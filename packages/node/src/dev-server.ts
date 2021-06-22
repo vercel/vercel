@@ -81,8 +81,9 @@ register({
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { Readable } from 'stream';
-import { Bridge } from './bridge';
-import { getNowLauncher } from './launcher';
+import type { Bridge } from '@vercel/node-bridge/bridge';
+// @ts-ignore - copied to the `dist` output as-is
+import { getVercelLauncher } from './launcher.js';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -105,16 +106,16 @@ async function main() {
     config.helpers === false || buildEnv.NODEJS_HELPERS === '0'
   );
 
-  bridge = getNowLauncher({
+  const proxyServer = createServer(onDevRequest);
+  await listen(proxyServer, 0, '127.0.0.1');
+
+  bridge = getVercelLauncher({
     entrypointPath: join(process.cwd(), entrypoint!),
     helpersPath: './helpers',
     shouldAddHelpers,
     bridgePath: 'not used',
     sourcemapSupportPath: 'not used',
   })();
-
-  const proxyServer = createServer(onDevRequest);
-  await listen(proxyServer, 0, '127.0.0.1');
 
   const address = proxyServer.address();
   if (typeof process.send === 'function') {
@@ -156,7 +157,7 @@ export async function onDevRequest(
   };
   if (!bridge) {
     res.statusCode = 500;
-    res.end('Bridge is not defined');
+    res.end('Bridge is not ready, please try again');
     return;
   }
   const result = await bridge.launcher(event, {

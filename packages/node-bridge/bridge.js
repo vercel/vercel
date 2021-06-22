@@ -1,43 +1,4 @@
-/// <reference types="node" />
-import { AddressInfo } from 'net';
-import { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import {
-  Server,
-  IncomingHttpHeaders,
-  OutgoingHttpHeaders,
-  request,
-} from 'http';
-
-interface NowProxyEvent {
-  Action: string;
-  body: string;
-}
-
-export interface NowProxyRequest {
-  isApiGateway?: boolean;
-  method: string;
-  path: string;
-  headers: IncomingHttpHeaders;
-  body: Buffer;
-}
-
-export interface NowProxyResponse {
-  statusCode: number;
-  headers: OutgoingHttpHeaders;
-  body: string;
-  encoding: BufferEncoding;
-}
-
-interface ServerLike {
-  timeout?: number;
-  listen: (
-    opts: {
-      host?: string;
-      port?: number;
-    },
-    callback: (this: Server | null) => void
-  ) => Server | void;
-}
+const { request } = require('http');
 
 /**
  * If the `http.Server` handler function throws an error asynchronously,
@@ -51,8 +12,11 @@ process.on('unhandledRejection', err => {
   process.exit(1);
 });
 
-function normalizeNowProxyEvent(event: NowProxyEvent): NowProxyRequest {
-  let bodyBuffer: Buffer | null;
+/**
+ * @param {import('./types').VercelProxyEvent} event
+ */
+function normalizeProxyEvent(event) {
+  let bodyBuffer;
   const { method, path, headers, encoding, body } = JSON.parse(event.body);
 
   if (body) {
@@ -70,10 +34,11 @@ function normalizeNowProxyEvent(event: NowProxyEvent): NowProxyRequest {
   return { isApiGateway: false, method, path, headers, body: bodyBuffer };
 }
 
-function normalizeAPIGatewayProxyEvent(
-  event: APIGatewayProxyEvent
-): NowProxyRequest {
-  let bodyBuffer: Buffer | null;
+/**
+ * @param {import('aws-lambda').APIGatewayProxyEvent} event
+ */
+function normalizeAPIGatewayProxyEvent(event) {
+  let bodyBuffer;
   const { httpMethod: method, path, headers, body } = event;
 
   if (body) {
@@ -89,12 +54,13 @@ function normalizeAPIGatewayProxyEvent(
   return { isApiGateway: true, method, path, headers, body: bodyBuffer };
 }
 
-function normalizeEvent(
-  event: NowProxyEvent | APIGatewayProxyEvent
-): NowProxyRequest {
+/**
+ * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
+ */
+function normalizeEvent(event) {
   if ('Action' in event) {
     if (event.Action === 'Invoke') {
-      return normalizeNowProxyEvent(event);
+      return normalizeProxyEvent(event);
     } else {
       throw new Error(`Unexpected event.Action: ${event.Action}`);
     }
@@ -103,33 +69,38 @@ function normalizeEvent(
   }
 }
 
-export class Bridge {
-  private server: ServerLike | null;
-  private listening: Promise<AddressInfo>;
-  private resolveListening: (info: AddressInfo) => void;
-  private events: { [key: string]: NowProxyRequest } = {};
-  private reqIdSeed = 1;
-  private shouldStoreEvents = false;
-
-  constructor(server?: ServerLike, shouldStoreEvents = false) {
-    this.server = null;
+class Bridge {
+  /**
+   * @param {import('./types').ServerLike | null} server
+   * @param {boolean} shouldStoreEvents
+   */
+  constructor(server = null, shouldStoreEvents = false) {
+    this.server = server;
     this.shouldStoreEvents = shouldStoreEvents;
-    if (server) {
-      this.setServer(server);
-    }
     this.launcher = this.launcher.bind(this);
-
-    // This is just to appease TypeScript strict mode, since it doesn't
-    // understand that the Promise constructor is synchronous
-    this.resolveListening = (_info: AddressInfo) => {}; // eslint-disable-line @typescript-eslint/no-unused-vars
+    this.reqIdSeed = 1;
+    /**
+     * @type {{ [key: string]: import('./types').VercelProxyRequest }}
+     */
+    this.events = {};
 
     this.listening = new Promise(resolve => {
       this.resolveListening = resolve;
     });
   }
 
-  setServer(server: ServerLike) {
+  /**
+   * @param {import('./types').ServerLike} server
+   */
+  setServer(server) {
     this.server = server;
+  }
+
+  /**
+   * @param {boolean} shouldStoreEvents
+   */
+  setStoreEvents(shouldStoreEvents) {
+    this.shouldStoreEvents = shouldStoreEvents;
   }
 
   listen() {
@@ -173,10 +144,13 @@ export class Bridge {
     );
   }
 
-  async launcher(
-    event: NowProxyEvent | APIGatewayProxyEvent,
-    context: Pick<Context, 'callbackWaitsForEmptyEventLoop'>
-  ): Promise<NowProxyResponse> {
+  /**
+   *
+   * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
+   * @param {import('aws-lambda').Context} context
+   * @return {Promise<{statusCode: number, headers: import('http').IncomingHttpHeaders,  body: string, encoding: 'base64'}>}
+   */
+  async launcher(event, context) {
     context.callbackWaitsForEmptyEventLoop = false;
     const { port } = await this.listening;
 
@@ -194,7 +168,10 @@ export class Bridge {
       const opts = { hostname: '127.0.0.1', port, path, method };
       const req = request(opts, res => {
         const response = res;
-        const respBodyChunks: Buffer[] = [];
+        /**
+         * @type {Buffer[]}
+         */
+        const respBodyChunks = [];
         response.on('data', chunk => respBodyChunks.push(Buffer.from(chunk)));
         response.on('error', reject);
         response.on('end', () => {
@@ -227,18 +204,14 @@ export class Bridge {
       for (const [name, value] of Object.entries(headers)) {
         if (value === undefined) {
           console.error(
-            'Skipping HTTP request header %j because value is undefined',
-            name
+            `Skipping HTTP request header "${name}" because value is undefined`
           );
           continue;
         }
         try {
           req.setHeader(name, value);
         } catch (err) {
-          console.error(
-            'Skipping HTTP request header: %j',
-            `${name}: ${value}`
-          );
+          console.error(`Skipping HTTP request header: "${name}: ${value}"`);
           console.error(err.message);
         }
       }
@@ -248,9 +221,15 @@ export class Bridge {
     });
   }
 
-  consumeEvent(reqId: string) {
+  /**
+   * @param {string} reqId
+   * @return {import('./types').VercelProxyRequest}
+   */
+  consumeEvent(reqId) {
     const event = this.events[reqId];
     delete this.events[reqId];
     return event;
   }
 }
+
+module.exports = { Bridge };
