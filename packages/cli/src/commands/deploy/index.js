@@ -21,12 +21,16 @@ export default async client => {
     return 1;
   }
 
+  if (argv['--help']) {
+    output.print(help());
+    return 2;
+  }
+
   if (argv._[0] === 'deploy') {
     argv._.shift();
   }
 
-  let paths = [];
-
+  let paths;
   if (argv._.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
@@ -39,16 +43,10 @@ export default async client => {
   if (!localConfig || localConfig instanceof Error) {
     localConfig = readLocalConfig(paths[0]);
   }
-  const stats = {};
-
-  if (argv['--help']) {
-    output.print(help());
-    return 2;
-  }
 
   for (const path of paths) {
     try {
-      stats[path] = await fs.lstat(path);
+      await fs.stat(path);
     } catch (err) {
       output.error(
         `The specified file or directory "${basename(path)}" does not exist.`
@@ -81,5 +79,5 @@ export default async client => {
     }
   }
 
-  return deploy(client, output, stats, localConfig, args);
+  return deploy(client, paths, localConfig, args);
 };

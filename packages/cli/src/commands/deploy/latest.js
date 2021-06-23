@@ -207,7 +207,7 @@ const parseEnv = env => {
   return env;
 };
 
-export default async function main(client, output, stats, localConfig, args) {
+export default async function main(client, paths, localConfig, args) {
   let argv = null;
 
   try {
@@ -219,10 +219,10 @@ export default async function main(client, output, stats, localConfig, args) {
 
   const {
     apiUrl,
+    output,
     authConfig: { token },
   } = client;
   const { log, debug, error, warn } = output;
-  const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
   const { isTTY } = process.stdout;
