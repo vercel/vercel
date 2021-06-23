@@ -1346,6 +1346,25 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
+  it('api detect node mjs files', async () => {
+    const files = [
+      'api/index.mjs',
+      'api/users.mjs',
+      'api/config/staging.mjs',
+      'api/config/production.mjs',
+      'api/src/controllers/health.mjs',
+      'api/src/controllers/user.module.mjs',
+    ];
+
+    const { builders, errorRoutes } = await detectBuilders(files, undefined, {
+      featHandleMiss,
+    });
+    expect(builders!.length).toBe(6);
+    expect(builders!.every(b => b.src!.endsWith('.mjs'))).toBe(true);
+    expect(errorRoutes!.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
+  });
+
   it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
