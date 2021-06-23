@@ -207,14 +207,7 @@ const parseEnv = env => {
   return env;
 };
 
-export default async function main(
-  client,
-  contextName,
-  output,
-  stats,
-  localConfig,
-  args
-) {
+export default async function main(client, paths, localConfig, args) {
   let argv = null;
 
   try {
@@ -226,10 +219,10 @@ export default async function main(
 
   const {
     apiUrl,
+    output,
     authConfig: { token },
   } = client;
   const { log, debug, error, warn } = output;
-  const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
   const { isTTY } = process.stdout;
@@ -339,6 +332,8 @@ export default async function main(
       status = 'linked';
     }
   }
+
+  const contextName = org && org.slug;
 
   // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
   // and upload the entire directory.
