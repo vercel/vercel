@@ -17,8 +17,9 @@ function Index() {
       <Helmet>
         <title>Gatsby + Node.js (TypeScript) API</title>
       </Helmet>
-      <h1>Gatsby + Node.js (TypeScript) API</h1>
-      <h2>
+      <h1>An Gatsby + Node.js (TypeScript) API</h1>
+      <font size="15">Interactize zone</font>
+       <h2>
         Deployed with{' '}
         <a
           href="https://vercel.com/docs"
@@ -35,7 +36,7 @@ function Index() {
           target="_blank"
           rel="noreferrer noopener"
         >
-          This project
+           project
         </a>{' '}
         is a <a href="https://www.gatsbyjs.org/">Gatsby</a> app with two
         directories, <code>/src</code> for static content and <code>/api</code>{' '}
