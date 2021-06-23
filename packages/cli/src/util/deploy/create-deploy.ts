@@ -18,7 +18,7 @@ export default async function createDeploy(
   isSettingUpProject: boolean,
   cwd?: string,
   client?: Client
-) {
+): Promise<any> {
   try {
     return await now.create(paths, createArgs, org, isSettingUpProject, cwd);
   } catch (error) {
