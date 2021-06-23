@@ -1,7 +1,6 @@
 import fs from 'fs-extra';
 import { resolve, basename } from 'path';
 import { fileNameSymbol } from '@vercel/client';
-import getScope from '../../util/get-scope.ts';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
@@ -11,12 +10,8 @@ import { help, args } from './args';
 import deploy from './latest';
 
 export default async client => {
-  const {
-    output,
-    config: { currentTeam },
-  } = client;
+  const { output } = client;
 
-  let contextName = currentTeam || 'current user';
   let argv = null;
 
   try {
@@ -62,17 +57,6 @@ export default async client => {
     }
   }
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
-
   if (localConfig) {
     const { version } = localConfig;
     const file = highlight(localConfig[fileNameSymbol]);
@@ -97,5 +81,5 @@ export default async client => {
     }
   }
 
-  return deploy(client, contextName, output, stats, localConfig, args);
+  return deploy(client, output, stats, localConfig, args);
 };
