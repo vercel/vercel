@@ -13,71 +13,73 @@ import { register } from 'ts-node';
 
 type TypescriptModule = typeof import('typescript');
 
-const resolveTypescript = (p: string): string => {
-  try {
-    return require.resolve('typescript', {
-      paths: [p],
-    });
-  } catch (_) {
-    return '';
-  }
-};
-
-const requireTypescript = (p: string): TypescriptModule => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require(p) as TypescriptModule;
-};
-
-let ts: TypescriptModule | null = null;
-
-// Assume Node.js 12 as the lowest common denominator
-let target = 'ES2019';
-const nodeMajor = Number(process.versions.node.split('.')[0]);
-if (nodeMajor >= 14) {
-  target = 'ES2020';
-}
-
-// Use the project's version of Typescript if available and supports `target`
-let compiler = resolveTypescript(process.cwd());
-if (compiler) {
-  ts = requireTypescript(compiler);
-  if (!(target in ts.ScriptTarget)) {
-    ts = null;
-  }
-}
-
-// Otherwise fall back to using the copy that `@vercel/node` uses
-if (!ts) {
-  compiler = resolveTypescript(join(__dirname, '..'));
-  ts = requireTypescript(compiler);
-}
-
-if (tsconfig) {
-  try {
-    const { config } = ts.readConfigFile(tsconfig, ts.sys.readFile);
-    if (config?.compilerOptions?.target) {
-      target = config.compilerOptions.target;
+if (!process.env.VERCEL_DEV_IS_ESM) {
+  const resolveTypescript = (p: string): string => {
+    try {
+      return require.resolve('typescript', {
+        paths: [p],
+      });
+    } catch (_) {
+      return '';
     }
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      console.error(`Error while parsing "${tsconfig}"`);
-      throw err;
+  };
+
+  const requireTypescript = (p: string): TypescriptModule => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require(p) as TypescriptModule;
+  };
+
+  let ts: TypescriptModule | null = null;
+
+  // Assume Node.js 12 as the lowest common denominator
+  let target = 'ES2019';
+  const nodeMajor = Number(process.versions.node.split('.')[0]);
+  if (nodeMajor >= 14) {
+    target = 'ES2020';
+  }
+
+  // Use the project's version of Typescript if available and supports `target`
+  let compiler = resolveTypescript(process.cwd());
+  if (compiler) {
+    ts = requireTypescript(compiler);
+    if (!(target in ts.ScriptTarget)) {
+      ts = null;
     }
   }
-}
 
-register({
-  compiler,
-  compilerOptions: {
-    allowJs: true,
-    esModuleInterop: true,
-    jsx: 'react',
-    module: 'commonjs',
-    target,
-  },
-  project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
-  transpileOnly: true,
-});
+  // Otherwise fall back to using the copy that `@vercel/node` uses
+  if (!ts) {
+    compiler = resolveTypescript(join(__dirname, '..'));
+    ts = requireTypescript(compiler);
+  }
+
+  if (tsconfig) {
+    try {
+      const { config } = ts.readConfigFile(tsconfig, ts.sys.readFile);
+      if (config?.compilerOptions?.target) {
+        target = config.compilerOptions.target;
+      }
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        console.error(`Error while parsing "${tsconfig}"`);
+        throw err;
+      }
+    }
+  }
+
+  register({
+    compiler,
+    compilerOptions: {
+      allowJs: true,
+      esModuleInterop: true,
+      jsx: 'react',
+      module: 'commonjs',
+      target,
+    },
+    project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
+    transpileOnly: true,
+  });
+}
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { Readable } from 'stream';
@@ -109,13 +111,12 @@ async function main() {
   const proxyServer = createServer(onDevRequest);
   await listen(proxyServer, 0, '127.0.0.1');
 
-  bridge = getVercelLauncher({
+  const launcher = getVercelLauncher({
     entrypointPath: join(process.cwd(), entrypoint!),
-    helpersPath: './helpers',
+    helpersPath: './helpers.js',
     shouldAddHelpers,
-    bridgePath: 'not used',
-    sourcemapSupportPath: 'not used',
-  })();
+  });
+  bridge = launcher();
 
   const address = proxyServer.address();
   if (typeof process.send === 'function') {

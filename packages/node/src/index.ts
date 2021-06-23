@@ -447,13 +447,21 @@ export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
   const { entrypoint, workPath, config, meta = {} } = opts;
-
-  // Find the `tsconfig.json` file closest to the entrypoint file
+  const entryDir = join(workPath, dirname(entrypoint));
   const projectTsConfig = await walkParentDirs({
     base: workPath,
-    start: join(workPath, dirname(entrypoint)),
+    start: entryDir,
     filename: 'tsconfig.json',
   });
+  const pathToPkg = await walkParentDirs({
+    base: workPath,
+    start: entryDir,
+    filename: 'package.json',
+  });
+  const pkg = pathToPkg ? require(pathToPkg) : {};
+  const isEsm =
+    entrypoint.endsWith('.mjs') ||
+    (pkg.type === 'module' && entrypoint.endsWith('.js'));
 
   const devServerPath = join(__dirname, 'dev-server.js');
   const child = fork(devServerPath, [], {
@@ -464,6 +472,7 @@ export async function startDevServer(
       ...meta.env,
       VERCEL_DEV_ENTRYPOINT: entrypoint,
       VERCEL_DEV_TSCONFIG: projectTsConfig || '',
+      VERCEL_DEV_IS_ESM: isEsm ? '1' : undefined,
       VERCEL_DEV_CONFIG: JSON.stringify(config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(meta.buildEnv || {}),
     },
