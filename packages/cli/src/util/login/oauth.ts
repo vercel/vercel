@@ -30,6 +30,10 @@ export default async function doOauthLogin(
     const [query] = await Promise.all([
       new Promise<URL['searchParams']>((resolve, reject) => {
         server.once('request', (req, res) => {
+          // Close the HTTP connection to prevent
+          // `server.close()` from hanging
+          res.setHeader('connection', 'close');
+
           const query = new URL(req.url || '/', 'http://localhost')
             .searchParams;
           resolve(query);
