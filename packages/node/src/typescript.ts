@@ -59,7 +59,7 @@ interface Options {
   compiler?: string;
   ignore?: string[];
   project?: string;
-  compilerOptions?: object;
+  compilerOptions?: any;
   ignoreDiagnostics?: Array<number | string>;
   readFile?: (path: string) => string | undefined;
   fileExists?: (path: string) => boolean;
@@ -214,7 +214,7 @@ export function register(opts: Options = {}): Register {
     /**
      * Create the basic required function using transpile mode.
      */
-    const getOutput = function(code: string, fileName: string): SourceOutput {
+    const getOutput = function (code: string, fileName: string): SourceOutput {
       const result = ts.transpileModule(code, {
         fileName,
         transformers,
@@ -284,7 +284,7 @@ export function register(opts: Options = {}): Register {
       const service = ts.createLanguageService(serviceHost, registry);
 
       // Set the file contents into cache manually.
-      const updateMemoryCache = function(contents: string, fileName: string) {
+      const updateMemoryCache = function (contents: string, fileName: string) {
         const fileVersion = memoryCache.fileVersions.get(fileName) || 0;
 
         // Avoid incrementing cache when nothing has changed.
@@ -294,7 +294,7 @@ export function register(opts: Options = {}): Register {
         memoryCache.fileContents.set(fileName, contents);
       };
 
-      getOutputTypeCheck = function(code: string, fileName: string) {
+      getOutputTypeCheck = function (code: string, fileName: string) {
         updateMemoryCache(code, fileName);
 
         const output = service.getEmitOutput(fileName);
@@ -430,9 +430,9 @@ export function register(opts: Options = {}): Register {
   ): SourceOutput {
     const configFileName = detectConfig();
     const build = getBuild(configFileName);
-    const { code: value, map: sourceMap } = (skipTypeCheck
-      ? build.getOutput
-      : build.getOutputTypeCheck)(code, fileName);
+    const { code: value, map: sourceMap } = (
+      skipTypeCheck ? build.getOutput : build.getOutputTypeCheck
+    )(code, fileName);
     const output = {
       code: value,
       map: Object.assign(JSON.parse(sourceMap), {
