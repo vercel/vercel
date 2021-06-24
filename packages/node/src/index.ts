@@ -84,10 +84,10 @@ const tscPath = resolve(
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
 
-const LAUNCHER_FILENAME = '___vc_launcher.js';
-const BRIDGE_FILENAME = '___vc_bridge.js';
-const HELPERS_FILENAME = '___vc_helpers.js';
-const SOURCEMAP_SUPPORT_FILENAME = '___vc_sourcemap_support.js';
+const LAUNCHER_FILENAME = '__launcher.js';
+const BRIDGE_FILENAME = '__bridge.js';
+const HELPERS_FILENAME = '__helpers.js';
+const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support.js';
 
 async function downloadInstallAndBundle({
   files,
@@ -391,10 +391,12 @@ export async function build({
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
+  const getFileName = (str: string) => `___vc/${str}`;
+
   const launcher = awsLambdaHandler ? makeAwsLauncher : makeVercelLauncher;
 
   const launcherSource = launcher({
-    entrypointPath: `./${renameTStoJS(relative(baseDir, entrypointPath))}`,
+    entrypointPath: `../${renameTStoJS(relative(baseDir, entrypointPath))}`,
     bridgePath: `./${BRIDGE_FILENAME}`,
     helpersPath: `./${HELPERS_FILENAME}`,
     sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
@@ -404,22 +406,22 @@ export async function build({
   });
 
   const launcherFiles: Files = {
-    [LAUNCHER_FILENAME]: new FileBlob({
+    [getFileName(LAUNCHER_FILENAME)]: new FileBlob({
       data: launcherSource,
     }),
-    [BRIDGE_FILENAME]: new FileFsRef({
+    [getFileName(BRIDGE_FILENAME)]: new FileFsRef({
       fsPath: join(__dirname, 'bridge.js'),
     }),
   };
 
   if (shouldAddSourcemapSupport) {
-    launcherFiles[SOURCEMAP_SUPPORT_FILENAME] = new FileFsRef({
+    launcherFiles[getFileName(SOURCEMAP_SUPPORT_FILENAME)] = new FileFsRef({
       fsPath: join(__dirname, 'source-map-support.js'),
     });
   }
 
   if (shouldAddHelpers) {
-    launcherFiles[HELPERS_FILENAME] = new FileFsRef({
+    launcherFiles[getFileName(HELPERS_FILENAME)] = new FileFsRef({
       fsPath: join(__dirname, 'helpers.js'),
     });
   }
@@ -429,7 +431,7 @@ export async function build({
       ...preparedFiles,
       ...launcherFiles,
     },
-    handler: `${LAUNCHER_FILENAME.slice(0, -3)}.launcher`,
+    handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
     runtime: nodeVersion.runtime,
   });
 
