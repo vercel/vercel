@@ -1206,7 +1206,7 @@ export default class DevServer {
   /**
    * Returns the request `headers` that will be sent to the Lambda.
    */
-  getNowProxyHeaders(
+  getProxyHeaders(
     req: http.IncomingMessage,
     nowRequestId: string,
     xfwd: boolean
@@ -1626,7 +1626,7 @@ export default class DevServer {
         debug(`Proxying to frontend dev server: ${upstream}`);
 
         // Add the Vercel platform proxy request headers
-        const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+        const headers = this.getProxyHeaders(req, nowRequestId, false);
         for (const [name, value] of Object.entries(headers)) {
           req.headers[name] = value;
         }
@@ -1688,11 +1688,11 @@ export default class DevServer {
     }
 
     // Before doing any asset matching, check if this builder supports the
-    // `startDevServer()` "optimization". In this case, the vercel dev server invokes
-    // `startDevServer()` on the builder for every HTTP request so that it boots
-    // up a single-serve dev HTTP server that vercel dev will proxy this HTTP request
-    // to. Once the proxied request is finished, vercel dev shuts down the dev
-    // server child process.
+    // `startDevServer()` "optimization". In this case, the vercel dev server
+    // invokes `startDevServer()` on the builder for the first HTTP request
+    // so that it boots up a dev HTTP server that `vercel dev` will proxy
+    // this HTTP request to. The dev server process is then reused for subsequent
+    // HTTP requests. Once *any* file modification happens, the process is shut down.
     const { builder, package: builderPkg } = match.builderWithPkg;
     if (
       typeof match.devServerResult === 'undefined' &&
@@ -1762,7 +1762,7 @@ export default class DevServer {
       });
 
       // Add the Vercel platform proxy request headers
-      const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+      const headers = this.getProxyHeaders(req, nowRequestId, false);
       for (const [name, value] of Object.entries(headers)) {
         req.headers[name] = value;
       }
@@ -1799,7 +1799,7 @@ export default class DevServer {
       debug('Proxying to frontend dev server');
 
       // Add the Vercel platform proxy request headers
-      const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+      const headers = this.getProxyHeaders(req, nowRequestId, false);
       for (const [name, value] of Object.entries(headers)) {
         req.headers[name] = value;
       }
@@ -1888,7 +1888,7 @@ export default class DevServer {
           path,
           headers: {
             ...req.headers,
-            ...this.getNowProxyHeaders(req, nowRequestId, true),
+            ...this.getProxyHeaders(req, nowRequestId, true),
           },
           encoding: 'base64',
           body: body.toString('base64'),
