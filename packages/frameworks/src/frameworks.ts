@@ -104,6 +104,7 @@ export const frameworks = [
     devCommand: 'next dev --port $PORT',
     buildCommand: 'next build',
     getOutputDirName: async () => 'public',
+    cachePattern: '.next/cache/**',
   },
   {
     name: 'Gatsby.js',
