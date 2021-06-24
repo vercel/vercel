@@ -333,7 +333,15 @@ export default async function main(client, paths, localConfig, args) {
     }
   }
 
-  const contextName = org && org.slug;
+  // At this point `org` should be populated
+  if (!org) {
+    throw new Error(`"org" is not defined`);
+  }
+
+  // Set the `contextName` and `currentTeam` as specified by the
+  // Project Settings, so that API calls happen with the proper scope
+  const contextName = org.slug;
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
   // and upload the entire directory.
