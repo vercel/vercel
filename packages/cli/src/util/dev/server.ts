@@ -32,7 +32,6 @@ import {
 import {
   Builder,
   Env,
-  StartDevServerResult,
   FileFsRef,
   PackageJson,
   detectBuilders,
@@ -246,10 +245,10 @@ export default class DevServer {
       }
     }
 
-    const nowConfig = await this.getVercelConfig();
+    const vercelConfig = await this.getVercelConfig();
 
     // Update the build matches in case an entrypoint was created or deleted
-    await this.updateBuildMatches(nowConfig);
+    await this.updateBuildMatches(vercelConfig);
 
     const filesChangedArray = [...filesChanged];
     const filesRemovedArray = [...filesRemoved];
@@ -292,13 +291,19 @@ export default class DevServer {
       for (const [result, [requestPath, match]] of needsRebuild) {
         if (
           requestPath === null ||
-          (await shouldServe(match, this.files, requestPath, this, nowConfig))
+          (await shouldServe(
+            match,
+            this.files,
+            requestPath,
+            this,
+            vercelConfig
+          ))
         ) {
           this.triggerBuild(
             match,
             requestPath,
             null,
-            nowConfig,
+            vercelConfig,
             result,
             filesChangedArray,
             filesRemovedArray
@@ -313,6 +318,16 @@ export default class DevServer {
             `Not rebuilding because \`shouldServe()\` returned \`false\` for "${match.use}" request path "${requestPath}"`
           );
         }
+      }
+    }
+
+    // Since there was a filesystem event, all currently running
+    // Serverless Function dev server processes need to be invalidated,
+    // so that a new process will be created on the next HTTP request
+    for (const match of this.buildMatches.values()) {
+      if (match.devServerResult) {
+        await this.killBuilderDevServer(match.devServerResult.pid);
+        delete match.devServerResult;
       }
     }
   }
@@ -1679,11 +1694,16 @@ export default class DevServer {
     // to. Once the proxied request is finished, vercel dev shuts down the dev
     // server child process.
     const { builder, package: builderPkg } = match.builderWithPkg;
-    if (typeof builder.startDevServer === 'function') {
-      let devServerResult: StartDevServerResult = null;
+    if (
+      typeof match.devServerResult === 'undefined' &&
+      typeof builder.startDevServer === 'function'
+    ) {
       try {
         const { envConfigs, files, devCacheDir, cwd: workPath } = this;
-        devServerResult = await builder.startDevServer({
+        debug(
+          `Invoking "startDevServer()" of ${builderPkg.name} for "${match.entrypoint}`
+        );
+        match.devServerResult = await builder.startDevServer({
           files,
           entrypoint: match.entrypoint,
           workPath,
@@ -1719,50 +1739,47 @@ export default class DevServer {
         );
         return;
       }
-
-      if (devServerResult) {
-        // When invoking lambda functions, the region where the lambda was invoked
-        // is also included in the request ID. So use the same `dev1` fake region.
-        nowRequestId = generateRequestId(this.podId, true);
-
-        const { port, pid } = devServerResult;
-        this.devServerPids.add(pid);
-
-        res.once('close', () => {
-          this.killBuilderDevServer(pid);
-        });
-
-        debug(
-          `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
-        );
-
-        // Mix in the routing based query parameters
-        const parsed = url.parse(req.url || '/', true);
-        Object.assign(parsed.query, uri_args);
-        req.url = url.format({
-          pathname: parsed.pathname,
-          query: parsed.query,
-        });
-
-        // Add the Vercel platform proxy request headers
-        const headers = this.getNowProxyHeaders(req, nowRequestId, false);
-        for (const [name, value] of Object.entries(headers)) {
-          req.headers[name] = value;
-        }
-
-        this.setResponseHeaders(res, nowRequestId);
-        return proxyPass(
-          req,
-          res,
-          `http://localhost:${port}`,
-          this,
-          nowRequestId,
-          false
-        );
-      } else {
-        debug(`Skipping \`startDevServer()\` for ${match.entrypoint}`);
-      }
     }
+
+    if (match.devServerResult) {
+      // When invoking lambda functions, the region where the lambda was invoked
+      // is also included in the request ID. So use the same `dev1` fake region.
+      nowRequestId = generateRequestId(this.podId, true);
+
+      const { port, pid } = match.devServerResult;
+      this.devServerPids.add(pid);
+
+      debug(
+        `Proxying to "${builderPkg.name}" dev server (port=${port}, pid=${pid})`
+      );
+
+      // Mix in the routing based query parameters
+      const parsed = url.parse(req.url || '/', true);
+      Object.assign(parsed.query, uri_args);
+      req.url = url.format({
+        pathname: parsed.pathname,
+        query: parsed.query,
+      });
+
+      // Add the Vercel platform proxy request headers
+      const headers = this.getNowProxyHeaders(req, nowRequestId, false);
+      for (const [name, value] of Object.entries(headers)) {
+        req.headers[name] = value;
+      }
+
+      this.setResponseHeaders(res, nowRequestId);
+      return proxyPass(
+        req,
+        res,
+        `http://localhost:${port}`,
+        this,
+        nowRequestId,
+        false
+      );
+    } else if (match.devServerResult === null) {
+      debug(`Skipping \`startDevServer()\` for ${match.entrypoint}`);
+    }
+
     let foundAsset = findAsset(match, requestPath, nowConfig);
 
     if (!foundAsset && callLevel === 0) {
