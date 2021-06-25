@@ -406,6 +406,9 @@ export async function build({
   });
 
   const launcherFiles: Files = {
+    [getFileName('package.json')]: new FileBlob({
+      data: JSON.stringify({ type: 'commonjs' }),
+    }),
     [getFileName(LAUNCHER_FILENAME)]: new FileBlob({
       data: launcherSource,
     }),
