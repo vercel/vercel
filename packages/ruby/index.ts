@@ -214,5 +214,3 @@ export async function build({
 
   return { output: lambda };
 }
-
-// test
