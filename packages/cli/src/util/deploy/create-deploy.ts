@@ -87,15 +87,21 @@ export default async function createDeploy(
 
     // If the cert is missing we try to generate a new one and the retry
     if (error.code === 'cert_missing') {
+      if (!client) {
+        throw new Error('Expected client but found undefined');
+      }
+
       const result = await generateCertForDeploy(
         output,
-        client!,
+        client,
         contextName,
         error.value
       );
+
       if (result instanceof NowError) {
         return result;
       }
+
       return createDeploy(
         output,
         now,
