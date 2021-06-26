@@ -93,3 +93,30 @@ export const help = () => `
     ${chalk.cyan(`$ ${getPkgName()} help list`)}
 
 `;
+
+export const args = {
+  '--force': Boolean,
+  '--with-cache': Boolean,
+  '--public': Boolean,
+  '--no-clipboard': Boolean,
+  '--env': [String],
+  '--build-env': [String],
+  '--meta': [String],
+  // This is not an array in favor of matching
+  // the config property name.
+  '--regions': String,
+  '--prod': Boolean,
+  '--confirm': Boolean,
+  '-f': '--force',
+  '-p': '--public',
+  '-e': '--env',
+  '-b': '--build-env',
+  '-C': '--no-clipboard',
+  '-m': '--meta',
+  '-c': '--confirm',
+
+  // deprecated
+  '--name': String,
+  '-n': '--name',
+  '--target': String,
+};
