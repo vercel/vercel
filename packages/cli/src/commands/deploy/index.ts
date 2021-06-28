@@ -7,7 +7,7 @@ import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
-import { help, args } from './args';
+import { help } from './args';
 import deploy from './latest';
 import Client from '../../util/client';
 
@@ -41,6 +41,7 @@ export default async (client: Client) => {
       '-C': '--no-clipboard',
       '-m': '--meta',
       '-c': '--confirm',
+
       // deprecated
       '--name': String,
       '-n': '--name',
@@ -126,5 +127,30 @@ export default async (client: Client) => {
     }
   }
 
-  return deploy(client, contextName, output, stats, localConfig, args);
+  return deploy(client, contextName, output, stats, localConfig, {
+    '--force': Boolean,
+    '--with-cache': Boolean,
+    '--public': Boolean,
+    '--no-clipboard': Boolean,
+    '--env': [String],
+    '--build-env': [String],
+    '--meta': [String],
+    // This is not an array in favor of matching
+    // the config property name.
+    '--regions': String,
+    '--prod': Boolean,
+    '--confirm': Boolean,
+    '-f': '--force',
+    '-p': '--public',
+    '-e': '--env',
+    '-b': '--build-env',
+    '-C': '--no-clipboard',
+    '-m': '--meta',
+    '-c': '--confirm',
+
+    // deprecated
+    '--name': String,
+    '-n': '--name',
+    '--target': String,
+  });
 };
