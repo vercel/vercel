@@ -7,6 +7,7 @@ import { Output } from '../output';
 import { Org } from '../../types';
 import Now from '..';
 import Client from '../client';
+import { DeploymentError } from '../../../../client/dist';
 
 export default async function createDeploy(
   output: Output,
@@ -18,7 +19,7 @@ export default async function createDeploy(
   isSettingUpProject: boolean,
   cwd?: string,
   client?: Client
-): Promise<any> {
+): Promise<any | DeploymentError> {
   try {
     return await now.create(paths, createArgs, org, isSettingUpProject, cwd);
   } catch (error) {
