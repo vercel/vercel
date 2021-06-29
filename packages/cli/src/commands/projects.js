@@ -8,7 +8,6 @@ import exit from '../util/exit';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 import getCommandFlags from '../util/get-command-flags';
-import wait from '../util/output/wait';
 import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const e = encodeURIComponent;
@@ -118,7 +117,9 @@ async function run({ client, contextName }) {
       return exit(2);
     }
 
-    const stopSpinner = wait(`Fetching projects in ${chalk.bold(contextName)}`);
+    const stopSpinner = client.output.spinner(
+      `Fetching projects in ${chalk.bold(contextName)}`
+    );
 
     let projectsUrl = '/v4/projects/?limit=20';
 
