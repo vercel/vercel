@@ -8,7 +8,6 @@ export const help = () => `
   ${chalk.dim('Commands:')}
 
     ${chalk.dim('Basic')}
-    
 
       deploy               [path]      Performs a deployment ${chalk.bold(
         '(default)'

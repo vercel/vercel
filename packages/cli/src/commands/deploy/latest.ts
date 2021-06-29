@@ -3,10 +3,9 @@ import bytes from 'bytes';
 import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
-import { fileNameSymbol, VercelConfig } from '@vercel/client';
+import { Dictionary, fileNameSymbol, VercelConfig } from '@vercel/client';
 import { getPrettyError } from '@vercel/build-utils';
 import { handleError } from '../../util/error';
-import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
@@ -189,7 +188,7 @@ const printDeploymentStatus = async (
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
-const parseEnv = (env: any | object) => {
+const parseEnv = (env?: string[] | Dictionary<string>) => {
   if (!env) {
     return {};
   }
@@ -214,8 +213,9 @@ const parseEnv = (env: any | object) => {
 
       o[key] = value;
       return o;
-    }, {});
+    }, {} as Dictionary<string | undefined>);
   }
+
   // assume it's already an Object
   return env;
 };
@@ -224,17 +224,8 @@ export default async function main(
   client: Client,
   paths: string[],
   localConfig: VercelConfig | null,
-  args: any
+  argv: any
 ) {
-  let argv = null;
-
-  try {
-    argv = getArgs(client.argv.slice(2), args);
-  } catch (error) {
-    handleError(error);
-    return 1;
-  }
-
   const {
     apiUrl,
     output,
