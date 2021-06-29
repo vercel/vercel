@@ -5,12 +5,13 @@ import eraseLines from '../output/erase-lines';
 import verify from './verify';
 import executeLogin from './login';
 import Client from '../client';
+import { LoginResult } from './types';
 
 export default async function doEmailLogin(
   client: Client,
   email: string,
   ssoUserId?: string
-): Promise<number | string> {
+): Promise<LoginResult> {
   let securityCode;
   let verificationToken;
   const { output } = client;
@@ -59,5 +60,5 @@ export default async function doEmailLogin(
   }
 
   output.success(`Email authentication complete for ${email}`);
-  return token;
+  return { token };
 }
