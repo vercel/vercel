@@ -540,15 +540,14 @@ export default async function main(
     }
 
     deployment = await createDeploy(
-      output,
+      client,
       now,
       contextName,
       [sourcePath],
       createArgs,
       org,
       !project && !isFile,
-      path,
-      client
+      path
     );
 
     if (deployment.code === 'missing_project_settings') {
@@ -574,7 +573,7 @@ export default async function main(
       deployStamp = stamp();
       createArgs.deployStamp = deployStamp;
       deployment = await createDeploy(
-        output,
+        client,
         now,
         contextName,
         [sourcePath],

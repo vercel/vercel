@@ -177,7 +177,7 @@ export default async function setupAndLink(
       }
 
       const deployment = await createDeploy(
-        output,
+        client,
         now,
         config.currentTeam || 'current user',
         [sourcePath],
