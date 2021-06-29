@@ -3,6 +3,10 @@ export interface LoginData {
   securityCode: string;
 }
 
+export interface VerifyData {
+  token: string;
+}
+
 export interface SAMLError {
   saml?: true;
   teamId: string | null;

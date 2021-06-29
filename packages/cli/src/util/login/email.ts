@@ -13,12 +13,12 @@ export default async function doEmailLogin(
 ): Promise<number | string> {
   let securityCode;
   let verificationToken;
-  const { apiUrl, output } = client;
+  const { output } = client;
 
   output.spinner('Sending you an email');
 
   try {
-    const data = await executeLogin(apiUrl, email);
+    const data = await executeLogin(client, email);
     verificationToken = data.token;
     securityCode = data.securityCode;
   } catch (err) {
