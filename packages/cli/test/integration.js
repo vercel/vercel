@@ -157,9 +157,10 @@ function mockLoginApi(req, res) {
   let { pathname = '/', query = {} } = parseUrl(url, true);
   console.log(`[mock-login-server] ${method} ${pathname}`);
   const securityCode = 'Bears Beets Battlestar Galactica';
+  res.setHeader('content-type', 'application/json');
   if (
     method === 'POST' &&
-    pathname === '/now/registration' &&
+    pathname === '/registration' &&
     query.mode === 'login'
   ) {
     res.end(JSON.stringify({ token, securityCode }));
