@@ -1,5 +1,4 @@
 import { URL } from 'url';
-import ua from '../ua';
 import Client from '../client';
 import { hostname } from 'os';
 import { getTitleName } from '../pkg-name';
@@ -30,8 +29,6 @@ export default async function verify(
     url.searchParams.set('ssoUserId', ssoUserId);
   }
 
-  const { token } = await client.fetch<VerifyData>(url.href, {
-    headers: { 'User-Agent': ua },
-  });
+  const { token } = await client.fetch<VerifyData>(url.href);
   return token;
 }
