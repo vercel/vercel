@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import { resolve, basename } from 'path';
-import { fileNameSymbol } from '@vercel/client';
+import { VercelConfig, fileNameSymbol } from '@vercel/client';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
@@ -65,12 +65,9 @@ export default async (client: Client) => {
     paths = [process.cwd()];
   }
 
-  let { localConfig } = client;
+  let localConfig: VercelConfig | null = client.localConfig;
   if (!localConfig || localConfig instanceof Error) {
-    const maybeConfig = readLocalConfig(paths[0]);
-    if (maybeConfig) {
-      localConfig = maybeConfig;
-    }
+    localConfig = readLocalConfig(paths[0]);
   }
 
   for (const path of paths) {

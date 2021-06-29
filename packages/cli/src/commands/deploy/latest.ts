@@ -223,7 +223,7 @@ const parseEnv = (env: any | object) => {
 export default async function main(
   client: Client,
   paths: string[],
-  localConfig: VercelConfig,
+  localConfig: VercelConfig | null,
   args: any
 ) {
   let argv = null;
