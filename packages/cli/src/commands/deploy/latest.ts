@@ -525,7 +525,7 @@ export default async function main(
   let deployment = null;
 
   try {
-    const createArgs = {
+    const createArgs: any = {
       name: project ? project.name : newProjectName,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
@@ -541,7 +541,6 @@ export default async function main(
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
-      projectSettings: {},
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
