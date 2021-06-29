@@ -1,13 +1,13 @@
 import { URL } from 'url';
-import { LoginParams } from './types';
+import Client from '../client';
 import doOauthLogin from './oauth';
 
-export default function doGithubLogin(params: LoginParams) {
+export default function doGithubLogin(client: Client, ssoUserId?: string) {
   const url = new URL(
     '/api/registration/login-with-github',
     // Can't use `apiUrl` here because this URL sets a
     // cookie that the OAuth callback URL depends on
     'https://vercel.com'
   );
-  return doOauthLogin(params, url, 'GitHub');
+  return doOauthLogin(client, url, 'GitHub', ssoUserId);
 }

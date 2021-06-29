@@ -1,9 +1,13 @@
 import { URL } from 'url';
-import { LoginParams } from './types';
+import Client from '../client';
 import doOauthLogin from './oauth';
 
-export default function doSsoLogin(params: LoginParams, teamIdOrSlug: string) {
-  const url = new URL('/auth/sso', params.apiUrl);
+export default function doSsoLogin(
+  client: Client,
+  teamIdOrSlug: string,
+  ssoUserId?: string
+) {
+  const url = new URL('/auth/sso', client.apiUrl);
   url.searchParams.set('teamId', teamIdOrSlug);
-  return doOauthLogin(params, url, 'SAML Single Sign-On');
+  return doOauthLogin(client, url, 'SAML Single Sign-On', ssoUserId);
 }
