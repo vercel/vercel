@@ -360,14 +360,18 @@ export async function build({
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
-  const { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts } =
-    await downloadInstallAndBundle({
-      files,
-      entrypoint,
-      workPath,
-      config,
-      meta,
-    });
+  const {
+    entrypointPath,
+    entrypointFsDirname,
+    nodeVersion,
+    spawnOpts,
+  } = await downloadInstallAndBundle({
+    files,
+    entrypoint,
+    workPath,
+    config,
+    meta,
+  });
 
   await runPackageJsonScript(
     entrypointFsDirname,

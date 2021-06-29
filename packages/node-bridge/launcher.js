@@ -143,12 +143,9 @@ function getAwsLauncher({ entrypointPath, awsLambdaHandler = '' }) {
    * @param {() => void} callback
    */
   function internal(e, context, callback) {
-    const {
-      path,
-      method: httpMethod,
-      body,
-      headers,
-    } = JSON.parse(e.body || '{}');
+    const { path, method: httpMethod, body, headers } = JSON.parse(
+      e.body || '{}'
+    );
     const { query } = parse(path, true);
     /**
      * @type {{[key: string]: string}}
