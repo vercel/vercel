@@ -51,7 +51,7 @@ export default async function doEmailLogin(
         ssoUserId
       );
     } catch (err) {
-      if (err.message !== 'Confirmation incomplete') {
+      if (err.serverMessage !== 'Confirmation incomplete') {
         output.error(err.message);
         return 1;
       }
