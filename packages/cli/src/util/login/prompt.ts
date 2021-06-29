@@ -12,8 +12,7 @@ import doBitbucketLogin from './bitbucket';
 
 export default async function prompt(
   client: Client,
-  error?: Pick<SAMLError, 'teamId'>,
-  ssoUserId?: string
+  error?: Pick<SAMLError, 'teamId'>
 ) {
   let result: number | string = 1;
 
@@ -25,9 +24,9 @@ export default async function prompt(
     { name: 'Continue with SAML Single Sign-On', value: 'sso', short: 'sso' },
   ];
 
-  if (ssoUserId || (error && !error.teamId)) {
-    // Remove SAML login option if we're connecting SAML Profile,
-    // or if this is a SAML error for a user / team without SAML
+  if (error && !error.teamId) {
+    // Remove SAML login option if this is a SAML
+    // error for a user or a team without SAML
     choices.pop();
   }
 
@@ -37,17 +36,17 @@ export default async function prompt(
   });
 
   if (choice === 'github') {
-    result = await doGithubLogin(client, ssoUserId);
+    result = await doGithubLogin(client);
   } else if (choice === 'gitlab') {
-    result = await doGitlabLogin(client, ssoUserId);
+    result = await doGitlabLogin(client);
   } else if (choice === 'bitbucket') {
-    result = await doBitbucketLogin(client, ssoUserId);
+    result = await doBitbucketLogin(client);
   } else if (choice === 'email') {
     const email = await readInput('Enter your email address');
-    result = await doEmailLogin(client, email, ssoUserId);
+    result = await doEmailLogin(client, email);
   } else if (choice === 'sso') {
     const slug = error?.teamId || (await readInput('Enter your Team slug'));
-    result = await doSsoLogin(client, slug, ssoUserId);
+    result = await doSsoLogin(client, slug);
   }
 
   return result;

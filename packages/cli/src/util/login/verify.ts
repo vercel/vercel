@@ -6,13 +6,11 @@ import { VerifyData } from './types';
 
 export default async function verify(
   client: Client,
-  email: string,
   verificationToken: string,
   provider: string,
   ssoUserId?: string
-): Promise<string> {
+): Promise<VerifyData> {
   const url = new URL('/registration/verify', client.apiUrl);
-  url.searchParams.set('email', email);
   url.searchParams.set('token', verificationToken);
 
   if (!client.authConfig.token) {
@@ -29,6 +27,5 @@ export default async function verify(
     url.searchParams.set('ssoUserId', ssoUserId);
   }
 
-  const { token } = await client.fetch<VerifyData>(url.href);
-  return token;
+  return await client.fetch<VerifyData>(url.href);
 }

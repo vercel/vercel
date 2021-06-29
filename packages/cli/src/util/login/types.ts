@@ -4,6 +4,7 @@ export interface LoginData {
 }
 
 export interface VerifyData {
+  email: string;
   token: string;
 }
 

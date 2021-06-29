@@ -66,6 +66,7 @@
     "@vercel/node": "1.11.2-canary.2",
     "@vercel/python": "2.0.4",
     "@vercel/ruby": "1.2.6",
+    "uid-promise": "1.1.0",
     "update-notifier": "4.1.0"
   },
   "devDependencies": {

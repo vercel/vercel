@@ -8,8 +8,7 @@ import Client from '../client';
 
 export default async function doEmailLogin(
   client: Client,
-  email: string,
-  ssoUserId?: string
+  email: string
 ): Promise<number | string> {
   let securityCode;
   let verificationToken;
@@ -43,13 +42,8 @@ export default async function doEmailLogin(
   while (!token) {
     try {
       await sleep(ms('1s'));
-      token = await verify(
-        client,
-        email,
-        verificationToken,
-        'Email',
-        ssoUserId
-      );
+      const data = await verify(client, verificationToken, 'Email');
+      token = data.token;
     } catch (err) {
       if (err.serverMessage !== 'Confirmation incomplete') {
         output.error(err.message);

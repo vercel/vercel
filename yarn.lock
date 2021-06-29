@@ -10891,6 +10891,11 @@ uid-promise@1.0.0:
   resolved "https://registry.yarnpkg.com/uid-promise/-/uid-promise-1.0.0.tgz#68ef7c70a19dea4d637c7e3df2e0e548106f1a37"
   integrity sha1-aO98cKGd6k1jfH498uDlSBBvGjc=
 
+uid-promise@1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/uid-promise/-/uid-promise-1.1.0.tgz#af6dee53e887834e9b0da3f705bc9d7b0d002b7c"
+  integrity sha512-8xlDRzI5YFQhoCaGvA/zZTZffX+7J916fVAnIBCVIcHlsHeXiDyrO8Kutb8zn5Azm3143hKlvmnf6eLEl9+hJQ==
+
 uid2@0.0.3:
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/uid2/-/uid2-0.0.3.tgz#483126e11774df2f71b8b639dcd799c376162b82"
