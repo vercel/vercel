@@ -1,8 +1,9 @@
 import inquirer from 'inquirer';
+import Client from '../client';
 import error from '../output/error';
 import listInput from '../input/list';
 import { getCommandName } from '../pkg-name';
-import { LoginParams, SAMLError } from './types';
+import { SAMLError } from './types';
 import doSsoLogin from './sso';
 import doEmailLogin from './email';
 import doGithubLogin from './github';
@@ -10,8 +11,9 @@ import doGitlabLogin from './gitlab';
 import doBitbucketLogin from './bitbucket';
 
 export default async function prompt(
-  params: LoginParams,
-  error?: Pick<SAMLError, 'teamId'>
+  client: Client,
+  error?: Pick<SAMLError, 'teamId'>,
+  ssoUserId?: string
 ) {
   let result: number | string = 1;
 
@@ -23,7 +25,7 @@ export default async function prompt(
     { name: 'Continue with SAML Single Sign-On', value: 'sso', short: 'sso' },
   ];
 
-  if (params.ssoUserId || (error && !error.teamId)) {
+  if (ssoUserId || (error && !error.teamId)) {
     // Remove SAML login option if we're connecting SAML Profile,
     // or if this is a SAML error for a user / team without SAML
     choices.pop();
@@ -35,17 +37,17 @@ export default async function prompt(
   });
 
   if (choice === 'github') {
-    result = await doGithubLogin(params);
+    result = await doGithubLogin(client, ssoUserId);
   } else if (choice === 'gitlab') {
-    result = await doGitlabLogin(params);
+    result = await doGitlabLogin(client, ssoUserId);
   } else if (choice === 'bitbucket') {
-    result = await doBitbucketLogin(params);
+    result = await doBitbucketLogin(client, ssoUserId);
   } else if (choice === 'email') {
     const email = await readInput('Enter your email address');
-    result = await doEmailLogin(params, email);
+    result = await doEmailLogin(client, email, ssoUserId);
   } else if (choice === 'sso') {
     const slug = error?.teamId || (await readInput('Enter your Team slug'));
-    result = await doSsoLogin(params, slug);
+    result = await doSsoLogin(client, slug, ssoUserId);
   }
 
   return result;

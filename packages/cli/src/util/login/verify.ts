@@ -1,16 +1,19 @@
 import { URL } from 'url';
 import fetch, { Headers } from 'node-fetch';
 import ua from '../ua';
-import { LoginParams } from './types';
+import Client from '../client';
 import { hostname } from 'os';
 import { getTitleName } from '../pkg-name';
 
 export default async function verify(
+  client: Client,
   email: string,
   verificationToken: string,
   provider: string,
-  { authConfig, apiUrl, ssoUserId }: LoginParams
+  ssoUserId?: string
 ): Promise<string> {
+  const { authConfig, apiUrl } = client;
+
   const url = new URL('/registration/verify', apiUrl);
   url.searchParams.set('email', email);
   url.searchParams.set('token', verificationToken);
