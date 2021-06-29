@@ -12,6 +12,7 @@ import { getCommandName, getPkgName } from '../util/pkg-name';
 import getGlobalPathConfig from '../util/config/global-path';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
 import Client from '../util/client';
+import { LoginResult } from '../util/login/types';
 
 const help = () => {
   console.log(`
@@ -66,7 +67,7 @@ export default async function login(client: Client): Promise<number> {
 
   const input = argv._[1];
 
-  let result: number | string = 1;
+  let result: LoginResult = 1;
 
   if (input) {
     // Email or Team slug was provided via command line
@@ -85,12 +86,20 @@ export default async function login(client: Client): Promise<number> {
     return result;
   }
 
+  // If the token was upgraded (not a new login), then don't modify
+  // the current scope.
+  if (!client.authConfig.token) {
+    if (result.teamId) {
+      // SSO login, so set the current scope to the appropriate Team
+      client.config.currentTeam = result.teamId;
+    } else {
+      delete client.config.currentTeam;
+    }
+  }
+
   // When `result` is a string it's the user's authentication token.
   // It needs to be saved to the configuration file.
-  client.authConfig.token = result;
-
-  // New user, so we can't keep the team
-  delete client.config.currentTeam;
+  client.authConfig.token = result.token;
 
   writeToAuthConfigFile(client.authConfig);
   writeToConfigFile(client.config);

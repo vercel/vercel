@@ -3,6 +3,13 @@ export interface LoginData {
   securityCode: string;
 }
 
+export type LoginResult = number | LoginResultSuccess;
+
+export interface LoginResultSuccess {
+  token: string;
+  teamId?: string | null;
+}
+
 export interface VerifyData {
   token: string;
 }

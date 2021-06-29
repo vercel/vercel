@@ -8,13 +8,14 @@ import verify from './verify';
 import highlight from '../output/highlight';
 import link from '../output/link';
 import eraseLines from '../output/erase-lines';
+import { LoginResult } from './types';
 
 export default async function doOauthLogin(
   client: Client,
   url: URL,
   provider: string,
   ssoUserId?: string
-): Promise<number | string> {
+): Promise<LoginResult> {
   const { output } = client;
 
   const server = http.createServer();
@@ -100,6 +101,7 @@ export default async function doOauthLogin(
 
     const email = query.get('email');
     const verificationToken = query.get('token');
+    const teamId = query.get('teamId');
     if (!email || !verificationToken) {
       output.error(
         'Verification token was not provided. Please contact support.'
@@ -118,7 +120,7 @@ export default async function doOauthLogin(
     output.success(
       `${provider} authentication complete for ${highlight(email)}`
     );
-    return token;
+    return { token, teamId };
   } finally {
     server.close();
   }

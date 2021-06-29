@@ -3,7 +3,7 @@ import Client from '../client';
 import error from '../output/error';
 import listInput from '../input/list';
 import { getCommandName } from '../pkg-name';
-import { SAMLError } from './types';
+import { LoginResult, SAMLError } from './types';
 import doSsoLogin from './sso';
 import doEmailLogin from './email';
 import doGithubLogin from './github';
@@ -15,7 +15,7 @@ export default async function prompt(
   error?: Pick<SAMLError, 'teamId'>,
   ssoUserId?: string
 ) {
-  let result: number | string = 1;
+  let result: LoginResult = 1;
 
   const choices = [
     { name: 'Continue with GitHub', value: 'github', short: 'github' },
