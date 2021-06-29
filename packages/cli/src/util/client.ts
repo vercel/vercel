@@ -90,8 +90,10 @@ export default class Client extends EventEmitter {
     }
 
     const headers = new Headers(opts.headers);
-    headers.set('authorization', `Bearer ${this.authConfig.token}`);
     headers.set('user-agent', ua);
+    if (this.authConfig.token) {
+      headers.set('authorization', `Bearer ${this.authConfig.token}`);
+    }
 
     let body;
     if (isJSONObject(opts.body)) {

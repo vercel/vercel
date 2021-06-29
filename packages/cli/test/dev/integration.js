@@ -1733,6 +1733,25 @@ test(
 );
 
 test(
+  '[vercel dev] 40-mixed-modules',
+  testFixtureStdio('40-mixed-modules', async testPath => {
+    await testPath(200, '/entrypoint.js', 'mixed-modules:js');
+    await testPath(200, '/entrypoint.mjs', 'mixed-modules:mjs');
+    await testPath(200, '/entrypoint.ts', 'mixed-modules:ts');
+    await testPath(
+      200,
+      '/type-module-package-json/auto.js',
+      'mixed-modules:auto'
+    );
+    await testPath(
+      200,
+      '/type-module-package-json/nested/also.js',
+      'mixed-modules:also'
+    );
+  })
+);
+
+test(
   '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
   testFixtureStdio('python-flask', async testPath => {
     const name = 'Alice';

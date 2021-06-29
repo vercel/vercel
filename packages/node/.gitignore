@@ -1,5 +1,3 @@
 /dist
-/src/bridge.ts
-/src/launcher.ts
 /test/fixtures/**/types.d.ts
 /test/fixtures/11-symlinks/symlink

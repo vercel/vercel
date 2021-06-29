@@ -15,21 +15,21 @@
     "lerna": "3.16.4"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "2.0.0",
-    "@typescript-eslint/parser": "2.0.0",
+    "@typescript-eslint/eslint-plugin": "4.28.0",
+    "@typescript-eslint/parser": "4.28.0",
     "@vercel/ncc": "0.24.0",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
     "cheerio": "1.0.0-rc.3",
-    "eslint": "6.2.2",
-    "eslint-config-prettier": "6.1.0",
-    "eslint-plugin-jest": "23.8.2",
+    "eslint": "7.29.0",
+    "eslint-config-prettier": "8.3.0",
+    "eslint-plugin-jest": "24.3.6",
     "husky": "6.0.0",
     "json5": "2.1.1",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.1",
     "npm-package-arg": "6.1.0",
-    "prettier": "2.0.5"
+    "prettier": "2.3.1"
   },
   "scripts": {
     "lerna": "lerna",
@@ -79,8 +79,7 @@
       "eslint:recommended",
       "plugin:@typescript-eslint/eslint-recommended",
       "plugin:@typescript-eslint/recommended",
-      "prettier",
-      "prettier/@typescript-eslint"
+      "prettier"
     ],
     "env": {
       "node": true,
@@ -89,26 +88,19 @@
     },
     "rules": {
       "require-atomic-updates": 0,
-      "@typescript-eslint/ban-ts-ignore": 0,
+      "@typescript-eslint/ban-ts-comment": 0,
       "@typescript-eslint/camelcase": 0,
-      "@typescript-eslint/explicit-function-return-type": 0,
+      "@typescript-eslint/explicit-module-boundary-types": 0,
       "@typescript-eslint/no-empty-function": 0,
       "@typescript-eslint/no-explicit-any": 0,
       "@typescript-eslint/no-non-null-assertion": 0,
       "@typescript-eslint/no-unused-vars": 2,
       "@typescript-eslint/no-use-before-define": 0,
+      "@typescript-eslint/no-var-requires": 0,
       "jest/no-disabled-tests": 2,
       "jest/no-focused-tests": 2
     },
     "overrides": [
-      {
-        "files": [
-          "**/*.js"
-        ],
-        "rules": {
-          "@typescript-eslint/no-var-requires": "off"
-        }
-      },
       {
         "files": [
           "packages/cli/**/*"
@@ -125,8 +117,7 @@
           "@typescript-eslint/member-delimiter-style": 0,
           "@typescript-eslint/no-empty-function": 0,
           "@typescript-eslint/no-explicit-any": 0,
-          "@typescript-eslint/no-inferrable-types": 0,
-          "@typescript-eslint/no-var-requires": 0
+          "@typescript-eslint/no-inferrable-types": 0
         }
       },
       {

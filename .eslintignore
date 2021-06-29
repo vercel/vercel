@@ -1,14 +1,7 @@
 node_modules
 dist
 examples
-
-# gatsby-plugin-now
-packages/gatsby-plugin-now/test/fixtures
-
-# build-utils
 packages/build-utils/test/fixtures
-
-# cli
 packages/cli/@types
 packages/cli/download
 packages/cli/dist
@@ -17,24 +10,9 @@ packages/cli/test/dev/fixtures
 packages/cli/bin
 packages/cli/link
 packages/cli/src/util/dev/templates/*.ts
-
-# client
 packages/client/tests/fixtures
 packages/client/lib
-
-# next
-packages/next/test/fixtures
-
-# node
 packages/node/src/bridge.ts
 packages/node/test/fixtures
-
-# node-bridge
-packages/node-bridge/bridge.*
-
-# static-build
-packages/static-build/test/fixtures
-packages/static-build/test/build-fixtures
-
-# redwood
-packages/redwood/test/fixtures
+packages/node-bridge/bridge.js
+packages/node-bridge/launcher.js

@@ -1,14 +1,13 @@
 {
   "compilerOptions": {
-    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": true,
     "lib": ["esnext"],
-    "target": "esnext",
-    "module": "commonjs",
-    "outDir": ".",
+    "noEmit": true,
+    "noImplicitReturns": true,
     "strict": true,
-    "sourceMap": true,
     "declaration": true
   },
-  "include": ["src/**/*"],
+  "include": ["bridge.js", "launcher.js"],
   "exclude": ["node_modules"]
 }

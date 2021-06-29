@@ -4,20 +4,21 @@ import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';
 import verify from './verify';
 import executeLogin from './login';
-import { LoginParams } from './types';
+import Client from '../client';
 
 export default async function doEmailLogin(
-  params: LoginParams,
-  email: string
+  client: Client,
+  email: string,
+  ssoUserId?: string
 ): Promise<number | string> {
   let securityCode;
   let verificationToken;
-  const { apiUrl, output } = params;
+  const { output } = client;
 
   output.spinner('Sending you an email');
 
   try {
-    const data = await executeLogin(apiUrl, email);
+    const data = await executeLogin(client, email);
     verificationToken = data.token;
     securityCode = data.securityCode;
   } catch (err) {
@@ -42,9 +43,15 @@ export default async function doEmailLogin(
   while (!token) {
     try {
       await sleep(ms('1s'));
-      token = await verify(email, verificationToken, 'Email', params);
+      token = await verify(
+        client,
+        email,
+        verificationToken,
+        'Email',
+        ssoUserId
+      );
     } catch (err) {
-      if (err.message !== 'Confirmation incomplete') {
+      if (err.serverMessage !== 'Confirmation incomplete') {
         output.error(err.message);
         return 1;
       }

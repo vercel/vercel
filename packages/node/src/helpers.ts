@@ -6,7 +6,7 @@ import {
   VercelRequestBody,
 } from './types';
 import { Server } from 'http';
-import { Bridge } from './bridge';
+import type { Bridge } from '@vercel/node-bridge/bridge';
 
 function getBodyParser(req: VercelRequest, body: Buffer) {
   return function parseBody(): VercelRequestBody {

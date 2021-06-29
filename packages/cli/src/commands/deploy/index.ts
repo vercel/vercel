@@ -1,7 +1,6 @@
 import fs from 'fs-extra';
 import { resolve, basename } from 'path';
 import { fileNameSymbol } from '@vercel/client';
-import getScope from '../../util/get-scope';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
@@ -12,12 +11,8 @@ import deploy from './latest';
 import Client from '../../util/client';
 
 export default async (client: Client) => {
-  const {
-    output,
-    config: { currentTeam },
-  } = client;
+  const { output } = client;
 
-  let contextName = currentTeam || 'current user';
   let argv = null;
 
   try {
@@ -52,12 +47,16 @@ export default async (client: Client) => {
     return 1;
   }
 
+  if (argv['--help']) {
+    output.print(help());
+    return 2;
+  }
+
   if (argv._[0] === 'deploy') {
     argv._.shift();
   }
 
-  let paths = [];
-
+  let paths;
   if (argv._.length > 0) {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
@@ -74,33 +73,15 @@ export default async (client: Client) => {
     }
   }
 
-  const stats: any = {};
-
-  if (argv['--help']) {
-    output.print(help());
-    return 2;
-  }
-
   for (const path of paths) {
     try {
-      stats[path] = await fs.lstat(path);
+      await fs.stat(path);
     } catch (err) {
       output.error(
         `The specified file or directory "${basename(path)}" does not exist.`
       );
       return 1;
     }
-  }
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
   }
 
   if (localConfig) {
@@ -127,7 +108,7 @@ export default async (client: Client) => {
     }
   }
 
-  return deploy(client, contextName, output, stats, localConfig, {
+  return deploy(client, paths, localConfig, {
     '--force': Boolean,
     '--with-cache': Boolean,
     '--public': Boolean,

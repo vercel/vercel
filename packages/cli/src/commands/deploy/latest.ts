@@ -222,9 +222,7 @@ const parseEnv = (env: any | object) => {
 
 export default async function main(
   client: Client,
-  contextName: string,
-  output: Output,
-  stats: any,
+  paths: string[],
   localConfig: VercelConfig,
   args: any
 ) {
@@ -239,10 +237,10 @@ export default async function main(
 
   const {
     apiUrl,
+    output,
     authConfig: { token },
   } = client;
   const { log, debug, error, warn } = output;
-  const paths = Object.keys(stats);
   const debugEnabled = argv['--debug'];
 
   const { isTTY } = process.stdout;
@@ -353,6 +351,16 @@ export default async function main(
       status = 'linked';
     }
   }
+
+  // At this point `org` should be populated
+  if (!org) {
+    throw new Error(`"org" is not defined`);
+  }
+
+  // Set the `contextName` and `currentTeam` as specified by the
+  // Project Settings, so that API calls happen with the proper scope
+  const contextName = org.slug;
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
   // and upload the entire directory.
@@ -560,7 +568,8 @@ export default async function main(
       }
 
       if (typeof sourceFilesOutsideRootDirectory !== 'undefined') {
-        projectSettings.sourceFilesOutsideRootDirectory = sourceFilesOutsideRootDirectory;
+        projectSettings.sourceFilesOutsideRootDirectory =
+          sourceFilesOutsideRootDirectory;
       }
 
       const settings = await editProjectSettings(

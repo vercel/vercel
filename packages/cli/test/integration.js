@@ -157,9 +157,10 @@ function mockLoginApi(req, res) {
   let { pathname = '/', query = {} } = parseUrl(url, true);
   console.log(`[mock-login-server] ${method} ${pathname}`);
   const securityCode = 'Bears Beets Battlestar Galactica';
+  res.setHeader('content-type', 'application/json');
   if (
     method === 'POST' &&
-    pathname === '/now/registration' &&
+    pathname === '/registration' &&
     query.mode === 'login'
   ) {
     res.end(JSON.stringify({ token, securityCode }));
@@ -2169,10 +2170,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const url = `https://${name}.user.vercel.app`;
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      firstDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([firstDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2189,10 +2191,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      secondDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([secondDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2211,10 +2214,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      firstDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([firstDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
