@@ -13,7 +13,6 @@ import getDomainPrice from '../../util/domains/get-domain-price';
 import { getCommandName } from '../../util/pkg-name';
 import { getDomainConfig } from '../../util/domains/get-domain-config';
 import code from '../../util/output/code';
-import wait from '../../util/output/wait';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 
 type Options = {};
@@ -59,7 +58,7 @@ export default async function inspect(
 
   output.debug(`Fetching domain info`);
 
-  const cancelWait = wait(
+  output.spinner(
     `Fetching Domain ${domainName} under ${chalk.bold(contextName)}`
   );
 
@@ -68,9 +67,6 @@ export default async function inspect(
     client,
     contextName,
     domainName,
-    cancelWait,
-  }).finally(() => {
-    cancelWait();
   });
 
   if (typeof information === 'number') {
@@ -207,13 +203,11 @@ async function fetchInformation({
   client,
   contextName,
   domainName,
-  cancelWait,
 }: {
   output: Output;
   client: Client;
   contextName: string;
   domainName: string;
-  cancelWait: () => void;
 }) {
   const [domain, renewalPrice] = await Promise.all([
     getDomainByName(client, contextName, domainName, { ignoreWait: true }),
@@ -223,13 +217,11 @@ async function fetchInformation({
   ]);
 
   if (domain instanceof DomainNotFound) {
-    cancelWait();
     output.prettyError(domain);
     return 1;
   }
 
   if (domain instanceof DomainPermissionDenied) {
-    cancelWait();
     output.prettyError(domain);
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
@@ -238,7 +230,6 @@ async function fetchInformation({
   const projects = await findProjectsForDomain(client, domainName);
 
   if (projects instanceof Error) {
-    cancelWait();
     output.prettyError(projects);
     return 1;
   }

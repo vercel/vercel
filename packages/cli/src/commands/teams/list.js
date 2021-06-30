@@ -1,11 +1,3 @@
-// Packages
-import chalk from 'chalk';
-
-// Utilities
-import wait from '../../util/output/wait';
-
-import info from '../../util/output/info';
-import error from '../../util/output/error';
 import chars from '../../util/output/chars';
 import table from '../../util/output/table';
 import getUser from '../../util/get-user.ts';
@@ -23,7 +15,7 @@ export default async function list(client, argv, teams) {
     return 1;
   }
 
-  const stopSpinner = wait('Fetching teams');
+  output.spinner('Fetching teams');
   const { teams: list, pagination } = await teams.ls({
     next,
     apiVersion: 2,
@@ -31,22 +23,18 @@ export default async function list(client, argv, teams) {
   let { currentTeam } = config;
   const accountIsCurrent = !currentTeam;
 
-  stopSpinner();
-
-  const stopUserSpinner = wait('Fetching user information');
+  output.spinner('Fetching user information');
   let user;
   try {
     user = await getUser(client);
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      console.error(error(err.message));
+      output.error(err.message);
       return 1;
     }
 
     throw err;
   }
-
-  stopUserSpinner();
 
   if (accountIsCurrent) {
     currentTeam = {
@@ -79,12 +67,12 @@ export default async function list(client, argv, teams) {
   const count = teamList.length;
   if (!count) {
     // Maybe should not happen
-    console.error(error(`No team found`));
+    output.error(`No teams found`);
     return 1;
   }
 
-  info(`${chalk.bold(count)} team${count > 1 ? 's' : ''} found`);
-  console.log();
+  output.stopSpinner();
+  console.log(); // empty line
 
   table(
     ['', 'id', 'email / name'],
