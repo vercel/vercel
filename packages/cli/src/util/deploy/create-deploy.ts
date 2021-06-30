@@ -3,17 +3,21 @@ import * as ERRORS_TS from '../errors-ts';
 import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
 import mapCertError from '../certs/map-cert-error';
+import { Org } from '../../types';
+import Now from '..';
+import Client from '../client';
+import { DeploymentError } from '../../../../client/dist';
 
 export default async function createDeploy(
-  output,
-  now,
-  contextName,
-  paths,
-  createArgs,
-  org,
-  isSettingUpProject,
-  cwd
-) {
+  client: Client,
+  now: Now,
+  contextName: string,
+  paths: string[],
+  createArgs: any,
+  org: Org | null,
+  isSettingUpProject: boolean,
+  cwd?: string
+): Promise<any | DeploymentError> {
   try {
     return await now.create(paths, createArgs, org, isSettingUpProject, cwd);
   } catch (error) {
@@ -83,16 +87,17 @@ export default async function createDeploy(
     // If the cert is missing we try to generate a new one and the retry
     if (error.code === 'cert_missing') {
       const result = await generateCertForDeploy(
-        output,
-        now,
+        client,
         contextName,
         error.value
       );
+
       if (result instanceof NowError) {
         return result;
       }
+
       return createDeploy(
-        output,
+        client,
         now,
         contextName,
         paths,
