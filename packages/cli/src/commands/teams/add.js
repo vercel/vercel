@@ -1,12 +1,9 @@
 import chalk from 'chalk';
 import stamp from '../../util/output/stamp.ts';
 import info from '../../util/output/info';
-import error from '../../util/output/error';
-import wait from '../../util/output/wait';
 import rightPad from '../../util/output/right-pad';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
-import success from '../../util/output/success';
 import note from '../../util/output/note';
 import textInput from '../../util/input/text';
 import invite from './invite';
@@ -40,14 +37,12 @@ export default async function add(client, teams) {
   let slug;
   let team;
   let elapsed;
-  let stopSpinner;
+  const { output } = client;
 
-  console.log(
-    info(
-      `Pick a team identifier for its url (e.g.: ${chalk.cyan(
-        '`vercel.com/acme`'
-      )})`
-    )
+  output.log(
+    `Pick a team identifier for its url (e.g.: ${chalk.cyan(
+      '`vercel.com/acme`'
+    )})`
   );
   do {
     try {
@@ -61,7 +56,7 @@ export default async function add(client, teams) {
       });
     } catch (err) {
       if (err.message === 'USER_ABORT') {
-        console.log(info('Aborted'));
+        output.log('Aborted');
         return 0;
       }
 
@@ -69,26 +64,26 @@ export default async function add(client, teams) {
     }
 
     elapsed = stamp();
-    stopSpinner = wait(teamUrlPrefix + slug);
+    output.spinner(teamUrlPrefix + slug);
 
     let res;
     try {
       // eslint-disable-next-line no-await-in-loop
       res = await teams.create({ slug });
-      stopSpinner();
       team = res;
     } catch (err) {
-      stopSpinner();
+      output.stopSpinner();
       process.stdout.write(eraseLines(2));
-      console.error(error(err.message));
+      output.error(err.message);
     }
   } while (!team);
 
+  output.stopSpinner();
   process.stdout.write(eraseLines(2));
 
-  console.log(success(`Team created ${elapsed()}`));
-  console.log(`${chalk.cyan(`${chars.tick} `) + teamUrlPrefix + slug}\n`);
-  console.log(info('Pick a display name for your team'));
+  output.success(`Team created ${elapsed()}`);
+  output.log(`${chalk.cyan(`${chars.tick} `) + teamUrlPrefix + slug}\n`);
+  output.log('Pick a display name for your team');
 
   let name;
 
@@ -107,17 +102,16 @@ export default async function add(client, teams) {
   }
 
   elapsed = stamp();
-  stopSpinner = wait(teamNamePrefix + name);
+  output.spinner(teamNamePrefix + name);
 
   const res = await teams.edit({ id: team.id, name });
 
-  stopSpinner();
-
+  output.stopSpinner();
   process.stdout.write(eraseLines(2));
 
   if (res.error) {
-    console.error(error(res.error.message));
-    console.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`);
+    output.error(res.error.message);
+    output.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`);
 
     return 1;
     // TODO: maybe we want to ask the user to retry? not sure if
@@ -126,10 +120,10 @@ export default async function add(client, teams) {
 
   team = Object.assign(team, res);
 
-  console.log(success(`Team name saved ${elapsed()}`));
-  console.log(`${chalk.cyan(`${chars.tick} `) + teamNamePrefix + team.name}\n`);
+  output.success(`Team name saved ${elapsed()}`);
+  output.log(`${chalk.cyan(`${chars.tick} `) + teamNamePrefix + team.name}\n`);
 
-  stopSpinner = wait('Saving');
+  output.spinner('Saving');
 
   // Update config file
   const configCopy = Object.assign({}, client.config);
@@ -142,7 +136,7 @@ export default async function add(client, teams) {
 
   writeToConfigFile(configCopy);
 
-  stopSpinner();
+  output.stopSpinner();
 
   await invite(client, { _: [] }, teams, {
     introMsg: 'Invite your teammates! When done, press enter on an empty field',

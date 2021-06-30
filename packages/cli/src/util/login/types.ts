@@ -1,16 +1,17 @@
-import { AuthConfig } from '../../types';
-import { Output } from '../output';
-
-export interface LoginParams {
-  authConfig: AuthConfig;
-  apiUrl: string;
-  output: Output;
-  ssoUserId?: string;
-}
-
 export interface LoginData {
   token: string;
   securityCode: string;
+}
+
+export type LoginResult = number | LoginResultSuccess;
+
+export interface LoginResultSuccess {
+  token: string;
+  teamId?: string | null;
+}
+
+export interface VerifyData {
+  token: string;
 }
 
 export interface SAMLError {
