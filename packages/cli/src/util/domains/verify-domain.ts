@@ -3,22 +3,19 @@ import retry from 'async-retry';
 import { Domain } from '../../types';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
-import wait from '../output/wait';
 
 export default async function verifyDomain(
   client: Client,
   domainName: string,
   contextName: string
 ) {
-  const cancelWait = wait(
+  client.output.spinner(
     `Verifying domain ${domainName} under ${chalk.bold(contextName)}`
   );
   try {
     const { domain } = await performVerifyDomain(client, domainName);
-    cancelWait();
     return domain;
   } catch (error) {
-    cancelWait();
     if (error.code === 'verification_failed') {
       return new ERRORS.DomainVerificationFailed({
         purchased: false,

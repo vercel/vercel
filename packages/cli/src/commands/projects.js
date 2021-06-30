@@ -8,7 +8,6 @@ import exit from '../util/exit';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 import getCommandFlags from '../util/get-command-flags';
-import wait from '../util/output/wait';
 import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const e = encodeURIComponent;
@@ -103,6 +102,7 @@ export default async client => {
 };
 
 async function run({ client, contextName }) {
+  const { output } = client;
   const args = argv._.slice(1);
   const start = Date.now();
 
@@ -118,7 +118,7 @@ async function run({ client, contextName }) {
       return exit(2);
     }
 
-    const stopSpinner = wait(`Fetching projects in ${chalk.bold(contextName)}`);
+    output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
     let projectsUrl = '/v4/projects/?limit=20';
 
@@ -131,7 +131,7 @@ async function run({ client, contextName }) {
       method: 'GET',
     });
 
-    stopSpinner();
+    output.stopSpinner();
 
     const elapsed = ms(new Date() - start);
 

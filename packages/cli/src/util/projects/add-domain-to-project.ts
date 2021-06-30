@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import Client from '../client';
-import wait from '../output/wait';
 import { ProjectAliasTarget } from '../../types';
 
 export async function addDomainToProject(
@@ -8,7 +7,7 @@ export async function addDomainToProject(
   projectNameOrId: string,
   domain: string
 ) {
-  const cancelWait = wait(
+  client.output.spinner(
     `Adding domain ${domain} to project ${chalk.bold(projectNameOrId)}`
   );
   try {
@@ -40,7 +39,5 @@ export async function addDomainToProject(
     }
 
     throw err;
-  } finally {
-    cancelWait();
   }
 }
