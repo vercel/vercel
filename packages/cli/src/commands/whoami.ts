@@ -1,9 +1,10 @@
 import chalk from 'chalk';
 import logo from '../util/output/logo';
-import getScope from '../util/get-scope.ts';
-import { getPkgName } from '../util/pkg-name.ts';
-import getArgs from '../util/get-args.ts';
-import handleError from '../util/handle-error.ts';
+import getScope from '../util/get-scope';
+import { getPkgName } from '../util/pkg-name';
+import getArgs from '../util/get-args';
+import handleError from '../util/handle-error';
+import Client from '../util/client';
 
 const help = () => {
   console.log(`
@@ -31,7 +32,7 @@ const help = () => {
 `);
 };
 
-export default async client => {
+export default async (client: Client) => {
   const { output } = client;
   let argv;
   try {
