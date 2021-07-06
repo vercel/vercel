@@ -65,6 +65,12 @@ export interface Deployment {
   alias: string[];
   aliasAssigned: boolean;
   aliasError: string | null;
+  aliasWarning?: {
+    code: string;
+    message: string;
+    link?: string;
+    action?: string;
+  };
 }
 
 export interface DeploymentBuild {

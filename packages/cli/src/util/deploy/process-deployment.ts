@@ -98,7 +98,20 @@ export default async function processDeployment({
       requestBody,
       nowConfig
     )) {
-      if (['tip', 'notice', 'warning'].includes(event.type)) {
+      if (event.type === 'warning') {
+        if (typeof event.payload.message === 'string') {
+          indications.push(event);
+        } else {
+          indications.push({
+            type: event.type,
+            payload: event.payload.message,
+            link: event.payload.link,
+            action: event.payload.action,
+          });
+        }
+      }
+
+      if (['tip', 'notice'].includes(event.type)) {
         indications.push(event);
       }
 

@@ -18,7 +18,7 @@ import {
 
 interface DeploymentStatus {
   type: DeploymentEventType;
-  payload: Deployment | DeploymentBuild[];
+  payload: Deployment | DeploymentBuild[] | Deployment['aliasWarning'];
 }
 
 /* eslint-disable */
@@ -95,7 +95,7 @@ export async function* checkDeploymentStatus(
       ) {
         yield {
           type: 'warning',
-          payload: deploymentUpdate.aliasWarning.message,
+          payload: deploymentUpdate.aliasWarning,
         };
       }
 
