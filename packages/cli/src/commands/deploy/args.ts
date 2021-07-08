@@ -16,7 +16,6 @@ export const help = () => `
       env                              Manages the Environment Variables for your current Project
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
-      projects                         Show all projects in the selected team/user
       inspect              [id]        Displays information related to a deployment
       link                             Link local directory to a Vercel Project
       login                [email]     Logs into your account or creates a new one
@@ -28,6 +27,7 @@ export const help = () => `
 
       rm | remove          [id]        Removes a deployment
       domains              [name]      Manages your domain names
+      proejcts                         Manages your Projects
       dns                  [name]      Manages your DNS records
       certs                [cmd]       Manages your SSL certificates
       secrets              [name]      Manages your global Secrets, for use in Environment Variables
