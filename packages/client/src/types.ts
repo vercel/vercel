@@ -102,6 +102,7 @@ export const fileNameSymbol = Symbol('fileName');
 export interface VercelConfig {
   [fileNameSymbol]?: string;
   name?: string;
+  meta?: string[];
   version?: number;
   public?: boolean;
   env?: Dictionary<string>;

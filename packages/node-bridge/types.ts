@@ -35,4 +35,5 @@ export type LauncherConfiguration = {
   shouldAddHelpers?: boolean;
   shouldAddSourcemapSupport?: boolean;
   awsLambdaHandler?: string;
+  useRequire?: boolean;
 };

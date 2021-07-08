@@ -3,13 +3,12 @@ import bytes from 'bytes';
 import { join } from 'path';
 import { write as copy } from 'clipboardy';
 import chalk from 'chalk';
-import { fileNameSymbol } from '@vercel/client';
+import { Dictionary, fileNameSymbol, VercelConfig } from '@vercel/client';
 import { getPrettyError } from '@vercel/build-utils';
 import { handleError } from '../../util/error';
-import getArgs from '../../util/get-args';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
-import stamp from '../../util/output/stamp.ts';
+import stamp from '../../util/output/stamp';
 import createDeploy from '../../util/deploy/create-deploy';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import parseMeta from '../../util/parse-meta';
@@ -53,10 +52,15 @@ import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
 import { readLocalConfig } from '../../util/config/files';
-import { getCommandName } from '../../util/pkg-name.ts';
-import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url.ts';
+import { getCommandName } from '../../util/pkg-name';
+import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url';
+import { Output } from '../../util/output';
+import Client from '../../util/client';
 
-const addProcessEnv = async (log, env) => {
+const addProcessEnv = async (
+  log: (str: string) => void,
+  env: typeof process.env
+) => {
   let val;
 
   for (const key of Object.keys(env)) {
@@ -85,8 +89,8 @@ const addProcessEnv = async (log, env) => {
 };
 
 const printDeploymentStatus = async (
-  output,
-  client,
+  output: Output,
+  client: Client,
   {
     readyState,
     alias: aliasList,
@@ -94,10 +98,17 @@ const printDeploymentStatus = async (
     target,
     indications,
     url: deploymentUrl,
+  }: {
+    readyState: string;
+    alias: string[];
+    aliasError: Error;
+    target: string;
+    indications: any;
+    url: string;
   },
-  deployStamp,
-  isClipboardEnabled,
-  isFile
+  deployStamp: () => string,
+  isClipboardEnabled: boolean,
+  isFile: boolean
 ) => {
   const isProdDeployment = target === 'production';
 
@@ -116,8 +127,8 @@ const printDeploymentStatus = async (
     );
   } else {
     // print preview/production url
-    let previewUrl;
-    let isWildcard;
+    let previewUrl: string;
+    let isWildcard: boolean;
     if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
       const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
       if (previewUrlInfo) {
@@ -136,11 +147,12 @@ const printDeploymentStatus = async (
     // copy to clipboard
     let isCopiedToClipboard = false;
     if (isClipboardEnabled && !isWildcard) {
-      await copy(previewUrl)
-        .then(() => {
-          isCopiedToClipboard = true;
-        })
-        .catch(error => output.debug(`Error copying to clipboard: ${error}`));
+      try {
+        await copy(previewUrl);
+        isCopiedToClipboard = true;
+      } catch (err) {
+        output.debug(`Error copyind to clipboard: ${err}`);
+      }
     }
 
     output.print(
@@ -176,7 +188,7 @@ const printDeploymentStatus = async (
 };
 
 // Converts `env` Arrays, Strings and Objects into env Objects.
-const parseEnv = env => {
+const parseEnv = (env?: string[] | Dictionary<string>) => {
   if (!env) {
     return {};
   }
@@ -201,22 +213,19 @@ const parseEnv = env => {
 
       o[key] = value;
       return o;
-    }, {});
+    }, {} as Dictionary<string | undefined>);
   }
+
   // assume it's already an Object
   return env;
 };
 
-export default async function main(client, paths, localConfig, args) {
-  let argv = null;
-
-  try {
-    argv = getArgs(client.argv.slice(2), args);
-  } catch (error) {
-    handleError(error);
-    return 1;
-  }
-
+export default async function main(
+  client: Client,
+  paths: string[],
+  localConfig: VercelConfig | null,
+  argv: any
+) {
   const {
     apiUrl,
     output,
@@ -258,6 +267,7 @@ export default async function main(client, paths, localConfig, args) {
   }
 
   let { org, project, status } = link;
+
   let newProjectName = null;
   let rootDirectory = project ? project.rootDirectory : null;
   let sourceFilesOutsideRootDirectory = true;
@@ -357,7 +367,7 @@ export default async function main(client, paths, localConfig, args) {
       path,
       sourcePath,
       project
-        ? `To change your Project Settings, go to https://vercel.com/${org.slug}/${project.name}/settings`
+        ? `To change your Project Settings, go to https://vercel.com/${org?.slug}/${project.name}/settings`
         : ''
     )) === false
   ) {
@@ -376,7 +386,7 @@ export default async function main(client, paths, localConfig, args) {
       output.print(
         `${prependEmoji(
           `The ${highlight(
-            localConfig[fileNameSymbol]
+            localConfig[fileNameSymbol]!
           )} file should be inside of the provided root directory.`,
           emoji('warning')
         )}\n`
@@ -390,7 +400,7 @@ export default async function main(client, paths, localConfig, args) {
     output.print(
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
-          localConfig[fileNameSymbol]
+          localConfig[fileNameSymbol]!
         )} is deprecated (https://vercel.link/name-prop)`,
         emoji('warning')
       )}\n`
@@ -398,7 +408,7 @@ export default async function main(client, paths, localConfig, args) {
   }
 
   // build `env`
-  const isObject = item =>
+  const isObject = (item: any) =>
     Object.prototype.toString.call(item) === '[object Object]';
 
   // This validation needs to happen on the client side because
@@ -407,7 +417,7 @@ export default async function main(client, paths, localConfig, args) {
   if (typeof localConfig.env !== 'undefined' && !isObject(localConfig.env)) {
     error(
       `The ${code('env')} property in ${highlight(
-        localConfig[fileNameSymbol]
+        localConfig[fileNameSymbol]!
       )} needs to be an object`
     );
     return 1;
@@ -417,7 +427,7 @@ export default async function main(client, paths, localConfig, args) {
     if (!isObject(localConfig.build)) {
       error(
         `The ${code('build')} property in ${highlight(
-          localConfig[fileNameSymbol]
+          localConfig[fileNameSymbol]!
         )} needs to be an object`
       );
       return 1;
@@ -429,7 +439,7 @@ export default async function main(client, paths, localConfig, args) {
     ) {
       error(
         `The ${code('build.env')} property in ${highlight(
-          localConfig[fileNameSymbol]
+          localConfig[fileNameSymbol]!
         )} needs to be an object`
       );
       return 1;
@@ -469,7 +479,7 @@ export default async function main(client, paths, localConfig, args) {
   // build `regions`
   const regionFlag = (argv['--regions'] || '')
     .split(',')
-    .map(s => s.trim())
+    .map((s: string) => s.trim())
     .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
 
@@ -500,13 +510,13 @@ export default async function main(client, paths, localConfig, args) {
     target = 'production';
   }
 
-  const currentTeam = org.type === 'team' ? org.id : undefined;
+  const currentTeam = org?.type === 'team' ? org.id : undefined;
   const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
   let deployStamp = stamp();
   let deployment = null;
 
   try {
-    const createArgs = {
+    const createArgs: any = {
       name: project ? project.name : newProjectName,
       env: deploymentEnv,
       build: { env: deploymentBuildEnv },
@@ -530,7 +540,7 @@ export default async function main(client, paths, localConfig, args) {
     }
 
     deployment = await createDeploy(
-      output,
+      client,
       now,
       contextName,
       [sourcePath],
@@ -540,18 +550,15 @@ export default async function main(client, paths, localConfig, args) {
       path
     );
 
-    if (
-      deployment instanceof Error &&
-      deployment.code === 'missing_project_settings'
-    ) {
+    if (deployment.code === 'missing_project_settings') {
       let { projectSettings, framework } = deployment;
-
       if (rootDirectory) {
         projectSettings.rootDirectory = rootDirectory;
       }
 
       if (typeof sourceFilesOutsideRootDirectory !== 'undefined') {
-        projectSettings.sourceFilesOutsideRootDirectory = sourceFilesOutsideRootDirectory;
+        projectSettings.sourceFilesOutsideRootDirectory =
+          sourceFilesOutsideRootDirectory;
       }
 
       const settings = await editProjectSettings(
@@ -566,7 +573,7 @@ export default async function main(client, paths, localConfig, args) {
       deployStamp = stamp();
       createArgs.deployStamp = deployStamp;
       deployment = await createDeploy(
-        output,
+        client,
         now,
         contextName,
         [sourcePath],
@@ -578,7 +585,7 @@ export default async function main(client, paths, localConfig, args) {
     }
 
     if (deployment instanceof NotDomainOwner) {
-      output.error(deployment);
+      output.error(deployment.message);
       return 1;
     }
 
@@ -586,7 +593,7 @@ export default async function main(client, paths, localConfig, args) {
       output.error(
         deployment.message ||
           'An unexpected error occurred while deploying your project',
-        null,
+        undefined,
         'https://vercel.link/help',
         'Contact Support'
       );
@@ -599,7 +606,7 @@ export default async function main(client, paths, localConfig, args) {
     }
 
     const deploymentResponse = await getDeploymentByIdOrHost(
-      now,
+      client,
       contextName,
       deployment.id,
       'v10'
@@ -679,12 +686,7 @@ export default async function main(client, paths, localConfig, args) {
       output.error(err.message || 'Build failed');
       output.error(
         `Check your logs at https://${now.url}/_logs or run ${getCommandName(
-          `logs ${now.url}`,
-          {
-            // Backticks are interpreted as part of the URL, causing CMD+Click
-            // behavior to fail in editors like VSCode.
-            backticks: false,
-          }
+          `logs ${now.url}`
         )}`
       );
 
@@ -718,7 +720,11 @@ export default async function main(client, paths, localConfig, args) {
   );
 }
 
-function handleCreateDeployError(output, error, localConfig) {
+function handleCreateDeployError(
+  output: Output,
+  error: Error,
+  localConfig: VercelConfig
+) {
   if (error instanceof InvalidDomain) {
     output.error(`The domain ${error.meta.domain} is not valid`);
     return 1;

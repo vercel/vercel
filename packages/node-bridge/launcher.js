@@ -26,6 +26,7 @@ ${
 const entrypointPath = ${JSON.stringify(entrypointPath)};
 const shouldAddHelpers = ${JSON.stringify(shouldAddHelpers)};
 const helpersPath = ${JSON.stringify(helpersPath)};
+const useRequire = false;
 
 const func = (${getVercelLauncher(config).toString()})();
 exports.launcher = func.launcher;`;
@@ -38,6 +39,7 @@ function getVercelLauncher({
   entrypointPath,
   helpersPath,
   shouldAddHelpers = false,
+  useRequire = false,
 }) {
   return function () {
     const bridge = new Bridge();
@@ -58,14 +60,22 @@ function getVercelLauncher({
       process.env.NODE_ENV = region === 'dev1' ? 'development' : 'production';
     }
 
-    import(entrypointPath)
-      .then(listener => {
-        // In some cases we might have nested default props
-        // due to TS => JS
-        for (let i = 0; i < 5; i++) {
-          if (listener.default) listener = listener.default;
-        }
+    async function getListener() {
+      let listener = useRequire
+        ? require(entrypointPath)
+        : await import(entrypointPath);
 
+      // In some cases we might have nested default props
+      // due to TS => JS
+      for (let i = 0; i < 5; i++) {
+        if (listener.default) listener = listener.default;
+      }
+
+      return listener;
+    }
+
+    getListener()
+      .then(listener => {
         if (typeof listener.listen === 'function') {
           Server.prototype.listen = originalListen;
           const server = listener;
@@ -143,9 +153,12 @@ function getAwsLauncher({ entrypointPath, awsLambdaHandler = '' }) {
    * @param {() => void} callback
    */
   function internal(e, context, callback) {
-    const { path, method: httpMethod, body, headers } = JSON.parse(
-      e.body || '{}'
-    );
+    const {
+      path,
+      method: httpMethod,
+      body,
+      headers,
+    } = JSON.parse(e.body || '{}');
     const { query } = parse(path, true);
     /**
      * @type {{[key: string]: string}}

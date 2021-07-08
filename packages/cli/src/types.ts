@@ -270,6 +270,7 @@ export interface Project extends ProjectSettings {
   rootDirectory?: string | null;
   latestDeployments?: Partial<Deployment>[];
   autoExposeSystemEnvs?: boolean;
+  sourceFilesOutsideRootDirectory: boolean;
 }
 
 export interface Org {

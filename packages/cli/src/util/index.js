@@ -20,6 +20,7 @@ export default class Now extends EventEmitter {
   constructor({
     apiUrl,
     token,
+    url = null,
     currentTeam = null,
     forceNew = false,
     withCache = false,
@@ -28,6 +29,7 @@ export default class Now extends EventEmitter {
   }) {
     super();
 
+    this.url = url;
     this._token = token;
     this._debug = debug;
     this._forceNew = forceNew;
