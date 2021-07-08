@@ -1567,17 +1567,17 @@ export const frameworks = [
         placeholder: '`yarn install` or `npm install`',
       },
       buildCommand: {
-        placeholder: '`yarn build` or `npm run build`',
+        placeholder: 'vite build',
       },
       devCommand: {
-        placeholder: '`yarn dev` or `npm run dev`',
+        placeholder: 'vite',
       },
       outputDirectory: {
         value: 'dist',
       },
     },
-    devCommand: 'yarn dev',
-    buildCommand: 'yarn build',
+    devCommand: 'vite',
+    buildCommand: 'vite build',
     getOutputDirName: async () => 'dist',
   },
   {
