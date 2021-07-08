@@ -117,6 +117,7 @@ const printDeploymentStatus = async (
   isClipboardEnabled: boolean,
   isFile: boolean
 ) => {
+  indications = indications || [];
   const isProdDeployment = target === 'production';
 
   if (readyState !== 'READY') {
@@ -174,23 +175,18 @@ const printDeploymentStatus = async (
     );
   }
 
-  const indent = process.stdout.isTTY ? '    ' : ''; // if using emojis
-  const newline = '\n';
-  if (aliasWarning && aliasWarning?.message) {
-    const message =
-      prependEmoji(chalk.dim(aliasWarning.message), emoji('warning')) + newline;
-    let link = '';
-    if (aliasWarning.link)
-      link =
-        indent +
-        chalk.dim(
-          `${aliasWarning.action || 'Learn More'}: ${aliasWarning.link}`
-        ) +
-        newline;
-    output.print(message + link);
+  if (aliasWarning?.message) {
+    indications.push({
+      type: 'warning',
+      payload: aliasWarning.message,
+      link: aliasWarning.link,
+      action: aliasWarning.action,
+    });
   }
 
   if (indications) {
+    const indent = process.stdout.isTTY ? '    ' : ''; // if using emojis
+    const newline = '\n';
     for (let indication of indications) {
       const message =
         prependEmoji(chalk.dim(indication.payload), emoji(indication.type)) +
