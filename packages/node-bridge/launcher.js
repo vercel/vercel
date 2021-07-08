@@ -26,6 +26,7 @@ ${
 const entrypointPath = ${JSON.stringify(entrypointPath)};
 const shouldAddHelpers = ${JSON.stringify(shouldAddHelpers)};
 const helpersPath = ${JSON.stringify(helpersPath)};
+const useRequire = false;
 
 const func = (${getVercelLauncher(config).toString()})();
 exports.launcher = func.launcher;`;
