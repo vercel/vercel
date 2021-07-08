@@ -98,6 +98,7 @@ const printDeploymentStatus = async (
     target,
     indications,
     url: deploymentUrl,
+    aliasWarning,
   }: {
     readyState: string;
     alias: string[];
@@ -105,6 +106,12 @@ const printDeploymentStatus = async (
     target: string;
     indications: any;
     url: string;
+    aliasWarning?: {
+      code: string;
+      message: string;
+      link?: string;
+      action?: string;
+    };
   },
   deployStamp: () => string,
   isClipboardEnabled: boolean,
@@ -167,9 +174,23 @@ const printDeploymentStatus = async (
     );
   }
 
+  const indent = process.stdout.isTTY ? '    ' : ''; // if using emojis
+  const newline = '\n';
+  if (aliasWarning && aliasWarning?.message) {
+    const message =
+      prependEmoji(chalk.dim(aliasWarning.message), emoji('warning')) + newline;
+    let link = '';
+    if (aliasWarning.link)
+      link =
+        indent +
+        chalk.dim(
+          `${aliasWarning.action || 'Learn More'}: ${aliasWarning.link}`
+        ) +
+        newline;
+    output.print(message + link);
+  }
+
   if (indications) {
-    const indent = process.stdout.isTTY ? '    ' : ''; // if using emojis
-    const newline = '\n';
     for (let indication of indications) {
       const message =
         prependEmoji(chalk.dim(indication.payload), emoji(indication.type)) +
