@@ -13,6 +13,8 @@ import { register } from 'ts-node';
 
 type TypescriptModule = typeof import('typescript');
 
+let useRequire = false;
+
 if (!process.env.VERCEL_DEV_IS_ESM) {
   const resolveTypescript = (p: string): string => {
     try {
@@ -79,6 +81,8 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
     project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
     transpileOnly: true,
   });
+
+  useRequire = true;
 }
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
@@ -115,6 +119,7 @@ async function main() {
     entrypointPath: join(process.cwd(), entrypoint!),
     helpersPath: './helpers.js',
     shouldAddHelpers,
+    useRequire,
   });
   bridge = launcher();
 
