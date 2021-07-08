@@ -27,7 +27,7 @@ export const help = () => `
 
       rm | remove          [id]        Removes a deployment
       domains              [name]      Manages your domain names
-      proejcts                         Manages your Projects
+      projects                         Manages your Projects
       dns                  [name]      Manages your DNS records
       certs                [cmd]       Manages your SSL certificates
       secrets              [name]      Manages your global Secrets, for use in Environment Variables
