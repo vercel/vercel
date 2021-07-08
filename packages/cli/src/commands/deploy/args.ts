@@ -16,6 +16,7 @@ export const help = () => `
       env                              Manages the Environment Variables for your current Project
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
+      projects                         Show all projects in the selected team/user
       inspect              [id]        Displays information related to a deployment
       link                             Link local directory to a Vercel Project
       login                [email]     Logs into your account or creates a new one
