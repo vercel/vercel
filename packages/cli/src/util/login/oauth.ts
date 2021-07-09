@@ -166,7 +166,6 @@ async function getVerificationTokenOutOfBand(client: Client, url: URL) {
     'next',
     `http://localhost:3000/notifications/cli-login-oob`
   );
-
   output.log(`Please visit the following URL in your web browser:`);
   output.log(link(url.href));
   output.print('\n');
@@ -174,7 +173,7 @@ async function getVerificationTokenOutOfBand(client: Client, url: URL) {
     `After login is complete, enter the verification code printed in your browser.`
   );
   const verificationToken = await readInput('Verification code:');
-
+  output.print(eraseLines(6));
   return { verificationToken };
 }
 
