@@ -2,15 +2,15 @@ import { URL } from 'url';
 import Client from '../client';
 import { hostname } from 'os';
 import { getTitleName } from '../pkg-name';
-import { VerifyData } from './types';
+import { LoginResultSuccess } from './types';
 
-export default async function verify(
+export default function verify(
   client: Client,
   email: string,
   verificationToken: string,
   provider: string,
   ssoUserId?: string
-): Promise<string> {
+) {
   const url = new URL('/registration/verify', client.apiUrl);
   url.searchParams.set('email', email);
   url.searchParams.set('token', verificationToken);
@@ -29,6 +29,5 @@ export default async function verify(
     url.searchParams.set('ssoUserId', ssoUserId);
   }
 
-  const { token } = await client.fetch<VerifyData>(url.href);
-  return token;
+  return client.fetch<LoginResultSuccess>(url.href);
 }

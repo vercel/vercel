@@ -2,8 +2,9 @@ import http from 'http';
 import open from 'open';
 import { URL } from 'url';
 import listen from 'async-listen';
+import isDocker from 'is-docker';
 import Client from '../client';
-import prompt from './prompt';
+import prompt, { readInput } from './prompt';
 import verify from './verify';
 import highlight from '../output/highlight';
 import link from '../output/link';
@@ -14,14 +15,57 @@ export default async function doOauthLogin(
   client: Client,
   url: URL,
   provider: string,
+  outOfBand = isHeadless(),
   ssoUserId?: string
 ): Promise<LoginResult> {
-  const { output } = client;
+  url.searchParams.set('mode', 'login');
 
+  const getVerificationToken = outOfBand
+    ? getVerificationTokenOutOfBand
+    : getVerificationTokenInBand;
+
+  let result = await getVerificationToken(client, url, provider);
+
+  if (typeof result === 'number') {
+    return result;
+  }
+
+  if ('verificationToken' in result) {
+    const { output } = client;
+    output.spinner('Verifying authentication token');
+    result = await verify(
+      client,
+      'nate@vercel.com',
+      result.verificationToken,
+      provider,
+      ssoUserId
+    );
+    output.success(
+      `${provider} authentication complete for ${highlight(result.email)}`
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Get the verification token "in-band" by spawning a localhost
+ * HTTP server that gets redirected to as the OAuth callback URL.
+ *
+ * This method is preferred since it doesn't require additional
+ * user interaction, however it only works when the web browser
+ * is on the same machine as the localhost HTTP server (so doesn't
+ * work over SSH, for example).
+ */
+async function getVerificationTokenInBand(
+  client: Client,
+  url: URL,
+  provider: string
+) {
+  const { output } = client;
   const server = http.createServer();
   const address = await listen(server, 0, '127.0.0.1');
   const { port } = new URL(address);
-  url.searchParams.set('mode', 'login');
   url.searchParams.set('next', `http://localhost:${port}`);
 
   output.log(`Please visit the following URL in your web browser:`);
@@ -96,32 +140,53 @@ export default async function doOauthLogin(
       output.log(
         'Please log in to your Vercel account to complete SAML connection.'
       );
-      return prompt(client, undefined, ssoUserIdParam);
+      return prompt(client, undefined, false, ssoUserIdParam);
     }
 
-    const email = query.get('email');
     const verificationToken = query.get('token');
-    const teamId = query.get('teamId');
-    if (!email || !verificationToken) {
+    if (!verificationToken) {
       output.error(
         'Verification token was not provided. Please contact support.'
       );
       return 1;
     }
 
-    output.spinner('Verifying authentication token');
-    const token = await verify(
-      client,
-      email,
-      verificationToken,
-      provider,
-      ssoUserId
-    );
-    output.success(
-      `${provider} authentication complete for ${highlight(email)}`
-    );
-    return { token, teamId };
+    return { verificationToken };
   } finally {
     server.close();
   }
+}
+
+/**
+ *
+ */
+async function getVerificationTokenOutOfBand(client: Client, url: URL) {
+  const { output } = client;
+  url.searchParams.set(
+    'next',
+    `http://localhost:3000/notifications/cli-login-oob`
+  );
+
+  output.log(`Please visit the following URL in your web browser:`);
+  output.log(link(url.href));
+  output.print('\n');
+  output.log(
+    `After login is complete, enter the verification code printed in your browser.`
+  );
+  const verificationToken = await readInput('Verification code:');
+
+  return { verificationToken };
+}
+
+/**
+ * Attempts to detect whether CLI is running inside a "headless"
+ * environment, such as inside a Docker container or in an SSH
+ * session.
+ */
+function isHeadless() {
+  return isDocker() || isSSH();
+}
+
+function isSSH() {
+  return Boolean(process.env.SSH_CLIENT || process.env.SSH_TTY);
 }

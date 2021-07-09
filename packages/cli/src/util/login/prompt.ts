@@ -4,7 +4,7 @@ import error from '../output/error';
 import listInput from '../input/list';
 import { getCommandName } from '../pkg-name';
 import { LoginResult, SAMLError } from './types';
-import doSsoLogin from './sso';
+import doSamlLogin from './saml';
 import doEmailLogin from './email';
 import doGithubLogin from './github';
 import doGitlabLogin from './gitlab';
@@ -13,6 +13,7 @@ import doBitbucketLogin from './bitbucket';
 export default async function prompt(
   client: Client,
   error?: Pick<SAMLError, 'teamId'>,
+  outOfBand?: boolean,
   ssoUserId?: string
 ) {
   let result: LoginResult = 1;
@@ -22,7 +23,7 @@ export default async function prompt(
     { name: 'Continue with GitLab', value: 'gitlab', short: 'gitlab' },
     { name: 'Continue with Bitbucket', value: 'bitbucket', short: 'bitbucket' },
     { name: 'Continue with Email', value: 'email', short: 'email' },
-    { name: 'Continue with SAML Single Sign-On', value: 'sso', short: 'sso' },
+    { name: 'Continue with SAML Single Sign-On', value: 'saml', short: 'saml' },
   ];
 
   if (ssoUserId || (error && !error.teamId)) {
@@ -37,23 +38,23 @@ export default async function prompt(
   });
 
   if (choice === 'github') {
-    result = await doGithubLogin(client, ssoUserId);
+    result = await doGithubLogin(client, outOfBand, ssoUserId);
   } else if (choice === 'gitlab') {
-    result = await doGitlabLogin(client, ssoUserId);
+    result = await doGitlabLogin(client, outOfBand, ssoUserId);
   } else if (choice === 'bitbucket') {
-    result = await doBitbucketLogin(client, ssoUserId);
+    result = await doBitbucketLogin(client, outOfBand, ssoUserId);
   } else if (choice === 'email') {
-    const email = await readInput('Enter your email address');
+    const email = await readInput('Enter your email address:');
     result = await doEmailLogin(client, email, ssoUserId);
-  } else if (choice === 'sso') {
-    const slug = error?.teamId || (await readInput('Enter your Team slug'));
-    result = await doSsoLogin(client, slug, ssoUserId);
+  } else if (choice === 'saml') {
+    const slug = error?.teamId || (await readInput('Enter your Team slug:'));
+    result = await doSamlLogin(client, slug, outOfBand, ssoUserId);
   }
 
   return result;
 }
 
-async function readInput(message: string) {
+export async function readInput(message: string) {
   let input;
 
   while (!input) {

@@ -1,5 +1,5 @@
 import { bold } from 'chalk';
-import doSsoLogin from './sso';
+import doSamlLogin from './saml';
 import showLoginPrompt from './prompt';
 import { LoginResult, SAMLError } from './types';
 import confirm from '../input/confirm';
@@ -15,7 +15,7 @@ export default async function reauthenticate(
       `You must re-authenticate with SAML to use ${bold(error.scope)} scope.`
     );
     if (await confirm(`Log in with SAML?`, true)) {
-      return doSsoLogin(client, error.teamId);
+      return doSamlLogin(client, error.teamId);
     }
   } else {
     // Personal account, or team that does not have SAML enforced
