@@ -158,7 +158,11 @@ async function getVerificationTokenInBand(
 }
 
 /**
+ * Get the verification token "out-of-band" by presenting the login URL
+ * to the user and directing them to visit the URL in their web browser.
  *
+ * A prompt is rendered asking for the verification token that is
+ * provided to them in the callback URL after the login is successful.
  */
 async function getVerificationTokenOutOfBand(client: Client, url: URL) {
   const { output } = client;
