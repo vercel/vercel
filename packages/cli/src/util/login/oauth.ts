@@ -168,7 +168,7 @@ async function getVerificationTokenOutOfBand(client: Client, url: URL) {
   const { output } = client;
   url.searchParams.set(
     'next',
-    `http://localhost:3000/notifications/cli-login-oob`
+    `https://vercel.com/notifications/cli-login-oob`
   );
   output.log(`Please visit the following URL in your web browser:`);
   output.log(link(url.href));
