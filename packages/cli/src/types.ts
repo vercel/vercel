@@ -140,7 +140,8 @@ export type Deployment = {
     | 'CANCELED';
   version?: number;
   created: number;
-  creator: { uid: string };
+  createdAt: number;
+  creator: { uid: string; username: string };
 };
 
 export type Alias = {
