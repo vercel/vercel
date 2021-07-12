@@ -136,6 +136,7 @@
     "glob": "7.1.2",
     "http-proxy": "1.18.1",
     "inquirer": "7.0.4",
+    "is-docker": "2.2.1",
     "is-port-reachable": "3.0.0",
     "is-url": "1.2.2",
     "jaro-winkler": "0.2.8",
