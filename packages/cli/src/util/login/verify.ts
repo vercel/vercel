@@ -6,14 +6,16 @@ import { LoginResultSuccess } from './types';
 
 export default function verify(
   client: Client,
-  email: string,
   verificationToken: string,
+  email: string | undefined,
   provider: string,
   ssoUserId?: string
 ) {
   const url = new URL('/registration/verify', client.apiUrl);
-  url.searchParams.set('email', email);
   url.searchParams.set('token', verificationToken);
+  if (email) {
+    url.searchParams.set('email', email);
+  }
 
   if (!client.authConfig.token) {
     // Set the "name" of the Token that will be created

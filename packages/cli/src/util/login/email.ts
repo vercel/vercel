@@ -46,8 +46,8 @@ export default async function doEmailLogin(
       await sleep(ms('1s'));
       result = await verify(
         client,
-        email,
         verificationToken,
+        email,
         'Email',
         ssoUserId
       );

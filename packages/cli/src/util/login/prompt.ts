@@ -54,7 +54,7 @@ export default async function prompt(
   return result;
 }
 
-export async function readInput(message: string) {
+export async function readInput(message: string): Promise<string> {
   let input;
 
   while (!input) {

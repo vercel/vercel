@@ -35,8 +35,8 @@ export default async function doOauthLogin(
     output.spinner('Verifying authentication token');
     result = await verify(
       client,
-      'nate@vercel.com',
       result.verificationToken,
+      undefined,
       provider,
       ssoUserId
     );
