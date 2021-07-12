@@ -13,6 +13,7 @@ import createDeploy from '../../util/deploy/create-deploy';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import parseMeta from '../../util/parse-meta';
 import code from '../../util/output/code';
+import linkStyle from '../../util/output/link';
 import param from '../../util/output/param';
 import highlight from '../../util/output/highlight';
 import {
@@ -98,6 +99,7 @@ const printDeploymentStatus = async (
     target,
     indications,
     url: deploymentUrl,
+    aliasWarning,
   }: {
     readyState: string;
     alias: string[];
@@ -105,11 +107,18 @@ const printDeploymentStatus = async (
     target: string;
     indications: any;
     url: string;
+    aliasWarning?: {
+      code: string;
+      message: string;
+      link?: string;
+      action?: string;
+    };
   },
   deployStamp: () => string,
   isClipboardEnabled: boolean,
   isFile: boolean
 ) => {
+  indications = indications || [];
   const isProdDeployment = target === 'production';
 
   if (readyState !== 'READY') {
@@ -167,23 +176,27 @@ const printDeploymentStatus = async (
     );
   }
 
-  if (indications) {
-    const indent = process.stdout.isTTY ? '    ' : ''; // if using emojis
-    const newline = '\n';
-    for (let indication of indications) {
-      const message =
-        prependEmoji(chalk.dim(indication.payload), emoji(indication.type)) +
-        newline;
-      let link = '';
-      if (indication.link)
-        link =
-          indent +
-          chalk.dim(
-            `${indication.action || 'Learn More'}: ${indication.link}`
-          ) +
-          newline;
-      output.print(message + link);
-    }
+  if (aliasWarning?.message) {
+    indications.push({
+      type: 'warning',
+      payload: aliasWarning.message,
+      link: aliasWarning.link,
+      action: aliasWarning.action,
+    });
+  }
+
+  const newline = '\n';
+  for (let indication of indications) {
+    const message =
+      prependEmoji(chalk.dim(indication.payload), emoji(indication.type)) +
+      newline;
+    let link = '';
+    if (indication.link)
+      link =
+        chalk.dim(
+          `${indication.action || 'Learn More'}: ${linkStyle(indication.link)}`
+        ) + newline;
+    output.print(message + link);
   }
 };
 
