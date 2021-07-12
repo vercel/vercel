@@ -252,7 +252,7 @@ export default async function main(client: Client) {
           ),
       ],
       {
-        align: ['l', 'l', 'r', 'l'],
+        align: ['l', 'l', 'r', 'l', 'l'],
         hsep: ' '.repeat(4),
         stringLength: strlen,
       }
