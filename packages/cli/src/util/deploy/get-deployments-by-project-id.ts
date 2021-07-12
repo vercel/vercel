@@ -17,9 +17,9 @@ type Response = {
 };
 
 interface Options {
-  from: number | null;
-  limit: number | null;
-  continue: boolean;
+  from?: number | null;
+  limit?: number | null;
+  continue?: boolean;
   max?: number;
 }
 
