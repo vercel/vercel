@@ -1,6 +1,6 @@
 import chalk from 'chalk';
-import table from 'text-table';
 import ms from 'ms';
+import table from 'text-table';
 import strlen from '../util/strlen';
 import getArgs from '../util/get-args';
 import { handleError, error } from '../util/error';
@@ -8,7 +8,8 @@ import exit from '../util/exit';
 import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 import getCommandFlags from '../util/get-command-flags';
-import { getPkgName, getCommandName } from '../util/pkg-name.ts';
+import { getPkgName, getCommandName } from '../util/pkg-name';
+import Client from '../util/client';
 
 const e = encodeURIComponent;
 
@@ -45,11 +46,10 @@ const help = () => {
 `);
 };
 
-// Options
-let argv;
-let subcommand;
+let argv: any;
+let subcommand: string | string[];
 
-const main = async client => {
+const main = async (client: Client) => {
   try {
     argv = getArgs(client.argv.slice(2), {
       '--next': Number,
@@ -92,7 +92,7 @@ const main = async client => {
   }
 };
 
-export default async client => {
+export default async (client: Client) => {
   try {
     await main(client);
   } catch (err) {
@@ -101,9 +101,16 @@ export default async client => {
   }
 };
 
-async function run({ client, contextName }) {
+async function run({
+  client,
+  contextName,
+}: {
+  client: Client;
+  contextName: string;
+}) {
   const { output } = client;
   const args = argv._.slice(1);
+
   const start = Date.now();
 
   if (subcommand === 'ls' || subcommand === 'list') {
@@ -127,13 +134,19 @@ async function run({ client, contextName }) {
       projectsUrl += `&until=${next}`;
     }
 
-    const { projects: list, pagination } = await client.fetch(projectsUrl, {
+    const {
+      projects: list,
+      pagination,
+    }: {
+      projects: [{ name: string; updatedAt: number }];
+      pagination: { count: number; next: number };
+    } = await client.fetch(projectsUrl, {
       method: 'GET',
     });
 
     output.stopSpinner();
 
-    const elapsed = ms(new Date() - start);
+    const elapsed = ms(Date.now() - start);
 
     console.log(
       `> ${
@@ -143,14 +156,14 @@ async function run({ client, contextName }) {
 
     if (list.length > 0) {
       const cur = Date.now();
-      const header = [['', 'name', 'updated'].map(s => chalk.dim(s))];
+      const header = [['', 'name', 'updated'].map(title => chalk.dim(title))];
 
       const out = table(
         header.concat(
           list.map(secret => [
             '',
             chalk.bold(secret.name),
-            chalk.gray(`${ms(cur - new Date(secret.updatedAt))} ago`),
+            chalk.gray(`${ms(cur - secret.updatedAt)} ago`),
           ])
         ),
         {
@@ -203,7 +216,7 @@ async function run({ client, contextName }) {
         return exit(1);
       }
     }
-    const elapsed = ms(new Date() - start);
+    const elapsed = ms(Date.now() - start);
     console.log(
       `${chalk.cyan('> Success!')} Project ${chalk.bold(
         name
@@ -248,7 +261,7 @@ async function run({ client, contextName }) {
         throw error;
       }
     }
-    const elapsed = ms(new Date() - start);
+    const elapsed = ms(Date.now() - start);
 
     console.log(
       `${chalk.cyan('> Success!')} Project ${chalk.bold(
@@ -268,7 +281,7 @@ process.on('uncaughtException', err => {
   exit(1);
 });
 
-function readConfirmation(projectName) {
+function readConfirmation(projectName: string) {
   return new Promise(resolve => {
     process.stdout.write(
       `The project: ${chalk.bold(projectName)} will be removed permanently.\n` +

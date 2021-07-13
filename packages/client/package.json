@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "10.1.2-canary.2",
+  "version": "10.1.2-canary.3",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
