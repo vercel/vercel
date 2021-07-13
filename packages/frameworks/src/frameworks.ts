@@ -1546,7 +1546,7 @@ export const frameworks = [
   {
     name: 'Vite',
     slug: 'vite',
-    //demo: 'https://vite.examples.vercel.com',
+    demo: 'https://vite.examples.vercel.com',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vite.svg',
     tagline:
       'Vite is a new breed of frontend build tool that significantly improves the frontend development experience.',
@@ -1567,7 +1567,7 @@ export const frameworks = [
         placeholder: '`yarn install` or `npm install`',
       },
       buildCommand: {
-        placeholder: 'vite build',
+        placeholder: '`npm run build` or `vite build`',
       },
       devCommand: {
         placeholder: 'vite',
@@ -1576,6 +1576,7 @@ export const frameworks = [
         value: 'dist',
       },
     },
+    dependency: 'vite',
     devCommand: 'vite',
     buildCommand: 'vite build',
     getOutputDirName: async () => 'dist',
