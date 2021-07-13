@@ -8,18 +8,19 @@ import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
 import { normalizeURL } from '../util/url';
 import getScope from '../util/get-scope';
-import { NowError } from '../util/now-error';
 import { isValidName } from '../util/is-valid-name';
 import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
-import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
+import getDeploymentsByProjectId, {
+  DeploymentPartial,
+} from '../util/deploy/get-deployments-by-project-id';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
 import Client from '../util/client';
 import { Output } from '../util/output';
-import { Deployment, Project } from '../types';
+import { Alias, Project } from '../types';
 
 const help = () => {
   console.log(`
@@ -65,7 +66,7 @@ const help = () => {
 };
 
 export default async function main(client: Client) {
-  let argv: any;
+  let argv;
 
   try {
     argv = getArgs(client.argv.slice(2), {
@@ -79,6 +80,8 @@ export default async function main(client: Client) {
     handleError(error);
     return 1;
   }
+
+  const safe = argv['--safe'];
 
   argv._ = argv._.slice(1);
 
@@ -132,21 +135,13 @@ export default async function main(client: Client) {
       .join(' ')} in ${chalk.bold(contextName)}`
   );
 
-  let aliases: any;
+  let aliases: Alias[][];
   let projects: Project[];
-  let deployments: Deployment[];
+  let deployments: DeploymentPartial[];
   const findStart = Date.now();
 
   try {
-    const searchFilter = (d: Deployment) =>
-      ids.some(
-        id =>
-          d &&
-          !(d instanceof NowError) &&
-          (d.uid === id || d.name === id || d.url === normalizeURL(id))
-      );
-
-    const [deploymentList, projectList] = await Promise.all<any>([
+    const [deploymentList, projectList] = await Promise.all([
       Promise.all(
         ids.map(idOrHost =>
           getDeploymentByIdOrHost(client, contextName!, idOrHost)
@@ -157,12 +152,21 @@ export default async function main(client: Client) {
       ),
     ]);
 
-    deployments = deploymentList.filter((d: Deployment) => searchFilter(d));
-    projects = projectList.filter((d: Deployment) => searchFilter(d));
+    deployments = deploymentList
+      .filter((d): d is any => d && 'name' in d)
+      .filter(d =>
+        ids.some(
+          id => d.name === id || d.name === id || d.name === normalizeURL(id)
+        )
+      );
+
+    projects = projectList
+      .filter((p): p is Project => p && 'name' in p)
+      .filter(p => ids.some(id => p.name === id));
 
     // When `--safe` is set we want to replace all projects
     // with deployments to verify the aliases
-    if (argv['--safe']) {
+    if (safe) {
       const projectDeployments = await Promise.all(
         projects.map(project => {
           return getDeploymentsByProjectId(client, project.id, {
@@ -174,7 +178,7 @@ export default async function main(client: Client) {
 
       projectDeployments
         .slice(0, 201)
-        .map((pDeployments: any) => deployments.push(...pDeployments));
+        .map(pDeployments => deployments.push(...pDeployments));
 
       projects = [];
     } else {
@@ -195,7 +199,7 @@ export default async function main(client: Client) {
   }
 
   deployments = deployments.filter((match, i) => {
-    if (argv['--safe'] && aliases[i].length > 0) {
+    if (safe && aliases[i].length > 0) {
       return false;
     }
 
@@ -256,7 +260,7 @@ export default async function main(client: Client) {
       `${elapsed(Date.now() - start)}`
   );
 
-  deployments.forEach((depl: Deployment) => {
+  deployments.forEach(depl => {
     console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`);
   });
 
@@ -268,7 +272,7 @@ export default async function main(client: Client) {
 }
 
 function readConfirmation(
-  deployments: Deployment[],
+  deployments: DeploymentPartial[],
   projects: Project[],
   output: Output
 ): Promise<string> {
@@ -333,7 +337,7 @@ function readConfirmation(
 }
 
 function deploymentsAndProjects(
-  deployments: Deployment[],
+  deployments: DeploymentPartial[],
   projects: Project[],
   conjunction = 'and'
 ) {
