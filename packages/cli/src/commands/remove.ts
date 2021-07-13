@@ -81,8 +81,6 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const safe = argv['--safe'];
-
   argv._ = argv._.slice(1);
 
   const {
@@ -93,6 +91,7 @@ export default async function main(client: Client) {
   } = client;
   const hard = argv['--hard'];
   const skipConfirmation = argv['--yes'];
+  const safe = argv['--safe'];
   const ids: string[] = argv._;
   const { success, error, log } = output;
 
@@ -143,9 +142,12 @@ export default async function main(client: Client) {
   try {
     const [deploymentList, projectList] = await Promise.all([
       Promise.all(
-        ids.map(idOrHost =>
-          getDeploymentByIdOrHost(client, contextName!, idOrHost)
-        )
+        ids.map(idOrHost => {
+          if (!contextName) {
+            throw new Error('Context name is not defined');
+          }
+          return getDeploymentByIdOrHost(client, contextName, idOrHost);
+        })
       ),
       Promise.all(
         ids.map(async idOrName => getProjectByIdOrName(client, idOrName))
