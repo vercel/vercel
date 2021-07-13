@@ -130,7 +130,6 @@ export type Deployment = {
   uid: string;
   url: string;
   name: string;
-  aliases: [{ alias: string }];
   type: 'LAMBDAS';
   state:
     | 'BUILDING'
