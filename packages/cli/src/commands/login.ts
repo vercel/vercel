@@ -5,8 +5,11 @@ import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
 import logo from '../util/output/logo';
 import prompt from '../util/login/prompt';
-import doSsoLogin from '../util/login/sso';
+import doSamlLogin from '../util/login/saml';
 import doEmailLogin from '../util/login/email';
+import doGithubLogin from '../util/login/github';
+import doGitlabLogin from '../util/login/gitlab';
+import doBitbucketLogin from '../util/login/bitbucket';
 import { prependEmoji, emoji } from '../util/emoji';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import getGlobalPathConfig from '../util/config/global-path';
@@ -41,6 +44,10 @@ const help = () => {
   ${chalk.gray('–')} Log in using a specific team "slug" for SAML Single Sign-On
 
     ${chalk.cyan(`$ ${getPkgName()} login acme`)}
+
+  ${chalk.gray('–')} Log in using GitHub in "out-of-band" mode
+
+    ${chalk.cyan(`$ ${getPkgName()} login --github --oob`)}
 `);
 };
 
@@ -49,7 +56,12 @@ export default async function login(client: Client): Promise<number> {
   const { output } = client;
 
   try {
-    argv = getArgs(client.argv.slice(2));
+    argv = getArgs(client.argv.slice(2), {
+      '--oob': Boolean,
+      '--github': Boolean,
+      '--gitlab': Boolean,
+      '--bitbucket': Boolean,
+    });
   } catch (err) {
     handleError(err);
     return 1;
@@ -74,11 +86,17 @@ export default async function login(client: Client): Promise<number> {
     if (validateEmail(input)) {
       result = await doEmailLogin(client, input);
     } else {
-      result = await doSsoLogin(client, input);
+      result = await doSamlLogin(client, input, argv['--oob']);
     }
+  } else if (argv['--github']) {
+    result = await doGithubLogin(client, argv['--oob']);
+  } else if (argv['--gitlab']) {
+    result = await doGitlabLogin(client, argv['--oob']);
+  } else if (argv['--bitbucket']) {
+    result = await doBitbucketLogin(client, argv['--oob']);
   } else {
     // Interactive mode
-    result = await prompt(client);
+    result = await prompt(client, undefined, argv['--oob']);
   }
 
   // The login function failed, so it returned an exit code

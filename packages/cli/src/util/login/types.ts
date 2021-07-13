@@ -7,11 +7,8 @@ export type LoginResult = number | LoginResultSuccess;
 
 export interface LoginResultSuccess {
   token: string;
-  teamId?: string | null;
-}
-
-export interface VerifyData {
-  token: string;
+  email: string;
+  teamId?: string;
 }
 
 export interface SAMLError {

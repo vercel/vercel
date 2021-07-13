@@ -89,16 +89,6 @@ export async function* checkDeploymentStatus(
     }
 
     if (isAliasAssigned(deploymentUpdate)) {
-      if (
-        deploymentUpdate.aliasWarning &&
-        deploymentUpdate.aliasWarning.message
-      ) {
-        yield {
-          type: 'warning',
-          payload: deploymentUpdate.aliasWarning.message,
-        };
-      }
-
       debug('Deployment alias assigned');
       return yield { type: 'alias-assigned', payload: deploymentUpdate };
     }
