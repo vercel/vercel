@@ -9,6 +9,7 @@ export const help = () => `
 
     ${chalk.dim('Basic')}
 
+      billing                          Manages the account payment methods
       deploy               [path]      Performs a deployment ${chalk.bold(
         '(default)'
       )}
