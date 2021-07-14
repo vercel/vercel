@@ -1618,7 +1618,6 @@ export const frameworks = [
     devCommand: 'astro dev',
     buildCommand: 'astro build',
     getOutputDirName: async () => 'dist',
-    cachePattern: '.snowpack/**',
     defaultRoutes: [
       {
         src: '^/_astro/(.*)\\.css$',
