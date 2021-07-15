@@ -21,6 +21,7 @@ import handleError from '../util/handle-error';
 import Client from '../util/client';
 import { Output } from '../util/output';
 import { Alias, Project } from '../types';
+import { NowError } from '../util/now-error';
 
 const help = () => {
   console.log(`
@@ -140,7 +141,15 @@ export default async function main(client: Client) {
   const findStart = Date.now();
 
   try {
-    const [deploymentList, projectList] = await Promise.all([
+    const searchFilter = (d: DeploymentPartial) =>
+      ids.some(
+        id =>
+          d &&
+          !(d instanceof NowError) &&
+          (d.uid === id || d.name === id || d.url === normalizeURL(id))
+      );
+
+    const [deploymentList, projectList] = await Promise.all<any>([
       Promise.all(
         ids.map(idOrHost => {
           if (!contextName) {
@@ -154,17 +163,9 @@ export default async function main(client: Client) {
       ),
     ]);
 
-    deployments = deploymentList
-      .filter((d): d is any => d && 'name' in d)
-      .filter(d =>
-        ids.some(
-          id => d.name === id || d.name === id || d.name === normalizeURL(id)
-        )
-      );
+    deployments = deploymentList.filter((d: any) => searchFilter(d));
 
-    projects = projectList
-      .filter((p): p is Project => p && 'name' in p)
-      .filter(p => ids.some(id => p.name === id));
+    projects = projectList.filter((d: any) => searchFilter(d));
 
     // When `--safe` is set we want to replace all projects
     // with deployments to verify the aliases
