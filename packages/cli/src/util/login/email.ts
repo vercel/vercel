@@ -40,14 +40,14 @@ export default async function doEmailLogin(
 
   output.spinner('Waiting for your confirmation');
 
-  let token = '';
-  while (!token) {
+  let result;
+  while (!result) {
     try {
       await sleep(ms('1s'));
-      token = await verify(
+      result = await verify(
         client,
-        email,
         verificationToken,
+        email,
         'Email',
         ssoUserId
       );
@@ -60,5 +60,5 @@ export default async function doEmailLogin(
   }
 
   output.success(`Email authentication complete for ${email}`);
-  return { token };
+  return result;
 }
