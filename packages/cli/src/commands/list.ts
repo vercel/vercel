@@ -4,16 +4,18 @@ import table from 'text-table';
 import Now from '../util';
 import getArgs from '../util/get-args';
 import { handleError } from '../util/error';
-import cmd from '../util/output/cmd.ts';
+import cmd from '../util/output/cmd';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed.ts';
-import strlen from '../util/strlen.ts';
-import getScope from '../util/get-scope.ts';
+import elapsed from '../util/output/elapsed';
+import strlen from '../util/strlen';
+import getScope from '../util/get-scope';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
 import getCommandFlags from '../util/get-command-flags';
-import { getPkgName, getCommandName } from '../util/pkg-name.ts';
+import { getPkgName, getCommandName } from '../util/pkg-name';
+import Client from '../util/client';
+import { Deployment } from '../types';
 
 const help = () => {
   console.log(`
@@ -60,7 +62,7 @@ const help = () => {
 `);
 };
 
-export default async function main(client) {
+export default async function main(client: Client) {
   let argv;
 
   try {
@@ -90,8 +92,8 @@ export default async function main(client) {
     return 1;
   }
 
-  let app = argv._[1];
-  let host = null;
+  let app: string | null = argv._[1];
+  let host: string | null = null;
 
   if (argv['--help']) {
     help();
@@ -130,7 +132,7 @@ export default async function main(client) {
     output,
     currentTeam,
   });
-  const start = new Date();
+  const start = Date.now();
 
   if (app && !isValidName(app)) {
     error(`The provided argument "${app}" is not a valid project name`);
@@ -147,9 +149,9 @@ export default async function main(client) {
       )} for retrieving details about a single deployment`
     );
 
-    const hostParts = asHost.split('-');
+    const hostParts: string[] = asHost.split('-');
 
-    if (hostParts < 2) {
+    if (hostParts.length < 2) {
       error('Only deployment hostnames are allowed, no aliases');
       return 1;
     }
@@ -165,7 +167,13 @@ export default async function main(client) {
     nextTimestamp,
   });
 
-  let { deployments, pagination } = response;
+  let {
+    deployments,
+    pagination,
+  }: {
+    deployments: Deployment[];
+    pagination: { count: number; next: number };
+  } = response;
 
   if (app && !deployments.length) {
     debug(
@@ -220,8 +228,8 @@ export default async function main(client) {
   console.log(
     `${table(
       [
-        ['project', 'latest deployment', 'state', 'age', 'username'].map(s =>
-          chalk.dim(s)
+        ['project', 'latest deployment', 'state', 'age', 'username'].map(
+          header => chalk.dim(header)
         ),
         ...deployments
           .sort(sortRecent())
@@ -230,23 +238,21 @@ export default async function main(client) {
               getProjectName(dep),
               chalk.bold((includeScheme ? 'https://' : '') + dep.url),
               stateString(dep.state),
-              chalk.gray(ms(Date.now() - new Date(dep.createdAt))),
+              chalk.gray(ms(Date.now() - dep.createdAt)),
               dep.creator.username,
             ],
           ])
           // flatten since the previous step returns a nested
           // array of the deployment and (optionally) its instances
-          .reduce((ac, c) => ac.concat(c), [])
-          .filter(
-            app == null
-              ? // if an app wasn't supplied to filter by,
-                // we only want to render one deployment per app
-                filterUniqueApps()
-              : () => true
+          .flat()
+          .filter(app =>
+            // if an app wasn't supplied to filter by,
+            // we only want to render one deployment per app
+            app === null ? filterUniqueApps() : () => true
           ),
       ],
       {
-        align: ['l', 'l', 'r', 'l', 'b'],
+        align: ['l', 'l', 'r', 'l', 'l'],
         hsep: ' '.repeat(4),
         stringLength: strlen,
       }
@@ -263,7 +269,7 @@ export default async function main(client) {
   }
 }
 
-function getProjectName(d) {
+function getProjectName(d: Deployment) {
   // We group both file and files into a single project
   if (d.name === 'file') {
     return 'files';
@@ -273,7 +279,7 @@ function getProjectName(d) {
 }
 
 // renders the state string
-function stateString(s) {
+function stateString(s: string) {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);
@@ -291,7 +297,7 @@ function stateString(s) {
 
 // sorts by most recent deployment
 function sortRecent() {
-  return function recencySort(a, b) {
+  return function recencySort(a: Deployment, b: Deployment) {
     return b.createdAt - a.createdAt;
   };
 }
@@ -301,7 +307,7 @@ function sortRecent() {
 // this mode can be bypassed by supplying an app name
 function filterUniqueApps() {
   const uniqueApps = new Set();
-  return function uniqueAppFilter([appName]) {
+  return function uniqueAppFilter([appName]: [appName: string]) {
     if (uniqueApps.has(appName)) {
       return false;
     }
