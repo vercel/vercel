@@ -1128,44 +1128,6 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Sapper',
-    slug: 'sapper',
-    demo: 'https://sapper.examples.vercel.com',
-    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
-    tagline:
-      'Sapper is a framework for building high-performance universal web apps with Svelte.',
-    description: 'A Sapper app, using the Sapper template.',
-    website: 'https://sapper.svelte.dev',
-    detectors: {
-      every: [
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sapper":\\s*".+?"[^}]*}',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install` or `npm install`',
-      },
-      buildCommand: {
-        placeholder: '`npm run build` or `sapper export`',
-      },
-      devCommand: {
-        value: 'sapper dev --port $PORT',
-        placeholder: 'sapper dev',
-      },
-      outputDirectory: {
-        value: '__sapper__/export',
-      },
-    },
-    dependency: 'sapper',
-    devCommand: 'sapper dev --port $PORT',
-    buildCommand: 'sapper export',
-    getOutputDirName: async () => '__sapper__/export',
-  },
-  {
     name: 'Saber',
     slug: 'saber',
     demo: 'https://saber.examples.vercel.com',
