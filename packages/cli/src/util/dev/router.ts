@@ -50,7 +50,7 @@ export async function devRouter(
   reqMethod?: string,
   routes?: Route[],
   devServer?: DevServer,
-  nowConfig?: VercelConfig,
+  vercelConfig?: VercelConfig,
   previousHeaders?: HttpHeadersConfig,
   missRoutes?: Route[],
   phase?: HandleValue | null
@@ -124,14 +124,14 @@ export async function devRouter(
         if (
           routeConfig.check &&
           devServer &&
-          nowConfig &&
+          vercelConfig &&
           phase !== 'hit' &&
           !isDestUrl
         ) {
           const { pathname = '/' } = url.parse(destPath);
           const hasDestFile = await devServer.hasFilesystem(
             pathname,
-            nowConfig
+            vercelConfig
           );
 
           if (!hasDestFile) {
@@ -144,7 +144,7 @@ export async function devRouter(
                 reqMethod,
                 missRoutes,
                 devServer,
-                nowConfig,
+                vercelConfig,
                 combinedHeaders,
                 [],
                 'miss'
