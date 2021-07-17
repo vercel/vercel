@@ -1,25 +1,31 @@
 import { URLSearchParams } from 'url';
+import { Alias } from '../../types';
 import Client from '../client';
 
 type Response = {
-  deployments: Array<{
-    uid: string;
-    name: string;
-    url: string;
-    created: number;
-    state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR';
-    creator: { uid: string };
-    instanceCount: number;
-    scale: {
-      [key: string]: number;
-    };
-  }>;
+  deployments: DeploymentPartial[];
 };
+export interface DeploymentPartial {
+  uid: string;
+  name: string;
+  url: string;
+  created: number;
+  createdAt: number;
+  aliases: Alias[];
+  state:
+    | 'BUILDING'
+    | 'ERROR'
+    | 'INITIALIZING'
+    | 'QUEUED'
+    | 'READY'
+    | 'CANCELED';
+  creator: { uid: string };
+}
 
 interface Options {
-  from: number | null;
-  limit: number | null;
-  continue: boolean;
+  from?: number | null;
+  limit?: number | null;
+  continue?: boolean;
   max?: number;
 }
 
@@ -28,7 +34,7 @@ export default async function getDeploymentsByProjectId(
   projectId: string,
   options: Options = { from: null, limit: 100, continue: false },
   total: number = 0
-) {
+): Promise<DeploymentPartial[]> {
   const limit = options.limit || 100;
 
   const query = new URLSearchParams();
