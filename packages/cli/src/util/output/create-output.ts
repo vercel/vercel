@@ -1,7 +1,5 @@
 import chalk from 'chalk';
 import boxen from 'boxen';
-import { format } from 'util';
-import { Console } from 'console';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 
@@ -138,20 +136,20 @@ function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
     }
   }
 
-  const c = {
-    _times: new Map(),
-    log(a: string, ...args: string[]) {
-      debug(format(a, ...args));
-    },
-  };
-
-  async function time(label: string, fn: Promise<any> | (() => Promise<any>)) {
+  async function time<T>(
+    label: string | ((r?: T) => string),
+    fn: Promise<T> | (() => Promise<T>)
+  ) {
     const promise = typeof fn === 'function' ? fn() : fn;
+
     if (debugEnabled) {
-      c.log(label);
-      Console.prototype.time.call(c, label);
+      const startLabel = typeof label === 'function' ? label() : label;
+      debug(startLabel);
+      const start = Date.now();
       const r = await promise;
-      Console.prototype.timeEnd.call(c, label);
+      const endLabel = typeof label === 'function' ? label(r) : label;
+      const duration = Date.now() - start;
+      debug(`${endLabel}: ${(duration / 1000).toFixed(2)}s`);
       return r;
     }
 
