@@ -178,6 +178,17 @@ async function getVerificationTokenOutOfBand(client: Client, url: URL) {
   );
   const verificationToken = await readInput('Verification code:');
   output.print(eraseLines(6));
+
+  // If the pasted token begins with "saml_", then the `ssoUserId` was returned.
+  // Prompt the user to log in to a Vercel account now, which will complete the
+  // connection to the SAML Profile.
+  if (verificationToken.startsWith('saml_')) {
+    output.log(
+      'Please log in to your Vercel account to complete SAML connection.'
+    );
+    return prompt(client, undefined, true, verificationToken.substring(5));
+  }
+
   return { verificationToken };
 }
 

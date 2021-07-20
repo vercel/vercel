@@ -5,18 +5,23 @@ import table from 'text-table';
 import Now from '../util';
 import getAliases from '../util/alias/get-aliases';
 import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed.ts';
+import elapsed from '../util/output/elapsed';
 import { normalizeURL } from '../util/url';
-import getScope from '../util/get-scope.ts';
-import { NowError } from '../util/now-error';
+import getScope from '../util/get-scope';
 import { isValidName } from '../util/is-valid-name';
 import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
-import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
-import { getPkgName, getCommandName } from '../util/pkg-name.ts';
-import getArgs from '../util/get-args.ts';
-import handleError from '../util/handle-error.ts';
+import getDeploymentsByProjectId, {
+  DeploymentPartial,
+} from '../util/deploy/get-deployments-by-project-id';
+import { getPkgName, getCommandName } from '../util/pkg-name';
+import getArgs from '../util/get-args';
+import handleError from '../util/handle-error';
+import Client from '../util/client';
+import { Output } from '../util/output';
+import { Alias, Project } from '../types';
+import { NowError } from '../util/now-error';
 
 const help = () => {
   console.log(`
@@ -61,7 +66,7 @@ const help = () => {
 `);
 };
 
-export default async function main(client) {
+export default async function main(client: Client) {
   let argv;
 
   try {
@@ -87,7 +92,8 @@ export default async function main(client) {
   } = client;
   const hard = argv['--hard'];
   const skipConfirmation = argv['--yes'];
-  const ids = argv._;
+  const safe = argv['--safe'];
+  const ids: string[] = argv._;
   const { success, error, log } = output;
 
   if (argv['--help'] || ids[0] === 'help') {
@@ -110,7 +116,7 @@ export default async function main(client) {
     return 1;
   }
 
-  let contextName = null;
+  let contextName: string | null = null;
 
   try {
     ({ contextName } = await getScope(client));
@@ -129,13 +135,13 @@ export default async function main(client) {
       .join(' ')} in ${chalk.bold(contextName)}`
   );
 
-  let aliases;
-  let projects;
-  let deployments;
+  let aliases: Alias[][];
+  let projects: Project[];
+  let deployments: DeploymentPartial[];
   const findStart = Date.now();
 
   try {
-    const searchFilter = d =>
+    const searchFilter = (d: DeploymentPartial) =>
       ids.some(
         id =>
           d &&
@@ -143,23 +149,27 @@ export default async function main(client) {
           (d.uid === id || d.name === id || d.url === normalizeURL(id))
       );
 
-    const [deploymentList, projectList] = await Promise.all([
+    const [deploymentList, projectList] = await Promise.all<any>([
       Promise.all(
-        ids.map(idOrHost =>
-          getDeploymentByIdOrHost(client, contextName, idOrHost)
-        )
+        ids.map(idOrHost => {
+          if (!contextName) {
+            throw new Error('Context name is not defined');
+          }
+          return getDeploymentByIdOrHost(client, contextName, idOrHost);
+        })
       ),
       Promise.all(
         ids.map(async idOrName => getProjectByIdOrName(client, idOrName))
       ),
     ]);
 
-    deployments = deploymentList.filter(searchFilter);
-    projects = projectList.filter(searchFilter);
+    deployments = deploymentList.filter((d: any) => searchFilter(d));
+
+    projects = projectList.filter((d: any) => searchFilter(d));
 
     // When `--safe` is set we want to replace all projects
     // with deployments to verify the aliases
-    if (argv['--safe']) {
+    if (safe) {
       const projectDeployments = await Promise.all(
         projects.map(project => {
           return getDeploymentsByProjectId(client, project.id, {
@@ -192,7 +202,7 @@ export default async function main(client) {
   }
 
   deployments = deployments.filter((match, i) => {
-    if (argv['--safe'] && aliases[i].length > 0) {
+    if (safe && aliases[i].length > 0) {
       return false;
     }
 
@@ -241,9 +251,9 @@ export default async function main(client) {
     currentTeam,
     output,
   });
-  const start = new Date();
+  const start = Date.now();
 
-  await Promise.all([
+  await Promise.all<any>([
     ...deployments.map(depl => now.remove(depl.uid, { hard })),
     ...projects.map(project => removeProject(client, project.id)),
   ]);
@@ -257,14 +267,18 @@ export default async function main(client) {
     console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`);
   });
 
-  projects.forEach(project => {
+  projects.forEach((project: Project) => {
     console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
   });
 
   return 0;
 }
 
-function readConfirmation(deployments, projects, output) {
+function readConfirmation(
+  deployments: DeploymentPartial[],
+  projects: Project[],
+  output: Output
+): Promise<string> {
   return new Promise(resolve => {
     if (deployments.length > 0) {
       output.log(
@@ -277,7 +291,7 @@ function readConfirmation(deployments, projects, output) {
 
       const deploymentTable = table(
         deployments.map(depl => {
-          const time = chalk.gray(`${ms(new Date() - depl.created)} ago`);
+          const time = chalk.gray(`${ms(Date.now() - depl.created)} ago`);
           const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
           return [`  ${depl.uid}`, url, time];
         }),
@@ -326,8 +340,8 @@ function readConfirmation(deployments, projects, output) {
 }
 
 function deploymentsAndProjects(
-  deployments = [],
-  projects = [],
+  deployments: DeploymentPartial[],
+  projects: Project[],
   conjunction = 'and'
 ) {
   if (!projects || projects.length === 0) {

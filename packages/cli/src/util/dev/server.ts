@@ -255,10 +255,8 @@ export default class DevServer {
 
     // Trigger rebuilds of any existing builds that are dependent
     // on one of the files that has changed
-    const needsRebuild: Map<
-      BuildResult,
-      [string | null, BuildMatch]
-    > = new Map();
+    const needsRebuild: Map<BuildResult, [string | null, BuildMatch]> =
+      new Map();
 
     for (const match of this.buildMatches.values()) {
       for (const [requestPath, result] of match.buildResults) {
@@ -392,12 +390,12 @@ export default class DevServer {
   }
 
   async updateBuildMatches(
-    nowConfig: VercelConfig,
+    vercelConfig: VercelConfig,
     isInitial = false
   ): Promise<void> {
     const fileList = this.resolveBuildFiles(this.files);
     const matches = await getBuildMatches(
-      nowConfig,
+      vercelConfig,
       this.cwd,
       this.output,
       this,
@@ -434,7 +432,7 @@ export default class DevServer {
         this.buildMatches.set(match.src, match);
         if (!isInitial && needsBlockingBuild(match)) {
           const buildPromise = executeBuild(
-            nowConfig,
+            vercelConfig,
             this,
             this.files,
             match,
@@ -477,7 +475,7 @@ export default class DevServer {
   }
 
   async invalidateBuildMatches(
-    nowConfig: VercelConfig,
+    vercelConfig: VercelConfig,
     updatedBuilders: string[]
   ): Promise<void> {
     if (updatedBuilders.length === 0) {
@@ -500,7 +498,7 @@ export default class DevServer {
     }
 
     // Re-add the build matches that were just removed, but with the new builder
-    await this.updateBuildMatches(nowConfig);
+    await this.updateBuildMatches(vercelConfig);
   }
 
   async getLocalEnv(fileName: string, base?: Env): Promise<Env> {
@@ -557,26 +555,26 @@ export default class DevServer {
       pkg = null,
       // The default empty `vercel.json` is used to serve all
       // files as static when no `vercel.json` is present
-      config = { version: 2, [fileNameSymbol]: 'vercel.json' },
+      vercelConfig = { version: 2, [fileNameSymbol]: 'vercel.json' },
     ] = await Promise.all([
       this.readJsonFile<PackageJson>('package.json'),
       this.readJsonFile<VercelConfig>(configPath),
     ]);
 
-    await this.validateVercelConfig(config);
+    await this.validateVercelConfig(vercelConfig);
     const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
-      nowConfig: config,
+      nowConfig: vercelConfig,
     });
     if (routeError) {
       this.output.prettyError(routeError);
       await this.exit();
     }
-    config.routes = maybeRoutes || [];
+    vercelConfig.routes = maybeRoutes || [];
 
     // no builds -> zero config
-    if (!config.builds || config.builds.length === 0) {
+    if (!vercelConfig.builds || vercelConfig.builds.length === 0) {
       const featHandleMiss = true; // enable for zero config
-      const { projectSettings, cleanUrls, trailingSlash } = config;
+      const { projectSettings, cleanUrls, trailingSlash } = vercelConfig;
 
       const opts = { output: this.output };
       const files = (await getFiles(this.cwd, opts)).map(f =>
@@ -593,7 +591,7 @@ export default class DevServer {
         errorRoutes,
       } = await detectBuilders(files, pkg, {
         tag: getDistTag(cliPkg.version) === 'canary' ? 'canary' : 'latest',
-        functions: config.functions,
+        functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
         featHandleMiss,
         cleanUrls,
@@ -616,18 +614,17 @@ export default class DevServer {
           builders = builders.filter(filterFrontendBuilds);
         }
 
-        config.builds = config.builds || [];
-        config.builds.push(...builders);
+        vercelConfig.builds = vercelConfig.builds || [];
+        vercelConfig.builds.push(...builders);
 
-        delete config.functions;
+        delete vercelConfig.functions;
       }
 
       let routes: Route[] = [];
-      const { routes: nowConfigRoutes } = config;
       routes.push(...(redirectRoutes || []));
       routes.push(
         ...appendRoutesToPhase({
-          routes: nowConfigRoutes,
+          routes: vercelConfig.routes,
           newRoutes: rewriteRoutes,
           phase: 'filesystem',
         })
@@ -638,28 +635,28 @@ export default class DevServer {
         phase: 'error',
       });
       routes.push(...(defaultRoutes || []));
-      config.routes = routes;
+      vercelConfig.routes = routes;
     }
 
-    if (Array.isArray(config.builds)) {
+    if (Array.isArray(vercelConfig.builds)) {
       if (this.devCommand) {
-        config.builds = config.builds.filter(filterFrontendBuilds);
+        vercelConfig.builds = vercelConfig.builds.filter(filterFrontendBuilds);
       }
 
       // `@vercel/static-build` needs to be the last builder
       // since it might catch all other requests
-      config.builds.sort(sortBuilders);
+      vercelConfig.builds.sort(sortBuilders);
     }
 
-    await this.validateVercelConfig(config);
+    await this.validateVercelConfig(vercelConfig);
 
     // TODO: temporarily strip and warn since `has` is not implemented yet
-    config.routes = (config.routes || []).filter(route => {
+    vercelConfig.routes = (vercelConfig.routes || []).filter(route => {
       if ('has' in route) {
         if (!this.vercelConfigWarning) {
           this.vercelConfigWarning = true;
           this.output.warn(
-            `The "has" property in ${config[fileNameSymbol]} will be ignored during development. Deployments will work as expected.`
+            `The "has" property in ${vercelConfig[fileNameSymbol]} will be ignored during development. Deployments will work as expected.`
           );
         }
         return false;
@@ -667,14 +664,14 @@ export default class DevServer {
       return true;
     });
 
-    this.caseSensitive = hasNewRoutingProperties(config);
-    this.apiDir = detectApiDirectory(config.builds || []);
-    this.apiExtensions = detectApiExtensions(config.builds || []);
+    this.caseSensitive = hasNewRoutingProperties(vercelConfig);
+    this.apiDir = detectApiDirectory(vercelConfig.builds || []);
+    this.apiExtensions = detectApiExtensions(vercelConfig.builds || []);
 
     // Update the env vars configuration
     let [runEnv, buildEnv] = await Promise.all([
-      this.getLocalEnv('.env', config.env),
-      this.getLocalEnv('.env.build', config.build?.env),
+      this.getLocalEnv('.env', vercelConfig.env),
+      this.getLocalEnv('.env.build', vercelConfig.build?.env),
     ]);
 
     let allEnv = { ...buildEnv, ...runEnv };
@@ -706,7 +703,7 @@ export default class DevServer {
     }
 
     this.envConfigs = { buildEnv, runEnv, allEnv };
-    return config;
+    return vercelConfig;
   }
 
   async readJsonFile<T>(
@@ -886,7 +883,7 @@ export default class DevServer {
       .replace('[::]', 'localhost')
       .replace('127.0.0.1', 'localhost');
 
-    const nowConfig = await this.getVercelConfig();
+    const vercelConfig = await this.getVercelConfig();
     const devCommandPromise = this.runDevCommand();
 
     const files = await getFiles(this.cwd, { output: this.output });
@@ -902,13 +899,13 @@ export default class DevServer {
     }
 
     const builders = new Set<string>(
-      (nowConfig.builds || [])
+      (vercelConfig.builds || [])
         .filter((b: Builder) => b.use)
         .map((b: Builder) => b.use)
     );
 
     await installBuilders(builders, this.output);
-    await this.updateBuildMatches(nowConfig, true);
+    await this.updateBuildMatches(vercelConfig, true);
 
     // Updating builders happens lazily, and any builders that were updated
     // get their "build matches" invalidated so that the new version is used.
@@ -916,7 +913,7 @@ export default class DevServer {
       this.updateBuildersPromise = updateBuilders(builders, this.output)
         .then(updatedBuilders => {
           this.updateBuildersPromise = null;
-          this.invalidateBuildMatches(nowConfig, updatedBuilders);
+          this.invalidateBuildMatches(vercelConfig, updatedBuilders);
         })
         .catch(err => {
           this.updateBuildersPromise = null;
@@ -937,7 +934,7 @@ export default class DevServer {
       );
 
       for (const match of blockingBuilds) {
-        await executeBuild(nowConfig, this, this.files, match, null, true);
+        await executeBuild(vercelConfig, this, this.files, match, null, true);
       }
 
       this.output.success('Build completed');
@@ -1077,21 +1074,21 @@ export default class DevServer {
   async send404(
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    nowRequestId: string
+    requestId: string
   ): Promise<void> {
-    return this.sendError(req, res, nowRequestId, 'NOT_FOUND', 404);
+    return this.sendError(req, res, requestId, 'NOT_FOUND', 404);
   }
 
   async sendError(
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    nowRequestId: string,
+    requestId: string,
     errorCode?: string,
     statusCode: number = 500,
     headers: HttpHeadersConfig = {}
   ): Promise<void> {
     res.statusCode = statusCode;
-    this.setResponseHeaders(res, nowRequestId, headers);
+    this.setResponseHeaders(res, requestId, headers);
 
     const http_status_description = generateHttpStatusDescription(statusCode);
     const error_code = errorCode || http_status_description;
@@ -1118,7 +1115,7 @@ export default class DevServer {
           http_status_code: statusCode,
           http_status_description,
           error_code,
-          now_id: nowRequestId,
+          request_id: requestId,
         });
       } else if (statusCode === 502) {
         view = errorTemplate502({
@@ -1126,13 +1123,13 @@ export default class DevServer {
           http_status_code: statusCode,
           http_status_description,
           error_code,
-          now_id: nowRequestId,
+          request_id: requestId,
         });
       } else {
         view = errorTemplate({
           http_status_code: statusCode,
           http_status_description,
-          now_id: nowRequestId,
+          request_id: requestId,
         });
       }
       body = errorTemplateBase({
@@ -1150,14 +1147,14 @@ export default class DevServer {
   async sendRedirect(
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    nowRequestId: string,
+    requestId: string,
     location: string,
     statusCode: number = 302
   ): Promise<void> {
     this.output.debug(`Redirect ${statusCode}: ${location}`);
 
     res.statusCode = statusCode;
-    this.setResponseHeaders(res, nowRequestId, { location });
+    this.setResponseHeaders(res, requestId, { location });
 
     let body: string;
     const { accept = 'text/plain' } = req.headers;
@@ -1188,14 +1185,14 @@ export default class DevServer {
    */
   setResponseHeaders(
     res: http.ServerResponse,
-    nowRequestId: string,
+    requestId: string,
     headers: http.OutgoingHttpHeaders = {}
   ): void {
     const allHeaders = {
       'cache-control': 'public, max-age=0, must-revalidate',
       ...headers,
       server: 'Vercel',
-      'x-vercel-id': nowRequestId,
+      'x-vercel-id': requestId,
       'x-vercel-cache': 'MISS',
     };
     for (const [name, value] of Object.entries(allHeaders)) {
@@ -1208,7 +1205,7 @@ export default class DevServer {
    */
   getProxyHeaders(
     req: http.IncomingMessage,
-    nowRequestId: string,
+    requestId: string,
     xfwd: boolean
   ): http.IncomingHttpHeaders {
     const ip = this.getRequestIp(req);
@@ -1218,7 +1215,7 @@ export default class DevServer {
       'x-real-ip': ip,
       'x-vercel-deployment-url': host,
       'x-vercel-forwarded-for': ip,
-      'x-vercel-id': nowRequestId,
+      'x-vercel-id': requestId,
     };
     if (xfwd) {
       headers['x-forwarded-host'] = host;
@@ -1232,7 +1229,7 @@ export default class DevServer {
     match: BuildMatch,
     requestPath: string | null,
     req: http.IncomingMessage | null,
-    nowConfig: VercelConfig,
+    vercelConfig: VercelConfig,
     previousBuildResult?: BuildResult,
     filesChanged?: string[],
     filesRemoved?: string[]
@@ -1268,7 +1265,7 @@ export default class DevServer {
       }
       this.output.debug(msg);
       buildPromise = executeBuild(
-        nowConfig,
+        vercelConfig,
         this,
         this.files,
         match,
@@ -1309,11 +1306,11 @@ export default class DevServer {
   ) => {
     await this.startPromise;
 
-    let nowRequestId = generateRequestId(this.podId);
+    let requestId = generateRequestId(this.podId);
 
     if (this.stopping) {
       res.setHeader('Connection', 'close');
-      await this.send404(req, res, nowRequestId);
+      await this.send404(req, res, requestId);
       return;
     }
 
@@ -1321,8 +1318,8 @@ export default class DevServer {
     this.output.debug(`${chalk.bold(method)} ${req.url}`);
 
     try {
-      const nowConfig = await this.getVercelConfig();
-      await this.serveProjectAsNowV2(req, res, nowRequestId, nowConfig);
+      const vercelConfig = await this.getVercelConfig();
+      await this.serveProjectAsNowV2(req, res, requestId, vercelConfig);
     } catch (err) {
       console.error(err);
       this.output.debug(err.stack);
@@ -1343,20 +1340,20 @@ export default class DevServer {
     phase: HandleValue | null,
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    nowRequestId: string
+    requestId: string
   ): Promise<boolean> => {
     const { status, headers, dest } = routeResult;
     const location = headers['location'] || dest;
 
     if (status && location && 300 <= status && status <= 399) {
       this.output.debug(`Route found with redirect status code ${status}`);
-      await this.sendRedirect(req, res, nowRequestId, location, status);
+      await this.sendRedirect(req, res, requestId, location, status);
       return true;
     }
 
     if (!match && status && phase !== 'miss') {
       this.output.debug(`Route found with with status code ${status}`);
-      await this.sendError(req, res, nowRequestId, '', status, headers);
+      await this.sendError(req, res, requestId, '', status, headers);
       return true;
     }
 
@@ -1369,9 +1366,9 @@ export default class DevServer {
   serveProjectAsNowV2 = async (
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    nowRequestId: string,
-    nowConfig: VercelConfig,
-    routes: Route[] | undefined = nowConfig.routes,
+    requestId: string,
+    vercelConfig: VercelConfig,
+    routes: Route[] | undefined = vercelConfig.routes,
     callLevel: number = 0
   ) => {
     const { debug } = this.output;
@@ -1388,7 +1385,7 @@ export default class DevServer {
       // Only `GET` requests are redirected.
       // Other methods are normalized without redirecting.
       if (req.method === 'GET') {
-        await this.sendRedirect(req, res, nowRequestId, location, 301);
+        await this.sendRedirect(req, res, requestId, location, 301);
         return;
       }
 
@@ -1397,7 +1394,7 @@ export default class DevServer {
     }
 
     if (callLevel === 0) {
-      await this.updateBuildMatches(nowConfig);
+      await this.updateBuildMatches(vercelConfig);
     }
 
     if (this.blockingBuildsPromise) {
@@ -1439,7 +1436,7 @@ export default class DevServer {
         req.method,
         phaseRoutes,
         this,
-        nowConfig,
+        vercelConfig,
         prevHeaders,
         missRoutes,
         phase
@@ -1459,8 +1456,8 @@ export default class DevServer {
         const destUrl = url.format(destParsed);
 
         debug(`ProxyPass: ${destUrl}`);
-        this.setResponseHeaders(res, nowRequestId);
-        return proxyPass(req, res, destUrl, this, nowRequestId);
+        this.setResponseHeaders(res, requestId);
+        return proxyPass(req, res, destUrl, this, requestId);
       }
 
       match = await findBuildMatch(
@@ -1468,7 +1465,7 @@ export default class DevServer {
         this.files,
         routeResult.dest,
         this,
-        nowConfig
+        vercelConfig
       );
 
       if (
@@ -1478,7 +1475,7 @@ export default class DevServer {
           phase,
           req,
           res,
-          nowRequestId
+          requestId
         )
       ) {
         return;
@@ -1491,7 +1488,7 @@ export default class DevServer {
           req.method,
           missRoutes,
           this,
-          nowConfig,
+          vercelConfig,
           routeResult.headers,
           [],
           'miss'
@@ -1502,7 +1499,7 @@ export default class DevServer {
           this.files,
           routeResult.dest,
           this,
-          nowConfig
+          vercelConfig
         );
         if (
           await this.exitWithStatus(
@@ -1511,7 +1508,7 @@ export default class DevServer {
             phase,
             req,
             res,
-            nowRequestId
+            requestId
           )
         ) {
           return;
@@ -1525,7 +1522,7 @@ export default class DevServer {
           req.method,
           hitRoutes,
           this,
-          nowConfig,
+          vercelConfig,
           routeResult.headers,
           [],
           'hit'
@@ -1553,7 +1550,7 @@ export default class DevServer {
         req.method,
         errorRoutes,
         this,
-        nowConfig,
+        vercelConfig,
         routeResult.headers,
         [],
         'error'
@@ -1565,7 +1562,7 @@ export default class DevServer {
         this.files,
         routeResultForError.dest,
         this,
-        nowConfig
+        vercelConfig
       );
 
       if (matchForError) {
@@ -1584,7 +1581,7 @@ export default class DevServer {
             'error',
             req,
             res,
-            nowRequestId
+            requestId
           )
         ) {
           return;
@@ -1626,25 +1623,25 @@ export default class DevServer {
         debug(`Proxying to frontend dev server: ${upstream}`);
 
         // Add the Vercel platform proxy request headers
-        const headers = this.getProxyHeaders(req, nowRequestId, false);
+        const headers = this.getProxyHeaders(req, requestId, false);
         for (const [name, value] of Object.entries(headers)) {
           req.headers[name] = value;
         }
 
-        this.setResponseHeaders(res, nowRequestId);
+        this.setResponseHeaders(res, requestId);
         const origUrl = url.parse(req.url || '/', true);
         delete origUrl.search;
         origUrl.pathname = dest;
         Object.assign(origUrl.query, uri_args);
         req.url = url.format(origUrl);
-        return proxyPass(req, res, upstream, this, nowRequestId, false);
+        return proxyPass(req, res, upstream, this, requestId, false);
       }
 
       if (
         (statusCode === 404 && routeResult.phase === 'miss') ||
-        !this.renderDirectoryListing(req, res, requestPath, nowRequestId)
+        !this.renderDirectoryListing(req, res, requestPath, requestId)
       ) {
-        await this.send404(req, res, nowRequestId);
+        await this.send404(req, res, requestId);
       }
       return;
     }
@@ -1670,7 +1667,7 @@ export default class DevServer {
         req.method,
         buildResult.routes,
         this,
-        nowConfig
+        vercelConfig
       );
       if (matchedRoute.found && callLevel === 0) {
         debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
@@ -1678,8 +1675,8 @@ export default class DevServer {
         await this.serveProjectAsNowV2(
           req,
           res,
-          nowRequestId,
-          nowConfig,
+          requestId,
+          vercelConfig,
           buildResult.routes,
           callLevel + 1
         );
@@ -1733,7 +1730,7 @@ export default class DevServer {
         await this.sendError(
           req,
           res,
-          nowRequestId,
+          requestId,
           'NO_RESPONSE_FROM_FUNCTION',
           502
         );
@@ -1744,7 +1741,7 @@ export default class DevServer {
     if (match.devServerResult) {
       // When invoking lambda functions, the region where the lambda was invoked
       // is also included in the request ID. So use the same `dev1` fake region.
-      nowRequestId = generateRequestId(this.podId, true);
+      requestId = generateRequestId(this.podId, true);
 
       const { port, pid } = match.devServerResult;
       this.devServerPids.add(pid);
@@ -1762,31 +1759,30 @@ export default class DevServer {
       });
 
       // Add the Vercel platform proxy request headers
-      const headers = this.getProxyHeaders(req, nowRequestId, false);
+      const headers = this.getProxyHeaders(req, requestId, false);
       for (const [name, value] of Object.entries(headers)) {
         req.headers[name] = value;
       }
 
-      this.setResponseHeaders(res, nowRequestId);
+      this.setResponseHeaders(res, requestId);
       return proxyPass(
         req,
         res,
         `http://localhost:${port}`,
         this,
-        nowRequestId,
+        requestId,
         false
       );
     } else if (match.devServerResult === null) {
       debug(`Skipping \`startDevServer()\` for ${match.entrypoint}`);
     }
-
-    let foundAsset = findAsset(match, requestPath, nowConfig);
+    let foundAsset = findAsset(match, requestPath, vercelConfig);
 
     if (!foundAsset && callLevel === 0) {
-      await this.triggerBuild(match, buildRequestPath, req, nowConfig);
+      await this.triggerBuild(match, buildRequestPath, req, vercelConfig);
 
       // Since the `asset` was just built, resolve again to get the new asset
-      foundAsset = findAsset(match, requestPath, nowConfig);
+      foundAsset = findAsset(match, requestPath, vercelConfig);
     }
 
     // Proxy to the dev server:
@@ -1799,24 +1795,24 @@ export default class DevServer {
       debug('Proxying to frontend dev server');
 
       // Add the Vercel platform proxy request headers
-      const headers = this.getProxyHeaders(req, nowRequestId, false);
+      const headers = this.getProxyHeaders(req, requestId, false);
       for (const [name, value] of Object.entries(headers)) {
         req.headers[name] = value;
       }
 
-      this.setResponseHeaders(res, nowRequestId);
+      this.setResponseHeaders(res, requestId);
       return proxyPass(
         req,
         res,
         `http://localhost:${this.devProcessPort}`,
         this,
-        nowRequestId,
+        requestId,
         false
       );
     }
 
     if (!foundAsset) {
-      await this.send404(req, res, nowRequestId);
+      await this.send404(req, res, requestId);
       return;
     }
 
@@ -1830,7 +1826,7 @@ export default class DevServer {
     /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
-        this.setResponseHeaders(res, nowRequestId);
+        this.setResponseHeaders(res, requestId);
         req.url = `/${basename(asset.fsPath)}`;
         return serveStaticFile(req, res, dirname(asset.fsPath), {
           headers: [
@@ -1851,7 +1847,7 @@ export default class DevServer {
           'Content-Length': asset.data.length,
           'Content-Type': asset.contentType || getMimeType(assetKey),
         };
-        this.setResponseHeaders(res, nowRequestId, headers);
+        this.setResponseHeaders(res, requestId, headers);
         res.end(asset.data);
         return;
 
@@ -1863,7 +1859,7 @@ export default class DevServer {
           await this.sendError(
             req,
             res,
-            nowRequestId,
+            requestId,
             'INTERNAL_LAMBDA_NOT_FOUND'
           );
           return;
@@ -1871,7 +1867,7 @@ export default class DevServer {
 
         // When invoking lambda functions, the region where the lambda was invoked
         // is also included in the request ID. So use the same `dev1` fake region.
-        nowRequestId = generateRequestId(this.podId, true);
+        requestId = generateRequestId(this.podId, true);
 
         // Mix the `routes` result dest query params into the req path
         const parsed = url.parse(req.url || '/', true);
@@ -1888,7 +1884,7 @@ export default class DevServer {
           path,
           headers: {
             ...req.headers,
-            ...this.getProxyHeaders(req, nowRequestId, true),
+            ...this.getProxyHeaders(req, requestId, true),
           },
           encoding: 'base64',
           body: body.toString('base64'),
@@ -1907,7 +1903,7 @@ export default class DevServer {
           await this.sendError(
             req,
             res,
-            nowRequestId,
+            requestId,
             'NO_RESPONSE_FROM_FUNCTION',
             502
           );
@@ -1917,7 +1913,7 @@ export default class DevServer {
         if (!statusCode) {
           res.statusCode = result.statusCode;
         }
-        this.setResponseHeaders(res, nowRequestId, result.headers);
+        this.setResponseHeaders(res, requestId, result.headers);
 
         let resBody: Buffer | string | undefined;
         if (result.encoding === 'base64' && typeof result.body === 'string') {
@@ -1929,15 +1925,15 @@ export default class DevServer {
 
       default:
         // This shouldn't really ever happen...
-        await this.sendError(req, res, nowRequestId, 'UNKNOWN_ASSET_TYPE');
+        await this.sendError(req, res, requestId, 'UNKNOWN_ASSET_TYPE');
     }
   };
 
   renderDirectoryListing(
-    req: http.IncomingMessage,
+    _req: http.IncomingMessage,
     res: http.ServerResponse,
     requestPath: string,
-    nowRequestId: string
+    requestId: string
   ): boolean {
     // If the "directory listing" feature is disabled in the
     // Project's settings, then don't render the directory listing
@@ -2015,7 +2011,7 @@ export default class DevServer {
       paths,
       directory,
     });
-    this.setResponseHeaders(res, nowRequestId);
+    this.setResponseHeaders(res, requestId);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader(
       'Content-Length',
@@ -2025,14 +2021,17 @@ export default class DevServer {
     return true;
   }
 
-  async hasFilesystem(dest: string, nowConfig: VercelConfig): Promise<boolean> {
+  async hasFilesystem(
+    dest: string,
+    vercelConfig: VercelConfig
+  ): Promise<boolean> {
     if (
       await findBuildMatch(
         this.buildMatches,
         this.files,
         dest,
         this,
-        nowConfig,
+        vercelConfig,
         true
       )
     ) {
@@ -2138,7 +2137,7 @@ function proxyPass(
   res: http.ServerResponse,
   dest: string,
   devServer: DevServer,
-  nowRequestId: string,
+  requestId: string,
   ignorePath: boolean = true
 ): void {
   return devServer.proxy.web(
@@ -2153,7 +2152,7 @@ function proxyPass(
         devServer.sendError(
           req,
           res,
-          nowRequestId,
+          requestId,
           'NO_RESPONSE_FROM_FUNCTION',
           502
         );
@@ -2214,7 +2213,7 @@ async function findBuildMatch(
   files: BuilderInputs,
   requestPath: string,
   devServer: DevServer,
-  nowConfig: VercelConfig,
+  vercelConfig: VercelConfig,
   isFilesystem = false
 ): Promise<BuildMatch | null> {
   requestPath = requestPath.replace(/^\//, '');
@@ -2227,7 +2226,7 @@ async function findBuildMatch(
         files,
         requestPath,
         devServer,
-        nowConfig,
+        vercelConfig,
         isFilesystem
       )
     ) {
@@ -2252,7 +2251,7 @@ async function shouldServe(
   files: BuilderInputs,
   requestPath: string,
   devServer: DevServer,
-  nowConfig: VercelConfig,
+  vercelConfig: VercelConfig,
   isFilesystem = false
 ): Promise<boolean> {
   const {
@@ -2266,22 +2265,22 @@ async function shouldServe(
     : requestPath;
 
   if (
-    nowConfig.cleanUrls &&
-    nowConfig.trailingSlash &&
+    vercelConfig.cleanUrls &&
+    vercelConfig.trailingSlash &&
     cleanSrc === trimmedPath
   ) {
     // Mimic fmeta-util and convert cleanUrls and trailingSlash
     return true;
   } else if (
-    nowConfig.cleanUrls &&
-    !nowConfig.trailingSlash &&
+    vercelConfig.cleanUrls &&
+    !vercelConfig.trailingSlash &&
     cleanSrc === requestPath
   ) {
     // Mimic fmeta-util and convert cleanUrls
     return true;
   } else if (
-    !nowConfig.cleanUrls &&
-    nowConfig.trailingSlash &&
+    !vercelConfig.cleanUrls &&
+    vercelConfig.trailingSlash &&
     src === trimmedPath
   ) {
     // Mimic fmeta-util and convert trailingSlash
@@ -2297,13 +2296,13 @@ async function shouldServe(
     if (shouldServe) {
       return true;
     }
-  } else if (findAsset(match, requestPath, nowConfig)) {
+  } else if (findAsset(match, requestPath, vercelConfig)) {
     // If there's no `shouldServe()` function, then look up if there's
     // a matching build asset on the `match` that has already been built.
     return true;
   } else if (
     !isFilesystem &&
-    (await findMatchingRoute(match, requestPath, devServer, nowConfig))
+    (await findMatchingRoute(match, requestPath, devServer, vercelConfig))
   ) {
     // If there's no `shouldServe()` function and no matched asset, then look
     // up if there's a matching build route on the `match` that has already
@@ -2317,7 +2316,7 @@ async function findMatchingRoute(
   match: BuildMatch,
   requestPath: string,
   devServer: DevServer,
-  nowConfig: VercelConfig
+  vercelConfig: VercelConfig
 ): Promise<RouteResult | void> {
   const reqUrl = `/${requestPath}`;
   for (const buildResult of match.buildResults.values()) {
@@ -2327,7 +2326,7 @@ async function findMatchingRoute(
       undefined,
       buildResult.routes,
       devServer,
-      nowConfig
+      vercelConfig
     );
     if (route.found) {
       return route;
@@ -2338,7 +2337,7 @@ async function findMatchingRoute(
 function findAsset(
   match: BuildMatch,
   requestPath: string,
-  nowConfig: VercelConfig
+  vercelConfig: VercelConfig
 ): { asset: BuilderOutput; assetKey: string } | void {
   if (!match.buildOutput) {
     return;
@@ -2346,7 +2345,7 @@ function findAsset(
   let assetKey: string = requestPath.replace(/\/$/, '');
   let asset = match.buildOutput[requestPath];
 
-  if (nowConfig.trailingSlash && requestPath.endsWith('/')) {
+  if (vercelConfig.trailingSlash && requestPath.endsWith('/')) {
     asset = match.buildOutput[requestPath.slice(0, -1)];
   }
 
@@ -2430,13 +2429,13 @@ function filterFrontendBuilds(build: Builder) {
   return !frontendRuntimeSet.has(name || '');
 }
 
-function hasNewRoutingProperties(nowConfig: VercelConfig) {
+function hasNewRoutingProperties(vercelConfig: VercelConfig) {
   return (
-    typeof nowConfig.cleanUrls !== undefined ||
-    typeof nowConfig.headers !== undefined ||
-    typeof nowConfig.redirects !== undefined ||
-    typeof nowConfig.rewrites !== undefined ||
-    typeof nowConfig.trailingSlash !== undefined
+    typeof vercelConfig.cleanUrls !== undefined ||
+    typeof vercelConfig.headers !== undefined ||
+    typeof vercelConfig.redirects !== undefined ||
+    typeof vercelConfig.rewrites !== undefined ||
+    typeof vercelConfig.trailingSlash !== undefined
   );
 }
 
