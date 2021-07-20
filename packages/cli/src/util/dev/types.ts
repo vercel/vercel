@@ -56,7 +56,7 @@ export interface BuildMatch extends BuildConfig {
   buildResults: Map<string | null, BuildResult>;
   buildTimestamp: number;
   buildProcess?: ChildProcess;
-  devServerResult?: StartDevServerResult;
+  devServerResultPromise?: Promise<StartDevServerResult>;
 }
 
 export interface HttpHandler {

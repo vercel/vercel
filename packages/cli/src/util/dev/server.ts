@@ -323,9 +323,10 @@ export default class DevServer {
     // Serverless Function dev server processes need to be invalidated,
     // so that a new process will be created on the next HTTP request
     for (const match of this.buildMatches.values()) {
-      if (match.devServerResult) {
-        await this.killBuilderDevServer(match.devServerResult.pid);
-        delete match.devServerResult;
+      const devServerResult = await match.devServerResultPromise;
+      if (devServerResult) {
+        await this.killBuilderDevServer(devServerResult.pid);
+        delete match.devServerResultPromise;
       }
     }
   }
@@ -1692,7 +1693,7 @@ export default class DevServer {
     // HTTP requests. Once *any* file modification happens, the process is shut down.
     const { builder, package: builderPkg } = match.builderWithPkg;
     if (
-      typeof match.devServerResult === 'undefined' &&
+      typeof match.devServerResultPromise === 'undefined' &&
       typeof builder.startDevServer === 'function'
     ) {
       try {
@@ -1700,7 +1701,7 @@ export default class DevServer {
         debug(
           `Invoking "startDevServer()" of ${builderPkg.name} for "${match.entrypoint}`
         );
-        match.devServerResult = await builder.startDevServer({
+        match.devServerResultPromise = builder.startDevServer({
           files,
           entrypoint: match.entrypoint,
           workPath,
@@ -1738,12 +1739,13 @@ export default class DevServer {
       }
     }
 
-    if (match.devServerResult) {
+    const devServerResult = await match.devServerResultPromise;
+    if (devServerResult) {
       // When invoking lambda functions, the region where the lambda was invoked
       // is also included in the request ID. So use the same `dev1` fake region.
       requestId = generateRequestId(this.podId, true);
 
-      const { port, pid } = match.devServerResult;
+      const { port, pid } = devServerResult;
       this.devServerPids.add(pid);
 
       debug(
@@ -1773,11 +1775,11 @@ export default class DevServer {
         requestId,
         false
       );
-    } else if (match.devServerResult === null) {
+    } else if (devServerResult === null) {
       debug(`Skipping \`startDevServer()\` for ${match.entrypoint}`);
     }
-    let foundAsset = findAsset(match, requestPath, vercelConfig);
 
+    let foundAsset = findAsset(match, requestPath, vercelConfig);
     if (!foundAsset && callLevel === 0) {
       await this.triggerBuild(match, buildRequestPath, req, vercelConfig);
 
