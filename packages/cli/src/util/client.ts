@@ -48,6 +48,7 @@ export default class Client extends EventEmitter {
   output: Output;
   config: GlobalConfig;
   localConfig: VercelConfig;
+  private requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
     super();
@@ -57,6 +58,7 @@ export default class Client extends EventEmitter {
     this.output = opts.output;
     this.config = opts.config;
     this.localConfig = opts.localConfig;
+    this.requestIdCounter = 1;
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -67,7 +69,7 @@ export default class Client extends EventEmitter {
     });
   }
 
-  async _fetch(_url: string, opts: FetchOptions = {}) {
+  _fetch(_url: string, opts: FetchOptions = {}) {
     const parsedUrl = parseUrl(_url, true);
     const apiUrl = parsedUrl.host
       ? `${parsedUrl.protocol}//${parsedUrl.host}`
@@ -104,17 +106,16 @@ export default class Client extends EventEmitter {
     }
 
     const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
-    const outputTime = await this.output.time(res => {
+    const requestId = this.requestIdCounter++;
+    return this.output.time(res => {
       if (res) {
-        return `← ${res.status}: ${res.headers.get('x-vercel-id')}`;
+        return `#${requestId} ← ${res.status} ${
+          res.statusText
+        }: ${res.headers.get('x-vercel-id')}`;
       } else {
-        return `→ ${opts.method || 'GET'} ${url} ${
-          JSON.stringify(opts.body) || ''
-        }`;
+        return `#${requestId} → ${opts.method || 'GET'} ${url}`;
       }
     }, fetch(url, { ...opts, headers, body }));
-
-    return outputTime;
   }
 
   fetch(url: string, opts: { json: false }): Promise<Response>;
