@@ -902,13 +902,13 @@ export const frameworks = [
         placeholder: '`npm run build` or `svelte-kit build`',
       },
       devCommand: {
-        placeholder: 'svelte-kit dev',
+        placeholder: 'svelte-kit dev --port $PORT',
       },
       outputDirectory: {
         placeholder: 'public',
       },
     },
-    devCommand: 'svelte-kit dev',
+    devCommand: 'svelte-kit dev --port $PORT',
     buildCommand: 'svelte-kit build',
     getOutputDirName: async () => 'public',
   },
