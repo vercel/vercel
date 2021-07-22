@@ -67,7 +67,7 @@ export default class Client extends EventEmitter {
     });
   }
 
-  _fetch(_url: string, opts: FetchOptions = {}) {
+  async _fetch(_url: string, opts: FetchOptions = {}) {
     const parsedUrl = parseUrl(_url, true);
     const apiUrl = parsedUrl.host
       ? `${parsedUrl.protocol}//${parsedUrl.host}`
@@ -104,10 +104,13 @@ export default class Client extends EventEmitter {
     }
 
     const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
-    return this.output.time(
+    const time = await this.output.time(
       `${opts.method || 'GET'} ${url} ${JSON.stringify(opts.body) || ''}`,
       fetch(url, { ...opts, headers, body })
     );
+
+    this.output.debug(time.headers.get('x-vercel-id'));
+    return time;
   }
 
   fetch(url: string, opts: { json: false }): Promise<Response>;
