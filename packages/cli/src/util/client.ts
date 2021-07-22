@@ -104,13 +104,18 @@ export default class Client extends EventEmitter {
     }
 
     const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
-    const time = await this.output.time(
+    const outputTime = await this.output.time(
       `${opts.method || 'GET'} ${url} ${JSON.stringify(opts.body) || ''}`,
       fetch(url, { ...opts, headers, body })
     );
 
-    this.output.debug(time.headers.get('x-vercel-id'));
-    return time;
+    // Display x-vercel-id in production logs
+    const vercelIdResHeader = outputTime.headers.get('x-vercel-id')
+      ? outputTime.headers.get('x-vercel-id')
+      : 'x-vercel-id not found';
+    this.output.debug(vercelIdResHeader);
+
+    return outputTime;
   }
 
   fetch(url: string, opts: { json: false }): Promise<Response>;
