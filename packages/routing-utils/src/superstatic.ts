@@ -184,7 +184,7 @@ export function sourceToRegex(source: string): {
 
 const namedGroupsRegex = /\(\?<([a-zA-Z][a-zA-Z0-9]*)>/g;
 
-function collectHasSegments(has?: HasField) {
+export function collectHasSegments(has?: HasField) {
   const hasSegments = new Set<string>();
 
   for (const hasItem of has || []) {
