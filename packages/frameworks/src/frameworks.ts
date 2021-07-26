@@ -1625,7 +1625,7 @@ export const frameworks = [
       'Astro is a next-generation static site generator that mixes lightning-fast performance with modern developer experience.',
     description: 'An Astro site, using the default starter kit.',
     website: 'https://astro.build',
-    envPrefix: 'ASTRO_',
+    envPrefix: 'SNOWPACK_PUBLIC_',
     detectors: {
       every: [
         {
