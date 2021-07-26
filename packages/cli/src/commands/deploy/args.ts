@@ -9,6 +9,7 @@ export const help = () => `
 
     ${chalk.dim('Basic')}
 
+      billing                          Manages the account payment methods
       deploy               [path]      Performs a deployment ${chalk.bold(
         '(default)'
       )}
@@ -27,6 +28,7 @@ export const help = () => `
 
       rm | remove          [id]        Removes a deployment
       domains              [name]      Manages your domain names
+      projects                         Manages your Projects
       dns                  [name]      Manages your DNS records
       certs                [cmd]       Manages your SSL certificates
       secrets              [name]      Manages your global Secrets, for use in Environment Variables

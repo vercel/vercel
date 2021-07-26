@@ -96,7 +96,7 @@ async function createBuildProcess(
 }
 
 export async function executeBuild(
-  nowConfig: VercelConfig,
+  vercelConfig: VercelConfig,
   devServer: DevServer,
   files: BuilderInputs,
   match: BuildMatch,
@@ -263,7 +263,7 @@ export async function executeBuild(
   }
 
   const { output } = result;
-  const { cleanUrls } = nowConfig;
+  const { cleanUrls } = vercelConfig;
 
   // Mimic fmeta-util and perform file renaming
   Object.entries(output).forEach(([path, value]) => {
@@ -359,7 +359,7 @@ export async function executeBuild(
           MemorySize: asset.memory || 3008,
           Environment: {
             Variables: {
-              ...nowConfig.env,
+              ...vercelConfig.env,
               ...asset.environment,
               ...envConfigs.runEnv,
             },
@@ -383,7 +383,7 @@ export async function executeBuild(
 }
 
 export async function getBuildMatches(
-  nowConfig: VercelConfig,
+  vercelConfig: VercelConfig,
   cwd: string,
   output: Output,
   devServer: DevServer,
@@ -398,7 +398,7 @@ export async function getBuildMatches(
   }
 
   const noMatches: Builder[] = [];
-  const builds = nowConfig.builds || [{ src: '**', use: '@vercel/static' }];
+  const builds = vercelConfig.builds || [{ src: '**', use: '@vercel/static' }];
 
   for (const buildConfig of builds) {
     let { src = '**', use, config = {} } = buildConfig;
