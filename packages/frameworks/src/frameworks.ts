@@ -830,8 +830,7 @@ export const frameworks = [
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
     tagline:
       'Svelte lets you write high performance reactive apps with significantly less boilerplate.',
-    description:
-      'A basic Svelte app using the default template.',
+    description: 'A basic Svelte app using the default template.',
     website: 'https://svelte.dev',
     detectors: {
       every: [
@@ -882,8 +881,7 @@ export const frameworks = [
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
-    description:
-      'A SvelteKit app optimized to work for serverless.',
+    description: 'A SvelteKit app optimized to work for serverless.',
     website: 'https://kit.svelte.dev',
     detectors: {
       every: [
@@ -1627,7 +1625,7 @@ export const frameworks = [
       'Astro is a next-generation static site generator that mixes lightning-fast performance with modern developer experience.',
     description: 'An Astro site, using the default starter kit.',
     website: 'https://astro.build',
-    envPrefix: 'SNOWPACK_PUBLIC_',
+    envPrefix: 'ASTRO_',
     detectors: {
       every: [
         {
@@ -1645,14 +1643,14 @@ export const frameworks = [
         placeholder: '`npm run build` or `astro build`',
       },
       devCommand: {
-        value: 'astro dev',
+        value: 'astro dev --port $PORT',
       },
       outputDirectory: {
         value: 'dist',
       },
     },
     dependency: 'astro',
-    devCommand: 'astro dev',
+    devCommand: 'astro dev --port $PORT',
     buildCommand: 'astro build',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
