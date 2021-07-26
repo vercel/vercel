@@ -773,6 +773,28 @@ describe('getTransformedRoutes', () => {
     assertValid(actual.routes);
   });
 
+  test('should not error when has segment is used in destination', () => {
+    const nowConfig = {
+      redirects: [
+        {
+          source: '/redirect',
+          destination: '/:url',
+          has: [
+            {
+              type: 'query',
+              key: 'url',
+              value: '(?<url>.*)',
+            },
+          ],
+        },
+      ],
+    };
+
+    const actual = getTransformedRoutes({ nowConfig });
+    assert.equal(actual.error, null);
+    assertValid(actual.routes);
+  });
+
   test('should error when routes is defined and cleanUrls is true', () => {
     const nowConfig = {
       cleanUrls: true,
@@ -1046,7 +1068,7 @@ describe('getTransformedRoutes', () => {
     assert.deepEqual(actual.routes, null);
     assert.ok(
       actual.error.message.includes(
-        'in `destination` property but not in `source` property'
+        'in `destination` property but not in `source` or `has` property'
       ),
       actual.error.message
     );
@@ -1065,7 +1087,7 @@ describe('getTransformedRoutes', () => {
     assert.deepEqual(actual.routes, null);
     assert.ok(
       actual.error.message.includes(
-        'in `destination` property but not in `source` property'
+        'in `destination` property but not in `source` or `has` property'
       ),
       actual.error.message
     );
@@ -1084,7 +1106,7 @@ describe('getTransformedRoutes', () => {
     assert.deepEqual(actual.routes, null);
     assert.ok(
       actual.error.message.includes(
-        'in `destination` property but not in `source` property'
+        'in `destination` property but not in `source` or `has` property'
       ),
       actual.error.message
     );
@@ -1103,7 +1125,7 @@ describe('getTransformedRoutes', () => {
     assert.deepEqual(actual.routes, null);
     assert.ok(
       actual.error.message.includes(
-        'in `destination` property but not in `source` property'
+        'in `destination` property but not in `source` or `has` property'
       ),
       actual.error.message
     );
