@@ -20,7 +20,7 @@ const allOptions = [
   },
 ] as const;
 
-function getHint(isAuto: boolean) {
+function getHint(isAuto = false) {
   const { major, range } = getLatestNodeVersion();
   return isAuto
     ? `Please set Node.js Version to ${range} in your Project Settings to use Node.js ${major}.`
@@ -40,7 +40,7 @@ export function getDiscontinuedNodeVersions(): NodeVersion[] {
 
 export async function getSupportedNodeVersion(
   engineRange: string | undefined,
-  isAuto: boolean
+  isAuto = false
 ): Promise<NodeVersion> {
   let selection: NodeVersion = getLatestNodeVersion();
 

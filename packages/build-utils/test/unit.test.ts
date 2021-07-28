@@ -1,19 +1,21 @@
-const ms = require('ms');
-const path = require('path');
-const fs = require('fs-extra');
-const assert = require('assert').strict;
-const { createZip } = require('../dist/lambda');
-const { glob, spawnAsync, download } = require('../');
-const { getSupportedNodeVersion } = require('../dist/fs/node-version');
-const {
+import ms from 'ms';
+import path from 'path';
+import fs from 'fs-extra';
+import { strict as assert } from 'assert';
+import { createZip } from '../src/lambda';
+import { getSupportedNodeVersion } from '../src/fs/node-version';
+import download from '../src/fs/download';
+import {
+  glob,
+  spawnAsync,
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   runNpmInstall,
   runPackageJsonScript,
-} = require('../dist');
+} from '../src';
 
-async function expectBuilderError(promise, pattern) {
+async function expectBuilderError(promise: Promise<any>, pattern: string) {
   let result;
   try {
     result = await promise;
@@ -31,7 +33,7 @@ async function expectBuilderError(promise, pattern) {
   );
 }
 
-let warningMessages;
+let warningMessages: string[];
 const originalConsoleWarn = console.warn;
 beforeEach(() => {
   warningMessages = [];
@@ -207,7 +209,7 @@ it('should not warn when package.json engines matches project setting from confi
 });
 
 it('should get latest node version', async () => {
-  expect(await getLatestNodeVersion()).toHaveProperty('major', 14);
+  expect(getLatestNodeVersion()).toHaveProperty('major', 14);
 });
 
 it('should throw for discontinued versions', async () => {
