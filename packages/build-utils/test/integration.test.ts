@@ -1,15 +1,16 @@
-const path = require('path');
-const fs = require('fs-extra');
-const {
+import path from 'path';
+import fs from 'fs-extra';
+import {
   packAndDeploy,
   testDeployment,
-} = require('../../../test/lib/deployment/test-deployment');
-const { glob, detectBuilders } = require('../');
+  // @ts-ignore
+} from '../../../test/lib/deployment/test-deployment';
+import { glob, detectBuilders } from '../src';
 
 jest.setTimeout(4 * 60 * 1000);
 
 const builderUrl = '@canary';
-let buildUtilsUrl;
+let buildUtilsUrl: string;
 
 beforeAll(async () => {
   const buildUtilsPath = path.resolve(__dirname, '..');
