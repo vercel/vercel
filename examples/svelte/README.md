@@ -4,7 +4,7 @@ This directory is a brief example of a [Svelte](https://svelte.dev/) site that c
 
 ## Deploy Your Own
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/svelte)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/svelte&template=svelte)
 
 _Live Example: https://svelte.examples.vercel.com_
 
