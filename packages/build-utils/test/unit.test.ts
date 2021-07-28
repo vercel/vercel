@@ -209,7 +209,7 @@ it('should not warn when package.json engines matches project setting from confi
 });
 
 it('should get latest node version', async () => {
-  expect(await getLatestNodeVersion()).toHaveProperty('major', 14);
+  expect(getLatestNodeVersion()).toHaveProperty('major', 14);
 });
 
 it('should throw for discontinued versions', async () => {
