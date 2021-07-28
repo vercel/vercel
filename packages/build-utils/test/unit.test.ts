@@ -4,10 +4,10 @@ import fs from 'fs-extra';
 import { strict as assert } from 'assert';
 import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
+import download from '../src/fs/download';
 import {
   glob,
   spawnAsync,
-  download,
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
