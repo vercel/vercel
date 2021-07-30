@@ -316,6 +316,5 @@ it('should return lockfileVersion 1 with older versions of npm', async () => {
     '08-yarn-npm/with-npm'
   );
   const result = await scanParentDirs(packageLockJsonPath);
-  console.log(result);
   expect(result.lockfileVersion).toEqual(1);
 });
