@@ -9,7 +9,46 @@ import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 
-interface SpawnOptionsExtended extends SpawnOptions {
+export type CliType = 'yarn' | 'npm';
+
+export interface ScanParentDirsResult {
+  /**
+   * "yarn" or "npm", depending on the presence of lockfiles.
+   */
+  cliType: CliType;
+  /**
+   * The contents of found `package.json` file, when the `readPackageJson`
+   * option is enabled.
+   */
+  packageJson?: PackageJson;
+  /**
+   * The `lockfileVersion` number from the `package-lock.json` file,
+   * when present.
+   */
+  lockfileVersion?: number;
+}
+
+export interface WalkParentDirsProps {
+  /**
+   * The highest directory, typically the workPath root of the project.
+   * If this directory is reached and it doesn't contain the file, null is returned.
+   */
+  base: string;
+  /**
+   * The directory to start searching, typically the same directory of the entrypoint.
+   * If this directory doesn't contain the file, the parent is checked, etc.
+   */
+  start: string;
+  /**
+   * The name of the file to search for, typically `package.json` or `Gemfile`.
+   */
+  filename: string;
+}
+
+export interface SpawnOptionsExtended extends SpawnOptions {
+  /**
+   * Pretty formatted command that is being spawned for logging purposes.
+   */
   prettyCommand?: string;
 }
 
@@ -155,6 +194,7 @@ export function getSpawnOptions(
   };
 
   if (!meta.isDev) {
+    // Ensure that the selected Node version is at the beginning of the `$PATH`
     opts.env.PATH = `/node${nodeVersion.major}/bin:${opts.env.PATH}`;
   }
 
@@ -188,10 +228,12 @@ export async function getNodeVersion(
   return getSupportedNodeVersion(nodeVersion, isAuto);
 }
 
-async function scanParentDirs(destPath: string, readPackageJson = false) {
+async function scanParentDirs(
+  destPath: string,
+  readPackageJson = false
+): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
-  type CliType = 'yarn' | 'npm';
   let cliType: CliType = 'yarn';
   let packageJson: PackageJson | undefined;
   let currentDestPath = destPath;
@@ -224,23 +266,6 @@ async function scanParentDirs(destPath: string, readPackageJson = false) {
   return { cliType, packageJson };
 }
 
-interface WalkParentDirsProps {
-  /**
-   * The highest directory, typically the workPath root of the project.
-   * If this directory is reached and it doesn't contain the file, null is returned.
-   */
-  base: string;
-  /**
-   * The directory to start searching, typically the same directory of the entrypoint.
-   * If this directory doesn't contain the file, the parent is checked, etc.
-   */
-  start: string;
-  /**
-   * The name of the file to search for, typically `package.json` or `Gemfile`.
-   */
-  filename: string;
-}
-
 export async function walkParentDirs({
   base,
   start,
@@ -270,7 +295,7 @@ export async function runNpmInstall(
   spawnOpts?: SpawnOptions,
   meta?: Meta
 ) {
-  if (meta && meta.isDev) {
+  if (meta?.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
     return;
   }
@@ -278,13 +303,13 @@ export async function runNpmInstall(
   assert(path.isAbsolute(destPath));
   debug(`Installing to ${destPath}`);
 
-  const { cliType } = await scanParentDirs(destPath);
+  const { cliType, lockfileVersion } = await scanParentDirs(destPath);
   const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
   const env = opts.env ? { ...opts.env } : { ...process.env };
   delete env.NODE_ENV;
   opts.env = env;
 
-  let command: 'npm' | 'yarn';
+  let command: CliType;
   let commandArgs: string[];
 
   if (cliType === 'npm') {
@@ -293,6 +318,11 @@ export async function runNpmInstall(
     commandArgs = args
       .filter(a => a !== '--prefer-offline')
       .concat(['install', '--no-audit', '--unsafe-perm']);
+
+    if (lockfileVersion === 2) {
+      // Ensure that npm 7 is at the beginning of the `$PATH`
+      env.PATH = `/node16/bin:${env.PATH}`;
+    }
   } else {
     opts.prettyCommand = 'yarn install';
     command = 'yarn';
@@ -308,6 +338,57 @@ export async function runNpmInstall(
     commandArgs.push('--production');
   }
   await spawnAsync(command, commandArgs, opts);
+}
+
+export async function runPackageJsonScript(
+  destPath: string,
+  scriptNames: string | Iterable<string>,
+  spawnOpts?: SpawnOptions
+) {
+  assert(path.isAbsolute(destPath));
+
+  let command: CliType;
+  const { packageJson, cliType, lockfileVersion } = await scanParentDirs(
+    destPath,
+    true
+  );
+  const scriptName = getScriptName(
+    packageJson,
+    typeof scriptNames === 'string' ? [scriptNames] : scriptNames
+  );
+  if (!scriptName) return false;
+
+  debug('Running user script...');
+  const runScriptTime = Date.now();
+
+  const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
+  const env: typeof process.env = { ...process.env, ...opts.env };
+  delete env.NODE_ENV;
+  opts.env = env;
+
+  if (cliType === 'npm') {
+    opts.prettyCommand = `npm run ${scriptName}`;
+    command = 'npm';
+
+    if (lockfileVersion === 2) {
+      // Ensure that npm 7 is at the beginning of the `$PATH`
+      env.PATH = `/node16/bin:${env.PATH}`;
+    }
+  } else {
+    opts.prettyCommand = `yarn run ${scriptName}`;
+    command = 'yarn';
+
+    // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
+    if (!env.YARN_NODE_LINKER) {
+      env.YARN_NODE_LINKER = 'node-modules';
+    }
+  }
+
+  console.log(`Running "${opts.prettyCommand}"`);
+  await spawnAsync(command, ['run', scriptName], opts);
+
+  debug(`Script complete [${Date.now() - runScriptTime}ms]`);
+  return true;
 }
 
 export async function runBundleInstall(
@@ -360,51 +441,6 @@ export function getScriptName(
     }
   }
   return null;
-}
-
-export async function runPackageJsonScript(
-  destPath: string,
-  scriptNames: string | Iterable<string>,
-  spawnOpts?: SpawnOptions
-) {
-  assert(path.isAbsolute(destPath));
-  const { packageJson, cliType } = await scanParentDirs(destPath, true);
-  const scriptName = getScriptName(
-    packageJson,
-    typeof scriptNames === 'string' ? [scriptNames] : scriptNames
-  );
-  if (!scriptName) return false;
-
-  debug('Running user script...');
-  const runScriptTime = Date.now();
-
-  if (cliType === 'npm') {
-    const prettyCommand = `npm run ${scriptName}`;
-    console.log(`Running "${prettyCommand}"`);
-    await spawnAsync('npm', ['run', scriptName], {
-      ...spawnOpts,
-      cwd: destPath,
-      prettyCommand,
-    });
-  } else {
-    // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
-    const env: typeof process.env = { ...process.env, ...spawnOpts?.env };
-    if (!env.YARN_NODE_LINKER) {
-      env.YARN_NODE_LINKER = 'node-modules';
-    }
-
-    const prettyCommand = `yarn run ${scriptName}`;
-    console.log(`Running "${prettyCommand}"`);
-    await spawnAsync('yarn', ['run', scriptName], {
-      ...spawnOpts,
-      env,
-      cwd: destPath,
-      prettyCommand,
-    });
-  }
-
-  debug(`Script complete [${Date.now() - runScriptTime}ms]`);
-  return true;
 }
 
 /**
