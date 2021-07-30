@@ -23,6 +23,7 @@ import {
   getNodeVersion,
   getSpawnOptions,
   getNodeBinPath,
+  scanParentDirs,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -68,6 +69,7 @@ export {
   debug,
   isSymbolicLink,
   getLambdaOptionsFromFunction,
+  scanParentDirs,
 };
 
 export {

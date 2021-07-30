@@ -20,10 +20,22 @@ beforeAll(async () => {
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
+// Fixtures that have separate tests and should be skipped in the loop
+const skipFixtures: string[] = [
+  '01-zero-config-api',
+  '02-zero-config-api',
+  '03-zero-config-angular',
+  '04-zero-config-brunch',
+  '05-zero-config-gatsby',
+  '06-zero-config-hugo',
+  '07-zero-config-jekyll',
+  '08-zero-config-middleman',
+  '20-npm-7',
+];
+
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
-  if (fixture.includes('zero-config')) {
-    // Those have separate tests
+  if (skipFixtures.includes(fixture)) {
     continue; // eslint-disable-line no-continue
   }
 
