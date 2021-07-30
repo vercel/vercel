@@ -20,9 +20,13 @@ beforeAll(async () => {
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
+// Add the fixture name here, if it's only needed
+// for unit tests, and not integration tests
+const skipFixtures: string[] = ['20-npm-7'];
+
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
-  if (fixture.includes('zero-config')) {
+  if (fixture.includes('zero-config') || skipFixtures.includes(fixture)) {
     // Those have separate tests
     continue; // eslint-disable-line no-continue
   }
