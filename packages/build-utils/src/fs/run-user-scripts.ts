@@ -309,12 +309,10 @@ export async function runNpmInstall(
   delete env.NODE_ENV;
   opts.env = env;
 
-  let command: CliType;
   let commandArgs: string[];
 
   if (cliType === 'npm') {
     opts.prettyCommand = 'npm install';
-    command = 'npm';
     commandArgs = args
       .filter(a => a !== '--prefer-offline')
       .concat(['install', '--no-audit', '--unsafe-perm']);
@@ -325,7 +323,6 @@ export async function runNpmInstall(
     }
   } else {
     opts.prettyCommand = 'yarn install';
-    command = 'yarn';
     commandArgs = ['install', ...args];
 
     // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
@@ -337,7 +334,8 @@ export async function runNpmInstall(
   if (process.env.NPM_ONLY_PRODUCTION) {
     commandArgs.push('--production');
   }
-  await spawnAsync(command, commandArgs, opts);
+
+  return spawnAsync(cliType, commandArgs, opts);
 }
 
 export async function runPackageJsonScript(
@@ -347,7 +345,6 @@ export async function runPackageJsonScript(
 ) {
   assert(path.isAbsolute(destPath));
 
-  let command: CliType;
   const { packageJson, cliType, lockfileVersion } = await scanParentDirs(
     destPath,
     true
@@ -362,13 +359,10 @@ export async function runPackageJsonScript(
   const runScriptTime = Date.now();
 
   const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
-  const env: typeof process.env = { ...process.env, ...opts.env };
-  delete env.NODE_ENV;
-  opts.env = env;
+  const env = (opts.env = { ...process.env, ...opts.env });
 
   if (cliType === 'npm') {
     opts.prettyCommand = `npm run ${scriptName}`;
-    command = 'npm';
 
     if (lockfileVersion === 2) {
       // Ensure that npm 7 is at the beginning of the `$PATH`
@@ -376,7 +370,6 @@ export async function runPackageJsonScript(
     }
   } else {
     opts.prettyCommand = `yarn run ${scriptName}`;
-    command = 'yarn';
 
     // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
     if (!env.YARN_NODE_LINKER) {
@@ -385,7 +378,7 @@ export async function runPackageJsonScript(
   }
 
   console.log(`Running "${opts.prettyCommand}"`);
-  await spawnAsync(command, ['run', scriptName], opts);
+  await spawnAsync(cliType, ['run', scriptName], opts);
 
   debug(`Script complete [${Date.now() - runScriptTime}ms]`);
   return true;
@@ -433,7 +426,7 @@ export function getScriptName(
   pkg: Pick<PackageJson, 'scripts'> | null | undefined,
   possibleNames: Iterable<string>
 ): string | null {
-  if (pkg && pkg.scripts) {
+  if (pkg?.scripts) {
     for (const name of possibleNames) {
       if (name in pkg.scripts) {
         return name;
