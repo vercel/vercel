@@ -13,6 +13,7 @@ import {
   getDiscontinuedNodeVersions,
   runNpmInstall,
   runPackageJsonScript,
+  scanParentDirs,
 } from '../src';
 
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
@@ -295,3 +296,25 @@ it(
   },
   ms('1m')
 );
+
+it('should return lockfileVersion 2 with npm7', async () => {
+  const packageLockJsonPath = path.join(__dirname, 'fixtures', '20-npm-7');
+  const result = await scanParentDirs(packageLockJsonPath);
+  expect(result.lockfileVersion).toEqual(2);
+});
+
+it('should not return lockfileVersion with yarn', async () => {
+  const packageLockJsonPath = path.join(__dirname, 'fixtures', '19-yarn-v2');
+  const result = await scanParentDirs(packageLockJsonPath);
+  expect(result.lockfileVersion).toEqual(undefined);
+});
+
+it('should return lockfileVersion 1 with older versions of npm', async () => {
+  const packageLockJsonPath = path.join(
+    __dirname,
+    'fixtures',
+    '08-yarn-npm/with-npm'
+  );
+  const result = await scanParentDirs(packageLockJsonPath);
+  expect(result.lockfileVersion).toEqual(1);
+});

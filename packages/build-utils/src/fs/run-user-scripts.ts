@@ -228,7 +228,7 @@ export async function getNodeVersion(
   return getSupportedNodeVersion(nodeVersion, isAuto);
 }
 
-async function scanParentDirs(
+export async function scanParentDirs(
   destPath: string,
   readPackageJson = false
 ): Promise<ScanParentDirsResult> {
@@ -237,6 +237,7 @@ async function scanParentDirs(
   let cliType: CliType = 'yarn';
   let packageJson: PackageJson | undefined;
   let currentDestPath = destPath;
+  let lockfileVersion: number | undefined;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -248,12 +249,23 @@ async function scanParentDirs(
         packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
       }
       // eslint-disable-next-line no-await-in-loop
-      const [hasPackageLockJson, hasYarnLock] = await Promise.all([
-        fs.pathExists(path.join(currentDestPath, 'package-lock.json')),
+      const [packageLockJson, hasYarnLock] = await Promise.all([
+        fs
+          .readJson(path.join(currentDestPath, 'package-lock.json'))
+          .catch(error => {
+            // If the file doesn't exist, fail gracefully otherwise error
+            if (error.code === 'ENOENT') {
+              return null;
+            } else {
+              throw error;
+            }
+          }),
         fs.pathExists(path.join(currentDestPath, 'yarn.lock')),
       ]);
-      if (hasPackageLockJson && !hasYarnLock) {
+
+      if (packageLockJson && !hasYarnLock) {
         cliType = 'npm';
+        lockfileVersion = packageLockJson.lockfileVersion;
       }
       break;
     }
@@ -263,7 +275,7 @@ async function scanParentDirs(
     currentDestPath = newDestPath;
   }
 
-  return { cliType, packageJson };
+  return { cliType, packageJson, lockfileVersion };
 }
 
 export async function walkParentDirs({
