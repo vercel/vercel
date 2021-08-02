@@ -1,6 +1,5 @@
 {
   "version": 2,
   "builds": [{ "src": "package.json", "use": "@vercel/static-build" }],
-  "build": { "env": { "VERCEL_DEBUG": "1" } },
   "probes": [{ "path": "/", "mustContain": "npm version: 7" }]
 }
