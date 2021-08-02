@@ -13,7 +13,7 @@
   "scripts": {
     "build": "node build",
     "test-unit": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
-    "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.ts",
+    "test-integration-once": "VERCEL_DEBUG=1 jest --env node --verbose --runInBand --bail test/integration.test.ts",
     "prepublishOnly": "node build"
   },
   "devDependencies": {
