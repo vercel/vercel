@@ -30,7 +30,6 @@ const skipFixtures: string[] = [
   '06-zero-config-hugo',
   '07-zero-config-jekyll',
   '08-zero-config-middleman',
-  '20-npm-7',
 ];
 
 // eslint-disable-next-line no-restricted-syntax

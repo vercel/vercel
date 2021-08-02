@@ -1,0 +1,4 @@
+{
+  "version": 2,
+  "probes": [{ "path": "/", "mustContain": "npm version: 7" }]
+}
