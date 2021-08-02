@@ -1,4 +1,4 @@
 {
   "version": 2,
-  "probes": [{ "path": "/", "mustContain": "npm version: 7" }]
+  "build": { "env": { "VERCEL_DEBUG": "1" } }
 }
