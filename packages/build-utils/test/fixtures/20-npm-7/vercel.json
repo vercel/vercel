@@ -1,4 +1,5 @@
 {
   "version": 2,
-  "build": { "env": { "VERCEL_DEBUG": "1" } }
+  "build": { "env": { "VERCEL_DEBUG": "1" } },
+  "probes": [{ "path": "/", "mustContain": "npm version: 7" }]
 }
