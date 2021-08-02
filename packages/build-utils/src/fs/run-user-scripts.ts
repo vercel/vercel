@@ -329,9 +329,9 @@ export async function runNpmInstall(
       .filter(a => a !== '--prefer-offline')
       .concat(['install', '--no-audit', '--unsafe-perm']);
 
-    if (lockfileVersion === 2) {
+    if (typeof lockfileVersion === 'number' && lockfileVersion >= 2) {
       // Ensure that npm 7 is at the beginning of the `$PATH`
-      env.PATH = `/node16/bin:${env.PATH}`;
+      env.PATH = `/node16/bin-npm7:${env.PATH}`;
     }
   } else {
     opts.prettyCommand = 'yarn install';
@@ -376,9 +376,9 @@ export async function runPackageJsonScript(
   if (cliType === 'npm') {
     opts.prettyCommand = `npm run ${scriptName}`;
 
-    if (lockfileVersion === 2) {
+    if (typeof lockfileVersion === 'number' && lockfileVersion >= 2) {
       // Ensure that npm 7 is at the beginning of the `$PATH`
-      env.PATH = `/node16/bin:${env.PATH}`;
+      env.PATH = `/node16/bin-npm7:${env.PATH}`;
     }
   } else {
     opts.prettyCommand = `yarn run ${scriptName}`;
