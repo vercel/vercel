@@ -1,12 +1,7 @@
 {
   "name": "20-npm-7",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+    "build": "mkdir -p public && (printf \"npm version: \" && npm -v) > public/index.txt"
+  }
 }
