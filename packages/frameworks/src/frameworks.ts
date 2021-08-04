@@ -6,9 +6,7 @@ import { readConfigFile } from './read-config-file';
 
 export * from './types';
 
-const { readdir, stat, readFile, unlink } = promises;
-const isDir = async (file: string): Promise<boolean> =>
-  (await stat(file)).isDirectory();
+const { readdir, readFile, unlink } = promises;
 
 /**
  * Please note that is extremely important that the `dependency` property needs
@@ -313,11 +311,11 @@ export const frameworks = [
       const base = 'build';
       try {
         const location = join(dirPrefix, base);
-        const content = await readdir(location);
+        const content = await readdir(location, { withFileTypes: true });
 
         // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && (await isDir(join(location, content[0])))) {
-          return join(base, content[0]);
+        if (content.length === 1 && content[0].isDirectory()) {
+          return join(base, content[0].name);
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
@@ -402,11 +400,11 @@ export const frameworks = [
       const base = 'build';
       try {
         const location = join(dirPrefix, base);
-        const content = await readdir(location);
+        const content = await readdir(location, { withFileTypes: true });
 
         // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && (await isDir(join(location, content[0])))) {
-          return join(base, content[0]);
+        if (content.length === 1 && content[0].isDirectory()) {
+          return join(base, content[0].name);
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
@@ -744,11 +742,11 @@ export const frameworks = [
       const base = 'dist';
       try {
         const location = join(dirPrefix, base);
-        const content = await readdir(location);
+        const content = await readdir(location, { withFileTypes: true });
 
         // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && (await isDir(join(location, content[0])))) {
-          return join(base, content[0]);
+        if (content.length === 1 && content[0].isDirectory()) {
+          return join(base, content[0].name);
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
@@ -830,8 +828,7 @@ export const frameworks = [
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
     tagline:
       'Svelte lets you write high performance reactive apps with significantly less boilerplate.',
-    description:
-      'A basic Svelte app using the default template.',
+    description: 'A basic Svelte app using the default template.',
     website: 'https://svelte.dev',
     detectors: {
       every: [
@@ -882,8 +879,7 @@ export const frameworks = [
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
-    description:
-      'A SvelteKit app optimized to work for serverless.',
+    description: 'A SvelteKit app optimized to work for serverless.',
     website: 'https://kit.svelte.dev',
     detectors: {
       every: [
