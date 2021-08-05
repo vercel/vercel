@@ -41,13 +41,11 @@
     "fs-extra": "7.0.0",
     "glob": "7.1.3",
     "into-stream": "5.0.0",
-    "jest": "27.0.6",
     "js-yaml": "3.13.1",
     "minimatch": "3.0.4",
     "multistream": "2.1.1",
     "node-fetch": "2.6.1",
     "semver": "6.1.1",
-    "ts-jest": "27.0.4",
     "typescript": "4.3.4",
     "yazl": "2.4.3"
   }
