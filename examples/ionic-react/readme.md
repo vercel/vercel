@@ -6,7 +6,7 @@ This directory is a brief example of an [Ionic React](https://ionicframework.com
 
 Deploy your own Ionic React project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/ionic-react)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/ionic-react&template=ionic-react)
 
 _Live Example: https://ionic-react.now-examples.now.sh_
 
