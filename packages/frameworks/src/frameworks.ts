@@ -900,7 +900,8 @@ export const frameworks = [
         placeholder: '`npm run build` or `svelte-kit build`',
       },
       devCommand: {
-        placeholder: 'svelte-kit dev --port $PORT',
+        value: 'svelte-kit dev --port $PORT',
+        placeholder: 'svelte-kit dev',
       },
       outputDirectory: {
         placeholder: 'public',

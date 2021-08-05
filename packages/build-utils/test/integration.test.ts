@@ -1,15 +1,16 @@
-const path = require('path');
-const fs = require('fs-extra');
-const {
+import path from 'path';
+import fs from 'fs-extra';
+import {
   packAndDeploy,
   testDeployment,
-} = require('../../../test/lib/deployment/test-deployment');
-const { glob, detectBuilders } = require('../');
+  // @ts-ignore
+} from '../../../test/lib/deployment/test-deployment';
+import { glob, detectBuilders } from '../src';
 
 jest.setTimeout(4 * 60 * 1000);
 
 const builderUrl = '@canary';
-let buildUtilsUrl;
+let buildUtilsUrl: string;
 
 beforeAll(async () => {
   const buildUtilsPath = path.resolve(__dirname, '..');
@@ -19,10 +20,21 @@ beforeAll(async () => {
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
+// Fixtures that have separate tests and should be skipped in the loop
+const skipFixtures: string[] = [
+  '01-zero-config-api',
+  '02-zero-config-api',
+  '03-zero-config-angular',
+  '04-zero-config-brunch',
+  '05-zero-config-gatsby',
+  '06-zero-config-hugo',
+  '07-zero-config-jekyll',
+  '08-zero-config-middleman',
+];
+
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
-  if (fixture.includes('zero-config')) {
-    // Those have separate tests
+  if (skipFixtures.includes(fixture)) {
     continue; // eslint-disable-line no-continue
   }
 
