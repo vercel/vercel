@@ -244,10 +244,13 @@ export async function scanParentDirs(
     const packageJsonPath = path.join(currentDestPath, 'package.json');
     // eslint-disable-next-line no-await-in-loop
     if (await fs.pathExists(packageJsonPath)) {
-      // eslint-disable-next-line no-await-in-loop
-      if (readPackageJson) {
+      // Only read the contents of the *first* `package.json` file found,
+      // since that's the one related to this installation.
+      if (readPackageJson && !packageJson) {
+        // eslint-disable-next-line no-await-in-loop
         packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
       }
+
       // eslint-disable-next-line no-await-in-loop
       const [packageLockJson, hasYarnLock] = await Promise.all([
         fs
@@ -256,9 +259,8 @@ export async function scanParentDirs(
             // If the file doesn't exist, fail gracefully otherwise error
             if (error.code === 'ENOENT') {
               return null;
-            } else {
-              throw error;
             }
+            throw error;
           }),
         fs.pathExists(path.join(currentDestPath, 'yarn.lock')),
       ]);
@@ -267,7 +269,13 @@ export async function scanParentDirs(
         cliType = 'npm';
         lockfileVersion = packageLockJson.lockfileVersion;
       }
-      break;
+
+      // Only stop iterating if a lockfile was found, because it's possible
+      // that the lockfile is in a higher path than where the `package.json`
+      // file was found.
+      if (packageLockJson || hasYarnLock) {
+        break;
+      }
     }
 
     const newDestPath = path.dirname(currentDestPath);
