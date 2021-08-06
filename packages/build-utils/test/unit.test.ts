@@ -318,7 +318,7 @@ it('should return lockfileVersion 1 with older versions of npm', async () => {
   expect(result.lockfileVersion).toEqual(1);
 });
 
-it('should return lockfileVersion 1 with older versions of npm', async () => {
+it('should detect npm Workspaces', async () => {
   const fixture = path.join(__dirname, 'fixtures', '21-npm-workspaces/a');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
