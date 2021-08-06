@@ -342,8 +342,7 @@ export async function runNpmInstall(
     if (
       typeof lockfileVersion === 'number' &&
       lockfileVersion >= 2 &&
-      nodeVersion &&
-      nodeVersion.major < 16
+      (nodeVersion?.major || 0) < 16
     ) {
       // Ensure that npm 7 is at the beginning of the `$PATH`
       env.PATH = `/node16/bin-npm7:${env.PATH}`;
