@@ -430,12 +430,16 @@ const main = async () => {
         return result;
       }
 
+      if (result.teamId) {
+        // SSO login, so set the current scope to the appropriate Team
+        client.config.currentTeam = result.teamId;
+      } else {
+        delete client.config.currentTeam;
+      }
+
       // When `result` is a string it's the user's authentication token.
       // It needs to be saved to the configuration file.
-      client.authConfig.token = result;
-
-      // New user, so we can't keep the team
-      delete client.config.currentTeam;
+      client.authConfig.token = result.token;
 
       configFiles.writeToAuthConfigFile(client.authConfig);
       configFiles.writeToConfigFile(client.config);
