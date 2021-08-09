@@ -1,19 +1,22 @@
-const ms = require('ms');
-const path = require('path');
-const fs = require('fs-extra');
-const assert = require('assert').strict;
-const { createZip } = require('../dist/lambda');
-const { glob, spawnAsync, download } = require('../');
-const { getSupportedNodeVersion } = require('../dist/fs/node-version');
-const {
+import ms from 'ms';
+import path from 'path';
+import fs from 'fs-extra';
+import { strict as assert } from 'assert';
+import { createZip } from '../src/lambda';
+import { getSupportedNodeVersion } from '../src/fs/node-version';
+import download from '../src/fs/download';
+import {
+  glob,
+  spawnAsync,
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   runNpmInstall,
   runPackageJsonScript,
-} = require('../dist');
+  scanParentDirs,
+} from '../src';
 
-async function expectBuilderError(promise, pattern) {
+async function expectBuilderError(promise: Promise<any>, pattern: string) {
   let result;
   try {
     result = await promise;
@@ -31,7 +34,7 @@ async function expectBuilderError(promise, pattern) {
   );
 }
 
-let warningMessages;
+let warningMessages: string[];
 const originalConsoleWarn = console.warn;
 beforeEach(() => {
   warningMessages = [];
@@ -207,7 +210,7 @@ it('should not warn when package.json engines matches project setting from confi
 });
 
 it('should get latest node version', async () => {
-  expect(await getLatestNodeVersion()).toHaveProperty('major', 14);
+  expect(getLatestNodeVersion()).toHaveProperty('major', 14);
 });
 
 it('should throw for discontinued versions', async () => {
@@ -293,3 +296,31 @@ it(
   },
   ms('1m')
 );
+
+it('should return lockfileVersion 2 with npm7', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('npm');
+  expect(result.lockfileVersion).toEqual(2);
+});
+
+it('should not return lockfileVersion with yarn', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '19-yarn-v2');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('yarn');
+  expect(result.lockfileVersion).toEqual(undefined);
+});
+
+it('should return lockfileVersion 1 with older versions of npm', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '08-yarn-npm/with-npm');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('npm');
+  expect(result.lockfileVersion).toEqual(1);
+});
+
+it('should detect npm Workspaces', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '21-npm-workspaces/a');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('npm');
+  expect(result.lockfileVersion).toEqual(2);
+});

@@ -149,7 +149,9 @@ function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
       const r = await promise;
       const endLabel = typeof label === 'function' ? label(r) : label;
       const duration = Date.now() - start;
-      debug(`${endLabel}: ${(duration / 1000).toFixed(2)}s`);
+      const durationPretty =
+        duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(2)}s`;
+      debug(`${endLabel} ${chalk.gray(`[${durationPretty}]`)}`);
       return r;
     }
 
