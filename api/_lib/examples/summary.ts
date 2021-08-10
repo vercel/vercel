@@ -15,5 +15,6 @@ export function summary(source: string) {
 
   return readdirSync(source, { withFileTypes: true })
     .filter(d => !isDotFile(d.name))
-    .filter(d => d.isDirectory());
+    .filter(d => d.isDirectory())
+    .map(d => d.name);
 }
