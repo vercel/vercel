@@ -5,7 +5,6 @@ import { User, Team } from '../../types';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import withSpinner from '../../util/with-spinner';
 import moveOutDomain from '../../util/domains/move-out-domain';
 import isRootDomain from '../../util/is-root-domain';
 import textInput from '../../util/input/text';
@@ -106,9 +105,14 @@ export default async function move(
   }
 
   const context = contextName;
-  const moveTokenResult = await withSpinner('Moving', () => {
-    return moveOutDomain(client, context, domainName, matchId || destination);
-  });
+  output.spinner('Moving');
+  const moveTokenResult = await moveOutDomain(
+    client,
+    context,
+    domainName,
+    matchId || destination
+  );
+
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
     const { suffix, pendingAsyncPurchase } = moveTokenResult.meta;
     if (suffix) {
