@@ -7,3 +7,4 @@ public/
 .deploy*/
 .env
 .env.build
+.vercel

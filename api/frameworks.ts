@@ -1,4 +1,4 @@
-import { NowRequest, NowResponse } from '@vercel/node';
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import { withApiHandler } from './_lib/util/with-api-handler';
 import _frameworks, { Framework } from '../packages/frameworks';
 
@@ -14,7 +14,6 @@ const frameworks = (_frameworks as Framework[])
       sort: undefined,
       dependency: undefined,
       defaultRoutes: undefined,
-      cachePattern: undefined,
       devCommand: undefined,
       buildCommand: undefined,
     };
@@ -27,8 +26,8 @@ const frameworks = (_frameworks as Framework[])
   });
 
 export default withApiHandler(async function (
-  req: NowRequest,
-  res: NowResponse
+  req: VercelRequest,
+  res: VercelResponse
 ) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');

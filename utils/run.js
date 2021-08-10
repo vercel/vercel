@@ -3,17 +3,16 @@ const { join, relative, sep } = require('path');
 
 // The order matters because we must build dependencies first
 const allPackages = [
-  'now-routing-utils',
+  'routing-utils',
   'frameworks',
-  'now-build-utils',
-  'now-cgi',
-  'now-client',
-  'now-node-bridge',
-  'now-node',
-  'now-go',
-  'now-python',
-  'now-ruby',
-  'now-cli',
+  'build-utils',
+  'client',
+  'node-bridge',
+  'node',
+  'go',
+  'python',
+  'ruby',
+  'cli',
 ];
 
 process.chdir(join(__dirname, '..'));
@@ -35,14 +34,14 @@ async function main() {
       process.env.GITHUB_HEAD_REF ||
       execSync('git branch --show-current').toString().trim();
 
-    const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/master...HEAD';
+    const gitPath = branch === 'main' ? 'HEAD~1' : 'origin/main...HEAD';
     const diff = execSync(`git diff ${gitPath} --name-only`).toString();
 
     const changed = diff
       .split('\n')
       .filter(item => Boolean(item) && item.startsWith('packages'))
       .map(item => relative('packages', item).split(sep)[0])
-      .concat('now-cli'); // Always run tests for Now CLI
+      .concat('cli'); // Always run tests for Vercel CLI
 
     modifiedPackages = new Set(changed);
 

@@ -36,6 +36,9 @@ const SchemaSettings = {
         value: {
           type: 'string',
         },
+        placeholder: {
+          type: 'string',
+        },
       },
     },
     {
@@ -73,6 +76,7 @@ const Schema = {
       tagline: { type: 'string' },
       website: { type: 'string' },
       description: { type: 'string' },
+      envPrefix: { type: 'string' },
       useRuntime: {
         type: 'object',
         required: ['src', 'use'],
@@ -136,6 +140,7 @@ const Schema = {
       cachePattern: { type: 'string' },
       buildCommand: { type: ['string', 'null'] },
       devCommand: { type: ['string', 'null'] },
+      defaultVersion: { type: 'string' },
     },
   },
 };
@@ -179,7 +184,7 @@ describe('frameworks', () => {
       .map(f => f.logo)
       .filter(url => {
         const prefix =
-          'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/';
+          'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/';
         const name = url.replace(prefix, '');
         return existsSync(join(__dirname, '..', 'logos', name)) === false;
       });

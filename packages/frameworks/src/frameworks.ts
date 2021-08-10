@@ -6,9 +6,7 @@ import { readConfigFile } from './read-config-file';
 
 export * from './types';
 
-const { readdir, stat, readFile, unlink } = promises;
-const isDir = async (file: string): Promise<boolean> =>
-  (await stat(file)).isDirectory();
+const { readdir, readFile, unlink } = promises;
 
 /**
  * Please note that is extremely important that the `dependency` property needs
@@ -22,13 +20,13 @@ export const frameworks = [
   {
     name: 'Blitz.js',
     slug: 'blitzjs',
-    demo: 'https://blitzjs.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/blitz.svg',
+    demo: 'https://blitzjs.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/blitz.svg',
     tagline: 'Blitz.js: The Fullstack React Framework',
     description:
       'A brand new Blitz.js app - the result of running `npx blitz new`.',
     website: 'https://blitzjs.com',
+    envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
       every: [
@@ -60,14 +58,14 @@ export const frameworks = [
   {
     name: 'Next.js',
     slug: 'nextjs',
-    demo: 'https://nextjs.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/next.svg',
+    demo: 'https://nextjs.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next.svg',
     tagline:
       'Next.js makes you productive with React instantly — whether you want to build static or dynamic sites.',
     description: 'A Next.js app and a Serverless Function API.',
     website: 'https://nextjs.org',
     sort: 1,
+    envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
       every: [
@@ -87,6 +85,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'next dev --port $PORT',
+        placeholder: 'next',
       },
       outputDirectory: {
         placeholder: 'Next.js default',
@@ -101,19 +100,20 @@ export const frameworks = [
     devCommand: 'next dev --port $PORT',
     buildCommand: 'next build',
     getOutputDirName: async () => 'public',
+    cachePattern: '.next/cache/**',
   },
   {
     name: 'Gatsby.js',
     slug: 'gatsby',
-    demo: 'https://gatsby.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/gatsby.svg',
+    demo: 'https://gatsby.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/gatsby.svg',
     tagline:
       'Gatsby helps developers build blazing fast websites and apps with React.',
     description:
       'A Gatsby app, using the default starter theme and a Serverless Function API.',
     website: 'https://gatsbyjs.org',
     sort: 2,
+    envPrefix: 'GATSBY_',
     detectors: {
       every: [
         {
@@ -132,6 +132,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'gatsby develop --port $PORT',
+        placeholder: 'gatsby develop',
       },
       outputDirectory: {
         value: 'public',
@@ -193,9 +194,8 @@ export const frameworks = [
   {
     name: 'Hexo',
     slug: 'hexo',
-    demo: 'https://hexo.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hexo.svg',
+    demo: 'https://hexo.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/hexo.svg',
     tagline:
       'Hexo is a fast, simple & powerful blog framework powered by Node.js.',
     description: 'A Hexo site, created with the Hexo CLI.',
@@ -219,6 +219,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'hexo server --port $PORT',
+        placeholder: 'hexo server',
       },
       outputDirectory: {
         value: 'public',
@@ -232,9 +233,8 @@ export const frameworks = [
   {
     name: 'Eleventy',
     slug: 'eleventy',
-    demo: 'https://eleventy.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/eleventy.svg',
+    demo: 'https://eleventy.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/eleventy.svg',
     tagline:
       '11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll.',
     description: 'An Eleventy site, created with npm init.',
@@ -258,6 +258,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'npx @11ty/eleventy --serve --watch --port $PORT',
+        placeholder: 'npx @11ty/eleventy --serve',
       },
       outputDirectory: {
         value: '_site',
@@ -272,9 +273,8 @@ export const frameworks = [
   {
     name: 'Docusaurus 2',
     slug: 'docusaurus-2',
-    demo: 'https://docusaurus-2.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg',
+    demo: 'https://docusaurus-2.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/docusaurus.svg',
     tagline:
       'Docusaurus makes it easy to maintain Open Source documentation websites.',
     description:
@@ -298,6 +298,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'docusaurus start --port $PORT',
+        placeholder: 'docusaurus start',
       },
       outputDirectory: {
         value: 'build',
@@ -310,11 +311,11 @@ export const frameworks = [
       const base = 'build';
       try {
         const location = join(dirPrefix, base);
-        const content = await readdir(location);
+        const content = await readdir(location, { withFileTypes: true });
 
         // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && (await isDir(join(location, content[0])))) {
-          return join(base, content[0]);
+        if (content.length === 1 && content[0].isDirectory()) {
+          return join(base, content[0].name);
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
@@ -329,20 +330,17 @@ export const frameworks = [
         continue: true,
       },
       {
-        src:
-          '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
+        src: '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
         headers: { 'cache-control': 'max-age=31536000, immutable' },
         continue: true,
       },
       {
-        src:
-          '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
+        src: '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
         headers: { 'cache-control': 'max-age=31536000, immutable' },
         continue: true,
       },
       {
-        src:
-          '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
+        src: '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
         headers: { 'cache-control': 'max-age=31536000, immutable' },
         continue: true,
       },
@@ -364,9 +362,8 @@ export const frameworks = [
   {
     name: 'Docusaurus 1',
     slug: 'docusaurus',
-    demo: 'https://docusaurus.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/docusaurus.svg',
+    demo: 'https://docusaurus.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/docusaurus.svg',
     tagline:
       'Docusaurus makes it easy to maintain Open Source documentation websites.',
     description:
@@ -390,6 +387,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'docusaurus-start --port $PORT',
+        placeholder: 'docusaurus-start',
       },
       outputDirectory: {
         value: 'build',
@@ -402,11 +400,11 @@ export const frameworks = [
       const base = 'build';
       try {
         const location = join(dirPrefix, base);
-        const content = await readdir(location);
+        const content = await readdir(location, { withFileTypes: true });
 
         // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && (await isDir(join(location, content[0])))) {
-          return join(base, content[0]);
+        if (content.length === 1 && content[0].isDirectory()) {
+          return join(base, content[0].name);
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
@@ -417,9 +415,8 @@ export const frameworks = [
   {
     name: 'Preact',
     slug: 'preact',
-    demo: 'https://preact.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/preact.svg',
+    demo: 'https://preact.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/preact.svg',
     tagline:
       'Preact is a fast 3kB alternative to React with the same modern API.',
     description: 'A Preact app, created with the Preact CLI.',
@@ -442,6 +439,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'preact watch --port $PORT',
+        placeholder: 'preact watch',
       },
       outputDirectory: {
         value: 'build',
@@ -464,9 +462,8 @@ export const frameworks = [
   {
     name: 'Dojo',
     slug: 'dojo',
-    demo: 'https://dojo.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/dojo.png',
+    demo: 'https://dojo.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/dojo.png',
     tagline: 'Dojo is a modern progressive, TypeScript first framework.',
     description:
       "A Dojo app, created with the Dojo CLI's cli-create-app command.",
@@ -492,6 +489,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'dojo build -m dev -w -s -p $PORT',
+        placeholder: 'dojo build -m dev -w -s',
       },
       outputDirectory: {
         value: 'output/dist',
@@ -519,9 +517,8 @@ export const frameworks = [
   {
     name: 'Ember.js',
     slug: 'ember',
-    demo: 'https://ember.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ember.svg',
+    demo: 'https://ember.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/ember.svg',
     tagline:
       'Ember.js helps webapp developers be more productive out of the box.',
     description: 'An Ember app, created with the Ember CLI.',
@@ -544,6 +541,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'ember serve --port $PORT',
+        placeholder: 'ember serve',
       },
       outputDirectory: {
         value: 'dist',
@@ -566,13 +564,13 @@ export const frameworks = [
   {
     name: 'Vue.js',
     slug: 'vue',
-    demo: 'https://vue.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/vue.svg',
+    demo: 'https://vue.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vue.svg',
     tagline:
       'Vue.js is a versatile JavaScript framework that is as approachable as it is performant.',
     description: 'A Vue.js app, created with the Vue CLI.',
     website: 'https://vuejs.org',
+    envPrefix: 'VUE_APP_',
     detectors: {
       every: [
         {
@@ -591,6 +589,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'vue-cli-service serve --port $PORT',
+        placeholder: 'vue-cli-service serve',
       },
       outputDirectory: {
         value: 'dist',
@@ -623,9 +622,8 @@ export const frameworks = [
   {
     name: 'Scully',
     slug: 'scully',
-    demo: 'https://scully.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/scullyio-logo.png',
+    demo: 'https://scully.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/scullyio-logo.png',
     tagline: 'Scully is a static site generator for Angular.',
     description: 'The Static Site Generator for Angular apps.',
     website: 'https://github.com/scullyio/scully',
@@ -647,6 +645,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'ng serve --port $PORT',
+        placeholder: 'ng serve',
       },
       outputDirectory: {
         value: 'dist',
@@ -660,9 +659,8 @@ export const frameworks = [
   {
     name: 'Ionic Angular',
     slug: 'ionic-angular',
-    demo: 'https://ionic-angular.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ionic.svg',
+    demo: 'https://ionic-angular.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/ionic.svg',
     tagline:
       'Ionic Angular allows you to build mobile PWAs with Angular and the Ionic Framework.',
     description: 'An Ionic Angular site, created with the Ionic CLI.',
@@ -684,14 +682,14 @@ export const frameworks = [
         placeholder: '`npm run build` or `ng build`',
       },
       devCommand: {
-        value: 'ng start',
+        value: 'ng serve',
       },
       outputDirectory: {
         value: 'www',
       },
     },
     dependency: '@ionic/angular',
-    devCommand: 'ng start',
+    devCommand: 'ng serve',
     buildCommand: 'ng build',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
@@ -707,9 +705,8 @@ export const frameworks = [
   {
     name: 'Angular',
     slug: 'angular',
-    demo: 'https://angular.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/angular.svg',
+    demo: 'https://angular.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/angular.svg',
     tagline:
       'Angular is a TypeScript-based cross-platform framework from Google.',
     description: 'An Angular app, created with the Angular CLI.',
@@ -732,6 +729,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'ng serve --port $PORT',
+        placeholder: 'ng serve',
       },
       outputDirectory: {
         value: 'dist',
@@ -744,11 +742,11 @@ export const frameworks = [
       const base = 'dist';
       try {
         const location = join(dirPrefix, base);
-        const content = await readdir(location);
+        const content = await readdir(location, { withFileTypes: true });
 
         // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && (await isDir(join(location, content[0])))) {
-          return join(base, content[0]);
+        if (content.length === 1 && content[0].isDirectory()) {
+          return join(base, content[0].name);
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
@@ -768,9 +766,8 @@ export const frameworks = [
   {
     name: 'Polymer',
     slug: 'polymer',
-    demo: 'https://polymer.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/polymer.svg',
+    demo: 'https://polymer.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/polymer.svg',
     tagline:
       'Polymer is an open-source webapps library from Google, for building using Web Components.',
     description: 'A Polymer app, created with the Polymer CLI.',
@@ -793,6 +790,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'polymer serve --port $PORT',
+        placeholder: 'polymer serve',
       },
       outputDirectory: {
         value: 'build',
@@ -826,16 +824,19 @@ export const frameworks = [
   {
     name: 'Svelte',
     slug: 'svelte',
-    demo: 'https://svelte.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/svelte.svg',
+    demo: 'https://svelte.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
     tagline:
-      'Svelte lets you write high performance reactive apps with significantly less boilerplate. ',
-    description:
-      'A Svelte app, using the Svelte template, and a Serverless Function API.',
+      'Svelte lets you write high performance reactive apps with significantly less boilerplate.',
+    description: 'A basic Svelte app using the default template.',
     website: 'https://svelte.dev',
     detectors: {
       every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"svelte":\\s*".+?"[^}]*}',
+        },
         {
           path: 'package.json',
           matchContent:
@@ -851,14 +852,14 @@ export const frameworks = [
         placeholder: '`npm run build` or `rollup -c`',
       },
       devCommand: {
-        value: 'sirv public --single --dev --port $PORT',
+        value: 'rollup -c -w',
       },
       outputDirectory: {
         value: 'public',
       },
     },
     dependency: 'sirv-cli',
-    devCommand: 'sirv public --single --dev --port $PORT',
+    devCommand: 'rollup -c -w',
     buildCommand: 'rollup -c',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
@@ -872,11 +873,47 @@ export const frameworks = [
     ],
   },
   {
+    name: 'SvelteKit',
+    slug: 'sveltekit',
+    demo: 'https://sveltekit.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
+    tagline:
+      'SvelteKit is a framework for building web applications of all sizes.',
+    description: 'A SvelteKit app optimized to work for serverless.',
+    website: 'https://kit.svelte.dev',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `svelte-kit build`',
+      },
+      devCommand: {
+        value: 'svelte-kit dev --port $PORT',
+        placeholder: 'svelte-kit dev',
+      },
+      outputDirectory: {
+        placeholder: 'public',
+      },
+    },
+    devCommand: 'svelte-kit dev --port $PORT',
+    buildCommand: 'svelte-kit build',
+    getOutputDirName: async () => 'public',
+  },
+  {
     name: 'Ionic React',
     slug: 'ionic-react',
-    demo: 'https://ionic-react.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/ionic.svg',
+    demo: 'https://ionic-react.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/ionic.svg',
     tagline:
       'Ionic React allows you to build mobile PWAs with React and the Ionic Framework.',
     description: 'An Ionic React site, created with the Ionic CLI.',
@@ -926,6 +963,7 @@ export const frameworks = [
       {
         handle: 'filesystem',
       },
+      { src: '/static/(.*)', status: 404, dest: '/404.html' },
       {
         src: '/(.*)',
         headers: { 'cache-control': 's-maxage=0' },
@@ -936,13 +974,13 @@ export const frameworks = [
   {
     name: 'Create React App',
     slug: 'create-react-app',
-    demo: 'https://react-functions.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/react.svg',
+    demo: 'https://react-functions.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/react.svg',
     tagline: 'Create React App allows you to get going with React in no time.',
     description:
       'A React app, bootstrapped with create-react-app, and a Serverless Function API.',
     website: 'https://create-react-app.dev',
+    envPrefix: 'REACT_APP_',
     detectors: {
       some: [
         {
@@ -993,6 +1031,7 @@ export const frameworks = [
       {
         handle: 'filesystem',
       },
+      { src: '/static/(.*)', status: 404, dest: '/404.html' },
       {
         src: '/(.*)',
         headers: { 'cache-control': 's-maxage=0' },
@@ -1003,9 +1042,8 @@ export const frameworks = [
   {
     name: 'Gridsome',
     slug: 'gridsome',
-    demo: 'https://gridsome.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/gridsome.svg',
+    demo: 'https://gridsome.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/gridsome.svg',
     tagline:
       'Gridsome is a Vue.js-powered framework for building websites & apps that are fast by default.',
     description: 'A Gridsome app, created with the Gridsome CLI.',
@@ -1028,6 +1066,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'gridsome develop -p $PORT',
+        placeholder: 'gridsome develop',
       },
       outputDirectory: {
         value: 'dist',
@@ -1041,9 +1080,8 @@ export const frameworks = [
   {
     name: 'UmiJS',
     slug: 'umijs',
-    demo: 'https://umijs.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/umi.svg',
+    demo: 'https://umijs.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/umi.svg',
     tagline:
       'UmiJS is an extensible enterprise-level React application framework.',
     description: 'An UmiJS app, created using the Umi CLI.',
@@ -1066,6 +1104,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'umi dev --port $PORT',
+        placeholder: 'umi dev',
       },
       outputDirectory: {
         value: 'dist',
@@ -1088,9 +1127,8 @@ export const frameworks = [
   {
     name: 'Sapper',
     slug: 'sapper',
-    demo: 'https://sapper.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/svelte.svg',
+    demo: 'https://sapper.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
     tagline:
       'Sapper is a framework for building high-performance universal web apps with Svelte.',
     description: 'A Sapper app, using the Sapper template.',
@@ -1113,6 +1151,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'sapper dev --port $PORT',
+        placeholder: 'sapper dev',
       },
       outputDirectory: {
         value: '__sapper__/export',
@@ -1126,9 +1165,8 @@ export const frameworks = [
   {
     name: 'Saber',
     slug: 'saber',
-    demo: 'https://saber.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/saber.svg',
+    demo: 'https://saber.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/saber.svg',
     tagline:
       'Saber is a framework for building static sites in Vue.js that supports data from any source.',
     description: 'A Saber site, created with npm init.',
@@ -1151,6 +1189,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'saber --port $PORT',
+        placeholder: 'saber',
       },
       outputDirectory: {
         value: 'public',
@@ -1178,9 +1217,8 @@ export const frameworks = [
   {
     name: 'Stencil',
     slug: 'stencil',
-    demo: 'https://stencil.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/stencil.svg',
+    demo: 'https://stencil.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/stencil.svg',
     tagline:
       'Stencil is a powerful toolchain for building Progressive Web Apps and Design Systems.',
     description: 'A Stencil site, created with the Stencil CLI.',
@@ -1203,6 +1241,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'stencil build --dev --watch --serve --port $PORT',
+        placeholder: 'stencil build --dev --watch --serve',
       },
       outputDirectory: {
         value: 'www',
@@ -1240,13 +1279,13 @@ export const frameworks = [
   {
     name: 'Nuxt.js',
     slug: 'nuxtjs',
-    demo: 'https://nuxtjs.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/nuxt.svg',
+    demo: 'https://nuxtjs.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/nuxt.svg',
     tagline:
       'Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.',
     description: 'A Nuxt.js app, bootstrapped with create-nuxt-app.',
     website: 'https://nuxtjs.org',
+    envPrefix: 'NUXT_ENV_',
     detectors: {
       every: [
         {
@@ -1298,12 +1337,12 @@ export const frameworks = [
   {
     name: 'RedwoodJS',
     slug: 'redwoodjs',
-    demo: 'https://redwoodjs.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/redwoodjs.svg',
+    demo: 'https://redwoodjs.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/redwoodjs.svg',
     tagline: 'RedwoodJS is a full-stack framework for the Jamstack.',
     description: 'A RedwoodJS app, bootstraped with create-redwood-app.',
     website: 'https://redwoodjs.com',
+    envPrefix: 'REDWOOD_ENV_',
     useRuntime: { src: 'package.json', use: '@vercel/redwood' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
@@ -1324,6 +1363,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'yarn rw dev --fwd="--port=$PORT --open=false"',
+        placeholder: 'yarn rw dev',
       },
       outputDirectory: {
         placeholder: 'RedwoodJS default',
@@ -1336,9 +1376,8 @@ export const frameworks = [
   {
     name: 'Hugo',
     slug: 'hugo',
-    demo: 'https://hugo.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/hugo.svg',
+    demo: 'https://hugo.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/hugo.svg',
     tagline:
       'Hugo is the world’s fastest framework for building websites, written in Go.',
     description: 'A Hugo site, created with the Hugo CLI.',
@@ -1369,6 +1408,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'hugo server -D -w -p $PORT',
+        placeholder: 'hugo server -D',
       },
       outputDirectory: {
         placeholder: '`public` or `publishDir` from the `config` file',
@@ -1391,9 +1431,8 @@ export const frameworks = [
   {
     name: 'Jekyll',
     slug: 'jekyll',
-    demo: 'https://jekyll.now-examples.vercel.app',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/jekyll.svg',
+    demo: 'https://jekyll.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/jekyll.svg',
     tagline:
       'Jekyll makes it super easy to transform your plain text into static websites and blogs.',
     description: 'A Jekyll site, created with the Jekyll CLI.',
@@ -1414,6 +1453,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'bundle exec jekyll serve --watch --port $PORT',
+        placeholder: 'bundle exec jekyll serve',
       },
       outputDirectory: {
         placeholder: '`_site` or `destination` from `_config.yml`',
@@ -1433,9 +1473,8 @@ export const frameworks = [
   {
     name: 'Brunch',
     slug: 'brunch',
-    demo: 'https://brunch.now-examples.now.sh',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/brunch.svg',
+    demo: 'https://brunch.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/brunch.svg',
     tagline:
       'Brunch is a fast and simple webapp build tool with seamless incremental compilation for rapid development.',
     description: 'A Brunch app, created with the Brunch CLI.',
@@ -1456,6 +1495,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'brunch watch --server --port $PORT',
+        placeholder: 'brunch watch --server',
       },
       outputDirectory: {
         value: 'public',
@@ -1468,9 +1508,8 @@ export const frameworks = [
   {
     name: 'Middleman',
     slug: 'middleman',
-    demo: 'https://middleman.now-examples.vercel.app',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/middleman.svg',
+    demo: 'https://middleman.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/middleman.svg',
     tagline:
       'Middleman is a static site generator that uses all the shortcuts and tools in modern web development.',
     description: 'A Middleman app, created with the Middleman CLI.',
@@ -1491,6 +1530,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'bundle exec middleman server -p $PORT',
+        placeholder: 'bundle exec middleman server',
       },
       outputDirectory: {
         value: 'build',
@@ -1504,9 +1544,8 @@ export const frameworks = [
   {
     name: 'Zola',
     slug: 'zola',
-    demo: 'https://zola.now-examples.vercel.app',
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/zola.png',
+    demo: 'https://zola.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/zola.png',
     tagline: 'Everything you need to make a static site engine in one binary.',
     description: 'A Zola app, created with the "Getting Started" tutorial.',
     website: 'https://www.getzola.org',
@@ -1527,6 +1566,7 @@ export const frameworks = [
       },
       devCommand: {
         value: 'zola serve --port $PORT',
+        placeholder: 'zola serve',
       },
       outputDirectory: {
         value: 'public',
@@ -1538,10 +1578,47 @@ export const frameworks = [
     defaultVersion: '0.13.0',
   },
   {
+    name: 'Vite',
+    slug: 'vite',
+    demo: 'https://vite.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vite.svg',
+    tagline:
+      'Vite is a new breed of frontend build tool that significantly improves the frontend development experience.',
+    description: 'A Vue.js app, created with Vite.',
+    website: 'https://vitejs.dev',
+    envPrefix: 'VITE_',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"vite":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vite build`',
+      },
+      devCommand: {
+        placeholder: 'vite',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'vite',
+    devCommand: 'vite',
+    buildCommand: 'vite build',
+    getOutputDirName: async () => 'dist',
+  },
+  {
     name: 'Other',
     slug: null,
-    logo:
-      'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/other.svg',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/other.svg',
     description: 'No framework or a unoptimized framework.',
     settings: {
       installCommand: {

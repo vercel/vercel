@@ -27,6 +27,7 @@ export interface SettingValue {
    * @example "next dev --port $PORT"
    */
   value: string;
+  placeholder?: string;
 }
 
 export type Setting = SettingValue | SettingPlaceholder;
@@ -47,7 +48,7 @@ export interface Framework {
   slug: string | null;
   /**
    * A URL to the logo of the framework
-   * @example "https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/next.svg"
+   * @example "https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next.svg"
    */
   logo: string;
   /**
@@ -75,6 +76,11 @@ export interface Framework {
    * @example 1
    */
   sort?: number;
+  /**
+   * The environment variable prefix used to inline values into the browser bundle.
+   * @example "NEXT_PUBLIC_"
+   */
+  envPrefix?: string;
   /**
    * Runtime configuration required to run the framework in Vercel
    */

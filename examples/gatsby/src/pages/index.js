@@ -31,7 +31,7 @@ function Index() {
       </h2>
       <p>
         <a
-          href="https://github.com/vercel/vercel/tree/master/examples/gatsby"
+          href="https://github.com/vercel/vercel/tree/main/examples/gatsby"
           target="_blank"
           rel="noreferrer noopener"
         >
