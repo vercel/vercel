@@ -120,19 +120,19 @@ async function extractExample(
 
   return client
     .fetch(url, { json: false })
-    .then(async resp => {
+    .then(async res => {
       output.stopSpinner();
 
-      if (resp.status !== 200) {
+      if (res.status !== 200) {
         throw new Error(`Could not get ${name}.tar.gz`);
       }
 
       await new Promise((resolve, reject) => {
         const extractor = tar.extract(folder);
-        resp.body.on('error', reject);
+        res.body.on('error', reject);
         extractor.on('error', reject);
         extractor.on('finish', resolve);
-        resp.body.pipe(extractor);
+        res.body.pipe(extractor);
       });
 
       const successLog = `Initialized "${chalk.bold(
