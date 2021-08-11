@@ -2170,10 +2170,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const url = `https://${name}.user.vercel.app`;
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      firstDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([firstDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2190,10 +2191,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      secondDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([secondDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2212,10 +2214,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      firstDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([firstDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2559,15 +2562,25 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host: url } = new URL(output.stdout);
+  const url = new URL(output.stdout);
 
-  const [response1, response2] = await Promise.all([
-    fetch('https://' + url + '/api/wait-for/2'),
-    fetch('https://' + url + '/api/wait-for/4'),
-  ]);
+  // Should time out
+  url.pathname = '/api/wait-for/4';
+  const response1 = await fetch(url.href);
+  t.is(
+    response1.status,
+    504,
+    `Expected 504 status, got ${response1.status}: ${url}`
+  );
 
-  t.is(response1.status, 200, url);
-  t.is(response2.status, 504, url);
+  // Should not time out
+  url.pathname = '/api/wait-for/2';
+  const response2 = await fetch(url.href);
+  t.is(
+    response2.status,
+    200,
+    `Expected 200 status, got ${response1.status}: ${url}`
+  );
 });
 
 test('fail to deploy a Lambda with an incorrect value for maxDuration', async t => {
