@@ -145,9 +145,9 @@ async function run({ output, token, contextName, currentTeam, client }) {
 
   if (subcommand === 'ls' || subcommand === 'list') {
     output.note(
-      `It is recommended to use ${getCommandName(
+      `The ${getCommandName(
         'env ls'
-      )} instead of ${commandName}\n`
+      )} command is recommended instead of ${commandName}\n`
     );
     if (args.length > 1) {
       console.error(
@@ -212,9 +212,9 @@ async function run({ output, token, contextName, currentTeam, client }) {
 
   if (subcommand === 'rm' || subcommand === 'remove') {
     output.note(
-      `It is recommended to use ${getCommandName(
+      `The ${getCommandName(
         'env rm'
-      )} instead of ${commandName}\n`
+      )} command is recommended instead of ${commandName}\n`
     );
     if (args.length !== 1) {
       console.error(
@@ -259,9 +259,9 @@ async function run({ output, token, contextName, currentTeam, client }) {
 
   if (subcommand === 'rename') {
     output.note(
-      `It is recommended to use ${getCommandName(
-        'env rm'
-      )} and ${getCommandName('env add')} instead of ${commandName}\n`
+      `The ${getCommandName('env rm')} and ${getCommandName(
+        'env add'
+      )} commands are recommended instead of ${commandName}\n`
     );
     if (args.length !== 2) {
       console.error(
@@ -287,9 +287,9 @@ async function run({ output, token, contextName, currentTeam, client }) {
 
   if (subcommand === 'add' || subcommand === 'set') {
     output.note(
-      `It is recommended to use ${getCommandName(
+      `The ${getCommandName(
         'env add'
-      )} instead of ${commandName}\n`
+      )} command is recommended instead of ${commandName}\n`
     );
     if (args.length !== 2) {
       console.error(
