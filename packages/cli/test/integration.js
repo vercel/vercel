@@ -2030,12 +2030,8 @@ test('initialize example "angular"', async t => {
     cwd,
   });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   t.is(exitCode, 0, formatOutput({ stdout, stderr }));
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
   t.true(
     verifyExampleAngular(cwd, 'angular'),
     formatOutput({ stdout, stderr })
@@ -2170,10 +2166,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const url = `https://${name}.user.vercel.app`;
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      firstDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([firstDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2190,10 +2187,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      secondDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([secondDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2212,10 +2210,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      firstDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([firstDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
