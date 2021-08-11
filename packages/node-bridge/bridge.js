@@ -155,7 +155,8 @@ class Bridge {
     const { port } = await this.listening;
 
     const normalizedEvent = normalizeEvent(event);
-    const { isApiGateway, method, path, headers, body } = normalizedEvent;
+    const { isApiGateway, method, headers, body } = normalizedEvent;
+    let { path } = normalizedEvent;
 
     if (this.shouldStoreEvents) {
       const reqId = `${this.reqIdSeed++}`;
@@ -165,6 +166,12 @@ class Bridge {
 
     // eslint-disable-next-line consistent-return
     return new Promise((resolve, reject) => {
+      // if the path is improperly encoded we need to encode it or
+      // http.request will throw an error (related check: https://github.com/nodejs/node/blob/4ece669c6205ec78abfdadfe78869bbb8411463e/lib/_http_client.js#L84)
+      if (path && path.match(/[^\u0021-\u00ff]/)) {
+        path = encodeURI(path);
+      }
+
       const opts = { hostname: '127.0.0.1', port, path, method };
       const req = request(opts, res => {
         const response = res;
