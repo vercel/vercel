@@ -258,10 +258,10 @@ async function run({ output, token, contextName, currentTeam, client }) {
   }
 
   if (subcommand === 'rename') {
-    output(
-      `${commandName} is deprecated. Please use ${getCommandName(
+    output.note(
+      `It is recommended to use ${getCommandName(
         'env rm'
-      )} and ${getCommandName('env add')} instead.`
+      )} and ${getCommandName('env add')} instead of ${commandName}\n`
     );
     if (args.length !== 2) {
       console.error(
