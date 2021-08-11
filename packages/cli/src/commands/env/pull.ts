@@ -6,7 +6,6 @@ import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import param from '../../util/output/param';
-import withSpinner from '../../util/with-spinner';
 import { join } from 'path';
 import { promises, openSync, closeSync, readSync } from 'fs';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -83,19 +82,16 @@ export default async function pull(
       project.name
     )}\n`
   );
-  const pullStamp = stamp();
 
-  const [
-    { envs: projectEnvs },
-    { systemEnvValues },
-  ] = await withSpinner('Downloading', () =>
-    Promise.all([
-      getDecryptedEnvRecords(output, client, project.id),
-      project.autoExposeSystemEnvs
-        ? getSystemEnvValues(output, client, project.id)
-        : { systemEnvValues: [] },
-    ])
-  );
+  const pullStamp = stamp();
+  output.spinner('Downloading');
+
+  const [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
+    getDecryptedEnvRecords(output, client, project.id),
+    project.autoExposeSystemEnvs
+      ? getSystemEnvValues(output, client, project.id)
+      : { systemEnvValues: [] },
+  ]);
 
   const records = exposeSystemEnvs(
     projectEnvs,
@@ -120,6 +116,7 @@ export default async function pull(
       emoji('success')
     )}\n`
   );
+
   return 0;
 }
 
