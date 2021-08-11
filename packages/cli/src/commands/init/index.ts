@@ -43,6 +43,7 @@ const help = () => {
 };
 
 export default async function main(client: Client) {
+  const { output } = client;
   let argv;
   let args;
 
@@ -63,9 +64,15 @@ export default async function main(client: Client) {
   }
 
   if (argv._.length > 3) {
-    client.output.error('Too much arguments.');
+    output.error('Too much arguments.');
     return 1;
   }
 
-  return await init(client, argv, args);
+  try {
+    return await init(client, argv, args);
+  } catch (err) {
+    output.prettyError(err);
+    output.debug(err.stack);
+    return 1;
+  }
 }
