@@ -5,7 +5,6 @@ import getSubcommand from '../../util/get-subcommand';
 import Client from '../../util/client';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
-import error from '../../util/output/error';
 import init from './init';
 import { getPkgName } from '../../util/pkg-name';
 
@@ -68,11 +67,5 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  try {
-    return await init(client, argv, args);
-  } catch (err) {
-    console.log(error(err.message));
-    client.output.debug(err.stack);
-    return 1;
-  }
+  return await init(client, argv, args);
 }
