@@ -2030,12 +2030,8 @@ test('initialize example "angular"', async t => {
     cwd,
   });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   t.is(exitCode, 0, formatOutput({ stdout, stderr }));
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
   t.true(
     verifyExampleAngular(cwd, 'angular'),
     formatOutput({ stdout, stderr })
@@ -2054,13 +2050,9 @@ test('initialize example ("angular") to specified directory', async t => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 0);
-  t.true(stdout.includes(goal));
-  t.true(verifyExampleAngular(cwd, 'ang'));
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(verifyExampleAngular(cwd, 'ang'), formatOutput({ stdout, stderr }));
 });
 
 test('initialize selected example ("amp")', async t => {
@@ -2073,12 +2065,8 @@ test('initialize selected example ("amp")', async t => {
     input: '\n',
   });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   t.is(exitCode, 0, formatOutput({ stdout, stderr }));
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
   t.true(verifyExampleAmp(cwd, 'amp'), formatOutput({ stdout, stderr }));
 });
 
@@ -2096,13 +2084,12 @@ test('initialize example to existing directory with "-f"', async t => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 0);
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
-  t.true(verifyExampleAngular(cwd, 'angular'));
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(
+    verifyExampleAngular(cwd, 'angular'),
+    formatOutput({ stdout, stderr })
+  );
 });
 
 test('try to initialize example to existing directory', async t => {
@@ -2118,12 +2105,8 @@ test('try to initialize example to existing directory', async t => {
     input: '\n',
   });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 1);
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.is(exitCode, 1, formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize misspelled example (noce) in non-tty', async t => {
@@ -2138,8 +2121,8 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  t.is(exitCode, 1);
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.is(exitCode, 1, formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize example "example-404"', async t => {
@@ -2152,12 +2135,8 @@ test('try to initialize example "example-404"', async t => {
     cwd,
   });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 1);
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.is(exitCode, 1, formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to revert a deployment and assign the automatic aliases', async t => {
