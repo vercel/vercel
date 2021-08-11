@@ -13,7 +13,6 @@ import {
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
-import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
@@ -112,9 +111,8 @@ export default async function rm(
   const rmStamp = stamp();
 
   try {
-    await withSpinner('Removing', async () => {
-      await removeEnvRecord(output, client, project.id, env);
-    });
+    output.spinner('Removing');
+    await removeEnvRecord(output, client, project.id, env);
   } catch (error) {
     if (isKnownError(error) && error.serverMessage) {
       output.error(error.serverMessage);

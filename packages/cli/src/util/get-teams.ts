@@ -1,8 +1,6 @@
 import Client from './client';
-import { APIError, InvalidToken } from './errors-ts';
 import { Team } from '../types';
-// @ts-ignore
-import NowTeams from './teams.js';
+import { APIError, InvalidToken } from './errors-ts';
 
 let teams: Team[] | undefined;
 
@@ -10,15 +8,11 @@ export default async function getTeams(client: Client): Promise<Team[]> {
   if (teams) return teams;
 
   try {
-    // we're using NowTeams because `client.fetch` hangs on windows
-    const teamClient = new NowTeams({
-      apiUrl: client.apiUrl,
-      token: client.authConfig.token,
-      debug: client.output.isDebugEnabled(),
+    const body = await client.fetch<{ teams: Team[] }>('/v1/teams', {
+      useCurrentTeam: false,
     });
-
-    teams = (await teamClient.ls()).teams;
-    return teams || [];
+    teams = body.teams || [];
+    return teams;
   } catch (error) {
     if (error instanceof APIError && error.status === 403) {
       throw new InvalidToken();

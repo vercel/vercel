@@ -50,6 +50,7 @@ import { SENTRY_DSN } from './util/constants.ts';
 import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics.ts';
 import { getCommandName, getTitleName } from './util/pkg-name.ts';
+import doLoginPrompt from './util/login/prompt.ts';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -422,13 +423,28 @@ const main = async () => {
   ) {
     if (isTTY) {
       output.log(info(`No existing credentials found. Please log in:`));
+      const result = await doLoginPrompt(client);
 
-      subcommand = 'login';
-      client.argv[2] = 'login';
+      // The login function failed, so it returned an exit code
+      if (typeof result === 'number') {
+        return result;
+      }
 
-      // Ensure that subcommands lead to login as well, if
-      // no credentials are defined
-      client.argv = client.argv.splice(0, 3);
+      if (result.teamId) {
+        // SSO login, so set the current scope to the appropriate Team
+        client.config.currentTeam = result.teamId;
+      } else {
+        delete client.config.currentTeam;
+      }
+
+      // When `result` is a string it's the user's authentication token.
+      // It needs to be saved to the configuration file.
+      client.authConfig.token = result.token;
+
+      configFiles.writeToAuthConfigFile(client.authConfig);
+      configFiles.writeToConfigFile(client.config);
+
+      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
     } else {
       output.prettyError({
         message:
@@ -587,10 +603,10 @@ const main = async () => {
   const eventCategory = 'Exit Code';
 
   try {
-    const start = new Date();
+    const start = Date.now();
     const full = require(`./commands/${targetCommand}`).default;
     exitCode = await full(client);
-    const end = new Date() - start;
+    const end = Date.now() - start;
 
     if (shouldCollectMetrics) {
       const category = 'Command Invocation';

@@ -157,9 +157,10 @@ function mockLoginApi(req, res) {
   let { pathname = '/', query = {} } = parseUrl(url, true);
   console.log(`[mock-login-server] ${method} ${pathname}`);
   const securityCode = 'Bears Beets Battlestar Galactica';
+  res.setHeader('content-type', 'application/json');
   if (
     method === 'POST' &&
-    pathname === '/now/registration' &&
+    pathname === '/registration' &&
     query.mode === 'login'
   ) {
     res.end(JSON.stringify({ token, securityCode }));
@@ -2029,12 +2030,8 @@ test('initialize example "angular"', async t => {
     cwd,
   });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   t.is(exitCode, 0, formatOutput({ stdout, stderr }));
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
   t.true(
     verifyExampleAngular(cwd, 'angular'),
     formatOutput({ stdout, stderr })
@@ -2053,13 +2050,9 @@ test('initialize example ("angular") to specified directory', async t => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 0);
-  t.true(stdout.includes(goal));
-  t.true(verifyExampleAngular(cwd, 'ang'));
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(verifyExampleAngular(cwd, 'ang'), formatOutput({ stdout, stderr }));
 });
 
 test('initialize selected example ("amp")', async t => {
@@ -2072,12 +2065,8 @@ test('initialize selected example ("amp")', async t => {
     input: '\n',
   });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
   t.is(exitCode, 0, formatOutput({ stdout, stderr }));
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
   t.true(verifyExampleAmp(cwd, 'amp'), formatOutput({ stdout, stderr }));
 });
 
@@ -2095,13 +2084,12 @@ test('initialize example to existing directory with "-f"', async t => {
     }
   );
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 0);
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
-  t.true(verifyExampleAngular(cwd, 'angular'));
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
+  t.true(
+    verifyExampleAngular(cwd, 'angular'),
+    formatOutput({ stdout, stderr })
+  );
 });
 
 test('try to initialize example to existing directory', async t => {
@@ -2117,12 +2105,8 @@ test('try to initialize example to existing directory', async t => {
     input: '\n',
   });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 1);
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.is(exitCode, 1, formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize misspelled example (noce) in non-tty', async t => {
@@ -2137,8 +2121,8 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  t.is(exitCode, 1);
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.is(exitCode, 1, formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to initialize example "example-404"', async t => {
@@ -2151,12 +2135,8 @@ test('try to initialize example "example-404"', async t => {
     cwd,
   });
 
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 1);
-  t.true(stdout.includes(goal), formatOutput({ stdout, stderr }));
+  t.is(exitCode, 1, formatOutput({ stdout, stderr }));
+  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
 });
 
 test('try to revert a deployment and assign the automatic aliases', async t => {
@@ -2169,10 +2149,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const url = `https://${name}.user.vercel.app`;
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      firstDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([firstDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2189,10 +2170,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      secondDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([secondDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2211,10 +2193,11 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   }
 
   {
-    const { stdout: deploymentUrl, stderr, exitCode } = await execute([
-      firstDeployment,
-      '--confirm',
-    ]);
+    const {
+      stdout: deploymentUrl,
+      stderr,
+      exitCode,
+    } = await execute([firstDeployment, '--confirm']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2558,15 +2541,25 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host: url } = new URL(output.stdout);
+  const url = new URL(output.stdout);
 
-  const [response1, response2] = await Promise.all([
-    fetch('https://' + url + '/api/wait-for/2'),
-    fetch('https://' + url + '/api/wait-for/4'),
-  ]);
+  // Should time out
+  url.pathname = '/api/wait-for/4';
+  const response1 = await fetch(url.href);
+  t.is(
+    response1.status,
+    504,
+    `Expected 504 status, got ${response1.status}: ${url}`
+  );
 
-  t.is(response1.status, 200, url);
-  t.is(response2.status, 504, url);
+  // Should not time out
+  url.pathname = '/api/wait-for/2';
+  const response2 = await fetch(url.href);
+  t.is(
+    response2.status,
+    200,
+    `Expected 200 status, got ${response1.status}: ${url}`
+  );
 });
 
 test('fail to deploy a Lambda with an incorrect value for maxDuration', async t => {

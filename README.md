@@ -13,7 +13,7 @@
 
 Vercel is the optimal workflow for frontend teams. All-in-one: Static and Jamstack deployment, Serverless Functions, and Global CDN.
 
-Get started by [Importing a Git Project](https://vercel.com/import) and use `git push` to deploy. Alternatively, you can [install Vercel CLI](https://vercel.com/download).
+Get started by [Importing a Git Project](https://vercel.com/new) and use `git push` to deploy. Alternatively, you can [install Vercel CLI](https://vercel.com/cli).
 
 ## Documentation
 

@@ -8,7 +8,7 @@ import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
 import error from '../output/error';
 import highlight from '../output/highlight';
-import { NowConfig } from '../dev/types';
+import { VercelConfig } from '../dev/types';
 import { AuthConfig, GlobalConfig } from '../../types';
 
 const VERCEL_DIR = getGlobalPathConfig();
@@ -100,8 +100,8 @@ export function getAuthConfigFilePath() {
 
 export function readLocalConfig(
   prefix: string = process.cwd()
-): NowConfig | null {
-  let config: NowConfig | null = null;
+): VercelConfig | null {
+  let config: VercelConfig | null = null;
   let target = '';
 
   try {

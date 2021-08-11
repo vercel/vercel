@@ -13,76 +13,83 @@ import { register } from 'ts-node';
 
 type TypescriptModule = typeof import('typescript');
 
-const resolveTypescript = (p: string): string => {
-  try {
-    return require.resolve('typescript', {
-      paths: [p],
-    });
-  } catch (_) {
-    return '';
-  }
-};
+let useRequire = false;
 
-const requireTypescript = (p: string): TypescriptModule => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require(p) as TypescriptModule;
-};
-
-let ts: TypescriptModule | null = null;
-
-// Assume Node.js 12 as the lowest common denominator
-let target = 'ES2019';
-const nodeMajor = Number(process.versions.node.split('.')[0]);
-if (nodeMajor >= 14) {
-  target = 'ES2020';
-}
-
-// Use the project's version of Typescript if available and supports `target`
-let compiler = resolveTypescript(process.cwd());
-if (compiler) {
-  ts = requireTypescript(compiler);
-  if (!(target in ts.ScriptTarget)) {
-    ts = null;
-  }
-}
-
-// Otherwise fall back to using the copy that `@vercel/node` uses
-if (!ts) {
-  compiler = resolveTypescript(join(__dirname, '..'));
-  ts = requireTypescript(compiler);
-}
-
-if (tsconfig) {
-  try {
-    const { config } = ts.readConfigFile(tsconfig, ts.sys.readFile);
-    if (config?.compilerOptions?.target) {
-      target = config.compilerOptions.target;
+if (!process.env.VERCEL_DEV_IS_ESM) {
+  const resolveTypescript = (p: string): string => {
+    try {
+      return require.resolve('typescript', {
+        paths: [p],
+      });
+    } catch (_) {
+      return '';
     }
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      console.error(`Error while parsing "${tsconfig}"`);
-      throw err;
+  };
+
+  const requireTypescript = (p: string): TypescriptModule => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require(p) as TypescriptModule;
+  };
+
+  let ts: TypescriptModule | null = null;
+
+  // Assume Node.js 12 as the lowest common denominator
+  let target = 'ES2019';
+  const nodeMajor = Number(process.versions.node.split('.')[0]);
+  if (nodeMajor >= 14) {
+    target = 'ES2020';
+  }
+
+  // Use the project's version of Typescript if available and supports `target`
+  let compiler = resolveTypescript(process.cwd());
+  if (compiler) {
+    ts = requireTypescript(compiler);
+    if (!(target in ts.ScriptTarget)) {
+      ts = null;
     }
   }
-}
 
-register({
-  compiler,
-  compilerOptions: {
-    allowJs: true,
-    esModuleInterop: true,
-    jsx: 'react',
-    module: 'commonjs',
-    target,
-  },
-  project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
-  transpileOnly: true,
-});
+  // Otherwise fall back to using the copy that `@vercel/node` uses
+  if (!ts) {
+    compiler = resolveTypescript(join(__dirname, '..'));
+    ts = requireTypescript(compiler);
+  }
+
+  if (tsconfig) {
+    try {
+      const { config } = ts.readConfigFile(tsconfig, ts.sys.readFile);
+      if (config?.compilerOptions?.target) {
+        target = config.compilerOptions.target;
+      }
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        console.error(`Error while parsing "${tsconfig}"`);
+        throw err;
+      }
+    }
+  }
+
+  register({
+    compiler,
+    compilerOptions: {
+      allowJs: true,
+      esModuleInterop: true,
+      jsx: 'react',
+      module: 'commonjs',
+      target,
+    },
+    project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
+    transpileOnly: true,
+  });
+
+  useRequire = true;
+}
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { Readable } from 'stream';
-import { Bridge } from './bridge';
-import { getNowLauncher } from './launcher';
+import type { Bridge } from '@vercel/node-bridge/bridge';
+// @ts-ignore - copied to the `dist` output as-is
+import { getVercelLauncher } from './launcher.js';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -105,16 +112,16 @@ async function main() {
     config.helpers === false || buildEnv.NODEJS_HELPERS === '0'
   );
 
-  bridge = getNowLauncher({
-    entrypointPath: join(process.cwd(), entrypoint!),
-    helpersPath: './helpers',
-    shouldAddHelpers,
-    bridgePath: 'not used',
-    sourcemapSupportPath: 'not used',
-  })();
-
   const proxyServer = createServer(onDevRequest);
   await listen(proxyServer, 0, '127.0.0.1');
+
+  const launcher = getVercelLauncher({
+    entrypointPath: join(process.cwd(), entrypoint!),
+    helpersPath: './helpers.js',
+    shouldAddHelpers,
+    useRequire,
+  });
+  bridge = launcher();
 
   const address = proxyServer.address();
   if (typeof process.send === 'function') {
@@ -156,7 +163,7 @@ export async function onDevRequest(
   };
   if (!bridge) {
     res.statusCode = 500;
-    res.end('Bridge is not defined');
+    res.end('Bridge is not ready, please try again');
     return;
   }
   const result = await bridge.launcher(event, {

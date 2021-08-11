@@ -588,7 +588,7 @@ export class DeploymentNotFound extends NowError<
   'DEPLOYMENT_NOT_FOUND',
   { id: string; context: string }
 > {
-  constructor({ context, id = '' }: { context: string; id: string }) {
+  constructor({ context, id = '' }: { context: string; id?: string }) {
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
       meta: { id, context },

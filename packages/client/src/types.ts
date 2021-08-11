@@ -55,7 +55,7 @@ export interface Deployment {
     | 'DEPLOYING'
     | 'READY'
     | 'ERROR';
-  createdAt: string;
+  createdAt: number;
   createdIn: string;
   env: Dictionary<string>;
   build: {
@@ -102,6 +102,7 @@ export const fileNameSymbol = Symbol('fileName');
 export interface VercelConfig {
   [fileNameSymbol]?: string;
   name?: string;
+  meta?: string[];
   version?: number;
   public?: boolean;
   env?: Dictionary<string>;

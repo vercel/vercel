@@ -258,7 +258,7 @@ function testFixtureStdio(
       const projectJsonPath = join(cwd, '.vercel', 'project.json');
       await fs.remove(projectJsonPath);
       const gitignore = join(cwd, '.gitignore');
-      const hasGitignore = await fs.exists(gitignore);
+      const hasGitignore = await fs.pathExists(gitignore);
 
       try {
         // Run `vc link`
@@ -469,7 +469,7 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async t => {
       t.is(body.FOO, undefined);
     }
   } finally {
-    await dev.kill('SIGTERM');
+    dev.kill('SIGTERM');
     await fs.writeJSON(configPath, originalConfig);
   }
 });
@@ -569,7 +569,7 @@ test('[vercel dev] reflects changes to config and env without restart', async t 
       t.is(body.query.foo, 'boo');
     }
   } finally {
-    await dev.kill('SIGTERM');
+    dev.kill('SIGTERM');
     await fs.writeJSON(configPath, originalConfig);
   }
 });
@@ -598,7 +598,7 @@ test('[vercel dev] `@vercel/node` TypeScript should be resolved by default', asy
     const body = await res.text();
     t.is(body, 'world');
   } finally {
-    await dev.kill('SIGTERM');
+    dev.kill('SIGTERM');
     await fs.remove(dir);
   }
 });
@@ -848,7 +848,7 @@ test('[vercel dev] validate env var names', async t => {
 
     t.pass();
   } finally {
-    await dev.kill('SIGTERM');
+    dev.kill('SIGTERM');
   }
 
   t.pass();
@@ -1431,7 +1431,7 @@ test(
 test('[vercel dev] 24-ember', async t => {
   if (shouldSkip(t, '24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
 
-  const tester = await testFixtureStdio(
+  const tester = testFixtureStdio(
     '24-ember',
     async testPath => {
       await testPath(200, '/', /HelloWorld/m);
@@ -1539,7 +1539,7 @@ test('[vercel dev] no build matches warning', async t => {
 
     t.pass();
   } finally {
-    await dev.kill('SIGTERM');
+    dev.kill('SIGTERM');
   }
 });
 
@@ -1577,7 +1577,7 @@ test('[vercel dev] render warning for empty cwd dir', async t => {
     validateResponseHeaders(t, response);
     t.is(response.status, 404);
   } finally {
-    await dev.kill('SIGTERM');
+    dev.kill('SIGTERM');
   }
 });
 
@@ -1617,7 +1617,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async t 
     const text2 = await resp2.text();
     t.is(text2.trim(), 'hello second', stderr.join(''));
   } finally {
-    await dev.kill('SIGTERM');
+    dev.kill('SIGTERM');
   }
 });
 
@@ -1710,7 +1710,9 @@ test(
       expectHeader('image/svg+xml'),
       fetchOpts('image/webp')
     );
-    // bmp should bypass: serve as-is
+    /* Disabled bmp because `next dev` bypasses
+     * and production will convert. Eventually
+     * we can enable once `next dev` supports it.
     await testPath(
       200,
       toUrl('/test.bmp', 64, 50),
@@ -1718,6 +1720,7 @@ test(
       expectHeader('image/bmp'),
       fetchOpts('image/webp')
     );
+    */
     // animated gif should bypass: serve as-is
     await testPath(
       200,
@@ -1725,6 +1728,25 @@ test(
       null,
       expectHeader('image/gif'),
       fetchOpts('image/webp')
+    );
+  })
+);
+
+test(
+  '[vercel dev] 40-mixed-modules',
+  testFixtureStdio('40-mixed-modules', async testPath => {
+    await testPath(200, '/entrypoint.js', 'mixed-modules:js');
+    await testPath(200, '/entrypoint.mjs', 'mixed-modules:mjs');
+    await testPath(200, '/entrypoint.ts', 'mixed-modules:ts');
+    await testPath(
+      200,
+      '/type-module-package-json/auto.js',
+      'mixed-modules:auto'
+    );
+    await testPath(
+      200,
+      '/type-module-package-json/nested/also.js',
+      'mixed-modules:also'
     );
   })
 );

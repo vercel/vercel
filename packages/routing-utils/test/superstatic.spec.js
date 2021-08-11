@@ -247,7 +247,7 @@ test('convertRedirects', () => {
         },
         {
           type: 'header',
-          key: 'x-pathname',
+          key: 'X-Pathname',
           value: '(?<another>hello|world)',
         },
       ],
@@ -549,10 +549,14 @@ test('convertRewrites', () => {
         },
         {
           type: 'header',
-          key: 'x-pathname',
+          key: 'X-Pathname',
           value: '(?<another>hello|world)',
         },
       ],
+    },
+    {
+      source: '/array-query-string/:id/:name',
+      destination: 'https://example.com/?tag=1&tag=2',
     },
   ]);
 
@@ -595,8 +599,7 @@ test('convertRewrites', () => {
     },
     {
       src: '^\\/fullurl$',
-      dest:
-        'https://user:pass@sub.example.com:8080/path/goes/here?v=1&id=2#hash',
+      dest: 'https://user:pass@sub.example.com:8080/path/goes/here?v=1&id=2#hash',
       check: true,
     },
     {
@@ -694,6 +697,11 @@ test('convertRewrites', () => {
       ],
       src: '^\\/hello(?:\\/([^\\/]+?))$',
     },
+    {
+      src: '^\\/array-query-string(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
+      dest: 'https://example.com/?tag=1&tag=2&id=$1&name=$2',
+      check: true,
+    },
   ];
 
   deepEqual(actual, expected);
@@ -719,6 +727,7 @@ test('convertRewrites', () => {
     ['/hello/world', '/hello/again'],
     ['/hello/world'],
     ['/hello/world'],
+    ['/array-query-string/10/email'],
   ];
 
   const mustNotMatch = [
@@ -742,6 +751,7 @@ test('convertRewrites', () => {
     ['/hello', '/hello/another/one'],
     ['/hllooo'],
     ['/hllooo'],
+    ['/array-query-string/10'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
@@ -893,7 +903,7 @@ test('convertHeaders', () => {
         },
         {
           type: 'header',
-          key: 'x-pathname',
+          key: 'X-Pathname',
           value: '(?<another>hello|world)',
         },
       ],

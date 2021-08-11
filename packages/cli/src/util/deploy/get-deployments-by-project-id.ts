@@ -1,25 +1,31 @@
 import { URLSearchParams } from 'url';
+import { Alias } from '../../types';
 import Client from '../client';
 
 type Response = {
-  deployments: Array<{
-    uid: string;
-    name: string;
-    url: string;
-    created: number;
-    state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR';
-    creator: { uid: string };
-    instanceCount: number;
-    scale: {
-      [key: string]: number;
-    };
-  }>;
+  deployments: DeploymentPartial[];
 };
+export interface DeploymentPartial {
+  uid: string;
+  name: string;
+  url: string;
+  created: number;
+  createdAt: number;
+  aliases: Alias[];
+  state:
+    | 'BUILDING'
+    | 'ERROR'
+    | 'INITIALIZING'
+    | 'QUEUED'
+    | 'READY'
+    | 'CANCELED';
+  creator: { uid: string };
+}
 
 interface Options {
-  from: number | null;
-  limit: number | null;
-  continue: boolean;
+  from?: number | null;
+  limit?: number | null;
+  continue?: boolean;
   max?: number;
 }
 
@@ -28,7 +34,7 @@ export default async function getDeploymentsByProjectId(
   projectId: string,
   options: Options = { from: null, limit: 100, continue: false },
   total: number = 0
-) {
+): Promise<DeploymentPartial[]> {
   const limit = options.limit || 100;
 
   const query = new URLSearchParams();
@@ -39,7 +45,9 @@ export default async function getDeploymentsByProjectId(
     query.set('from', options.from.toString());
   }
 
-  const { deployments } = await client.fetch<Response>(`/v4/now/deployments?${query}`);
+  const { deployments } = await client.fetch<Response>(
+    `/v4/now/deployments?${query}`
+  );
   total += deployments.length;
 
   if (options.max && total >= options.max) {
@@ -49,15 +57,15 @@ export default async function getDeploymentsByProjectId(
   if (options.continue && deployments.length === limit) {
     const nextFrom = deployments[deployments.length - 1].created;
     const nextOptions = Object.assign({}, options, { from: nextFrom });
-    deployments.push(...(await getDeploymentsByProjectId(client, projectId, nextOptions, total)));
+    deployments.push(
+      ...(await getDeploymentsByProjectId(
+        client,
+        projectId,
+        nextOptions,
+        total
+      ))
+    );
   }
 
   return deployments;
-}
-
-export async function getAllDeploymentsByProjectId(
-  client: Client,
-  projectId: string
-) {
-  return getDeploymentsByProjectId(client, projectId, { from: null, limit: 100, continue: true });
 }

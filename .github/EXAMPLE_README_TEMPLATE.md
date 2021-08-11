@@ -6,7 +6,7 @@ This directory is a brief example of a [Name](site-link) site that can be deploy
 
 Deploy your own [Name] project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/example-directory)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/example-directory)
 
 ### How We Created This Example
 

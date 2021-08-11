@@ -4,20 +4,22 @@ import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';
 import verify from './verify';
 import executeLogin from './login';
-import { LoginParams } from './types';
+import Client from '../client';
+import { LoginResult } from './types';
 
 export default async function doEmailLogin(
+  client: Client,
   email: string,
-  params: LoginParams
-): Promise<number | string> {
+  ssoUserId?: string
+): Promise<LoginResult> {
   let securityCode;
   let verificationToken;
-  const { apiUrl, output } = params;
+  const { output } = client;
 
   output.spinner('Sending you an email');
 
   try {
-    const data = await executeLogin(apiUrl, email);
+    const data = await executeLogin(client, email);
     verificationToken = data.token;
     securityCode = data.securityCode;
   } catch (err) {
@@ -38,13 +40,19 @@ export default async function doEmailLogin(
 
   output.spinner('Waiting for your confirmation');
 
-  let token = '';
-  while (!token) {
+  let result;
+  while (!result) {
     try {
       await sleep(ms('1s'));
-      token = await verify(email, verificationToken, params);
+      result = await verify(
+        client,
+        verificationToken,
+        email,
+        'Email',
+        ssoUserId
+      );
     } catch (err) {
-      if (err.message !== 'Confirmation incomplete') {
+      if (err.serverMessage !== 'Confirmation incomplete') {
         output.error(err.message);
         return 1;
       }
@@ -52,5 +60,5 @@ export default async function doEmailLogin(
   }
 
   output.success(`Email authentication complete for ${email}`);
-  return token;
+  return result;
 }

@@ -86,6 +86,7 @@ export const build = async ({
 
   await installRequirement({
     dependency: 'werkzeug',
+    version: '1.0.1',
     workPath,
     meta,
   });
@@ -109,6 +110,7 @@ export const build = async ({
     const tempDir = await getWriteableDirectory();
     await installRequirement({
       dependency: 'pipfile-requirements',
+      version: '0.3.0',
       workPath: tempDir,
       meta,
       args: ['--no-warn-script-location'],

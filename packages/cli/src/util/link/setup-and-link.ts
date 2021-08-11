@@ -2,7 +2,7 @@ import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { ProjectLinkResult, ProjectSettings } from '../../types';
-import { NowConfig } from '../dev/types';
+import { VercelConfig } from '../dev/types';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -134,7 +134,7 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1 };
   }
 
-  let localConfig: NowConfig = {};
+  let localConfig: VercelConfig = {};
   if (client.localConfig && !(client.localConfig instanceof Error)) {
     localConfig = client.localConfig;
   }
@@ -177,7 +177,7 @@ export default async function setupAndLink(
       }
 
       const deployment = await createDeploy(
-        output,
+        client,
         now,
         config.currentTeam || 'current user',
         [sourcePath],

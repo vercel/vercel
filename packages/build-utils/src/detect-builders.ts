@@ -424,6 +424,7 @@ function getApiMatches() {
 
   return [
     { src: 'api/**/*.js', use: `@vercel/node`, config },
+    { src: 'api/**/*.mjs', use: `@vercel/node`, config },
     { src: 'api/**/*.ts', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },

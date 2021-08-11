@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import Client from '../client';
-import wait from '../output/wait';
 import { Domain } from '../../types';
 
 type Response = {
@@ -12,7 +11,7 @@ export async function getDomain(
   contextName: string,
   domainName: string
 ) {
-  const cancelWait = wait(
+  client.output.spinner(
     `Fetching domain ${domainName} under ${chalk.bold(contextName)}`
   );
   try {
@@ -27,7 +26,5 @@ export async function getDomain(
     }
 
     throw error;
-  } finally {
-    cancelWait();
   }
 }

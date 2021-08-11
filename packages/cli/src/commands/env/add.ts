@@ -13,7 +13,6 @@ import {
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
-import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
@@ -142,17 +141,16 @@ export default async function add(
 
   const addStamp = stamp();
   try {
-    await withSpinner('Saving', () =>
-      addEnvRecord(
-        output,
-        client,
-        project.id,
-        ProjectEnvType.Encrypted,
-        envName,
-        envValue,
-        envTargets,
-        envGitBranch
-      )
+    output.spinner('Saving');
+    await addEnvRecord(
+      output,
+      client,
+      project.id,
+      ProjectEnvType.Encrypted,
+      envName,
+      envValue,
+      envTargets,
+      envGitBranch
     );
   } catch (error) {
     if (isKnownError(error) && error.serverMessage) {
