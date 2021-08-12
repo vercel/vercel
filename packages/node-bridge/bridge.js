@@ -168,7 +168,7 @@ class Bridge {
     return new Promise((resolve, reject) => {
       // if the path is improperly encoded we need to encode it or
       // http.request will throw an error (related check: https://github.com/nodejs/node/blob/4ece669c6205ec78abfdadfe78869bbb8411463e/lib/_http_client.js#L84)
-      if (path && path.match(/[^\u0021-\u00ff]/)) {
+      if (path && /[^\u0021-\u00ff]/.test(path)) {
         path = encodeURI(path);
       }
 
