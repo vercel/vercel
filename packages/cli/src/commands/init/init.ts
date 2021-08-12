@@ -2,16 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import tar from 'tar-fs';
 import chalk from 'chalk';
-import fetch from 'node-fetch';
 
 // @ts-ignore
 import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
 import promptBool from '../../util/input/prompt-bool';
 import toHumanPath from '../../util/humanize-path';
-import { Output } from '../../util/output';
 import Client from '../../util/client';
-import success from '../../util/output/success';
 import info from '../../util/output/info';
 import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
@@ -40,7 +37,7 @@ export default async function init(
   const [name, dir] = args;
   const force = opts['-f'] || opts['--force'];
 
-  const examples = await fetchExampleList(output);
+  const examples = await fetchExampleList(client);
 
   if (!examples) {
     throw new Error(`Could not fetch example list.`);
@@ -56,47 +53,37 @@ export default async function init(
       return 0;
     }
 
-    return extractExample(output, chosen, dir, force);
+    return extractExample(client, chosen, dir, force);
   }
 
   if (exampleList.includes(name)) {
-    return extractExample(output, name, dir, force);
+    return extractExample(client, name, dir, force);
   }
 
   const oldExample = examples.find(x => !x.visible && x.name === name);
   if (oldExample) {
-    return extractExample(output, name, dir, force, 'v1');
+    return extractExample(client, name, dir, force, 'v1');
   }
 
   const found = await guess(exampleList, name);
 
   if (typeof found === 'string') {
-    return extractExample(output, found, dir, force);
+    return extractExample(client, found, dir, force);
   }
 
-  console.log(info('No changes made.'));
+  output.log(info('No changes made.'));
   return 0;
 }
 
 /**
  * Fetch example list json
  */
-async function fetchExampleList(output: Output) {
-  output.spinner('Fetching examples');
+async function fetchExampleList(client: Client) {
+  client.output.spinner('Fetching examples');
   const url = `${EXAMPLE_API}/v2/list.json`;
 
-  try {
-    const resp = await fetch(url);
-    output.stopSpinner();
-
-    if (resp.status !== 200) {
-      throw new Error(`Failed fetching list.json (${resp.statusText}).`);
-    }
-
-    return (await resp.json()) as Example[];
-  } catch (e) {
-    output.stopSpinner();
-  }
+  const body = await client.fetch<Example[]>(url);
+  return body;
 }
 
 /**
@@ -119,31 +106,33 @@ async function chooseFromDropdown(message: string, exampleList: string[]) {
  * Extract example to directory
  */
 async function extractExample(
-  output: Output,
+  client: Client,
   name: string,
   dir: string,
   force?: boolean,
   ver: string = 'v2'
 ) {
+  const { output } = client;
   const folder = prepareFolder(process.cwd(), dir || name, force);
   output.spinner(`Fetching ${name}`);
 
   const url = `${EXAMPLE_API}/${ver}/download/${name}.tar.gz`;
 
-  return fetch(url)
-    .then(async resp => {
+  return client
+    .fetch(url, { json: false })
+    .then(async res => {
       output.stopSpinner();
 
-      if (resp.status !== 200) {
+      if (res.status !== 200) {
         throw new Error(`Could not get ${name}.tar.gz`);
       }
 
       await new Promise((resolve, reject) => {
         const extractor = tar.extract(folder);
-        resp.body.on('error', reject);
+        res.body.on('error', reject);
         extractor.on('error', reject);
         extractor.on('finish', resolve);
-        resp.body.pipe(extractor);
+        res.body.pipe(extractor);
       });
 
       const successLog = `Initialized "${chalk.bold(
@@ -158,7 +147,7 @@ async function extractExample(
                 `cd ${folderRel}`
               )} and run ${getCommandName()}.`
             );
-      console.log(success(`${successLog}\n${deployHint}`));
+      output.success(`${successLog}\n${deployHint}`);
       return 0;
     })
     .catch(e => {

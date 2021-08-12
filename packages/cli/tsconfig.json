@@ -11,6 +11,7 @@
     "lib": ["esnext"],
     "resolveJsonModule": true,
     "sourceMap": true,
+    "outDir": "./dist",
     "typeRoots": ["./@types", "./node_modules/@types"]
   },
   "include": ["src/**/*"]

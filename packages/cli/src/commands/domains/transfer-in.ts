@@ -7,7 +7,6 @@ import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
 import getAuthCode from '../../util/domains/get-auth-code';
-import withSpinner from '../../util/with-spinner';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import checkTransfer from '../../util/domains/check-transfer';
 import promptBool from '../../util/input/prompt-bool';
@@ -89,9 +88,13 @@ export default async function transferIn(
   }
 
   const transferStamp = stamp();
-  const transferInResult = await withSpinner(
-    `Initiating transfer for domain ${domainName}`,
-    () => transferInDomain(client, domainName, authCode, price)
+  output.spinner(`Initiating transfer for domain ${domainName}`);
+
+  const transferInResult = await transferInDomain(
+    client,
+    domainName,
+    authCode,
+    price
   );
 
   if (transferInResult instanceof ERRORS.InvalidDomain) {
