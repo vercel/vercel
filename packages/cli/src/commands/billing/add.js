@@ -6,12 +6,11 @@ import cardBrands from '../../util/billing/card-brands';
 import success from '../../util/output/success';
 import wait from '../../util/output/wait';
 import chars from '../../util/output/chars';
-import rightPad from '../../util/output/right-pad';
 import error from '../../util/output/error';
 
 const expDateMiddleware = data => data;
 
-export default async function({ creditCards, clear = false, contextName }) {
+export default async function ({ creditCards, clear = false, contextName }) {
   const state = {
     error: undefined,
     cardGroupLabel: `> ${chalk.bold(
@@ -19,13 +18,13 @@ export default async function({ creditCards, clear = false, contextName }) {
     )}`,
 
     name: {
-      label: rightPad('Full Name', 12),
+      label: 'Full Name'.padEnd(12),
       placeholder: 'John Appleseed',
       validateValue: data => data.trim().length > 0,
     },
 
     cardNumber: {
-      label: rightPad('Number', 12),
+      label: 'Number'.padEnd(12),
       mask: 'cc',
       placeholder: '#### #### #### ####',
       validateKeypress: (data, value) => /\d/.test(data) && value.length < 19,
@@ -40,7 +39,7 @@ export default async function({ creditCards, clear = false, contextName }) {
     },
 
     ccv: {
-      label: rightPad('CCV', 12),
+      label: 'CCV'.padEnd(12),
       mask: 'ccv',
       placeholder: '###',
       validateValue: data => {
@@ -50,7 +49,7 @@ export default async function({ creditCards, clear = false, contextName }) {
     },
 
     expDate: {
-      label: rightPad('Exp. Date', 12),
+      label: 'Exp. Date'.padEnd(12),
       mask: 'expDate',
       placeholder: 'mm / yyyy',
       middleware: expDateMiddleware,
@@ -147,9 +146,9 @@ export default async function({ creditCards, clear = false, contextName }) {
 
       console.log(
         success(
-          `${state.cardNumber.brand ||
-            state.cardNumber.card.brand} ending in ${res.last4 ||
-            res.card.last4} was added to ${chalk.bold(contextName)}`
+          `${state.cardNumber.brand || state.cardNumber.card.brand} ending in ${
+            res.last4 || res.card.last4
+          } was added to ${chalk.bold(contextName)}`
         )
       );
     } catch (err) {

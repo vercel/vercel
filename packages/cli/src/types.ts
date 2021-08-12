@@ -306,3 +306,15 @@ export interface Token {
   createdAt: number;
   teamId?: string;
 }
+
+export interface Build {
+  id: string;
+  deploymentId: string;
+  entrypoint: string;
+  readyState: string;
+  readyStateAt: number;
+  createdAt: number;
+  use: string;
+  config: any;
+  output: any;
+}

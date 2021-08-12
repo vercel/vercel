@@ -11,6 +11,7 @@ import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { getDeployment } from '../util/get-deployment';
 import { Deployment } from '@vercel/client';
+import { Build } from '../types';
 
 const help = () => {
   console.log(`
@@ -116,7 +117,9 @@ export default async function main(client: Client) {
 
   const { builds } =
     deployment.version === 2
-      ? await client.fetch(`/v1/now/deployments/${id}/builds`)
+      ? await client.fetch<{ builds: Build[] }>(
+          `/v1/now/deployments/${id}/builds`
+        )
       : { builds: [] };
 
   log(
