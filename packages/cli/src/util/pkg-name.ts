@@ -6,9 +6,6 @@ import cmd from './output/cmd';
  * Returns the package name such as `vercel` or `now`.
  */
 export function getPkgName(): string {
-  if (!pkg.name) {
-    throw new Error('Expected `package.json` to have a `name` property.');
-  }
   return pkg.name;
 }
 
