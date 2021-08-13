@@ -149,7 +149,8 @@ export default async function main(client: Client) {
 
     for (const build of builds) {
       const { id, createdAt, readyStateAt } = build;
-      times[id] = createdAt ? elapsed(readyStateAt - createdAt) : null;
+      times[id] =
+        createdAt && readyStateAt ? elapsed(readyStateAt - createdAt) : null;
     }
 
     print(chalk.bold('  Builds\n\n'));
