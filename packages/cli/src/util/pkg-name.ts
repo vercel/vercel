@@ -1,6 +1,4 @@
-// @ts-ignore
 import title from 'title';
-
 import pkg from './pkg';
 import cmd from './output/cmd';
 
