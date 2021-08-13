@@ -245,16 +245,7 @@ test('5xx response error with random JSON', async t => {
   t.is(formatted.message, 'Failed to process data (500)');
 });
 
-test('getProjectName with argv - option 1', t => {
-  const project = getProjectName({
-    argv: {
-      name: 'abc',
-    },
-  });
-  t.is(project, 'abc');
-});
-
-test('getProjectName with argv - option 2', t => {
+test('getProjectName with argv', t => {
   const project = getProjectName({
     argv: {
       '--name': 'abc',

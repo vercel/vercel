@@ -13,7 +13,7 @@ export default function getProjectName({
   argv,
   nowConfig = {},
   isFile,
-  paths,
+  paths = [],
 }: GetProjectNameOptions) {
   const nameCli = argv['--name'];
 
@@ -30,5 +30,5 @@ export default function getProjectName({
   }
 
   // Otherwise, use the name of the directory
-  return basename(paths[0]);
+  return basename(paths[0] || '');
 }
