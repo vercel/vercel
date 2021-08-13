@@ -16,11 +16,13 @@ export interface JSONObject {
 }
 
 export interface AuthConfig {
+  _: string;
   token?: string;
   skipWrite?: boolean;
 }
 
 export interface GlobalConfig {
+  _: string;
   currentTeam?: string;
   includeScheme?: string;
   collectMetrics?: boolean;
