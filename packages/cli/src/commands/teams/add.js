@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import stamp from '../../util/output/stamp.ts';
 import info from '../../util/output/info';
-import rightPad from '../../util/output/right-pad';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
 import note from '../../util/output/note';
@@ -30,8 +29,8 @@ const gracefulExit = () => {
   return 0;
 };
 
-const teamUrlPrefix = rightPad('Team URL', 14) + chalk.gray('vercel.com/');
-const teamNamePrefix = rightPad('Team Name', 14);
+const teamUrlPrefix = 'Team URL'.padEnd(14) + chalk.gray('vercel.com/');
+const teamNamePrefix = 'Team Name'.padEnd(14);
 
 export default async function add(client, teams) {
   let slug;

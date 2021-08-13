@@ -16,11 +16,13 @@ export interface JSONObject {
 }
 
 export interface AuthConfig {
+  _: string;
   token?: string;
   skipWrite?: boolean;
 }
 
 export interface GlobalConfig {
+  _: string;
   currentTeam?: string;
   includeScheme?: string;
   collectMetrics?: boolean;
@@ -305,4 +307,142 @@ export interface Token {
   activeAt: number;
   createdAt: number;
   teamId?: string;
+}
+
+/**
+ * An object representing a Build on Vercel
+ */
+export interface Build {
+  /**
+   * The unique identifier of the Build
+   * @example "bld_q5fj68jh7eewfe8"
+   */
+  id: string;
+
+  /**
+   * The unique identifier of the deployment
+   * @example "dpl_BRGyoU2Jzzwx7myBnqv3xjRDD2GnHTwUWyFybnrUvjDD"
+   */
+  deploymentId: string;
+
+  /**
+   * The entrypoint of the deployment
+   * @example "api/index.js"
+   */
+  entrypoint: string;
+
+  /**
+   * The state of the deployment depending on the process of deploying,
+   * or if it is ready or in an error state
+   * @example "READY"
+   */
+  readyState:
+    | 'INITIALIZING'
+    | 'BUILDING'
+    | 'UPLOADING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'ARCHIVED'
+    | 'ERROR'
+    | 'QUEUED'
+    | 'CANCELED';
+
+  /**
+   * The time at which the Build state was last modified
+   * @example 1567024758130
+   */
+  readyStateAt?: number;
+
+  /**
+   * The time at which the Build was scheduled to be built
+   * @example 1567024756543
+   */
+  scheduledAt?: number | null;
+
+  /**
+   * The time at which the Build was created
+   * @example 1567071524208
+   */
+  createdAt?: number;
+
+  /**
+   * The time at which the Build was deployed
+   * @example 1567071598563
+   */
+  deployedAt?: number;
+
+  /**
+   * The region where the Build was first created
+   * @example "sfo1"
+   */
+  createdIn?: string;
+
+  /**
+   * The Runtime the Build used to generate the output
+   * @example "@vercel/node"
+   */
+  use?: string;
+
+  /**
+   * An object that contains the Build's configuration
+   * @example {"zeroConfig": true}
+   */
+  config?: {
+    distDir?: string | undefined;
+    forceBuildIn?: string | undefined;
+    reuseWorkPathFrom?: string | undefined;
+    zeroConfig?: boolean | undefined;
+  };
+
+  /**
+   * A list of outputs for the Build that can be either Serverless Functions or static files
+   */
+  output: BuildOutput[];
+
+  /**
+   * If the Build uses the `@vercel/static` Runtime, it contains a hashed string of all outputs
+   * @example null
+   */
+  fingerprint?: string | null;
+
+  copiedFrom?: string;
+}
+
+export interface BuildOutput {
+  /**
+   * The type of the output
+   */
+  type?: 'lambda' | 'file';
+
+  /**
+   * The absolute path of the file or Serverless Function
+   */
+  path: string;
+
+  /**
+   * The SHA1 of the file
+   */
+  digest: string;
+
+  /**
+   * The POSIX file permissions
+   */
+  mode: number;
+
+  /**
+   * The size of the file in bytes
+   */
+  size?: number;
+
+  /**
+   * If the output is a Serverless Function, an object
+   * containing the name, location and memory size of the function
+   */
+  lambda?: {
+    functionName: string;
+    deployedTo: string[];
+    memorySize?: number;
+    timeout?: number;
+    layers?: string[];
+  } | null;
 }
