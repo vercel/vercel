@@ -1,4 +1,3 @@
-//@ts-ignore Missing types for 'title'
 import title from 'title';
 import { ProjectEnvVariable } from '../../types';
 
