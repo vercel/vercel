@@ -120,10 +120,7 @@ export default async (client: Client) => {
     paths = [process.cwd()];
   }
 
-  let localConfig: VercelConfig | null = client.localConfig;
-  if (!localConfig || localConfig instanceof Error) {
-    localConfig = readLocalConfig(paths[0]);
-  }
+  let localConfig = client.localConfig || readLocalConfig(paths[0]);
 
   for (const path of paths) {
     try {

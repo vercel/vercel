@@ -50,6 +50,7 @@ import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
 import { GlobalConfig, Team } from './types';
+import { VercelConfig } from '@vercel/client';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -107,23 +108,30 @@ const main = async () => {
   debug = output.debug;
 
   const localConfigPath = argv['--local-config'];
-  const localConfig = await getConfig(output, localConfigPath);
+  let localConfig: VercelConfig | Error | undefined = await getConfig(
+    output,
+    localConfigPath
+  );
 
-  if (localConfig instanceof Error) {
-    if (localConfig instanceof ERRORS.CantFindConfig) {
+  if (localConfig instanceof ERRORS.CantParseJSONFile) {
+    output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
+    return 1;
+  }
+
+  if (localConfig instanceof ERRORS.CantFindConfig) {
+    if (localConfigPath) {
       output.error(
         `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
           ' or\n    '
         )}`
       );
       return 1;
+    } else {
+      localConfig = undefined;
     }
+  }
 
-    if (localConfig instanceof ERRORS.CantParseJSONFile) {
-      output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
-      return 1;
-    }
-
+  if (localConfig instanceof Error) {
     output.prettyError(localConfig);
     return 1;
   }
@@ -525,7 +533,7 @@ const main = async () => {
     authConfig: { token },
   } = client;
 
-  let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
+  let scope = argv['--scope'] || argv['--team'] || localConfig?.scope;
 
   const targetCommand = commands.get(subcommand);
 

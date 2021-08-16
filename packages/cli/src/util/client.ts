@@ -34,7 +34,7 @@ export interface ClientOptions {
   authConfig: AuthConfig;
   output: Output;
   config: GlobalConfig;
-  localConfig: VercelConfig;
+  localConfig?: VercelConfig;
 }
 
 const isJSONObject = (v: any): v is JSONObject => {
@@ -47,7 +47,7 @@ export default class Client extends EventEmitter {
   authConfig: AuthConfig;
   output: Output;
   config: GlobalConfig;
-  localConfig: VercelConfig;
+  localConfig?: VercelConfig;
   private requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
