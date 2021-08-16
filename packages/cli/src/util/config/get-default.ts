@@ -1,6 +1,6 @@
 import { AuthConfig, GlobalConfig } from '../../types';
 
-export const getDefaultConfig = async (existingCopy: GlobalConfig) => {
+export const getDefaultConfig = async (existingCopy?: GlobalConfig | null) => {
   let migrated = false;
 
   const config: GlobalConfig = {
@@ -51,7 +51,7 @@ export const getDefaultConfig = async (existingCopy: GlobalConfig) => {
   return { config, migrated };
 };
 
-export const getDefaultAuthConfig = async (existing?: AuthConfig) => {
+export const getDefaultAuthConfig = async (existing?: AuthConfig | null) => {
   let migrated = false;
 
   const config: AuthConfig = {

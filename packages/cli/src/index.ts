@@ -20,10 +20,9 @@ import epipebomb from 'epipebomb';
 import updateNotifier from 'update-notifier';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-import { NowBuildError } from '@vercel/build-utils';
 import hp from './util/humanize-path';
-import commands from './commands/index.ts';
-import pkg from './util/pkg.ts';
+import commands from './commands';
+import pkg from './util/pkg';
 import createOutput from './util/output';
 import cmd from './util/output/cmd';
 import info from './util/output/info';
@@ -31,8 +30,8 @@ import error from './util/output/error';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
 import getArgs from './util/get-args';
-import getUser from './util/get-user.ts';
-import Client from './util/client.ts';
+import getUser from './util/get-user';
+import Client from './util/client';
 import NowTeams from './util/teams';
 import { handleError } from './util/error';
 import reportError from './util/report-error';
@@ -44,13 +43,13 @@ import {
   getDefaultAuthConfig,
 } from './util/config/get-default';
 import * as ERRORS from './util/errors-ts';
-import { NowError } from './util/now-error';
-import { APIError } from './util/errors-ts.ts';
-import { SENTRY_DSN } from './util/constants.ts';
+import { APIError } from './util/errors-ts';
+import { SENTRY_DSN } from './util/constants';
 import getUpdateCommand from './util/get-update-command';
-import { metrics, shouldCollectMetrics } from './util/metrics.ts';
-import { getCommandName, getTitleName } from './util/pkg-name.ts';
-import doLoginPrompt from './util/login/prompt.ts';
+import { metrics, shouldCollectMetrics } from './util/metrics';
+import { getCommandName, getTitleName } from './util/pkg-name';
+import doLoginPrompt from './util/login/prompt';
+import { GlobalConfig, Team } from './types';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -77,8 +76,8 @@ Sentry.init({
   environment: isCanary ? 'canary' : 'stable',
 });
 
-let client;
-let debug = () => {};
+let client: Client;
+let debug: (s: string) => void = () => {};
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
@@ -110,24 +109,21 @@ const main = async () => {
   const localConfigPath = argv['--local-config'];
   const localConfig = await getConfig(output, localConfigPath);
 
-  if (localConfigPath && localConfig instanceof ERRORS.CantFindConfig) {
-    output.error(
-      `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
-        ' or\n    '
-      )}`
-    );
-    return 1;
-  }
+  if (localConfig instanceof Error) {
+    if (localConfig instanceof ERRORS.CantFindConfig) {
+      output.error(
+        `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
+          ' or\n    '
+        )}`
+      );
+      return 1;
+    }
 
-  if (localConfig instanceof ERRORS.CantParseJSONFile) {
-    output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
-    return 1;
-  }
+    if (localConfig instanceof ERRORS.CantParseJSONFile) {
+      output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
+      return 1;
+    }
 
-  if (
-    (localConfig instanceof NowError || localConfig instanceof NowBuildError) &&
-    !(localConfig instanceof ERRORS.CantFindConfig)
-  ) {
     output.prettyError(localConfig);
     return 1;
   }
@@ -207,7 +203,7 @@ const main = async () => {
     return 0;
   }
 
-  let config;
+  let config: GlobalConfig | null = null;
 
   if (configExists) {
     try {
@@ -229,8 +225,11 @@ const main = async () => {
     // multiple providers. In that case, we really
     // need to migrate.
     if (
+      // @ts-ignore
       config.sh ||
+      // @ts-ignore
       config.user ||
+      // @ts-ignore
       typeof config.user === 'object' ||
       typeof config.currentTeam === 'object'
     ) {
@@ -300,6 +299,7 @@ const main = async () => {
     // This is from when Vercel CLI supported
     // multiple providers. In that case, we really
     // need to migrate.
+    // @ts-ignore
     if (authConfig.credentials) {
       authConfigExists = false;
     }
@@ -343,6 +343,11 @@ const main = async () => {
     new URL(apiUrl);
   } catch (err) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
+    return 1;
+  }
+
+  if (!config) {
+    output.error(`Vercel global config was not loaded.`);
     return 1;
   }
 
@@ -397,7 +402,7 @@ const main = async () => {
     }
 
     if (subcommandExists) {
-      debug('user supplied known subcommand', targetOrSubcommand);
+      debug(`user supplied known subcommand: "${targetOrSubcommand}"`);
       subcommand = targetOrSubcommand;
     } else {
       debug('user supplied a possible target for deployment');
@@ -553,7 +558,7 @@ const main = async () => {
     if (user.uid === scope || user.email === scope || user.username === scope) {
       delete client.config.currentTeam;
     } else {
-      let list = [];
+      let list: Team[] = [];
 
       try {
         const teams = new NowTeams({ apiUrl, token, debug: isDebugging });
@@ -678,7 +683,7 @@ const main = async () => {
   return exitCode;
 };
 
-const handleRejection = async err => {
+const handleRejection = async (err: any) => {
   debug('handling rejection');
 
   if (err) {
@@ -695,7 +700,7 @@ const handleRejection = async err => {
   process.exit(1);
 };
 
-const handleUnexpected = async err => {
+const handleUnexpected = async (err: Error) => {
   const { message } = err;
 
   // We do not want to render errors about Sentry not being reachable
@@ -704,9 +709,8 @@ const handleUnexpected = async err => {
     return;
   }
 
-  await reportError(Sentry, client, err);
-
   console.error(error(`An unexpected error occurred!\n${err.stack}`));
+  await reportError(Sentry, client, err);
 
   process.exit(1);
 };
@@ -717,6 +721,7 @@ process.on('uncaughtException', handleUnexpected);
 main()
   .then(exitCode => {
     process.exitCode = exitCode;
+    // @ts-ignore - "nowExit" is a non-standard event name
     process.emit('nowExit');
   })
   .catch(handleUnexpected);

@@ -5,7 +5,9 @@ import renderLink from './link';
 
 const metric = metrics();
 
-export default function error(...input: string[] | [APIError]) {
+export default function error(
+  ...input: string[] | [Pick<APIError, 'slug' | 'message' | 'link' | 'action'>]
+) {
   let messages = input;
   if (typeof input[0] === 'object') {
     const { slug, message, link, action = 'Learn More' } = input[0];
