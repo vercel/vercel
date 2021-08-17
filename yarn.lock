@@ -2389,6 +2389,11 @@
   dependencies:
     "@types/node" "*"
 
+"@types/title@3.4.1":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@types/title/-/title-3.4.1.tgz#583cd7561291eac4ade4bef0d589d23c27bf71e7"
+  integrity sha512-GAt+5DJl84n7Qz+/weJteapG8j2csP/5NOg8H4dnaTxuqsK6AcZ4hPYsvvjAjcEVv5l9dfK8rz4pOfpgjlrNqg==
+
 "@types/universal-analytics@0.4.2":
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/@types/universal-analytics/-/universal-analytics-0.4.2.tgz#d21a122a984bf8261eb206bcb7ccb1c0e8353d04"

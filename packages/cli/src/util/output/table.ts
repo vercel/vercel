@@ -1,10 +1,16 @@
 import chalk from 'chalk';
 
-const printLine = (data, sizes) =>
+const printLine = (data: string[], sizes: number[]) =>
   data.reduce((line, col, i) => line + col.padEnd(sizes[i]), '');
 
-// Print a table
-export default (fieldNames = [], data = [], margins = []) => {
+/**
+ * Print a table.
+ */
+export default function table(
+  fieldNames: string[] = [],
+  data: string[][] = [],
+  margins: number[] = []
+) {
   // Compute size of each column
   const sizes = data
     .reduce(
@@ -21,6 +27,9 @@ export default (fieldNames = [], data = [], margins = []) => {
 
   // Print header
   console.log(chalk.grey(printLine(fieldNames, sizes)));
+
   // Print content
-  data.forEach(row => console.log(printLine(row, sizes)));
-};
+  for (const row of data) {
+    console.log(printLine(row, sizes));
+  }
+}
