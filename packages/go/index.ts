@@ -20,17 +20,13 @@ import {
   PrepareCacheOptions,
   StartDevServerOptions,
   StartDevServerResult,
-} from '@vercel/build-utils';
-import buildUtils from './build-utils';
-
-const {
   glob,
   download,
   createLambda,
   getWriteableDirectory,
   shouldServe,
   debug,
-} = buildUtils;
+} from '@vercel/build-utils';
 
 const TMP = tmpdir();
 
