@@ -32,7 +32,7 @@
     "@types/cookie": "0.3.3",
     "@types/etag": "1.8.0",
     "@types/test-listen": "1.1.0",
-    "@vercel/ncc": "0.24.0",
+    "@vercel/ncc": "0.29.1",
     "@vercel/nft": "0.13.1",
     "@vercel/node-bridge": "2.1.0",
     "content-type": "1.0.4",

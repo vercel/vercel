@@ -22,7 +22,7 @@
   "devDependencies": {
     "@types/fs-extra": "8.0.0",
     "@types/semver": "6.0.0",
-    "@vercel/ncc": "0.24.0",
+    "@vercel/ncc": "0.29.1",
     "execa": "2.0.4",
     "fs-extra": "^7.0.1",
     "semver": "6.1.1",
