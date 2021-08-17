@@ -217,7 +217,10 @@ export default class Now extends EventEmitter {
       });
     }
 
-    if (error.errorCode && error.errorCode === 'BUILD_FAILED') {
+    if (
+      error.errorCode === 'BUILD_FAILED' ||
+      error.errorCode === 'UNEXPECTED_ERROR'
+    ) {
       return new BuildError({
         message: error.errorMessage,
         meta: {},
