@@ -1,7 +1,5 @@
 import execa from 'execa';
-import { Meta } from '@vercel/build-utils';
-import buildUtils from './build-utils';
-const { debug } = buildUtils;
+import { Meta, debug } from '@vercel/build-utils';
 const pipPath = 'pip3';
 
 const makeDependencyCheckCode = (dependency: string) => `

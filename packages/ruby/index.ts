@@ -8,16 +8,15 @@ import {
   readFile,
   writeFile,
 } from 'fs-extra';
-import buildUtils from './build-utils';
-import { BuildOptions } from '@vercel/build-utils';
-const {
+import {
+  BuildOptions,
   download,
   getWriteableDirectory,
   glob,
   createLambda,
   debug,
   walkParentDirs,
-} = buildUtils;
+} from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
 async function matchPaths(

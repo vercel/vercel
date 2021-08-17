@@ -1,9 +1,7 @@
 import { join } from 'path';
 import { intersects } from 'semver';
 import execa from 'execa';
-import buildUtils from './build-utils';
-import { Meta, NodeVersion } from '@vercel/build-utils';
-const { debug, NowBuildError } = buildUtils;
+import { Meta, NodeVersion, debug, NowBuildError } from '@vercel/build-utils';
 
 interface RubyVersion extends NodeVersion {
   minor: number;
@@ -29,11 +27,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       .split('\n')
       .find(line => line.startsWith('ruby'));
     if (line) {
-      const strVersion = line
-        .slice(4)
-        .trim()
-        .slice(1, -1)
-        .replace('~>', '');
+      const strVersion = line.slice(4).trim().slice(1, -1).replace('~>', '');
       const found = allOptions.some(o => {
         // The array is already in order so return the first
         // match which will be the newest version.
@@ -44,8 +38,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
         throw new NowBuildError({
           code: 'RUBY_INVALID_VERSION',
           message: 'Found `Gemfile` with invalid Ruby version: `' + line + '`.',
-          link:
-            'https://vercel.com/docs/runtimes#official-runtimes/ruby/ruby-version',
+          link: 'https://vercel.com/docs/runtimes#official-runtimes/ruby/ruby-version',
         });
       }
     }
