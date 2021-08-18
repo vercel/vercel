@@ -49,7 +49,13 @@ async function main() {
   // Do the initial `ncc` build
   console.log();
   const src = join(dirRoot, 'src');
-  const args = ['ncc', 'build', '--external', 'update-notifier'];
+  const args = [
+    'ncc',
+    'build',
+    '--no-asset-builds',
+    '--external',
+    'update-notifier',
+  ];
   if (isDev) {
     args.push('--source-map');
   }
