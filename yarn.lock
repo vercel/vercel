@@ -2504,10 +2504,10 @@
     "@typescript-eslint/types" "4.28.0"
     eslint-visitor-keys "^2.0.0"
 
-"@vercel/ncc@0.29.1":
-  version "0.29.1"
-  resolved "https://registry.yarnpkg.com/@vercel/ncc/-/ncc-0.29.1.tgz#d62b1b9508a2bc7a822791ff6a6eb3e08a2cfdd7"
-  integrity sha512-92d2AApJtkpampMqKgfqWbYkuFvqRFs8kPkKLTbesSB9RVwWfiI3i6mgBxtZgMV9iRuLPVZ+OBNocKHXZSRj6Q==
+"@vercel/ncc@0.29.2":
+  version "0.29.2"
+  resolved "https://registry.yarnpkg.com/@vercel/ncc/-/ncc-0.29.2.tgz#29a35d21b03267a538b536168af766f4270ae8f4"
+  integrity sha512-eUxibZD92k+rY0oZJFZooGqdVpGkDrrHlUhj9UAWrtoyXCGmNOWC1Kcr2KPrZoHRSlWwHOcRnkn2nGT+aHY2KA==
 
 "@vercel/nft@0.13.1":
   version "0.13.1"
