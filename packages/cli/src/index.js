@@ -32,8 +32,8 @@ import param from './util/output/param';
 import highlight from './util/output/highlight';
 import getArgs from './util/get-args';
 import getUser from './util/get-user.ts';
+import getTeams from './util/get-teams.ts';
 import Client from './util/client.ts';
-import NowTeams from './util/teams';
 import { handleError } from './util/error';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
@@ -516,13 +516,8 @@ const main = async () => {
     );
   }
 
-  const {
-    authConfig: { token },
-  } = client;
-
-  let scope = argv['--scope'] || argv['--team'] || localConfig.scope;
-
   const targetCommand = commands.get(subcommand);
+  const scope = argv['--scope'] || argv['--team'] || localConfig.scope;
 
   if (
     typeof scope === 'string' &&
@@ -553,11 +548,10 @@ const main = async () => {
     if (user.uid === scope || user.email === scope || user.username === scope) {
       delete client.config.currentTeam;
     } else {
-      let list = [];
+      let teams = [];
 
       try {
-        const teams = new NowTeams({ apiUrl, token, debug: isDebugging });
-        list = (await teams.ls()).teams;
+        teams = await getTeams(client);
       } catch (err) {
         if (err.code === 'not_authorized') {
           console.error(
@@ -575,7 +569,7 @@ const main = async () => {
       }
 
       const related =
-        list && list.find(item => item.id === scope || item.slug === scope);
+        teams && teams.find(team => team.id === scope || team.slug === scope);
 
       if (!related) {
         console.error(

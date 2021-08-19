@@ -1,22 +1,41 @@
 import chars from '../../util/output/chars';
 import table from '../../util/output/table';
-import getUser from '../../util/get-user.ts';
+import getUser from '../../util/get-user';
+import getTeams from '../../util/get-teams';
 import getPrefixedFlags from '../../util/get-prefixed-flags';
-import { getPkgName } from '../../util/pkg-name.ts';
+import { getPkgName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
-import cmd from '../../util/output/cmd.ts';
+import cmd from '../../util/output/cmd';
+import Client from '../../util/client';
+import getArgs from '../../util/get-args';
 
-export default async function list(client, argv, teams) {
+export default async function list(client: Client): Promise<number> {
   const { config, output } = client;
-  const { next } = argv;
+
+  const argv = getArgs(client.argv.slice(2), {
+    '--since': String,
+    '--until': String,
+    '--count': Number,
+    '--next': Number,
+    '-C': '--count',
+    '-N': '--next',
+  });
+
+  const next = argv['--next'];
+  const count = argv['--count'];
 
   if (typeof next !== 'undefined' && !Number.isInteger(next)) {
-    output.error('Please provide a number for flag --next');
+    output.error('Please provide a number for flag `--next`');
+    return 1;
+  }
+
+  if (typeof count !== 'undefined' && !Number.isInteger(next)) {
+    output.error('Please provide a number for flag `--count`');
     return 1;
   }
 
   output.spinner('Fetching teams');
-  const { teams: list, pagination } = await teams.ls({
+  const { teams, pagination } = await getTeams(client, {
     next,
     apiVersion: 2,
   });
@@ -37,40 +56,31 @@ export default async function list(client, argv, teams) {
   }
 
   if (accountIsCurrent) {
-    currentTeam = {
-      slug: user.username || user.email,
-    };
+    currentTeam = user.uid;
   }
 
-  const teamList = list.map(({ slug, name }) => ({
+  const teamList = teams.map(({ id, slug, name }) => ({
+    id,
     name,
     value: slug,
-    current: slug === currentTeam.slug ? chars.tick : '',
+    current: id === currentTeam ? chars.tick : '',
   }));
 
   teamList.unshift({
+    id: user.uid,
     name: user.email,
     value: user.username || user.email,
-    current: (accountIsCurrent && chars.tick) || '',
+    current: accountIsCurrent ? chars.tick : '',
   });
 
-  // Let's bring the current team to the beginning of the list
+  // Bring the current Team to the beginning of the list
   if (!accountIsCurrent) {
-    const index = teamList.findIndex(
-      choice => choice.value === currentTeam.slug
-    );
+    const index = teamList.findIndex(choice => choice.id === currentTeam);
     const choice = teamList.splice(index, 1)[0];
     teamList.unshift(choice);
   }
 
   // Printing
-  const count = teamList.length;
-  if (!count) {
-    // Maybe should not happen
-    output.error(`No teams found`);
-    return 1;
-  }
-
   output.stopSpinner();
   console.log(); // empty line
 
@@ -80,7 +90,7 @@ export default async function list(client, argv, teams) {
     [1, 5]
   );
 
-  if (pagination && pagination.count === 20) {
+  if (pagination?.count === 20) {
     const prefixedArgs = getPrefixedFlags(argv);
     const flags = getCommandFlags(prefixedArgs, ['_', '--next', '-N', '-d']);
     const nextCmd = `${getPkgName()} teams ls${flags} --next ${
@@ -89,4 +99,6 @@ export default async function list(client, argv, teams) {
     console.log(); // empty line
     output.log(`To display the next page run ${cmd(nextCmd)}`);
   }
+
+  return 0;
 }

@@ -1,13 +1,13 @@
 import chalk from 'chalk';
 import { email as regexEmail } from '../../util/input/regexes';
-import cmd from '../../util/output/cmd.ts';
-import stamp from '../../util/output/stamp.ts';
-import param from '../../util/output/param.ts';
+import cmd from '../../util/output/cmd';
+import stamp from '../../util/output/stamp';
+import param from '../../util/output/param';
 import chars from '../../util/output/chars';
 import textInput from '../../util/input/text';
 import eraseLines from '../../util/output/erase-lines';
-import getUser from '../../util/get-user.ts';
-import { getCommandName } from '../../util/pkg-name.ts';
+import getUser from '../../util/get-user';
+import { getCommandName } from '../../util/pkg-name';
 
 const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
 

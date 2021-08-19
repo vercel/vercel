@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import error from '../../util/output/error';
-import NowTeams from '../../util/teams';
 import logo from '../../util/output/logo';
 import list from './list';
 import add from './add';
@@ -8,7 +7,6 @@ import change from './switch';
 import invite from './invite';
 import { getPkgName } from '../../util/pkg-name';
 import getArgs from '../../util/get-args';
-import handleError from '../../util/handle-error';
 import Client from '../../util/client';
 
 const help = () => {
@@ -61,28 +59,11 @@ const help = () => {
   `);
 };
 
-let argv;
-let debug;
-let apiUrl;
-let subcommand;
-
 export default async (client: Client) => {
-  try {
-    argv = getArgs(client.argv.slice(2), {
-      '--since': String,
-      '--until': String,
-      '--next': Number,
-      '-N': '--next',
-    });
-  } catch (error) {
-    handleError(error);
-    return 1;
-  }
+  let subcommand;
 
-  debug = argv['--debug'];
-  apiUrl = client.apiUrl;
-
-  const isSwitch = argv._[0] && argv._[0] === 'switch';
+  const argv = getArgs(client.argv.slice(2), undefined, { permissive: true });
+  const isSwitch = argv._[0] === 'switch';
 
   argv._ = argv._.slice(1);
 
@@ -97,19 +78,11 @@ export default async (client: Client) => {
     return 2;
   }
 
-  const {
-    authConfig: { token },
-    config,
-  } = client;
-
-  const { currentTeam } = config;
-  const teams = new NowTeams({ apiUrl, token, debug, currentTeam });
-
-  let exitCode;
+  let exitCode = 0;
   switch (subcommand) {
     case 'list':
     case 'ls': {
-      exitCode = await list(client, argv, teams);
+      exitCode = await list(client);
       break;
     }
     case 'switch':
@@ -119,12 +92,12 @@ export default async (client: Client) => {
     }
     case 'add':
     case 'create': {
-      exitCode = await add(client, teams);
+      exitCode = await add(client);
       break;
     }
 
     case 'invite': {
-      exitCode = await invite(client, argv, teams);
+      exitCode = await invite(client, argv);
       break;
     }
     default: {
@@ -137,6 +110,5 @@ export default async (client: Client) => {
       help();
     }
   }
-  teams.close();
-  return exitCode || 0;
+  return exitCode;
 };
