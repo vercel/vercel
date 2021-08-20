@@ -9,7 +9,8 @@ type Choice = { name: string; value: Org };
 export default async function selectOrg(
   client: Client,
   question: string,
-  autoConfirm?: boolean
+  autoConfirm?: boolean,
+  scope?: string
 ): Promise<Org> {
   require('./patch-inquirer');
   const {
@@ -36,6 +37,18 @@ export default async function selectOrg(
       value: { type: 'team', id: team.id, slug: team.slug },
     })),
   ];
+
+  // If an explicit `scope` was provided then
+  // try to match the correct `org` choince
+  if (scope) {
+    const choice = choices.find(
+      ({ value }) => value.id === scope || value.slug === scope
+    );
+    if (!choice) {
+      throw new Error('bad');
+    }
+    return choice.value;
+  }
 
   const defaultOrgIndex = teams.findIndex(team => team.id === currentTeam) + 1;
 

@@ -1,8 +1,6 @@
 import chalk from 'chalk';
 import Client from '../../util/client';
 import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
 import setupAndLink from '../../util/link/setup-and-link';
@@ -44,40 +42,27 @@ const help = () => {
 `);
 };
 
-const COMMAND_CONFIG = {
-  // No subcommands yet
-};
-
 export default async function main(client: Client) {
-  let argv;
-
-  try {
-    argv = getArgs(client.argv.slice(2), {
-      '--confirm': Boolean,
-    });
-  } catch (error) {
-    handleError(error);
-    return 1;
-  }
+  const argv = getArgs(client.argv.slice(2), {
+    '--confirm': Boolean,
+    '--project': String,
+    '-p': '--project',
+  });
 
   if (argv['--help']) {
     help();
     return 2;
   }
 
-  const { args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
-  const path = args[0] || process.cwd();
-  const autoConfirm = argv['--confirm'] || false;
-  const forceDelete = true;
-
-  const link = await setupAndLink(
-    client,
-    path,
-    forceDelete,
-    autoConfirm,
-    'success',
-    'Set up'
-  );
+  const cwd = argv._[1] || process.cwd();
+  const link = await setupAndLink(client, cwd, {
+    forceDelete: true,
+    autoConfirm: argv['--confirm'],
+    projectName: argv['--project'],
+    scope: argv['--scope'],
+    successEmoji: 'success',
+    setupMsg: 'Set up',
+  });
 
   if (link.status === 'error') {
     return link.exitCode;
