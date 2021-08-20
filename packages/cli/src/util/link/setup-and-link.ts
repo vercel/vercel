@@ -30,7 +30,6 @@ export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
   successEmoji: EmojiLabel;
   setupMsg: string;
-  scope?: string;
   projectName?: string;
 }
 
@@ -42,7 +41,6 @@ export default async function setupAndLink(
     autoConfirm = false,
     successEmoji,
     setupMsg,
-    scope,
     projectName,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
@@ -92,8 +90,7 @@ export default async function setupAndLink(
     org = await selectOrg(
       client,
       'Which scope should contain your project?',
-      autoConfirm,
-      scope
+      autoConfirm
     );
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {

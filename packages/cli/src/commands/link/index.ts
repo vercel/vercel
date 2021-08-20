@@ -59,7 +59,6 @@ export default async function main(client: Client) {
     forceDelete: true,
     autoConfirm: argv['--confirm'],
     projectName: argv['--project'],
-    scope: argv['--scope'],
     successEmoji: 'success',
     setupMsg: 'Set up',
   });
