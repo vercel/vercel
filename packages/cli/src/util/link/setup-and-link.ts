@@ -107,7 +107,6 @@ export default async function setupAndLink(
   const detectedProjectName = projectName || basename(path);
 
   const projectOrNewProjectName = await inputProject(
-    output,
     client,
     org,
     detectedProjectName,

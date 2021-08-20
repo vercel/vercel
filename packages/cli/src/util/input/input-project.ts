@@ -4,17 +4,16 @@ import confirm from './confirm';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
 import { ProjectNotFound } from '../../util/errors-ts';
-import { Output } from '../output';
 import { Project, Org } from '../../types';
 import slugify from '@sindresorhus/slugify';
 
 export default async function inputProject(
-  output: Output,
   client: Client,
   org: Org,
   detectedProjectName: string,
   autoConfirm: boolean
 ): Promise<Project | string> {
+  const { output } = client;
   const slugifiedName = slugify(detectedProjectName);
 
   // attempt to auto-detect a project to link
