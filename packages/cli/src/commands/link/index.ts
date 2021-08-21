@@ -22,6 +22,9 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
+    -p ${chalk.bold.underline('NAME')}, --project=${chalk.bold.underline(
+    'NAME'
+  )}        Project name
     --confirm                      Confirm default options and skip questions
 
   ${chalk.dim('Examples:')}
