@@ -97,7 +97,7 @@ export default async (client: Client) => {
     }
 
     case 'invite': {
-      exitCode = await invite(client, argv);
+      exitCode = await invite(client, argv._);
       break;
     }
     default: {

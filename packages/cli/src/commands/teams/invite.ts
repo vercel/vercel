@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { email as regexEmail } from '../../util/input/regexes';
+import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
@@ -8,8 +8,12 @@ import textInput from '../../util/input/text';
 import eraseLines from '../../util/output/erase-lines';
 import getUser from '../../util/get-user';
 import { getCommandName } from '../../util/pkg-name';
+import { email as regexEmail } from '../../util/input/regexes';
+import getTeams from '../../util/teams/get-teams';
+import inviteUserToTeam from '../../util/teams/invite-user-to-team';
 
-const validateEmail = data => regexEmail.test(data.trim()) || data.length === 0;
+const validateEmail = (data: string) =>
+  regexEmail.test(data.trim()) || data.length === 0;
 
 const domains = Array.from(
   new Set([
@@ -28,12 +32,12 @@ const domains = Array.from(
   ])
 );
 
-const emailAutoComplete = (value, teamSlug) => {
+const emailAutoComplete = (value: string, teamSlug: string) => {
   const parts = value.split('@');
 
   if (parts.length === 2 && parts[1].length > 0) {
     const [, host] = parts;
-    let suggestion = false;
+    let suggestion: string | false = false;
 
     domains.unshift(teamSlug);
     for (const domain of domains) {
@@ -51,17 +55,16 @@ const emailAutoComplete = (value, teamSlug) => {
 };
 
 export default async function invite(
-  client,
-  argv,
-  teams,
-  { introMsg, noopMsg = 'No changes made' } = {}
-) {
+  client: Client,
+  emails: string[] = [],
+  { introMsg = '', noopMsg = 'No changes made' } = {}
+): Promise<number> {
   const { config, output } = client;
   const { currentTeam: currentTeamId } = config;
 
   output.spinner('Fetching teams');
-  const list = (await teams.ls()).teams;
-  const currentTeam = list.find(team => team.id === currentTeamId);
+  const teams = await getTeams(client);
+  const currentTeam = teams.find(team => team.id === currentTeamId);
 
   output.spinner('Fetching user information');
   let user;
@@ -93,8 +96,8 @@ export default async function invite(
     introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`
   );
 
-  if (argv._.length > 0) {
-    for (const email of argv._) {
+  if (emails.length > 0) {
+    for (const email of emails) {
       if (regexEmail.test(email)) {
         output.spinner(email);
         const elapsed = stamp();
@@ -102,8 +105,8 @@ export default async function invite(
 
         try {
           // eslint-disable-next-line no-await-in-loop
-          const res = await teams.inviteUser({ teamId: currentTeam.id, email });
-          userInfo = res.name || res.username;
+          const res = await inviteUserToTeam(client, currentTeam.id, email);
+          userInfo = res.username;
         } catch (err) {
           if (err.code === 'user_not_found') {
             output.error(`No user exists with the email address "${email}".`);
@@ -122,12 +125,11 @@ export default async function invite(
         output.log(`${chalk.red(`✖ ${email}`)} ${chalk.gray('[invalid]')}`);
       }
     }
-    return;
+    return 0;
   }
 
   const inviteUserPrefix = 'Invite User'.padEnd(14);
   const sentEmailPrefix = 'Sent Email'.padEnd(14);
-  const emails = [];
   let hasError = false;
   let email;
   do {
@@ -150,12 +152,12 @@ export default async function invite(
       output.spinner(inviteUserPrefix + email);
       try {
         // eslint-disable-next-line no-await-in-loop
-        const { name, username } = await teams.inviteUser({
-          teamId: currentTeam.id,
-          email,
-        });
-        const userInfo = name || username;
-        email = `${email}${userInfo ? ` (${userInfo})` : ''} ${elapsed()}`;
+        const { username } = await inviteUserToTeam(
+          client,
+          currentTeam.id,
+          email
+        );
+        email = `${email}${username ? ` (${username})` : ''} ${elapsed()}`;
         emails.push(email);
         output.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
         if (hasError) {
@@ -193,4 +195,6 @@ export default async function invite(
       output.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
     }
   }
+
+  return 0;
 }

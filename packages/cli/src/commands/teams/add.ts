@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import stamp from '../../util/output/stamp.ts';
+import stamp from '../../util/output/stamp';
 import info from '../../util/output/info';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
@@ -7,14 +7,17 @@ import note from '../../util/output/note';
 import textInput from '../../util/input/text';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
-import { getPkgName, getCommandName } from '../../util/pkg-name.ts';
+import { getPkgName, getCommandName } from '../../util/pkg-name';
+import Client from '../../util/client';
+import createTeam from '../../util/teams/create-team';
+import patchTeam from '../../util/teams/patch-team';
 
-const validateSlugKeypress = (data, value) =>
+const validateSlugKeypress = (data: string, value: string) =>
   // TODO: the `value` here should contain the current value + the keypress
   // should be fixed on utils/input/text.js
   /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data);
 
-const validateNameKeypress = (data, value) =>
+const validateNameKeypress = (data: string, value: string) =>
   // TODO: the `value` here should contain the current value + the keypress
   // should be fixed on utils/input/text.js
   /^[ a-zA-Z0-9_-]+$/.test(value + data);
@@ -32,14 +35,14 @@ const gracefulExit = () => {
 const teamUrlPrefix = 'Team URL'.padEnd(14) + chalk.gray('vercel.com/');
 const teamNamePrefix = 'Team Name'.padEnd(14);
 
-export default async function add(client, teams) {
+export default async function add(client: Client): Promise<number> {
   let slug;
   let team;
   let elapsed;
   const { output } = client;
 
   output.log(
-    `Pick a team identifier for its url (e.g.: ${chalk.cyan(
+    `Pick a team identifier for its URL (e.g.: ${chalk.cyan(
       '`vercel.com/acme`'
     )})`
   );
@@ -65,14 +68,12 @@ export default async function add(client, teams) {
     elapsed = stamp();
     output.spinner(teamUrlPrefix + slug);
 
-    let res;
     try {
       // eslint-disable-next-line no-await-in-loop
-      res = await teams.create({ slug });
-      team = res;
+      team = await createTeam(client, { slug });
     } catch (err) {
       output.stopSpinner();
-      process.stdout.write(eraseLines(2));
+      output.print(eraseLines(2));
       output.error(err.message);
     }
   } while (!team);
@@ -103,11 +104,12 @@ export default async function add(client, teams) {
   elapsed = stamp();
   output.spinner(teamNamePrefix + name);
 
-  const res = await teams.edit({ id: team.id, name });
+  const res = await patchTeam(client, team.id, { name });
 
   output.stopSpinner();
   process.stdout.write(eraseLines(2));
 
+  /*
   if (res.error) {
     output.error(res.error.message);
     output.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`);
@@ -116,33 +118,25 @@ export default async function add(client, teams) {
     // TODO: maybe we want to ask the user to retry? not sure if
     // there's a scenario where that would be wanted
   }
+  */
 
   team = Object.assign(team, res);
 
   output.success(`Team name saved ${elapsed()}`);
   output.log(`${chalk.cyan(`${chars.tick} `) + teamNamePrefix + team.name}\n`);
 
-  output.spinner('Saving');
-
   // Update config file
-  const configCopy = Object.assign({}, client.config);
-
-  if (configCopy.sh) {
-    configCopy.sh.currentTeam = team;
-  } else {
-    configCopy.currentTeam = team.id;
-  }
-
-  writeToConfigFile(configCopy);
-
+  output.spinner('Saving');
+  client.config.currentTeam = team.id;
+  writeToConfigFile(client.config);
   output.stopSpinner();
 
-  await invite(client, { _: [] }, teams, {
+  await invite(client, [], {
     introMsg: 'Invite your teammates! When done, press enter on an empty field',
     noopMsg: `You can invite teammates later by running ${getCommandName(
       `teams invite`
     )}`,
   });
 
-  gracefulExit();
+  return gracefulExit();
 }

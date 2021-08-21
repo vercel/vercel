@@ -32,7 +32,7 @@ import param from './util/output/param';
 import highlight from './util/output/highlight';
 import getArgs from './util/get-args';
 import getUser from './util/get-user.ts';
-import getTeams from './util/get-teams.ts';
+import getTeams from './util/teams/get-teams.ts';
 import Client from './util/client.ts';
 import { handleError } from './util/error';
 import reportError from './util/report-error';

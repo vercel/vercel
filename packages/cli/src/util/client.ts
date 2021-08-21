@@ -69,7 +69,7 @@ export default class Client extends EventEmitter {
     });
   }
 
-  _fetch(_url: string, opts: FetchOptions = {}) {
+  private _fetch(_url: string, opts: FetchOptions = {}) {
     const parsedUrl = parseUrl(_url, true);
     const apiUrl = parsedUrl.host
       ? `${parsedUrl.protocol}//${parsedUrl.host}`

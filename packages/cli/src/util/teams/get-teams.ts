@@ -1,9 +1,7 @@
 import { URLSearchParams } from 'url';
-import Client from './client';
-import { Team } from '../types';
-import { APIError, InvalidToken } from './errors-ts';
-
-//let teams: Team[] | undefined;
+import Client from '../client';
+import { Team } from '../../types';
+import { APIError, InvalidToken } from '../errors-ts';
 
 export interface GetTeamsV1Options {
   apiVersion?: 1;
