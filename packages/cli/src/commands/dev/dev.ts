@@ -36,17 +36,11 @@ export default async function dev(
   ]);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    const autoConfirm = opts['--confirm'] || false;
-    const forceDelete = false;
-
-    link = await setupAndLink(
-      client,
-      cwd,
-      forceDelete,
-      autoConfirm,
-      'link',
-      'Set up and develop'
-    );
+    link = await setupAndLink(client, cwd, {
+      autoConfirm: opts['--confirm'],
+      successEmoji: 'link',
+      setupMsg: 'Set up and develop',
+    });
 
     if (link.status === 'not_linked') {
       // User aborted project linking questions
