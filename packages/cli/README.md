@@ -10,9 +10,13 @@
 
 ## Usage
 
-Vercel is the optimal workflow for frontend teams. All-in-one: Static and Jamstack deployment, Serverless Functions, and Global CDN.
+Vercel is a platform for **static sites and frontend frameworks**, built to integrate with your headless content, commerce, or database.
 
-To install the latest version of Vercel CLI, visit [vercel.com/download](https://vercel.com/download) or run this command:
+We provide a **frictionless developer experience** to take care of the hard things: deploy instantly, scale automatically, and serve personalized content around the globe.
+
+We make it easy for frontend teams to **develop, preview, and ship** delightful user experiences, where performance is the default.
+
+To install the latest version of Vercel CLI, run this command:
 
 ```bash
 npm i -g vercel
@@ -25,6 +29,8 @@ vercel init     # Pick an example project
 cd <PROJECT>    # Change directory to the new project
 vercel          # Deploy to the cloud
 ```
+
+Finally, [connect your Git repository to Vercel](https://vercel.com/docs/git) and deploy with `git push`.
 
 ## Documentation
 
