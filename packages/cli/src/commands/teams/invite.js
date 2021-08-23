@@ -4,7 +4,6 @@ import cmd from '../../util/output/cmd.ts';
 import stamp from '../../util/output/stamp.ts';
 import param from '../../util/output/param.ts';
 import chars from '../../util/output/chars';
-import rightPad from '../../util/output/right-pad';
 import textInput from '../../util/input/text';
 import eraseLines from '../../util/output/erase-lines';
 import getUser from '../../util/get-user.ts';
@@ -126,8 +125,8 @@ export default async function invite(
     return;
   }
 
-  const inviteUserPrefix = rightPad('Invite User', 14);
-  const sentEmailPrefix = rightPad('Sent Email', 14);
+  const inviteUserPrefix = 'Invite User'.padEnd(14);
+  const sentEmailPrefix = 'Sent Email'.padEnd(14);
   const emails = [];
   let hasError = false;
   let email;

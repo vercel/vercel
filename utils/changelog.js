@@ -52,7 +52,7 @@ async function main() {
 
   console.log('To publish a stable release, execute the following:');
   console.log(
-    `\nnpx lerna version --message 'Publish Stable' --exact --force-publish=${pub}\n`
+    `\nnpx lerna version --message "Publish Stable" --exact --force-publish=${pub}\n`
   );
 }
 

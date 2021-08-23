@@ -3,7 +3,7 @@ import ms from 'ms';
 import plural from 'pluralize';
 import { error } from '../../util/error';
 import NowCreditCards from '../../util/credit-cards';
-import indent from '../../util/indent';
+import indent from '../../util/output/indent';
 import listInput from '../../util/input/list';
 import success from '../../util/output/success';
 import promptBool from '../../util/input/prompt-bool';

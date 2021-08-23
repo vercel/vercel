@@ -1,4 +1,4 @@
-export default function parseMeta(meta) {
+export default function parseMeta(meta?: string | string[]) {
   if (!meta) {
     return {};
   }
@@ -7,12 +7,12 @@ export default function parseMeta(meta) {
     meta = [meta];
   }
 
-  const parsed = {};
+  const parsed: { [k: string]: string } = {};
 
-  meta.forEach(item => {
+  for (const item of meta) {
     const [key, ...rest] = item.split('=');
     parsed[key] = rest.join('=');
-  });
+  }
 
   return parsed;
 }

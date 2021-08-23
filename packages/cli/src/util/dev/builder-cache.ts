@@ -82,14 +82,14 @@ function getNpmVersion(use = ''): string {
   return '';
 }
 
-export function getBuildUtils(packages: string[], org: string): string {
+export function getBuildUtils(packages: string[]): string {
   const version = packages
     .map(getNpmVersion)
     .some(ver => ver.includes('canary'))
     ? 'canary'
     : 'latest';
 
-  return `@${org}/build-utils@${version}`;
+  return `@vercel/build-utils@${version}`;
 }
 
 function parseVersionSafe(rawSpec: string) {
@@ -191,10 +191,7 @@ export async function installBuilders(
     return;
   }
 
-  packagesToInstall.push(
-    getBuildUtils(packages, 'vercel'),
-    getBuildUtils(packages, 'now')
-  );
+  packagesToInstall.push(getBuildUtils(packages));
 
   await npmInstall(builderDir, output, packagesToInstall, false);
 
@@ -307,10 +304,7 @@ export async function updateBuilders(
   });
 
   if (packagesToUpdate.length > 0) {
-    packagesToUpdate.push(
-      getBuildUtils(packages, 'vercel'),
-      getBuildUtils(packages, 'now')
-    );
+    packagesToUpdate.push(getBuildUtils(packages));
 
     await npmInstall(builderDir, output, packagesToUpdate, true);
 

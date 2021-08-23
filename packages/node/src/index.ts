@@ -20,7 +20,6 @@ import {
 import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
-import buildUtils from './build-utils';
 import {
   File,
   Files,
@@ -30,8 +29,6 @@ import {
   Config,
   StartDevServerOptions,
   StartDevServerResult,
-} from '@vercel/build-utils';
-const {
   glob,
   download,
   FileBlob,
@@ -45,7 +42,7 @@ const {
   debug,
   isSymbolicLink,
   walkParentDirs,
-} = buildUtils;
+} from '@vercel/build-utils';
 
 // @ts-ignore - copied to the `dist` output as-is
 import { makeVercelLauncher, makeAwsLauncher } from './launcher.js';
