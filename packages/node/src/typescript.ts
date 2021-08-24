@@ -151,15 +151,16 @@ export function register(opts: Options = {}): Register {
   const cwd = options.basePath || process.cwd();
   const nowNodeBase = resolve(__dirname, '..', '..', '..');
   let compiler: string;
+  const require_ = eval('require');
   try {
-    compiler = require.resolve(options.compiler || 'typescript', {
+    compiler = require_.resolve(options.compiler || 'typescript', {
       paths: [options.project || cwd, nowNodeBase],
     });
   } catch (e) {
     compiler = 'typescript';
   }
   //eslint-disable-next-line @typescript-eslint/no-var-requires
-  const ts: typeof _ts = require(compiler);
+  const ts: typeof _ts = require_(compiler);
   if (compiler.startsWith(nowNodeBase)) {
     console.log('Using TypeScript ' + ts.version + ' (no local tsconfig.json)');
   } else {
