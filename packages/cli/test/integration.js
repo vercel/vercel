@@ -3643,3 +3643,19 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
     process.kill(dev.pid, 'SIGTERM');
   }
 });
+
+test('[vc link] should support the `--project` flag', async t => {
+  const projectName = 'link-project-flag';
+  const directory = fixture('static-deployment');
+
+  const [user, output] = await Promise.all([
+    fetchTokenInformation(token),
+    execute(['link', '--confirm', '--project', projectName, directory]),
+  ]);
+
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.true(
+    output.stderr.includes(`Linked to ${user.username}/${projectName}`),
+    formatOutput(output)
+  );
+});

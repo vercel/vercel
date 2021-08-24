@@ -25,13 +25,24 @@ import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now from '../index';
 
+export interface SetupAndLinkOptions {
+  forceDelete?: boolean;
+  autoConfirm?: boolean;
+  successEmoji: EmojiLabel;
+  setupMsg: string;
+  projectName?: string;
+}
+
 export default async function setupAndLink(
   client: Client,
   path: string,
-  forceDelete: boolean,
-  autoConfirm: boolean,
-  successEmoji: EmojiLabel,
-  setupMsg: string
+  {
+    forceDelete = false,
+    autoConfirm = false,
+    successEmoji,
+    setupMsg,
+    projectName,
+  }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const {
     authConfig: { token },
@@ -90,10 +101,9 @@ export default async function setupAndLink(
     throw err;
   }
 
-  const detectedProjectName = basename(path);
+  const detectedProjectName = projectName || basename(path);
 
   const projectOrNewProjectName = await inputProject(
-    output,
     client,
     org,
     detectedProjectName,
