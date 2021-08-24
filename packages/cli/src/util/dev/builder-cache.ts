@@ -355,8 +355,9 @@ export async function getBuilder(
 
     try {
       output.debug(`Requiring runtime: "${requirePath}"`);
-      const mod = require(requirePath);
-      const pkg = require(join(requirePath, 'package.json'));
+      const req = eval('require');
+      const mod = req(requirePath);
+      const pkg = req(join(requirePath, 'package.json'));
       builderWithPkg = {
         requirePath,
         builder: Object.freeze(mod),
