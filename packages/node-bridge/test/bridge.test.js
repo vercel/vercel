@@ -122,6 +122,44 @@ test('consumeEvent', async () => {
   server.close();
 });
 
+test('consumeEvent and handle decoded path', async () => {
+  const mockListener = jest.fn((req, res) => {
+    res.end('hello');
+  });
+
+  const server = new Server(mockListener);
+  const bridge = new Bridge(server, true);
+  bridge.listen();
+
+  const context = { callbackWaitsForEmptyEventLoop: true };
+  await bridge.launcher(
+    {
+      Action: 'Invoke',
+      body: JSON.stringify({
+        method: 'POST',
+        headers: { foo: 'baz' },
+        path: '/now proxy',
+        body: 'body=1',
+      }),
+    },
+    context
+  );
+
+  const headers = mockListener.mock.calls[0][0].headers;
+  const reqId = headers['x-now-bridge-request-id'];
+
+  expect(reqId).toBeTruthy();
+
+  const event = bridge.consumeEvent(reqId);
+  expect(event.body.toString()).toBe('body=1');
+
+  // an event can't be consumed multiple times
+  // to avoid memory leaks
+  expect(bridge.consumeEvent(reqId)).toBeUndefined();
+
+  server.close();
+});
+
 test('invalid request headers', async () => {
   const server = new Server((req, res) =>
     res.end(
