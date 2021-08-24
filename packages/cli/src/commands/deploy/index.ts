@@ -242,7 +242,6 @@ export default async (client: Client) => {
     });
 
     const projectOrNewProjectName = await inputProject(
-      output,
       client,
       org,
       detectedProjectName,
