@@ -1,5 +1,5 @@
-import Client from './client';
-import { Team } from '../types';
+import Client from '../client';
+import { Team } from '../../types';
 
 const teamCache = new Map<string, Team>();
 

@@ -1,19 +1,20 @@
-import { join } from 'path';
 import fs from 'fs';
 import os from 'os';
+import AJV from 'ajv';
+import chalk from 'chalk';
+import { join } from 'path';
 import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
+
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import Client from '../client';
 import { ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
-import getTeamById from '../get-team-by-id';
+import getTeamById from '../teams/get-team-by-id';
 import { Output } from '../output';
 import { Project, ProjectLinkResult } from '../../types';
 import { Org, ProjectLink } from '../../types';
-import chalk from 'chalk';
 import { prependEmoji, emoji, EmojiLabel } from '../emoji';
-import AJV from 'ajv';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
