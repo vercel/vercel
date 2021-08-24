@@ -34,7 +34,6 @@ export default async function getTeams(
   client: Client,
   opts: GetTeamsV1Options | GetTeamsV2Options = {}
 ): Promise<Team[] | GetTeamsV2Response> {
-  //if (teams) return teams;
   const { apiVersion = 1 } = opts;
 
   let query = '';
