@@ -86,8 +86,8 @@ function getVercelLauncher({
           if (shouldAddHelpers) {
             bridge.setStoreEvents(true);
             import(helpersPath).then(helper => {
-              console.error({ helper });
-              const server = helper.createServerWithHelpers(listener, bridge);
+              const h = helper.default || helper;
+              const server = h.createServerWithHelpers(listener, bridge);
               bridge.setServer(server);
               bridge.listen();
             });
