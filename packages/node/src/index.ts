@@ -76,7 +76,6 @@ function isPortInfo(v: any): v is PortInfo {
 const require_ = eval('require');
 
 const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
-console.error({ tscPath });
 
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
