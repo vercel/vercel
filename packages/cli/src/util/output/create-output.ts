@@ -31,25 +31,25 @@ export class Output {
     return process.stdout.isTTY;
   }
 
-  isDebugEnabled() {
+  isDebugEnabled = () => {
     return this.debugEnabled;
-  }
+  };
 
-  print(str: string, { w }: PrintOptions = { w: process.stderr }) {
+  print = (str: string, { w }: PrintOptions = { w: process.stderr }) => {
     this.stopSpinner();
     const stream: Writable = w || process.stderr;
     stream.write(str);
-  }
+  };
 
-  log(str: string, color = chalk.grey) {
+  log = (str: string, color = chalk.grey) => {
     this.print(`${color('>')} ${str}\n`);
-  }
+  };
 
-  dim(str: string, color = chalk.grey) {
+  dim = (str: string, color = chalk.grey) => {
     this.print(`${color(`> ${str}`)}\n`);
-  }
+  };
 
-  warn(
+  warn = (
     str: string,
     slug: string | null = null,
     link: string | null = null,
@@ -57,7 +57,7 @@ export class Output {
     options?: {
       boxen?: boxen.Options;
     }
-  ) {
+  ) => {
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
 
     this.print(
@@ -78,33 +78,38 @@ export class Output {
       )
     );
     this.print('\n');
-  }
+  };
 
-  note(str: string) {
+  note = (str: string) => {
     this.log(chalk`{yellow.bold NOTE:} ${str}`);
-  }
+  };
 
-  error(str: string, slug?: string, link?: string, action = 'Learn More') {
+  error = (
+    str: string,
+    slug?: string,
+    link?: string,
+    action = 'Learn More'
+  ) => {
     this.print(`${chalk.red(`Error!`)} ${str}\n`);
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
       this.print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
     }
-  }
+  };
 
-  prettyError(err: Error & { link?: string; action?: string }) {
+  prettyError = (err: Error & { link?: string; action?: string }) => {
     return this.error(err.message, undefined, err.link, err.action);
-  }
+  };
 
-  ready(str: string) {
+  ready = (str: string) => {
     this.print(`${chalk.cyan('> Ready!')} ${str}\n`);
-  }
+  };
 
-  success(str: string) {
+  success = (str: string) => {
     this.print(`${chalk.cyan('> Success!')} ${str}\n`);
-  }
+  };
 
-  debug(str: string) {
+  debug = (str: string) => {
     if (this.debugEnabled) {
       this.log(
         `${chalk.bold('[debug]')} ${chalk.gray(
@@ -112,9 +117,9 @@ export class Output {
         )} ${str}`
       );
     }
-  }
+  };
 
-  spinner(message: string, delay: number = 300): void {
+  spinner = (message: string, delay: number = 300): void => {
     this.spinnerMessage = message;
     if (this.debugEnabled) {
       this.debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
@@ -125,9 +130,9 @@ export class Output {
     } else {
       this._spinner = wait(message, delay);
     }
-  }
+  };
 
-  stopSpinner() {
+  stopSpinner = () => {
     if (this.debugEnabled && this.spinnerMessage) {
       const msg = `Spinner stopped (${this.spinnerMessage})`;
       this.spinnerMessage = '';
@@ -138,12 +143,12 @@ export class Output {
       this._spinner = null;
       this.spinnerMessage = '';
     }
-  }
+  };
 
-  async time<T>(
+  time = async <T>(
     label: string | ((r?: T) => string),
     fn: Promise<T> | (() => Promise<T>)
-  ) {
+  ) => {
     const promise = typeof fn === 'function' ? fn() : fn;
 
     if (this.debugEnabled) {
@@ -160,7 +165,7 @@ export class Output {
     }
 
     return promise;
-  }
+  };
 }
 
 export default function createOutput(opts?: OutputOptions) {
