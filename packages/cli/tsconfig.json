@@ -8,7 +8,7 @@
     "target": "es2019",
     "esModuleInterop": true,
     "allowJs": true,
-    "lib": ["esnext", "es5"],
+    "lib": ["esnext"],
     "resolveJsonModule": true,
     "sourceMap": true,
     "outDir": "./dist",
