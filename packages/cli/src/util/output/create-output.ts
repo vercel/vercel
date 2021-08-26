@@ -2,11 +2,20 @@ import chalk from 'chalk';
 import boxen from 'boxen';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
+import { Writable } from 'stream';
 
 export type Output = ReturnType<typeof _createOutput>;
 
 export interface OutputOptions {
   debug?: boolean;
+}
+
+export interface PrintOptions {
+  w?: Writable;
+}
+
+export interface LogOptions extends PrintOptions {
+  color?: typeof chalk;
 }
 
 // Singleton
@@ -27,9 +36,10 @@ function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
     return debugEnabled;
   }
 
-  function print(str: string) {
+  function print(str: string, { w }: PrintOptions = { w: process.stderr }) {
     stopSpinner();
-    process.stderr.write(str);
+    const stream: Writable = w || process.stderr;
+    stream.write(str);
   }
 
   function log(str: string, color = chalk.grey) {

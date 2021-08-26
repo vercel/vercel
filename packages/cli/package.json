@@ -12,6 +12,7 @@
   },
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
+    "test": "NODE_ENV=test jest",
     "test-unit": "nyc ava test/unit.js test/dev-builder.unit.js test/dev-router.unit.js test/dev-server.unit.js test/dev-validate.unit.js --serial --fail-fast --verbose",
     "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
     "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
@@ -83,6 +84,7 @@
     "@types/glob": "7.1.1",
     "@types/http-proxy": "1.16.2",
     "@types/inquirer": "7.3.1",
+    "@types/jest": "27.0.1",
     "@types/load-json-file": "2.0.7",
     "@types/mime-types": "2.1.0",
     "@types/minimatch": "3.0.3",
@@ -179,5 +181,19 @@
     "which": "2.0.2",
     "write-json-file": "2.2.0",
     "xdg-app-paths": "5.1.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "globals": {
+      "ts-jest": {
+        "diagnostics": false,
+        "isolatedModules": true
+      }
+    },
+    "verbose": false,
+    "testEnvironment": "node",
+    "testMatch": [
+      "<rootDir>/test/**/*.test.ts"
+    ]
   }
 }

@@ -32,7 +32,7 @@ const help = () => {
 `);
 };
 
-export default async (client: Client) => {
+export default async (client: Client): Promise<number> => {
   const { output } = client;
   let argv;
   try {
@@ -63,8 +63,10 @@ export default async (client: Client) => {
   }
 
   if (process.stdout.isTTY) {
-    process.stdout.write('> ');
+    output.log(contextName);
+  } else {
+    console.log(contextName);
   }
 
-  console.log(contextName);
+  return 0;
 };
