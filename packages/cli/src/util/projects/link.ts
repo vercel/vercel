@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import AJV from 'ajv';
 import chalk from 'chalk';
+import { URL } from 'url';
 import { join } from 'path';
 import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
@@ -26,6 +27,12 @@ export const VERCEL_DIR = '.vercel';
 export const VERCEL_DIR_FALLBACK = '.now';
 export const VERCEL_DIR_README = 'README.txt';
 export const VERCEL_DIR_PROJECT = 'project.json';
+
+declare global {
+  interface ImportMeta {
+    url: string;
+  }
+}
 
 const linkSchema = {
   type: 'object',
@@ -233,7 +240,7 @@ export async function linkFolderToProject(
 
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_README),
-    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
+    await readFile(new URL('VERCEL_DIR_README.txt', import.meta.url), 'utf8')
   );
 
   // update .gitignore
