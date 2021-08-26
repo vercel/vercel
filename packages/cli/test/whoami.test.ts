@@ -2,7 +2,7 @@ import { createServer } from 'http';
 import listen from 'async-listen';
 import Client from '../src/util/client';
 import whoami from '../src/commands/whoami';
-import createOutput from '../src/util/output';
+import { Output } from '../src/util/output';
 
 describe('whoami', () => {
   it('should print the Vercel username', async () => {
@@ -24,7 +24,9 @@ describe('whoami', () => {
     });
     await listen(mock, 0);
     try {
-      const output = createOutput({ debug: true });
+      const output = new Output({ debug: false });
+      output.print = jest.fn();
+      Object.defineProperty(output, 'isTTY', { value: false });
       const client = new Client({
         argv: [],
         // @ts-ignore
@@ -34,8 +36,10 @@ describe('whoami', () => {
         config: {},
         localConfig: {},
       });
-      const result = await whoami(client);
-      expect(result).toEqual(0);
+      const exitCode = await whoami(client);
+      expect(exitCode).toEqual(0);
+      expect(client.output.print.mock.calls.length).toEqual(1);
+      expect(client.output.print.mock.calls[0][0]).toEqual('n1\n');
     } finally {
       mock.close();
     }
