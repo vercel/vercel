@@ -84,6 +84,9 @@ async function main() {
     cwd: runtimes,
   });
 
+  // Band-aid to bundle stuff that `ncc` neglects to bundle
+  await cpy(join(dirRoot, 'src/util/projects/VERCEL_DIR_README.txt'), distRoot);
+
   console.log('Finished building Vercel CLI');
 }
 

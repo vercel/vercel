@@ -4,7 +4,7 @@
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
-    "module": "es2020",
+    "module": "commonjs",
     "target": "es2019",
     "esModuleInterop": true,
     "allowJs": true,
