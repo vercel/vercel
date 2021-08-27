@@ -104,7 +104,7 @@ export function filterPackage(
   builderSpec: string,
   distTag: string,
   buildersPkg: PackageJson,
-  cliPkg: CliPackageJson
+  cliPkg: Partial<CliPackageJson>
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
