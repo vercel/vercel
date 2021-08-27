@@ -1,5 +1,5 @@
-import { client } from './mocks/client';
-import login from '../src/commands/login';
+import { client } from '../mocks/client';
+import login from '../../src/commands/login';
 
 describe('login', () => {
   it('should not allow the `--token` flag', async () => {

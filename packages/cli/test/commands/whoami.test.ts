@@ -1,6 +1,6 @@
-import { client } from './mocks/client';
-import { createUser } from './mocks/user';
-import whoami from '../src/commands/whoami';
+import { client } from '../mocks/client';
+import { createUser } from '../mocks/user';
+import whoami from '../../src/commands/whoami';
 
 describe('whoami', () => {
   it('should reject invalid arguments', async () => {
