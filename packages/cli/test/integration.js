@@ -307,7 +307,7 @@ test('login', async t => {
 
   t.is(loginOutput.exitCode, 0, formatOutput(loginOutput));
   t.regex(
-    loginOutput.stdout,
+    loginOutput.stderr,
     /You are now logged in\./gm,
     formatOutput(loginOutput)
   );
