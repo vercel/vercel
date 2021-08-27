@@ -13,32 +13,13 @@
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
     "test": "NODE_ENV=test jest",
-    "test-unit": "nyc ava test/unit.js test/dev-builder.unit.js test/dev-router.unit.js test/dev-server.unit.js test/dev-validate.unit.js --serial --fail-fast --verbose",
+    "test-unit": "NODE_ENV=test jest --coverage",
     "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
     "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
     "prepublishOnly": "yarn build",
-    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
+    "coverage": "codecov",
     "build": "node -r ts-eager/register ./scripts/build.ts",
     "build-dev": "node -r ts-eager/register ./scripts/build.ts --dev"
-  },
-  "nyc": {
-    "include": [
-      "src/**"
-    ],
-    "extension": [
-      ".js",
-      ".ts"
-    ],
-    "require": [
-      "ts-node/register"
-    ],
-    "reporter": [
-      "text",
-      "html"
-    ],
-    "sourceMap": true,
-    "instrument": true,
-    "all": true
   },
   "bin": {
     "vc": "./dist/index.js",
@@ -156,7 +137,6 @@
     "ms": "2.1.2",
     "node-fetch": "2.6.1",
     "npm-package-arg": "6.1.0",
-    "nyc": "13.2.0",
     "open": "8.2.0",
     "ora": "3.4.0",
     "pcre-to-regexp": "1.0.0",
