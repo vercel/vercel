@@ -97,7 +97,9 @@ export class Output {
     }
   };
 
-  prettyError = (err: Error & { link?: string; action?: string }) => {
+  prettyError = (
+    err: Pick<Error, 'message'> & { link?: string; action?: string }
+  ) => {
     return this.error(err.message, undefined, err.link, err.action);
   };
 

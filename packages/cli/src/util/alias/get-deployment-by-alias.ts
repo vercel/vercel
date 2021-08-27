@@ -35,7 +35,7 @@ export async function getDeploymentForAlias(
   localConfigPath: string | undefined,
   user: User,
   contextName: string,
-  localConfig: VercelConfig
+  localConfig?: VercelConfig
 ) {
   output.spinner(`Fetching deployment to alias in ${chalk.bold(contextName)}`);
 
@@ -52,7 +52,7 @@ export async function getDeploymentForAlias(
   }
 
   const appName =
-    (localConfig && localConfig.name) ||
+    localConfig?.name ||
     path.basename(path.resolve(process.cwd(), localConfigPath || ''));
 
   if (!appName) {

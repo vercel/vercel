@@ -20,10 +20,9 @@ import epipebomb from 'epipebomb';
 import updateNotifier from 'update-notifier';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-import { NowBuildError } from '@vercel/build-utils';
 import hp from './util/humanize-path';
-import commands from './commands/index.ts';
-import pkg from './util/pkg.ts';
+import commands from './commands';
+import pkg from './util/pkg';
 import createOutput from './util/output';
 import cmd from './util/output/cmd';
 import info from './util/output/info';
@@ -31,9 +30,9 @@ import error from './util/output/error';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
 import getArgs from './util/get-args';
-import getUser from './util/get-user.ts';
-import getTeams from './util/teams/get-teams.ts';
-import Client from './util/client.ts';
+import getUser from './util/get-user';
+import getTeams from './util/teams/get-teams';
+import Client from './util/client';
 import { handleError } from './util/error';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
@@ -44,13 +43,14 @@ import {
   getDefaultAuthConfig,
 } from './util/config/get-default';
 import * as ERRORS from './util/errors-ts';
-import { NowError } from './util/now-error';
-import { APIError } from './util/errors-ts.ts';
-import { SENTRY_DSN } from './util/constants.ts';
+import { APIError } from './util/errors-ts';
+import { SENTRY_DSN } from './util/constants';
 import getUpdateCommand from './util/get-update-command';
-import { metrics, shouldCollectMetrics } from './util/metrics.ts';
-import { getCommandName, getTitleName } from './util/pkg-name.ts';
-import doLoginPrompt from './util/login/prompt.ts';
+import { metrics, shouldCollectMetrics } from './util/metrics';
+import { getCommandName, getTitleName } from './util/pkg-name';
+import doLoginPrompt from './util/login/prompt';
+import { GlobalConfig } from './types';
+import { VercelConfig } from '@vercel/client';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -77,8 +77,8 @@ Sentry.init({
   environment: isCanary ? 'canary' : 'stable',
 });
 
-let client;
-let debug = () => {};
+let client: Client;
+let debug: (s: string) => void = () => {};
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
@@ -108,26 +108,30 @@ const main = async () => {
   debug = output.debug;
 
   const localConfigPath = argv['--local-config'];
-  const localConfig = await getConfig(output, localConfigPath);
-
-  if (localConfigPath && localConfig instanceof ERRORS.CantFindConfig) {
-    output.error(
-      `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
-        ' or\n    '
-      )}`
-    );
-    return 1;
-  }
+  let localConfig: VercelConfig | Error | undefined = await getConfig(
+    output,
+    localConfigPath
+  );
 
   if (localConfig instanceof ERRORS.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
     return 1;
   }
 
-  if (
-    (localConfig instanceof NowError || localConfig instanceof NowBuildError) &&
-    !(localConfig instanceof ERRORS.CantFindConfig)
-  ) {
+  if (localConfig instanceof ERRORS.CantFindConfig) {
+    if (localConfigPath) {
+      output.error(
+        `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
+          ' or\n    '
+        )}`
+      );
+      return 1;
+    } else {
+      localConfig = undefined;
+    }
+  }
+
+  if (localConfig instanceof Error) {
     output.prettyError(localConfig);
     return 1;
   }
@@ -207,7 +211,7 @@ const main = async () => {
     return 0;
   }
 
-  let config;
+  let config: GlobalConfig | null = null;
 
   if (configExists) {
     try {
@@ -229,8 +233,11 @@ const main = async () => {
     // multiple providers. In that case, we really
     // need to migrate.
     if (
+      // @ts-ignore
       config.sh ||
+      // @ts-ignore
       config.user ||
+      // @ts-ignore
       typeof config.user === 'object' ||
       typeof config.currentTeam === 'object'
     ) {
@@ -300,6 +307,7 @@ const main = async () => {
     // This is from when Vercel CLI supported
     // multiple providers. In that case, we really
     // need to migrate.
+    // @ts-ignore
     if (authConfig.credentials) {
       authConfigExists = false;
     }
@@ -343,6 +351,11 @@ const main = async () => {
     new URL(apiUrl);
   } catch (err) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
+    return 1;
+  }
+
+  if (!config) {
+    output.error(`Vercel global config was not loaded.`);
     return 1;
   }
 
@@ -397,7 +410,7 @@ const main = async () => {
     }
 
     if (subcommandExists) {
-      debug('user supplied known subcommand', targetOrSubcommand);
+      debug(`user supplied known subcommand: "${targetOrSubcommand}"`);
       subcommand = targetOrSubcommand;
     } else {
       debug('user supplied a possible target for deployment');
@@ -457,14 +470,12 @@ const main = async () => {
   }
 
   if (typeof argv['--token'] === 'string' && subcommand === 'switch') {
-    console.error(
-      error({
-        message: `This command doesn't work with ${param(
-          '--token'
-        )}. Please use ${param('--scope')}.`,
-        slug: 'no-token-allowed',
-      })
-    );
+    output.prettyError({
+      message: `This command doesn't work with ${param(
+        '--token'
+      )}. Please use ${param('--scope')}.`,
+      link: 'https://err.sh/vercel/no-token-allowed',
+    });
 
     return 1;
   }
@@ -473,12 +484,10 @@ const main = async () => {
     const token = argv['--token'];
 
     if (token.length === 0) {
-      console.error(
-        error({
-          message: `You defined ${param('--token')}, but it's missing a value`,
-          slug: 'missing-token-value',
-        })
-      );
+      output.prettyError({
+        message: `You defined ${param('--token')}, but it's missing a value`,
+        link: 'https://err.sh/vercel/missing-token-value',
+      });
 
       return 1;
     }
@@ -486,16 +495,14 @@ const main = async () => {
     const invalid = token.match(/(\W)/g);
     if (invalid) {
       const notContain = Array.from(new Set(invalid)).sort();
-      console.error(
-        error({
-          message: `You defined ${param(
-            '--token'
-          )}, but its contents are invalid. Must not contain: ${notContain
-            .map(c => JSON.stringify(c))
-            .join(', ')}`,
-          slug: 'invalid-token-value',
-        })
-      );
+      output.prettyError({
+        message: `You defined ${param(
+          '--token'
+        )}, but its contents are invalid. Must not contain: ${notContain
+          .map(c => JSON.stringify(c))
+          .join(', ')}`,
+        link: 'https://err.sh/vercel/invalid-token-value',
+      });
 
       return 1;
     }
@@ -517,7 +524,7 @@ const main = async () => {
   }
 
   const targetCommand = commands.get(subcommand);
-  const scope = argv['--scope'] || argv['--team'] || localConfig.scope;
+  const scope = argv['--scope'] || argv['--team'] || localConfig?.scope;
 
   if (
     typeof scope === 'string' &&
@@ -531,12 +538,10 @@ const main = async () => {
       user = await getUser(client);
     } catch (err) {
       if (err.code === 'NOT_AUTHORIZED') {
-        console.error(
-          error({
-            message: `You do not have access to the specified account`,
-            slug: 'scope-not-accessible',
-          })
-        );
+        output.prettyError({
+          message: `You do not have access to the specified account`,
+          link: 'https://err.sh/vercel/scope-not-accessible',
+        });
 
         return 1;
       }
@@ -554,12 +559,10 @@ const main = async () => {
         teams = await getTeams(client);
       } catch (err) {
         if (err.code === 'not_authorized') {
-          console.error(
-            error({
-              message: `You do not have access to the specified team`,
-              slug: 'scope-not-accessible',
-            })
-          );
+          output.prettyError({
+            message: `You do not have access to the specified team`,
+            link: 'https://err.sh/vercel/scope-not-accessible',
+          });
 
           return 1;
         }
@@ -572,12 +575,10 @@ const main = async () => {
         teams && teams.find(team => team.id === scope || team.slug === scope);
 
       if (!related) {
-        console.error(
-          error({
-            message: 'The specified scope does not exist',
-            slug: 'scope-not-existent',
-          })
-        );
+        output.prettyError({
+          message: 'The specified scope does not exist',
+          link: 'https://err.sh/vercel/scope-not-existent',
+        });
 
         return 1;
       }
@@ -672,7 +673,7 @@ const main = async () => {
   return exitCode;
 };
 
-const handleRejection = async err => {
+const handleRejection = async (err: any) => {
   debug('handling rejection');
 
   if (err) {
@@ -689,7 +690,7 @@ const handleRejection = async err => {
   process.exit(1);
 };
 
-const handleUnexpected = async err => {
+const handleUnexpected = async (err: Error) => {
   const { message } = err;
 
   // We do not want to render errors about Sentry not being reachable
@@ -698,9 +699,8 @@ const handleUnexpected = async err => {
     return;
   }
 
-  await reportError(Sentry, client, err);
-
   console.error(error(`An unexpected error occurred!\n${err.stack}`));
+  await reportError(Sentry, client, err);
 
   process.exit(1);
 };
@@ -711,6 +711,7 @@ process.on('uncaughtException', handleUnexpected);
 main()
   .then(exitCode => {
     process.exitCode = exitCode;
+    // @ts-ignore - "nowExit" is a non-standard event name
     process.emit('nowExit');
   })
   .catch(handleUnexpected);

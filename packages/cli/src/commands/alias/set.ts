@@ -421,7 +421,7 @@ function handleCreateAliasError<T>(
   return error;
 }
 
-function getTargetsForAlias(args: string[], { alias }: VercelConfig) {
+function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {
   if (args.length) {
     return [args[args.length - 1]]
       .map(target => (target.indexOf('.') !== -1 ? toHost(target) : target))

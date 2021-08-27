@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "strict": true,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
@@ -12,7 +13,7 @@
     "resolveJsonModule": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "typeRoots": ["./@types", "./node_modules/@types"]
+    "typeRoots": ["./types", "./node_modules/@types"]
   },
-  "include": ["src/**/*"]
+  "include": ["./types", "src/**/*"]
 }
