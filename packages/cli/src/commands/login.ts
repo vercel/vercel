@@ -110,7 +110,6 @@ export default async function login(client: Client): Promise<number> {
 
   // Save the user's authentication token to the configuration file.
   client.authConfig.token = result.token;
-  console.log({ result });
 
   writeToAuthConfigFile(client.authConfig);
   writeToConfigFile(client.config);
