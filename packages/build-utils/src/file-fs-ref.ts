@@ -100,4 +100,4 @@ class FileFsRef implements File {
   }
 }
 
-export = FileFsRef;
+export default FileFsRef;

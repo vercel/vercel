@@ -20,7 +20,6 @@ import {
 import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
-import buildUtils from './build-utils';
 import {
   File,
   Files,
@@ -30,8 +29,6 @@ import {
   Config,
   StartDevServerOptions,
   StartDevServerResult,
-} from '@vercel/build-utils';
-const {
   glob,
   download,
   FileBlob,
@@ -45,7 +42,7 @@ const {
   debug,
   isSymbolicLink,
   walkParentDirs,
-} = buildUtils;
+} from '@vercel/build-utils';
 
 // @ts-ignore - copied to the `dist` output as-is
 import { makeVercelLauncher, makeAwsLauncher } from './launcher.js';
@@ -76,10 +73,9 @@ function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
 
-const tscPath = resolve(
-  dirname(require.resolve(eval('"typescript"'))),
-  '../bin/tsc'
-);
+const require_ = eval('require');
+
+const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
@@ -294,7 +290,7 @@ async function compile(
           start: pathDir,
           filename: 'package.json',
         });
-        const pkg = pathToPkg ? require(pathToPkg) : {};
+        const pkg = pathToPkg ? require_(pathToPkg) : {};
         pkgCache.set(pathDir, pkg);
       }
       const pkg = pkgCache.get(pathDir) || {};
@@ -459,7 +455,7 @@ export async function startDevServer(
     start: entryDir,
     filename: 'package.json',
   });
-  const pkg = pathToPkg ? require(pathToPkg) : {};
+  const pkg = pathToPkg ? require_(pathToPkg) : {};
   const isEsm =
     entrypoint.endsWith('.mjs') ||
     (pkg.type === 'module' && entrypoint.endsWith('.js'));

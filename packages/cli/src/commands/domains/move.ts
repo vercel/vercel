@@ -12,7 +12,7 @@ import param from '../../util/output/param';
 import getDomainAliases from '../../util/alias/get-domain-aliases';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import promptBool from '../../util/input/prompt-bool';
-import getTeams from '../../util/get-teams';
+import getTeams from '../../util/teams/get-teams';
 import { getCommandName } from '../../util/pkg-name';
 
 type Options = {

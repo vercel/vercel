@@ -1,7 +1,7 @@
-import Client from '../client';
 import inquirer from 'inquirer';
+import Client from '../client';
 import getUser from '../get-user';
-import getTeams from '../get-teams';
+import getTeams from '../teams/get-teams';
 import { User, Team, Org } from '../../types';
 
 type Choice = { name: string; value: Org };

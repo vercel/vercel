@@ -19,7 +19,7 @@ import { BuilderWithPackage } from './types';
 
 type CliPackageJson = typeof cliPkg;
 
-declare const __non_webpack_require__: typeof require;
+const require_: typeof require = eval('require');
 
 const registryTypes = new Set(['version', 'tag', 'range']);
 
@@ -82,14 +82,14 @@ function getNpmVersion(use = ''): string {
   return '';
 }
 
-export function getBuildUtils(packages: string[], org: string): string {
+export function getBuildUtils(packages: string[]): string {
   const version = packages
     .map(getNpmVersion)
     .some(ver => ver.includes('canary'))
     ? 'canary'
     : 'latest';
 
-  return `@${org}/build-utils@${version}`;
+  return `@vercel/build-utils@${version}`;
 }
 
 function parseVersionSafe(rawSpec: string) {
@@ -191,10 +191,7 @@ export async function installBuilders(
     return;
   }
 
-  packagesToInstall.push(
-    getBuildUtils(packages, 'vercel'),
-    getBuildUtils(packages, 'now')
-  );
+  packagesToInstall.push(getBuildUtils(packages));
 
   await npmInstall(builderDir, output, packagesToInstall, false);
 
@@ -307,10 +304,7 @@ export async function updateBuilders(
   });
 
   if (packagesToUpdate.length > 0) {
-    packagesToUpdate.push(
-      getBuildUtils(packages, 'vercel'),
-      getBuildUtils(packages, 'now')
-    );
+    packagesToUpdate.push(getBuildUtils(packages));
 
     await npmInstall(builderDir, output, packagesToUpdate, true);
 
@@ -361,8 +355,8 @@ export async function getBuilder(
 
     try {
       output.debug(`Requiring runtime: "${requirePath}"`);
-      const mod = require(requirePath);
-      const pkg = require(join(requirePath, 'package.json'));
+      const mod = require_(requirePath);
+      const pkg = require_(join(requirePath, 'package.json'));
       builderWithPkg = {
         requirePath,
         builder: Object.freeze(mod),
@@ -438,18 +432,13 @@ function purgeRequireCache(
   builderDir: string,
   output: Output
 ) {
-  const _require =
-    typeof __non_webpack_require__ === 'function'
-      ? __non_webpack_require__
-      : require;
-
   // The `require()` cache for the builder's assets must be purged
   const packagesPaths = packages.map(b => join(builderDir, 'node_modules', b));
-  for (const id of Object.keys(_require.cache)) {
+  for (const id of Object.keys(require_.cache)) {
     for (const path of packagesPaths) {
       if (id.startsWith(path)) {
         output.debug(`Purging require cache for "${id}"`);
-        delete _require.cache[id];
+        delete require_.cache[id];
       }
     }
   }

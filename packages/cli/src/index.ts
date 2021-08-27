@@ -31,8 +31,8 @@ import param from './util/output/param';
 import highlight from './util/output/highlight';
 import getArgs from './util/get-args';
 import getUser from './util/get-user';
+import getTeams from './util/teams/get-teams';
 import Client from './util/client';
-import NowTeams from './util/teams';
 import { handleError } from './util/error';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
@@ -49,7 +49,7 @@ import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
-import { GlobalConfig, Team } from './types';
+import { GlobalConfig } from './types';
 import { VercelConfig } from '@vercel/client';
 
 const isCanary = pkg.version.includes('canary');
@@ -470,14 +470,12 @@ const main = async () => {
   }
 
   if (typeof argv['--token'] === 'string' && subcommand === 'switch') {
-    console.error(
-      error({
-        message: `This command doesn't work with ${param(
-          '--token'
-        )}. Please use ${param('--scope')}.`,
-        slug: 'no-token-allowed',
-      })
-    );
+    output.prettyError({
+      message: `This command doesn't work with ${param(
+        '--token'
+      )}. Please use ${param('--scope')}.`,
+      link: 'https://err.sh/vercel/no-token-allowed',
+    });
 
     return 1;
   }
@@ -486,12 +484,10 @@ const main = async () => {
     const token = argv['--token'];
 
     if (token.length === 0) {
-      console.error(
-        error({
-          message: `You defined ${param('--token')}, but it's missing a value`,
-          slug: 'missing-token-value',
-        })
-      );
+      output.prettyError({
+        message: `You defined ${param('--token')}, but it's missing a value`,
+        link: 'https://err.sh/vercel/missing-token-value',
+      });
 
       return 1;
     }
@@ -499,16 +495,14 @@ const main = async () => {
     const invalid = token.match(/(\W)/g);
     if (invalid) {
       const notContain = Array.from(new Set(invalid)).sort();
-      console.error(
-        error({
-          message: `You defined ${param(
-            '--token'
-          )}, but its contents are invalid. Must not contain: ${notContain
-            .map(c => JSON.stringify(c))
-            .join(', ')}`,
-          slug: 'invalid-token-value',
-        })
-      );
+      output.prettyError({
+        message: `You defined ${param(
+          '--token'
+        )}, but its contents are invalid. Must not contain: ${notContain
+          .map(c => JSON.stringify(c))
+          .join(', ')}`,
+        link: 'https://err.sh/vercel/invalid-token-value',
+      });
 
       return 1;
     }
@@ -529,13 +523,8 @@ const main = async () => {
     );
   }
 
-  const {
-    authConfig: { token },
-  } = client;
-
-  let scope = argv['--scope'] || argv['--team'] || localConfig?.scope;
-
   const targetCommand = commands.get(subcommand);
+  const scope = argv['--scope'] || argv['--team'] || localConfig?.scope;
 
   if (
     typeof scope === 'string' &&
@@ -549,12 +538,10 @@ const main = async () => {
       user = await getUser(client);
     } catch (err) {
       if (err.code === 'NOT_AUTHORIZED') {
-        console.error(
-          error({
-            message: `You do not have access to the specified account`,
-            slug: 'scope-not-accessible',
-          })
-        );
+        output.prettyError({
+          message: `You do not have access to the specified account`,
+          link: 'https://err.sh/vercel/scope-not-accessible',
+        });
 
         return 1;
       }
@@ -566,19 +553,16 @@ const main = async () => {
     if (user.uid === scope || user.email === scope || user.username === scope) {
       delete client.config.currentTeam;
     } else {
-      let list: Team[] = [];
+      let teams = [];
 
       try {
-        const teams = new NowTeams({ apiUrl, token, debug: isDebugging });
-        list = (await teams.ls()).teams;
+        teams = await getTeams(client);
       } catch (err) {
         if (err.code === 'not_authorized') {
-          console.error(
-            error({
-              message: `You do not have access to the specified team`,
-              slug: 'scope-not-accessible',
-            })
-          );
+          output.prettyError({
+            message: `You do not have access to the specified team`,
+            link: 'https://err.sh/vercel/scope-not-accessible',
+          });
 
           return 1;
         }
@@ -588,15 +572,13 @@ const main = async () => {
       }
 
       const related =
-        list && list.find(item => item.id === scope || item.slug === scope);
+        teams && teams.find(team => team.id === scope || team.slug === scope);
 
       if (!related) {
-        console.error(
-          error({
-            message: 'The specified scope does not exist',
-            slug: 'scope-not-existent',
-          })
-        );
+        output.prettyError({
+          message: 'The specified scope does not exist',
+          link: 'https://err.sh/vercel/scope-not-existent',
+        });
 
         return 1;
       }
