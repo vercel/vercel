@@ -2,7 +2,6 @@ import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { ProjectLinkResult, ProjectSettings } from '../../types';
-import { VercelConfig } from '../dev/types';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -46,6 +45,7 @@ export default async function setupAndLink(
 ): Promise<ProjectLinkResult> {
   const {
     authConfig: { token },
+    localConfig,
     apiUrl,
     output,
     config,
@@ -144,13 +144,9 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1 };
   }
 
-  let localConfig: VercelConfig = {};
-  if (client.localConfig && !(client.localConfig instanceof Error)) {
-    localConfig = client.localConfig;
-  }
-
   config.currentTeam = org.type === 'team' ? org.id : undefined;
-  const isZeroConfig = !localConfig.builds || localConfig.builds.length === 0;
+  const isZeroConfig =
+    !localConfig || !localConfig.builds || localConfig.builds.length === 0;
 
   try {
     let settings: ProjectSettings = {};
@@ -170,7 +166,7 @@ export default async function setupAndLink(
         forceNew: undefined,
         withCache: undefined,
         quiet,
-        wantsPublic: localConfig.public,
+        wantsPublic: localConfig?.public || false,
         isFile,
         type: null,
         nowConfig: localConfig,
@@ -181,7 +177,7 @@ export default async function setupAndLink(
         skipAutoDetectionConfirmation: false,
       };
 
-      if (!localConfig.builds || localConfig.builds.length === 0) {
+      if (isZeroConfig) {
         // Only add projectSettings for zero config deployments
         createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
       }

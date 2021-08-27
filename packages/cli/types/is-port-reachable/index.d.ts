@@ -3,7 +3,7 @@ declare module 'is-port-reachable' {
     timeout?: number | undefined;
     host?: string;
   }
-  export default function(
+  export default function (
     port: number | undefined,
     options?: IsPortReachableOptions
   ): Promise<boolean>;

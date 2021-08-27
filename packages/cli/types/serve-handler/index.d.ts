@@ -1,7 +1,7 @@
 declare module 'serve-handler' {
   import http from 'http';
 
-  export default function(
+  export default function (
     request: http.IncomingMessage,
     response: http.ServerResponse,
     options: serveHandler.Options
@@ -59,5 +59,5 @@ declare module 'serve-handler/src/directory' {
     directory: string;
   }
 
-  export default function(spec: Spec): string;
+  export default function (spec: Spec): string;
 }

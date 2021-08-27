@@ -49,7 +49,7 @@ async function main() {
 
   // Do the initial `ncc` build
   console.log();
-  const src = join(dirRoot, 'src');
+  const src = join(dirRoot, 'src/index.ts');
   const args = [
     'ncc',
     'build',

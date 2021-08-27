@@ -88,7 +88,9 @@ function _createOutput({ debug: debugEnabled = false }: OutputOptions = {}) {
     }
   }
 
-  function prettyError(err: Error & { link?: string; action?: string }) {
+  function prettyError(
+    err: Pick<Error, 'message'> & { link?: string; action?: string }
+  ) {
     return error(err.message, undefined, err.link, err.action);
   }
 
