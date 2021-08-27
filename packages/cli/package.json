@@ -12,8 +12,8 @@
   },
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
-    "test": "NODE_ENV=test jest",
-    "test-unit": "NODE_ENV=test jest --coverage",
+    "test": "jest",
+    "test-unit": "jest --coverage",
     "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
     "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
     "prepublishOnly": "yarn build",
