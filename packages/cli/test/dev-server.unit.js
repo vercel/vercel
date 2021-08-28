@@ -8,8 +8,7 @@ import listen from 'async-listen';
 import { createServer } from 'http';
 import createOutput from '../src/util/output';
 import DevServer from '../src/util/dev/server';
-import { installBuilders, getBuildUtils } from '../src/util/dev/builder-cache';
-import parseListen from '../src/util/dev/parse-listen';
+import { installBuilders } from '../src/util/dev/builder-cache';
 
 async function runNpmInstall(fixturePath) {
   if (await fs.exists(path.join(fixturePath, 'package.json'))) {
@@ -221,64 +220,6 @@ test('[DevServer] Does not install builders if there are no builds', async t => 
   t.pass();
 });
 
-test('[DevServer] Installs canary build-utils if one more more builders is canary', t => {
-  t.is(
-    getBuildUtils(['@vercel/static', '@vercel/node@canary'], 'vercel'),
-    '@vercel/build-utils@canary'
-  );
-  t.is(
-    getBuildUtils(['@vercel/static', '@vercel/node@0.7.4-canary.0'], 'vercel'),
-    '@vercel/build-utils@canary'
-  );
-  t.is(
-    getBuildUtils(['@vercel/static', '@vercel/node@0.8.0'], 'vercel'),
-    '@vercel/build-utils@latest'
-  );
-  t.is(
-    getBuildUtils(['@vercel/static', '@vercel/node'], 'vercel'),
-    '@vercel/build-utils@latest'
-  );
-  t.is(
-    getBuildUtils(['@vercel/static'], 'vercel'),
-    '@vercel/build-utils@latest'
-  );
-  t.is(
-    getBuildUtils(['@vercel/md@canary'], 'vercel'),
-    '@vercel/build-utils@canary'
-  );
-  t.is(
-    getBuildUtils(['custom-builder'], 'vercel'),
-    '@vercel/build-utils@latest'
-  );
-  t.is(
-    getBuildUtils(['custom-builder@canary'], 'vercel'),
-    '@vercel/build-utils@canary'
-  );
-  t.is(getBuildUtils(['canary-bird'], 'vercel'), '@vercel/build-utils@latest');
-  t.is(
-    getBuildUtils(['canary-bird@4.0.0'], 'vercel'),
-    '@vercel/build-utils@latest'
-  );
-  t.is(
-    getBuildUtils(['canary-bird@canary'], 'vercel'),
-    '@vercel/build-utils@canary'
-  );
-  t.is(getBuildUtils(['@canary/bird'], 'vercel'), '@vercel/build-utils@latest');
-  t.is(
-    getBuildUtils(['@canary/bird@0.1.0'], 'vercel'),
-    '@vercel/build-utils@latest'
-  );
-  t.is(
-    getBuildUtils(['@canary/bird@canary'], 'vercel'),
-    '@vercel/build-utils@canary'
-  );
-  t.is(
-    getBuildUtils(['https://example.com'], 'vercel'),
-    '@vercel/build-utils@latest'
-  );
-  t.is(getBuildUtils([''], 'vercel'), '@vercel/build-utils@latest');
-});
-
 test(
   '[DevServer] Test default builds and routes',
   testFixture('now-dev-default-builds-and-routes', async (t, server) => {
@@ -473,28 +414,3 @@ test(
     }
   })
 );
-
-test('[DevServer] parseListen()', t => {
-  t.deepEqual(parseListen('0'), [0]);
-  t.deepEqual(parseListen('3000'), [3000]);
-  t.deepEqual(parseListen('0.0.0.0'), [3000, '0.0.0.0']);
-  t.deepEqual(parseListen('127.0.0.1:3005'), [3005, '127.0.0.1']);
-  t.deepEqual(parseListen('tcp://127.0.0.1:5000'), [5000, '127.0.0.1']);
-  if (process.platform !== 'win32') {
-    t.deepEqual(parseListen('unix:/home/user/server.sock'), [
-      '/home/user/server.sock',
-    ]);
-    t.deepEqual(parseListen('pipe:\\\\.\\pipe\\PipeName'), [
-      '\\\\.\\pipe\\PipeName',
-    ]);
-  }
-
-  let err;
-  try {
-    parseListen('bad://url');
-  } catch (_err) {
-    err = _err;
-  }
-  t.truthy(err);
-  t.is(err.message, 'Unknown `--listen` scheme (protocol): bad:');
-});
