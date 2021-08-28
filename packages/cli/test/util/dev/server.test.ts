@@ -160,7 +160,8 @@ describe('DevServer', () => {
           ? '9dc423ab77c2e0446cd355256efff2ea1be27cbf'
           : 'd263af8ab880c0b97eb6c5c125b5d44f9e5addd9';
       expect(res.headers.get('etag')).toEqual(`"${expected}"`);
-      expect(await res.text()).toEqual('hi\n');
+      const body = await res.text();
+      expect(body.trim()).toEqual('hi');
     })
   );
 
@@ -202,23 +203,22 @@ describe('DevServer', () => {
     })
   );
 
-  it(
-    'should support `@vercel/static-build` routing',
-    testFixture('now-dev-static-build-routing', async server => {
-      if (process.platform === 'win32') {
-        // This test is currently failing on Windows, so skip for now:
-        //   > Creating initial build
-        //   $ serve -l $PORT src
-        //   'serve' is not recognized as an internal or external command,
-        // https://github.com/vercel/vercel/pull/6638/checks?check_run_id=3449662836
-        return;
-      }
-      const res = await fetch(`${server.address}/api/date`);
-      expect(res.status).toEqual(200);
-      const body = await res.text();
-      expect(body.startsWith('The current date:')).toBeTruthy();
-    })
-  );
+  if (process.platform !== 'win32') {
+    // This test is currently failing on Windows, so skip for now:
+    //   > Creating initial build
+    //   $ serve -l $PORT src
+    //   'serve' is not recognized as an internal or external command,
+    // https://github.com/vercel/vercel/pull/6638/checks?check_run_id=3449662836
+    it(
+      'should support `@vercel/static-build` routing',
+      testFixture('now-dev-static-build-routing', async server => {
+        const res = await fetch(`${server.address}/api/date`);
+        expect(res.status).toEqual(200);
+        const body = await res.text();
+        expect(body.startsWith('The current date:')).toBeTruthy();
+      })
+    );
+  }
 
   it(
     'should support directory listing',
