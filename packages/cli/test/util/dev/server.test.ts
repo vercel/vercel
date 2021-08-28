@@ -15,26 +15,8 @@ async function runNpmInstall(fixturePath: string) {
   }
 }
 
-/*
-const skipOnWindows = new Set([
-  'now-dev-default-builds-and-routes',
-  'now-dev-static-routes',
-  'now-dev-static-build-routing',
-  'now-dev-directory-listing',
-  'now-dev-api-with-public',
-  'now-dev-api-with-static',
-  'now-dev-custom-404',
-]);
-*/
-
 const testFixture =
   (name: string, fn: (server: DevServer) => Promise<void>) => async () => {
-    //if (process.platform === 'win32' && skipOnWindows.has(name)) {
-    //  console.log(`Skipping test "${name}" on Windows.`);
-    //  t.is(true, true);
-    //  return;
-    //}
-
     let server: DevServer | null = null;
     const fixturePath = path.join(__dirname, '../../fixtures/unit', name);
     await runNpmInstall(fixturePath);

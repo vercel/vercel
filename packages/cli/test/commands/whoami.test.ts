@@ -1,5 +1,5 @@
 import { client } from '../mocks/client';
-import { createUser } from '../mocks/user';
+import { useUser } from '../mocks/user';
 import whoami from '../../src/commands/whoami';
 
 describe('whoami', () => {
@@ -11,7 +11,7 @@ describe('whoami', () => {
   });
 
   it('should print the Vercel username', async () => {
-    const user = createUser();
+    const user = useUser();
     const exitCode = await whoami(client);
     expect(exitCode).toEqual(0);
     expect(client.mockOutput.mock.calls.length).toEqual(1);

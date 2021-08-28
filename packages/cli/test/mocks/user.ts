@@ -1,7 +1,7 @@
 import chance from 'chance';
 import { client } from './client';
 
-export function createUser() {
+export function useUser() {
   const userLimited = {
     uid: chance().guid(),
     email: chance().email(),
@@ -9,7 +9,7 @@ export function createUser() {
     username: chance().first().toLowerCase(),
   };
 
-  client.scenario.get('/www/user', (req, res) => {
+  client.scenario.get('/www/user', (_req, res) => {
     res.json({
       user: userLimited,
     });
