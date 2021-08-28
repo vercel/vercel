@@ -50,7 +50,10 @@ export class MockClient extends Client {
   reset() {
     this.output = new Output();
     this.mockOutput = jest.fn();
-    this.output.print = this.mockOutput;
+    this.output.print = (s) => {
+      process.stdout.write(s);
+      return this.mockOutput(s);
+    };
 
     this.argv = [];
     this.authConfig = {};

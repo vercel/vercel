@@ -151,16 +151,9 @@ describe('DevServer', () => {
     })
   );
 
-  it(
+  it.only(
     'should send `etag` header for static files',
     testFixture('now-dev-headers', async server => {
-      if (process.platform === 'win32') {
-        console.log(
-          'Skipping "etag" test on windows since it yields a different result.'
-        );
-        //epx(true, true);
-        return;
-      }
       const res = await fetch(`${server.address}/foo.txt`);
       expect(res.headers.get('etag')).toEqual(
         '"d263af8ab880c0b97eb6c5c125b5d44f9e5addd9"'
@@ -207,7 +200,7 @@ describe('DevServer', () => {
     })
   );
 
-  it(
+  it.only(
     'should support `@vercel/static-build` routing',
     testFixture('now-dev-static-build-routing', async server => {
       const res = await fetch(`${server.address}/api/date`);
