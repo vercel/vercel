@@ -221,7 +221,7 @@ describe('DevServer', () => {
       const res = await fetch(`${server.address}/`);
       expect(res.status).toEqual(200);
       const body = await res.text();
-      expect(body).toEqual('<body>Hello!</body>\n');
+      expect(body.trim()).toEqual('<body>Hello!</body>');
     })
   );
 
@@ -248,7 +248,7 @@ describe('DevServer', () => {
       res = await fetch(`${server.address}/file.txt`);
       body = await res.text();
       expect(res.status).toEqual(200);
-      expect(body).toEqual('Hello from file!\n');
+      expect(body.trim()).toEqual('Hello from file!');
 
       // Invoke a lambda
       res = await fetch(`${server.address}/lambda.js`);
@@ -335,7 +335,7 @@ describe('DevServer', () => {
       let res = await fetch(`${server.address}/error.html`);
       expect(res.status).toEqual(404);
       let body = await res.text();
-      expect(body).toEqual('<div>Custom 404 page</div>\n');
+      expect(body.trim()).toEqual('<div>Custom 404 page</div>');
 
       // Test custom 404 with lambda dest
       res = await fetch(`${server.address}/error.js`);
