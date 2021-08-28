@@ -10,7 +10,6 @@ export default new Map([
   ['dns', 'dns'],
   ['domain', 'domains'],
   ['domains', 'domains'],
-  ['downgrade', 'upgrade'],
   ['env', 'env'],
   ['help', 'help'],
   ['init', 'init'],
