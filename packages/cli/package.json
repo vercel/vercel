@@ -149,7 +149,6 @@
     "rimraf": "3.0.2",
     "semver": "5.5.0",
     "serve-handler": "6.1.1",
-    "sinon": "4.4.2",
     "strip-ansi": "5.2.0",
     "stripe": "5.1.0",
     "tar-fs": "1.16.3",
