@@ -1,8 +1,13 @@
+import chalk from 'chalk';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
 import listen from 'async-listen';
 import Client from '../../src/util/client';
 import { Output } from '../../src/util/output';
+
+// Disable colors in `chalk` so that tests don't need
+// to worry about ANSI codes
+chalk.level = 0;
 
 export type Scenario = Router;
 
@@ -50,8 +55,8 @@ export class MockClient extends Client {
   reset() {
     this.output = new Output();
     this.mockOutput = jest.fn();
-    this.output.print = (s) => {
-      process.stdout.write(s);
+    this.output.print = s => {
+      //process.stdout.write(s);
       return this.mockOutput(s);
     };
 

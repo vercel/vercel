@@ -11,8 +11,8 @@ describe('inspect', () => {
     const exitCode = await inspect(client);
     expect(exitCode).toEqual(0);
     expect(
-      client.mockOutput.mock.calls[0][0].includes(
-        `Fetched deployment "${deployment.url}" in`
+      client.mockOutput.mock.calls[0][0].startsWith(
+        `> Fetched deployment "${deployment.url}" in ${user.username}`
       )
     ).toBeTruthy();
   });
@@ -23,10 +23,8 @@ describe('inspect', () => {
     client.setArgv('inspect', 'bad.com');
     const exitCode = await inspect(client);
     expect(exitCode).toEqual(1);
-    expect(
-      client.mockOutput.mock.calls[0][0].includes(
-        `Failed to find deployment "bad.com" in`
-      )
-    ).toBeTruthy();
+    expect(client.mockOutput.mock.calls[0][0]).toEqual(
+      `Error! Failed to find deployment "bad.com" in ${user.username}\n`
+    );
   });
 });
