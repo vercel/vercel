@@ -1,18 +1,17 @@
-import arg from 'arg';
 import { basename } from 'path';
 import { VercelConfig } from '@vercel/client';
 
 export interface GetProjectNameOptions {
-  argv: arg.Result<{ '--name': StringConstructor }>;
+  argv: { '--name'?: string };
   nowConfig?: VercelConfig;
-  isFile: boolean;
-  paths: string[];
+  isFile?: boolean;
+  paths?: string[];
 }
 
 export default function getProjectName({
   argv,
   nowConfig = {},
-  isFile,
+  isFile = false,
   paths = [],
 }: GetProjectNameOptions) {
   const nameCli = argv['--name'];
