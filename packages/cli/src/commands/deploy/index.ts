@@ -436,7 +436,13 @@ export default async (client: Client) => {
   }
 
   const currentTeam = org?.type === 'team' ? org.id : undefined;
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    apiUrl,
+    token,
+    debug: debugEnabled,
+    currentTeam,
+    output,
+  });
   let deployStamp = stamp();
   let deployment = null;
 

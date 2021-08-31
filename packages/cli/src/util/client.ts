@@ -37,7 +37,7 @@ export interface ClientOptions {
   localConfig?: VercelConfig;
 }
 
-const isJSONObject = (v: any): v is JSONObject => {
+export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
 
