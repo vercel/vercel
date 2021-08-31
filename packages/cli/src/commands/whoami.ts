@@ -3,7 +3,6 @@ import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 import { getPkgName } from '../util/pkg-name';
 import getArgs from '../util/get-args';
-import handleError from '../util/handle-error';
 import Client from '../util/client';
 
 const help = () => {
@@ -32,16 +31,9 @@ const help = () => {
 `);
 };
 
-export default async (client: Client) => {
+export default async (client: Client): Promise<number> => {
   const { output } = client;
-  let argv;
-  try {
-    argv = getArgs(client.argv.slice(2), {});
-  } catch (error) {
-    handleError(error);
-    return 1;
-  }
-
+  const argv = getArgs(client.argv.slice(2), {});
   argv._ = argv._.slice(1);
 
   if (argv['--help'] || argv._[0] === 'help') {
@@ -62,9 +54,13 @@ export default async (client: Client) => {
     throw err;
   }
 
-  if (process.stdout.isTTY) {
-    process.stdout.write('> ');
+  if (output.isTTY) {
+    output.log(contextName);
+  } else {
+    // If stdout is not a TTY, then only print the username
+    // to support piping the output to another file / exe
+    output.print(`${contextName}\n`, { w: process.stdout });
   }
 
-  console.log(contextName);
+  return 0;
 };

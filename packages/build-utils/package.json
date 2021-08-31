@@ -23,7 +23,7 @@
     "@types/end-of-stream": "^1.4.0",
     "@types/fs-extra": "^5.0.5",
     "@types/glob": "^7.1.1",
-    "@types/jest": "26.0.24",
+    "@types/jest": "27.0.1",
     "@types/js-yaml": "3.12.1",
     "@types/ms": "0.7.31",
     "@types/multistream": "2.1.1",

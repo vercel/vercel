@@ -6,3 +6,5 @@ coverage:
     project: off
     patch: off
 
+fixes:
+  - "::packages/cli/"         # move root   e.g., "path/" => "after/path/"

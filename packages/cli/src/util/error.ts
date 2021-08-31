@@ -1,14 +1,22 @@
+import { Response } from 'node-fetch';
 import errorOutput from './output/error';
 
 export { default as handleError } from './handle-error';
 export const error = errorOutput;
 
+export interface ResponseError extends Error {
+  status: number;
+  serverMessage: string;
+  retryAfter?: number;
+  [key: string]: any;
+}
+
 export async function responseError(
-  res,
-  fallbackMessage = null,
+  res: Response,
+  fallbackMessage: string | null = null,
   parsedBody = {}
 ) {
-  let message;
+  let message = '';
   let bodyError;
 
   if (res.status >= 400 && res.status < 500) {
@@ -25,11 +33,11 @@ export async function responseError(
     message = bodyError.message;
   }
 
-  if (message == null) {
+  if (!message) {
     message = fallbackMessage === null ? 'Response Error' : fallbackMessage;
   }
 
-  const err = new Error(`${message} (${res.status})`);
+  const err = new Error(`${message} (${res.status})`) as ResponseError;
 
   err.status = res.status;
   err.serverMessage = message;
@@ -54,7 +62,10 @@ export async function responseError(
   return err;
 }
 
-export async function responseErrorMessage(res, fallbackMessage = null) {
+export async function responseErrorMessage(
+  res: Response,
+  fallbackMessage: string | null = null
+) {
   let message;
 
   if (res.status >= 400 && res.status < 500) {

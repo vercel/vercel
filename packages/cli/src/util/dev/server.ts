@@ -117,7 +117,6 @@ function sortBuilders(buildA: Builder, buildB: Builder) {
 
 export default class DevServer {
   public cwd: string;
-  public debug: boolean;
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
@@ -157,7 +156,6 @@ export default class DevServer {
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
-    this.debug = options.debug;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
     this.systemEnvValues = options.systemEnvValues || [];

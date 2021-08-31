@@ -13,8 +13,7 @@ import setupAndLink from '../../util/link/setup-and-link';
 import getSystemEnvValues from '../../util/env/get-system-env-values';
 
 type Options = {
-  '--debug'?: boolean;
-  '--listen'?: string;
+  '--listen': string;
   '--confirm': boolean;
 };
 
@@ -27,7 +26,6 @@ export default async function dev(
   const [dir = '.'] = args;
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
-  const debug = opts['--debug'] || false;
 
   // retrieve dev command
   let [link, frameworks] = await Promise.all([
@@ -94,7 +92,6 @@ export default async function dev(
 
   const devServer = new DevServer(cwd, {
     output,
-    debug,
     devCommand,
     frameworkSlug,
     projectSettings,

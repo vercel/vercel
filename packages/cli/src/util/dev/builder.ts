@@ -109,7 +109,8 @@ export async function executeBuild(
     builderWithPkg: { runInProcess, requirePath, builder, package: pkg },
   } = match;
   const { entrypoint } = match;
-  const { debug, envConfigs, cwd: workPath, devCacheDir } = devServer;
+  const { envConfigs, cwd: workPath, devCacheDir } = devServer;
+  const debug = devServer.output.isDebugEnabled();
 
   const startTime = Date.now();
   const showBuildTimestamp =
