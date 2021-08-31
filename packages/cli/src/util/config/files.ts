@@ -100,8 +100,8 @@ export function getAuthConfigFilePath() {
 
 export function readLocalConfig(
   prefix: string = process.cwd()
-): VercelConfig | null {
-  let config: VercelConfig | null = null;
+): VercelConfig | undefined {
+  let config: VercelConfig | undefined = undefined;
   let target = '';
 
   try {
@@ -116,7 +116,7 @@ export function readLocalConfig(
   }
 
   if (!target) {
-    return null;
+    return;
   }
 
   try {
@@ -134,7 +134,7 @@ export function readLocalConfig(
   }
 
   if (!config) {
-    return null;
+    return;
   }
 
   config[fileNameSymbol] = basename(target);

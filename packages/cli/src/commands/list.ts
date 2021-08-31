@@ -92,8 +92,8 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  let app: string | null = argv._[1];
-  let host: string | null = null;
+  let app: string | undefined = argv._[1];
+  let host: string | undefined = undefined;
 
   if (argv['--help']) {
     help();
@@ -156,7 +156,7 @@ export default async function main(client: Client) {
       return 1;
     }
 
-    app = null;
+    app = undefined;
     host = asHost;
   }
 

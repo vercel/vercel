@@ -13,7 +13,7 @@ describe('getProjectName', () => {
   it('should work with now.json', () => {
     const project = getProjectName({
       argv: {},
-      nowConfig: { name: 'abc' },
+      vercelConfig: { name: 'abc' },
     });
     expect(project).toEqual('abc');
   });
@@ -39,7 +39,7 @@ describe('getProjectName', () => {
   it('should work with a directory', () => {
     const project = getProjectName({
       argv: {},
-      nowConfig: {},
+      vercelConfig: {},
       paths: ['/tmp/aa'],
     });
     expect(project).toEqual('aa');

@@ -14,7 +14,7 @@ export default async function createDeploy(
   contextName: string,
   paths: string[],
   createArgs: any,
-  org: Org | null,
+  org: Org,
   isSettingUpProject: boolean,
   cwd?: string
 ): Promise<any | DeploymentError> {

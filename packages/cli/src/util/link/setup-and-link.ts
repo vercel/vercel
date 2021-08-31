@@ -22,7 +22,7 @@ import editProjectSettings from '../input/edit-project-settings';
 import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
-import Now from '../index';
+import Now, { CreateOptions } from '../index';
 
 export interface SetupAndLinkOptions {
   forceDelete?: boolean;
@@ -159,7 +159,7 @@ export default async function setupAndLink(
         output,
         currentTeam: config.currentTeam,
       });
-      const createArgs: any = {
+      const createArgs: CreateOptions = {
         name: newProjectName,
         env: {},
         build: { env: {} },
