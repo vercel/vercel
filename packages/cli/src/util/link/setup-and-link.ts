@@ -167,7 +167,6 @@ export default async function setupAndLink(
         withCache: undefined,
         quiet,
         wantsPublic: localConfig?.public || false,
-        isFile,
         nowConfig: localConfig,
         regions: undefined,
         meta: {},
@@ -188,7 +187,7 @@ export default async function setupAndLink(
         [sourcePath],
         createArgs,
         org,
-        !isFile,
+        true,
         path
       );
 

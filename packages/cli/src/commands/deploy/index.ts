@@ -170,8 +170,8 @@ export default async (client: Client) => {
     return pathValidation.exitCode;
   }
 
-  const { isFile, path } = pathValidation;
-  const autoConfirm = argv['--confirm'] || isFile;
+  const { path } = pathValidation;
+  const autoConfirm = argv['--confirm'];
 
   // deprecate --name
   if (argv['--name']) {
@@ -233,8 +233,7 @@ export default async (client: Client) => {
     // user input.
     const detectedProjectName = getProjectName({
       argv,
-      nowConfig: localConfig || {},
-      isFile,
+      nowConfig: localConfig,
       paths,
     });
 
@@ -455,7 +454,6 @@ export default async (client: Client) => {
       withCache: argv['--with-cache'],
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
-      isFile,
       type: null,
       nowConfig: localConfig,
       regions,
@@ -477,7 +475,7 @@ export default async (client: Client) => {
       [sourcePath],
       createArgs,
       org,
-      !project && !isFile,
+      !project,
       path
     );
 
@@ -646,8 +644,7 @@ export default async (client: Client) => {
     client,
     deployment,
     deployStamp,
-    !argv['--no-clipboard'],
-    isFile
+    !argv['--no-clipboard']
   );
 };
 
@@ -782,8 +779,7 @@ const printDeploymentStatus = async (
     };
   },
   deployStamp: () => string,
-  isClipboardEnabled: boolean,
-  isFile: boolean
+  isClipboardEnabled: boolean
 ) => {
   indications = indications || [];
   const isProdDeployment = target === 'production';
@@ -805,7 +801,7 @@ const printDeploymentStatus = async (
     // print preview/production url
     let previewUrl: string;
     let isWildcard: boolean;
-    if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
+    if (Array.isArray(aliasList) && aliasList.length > 0) {
       const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
       if (previewUrlInfo) {
         isWildcard = previewUrlInfo.isWildcard;

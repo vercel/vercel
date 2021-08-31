@@ -6,11 +6,8 @@ describe('login', () => {
     client.setArgv('login', '--token', 'foo');
     const exitCode = await login(client);
     expect(exitCode).toEqual(2);
-    expect(client.mockOutput.mock.calls.length).toEqual(1);
-    expect(
-      client.mockOutput.mock.calls[0][0].includes(
-        '`--token` may not be used with the "login" command'
-      )
-    ).toEqual(true);
+    expect(client.outputBuffer).toEqual(
+      'Error! `--token` may not be used with the "login" command\n'
+    );
   });
 });
