@@ -68,7 +68,7 @@ export class Prerender {
 
     if (allowQuery && !Array.isArray(allowQuery)) {
       throw new Error(
-        'The `allowQuery` argument for `Prerender` needs to be a `FileBlob`, `FileFsRef`, `FileRef`, or null.'
+        'The `allowQuery` argument for `Prerender` needs to be a string Array.'
       );
     }
     this.allowQuery = allowQuery || null;
