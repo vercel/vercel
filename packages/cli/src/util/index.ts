@@ -34,6 +34,7 @@ export interface NowOptions {
 export interface CreateOptions {
   // Legacy
   vercelConfig?: VercelConfig;
+  isFile?: boolean;
 
   // Latest
   name: string;
