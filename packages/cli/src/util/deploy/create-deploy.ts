@@ -4,7 +4,7 @@ import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
 import mapCertError from '../certs/map-cert-error';
 import { Org } from '../../types';
-import Now from '..';
+import Now, { CreateOptions } from '..';
 import Client from '../client';
 import { DeploymentError } from '../../../../client/dist';
 
@@ -13,7 +13,7 @@ export default async function createDeploy(
   now: Now,
   contextName: string,
   paths: string[],
-  createArgs: any,
+  createArgs: CreateOptions,
   org: Org,
   isSettingUpProject: boolean,
   cwd?: string

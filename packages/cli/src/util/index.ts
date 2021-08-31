@@ -33,7 +33,7 @@ export interface NowOptions {
 
 export interface CreateOptions {
   // Legacy
-  vercelConfig?: VercelConfig;
+  nowConfig?: VercelConfig;
   isFile?: boolean;
 
   // Latest
@@ -103,7 +103,7 @@ export default class Now extends EventEmitter {
     paths: string[],
     {
       // Legacy
-      vercelConfig: nowConfig = {},
+      nowConfig: nowConfig = {},
 
       // Latest
       name,

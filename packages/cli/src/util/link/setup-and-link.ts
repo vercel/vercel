@@ -168,7 +168,7 @@ export default async function setupAndLink(
         quiet,
         wantsPublic: localConfig?.public || false,
         isFile,
-        vercelConfig: localConfig,
+        nowConfig: localConfig,
         regions: undefined,
         meta: {},
         deployStamp: stamp(),
