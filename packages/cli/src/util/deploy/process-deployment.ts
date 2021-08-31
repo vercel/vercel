@@ -69,10 +69,15 @@ export default async function processDeployment({
 
   const { env = {} } = requestBody;
 
+  const token = now._token;
+  if (!token) {
+    throw new Error('Missing authentication token');
+  }
+
   const clientOptions: VercelClientOptions = {
     teamId: org.type === 'team' ? org.id : undefined,
     apiUrl: now._apiUrl,
-    token: now._token,
+    token,
     debug: now._debug,
     userAgent: ua,
     path: paths[0],
@@ -149,7 +154,6 @@ export default async function processDeployment({
           org.slug
         );
 
-        // @ts-ignore
         now.url = event.payload.url;
 
         output.stopSpinner();
