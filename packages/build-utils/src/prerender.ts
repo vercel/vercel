@@ -68,16 +68,15 @@ export class Prerender {
 
     if (!allowQuery) {
       this.allowQuery = null;
-    } else {
-      if (
-        !Array.isArray(allowQuery) ||
-        !allowQuery.every(q => typeof q === 'string')
-      ) {
-        throw new Error(
-          'The `allowQuery` argument for `Prerender` needs to be a string Array.'
-        );
-      }
+    } else if (
+      Array.isArray(allowQuery) &&
+      allowQuery.every(q => typeof q === 'string')
+    ) {
       this.allowQuery = allowQuery;
+    } else {
+      throw new Error(
+        'The `allowQuery` argument for `Prerender` needs to be a string Array.'
+      );
     }
   }
 }
