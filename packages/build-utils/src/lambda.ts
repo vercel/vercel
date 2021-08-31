@@ -93,7 +93,7 @@ export async function createLambda({
   }
 
   if (allowQuery !== undefined) {
-    assert(Array.isArray(allowQuery), '"allowQuery" is not a string Array');
+    assert(Array.isArray(allowQuery), '"allowQuery" is not an Array');
     assert(
       allowQuery.every(q => typeof q === 'string'),
       '"allowQuery" is not a string Array'
