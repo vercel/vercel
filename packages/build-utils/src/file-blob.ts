@@ -5,12 +5,14 @@ import { File } from './types';
 interface FileBlobOptions {
   mode?: number;
   contentType?: string;
+  allowQuery?: string[];
   data: string | Buffer;
 }
 
 interface FromStreamOptions {
   mode?: number;
   contentType?: string;
+  allowQuery?: string[];
   stream: NodeJS.ReadableStream;
 }
 

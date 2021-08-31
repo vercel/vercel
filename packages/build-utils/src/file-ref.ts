@@ -9,6 +9,7 @@ interface FileRefOptions {
   mode?: number;
   digest: string;
   contentType?: string;
+  allowQuery?: string[];
   mutable?: boolean;
 }
 

@@ -9,6 +9,7 @@ export interface File {
   type: string;
   mode: number;
   contentType?: string;
+  allowQuery?: string[];
   toStream: () => NodeJS.ReadableStream;
   /**
    * The absolute path to the file in the filesystem

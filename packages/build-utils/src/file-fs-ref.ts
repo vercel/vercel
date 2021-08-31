@@ -10,12 +10,14 @@ const semaToPreventEMFILE = new Sema(20);
 interface FileFsRefOptions {
   mode?: number;
   contentType?: string;
+  allowQuery?: string[];
   fsPath: string;
 }
 
 interface FromStreamOptions {
   mode: number;
   contentType?: string;
+  allowQuery?: string[];
   stream: NodeJS.ReadableStream;
   fsPath: string;
 }

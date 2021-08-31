@@ -19,7 +19,6 @@ interface LambdaOptions {
   memory?: number;
   maxDuration?: number;
   environment: Environment;
-  allowQuery?: string[];
 }
 
 interface CreateLambdaOptions {
@@ -29,7 +28,6 @@ interface CreateLambdaOptions {
   memory?: number;
   maxDuration?: number;
   environment?: Environment;
-  allowQuery?: string[];
 }
 
 interface GetLambdaOptionsFromFunctionOptions {
@@ -45,7 +43,6 @@ export class Lambda {
   public memory?: number;
   public maxDuration?: number;
   public environment: Environment;
-  public allowQuery?: string[];
 
   constructor({
     zipBuffer,
@@ -54,7 +51,6 @@ export class Lambda {
     maxDuration,
     memory,
     environment,
-    allowQuery,
   }: LambdaOptions) {
     this.type = 'Lambda';
     this.zipBuffer = zipBuffer;
@@ -63,7 +59,6 @@ export class Lambda {
     this.memory = memory;
     this.maxDuration = maxDuration;
     this.environment = environment;
-    this.allowQuery = allowQuery;
   }
 }
 
@@ -77,7 +72,6 @@ export async function createLambda({
   memory,
   maxDuration,
   environment = {},
-  allowQuery,
 }: CreateLambdaOptions): Promise<Lambda> {
   assert(typeof files === 'object', '"files" must be an object');
   assert(typeof handler === 'string', '"handler" is not a string');
@@ -90,14 +84,6 @@ export async function createLambda({
 
   if (maxDuration !== undefined) {
     assert(typeof maxDuration === 'number', '"maxDuration" is not a number');
-  }
-
-  if (allowQuery !== undefined) {
-    assert(Array.isArray(allowQuery), '"allowQuery" is not an Array');
-    assert(
-      allowQuery.every(q => typeof q === 'string'),
-      '"allowQuery" is not a string Array'
-    );
   }
 
   await sema.acquire();
