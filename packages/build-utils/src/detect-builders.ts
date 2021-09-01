@@ -1030,7 +1030,7 @@ function getRouteResult(
     // https://nextjs.org/docs/advanced-features/custom-error-page
     errorRoutes.push({
       status: 404,
-      src: '^/(?!.*api).*$',
+      src: '^(?!/api).*$',
       dest: options.cleanUrls ? '/404' : '/404.html',
     });
   }
