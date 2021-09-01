@@ -77,7 +77,7 @@ export default async function validatePaths(
   if (!pathStat.isDirectory()) {
     output.prettyError({
       message: 'Support for single file deployments has been removed.',
-      link: 'https://err.sh/vercel/no-single-file-deployments',
+      link: 'https://vercel.link/no-single-file-deployments',
     });
     return { valid: false, exitCode: 1 };
   }

@@ -9,7 +9,7 @@ describe('deploy', () => {
     const exitCode = await deploy(client);
     expect(exitCode).toEqual(1);
     expect(client.outputBuffer).toEqual(
-      `Error! Support for single file deployments has been removed.\nLearn More: https://err.sh/vercel/no-single-file-deployments\n`
+      `Error! Support for single file deployments has been removed.\nLearn More: https://vercel.link/no-single-file-deployments\n`
     );
   });
 
