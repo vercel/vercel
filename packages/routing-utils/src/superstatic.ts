@@ -112,7 +112,7 @@ export function convertHeaders(headers: Header[]): Route[] {
     });
 
     h.headers.forEach(({ key, value }) => {
-      if (namedSegments.length > 0) {
+      if (namedSegments.length > 0 || hasSegments.length > 0) {
         if (key.includes(':')) {
           key = safelyCompile(key, indexes);
         }

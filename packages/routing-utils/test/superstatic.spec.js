@@ -938,6 +938,22 @@ test('convertHeaders', () => {
         },
       ],
     },
+    {
+      source: '/(.*)',
+      headers: [
+        {
+          key: 'Content-Security-Policy',
+          value:
+            "frame-ancestors 'self' https://test-app.vercel.app https://:shop;",
+        },
+      ],
+      has: [
+        {
+          type: 'query',
+          key: 'shop',
+        },
+      ],
+    },
   ]);
 
   const expected = [
@@ -1040,6 +1056,20 @@ test('convertHeaders', () => {
         'x-$d': 'd',
       },
     },
+    {
+      continue: true,
+      has: [
+        {
+          key: 'shop',
+          type: 'query',
+        },
+      ],
+      headers: {
+        'Content-Security-Policy':
+          "frame-ancestors 'self' https://test-app.vercel.app https://$shop;",
+      },
+      src: '^(?:\\/(.*))$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -1051,6 +1081,7 @@ test('convertHeaders', () => {
     ['/like/params/first', '/like/params/second'],
     ['/hello/world'],
     ['/hello/world'],
+    ['/hello'],
   ];
 
   const mustNotMatch = [
@@ -1060,6 +1091,7 @@ test('convertHeaders', () => {
     ['/non-match', '/like/params', '/like/params/'],
     ['/hellooo'],
     ['/hellooo'],
+    [],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
