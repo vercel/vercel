@@ -86,6 +86,10 @@ interface InstallRequirementArg {
   args?: string[];
 }
 
+// note that any internal dependency that vc_init.py requires that's installed
+// with this function can get overriden by a newer version from requirements.txt,
+// so vc_init should do runtime version checks to be compatible with any recent
+// version of its dependencies
 export async function installRequirement({
   dependency,
   version,
@@ -120,5 +124,5 @@ export async function installRequirementsFile({
     debug(`Skipping requirements file installation, already installed`);
     return;
   }
-  await pipInstall(workPath, ['-r', filePath, ...args]);
+  await pipInstall(workPath, ['--upgrade', '-r', filePath, ...args]);
 }
