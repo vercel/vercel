@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "declaration": false,
     "esModuleInterop": true,
     "lib": ["esnext"],
