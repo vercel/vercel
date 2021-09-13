@@ -147,6 +147,11 @@ test('convertCleanUrls false', () => {
 
 test('convertRedirects', () => {
   const actual = convertRedirects([
+    {
+      source: '/(.*)',
+      has: [{ type: 'host', value: '(?<subdomain>.*)-test.vercel.app' }],
+      destination: 'https://:subdomain.example.com/some-path/end?a=b',
+    },
     { source: '/some/old/path', destination: '/some/new/path' },
     { source: '/next(\\.js)?', destination: 'https://nextjs.org' },
     {
@@ -256,6 +261,19 @@ test('convertRedirects', () => {
   ]);
 
   const expected = [
+    {
+      has: [
+        {
+          type: 'host',
+          value: '(?<subdomain>.*)-test.vercel.app',
+        },
+      ],
+      headers: {
+        Location: 'https://$subdomain.example.com/some-path/end?a=b',
+      },
+      src: '^(?:\\/(.*))$',
+      status: 308,
+    },
     {
       src: '^\\/some\\/old\\/path$',
       headers: { Location: '/some/new/path' },
@@ -406,6 +424,7 @@ test('convertRedirects', () => {
   deepEqual(actual, expected);
 
   const mustMatch = [
+    ['/hello'],
     ['/some/old/path'],
     ['/next', '/next.js'],
     ['/proxy/one', '/proxy/2', '/proxy/-', '/proxy/dir/sub'],
@@ -427,6 +446,7 @@ test('convertRedirects', () => {
   ];
 
   const mustNotMatch = [
+    [],
     ['/nope'],
     ['/nextAjs', '/nextjs'],
     ['/prox', '/proxyed/two'],
@@ -564,7 +584,7 @@ test('convertRewrites', () => {
     { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', check: true },
     {
       src: '^\\/proxy(?:\\/(.*))$',
-      dest: 'https://www.firebase.com',
+      dest: 'https://www.firebase.com/',
       check: true,
     },
     {
