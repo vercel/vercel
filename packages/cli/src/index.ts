@@ -587,19 +587,92 @@ const main = async () => {
     }
   }
 
-  if (!targetCommand) {
-    const sub = param(subcommand);
-    console.error(error(`The ${sub} subcommand does not exist`));
-    return 1;
-  }
-
   const metric = metrics();
   let exitCode;
   const eventCategory = 'Exit Code';
 
   try {
     const start = Date.now();
-    const full = require(`./commands/${targetCommand}`).default;
+    let full: any;
+    switch (targetCommand) {
+      case 'alias':
+        full = await import('./commands/alias');
+        break;
+      case 'billing':
+        full = await import('./commands/billing');
+        break;
+      case 'certs':
+        full = await import('./commands/certs');
+        break;
+      case 'deploy':
+        full = await import('./commands/deploy');
+        break;
+      case 'dev':
+        full = await import('./commands/dev');
+        break;
+      case 'dns':
+        full = await import('./commands/dns');
+        break;
+      case 'domains':
+        full = await import('./commands/domains');
+        break;
+      case 'env':
+        full = await import('./commands/env');
+        break;
+      case 'init':
+        full = await import('./commands/init');
+        break;
+      case 'inspect':
+        full = await import('./commands/inspect');
+        break;
+      case 'link':
+        full = await import('./commands/link');
+        break;
+      case 'list':
+        full = await import('./commands/list');
+        break;
+      case 'logs':
+        full = await import('./commands/logs');
+        break;
+      case 'login':
+        full = await import('./commands/login');
+        break;
+      case 'logout':
+        full = await import('./commands/logout');
+        break;
+      case 'projects':
+        full = await import('./commands/projects');
+        break;
+      case 'remove':
+        full = await import('./commands/remove');
+        break;
+      case 'secrets':
+        full = await import('./commands/secrets');
+        break;
+      case 'teams':
+        full = await import('./commands/teams');
+        break;
+      case 'update':
+        full = await import('./commands/update');
+        break;
+      case 'whoami':
+        full = await import('./commands/whoami');
+        break;
+      default:
+        full = null;
+        break;
+    }
+
+    if (full?.default) {
+      full = full.default;
+    }
+
+    if (!full) {
+      const sub = param(subcommand);
+      output.error(`The ${sub} subcommand does not exist`);
+      return 1;
+    }
+
     exitCode = await full(client);
     const end = Date.now() - start;
 
