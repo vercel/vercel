@@ -593,87 +593,87 @@ const main = async () => {
 
   try {
     const start = Date.now();
-    let full: any;
+    let func: any;
     switch (targetCommand) {
       case 'alias':
-        full = await import('./commands/alias');
+        func = await import('./commands/alias');
         break;
       case 'billing':
-        full = await import('./commands/billing');
+        func = await import('./commands/billing');
         break;
       case 'certs':
-        full = await import('./commands/certs');
+        func = await import('./commands/certs');
         break;
       case 'deploy':
-        full = await import('./commands/deploy');
+        func = await import('./commands/deploy');
         break;
       case 'dev':
-        full = await import('./commands/dev');
+        func = await import('./commands/dev');
         break;
       case 'dns':
-        full = await import('./commands/dns');
+        func = await import('./commands/dns');
         break;
       case 'domains':
-        full = await import('./commands/domains');
+        func = await import('./commands/domains');
         break;
       case 'env':
-        full = await import('./commands/env');
+        func = await import('./commands/env');
         break;
       case 'init':
-        full = await import('./commands/init');
+        func = await import('./commands/init');
         break;
       case 'inspect':
-        full = await import('./commands/inspect');
+        func = await import('./commands/inspect');
         break;
       case 'link':
-        full = await import('./commands/link');
+        func = await import('./commands/link');
         break;
       case 'list':
-        full = await import('./commands/list');
+        func = await import('./commands/list');
         break;
       case 'logs':
-        full = await import('./commands/logs');
+        func = await import('./commands/logs');
         break;
       case 'login':
-        full = await import('./commands/login');
+        func = await import('./commands/login');
         break;
       case 'logout':
-        full = await import('./commands/logout');
+        func = await import('./commands/logout');
         break;
       case 'projects':
-        full = await import('./commands/projects');
+        func = await import('./commands/projects');
         break;
       case 'remove':
-        full = await import('./commands/remove');
+        func = await import('./commands/remove');
         break;
       case 'secrets':
-        full = await import('./commands/secrets');
+        func = await import('./commands/secrets');
         break;
       case 'teams':
-        full = await import('./commands/teams');
+        func = await import('./commands/teams');
         break;
       case 'update':
-        full = await import('./commands/update');
+        func = await import('./commands/update');
         break;
       case 'whoami':
-        full = await import('./commands/whoami');
+        func = await import('./commands/whoami');
         break;
       default:
-        full = null;
+        func = null;
         break;
     }
 
-    if (full?.default) {
-      full = full.default;
-    }
-
-    if (!full) {
+    if (!func || !targetCommand) {
       const sub = param(subcommand);
       output.error(`The ${sub} subcommand does not exist`);
       return 1;
     }
 
-    exitCode = await full(client);
+    if (func.default) {
+      func = func.default;
+    }
+
+    exitCode = await func(client);
     const end = Date.now() - start;
 
     if (shouldCollectMetrics) {
