@@ -474,6 +474,7 @@ test('convertRewrites', () => {
   const actual = convertRewrites([
     { source: '/some/old/path', destination: '/some/new/path' },
     { source: '/proxy/(.*)', destination: 'https://www.firebase.com' },
+    { source: '/proxy/(.*)', destination: 'https://www.firebase.com/' },
     {
       source: '/proxy-regex/([a-zA-Z]{1,})',
       destination: 'https://firebase.com/$1',
@@ -582,6 +583,11 @@ test('convertRewrites', () => {
 
   const expected = [
     { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', check: true },
+    {
+      src: '^\\/proxy(?:\\/(.*))$',
+      dest: 'https://www.firebase.com/',
+      check: true,
+    },
     {
       src: '^\\/proxy(?:\\/(.*))$',
       dest: 'https://www.firebase.com/',
@@ -729,6 +735,7 @@ test('convertRewrites', () => {
   const mustMatch = [
     ['/some/old/path'],
     ['/proxy/one', '/proxy/two'],
+    ['/proxy/one', '/proxy/two'],
     ['/proxy-regex/admin', '/proxy-regex/anotherAdmin'],
     ['/proxy-port/admin', '/proxy-port/anotherAdmin'],
     ['/projects/one/edit', '/projects/two/edit'],
@@ -752,6 +759,7 @@ test('convertRewrites', () => {
 
   const mustNotMatch = [
     ['/nope'],
+    ['/prox', '/proxyed/two'],
     ['/prox', '/proxyed/two'],
     ['/proxy-regex/user/1', '/proxy-regex/another/1'],
     ['/proxy-port/user/1', '/proxy-port/another/1'],
