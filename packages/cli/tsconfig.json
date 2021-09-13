@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "strict": true,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
