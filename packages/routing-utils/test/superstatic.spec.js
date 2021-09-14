@@ -147,6 +147,11 @@ test('convertCleanUrls false', () => {
 
 test('convertRedirects', () => {
   const actual = convertRedirects([
+    {
+      source: '/(.*)',
+      has: [{ type: 'host', value: '(?<subdomain>.*)-test.vercel.app' }],
+      destination: 'https://:subdomain.example.com/some-path/end?a=b',
+    },
     { source: '/some/old/path', destination: '/some/new/path' },
     { source: '/next(\\.js)?', destination: 'https://nextjs.org' },
     {
@@ -256,6 +261,19 @@ test('convertRedirects', () => {
   ]);
 
   const expected = [
+    {
+      has: [
+        {
+          type: 'host',
+          value: '(?<subdomain>.*)-test.vercel.app',
+        },
+      ],
+      headers: {
+        Location: 'https://$subdomain.example.com/some-path/end?a=b',
+      },
+      src: '^(?:\\/(.*))$',
+      status: 308,
+    },
     {
       src: '^\\/some\\/old\\/path$',
       headers: { Location: '/some/new/path' },
@@ -406,6 +424,7 @@ test('convertRedirects', () => {
   deepEqual(actual, expected);
 
   const mustMatch = [
+    ['/hello'],
     ['/some/old/path'],
     ['/next', '/next.js'],
     ['/proxy/one', '/proxy/2', '/proxy/-', '/proxy/dir/sub'],
@@ -427,6 +446,7 @@ test('convertRedirects', () => {
   ];
 
   const mustNotMatch = [
+    [],
     ['/nope'],
     ['/nextAjs', '/nextjs'],
     ['/prox', '/proxyed/two'],
@@ -454,6 +474,7 @@ test('convertRewrites', () => {
   const actual = convertRewrites([
     { source: '/some/old/path', destination: '/some/new/path' },
     { source: '/proxy/(.*)', destination: 'https://www.firebase.com' },
+    { source: '/proxy/(.*)', destination: 'https://www.firebase.com/' },
     {
       source: '/proxy-regex/([a-zA-Z]{1,})',
       destination: 'https://firebase.com/$1',
@@ -564,7 +585,12 @@ test('convertRewrites', () => {
     { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', check: true },
     {
       src: '^\\/proxy(?:\\/(.*))$',
-      dest: 'https://www.firebase.com',
+      dest: 'https://www.firebase.com/',
+      check: true,
+    },
+    {
+      src: '^\\/proxy(?:\\/(.*))$',
+      dest: 'https://www.firebase.com/',
       check: true,
     },
     {
@@ -709,6 +735,7 @@ test('convertRewrites', () => {
   const mustMatch = [
     ['/some/old/path'],
     ['/proxy/one', '/proxy/two'],
+    ['/proxy/one', '/proxy/two'],
     ['/proxy-regex/admin', '/proxy-regex/anotherAdmin'],
     ['/proxy-port/admin', '/proxy-port/anotherAdmin'],
     ['/projects/one/edit', '/projects/two/edit'],
@@ -732,6 +759,7 @@ test('convertRewrites', () => {
 
   const mustNotMatch = [
     ['/nope'],
+    ['/prox', '/proxyed/two'],
     ['/prox', '/proxyed/two'],
     ['/proxy-regex/user/1', '/proxy-regex/another/1'],
     ['/proxy-port/user/1', '/proxy-port/another/1'],
