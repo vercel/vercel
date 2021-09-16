@@ -33,7 +33,7 @@
     "@types/etag": "1.8.0",
     "@types/test-listen": "1.1.0",
     "@vercel/ncc": "0.31.1",
-    "@vercel/nft": "0.13.1",
+    "@vercel/nft": "0.14.0",
     "@vercel/node-bridge": "2.1.1-canary.1",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
