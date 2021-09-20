@@ -77,12 +77,21 @@ export function convertRedirects(
   });
 }
 
-export function convertRewrites(rewrites: Rewrite[]): Route[] {
+export function convertRewrites(
+  rewrites: Rewrite[],
+  internalParamNames?: string[]
+): Route[] {
   return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const hasSegments = collectHasSegments(r.has);
     try {
-      const dest = replaceSegments(segments, hasSegments, r.destination);
+      const dest = replaceSegments(
+        segments,
+        hasSegments,
+        r.destination,
+        false,
+        internalParamNames
+      );
       const route: Route = { src, dest, check: true };
 
       if (r.has) {
@@ -220,7 +229,8 @@ function replaceSegments(
   segments: string[],
   hasItemSegments: string[],
   destination: string,
-  isRedirect?: boolean
+  isRedirect?: boolean,
+  internalParamNames?: string[]
 ): string {
   const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
   const canNeedReplacing =
@@ -296,7 +306,11 @@ function replaceSegments(
   // or more params aren't already used in the destination's path
   const paramKeys = Object.keys(indexes);
   const needsQueryUpdating =
-    !isRedirect && !paramKeys.some(param => destParams.has(param));
+    // we do not consider an internal param since it is added automatically
+    !isRedirect &&
+    !paramKeys.some(
+      param => !internalParamNames?.includes(param) && destParams.has(param)
+    );
 
   if (needsQueryUpdating) {
     for (const param of paramKeys) {
