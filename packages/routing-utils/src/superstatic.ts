@@ -309,7 +309,9 @@ function replaceSegments(
     // we do not consider an internal param since it is added automatically
     !isRedirect &&
     !paramKeys.some(
-      param => !internalParamNames?.includes(param) && destParams.has(param)
+      param =>
+        !(internalParamNames && internalParamNames.includes(param)) &&
+        destParams.has(param)
     );
 
   if (needsQueryUpdating) {
