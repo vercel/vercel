@@ -793,7 +793,7 @@ test('convertRewrites', () => {
     ['/hllooo'],
     ['/hllooo'],
     ['/array-query-string/10'],
-    ['/en/hello/world'],
+    ['/en/hello/world', '/en/hello/'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
