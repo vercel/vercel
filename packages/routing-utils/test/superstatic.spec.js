@@ -471,115 +471,122 @@ test('convertRedirects', () => {
 });
 
 test('convertRewrites', () => {
-  const actual = convertRewrites([
-    { source: '/some/old/path', destination: '/some/new/path' },
-    { source: '/proxy/(.*)', destination: 'https://www.firebase.com' },
-    { source: '/proxy/(.*)', destination: 'https://www.firebase.com/' },
-    {
-      source: '/proxy-regex/([a-zA-Z]{1,})',
-      destination: 'https://firebase.com/$1',
-    },
-    {
-      source: '/proxy-port/([a-zA-Z]{1,})',
-      destination: 'https://firebase.com:8080/$1',
-    },
-    { source: '/projects/:id/edit', destination: '/projects.html' },
-    {
-      source: '/users/:id',
-      destination: '/api/user?identifier=:id&version=v2',
-    },
-    {
-      source: '/:file/:id',
-      destination: '/:file/get?identifier=:id',
-    },
-    {
-      source: '/qs-and-hash/:id/:hash',
-      destination: '/api/get?identifier=:id#:hash',
-    },
-    {
-      source: '/fullurl',
-      destination:
-        'https://user:pass@sub.example.com:8080/path/goes/here?v=1&id=2#hash',
-    },
-    {
-      source: '/dont-override-qs/:name/:age',
-      destination: '/final?name=bob&age=',
-    },
-    { source: '/catchall/:hello*/', destination: '/catchall/:hello*' },
-    {
-      source: '/another-catch/:hello+/',
-      destination: '/another-catch/:hello+',
-    },
-    { source: '/catchme/:id*', destination: '/api/user' },
-    { source: '/:path', destination: '/test?path=:path' },
-    { source: '/:path/:two', destination: '/test?path=:path' },
-    { source: '/(.*)-:id(\\d+).html', destination: '/blog/:id' },
-    {
-      source: '/feature-{:slug}',
-      destination: '/blog-{:slug}',
-    },
-    {
-      source: '/hello/:world',
-      destination: '/somewhere?else={:world}',
-    },
-    {
-      source: '/hello/:first',
-      destination: '/another/:a/:b',
-      has: [
-        {
-          type: 'host',
-          value: '(?<a>.*)\\.(?<b>.*)',
-        },
-      ],
-    },
-    {
-      source: '/hello/:first',
-      destination:
-        '/another/:first/:username/:pathname/:another/:host/:a/:b/:c/:d',
-      has: [
-        {
-          type: 'header',
-          key: 'x-rewrite',
-        },
-        {
-          type: 'cookie',
-          key: 'loggedIn',
-          value: '1',
-        },
-        {
-          type: 'host',
-          value: 'vercel.com',
-        },
-        {
-          type: 'host',
-          value: '(?<a>.*)\\.(?<b>.*)',
-        },
-        {
-          type: 'header',
-          key: 'host',
-          value: '(?<c>.*)\\.(?<d>.*)',
-        },
-        {
-          type: 'query',
-          key: 'username',
-        },
-        {
-          type: 'header',
-          key: 'x-pathname',
-          value: '(?<pathname>.*)',
-        },
-        {
-          type: 'header',
-          key: 'X-Pathname',
-          value: '(?<another>hello|world)',
-        },
-      ],
-    },
-    {
-      source: '/array-query-string/:id/:name',
-      destination: 'https://example.com/?tag=1&tag=2',
-    },
-  ]);
+  const actual = convertRewrites(
+    [
+      { source: '/some/old/path', destination: '/some/new/path' },
+      { source: '/proxy/(.*)', destination: 'https://www.firebase.com' },
+      { source: '/proxy/(.*)', destination: 'https://www.firebase.com/' },
+      {
+        source: '/proxy-regex/([a-zA-Z]{1,})',
+        destination: 'https://firebase.com/$1',
+      },
+      {
+        source: '/proxy-port/([a-zA-Z]{1,})',
+        destination: 'https://firebase.com:8080/$1',
+      },
+      { source: '/projects/:id/edit', destination: '/projects.html' },
+      {
+        source: '/users/:id',
+        destination: '/api/user?identifier=:id&version=v2',
+      },
+      {
+        source: '/:file/:id',
+        destination: '/:file/get?identifier=:id',
+      },
+      {
+        source: '/qs-and-hash/:id/:hash',
+        destination: '/api/get?identifier=:id#:hash',
+      },
+      {
+        source: '/fullurl',
+        destination:
+          'https://user:pass@sub.example.com:8080/path/goes/here?v=1&id=2#hash',
+      },
+      {
+        source: '/dont-override-qs/:name/:age',
+        destination: '/final?name=bob&age=',
+      },
+      { source: '/catchall/:hello*/', destination: '/catchall/:hello*' },
+      {
+        source: '/another-catch/:hello+/',
+        destination: '/another-catch/:hello+',
+      },
+      { source: '/catchme/:id*', destination: '/api/user' },
+      { source: '/:path', destination: '/test?path=:path' },
+      { source: '/:path/:two', destination: '/test?path=:path' },
+      { source: '/(.*)-:id(\\d+).html', destination: '/blog/:id' },
+      {
+        source: '/feature-{:slug}',
+        destination: '/blog-{:slug}',
+      },
+      {
+        source: '/hello/:world',
+        destination: '/somewhere?else={:world}',
+      },
+      {
+        source: '/hello/:first',
+        destination: '/another/:a/:b',
+        has: [
+          {
+            type: 'host',
+            value: '(?<a>.*)\\.(?<b>.*)',
+          },
+        ],
+      },
+      {
+        source: '/hello/:first',
+        destination:
+          '/another/:first/:username/:pathname/:another/:host/:a/:b/:c/:d',
+        has: [
+          {
+            type: 'header',
+            key: 'x-rewrite',
+          },
+          {
+            type: 'cookie',
+            key: 'loggedIn',
+            value: '1',
+          },
+          {
+            type: 'host',
+            value: 'vercel.com',
+          },
+          {
+            type: 'host',
+            value: '(?<a>.*)\\.(?<b>.*)',
+          },
+          {
+            type: 'header',
+            key: 'host',
+            value: '(?<c>.*)\\.(?<d>.*)',
+          },
+          {
+            type: 'query',
+            key: 'username',
+          },
+          {
+            type: 'header',
+            key: 'x-pathname',
+            value: '(?<pathname>.*)',
+          },
+          {
+            type: 'header',
+            key: 'X-Pathname',
+            value: '(?<another>hello|world)',
+          },
+        ],
+      },
+      {
+        source: '/array-query-string/:id/:name',
+        destination: 'https://example.com/?tag=1&tag=2',
+      },
+      {
+        source: '/:nextInternalLocale/:path',
+        destination: '/api/hello',
+      },
+    ],
+    ['nextInternalLocale']
+  );
 
   const expected = [
     { src: '^\\/some\\/old\\/path$', dest: '/some/new/path', check: true },
@@ -728,6 +735,11 @@ test('convertRewrites', () => {
       dest: 'https://example.com/?tag=1&tag=2&id=$1&name=$2',
       check: true,
     },
+    {
+      check: true,
+      dest: '/api/hello?nextInternalLocale=$1&path=$2',
+      src: '^(?:\\/([^\\/]+?))(?:\\/([^\\/]+?))$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -755,6 +767,7 @@ test('convertRewrites', () => {
     ['/hello/world'],
     ['/hello/world'],
     ['/array-query-string/10/email'],
+    ['/en/hello'],
   ];
 
   const mustNotMatch = [
@@ -780,6 +793,7 @@ test('convertRewrites', () => {
     ['/hllooo'],
     ['/hllooo'],
     ['/array-query-string/10'],
+    ['/en/hello/world', '/en/hello/'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
