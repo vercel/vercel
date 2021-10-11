@@ -1,9 +1,10 @@
 import { writeFile } from 'fs-extra';
 import { join } from 'path';
+import { ProjectLinkResult } from '../types';
 import Client from '../util/client';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
-import { getCommandName } from '../util/pkg-name';
+import setupAndLink from '../util/link/setup-and-link';
 import {
   getLinkedProject,
   VERCEL_DIR,
@@ -19,7 +20,7 @@ export default async function main(client: Client) {
   let argv;
   let debug;
   let yes;
-  const { output } = client;
+  let link: ProjectLinkResult;
   try {
     argv = getArgs(client.argv.slice(2), {
       '--debug': Boolean,
@@ -35,48 +36,64 @@ export default async function main(client: Client) {
     help();
     return 2;
   }
+
   const cwd = argv._[1] || process.cwd();
   debug = argv['--debug'];
   yes = argv['--yes'];
-  const link = await getLinkedProject(client);
+
+  link = await getLinkedProject(client);
+  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_PULL_CMD) {
+    link = await setupAndLink(client, cwd, {
+      autoConfirm: yes,
+      successEmoji: 'link',
+      setupMsg: 'Set up',
+    });
+
+    if (link.status === 'not_linked') {
+      // User aborted project linking questions
+      return 0;
+    }
+  }
+
   if (link.status === 'error') {
     return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
-        'link'
-      )} to begin.`
-    );
-    return 1;
-  } else {
-    const { project, org } = link;
-    const result = await pull(
-      client,
-      project,
-      { '--yes': yes, '--debug': debug },
-      [], // @TODO how do I get these?
-      client.output
-    );
-    if (result != 0) {
-      // an error happened
-      return result;
-    }
-
-    await writeFile(
-      join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT),
-      JSON.stringify({
-        projectId: project.id,
-        orgId: org.id,
-        settings: {
-          buildCommand: project.buildCommand,
-          devCommand: project.devCommand,
-          directoryListing: project.directoryListing,
-          outputDirectory: project.outputDirectory,
-          rootDirectory: project.rootDirectory,
-          framework: project.framework,
-        },
-      })
-    );
   }
+
+  if (link.status !== 'linked') {
+    // This branching is needed or we need another TS guard to handle this
+    // because of the union type
+    return 1;
+  }
+
+  const { project, org } = link;
+
+  const result = await pull(
+    client,
+    project,
+    { '--yes': yes, '--debug': debug },
+    [], // @TODO how do I get these?
+    client.output
+  );
+  if (result != 0) {
+    // an error happened
+    return result;
+  }
+
+  await writeFile(
+    join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT),
+    JSON.stringify({
+      projectId: project.id,
+      orgId: org.id,
+      settings: {
+        buildCommand: project.buildCommand,
+        devCommand: project.devCommand,
+        directoryListing: project.directoryListing,
+        outputDirectory: project.outputDirectory,
+        rootDirectory: project.rootDirectory,
+        framework: project.framework,
+      },
+    })
+  );
+
   return 0;
 }
