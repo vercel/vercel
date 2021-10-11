@@ -643,6 +643,9 @@ const main = async () => {
       case 'projects':
         func = await import('./commands/projects');
         break;
+      case 'pull':
+        func = await import('./commands/pull');
+        break;
       case 'remove':
         func = await import('./commands/remove');
         break;
