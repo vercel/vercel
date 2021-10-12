@@ -20,15 +20,13 @@ export class Output {
   private debugEnabled: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
+  isTTY: boolean;
 
   constructor({ debug: debugEnabled = false }: OutputOptions = {}) {
     this.debugEnabled = debugEnabled;
     this.spinnerMessage = '';
     this._spinner = null;
-  }
-
-  get isTTY() {
-    return process.stdout.isTTY;
+    this.isTTY = process.stdout.isTTY || false;
   }
 
   isDebugEnabled = () => {
