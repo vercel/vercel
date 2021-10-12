@@ -69,6 +69,12 @@ export class MockClient extends Client {
     this.output.spinner = () => {};
 
     this.scenario = Router();
+
+    this.output.isTTY = true;
+  }
+
+  get outputBuffer() {
+    return this.mockOutput.mock.calls.map(c => c[0]).join('');
   }
 
   async startMockServer() {
