@@ -587,20 +587,93 @@ const main = async () => {
     }
   }
 
-  if (!targetCommand) {
-    const sub = param(subcommand);
-    console.error(error(`The ${sub} subcommand does not exist`));
-    return 1;
-  }
-
   const metric = metrics();
   let exitCode;
   const eventCategory = 'Exit Code';
 
   try {
     const start = Date.now();
-    const full = require(`./commands/${targetCommand}`).default;
-    exitCode = await full(client);
+    let func: any;
+    switch (targetCommand) {
+      case 'alias':
+        func = await import('./commands/alias');
+        break;
+      case 'billing':
+        func = await import('./commands/billing');
+        break;
+      case 'certs':
+        func = await import('./commands/certs');
+        break;
+      case 'deploy':
+        func = await import('./commands/deploy');
+        break;
+      case 'dev':
+        func = await import('./commands/dev');
+        break;
+      case 'dns':
+        func = await import('./commands/dns');
+        break;
+      case 'domains':
+        func = await import('./commands/domains');
+        break;
+      case 'env':
+        func = await import('./commands/env');
+        break;
+      case 'init':
+        func = await import('./commands/init');
+        break;
+      case 'inspect':
+        func = await import('./commands/inspect');
+        break;
+      case 'link':
+        func = await import('./commands/link');
+        break;
+      case 'list':
+        func = await import('./commands/list');
+        break;
+      case 'logs':
+        func = await import('./commands/logs');
+        break;
+      case 'login':
+        func = await import('./commands/login');
+        break;
+      case 'logout':
+        func = await import('./commands/logout');
+        break;
+      case 'projects':
+        func = await import('./commands/projects');
+        break;
+      case 'remove':
+        func = await import('./commands/remove');
+        break;
+      case 'secrets':
+        func = await import('./commands/secrets');
+        break;
+      case 'teams':
+        func = await import('./commands/teams');
+        break;
+      case 'update':
+        func = await import('./commands/update');
+        break;
+      case 'whoami':
+        func = await import('./commands/whoami');
+        break;
+      default:
+        func = null;
+        break;
+    }
+
+    if (!func || !targetCommand) {
+      const sub = param(subcommand);
+      output.error(`The ${sub} subcommand does not exist`);
+      return 1;
+    }
+
+    if (func.default) {
+      func = func.default;
+    }
+
+    exitCode = await func(client);
     const end = Date.now() - start;
 
     if (shouldCollectMetrics) {
