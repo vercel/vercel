@@ -42,7 +42,7 @@ export default async function main(client: Client) {
   yes = argv['--yes'];
 
   link = await getLinkedProject(client);
-  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_PULL_CMD) {
+  if (link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, {
       autoConfirm: yes,
       successEmoji: 'link',
@@ -57,12 +57,6 @@ export default async function main(client: Client) {
 
   if (link.status === 'error') {
     return link.exitCode;
-  }
-
-  if (link.status !== 'linked') {
-    // This branching is needed or we need another TS guard to handle this
-    // because of the union type
-    return 1;
   }
 
   const { project, org } = link;
