@@ -45,13 +45,11 @@ type Billing = {
 };
 
 export type User = {
-  uid: string;
+  id: string;
   avatar: string;
-  bio?: string;
-  date: number;
+  createdAt: number;
   email: string;
   username: string;
-  website?: string;
   billingChecked: boolean;
   billing: Billing;
   github?: {

@@ -4,7 +4,7 @@ import { APIError, InvalidToken, MissingUser } from './errors-ts';
 
 export default async function getUser(client: Client) {
   try {
-    const res = await client.fetch<{ user: User }>('/www/user', {
+    const res = await client.fetch<{ user: User }>('/v2/user', {
       useCurrentTeam: false,
     });
 
