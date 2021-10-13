@@ -106,7 +106,7 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
   }
 
   const user = await getUser(client);
-  if (user.uid !== orgId) return null;
+  if (user.id !== orgId) return null;
   return { type: 'user', id: orgId, slug: user.username };
 }
 
