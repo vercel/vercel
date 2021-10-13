@@ -50,18 +50,7 @@ export type User = {
   createdAt: number;
   email: string;
   username: string;
-  billingChecked: boolean;
   billing: Billing;
-  github?: {
-    email: string;
-    installation: {
-      id: string;
-      login: string;
-      loginType: string;
-    };
-    login: string;
-    updatedAt: number;
-  };
   name?: string;
   limited?: boolean;
 };
