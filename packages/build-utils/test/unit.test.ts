@@ -324,3 +324,17 @@ it('should detect npm Workspaces', async () => {
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
 });
+
+it('should detect pnpm', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '22-pnpm');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('pnpm');
+  expect(result.lockfileVersion).toEqual(5.3);
+});
+
+it('should detect pnpm Workspaces', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/a');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('pnpm');
+  expect(result.lockfileVersion).toEqual(5.3);
+});
