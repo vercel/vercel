@@ -10,25 +10,21 @@ import chalk from 'chalk';
 import ua from './ua';
 import processDeployment from './deploy/process-deployment';
 import highlight from './output/highlight';
-import createOutput, { Output } from './output';
 import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
 import { Org } from '../types';
 import { VercelConfig } from './dev/types';
-import { FetchOptions, isJSONObject } from './client';
+import Client, { FetchOptions, isJSONObject } from './client';
 import { Dictionary } from '@vercel/client';
 
 export interface NowOptions {
-  apiUrl: string;
-  token?: string;
+  client: Client;
   url?: string | null;
   currentTeam?: string | null;
-  output: Output;
   forceNew?: boolean;
   withCache?: boolean;
-  debug?: boolean;
 }
 
 export interface CreateOptions {
@@ -66,37 +62,44 @@ export interface ListOptions {
 export default class Now extends EventEmitter {
   url: string | null;
   currentTeam: string | null;
-  _apiUrl: string;
-  _token?: string;
-  _debug: boolean;
+  _client: Client;
   _forceNew: boolean;
   _withCache: boolean;
-  _output: Output;
   _syncAmount?: number;
   _files?: any[];
   _missing?: string[];
 
   constructor({
-    apiUrl,
-    token,
+    client,
     url = null,
     currentTeam = null,
     forceNew = false,
     withCache = false,
-    debug = false,
-    output = createOutput({ debug }),
   }: NowOptions) {
     super();
 
     this.url = url;
-    this._token = token;
-    this._debug = debug;
+    this._client = client;
     this._forceNew = forceNew;
     this._withCache = withCache;
-    this._output = output;
-    this._apiUrl = apiUrl;
     this._onRetry = this._onRetry.bind(this);
     this.currentTeam = currentTeam;
+  }
+
+  get _apiUrl() {
+    return this._client.apiUrl;
+  }
+
+  get _token() {
+    return this._client.authConfig.token;
+  }
+
+  get _output() {
+    return this._client.output;
+  }
+
+  get _debug() {
+    return this._client.output.isDebugEnabled();
   }
 
   async create(

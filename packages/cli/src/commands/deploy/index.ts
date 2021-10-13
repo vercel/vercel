@@ -62,11 +62,7 @@ import { Output } from '../../util/output';
 import { help } from './args';
 
 export default async (client: Client) => {
-  const {
-    apiUrl,
-    output,
-    authConfig: { token },
-  } = client;
+  const { output } = client;
 
   let argv = null;
 
@@ -157,10 +153,8 @@ export default async (client: Client) => {
     }
   }
 
-  const { log, debug, error, warn } = output;
-  const debugEnabled = argv['--debug'];
+  const { log, debug, error, warn, isTTY } = output;
 
-  const { isTTY } = process.stdout;
   const quiet = !isTTY;
 
   // check paths
@@ -437,11 +431,8 @@ export default async (client: Client) => {
 
   const currentTeam = org?.type === 'team' ? org.id : undefined;
   const now = new Now({
-    apiUrl,
-    token,
-    debug: debugEnabled,
+    client,
     currentTeam,
-    output,
   });
   let deployStamp = stamp();
   let deployment = null;
