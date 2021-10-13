@@ -7,7 +7,7 @@ import { Build, User } from '../../src/types';
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
 
-export function useDeployment({ creator }: { creator: Pick<User, 'uid'> }) {
+export function useDeployment({ creator }: { creator: Pick<User, 'id'> }) {
   const createdAt = Date.now();
   const url = new URL(chance().url());
   const deployment: Deployment = {
@@ -22,7 +22,7 @@ export function useDeployment({ creator }: { creator: Pick<User, 'uid'> }) {
     version: 2,
     createdAt,
     createdIn: 'sfo1',
-    ownerId: creator.uid,
+    ownerId: creator.id,
     readyState: 'READY',
     env: {},
     build: { env: {} },
