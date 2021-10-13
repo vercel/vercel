@@ -85,7 +85,7 @@ const waitForDeployment = async href => {
 };
 
 function fetchTokenInformation(token, retries = 3) {
-  const url = `https://api.vercel.com/www/user`;
+  const url = `https://api.vercel.com/v2/user`;
   const headers = { Authorization: `Bearer ${token}` };
 
   return retry(
@@ -2980,7 +2980,7 @@ test('deploy with unknown `VERCEL_PROJECT_ID` should fail', async t => {
 
   const output = await execute([directory], {
     env: {
-      VERCEL_ORG_ID: user.uid,
+      VERCEL_ORG_ID: user.id,
       VERCEL_PROJECT_ID: 'asdf',
     },
   });
@@ -2994,7 +2994,7 @@ test('deploy with `VERCEL_ORG_ID` but without `VERCEL_PROJECT_ID` should fail', 
   const user = await fetchTokenInformation(token);
 
   const output = await execute([directory], {
-    env: { VERCEL_ORG_ID: user.uid },
+    env: { VERCEL_ORG_ID: user.id },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
@@ -3136,7 +3136,7 @@ test('whoami with `VERCEL_ORG_ID` should favor `--scope` and should error', asyn
   const user = await fetchTokenInformation(token);
 
   const output = await execute(['whoami', '--scope', 'asdf'], {
-    env: { VERCEL_ORG_ID: user.uid },
+    env: { VERCEL_ORG_ID: user.id },
   });
 
   t.is(output.exitCode, 1, formatOutput(output));
@@ -3155,7 +3155,7 @@ test('whoami with local .vercel scope', async t => {
   await ensureDir(path.join(directory, '.vercel'));
   await fs.writeFile(
     path.join(directory, '.vercel', 'project.json'),
-    JSON.stringify({ orgId: user.uid, projectId: 'xxx' })
+    JSON.stringify({ orgId: user.id, projectId: 'xxx' })
   );
 
   const output = await execute(['whoami'], {
