@@ -9,6 +9,7 @@ interface PrerenderOptions {
   fallback: FileBlob | FileFsRef | FileRef | null;
   group?: number;
   bypassToken?: string | null /* optional to be non-breaking change */;
+  allowQuery?: string[];
 }
 
 export class Prerender {
@@ -18,6 +19,7 @@ export class Prerender {
   public fallback: FileBlob | FileFsRef | FileRef | null;
   public group?: number;
   public bypassToken: string | null;
+  public allowQuery?: string[];
 
   constructor({
     expiration,
@@ -25,6 +27,7 @@ export class Prerender {
     fallback,
     group,
     bypassToken,
+    allowQuery,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
@@ -62,5 +65,19 @@ export class Prerender {
       );
     }
     this.fallback = fallback;
+
+    if (allowQuery !== undefined) {
+      if (!Array.isArray(allowQuery)) {
+        throw new Error(
+          'The `allowQuery` argument for `Prerender` must be Array.'
+        );
+      }
+      if (!allowQuery.every(q => typeof q === 'string')) {
+        throw new Error(
+          'The `allowQuery` argument for `Prerender` must be Array of strings.'
+        );
+      }
+      this.allowQuery = allowQuery;
+    }
   }
 }
