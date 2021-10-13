@@ -18,7 +18,7 @@ async function getAppLastDeployment(
   const deployments = await getDeploymentsByAppName(client, appName);
   const deploymentItem = deployments
     .sort((a, b) => b.created - a.created)
-    .filter(dep => dep.state === 'READY' && dep.creator.uid === user.uid)[0];
+    .filter(dep => dep.state === 'READY' && dep.creator.uid === user.id)[0];
 
   // Try to fetch deployment details
   if (deploymentItem) {
