@@ -31,5 +31,5 @@ export default function verify(
     url.searchParams.set('ssoUserId', ssoUserId);
   }
 
-  return client.fetch<LoginResultSuccess>(url.href);
+  return client.fetch<LoginResultSuccess>(url.href, { useCurrentTeam: false });
 }
