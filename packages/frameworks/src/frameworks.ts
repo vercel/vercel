@@ -1616,6 +1616,53 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
   },
   {
+    name: 'Parcel',
+    slug: 'parcel',
+    demo: 'https://parcel.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/parcel.png',
+    tagline:
+      'Parcel is a zero configuration build tool for the web that scales to projects of any size and complexity.',
+    description: 'A vanilla web app built with Parcel.',
+    website: 'https://parceljs.org',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"parcel":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `parcel build`',
+      },
+      devCommand: {
+        placeholder: 'parcel',
+      },
+      outputDirectory: {
+        placeholder: 'dist',
+      },
+    },
+    dependency: 'parcel',
+    devCommand: 'parcel',
+    buildCommand: 'parcel build',
+    getOutputDirName: async () => 'dist',
+    defaultRoutes: [
+      {
+        src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$',
+        headers: { 'cache-control': 's-maxage=31536000, immutable' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+    ],
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/other.svg',
