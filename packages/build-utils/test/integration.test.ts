@@ -31,6 +31,7 @@ const skipFixtures: string[] = [
   '07-zero-config-jekyll',
   '08-zero-config-middleman',
   '21-npm-workspaces',
+  '23-pnpm-workspaces',
 ];
 
 // eslint-disable-next-line no-restricted-syntax

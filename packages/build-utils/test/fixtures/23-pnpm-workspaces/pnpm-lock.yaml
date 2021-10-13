@@ -5,10 +5,10 @@ importers:
   .:
     specifiers: {}
 
-  a:
+  c:
     specifiers: {}
 
-  b:
+  d:
     specifiers:
       once: 1.4.0
     devDependencies:
