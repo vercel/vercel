@@ -682,14 +682,14 @@ export const frameworks = [
         placeholder: '`npm run build` or `ng build`',
       },
       devCommand: {
-        value: 'ng serve',
+        value: 'ng serve --port $PORT',
       },
       outputDirectory: {
         value: 'www',
       },
     },
     dependency: '@ionic/angular',
-    devCommand: 'ng serve',
+    devCommand: 'ng serve --port $PORT',
     buildCommand: 'ng build',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
@@ -1291,7 +1291,7 @@ export const frameworks = [
         {
           path: 'package.json',
           matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"nuxt(-edge)?":\\s*".+?"[^}]*}',
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"nuxt3?(-edge)?":\\s*".+?"[^}]*}',
         },
       ],
     },

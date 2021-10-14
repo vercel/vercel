@@ -23,7 +23,7 @@ describe('inspect', () => {
     client.setArgv('inspect', 'bad.com');
     const exitCode = await inspect(client);
     expect(exitCode).toEqual(1);
-    expect(client.mockOutput.mock.calls[0][0]).toEqual(
+    expect(client.outputBuffer).toEqual(
       `Error! Failed to find deployment "bad.com" in ${user.username}\n`
     );
   });
