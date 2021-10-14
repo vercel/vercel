@@ -3,10 +3,16 @@ import { useUser } from '../mocks/user';
 import { useTeams } from '../mocks/team';
 import { useProject } from '../mocks/project';
 import pull from '../../src/commands/pull';
+import { cleanupFixtures, setupFixture } from '../helpers/setupFixture';
 
 describe('pull', () => {
+  afterAll(() => {
+    cleanupFixtures();
+  });
+
   it('should handle pulling', async () => {
-    client.setArgv('pull', '--yes');
+    const cwd = setupFixture('unit/now-dev-next');
+    client.setArgv('pull', '--yes', cwd);
     useUser();
     useTeams();
     useProject();
