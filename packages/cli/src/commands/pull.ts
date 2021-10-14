@@ -18,12 +18,10 @@ const help = () => {
 };
 export default async function main(client: Client) {
   let argv;
-  let debug;
   let yes;
   let link: ProjectLinkResult;
   try {
     argv = getArgs(client.argv.slice(2), {
-      '--debug': Boolean,
       '--yes': Boolean,
       '-y': '--yes',
     });
@@ -38,7 +36,6 @@ export default async function main(client: Client) {
   }
 
   const cwd = argv._[1] || process.cwd();
-  debug = argv['--debug'];
   yes = argv['--yes'];
 
   link = await getLinkedProject(client);
