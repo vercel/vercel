@@ -56,7 +56,7 @@ export class MockClient extends Client {
     this.output = new Output();
     this.mockOutput = jest.fn();
     this.output.print = s => {
-      //process.stdout.write(s);
+      process.stdout.write(s);
       return this.mockOutput(s);
     };
 
