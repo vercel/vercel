@@ -85,8 +85,6 @@ export default async function main(client: Client) {
   argv._ = argv._.slice(1);
 
   const {
-    apiUrl,
-    authConfig: { token },
     output,
     config: { currentTeam },
   } = client;
@@ -245,11 +243,8 @@ export default async function main(client: Client) {
   }
 
   const now = new Now({
-    apiUrl,
-    token,
-    debug: argv['--debug'],
+    client,
     currentTeam,
-    output,
   });
   const start = Date.now();
 
