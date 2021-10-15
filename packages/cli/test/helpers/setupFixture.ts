@@ -3,10 +3,6 @@ import fs from 'fs-extra';
 import path from 'path';
 import tmp from 'tmp-promise';
 
-// tmp is supposed to be able to clean up automatically, but this doesn't always work within jest.
-// So we attempt to use its built-in cleanup mechanisms, but tests should ideally do their own cleanup too.
-tmp.setGracefulCleanup();
-
 let fixturesRoot: string | undefined;
 let tempRoot: tmp.DirResult | undefined;
 let tempNumber = 0;
