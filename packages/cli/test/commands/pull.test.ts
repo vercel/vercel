@@ -1,9 +1,9 @@
-import { client } from '../mocks/client';
-import { useUser } from '../mocks/user';
-import { useTeams } from '../mocks/team';
-import { defaultProject, useProject } from '../mocks/project';
 import pull from '../../src/commands/pull';
 import { cleanupFixtures, setupFixture } from '../helpers/setupFixture';
+import { client } from '../mocks/client';
+import { defaultProject, useProject } from '../mocks/project';
+import { useTeams } from '../mocks/team';
+import { useUser } from '../mocks/user';
 
 describe('pull', () => {
   afterAll(() => {
