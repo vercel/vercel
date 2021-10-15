@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import { writeFile } from 'fs-extra';
 import { join } from 'path';
-import { ProjectLinkResult } from '../types';
 import Client from '../util/client';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
@@ -16,7 +15,6 @@ import {
 import pull from './env/pull';
 
 const help = () => {
-  // @todo help output
   return console.log(`
   ${chalk.bold(`${logo} ${getPkgName()} pull`)} [filename]
 
@@ -33,18 +31,13 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray(
-    '–'
-  )} Pull the latest Project Settings from the cloud
+  ${chalk.gray('–')} Pull the latest Project Settings from the cloud
 
     ${chalk.cyan(`$ ${getPkgName()} pull`)}
 `);
 };
 export default async function main(client: Client) {
   let argv;
-  let debug;
-  let yes;
-  let link: ProjectLinkResult;
   try {
     argv = getArgs(client.argv.slice(2), {
       '--yes': Boolean,
@@ -61,9 +54,9 @@ export default async function main(client: Client) {
   }
 
   const cwd = argv._[1] || process.cwd();
-  debug = argv['--debug'];
-  yes = argv['--yes'];
-  link = await getLinkedProject(client, cwd);
+  const debug = argv['--debug'];
+  const yes = argv['--yes'];
+  let link = await getLinkedProject(client, cwd);
   if (link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, {
       autoConfirm: yes,
