@@ -11,11 +11,18 @@ describe('pull', () => {
   });
 
   it('should handle pulling', async () => {
+    console.log('before');
     const cwd = setupFixture('now-dev-next');
-    client.setArgv('pull', '--yes', cwd);
+    console.log({ cwd });
     useUser();
     useTeams();
-    useProject({ ...defaultProject, id: 'now-dev-next', name: 'now-dev-next' });
+    const proj = useProject({
+      ...defaultProject,
+      id: 'now-dev-next',
+      name: 'now-dev-next',
+    });
+    console.log(proj);
+    client.setArgv('pull', '--yes', cwd);
     const exitCode = await pull(client);
     expect(exitCode).toEqual(0);
   });
