@@ -35,7 +35,7 @@ const help = () => {
 
   ${chalk.gray(
     '–'
-  )} Pull the latest Environment Variables and settings for your Project
+  )} Pull the latest Project Settings from the cloud
 
     ${chalk.cyan(`$ ${getPkgName()} pull`)}
 `);
