@@ -90,7 +90,7 @@ export default async function main(client: Client) {
     [join(cwd, '.env')],
     client.output
   );
-  if (result != 0) {
+  if (result !== 0) {
     // an error happened
     return result;
   }
