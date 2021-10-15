@@ -39,8 +39,7 @@ export default async function main(client: Client) {
   const cwd = argv._[1] || process.cwd();
   debug = argv['--debug'];
   yes = argv['--yes'];
-
-  link = await getLinkedProject(client);
+  link = await getLinkedProject(client, cwd);
   if (link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, {
       autoConfirm: yes,
@@ -64,7 +63,7 @@ export default async function main(client: Client) {
     client,
     project,
     { '--yes': yes, '--debug': debug },
-    [], // @TODO how do I get these?
+    [join(cwd, '.env')],
     client.output
   );
   if (result != 0) {
