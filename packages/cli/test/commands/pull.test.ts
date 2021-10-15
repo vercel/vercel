@@ -15,7 +15,11 @@ describe('pull', () => {
     client.setArgv('pull', '--yes', cwd);
     useUser();
     useTeams();
-    useProject({ ...defaultProject, id: 'now-dev-next', name: 'now-dev-next' });
+    useProject({
+      ...defaultProject,
+      id: 'now-pull-next',
+      name: 'now-pull-next',
+    });
     const exitCode = await pull(client);
     expect(exitCode).toEqual(0);
   });
