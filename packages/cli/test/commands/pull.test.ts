@@ -1,3 +1,4 @@
+import ms from 'ms';
 import pull from '../../src/commands/pull';
 import { cleanupFixtures, setupFixture } from '../helpers/setupFixture';
 import { client } from '../mocks/client';
@@ -10,20 +11,21 @@ describe('pull', () => {
     cleanupFixtures();
   });
 
-  it('should handle pulling', async () => {
-    console.log('before');
-    const cwd = setupFixture('now-dev-next');
-    console.log({ cwd });
-    useUser();
-    useTeams();
-    const proj = useProject({
-      ...defaultProject,
-      id: 'now-dev-next',
-      name: 'now-dev-next',
-    });
-    console.log(proj);
-    client.setArgv('pull', '--yes', cwd);
-    const exitCode = await pull(client);
-    expect(exitCode).toEqual(0);
-  });
+  it(
+    'should handle pulling',
+    async () => {
+      const cwd = setupFixture('now-dev-next');
+      useUser();
+      useTeams();
+      useProject({
+        ...defaultProject,
+        id: 'now-dev-next',
+        name: 'now-dev-next',
+      });
+      client.setArgv('pull', '--yes', cwd);
+      const exitCode = await pull(client);
+      expect(exitCode).toEqual(0);
+    },
+    ms('10s')
+  );
 });
