@@ -1,7 +1,7 @@
 import findUp from 'find-up';
 import fs from 'fs-extra';
 import path from 'path';
-import tmp from 'tmp';
+import tmp from 'tmp-promise';
 
 // tmp is supposed to be able to clean up automatically, but this doesn't always work within jest.
 // So we attempt to use its built-in cleanup mechanisms, but tests should ideally do their own cleanup too.
