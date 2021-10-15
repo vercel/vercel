@@ -11,7 +11,7 @@ describe('pull', () => {
   });
 
   it('should handle pulling', async () => {
-    const cwd = setupFixture('now-dev-next');
+    const cwd = setupFixture('now-pull-next');
     client.setArgv('pull', '--yes', cwd);
     useUser();
     useTeams();
