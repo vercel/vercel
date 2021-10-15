@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { writeFile } from 'fs-extra';
 import { join } from 'path';
 import { ProjectLinkResult } from '../types';
@@ -5,6 +6,8 @@ import Client from '../util/client';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
 import setupAndLink from '../util/link/setup-and-link';
+import logo from '../util/output/logo';
+import { getPkgName } from '../util/pkg-name';
 import {
   getLinkedProject,
   VERCEL_DIR,
@@ -14,7 +17,28 @@ import pull from './env/pull';
 
 const help = () => {
   // @todo help output
-  return 'vercel pull';
+  return console.log(`
+  ${chalk.bold(`${logo} ${getPkgName()} pull`)} [filename]
+
+ ${chalk.dim('Options:')}
+
+    -h, --help                     Output usage information
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+    'FILE'
+  )}   Path to the local ${'`vercel.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    'DIR'
+  )}    Path to the global ${'`.vercel`'} directory
+    -d, --debug                    Debug mode [off]
+
+  ${chalk.dim('Examples:')}
+
+  ${chalk.gray(
+    '–'
+  )} Pull the latest Environment Variables and settings for your Project
+
+    ${chalk.cyan(`$ ${getPkgName()} pull`)}
+`);
 };
 export default async function main(client: Client) {
   let argv;
