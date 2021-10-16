@@ -41,6 +41,7 @@ export default async function main(client: Client) {
   try {
     argv = getArgs(client.argv.slice(2), {
       '--yes': Boolean,
+      '--env': String,
       '-y': '--yes',
     });
   } catch (err) {
@@ -56,6 +57,7 @@ export default async function main(client: Client) {
   const cwd = argv._[1] || process.cwd();
   const debug = argv['--debug'];
   const yes = argv['--yes'];
+  const env = argv['--env'] ?? '.env';
   let link = await getLinkedProject(client, cwd);
   if (link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, {
@@ -75,12 +77,11 @@ export default async function main(client: Client) {
   }
 
   const { project, org } = link;
-
   const result = await pull(
     client,
     project,
     { '--yes': yes, '--debug': debug },
-    [join(cwd, '.env')],
+    [join(cwd, env)],
     client.output
   );
   if (result !== 0) {
