@@ -12,13 +12,13 @@ describe('pull', () => {
     cleanupFixtures();
   });
   it('should handle pulling', async () => {
-    const cwd = setupFixture('now-pull-next');
+    const cwd = setupFixture('vercel-pull-next');
     useUser();
     useTeams();
     useProject({
       ...defaultProject,
-      id: 'now-pull-next',
-      name: 'now-pull-next',
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
     });
     client.setArgv('pull', '--yes', cwd);
     const exitCode = await pull(client);
@@ -26,13 +26,13 @@ describe('pull', () => {
   });
 
   it('should handle custom --env flag', async () => {
-    const cwd = setupFixture('now-pull-next');
+    const cwd = setupFixture('vercel-pull-next');
     useUser();
     useTeams();
     useProject({
       ...defaultProject,
-      id: 'now-pull-next',
-      name: 'now-pull-next',
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
     });
     const expectedEnvFilename = '.env.vercel';
     client.setArgv('pull', '--yes', `--env=${expectedEnvFilename}`, cwd);

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "now-pull-next",
+  "name": "vercel-pull-next",
   "builds": [{ "src": "package.json", "use": "@vercel/next@canary" }],
   "routes": [
     {
