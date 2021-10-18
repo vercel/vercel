@@ -43,6 +43,7 @@
     "node": ">= 12"
   },
   "dependencies": {
+    "@next/env": "11.1.2",
     "@vercel/build-utils": "2.12.3-canary.10",
     "@vercel/go": "1.2.4-canary.3",
     "@vercel/node": "1.12.2-canary.4",

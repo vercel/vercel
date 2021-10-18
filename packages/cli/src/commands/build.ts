@@ -1,3 +1,4 @@
+import { loadEnvConfig } from '@next/env';
 import { execCommand, runPackageJsonScript } from '@vercel/build-utils';
 import { join } from 'path';
 import Client from '../util/client';
@@ -44,8 +45,16 @@ export default async function main(client: Client) {
   }
 
   const buildCommand = project.settings.buildCommand;
+  const { combinedEnv, loadedEnvFiles } = await loadEnvConfig(cwd, false);
+  if (loadedEnvFiles.length > 0) {
+    client.output.debug(`Found ${loadedEnvFiles.length} .env files:`);
+    for (let f of loadedEnvFiles) {
+      client.output.debug(`- ${f.path}`);
+    }
+  }
+
   const spawnOpts = {
-    env: {}, // @todo what shouuld these be for build?
+    env: combinedEnv,
   };
 
   let result: boolean;
