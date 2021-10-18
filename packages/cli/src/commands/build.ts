@@ -3,8 +3,8 @@ import { join } from 'path';
 import Client from '../util/client';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
-import { getCommandName } from '../util/pkg-name';
 import { readProjectSettings } from '../util/projects/project-settings';
+import pull from './pull';
 
 const help = () => {
   // @todo help output
@@ -14,7 +14,11 @@ const help = () => {
 export default async function main(client: Client) {
   let argv;
   try {
-    argv = getArgs(client.argv.slice(2));
+    argv = getArgs(client.argv.slice(2), {
+      '--yes': Boolean,
+      '--env': String,
+      '-y': '--yes',
+    });
   } catch (err) {
     handleError(err);
     return 1;
@@ -26,14 +30,14 @@ export default async function main(client: Client) {
   }
 
   let cwd = argv._[1] || process.cwd();
-  const project = await readProjectSettings(cwd);
-  if (project === null) {
-    client.output.error(
-      `Project settings not found. Run ${getCommandName(
-        'pull'
-      )} and then try running ${getCommandName('build')} again.`
-    );
-    return 1;
+  let project = await readProjectSettings(cwd);
+  // If there are no project settings, only then do we pull them down
+  while (project === null) {
+    const result = await pull(client);
+    if (result !== 0) {
+      return result;
+    }
+    project = await readProjectSettings(cwd);
   }
 
   if (project.settings.rootDirectory) {
