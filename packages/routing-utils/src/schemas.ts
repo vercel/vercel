@@ -161,7 +161,8 @@ export const routesSchema = {
               },
               type: {
                 type: 'string',
-                maxLength: 256,
+                maxLength: 32,
+                enum: ['v8-worker'],
               },
             },
           },

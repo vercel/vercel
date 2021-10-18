@@ -36,6 +36,10 @@ export type Source = {
     redirect?: Record<string, string>;
     cookie?: string;
   };
+  middleware?: {
+    id: string;
+    type: 'v8-worker';
+  };
 };
 
 export type Handler = {
