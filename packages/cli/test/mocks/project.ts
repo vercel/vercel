@@ -32,6 +32,7 @@ export const defaultProject = {
   createdAt: 1555413045188,
   updatedAt: 1555413045188,
   env: envs,
+  framework: 'nextjs',
   targets: {
     production: {
       alias: ['foobar.com'],

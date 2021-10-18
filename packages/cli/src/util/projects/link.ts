@@ -67,12 +67,14 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
   return getLinkFromDir(dir);
 }
 
-async function getLinkFromDir(dir: string): Promise<ProjectLink | null> {
+export async function getLinkFromDir<T = ProjectLink>(
+  dir: string
+): Promise<T | null> {
   try {
     const json = await readFile(join(dir, VERCEL_DIR_PROJECT), 'utf8');
 
     const ajv = new AJV();
-    const link: ProjectLink = JSON.parse(json);
+    const link: T = JSON.parse(json);
 
     if (!ajv.validate(linkSchema, link)) {
       throw new Error(

@@ -30,7 +30,7 @@ export default async function dev(
   // retrieve dev command
   let [link, frameworks] = await Promise.all([
     getLinkedProject(client, cwd),
-    getFrameworks(client),
+    getFrameworks(client), // @todo remove
   ]);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {

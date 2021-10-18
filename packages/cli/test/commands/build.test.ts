@@ -4,21 +4,25 @@ import frameworks from '../mocks/frameworks.json';
 import { useUser } from '../mocks/user';
 import { useTeams } from '../mocks/team';
 import { defaultProject, useProject } from '../mocks/project';
-import { cleanupFixtures, setupFixture } from '../helpers/setupFixture';
+import { cleanupFixtures, setupFixture } from '../helpers/setup-fixture';
 
 describe('build', () => {
   afterAll(() => {
     cleanupFixtures();
   });
   it('works with next.js', async () => {
-    const cwd = await setupFixture('unit/now-dev-next');
+    const cwd = await setupFixture('vercel-pull-next');
     client.scenario.get('/v1/frameworks', (_req, res) => {
       res.json(frameworks);
     });
     client.setArgv('build', '--yes', cwd);
     useUser();
     useTeams();
-    useProject({ ...defaultProject, id: 'now-dev-next', name: 'now-dev-next' });
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
     const exitCode = await build(client);
     expect(exitCode).toEqual(2);
   });

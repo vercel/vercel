@@ -2,12 +2,14 @@ import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../util/client';
 import getArgs from '../util/get-args';
+import { getFrameworks } from '../util/get-frameworks';
 import handleError from '../util/handle-error';
+import { isSettingValue } from '../util/is-setting-value';
 import setupAndLink from '../util/link/setup-and-link';
 import logo from '../util/output/logo';
 import { getPkgName } from '../util/pkg-name';
 import { getLinkedProject } from '../util/projects/link';
-import { writeProjectSettings } from '../util/projects/write-project-settings';
+import { writeProjectSettings } from '../util/projects/project-settings';
 import pull from './env/pull';
 
 const help = () => {
@@ -54,7 +56,10 @@ export default async function main(client: Client) {
   const debug = argv['--debug'];
   const yes = argv['--yes'];
   const env = argv['--env'] ?? '.env';
-  let link = await getLinkedProject(client, cwd);
+  let [link, frameworks] = await Promise.all([
+    await getLinkedProject(client, cwd),
+    await getFrameworks(client),
+  ]);
   if (link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, {
       autoConfirm: yes,
@@ -84,8 +89,47 @@ export default async function main(client: Client) {
     // an error happened
     return result;
   }
+  let devCommand = project.devCommand;
+  let buildCommand = project.buildCommand;
+  let frameworkSlug = project.framework;
+  if (!devCommand && project.framework) {
+    const framework = frameworks.find(f => f.slug === project.framework);
 
-  await writeProjectSettings(cwd, project, org);
+    if (framework) {
+      if (framework.slug) {
+        frameworkSlug = framework.slug;
+      }
+
+      const defaults = framework.settings.devCommand;
+      if (isSettingValue(defaults)) {
+        devCommand = defaults.value;
+      }
+    }
+  }
+
+  if (!buildCommand && project.framework) {
+    const framework = frameworks.find(f => f.slug === project.framework);
+
+    if (framework) {
+      if (framework.slug) {
+        frameworkSlug = framework.slug;
+      }
+
+      const defaults = framework.settings.buildCommand;
+      if (isSettingValue(defaults)) {
+        buildCommand = defaults.value;
+      }
+    }
+  }
+
+  const normalizedProject = {
+    ...project,
+    buildCommand,
+    devCommand,
+    framework: frameworkSlug,
+  };
+
+  await writeProjectSettings(cwd, normalizedProject, org);
 
   return 0;
 }

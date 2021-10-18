@@ -5,7 +5,7 @@ import getSubcommand from '../../util/get-subcommand';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import { getLinkedProject } from '../../util/projects/link';
-import { writeProjectSettings } from '../../util/projects/write-project-settings';
+import { writeProjectSettings } from '../../util/projects/project-settings';
 import Client from '../../util/client';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
