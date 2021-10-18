@@ -150,6 +150,21 @@ export const routesSchema = {
               },
             },
           },
+          middleware: {
+            type: 'object',
+            required: ['id', 'type'],
+            additionalProperties: false,
+            properties: {
+              id: {
+                type: 'string',
+                maxLength: 256,
+              },
+              type: {
+                type: 'string',
+                maxLength: 256,
+              },
+            },
+          },
           has: hasSchema,
         },
       },
