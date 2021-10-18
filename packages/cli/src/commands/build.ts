@@ -51,7 +51,7 @@ export default async function main(client: Client) {
   // Load the environment
   await buildState.loadEnv(false);
 
-  buildState.printConfig();
+  buildState.renderConfig();
 
   const spawnOpts = {
     env: buildState.combinedEnv,
@@ -233,7 +233,7 @@ export class BuildState {
 
   // print config pretty prints the build state, it's goal is to remove
   // imperative logging/printing throughout the `main` function
-  printConfig() {
+  renderConfig() {
     if (this.buildCommand) {
       this.client.output.print(
         `Running \`${this.buildCommand.value}\` (${
