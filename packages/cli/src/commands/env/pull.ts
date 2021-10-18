@@ -58,10 +58,7 @@ export default async function pull(
 
   // handle relative or absolute filename
   const [filename = '.env'] = args;
-  let fullPath = isAbsolute(filename)
-    ? filename
-    : join(process.cwd(), filename);
-
+  const fullPath = resolve(filename);
   const skipConfirmation = opts['--yes'];
 
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
