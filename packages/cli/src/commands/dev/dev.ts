@@ -82,6 +82,7 @@ export default async function dev(
       cwd = join(cwd, project.rootDirectory);
     }
 
+    // @todo remove since this is now handled in `vc pull`
     [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
       getDecryptedEnvRecords(output, client, project.id),
       project.autoExposeSystemEnvs
