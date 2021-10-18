@@ -14,11 +14,7 @@ const help = () => {
 export default async function main(client: Client) {
   let argv;
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--yes': Boolean,
-      '--env': String,
-      '-y': '--yes',
-    });
+    argv = getArgs(client.argv.slice(2));
   } catch (err) {
     handleError(err);
     return 1;
