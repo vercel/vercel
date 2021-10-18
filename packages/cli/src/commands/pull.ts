@@ -7,7 +7,7 @@ import setupAndLink from '../util/link/setup-and-link';
 import logo from '../util/output/logo';
 import { getPkgName } from '../util/pkg-name';
 import { getLinkedProject } from '../util/projects/link';
-import { writeProjectSettings } from '../util/projects/write-project-settings';
+import { writeProjectSettings } from '../util/projects/project-settings';
 import pull from './env/pull';
 
 const help = () => {
