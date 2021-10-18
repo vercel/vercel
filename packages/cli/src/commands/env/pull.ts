@@ -56,7 +56,7 @@ export default async function pull(
     return 1;
   }
 
-  // handle absolute or relative filenames
+  // handle relative or absolute filename
   const [filename = '.env'] = args;
   let fullPath = isAbsolute(filename)
     ? filename

@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import { writeFile } from 'fs-extra';
 import { join } from 'path';
 import Client from '../util/client';
 import getArgs from '../util/get-args';
@@ -7,11 +6,8 @@ import handleError from '../util/handle-error';
 import setupAndLink from '../util/link/setup-and-link';
 import logo from '../util/output/logo';
 import { getPkgName } from '../util/pkg-name';
-import {
-  getLinkedProject,
-  VERCEL_DIR,
-  VERCEL_DIR_PROJECT,
-} from '../util/projects/link';
+import { getLinkedProject } from '../util/projects/link';
+import { writeProjectSettings } from '../util/projects/write-project-settings';
 import pull from './env/pull';
 
 const help = () => {
@@ -41,6 +37,7 @@ export default async function main(client: Client) {
   try {
     argv = getArgs(client.argv.slice(2), {
       '--yes': Boolean,
+      '--env': String,
       '-y': '--yes',
     });
   } catch (err) {
@@ -56,6 +53,7 @@ export default async function main(client: Client) {
   const cwd = argv._[1] || process.cwd();
   const debug = argv['--debug'];
   const yes = argv['--yes'];
+  const env = argv['--env'] ?? '.env';
   let link = await getLinkedProject(client, cwd);
   if (link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, {
@@ -75,12 +73,11 @@ export default async function main(client: Client) {
   }
 
   const { project, org } = link;
-
   const result = await pull(
     client,
     project,
     { '--yes': yes, '--debug': debug },
-    [join(cwd, '.env')],
+    [join(cwd, env)],
     client.output
   );
   if (result !== 0) {
@@ -88,21 +85,7 @@ export default async function main(client: Client) {
     return result;
   }
 
-  await writeFile(
-    join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT),
-    JSON.stringify({
-      projectId: project.id,
-      orgId: org.id,
-      settings: {
-        buildCommand: project.buildCommand,
-        devCommand: project.devCommand,
-        directoryListing: project.directoryListing,
-        outputDirectory: project.outputDirectory,
-        rootDirectory: project.rootDirectory,
-        framework: project.framework,
-      },
-    })
-  );
+  await writeProjectSettings(cwd, project, org);
 
   return 0;
 }
