@@ -488,6 +488,13 @@ test('mergeRoutes ensure beforeFiles comes after redirects (check)', () => {
           override: true,
         },
         {
+          src: '^/.*$',
+          middleware: {
+            id: '1',
+            type: 'v8-worker',
+          },
+        },
+        {
           handle: 'filesystem',
         },
         {
@@ -507,6 +514,13 @@ test('mergeRoutes ensure beforeFiles comes after redirects (check)', () => {
       dest: '/somewhere',
       check: true,
       override: true,
+    },
+    {
+      src: '^/.*$',
+      middleware: {
+        id: '1',
+        type: 'v8-worker',
+      },
     },
     { handle: 'filesystem' },
     { src: '^/404$', dest: '/404', status: 404, check: true },
