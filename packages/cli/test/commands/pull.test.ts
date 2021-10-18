@@ -1,5 +1,5 @@
 import pull from '../../src/commands/pull';
-import { cleanupFixtures, setupFixture } from '../helpers/setupFixture';
+import { cleanupFixtures, setupFixture } from '../helpers/setup-fixture';
 import { client } from '../mocks/client';
 import { defaultProject, useProject } from '../mocks/project';
 import { useTeams } from '../mocks/team';
