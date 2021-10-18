@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { closeSync, openSync, promises, readSync } from 'fs';
-import { isAbsolute, join } from 'path';
+import { resolve } from 'path';
 import { Project } from '../../types';
 import Client from '../../util/client';
 import exposeSystemEnvs from '../../util/dev/expose-system-envs';
