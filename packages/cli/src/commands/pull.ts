@@ -91,6 +91,7 @@ export default async function main(client: Client) {
   }
   let devCommand = project.devCommand;
   let buildCommand = project.buildCommand;
+  let outputDirectory = project.outputDirectory;
   let frameworkSlug = project.framework;
   if (!devCommand && project.framework) {
     const framework = frameworks.find(f => f.slug === project.framework);
@@ -122,10 +123,26 @@ export default async function main(client: Client) {
     }
   }
 
+  if (!outputDirectory && project.framework) {
+    const framework = frameworks.find(f => f.slug === project.framework);
+
+    if (framework) {
+      if (framework.slug) {
+        frameworkSlug = framework.slug;
+      }
+
+      const defaults = framework.settings.buildCommand;
+      if (isSettingValue(defaults)) {
+        buildCommand = defaults.value;
+      }
+    }
+  }
+
   const normalizedProject = {
     ...project,
     buildCommand,
     devCommand,
+    outputDirectory,
     framework: frameworkSlug,
   };
 
