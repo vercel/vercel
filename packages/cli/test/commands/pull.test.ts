@@ -1,16 +1,13 @@
+import fs from 'fs-extra';
+import path from 'path';
 import pull from '../../src/commands/pull';
-import { cleanupFixtures, setupFixture } from '../helpers/setup-fixture';
+import { setupFixture } from '../helpers/setup-fixture';
 import { client } from '../mocks/client';
 import { defaultProject, useProject } from '../mocks/project';
 import { useTeams } from '../mocks/team';
 import { useUser } from '../mocks/user';
-import fs from 'fs-extra';
-import path from 'path';
 
 describe('pull', () => {
-  afterAll(() => {
-    cleanupFixtures();
-  });
   it('should handle pulling', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();

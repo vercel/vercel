@@ -52,3 +52,8 @@ export function cleanupFixtures() {
     tempRoot = undefined;
   }
 }
+
+// After all tests are run, we clean up our fixtures
+afterAll(() => {
+  cleanupFixtures();
+});
