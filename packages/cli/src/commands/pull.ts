@@ -12,7 +12,7 @@ import pull from './env/pull';
 
 const help = () => {
   return console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} pull`)} [filename]
+  ${chalk.bold(`${logo} ${getPkgName()} pull`)} [path]
 
  ${chalk.dim('Options:')}
 
