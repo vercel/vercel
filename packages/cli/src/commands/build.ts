@@ -54,7 +54,7 @@ export default async function main(client: Client) {
 
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
   // If there are no project settings, only then do we pull them down
-  while (project === null) {
+  while (!project?.settings) {
     const result = await pull(client);
     if (result !== 0) {
       return result;
