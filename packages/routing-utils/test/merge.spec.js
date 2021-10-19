@@ -489,10 +489,7 @@ test('mergeRoutes ensure beforeFiles comes after redirects (check)', () => {
         },
         {
           src: '^/.*$',
-          middleware: {
-            id: '1',
-            type: 'v8-worker',
-          },
+          middleware: 0,
         },
         {
           handle: 'filesystem',
@@ -517,10 +514,7 @@ test('mergeRoutes ensure beforeFiles comes after redirects (check)', () => {
     },
     {
       src: '^/.*$',
-      middleware: {
-        id: '1',
-        type: 'v8-worker',
-      },
+      middleware: 0,
     },
     { handle: 'filesystem' },
     { src: '^/404$', dest: '/404', status: 404, check: true },
