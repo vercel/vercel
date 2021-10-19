@@ -1,12 +1,18 @@
 import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../util/client';
+import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
 import setupAndLink from '../util/link/setup-and-link';
 import logo from '../util/output/logo';
+import stamp from '../util/output/stamp';
 import { getPkgName } from '../util/pkg-name';
-import { getLinkedProject } from '../util/projects/link';
+import {
+  getLinkedProject,
+  VERCEL_DIR,
+  VERCEL_DIR_PROJECT,
+} from '../util/projects/link';
 import { writeProjectSettings } from '../util/projects/write-project-settings';
 import pull from './env/pull';
 
@@ -60,6 +66,7 @@ export default async function main(client: Client) {
   const cwd = argv._[1] || process.cwd();
   const yes = argv['--yes'];
   const env = argv['--env'] ?? '.env';
+  const settingsStamp = stamp();
   let link = await getLinkedProject(client, cwd);
   if (link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, {
@@ -79,6 +86,18 @@ export default async function main(client: Client) {
   }
 
   const { project, org } = link;
+
+  await writeProjectSettings(cwd, project, org);
+
+  client.output.print(
+    `${prependEmoji(
+      `Downloaded project settings to ${chalk.bold(
+        join(VERCEL_DIR, VERCEL_DIR_PROJECT)
+      )} ${chalk.gray(settingsStamp())}`,
+      emoji('success')
+    )}\n`
+  );
+
   const result = await pull(
     client,
     project,
@@ -90,8 +109,6 @@ export default async function main(client: Client) {
     // an error happened
     return result;
   }
-
-  await writeProjectSettings(cwd, project, org);
 
   return 0;
 }
