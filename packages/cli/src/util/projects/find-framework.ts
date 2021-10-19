@@ -1,6 +1,5 @@
-import { Framework } from '@vercel/frameworks';
-import frameworks from './frameworks.json';
+import { frameworks } from '@vercel/frameworks';
 
-export function findFramework(slug?: string | null): Framework | undefined {
-  return (frameworks as Framework[]).find(f => f.slug === slug);
+export function findFramework(slug?: string | null) {
+  return frameworks.find(f => f.slug === slug);
 }
