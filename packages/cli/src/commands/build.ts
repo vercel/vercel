@@ -76,7 +76,15 @@ export default async function main(client: Client) {
 
   process.chdir(buildState.cwd);
 
-  const plugins = await loadCliPlugins(buildState.cwd);
+  let plugins;
+  try {
+    plugins = await loadCliPlugins(client, buildState.cwd);
+  } catch (error) {
+    client.output.error('Failed to load plugins');
+    handleError(error);
+    return 1;
+  }
+
   if (plugins) {
     client.output.log(
       `Found ${plugins.length} ${pluralize('plugin', plugins.length)}`
@@ -385,7 +393,7 @@ export async function runPackageJsonScript(
   return true;
 }
 
-async function loadCliPlugins(cwd: string) {
+async function loadCliPlugins(client: Client, cwd: string) {
   const { packageJson } = await scanParentDirs(cwd, true);
   if (packageJson) {
     const plugins = [];
@@ -398,10 +406,17 @@ async function loadCliPlugins(cwd: string) {
       const resolved = require.resolve(dep, {
         paths: [cwd, process.cwd()],
       });
-      plugins.push({
-        plugin: require(resolved),
-        name: dep,
-      });
+      let plugin;
+      try {
+        plugin = require(resolved);
+        plugins.push({
+          plugin,
+          name: dep,
+        });
+      } catch (error) {
+        client.output.error(`Failed to import ${code(dep)}`);
+        throw error;
+      }
     }
 
     return plugins;
