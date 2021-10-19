@@ -151,20 +151,7 @@ export const routesSchema = {
             },
           },
           middleware: {
-            type: 'object',
-            required: ['id', 'type'],
-            additionalProperties: false,
-            properties: {
-              id: {
-                type: 'string',
-                maxLength: 256,
-              },
-              type: {
-                type: 'string',
-                maxLength: 32,
-                enum: ['v8-worker'],
-              },
-            },
+            type: 'number',
           },
           has: hasSchema,
         },

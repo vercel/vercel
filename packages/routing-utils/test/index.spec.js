@@ -60,10 +60,7 @@ describe('normalizeRoutes', () => {
       },
       {
         src: '^/.*$',
-        middleware: {
-          id: '1',
-          type: 'v8-worker',
-        },
+        middleware: 0,
       },
       { handle: 'filesystem' },
       { src: '^/(?<slug>[^/]+)$', dest: 'blog?slug=$slug' },
