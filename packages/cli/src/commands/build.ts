@@ -25,6 +25,7 @@ import { isAbsolute } from '@sentry/utils';
 import { SpawnOptions } from 'child_process';
 import cmd from '../util/output/cmd';
 import param from '../util/output/param';
+import code from '../util/output/code';
 import { Framework } from '../../../frameworks/dist/types';
 
 const help = () => {
@@ -33,6 +34,7 @@ const help = () => {
 };
 
 const OUTPUT_DIR = '.output';
+const VERCEL_PLUGIN_PREFIX = 'vercel-plugin-';
 
 export default async function main(client: Client) {
   let argv;
@@ -49,6 +51,7 @@ export default async function main(client: Client) {
   }
 
   let cwd = argv._[1] || process.cwd();
+
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
   // If there are no project settings, only then do we pull them down
   while (project === null) {
@@ -69,6 +72,26 @@ export default async function main(client: Client) {
   const spawnOpts = {
     env: buildState.combinedEnv,
   };
+
+  process.chdir(buildState.cwd);
+
+  const plugins = await loadCliPlugins(buildState.cwd);
+  if (plugins) {
+    client.output.log(`Found ${plugins.length} plugin(s)`);
+    for (let item of plugins) {
+      const { name, plugin } = item;
+      if (typeof plugin.preBuild === 'function') {
+        client.output.log(`Running ${code(name + '.preBuild')}`);
+        try {
+          await plugin.preBuild();
+        } catch (error) {
+          client.output.error(`${code(name + '.preBuild')} failed`);
+          handleError(error);
+          return 1;
+        }
+      }
+    }
+  }
 
   let result: boolean;
   if (typeof buildState.buildCommand?.value === 'string') {
@@ -136,6 +159,23 @@ export default async function main(client: Client) {
   );
 
   // Plugins
+  if (plugins) {
+    for (let item of plugins) {
+      const { name, plugin } = item;
+      if (typeof plugin.build === 'function') {
+        client.output.log(`Running ${code(name + '.build')}`);
+        try {
+          await plugin.build();
+        } catch (error) {
+          client.output.error(`${code(name + '.build')} failed`);
+          handleError(error);
+          return 1;
+        }
+      }
+    }
+  }
+
+  client.output.success('Build completed');
 
   return 0;
 }
@@ -340,4 +380,27 @@ export async function runPackageJsonScript(
   client.output.print('\n'); // give it some room
   client.output.debug(`Script complete [${Date.now() - runScriptTime}ms]`);
   return true;
+}
+
+async function loadCliPlugins(cwd: string) {
+  const { packageJson } = await scanParentDirs(cwd, true);
+  if (packageJson) {
+    const plugins = [];
+    const deps = [
+      ...Object.keys(packageJson.dependencies || {}),
+      ...Object.keys(packageJson.devDependencies || {}),
+    ].filter(dep => dep.startsWith(VERCEL_PLUGIN_PREFIX));
+
+    for (let dep of deps) {
+      const resolved = require.resolve(dep, {
+        paths: [cwd, process.cwd()],
+      });
+      plugins.push({
+        plugin: require(resolved),
+        name: dep,
+      });
+    }
+
+    return plugins;
+  }
 }
