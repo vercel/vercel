@@ -140,7 +140,7 @@ export default async function main(client: Client) {
         output.warn(
           `${getCommandName(
             'env pull'
-          )} will be deprecated in future releases. Run ${getCommandName(
+          )} is deprecated and will be removed in future releases. Run ${getCommandName(
             'pull'
           )} instead.`
         );

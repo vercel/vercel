@@ -3,7 +3,7 @@ import { Org, Project } from '../../types';
 import { VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 import { join } from 'path';
 
-// writeProjectSettings writes the project configuration to `vercel/project.json`
+// Write the project configuration to `.vercel/project.json`
 // that is needed for `vercel build` and `vercel dev` commands
 export async function writeProjectSettings(
   cwd: string,

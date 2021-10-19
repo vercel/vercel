@@ -12,7 +12,7 @@ import pull from './env/pull';
 
 const help = () => {
   return console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} pull`)} [filename]
+  ${chalk.bold(`${logo} ${getPkgName()} pull`)} [path]
 
  ${chalk.dim('Options:')}
 
@@ -76,7 +76,7 @@ export default async function main(client: Client) {
   const result = await pull(
     client,
     project,
-    { '--yes': yes, '--debug': debug },
+    argv,
     [join(cwd, env)],
     client.output
   );
