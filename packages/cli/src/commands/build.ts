@@ -185,7 +185,8 @@ export class BuildState {
         outputDirectory = defaults.value;
         this.setOutputDirectory(outputDirectory, BuildStateSource.DEFAULT);
       } else {
-        this.setOutputDirectory(null, BuildStateSource.DEFAULT);
+        // the default output directory is actually .next
+        this.setOutputDirectory('.next', BuildStateSource.DEFAULT);
       }
     }
   }
@@ -234,7 +235,7 @@ export class BuildState {
   // print config pretty prints the build state, it's goal is to remove
   // imperative logging/printing throughout the `main` function
   renderConfig() {
-    if (this.buildCommand) {
+    if (typeof this.buildCommand?.value === 'string') {
       this.client.output.print(
         `Running \`${this.buildCommand.value}\` (${
           this.buildCommand.source == BuildStateSource.DASHBOARD
@@ -244,11 +245,11 @@ export class BuildState {
       );
     }
 
-    if (this.frameworkName) {
-      this.client.output.print(`Detected ${this.frameworkName}`);
+    if (typeof this.frameworkName?.value === 'string') {
+      this.client.output.print(`Detected ${this.frameworkName.value}`);
     }
 
-    if (this.outputDirectory) {
+    if (typeof this.outputDirectory?.value === 'string') {
       this.client.output.print(
         `Output directory: \`${this.outputDirectory.value}\` (${
           this.outputDirectory.source == BuildStateSource.DASHBOARD
@@ -258,7 +259,7 @@ export class BuildState {
       );
     }
 
-    if (this.rootDirectory) {
+    if (typeof this.rootDirectory?.value === 'string') {
       this.client.output.print(
         `Root directory: \`${this.rootDirectory.value}\` (${
           this.rootDirectory.source == BuildStateSource.DASHBOARD
