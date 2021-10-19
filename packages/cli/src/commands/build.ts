@@ -27,6 +27,7 @@ import cmd from '../util/output/cmd';
 import param from '../util/output/param';
 import code from '../util/output/code';
 import { Framework } from '../../../frameworks/dist/types';
+import pluralize from 'pluralize';
 
 const help = () => {
   // @todo help output
@@ -77,7 +78,9 @@ export default async function main(client: Client) {
 
   const plugins = await loadCliPlugins(buildState.cwd);
   if (plugins) {
-    client.output.log(`Found ${plugins.length} plugin(s)`);
+    client.output.log(
+      `Found ${plugins.length} ${pluralize('plugin', plugins.length)}`
+    );
     for (let item of plugins) {
       const { name, plugin } = item;
       if (typeof plugin.preBuild === 'function') {
