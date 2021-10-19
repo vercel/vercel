@@ -76,7 +76,7 @@ export default async function main(client: Client) {
   const result = await pull(
     client,
     project,
-    { '--yes': yes, '--debug': debug },
+    argv,
     [join(cwd, env)],
     client.output
   );
