@@ -212,6 +212,7 @@ export class BuildState {
         this.setOutputDirectory(outputDirectory, BuildStateSource.DEFAULT);
       } else {
         // the default output directory is actually .next
+        // @todo need to handle Other which is `public` if it exists or `.`
         this.setOutputDirectory('.next', BuildStateSource.DEFAULT);
       }
     }
