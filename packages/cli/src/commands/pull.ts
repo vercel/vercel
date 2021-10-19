@@ -87,17 +87,6 @@ export default async function main(client: Client) {
 
   const { project, org } = link;
 
-  await writeProjectSettings(cwd, project, org);
-
-  client.output.print(
-    `${prependEmoji(
-      `Downloaded project settings to ${chalk.bold(
-        join(VERCEL_DIR, VERCEL_DIR_PROJECT)
-      )} ${chalk.gray(settingsStamp())}`,
-      emoji('success')
-    )}\n`
-  );
-
   const result = await pull(
     client,
     project,
@@ -109,6 +98,17 @@ export default async function main(client: Client) {
     // an error happened
     return result;
   }
+
+  await writeProjectSettings(cwd, project, org);
+
+  client.output.print(
+    `${prependEmoji(
+      `Downloaded project settings to ${chalk.bold(
+        join(VERCEL_DIR, VERCEL_DIR_PROJECT)
+      )} ${chalk.gray(settingsStamp())}`,
+      emoji('success')
+    )}\n`
+  );
 
   return 0;
 }
