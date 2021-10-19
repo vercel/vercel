@@ -601,6 +601,9 @@ const main = async () => {
       case 'billing':
         func = await import('./commands/billing');
         break;
+      case 'build':
+        func = await import('./commands/build');
+        break;
       case 'certs':
         func = await import('./commands/certs');
         break;

@@ -1,5 +1,10 @@
 import { Env, LoadedEnvFiles, loadEnvConfig } from '@next/env';
-import { execCommand, runPackageJsonScript } from '@vercel/build-utils';
+import {
+  execCommand,
+  getScriptName,
+  scanParentDirs,
+  spawnAsync,
+} from '@vercel/build-utils';
 import fs from 'fs-extra';
 import { join } from 'path';
 import Client from '../util/client';
@@ -8,11 +13,19 @@ import handleError from '../util/handle-error';
 import { isSettingValue } from '../util/is-setting-value';
 import { getCommandName } from '../util/pkg-name';
 import { findFramework } from '../util/projects/find-framework';
+import { VERCEL_DIR } from '../util/projects/link';
 import {
   ProjectLinkAndSettings,
   readProjectSettings,
 } from '../util/projects/project-settings';
 import pull from './pull';
+
+import { assert } from 'console';
+import { isAbsolute } from '@sentry/utils';
+import { SpawnOptions } from 'child_process';
+import cmd from '../util/output/cmd';
+import param from '../util/output/param';
+import { Framework } from '../../../frameworks/dist/types';
 
 const help = () => {
   // @todo help output
@@ -36,17 +49,17 @@ export default async function main(client: Client) {
   }
 
   let cwd = argv._[1] || process.cwd();
-  let project = await readProjectSettings(cwd);
+  let project = await readProjectSettings(join(cwd, VERCEL_DIR));
   // If there are no project settings, only then do we pull them down
   while (project === null) {
     const result = await pull(client);
     if (result !== 0) {
       return result;
     }
-    project = await readProjectSettings(cwd);
+    project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
-
-  const buildState = new BuildState(cwd, client, project);
+  client.output.print(getCommandName('build') + '\n');
+  const buildState = new BuildState(cwd, client, project!);
 
   // Load the environment
   await buildState.loadEnv(false);
@@ -58,8 +71,16 @@ export default async function main(client: Client) {
   };
 
   let result: boolean;
-  if (typeof buildState.buildCommand === 'string') {
-    result = await execCommand(buildState.buildCommand, {
+  if (typeof buildState.buildCommand?.value === 'string') {
+    buildState.client.output.log(
+      `Running ${cmd(buildState.buildCommand.value)} (${
+        buildState.buildCommand.source == BuildStateSource.DASHBOARD
+          ? 'project settings'
+          : 'package.json'
+      })\n`
+    );
+
+    result = await execCommand(buildState.buildCommand.value, {
       ...spawnOpts,
       // Yarn v2 PnP mode may be activated, so force
       // "node-modules" linker style
@@ -71,6 +92,7 @@ export default async function main(client: Client) {
     });
   } else {
     result = await runPackageJsonScript(
+      client,
       cwd,
       ['vercel-build', 'now-build', 'build'],
       spawnOpts
@@ -79,30 +101,38 @@ export default async function main(client: Client) {
 
   if (!result) {
     client.output.error(
-      `Missing required "${
-        buildState.buildCommand || 'vercel-build' || 'build'
-      }" script in "${buildState.cwd}"`
+      `Missing required "${cmd(
+        buildState.buildCommand?.value || 'vercel-build' || 'build'
+      )}" script in ${param(buildState.cwd)}"\n`
     );
     return 1;
   }
 
-  client.output.debug(
-    `Moving output from ${buildState.outputDirectory} to .output`
+  client.output.log(
+    `Moving output from ${param(
+      buildState.outputDirectory?.value || '.next'
+    )} to ${param(OUTPUT_DIR)}`
   );
-  if (typeof buildState.outputDirectory !== 'string') {
+  if (typeof buildState.outputDirectory?.value !== 'string') {
     client.output.error(
       `Could not determine output directory. Please run ${getCommandName(
         'pull'
-      )}.`
+      )}.\n`
     );
     return 1;
   }
 
   // Move to .output
-  await fs.move(join(cwd, buildState.outputDirectory), join(cwd, OUTPUT_DIR));
+  await fs.remove(join(cwd, OUTPUT_DIR));
+  await fs.move(
+    join(cwd, buildState.outputDirectory.value),
+    join(cwd, OUTPUT_DIR)
+  );
 
-  client.output.print(
-    `Created \`${OUTPUT_DIR}\` from \`${project.settings.outputDirectory}\` `
+  client.output.log(
+    `Moved ${param(buildState.outputDirectory.value || '.next')} to ${param(
+      OUTPUT_DIR
+    )}`
   );
 
   // Plugins
@@ -125,8 +155,9 @@ export class BuildState {
   cwd: string;
   // Vercel client
   client: Client;
-  // Project framework name
-  frameworkName?: BuildStateRecord;
+
+  framework?: Framework;
+
   // Output directory
   outputDirectory?: BuildStateRecord;
   // Build command
@@ -155,19 +186,14 @@ export class BuildState {
       this.setRootDirectory(null, BuildStateSource.DEFAULT);
     }
 
-    const framework =
-      project.settings.framework && findFramework(project.settings.framework);
-
-    if (framework && framework.name) {
-      this.setFrameworkName(framework.name, BuildStateSource.DASHBOARD);
-    }
+    this.framework = findFramework(project.settings.framework);
 
     let buildCommand = project.settings.buildCommand;
 
     if (typeof buildCommand === 'string') {
       this.setBuildCommand(buildCommand, BuildStateSource.DASHBOARD);
-    } else if (framework) {
-      const defaults = framework.settings.buildCommand;
+    } else if (this.framework) {
+      const defaults = this.framework.settings.buildCommand;
       if (isSettingValue(defaults)) {
         buildCommand = defaults.value;
         this.setBuildCommand(buildCommand, BuildStateSource.DEFAULT);
@@ -179,8 +205,8 @@ export class BuildState {
     let outputDirectory = project.settings.outputDirectory;
     if (typeof outputDirectory === 'string') {
       this.setOutputDirectory(outputDirectory, BuildStateSource.DASHBOARD);
-    } else if (framework) {
-      const defaults = framework.settings.outputDirectory;
+    } else if (this.framework) {
+      const defaults = this.framework.settings.outputDirectory;
       if (isSettingValue(defaults)) {
         outputDirectory = defaults.value;
         this.setOutputDirectory(outputDirectory, BuildStateSource.DEFAULT);
@@ -212,13 +238,6 @@ export class BuildState {
     };
   }
 
-  setFrameworkName(value: BuildStateRecord['value'], source: BuildStateSource) {
-    this.frameworkName = {
-      source,
-      value,
-    };
-  }
-
   setRootDirectory(value: BuildStateRecord['value'], source: BuildStateSource) {
     this.rootDirectory = {
       source,
@@ -235,38 +254,89 @@ export class BuildState {
   // print config pretty prints the build state, it's goal is to remove
   // imperative logging/printing throughout the `main` function
   renderConfig() {
-    if (typeof this.buildCommand?.value === 'string') {
-      this.client.output.print(
-        `Running \`${this.buildCommand.value}\` (${
-          this.buildCommand.source == BuildStateSource.DASHBOARD
-            ? 'dashboard'
-            : 'package.json'
-        })`
+    if (this.framework) {
+      this.client.output.log(
+        `Framework preset: ${param(this.framework.name)} (project settings)`
       );
     }
 
-    if (typeof this.frameworkName?.value === 'string') {
-      this.client.output.print(`Detected ${this.frameworkName.value}`);
-    }
-
     if (typeof this.outputDirectory?.value === 'string') {
-      this.client.output.print(
-        `Output directory: \`${this.outputDirectory.value}\` (${
+      this.client.output.log(
+        `Output directory: ${param(this.outputDirectory.value)} (${
           this.outputDirectory.source == BuildStateSource.DASHBOARD
-            ? 'dashboard'
-            : 'default'
+            ? 'project settings'
+            : 'framework default'
         })`
       );
     }
 
     if (typeof this.rootDirectory?.value === 'string') {
-      this.client.output.print(
-        `Root directory: \`${this.rootDirectory.value}\` (${
+      this.client.output.log(
+        `Root directory: ${param(this.rootDirectory.value)} (${
           this.rootDirectory.source == BuildStateSource.DASHBOARD
-            ? 'dashboard'
+            ? 'project settings'
             : 'default'
         })`
       );
     }
+
+    this.client.output.log(
+      `Build command: ${param(
+        this.buildCommand?.value ||
+          this.framework?.settings.buildCommand.placeholder ||
+          ''
+      )} (${
+        this.buildCommand?.source == BuildStateSource.DASHBOARD
+          ? 'project settings'
+          : 'default'
+      })`
+    );
   }
+}
+
+export async function runPackageJsonScript(
+  client: Client,
+  destPath: string,
+  scriptNames: string | Iterable<string>,
+  spawnOpts?: SpawnOptions
+) {
+  assert(isAbsolute(destPath));
+
+  const { packageJson, cliType, lockfileVersion } = await scanParentDirs(
+    destPath,
+    true
+  );
+  const scriptName = getScriptName(
+    packageJson,
+    typeof scriptNames === 'string' ? [scriptNames] : scriptNames
+  );
+  if (!scriptName) return false;
+
+  client.output.debug('Running user script...');
+  const runScriptTime = Date.now();
+
+  const opts: any = { cwd: destPath, ...spawnOpts };
+  const env = (opts.env = { ...process.env, ...opts.env });
+
+  if (cliType === 'npm') {
+    opts.prettyCommand = `npm run ${scriptName}`;
+
+    if (typeof lockfileVersion === 'number' && lockfileVersion >= 2) {
+      // Ensure that npm 7 is at the beginning of the `$PATH`
+      env.PATH = `/node16/bin-npm7:${env.PATH}`;
+    }
+  } else {
+    opts.prettyCommand = `yarn run ${scriptName}`;
+
+    // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
+    if (!env.YARN_NODE_LINKER) {
+      env.YARN_NODE_LINKER = 'node-modules';
+    }
+  }
+
+  client.output.log(`Running ${cmd(opts.prettyCommand)} (package.json)\n`);
+  await spawnAsync(cliType, ['run', scriptName], opts);
+  client.output.print('\n'); // give it some room
+  client.output.debug(`Script complete [${Date.now() - runScriptTime}ms]`);
+  return true;
 }
