@@ -2,16 +2,15 @@ import chance from 'chance';
 import { client } from './client';
 
 export function useUser() {
-  const userLimited = {
+  const user = {
     id: chance().guid(),
     email: chance().email(),
     name: chance().name(),
     username: chance().first().toLowerCase(),
   };
-
   client.scenario.get('/v2/user', (_req, res) => {
     res.json({
-      user: userLimited,
+      user,
     });
   });
 
@@ -25,11 +24,9 @@ export function useUser() {
   client.scenario.get('/registration/verify', (_req, res) => {
     res.json({
       token: 'hjkjn',
-      email: userLimited.email,
+      email: user.email,
     });
   });
 
-  return {
-    ...userLimited,
-  };
+  return user;
 }

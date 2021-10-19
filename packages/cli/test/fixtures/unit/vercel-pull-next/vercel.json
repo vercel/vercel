@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "name": "vercel-pull-next",
+  "builds": [{ "src": "package.json", "use": "@vercel/next@canary" }],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index?route-param=b"
+    }
+  ]
+}
