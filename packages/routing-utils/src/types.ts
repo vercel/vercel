@@ -36,6 +36,7 @@ export type Source = {
     redirect?: Record<string, string>;
     cookie?: string;
   };
+  middleware?: number;
 };
 
 export type Handler = {

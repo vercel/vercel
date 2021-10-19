@@ -58,6 +58,10 @@ describe('normalizeRoutes', () => {
         headers: { 'Cache-Control': 'no-cache' },
         dest: '/blog',
       },
+      {
+        src: '^/.*$',
+        middleware: 0,
+      },
       { handle: 'filesystem' },
       { src: '^/(?<slug>[^/]+)$', dest: 'blog?slug=$slug' },
       { handle: 'hit' },
