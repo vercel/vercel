@@ -14,5 +14,19 @@ export function useUser() {
     });
   });
 
+  client.scenario.post('/registration', (_req, res) => {
+    res.json({
+      token: 'T1dmvPu36nmyYisXAs7IRzcR',
+      securityCode: 'Practical Saola',
+    });
+  });
+
+  client.scenario.get('/registration/verify', (_req, res) => {
+    res.json({
+      token: 'hjkjn',
+      email: user.email,
+    });
+  });
+
   return user;
 }
