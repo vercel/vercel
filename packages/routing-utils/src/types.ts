@@ -9,7 +9,7 @@ export type RouteApiError = {
   errors?: string[]; // array of all error messages
 };
 
-export type ConditionalField = Array<
+export type HasField = Array<
   | {
       type: 'host';
       value: string;
@@ -31,8 +31,8 @@ export type Source = {
   check?: boolean;
   important?: boolean;
   status?: number;
-  has?: ConditionalField;
-  missing?: ConditionalField;
+  has?: HasField;
+  missing?: HasField;
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;
@@ -83,8 +83,8 @@ export interface VercelConfig {
 export interface Rewrite {
   source: string;
   destination: string;
-  has?: ConditionalField;
-  missing?: ConditionalField;
+  has?: HasField;
+  missing?: HasField;
 }
 
 export interface Redirect {
@@ -92,15 +92,15 @@ export interface Redirect {
   destination: string;
   permanent?: boolean;
   statusCode?: number;
-  has?: ConditionalField;
-  missing?: ConditionalField;
+  has?: HasField;
+  missing?: HasField;
 }
 
 export interface Header {
   source: string;
   headers: HeaderKeyValue[];
-  has?: ConditionalField;
-  missing?: ConditionalField;
+  has?: HasField;
+  missing?: HasField;
 }
 
 export interface HeaderKeyValue {
