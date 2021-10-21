@@ -25,7 +25,6 @@ export type Source = {
   src: string;
   dest?: string;
   headers?: { [name: string]: string };
-  missing?: ConditionalField;
   methods?: string[];
   continue?: boolean;
   override?: boolean;
@@ -33,6 +32,7 @@ export type Source = {
   important?: boolean;
   status?: number;
   has?: ConditionalField;
+  missing?: ConditionalField;
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;
@@ -84,6 +84,7 @@ export interface Rewrite {
   source: string;
   destination: string;
   has?: ConditionalField;
+  missing?: ConditionalField;
 }
 
 export interface Redirect {
@@ -92,12 +93,14 @@ export interface Redirect {
   permanent?: boolean;
   statusCode?: number;
   has?: ConditionalField;
+  missing?: ConditionalField;
 }
 
 export interface Header {
   source: string;
   headers: HeaderKeyValue[];
   has?: ConditionalField;
+  missing?: ConditionalField;
 }
 
 export interface HeaderKeyValue {
