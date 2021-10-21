@@ -1,5 +1,5 @@
 {
-  "name": "@vercel/node",
+  "name": "vercel-plugin-node",
   "version": "1.12.2-canary.4",
   "license": "MIT",
   "main": "./dist/index",
@@ -38,7 +38,6 @@
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",
-    "mkdirp-promise": "5.0.1",
     "node-fetch": "2.6.1",
     "source-map-support": "0.5.12",
     "test-listen": "1.1.0"

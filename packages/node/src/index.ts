@@ -1,5 +1,6 @@
 import { fork, spawn } from 'child_process';
 import {
+  createWriteStream,
   readFileSync,
   lstatSync,
   readlinkSync,
@@ -16,8 +17,6 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
-// @ts-ignore - `@types/mkdirp-promise` is broken
-import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
@@ -25,17 +24,14 @@ import {
   Files,
   Meta,
   PrepareCacheOptions,
-  BuildOptions,
   Config,
   StartDevServerOptions,
   StartDevServerResult,
   glob,
-  download,
   FileBlob,
   FileFsRef,
-  createLambda,
-  runNpmInstall,
-  runPackageJsonScript,
+  //runNpmInstall,
+  //runPackageJsonScript,
   getNodeVersion,
   getSpawnOptions,
   shouldServe,
@@ -58,7 +54,7 @@ export {
 } from './types';
 
 interface DownloadOptions {
-  files: Files;
+  //files: Files;
   entrypoint: string;
   workPath: string;
   config: Config;
@@ -86,14 +82,11 @@ const HELPERS_FILENAME = '__helpers.js';
 const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support.js';
 
 async function downloadInstallAndBundle({
-  files,
   entrypoint,
   workPath,
   config,
   meta,
 }: DownloadOptions) {
-  const downloadedFiles = await download(files, workPath, meta);
-
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
@@ -103,17 +96,25 @@ async function downloadInstallAndBundle({
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
-  if (meta.isDev) {
-    debug('Skipping dependency installation because dev mode is enabled');
-  } else {
-    const installTime = Date.now();
-    console.log('Installing dependencies...');
-    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
-    debug(`Install complete [${Date.now() - installTime}ms]`);
-  }
+  // TODO NATE: Do we want to run `npm install` in this case?
+  // If there's only the root `package.json` then we can probably skip,
+  // but maybe we have to search for a `package.json` in a sub-dir
+  // that is in the parent path of the entrypoint, and run npm install in that case
+  //if (meta.isDev) {
+  //  debug('Skipping dependency installation because dev mode is enabled');
+  //} else {
+  //  const installTime = Date.now();
+  //  console.log('Installing dependencies...');
+  //  await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
+  //  debug(`Install complete [${Date.now() - installTime}ms]`);
+  //}
 
-  const entrypointPath = downloadedFiles[entrypoint].fsPath;
-  return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
+  return {
+    entrypointPath: join(workPath, dirname(entrypoint)),
+    entrypointFsDirname,
+    nodeVersion,
+    spawnOpts,
+  };
 }
 
 function renameTStoJS(path: string) {
@@ -127,10 +128,8 @@ function renameTStoJS(path: string) {
 }
 
 async function compile(
-  workPath: string,
   baseDir: string,
   entrypointPath: string,
-  entrypoint: string,
   config: Config
 ): Promise<{
   preparedFiles: Files;
@@ -146,28 +145,28 @@ async function compile(
 
   let shouldAddSourcemapSupport = false;
 
-  if (config.includeFiles) {
-    const includeFiles =
-      typeof config.includeFiles === 'string'
-        ? [config.includeFiles]
-        : config.includeFiles;
+  //if (config.includeFiles) {
+  //  const includeFiles =
+  //    typeof config.includeFiles === 'string'
+  //      ? [config.includeFiles]
+  //      : config.includeFiles;
 
-    for (const pattern of includeFiles) {
-      const files = await glob(pattern, workPath);
-      await Promise.all(
-        Object.values(files).map(async entry => {
-          const { fsPath } = entry;
-          const relPath = relative(baseDir, fsPath);
-          fsCache.set(relPath, entry);
-          preparedFiles[relPath] = entry;
-        })
-      );
-    }
-  }
+  //  for (const pattern of includeFiles) {
+  //    const files = await glob(pattern, workPath);
+  //    await Promise.all(
+  //      Object.values(files).map(async entry => {
+  //        const { fsPath } = entry;
+  //        const relPath = relative(baseDir, fsPath);
+  //        fsCache.set(relPath, entry);
+  //        preparedFiles[relPath] = entry;
+  //      })
+  //    );
+  //  }
+  //}
 
   debug(
     'Tracing input files: ' +
-      [...inputFiles].map(p => relative(workPath, p)).join(', ')
+      [...inputFiles].map(p => relative(baseDir, p)).join(', ')
   );
 
   let tsCompile: Register;
@@ -175,7 +174,7 @@ async function compile(
     const relPath = relative(baseDir, path);
     if (!tsCompile) {
       tsCompile = register({
-        basePath: workPath, // The base is the same as root now.json dir
+        basePath: baseDir, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
       });
@@ -194,7 +193,7 @@ async function compile(
     [...inputFiles],
     {
       base: baseDir,
-      processCwd: workPath,
+      processCwd: baseDir,
       ts: true,
       mixedModules: true,
       ignore: config.excludeFiles,
@@ -283,10 +282,10 @@ async function compile(
   if (esmPaths.length) {
     const babelCompile = require('./babel').compile;
     for (const path of esmPaths) {
-      const pathDir = join(workPath, dirname(path));
+      const pathDir = join(baseDir, dirname(path));
       if (!pkgCache.has(pathDir)) {
         const pathToPkg = await walkParentDirs({
-          base: workPath,
+          base: baseDir,
           start: pathDir,
           filename: 'package.json',
         });
@@ -324,61 +323,66 @@ async function compile(
   };
 }
 
-function getAWSLambdaHandler(entrypoint: string, config: Config) {
-  if (config.awsLambdaHandler) {
-    return config.awsLambdaHandler as string;
+function getAWSLambdaHandler(entrypoint: string, config: Config): string {
+  if (typeof config.awsLambdaHandler === 'string') {
+    return config.awsLambdaHandler;
   }
 
   if (process.env.NODEJS_AWS_HANDLER_NAME) {
     const { dir, name } = parsePath(entrypoint);
-    return `${dir}${dir ? sep : ''}${name}.${
-      process.env.NODEJS_AWS_HANDLER_NAME
-    }`;
+    return `${join(dir, name)}.${process.env.NODEJS_AWS_HANDLER_NAME}`;
   }
 
   return '';
 }
 
-export const version = 3;
+// TODO NATE: turn this into a `@vercel/plugin-utils` helper function?
+export async function build() {
+  const entrypoints = await glob('api/**/*.[jt]s', process.cwd());
+  for (const entrypoint of Object.keys(entrypoints)) {
+    await buildEntrypoint(entrypoint);
+  }
+}
 
-export async function build({
-  files,
-  entrypoint,
-  workPath,
-  repoRootPath,
-  config = {},
-  meta = {},
-}: BuildOptions) {
-  const shouldAddHelpers = !(
-    config.helpers === false || process.env.NODEJS_HELPERS === '0'
+export async function buildEntrypoint(entrypoint: string) {
+  const meta: Meta = {};
+  const config: Config = {};
+  const baseDir = process.cwd();
+  const outputPath = join(baseDir, '.output');
+  const entrypointWithoutExt = join(
+    dirname(entrypoint),
+    basename(entrypoint, extname(entrypoint))
   );
+  const workPath = join(outputPath, 'server/pages', entrypointWithoutExt);
+  await fsp.mkdir(workPath, { recursive: true });
+  console.log(`Compiling ${entrypoint} to ${workPath}`);
 
-  const baseDir = repoRootPath || workPath;
+  const shouldAddHelpers = process.env.NODEJS_HELPERS !== '0';
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
-  const { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts } =
-    await downloadInstallAndBundle({
-      files,
-      entrypoint,
-      workPath,
-      config,
-      meta,
-    });
+  //const { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts } =
+  const { nodeVersion } = await downloadInstallAndBundle({
+    entrypoint,
+    workPath,
+    config,
+    meta,
+  });
+  const entrypointPath = join(baseDir, entrypoint);
 
-  await runPackageJsonScript(
-    entrypointFsDirname,
-    // Don't consider "build" script since its intended for frontend code
-    ['vercel-build', 'now-build'],
-    spawnOpts
-  );
+  // TODO NATE: do we want to run the build script?
+  // The frontend build command probably already did this
+  //await runPackageJsonScript(
+  //  entrypointFsDirname,
+  //  // Don't consider "build" script since its intended for frontend code
+  //  ['vercel-build', 'now-build'],
+  //  spawnOpts
+  //);
 
   debug('Tracing input files...');
   const traceTime = Date.now();
-  const { preparedFiles, shouldAddSourcemapSupport, watch } = await compile(
-    workPath,
+  const { preparedFiles, shouldAddSourcemapSupport } = await compile(
     baseDir,
     entrypointPath,
-    entrypoint,
     config
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
@@ -386,7 +390,6 @@ export async function build({
   const getFileName = (str: string) => `___vc/${str}`;
 
   const launcher = awsLambdaHandler ? makeAwsLauncher : makeVercelLauncher;
-
   const launcherSource = launcher({
     entrypointPath: `../${renameTStoJS(relative(baseDir, entrypointPath))}`,
     bridgePath: `./${BRIDGE_FILENAME}`,
@@ -421,16 +424,43 @@ export async function build({
     });
   }
 
-  const lambda = await createLambda({
-    files: {
-      ...preparedFiles,
-      ...launcherFiles,
-    },
+  // Map `files` to the output workPath
+  const files = {
+    ...preparedFiles,
+    ...launcherFiles,
+  };
+  for (const filename of Object.keys(files)) {
+    const outPath = join(workPath, filename);
+    const file = files[filename];
+    await fsp.mkdir(dirname(outPath), { recursive: true });
+    const ws = createWriteStream(outPath, {
+      mode: file.mode,
+    });
+    const finishPromise = once(ws, 'finish');
+    file.toStream().pipe(ws);
+    await finishPromise;
+  }
+
+  // Update the `functions-mainifest.json` file with this entrypoint
+  // TODO NATE: turn this into a `@vercel/plugin-utils` helper function?
+  const functionsManifestPath = join(outputPath, 'functions-manifest.json');
+  let functionsManifest: any = {};
+  try {
+    functionsManifest = JSON.parse(
+      await fsp.readFile(functionsManifestPath, 'utf8')
+    );
+  } catch (_err) {
+    // ignore...
+  }
+  if (!functionsManifest.pages) functionsManifest.pages = {};
+  functionsManifest.pages[entrypointWithoutExt] = {
     handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
     runtime: nodeVersion.runtime,
-  });
-
-  return { output: lambda, watch };
+  };
+  await fsp.writeFile(
+    functionsManifestPath,
+    JSON.stringify(functionsManifest, null, 2)
+  );
 }
 
 export async function prepareCache({
@@ -530,7 +560,7 @@ async function doTypeCheck(
 
   try {
     const json = JSON.stringify(tsconfig, null, '\t');
-    await mkdirp(entrypointCacheDir);
+    await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
   } catch (err) {
     // Don't throw if the file already exists
