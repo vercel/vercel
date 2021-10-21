@@ -344,6 +344,52 @@ export const frameworks = [
 
       return base;
     },
+    defaultHeaders: [
+      {
+        source: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
+        regex: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        source:
+          '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
+        regex:
+          '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        source:
+          '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
+        regex:
+          '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        source:
+          '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
+        regex:
+          '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        source: '^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$',
+        regex: '^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+    ],
+    defaultRedirects: [
+      {
+        source: '.*',
+        regex: '.*',
+        statusCode: 404,
+        destination: '404.html',
+      },
+    ],
     defaultRoutes: [
       {
         src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
@@ -495,6 +541,13 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        destination: '/index.html',
+      },
+    ],
   },
   {
     name: 'Dojo',
@@ -551,6 +604,21 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    defaulHeaders: [
+      {
+        source: '/service-worker.js',
+        regex: '/service-worker.js',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        destination: '/index.html',
+      },
+    ],
   },
   {
     name: 'Ember.js',
@@ -597,6 +665,13 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        destination: '/index.html',
       },
     ],
   },
@@ -656,6 +731,27 @@ export const frameworks = [
       {
         src: '^.*',
         dest: '/index.html',
+      },
+    ],
+    defaultHeaders: [
+      {
+        source: '^/[^/]*\\.(js|txt|ico|json)',
+        regex: '^/[^/]*\\.(js|txt|ico|json)',
+        headers: { 'cache-control': 'max-age=300' },
+        continue: true,
+      },
+      {
+        source: '^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*',
+        regex: '^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '^.*',
+        regex: '^.*',
+        destination: '/index.html',
       },
     ],
   },
@@ -743,6 +839,13 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        destination: '/index.html',
+      },
+    ],
   },
   {
     name: 'Angular',
@@ -805,6 +908,13 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        destination: '/index.html',
+      },
+    ],
   },
   {
     name: 'Polymer',
@@ -864,6 +974,13 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        destination: '/index.html',
+      },
+    ],
   },
   {
     name: 'Svelte',
@@ -914,6 +1031,13 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        destination: '/index.html',
       },
     ],
   },
@@ -1017,6 +1141,46 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    defaultHeaders: [
+      {
+        source: '/static/(.*)',
+        regex: '/static/(.*)',
+        headers: { 'cache-control': 's-maxage=31536000, immutable' },
+        continue: true,
+      },
+      {
+        source: '/service-worker.js',
+        regex: '/service-worker.js',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+    ],
+    defaultRedirects: [
+      {
+        source: '/static/(.*)',
+        destination: '/404.html',
+        statusCode: 404,
+        regex: '/static/(.*)',
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '/sockjs-node/(.*)',
+        destination: '/sockjs-node/$1',
+        regex: '/sockjs-node/(.*)',
+      },
+      {
+        source: '/(.*)',
+        destination: '/index.html',
+        regex: '/(.*)',
+      },
+    ],
   },
   {
     name: 'Create React App',
@@ -1084,6 +1248,46 @@ export const frameworks = [
         src: '/(.*)',
         headers: { 'cache-control': 's-maxage=0' },
         dest: '/index.html',
+      },
+    ],
+    defaultHeaders: [
+      {
+        source: '/static/(.*)',
+        regex: '/static/(.*)',
+        headers: { 'cache-control': 's-maxage=31536000, immutable' },
+        continue: true,
+      },
+      {
+        source: '/service-worker.js',
+        regex: '/service-worker.js',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+    ],
+    defaultRedirects: [
+      {
+        source: '/static/(.*)',
+        destination: '/404.html',
+        statusCode: 404,
+        regex: '/static/(.*)',
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '/sockjs-node/(.*)',
+        destination: '/sockjs-node/$1',
+        regex: '/sockjs-node/(.*)',
+      },
+      {
+        source: '/(.*)',
+        destination: '/index.html',
+        regex: '/(.*)',
       },
     ],
   },
@@ -1171,6 +1375,13 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        destination: '/index.html',
+        regex: '/(.*)',
       },
     ],
   },
@@ -1265,6 +1476,21 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
+    defaultHeaders: [
+      {
+        source: '/_saber/.*',
+        regex: '/_saber/.*',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+      },
+    ],
+    defaultRedirects: [
+      {
+        source: '.*',
+        statusCode: 404,
+        destination: '404.html',
+        regex: '.*',
+      },
+    ],
   },
   {
     name: 'Stencil',
@@ -1326,6 +1552,33 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
+      },
+    ],
+    defaultHeaders: [
+      {
+        source: '/assets/(.*)',
+        regex: '/assets/(.*)',
+        headers: { 'cache-control': 'max-age=2592000' },
+        continue: true,
+      },
+      {
+        source: '/build/p-.*',
+        regex: '/build/p-.*',
+        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        source: '/sw.js',
+        regex: '/sw.js',
+        headers: { 'cache-control': 'no-cache' },
+        continue: true,
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        destination: '/index.html',
+        regex: '/(.*)',
       },
     ],
   },
@@ -1736,6 +1989,14 @@ export const frameworks = [
       },
       {
         handle: 'filesystem',
+      },
+    ],
+    defaultHeaders: [
+      {
+        source: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$',
+        regex: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$',
+        headers: { 'cache-control': 's-maxage=31536000, immutable' },
+        continue: true,
       },
     ],
   },

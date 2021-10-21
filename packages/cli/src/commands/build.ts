@@ -57,7 +57,9 @@ const fields: {
 export default async function main(client: Client) {
   let argv;
   try {
-    argv = getArgs(client.argv.slice(2));
+    argv = getArgs(client.argv.slice(2), {
+      '--debug': Boolean,
+    });
   } catch (err) {
     handleError(err);
     return 1;
@@ -157,12 +159,13 @@ export default async function main(client: Client) {
   }
 
   // Load plugins
+  const debug = argv['--debug'];
   let plugins;
   try {
     plugins = await loadCliPlugins(client, cwd);
   } catch (error) {
     client.output.error('Failed to load CLI Plugins');
-    handleError(error);
+    handleError(error, { debug });
     return 1;
   }
 
@@ -195,7 +198,7 @@ export default async function main(client: Client) {
             );
           } catch (error) {
             client.output.error(`${code(name + '.preBuild')} failed`);
-            handleError(error);
+            handleError(error, { debug });
             return 1;
           }
         }
@@ -284,10 +287,33 @@ export default async function main(client: Client) {
       )} to ${param(outputDir)} ${copyStamp()}`
     );
 
-    client.output.log(`Generating build manifest`);
-    await fs.writeJSON(join(cwd, OUTPUT_DIR, 'build-manifest.json'), {
-      cache: [framework.cachePattern],
-    });
+    const buildManifestPath = join(cwd, OUTPUT_DIR, 'build-manifest.json');
+    const routesManifestPath = join(cwd, OUTPUT_DIR, 'routes-manifest.json');
+
+    if (!fs.existsSync(buildManifestPath)) {
+      client.output.debug(
+        `Generating build manifest: ${param(buildManifestPath)}`
+      );
+      await fs.writeJSON(buildManifestPath, {
+        cache: [framework.cachePattern],
+      });
+    }
+
+    if (!fs.existsSync(routesManifestPath)) {
+      client.output.debug(
+        `Generating routes manifest: ${param(routesManifestPath)}`
+      );
+      await fs.writeJSON(join(cwd, OUTPUT_DIR, 'routes-manifest.json'), {
+        version: 3,
+        pages404: true,
+        basePath: '',
+        redirects: framework.defaultRedirects,
+        headers: framework.defaultHeaders,
+        dynamicRoutes: [],
+        dataRoutes: [],
+        rewrites: framework.defaultRewrites,
+      });
+    }
   }
 
   // Build Plugins
@@ -312,7 +338,7 @@ export default async function main(client: Client) {
           );
         } catch (error) {
           client.output.error(`${code(name + '.build')} failed`);
-          handleError(error);
+          handleError(error, { debug });
           return 1;
         }
       }
