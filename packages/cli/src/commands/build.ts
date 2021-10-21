@@ -1,16 +1,18 @@
-import { loadEnvConfig } from '@next/env';
-import { isAbsolute } from '@sentry/utils';
+import { loadEnvConfig, processEnv } from '@next/env';
 import {
   execCommand,
   getScriptName,
+  GlobOptions,
   scanParentDirs,
   spawnAsync,
 } from '@vercel/build-utils';
+import Sema from 'async-sema';
 import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
 import { assert } from 'console';
 import fs from 'fs-extra';
-import { join } from 'path';
+import ogGlob from 'glob';
+import { isAbsolute, join, relative } from 'path';
 import pluralize from 'pluralize';
 import Client from '../util/client';
 import getArgs from '../util/get-args';
@@ -28,6 +30,10 @@ import {
   readProjectSettings,
 } from '../util/projects/project-settings';
 import pull from './pull';
+
+const sema = new Sema(16, {
+  capacity: 100,
+});
 
 const help = () => {
   // @todo help output
@@ -84,6 +90,9 @@ export default async function main(client: Client) {
     error: (...args: any[]) => client.output.error(args.join(' ')),
   });
 
+  // Set process.env with loaded environment variables
+  await processEnv(loadedEnvFiles);
+
   const spawnOpts = {
     env: { ...combinedEnv, VERCEL: '1' },
   };
@@ -91,28 +100,40 @@ export default async function main(client: Client) {
   process.chdir(cwd);
 
   const framework = findFramework(project.settings.framework);
-  const buildState = { ...project.settings };
-  if (framework) {
-    client.output.log(`Retrieved Project Settings:`);
-    client.output.print(
-      chalk.dim(`  - ${chalk.bold(`Framework Preset:`)} ${framework.name}\n`)
+  // If this is undefined, we bail. If it is null, then findFramework should return "Other",
+  // so this should really never happen, but just in case....
+  if (framework === undefined) {
+    client.output.error(
+      `Framework detection failed or is malformed. Please run ${getCommandName(
+        'pull'
+      )} again.`
     );
+    return 1;
+  }
 
-    for (let field of fields) {
-      const defaults = (framework.settings as any)[field.value];
-      if (defaults) {
-        client.output.print(
-          chalk.dim(
-            `  - ${chalk.bold(`${field.name}:`)} ${`${
-              project.settings[field.value]
-                ? project.settings[field.value] + ` (override)`
-                : isSettingValue(defaults)
-                ? defaults.value
-                : chalk.italic(`${defaults.placeholder}`)
-            }`}\n`
-          )
-        );
-      }
+  const buildState = { ...project.settings };
+
+  client.output.log(`Retrieved Project Settings:`);
+  client.output.print(
+    chalk.dim(`  - ${chalk.bold(`Framework Preset:`)} ${framework.name}\n`)
+  );
+
+  for (let field of fields) {
+    const defaults = (framework.settings as any)[field.value];
+    if (defaults) {
+      client.output.print(
+        chalk.dim(
+          `  - ${chalk.bold(`${field.name}:`)} ${`${
+            project.settings[field.value]
+              ? project.settings[field.value] + ` (override)`
+              : isSettingValue(defaults)
+              ? defaults.value
+              : chalk.italic(`${defaults.placeholder}`)
+          }`}\n`
+        )
+      );
+    }
+    if (field.value != 'buildCommand') {
       (buildState as any)[field.value] = project.settings[field.value]
         ? project.settings[field.value]
         : defaults
@@ -182,6 +203,8 @@ export default async function main(client: Client) {
     }
   }
 
+  // Clean the output directory
+  fs.removeSync(join(cwd, OUTPUT_DIR));
   let result: boolean;
   if (typeof buildState.buildCommand === 'string') {
     client.output.log(`Running Build Command: ${cmd(buildState.buildCommand)}`);
@@ -213,37 +236,55 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  client.output.log(
-    `Moving output from ${param(
-      buildState.outputDirectory || '.next'
-    )} to ${param(OUTPUT_DIR)}`
-  );
-  if (typeof buildState.outputDirectory !== 'string') {
-    client.output.error(
-      `Could not determine output directory. Please run ${getCommandName(
-        'pull'
-      )}.\n`
+  if (!fs.existsSync(join(cwd, OUTPUT_DIR))) {
+    let outputDir = join(OUTPUT_DIR, 'static');
+    let distDir = await framework.getFsOutputDir(cwd);
+    if (framework.slug === 'nextjs') {
+      outputDir = OUTPUT_DIR;
+    }
+    const copyStamp = stamp();
+    await fs.ensureDir(join(cwd, outputDir));
+    const relativeDistDir = relative(cwd, distDir);
+    client.output.spinner(
+      `Copying files from ${param(distDir)} to ${param(outputDir)}`
     );
-    return 1;
+    const files = await glob(join(relativeDistDir, '**'), {
+      ignore: [
+        '**/node_modules/**',
+        '.vercel/**',
+        '_middleware.ts',
+        '_middleware.mts',
+        '_middleware.cts',
+        '_middleware.mjs',
+        '_middleware.cjs',
+        '_middleware.js',
+        'api/**',
+        '.git/**',
+      ],
+      nodir: true,
+      dot: true,
+      cwd,
+      absolute: true,
+    });
+    await Promise.all(
+      files.map(f =>
+        smartCopy(
+          client,
+          f,
+          distDir === '.'
+            ? join(cwd, outputDir, relative(cwd, f))
+            : f.replace(distDir, outputDir)
+        )
+      )
+    );
+    client.output.stopSpinner();
+    client.output.log(
+      `Copied ${files.length.toLocaleString()} files from ${param(
+        distDir
+      )} to ${param(outputDir)} ${copyStamp()}`
+    );
   }
-
-  const maybeOutputDir = await framework?.getOutputDirName(cwd);
-  const realOutputDir = buildState.outputDirectory
-    ? join(cwd, buildState.outputDirectory)
-    : maybeOutputDir;
-
-  if (realOutputDir) {
-    await fs.pathExists(realOutputDir);
-    // Move to .output
-    await fs.remove(join(cwd, OUTPUT_DIR));
-    await fs.move(realOutputDir, join(cwd, OUTPUT_DIR));
-  }
-
-  client.output.log(
-    `Moved ${param(buildState.outputDirectory || '.next')} to ${param(
-      OUTPUT_DIR
-    )}`
-  );
+  // @todo generate manifests if there is no .output
 
   // Build Plugins
   if (plugins?.buildPlugins && plugins.buildPlugins.length > 0) {
@@ -366,4 +407,37 @@ async function loadCliPlugins(client: Client, cwd: string) {
 
     return { pluginCount, preBuildPlugins, buildPlugins };
   }
+}
+
+async function linkOrCopy(existingPath: string, newPath: string) {
+  try {
+    await fs.createLink(existingPath, newPath);
+  } catch (err: any) {
+    // eslint-disable-line
+    // If a hard link to the same file already exists
+    // then trying to copy it will make an empty file from it.
+    if (err['code'] === 'EEXIST') return;
+    // In some VERY rare cases (1 in a thousand), hard-link creation fails on Windows.
+    // In that case, we just fall back to copying.
+    // This issue is reproducible with "pnpm add @material-ui/icons@4.9.1"
+    await fs.copyFile(existingPath, newPath);
+  }
+}
+
+async function smartCopy(client: Client, from: string, to: string) {
+  sema.acquire();
+  try {
+    client.output.debug(`Copying from ${from} to ${to}`);
+    await linkOrCopy(from, to);
+  } finally {
+    sema.release();
+  }
+}
+
+async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    ogGlob(pattern, options, (err, files) => {
+      err ? reject(err) : resolve(files);
+    });
+  });
 }

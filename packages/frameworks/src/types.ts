@@ -154,6 +154,11 @@ export interface Framework {
    * Function that returns the name of the directory that the framework outputs
    * its build results to. In some cases this is read from a configuration file.
    */
+  getFsOutputDir: (dirPrefix: string) => Promise<string>;
+  /**
+   * Function that returns the name of the directory that the framework outputs
+   * its STATIC build results to. In some cases this is read from a configuration file.
+   */
   getOutputDirName: (dirPrefix: string) => Promise<string>;
   /**
    * An array (or a function that returns an array) of default `Route` rules that
