@@ -283,8 +283,12 @@ export default async function main(client: Client) {
         distDir
       )} to ${param(outputDir)} ${copyStamp()}`
     );
+
+    client.output.log(`Generating build manifest`);
+    await fs.writeJSON(join(cwd, OUTPUT_DIR, 'build-manifest.json'), {
+      cache: [framework.cachePattern],
+    });
   }
-  // @todo generate manifests if there is no .output
 
   // Build Plugins
   if (plugins?.buildPlugins && plugins.buildPlugins.length > 0) {
