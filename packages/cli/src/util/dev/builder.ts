@@ -401,6 +401,7 @@ export async function getBuildMatches(
   const noMatches: Builder[] = [];
   const builds = vercelConfig.builds || [{ src: '**', use: '@vercel/static' }];
 
+  // console.log('builds', builds);
   for (const buildConfig of builds) {
     let { src = '**', use, config = {} } = buildConfig;
 
@@ -456,6 +457,7 @@ export async function getBuildMatches(
         buildResults: new Map(),
         buildTimestamp: 0,
       });
+      // console.log('matches', matches[matches.length - 1])
     }
   }
 

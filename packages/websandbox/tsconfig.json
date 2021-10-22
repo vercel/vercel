@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "module": "commonjs",
+    "target": "ES2019",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "jsx": "react",
+    "outDir": "./dist"
+  },
+  "exclude": ["dist", "./*.d.ts"]
+}

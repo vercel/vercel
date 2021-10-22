@@ -1,0 +1,34 @@
+{
+  "name": "@vercel/websandbox",
+  "version": "0.0.0-canary.0",
+  "main": "./dist/index.js",
+  "license": "MIT",
+  "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/websandbox"
+  },
+  "scripts": {
+    "build": "node build",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail",
+    "prepublishOnly": "node build"
+  },
+  "devDependencies": {
+    "@types/cookie": "0.4.1",
+    "@types/node": "16.11.6",
+    "@types/uuid": "8.3.1"
+  },
+  "dependencies": {
+    "@peculiar/webcrypto": "1.2.0",
+    "@types/ua-parser-js": "0.7.36",
+    "cookie": "0.4.1",
+    "formdata-node": "4.3.1",
+    "ua-parser-js": "1.0.1",
+    "uuid": "8.3.2",
+    "web-streams-polyfill": "3.1.1"
+  }
+}
