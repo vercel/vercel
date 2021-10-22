@@ -286,7 +286,14 @@ const main = async () => {
 
   let authConfig = null;
 
-  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'update'];
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'update',
+    'build',
+  ];
 
   if (authConfigExists) {
     try {
