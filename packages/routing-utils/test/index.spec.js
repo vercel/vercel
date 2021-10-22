@@ -95,6 +95,9 @@ describe('normalizeRoutes', () => {
           { type: 'query', key: 'authorized', value: 'yup' },
           { type: 'host', value: 'vercel.com' },
         ],
+        missing: [
+          { type: 'header', key: 'x-middleware-subrequest', value: 'secret' },
+        ],
       },
     ];
 

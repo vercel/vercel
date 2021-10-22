@@ -154,6 +154,7 @@ export const routesSchema = {
             type: 'number',
           },
           has: hasSchema,
+          missing: hasSchema,
         },
       },
       {
@@ -194,6 +195,7 @@ export const rewritesSchema = {
         maxLength: 4096,
       },
       has: hasSchema,
+      missing: hasSchema,
     },
   },
 } as const;
@@ -232,6 +234,7 @@ export const redirectsSchema = {
         maximum: 999,
       },
       has: hasSchema,
+      missing: hasSchema,
     },
   },
 } as const;
@@ -273,6 +276,7 @@ export const headersSchema = {
         },
       },
       has: hasSchema,
+      missing: hasSchema,
     },
   },
 } as const;

@@ -32,6 +32,7 @@ export type Source = {
   important?: boolean;
   status?: number;
   has?: HasField;
+  missing?: HasField;
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;
@@ -83,6 +84,7 @@ export interface Rewrite {
   source: string;
   destination: string;
   has?: HasField;
+  missing?: HasField;
 }
 
 export interface Redirect {
@@ -91,12 +93,14 @@ export interface Redirect {
   permanent?: boolean;
   statusCode?: number;
   has?: HasField;
+  missing?: HasField;
 }
 
 export interface Header {
   source: string;
   headers: HeaderKeyValue[];
   has?: HasField;
+  missing?: HasField;
 }
 
 export interface HeaderKeyValue {
