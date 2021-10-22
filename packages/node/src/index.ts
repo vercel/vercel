@@ -22,16 +22,12 @@ import { nodeFileTrace } from '@vercel/nft';
 import {
   File,
   Files,
-  Meta,
   PrepareCacheOptions,
-  Config,
   StartDevServerOptions,
   StartDevServerResult,
   glob,
   FileBlob,
   FileFsRef,
-  //runNpmInstall,
-  //runPackageJsonScript,
   getNodeVersion,
   getSpawnOptions,
   shouldServe,
@@ -54,11 +50,8 @@ export {
 } from './types';
 
 interface DownloadOptions {
-  //files: Files;
   entrypoint: string;
   workPath: string;
-  config: Config;
-  meta: Meta;
 }
 
 interface PortInfo {
@@ -84,17 +77,10 @@ const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support.js';
 async function downloadInstallAndBundle({
   entrypoint,
   workPath,
-  config,
-  meta,
 }: DownloadOptions) {
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
-  const nodeVersion = await getNodeVersion(
-    entrypointFsDirname,
-    undefined,
-    config,
-    meta
-  );
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
+  const nodeVersion = await getNodeVersion(entrypointFsDirname);
+  const spawnOpts = getSpawnOptions({}, nodeVersion);
 
   // TODO NATE: Do we want to run `npm install` in this case?
   // If there's only the root `package.json` then we can probably skip,
@@ -111,7 +97,6 @@ async function downloadInstallAndBundle({
 
   return {
     entrypointPath: join(workPath, dirname(entrypoint)),
-    entrypointFsDirname,
     nodeVersion,
     spawnOpts,
   };
@@ -129,8 +114,7 @@ function renameTStoJS(path: string) {
 
 async function compile(
   baseDir: string,
-  entrypointPath: string,
-  config: Config
+  entrypointPath: string
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -195,7 +179,7 @@ async function compile(
       processCwd: baseDir,
       ts: true,
       mixedModules: true,
-      ignore: config.excludeFiles,
+      //ignore: config.excludeFiles,
       readFile(fsPath: string): Buffer | string | null {
         const relPath = relative(baseDir, fsPath);
         const cached = sourceCache.get(relPath);
@@ -321,16 +305,11 @@ async function compile(
   };
 }
 
-function getAWSLambdaHandler(entrypoint: string, config: Config): string {
-  if (typeof config.awsLambdaHandler === 'string') {
-    return config.awsLambdaHandler;
-  }
-
+function getAWSLambdaHandler(entrypoint: string): string {
   if (process.env.NODEJS_AWS_HANDLER_NAME) {
     const { dir, name } = parsePath(entrypoint);
     return `${join(dir, name)}.${process.env.NODEJS_AWS_HANDLER_NAME}`;
   }
-
   return '';
 }
 
@@ -343,8 +322,6 @@ export async function build() {
 }
 
 export async function buildEntrypoint(entrypoint: string) {
-  const meta: Meta = {};
-  const config: Config = {};
   const baseDir = process.cwd();
   const outputPath = join(baseDir, '.output');
   const { dir, name } = parsePath(entrypoint);
@@ -354,14 +331,11 @@ export async function buildEntrypoint(entrypoint: string) {
   console.log(`Compiling "${entrypoint}" to "${workPath}"`);
 
   const shouldAddHelpers = process.env.NODEJS_HELPERS !== '0';
-  const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
+  const awsLambdaHandler = getAWSLambdaHandler(entrypoint);
 
-  //const { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts } =
   const { nodeVersion } = await downloadInstallAndBundle({
     entrypoint,
     workPath,
-    config,
-    meta,
   });
   const entrypointPath = join(baseDir, entrypoint);
 
@@ -378,8 +352,7 @@ export async function buildEntrypoint(entrypoint: string) {
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
     baseDir,
-    entrypointPath,
-    config
+    entrypointPath
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
