@@ -23,6 +23,7 @@ const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
 export const VERCEL_DIR = '.vercel';
+export const VERCEL_OUTPUT_DIR = '.output';
 export const VERCEL_DIR_FALLBACK = '.now';
 export const VERCEL_DIR_README = 'README.txt';
 export const VERCEL_DIR_PROJECT = 'project.json';
@@ -246,12 +247,16 @@ export async function linkFolderToProject(
     const gitIgnore = await readFile(gitIgnorePath, 'utf8').catch(() => null);
     const EOL = gitIgnore && gitIgnore.includes('\r\n') ? '\r\n' : os.EOL;
 
-    if (!gitIgnore || !gitIgnore.split(EOL).includes(VERCEL_DIR)) {
+    if (
+      !gitIgnore ||
+      !gitIgnore.split(EOL).includes(VERCEL_DIR) ||
+      !gitIgnore.split(EOL).includes(VERCEL_OUTPUT_DIR)
+    ) {
       await writeFile(
         gitIgnorePath,
         gitIgnore
-          ? `${gitIgnore}${EOL}${VERCEL_DIR}${EOL}`
-          : `${VERCEL_DIR}${EOL}`
+          ? `${gitIgnore}${EOL}${VERCEL_DIR}${EOL}${VERCEL_OUTPUT_DIR}${EOL}`
+          : `${VERCEL_DIR}${EOL}${VERCEL_OUTPUT_DIR}${EOL}`
       );
       isGitIgnoreUpdated = true;
     }
