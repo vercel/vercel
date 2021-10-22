@@ -134,7 +134,6 @@ async function compile(
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
-  watch: string[];
 }> {
   const inputFiles = new Set<string>([entrypointPath]);
   const preparedFiles: Files = {};
@@ -319,7 +318,6 @@ async function compile(
   return {
     preparedFiles,
     shouldAddSourcemapSupport,
-    watch: fileList,
   };
 }
 
@@ -349,13 +347,11 @@ export async function buildEntrypoint(entrypoint: string) {
   const config: Config = {};
   const baseDir = process.cwd();
   const outputPath = join(baseDir, '.output');
-  const entrypointWithoutExt = join(
-    dirname(entrypoint),
-    basename(entrypoint, extname(entrypoint))
-  );
+  const { dir, name } = parsePath(entrypoint);
+  const entrypointWithoutExt = join(dir, name, name === 'index' ? '' : 'index');
   const workPath = join(outputPath, 'server/pages', entrypointWithoutExt);
   await fsp.mkdir(workPath, { recursive: true });
-  console.log(`Compiling ${entrypoint} to ${workPath}`);
+  console.log(`Compiling "${entrypoint}" to "${workPath}"`);
 
   const shouldAddHelpers = process.env.NODEJS_HELPERS !== '0';
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
