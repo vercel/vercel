@@ -393,20 +393,33 @@ const main = async () => {
       } else if (commands.has(singular)) {
         alternative = singular;
       }
-      console.error(
-        error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
-            `\nIf you wish to deploy the ${fileType} ${param(
-              targetOrSubcommand
-            )}, first run "cd ${targetOrSubcommand}". ` +
+      if (targetOrSubcommand === 'build') {
+        output.note(
+          `If you wish to deploy the ${fileType} ${param(
+            targetOrSubcommand
+          )}, run ${getCommandName('deploy build')}.` +
             (alternative
               ? `\nIf you wish to use the subcommand ${param(
                   targetOrSubcommand
                 )}, use ${param(alternative)} instead.`
               : '')
-        )
-      );
-      return 1;
+        );
+      } else {
+        console.error(
+          error(
+            `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
+              `\nIf you wish to deploy the ${fileType} ${param(
+                targetOrSubcommand
+              )}, first run "cd ${targetOrSubcommand}". ` +
+              (alternative
+                ? `\nIf you wish to use the subcommand ${param(
+                    targetOrSubcommand
+                  )}, use ${param(alternative)} instead.`
+                : '')
+          )
+        );
+        return 1;
+      }
     }
 
     if (subcommandExists) {
