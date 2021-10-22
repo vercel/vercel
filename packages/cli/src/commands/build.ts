@@ -295,7 +295,7 @@ export default async function main(client: Client) {
         `Generating build manifest: ${param(buildManifestPath)}`
       );
       await fs.writeJSON(buildManifestPath, {
-        cache: [framework.cachePattern],
+        cache: framework.cachePattern ? [framework.cachePattern] : [],
       });
     }
 
@@ -307,11 +307,11 @@ export default async function main(client: Client) {
         version: 3,
         pages404: true,
         basePath: '',
-        redirects: framework.defaultRedirects,
-        headers: framework.defaultHeaders,
+        redirects: framework.defaultRedirects ?? [],
+        headers: framework.defaultHeaders ?? [],
         dynamicRoutes: [],
         dataRoutes: [],
-        rewrites: framework.defaultRewrites,
+        rewrites: framework.defaultRewrites ?? [],
       });
     }
   }
