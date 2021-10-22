@@ -30,6 +30,7 @@ import {
   readProjectSettings,
 } from '../util/projects/project-settings';
 import pull from './pull';
+import cliPkgJson from '../util/pkg';
 
 const sema = new Sema(16, {
   capacity: 100,
@@ -399,44 +400,43 @@ export async function runPackageJsonScript(
 
 async function loadCliPlugins(client: Client, cwd: string) {
   const { packageJson } = await scanParentDirs(cwd, true);
-  if (packageJson) {
-    let pluginCount = 0;
-    const preBuildPlugins = [];
-    const buildPlugins = [];
 
-    const deps = [
-      ...Object.keys(packageJson.dependencies || {}),
-      ...Object.keys(packageJson.devDependencies || {}),
-    ].filter(dep => dep.startsWith(VERCEL_PLUGIN_PREFIX));
+  let pluginCount = 0;
+  const preBuildPlugins = [];
+  const buildPlugins = [];
+  const deps = [
+    ...Object.keys(packageJson?.dependencies || {}),
+    ...Object.keys(packageJson?.devDependencies || {}),
+    ...Object.keys(cliPkgJson.dependencies),
+  ].filter(dep => dep.startsWith(VERCEL_PLUGIN_PREFIX));
 
-    for (let dep of deps) {
-      pluginCount++;
-      const resolved = require.resolve(dep, {
-        paths: [cwd, process.cwd()],
-      });
-      let plugin;
-      try {
-        plugin = require(resolved);
-        if (typeof plugin.preBuild === 'function') {
-          preBuildPlugins.push({
-            plugin,
-            name: dep,
-          });
-        }
-        if (typeof plugin.build === 'function') {
-          buildPlugins.push({
-            plugin,
-            name: dep,
-          });
-        }
-      } catch (error) {
-        client.output.error(`Failed to import ${code(dep)}`);
-        throw error;
+  for (let dep of deps) {
+    pluginCount++;
+    const resolved = require.resolve(dep, {
+      paths: [cwd, process.cwd()],
+    });
+    let plugin;
+    try {
+      plugin = require(resolved);
+      if (typeof plugin.preBuild === 'function') {
+        preBuildPlugins.push({
+          plugin,
+          name: dep,
+        });
       }
+      if (typeof plugin.build === 'function') {
+        buildPlugins.push({
+          plugin,
+          name: dep,
+        });
+      }
+    } catch (error) {
+      client.output.error(`Failed to import ${code(dep)}`);
+      throw error;
     }
-
-    return { pluginCount, preBuildPlugins, buildPlugins };
   }
+
+  return { pluginCount, preBuildPlugins, buildPlugins };
 }
 
 async function linkOrCopy(existingPath: string, newPath: string) {
