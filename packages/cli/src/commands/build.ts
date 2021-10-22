@@ -31,6 +31,7 @@ import {
 } from '../util/projects/project-settings';
 import pull from './pull';
 import cliPkgJson from '../util/pkg';
+import { getColorForPkgName } from '../util/output/color-name-cache';
 
 const sema = new Sema(16, {
   capacity: 100,
@@ -169,6 +170,9 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  const tmpLog = console.log;
+  const tmpErr = console.error;
+
   if (plugins?.pluginCount && plugins?.pluginCount > 0) {
     client.output.log(
       `Loaded ${plugins.pluginCount} CLI ${pluralize(
@@ -185,21 +189,30 @@ export default async function main(client: Client) {
         )} before Build Command:`
       );
       for (let item of plugins.preBuildPlugins) {
-        const { name, plugin } = item;
+        const { name, plugin, color } = item;
         if (typeof plugin.preBuild === 'function') {
           const pluginStamp = stamp();
-          client.output.log(`Running ${code(name + '.preBuild')}`);
+          const fullName = name + '.preBuild';
+          const prefix = chalk.gray('> ') + color(fullName + ':');
+          client.output.debug(`Running ${fullName}:`);
           try {
+            console.log = (message?: string, ...args: any[]) =>
+              tmpLog(prefix, message, ...args);
+            console.error = (message?: string, ...args: any[]) =>
+              tmpErr(prefix, message, ...args);
             await plugin.preBuild();
-            client.output.log(
-              `Completed ${code(name + '.preBuild')} ${chalk.dim(
-                `${pluginStamp()}`
-              )}`
+            client.output.debug(
+              `Completed ${fullName} ${chalk.dim(`${pluginStamp()}`)}`
             );
           } catch (error) {
-            client.output.error(`${code(name + '.preBuild')} failed`);
+            client.output.error(`${prefix} failed`);
             handleError(error, { debug });
             return 1;
+          } finally {
+            console.log = (message?: string, ...args: any[]) =>
+              tmpLog(message, ...args);
+            console.error = (message?: string, ...args: any[]) =>
+              tmpErr(message, ...args);
           }
         }
       }
@@ -325,21 +338,30 @@ export default async function main(client: Client) {
       )} after Build Command`
     );
     for (let item of plugins.buildPlugins) {
-      const { name, plugin } = item;
+      const { name, plugin, color } = item;
       if (typeof plugin.build === 'function') {
         const pluginStamp = stamp();
-        client.output.log(`Running ${code(name + '.build')}`);
+        const fullName = name + '.build';
+        const prefix = chalk.gray('> ') + color(fullName + ':');
+        client.output.debug(`Running ${fullName}:`);
         try {
+          console.log = (message?: string, ...args: any[]) =>
+            tmpLog(prefix, message, ...args);
+          console.error = (message?: string, ...args: any[]) =>
+            tmpErr(prefix, message, ...args);
           await plugin.build();
-          client.output.log(
-            `Completed ${code(name + '.build')} ${chalk.dim(
-              `${pluginStamp()}`
-            )}`
+          client.output.debug(
+            `Completed ${fullName} ${chalk.dim(`${pluginStamp()}`)}`
           );
         } catch (error) {
-          client.output.error(`${code(name + '.build')} failed`);
+          client.output.error(`${prefix} failed`);
           handleError(error, { debug });
           return 1;
+        } finally {
+          console.log = (message?: string, ...args: any[]) =>
+            tmpLog(message, ...args);
+          console.error = (message?: string, ...args: any[]) =>
+            tmpErr(message, ...args);
         }
       }
     }
@@ -417,16 +439,19 @@ async function loadCliPlugins(client: Client, cwd: string) {
     let plugin;
     try {
       plugin = require(resolved);
+      const color = getColorForPkgName(dep);
       if (typeof plugin.preBuild === 'function') {
         preBuildPlugins.push({
           plugin,
           name: dep,
+          color,
         });
       }
       if (typeof plugin.build === 'function') {
         buildPlugins.push({
           plugin,
           name: dep,
+          color,
         });
       }
     } catch (error) {
