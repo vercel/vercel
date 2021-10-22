@@ -48,7 +48,6 @@ const fields: {
   name: string;
   value: keyof ProjectLinkAndSettings['settings'];
 }[] = [
-  { name: 'Directory Listing', value: 'directoryListing' },
   { name: 'Build Command', value: 'buildCommand' },
   { name: 'Output Directory', value: 'outputDirectory' },
   { name: 'Root Directory', value: 'rootDirectory' },
