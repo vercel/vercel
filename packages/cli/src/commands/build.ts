@@ -32,6 +32,7 @@ import {
 import pull from './pull';
 import cliPkgJson from '../util/pkg';
 import { getColorForPkgName } from '../util/output/color-name-cache';
+import { emoji, prependEmoji } from '../util/emoji';
 
 const sema = new Sema(16, {
   capacity: 100,
@@ -57,6 +58,7 @@ const fields: {
 
 export default async function main(client: Client) {
   let argv;
+  const buildStamp = stamp();
   try {
     argv = getArgs(client.argv.slice(2), {
       '--debug': Boolean,
@@ -193,7 +195,7 @@ export default async function main(client: Client) {
         if (typeof plugin.preBuild === 'function') {
           const pluginStamp = stamp();
           const fullName = name + '.preBuild';
-          const prefix = chalk.gray('> ') + color(fullName + ':');
+          const prefix = chalk.gray('  > ') + color(fullName + ':');
           client.output.debug(`Running ${fullName}:`);
           try {
             console.log = (message?: string, ...args: any[]) =>
@@ -335,14 +337,14 @@ export default async function main(client: Client) {
       `Running ${plugins.pluginCount} CLI ${pluralize(
         'Plugin',
         plugins.pluginCount
-      )} after Build Command`
+      )} after Build Command:`
     );
     for (let item of plugins.buildPlugins) {
       const { name, plugin, color } = item;
       if (typeof plugin.build === 'function') {
         const pluginStamp = stamp();
         const fullName = name + '.build';
-        const prefix = chalk.gray('> ') + color(fullName + ':');
+        const prefix = chalk.gray('  > ') + color(fullName + ':');
         client.output.debug(`Running ${fullName}:`);
         try {
           console.log = (message?: string, ...args: any[]) =>
@@ -367,7 +369,14 @@ export default async function main(client: Client) {
     }
   }
 
-  client.output.success('Build completed');
+  client.output.print(
+    `${prependEmoji(
+      `Build Completed in ${chalk.bold(OUTPUT_DIR)} ${chalk.gray(
+        buildStamp()
+      )}`,
+      emoji('success')
+    )}\n`
+  );
 
   return 0;
 }
