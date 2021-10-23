@@ -11842,10 +11842,10 @@ vary@~1.1.2:
   resolved "https://registry.yarnpkg.com/vary/-/vary-1.1.2.tgz#2299f02c6ded30d4a5961b0b9f74524a18f634fc"
   integrity sha1-IpnwLG3tMNSllhsLn3RSShj2NPw=
 
-vercel-plugin-middleware@0.0.0-canary.1:
-  version "0.0.0-canary.1"
-  resolved "https://registry.yarnpkg.com/vercel-plugin-middleware/-/vercel-plugin-middleware-0.0.0-canary.1.tgz#fce917cbc7effde1e1bac03b2a5f8c2b759cd27f"
-  integrity sha512-LJHJTUOeBtPbufJOUc0RSJakW4ndvhl/C8FYcM9JqaCNQ6ISjZvG9lsnjZ2wIo0sDNP0CEGJ3aB9yME8/2w6vA==
+vercel-plugin-middleware@0.0.0-canary.2:
+  version "0.0.0-canary.2"
+  resolved "https://registry.yarnpkg.com/vercel-plugin-middleware/-/vercel-plugin-middleware-0.0.0-canary.2.tgz#0906820c1d089a31ea043db58a6d8f4dac4ac791"
+  integrity sha512-oT86jKmXIKxHToRmNsdpz9U4khDi/T1ALf4BoeIclPdVmiW6Qr/OB3UMGYzRBCx2az8+/siNs5yNdTai7ijMZw==
   dependencies:
     esbuild "0.13.8"
 
