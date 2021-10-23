@@ -172,8 +172,20 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const tmpLog = console.log;
-  const tmpErr = console.error;
+  const origLog = console.log;
+  const origErr = console.error;
+  const prefixedLog = (
+    prefix: string,
+    args: any[],
+    logger: (...args: any[]) => void
+  ) => {
+    if (typeof args[0] === 'string') {
+      args[0] = `${prefix} ${args[0]}`;
+    } else {
+      args.unshift(prefix);
+    }
+    return logger(...args);
+  };
 
   if (plugins?.pluginCount && plugins?.pluginCount > 0) {
     client.output.log(
@@ -198,10 +210,10 @@ export default async function main(client: Client) {
           const prefix = chalk.gray('  > ') + color(fullName + ':');
           client.output.debug(`Running ${fullName}:`);
           try {
-            console.log = (message?: string, ...args: any[]) =>
-              tmpLog(prefix, message, ...args);
-            console.error = (message?: string, ...args: any[]) =>
-              tmpErr(prefix, message, ...args);
+            console.log = (...args: any[]) =>
+              prefixedLog(prefix, args, origLog);
+            console.error = (...args: any[]) =>
+              prefixedLog(prefix, args, origErr);
             await plugin.preBuild();
             client.output.debug(
               `Completed ${fullName} ${chalk.dim(`${pluginStamp()}`)}`
@@ -211,10 +223,8 @@ export default async function main(client: Client) {
             handleError(error, { debug });
             return 1;
           } finally {
-            console.log = (message?: string, ...args: any[]) =>
-              tmpLog(message, ...args);
-            console.error = (message?: string, ...args: any[]) =>
-              tmpErr(message, ...args);
+            console.log = origLog;
+            console.error = origErr;
           }
         }
       }
@@ -347,10 +357,9 @@ export default async function main(client: Client) {
         const prefix = chalk.gray('  > ') + color(fullName + ':');
         client.output.debug(`Running ${fullName}:`);
         try {
-          console.log = (message?: string, ...args: any[]) =>
-            tmpLog(prefix, message, ...args);
-          console.error = (message?: string, ...args: any[]) =>
-            tmpErr(prefix, message, ...args);
+          console.log = (...args: any[]) => prefixedLog(prefix, args, origLog);
+          console.error = (...args: any[]) =>
+            prefixedLog(prefix, args, origErr);
           await plugin.build();
           client.output.debug(
             `Completed ${fullName} ${chalk.dim(`${pluginStamp()}`)}`
@@ -360,10 +369,8 @@ export default async function main(client: Client) {
           handleError(error, { debug });
           return 1;
         } finally {
-          console.log = (message?: string, ...args: any[]) =>
-            tmpLog(message, ...args);
-          console.error = (message?: string, ...args: any[]) =>
-            tmpErr(message, ...args);
+          console.log = origLog;
+          console.error = origLog;
         }
       }
     }
