@@ -1666,7 +1666,7 @@ export const frameworks = [
     name: 'Other',
     slug: null,
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/other.svg',
-    description: 'No framework or a unoptimized framework.',
+    description: 'No framework or an unoptimized framework.',
     settings: {
       installCommand: {
         placeholder: '`yarn install` or `npm install`',
