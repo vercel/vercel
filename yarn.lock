@@ -11849,10 +11849,10 @@ vercel-plugin-middleware@0.0.0-canary.2:
   dependencies:
     esbuild "0.13.8"
 
-vercel-plugin-node@1.12.2-canary.4:
-  version "1.12.2-canary.4"
-  resolved "https://registry.yarnpkg.com/vercel-plugin-node/-/vercel-plugin-node-1.12.2-canary.4.tgz#19d562c1d08fc1a60883775099352db7155f0afc"
-  integrity sha512-stTEY4O/9Y27C+anjJI1PU5nv/8eZW//dqprsqdUmi/KrPrmo6ZiXAoCt4tQaOGXe4nU2QbmK2Wm/W0xzh9GQQ==
+vercel-plugin-node@1.12.2-plugin.5:
+  version "1.12.2-plugin.5"
+  resolved "https://registry.yarnpkg.com/vercel-plugin-node/-/vercel-plugin-node-1.12.2-plugin.5.tgz#7c08221a019992512bed0673a4bc06977b023af8"
+  integrity sha512-Cz2ssrP6Zm+JEiyMX2MEldYVYEG/FQIfFr5WFjaDHzCcRzsR467424y7uO81vUsSy7J9t4293pcUQGK/z14p9Q==
   dependencies:
     "@types/node" "*"
     ts-node "8.9.1"
