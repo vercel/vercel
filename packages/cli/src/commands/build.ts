@@ -319,16 +319,17 @@ export default async function main(client: Client) {
       client.output.debug(
         `Generating build manifest: ${param(buildManifestPath)}`
       );
-      await fs.writeJSON(buildManifestPath, {
+      const buildManifest = {
         cache: framework.cachePattern ? [framework.cachePattern] : [],
-      });
+      };
+      await fs.writeJSON(buildManifestPath, buildManifest, { spaces: 2 });
     }
 
     if (!fs.existsSync(routesManifestPath)) {
       client.output.debug(
         `Generating routes manifest: ${param(routesManifestPath)}`
       );
-      await fs.writeJSON(join(cwd, OUTPUT_DIR, 'routes-manifest.json'), {
+      const routesManifest = {
         version: 3,
         pages404: true,
         basePath: '',
@@ -337,7 +338,12 @@ export default async function main(client: Client) {
         dynamicRoutes: [],
         dataRoutes: [],
         rewrites: framework.defaultRewrites ?? [],
-      });
+      };
+      await fs.writeJSON(
+        join(cwd, OUTPUT_DIR, 'routes-manifest.json'),
+        routesManifest,
+        { spaces: 2 }
+      );
     }
   }
 
