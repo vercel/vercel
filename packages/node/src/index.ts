@@ -421,6 +421,7 @@ export async function buildEntrypoint(entrypoint: string) {
   } catch (_err) {
     // ignore...
   }
+  if (!functionsManifest.version) functionsManifest.version = 1;
   if (!functionsManifest.pages) functionsManifest.pages = {};
   functionsManifest.pages[entrypointWithoutExt] = {
     handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
