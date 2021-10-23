@@ -443,7 +443,7 @@ async function loadCliPlugins(client: Client, cwd: string) {
   for (let dep of deps) {
     pluginCount++;
     const resolved = require.resolve(dep, {
-      paths: [cwd, process.cwd(), join(__dirname, '../node_modules')],
+      paths: [cwd, process.cwd(), __dirname],
     });
     let plugin;
     try {
