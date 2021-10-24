@@ -35,11 +35,13 @@ import {
   isSymbolicLink,
   walkParentDirs,
 } from '@vercel/build-utils';
+import { getConfig } from '@vercel/static-config';
 
 // @ts-ignore - copied to the `dist` output as-is
 import { makeVercelLauncher, makeAwsLauncher } from './launcher.js';
 
 import { Register, register } from './typescript';
+import { Project } from 'ts-morph';
 
 export { shouldServe };
 export {
@@ -315,8 +317,18 @@ function getAWSLambdaHandler(entrypoint: string): string {
 
 // TODO NATE: turn this into a `@vercel/plugin-utils` helper function?
 export async function build() {
+  const project = new Project();
   const entrypoints = await glob('api/**/*.[jt]s', process.cwd());
   for (const entrypoint of Object.keys(entrypoints)) {
+    const config = getConfig(project, entrypoint);
+
+    // No config exported means "node", but if there is a config
+    // and "runtime" is defined, but it is not "node" then don't
+    // compile this file.
+    if (config?.runtime && config.runtime !== 'node') {
+      continue;
+    }
+
     await buildEntrypoint(entrypoint);
   }
 }
