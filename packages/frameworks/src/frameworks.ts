@@ -348,38 +348,43 @@ export const frameworks = [
       {
         source: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
         regex: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
-        headers: { 'cache-control': 'max-age=31536000, immutable' },
-        continue: true,
+        headers: [
+          { key: 'cache-control', value: 'max-age=31536000, immutable' },
+        ],
       },
       {
         source:
           '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
         regex:
           '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
-        headers: { 'cache-control': 'max-age=31536000, immutable' },
-        continue: true,
+        headers: [
+          { key: 'cache-control', value: 'max-age=31536000, immutable' },
+        ],
       },
       {
         source:
           '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
         regex:
           '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
-        headers: { 'cache-control': 'max-age=31536000, immutable' },
-        continue: true,
+        headers: [
+          { key: 'cache-control', value: 'max-age=31536000, immutable' },
+        ],
       },
       {
         source:
           '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
         regex:
           '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
-        headers: { 'cache-control': 'max-age=31536000, immutable' },
-        continue: true,
+        headers: [
+          { key: 'cache-control', value: 'max-age=31536000, immutable' },
+        ],
       },
       {
         source: '^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$',
         regex: '^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$',
-        headers: { 'cache-control': 'max-age=31536000, immutable' },
-        continue: true,
+        headers: [
+          { key: 'cache-control', value: 'max-age=31536000, immutable' },
+        ],
       },
     ],
     defaultRedirects: [
@@ -737,14 +742,14 @@ export const frameworks = [
       {
         source: '^/[^/]*\\.(js|txt|ico|json)',
         regex: '^/[^/]*\\.(js|txt|ico|json)',
-        headers: { 'cache-control': 'max-age=300' },
-        continue: true,
+        headers: [{ key: 'cache-control', value: 'max-age=300' }],
       },
       {
         source: '^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*',
         regex: '^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*',
-        headers: { 'cache-control': 'max-age=31536000, immutable' },
-        continue: true,
+        headers: [
+          { key: 'cache-control', value: 'max-age=31536000, immutable' },
+        ],
       },
     ],
     defaultRewrites: [
@@ -1145,20 +1150,19 @@ export const frameworks = [
       {
         source: '/static/(.*)',
         regex: '/static/(.*)',
-        headers: { 'cache-control': 's-maxage=31536000, immutable' },
-        continue: true,
+        headers: [
+          { key: 'cache-control', value: 's-maxage=31536000, immutable' },
+        ],
       },
       {
         source: '/service-worker.js',
         regex: '/service-worker.js',
-        headers: { 'cache-control': 's-maxage=0' },
-        continue: true,
+        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
       },
       {
         source: '/(.*)',
         regex: '/(.*)',
-        headers: { 'cache-control': 's-maxage=0' },
-        continue: true,
+        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
       },
     ],
     defaultRedirects: [
@@ -1254,20 +1258,19 @@ export const frameworks = [
       {
         source: '/static/(.*)',
         regex: '/static/(.*)',
-        headers: { 'cache-control': 's-maxage=31536000, immutable' },
-        continue: true,
+        headers: [
+          { key: 'cache-control', value: 's-maxage=31536000, immutable' },
+        ],
       },
       {
         source: '/service-worker.js',
         regex: '/service-worker.js',
-        headers: { 'cache-control': 's-maxage=0' },
-        continue: true,
+        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
       },
       {
         source: '/(.*)',
         regex: '/(.*)',
-        headers: { 'cache-control': 's-maxage=0' },
-        continue: true,
+        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
       },
     ],
     defaultRedirects: [
@@ -1480,7 +1483,9 @@ export const frameworks = [
       {
         source: '/_saber/.*',
         regex: '/_saber/.*',
-        headers: { 'cache-control': 'max-age=31536000, immutable' },
+        headers: [
+          { key: 'cache-control', value: 'max-age=31536000, immutable' },
+        ],
       },
     ],
     defaultRedirects: [
@@ -1558,20 +1563,19 @@ export const frameworks = [
       {
         source: '/assets/(.*)',
         regex: '/assets/(.*)',
-        headers: { 'cache-control': 'max-age=2592000' },
-        continue: true,
+        headers: [{ key: 'cache-control', value: 'max-age=2592000' }],
       },
       {
         source: '/build/p-.*',
         regex: '/build/p-.*',
-        headers: { 'cache-control': 'max-age=31536000, immutable' },
-        continue: true,
+        headers: [
+          { key: 'cache-control', value: 'max-age=31536000, immutable' },
+        ],
       },
       {
         source: '/sw.js',
         regex: '/sw.js',
-        headers: { 'cache-control': 'no-cache' },
-        continue: true,
+        headers: [{ key: 'cache-control', value: 'no-cache' }],
       },
     ],
     defaultRewrites: [
@@ -1995,8 +1999,9 @@ export const frameworks = [
       {
         source: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$',
         regex: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$',
-        headers: { 'cache-control': 's-maxage=31536000, immutable' },
-        continue: true,
+        headers: [
+          { key: 'cache-control', value: 's-maxage=31536000, immutable' },
+        ],
       },
     ],
   },
