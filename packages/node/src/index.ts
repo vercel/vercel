@@ -17,6 +17,7 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
+import { Project } from 'ts-morph';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
@@ -36,12 +37,12 @@ import {
   walkParentDirs,
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
+import { Register, register } from './typescript';
+import { pageToRoute } from './router/page-to-route.js';
+import { isDynamicRoute } from './router/is-dynamic.js';
 
 // @ts-ignore - copied to the `dist` output as-is
 import { makeVercelLauncher, makeAwsLauncher } from './launcher.js';
-
-import { Register, register } from './typescript';
-import { Project } from 'ts-morph';
 
 export { shouldServe };
 export {
@@ -337,8 +338,13 @@ export async function buildEntrypoint(entrypoint: string) {
   const baseDir = process.cwd();
   const outputPath = join(baseDir, '.output');
   const { dir, name } = parsePath(entrypoint);
-  const entrypointWithoutExt = join(dir, name, name === 'index' ? '' : 'index');
-  const workPath = join(outputPath, 'server/pages', entrypointWithoutExt);
+  const entrypointWithoutExt = join('/', dir, name);
+  const entrypointWithoutExtIndex = join(
+    dir,
+    name,
+    name === 'index' ? '' : 'index'
+  );
+  const workPath = join(outputPath, 'server/pages', entrypointWithoutExtIndex);
   await fsp.mkdir(workPath, { recursive: true });
   console.log(`Compiling "${entrypoint}" to "${workPath}"`);
 
@@ -435,7 +441,7 @@ export async function buildEntrypoint(entrypoint: string) {
   }
   if (!functionsManifest.version) functionsManifest.version = 1;
   if (!functionsManifest.pages) functionsManifest.pages = {};
-  functionsManifest.pages[entrypointWithoutExt] = {
+  functionsManifest.pages[entrypointWithoutExtIndex] = {
     handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
     runtime: nodeVersion.runtime,
   };
@@ -443,6 +449,26 @@ export async function buildEntrypoint(entrypoint: string) {
     functionsManifestPath,
     JSON.stringify(functionsManifest, null, 2)
   );
+
+  // Update the `routes-mainifest.json` file with the wildcard route
+  // when entrypoint is dynamic (i.e. `/api/[id].ts`).
+  if (isDynamicRoute(entrypointWithoutExt)) {
+    const routesManifestPath = join(outputPath, 'routes-manifest.json');
+    let routesManifest: any = {};
+    try {
+      routesManifest = JSON.parse(
+        await fsp.readFile(routesManifestPath, 'utf8')
+      );
+    } catch (_err) {
+      // ignore...
+    }
+    if (!routesManifest.dynamicRoutes) routesManifest.dynamicRoutes = [];
+    routesManifest.dynamicRoutes.push(pageToRoute(entrypointWithoutExt));
+    await fsp.writeFile(
+      routesManifestPath,
+      JSON.stringify(routesManifest, null, 2)
+    );
+  }
 }
 
 export async function prepareCache({
