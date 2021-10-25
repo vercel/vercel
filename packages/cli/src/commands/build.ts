@@ -447,11 +447,13 @@ async function loadCliPlugins(client: Client, cwd: string) {
   let pluginCount = 0;
   const preBuildPlugins = [];
   const buildPlugins = [];
-  const deps = [
-    ...Object.keys(packageJson?.dependencies || {}),
-    ...Object.keys(packageJson?.devDependencies || {}),
-    ...Object.keys(cliPkgJson.dependencies),
-  ].filter(dep => dep.startsWith(VERCEL_PLUGIN_PREFIX));
+  const deps = new Set(
+    [
+      ...Object.keys(packageJson?.dependencies || {}),
+      ...Object.keys(packageJson?.devDependencies || {}),
+      ...Object.keys(cliPkgJson.dependencies),
+    ].filter(dep => dep.startsWith(VERCEL_PLUGIN_PREFIX))
+  );
 
   for (let dep of deps) {
     pluginCount++;
