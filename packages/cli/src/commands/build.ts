@@ -382,13 +382,13 @@ export default async function main(client: Client) {
   }
 
   if (framework.slug === 'nextjs') {
-    const files = await glob(join('.output', '**', '*.nft.json'), {
+    const files = await glob(join(OUTPUT_DIR, '**', '*.nft.json'), {
       nodir: true,
       dot: true,
       cwd,
       absolute: true,
     });
-    await fs.mkdirp(join(cwd, '.output', 'inputs'));
+    await fs.mkdirp(join(cwd, OUTPUT_DIR, 'inputs'));
     for (let f of files) {
       client.output.debug(`Processing ${f}:`);
       const json = await fs.readJson(f);
@@ -399,10 +399,10 @@ export default async function main(client: Client) {
           parse(f).dir,
           typeof file === 'string' ? file : file.input
         );
-        if (!resolve(fullPath).includes('.output')) {
+        if (!resolve(fullPath).includes(OUTPUT_DIR)) {
           const { ext } = parse(file);
           const raw = await fs.readFile(resolve(fullPath));
-          const newFilePath = join('.output', 'inputs', hash(raw) + ext);
+          const newFilePath = join(OUTPUT_DIR, 'inputs', hash(raw) + ext);
           smartCopy(client, fullPath, newFilePath);
 
           newFilesList.push({
