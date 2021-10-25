@@ -280,16 +280,16 @@ export default async function main(client: Client) {
       },
       cwd: cwd,
     });
-  } else if (!fs.existsSync(join(cwd, 'package.json'))) {
-    // no package.json exists
-    result = true;
-  } else {
+  } else if (fs.existsSync(join(cwd, 'package.json'))) {
     result = await runPackageJsonScript(
       client,
       cwd,
       ['vercel-build', 'now-build', 'build'],
       spawnOpts
     );
+  } else {
+    // no package.json exists and no build command present
+    result = true;
   }
 
   if (!result) {
