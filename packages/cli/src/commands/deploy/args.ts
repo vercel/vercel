@@ -70,6 +70,7 @@ export const help = () => `
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --prod                         Create a production deployment
+    --prebuilt                     Only deploy prebuilt output
     -c, --confirm                  Confirm default options and skip questions
 
   ${chalk.dim('Examples:')}

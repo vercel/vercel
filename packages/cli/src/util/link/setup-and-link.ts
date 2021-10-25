@@ -164,6 +164,7 @@ export default async function setupAndLink(
         meta: {},
         deployStamp: stamp(),
         target: undefined,
+        prebuilt: false,
         skipAutoDetectionConfirmation: false,
       };
 
@@ -180,6 +181,7 @@ export default async function setupAndLink(
         createArgs,
         org,
         !isFile,
+        false, // prebuilt
         path
       );
 

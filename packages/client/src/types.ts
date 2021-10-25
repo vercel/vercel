@@ -11,6 +11,7 @@ export interface VercelClientOptions {
   token: string;
   path: string | string[];
   debug?: boolean;
+  prebuilt: boolean;
   teamId?: string;
   apiUrl?: string;
   force?: boolean;

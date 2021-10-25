@@ -79,6 +79,7 @@ export default async (client: Client) => {
       // the config property name.
       '--regions': String,
       '--prod': Boolean,
+      '--prebuilt': Boolean,
       '--confirm': Boolean,
       '-f': '--force',
       '-p': '--public',
@@ -404,6 +405,7 @@ export default async (client: Client) => {
 
   // build `target`
   let target;
+  const prebuilt = argv['--prebuilt'];
   if (argv['--target']) {
     const deprecatedTarget = argv['--target'];
 
@@ -469,6 +471,7 @@ export default async (client: Client) => {
       createArgs,
       org,
       !project && !isFile,
+      prebuilt,
       path
     );
 
@@ -502,6 +505,7 @@ export default async (client: Client) => {
         createArgs,
         org,
         false,
+        prebuilt,
         path
       );
     }

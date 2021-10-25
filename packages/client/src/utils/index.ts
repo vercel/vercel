@@ -73,12 +73,13 @@ const maybeRead = async function <T>(path: string, default_: T) {
 
 export async function buildFileTree(
   path: string | string[],
+  prebuilt: boolean,
   isDirectory: boolean,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
   const ignoreList: string[] = [];
   let fileList: string[];
-  let { ig, ignores } = await getVercelIgnore(path);
+  let { ig, ignores } = await getVercelIgnore(path, prebuilt);
 
   debug(`Found ${ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
@@ -109,7 +110,8 @@ export async function buildFileTree(
 }
 
 export async function getVercelIgnore(
-  cwd: string | string[]
+  cwd: string | string[],
+  prebuilt: boolean
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ignores: string[] = [
     '.hg',
@@ -136,8 +138,10 @@ export async function getVercelIgnore(
     '__pycache__',
     'venv',
     'CVS',
-    '.vercel_build_output',
   ];
+  if (!prebuilt) {
+    ignores.push('.output');
+  }
 
   const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
@@ -161,9 +165,9 @@ export async function getVercelIgnore(
 
   const ignoreFile = files.join('\n');
 
-  const ig = ignore().add(
-    `${ignores.join('\n')}\n${clearRelative(ignoreFile)}`
-  );
+  const ig = prebuilt
+    ? ignore().add(`${['*', '!.output'].join('\n')}\n`)
+    : ignore().add(`${ignores.join('\n')}\n${clearRelative(ignoreFile)}`);
 
   return { ig, ignores };
 }

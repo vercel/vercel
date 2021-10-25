@@ -44,6 +44,7 @@ export default async function processDeployment({
   deployStamp: () => string;
   quiet: boolean;
   nowConfig?: VercelConfig;
+  prebuilt: boolean;
   force?: boolean;
   withCache?: boolean;
   org: Org;
@@ -62,6 +63,7 @@ export default async function processDeployment({
     withCache,
     nowConfig,
     quiet,
+    prebuilt,
   } = args;
 
   const { debug } = output;
@@ -83,6 +85,7 @@ export default async function processDeployment({
     path: paths[0],
     force,
     withCache,
+    prebuilt,
     skipAutoDetectionConfirmation,
   };
 

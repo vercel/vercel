@@ -46,6 +46,7 @@ export interface CreateOptions {
   target?: string | null;
   deployStamp: () => string;
   projectSettings?: any;
+  prebuilt: boolean;
   skipAutoDetectionConfirmation?: boolean;
 }
 
@@ -120,6 +121,7 @@ export default class Now extends EventEmitter {
       forceNew = false,
       withCache = false,
       target = null,
+      prebuilt = false,
       deployStamp,
       projectSettings,
       skipAutoDetectionConfirmation,
@@ -165,6 +167,7 @@ export default class Now extends EventEmitter {
       isSettingUpProject,
       skipAutoDetectionConfirmation,
       cwd,
+      prebuilt,
     });
 
     if (deployment && deployment.warnings) {

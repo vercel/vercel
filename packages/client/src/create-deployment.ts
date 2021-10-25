@@ -18,7 +18,7 @@ export default function buildCreateDeployment() {
     deploymentOptions: DeploymentOptions = {},
     nowConfig: NowConfig = {}
   ): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
-    const { path } = clientOptions;
+    const { path, prebuilt } = clientOptions;
 
     const debug = createDebug(clientOptions.debug);
     const cwd = process.cwd();
@@ -76,6 +76,7 @@ export default function buildCreateDeployment() {
 
     let { fileList } = await buildFileTree(
       path,
+      prebuilt,
       clientOptions.isDirectory,
       debug
     );

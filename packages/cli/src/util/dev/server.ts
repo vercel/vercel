@@ -838,7 +838,7 @@ export default class DevServer {
       throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
     }
 
-    const { ig } = await getVercelIgnore(this.cwd);
+    const { ig } = await getVercelIgnore(this.cwd, false);
     this.filter = ig.createFilter();
 
     let address: string | null = null;

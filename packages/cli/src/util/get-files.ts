@@ -76,7 +76,7 @@ export async function staticFiles(
   const search = await glob(source, { cwd: path, absolute: true, dot: true });
 
   // Compile list of ignored patterns and files
-  const { ig } = await getVercelIgnore(path);
+  const { ig } = await getVercelIgnore(path, false);
   const filter = ig.createFilter();
 
   const prefixLength = path.length + 1;
@@ -164,7 +164,7 @@ async function explode(
       const all = await fs.readdir(file);
       /* eslint-disable no-use-before-define */
       const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
-      return (recursive as any) as Promise<string | null>;
+      return recursive as any as Promise<string | null>;
       /* eslint-enable no-use-before-define */
     }
     if (!s.isFile()) {
