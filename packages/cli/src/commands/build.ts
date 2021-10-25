@@ -10,18 +10,24 @@ import Sema from 'async-sema';
 import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
 import { assert } from 'console';
+import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import ogGlob from 'glob';
-import { isAbsolute, join, relative } from 'path';
+import { isAbsolute, join, parse, relative, resolve } from 'path';
 import pluralize from 'pluralize';
 import Client from '../util/client';
+import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
+import confirm from '../util/input/confirm';
 import { isSettingValue } from '../util/is-setting-value';
 import cmd from '../util/output/cmd';
 import code from '../util/output/code';
+import { getColorForPkgName } from '../util/output/color-name-cache';
+import logo from '../util/output/logo';
 import param from '../util/output/param';
 import stamp from '../util/output/stamp';
+import cliPkgJson from '../util/pkg';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import { findFramework } from '../util/projects/find-framework';
 import { VERCEL_DIR } from '../util/projects/link';
@@ -30,11 +36,6 @@ import {
   readProjectSettings,
 } from '../util/projects/project-settings';
 import pull from './pull';
-import cliPkgJson from '../util/pkg';
-import { getColorForPkgName } from '../util/output/color-name-cache';
-import { emoji, prependEmoji } from '../util/emoji';
-import logo from '../util/output/logo';
-import confirm from '../util/input/confirm';
 
 const sema = new Sema(16, {
   capacity: 100,
@@ -311,7 +312,7 @@ export default async function main(client: Client) {
     );
     const files = await glob(join(relativeDistDir, '**'), {
       ignore: [
-        '**/node_modules/**',
+        'node_modules/**',
         '.vercel/**',
         '_middleware.ts',
         '_middleware.mts',
@@ -377,6 +378,49 @@ export default async function main(client: Client) {
         routesManifest,
         { spaces: 2 }
       );
+    }
+  }
+
+  if (framework.slug === 'nextjs') {
+    const files = await glob(join('.output', '**', '*.nft.json'), {
+      nodir: true,
+      dot: true,
+      cwd,
+      absolute: true,
+    });
+    await fs.mkdirp(join(cwd, '.output', 'inputs'));
+    for (let f of files) {
+      client.output.debug(`Processing ${f}:`);
+      const json = await fs.readJson(f);
+      const newFilesList: Array<{ input: string; output: string }> = [];
+      for (let file of json.files) {
+        // if the resolved path is NOT in the .output directory we move in it there
+        const fullPath = resolve(
+          parse(f).dir,
+          typeof file === 'string' ? file : file.input
+        );
+        if (!resolve(fullPath).includes('.output')) {
+          const { ext } = parse(file);
+          const raw = await fs.readFile(resolve(fullPath));
+          const newFilePath = join('.output', 'inputs', hash(raw) + ext);
+          smartCopy(client, fullPath, newFilePath);
+
+          newFilesList.push({
+            input: relative(parse(f).dir, newFilePath),
+            output: file,
+          });
+        } else {
+          newFilesList.push({
+            input: file,
+            output: file,
+          });
+        }
+      }
+      // Update the .nft.json with new input and output mapping
+      await fs.writeJSON(f, {
+        ...json,
+        files: newFilesList,
+      });
     }
   }
 
@@ -551,4 +595,14 @@ async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
       err ? reject(err) : resolve(files);
     });
   });
+}
+
+/**
+ * Computes a hash for the given buf.
+ *
+ * @param {Buffer} file data
+ * @return {String} hex digest
+ */
+function hash(buf: Buffer): string {
+  return createHash('sha1').update(buf).digest('hex');
 }
