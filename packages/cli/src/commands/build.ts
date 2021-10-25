@@ -11,7 +11,7 @@ import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
 import { assert } from 'console';
 import { createHash } from 'crypto';
-import fs, { mkdirp } from 'fs-extra';
+import fs from 'fs-extra';
 import ogGlob from 'glob';
 import { isAbsolute, join, parse, relative, resolve } from 'path';
 import pluralize from 'pluralize';
@@ -388,7 +388,7 @@ export default async function main(client: Client) {
       cwd,
       absolute: true,
     });
-    await mkdirp(join(cwd, '.output', 'inputs'));
+    await fs.mkdirp(join(cwd, '.output', 'inputs'));
     for (let f of files) {
       client.output.debug(`Processing ${f}:`);
       const json = await fs.readJson(f);
