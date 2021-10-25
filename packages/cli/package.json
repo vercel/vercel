@@ -79,7 +79,6 @@
     "@types/node": "11.11.0",
     "@types/node-fetch": "2.5.10",
     "@types/npm-package-arg": "6.1.0",
-    "@types/p-limit": "2.2.0",
     "@types/pluralize": "0.0.29",
     "@types/progress": "2.0.3",
     "@types/psl": "1.1.0",
