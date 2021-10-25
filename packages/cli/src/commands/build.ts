@@ -280,6 +280,9 @@ export default async function main(client: Client) {
       },
       cwd: cwd,
     });
+  } else if (!fs.existsSync(join(cwd, 'package.json'))) {
+    // no package.json exists
+    result = true;
   } else {
     result = await runPackageJsonScript(
       client,
