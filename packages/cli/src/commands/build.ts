@@ -22,7 +22,7 @@ import cmd from '../util/output/cmd';
 import code from '../util/output/code';
 import param from '../util/output/param';
 import stamp from '../util/output/stamp';
-import { getCommandName } from '../util/pkg-name';
+import { getCommandName, getPkgName } from '../util/pkg-name';
 import { findFramework } from '../util/projects/find-framework';
 import { VERCEL_DIR } from '../util/projects/link';
 import {
@@ -33,14 +33,36 @@ import pull from './pull';
 import cliPkgJson from '../util/pkg';
 import { getColorForPkgName } from '../util/output/color-name-cache';
 import { emoji, prependEmoji } from '../util/emoji';
+import logo from '../util/output/logo';
 
 const sema = new Sema(16, {
   capacity: 100,
 });
 
 const help = () => {
-  // @todo help output
-  return console.log('vercel build');
+  return console.log(`
+  ${chalk.bold(`${logo} ${getPkgName()} build`)}
+
+ ${chalk.dim('Options:')}
+
+    -h, --help                     Output usage information
+    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+    'FILE'
+  )}   Path to the local ${'`vercel.json`'} file
+    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    'DIR'
+  )}    Path to the global ${'`.vercel`'} directory
+    --cwd [path]                   The current working directory
+    -d, --debug                    Debug mode [off]
+    -y, --yes                      Skip the confirmation prompt
+
+  ${chalk.dim('Examples:')}
+
+  ${chalk.gray('–')} Build the project
+
+    ${chalk.cyan(`$ ${getPkgName()} build`)}
+    ${chalk.cyan(`$ ${getPkgName()} build --cwd ./path-to-project`)}    
+`);
 };
 
 const OUTPUT_DIR = '.output';
@@ -53,7 +75,6 @@ const fields: {
   { name: 'Build Command', value: 'buildCommand' },
   { name: 'Output Directory', value: 'outputDirectory' },
   { name: 'Root Directory', value: 'rootDirectory' },
-  { name: 'Development Command', value: 'devCommand' },
 ];
 
 export default async function main(client: Client) {
@@ -62,6 +83,7 @@ export default async function main(client: Client) {
   try {
     argv = getArgs(client.argv.slice(2), {
       '--debug': Boolean,
+      '--cwd': String,
     });
   } catch (err) {
     handleError(err);
@@ -73,7 +95,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  let cwd = argv._[1] || process.cwd();
+  let cwd = argv['--cwd'] || process.cwd();
 
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
   // If there are no project settings, only then do we pull them down
