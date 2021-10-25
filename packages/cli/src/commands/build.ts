@@ -34,6 +34,7 @@ import cliPkgJson from '../util/pkg';
 import { getColorForPkgName } from '../util/output/color-name-cache';
 import { emoji, prependEmoji } from '../util/emoji';
 import logo from '../util/output/logo';
+import confirm from '../util/input/confirm';
 
 const sema = new Sema(16, {
   capacity: 100,
@@ -100,6 +101,16 @@ export default async function main(client: Client) {
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
   // If there are no project settings, only then do we pull them down
   while (!project?.settings) {
+    const confirmed = await confirm(
+      `No Project Settings found locally. Run ${getCommandName(
+        'pull'
+      )} for retrieving them?`,
+      true
+    );
+    if (!confirmed) {
+      client.output.print(`Aborted. No Project Settings retrieved.\n`);
+      return 0;
+    }
     const result = await pull(client);
     if (result !== 0) {
       return result;
