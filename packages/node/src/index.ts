@@ -321,6 +321,18 @@ export async function build() {
   const project = new Project();
   const entrypoints = await glob('api/**/*.[jt]s', process.cwd());
   for (const entrypoint of Object.keys(entrypoints)) {
+    // Dotfiles are not compiled
+    if (entrypoint.includes('/.')) continue;
+
+    // Files starting with an `_` (or within a directory) are not compiled
+    if (entrypoint.includes('/_')) continue;
+
+    // Files within a `node_modules` directory are not compiled
+    if (entrypoint.includes('/node_modules/')) continue;
+
+    // TypeScript definition files are not compiled
+    if (entrypoint.endsWith('.d.ts')) continue;
+
     const config = getConfig(project, entrypoint);
 
     // No config exported means "node", but if there is a config
