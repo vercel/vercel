@@ -60,6 +60,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url';
 import { Output } from '../../util/output';
 import { help } from './args';
+import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -527,9 +528,24 @@ export default async (client: Client) => {
       return 1;
     }
 
-    if (deployment.checksConclusion === 'failed') {
-      error('The checks failed.');
-      return 1;
+    if (deployment.checksState !== undefined) {
+      const { checks } = await getDeploymentChecks(client, deployment.id);
+      const counters = new Map<string, number>();
+      checks.forEach(c => {
+        counters.set(c.conclusion, (counters.get(c.conclusion) ?? 0) + 1);
+      });
+
+      if (deployment.checksConclusion === 'failed') {
+        const counterList = Array.from(counters)
+          .map(([name, no]) => `${no} ${name}`)
+          .join(', ');
+        error(`Running Checks: ${counterList}`);
+        return 1;
+      }
+
+      if (deployment.checksConclusion === 'skipped') {
+        output.print(`Running Checks: ${checks.length} skipped\n`);
+      }
     }
 
     const deploymentResponse = await getDeploymentByIdOrHost(
