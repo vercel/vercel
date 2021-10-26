@@ -142,7 +142,7 @@ export async function getVercelIgnore(
         'CVS',
         '.output',
       ];
-  console.log({ prebuilt });
+
   const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
   const files = await Promise.all(
