@@ -88,6 +88,42 @@ export async function* checkDeploymentStatus(
       yield { type: 'ready', payload: deploymentUpdate };
     }
 
+    if (deploymentUpdate.checksState !== undefined) {
+      if (deploymentUpdate.checksState === 'completed') {
+        finishedEvents.add('checks-completed');
+
+        if (deploymentUpdate.checksConclusion === 'succeeded') {
+          finishedEvents.add('checks-conclusion-succeeded');
+          yield {
+            type: 'checks-conclusion-succeeded',
+            payload: deploymentUpdate,
+          };
+        } else if (deploymentUpdate.checksConclusion === 'failed') {
+          finishedEvents.add('checks-conclusion-failed');
+          yield { type: 'checks-conclusion-failed', payload: deploymentUpdate };
+        } else if (deploymentUpdate.checksConclusion === 'skipped') {
+          finishedEvents.add('checks-conclusion-skipped');
+          yield {
+            type: 'checks-conclusion-skipped',
+            payload: deploymentUpdate,
+          };
+        } else if (deploymentUpdate.checksConclusion === 'canceled') {
+          finishedEvents.add('checks-conclusion-canceled');
+          yield {
+            type: 'checks-conclusion-canceled',
+            payload: deploymentUpdate,
+          };
+        }
+      }
+
+      if (deploymentUpdate.checksState === 'registered') {
+        finishedEvents.add('checks-registered');
+        yield { type: 'checks-registered', payload: deploymentUpdate };
+      }
+
+      yield { type: 'checks-running', payload: deploymentUpdate };
+    }
+
     if (isAliasAssigned(deploymentUpdate)) {
       debug('Deployment alias assigned');
       return yield { type: 'alias-assigned', payload: deploymentUpdate };

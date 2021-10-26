@@ -183,6 +183,15 @@ export default async function processDeployment({
         output.spinner('Completing', 0);
       }
 
+      if (event.type === 'checks-running') {
+        output.spinner('Running Checks', 0);
+      }
+
+      if (event.type === 'checks-conclusion-failed') {
+        output.stopSpinner();
+        return event.payload;
+      }
+
       // Handle error events
       if (event.type === 'error') {
         output.stopSpinner();

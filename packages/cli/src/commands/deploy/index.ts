@@ -527,6 +527,11 @@ export default async (client: Client) => {
       return 1;
     }
 
+    if (deployment.checksConclusion === 'failed') {
+      error('The checks failed.');
+      return 1;
+    }
+
     const deploymentResponse = await getDeploymentByIdOrHost(
       client,
       contextName,
