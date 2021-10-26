@@ -396,12 +396,11 @@ export default async function main(client: Client) {
       client.output.debug(`Processing ${f}:`);
       const json = await fs.readJson(f);
       const newFilesList: Array<{ input: string; output: string }> = [];
-      for (let file of json.files) {
+      for (let fileEntity of json.files) {
+        const file =
+          typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
         // if the resolved path is NOT in the .output directory we move in it there
-        const fullPath = resolve(
-          parse(f).dir,
-          typeof file === 'string' ? file : file.input
-        );
+        const fullPath = resolve(parse(f).dir);
         if (!resolve(fullPath).includes(OUTPUT_DIR)) {
           const { ext } = parse(file);
           const raw = await fs.readFile(resolve(fullPath));
