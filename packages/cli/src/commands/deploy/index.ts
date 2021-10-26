@@ -78,6 +78,7 @@ export default async (client: Client) => {
       // This is not an array in favor of matching
       // the config property name.
       '--regions': String,
+      '--prebuilt': Boolean,
       '--prod': Boolean,
       '--confirm': Boolean,
       '-f': '--force',
@@ -444,6 +445,7 @@ export default async (client: Client) => {
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
       withCache: argv['--with-cache'],
+      prebuilt: argv['--prebuilt'],
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
       isFile,
