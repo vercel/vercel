@@ -94,17 +94,14 @@ export async function buildFileTree(
       }
       return ignored;
     };
-    console.log('isDirectory', path);
     fileList = await readdir(path, [ignores]);
     debug(`Found ${fileList.length} files in the specified directory`);
   } else if (Array.isArray(path)) {
     // Array of file paths
     fileList = path;
-    console.log('isArray', path);
     debug(`Assigned ${fileList.length} files provided explicitly`);
   } else {
     // Single file
-    console.log('SingleFile', path);
     fileList = [path];
     debug(`Deploying the provided path as single file`);
   }
