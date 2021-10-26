@@ -164,9 +164,15 @@ const main = async () => {
   output.print(
     `${chalk.grey(
       `${getTitleName()} CLI ${pkg.version}${
-        targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
+        targetOrSubcommand === 'dev'
+          ? ' dev (beta)'
+          : targetOrSubcommand === 'build'
+          ? ' build (beta)'
+          : ''
       }${
-        isCanary || targetOrSubcommand === 'dev'
+        isCanary ||
+        targetOrSubcommand === 'dev' ||
+        targetOrSubcommand === 'build'
           ? ' — https://vercel.com/feedback'
           : ''
       }`
