@@ -530,24 +530,18 @@ export default async (client: Client) => {
       return 1;
     }
 
-    if (deployment.checksState !== undefined) {
+    if (deployment.checksConclusion === 'failed') {
       const { checks } = await getDeploymentChecks(client, deployment.id);
       const counters = new Map<string, number>();
       checks.forEach(c => {
         counters.set(c.conclusion, (counters.get(c.conclusion) ?? 0) + 1);
       });
 
-      if (deployment.checksConclusion === 'failed') {
-        const counterList = Array.from(counters)
-          .map(([name, no]) => `${no} ${name}`)
-          .join(', ');
-        error(`Running Checks: ${counterList}`);
-        return 1;
-      }
-
-      if (deployment.checksConclusion === 'skipped') {
-        output.print(`Running Checks: ${checks.length} skipped\n`);
-      }
+      const counterList = Array.from(counters)
+        .map(([name, no]) => `${no} ${name}`)
+        .join(', ');
+      error(`Running Checks: ${counterList}`);
+      return 1;
     }
 
     const deploymentResponse = await getDeploymentByIdOrHost(
