@@ -114,7 +114,7 @@ export async function getVercelIgnore(
   prebuilt?: boolean
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ignores: string[] = prebuilt
-    ? ['*', '!.output/**']
+    ? ['*', '!.output', '!.output/**']
     : [
         '.hg',
         '.git',
@@ -142,7 +142,6 @@ export async function getVercelIgnore(
         'CVS',
         '.output',
       ];
-  console.log({ prebuilt });
   const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
   const files = await Promise.all(
