@@ -455,6 +455,7 @@ export default async (client: Client) => {
       meta,
       deployStamp,
       target,
+      prebuilt,
       skipAutoDetectionConfirmation: autoConfirm,
     };
 
@@ -471,7 +472,6 @@ export default async (client: Client) => {
       createArgs,
       org,
       !project && !isFile,
-      prebuilt,
       path
     );
 
@@ -505,7 +505,6 @@ export default async (client: Client) => {
         createArgs,
         org,
         false,
-        prebuilt,
         path
       );
     }

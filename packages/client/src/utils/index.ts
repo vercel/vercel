@@ -113,35 +113,35 @@ export async function getVercelIgnore(
   cwd: string | string[],
   prebuilt: boolean
 ): Promise<{ ig: Ignore; ignores: string[] }> {
-  const ignores: string[] = [
-    '.hg',
-    '.git',
-    '.gitmodules',
-    '.svn',
-    '.cache',
-    '.next',
-    '.now',
-    '.vercel',
-    '.npmignore',
-    '.dockerignore',
-    '.gitignore',
-    '.*.swp',
-    '.DS_Store',
-    '.wafpicke-*',
-    '.lock-wscript',
-    '.env.local',
-    '.env.*.local',
-    '.venv',
-    'npm-debug.log',
-    'config.gypi',
-    'node_modules',
-    '__pycache__',
-    'venv',
-    'CVS',
-  ];
-  if (!prebuilt) {
-    ignores.push('.output');
-  }
+  const ignores: string[] = prebuilt
+    ? ['*', '!.output/']
+    : [
+        '.hg',
+        '.git',
+        '.gitmodules',
+        '.svn',
+        '.cache',
+        '.next',
+        '.now',
+        '.vercel',
+        '.npmignore',
+        '.dockerignore',
+        '.gitignore',
+        '.*.swp',
+        '.DS_Store',
+        '.wafpicke-*',
+        '.lock-wscript',
+        '.env.local',
+        '.env.*.local',
+        '.venv',
+        'npm-debug.log',
+        'config.gypi',
+        'node_modules',
+        '__pycache__',
+        'venv',
+        'CVS',
+        '.output',
+      ];
 
   const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
@@ -165,10 +165,9 @@ export async function getVercelIgnore(
 
   const ignoreFile = files.join('\n');
 
-  const ig = prebuilt
-    ? ignore().add(`${['*', '!.output'].join('\n')}\n`)
-    : ignore().add(`${ignores.join('\n')}\n${clearRelative(ignoreFile)}`);
-
+  const ig = ignore().add(
+    `${ignores.join('\n')}\n${clearRelative(ignoreFile)}`
+  );
   return { ig, ignores };
 }
 

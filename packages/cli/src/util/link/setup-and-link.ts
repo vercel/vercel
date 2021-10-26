@@ -181,7 +181,6 @@ export default async function setupAndLink(
         createArgs,
         org,
         !isFile,
-        false, // prebuilt
         path
       );
 

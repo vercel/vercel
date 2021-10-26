@@ -16,7 +16,6 @@ export default async function createDeploy(
   createArgs: CreateOptions,
   org: Org,
   isSettingUpProject: boolean,
-  prebuilt?: boolean,
   cwd?: string
 ): Promise<any | DeploymentError> {
   try {
@@ -104,8 +103,7 @@ export default async function createDeploy(
         paths,
         createArgs,
         org,
-        isSettingUpProject,
-        prebuilt
+        isSettingUpProject
       );
     }
 
