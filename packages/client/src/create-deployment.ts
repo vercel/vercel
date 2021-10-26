@@ -77,7 +77,8 @@ export default function buildCreateDeployment() {
     let { fileList } = await buildFileTree(
       path,
       clientOptions.isDirectory,
-      debug
+      debug,
+      clientOptions.prebuilt
     );
 
     let configPath: string | undefined;
