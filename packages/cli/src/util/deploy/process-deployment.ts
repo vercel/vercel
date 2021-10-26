@@ -47,6 +47,7 @@ export default async function processDeployment({
   force?: boolean;
   withCache?: boolean;
   org: Org;
+  prebuilt: boolean;
   projectName: string;
   isSettingUpProject: boolean;
   skipAutoDetectionConfirmation?: boolean;
@@ -62,6 +63,7 @@ export default async function processDeployment({
     withCache,
     nowConfig,
     quiet,
+    prebuilt,
   } = args;
 
   const { debug } = output;
@@ -83,6 +85,7 @@ export default async function processDeployment({
     path: paths[0],
     force,
     withCache,
+    prebuilt,
     skipAutoDetectionConfirmation,
   };
 
