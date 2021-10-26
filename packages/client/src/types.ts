@@ -14,6 +14,7 @@ export interface VercelClientOptions {
   teamId?: string;
   apiUrl?: string;
   force?: boolean;
+  prebuilt?: boolean;
   withCache?: boolean;
   userAgent?: string;
   defaultName?: string;

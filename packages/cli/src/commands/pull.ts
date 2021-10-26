@@ -13,7 +13,7 @@ import {
   VERCEL_DIR,
   VERCEL_DIR_PROJECT,
 } from '../util/projects/link';
-import { writeProjectSettings } from '../util/projects/write-project-settings';
+import { writeProjectSettings } from '../util/projects/project-settings';
 import pull from './env/pull';
 
 const help = () => {
