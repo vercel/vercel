@@ -1,0 +1,27 @@
+{
+  "name": "vercel-plugin-middleware",
+  "version": "0.0.0-canary.3",
+  "license": "MIT",
+  "main": "./dist/index",
+  "homepage": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/middleware"
+  },
+  "scripts": {
+    "build": "node build",
+    "prepublishOnly": "node build"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "esbuild": "0.13.8"
+  },
+  "devDependencies": {
+    "@types/node": "16.11.4",
+    "@vercel/ncc": "0.24.0",
+    "globby": "11"
+  }
+}
