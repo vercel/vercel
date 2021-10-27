@@ -284,7 +284,6 @@ export default class DevServer {
         page,
       })
     );
-    console.log('getMiddlewareREsult', result);
 
     return result;
   }
@@ -322,8 +321,6 @@ export default class DevServer {
             continue;
           }
 
-          // await this.ensureMiddleware(middleware.page);
-
           const distDir =
             '/Users/gary/code/edge-functions/examples/geolocation/.next';
           const manifestPath = path.join(
@@ -345,8 +342,6 @@ export default class DevServer {
             }
           )[0];
 
-          console.log('about to call run', middlewareInfo);
-
           result = await run({
             name: middlewareInfo.name,
             paths: middlewareInfo.paths,
@@ -358,17 +353,14 @@ export default class DevServer {
               page: page,
             },
           });
-          console.log('middleware result', result);
 
-          // if (!this.renderOpts.dev) {
-          //   result.promise.catch((error) => {
-          //     console.error(`Uncaught: middleware error after responding`, error)
-          //   })
+          result.promise.catch((error: any) => {
+            console.error(`Uncaught: middleware error after responding`, error);
+          });
 
-          //   result.waitUntil.catch((error) => {
-          //     console.error(`Uncaught: middleware waitUntil errored`, error)
-          //   })
-          // }
+          result.waitUntil.catch((error: any) => {
+            console.error(`Uncaught: middleware waitUntil errored`, error);
+          });
           //@ts-ignore
           if (!result.response.headers.has('x-middleware-next')) {
             break;
@@ -1589,16 +1581,10 @@ export default class DevServer {
 
       // const error = isError(err) ? err : new Error(err + '')
       // console.error(error)
-      // res.statusCode = 500
-      // this.Error(error, req, res, parsed.pathname || '')
-      // return { finished: true }
+      res.statusCode = 500;
       this.sendError(req, res, requestId, 'error in middleware', 500);
-      return {
-        finished: true,
-      };
+      return { finished: true };
     }
-
-    console.log('result');
 
     if (result === null) {
       return { finished: true };
@@ -1716,16 +1702,6 @@ export default class DevServer {
       req.url = location;
     }
 
-    const middlewareResult = await this.runMiddlewareCatchAll(
-      req,
-      res,
-      requestId
-    );
-    console.log(req.url, 'middwareResult', middlewareResult);
-    if (middlewareResult.finished) {
-      return;
-    }
-
     if (callLevel === 0) {
       await this.updateBuildMatches(vercelConfig);
     }
@@ -1760,14 +1736,32 @@ export default class DevServer {
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
 
-    // console.log(this.files);
-    // console.log('this.buildMatches', this.buildMatches);
-    // console.log('routes', routes);
+    const middlewareResult = await this.runMiddlewareCatchAll(
+      req,
+      res,
+      requestId
+    );
+
+    if (middlewareResult.finished) {
+      return;
+    }
+
+    if (middlewareResult.pathname) {
+      const origUrl = url.parse(req.url || '/', true);
+      origUrl.pathname = middlewareResult.pathname;
+      prevUrl = url.format(origUrl);
+    }
+    if (middlewareResult.query && prevUrl) {
+      const origUrl = url.parse(req.url || '/', true);
+      delete origUrl.search;
+      Object.assign(origUrl.query, middlewareResult.query);
+      prevUrl = url.format(origUrl);
+    }
+
     for (const phase of phases) {
       statusCode = undefined;
 
       const phaseRoutes = handleMap.get(phase) || [];
-      console.log('phaseRoutes', phase, phaseRoutes.length, phaseRoutes);
       routeResult = await devRouter(
         prevUrl,
         req.method,
@@ -1796,8 +1790,6 @@ export default class DevServer {
         this.setResponseHeaders(res, requestId);
         return proxyPass(req, res, destUrl, this, requestId);
       }
-
-      // console.log('route dest', routeResult.dest);
 
       match = await findBuildMatch(
         this.buildMatches,
@@ -1987,7 +1979,6 @@ export default class DevServer {
 
     const buildRequestPath = match.buildResults.has(null) ? null : requestPath;
     const buildResult = match.buildResults.get(buildRequestPath);
-    console.log('match', !!match, buildResult);
 
     if (
       buildResult &&
@@ -2105,7 +2096,6 @@ export default class DevServer {
         }
 
         this.setResponseHeaders(res, requestId);
-        console.log('proxying to builder devServer');
         return proxyPass(
           req,
           res,
@@ -2134,7 +2124,6 @@ export default class DevServer {
       this.devProcessPort &&
       (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
     ) {
-      console.log('proxying to dev');
       debug('Proxying to frontend dev server');
 
       // Add the Vercel platform proxy request headers

@@ -349,7 +349,6 @@ export async function build({
   config = {},
   meta = {},
 }: BuildOptions) {
-  console.log('building', entrypoint);
   const shouldAddHelpers = !(
     config.helpers === false || process.env.NODEJS_HELPERS === '0'
   );
@@ -431,8 +430,6 @@ export async function build({
     runtime: nodeVersion.runtime,
   });
 
-  console.log('output?', lambda);
-
   return { output: lambda, watch };
 }
 
@@ -447,7 +444,6 @@ export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
   const { entrypoint, workPath, config, meta = {} } = opts;
-  console.trace('starting dev server', entrypoint);
   const entryDir = join(workPath, dirname(entrypoint));
   const projectTsConfig = await walkParentDirs({
     base: workPath,
@@ -485,8 +481,6 @@ export async function startDevServer(
   const result = await Promise.race([onMessage, onExit]);
   onExit.cancel();
   onMessage.cancel();
-
-  console.log('desServer result', result);
 
   if (isPortInfo(result)) {
     // "message" event
