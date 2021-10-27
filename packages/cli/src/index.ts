@@ -164,9 +164,15 @@ const main = async () => {
   output.print(
     `${chalk.grey(
       `${getTitleName()} CLI ${pkg.version}${
-        targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
+        targetOrSubcommand === 'dev'
+          ? ' dev (beta)'
+          : targetOrSubcommand === 'build'
+          ? ' build (beta)'
+          : ''
       }${
-        isCanary || targetOrSubcommand === 'dev'
+        isCanary ||
+        targetOrSubcommand === 'dev' ||
+        targetOrSubcommand === 'build'
           ? ' — https://vercel.com/feedback'
           : ''
       }`
@@ -286,7 +292,14 @@ const main = async () => {
 
   let authConfig = null;
 
-  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'update'];
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'update',
+    'build',
+  ];
 
   if (authConfigExists) {
     try {
@@ -393,20 +406,33 @@ const main = async () => {
       } else if (commands.has(singular)) {
         alternative = singular;
       }
-      console.error(
-        error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
-            `\nIf you wish to deploy the ${fileType} ${param(
-              targetOrSubcommand
-            )}, first run "cd ${targetOrSubcommand}". ` +
+      if (targetOrSubcommand === 'build') {
+        output.note(
+          `If you wish to deploy the ${fileType} ${param(
+            targetOrSubcommand
+          )}, run ${getCommandName('deploy build')}.` +
             (alternative
               ? `\nIf you wish to use the subcommand ${param(
                   targetOrSubcommand
                 )}, use ${param(alternative)} instead.`
               : '')
-        )
-      );
-      return 1;
+        );
+      } else {
+        console.error(
+          error(
+            `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
+              `\nIf you wish to deploy the ${fileType} ${param(
+                targetOrSubcommand
+              )}, first run "cd ${targetOrSubcommand}". ` +
+              (alternative
+                ? `\nIf you wish to use the subcommand ${param(
+                    targetOrSubcommand
+                  )}, use ${param(alternative)} instead.`
+                : '')
+          )
+        );
+        return 1;
+      }
     }
 
     if (subcommandExists) {
@@ -600,6 +626,9 @@ const main = async () => {
         break;
       case 'billing':
         func = await import('./commands/billing');
+        break;
+      case 'build':
+        func = await import('./commands/build');
         break;
       case 'certs':
         func = await import('./commands/certs');

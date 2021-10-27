@@ -1,2 +1,4 @@
 .next
 yarn.lock
+.vercel
+.output

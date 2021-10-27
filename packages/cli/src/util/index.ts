@@ -36,6 +36,7 @@ export interface CreateOptions {
   name: string;
   project?: string;
   wantsPublic: boolean;
+  prebuilt?: boolean;
   meta: Dictionary<string>;
   regions?: string[];
   quiet?: boolean;
@@ -111,6 +112,7 @@ export default class Now extends EventEmitter {
       // Latest
       name,
       project,
+      prebuilt = false,
       wantsPublic,
       meta,
       regions,
@@ -165,6 +167,7 @@ export default class Now extends EventEmitter {
       isSettingUpProject,
       skipAutoDetectionConfirmation,
       cwd,
+      prebuilt,
     });
 
     if (deployment && deployment.warnings) {
