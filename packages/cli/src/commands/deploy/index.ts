@@ -540,7 +540,7 @@ export default async (client: Client) => {
       const counterList = Array.from(counters)
         .map(([name, no]) => `${no} ${name}`)
         .join(', ');
-      error(`Running Checks: ${counterList}`);
+      output.error(`Running Checks: ${counterList}`);
       return 1;
     }
 
