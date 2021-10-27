@@ -384,13 +384,27 @@ export default async function main(client: Client) {
       );
     }
 
+    // Special Next.js processing.
     if (framework.slug === 'nextjs') {
+      // Regardless of the Next.js version, we make sure that it is compatible with
+      // the Filesystem API. We get there by  moving all the files needed
+      // into the outputs directory `inputs` folder.  Next.js is > 12, we can
+      // read the .nft.json files directly. If there aren't .nft.json files
+      // we trace and create them. We then resolve the files in each nft file list
+      // and move them into the "inputs" directory. We rename them with hashes to
+      // prevent collisions and then update the related .nft files accordingly
+      // to point to the newly named input files. Again, all of this is so that Next.js
+      // works with the Filesystem API (and so .output contains all inputs
+      // needed to run Next.js) and `vc --prebuilt`.
       const nftFiles = await glob(join(OUTPUT_DIR, '**', '*.nft.json'), {
         nodir: true,
         dot: true,
         cwd,
         absolute: true,
       });
+
+      // If there are no .nft.json files, we know that Next.js < 12. We then
+      // execute the tracing on our own.
       if (nftFiles.length === 0) {
         const serverFiles = await glob(
           join(OUTPUT_DIR, 'server', 'pages', '**', '*.js'),
@@ -431,7 +445,6 @@ export default async function main(client: Client) {
         }
       } else {
         for (let f of nftFiles) {
-          client.output.debug(`Processing ${f}:`);
           const json = await fs.readJson(f);
           await resolveNftToOutput({
             client,
@@ -633,8 +646,8 @@ interface NftFile {
   files: (string | { input: string; output: string })[];
 }
 
-// resolveNftToOutput takes nft file and moves all of its traces files
-// into the specified directory + "inputs", (renaming them to there hash + ext) and
+// resolveNftToOutput takes nft file and moves all of its trace files
+// into the specified directory + `inputs`, (renaming them to their hash + ext) and
 // subsequently updating the original nft file accordingly. This is done
 // to make the `.output` directory be self-contained, so that it works
 // properly with `vc --prebuilt`.
@@ -651,6 +664,7 @@ async function resolveNftToOutput({
   nftFileName: string;
   nft: NftFile;
 }) {
+  client.output.debug(`Processing and resolving ${nftFileName}`);
   await fs.ensureDir(join(outputDir, 'inputs'));
   const newFilesList: NftFile['files'] = [];
   for (let fileEntity of nft.files) {
