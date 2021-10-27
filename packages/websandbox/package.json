@@ -20,6 +20,7 @@
   "devDependencies": {
     "@types/cookie": "0.4.1",
     "@types/node": "16.11.6",
+    "@types/node-fetch": "^2",
     "@types/uuid": "8.3.1"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "@types/ua-parser-js": "0.7.36",
     "cookie": "0.4.1",
     "formdata-node": "4.3.1",
+    "node-fetch": "2",
     "ua-parser-js": "1.0.1",
     "uuid": "8.3.2",
     "web-streams-polyfill": "3.1.1"

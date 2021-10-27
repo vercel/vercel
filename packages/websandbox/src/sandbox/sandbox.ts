@@ -7,6 +7,8 @@ import * as polyfills from './polyfills';
 import cookie from 'cookie';
 import vm from 'vm';
 
+import fetch, { Headers, RequestInit } from 'node-fetch';
+
 let cache:
   | {
       context: { [key: string]: any };
@@ -65,6 +67,7 @@ export async function run(params: {
             ...init,
             headers: {
               ...Object.fromEntries(input.headers),
+              // @ts-ignore TODO - is this an issue? not being caught in next repo but it's .js
               ...Object.fromEntries(init.headers),
             },
           });
