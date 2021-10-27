@@ -63,7 +63,7 @@ const help = () => {
   ${chalk.gray('–')} Build the project
 
     ${chalk.cyan(`$ ${getPkgName()} build`)}
-    ${chalk.cyan(`$ ${getPkgName()} build --cwd ./path-to-project`)}    
+    ${chalk.cyan(`$ ${getPkgName()} build --cwd ./path-to-project`)}
 `);
 };
 
@@ -397,24 +397,25 @@ export default async function main(client: Client) {
       const json = await fs.readJson(f);
       const newFilesList: Array<{ input: string; output: string }> = [];
       for (let fileEntity of json.files) {
-        const file =
+        const relativeInput =
           typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
+        const fullInput = resolve(join(parse(f).dir, relativeInput));
+
         // if the resolved path is NOT in the .output directory we move in it there
-        const fullPath = resolve(parse(f).dir);
-        if (!resolve(fullPath).includes(OUTPUT_DIR)) {
-          const { ext } = parse(file);
-          const raw = await fs.readFile(resolve(fullPath));
+        if (!fullInput.includes(OUTPUT_DIR)) {
+          const { ext } = parse(fullInput);
+          const raw = await fs.readFile(fullInput);
           const newFilePath = join(OUTPUT_DIR, 'inputs', hash(raw) + ext);
-          smartCopy(client, fullPath, newFilePath);
+          smartCopy(client, fullInput, newFilePath);
 
           newFilesList.push({
             input: relative(parse(f).dir, newFilePath),
-            output: file,
+            output: relative(cwd, fullInput),
           });
         } else {
           newFilesList.push({
-            input: file,
-            output: file,
+            input: relativeInput,
+            output: relative(cwd, fullInput),
           });
         }
       }
