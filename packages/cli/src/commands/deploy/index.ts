@@ -60,6 +60,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url';
 import { Output } from '../../util/output';
 import { help } from './args';
+import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -526,6 +527,20 @@ export default async (client: Client) => {
 
     if (deployment.readyState === 'CANCELED') {
       output.print('The deployment has been canceled.\n');
+      return 1;
+    }
+
+    if (deployment.checksConclusion === 'failed') {
+      const { checks } = await getDeploymentChecks(client, deployment.id);
+      const counters = new Map<string, number>();
+      checks.forEach(c => {
+        counters.set(c.conclusion, (counters.get(c.conclusion) ?? 0) + 1);
+      });
+
+      const counterList = Array.from(counters)
+        .map(([name, no]) => `${no} ${name}`)
+        .join(', ');
+      output.error(`Running Checks: ${counterList}`);
       return 1;
     }
 
