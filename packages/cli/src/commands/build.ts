@@ -395,9 +395,9 @@ export default async function main(client: Client) {
     for (let f of files) {
       client.output.debug(`Processing ${f}:`);
       const json = await fs.readJson(f);
-      const newFilesList: Array<{ input: string; output: string }> = [];
+      const newFilesList: (string | { input: string; output: string })[] = [];
       for (let fileEntity of json.files) {
-        const relativeInput =
+        const relativeInput: string =
           typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
         const fullInput = resolve(join(parse(f).dir, relativeInput));
 
@@ -413,10 +413,7 @@ export default async function main(client: Client) {
             output: relative(cwd, fullInput),
           });
         } else {
-          newFilesList.push({
-            input: relativeInput,
-            output: relative(cwd, fullInput),
-          });
+          newFilesList.push(relativeInput);
         }
       }
       // Update the .nft.json with new input and output mapping
