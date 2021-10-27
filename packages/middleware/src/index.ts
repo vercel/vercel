@@ -2,6 +2,7 @@ import globby from 'globby';
 import { extname, join } from 'path';
 import * as esbuild from 'esbuild';
 import { promises as fsp } from 'fs';
+import { IncomingMessage } from 'http';
 
 const SUPPORTED_EXTENSIONS = ['.js', '.ts'];
 
@@ -9,7 +10,7 @@ const SUPPORTED_EXTENSIONS = ['.js', '.ts'];
 // project directory. Use a name that is unlikely to conflict.
 const ENTRIES_NAME = '___vc_entries.js';
 
-export async function build() {
+async function getMiddlewareFile() {
   // Only the root-level `_middleware.*` files are considered.
   // For more granular routing, the Project's Framework (i.e. Next.js)
   // middleware support should be used.
@@ -33,7 +34,14 @@ export async function build() {
     throw new Error(`Unsupported file type: ${ext}`);
   }
 
-  console.log('Compiling middleware file: %j', middlewareFiles[0]);
+  return middlewareFiles[0];
+}
+
+export async function build() {
+  const middlewareFile = await getMiddlewareFile();
+  if (!middlewareFile) return;
+
+  console.log('Compiling middleware file: %j', middlewareFile);
 
   // Create `_ENTRIES` wrapper
   await fsp.copyFile(join(__dirname, 'entries.js'), ENTRIES_NAME);
@@ -66,4 +74,11 @@ export async function build() {
   const middlewareManifestData = JSON.stringify(middlewareManifest, null, 2);
   const middlewareManifestPath = '.output/server/middleware-manifest.json';
   await fsp.writeFile(middlewareManifestPath, middlewareManifestData);
+}
+
+export async function runDevMiddleware(req: IncomingMessage) {
+  // Should run the middleware in the `vm` sandbox and return the result
+  // back to `vercel dev`. If no middleware file exists then this function
+  // should return `finished: false` (very quickly, since this is being
+  // invoked for every HTTP request!).
 }
