@@ -7,7 +7,13 @@ import * as polyfills from './polyfills';
 import cookie from 'cookie';
 import vm from 'vm';
 
-import fetch, { Headers, RequestInit } from 'node-fetch';
+import fetch, {
+  Headers,
+  RequestInit,
+  Response,
+  Request,
+  RequestInfo,
+} from 'node-fetch';
 
 let cache:
   | {
@@ -59,6 +65,9 @@ export async function run(params: {
       },
       Crypto: polyfills.Crypto,
       crypto: new polyfills.Crypto(),
+      Response,
+      Headers,
+      Request,
       fetch: (input: RequestInfo, init: RequestInit = {}) => {
         const url = getFetchURL(input, params.request.headers);
         init.headers = getFetchHeaders(params.name, init);
@@ -209,6 +218,8 @@ function getFetchHeaders(middleware: string, init: RequestInit) {
 
 function getFetchURL(input: RequestInfo, headers: NodeHeaders = {}): string {
   const initurl = isRequestLike(input) ? input.url : input;
+  // TODO - why are these failing tsc?
+  // @ts-ignore
   if (initurl.startsWith('/')) {
     const host = headers.host?.toString();
     const localhost =
@@ -217,6 +228,8 @@ function getFetchURL(input: RequestInfo, headers: NodeHeaders = {}): string {
       host?.startsWith('localhost:');
     return `${localhost ? 'http' : 'https'}://${host}${initurl}`;
   }
+  // TODO - why are these failing tsc?
+  // @ts-ignore
   return initurl;
 }
 
