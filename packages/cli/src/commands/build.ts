@@ -635,7 +635,9 @@ interface NftFile {
 
 // resolveNftToOutput takes nft file and moves all of its traces files
 // into the specified directory + "inputs", (renaming them to there hash + ext) and
-// subsequently updating the original nft file accordingly.
+// subsequently updating the original nft file accordingly. This is done
+// to make the `.output` directory be self-contained, so that it works
+// properly with `vc --prebuilt`.
 async function resolveNftToOutput({
   client,
   cwd,
