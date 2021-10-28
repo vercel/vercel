@@ -17,6 +17,10 @@ import { adapter } from '../adapter';
 import * as esbuild from 'esbuild';
 import m from 'module';
 
+interface URLLike {
+  href: string;
+}
+
 let cache:
   | {
       context: { [key: string]: any };
@@ -76,7 +80,6 @@ export async function run(params: {
             ...init,
             headers: {
               ...Object.fromEntries(input.headers),
-              // @ts-ignore TODO - is this an issue? not being caught in next repo but it's .js
               ...Object.fromEntries(init.headers),
             },
           });
@@ -198,9 +201,11 @@ function getFetchHeaders(middleware: string, init: RequestInit) {
 }
 
 function getFetchURL(input: RequestInfo, headers: NodeHeaders = {}): string {
-  const initurl = isRequestLike(input) ? input.url : input;
-  // TODO - why are these failing tsc?
-  // @ts-ignore
+  const initurl = isRequestLike(input)
+    ? input.url
+    : isURLLike(input)
+    ? input.href
+    : input;
   if (initurl.startsWith('/')) {
     const host = headers.host?.toString();
     const localhost =
@@ -209,9 +214,11 @@ function getFetchURL(input: RequestInfo, headers: NodeHeaders = {}): string {
       host?.startsWith('localhost:');
     return `${localhost ? 'http' : 'https'}://${host}${initurl}`;
   }
-  // TODO - why are these failing tsc?
-  // @ts-ignore
   return initurl;
+}
+
+function isURLLike(obj: unknown): obj is URLLike {
+  return Boolean(obj && typeof obj === 'object' && 'href' in obj);
 }
 
 function isRequestLike(obj: unknown): obj is Request {

@@ -123,7 +123,6 @@ async function runMiddlewareCatchAll(
       parsed: parseUrl(req.url!, true),
     });
   } catch (err) {
-    console.log('error', err);
     // if (isError(err) && err.code === 'ENOENT') {
     //   await this.render404(req, res, parsed)
     //   return { finished: true }
@@ -236,8 +235,6 @@ const proxyRequest = async (
   delete (parsedUrl as any).query;
   parsedUrl.search = stringifyQuery(req, query);
 
-  // TODO why do i have to ignore this? what should I do?
-  // @ts-ignore
   const target = formatUrl(parsedUrl);
   const proxy = new Proxy({
     target,
