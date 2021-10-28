@@ -386,6 +386,69 @@ export default async function main(client: Client) {
 
     // Special Next.js processing.
     if (framework.slug === 'nextjs') {
+      // We want to pick up directories for user-provided static files into `.`output/static`.
+      // More specifically, the static directory contents would then be mounted to `output/static/static`,
+      // and the public directory contents would be mounted to `output/static`. Old Next.js versions
+      // allow `static`, and newer ones allow both, but since there's nobody that actually uses both,
+      // we can check for the existence of both and pick the first match that we find (first
+      // `public`, then`static`). We can't read both at the same time because that would mean we'd
+      // read public for old Next.js versions that don't support it, which might be breaking (and
+      // we don't want to make vercel build specific framework versions).
+      const publicFiles = await glob('public/**', {
+        nodir: true,
+        dot: true,
+        cwd,
+        absolute: true,
+      });
+      if (publicFiles.length > 0) {
+        await Promise.all(
+          publicFiles.map(f =>
+            smartCopy(
+              client,
+              f,
+              f.replace('public', join(OUTPUT_DIR, 'static'))
+            )
+          )
+        );
+      } else {
+        const staticFiles = await glob('static/**', {
+          nodir: true,
+          dot: true,
+          cwd,
+          absolute: true,
+        });
+        await Promise.all(
+          staticFiles.map(f =>
+            smartCopy(
+              client,
+              f,
+              f.replace('static', join(OUTPUT_DIR, 'static', 'static'))
+            )
+          )
+        );
+      }
+
+      // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
+      const staticFiles = await glob(join(OUTPUT_DIR, 'static', '**'), {
+        nodir: true,
+        dot: true,
+        cwd,
+        absolute: true,
+      });
+
+      await Promise.all(
+        staticFiles.map(f =>
+          smartCopy(
+            client,
+            f,
+            f.replace(
+              join(OUTPUT_DIR, 'static'),
+              join(OUTPUT_DIR, 'static', '_next', 'static')
+            )
+          )
+        )
+      );
+
       // Regardless of the Next.js version, we make sure that it is compatible with
       // the Filesystem API. We get there by  moving all the files needed
       // into the outputs directory `inputs` folder.  Next.js is > 12, we can
