@@ -7,7 +7,7 @@
  * that to read and write the contents of the buffer.
  */
 export function isArrayBuffer(value: any): value is ArrayBuffer {
-  return ArrayBuffer.prototype.isPrototypeOf(value);
+  return Object.prototype.isPrototypeOf.call(ArrayBuffer, value);
 }
 
 /**
@@ -25,7 +25,7 @@ export function isArrayBufferView(value: any): value is ArrayBufferView {
  * the platform's endianness.
  */
 export function isDataView(value: any): value is DataView {
-  return DataView.prototype.isPrototypeOf(value);
+  return Object.prototype.isPrototypeOf.call(DataView, value);
 }
 
 /**
@@ -33,7 +33,7 @@ export function isDataView(value: any): value is DataView {
  * query string of a URL.
  */
 export function isURLSearchParams(value: any): value is URLSearchParams {
-  return URLSearchParams.prototype.isPrototypeOf(value);
+  return Object.prototype.isPrototypeOf.call(URLSearchParams, value);
 }
 
 /**
@@ -42,7 +42,7 @@ export function isURLSearchParams(value: any): value is URLSearchParams {
  * that isn't necessarily in a JavaScript-native format.
  */
 export function isBlob(value: any): value is Blob {
-  return Blob.prototype.isPrototypeOf(value);
+  return Object.prototype.isPrototypeOf.call(Blob, value);
 }
 
 /**
@@ -52,7 +52,7 @@ export function isBlob(value: any): value is Blob {
  * form would use if the encoding type were set to "multipart/form-data".
  */
 export function isFormData(value: any): value is FormData {
-  return FormData.prototype.isPrototypeOf(value);
+  return Object.prototype.isPrototypeOf.call(FormData, value);
 }
 
 /**
@@ -63,7 +63,7 @@ export function isFormData(value: any): value is FormData {
 export function isReadableStream(value: any): value is ReadableStream {
   return (
     value &&
-    (ReadableStream.prototype.isPrototypeOf(value) ||
+    (Object.prototype.isPrototypeOf.call(ReadableStream, value) ||
       (value.constructor.name === 'ReadableStream' && 'getReader' in value))
   );
 }

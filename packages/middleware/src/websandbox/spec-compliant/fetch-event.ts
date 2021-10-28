@@ -8,7 +8,7 @@ export class FetchEvent {
   [passThroughSymbol] = false;
 
   // eslint-disable-next-line @typescript-eslint/no-useless-constructor
-  constructor(_request: Request) {}
+  constructor() {}
 
   respondWith(response: Response | Promise<Response>): void {
     if (!this[responseSymbol]) {

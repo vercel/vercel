@@ -1,6 +1,7 @@
 import { join } from 'path';
 import { promises as fsp } from 'fs';
 import { build } from '../src';
+import { BuildOptions } from '@vercel/build-utils/dist';
 
 describe('build()', () => {
   it('should build simple middleware', async () => {
@@ -8,7 +9,9 @@ describe('build()', () => {
     const orig = process.cwd();
     try {
       process.chdir(fixture);
-      await build();
+      await build({
+        workPath: fixture,
+      } as BuildOptions);
     } finally {
       process.chdir(orig);
     }
