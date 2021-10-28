@@ -1,4 +1,4 @@
-import { Route } from '@vercel/routing-utils';
+import { Header, Rewrite, Route } from '@vercel/routing-utils';
 
 export interface FrameworkDetectionItem {
   /**
@@ -31,6 +31,15 @@ export interface SettingValue {
 }
 
 export type Setting = SettingValue | SettingPlaceholder;
+
+export type Redirect = Rewrite & {
+  statusCode?: number;
+  permanent?: boolean;
+};
+
+type RoutesManifestRegex = {
+  regex: string;
+};
 
 /**
  * Framework detection information.
@@ -154,6 +163,11 @@ export interface Framework {
    * Function that returns the name of the directory that the framework outputs
    * its build results to. In some cases this is read from a configuration file.
    */
+  getFsOutputDir: (dirPrefix: string) => Promise<string>;
+  /**
+   * Function that returns the name of the directory that the framework outputs
+   * its STATIC build results to. In some cases this is read from a configuration file.
+   */
   getOutputDirName: (dirPrefix: string) => Promise<string>;
   /**
    * An array (or a function that returns an array) of default `Route` rules that
@@ -161,6 +175,27 @@ export interface Framework {
    * @example [{ handle: 'filesystem' }, { src: '.*', status: 404, dest: '404.html' }]
    */
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
+  /**
+   * An array (or a function that returns an array) of default `Header` rules that
+   * the framework uses.
+   */
+  defaultHeaders?:
+    | (Header & RoutesManifestRegex)[]
+    | ((dirPrefix: string) => Promise<(Header & RoutesManifestRegex)[]>);
+  /**
+   * An array (or a function that returns an array) of default `Redirect` rules that
+   * the framework uses.
+   */
+  defaultRedirects?:
+    | (Redirect & RoutesManifestRegex)[]
+    | ((dirPrefix: string) => Promise<(Redirect & RoutesManifestRegex)[]>);
+  /**
+   * An array (or a function that returns an array) of default `Rewrite` rules that
+   * the framework uses.
+   */
+  defaultRewrites?:
+    | (Rewrite & RoutesManifestRegex)[]
+    | ((dirPrefix: string) => Promise<(Rewrite & RoutesManifestRegex)[]>);
   /**
    * A glob string of files to cache for future deployments.
    * @example ".cache/**"
