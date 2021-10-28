@@ -16,3 +16,4 @@ packages/node/src/bridge.ts
 packages/node/test/fixtures
 packages/node-bridge/bridge.js
 packages/node-bridge/launcher.js
+packages/static-config/test/fixtures

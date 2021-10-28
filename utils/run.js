@@ -6,6 +6,7 @@ const allPackages = [
   'routing-utils',
   'frameworks',
   'build-utils',
+  'static-config',
   'client',
   'node-bridge',
   'node',
