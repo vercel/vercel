@@ -1,6 +1,6 @@
 import type { RequestData, FetchEventResult, NodeHeaders } from '../types';
 import { Blob, File, FormData } from 'formdata-node';
-import { dirname } from 'path';
+import { dirname, extname } from 'path';
 import { readFileSync } from 'fs';
 import { TransformStream } from 'web-streams-polyfill';
 import * as polyfills from './polyfills';
@@ -107,11 +107,11 @@ export async function run(params: {
       sandbox: vm.createContext(context),
     };
   }
-  const content = readFileSync(params.path, 'utf-8');
-  const esBuildResult = await esbuild.transformSync(content, {
-    format: 'cjs',
-  });
   try {
+    const content = readFileSync(params.path, 'utf-8');
+    const esBuildResult = esbuild.transformSync(content, {
+      format: 'cjs',
+    });
     const x = vm.runInNewContext(m.wrap(esBuildResult.code), cache.sandbox, {
       filename: params.path,
     });
@@ -157,11 +157,19 @@ function sandboxRequire(referrer: string, specifier: string) {
   };
 
   cache?.require.set(resolved, module);
+
+  const transformOptions: esbuild.TransformOptions = {
+    format: 'cjs',
+  };
+  if (extname(resolved) === '.json') {
+    transformOptions.loader = 'json';
+  }
+  const transformedContent = esbuild.transformSync(
+    readFileSync(resolved, 'utf-8'),
+    transformOptions
+  ).code;
   const fn = vm.runInContext(
-    `(function(module,exports,require,__dirname,__filename) {${readFileSync(
-      resolved,
-      'utf-8'
-    )}\n})`,
+    `(function(module,exports,require,__dirname,__filename) {${transformedContent}\n})`,
     cache!.sandbox
   );
 
