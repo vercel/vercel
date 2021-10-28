@@ -6,6 +6,7 @@ export class NextFetchEvent extends FetchEvent {
   sourcePage: string;
 
   constructor(params: { request: NextRequest; page: string }) {
+    //@ts-ignore
     super(params.request);
     this.sourcePage = params.page;
   }

@@ -1,4 +1,5 @@
 import type { NodeHeaders } from './types';
+import { Headers } from 'node-fetch';
 
 export async function* streamToIterator<T>(
   readable: ReadableStream<T>
@@ -22,9 +23,9 @@ export function notImplemented(name: string, method: string): any {
 
 export function fromNodeHeaders(object: NodeHeaders): Headers {
   const headers = new Headers();
-  for (let [key, value] of Object.entries(object)) {
+  for (const [key, value] of Object.entries(object)) {
     const values = Array.isArray(value) ? value : [value];
-    for (let v of values) {
+    for (const v of values) {
       if (v !== undefined) {
         headers.append(key, v);
       }

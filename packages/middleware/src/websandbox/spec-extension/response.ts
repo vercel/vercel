@@ -1,5 +1,6 @@
 import type { CookieSerializeOptions } from 'cookie';
 import cookie from 'cookie';
+import { Response, ResponseInit as NodeFetchResponseInit } from 'node-fetch';
 
 const INTERNALS = Symbol('internal response');
 const REDIRECTS = new Set([301, 302, 303, 307, 308]);
@@ -11,6 +12,8 @@ export class SpecResponse extends Response {
   };
 
   constructor(body?: BodyInit | null, init: ResponseInit = {}) {
+    // TODO - why is this failing?
+    // @ts-ignore
     super(body, init);
 
     const cookieParser = () => {
@@ -89,6 +92,6 @@ export class SpecResponse extends Response {
   }
 }
 
-interface ResponseInit extends globalThis.ResponseInit {
+interface ResponseInit extends NodeFetchResponseInit {
   url?: string;
 }

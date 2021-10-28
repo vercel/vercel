@@ -43,6 +43,7 @@ export async function* formDataIterator(
   boundary: string
 ): AsyncIterableIterator<Uint8Array> {
   const encoder = new TextEncoder();
+  //@ts-ignore
   for (const [name, value] of form) {
     yield encoder.encode(getHeader(boundary, name, value));
 
@@ -63,6 +64,7 @@ export async function* formDataIterator(
 export function getFormDataLength(form: FormData, boundary: string) {
   let length = 0;
 
+  //@ts-ignore
   for (const [name, value] of form) {
     length += Buffer.byteLength(getHeader(boundary, name, value));
     length += isBlob(value) ? value.size : Buffer.byteLength(String(value));

@@ -22,11 +22,7 @@ import deepEqual from 'fast-deep-equal';
 import which from 'which';
 import npa from 'npm-package-arg';
 
-//@ts-ignore
-import { run } from '@vercel/websandbox';
-//@ts-ignore
-import type { FetchEventResult } from '@vercel/websandbox/dist/types';
-import Proxy from 'http-proxy';
+import { runDevMiddleware } from 'vercel-plugin-middleware';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
@@ -95,13 +91,6 @@ import {
 } from './types';
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
-import { IncomingMessage, ServerResponse } from 'http';
-import { ParsedUrlQuery, stringify as stringifyQs } from 'querystring';
-import {
-  format as formatUrl,
-  parse as parseUrl,
-  UrlWithParsedQuery,
-} from 'url';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -127,62 +116,6 @@ function sortBuilders(buildA: Builder, buildB: Builder) {
 
   return 0;
 }
-const stringifyQuery = (req: IncomingMessage, query: ParsedUrlQuery) => {
-  const initialQueryValues = Object.values((req as any).__NEXT_INIT_QUERY);
-
-  return stringifyQs(query, undefined, undefined, {
-    encodeURIComponent(value: any) {
-      if (initialQueryValues.some(val => val === value)) {
-        return encodeURIComponent(value);
-      }
-      return value;
-    },
-  });
-};
-const proxyRequest = async (
-  req: IncomingMessage,
-  res: ServerResponse,
-  parsedUrl: UrlWithParsedQuery
-) => {
-  const { query } = parsedUrl;
-  delete (parsedUrl as any).query;
-  parsedUrl.search = stringifyQuery(req, query);
-
-  // TODO why do i have to ignore this? what should I do?
-  // @ts-ignore
-  const target = formatUrl(parsedUrl);
-  const proxy = new Proxy({
-    target,
-    changeOrigin: true,
-    ignorePath: true,
-    xfwd: true,
-    proxyTimeout: 30_000, // limit proxying to 30 seconds
-  });
-
-  await new Promise((proxyResolve, proxyReject) => {
-    let finished = false;
-
-    proxy.on('proxyReq', (proxyReq: any) => {
-      proxyReq.on('close', () => {
-        if (!finished) {
-          finished = true;
-          proxyResolve(true);
-        }
-      });
-    });
-    proxy.on('error', (err: any) => {
-      if (!finished) {
-        finished = true;
-        proxyReject(err);
-      }
-    });
-    proxy.web(req, res);
-  });
-
-  return {
-    finished: true,
-  };
-};
 
 export default class DevServer {
   public cwd: string;
@@ -268,142 +201,6 @@ export default class DevServer {
   async exit(code = 1) {
     await this.stop(code);
     process.exit(code);
-  }
-
-  protected getMiddleware() {
-    const middlewareManifestPath =
-      '/Users/gary/code/edge-functions/examples/geolocation/.next/server/middleware-manifest.json';
-    const middlewareManifest = JSON.parse(
-      fs.readFileSync(middlewareManifestPath, 'utf8')
-    );
-
-    const result = Object.keys(middlewareManifest?.middleware || {}).map(
-      page => ({
-        match: (pathname: string | undefined) =>
-          pathname && /^\/.*$/.exec(pathname),
-        page,
-      })
-    );
-
-    return result;
-  }
-
-  protected async runMiddleware(params: {
-    request: IncomingMessage;
-    response: ServerResponse;
-    parsedUrl: UrlWithParsedQuery;
-    parsed: UrlWithParsedQuery;
-    requestId: string;
-  }): Promise<FetchEventResult | null> {
-    try {
-      const page: { name?: string; params?: { [key: string]: string } } = {};
-      // if (await this.hasPage(params.parsedUrl.pathname)) {
-      //   page.name = params.parsedUrl.pathname
-      // } else if (this.dynamicRoutes) {
-      //   for (const dynamicRoute of this.dynamicRoutes) {
-      //     const matchParams = dynamicRoute.match(params.parsedUrl.pathname)
-      //     if (matchParams) {
-      //       page.name = dynamicRoute.page
-      //       page.params = matchParams
-      //       break
-      //     }
-      //   }
-      // }
-
-      let result: FetchEventResult | null = null;
-
-      for (const middleware of this.getMiddleware() || []) {
-        if (middleware.match(params.parsedUrl.pathname)) {
-          if (!(await this.hasMiddleware())) {
-            console.warn(
-              `The Edge Function for ${middleware.page} was not found`
-            );
-            continue;
-          }
-
-          const distDir =
-            '/Users/gary/code/edge-functions/examples/geolocation/.next';
-          const manifestPath = path.join(
-            distDir,
-            'server/middleware-manifest.json'
-          );
-          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-          // this is an array atm, pull the first item.
-          const middlewareInfo = manifest.sortedMiddleware.map(
-            (middlewarePath: string) => {
-              return {
-                name: manifest.middleware[middlewarePath].name,
-                paths: manifest.middleware[middlewarePath].files.map(
-                  (relativePath: string) => {
-                    return path.join(distDir, relativePath);
-                  }
-                ),
-              };
-            }
-          )[0];
-
-          result = await run({
-            name: middlewareInfo.name,
-            paths: middlewareInfo.paths,
-            request: {
-              headers: params.request.headers,
-              method: params.request.method || 'GET',
-              url: params.request.url!,
-              // url: (params.request as any).__NEXT_INIT_URL,
-              page: page,
-            },
-          });
-
-          result.promise.catch((error: any) => {
-            console.error(`Uncaught: middleware error after responding`, error);
-          });
-
-          result.waitUntil.catch((error: any) => {
-            console.error(`Uncaught: middleware waitUntil errored`, error);
-          });
-          //@ts-ignore
-          if (!result.response.headers.has('x-middleware-next')) {
-            break;
-          }
-        }
-      }
-
-      if (!result) {
-        this.send404(params.request, params.response, params.requestId);
-      }
-
-      return result;
-    } catch (e) {
-      console.log('caught an error');
-    }
-  }
-
-  protected async hasMiddleware(): Promise<boolean> {
-    try {
-      const distDir =
-        '/Users/gary/code/edge-functions/examples/geolocation/.next';
-      const manifestPath = path.join(
-        distDir,
-        'server/middleware-manifest.json'
-      );
-      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-      // this is an array atm, pull the first item.
-      const middlewareInfo = manifest.sortedMiddleware.map(
-        (middlewarePath: string) => {
-          return {
-            name: manifest.middleware[middlewarePath].name,
-            paths: manifest.middleware[middlewarePath].files.map(
-              (relativePath: string) => {
-                return path.join(distDir, relativePath);
-              }
-            ),
-          };
-        }
-      )[0];
-      return middlewareInfo.paths.length > 0;
-    } catch (_) {}
-
-    return false;
   }
 
   enqueueFsEvent(type: string, path: string): void {
@@ -1554,121 +1351,6 @@ export default class DevServer {
     return false;
   };
 
-  protected async runMiddlewareCatchAll(
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-    requestId: string
-  ) {
-    let result: FetchEventResult | null = null;
-    const parsedUrl = parseUrl(req.url!, true);
-    if (!this.getMiddleware().some(m => m.match(parsedUrl.pathname))) {
-      return { finished: false };
-    }
-    try {
-      result = await this.runMiddleware({
-        request: req,
-        response: res,
-        requestId: requestId,
-        parsedUrl,
-        parsed: parseUrl(req.url!, true),
-      });
-    } catch (err) {
-      console.log('error', err);
-      // if (isError(err) && err.code === 'ENOENT') {
-      //   await this.render404(req, res, parsed)
-      //   return { finished: true }
-      // }
-
-      // const error = isError(err) ? err : new Error(err + '')
-      // console.error(error)
-      res.statusCode = 500;
-      this.sendError(req, res, requestId, 'error in middleware', 500);
-      return { finished: true };
-    }
-
-    if (result === null) {
-      return { finished: true };
-    }
-
-    if (
-      !result.response.headers.has('x-middleware-rewrite') &&
-      !result.response.headers.has('x-middleware-next') &&
-      !result.response.headers.has('Location')
-    ) {
-      result.response.headers.set('x-middleware-refresh', '1');
-    }
-
-    result.response.headers.delete('x-middleware-next');
-
-    for (const [key, value] of result.response.headers.entries()) {
-      if (key !== 'content-encoding') {
-        res.setHeader(key, value);
-      }
-    }
-
-    const preflight =
-      req.method === 'HEAD' && req.headers['x-middleware-preflight'];
-
-    if (preflight) {
-      res.writeHead(200);
-      res.end();
-      return {
-        finished: true,
-      };
-    }
-
-    res.statusCode = result.response.status;
-    res.statusMessage = result.response.statusText;
-
-    const location = result.response.headers.get('Location');
-    if (location) {
-      res.statusCode = result.response.status;
-      if (res.statusCode === 308) {
-        res.setHeader('Refresh', `0;url=${location}`);
-      }
-
-      res.end();
-      return {
-        finished: true,
-      };
-    }
-
-    if (result.response.headers.has('x-middleware-rewrite')) {
-      const rewrite = result.response.headers.get('x-middleware-rewrite')!;
-      const rewriteParsed = parseUrl(rewrite, true);
-      if (rewriteParsed.protocol) {
-        return proxyRequest(req, res, rewriteParsed);
-      }
-
-      (req as any)._nextRewroteUrl = rewrite;
-      (req as any)._nextDidRewrite = (req as any)._nextRewroteUrl !== req.url;
-
-      return {
-        finished: false,
-        pathname: rewriteParsed.pathname,
-        query: {
-          ...parsedUrl.query,
-          ...rewriteParsed.query,
-        },
-      };
-    }
-
-    if (result.response.headers.has('x-middleware-refresh')) {
-      res.writeHead(result.response.status);
-      for await (const chunk of result.response.body || []) {
-        res.write(chunk);
-      }
-      res.end();
-      return {
-        finished: true,
-      };
-    }
-
-    return {
-      finished: false,
-    };
-  }
-
   /**
    * Serve project directory as a v2 deployment.
    */
@@ -1736,26 +1418,24 @@ export default class DevServer {
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
 
-    const middlewareResult = await this.runMiddlewareCatchAll(
-      req,
-      res,
-      requestId
-    );
+    const middlewareResult = await runDevMiddleware(req, res, this.cwd);
 
-    if (middlewareResult.finished) {
-      return;
-    }
+    if (middlewareResult) {
+      if (middlewareResult.finished) {
+        return;
+      }
 
-    if (middlewareResult.pathname) {
-      const origUrl = url.parse(req.url || '/', true);
-      origUrl.pathname = middlewareResult.pathname;
-      prevUrl = url.format(origUrl);
-    }
-    if (middlewareResult.query && prevUrl) {
-      const origUrl = url.parse(req.url || '/', true);
-      delete origUrl.search;
-      Object.assign(origUrl.query, middlewareResult.query);
-      prevUrl = url.format(origUrl);
+      if (middlewareResult.pathname) {
+        const origUrl = url.parse(req.url || '/', true);
+        origUrl.pathname = middlewareResult.pathname;
+        prevUrl = url.format(origUrl);
+      }
+      if (middlewareResult.query && prevUrl) {
+        const origUrl = url.parse(req.url || '/', true);
+        delete origUrl.search;
+        Object.assign(origUrl.query, middlewareResult.query);
+        prevUrl = url.format(origUrl);
+      }
     }
 
     for (const phase of phases) {
@@ -2013,8 +1693,6 @@ export default class DevServer {
         );
         return;
       }
-    } else {
-      console.log('no build result');
     }
 
     // Before doing any asset matching, check if this builder supports the

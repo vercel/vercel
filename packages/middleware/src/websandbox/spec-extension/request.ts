@@ -1,6 +1,7 @@
 import type { IResult } from 'ua-parser-js';
 import cookie from 'cookie';
 import parseua from 'ua-parser-js';
+import { Request, RequestInit as NodeFetchRequestInit } from 'node-fetch';
 
 export const INTERNALS = Symbol('internal request');
 
@@ -15,6 +16,7 @@ export class NextRequest extends Request {
   };
 
   constructor(input: Request | string, init: RequestInit = {}) {
+    //@ts-ignore
     super(input, init);
 
     const cookieParser = () => {
@@ -71,18 +73,18 @@ export class NextRequest extends Request {
 
     this[INTERNALS].ua = {
       ...parseua(uaString),
-      // isBot: isBot(uaString),
     };
 
     return this[INTERNALS].ua;
   }
 
+  //@ts-ignore
   public get url() {
     return this[INTERNALS].url.toString();
   }
 }
 
-export interface RequestInit extends globalThis.RequestInit {
+export interface RequestInit extends NodeFetchRequestInit {
   geo?: {
     city?: string;
     country?: string;
@@ -94,7 +96,3 @@ export interface RequestInit extends globalThis.RequestInit {
     params?: { [key: string]: string };
   };
 }
-
-// interface UserAgent extends IResult {
-//   isBot: boolean
-// }

@@ -20,6 +20,7 @@ export async function adapter(params: {
     input: url,
     init: {
       geo: params.request.geo,
+      //@ts-ignore
       headers: fromNodeHeaders(params.request.headers),
       ip: params.request.ip,
       method: params.request.method,
@@ -44,6 +45,7 @@ class NextRequestHint extends NextRequest {
     input: Request | string;
     page: string;
   }) {
+    //@ts-ignore
     super(params.input, params.init);
     this.sourcePage = params.page;
   }

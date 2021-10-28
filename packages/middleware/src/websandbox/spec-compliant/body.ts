@@ -1,6 +1,7 @@
 import { formDataIterator, getBoundary } from '../form-data';
 import { streamToIterator } from '../utils';
 import * as util from '../is';
+import { URLSearchParams } from 'url';
 
 const INTERNALS = Symbol('internal body');
 
@@ -31,6 +32,7 @@ abstract class BaseBody implements Body {
       return null;
     }
 
+    // eslint-disable-next-line
     const that = this;
     if (!this[INTERNALS].stream) {
       const readable = new ReadableStream({

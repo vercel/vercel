@@ -6,7 +6,6 @@ import { TransformStream } from 'web-streams-polyfill';
 import * as polyfills from './polyfills';
 import cookie from 'cookie';
 import vm from 'vm';
-
 import fetch, {
   Headers,
   RequestInit,
@@ -14,6 +13,9 @@ import fetch, {
   Request,
   RequestInfo,
 } from 'node-fetch';
+import { adapter } from '../adapter';
+import * as esbuild from 'esbuild';
+import m from 'module';
 
 let cache:
   | {
@@ -41,13 +43,11 @@ export function clearSandboxCache(path: string, content: Buffer | string) {
 
 export async function run(params: {
   name: string;
-  paths: string[];
+  path: string;
   request: RequestData;
-  ssr: boolean;
 }): Promise<FetchEventResult> {
   if (cache === undefined) {
     const context: { [key: string]: any } = {
-      _ENTRIES: {},
       atob: polyfills.atob,
       Blob,
       btoa: polyfills.btoa,
@@ -106,64 +106,37 @@ export async function run(params: {
       paths: new Map<string, string>(),
       sandbox: vm.createContext(context),
     };
-
-    loadDependencies(cache.sandbox, [
-      {
-        path: require.resolve('../spec-compliant/headers'),
-        map: { Headers: 'Headers' },
-      },
-      {
-        path: require.resolve('../spec-compliant/response'),
-        map: { Response: 'Response' },
-      },
-      {
-        path: require.resolve('../spec-compliant/request'),
-        map: { Request: 'Request' },
-      },
-    ]);
   }
-
-  for (const paramPath of params.paths) {
-    if (!cache.paths.has(paramPath)) {
-      const content = readFileSync(paramPath, 'utf-8');
-      try {
-        vm.runInNewContext(content, cache.sandbox, {
-          filename: paramPath,
-        });
-        cache.paths.set(paramPath, content);
-      } catch (error) {
-        cache = undefined;
-        throw error;
-      }
-    }
-  }
-
-  const entryPoint = cache.context._ENTRIES[`middleware_${params.name}`];
-
-  if (params.ssr) {
-    const rscManifest = cache.context._ENTRIES._middleware_rsc_manifest;
+  const content = readFileSync(params.path, 'utf-8');
+  const esBuildResult = await esbuild.transformSync(content, {
+    format: 'cjs',
+  });
+  try {
+    const x = vm.runInNewContext(m.wrap(esBuildResult.code), cache.sandbox, {
+      filename: params.path,
+    });
+    const module = {
+      exports: {},
+      loaded: false,
+      id: params.path,
+    };
+    x(
+      module.exports,
+      sandboxRequire.bind(null, params.path),
+      module,
+      dirname(params.path),
+      params.path
+    );
+    const adapterResult = await adapter({
+      request: params.request,
+      // @ts-ignore
+      handler: module.exports.default,
+      page: params.path,
+    });
+    return adapterResult;
+  } catch (error) {
     cache = undefined;
-
-    if (rscManifest && entryPoint) {
-      return entryPoint.default({
-        request: params.request,
-        rscManifest,
-      });
-    }
-  }
-
-  return entryPoint.default({ request: params.request });
-}
-
-function loadDependencies(
-  ctx: vm.Context,
-  dependencies: { path: string; map: { [key: string]: string } }[]
-) {
-  for (const { path, map } of dependencies) {
-    const mod = sandboxRequire(path, path);
-    for (const mapKey of Object.keys(map)) {
-      ctx[map[mapKey]] = mod[mapKey];
-    }
+    throw error;
   }
 }
 

@@ -1,7 +1,5 @@
 import { isIterable } from '../is';
 
-export type HeadersInit = Headers | string[][] | { [key: string]: string };
-
 const MAP = Symbol('map');
 const INTERNAL = Symbol('internal');
 const INVALID_TOKEN_REGEX = /[^^_`a-zA-Z\-0-9!#$%&'*+.|~]/;
@@ -35,6 +33,7 @@ class BaseHeaders implements Headers {
       }
     } else if (typeof init === 'object') {
       for (const key of Object.keys(init)) {
+        // @ts-ignore
         this.append(key, init[key]);
       }
     } else if (init) {
