@@ -51,6 +51,7 @@ export async function build() {
     await esbuild.build({
       entryPoints: [ENTRIES_NAME],
       bundle: true,
+      absWorkingDir: process.cwd(),
       outfile: '.output/server/pages/_middleware.js',
     });
   } finally {
@@ -76,6 +77,7 @@ export async function build() {
   await fsp.writeFile(middlewareManifestPath, middlewareManifestData);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function runDevMiddleware(req: IncomingMessage) {
   // Should run the middleware in the `vm` sandbox and return the result
   // back to `vercel dev`. If no middleware file exists then this function

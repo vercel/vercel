@@ -15,8 +15,6 @@ async function main() {
     ['build', join(srcDir, 'index.ts'), '-o', outDir, '--external', 'esbuild'],
     { stdio: 'inherit' }
   );
-
-  await fs.copyFile(join(__dirname, 'entries.js'), join(outDir, 'entries.js'));
 }
 
 main().catch(err => {

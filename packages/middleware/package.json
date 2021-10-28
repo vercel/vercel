@@ -11,17 +11,33 @@
   },
   "scripts": {
     "build": "node build",
+    "test-unit": "jest",
     "prepublishOnly": "node build"
   },
   "files": [
     "dist"
   ],
   "dependencies": {
-    "esbuild": "0.13.8"
+    "esbuild": "0.13.8",
+    "globby": "11"
   },
   "devDependencies": {
+    "@types/jest": "27.0.2",
     "@types/node": "16.11.4",
-    "@vercel/ncc": "0.24.0",
-    "globby": "11"
+    "@vercel/ncc": "0.24.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "globals": {
+      "ts-jest": {
+        "diagnostics": false,
+        "isolatedModules": true
+      }
+    },
+    "verbose": false,
+    "testEnvironment": "node",
+    "testMatch": [
+      "<rootDir>/test/**/*.test.ts"
+    ]
   }
 }
