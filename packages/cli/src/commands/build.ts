@@ -318,6 +318,9 @@ export default async function main(client: Client) {
       ignore: [
         'node_modules/**',
         '.vercel/**',
+        '.env',
+        '.env.*',
+        '.*ignore',
         '_middleware.ts',
         '_middleware.mts',
         '_middleware.cts',
