@@ -6,15 +6,9 @@ import { BuildOptions } from '@vercel/build-utils/dist';
 describe('build()', () => {
   it('should build simple middleware', async () => {
     const fixture = join(__dirname, 'fixtures/simple');
-    const orig = process.cwd();
-    try {
-      process.chdir(fixture);
-      await build({
-        workPath: fixture,
-      } as BuildOptions);
-    } finally {
-      process.chdir(orig);
-    }
+    await build({
+      workPath: fixture,
+    } as BuildOptions);
 
     const middlewareManifest = JSON.parse(
       await fsp.readFile(

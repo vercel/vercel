@@ -50,24 +50,25 @@ async function getMiddlewareFile(workingDirectory: string) {
 }
 
 export async function build({ workPath }: BuildOptions) {
+  const entriesPath = join(workPath, ENTRIES_NAME);
   const middlewareFile = await getMiddlewareFile(workPath);
   if (!middlewareFile) return;
 
   console.log('Compiling middleware file: %j', middlewareFile);
 
   // Create `_ENTRIES` wrapper
-  await fsp.copyFile(join(__dirname, 'entries.js'), ENTRIES_NAME);
+  await fsp.copyFile(join(__dirname, 'entries.js'), entriesPath);
 
   // Build
   try {
     await esbuild.build({
-      entryPoints: [ENTRIES_NAME],
+      entryPoints: [entriesPath],
       bundle: true,
-      absWorkingDir: process.cwd(),
-      outfile: '.output/server/pages/_middleware.js',
+      absWorkingDir: workPath,
+      outfile: join(workPath, '.output/server/pages/_middleware.js'),
     });
   } finally {
-    await fsp.unlink(ENTRIES_NAME);
+    await fsp.unlink(entriesPath);
   }
 
   // Write middleware manifest
@@ -85,7 +86,10 @@ export async function build({ workPath }: BuildOptions) {
     },
   };
   const middlewareManifestData = JSON.stringify(middlewareManifest, null, 2);
-  const middlewareManifestPath = '.output/server/middleware-manifest.json';
+  const middlewareManifestPath = join(
+    workPath,
+    '.output/server/middleware-manifest.json'
+  );
   await fsp.writeFile(middlewareManifestPath, middlewareManifestData);
 }
 
@@ -315,10 +319,11 @@ export async function runDevMiddleware(
   workingDirectory: string
 ): ReturnType<typeof runMiddlewareCatchAll> {
   const middlewareFile = await getMiddlewareFile(workingDirectory);
-  if (!middlewareFile)
+  if (!middlewareFile) {
     return {
       finished: false,
     };
+  }
   return runMiddlewareCatchAll(
     req,
     res,

@@ -23,7 +23,7 @@
     "cookie": "0.4.1",
     "esbuild": "0.13.10",
     "formdata-node": "4.3.1",
-    "globby": "11",
+    "globby": "9",
     "http-proxy": "1.18.1",
     "node-fetch": "^2",
     "querystring": "0.2.1",
@@ -41,8 +41,7 @@
     "@types/node-fetch": "^2",
     "@types/ua-parser-js": "0.7.36",
     "@types/uuid": "8.3.1",
-    "@vercel/ncc": "0.24.0",
-    "globby": "11"
+    "@vercel/ncc": "0.24.0"
   },
   "jest": {
     "preset": "ts-jest",

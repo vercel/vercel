@@ -1,6 +1,6 @@
 import type { RequestData, FetchEventResult, NodeHeaders } from '../types';
 import { Blob, File, FormData } from 'formdata-node';
-import { dirname, extname } from 'path';
+import { dirname, extname, resolve } from 'path';
 import { readFileSync } from 'fs';
 import { TransformStream } from 'web-streams-polyfill';
 import * as polyfills from './polyfills';
@@ -145,7 +145,7 @@ export async function run(params: {
 
 function sandboxRequire(referrer: string, specifier: string) {
   const resolved = require.resolve(specifier, {
-    paths: [dirname(referrer)],
+    paths: [resolve(dirname(referrer))],
   });
 
   const cached = cache?.require.get(resolved);
