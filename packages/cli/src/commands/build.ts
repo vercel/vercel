@@ -387,24 +387,15 @@ export default async function main(client: Client) {
     // Special Next.js processing.
     if (framework.slug === 'nextjs') {
       // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
-      const staticFiles = await glob(join(OUTPUT_DIR, 'static', '**'), {
-        nodir: true,
-        dot: true,
-        cwd,
-        absolute: true,
-      });
-
-      await Promise.all(
-        staticFiles.map(f =>
-          smartCopy(
-            client,
-            f,
-            f.replace(
-              join(OUTPUT_DIR, 'static'),
-              join(OUTPUT_DIR, 'static', '_next', 'static')
-            )
-          )
-        )
+      const tempStatic = '___static';
+      await fs.rename(
+        join(cwd, OUTPUT_DIR, 'static'),
+        join(cwd, OUTPUT_DIR, tempStatic)
+      );
+      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'static', '_next', 'static'));
+      await fs.rename(
+        join(cwd, OUTPUT_DIR, tempStatic),
+        join(cwd, OUTPUT_DIR, 'static', '_next', 'static')
       );
 
       // We want to pick up directories for user-provided static files into `.`output/static`.
