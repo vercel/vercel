@@ -386,6 +386,27 @@ export default async function main(client: Client) {
 
     // Special Next.js processing.
     if (framework.slug === 'nextjs') {
+      // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
+      const staticFiles = await glob(join(OUTPUT_DIR, 'static', '**'), {
+        nodir: true,
+        dot: true,
+        cwd,
+        absolute: true,
+      });
+
+      await Promise.all(
+        staticFiles.map(f =>
+          smartCopy(
+            client,
+            f,
+            f.replace(
+              join(OUTPUT_DIR, 'static'),
+              join(OUTPUT_DIR, 'static', '_next', 'static')
+            )
+          )
+        )
+      );
+
       // We want to pick up directories for user-provided static files into `.`output/static`.
       // More specifically, the static directory contents would then be mounted to `output/static/static`,
       // and the public directory contents would be mounted to `output/static`. Old Next.js versions
@@ -427,27 +448,6 @@ export default async function main(client: Client) {
           )
         );
       }
-
-      // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
-      const staticFiles = await glob(join(OUTPUT_DIR, 'static', '**'), {
-        nodir: true,
-        dot: true,
-        cwd,
-        absolute: true,
-      });
-
-      await Promise.all(
-        staticFiles.map(f =>
-          smartCopy(
-            client,
-            f,
-            f.replace(
-              join(OUTPUT_DIR, 'static'),
-              join(OUTPUT_DIR, 'static', '_next', 'static')
-            )
-          )
-        )
-      );
 
       // Regardless of the Next.js version, we make sure that it is compatible with
       // the Filesystem API. We get there by  moving all the files needed
