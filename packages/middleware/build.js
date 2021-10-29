@@ -12,6 +12,11 @@ async function main() {
   await execa('tsc', [], {
     stdio: 'inherit',
   });
+
+  await fs.copyFile(
+    join(__dirname, 'src/entries.js'),
+    join(outDir, 'entries.js')
+  );
 }
 
 main().catch(err => {
