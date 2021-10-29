@@ -2,7 +2,6 @@ import { loadEnvConfig, processEnv } from '@next/env';
 import {
   execCommand,
   getScriptName,
-  GlobOptions,
   scanParentDirs,
   spawnAsync,
 } from '@vercel/build-utils';
@@ -12,8 +11,8 @@ import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
 import { assert } from 'console';
 import { createHash } from 'crypto';
+import glob from 'fast-glob';
 import fs from 'fs-extra';
-import ogGlob from 'glob';
 import { isAbsolute, join, parse, relative, resolve } from 'path';
 import pluralize from 'pluralize';
 import Client from '../util/client';
@@ -314,6 +313,7 @@ export default async function main(client: Client) {
     client.output.spinner(
       `Copying files from ${param(distDir)} to ${param(outputDir)}`
     );
+    const promises = [];
     const files = await glob(join(relativeDistDir, '**'), {
       ignore: [
         'node_modules/**',
@@ -330,13 +330,14 @@ export default async function main(client: Client) {
         'api/**',
         '.git/**',
       ],
-      nodir: true,
+      onlyFiles: true,
+
       dot: true,
       cwd,
       absolute: true,
     });
-    await Promise.all(
-      files.map(f =>
+    promises.push(
+      ...files.map(f =>
         smartCopy(
           client,
           f,
@@ -346,16 +347,8 @@ export default async function main(client: Client) {
         )
       )
     );
-    client.output.stopSpinner();
-    client.output.log(
-      `Copied ${files.length.toLocaleString()} files from ${param(
-        distDir
-      )} to ${param(outputDir)} ${copyStamp()}`
-    );
-
     const buildManifestPath = join(cwd, OUTPUT_DIR, 'build-manifest.json');
     const routesManifestPath = join(cwd, OUTPUT_DIR, 'routes-manifest.json');
-
     if (!fs.existsSync(buildManifestPath)) {
       client.output.debug(
         `Generating build manifest: ${param(buildManifestPath)}`
@@ -363,7 +356,9 @@ export default async function main(client: Client) {
       const buildManifest = {
         cache: framework.cachePattern ? [framework.cachePattern] : [],
       };
-      await fs.writeJSON(buildManifestPath, buildManifest, { spaces: 2 });
+      promises.push(
+        fs.writeJSON(buildManifestPath, buildManifest, { spaces: 2 })
+      );
     }
 
     if (!fs.existsSync(routesManifestPath)) {
@@ -380,10 +375,21 @@ export default async function main(client: Client) {
         dataRoutes: [],
         rewrites: framework.defaultRewrites ?? [],
       };
-      await fs.writeJSON(
-        join(cwd, OUTPUT_DIR, 'routes-manifest.json'),
-        routesManifest,
-        { spaces: 2 }
+      promises.push(
+        fs.writeJSON(
+          join(cwd, OUTPUT_DIR, 'routes-manifest.json'),
+          routesManifest,
+          { spaces: 2 }
+        )
+      );
+
+      // Blast all promises at once.
+      await Promise.all(promises);
+      client.output.stopSpinner();
+      client.output.log(
+        `Copied ${files.length.toLocaleString()} files from ${param(
+          distDir
+        )} to ${param(outputDir)} ${copyStamp()}`
       );
     }
 
@@ -410,7 +416,7 @@ export default async function main(client: Client) {
       // read public for old Next.js versions that don't support it, which might be breaking (and
       // we don't want to make vercel build specific framework versions).
       const publicFiles = await glob('public/**', {
-        nodir: true,
+        onlyFiles: true,
         dot: true,
         cwd,
         absolute: true,
@@ -427,7 +433,7 @@ export default async function main(client: Client) {
         );
       } else {
         const staticFiles = await glob('static/**', {
-          nodir: true,
+          onlyFiles: true,
           dot: true,
           cwd,
           absolute: true,
@@ -454,7 +460,7 @@ export default async function main(client: Client) {
       // works with the Filesystem API (and so .output contains all inputs
       // needed to run Next.js) and `vc --prebuilt`.
       const nftFiles = await glob(join(OUTPUT_DIR, '**', '*.nft.json'), {
-        nodir: true,
+        onlyFiles: true,
         dot: true,
         cwd,
         absolute: true,
@@ -466,7 +472,7 @@ export default async function main(client: Client) {
         const serverFiles = await glob(
           join(OUTPUT_DIR, 'server', 'pages', '**', '*.js'),
           {
-            nodir: true,
+            onlyFiles: true,
             dot: true,
             cwd,
             ignore: ['webpack-runtime.js'],
@@ -694,14 +700,6 @@ async function smartCopy(client: Client, from: string, to: string) {
   } finally {
     sema.release();
   }
-}
-
-async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
-  return new Promise((resolve, reject) => {
-    ogGlob(pattern, options, (err, files) => {
-      err ? reject(err) : resolve(files);
-    });
-  });
 }
 
 /**
