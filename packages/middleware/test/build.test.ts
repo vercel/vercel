@@ -5,13 +5,9 @@ import { build } from '../src';
 describe('build()', () => {
   it('should build simple middleware', async () => {
     const fixture = join(__dirname, 'fixtures/simple');
-    const orig = process.cwd();
-    try {
-      process.chdir(fixture);
-      await build();
-    } finally {
-      process.chdir(orig);
-    }
+    await build({
+      workPath: fixture,
+    });
 
     const middlewareManifest = JSON.parse(
       await fsp.readFile(

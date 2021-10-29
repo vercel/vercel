@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "23.1.3-canary.16",
+  "version": "23.1.3-canary.18",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -92,6 +92,7 @@
     "@types/write-json-file": "2.2.1",
     "@vercel/frameworks": "0.5.1-canary.10",
     "@vercel/ncc": "0.24.0",
+    "@vercel/nft": "0.17.0",
     "@zeit/fun": "0.11.2",
     "@zeit/source-map-support": "0.6.2",
     "ajv": "6.12.2",
