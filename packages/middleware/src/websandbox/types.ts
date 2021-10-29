@@ -1,3 +1,5 @@
+import { Response } from 'node-fetch';
+
 export interface NodeHeaders {
   [header: string]: string | string[] | undefined;
 }

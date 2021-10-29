@@ -5,6 +5,7 @@ import { NextFetchEvent } from './spec-extension/fetch-event';
 import { NextRequest, RequestInit } from './spec-extension/request';
 import { SpecResponse } from './spec-extension/response';
 import { waitUntilSymbol } from './spec-compliant/fetch-event';
+import { Response } from 'node-fetch';
 
 export async function adapter(params: {
   handler: (request: NextRequest, event: NextFetchEvent) => Promise<Response>;
