@@ -92,6 +92,7 @@
     "@types/write-json-file": "2.2.1",
     "@vercel/frameworks": "0.5.1-canary.10",
     "@vercel/ncc": "0.24.0",
+    "@vercel/nft": "0.17.0",
     "@zeit/fun": "0.11.2",
     "@zeit/source-map-support": "0.6.2",
     "ajv": "6.12.2",
