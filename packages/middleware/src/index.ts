@@ -3,7 +3,6 @@ import { extname, join, basename } from 'path';
 import * as esbuild from 'esbuild';
 import { promises as fsp } from 'fs';
 import { IncomingMessage, ServerResponse } from 'http';
-import { BuildOptions } from '@vercel/build-utils';
 import Proxy from 'http-proxy';
 
 import { run } from './websandbox';
@@ -15,6 +14,7 @@ import {
   parse as parseUrl,
   UrlWithParsedQuery,
 } from 'url';
+import { toNodeHeaders } from './websandbox/utils';
 
 const SUPPORTED_EXTENSIONS = ['.js', '.ts'];
 
@@ -49,7 +49,7 @@ async function getMiddlewareFile(workingDirectory: string) {
   return middlewareFiles[0];
 }
 
-export async function build({ workPath }: BuildOptions) {
+export async function build({ workPath }: { workPath: string }) {
   const entriesPath = join(workPath, ENTRIES_NAME);
   const middlewareFile = await getMiddlewareFile(workPath);
   if (!middlewareFile) return;
@@ -154,9 +154,10 @@ async function runMiddlewareCatchAll(
 
   result.response.headers.delete('x-middleware-next');
 
-  // @ts-ignore
-  for (const [key, value] of result.response.headers.entries()) {
-    if (key !== 'content-encoding') {
+  for (const [key, value] of Object.entries(
+    toNodeHeaders(result.response.headers)
+  )) {
+    if (key !== 'content-encoding' && value !== undefined) {
       res.setHeader(key, value);
     }
   }

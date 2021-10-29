@@ -443,7 +443,9 @@ export default async function main(client: Client) {
           console.log = (...args: any[]) => prefixedLog(prefix, args, origLog);
           console.error = (...args: any[]) =>
             prefixedLog(prefix, args, origErr);
-          await plugin.build();
+          await plugin.build({
+            workPath: cwd,
+          });
           client.output.debug(
             `Completed ${fullName} ${chalk.dim(`${pluginStamp()}`)}`
           );

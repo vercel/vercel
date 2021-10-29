@@ -19,7 +19,6 @@
   ],
   "dependencies": {
     "@peculiar/webcrypto": "1.2.0",
-    "@vercel/build-utils": "2.12.2",
     "cookie": "0.4.1",
     "esbuild": "0.13.10",
     "formdata-node": "4.3.1",

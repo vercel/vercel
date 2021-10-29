@@ -2597,11 +2597,6 @@
     "@typescript-eslint/types" "4.28.0"
     eslint-visitor-keys "^2.0.0"
 
-"@vercel/build-utils@2.12.2":
-  version "2.12.2"
-  resolved "https://registry.yarnpkg.com/@vercel/build-utils/-/build-utils-2.12.2.tgz#285a3bb0b78864fb6f44478257bd275c57aa8651"
-  integrity sha512-KbSgG2ZCVXhUsdbnpv6gC7buygd31jaKiKhrd4Lzv1NwjnoeDZAXlm4hzvSPYHVtCY2jirKJWP2rFtMW8iAh9g==
-
 "@vercel/ncc@0.24.0":
   version "0.24.0"
   resolved "https://registry.yarnpkg.com/@vercel/ncc/-/ncc-0.24.0.tgz#a2e8783a185caa99b5d8961a57dfc9665de16296"
