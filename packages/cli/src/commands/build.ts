@@ -521,7 +521,7 @@ export default async function main(client: Client) {
 
       const requiredServerFilesPath = join(
         OUTPUT_DIR,
-        'require-server-files.json'
+        'required-server-files.json'
       );
       const requiredServerFilesJson = await fs.readJSON(
         requiredServerFilesPath
