@@ -744,7 +744,7 @@ async function resolveNftToOutput({
 
       newFilesList.push({
         input: relative(parse(nftFileName).dir, newFilePath),
-        output: relative(cwd, fullInput),
+        output: relative(cwd, fullInput).replace('.output', '.next'),
       });
     } else {
       newFilesList.push(relativeInput);
