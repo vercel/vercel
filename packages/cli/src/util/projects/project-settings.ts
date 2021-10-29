@@ -8,8 +8,10 @@ export type ProjectLinkAndSettings = ProjectLink & {
     buildCommand: Project['buildCommand'];
     devCommand: Project['devCommand'];
     outputDirectory: Project['outputDirectory'];
+    directoryListing: Project['directoryListing'];
     rootDirectory: Project['rootDirectory'];
     framework: Project['framework'];
+    autoExposeSystemEnvs: Project['autoExposeSystemEnvs'];
   };
 };
 
@@ -32,6 +34,7 @@ export async function writeProjectSettings(
         directoryListing: project.directoryListing,
         rootDirectory: project.rootDirectory,
         framework: project.framework,
+        autoExposeSystemEnvs: project.autoExposeSystemEnvs,
       },
     })
   );

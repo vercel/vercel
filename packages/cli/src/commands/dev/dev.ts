@@ -1,16 +1,14 @@
-import { resolve, join } from 'path';
-
-import DevServer from '../../util/dev/server';
-import parseListen from '../../util/dev/parse-listen';
-import { ProjectEnvVariable } from '../../types';
+import { join, resolve } from 'path';
 import Client from '../../util/client';
-import { getLinkedProject } from '../../util/projects/link';
-import { getFrameworks } from '../../util/get-frameworks';
+import parseListen from '../../util/dev/parse-listen';
+import DevServer from '../../util/dev/server';
+import confirm from '../../util/input/confirm';
 import { isSettingValue } from '../../util/is-setting-value';
-import { ProjectSettings } from '../../types';
-import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
-import setupAndLink from '../../util/link/setup-and-link';
-import getSystemEnvValues from '../../util/env/get-system-env-values';
+import { getCommandName } from '../../util/pkg-name';
+import { findFramework } from '../../util/projects/find-framework';
+import { VERCEL_DIR } from '../../util/projects/link';
+import { readProjectSettings } from '../../util/projects/project-settings';
+import pull from '../pull';
 
 type Options = {
   '--listen': string;
@@ -27,76 +25,59 @@ export default async function dev(
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
 
-  // retrieve dev command
-  let [link, frameworks] = await Promise.all([
-    getLinkedProject(client, cwd),
-    getFrameworks(client),
-  ]);
-
-  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    link = await setupAndLink(client, cwd, {
-      autoConfirm: opts['--confirm'],
-      successEmoji: 'link',
-      setupMsg: 'Set up and develop',
-    });
-
-    if (link.status === 'not_linked') {
-      // User aborted project linking questions
+  let project = await readProjectSettings(join(cwd, VERCEL_DIR));
+  // If there are no project settings, only then do we pull them down
+  while (!project?.settings) {
+    const confirmed = await confirm(
+      `No Project Settings found locally. Run ${getCommandName(
+        'pull'
+      )} for retrieving them?`,
+      true
+    );
+    if (!confirmed) {
+      client.output.print(`Aborted. No Project Settings retrieved.\n`);
       return 0;
     }
-  }
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  }
-
-  let devCommand: string | undefined;
-  let frameworkSlug: string | undefined;
-  let projectSettings: ProjectSettings | undefined;
-  let projectEnvs: ProjectEnvVariable[] = [];
-  let systemEnvValues: string[] = [];
-  if (link.status === 'linked') {
-    const { project, org } = link;
-    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
-
-    projectSettings = project;
-
-    if (project.devCommand) {
-      devCommand = project.devCommand;
-    } else if (project.framework) {
-      const framework = frameworks.find(f => f.slug === project.framework);
-
-      if (framework) {
-        if (framework.slug) {
-          frameworkSlug = framework.slug;
-        }
-
-        const defaults = framework.settings.devCommand;
-        if (isSettingValue(defaults)) {
-          devCommand = defaults.value;
-        }
-      }
+    const result = await pull(client);
+    if (result !== 0) {
+      return result;
     }
-
-    if (project.rootDirectory) {
-      cwd = join(cwd, project.rootDirectory);
-    }
-
-    [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-      getDecryptedEnvRecords(output, client, project.id),
-      project.autoExposeSystemEnvs
-        ? getSystemEnvValues(output, client, project.id)
-        : { systemEnvValues: [] },
-    ]);
+    project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
+
+  cwd = project.settings.rootDirectory
+    ? join(cwd, project.settings.rootDirectory)
+    : cwd;
+
+  process.chdir(cwd);
+
+  const framework = findFramework(project.settings.framework);
+  // If this is undefined, we bail. If it is null, then findFramework should return "Other",
+  // so this should really never happen, but just in case....
+  if (framework === undefined) {
+    client.output.error(
+      `Framework detection failed or is malformed. Please run ${getCommandName(
+        'pull'
+      )} again.`
+    );
+    return 1;
+  }
+
+  const devCommand = project.settings.devCommand
+    ? project.settings.devCommand
+    : framework.settings.devCommand
+    ? isSettingValue(framework.settings.devCommand)
+      ? framework.settings.devCommand?.value
+      : undefined
+    : undefined;
 
   const devServer = new DevServer(cwd, {
     output,
     devCommand,
-    frameworkSlug,
-    projectSettings,
-    projectEnvs,
-    systemEnvValues,
+    frameworkSlug: project.settings.framework ?? undefined,
+    projectSettings: project.settings,
+    projectEnvs: [],
+    systemEnvValues: [],
   });
 
   await devServer.start(...listen);
