@@ -518,6 +518,22 @@ export default async function main(client: Client) {
           });
         }
       }
+
+      const requiredServerFilesPath = join(
+        OUTPUT_DIR,
+        'require-server-files.json'
+      );
+      const requiredServerFilesJson = await fs.readJSON(
+        requiredServerFilesPath
+      );
+      await fs.writeJSON(requiredServerFilesPath, {
+        ...requiredServerFilesJson,
+        appDir: '.',
+        files: requiredServerFilesJson.files.map((i: string) => ({
+          input: i.replace('.next', '.output'),
+          output: i,
+        })),
+      });
     }
   }
 
