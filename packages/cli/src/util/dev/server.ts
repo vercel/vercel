@@ -22,6 +22,8 @@ import deepEqual from 'fast-deep-equal';
 import which from 'which';
 import npa from 'npm-package-arg';
 
+import { runDevMiddleware } from 'vercel-plugin-middleware';
+
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
   getTransformedRoutes,
@@ -1415,6 +1417,26 @@ export default class DevServer {
     let statusCode: number | undefined;
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
+
+    const middlewareResult = await runDevMiddleware(req, res, this.cwd);
+
+    if (middlewareResult) {
+      if (middlewareResult.finished) {
+        return;
+      }
+
+      if (middlewareResult.pathname) {
+        const origUrl = url.parse(req.url || '/', true);
+        origUrl.pathname = middlewareResult.pathname;
+        prevUrl = url.format(origUrl);
+      }
+      if (middlewareResult.query && prevUrl) {
+        const origUrl = url.parse(req.url || '/', true);
+        delete origUrl.search;
+        Object.assign(origUrl.query, middlewareResult.query);
+        prevUrl = url.format(origUrl);
+      }
+    }
 
     for (const phase of phases) {
       statusCode = undefined;

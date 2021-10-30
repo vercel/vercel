@@ -335,4 +335,32 @@ describe('DevServer', () => {
       expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
     })
   );
+
+  it(
+    'should support edge middleware',
+    testFixture('edge-middleware', async server => {
+      const response = await fetch(`${server.address}/index.html`);
+      const body = await response.json();
+      expect(body).toEqual(
+        JSON.parse(
+          fs.readFileSync(
+            path.join(
+              __dirname,
+              '../../fixtures/unit/edge-middleware/response.json'
+            ),
+            'utf8'
+          )
+        )
+      );
+    })
+  );
+
+  it(
+    'should work with middleware written in typescript',
+    testFixture('edge-middleware-ts', async server => {
+      const response = await fetch(`${server.address}/index.html`);
+      const body = await response.text();
+      expect(body).toStrictEqual('response');
+    })
+  );
 });

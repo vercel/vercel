@@ -88,6 +88,50 @@ export async function* checkDeploymentStatus(
       yield { type: 'ready', payload: deploymentUpdate };
     }
 
+    if (deploymentUpdate.checksState !== undefined) {
+      if (
+        deploymentUpdate.checksState === 'completed' &&
+        !finishedEvents.has('checks-completed')
+      ) {
+        finishedEvents.add('checks-completed');
+
+        if (deploymentUpdate.checksConclusion === 'succeeded') {
+          yield {
+            type: 'checks-conclusion-succeeded',
+            payload: deploymentUpdate,
+          };
+        } else if (deploymentUpdate.checksConclusion === 'failed') {
+          yield { type: 'checks-conclusion-failed', payload: deploymentUpdate };
+        } else if (deploymentUpdate.checksConclusion === 'skipped') {
+          yield {
+            type: 'checks-conclusion-skipped',
+            payload: deploymentUpdate,
+          };
+        } else if (deploymentUpdate.checksConclusion === 'canceled') {
+          yield {
+            type: 'checks-conclusion-canceled',
+            payload: deploymentUpdate,
+          };
+        }
+      }
+
+      if (
+        deploymentUpdate.checksState === 'registered' &&
+        !finishedEvents.has('checks-registered')
+      ) {
+        finishedEvents.add('checks-registered');
+        yield { type: 'checks-registered', payload: deploymentUpdate };
+      }
+
+      if (
+        deploymentUpdate.checksState === 'running' &&
+        !finishedEvents.has('checks-running')
+      ) {
+        finishedEvents.add('checks-running');
+        yield { type: 'checks-running', payload: deploymentUpdate };
+      }
+    }
+
     if (isAliasAssigned(deploymentUpdate)) {
       debug('Deployment alias assigned');
       return yield { type: 'alias-assigned', payload: deploymentUpdate };
