@@ -7,6 +7,7 @@ const allPackages = [
   'frameworks',
   'build-utils',
   'static-config',
+  'middleware',
   'client',
   'node-bridge',
   'node',

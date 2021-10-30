@@ -268,10 +268,10 @@ export default async function main(client: Client) {
 
   // Clean the output directory
   fs.removeSync(join(cwd, OUTPUT_DIR));
-  let result: boolean;
+
   if (typeof buildState.buildCommand === 'string') {
     client.output.log(`Running Build Command: ${cmd(buildState.buildCommand)}`);
-    result = await execCommand(buildState.buildCommand, {
+    await execCommand(buildState.buildCommand, {
       ...spawnOpts,
       // Yarn v2 PnP mode may be activated, so force
       // "node-modules" linker style
@@ -282,24 +282,12 @@ export default async function main(client: Client) {
       cwd: cwd,
     });
   } else if (fs.existsSync(join(cwd, 'package.json'))) {
-    result = await runPackageJsonScript(
+    await runPackageJsonScript(
       client,
       cwd,
       ['vercel-build', 'now-build', 'build'],
       spawnOpts
     );
-  } else {
-    // no package.json exists and no build command present
-    result = true;
-  }
-
-  if (!result) {
-    client.output.error(
-      `Missing required "${cmd(
-        buildState.buildCommand || 'vercel-build' || 'build'
-      )}" script in ${param(cwd)}"\n`
-    );
-    return 1;
   }
 
   if (!fs.existsSync(join(cwd, OUTPUT_DIR))) {
@@ -550,7 +538,9 @@ export default async function main(client: Client) {
           console.log = (...args: any[]) => prefixedLog(prefix, args, origLog);
           console.error = (...args: any[]) =>
             prefixedLog(prefix, args, origErr);
-          await plugin.build();
+          await plugin.build({
+            workPath: cwd,
+          });
           client.output.debug(
             `Completed ${fullName} ${chalk.dim(`${pluginStamp()}`)}`
           );
