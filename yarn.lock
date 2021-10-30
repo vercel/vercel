@@ -12082,10 +12082,10 @@ vary@~1.1.2:
   resolved "https://registry.yarnpkg.com/vary/-/vary-1.1.2.tgz#2299f02c6ded30d4a5961b0b9f74524a18f634fc"
   integrity sha1-IpnwLG3tMNSllhsLn3RSShj2NPw=
 
-vercel-plugin-node@1.12.2-plugin.0:
-  version "1.12.2-plugin.0"
-  resolved "https://registry.yarnpkg.com/vercel-plugin-node/-/vercel-plugin-node-1.12.2-plugin.0.tgz#0fa8933e03bfcf97381cec200eeafa71f71814e2"
-  integrity sha512-2JewVOUy2ywwHWTxpqnuyvGDKV4dOIBLDvDGQdnaJUSaDbs0GNeXqz1BMxhm6JnjlAUlXTJf+zbTBzgayIDlwQ==
+vercel-plugin-node@1.12.2-plugin.6:
+  version "1.12.2-plugin.6"
+  resolved "https://registry.yarnpkg.com/vercel-plugin-node/-/vercel-plugin-node-1.12.2-plugin.6.tgz#880458b8b1fdda2a15f424c720b4f914e0d9a008"
+  integrity sha512-UU9By2r5n9npCFoF7+V1Piv3352pQEwlOPts9HJLOjsBiynnKNfgoQPE+8ptnn6eQ2HM80CCYn22UeXhjYfaDQ==
   dependencies:
     "@types/node" "*"
     ts-node "8.9.1"
