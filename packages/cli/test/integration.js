@@ -781,10 +781,10 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     }
   }
 
-  async function vcEnvPullFetchSystemVars() {
+  async function vcPullFetchSystemVars() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
-      ['env', 'pull', '-y', ...defaultArgs],
+      ['pull', '-y', ...defaultArgs],
       {
         reject: false,
         cwd: target,
@@ -884,7 +884,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await vcDevWithEnv();
   fs.unlinkSync(path.join(target, '.env'));
   await enableAutoExposeSystemEnvs();
-  await vcEnvPullFetchSystemVars();
+  await vcPullFetchSystemVars();
   fs.unlinkSync(path.join(target, '.env'));
   await vcEnvRemove();
   await vcEnvRemoveWithArgs();
