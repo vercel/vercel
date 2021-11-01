@@ -27,7 +27,7 @@ export default async function dev(
 
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
   // If there are no project settings, only then do we pull them down
-  while (!project?.settings) {
+  while (!project?.settings && !process.env.__VERCEL_SKIP_DEV_CMD) {
     const confirmed = await confirm(
       `No Project Settings found locally. Run ${getCommandName(
         'pull'
@@ -45,13 +45,13 @@ export default async function dev(
     project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
 
-  cwd = project.settings.rootDirectory
+  cwd = project?.settings.rootDirectory
     ? join(cwd, project.settings.rootDirectory)
     : cwd;
 
   process.chdir(cwd);
 
-  const framework = findFramework(project.settings.framework);
+  const framework = findFramework(project?.settings.framework);
   // If this is undefined, we bail. If it is null, then findFramework should return "Other",
   // so this should really never happen, but just in case....
   if (framework === undefined) {
@@ -63,7 +63,7 @@ export default async function dev(
     return 1;
   }
 
-  const devCommand = project.settings.devCommand
+  const devCommand = project?.settings.devCommand
     ? project.settings.devCommand
     : framework.settings.devCommand
     ? isSettingValue(framework.settings.devCommand)
@@ -74,8 +74,8 @@ export default async function dev(
   const devServer = new DevServer(cwd, {
     output,
     devCommand,
-    frameworkSlug: project.settings.framework ?? undefined,
-    projectSettings: project.settings,
+    frameworkSlug: project?.settings.framework ?? undefined,
+    projectSettings: project?.settings,
     projectEnvs: [],
     systemEnvValues: [],
   });
