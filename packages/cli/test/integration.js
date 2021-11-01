@@ -765,47 +765,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
-  async function vcDevAndFetchCloudVars() {
-    const vc = execa(binaryPath, ['dev', ...defaultArgs], {
-      reject: false,
-      cwd: target,
-    });
-
-    let localhost = undefined;
-    await waitForPrompt(vc, chunk => {
-      if (chunk.includes('Ready! Available at')) {
-        localhost = /(https?:[^\s]+)/g.exec(chunk);
-        return true;
-      }
-      return false;
-    });
-
-    const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await fetch(apiUrl);
-    t.is(apiRes.status, 200);
-
-    const apiJson = await apiRes.json();
-    t.is(apiJson['MY_NEW_ENV_VAR'], 'my plaintext value');
-    t.is(apiJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
-    t.is(apiJson['MY_DECRYPTABLE_SECRET_ENV'], 'decryptable value');
-
-    const homeUrl = localhost[0];
-    const homeRes = await fetch(homeUrl);
-    const homeJson = await homeRes.json();
-    t.is(homeJson['MY_NEW_ENV_VAR'], 'my plaintext value');
-    t.is(homeJson['MY_STDIN_VAR'], '{"expect":"quotes"}');
-    t.is(homeJson['MY_DECRYPTABLE_SECRET_ENV'], 'decryptable value');
-
-    // system env vars are automatically exposed
-    t.is(apiJson['VERCEL'], '1');
-    t.is(homeJson['VERCEL'], '1');
-
-    vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
-
-    const { exitCode, stderr, stdout } = await vc;
-    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-  }
-
   async function enableAutoExposeSystemEnvs() {
     const link = require(path.join(target, '.vercel/project.json'));
 
@@ -842,50 +801,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.true(lines.has('VERCEL_ENV="development"'));
     t.true(lines.has('VERCEL_GIT_PROVIDER=""'));
     t.true(lines.has('VERCEL_GIT_REPO_SLUG=""'));
-  }
-
-  async function vcDevAndFetchSystemVars() {
-    const vc = execa(binaryPath, ['dev', ...defaultArgs], {
-      reject: false,
-      cwd: target,
-    });
-
-    let localhost = undefined;
-    await waitForPrompt(vc, chunk => {
-      if (chunk.includes('Ready! Available at')) {
-        localhost = /(https?:[^\s]+)/g.exec(chunk);
-        return true;
-      }
-      return false;
-    });
-
-    const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await fetch(apiUrl);
-
-    const localhostNoProtocol = localhost[0].slice('http://'.length);
-
-    const apiJson = await apiRes.json();
-    t.is(apiJson['VERCEL'], '1');
-    t.is(apiJson['VERCEL_URL'], localhostNoProtocol);
-    t.is(apiJson['VERCEL_ENV'], 'development');
-    t.is(apiJson['VERCEL_REGION'], 'dev1');
-    t.is(apiJson['VERCEL_GIT_PROVIDER'], '');
-    t.is(apiJson['VERCEL_GIT_REPO_SLUG'], '');
-
-    const homeUrl = localhost[0];
-    const homeRes = await fetch(homeUrl);
-    const homeJson = await homeRes.json();
-    t.is(homeJson['VERCEL'], '1');
-    t.is(homeJson['VERCEL_URL'], localhostNoProtocol);
-    t.is(homeJson['VERCEL_ENV'], 'development');
-    t.is(homeJson['VERCEL_REGION'], undefined);
-    t.is(homeJson['VERCEL_GIT_PROVIDER'], '');
-    t.is(homeJson['VERCEL_GIT_REPO_SLUG'], '');
-
-    vc.kill('SIGTERM', { forceKillAfterTimeout: 2000 });
-
-    const { exitCode, stderr, stdout } = await vc;
-    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
   async function vcEnvRemove() {
@@ -961,16 +876,16 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await vcEnvPullOverwrite();
   await vcEnvPullConfirm();
   await vcDeployWithVar();
+  fs.unlinkSync(path.join(target, '.env'));
+  fs.unlinkSync(path.join(target, '.vercel/project.json'));
   await vcPull();
   await vcPullOverwrite();
   await vcPullConfirm();
   await vcDevWithEnv();
   fs.unlinkSync(path.join(target, '.env'));
-  await vcDevAndFetchCloudVars();
   await enableAutoExposeSystemEnvs();
   await vcEnvPullFetchSystemVars();
   fs.unlinkSync(path.join(target, '.env'));
-  await vcDevAndFetchSystemVars();
   await vcEnvRemove();
   await vcEnvRemoveWithArgs();
   await vcEnvRemoveWithNameOnly();
