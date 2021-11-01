@@ -123,6 +123,8 @@ export default async function main(client: Client) {
     ? join(cwd, project.settings.rootDirectory)
     : cwd;
 
+  process.chdir(cwd);
+
   // Load the environment
   const { combinedEnv, loadedEnvFiles } = loadEnvConfig(cwd, false, {
     info: () => ({}), // we don't want to log this yet.
