@@ -600,6 +600,42 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.false(lines.has('MY_PREVIEW'));
   }
 
+  async function vcPull() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['pull', '-y', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /Created .env file/gm);
+
+    const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
+    t.true(contents.startsWith('# Created by Vercel CLI\n'));
+
+    const lines = new Set(contents.split('\n'));
+    t.true(lines.has('MY_NEW_ENV_VAR="my plaintext value"'));
+    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
+    t.true(lines.has('MY_DECRYPTABLE_SECRET_ENV="decryptable value"'));
+    t.false(lines.has('MY_PREVIEW'));
+
+    const projectJson = fs.readJsonSync(
+      path.join(target, '.vercel/project.json'),
+      'utf8'
+    );
+    const keys = Object.keys(projectJson.settings);
+    t.true(keys.include('buildCommand'));
+    t.true(keys.include('devCommand'));
+    t.true(keys.include('outputDirectory'));
+    t.true(keys.include('directoryListing'));
+    t.true(keys.include('rootDirectory'));
+    t.true(keys.include('framework'));
+    t.true(keys.include('autoExposeSystemEnvs'));
+  }
+
   async function vcEnvPullOverwrite() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
@@ -615,10 +651,42 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(stderr, /Updated .env file/gm);
   }
 
+  async function vcPullOverwrite() {
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      ['pull', ...defaultArgs],
+      {
+        reject: false,
+        cwd: target,
+      }
+    );
+
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+    t.regex(stderr, /Overwriting existing .env file/gm);
+    t.regex(stderr, /Updated .env file/gm);
+  }
+
   async function vcEnvPullConfirm() {
     fs.writeFileSync(path.join(target, '.env'), 'hahaha');
 
     const vc = execa(binaryPath, ['env', 'pull', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+
+    await waitForPrompt(vc, chunk =>
+      chunk.includes('Found existing file ".env". Do you want to overwrite?')
+    );
+    vc.stdin.end('y\n');
+
+    const { exitCode, stderr, stdout } = await vc;
+    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  }
+
+  async function vcPullConfirm() {
+    fs.writeFileSync(path.join(target, '.env'), 'hahaha');
+
+    const vc = execa(binaryPath, ['pull', ...defaultArgs], {
       reject: false,
       cwd: target,
     });
@@ -893,6 +961,9 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await vcEnvPullOverwrite();
   await vcEnvPullConfirm();
   await vcDeployWithVar();
+  await vcPull();
+  await vcPullOverwrite();
+  await vcPullConfirm();
   await vcDevWithEnv();
   fs.unlinkSync(path.join(target, '.env'));
   await vcDevAndFetchCloudVars();
