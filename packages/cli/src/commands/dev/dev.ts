@@ -54,7 +54,7 @@ export default async function dev(
   const framework = findFramework(project?.settings.framework);
   // If this is undefined, we bail. If it is null, then findFramework should return "Other",
   // so this should really never happen, but just in case....
-  if (framework === undefined) {
+  if (framework === undefined && !process.env.__VERCEL_SKIP_DEV_CMD) {
     client.output.error(
       `Framework detection failed or is malformed. Please run ${getCommandName(
         'pull'
@@ -65,7 +65,7 @@ export default async function dev(
 
   const devCommand = project?.settings.devCommand
     ? project.settings.devCommand
-    : framework.settings.devCommand
+    : framework?.settings.devCommand
     ? isSettingValue(framework.settings.devCommand)
       ? framework.settings.devCommand?.value
       : undefined
