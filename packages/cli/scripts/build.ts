@@ -49,16 +49,7 @@ async function main() {
 
   // Do the initial `ncc` build
   console.log();
-  const args = [
-    'ncc',
-    'build',
-    '--external',
-    'update-notifier',
-    '--external',
-    'vercel-plugin-node',
-    '--external',
-    'vercel-plugin-middleware',
-  ];
+  const args = ['ncc', 'build', '--external', 'update-notifier'];
   if (isDev) {
     args.push('--source-map');
   }
