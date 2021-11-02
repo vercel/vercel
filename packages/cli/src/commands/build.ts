@@ -385,7 +385,6 @@ export default async function main(client: Client) {
 
       // Blast all promises at once.
       await Promise.all(promises);
-      client.output.stopSpinner();
       client.output.log(
         `Copied ${files.length.toLocaleString()} files from ${param(
           distDir
