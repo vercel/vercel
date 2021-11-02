@@ -48,9 +48,7 @@
     "@vercel/node": "1.12.2-canary.4",
     "@vercel/python": "2.0.6-canary.4",
     "@vercel/ruby": "1.2.8-canary.3",
-    "update-notifier": "4.1.0",
-    "vercel-plugin-middleware": "0.0.0-canary.4",
-    "vercel-plugin-node": "1.12.2-plugin.6"
+    "update-notifier": "4.1.0"
   },
   "devDependencies": {
     "@next/env": "11.1.2",
@@ -166,6 +164,8 @@
     "typescript": "4.3.4",
     "universal-analytics": "0.4.20",
     "utility-types": "2.1.0",
+    "vercel-plugin-middleware": "0.0.0-canary.4",
+    "vercel-plugin-node": "1.12.2-plugin.6",
     "which": "2.0.2",
     "write-json-file": "2.2.0",
     "xdg-app-paths": "5.1.0"
