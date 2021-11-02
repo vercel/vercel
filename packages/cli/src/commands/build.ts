@@ -6,6 +6,7 @@ import {
   scanParentDirs,
   spawnAsync,
 } from '@vercel/build-utils';
+import { nodeFileTrace } from '@vercel/nft';
 import Sema from 'async-sema';
 import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
@@ -269,10 +270,10 @@ export default async function main(client: Client) {
 
   // Clean the output directory
   fs.removeSync(join(cwd, OUTPUT_DIR));
-  let result: boolean;
+
   if (typeof buildState.buildCommand === 'string') {
     client.output.log(`Running Build Command: ${cmd(buildState.buildCommand)}`);
-    result = await execCommand(buildState.buildCommand, {
+    await execCommand(buildState.buildCommand, {
       ...spawnOpts,
       // Yarn v2 PnP mode may be activated, so force
       // "node-modules" linker style
@@ -283,24 +284,12 @@ export default async function main(client: Client) {
       cwd: cwd,
     });
   } else if (fs.existsSync(join(cwd, 'package.json'))) {
-    result = await runPackageJsonScript(
+    await runPackageJsonScript(
       client,
       cwd,
       ['vercel-build', 'now-build', 'build'],
       spawnOpts
     );
-  } else {
-    // no package.json exists and no build command present
-    result = true;
-  }
-
-  if (!result) {
-    client.output.error(
-      `Missing required "${cmd(
-        buildState.buildCommand || 'vercel-build' || 'build'
-      )}" script in ${param(cwd)}"\n`
-    );
-    return 1;
   }
 
   if (!fs.existsSync(join(cwd, OUTPUT_DIR))) {
@@ -319,6 +308,9 @@ export default async function main(client: Client) {
       ignore: [
         'node_modules/**',
         '.vercel/**',
+        '.env',
+        '.env.*',
+        '.*ignore',
         '_middleware.ts',
         '_middleware.mts',
         '_middleware.cts',
@@ -384,44 +376,147 @@ export default async function main(client: Client) {
         { spaces: 2 }
       );
     }
-  }
 
-  if (framework.slug === 'nextjs') {
-    const files = await glob(join(OUTPUT_DIR, '**', '*.nft.json'), {
-      nodir: true,
-      dot: true,
-      cwd,
-      absolute: true,
-    });
-    await fs.mkdirp(join(cwd, OUTPUT_DIR, 'inputs'));
-    for (let f of files) {
-      client.output.debug(`Processing ${f}:`);
-      const json = await fs.readJson(f);
-      const newFilesList: (string | { input: string; output: string })[] = [];
-      for (let fileEntity of json.files) {
-        const relativeInput: string =
-          typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
-        const fullInput = resolve(join(parse(f).dir, relativeInput));
+    // Special Next.js processing.
+    if (framework.slug === 'nextjs') {
+      // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
+      const tempStatic = '___static';
+      await fs.rename(
+        join(cwd, OUTPUT_DIR, 'static'),
+        join(cwd, OUTPUT_DIR, tempStatic)
+      );
+      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'static', '_next', 'static'));
+      await fs.rename(
+        join(cwd, OUTPUT_DIR, tempStatic),
+        join(cwd, OUTPUT_DIR, 'static', '_next', 'static')
+      );
 
-        // if the resolved path is NOT in the .output directory we move in it there
-        if (!fullInput.includes(OUTPUT_DIR)) {
-          const { ext } = parse(fullInput);
-          const raw = await fs.readFile(fullInput);
-          const newFilePath = join(OUTPUT_DIR, 'inputs', hash(raw) + ext);
-          smartCopy(client, fullInput, newFilePath);
+      // We want to pick up directories for user-provided static files into `.`output/static`.
+      // More specifically, the static directory contents would then be mounted to `output/static/static`,
+      // and the public directory contents would be mounted to `output/static`. Old Next.js versions
+      // allow `static`, and newer ones allow both, but since there's nobody that actually uses both,
+      // we can check for the existence of both and pick the first match that we find (first
+      // `public`, then`static`). We can't read both at the same time because that would mean we'd
+      // read public for old Next.js versions that don't support it, which might be breaking (and
+      // we don't want to make vercel build specific framework versions).
+      const publicFiles = await glob('public/**', {
+        nodir: true,
+        dot: true,
+        cwd,
+        absolute: true,
+      });
+      if (publicFiles.length > 0) {
+        await Promise.all(
+          publicFiles.map(f =>
+            smartCopy(
+              client,
+              f,
+              f.replace('public', join(OUTPUT_DIR, 'static'))
+            )
+          )
+        );
+      } else {
+        const staticFiles = await glob('static/**', {
+          nodir: true,
+          dot: true,
+          cwd,
+          absolute: true,
+        });
+        await Promise.all(
+          staticFiles.map(f =>
+            smartCopy(
+              client,
+              f,
+              f.replace('static', join(OUTPUT_DIR, 'static', 'static'))
+            )
+          )
+        );
+      }
 
-          newFilesList.push({
-            input: relative(parse(f).dir, newFilePath),
-            output: relative(cwd, fullInput),
+      // Regardless of the Next.js version, we make sure that it is compatible with
+      // the Filesystem API. We get there by  moving all the files needed
+      // into the outputs directory `inputs` folder.  Next.js is > 12, we can
+      // read the .nft.json files directly. If there aren't .nft.json files
+      // we trace and create them. We then resolve the files in each nft file list
+      // and move them into the "inputs" directory. We rename them with hashes to
+      // prevent collisions and then update the related .nft files accordingly
+      // to point to the newly named input files. Again, all of this is so that Next.js
+      // works with the Filesystem API (and so .output contains all inputs
+      // needed to run Next.js) and `vc --prebuilt`.
+      const nftFiles = await glob(join(OUTPUT_DIR, '**', '*.nft.json'), {
+        nodir: true,
+        dot: true,
+        cwd,
+        absolute: true,
+      });
+
+      // If there are no .nft.json files, we know that Next.js < 12. We then
+      // execute the tracing on our own.
+      if (nftFiles.length === 0) {
+        const serverFiles = await glob(
+          join(OUTPUT_DIR, 'server', 'pages', '**', '*.js'),
+          {
+            nodir: true,
+            dot: true,
+            cwd,
+            ignore: ['webpack-runtime.js'],
+            absolute: true,
+          }
+        );
+        for (let f of serverFiles) {
+          const { ext, dir } = parse(f);
+          const { fileList } = await nodeFileTrace([f], {
+            ignore: [
+              relative(cwd, f),
+              'node_modules/next/dist/pages/**/*',
+              'node_modules/next/dist/compiled/webpack/(bundle4|bundle5).js',
+              'node_modules/react/**/*.development.js',
+              'node_modules/react-dom/**/*.development.js',
+              'node_modules/use-subscription/**/*.development.js',
+              'node_modules/sharp/**/*',
+            ],
           });
-        } else {
-          newFilesList.push(relativeInput);
+          fileList.delete(relative(cwd, f));
+          await resolveNftToOutput({
+            client,
+            cwd,
+            outputDir: OUTPUT_DIR,
+            nftFileName: f.replace(ext, '.js.nft.json'),
+            nft: {
+              version: 1,
+              files: Array.from(fileList).map(fileListEntry =>
+                relative(dir, fileListEntry)
+              ),
+            },
+          });
+        }
+      } else {
+        for (let f of nftFiles) {
+          const json = await fs.readJson(f);
+          await resolveNftToOutput({
+            client,
+            cwd,
+            outputDir: OUTPUT_DIR,
+            nftFileName: f,
+            nft: json,
+          });
         }
       }
-      // Update the .nft.json with new input and output mapping
-      await fs.writeJSON(f, {
-        ...json,
-        files: newFilesList,
+
+      const requiredServerFilesPath = join(
+        OUTPUT_DIR,
+        'required-server-files.json'
+      );
+      const requiredServerFilesJson = await fs.readJSON(
+        requiredServerFilesPath
+      );
+      await fs.writeJSON(requiredServerFilesPath, {
+        ...requiredServerFilesJson,
+        appDir: '.',
+        files: requiredServerFilesJson.files.map((i: string) => ({
+          input: i.replace('.next', '.output'),
+          output: i,
+        })),
       });
     }
   }
@@ -445,7 +540,9 @@ export default async function main(client: Client) {
           console.log = (...args: any[]) => prefixedLog(prefix, args, origLog);
           console.error = (...args: any[]) =>
             prefixedLog(prefix, args, origErr);
-          await plugin.build();
+          await plugin.build({
+            workPath: cwd,
+          });
           client.output.debug(
             `Completed ${fullName} ${chalk.dim(`${pluginStamp()}`)}`
           );
@@ -607,4 +704,57 @@ async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
  */
 function hash(buf: Buffer): string {
   return createHash('sha1').update(buf).digest('hex');
+}
+
+interface NftFile {
+  version: number;
+  files: (string | { input: string; output: string })[];
+}
+
+// resolveNftToOutput takes nft file and moves all of its trace files
+// into the specified directory + `inputs`, (renaming them to their hash + ext) and
+// subsequently updating the original nft file accordingly. This is done
+// to make the `.output` directory be self-contained, so that it works
+// properly with `vc --prebuilt`.
+async function resolveNftToOutput({
+  client,
+  cwd,
+  outputDir,
+  nftFileName,
+  nft,
+}: {
+  client: Client;
+  cwd: string;
+  outputDir: string;
+  nftFileName: string;
+  nft: NftFile;
+}) {
+  client.output.debug(`Processing and resolving ${nftFileName}`);
+  await fs.ensureDir(join(outputDir, 'inputs'));
+  const newFilesList: NftFile['files'] = [];
+  for (let fileEntity of nft.files) {
+    const relativeInput: string =
+      typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
+    const fullInput = resolve(join(parse(nftFileName).dir, relativeInput));
+
+    // if the resolved path is NOT in the .output directory we move in it there
+    if (!fullInput.includes(outputDir)) {
+      const { ext } = parse(fullInput);
+      const raw = await fs.readFile(fullInput);
+      const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
+      smartCopy(client, fullInput, newFilePath);
+
+      newFilesList.push({
+        input: relative(parse(nftFileName).dir, newFilePath),
+        output: relative(cwd, fullInput).replace('.output', '.next'),
+      });
+    } else {
+      newFilesList.push(relativeInput);
+    }
+  }
+  // Update the .nft.json with new input and output mapping
+  await fs.writeJSON(nftFileName, {
+    ...nft,
+    files: newFilesList,
+  });
 }

@@ -1,0 +1,21 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`build() should build simple middleware 1`] = `
+Object {
+  "middleware": Object {
+    "/": Object {
+      "env": Array [],
+      "files": Array [
+        "server/pages/_middleware.js",
+      ],
+      "name": "pages/_middleware",
+      "page": "/",
+      "regexp": "^/.*$",
+    },
+  },
+  "sortedMiddleware": Array [
+    "/",
+  ],
+  "version": 1,
+}
+`;
