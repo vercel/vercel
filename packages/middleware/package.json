@@ -31,7 +31,7 @@
     "cookie": "0.4.1",
     "esbuild": "0.13.10",
     "formdata-node": "4.3.1",
-    "globby": "9",
+    "glob": "7.2.0",
     "http-proxy": "1.18.1",
     "node-fetch": "^2",
     "ua-parser-js": "1.0.2",
