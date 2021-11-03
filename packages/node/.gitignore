@@ -1,3 +1,5 @@
 /dist
+/test/fixtures/**/.env
+/test/fixtures/**/.gitignore
 /test/fixtures/**/types.d.ts
 /test/fixtures/11-symlinks/symlink

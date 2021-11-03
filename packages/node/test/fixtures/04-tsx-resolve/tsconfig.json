@@ -8,5 +8,5 @@
     "target": "esnext",
     "module": "commonjs"
   },
-  "include": ["index.ts"]
+  "include": ["api/*.ts", "api/*.tsx"]
 }
