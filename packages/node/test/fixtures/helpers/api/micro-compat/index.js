@@ -1,4 +1,3 @@
-/* eslint-disable prefer-destructuring */
 const { json, send } = require('micro');
 
 module.exports = async (req, res) => {
@@ -10,5 +9,5 @@ module.exports = async (req, res) => {
     who = body.who;
   }
 
-  send(res, 200, `hello ${who}:RANDOMNESS_PLACEHOLDER`);
+  send(res, 200, `hello ${who}`);
 };

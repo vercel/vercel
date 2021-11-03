@@ -2,12 +2,19 @@ import { join } from 'path';
 import { parse } from 'url';
 import { promises as fsp } from 'fs';
 import { createFunction, Lambda } from '@vercel/fun';
-import { HeadersInit, Response } from 'node-fetch';
+import {
+  Request,
+  HeadersInit,
+  RequestInfo,
+  RequestInit,
+  Response,
+  Headers,
+} from 'node-fetch';
 import { build } from '../src';
 
 interface TestParams {
   fixture: string;
-  fetch: (path: string) => Promise<Response>;
+  fetch: (r: RequestInfo, init?: RequestInit) => Promise<Response>;
 }
 
 interface VercelResponsePayload {
@@ -15,6 +22,27 @@ interface VercelResponsePayload {
   headers: { [name: string]: string };
   encoding: 'base64';
   body: string;
+}
+
+function headersToObject(headers: Headers) {
+  const h: { [name: string]: string } = {};
+  for (const [name, value] of headers) {
+    h[name] = value;
+  }
+  return h;
+}
+
+function base64Stream(body?: Buffer | NodeJS.ReadableStream) {
+  if (!body) return undefined;
+  if (Buffer.isBuffer(body)) {
+    return body.toString('base64');
+  }
+  return new Promise<string>((res, rej) => {
+    const buffers: Buffer[] = [];
+    body.on('data', b => buffers.push(b));
+    body.on('end', () => res(Buffer.concat(buffers).toString('base64')));
+    body.on('error', rej);
+  });
 }
 
 function withFixture<T>(
@@ -25,11 +53,12 @@ function withFixture<T>(
     const fixture = join(__dirname, 'fixtures', name);
     const functions = new Map<string, Lambda>();
 
-    async function fetch(url: string) {
-      const parsed = parse(url);
+    async function fetch(r: RequestInfo, init?: RequestInit) {
+      const req = new Request(r, init);
+      const url = parse(req.url);
       const pathWithIndex = join(
-        parsed.pathname!,
-        parsed.pathname!.endsWith('/index') ? '' : 'index'
+        url.pathname!,
+        url.pathname!.endsWith('/index') ? '' : 'index'
       ).substring(1);
 
       let status = 404;
@@ -62,13 +91,13 @@ function withFixture<T>(
         const payload: VercelResponsePayload = await fn({
           Action: 'Invoke',
           body: JSON.stringify({
-            method: 'GET',
-            path: url,
-            headers: {},
-            //body: string;
+            method: req.method,
+            path: req.url,
+            headers: headersToObject(req.headers),
+            body: await base64Stream(req.body),
+            encoding: 'base64',
           }),
         });
-        //console.log({ payload });
         status = payload.statusCode;
         headers = payload.headers;
         body = Buffer.from(payload.body, 'base64');
@@ -205,6 +234,51 @@ describe('build()', () => {
       const res4 = await fetch('/api/accepts-string');
       const body4 = await res4.text();
       expect(body4.includes('hello String!')).toEqual(true);
+    })
+  );
+
+  // Tests the Vercel helper properties / functions
+  it(
+    'should build "helpers"',
+    withFixture('helpers', async ({ fetch }) => {
+      const res = await fetch('/api');
+      const body = await res.text();
+      expect(body).toEqual('hello anonymous');
+
+      const res2 = await fetch('/api?who=bill');
+      const body2 = await res2.text();
+      expect(body2).toEqual('hello bill');
+
+      const res3 = await fetch('/api', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ who: 'john' }),
+      });
+      const body3 = await res3.text();
+      expect(body3).toEqual('hello john');
+
+      const res4 = await fetch('/api', {
+        headers: { cookie: 'who=chris' },
+      });
+      const body4 = await res4.text();
+      expect(body4).toEqual('hello chris');
+
+      const res5 = await fetch('/api/ts');
+      expect(res5.status).toEqual(404);
+      const body5 = await res5.text();
+      expect(body5).toEqual('not found');
+
+      const res6 = await fetch('/api/micro-compat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ who: 'katie' }),
+      });
+      const body6 = await res6.text();
+      expect(body6).toEqual('hello katie');
+
+      const res7 = await fetch('/api/no-helpers');
+      const body7 = await res7.text();
+      expect(body7).toEqual('no');
     })
   );
 });

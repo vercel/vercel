@@ -1,5 +1,3 @@
-/* eslint-disable prefer-destructuring */
-
 module.exports = (req, res) => {
   res.status(200);
 
@@ -13,5 +11,5 @@ module.exports = (req, res) => {
     who = req.cookies.who;
   }
 
-  res.send(`hello ${who}:RANDOMNESS_PLACEHOLDER`);
+  res.send(`hello ${who}`);
 };
