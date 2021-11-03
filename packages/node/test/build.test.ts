@@ -175,6 +175,17 @@ describe('build()', () => {
     })
   );
 
+  // Tests that nft includes statically detected asset files
+  it(
+    'should build "assets"',
+    withFixture('assets', async ({ fetch }) => {
+      const res = await fetch('/api');
+      const body = await res.text();
+      console.log({ body });
+      expect(body).toEqual('asset1,asset2');
+    })
+  );
+
   // Tests the `includeFiles` config option
   it(
     'should build "include-files"',
