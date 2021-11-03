@@ -23,13 +23,11 @@ import handleError from '../util/handle-error';
 import confirm from '../util/input/confirm';
 import { isSettingValue } from '../util/is-setting-value';
 import cmd from '../util/output/cmd';
-import code from '../util/output/code';
-import { getColorForPkgName } from '../util/output/color-name-cache';
 import logo from '../util/output/logo';
 import param from '../util/output/param';
 import stamp from '../util/output/stamp';
-import cliPkgJson from '../util/pkg';
 import { getCommandName, getPkgName } from '../util/pkg-name';
+import { loadCliPlugins } from '../util/plugins';
 import { findFramework } from '../util/projects/find-framework';
 import { VERCEL_DIR } from '../util/projects/link';
 import {
@@ -69,7 +67,6 @@ const help = () => {
 };
 
 const OUTPUT_DIR = '.output';
-const VERCEL_PLUGIN_PREFIX = 'vercel-plugin-';
 
 const fields: {
   name: string;
@@ -200,7 +197,7 @@ export default async function main(client: Client) {
   const debug = argv['--debug'];
   let plugins;
   try {
-    plugins = await loadCliPlugins(client, cwd);
+    plugins = await loadCliPlugins(cwd, client.output.error);
   } catch (error) {
     client.output.error('Failed to load CLI Plugins');
     handleError(error, { debug });
@@ -613,52 +610,6 @@ export async function runPackageJsonScript(
   client.output.print('\n'); // give it some room
   client.output.debug(`Script complete [${Date.now() - runScriptTime}ms]`);
   return true;
-}
-
-async function loadCliPlugins(client: Client, cwd: string) {
-  const { packageJson } = await scanParentDirs(cwd, true);
-
-  let pluginCount = 0;
-  const preBuildPlugins = [];
-  const buildPlugins = [];
-  const deps = new Set(
-    [
-      ...Object.keys(packageJson?.dependencies || {}),
-      ...Object.keys(packageJson?.devDependencies || {}),
-      ...Object.keys(cliPkgJson.dependencies),
-    ].filter(dep => dep.startsWith(VERCEL_PLUGIN_PREFIX))
-  );
-
-  for (let dep of deps) {
-    pluginCount++;
-    const resolved = require.resolve(dep, {
-      paths: [cwd, process.cwd(), __dirname],
-    });
-    let plugin;
-    try {
-      plugin = require(resolved);
-      const color = getColorForPkgName(dep);
-      if (typeof plugin.preBuild === 'function') {
-        preBuildPlugins.push({
-          plugin,
-          name: dep,
-          color,
-        });
-      }
-      if (typeof plugin.build === 'function') {
-        buildPlugins.push({
-          plugin,
-          name: dep,
-          color,
-        });
-      }
-    } catch (error) {
-      client.output.error(`Failed to import ${code(dep)}`);
-      throw error;
-    }
-  }
-
-  return { pluginCount, preBuildPlugins, buildPlugins };
 }
 
 async function linkOrCopy(existingPath: string, newPath: string) {

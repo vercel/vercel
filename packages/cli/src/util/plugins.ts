@@ -1,0 +1,55 @@
+import code from '../util/output/code';
+import { getColorForPkgName } from '../util/output/color-name-cache';
+import cliPkgJson from '../util/pkg';
+import { scanParentDirs } from '@vercel/build-utils';
+
+const VERCEL_PLUGIN_PREFIX = 'vercel-plugin-';
+
+export async function loadCliPlugins(
+  cwd: string,
+  logError: (errorMessage: string) => void = console.error
+) {
+  const { packageJson } = await scanParentDirs(cwd, true);
+
+  let pluginCount = 0;
+  const preBuildPlugins = [];
+  const buildPlugins = [];
+  const deps = new Set(
+    [
+      ...Object.keys(packageJson?.dependencies || {}),
+      ...Object.keys(packageJson?.devDependencies || {}),
+      ...Object.keys(cliPkgJson.dependencies),
+    ].filter(dep => dep.startsWith(VERCEL_PLUGIN_PREFIX))
+  );
+
+  for (let dep of deps) {
+    pluginCount++;
+    const resolved = require.resolve(dep, {
+      paths: [cwd, process.cwd(), __dirname],
+    });
+    let plugin;
+    try {
+      plugin = require(resolved);
+      const color = getColorForPkgName(dep);
+      if (typeof plugin.preBuild === 'function') {
+        preBuildPlugins.push({
+          plugin,
+          name: dep,
+          color,
+        });
+      }
+      if (typeof plugin.build === 'function') {
+        buildPlugins.push({
+          plugin,
+          name: dep,
+          color,
+        });
+      }
+    } catch (error) {
+      logError(`Failed to import ${code(dep)}`);
+      throw error;
+    }
+  }
+
+  return { pluginCount, preBuildPlugins, buildPlugins };
+}
