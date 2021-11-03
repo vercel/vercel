@@ -22,12 +22,6 @@ async function main() {
     fs.copyFile(join(bridgeDir, 'launcher.js'), join(outDir, 'launcher.js')),
   ]);
 
-  // Copy type file for ts test
-  await fs.copyFile(
-    join(outDir, 'types.d.ts'),
-    join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
-  );
-
   // Setup symlink for symlink test
   const symlinkTarget = join(__dirname, 'test/fixtures/11-symlinks/symlink');
   await fs.remove(symlinkTarget);
