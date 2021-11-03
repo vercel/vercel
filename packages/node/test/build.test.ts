@@ -91,6 +91,8 @@ function withFixture<T>(
 }
 
 describe('build()', () => {
+  jest.setTimeout(20 * 1000);
+
   it(
     'should build "hello"',
     withFixture('hello', async ({ fetch }) => {
