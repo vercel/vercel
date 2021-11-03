@@ -44,7 +44,7 @@ const sema = new Sema(16, {
 
 const help = () => {
   return console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} build`)}
+  ${chalk.bold(`${logo} ${getPkgName()} build [path]`)}
 
  ${chalk.dim('Options:')}
 
@@ -55,7 +55,6 @@ const help = () => {
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
-    --cwd [path]                   The current working directory
     -d, --debug                    Debug mode [off]
     -y, --yes                      Skip the confirmation prompt
 
@@ -86,7 +85,6 @@ export default async function main(client: Client) {
   try {
     argv = getArgs(client.argv.slice(2), {
       '--debug': Boolean,
-      '--cwd': String,
     });
   } catch (err) {
     handleError(err);
@@ -98,7 +96,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  let cwd = argv['--cwd'] || process.cwd();
+  let cwd = argv._[1] || process.cwd();
 
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
   // If there are no project settings, only then do we pull them down
