@@ -2,13 +2,11 @@ import code from '../util/output/code';
 import { getColorForPkgName } from '../util/output/color-name-cache';
 import cliPkgJson from '../util/pkg';
 import { scanParentDirs } from '@vercel/build-utils';
+import { Output } from './output';
 
 const VERCEL_PLUGIN_PREFIX = 'vercel-plugin-';
 
-export async function loadCliPlugins(
-  cwd: string,
-  logError: (errorMessage: string) => void = console.error
-) {
+export async function loadCliPlugins(cwd: string, output: Output) {
   const { packageJson } = await scanParentDirs(cwd, true);
 
   let pluginCount = 0;
@@ -63,7 +61,7 @@ export async function loadCliPlugins(
         });
       }
     } catch (error) {
-      logError(`Failed to import ${code(dep)}`);
+      output.error(`Failed to import ${code(dep)}`);
       throw error;
     }
   }
@@ -77,7 +75,7 @@ export async function loadCliPlugins(
     const message = `Only one middlware plugin is supported at a time. Found [${devMiddlewarePlugins
       .map(plugin => plugin.name)
       .join(', ')}]`;
-    logError(message);
+    output.error(message);
     throw new Error(message);
   }
 

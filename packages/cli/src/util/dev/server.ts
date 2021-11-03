@@ -1354,7 +1354,10 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) => {
-    const { devMiddlewarePlugins } = await loadCliPlugins(this.cwd);
+    const { devMiddlewarePlugins } = await loadCliPlugins(
+      this.cwd,
+      this.output
+    );
     if (devMiddlewarePlugins.length) {
       for (let plugin of devMiddlewarePlugins) {
         /**

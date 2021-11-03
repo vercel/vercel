@@ -197,7 +197,7 @@ export default async function main(client: Client) {
   const debug = argv['--debug'];
   let plugins;
   try {
-    plugins = await loadCliPlugins(cwd, client.output.error);
+    plugins = await loadCliPlugins(cwd, client.output);
   } catch (error) {
     client.output.error('Failed to load CLI Plugins');
     handleError(error, { debug });
