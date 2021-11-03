@@ -91,8 +91,11 @@ function withFixture<T>(
 }
 
 describe('build()', () => {
-  jest.setTimeout(20 * 1000);
+  // Longer timeout to install deps of fixtures
+  jest.setTimeout(60 * 1000);
 
+  // Basic test with no dependencies
+  // Also tests `req.query`
   it(
     'should build "hello"',
     withFixture('hello', async ({ fetch }) => {
@@ -107,10 +110,12 @@ describe('build()', () => {
       expect(body2).toEqual('Hello SF!');
     })
   );
-  /*
+
+  // Tests a basic dependency with root-level `package.json`
+  // and an endpoint in a subdirectory with its own `package.json`
   it(
-    'should build "01-cowsay"',
-    withFixture('01-cowsay', async ({ fetch }) => {
+    'should build "cowsay"',
+    withFixture('cowsay', async ({ fetch }) => {
       const res = await fetch('/api');
       expect(res.status).toEqual(200);
       const body = await res.text();
@@ -126,7 +131,6 @@ describe('build()', () => {
       );
     })
   );
-  */
 
   //it(
   //  'should build "02-node-server"',

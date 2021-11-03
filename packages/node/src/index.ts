@@ -34,6 +34,7 @@ import {
   shouldServe,
   debug,
   isSymbolicLink,
+  runNpmInstall,
   walkParentDirs,
 } from '@vercel/build-utils';
 import { FromSchema } from 'json-schema-to-ts';
@@ -78,23 +79,18 @@ const FunctionConfigSchema = {
   additionalProperties: false,
   properties: {
     ...BaseFunctionConfigSchema.properties,
-
     helpers: {
       type: 'boolean',
     },
-
     nodeVersion: {
       type: 'string',
     },
-
     awsHandlerName: {
       type: 'string',
     },
-
     excludeFiles: {
       oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
     },
-
     includeFiles: {
       oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
     },
@@ -125,14 +121,10 @@ async function downloadInstallAndBundle({
   // If there's only the root `package.json` then we can probably skip,
   // but maybe we have to search for a `package.json` in a sub-dir
   // that is in the parent path of the entrypoint, and run npm install in that case
-  //if (meta.isDev) {
-  //  debug('Skipping dependency installation because dev mode is enabled');
-  //} else {
-  //  const installTime = Date.now();
-  //  console.log('Installing dependencies...');
-  //  await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
-  //  debug(`Install complete [${Date.now() - installTime}ms]`);
-  //}
+  const installTime = Date.now();
+  console.log({ entrypointFsDirname });
+  await runNpmInstall(entrypointFsDirname, [], spawnOpts, {}, nodeVersion);
+  debug(`Install complete [${Date.now() - installTime}ms]`);
 
   return {
     entrypointPath: join(workPath, dirname(entrypoint)),
@@ -415,7 +407,7 @@ export async function buildEntrypoint({
 
   const { nodeVersion } = await downloadInstallAndBundle({
     entrypoint,
-    workPath: outputWorkPath,
+    workPath,
   });
   const entrypointPath = join(workPath, entrypoint);
 
