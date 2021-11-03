@@ -22,8 +22,6 @@ import deepEqual from 'fast-deep-equal';
 import which from 'which';
 import npa from 'npm-package-arg';
 
-import { runDevMiddleware } from 'vercel-plugin-middleware';
-
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
   getTransformedRoutes,
@@ -91,6 +89,7 @@ import {
 } from './types';
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
+import { loadCliPlugins } from '../plugins';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -1351,6 +1350,22 @@ export default class DevServer {
     return false;
   };
 
+  runDevMiddleware = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ) => {
+    const { devMiddlewarePlugins } = await loadCliPlugins(this.cwd);
+    if (devMiddlewarePlugins.length) {
+      for (let plugin of devMiddlewarePlugins) {
+        /**
+         * Only one middleware plugin is supported at a time, this is currently enforced in loadCliPlugins.
+         */
+        return plugin.plugin.runDevMiddleware(req, res, this.cwd);
+      }
+    }
+    return { finished: false };
+  };
+
   /**
    * Serve project directory as a v2 deployment.
    */
@@ -1418,7 +1433,7 @@ export default class DevServer {
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
 
-    const middlewareResult = await runDevMiddleware(req, res, this.cwd);
+    const middlewareResult = await this.runDevMiddleware(req, res);
 
     if (middlewareResult) {
       if (middlewareResult.error) {

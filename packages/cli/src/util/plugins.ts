@@ -32,6 +32,7 @@ export async function loadCliPlugins(
     let plugin;
     try {
       plugin = require(resolved);
+
       const color = getColorForPkgName(dep);
       if (typeof plugin.preBuild === 'function') {
         preBuildPlugins.push({
@@ -65,6 +66,19 @@ export async function loadCliPlugins(
       logError(`Failed to import ${code(dep)}`);
       throw error;
     }
+  }
+
+  /**
+   * This is might be wrong... should we support more than one plugin defining runDevMiddleware?
+   * Should the middleware plugin ALWAYS be added? What about when a different framework defines
+   * a runDevMiddleware plugin?
+   */
+  if (devMiddlewarePlugins.length > 1) {
+    const message = `Only one middlware plugin is supported at a time. Found [${devMiddlewarePlugins
+      .map(plugin => plugin.name)
+      .join(', ')}]`;
+    logError(message);
+    throw new Error(message);
   }
 
   return {
