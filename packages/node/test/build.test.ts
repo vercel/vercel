@@ -129,6 +129,23 @@ describe('build()', () => {
           '                ||----w |\n' +
           '                ||     ||'
       );
+
+      const res2 = await fetch('/api/subdirectory');
+      expect(res2.status).toEqual(200);
+      const body2 = await res2.text();
+      expect(body2).toEqual(
+        ' _____________________________\n' +
+          '< yoda:RANDOMNESS_PLACEHOLDER >\n' +
+          ' -----------------------------\n' +
+          '      \\\n' +
+          '       \\\n' +
+          '          .--.\n' +
+          "  \\`--._,'.::.`._.--'/\n" +
+          "    .  ` __::__ '  .\n" +
+          "      -:.`'..`'.:-\n" +
+          "        \\ `--' /\n" +
+          '          ----\n'
+      );
     })
   );
 
@@ -145,6 +162,38 @@ describe('build()', () => {
 
       const res3 = await fetch('/api/hapi-async');
       expect(await res3.text()).toEqual('hapi-async');
+    })
+  );
+
+  // Tests the importing a `.tsx` file
+  it(
+    'should build "tsx-resolve"',
+    withFixture('tsx-resolve', async ({ fetch }) => {
+      const res = await fetch('/api');
+      const body = await res.text();
+      expect(body).toEqual('tsx');
+    })
+  );
+
+  // Tests the `includeFiles` config option
+  it(
+    'should build "include-files"',
+    withFixture('include-files', async ({ fetch }) => {
+      const res = await fetch('/api');
+      const body = await res.text();
+      expect(body.includes('hello Vercel!')).toEqual(true);
+
+      const res2 = await fetch('/api/include-ts-file');
+      const body2 = await res2.text();
+      expect(body2.includes("const foo = 'hello TS!'")).toEqual(true);
+
+      const res3 = await fetch('/api/root');
+      const body3 = await res3.text();
+      expect(body3.includes('hello Root!')).toEqual(true);
+
+      const res4 = await fetch('/api/accepts-string');
+      const body4 = await res4.text();
+      expect(body4.includes('hello String!')).toEqual(true);
     })
   );
 });

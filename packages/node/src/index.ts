@@ -139,7 +139,8 @@ function renameTStoJS(path: string) {
 
 async function compile(
   baseDir: string,
-  entrypointPath: string
+  entrypointPath: string,
+  config: FunctionConfig
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -153,24 +154,30 @@ async function compile(
 
   let shouldAddSourcemapSupport = false;
 
-  //if (config.includeFiles) {
-  //  const includeFiles =
-  //    typeof config.includeFiles === 'string'
-  //      ? [config.includeFiles]
-  //      : config.includeFiles;
+  if (config.includeFiles) {
+    const includeFiles =
+      typeof config.includeFiles === 'string'
+        ? [config.includeFiles]
+        : config.includeFiles;
+    const rel = includeFiles.map(f => {
+      return relative(baseDir, join(dirname(entrypointPath), f));
+    });
+    console.log({ baseDir, entrypointPath, includeFiles, rel });
 
-  //  for (const pattern of includeFiles) {
-  //    const files = await glob(pattern, workPath);
-  //    await Promise.all(
-  //      Object.values(files).map(async entry => {
-  //        const { fsPath } = entry;
-  //        const relPath = relative(baseDir, fsPath);
-  //        fsCache.set(relPath, entry);
-  //        preparedFiles[relPath] = entry;
-  //      })
-  //    );
-  //  }
-  //}
+    for (const pattern of rel) {
+      const files = await glob(pattern, baseDir);
+      await Promise.all(
+        Object.values(files).map(async entry => {
+          const { fsPath } = entry;
+          const relPath = relative(baseDir, fsPath);
+          fsCache.set(relPath, entry);
+          preparedFiles[relPath] = entry;
+        })
+      );
+    }
+
+    console.log({ preparedFiles });
+  }
 
   debug(
     'Tracing input files: ' +
@@ -418,7 +425,8 @@ export async function buildEntrypoint({
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
     workPath,
-    entrypointPath
+    entrypointPath,
+    config
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
