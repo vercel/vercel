@@ -6,10 +6,11 @@ export interface Env {
 }
 
 export interface File {
-  type: string;
+  type: 'FileRef' | 'FileFsRef' | 'FileBlob';
   mode: number;
   contentType?: string;
   toStream: () => NodeJS.ReadableStream;
+  toStreamAsync?: () => Promise<NodeJS.ReadableStream>;
   /**
    * The absolute path to the file in the filesystem
    */
