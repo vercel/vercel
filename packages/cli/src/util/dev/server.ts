@@ -1358,12 +1358,10 @@ export default class DevServer {
       this.cwd,
       this.output
     );
-    if (devMiddlewarePlugins.length) {
-      for (let plugin of devMiddlewarePlugins) {
-        /**
-         * Only one middleware plugin is supported at a time, this is currently enforced in loadCliPlugins.
-         */
-        return plugin.plugin.runDevMiddleware(req, res, this.cwd);
+    for (let plugin of devMiddlewarePlugins) {
+      const result = await plugin.plugin.runDevMiddleware(req, res, this.cwd);
+      if (result.finished) {
+        return result;
       }
     }
     return { finished: false };
