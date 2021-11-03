@@ -14,6 +14,8 @@ export async function loadCliPlugins(
   let pluginCount = 0;
   const preBuildPlugins = [];
   const buildPlugins = [];
+  const devServerPlugins = [];
+  const devMiddlewarePlugins = [];
   const deps = new Set(
     [
       ...Object.keys(packageJson?.dependencies || {}),
@@ -45,11 +47,31 @@ export async function loadCliPlugins(
           color,
         });
       }
+      if (typeof plugin.startDevServer === 'function') {
+        devServerPlugins.push({
+          plugin,
+          name: dep,
+          color,
+        });
+      }
+      if (typeof plugin.runDevMiddleware === 'function') {
+        devMiddlewarePlugins.push({
+          plugin,
+          name: dep,
+          color,
+        });
+      }
     } catch (error) {
       logError(`Failed to import ${code(dep)}`);
       throw error;
     }
   }
 
-  return { pluginCount, preBuildPlugins, buildPlugins };
+  return {
+    pluginCount,
+    preBuildPlugins,
+    buildPlugins,
+    devServerPlugins,
+    devMiddlewarePlugins,
+  };
 }
