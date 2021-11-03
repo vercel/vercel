@@ -9,7 +9,7 @@ const init = async () => {
   server.route({
     method: 'GET',
     path: '/{p*}',
-    handler: () => 'hapi-async:RANDOMNESS_PLACEHOLDER',
+    handler: () => 'hapi-async',
   });
 
   await server.start();

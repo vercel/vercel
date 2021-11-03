@@ -117,17 +117,11 @@ async function downloadInstallAndBundle({
   const nodeVersion = await getNodeVersion(entrypointFsDirname);
   const spawnOpts = getSpawnOptions({}, nodeVersion);
 
-  // TODO NATE: Do we want to run `npm install` in this case?
-  // If there's only the root `package.json` then we can probably skip,
-  // but maybe we have to search for a `package.json` in a sub-dir
-  // that is in the parent path of the entrypoint, and run npm install in that case
   const installTime = Date.now();
-  console.log({ entrypointFsDirname });
   await runNpmInstall(entrypointFsDirname, [], spawnOpts, {}, nodeVersion);
   debug(`Install complete [${Date.now() - installTime}ms]`);
 
   return {
-    entrypointPath: join(workPath, dirname(entrypoint)),
     nodeVersion,
     spawnOpts,
   };

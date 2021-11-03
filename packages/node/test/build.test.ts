@@ -132,40 +132,19 @@ describe('build()', () => {
     })
   );
 
-  //it(
-  //  'should build "02-node-server"',
-  //  withFixture('02-node-server', async ({ fetch }) => {
-  //      const res = await fetch('/api');
-  //      console.log(res);
-  //      expect(await res.text(), );
-  //  })
-  //);
+  // Tests the legacy Node.js server interface where
+  // `server.listen()` is explicitly called
+  it(
+    'should build "node-server"',
+    withFixture('node-server', async ({ fetch }) => {
+      const res = await fetch('/api');
+      expect(await res.text()).toEqual('root');
 
-  /*
-  it('should build "01-cowsay"', async () => {
-    const fixture = join(__dirname, 'fixtures', '01-cowsay');
-    //await build({ workPath: fixture });
-    const fn = await createFunction({
-      Code: {
-        Directory: `${fixture}/.output/server/pages/api/index`,
-      },
-      Handler: '___vc/__launcher.launcher',
-      Runtime: 'nodejs12.x',
-    });
-    try {
-      const res = await fn({
-        Action: 'Invoke',
-        body: JSON.stringify({
-          method: 'GET',
-          path: '/api',
-          headers: {},
-          //body: string;
-        }),
-      });
-      console.log({ res });
-    } finally {
-      await fn.destroy();
-    }
-  });
-  */
+      const res2 = await fetch('/api/subdirectory');
+      expect(await res2.text()).toEqual('subdir');
+
+      const res3 = await fetch('/api/hapi-async');
+      expect(await res3.text()).toEqual('hapi-async');
+    })
+  );
 });

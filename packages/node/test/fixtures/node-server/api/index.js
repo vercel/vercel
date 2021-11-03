@@ -1,7 +1,7 @@
 const http = require('http');
 
 const server = http.createServer((req, resp) => {
-  resp.end('root:RANDOMNESS_PLACEHOLDER');
+  resp.end('root');
 });
 
 server.listen();
