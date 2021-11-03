@@ -1,7 +1,8 @@
 import { join } from 'path';
+import { parse } from 'url';
 import { promises as fsp } from 'fs';
 import { createFunction, Lambda } from '@vercel/fun';
-import { Response } from 'node-fetch';
+import { HeadersInit, Response } from 'node-fetch';
 import { build } from '../src';
 
 interface TestParams {
@@ -24,11 +25,16 @@ function withFixture<T>(
     const fixture = join(__dirname, 'fixtures', name);
     const functions = new Map<string, Lambda>();
 
-    async function fetch(path: string) {
+    async function fetch(url: string) {
+      const parsed = parse(url);
       const pathWithIndex = join(
-        path,
-        path.endsWith('/index') ? '' : 'index'
+        parsed.pathname!,
+        parsed.pathname!.endsWith('/index') ? '' : 'index'
       ).substring(1);
+
+      let status = 404;
+      let headers: HeadersInit = {};
+      let body: string | Buffer = 'Function not found';
 
       let fn = functions.get(pathWithIndex);
       if (!fn) {
@@ -39,33 +45,39 @@ function withFixture<T>(
           )
         );
         const functionManifest = manifest.pages[pathWithIndex];
-        const dir = join(fixture, '.output/server/pages', pathWithIndex);
-        fn = await createFunction({
-          Code: {
-            Directory: dir,
-          },
-          Handler: functionManifest.handler,
-          Runtime: functionManifest.runtime,
-        });
-        functions.set(pathWithIndex, fn);
+        if (functionManifest) {
+          const dir = join(fixture, '.output/server/pages', pathWithIndex);
+          fn = await createFunction({
+            Code: {
+              Directory: dir,
+            },
+            Handler: functionManifest.handler,
+            Runtime: functionManifest.runtime,
+          });
+          functions.set(pathWithIndex, fn);
+        }
       }
 
-      const payload: VercelResponsePayload = await fn({
-        Action: 'Invoke',
-        body: JSON.stringify({
-          method: 'GET',
-          path,
-          headers: {},
-          //body: string;
-        }),
-      });
-      //console.log({ payload });
+      if (fn) {
+        const payload: VercelResponsePayload = await fn({
+          Action: 'Invoke',
+          body: JSON.stringify({
+            method: 'GET',
+            path: url,
+            headers: {},
+            //body: string;
+          }),
+        });
+        //console.log({ payload });
+        status = payload.statusCode;
+        headers = payload.headers;
+        body = Buffer.from(payload.body, 'base64');
+      }
 
-      const res = new Response(Buffer.from(payload.body, 'base64'), {
-        status: payload.statusCode,
-        headers: payload.headers,
+      return new Response(body, {
+        status,
+        headers,
       });
-      return res;
     }
 
     await build({ workPath: fixture });
@@ -79,6 +91,21 @@ function withFixture<T>(
 }
 
 describe('build()', () => {
+  it(
+    'should build "hello"',
+    withFixture('hello', async ({ fetch }) => {
+      const res = await fetch('/api/hello');
+      expect(res.status).toEqual(200);
+      const body = await res.text();
+      expect(body).toEqual('Hello world!');
+
+      const res2 = await fetch('/api/hello?place=SF');
+      expect(res2.status).toEqual(200);
+      const body2 = await res2.text();
+      expect(body2).toEqual('Hello SF!');
+    })
+  );
+  /*
   it(
     'should build "01-cowsay"',
     withFixture('01-cowsay', async ({ fetch }) => {
@@ -97,6 +124,7 @@ describe('build()', () => {
       );
     })
   );
+  */
 
   //it(
   //  'should build "02-node-server"',
