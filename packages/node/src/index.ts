@@ -478,6 +478,8 @@ export async function buildEntrypoint({
     ...preparedFiles,
     ...launcherFiles,
   };
+  console.log(files);
+
   for (const filename of Object.keys(files)) {
     const outPath = join(outputWorkPath, filename);
     const file = files[filename];
@@ -531,6 +533,8 @@ export async function buildEntrypoint({
       JSON.stringify(routesManifest, null, 2)
     );
   }
+
+  console.log('Done with %j', entrypoint);
 }
 
 export async function prepareCache({
