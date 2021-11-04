@@ -627,13 +627,13 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
       'utf8'
     );
     const keys = Object.keys(projectJson.settings);
-    t.true(keys.include('buildCommand'));
-    t.true(keys.include('devCommand'));
-    t.true(keys.include('outputDirectory'));
-    t.true(keys.include('directoryListing'));
-    t.true(keys.include('rootDirectory'));
-    t.true(keys.include('framework'));
-    t.true(keys.include('autoExposeSystemEnvs'));
+    t.true(keys.includes('buildCommand'));
+    t.true(keys.includes('devCommand'));
+    t.true(keys.includes('outputDirectory'));
+    t.true(keys.includes('directoryListing'));
+    t.true(keys.includes('rootDirectory'));
+    t.true(keys.includes('framework'));
+    t.true(keys.includes('autoExposeSystemEnvs'));
   }
 
   async function vcEnvPullOverwrite() {
