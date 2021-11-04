@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { join, dirname } from 'path';
+import { join, dirname, relative } from 'path';
 import glob from './fs/glob';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
@@ -63,16 +63,23 @@ export async function convertRuntimeToPlugin(
         }
       });
 
-      const json = JSON.stringify({ files: newFiles });
-      const entry = join(
+      const nft = join(
         cwd,
         OUTPUT_DIR,
         'server',
         'pages',
         entrypoint.replace(ext, '.nft.json')
       );
-      await fs.ensureDir(dirname(entry));
-      await fs.writeFile(entry, json);
+      const json = JSON.stringify({
+        version: 1,
+        files: newFiles.map(f => ({
+          input: relative(entrypoint, f),
+          output: f,
+        })),
+      });
+
+      await fs.ensureDir(dirname(nft));
+      await fs.writeFile(nft, json);
     }
   };
 }
