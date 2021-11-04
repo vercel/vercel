@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { closeSync, openSync, promises, readSync } from 'fs';
-import { resolve } from 'path';
+import { basename, resolve } from 'path';
 import { Project } from '../../types';
 import Client from '../../util/client';
 import exposeSystemEnvs from '../../util/dev/expose-system-envs';
@@ -65,12 +65,16 @@ export default async function pull(
   const exists = typeof head !== 'undefined';
 
   if (head === CONTENTS_PREFIX) {
-    output.print(`Overwriting existing ${chalk.bold(filename)} file\n`);
+    output.print(
+      `Overwriting existing ${chalk.bold(basename(filename))} file\n`
+    );
   } else if (
     exists &&
     !skipConfirmation &&
     !(await confirm(
-      `Found existing file ${param(filename)}. Do you want to overwrite?`,
+      `Found existing file ${param(
+        basename(filename)
+      )}. Do you want to overwrite?`,
       false
     ))
   ) {
@@ -112,7 +116,7 @@ export default async function pull(
   output.print(
     `${prependEmoji(
       `${exists ? 'Updated' : 'Created'} ${chalk.bold(
-        filename
+        basename(filename)
       )} file ${chalk.gray(pullStamp())}`,
       emoji('success')
     )}\n`
