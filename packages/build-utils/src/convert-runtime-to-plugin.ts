@@ -16,13 +16,12 @@ export async function convertRuntimeToPlugin(
   buildRuntime: (options: BuildOptions) => Promise<{ output: Lambda }>,
   ext: string
 ) {
-  const cwd = process.cwd();
-  const files = await glob('**', { cwd });
-  const entrypoints = await glob(`api/**/*.${ext}`, { cwd });
-
   return async function build({ workPath }: { workPath: string }) {
+    const opts = { cwd: workPath };
+    const files = await glob('**', opts);
+    const entrypoints = await glob(`api/**/*${ext}`, opts);
     for (const entrypoint of Object.keys(entrypoints)) {
-      const dir = join(cwd, OUTPUT_DIR, 'inputs', entrypoint);
+      const dir = join(workPath, OUTPUT_DIR, 'inputs', entrypoint);
       await fs.ensureDir(dir);
 
       const { output } = await buildRuntime({
@@ -64,7 +63,7 @@ export async function convertRuntimeToPlugin(
       });
 
       const nft = join(
-        cwd,
+        workPath,
         OUTPUT_DIR,
         'server',
         'pages',
