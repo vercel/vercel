@@ -58,7 +58,7 @@ export async function convertRuntimeToPlugin(
         OUTPUT_DIR,
         'server',
         'pages',
-        entrypoint.replace(ext, '.nft.json')
+        `${entrypoint}.nft.json`
       );
       const json = JSON.stringify({
         version: 1,

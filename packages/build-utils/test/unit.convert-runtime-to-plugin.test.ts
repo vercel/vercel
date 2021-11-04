@@ -1,5 +1,5 @@
 import { join } from 'path';
-import { readFile, remove } from 'fs-extra';
+import { readFile, remove, existsSync } from 'fs-extra';
 import { BuildOptions, createLambda } from '../src';
 import { convertRuntimeToPlugin } from '../src/convert-runtime-to-plugin';
 
@@ -24,7 +24,7 @@ describe('convert-runtime-to-plugin', () => {
     await build({ workPath });
     const apiDir = join(workPath, '.output', 'server', 'pages', 'api');
 
-    const indexJson = await readFile(join(apiDir, 'index.nft.json'), 'utf8');
+    const indexJson = await readFile(join(apiDir, 'index.py.nft.json'), 'utf8');
     expect(JSON.parse(indexJson)).toMatchObject({
       version: 1,
       files: [
@@ -56,7 +56,7 @@ describe('convert-runtime-to-plugin', () => {
     });
 
     const getJson = await readFile(
-      join(apiDir, 'users', 'get.nft.json'),
+      join(apiDir, 'users', 'get.py.nft.json'),
       'utf8'
     );
     expect(JSON.parse(getJson)).toMatchObject({
@@ -90,7 +90,7 @@ describe('convert-runtime-to-plugin', () => {
     });
 
     const postJson = await readFile(
-      join(apiDir, 'users', 'post.nft.json'),
+      join(apiDir, 'users', 'post.py.nft.json'),
       'utf8'
     );
     expect(JSON.parse(postJson)).toMatchObject({
@@ -122,5 +122,9 @@ describe('convert-runtime-to-plugin', () => {
         },
       ],
     });
+
+    expect(existsSync(join(apiDir, 'file.txt'))).toBe(false);
+    expect(existsSync(join(apiDir, 'util', 'date.py'))).toBe(false);
+    expect(existsSync(join(apiDir, 'util', 'math.py'))).toBe(false);
   });
 });
