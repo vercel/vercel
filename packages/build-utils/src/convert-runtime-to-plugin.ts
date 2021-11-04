@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import { join, dirname, relative } from 'path';
 import glob from './fs/glob';
+import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
@@ -62,8 +63,8 @@ export async function convertRuntimeToPlugin(
       const json = JSON.stringify({
         version: 1,
         files: newFiles.map(f => ({
-          input: relative(nft, f.absolutePath),
-          output: f.relativePath,
+          input: normalizePath(relative(nft, f.absolutePath)),
+          output: normalizePath(f.relativePath),
         })),
       });
 
