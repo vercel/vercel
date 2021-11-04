@@ -1,7 +1,6 @@
 import fs from 'fs-extra';
-import { join, dirname, relative } from 'path';
+import { join, dirname, parse } from 'path';
 import glob from './fs/glob';
-import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
@@ -21,27 +20,44 @@ export async function convertRuntimeToPlugin(
     const opts = { cwd: workPath };
     const files = await glob('**', opts);
     const entrypoints = await glob(`api/**/*${ext}`, opts);
-    const dir = join(workPath, OUTPUT_DIR, 'inputs', 'runtime-temp');
-    await fs.ensureDir(dir);
+    const functionsManifest: { [key: string]: any } = {};
+
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
         files,
         entrypoint,
         workPath,
-        // TODO: What about includeFiles/excludeFiles?
+        // TODO: Read vercel.json and match includeFiles/excludeFiles
         config: { zeroConfig: true },
       });
 
+      functionsManifest[entrypoint] = {
+        handler: output.handler,
+        runtime: output.runtime,
+        memory: output.memory,
+        maxDuration: output.maxDuration,
+        environment: output.environment,
+        allowQuery: output.allowQuery,
+        regions: output.regions,
+      };
+
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
-      const newFiles: {
-        absolutePath: string;
-        relativePath: string;
-      }[] = [];
+
+      const { dir, name } = parse(entrypoint);
+      const lambdaDir = join(
+        workPath,
+        OUTPUT_DIR,
+        'server',
+        'pages',
+        dir,
+        name,
+        name === 'index' ? '' : 'index'
+      );
+      await fs.ensureDir(lambdaDir);
 
       Object.entries(lambdaFiles).forEach(async ([relPath, file]) => {
-        const newPath = join(dir, relPath);
-        newFiles.push({ absolutePath: newPath, relativePath: relPath });
+        const newPath = join(lambdaDir, relPath);
         await fs.ensureDir(dirname(newPath));
         if (file.fsPath) {
           await linkOrCopy(file.fsPath, newPath);
@@ -52,25 +68,12 @@ export async function convertRuntimeToPlugin(
           throw new Error(`Unknown file type: ${file.type}`);
         }
       });
-
-      const nft = join(
-        workPath,
-        OUTPUT_DIR,
-        'server',
-        'pages',
-        `${entrypoint}.nft.json`
-      );
-      const json = JSON.stringify({
-        version: 1,
-        files: newFiles.map(f => ({
-          input: normalizePath(relative(nft, f.absolutePath)),
-          output: normalizePath(f.relativePath),
-        })),
-      });
-
-      await fs.ensureDir(dirname(nft));
-      await fs.writeFile(nft, json);
     }
+
+    await fs.writeFile(
+      join(workPath, OUTPUT_DIR, 'functions-manifest.json'),
+      JSON.stringify(functionsManifest)
+    );
   };
 }
 
