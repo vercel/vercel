@@ -363,4 +363,15 @@ describe('DevServer', () => {
       expect(body).toStrictEqual('response');
     })
   );
+
+  it(
+    'should render an error page when the middleware throws',
+    testFixture('edge-middleware-error', async server => {
+      const response = await fetch(`${server.address}/index.html`);
+      const body = await response.text();
+      expect(body).toStrictEqual(
+        'A server error has occurred\n\nEDGE_FUNCTION_INVOCATION_FAILED\n'
+      );
+    })
+  );
 });

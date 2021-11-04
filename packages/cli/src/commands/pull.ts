@@ -87,6 +87,8 @@ export default async function main(client: Client) {
 
   const { project, org } = link;
 
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
   const result = await pull(
     client,
     project,
