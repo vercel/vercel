@@ -20,7 +20,7 @@ interface TestParams {
 interface VercelResponsePayload {
   statusCode: number;
   headers: { [name: string]: string };
-  encoding: 'base64';
+  encoding?: 'base64';
   body: string;
 }
 
@@ -32,7 +32,7 @@ function headersToObject(headers: Headers) {
   return h;
 }
 
-function base64Stream(body?: Buffer | NodeJS.ReadableStream) {
+function toBase64(body?: Buffer | NodeJS.ReadableStream) {
   if (!body) return undefined;
   if (Buffer.isBuffer(body)) {
     return body.toString('base64');
@@ -94,13 +94,13 @@ function withFixture<T>(
             method: req.method,
             path: req.url,
             headers: headersToObject(req.headers),
-            body: await base64Stream(req.body),
+            body: await toBase64(req.body),
             encoding: 'base64',
           }),
         });
         status = payload.statusCode;
         headers = payload.headers;
-        body = Buffer.from(payload.body, 'base64');
+        body = Buffer.from(payload.body, payload.encoding || 'utf8');
       }
 
       return new Response(body, {
@@ -210,7 +210,6 @@ describe('build()', () => {
     withFixture('assets', async ({ fetch }) => {
       const res = await fetch('/api');
       const body = await res.text();
-      console.log({ body });
       expect(body).toEqual('asset1,asset2');
     })
   );
@@ -279,6 +278,42 @@ describe('build()', () => {
       const res7 = await fetch('/api/no-helpers');
       const body7 = await res7.text();
       expect(body7).toEqual('no');
+    })
+  );
+
+  // Tests the `awsHandlerName` config option
+  it(
+    'should build "aws-api"',
+    withFixture('aws-api', async ({ fetch }) => {
+      const res = await fetch('/api');
+      const body = await res.text();
+      expect(body).toEqual(
+        ' ______________\n' +
+          '< aws-api-root >\n' +
+          ' --------------\n' +
+          '        \\   ^__^\n' +
+          '         \\  (oo)\\_______\n' +
+          '            (__)\\       )\\/\\\n' +
+          '                ||----w |\n' +
+          '                ||     ||'
+      );
+
+      const res2 = await fetch('/api/callback');
+      const body2 = await res2.text();
+      expect(body2).toEqual(
+        ' __________________\n' +
+          '< aws-api-callback >\n' +
+          ' ------------------\n' +
+          '        \\   ^__^\n' +
+          '         \\  (oo)\\_______\n' +
+          '            (__)\\       )\\/\\\n' +
+          '                ||----w |\n' +
+          '                ||     ||'
+      );
+
+      const res3 = await fetch('/api/graphql');
+      const body3 = await res3.text();
+      expect(body3.includes('GraphQL Playground')).toEqual(true);
     })
   );
 });

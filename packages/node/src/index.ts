@@ -337,12 +337,12 @@ async function compile(
   };
 }
 
-function getAWSLambdaHandler(entrypoint: string): string {
-  if (process.env.NODEJS_AWS_HANDLER_NAME) {
+function getAWSLambdaHandler(entrypoint: string, config: FunctionConfig) {
+  const handler = config.awsHandlerName || process.env.NODEJS_AWS_HANDLER_NAME;
+  if (handler) {
     const { dir, name } = parsePath(entrypoint);
-    return `${join(dir, name)}.${process.env.NODEJS_AWS_HANDLER_NAME}`;
+    return `${join(dir, name)}.${handler}`;
   }
-  return '';
 }
 
 // TODO NATE: turn this into a `@vercel/plugin-utils` helper function?
@@ -403,8 +403,8 @@ export async function buildEntrypoint({
   console.log(`Compiling "${entrypoint}" to "${outputWorkPath}"`);
 
   const shouldAddHelpers =
-    config?.helpers !== false && process.env.NODEJS_HELPERS !== '0';
-  const awsLambdaHandler = getAWSLambdaHandler(entrypoint);
+    config.helpers !== false && process.env.NODEJS_HELPERS !== '0';
+  const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const { nodeVersion } = await downloadInstallAndBundle({
     entrypoint,

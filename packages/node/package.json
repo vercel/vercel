@@ -33,7 +33,7 @@
     "@types/jest": "27.0.2",
     "@types/node-fetch": "2",
     "@types/test-listen": "1.1.0",
-    "@vercel/fun": "1.0.0",
+    "@vercel/fun": "1.0.1",
     "@vercel/ncc": "0.24.0",
     "@vercel/nft": "0.14.0",
     "@vercel/node-bridge": "2.1.1-canary.1",

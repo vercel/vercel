@@ -2613,10 +2613,10 @@
     "@typescript-eslint/types" "4.28.0"
     eslint-visitor-keys "^2.0.0"
 
-"@vercel/fun@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@vercel/fun/-/fun-1.0.0.tgz#505ba3690b9a168494d081acbb06bd22d6a3ce64"
-  integrity sha512-8WAcury+594MFp5CKKSFrd5L0/ArqChFbhIBWF86Mqynh0hqqcXHx1O7Zvk6cum9qrLDWoJyOVFCuJ62QlStdA==
+"@vercel/fun@1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@vercel/fun/-/fun-1.0.1.tgz#4b25f50c27bbbdca5b7e71f25ef5018701467962"
+  integrity sha512-v++KDTdKIr0357sm0AbyYk5jLmsqfUlOKhTsaN0Z/XHpk2YJHOLlGFTDzZPt+8i+ofdPG8lCfht729DHNQskJg==
   dependencies:
     "@tootallnate/once" "2.0.0"
     async-listen "1.0.0"
