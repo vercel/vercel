@@ -494,6 +494,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     );
     vc.stdin.end('preview-no-branch');
     const { exitCode, stderr, stdout } = await vc;
+    console.log(formatOutput({ stderr, stdout }));
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
