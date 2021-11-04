@@ -20,10 +20,9 @@ export async function convertRuntimeToPlugin(
     const opts = { cwd: workPath };
     const files = await glob('**', opts);
     const entrypoints = await glob(`api/**/*${ext}`, opts);
+    const dir = join(workPath, OUTPUT_DIR, 'inputs', 'runtime-temp');
+    await fs.ensureDir(dir);
     for (const entrypoint of Object.keys(entrypoints)) {
-      const dir = join(workPath, OUTPUT_DIR, 'inputs', entrypoint);
-      await fs.ensureDir(dir);
-
       const { output } = await buildRuntime({
         files,
         entrypoint,
@@ -34,11 +33,14 @@ export async function convertRuntimeToPlugin(
 
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
-      const newFiles: string[] = [];
+      const newFiles: {
+        absolutePath: string;
+        relativePath: string;
+      }[] = [];
 
       Object.entries(lambdaFiles).forEach(async ([relPath, file]) => {
         const newPath = join(dir, relPath);
-        newFiles.push(newPath);
+        newFiles.push({ absolutePath: newPath, relativePath: relPath });
         await fs.ensureDir(dirname(newPath));
         switch (file.type) {
           case 'FileRef':
@@ -72,8 +74,8 @@ export async function convertRuntimeToPlugin(
       const json = JSON.stringify({
         version: 1,
         files: newFiles.map(f => ({
-          input: relative(entrypoint, f),
-          output: f,
+          input: relative(nft, f.absolutePath),
+          output: f.relativePath,
         })),
       });
 

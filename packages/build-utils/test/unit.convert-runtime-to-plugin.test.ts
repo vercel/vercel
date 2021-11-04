@@ -21,19 +21,104 @@ describe('convert-runtime-to-plugin', () => {
     };
 
     const build = await convertRuntimeToPlugin(buildRuntime, '.py');
-
     await build({ workPath });
-
     const apiDir = join(workPath, '.output', 'server', 'pages', 'api');
+
     const indexJson = await readFile(join(apiDir, 'index.nft.json'), 'utf8');
-    //const getJson = await readFile(join(apiDir, 'users', 'get.nft.json'), 'utf8');
-    //const postJson = await readFile(join(apiDir, 'users', 'post.nft.json'), 'utf8');
-    expect(JSON.parse(indexJson)).toEqual({
+    expect(JSON.parse(indexJson)).toMatchObject({
       version: 1,
       files: [
         {
-          input: '../../index.py',
-          output: 'index.py', // TODO: fix me
+          input: '../../../../inputs/runtime-temp/api/index.py',
+          output: 'api/index.py',
+        },
+        {
+          input: '../../../../inputs/runtime-temp/api/users/get.py',
+          output: 'api/users/get.py',
+        },
+        {
+          input: '../../../../inputs/runtime-temp/api/users/post.py',
+          output: 'api/users/post.py',
+        },
+        {
+          input: '../../../../inputs/runtime-temp/file.txt',
+          output: 'file.txt',
+        },
+        {
+          input: '../../../../inputs/runtime-temp/util/date.py',
+          output: 'util/date.py',
+        },
+        {
+          input: '../../../../inputs/runtime-temp/util/math.py',
+          output: 'util/math.py',
+        },
+      ],
+    });
+
+    const getJson = await readFile(
+      join(apiDir, 'users', 'get.nft.json'),
+      'utf8'
+    );
+    expect(JSON.parse(getJson)).toMatchObject({
+      version: 1,
+      files: [
+        {
+          input: '../../../../../inputs/runtime-temp/api/index.py',
+          output: 'api/index.py',
+        },
+        {
+          input: '../../../../../inputs/runtime-temp/api/users/get.py',
+          output: 'api/users/get.py',
+        },
+        {
+          input: '../../../../../inputs/runtime-temp/api/users/post.py',
+          output: 'api/users/post.py',
+        },
+        {
+          input: '../../../../../inputs/runtime-temp/file.txt',
+          output: 'file.txt',
+        },
+        {
+          input: '../../../../../inputs/runtime-temp/util/date.py',
+          output: 'util/date.py',
+        },
+        {
+          input: '../../../../../inputs/runtime-temp/util/math.py',
+          output: 'util/math.py',
+        },
+      ],
+    });
+
+    const postJson = await readFile(
+      join(apiDir, 'users', 'post.nft.json'),
+      'utf8'
+    );
+    expect(JSON.parse(postJson)).toMatchObject({
+      version: 1,
+      files: [
+        {
+          input: '../../../../../inputs/runtime-temp/api/index.py',
+          output: 'api/index.py',
+        },
+        {
+          input: '../../../../../inputs/runtime-temp/api/users/get.py',
+          output: 'api/users/get.py',
+        },
+        {
+          input: '../../../../../inputs/runtime-temp/api/users/post.py',
+          output: 'api/users/post.py',
+        },
+        {
+          input: '../../../../../inputs/runtime-temp/file.txt',
+          output: 'file.txt',
+        },
+        {
+          input: '../../../../../inputs/runtime-temp/util/date.py',
+          output: 'util/date.py',
+        },
+        {
+          input: '../../../../../inputs/runtime-temp/util/math.py',
+          output: 'util/math.py',
         },
       ],
     });
