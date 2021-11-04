@@ -42,25 +42,13 @@ export async function convertRuntimeToPlugin(
         const newPath = join(dir, relPath);
         newFiles.push({ absolutePath: newPath, relativePath: relPath });
         await fs.ensureDir(dirname(newPath));
-        switch (file.type) {
-          case 'FileRef':
-          case 'FileFsRef':
-            if (!file.fsPath) {
-              throw new Error(
-                `File type "${file.type}" is missing fsPath property`
-              );
-            }
-            await linkOrCopy(file.fsPath, newPath);
-            break;
-          case 'FileBlob': {
-            const { data, mode } = file as FileBlob;
-            await fs.writeFile(newPath, data, { mode });
-            break;
-          }
-          default: {
-            const type: never = file.type;
-            throw new Error(`Unknown file type: ${type}`);
-          }
+        if (file.fsPath) {
+          await linkOrCopy(file.fsPath, newPath);
+        } else if (file.type === 'FileBlob') {
+          const { data, mode } = file as FileBlob;
+          await fs.writeFile(newPath, data, { mode });
+        } else {
+          throw new Error(`Unknown file type: ${file.type}`);
         }
       });
 

@@ -6,7 +6,7 @@ export interface Env {
 }
 
 export interface File {
-  type: 'FileRef' | 'FileFsRef' | 'FileBlob';
+  type: string;
   mode: number;
   contentType?: string;
   toStream: () => NodeJS.ReadableStream;
