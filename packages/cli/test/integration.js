@@ -483,21 +483,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
-  async function vcEnvAddFromStdinPreview() {
-    const vc = execa(
-      binaryPath,
-      ['env', 'add', 'MY_PREVIEW', 'preview', ...defaultArgs],
-      {
-        reject: false,
-        cwd: target,
-      }
-    );
-    vc.stdin.end('preview-no-branch');
-    const { exitCode, stderr, stdout } = await vc;
-    console.log(formatOutput({ stderr, stdout }));
-    t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-  }
-
   async function vcEnvAddFromStdinPreviewWithBranch() {
     const vc = execa(
       binaryPath,
@@ -869,7 +854,6 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   await vcEnvLsIsEmpty();
   await vcEnvAddWithPrompts();
   await vcEnvAddFromStdin();
-  await vcEnvAddFromStdinPreview();
   await vcEnvAddFromStdinPreviewWithBranch();
   await vcEnvLsIncludesVar();
   await createEnvWithDecryptableSecret();
