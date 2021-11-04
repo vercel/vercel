@@ -27,8 +27,8 @@ export async function convertRuntimeToPlugin(
         files,
         entrypoint,
         workPath,
-        config: {}, // TODO: what should config be?
-        meta: {}, // TODO: what should meta be?
+        // TODO: What about includeFiles/excludeFiles?
+        config: { zeroConfig: true },
       });
 
       // @ts-ignore This symbol is a private API
