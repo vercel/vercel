@@ -77,14 +77,8 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const {
-    authConfig: { token },
-    output,
-    apiUrl,
-    config,
-  } = client;
+  const { output, config } = client;
 
-  const debugEnabled = argv['--debug'];
   const { print, log, error, note, debug, spinner } = output;
 
   if (argv._.length > 2) {
@@ -126,10 +120,7 @@ export default async function main(client: Client) {
   spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
 
   const now = new Now({
-    apiUrl,
-    token,
-    debug: debugEnabled,
-    output,
+    client,
     currentTeam,
   });
   const start = Date.now();

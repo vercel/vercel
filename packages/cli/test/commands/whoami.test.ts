@@ -14,7 +14,14 @@ describe('whoami', () => {
     const user = useUser();
     const exitCode = await whoami(client);
     expect(exitCode).toEqual(0);
-    expect(client.mockOutput.mock.calls.length).toEqual(1);
-    expect(client.mockOutput.mock.calls[0][0]).toEqual(`${user.username}\n`);
+    expect(client.outputBuffer).toEqual(`> ${user.username}\n`);
+  });
+
+  it('should print only the Vercel username when output is not a TTY', async () => {
+    const user = useUser();
+    client.output.isTTY = false;
+    const exitCode = await whoami(client);
+    expect(exitCode).toEqual(0);
+    expect(client.outputBuffer).toEqual(`${user.username}\n`);
   });
 });
