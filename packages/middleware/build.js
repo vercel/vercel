@@ -10,11 +10,9 @@ async function main() {
   // Start fresh
   await fs.remove(outDir);
 
-  await execa(
-    'ncc',
-    ['build', join(srcDir, 'index.ts'), '-o', outDir, '--external', 'esbuild'],
-    { stdio: 'inherit' }
-  );
+  await execa('ncc', ['build', join(srcDir, 'index.ts'), '-o', outDir], {
+    stdio: 'inherit',
+  });
 
   await fs.copyFile(
     join(__dirname, 'src/entries.js'),
