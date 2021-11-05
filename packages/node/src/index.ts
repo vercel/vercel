@@ -162,7 +162,6 @@ async function compile(
     const rel = includeFiles.map(f => {
       return relative(baseDir, join(dirname(entrypointPath), f));
     });
-    console.log({ baseDir, entrypointPath, includeFiles, rel });
 
     for (const pattern of rel) {
       const files = await glob(pattern, baseDir);
@@ -175,8 +174,6 @@ async function compile(
         })
       );
     }
-
-    console.log({ preparedFiles });
   }
 
   debug(
