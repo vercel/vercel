@@ -10,7 +10,6 @@ const allPackages = [
   'middleware',
   'client',
   'node-bridge',
-  'plugin-node',
   'node',
   'go',
   'python',

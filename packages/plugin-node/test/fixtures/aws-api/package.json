@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "cowsay": "1.4.0",
-    "graphql-yoga": "1.18.3"
-  }
-}
