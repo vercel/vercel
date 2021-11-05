@@ -460,6 +460,7 @@ export async function startDevServer(
     entrypoint.endsWith('.mjs') ||
     (pkg.type === 'module' && entrypoint.endsWith('.js'));
 
+  console.log({ isEsm, entrypoint });
   const devServerPath = join(__dirname, 'dev-server.js');
   const child = fork(devServerPath, [], {
     cwd: workPath,
