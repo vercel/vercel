@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "builds": [{ "src": "index.ts", "use": "@vercel/node" }],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "tsx"
+    }
+  ]
+}

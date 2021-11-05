@@ -240,6 +240,7 @@ describe('req.body', () => {
 
   test('should work when body is empty and content-type is `application/json`', async () => {
     mockListener.mockImplementation((req, res) => {
+      console.log(req.body);
       res.end();
     });
 
