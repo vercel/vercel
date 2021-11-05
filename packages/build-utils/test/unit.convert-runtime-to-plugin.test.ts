@@ -50,12 +50,8 @@ describe('convert-runtime-to-plugin', () => {
 
     const result = await fsToJson(join(workPath, '.output'));
 
-    expect(result).toEqual({
-      'functions-manifest.json': JSON.stringify({
-        'api/index.py': lambdaOptions,
-        'api/users/get.py': lambdaOptions,
-        'api/users/post.py': lambdaOptions,
-      }),
+    expect(result).toMatchObject({
+      'functions-manifest.json': expect.stringContaining('python3.9'),
       server: {
         pages: {
           api: {
@@ -71,6 +67,14 @@ describe('convert-runtime-to-plugin', () => {
           },
         },
       },
+    });
+
+    const manifest = JSON.parse(result['functions-manifest.json']);
+
+    expect(manifest).toMatchObject({
+      'api/index.py': lambdaOptions,
+      'api/users/get.py': lambdaOptions,
+      'api/users/post.py': { ...lambdaOptions, memory: 3008 },
     });
   });
 });
