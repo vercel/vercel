@@ -518,7 +518,7 @@ export default async function main(client: Client) {
         appDir: '.',
         files: requiredServerFilesJson.files.map((i: string) => ({
           input: i.replace('.next', '.output'),
-          output: i,
+          output: i.replace('.next', '.output'),
         })),
       });
     }
