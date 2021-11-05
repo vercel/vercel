@@ -1,7 +1,6 @@
-const { parse } = require('url');
+const { parse, pathToFileURL } = require('url');
 const { createServer, Server } = require('http');
 const { Bridge } = require('./bridge.js');
-const { isAbsolute } = require('path');
 
 /**
  * @param {import('./types').LauncherConfiguration} config
@@ -16,7 +15,7 @@ function makeVercelLauncher(config) {
     shouldAddSourcemapSupport = false,
   } = config;
   return `
-const { parse } = require('url');
+const { parse, pathToFileURL } = require('url');
 const { createServer, Server } = require('http');
 const { Bridge } = require(${JSON.stringify(bridgePath)});
 ${
@@ -42,11 +41,6 @@ function getVercelLauncher({
   shouldAddHelpers = false,
   useRequire = false,
 }) {
-  if (isAbsolute(entrypointPath) && !entrypointPath.startsWith('file://')) {
-    // Fixes error that happens on Windows with absolute entrypointPath for ESM import.
-    // ERR_UNSUPPORTED_ESM_URL_SCHEME: Only file and data URLs are supported by the default ESM loader.
-    entrypointPath = `file://${entrypointPath}`;
-  }
   return function () {
     const bridge = new Bridge();
     let isServerListening = false;
@@ -69,7 +63,7 @@ function getVercelLauncher({
     async function getListener() {
       let listener = useRequire
         ? require(entrypointPath)
-        : await import(entrypointPath);
+        : await import(pathToFileURL(entrypointPath).href);
 
       // In some cases we might have nested default props
       // due to TS => JS
