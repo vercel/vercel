@@ -56,12 +56,12 @@ describe('convert-runtime-to-plugin', () => {
       server: {
         pages: {
           api: {
-            'index.py': '# index\n',
+            'index.py': expect.stringContaining('index'),
             'index.py.nft.json': expect.stringContaining('{'),
             users: {
-              'get.py': '# get\n',
+              'get.py': expect.stringContaining('get'),
               'get.py.nft.json': expect.stringContaining('{'),
-              'post.py': '# post\n',
+              'post.py': expect.stringContaining('post'),
               'post.py.nft.json': expect.stringContaining('{'),
             },
           },
