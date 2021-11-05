@@ -1421,6 +1421,16 @@ export default class DevServer {
     const middlewareResult = await runDevMiddleware(req, res, this.cwd);
 
     if (middlewareResult) {
+      if (middlewareResult.error) {
+        this.sendError(
+          req,
+          res,
+          requestId,
+          'EDGE_FUNCTION_INVOCATION_FAILED',
+          500
+        );
+        return;
+      }
       if (middlewareResult.finished) {
         return;
       }

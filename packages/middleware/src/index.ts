@@ -1,8 +1,9 @@
-import globby from 'globby';
+import util from 'util';
 import { extname, join, basename } from 'path';
 import * as esbuild from 'esbuild';
 import { promises as fsp } from 'fs';
 import { IncomingMessage, ServerResponse } from 'http';
+import libGlob from 'glob';
 import Proxy from 'http-proxy';
 
 import { run } from './websandbox';
@@ -16,6 +17,7 @@ import {
 } from 'url';
 import { toNodeHeaders } from './websandbox/utils';
 
+const glob = util.promisify(libGlob);
 const SUPPORTED_EXTENSIONS = ['.js', '.ts'];
 
 // File name of the `entries.js` file that gets copied into the
@@ -26,7 +28,7 @@ async function getMiddlewareFile(workingDirectory: string) {
   // Only the root-level `_middleware.*` files are considered.
   // For more granular routing, the Project's Framework (i.e. Next.js)
   // middleware support should be used.
-  const middlewareFiles = await globby(join(workingDirectory, '_middleware.*'));
+  const middlewareFiles = await glob(join(workingDirectory, '_middleware.*'));
 
   if (middlewareFiles.length === 0) {
     // No middleware file at the root of the project, so bail...
@@ -127,17 +129,8 @@ async function runMiddlewareCatchAll(
       parsed: parseUrl(req.url!, true),
     });
   } catch (err) {
-    // if (isError(err) && err.code === 'ENOENT') {
-    //   await this.render404(req, res, parsed)
-    //   return { finished: true }
-    // }
-
-    // const error = isError(err) ? err : new Error(err + '')
-    // console.error(error)
-    // TODO - pretty sure we'll need this.
-    // res.statusCode = 500;
-    // this.sendError(req, res, requestId, 'error in middleware', 500);
-    return { finished: true };
+    console.error(err);
+    return { finished: true, error: err };
   }
 
   if (result === null) {
