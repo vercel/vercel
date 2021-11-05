@@ -2644,6 +2644,11 @@
     resolve-from "^5.0.0"
     rollup-pluginutils "^2.8.2"
 
+"@vercel/python@2.0.6-canary.4":
+  version "2.0.6-canary.4"
+  resolved "https://registry.yarnpkg.com/@vercel/python/-/python-2.0.6-canary.4.tgz#2d9097150c4d2b5a6ff851f40b681d3a9705908b"
+  integrity sha512-rivsD0TmyakBg+idS7gb9BqCG8ycyXRrV3dEnMIh2DHujqUbMAmnk5HZfkoI+m7Q1yYuepRj1SvWBaPo1sfuYQ==
+
 "@zeit/dns-cached-resolve@2.1.0":
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/@zeit/dns-cached-resolve/-/dns-cached-resolve-2.1.0.tgz#78583010df1683fdb7b05949b75593c9a8641bc1"
@@ -5976,15 +5981,6 @@ fs-extra@10.0.0:
     graceful-fs "^4.2.0"
     jsonfile "^6.0.1"
     universalify "^2.0.0"
-
-fs-extra@7.0.0:
-  version "7.0.0"
-  resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-7.0.0.tgz#8cc3f47ce07ef7b3593a11b9fb245f7e34c041d6"
-  integrity sha512-EglNDLRpmaTWiD/qraZn6HREAEAHJcJOmxNEYwq6xeMKnVMAy3GUcFB+wXt2C6k4CNvB/mP1y/U3dzvKKj5OtQ==
-  dependencies:
-    graceful-fs "^4.1.2"
-    jsonfile "^4.0.0"
-    universalify "^0.1.0"
 
 fs-extra@7.0.1, fs-extra@^7.0.0, fs-extra@^7.0.1:
   version "7.0.1"
