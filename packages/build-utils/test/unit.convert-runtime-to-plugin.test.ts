@@ -44,37 +44,136 @@ describe('convert-runtime-to-plugin', () => {
     };
 
     const lambdaFiles = await fsToJson(workPath);
+    delete lambdaFiles['vercel.json'];
     const build = await convertRuntimeToPlugin(buildRuntime, '.py');
 
     await build({ workPath });
 
-    const result = await fsToJson(join(workPath, '.output'));
-
-    expect(result).toMatchObject({
-      'functions-manifest.json': expect.stringContaining('python3.9'),
+    const output = await fsToJson(join(workPath, '.output'));
+    expect(output).toMatchObject({
+      'functions-manifest.json': expect.stringContaining('{'),
+      'runtime-traced-files': lambdaFiles,
       server: {
         pages: {
           api: {
-            index: lambdaFiles,
+            'index.py': '# index\n',
+            'index.py.nft.json': expect.stringContaining('{'),
             users: {
-              get: {
-                index: lambdaFiles,
-              },
-              post: {
-                index: lambdaFiles,
-              },
+              'get.py': '# get\n',
+              'get.py.nft.json': expect.stringContaining('{'),
+              'post.py': '# post\n',
+              'post.py.nft.json': expect.stringContaining('{'),
             },
           },
         },
       },
     });
 
-    const manifest = JSON.parse(result['functions-manifest.json']);
-
-    expect(manifest).toMatchObject({
+    const funcManifest = JSON.parse(output['functions-manifest.json']);
+    expect(funcManifest).toMatchObject({
       'api/index.py': lambdaOptions,
       'api/users/get.py': lambdaOptions,
       'api/users/post.py': { ...lambdaOptions, memory: 3008 },
     });
+
+    const indexJson = JSON.parse(output.server.pages.api['index.py.nft.json']);
+    expect(indexJson).toMatchObject({
+      version: 1,
+      files: [
+        {
+          input: '../../../../runtime-traced-files/api/index.py',
+          output: 'api/index.py',
+        },
+        {
+          input: '../../../../runtime-traced-files/api/users/get.py',
+          output: 'api/users/get.py',
+        },
+        {
+          input: '../../../../runtime-traced-files/api/users/post.py',
+          output: 'api/users/post.py',
+        },
+        {
+          input: '../../../../runtime-traced-files/file.txt',
+          output: 'file.txt',
+        },
+        {
+          input: '../../../../runtime-traced-files/util/date.py',
+          output: 'util/date.py',
+        },
+        {
+          input: '../../../../runtime-traced-files/util/math.py',
+          output: 'util/math.py',
+        },
+      ],
+    });
+
+    const getJson = JSON.parse(
+      output.server.pages.api.users['get.py.nft.json']
+    );
+    expect(getJson).toMatchObject({
+      version: 1,
+      files: [
+        {
+          input: '../../../../../runtime-traced-files/api/index.py',
+          output: 'api/index.py',
+        },
+        {
+          input: '../../../../../runtime-traced-files/api/users/get.py',
+          output: 'api/users/get.py',
+        },
+        {
+          input: '../../../../../runtime-traced-files/api/users/post.py',
+          output: 'api/users/post.py',
+        },
+        {
+          input: '../../../../../runtime-traced-files/file.txt',
+          output: 'file.txt',
+        },
+        {
+          input: '../../../../../runtime-traced-files/util/date.py',
+          output: 'util/date.py',
+        },
+        {
+          input: '../../../../../runtime-traced-files/util/math.py',
+          output: 'util/math.py',
+        },
+      ],
+    });
+
+    const postJson = JSON.parse(
+      output.server.pages.api.users['post.py.nft.json']
+    );
+    expect(postJson).toMatchObject({
+      version: 1,
+      files: [
+        {
+          input: '../../../../../runtime-traced-files/api/index.py',
+          output: 'api/index.py',
+        },
+        {
+          input: '../../../../../runtime-traced-files/api/users/get.py',
+          output: 'api/users/get.py',
+        },
+        {
+          input: '../../../../../runtime-traced-files/api/users/post.py',
+          output: 'api/users/post.py',
+        },
+        {
+          input: '../../../../../runtime-traced-files/file.txt',
+          output: 'file.txt',
+        },
+        {
+          input: '../../../../../runtime-traced-files/util/date.py',
+          output: 'util/date.py',
+        },
+        {
+          input: '../../../../../runtime-traced-files/util/math.py',
+          output: 'util/math.py',
+        },
+      ],
+    });
+
+    expect(output.server.pages['file.txt']).toBeUndefined();
+    expect(output.server.pages.api['file.txt']).toBeUndefined();
   });
 });

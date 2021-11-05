@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
-import { join, dirname, parse } from 'path';
+import { join, dirname, relative } from 'path';
 import glob from './fs/glob';
+import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuilderFunctions, BuildOptions, Files } from './types';
@@ -18,9 +19,12 @@ export async function convertRuntimeToPlugin(
   return async function build({ workPath }: { workPath: string }) {
     const opts = { cwd: workPath };
     const files = await glob('**', opts);
+    delete files['vercel.json']; // Builders/Runtimes didn't have vercel.json
     const entrypoints = await glob(`api/**/*${ext}`, opts);
     const functionsManifest: { [key: string]: any } = {};
     const functions = await readVercelConfigFunctions(workPath);
+    const traceDir = join(workPath, '.output', 'runtime-traced-files');
+    await fs.ensureDir(traceDir);
 
     for (const entrypoint of Object.keys(entrypoints)) {
       const key =
@@ -53,21 +57,18 @@ export async function convertRuntimeToPlugin(
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
 
-      const { dir, name } = parse(entrypoint);
-      const lambdaDir = join(
-        workPath,
-        '.output',
-        'server',
-        'pages',
-        dir,
-        name,
-        name === 'index' ? '' : 'index'
-      );
-      await fs.ensureDir(lambdaDir);
+      const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
+      await fs.ensureDir(dirname(entry));
+      await linkOrCopy(files[entrypoint].fsPath, entry);
+
+      const tracedFiles: {
+        absolutePath: string;
+        relativePath: string;
+      }[] = [];
 
       Object.entries(lambdaFiles).forEach(async ([relPath, file]) => {
-        const newPath = join(lambdaDir, relPath);
-        await fs.ensureDir(dirname(newPath));
+        const newPath = join(traceDir, relPath);
+        tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
         if (file.fsPath) {
           await linkOrCopy(file.fsPath, newPath);
         } else if (file.type === 'FileBlob') {
@@ -77,6 +78,24 @@ export async function convertRuntimeToPlugin(
           throw new Error(`Unknown file type: ${file.type}`);
         }
       });
+
+      const nft = join(
+        workPath,
+        '.output',
+        'server',
+        'pages',
+        `${entrypoint}.nft.json`
+      );
+      const json = JSON.stringify({
+        version: 1,
+        files: tracedFiles.map(f => ({
+          input: normalizePath(relative(nft, f.absolutePath)),
+          output: normalizePath(f.relativePath),
+        })),
+      });
+
+      await fs.ensureDir(dirname(nft));
+      await fs.writeFile(nft, json);
     }
 
     await fs.writeFile(
