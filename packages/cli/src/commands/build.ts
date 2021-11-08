@@ -696,6 +696,10 @@ async function resolveNftToOutput({
       const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
       smartCopy(client, fullInput, newFilePath);
 
+      // We have to use `baseDir` instead of `cwd`, because we want to
+      // mount everything from there (especially `node_modules`).
+      // This is important for NPM Workspaces where `node_modules` is not
+      // in the directory of the workspace.
       const output = relative(baseDir, fullInput).replace('.output', '.next');
 
       newFilesList.push({
