@@ -1,0 +1,26 @@
+{
+  "private": false,
+  "name": "vercel-plugin-go",
+  "version": "1.0.0-canary.0",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/vercel-plugin-go"
+  },
+  "scripts": {
+    "build": "node build",
+    "prepublishOnly": "node build"
+  },
+  "dependencies": {
+    "@vercel/build-utils": "2.12.3-canary.15",
+    "@vercel/go": "1.2.4-canary.3"
+  },
+  "devDependencies": {
+    "typescript": "4.3.4"
+  }
+}
