@@ -117,6 +117,9 @@ export default async function main(client: Client) {
     project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
 
+  // If `rootDirectory` exists, then `baseDir` will be the repo's root directory.
+  const baseDir = cwd;
+
   cwd = project.settings.rootDirectory
     ? join(cwd, project.settings.rootDirectory)
     : cwd;
@@ -474,7 +477,7 @@ export default async function main(client: Client) {
           fileList.delete(relative(cwd, f));
           await resolveNftToOutput({
             client,
-            cwd,
+            baseDir,
             outputDir: OUTPUT_DIR,
             nftFileName: f.replace(ext, '.js.nft.json'),
             nft: {
@@ -490,7 +493,7 @@ export default async function main(client: Client) {
           const json = await fs.readJson(f);
           await resolveNftToOutput({
             client,
-            cwd,
+            baseDir,
             outputDir: OUTPUT_DIR,
             nftFileName: f,
             nft: json,
@@ -667,13 +670,13 @@ interface NftFile {
 // properly with `vc --prebuilt`.
 async function resolveNftToOutput({
   client,
-  cwd,
+  baseDir,
   outputDir,
   nftFileName,
   nft,
 }: {
   client: Client;
-  cwd: string;
+  baseDir: string;
   outputDir: string;
   nftFileName: string;
   nft: NftFile;
@@ -693,12 +696,7 @@ async function resolveNftToOutput({
       const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
       smartCopy(client, fullInput, newFilePath);
 
-      let output = relative(cwd, fullInput).replace('.output', '.next');
-      if (/^[./]*\/node_modules\//gm.test(output)) {
-        // NPM Workspaces put `node_modules` in the root of the workspace,
-        // so we'll put them in the root `node_modules` of `output`.
-        output = output.replace(/^[./]*\/node_modules\//gm, 'node_modules/');
-      }
+      const output = relative(baseDir, fullInput).replace('.output', '.next');
 
       newFilesList.push({
         input: relative(parse(nftFileName).dir, newFilePath),
