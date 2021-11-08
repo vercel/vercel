@@ -39,6 +39,8 @@ interface GetLambdaOptionsFromFunctionOptions {
   config?: Config;
 }
 
+export const FILES_SYMBOL = Symbol('files');
+
 export class Lambda {
   public type: 'Lambda';
   public zipBuffer: Buffer;
@@ -118,7 +120,7 @@ export async function createLambda({
 
   try {
     const zipBuffer = await createZip(files);
-    return new Lambda({
+    const lambda = new Lambda({
       zipBuffer,
       handler,
       runtime,
@@ -127,6 +129,9 @@ export async function createLambda({
       environment,
       regions,
     });
+    // @ts-ignore This symbol is a private API
+    lambda[FILES_SYMBOL] = files;
+    return lambda;
   } finally {
     sema.release();
   }
