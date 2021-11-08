@@ -81,6 +81,10 @@ function runScript(pkgName, script) {
         cwd,
         stdio: 'inherit',
         shell: true,
+        env: {
+          NODE_OPTIONS: '--max-old-space-size=4096',
+          ...process.env,
+        },
       });
       child.on('error', reject);
       child.on('close', (code, signal) => {

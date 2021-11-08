@@ -13,7 +13,7 @@
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
     "test": "jest",
-    "test-unit": "NODE_OPTIONS=\"--max-old-space-size=4096\" jest --coverage --verbose",
+    "test-unit": "jest --coverage --verbose",
     "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
     "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
     "prepublishOnly": "yarn build",
