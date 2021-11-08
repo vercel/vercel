@@ -3,7 +3,7 @@
     "strict": true,
     "esModuleInterop": true,
     "lib": ["esnext"],
-    "target": "es2019",
+    "target": "es2018",
     "module": "commonjs",
     "outDir": "dist",
     "sourceMap": false,

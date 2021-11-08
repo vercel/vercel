@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "build": {
+    "env": {
+      "NODEJS_HELPERS": "0"
+    }
+  },
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "helpers are disabled"
+    }
+  ]
+}
