@@ -89,7 +89,7 @@ import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { Readable } from 'stream';
 import type { Bridge } from '@vercel/node-bridge/bridge';
 // @ts-ignore - copied to the `dist` output as-is
-import { getVercelLauncher } from './launcher.js';
+import { getVercelLauncher } from './launcher.js.js';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
