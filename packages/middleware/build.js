@@ -13,7 +13,9 @@ async function main() {
   await execa(
     'ncc',
     ['build', join(srcDir, 'index.ts'), '-o', outDir, '--external', 'esbuild'],
-    { stdio: 'inherit' }
+    {
+      stdio: 'inherit',
+    }
   );
 
   await fs.copyFile(
