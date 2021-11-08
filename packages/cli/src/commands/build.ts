@@ -693,9 +693,16 @@ async function resolveNftToOutput({
       const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
       smartCopy(client, fullInput, newFilePath);
 
+      let output = relative(cwd, fullInput).replace('.output', '.next');
+      if (/^[./]*\/node_modules\//gm.test(output)) {
+        // NPM Workspaces put `node_modules` in the root of the workspace,
+        // so we'll put them in the root `node_modules` of `output`.
+        output = output.replace(/^[./]*\/node_modules\//gm, 'node_modules/');
+      }
+
       newFilesList.push({
         input: relative(parse(nftFileName).dir, newFilePath),
-        output: relative(cwd, fullInput).replace('.output', '.next'),
+        output,
       });
     } else {
       newFilesList.push(relativeInput);
