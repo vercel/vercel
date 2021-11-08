@@ -10,6 +10,15 @@ _ENTRIES['middleware_pages/_middleware'] = {
         response: result,
       };
     }
-    return result;
+
+    return {
+      promise: Promise.resolve(),
+      waitUntil: Promise.resolve(),
+      response: new Response(null, {
+        headers: {
+          'x-middleware-next': 1,
+        },
+      }),
+    };
   },
 };
