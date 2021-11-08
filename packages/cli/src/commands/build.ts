@@ -511,10 +511,15 @@ export default async function main(client: Client) {
       await fs.writeJSON(requiredServerFilesPath, {
         ...requiredServerFilesJson,
         appDir: '.',
-        files: requiredServerFilesJson.files.map((i: string) => ({
-          input: i.replace('.next', '.output'),
-          output: i.replace('.next', '.output'),
-        })),
+        files: requiredServerFilesJson.files.map((i: string) => {
+          const absolutePath = join(cwd, i.replace('.next', '.output'));
+          const output = relative(baseDir, absolutePath);
+
+          return {
+            input: i.replace('.next', '.output'),
+            output,
+          };
+        }),
       });
     }
   }
