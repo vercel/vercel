@@ -2685,10 +2685,10 @@
     resolve-from "^5.0.0"
     rollup-pluginutils "^2.8.2"
 
-"@vercel/python@2.0.6-canary.4":
-  version "2.0.6-canary.4"
-  resolved "https://registry.yarnpkg.com/@vercel/python/-/python-2.0.6-canary.4.tgz#2d9097150c4d2b5a6ff851f40b681d3a9705908b"
-  integrity sha512-rivsD0TmyakBg+idS7gb9BqCG8ycyXRrV3dEnMIh2DHujqUbMAmnk5HZfkoI+m7Q1yYuepRj1SvWBaPo1sfuYQ==
+"@vercel/node-bridge@2.1.1-canary.1":
+  version "2.1.1-canary.1"
+  resolved "https://registry.yarnpkg.com/@vercel/node-bridge/-/node-bridge-2.1.1-canary.1.tgz#afce3989c4359c02f9f5c3997b6c32b1ddb96872"
+  integrity sha512-uOg6kKEGoSDgf7P6vKU+88dmrdEWIyrFf25DK86HhcEHqVKjAEDZ7nqKb+bG0b/LV+dxrkNqi+qvvjT3SwvzQg==
 
 "@zeit/dns-cached-resolve@2.1.0":
   version "2.1.0"
@@ -12193,15 +12193,6 @@ vary@~1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/vary/-/vary-1.1.2.tgz#2299f02c6ded30d4a5961b0b9f74524a18f634fc"
   integrity sha1-IpnwLG3tMNSllhsLn3RSShj2NPw=
-
-vercel-plugin-node@1.12.2-plugin.6:
-  version "1.12.2-plugin.6"
-  resolved "https://registry.yarnpkg.com/vercel-plugin-node/-/vercel-plugin-node-1.12.2-plugin.6.tgz#880458b8b1fdda2a15f424c720b4f914e0d9a008"
-  integrity sha512-UU9By2r5n9npCFoF7+V1Piv3352pQEwlOPts9HJLOjsBiynnKNfgoQPE+8ptnn6eQ2HM80CCYn22UeXhjYfaDQ==
-  dependencies:
-    "@types/node" "*"
-    ts-node "8.9.1"
-    typescript "4.3.4"
 
 verror@1.10.0:
   version "1.10.0"
