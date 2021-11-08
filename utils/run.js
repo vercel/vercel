@@ -82,7 +82,12 @@ function runScript(pkgName, script) {
         stdio: 'inherit',
         shell: true,
         env: {
-          NODE_OPTIONS: '--max-old-space-size=4096',
+          // Only add this for unit tests, as it's not relevant to others.
+          ...(script === 'test-unit'
+            ? {
+                NODE_OPTIONS: '--max-old-space-size=4096',
+              }
+            : null),
           ...process.env,
         },
       });
