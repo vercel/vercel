@@ -1,6 +1,4 @@
-import path from 'path';
 import chalk from 'chalk';
-import { PackageJson } from '@vercel/build-utils';
 
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
@@ -11,8 +9,6 @@ import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
 import dev from './dev';
-import readPackage from '../../util/read-package';
-import readConfig from '../../util/config/read-config';
 import { getPkgName, getCommandName } from '../../util/pkg-name';
 
 const COMMAND_CONFIG = {
@@ -48,6 +44,22 @@ const help = () => {
 };
 
 export default async function main(client: Client) {
+  if (process.env.__VERCEL_DEV_RUNNING) {
+    client.output.error(
+      `${cmd(
+        `${getPkgName()} dev`
+      )} must not recursively invoke itself. Check the dev command in project settings or the ${cmd(
+        'dev'
+      )} script in ${cmd('package.json')}`
+    );
+    client.output.error(
+      `Learn More: http://err.sh/vercel/recursive-invocation`
+    );
+    return 1;
+  } else {
+    process.env.__VERCEL_DEV_RUNNING = '1';
+  }
+
   let argv;
   let args;
   const { output } = client;
@@ -76,39 +88,6 @@ export default async function main(client: Client) {
   if (argv['--help']) {
     help();
     return 2;
-  }
-
-  const [dir = '.'] = args;
-
-  const nowJson = await readConfig(dir);
-  // @ts-ignore: Because `nowJson` could be one of three different types
-  const hasBuilds = nowJson && nowJson.builds && nowJson.builds.length > 0;
-
-  if (!nowJson || !hasBuilds) {
-    const pkg = await readPackage(path.join(dir, 'package.json'));
-
-    if (pkg) {
-      const { scripts } = pkg as PackageJson;
-
-      if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(
-          `The ${cmd('dev')} script in ${cmd(
-            'package.json'
-          )} must not contain ${cmd('now dev')}`
-        );
-        output.error(`Learn More: http://err.sh/vercel/now-dev-as-dev-script`);
-        return 1;
-      }
-      if (scripts && scripts.dev && /\bvercel\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(
-          `The ${cmd('dev')} script in ${cmd(
-            'package.json'
-          )} must not contain ${cmd('vercel dev')}`
-        );
-        output.error(`Learn More: http://err.sh/vercel/now-dev-as-dev-script`);
-        return 1;
-      }
-    }
   }
 
   if (argv._.length > 2) {

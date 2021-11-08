@@ -81,6 +81,22 @@ const fields: {
 ];
 
 export default async function main(client: Client) {
+  if (process.env.__VERCEL_BUILD_RUNNING) {
+    client.output.error(
+      `${cmd(
+        `${getPkgName()} build`
+      )} must not recursively invoke itself. Check the build command in project settings or the ${cmd(
+        'build'
+      )} script in ${cmd('package.json')}`
+    );
+    client.output.error(
+      `Learn More: http://err.sh/vercel/recursive-invocation`
+    );
+    return 1;
+  } else {
+    process.env.__VERCEL_BUILD_RUNNING = '1';
+  }
+
   let argv;
   const buildStamp = stamp();
   try {
