@@ -1,6 +1,6 @@
 {
   "name": "vercel-plugin-middleware",
-  "version": "0.0.0-canary.5",
+  "version": "0.0.0-canary.6",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "",
