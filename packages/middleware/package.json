@@ -18,7 +18,7 @@
     "dist"
   ],
   "dependencies": {
-    "esbuild": "0.13.10"
+    "esbuild": "0.13.12"
   },
   "devDependencies": {
     "@peculiar/webcrypto": "1.2.0",
