@@ -1358,13 +1358,20 @@ export default class DevServer {
       this.cwd,
       this.output
     );
-    for (let plugin of devMiddlewarePlugins) {
-      const result = await plugin.plugin.runDevMiddleware(req, res, this.cwd);
-      if (result.finished) {
-        return result;
+    try {
+      for (let plugin of devMiddlewarePlugins) {
+        const result = await plugin.plugin.runDevMiddleware(req, res, this.cwd);
+        if (result.finished) {
+          return result;
+        }
       }
+      return { finished: false };
+    } catch (e) {
+      return {
+        finished: true,
+        error: e,
+      };
     }
-    return { finished: false };
   };
 
   /**
