@@ -117,6 +117,9 @@ export default async function main(client: Client) {
     project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
 
+  // If `rootDirectory` exists, then `baseDir` will be the repo's root directory.
+  const baseDir = cwd;
+
   cwd = project.settings.rootDirectory
     ? join(cwd, project.settings.rootDirectory)
     : cwd;
@@ -474,7 +477,7 @@ export default async function main(client: Client) {
           fileList.delete(relative(cwd, f));
           await resolveNftToOutput({
             client,
-            cwd,
+            baseDir,
             outputDir: OUTPUT_DIR,
             nftFileName: f.replace(ext, '.js.nft.json'),
             nft: {
@@ -490,7 +493,7 @@ export default async function main(client: Client) {
           const json = await fs.readJson(f);
           await resolveNftToOutput({
             client,
-            cwd,
+            baseDir,
             outputDir: OUTPUT_DIR,
             nftFileName: f,
             nft: json,
@@ -508,10 +511,15 @@ export default async function main(client: Client) {
       await fs.writeJSON(requiredServerFilesPath, {
         ...requiredServerFilesJson,
         appDir: '.',
-        files: requiredServerFilesJson.files.map((i: string) => ({
-          input: i.replace('.next', '.output'),
-          output: i.replace('.next', '.output'),
-        })),
+        files: requiredServerFilesJson.files.map((i: string) => {
+          const absolutePath = join(cwd, i.replace('.next', '.output'));
+          const output = relative(baseDir, absolutePath);
+
+          return {
+            input: i.replace('.next', '.output'),
+            output,
+          };
+        }),
       });
     }
   }
@@ -667,13 +675,13 @@ interface NftFile {
 // properly with `vc --prebuilt`.
 async function resolveNftToOutput({
   client,
-  cwd,
+  baseDir,
   outputDir,
   nftFileName,
   nft,
 }: {
   client: Client;
-  cwd: string;
+  baseDir: string;
   outputDir: string;
   nftFileName: string;
   nft: NftFile;
@@ -693,9 +701,15 @@ async function resolveNftToOutput({
       const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
       smartCopy(client, fullInput, newFilePath);
 
+      // We have to use `baseDir` instead of `cwd`, because we want to
+      // mount everything from there (especially `node_modules`).
+      // This is important for NPM Workspaces where `node_modules` is not
+      // in the directory of the workspace.
+      const output = relative(baseDir, fullInput).replace('.output', '.next');
+
       newFilesList.push({
         input: relative(parse(nftFileName).dir, newFilePath),
-        output: relative(cwd, fullInput).replace('.output', '.next'),
+        output,
       });
     } else {
       newFilesList.push(relativeInput);
