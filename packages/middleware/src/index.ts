@@ -295,11 +295,6 @@ async function runMiddleware(params: {
     console.error(`Uncaught: middleware waitUntil errored`, error);
   });
 
-  // TODO - is this needed?
-  // if (!result) {
-  //   this.send404(params.request, params.response, params.requestId);
-  // }
-
   return result;
 }
 
