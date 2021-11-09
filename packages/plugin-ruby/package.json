@@ -13,14 +13,15 @@
     "directory": "packages/vercel-plugin-ruby"
   },
   "scripts": {
-    "build": "node build",
-    "prepublishOnly": "node build"
+    "build": "tsc",
+    "prepublishOnly": "tsc"
   },
   "dependencies": {
     "@vercel/build-utils": "2.12.3-canary.15",
     "@vercel/ruby": "1.2.8-canary.3"
   },
   "devDependencies": {
+    "@types/node": "*",
     "typescript": "4.3.4"
   }
 }

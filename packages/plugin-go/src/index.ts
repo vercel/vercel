@@ -1,4 +1,6 @@
 import { convertRuntimeToPlugin } from '@vercel/build-utils';
-import * as python from '@vercel/python';
+import * as go from '@vercel/go';
 
-export const build = convertRuntimeToPlugin(python.build);
+export const build = convertRuntimeToPlugin(go.build, '.go');
+
+export const startDevServer = go.startDevServer;

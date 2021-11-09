@@ -13,14 +13,15 @@
     "directory": "packages/vercel-plugin-python"
   },
   "scripts": {
-    "build": "node build",
-    "prepublishOnly": "node build"
+    "build": "tsc",
+    "prepublishOnly": "tsc"
   },
   "dependencies": {
     "@vercel/build-utils": "2.12.3-canary.15",
     "@vercel/python": "2.0.6-canary.4"
   },
   "devDependencies": {
+    "@types/node": "*",
     "typescript": "4.3.4"
   }
 }

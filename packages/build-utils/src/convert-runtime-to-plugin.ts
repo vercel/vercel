@@ -12,7 +12,7 @@ import minimatch from 'minimatch';
  * @param buildRuntime - a legacy build() function from a Runtime
  * @param ext - the file extension, for example `.py`
  */
-export async function convertRuntimeToPlugin(
+export function convertRuntimeToPlugin(
   buildRuntime: (options: BuildOptions) => Promise<{ output: Lambda }>,
   ext: string
 ) {

@@ -1,4 +1,6 @@
 import { convertRuntimeToPlugin } from '@vercel/build-utils';
-import * as python from '@vercel/python';
+import * as ruby from '@vercel/ruby';
 
-export const build = convertRuntimeToPlugin(python.build);
+export const build = convertRuntimeToPlugin(ruby.build, '.rb');
+
+//export const startDevServer = ruby.startDevServer;
