@@ -1,0 +1,27 @@
+{
+  "private": false,
+  "name": "vercel-plugin-python",
+  "version": "1.0.0-canary.0",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/vercel-plugin-python"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "tsc"
+  },
+  "dependencies": {
+    "@vercel/build-utils": "2.12.3-canary.16",
+    "@vercel/python": "2.0.6-canary.4"
+  },
+  "devDependencies": {
+    "@types/node": "*",
+    "typescript": "4.3.4"
+  }
+}

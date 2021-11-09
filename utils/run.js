@@ -10,11 +10,14 @@ const allPackages = [
   'middleware',
   'client',
   'node-bridge',
-  'plugin-node',
   'node',
   'go',
   'python',
   'ruby',
+  'plugin-go',
+  'plugin-node',
+  'plugin-python',
+  'plugin-ruby',
   'cli',
 ];
 
