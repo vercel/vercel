@@ -103,7 +103,7 @@ function getDeleteTableRow(domainName: string, record: DNSRecord) {
   return [
     record.id,
     chalk.bold(
-      `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
+      `${recordName} ${record.recordType} ${record.value} ${record.mxPriority || ''}`
     ),
     chalk.gray(
       `${ms(Date.now() - new Date(Number(record.createdAt)).getTime())} ago`
