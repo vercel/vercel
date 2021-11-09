@@ -397,7 +397,6 @@ export default async function main(client: Client) {
         cwd,
         OUTPUT_DIR,
         'server',
-        'pages',
         'middleware-manifest.json'
       );
       if (fs.existsSync(middlewareManifest)) {
@@ -405,7 +404,11 @@ export default async function main(client: Client) {
         Object.keys(manifest.middleware).forEach(key => {
           const files = manifest.middleware[key].files.map((f: string) => {
             if (f.startsWith('static/')) {
-              return f.replace(/^static\//gm, 'static/_next/static/');
+              const next = f.replace(/^static\//gm, 'static/_next/static/');
+              client.output.debug(
+                `Replacing file in \`middleware-manifest.json\`: ${f} => ${next}`
+              );
+              return next;
             }
 
             return f;
