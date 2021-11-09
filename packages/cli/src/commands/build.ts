@@ -23,13 +23,11 @@ import handleError from '../util/handle-error';
 import confirm from '../util/input/confirm';
 import { isSettingValue } from '../util/is-setting-value';
 import cmd from '../util/output/cmd';
-import code from '../util/output/code';
-import { getColorForPkgName } from '../util/output/color-name-cache';
 import logo from '../util/output/logo';
 import param from '../util/output/param';
 import stamp from '../util/output/stamp';
-import cliPkgJson from '../util/pkg';
 import { getCommandName, getPkgName } from '../util/pkg-name';
+import { loadCliPlugins } from '../util/plugins';
 import { findFramework } from '../util/projects/find-framework';
 import { VERCEL_DIR } from '../util/projects/link';
 import {
@@ -69,7 +67,6 @@ const help = () => {
 };
 
 const OUTPUT_DIR = '.output';
-const VERCEL_PLUGIN_PREFIX = 'vercel-plugin-';
 
 const fields: {
   name: string;
@@ -119,6 +116,9 @@ export default async function main(client: Client) {
     }
     project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
+
+  // If `rootDirectory` exists, then `baseDir` will be the repo's root directory.
+  const baseDir = cwd;
 
   cwd = project.settings.rootDirectory
     ? join(cwd, project.settings.rootDirectory)
@@ -200,7 +200,7 @@ export default async function main(client: Client) {
   const debug = argv['--debug'];
   let plugins;
   try {
-    plugins = await loadCliPlugins(client, cwd);
+    plugins = await loadCliPlugins(cwd, client.output);
   } catch (error) {
     client.output.error('Failed to load CLI Plugins');
     handleError(error, { debug });
@@ -477,7 +477,7 @@ export default async function main(client: Client) {
           fileList.delete(relative(cwd, f));
           await resolveNftToOutput({
             client,
-            cwd,
+            baseDir,
             outputDir: OUTPUT_DIR,
             nftFileName: f.replace(ext, '.js.nft.json'),
             nft: {
@@ -493,7 +493,7 @@ export default async function main(client: Client) {
           const json = await fs.readJson(f);
           await resolveNftToOutput({
             client,
-            cwd,
+            baseDir,
             outputDir: OUTPUT_DIR,
             nftFileName: f,
             nft: json,
@@ -511,10 +511,15 @@ export default async function main(client: Client) {
       await fs.writeJSON(requiredServerFilesPath, {
         ...requiredServerFilesJson,
         appDir: '.',
-        files: requiredServerFilesJson.files.map((i: string) => ({
-          input: i.replace('.next', '.output'),
-          output: i.replace('.next', '.output'),
-        })),
+        files: requiredServerFilesJson.files.map((i: string) => {
+          const absolutePath = join(cwd, i.replace('.next', '.output'));
+          const output = relative(baseDir, absolutePath);
+
+          return {
+            input: i.replace('.next', '.output'),
+            output,
+          };
+        }),
       });
     }
   }
@@ -615,52 +620,6 @@ export async function runPackageJsonScript(
   return true;
 }
 
-async function loadCliPlugins(client: Client, cwd: string) {
-  const { packageJson } = await scanParentDirs(cwd, true);
-
-  let pluginCount = 0;
-  const preBuildPlugins = [];
-  const buildPlugins = [];
-  const deps = new Set(
-    [
-      ...Object.keys(packageJson?.dependencies || {}),
-      ...Object.keys(packageJson?.devDependencies || {}),
-      ...Object.keys(cliPkgJson.dependencies),
-    ].filter(dep => dep.startsWith(VERCEL_PLUGIN_PREFIX))
-  );
-
-  for (let dep of deps) {
-    pluginCount++;
-    const resolved = require.resolve(dep, {
-      paths: [cwd, process.cwd(), __dirname],
-    });
-    let plugin;
-    try {
-      plugin = require(resolved);
-      const color = getColorForPkgName(dep);
-      if (typeof plugin.preBuild === 'function') {
-        preBuildPlugins.push({
-          plugin,
-          name: dep,
-          color,
-        });
-      }
-      if (typeof plugin.build === 'function') {
-        buildPlugins.push({
-          plugin,
-          name: dep,
-          color,
-        });
-      }
-    } catch (error) {
-      client.output.error(`Failed to import ${code(dep)}`);
-      throw error;
-    }
-  }
-
-  return { pluginCount, preBuildPlugins, buildPlugins };
-}
-
 async function linkOrCopy(existingPath: string, newPath: string) {
   try {
     await fs.createLink(existingPath, newPath);
@@ -716,13 +675,13 @@ interface NftFile {
 // properly with `vc --prebuilt`.
 async function resolveNftToOutput({
   client,
-  cwd,
+  baseDir,
   outputDir,
   nftFileName,
   nft,
 }: {
   client: Client;
-  cwd: string;
+  baseDir: string;
   outputDir: string;
   nftFileName: string;
   nft: NftFile;
@@ -742,9 +701,15 @@ async function resolveNftToOutput({
       const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
       smartCopy(client, fullInput, newFilePath);
 
+      // We have to use `baseDir` instead of `cwd`, because we want to
+      // mount everything from there (especially `node_modules`).
+      // This is important for NPM Workspaces where `node_modules` is not
+      // in the directory of the workspace.
+      const output = relative(baseDir, fullInput).replace('.output', '.next');
+
       newFilesList.push({
         input: relative(parse(nftFileName).dir, newFilePath),
-        output: relative(cwd, fullInput).replace('.output', '.next'),
+        output,
       });
     } else {
       newFilesList.push(relativeInput);
