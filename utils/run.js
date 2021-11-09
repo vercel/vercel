@@ -10,6 +10,7 @@ const allPackages = [
   'middleware',
   'client',
   'node-bridge',
+  'plugin-node',
   'node',
   'go',
   'python',
@@ -80,6 +81,15 @@ function runScript(pkgName, script) {
         cwd,
         stdio: 'inherit',
         shell: true,
+        env: {
+          // Only add this for unit tests, as it's not relevant to others.
+          ...(script === 'test-unit'
+            ? {
+                NODE_OPTIONS: '--max-old-space-size=4096',
+              }
+            : null),
+          ...process.env,
+        },
       });
       child.on('error', reject);
       child.on('close', (code, signal) => {
