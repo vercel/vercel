@@ -374,4 +374,15 @@ describe('DevServer', () => {
       );
     })
   );
+
+  it(
+    'should render an error page when the middleware returns not a Response',
+    testFixture('edge-middleware-invalid-response', async server => {
+      const response = await fetch(`${server.address}/index.html`);
+      const body = await response.text();
+      expect(body).toStrictEqual(
+        'A server error has occurred\n\nEDGE_FUNCTION_INVOCATION_FAILED\n'
+      );
+    })
+  );
 });
