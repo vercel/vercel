@@ -390,6 +390,33 @@ export default async function main(client: Client) {
         join(cwd, OUTPUT_DIR, 'static', '_next', 'static')
       );
 
+      // Next.js might reference files from the `static` directory in `middleware-manifest.json`.
+      // Since we move all files from `static` to `static/_next/static`, we'll need to change
+      // those references as well and update the manifest file.
+      const middlewareManifest = join(
+        cwd,
+        OUTPUT_DIR,
+        'server',
+        'pages',
+        'middleware-manifest.json'
+      );
+      if (fs.existsSync(middlewareManifest)) {
+        const manifest = await fs.readJSON(middlewareManifest);
+        Object.keys(manifest.middleware).forEach(key => {
+          const files = manifest.middleware[key].files.map((f: string) => {
+            if (f.startsWith('static/')) {
+              return f.replace(/^static\//gm, 'static/_next/static/');
+            }
+
+            return f;
+          });
+
+          manifest.middleware[key].files = files;
+        });
+
+        await fs.writeJSON(middlewareManifest, manifest);
+      }
+
       // We want to pick up directories for user-provided static files into `.`output/static`.
       // More specifically, the static directory contents would then be mounted to `output/static/static`,
       // and the public directory contents would be mounted to `output/static`. Old Next.js versions
