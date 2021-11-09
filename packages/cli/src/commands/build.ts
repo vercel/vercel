@@ -317,6 +317,7 @@ export default async function main(client: Client) {
         '_middleware.js',
         'api/**',
         '.git/**',
+        '.next/cache/**',
       ],
       nodir: true,
       dot: true,
