@@ -2299,7 +2299,8 @@ test('fail `now dev` dev script without now.json', async t => {
   );
 });
 
-test('[vercel dev] fails when development commad calls vercel dev recursively', async t => {
+// eslint-disable-next-line jest/no-focused-tests
+test.only('[vercel dev] fails when development commad calls vercel dev recursively', async t => {
   const dir = fixture('dev-fail-on-recursion-command');
   const projectName = `dev-fail-on-recursion-command-${
     Math.random().toString(36).split('.')[1]
