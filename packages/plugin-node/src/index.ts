@@ -484,8 +484,10 @@ export async function buildEntrypoint({
   }
 
   const pages = {
-    handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
-    runtime: nodeVersion.runtime,
+    [entrypointWithoutExtIndex]: {
+      handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
+      runtime: nodeVersion.runtime,
+    },
   };
   await updateFunctionsManifest({ workPath, pages });
 
