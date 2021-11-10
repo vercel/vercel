@@ -114,6 +114,23 @@ module.exports = async function prepare(session) {
         2
       ),
     },
+    'dev-fail-on-recursion-command': {
+      'package.json': '{}',
+    },
+    'build-fail-on-recursion-command': {
+      'package.json': '{}',
+    },
+    'build-fail-on-recursion-script': {
+      'package.json': JSON.stringify(
+        {
+          scripts: {
+            build: 'vercel build',
+          },
+        },
+        null,
+        2
+      ),
+    },
     'static-deployment': {
       'index.txt': 'Hello World',
     },
