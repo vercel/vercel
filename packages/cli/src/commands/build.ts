@@ -82,7 +82,7 @@ export default async function main(client: Client) {
     client.output.error(
       `${cmd(
         `${getPkgName()} build`
-      )} must not recursively invoke itself. Check the build command in project settings or the ${cmd(
+      )} must not recursively invoke itself. Check the Build Command in the Project Settings or the ${cmd(
         'build'
       )} script in ${cmd('package.json')}`
     );
