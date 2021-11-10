@@ -48,7 +48,7 @@ export default async function main(client: Client) {
     client.output.error(
       `${cmd(
         `${getPkgName()} dev`
-      )} must not recursively invoke itself. Check the dev command in project settings or the ${cmd(
+      )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
         'dev'
       )} script in ${cmd('package.json')}`
     );
