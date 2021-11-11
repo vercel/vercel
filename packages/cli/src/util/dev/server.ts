@@ -2161,7 +2161,10 @@ export default class DevServer {
       process.stdout.write(data.replace(proxyPort, devPort));
     });
 
-    p.on('exit', () => {
+    p.on('exit', (code: number) => {
+      if (code > 0) {
+        process.exit(code);
+      }
       this.devProcessPort = undefined;
     });
 
