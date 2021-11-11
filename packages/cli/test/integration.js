@@ -2352,8 +2352,7 @@ test('[vercel build] fails when build commad calls vercel build recursively', as
   );
 });
 
-// eslint-disable-next-line jest/no-focused-tests
-test.only('[vercel build] fails when build script calls vercel build recursively', async t => {
+test('[vercel build] fails when build script calls vercel build recursively', async t => {
   const dir = fixture('build-fail-on-recursion-script');
   const projectName = `build-fail-on-recursion-script-${
     Math.random().toString(36).split('.')[1]
