@@ -316,7 +316,7 @@ async function setupProject(process, projectName, overrides) {
 test.before(async () => {
   try {
     await createUser();
-    await prepareFixtures(contextName);
+    await prepareFixtures(contextName, binaryPath);
   } catch (err) {
     console.log('Failed `test.before`');
     console.log(err);
@@ -2299,8 +2299,7 @@ test('fail `now dev` dev script without now.json', async t => {
   );
 });
 
-// eslint-disable-next-line jest/no-focused-tests
-test.only('[vercel dev] fails when development commad calls vercel dev recursively', async t => {
+test('[vercel dev] fails when development commad calls vercel dev recursively', async t => {
   const dir = fixture('dev-fail-on-recursion-command');
   const projectName = `dev-fail-on-recursion-command-${
     Math.random().toString(36).split('.')[1]
@@ -2324,8 +2323,7 @@ test.only('[vercel dev] fails when development commad calls vercel dev recursive
   );
 });
 
-// eslint-disable-next-line jest/no-focused-tests
-test.only('[vercel build] fails when build commad calls vercel build recursively', async t => {
+test('[vercel build] fails when build commad calls vercel build recursively', async t => {
   const dir = fixture('build-fail-on-recursion-command');
   const projectName = `build-fail-on-recursion-command-${
     Math.random().toString(36).split('.')[1]

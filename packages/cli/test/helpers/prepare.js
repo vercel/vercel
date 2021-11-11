@@ -19,7 +19,7 @@ const getRevertAliasConfigFile = () => {
     ],
   });
 };
-module.exports = async function prepare(session) {
+module.exports = async function prepare(session, binaryPath) {
   const spec = {
     'static-single-file': {
       'first.png': getImageFile(session, { size: 30 }),
@@ -124,7 +124,7 @@ module.exports = async function prepare(session) {
       'package.json': JSON.stringify(
         {
           scripts: {
-            build: 'vercel build',
+            build: `${binaryPath} build`,
           },
         },
         null,
