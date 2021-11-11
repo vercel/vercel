@@ -48,9 +48,6 @@ const help = () => {
 };
 
 export default async function main(client: Client) {
-  client.output.log(
-    `__VERCEL_DEV_RUNNING = ${process.env.__VERCEL_DEV_RUNNING}`
-  );
   if (process.env.__VERCEL_DEV_RUNNING) {
     client.output.error(
       `${cmd(

@@ -2301,21 +2301,15 @@ test('fail `now dev` dev script without now.json', async t => {
 
 // eslint-disable-next-line jest/no-focused-tests
 test.only('[vercel dev] fails when development commad calls vercel dev recursively', async t => {
-  t.timeout(30 * 1000);
   const dir = fixture('dev-fail-on-recursion-command');
   const projectName = `dev-fail-on-recursion-command-${
     Math.random().toString(36).split('.')[1]
   }`;
 
-  // // remove previously linked project if it exists
-  // await remove(path.join(dir, '.vercel'));
-
-  const dev = execa(binaryPath, ['dev', dir, '--debug', ...defaultArgs], {
+  const dev = execa(binaryPath, ['dev', ...defaultArgs], {
+    cwd: dir,
     reject: false,
   });
-
-  dev.stdout.pipe(process.stdout);
-  dev.stderr.pipe(process.stderr);
 
   await setupProject(dev, projectName, {
     devCommand: `${binaryPath} dev`,
@@ -2330,14 +2324,12 @@ test.only('[vercel dev] fails when development commad calls vercel dev recursive
   );
 });
 
-test('[vercel build] fails when build commad calls vercel build recursively', async t => {
+// eslint-disable-next-line jest/no-focused-tests
+test.only('[vercel build] fails when build commad calls vercel build recursively', async t => {
   const dir = fixture('build-fail-on-recursion-command');
   const projectName = `build-fail-on-recursion-command-${
     Math.random().toString(36).split('.')[1]
   }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(dir, '.vercel'));
 
   const build = execa(binaryPath, ['build', ...defaultArgs], {
     cwd: dir,
@@ -2349,7 +2341,9 @@ test('[vercel build] fails when build commad calls vercel build recursively', as
   );
   build.stdin.write('yes\n');
 
-  await setupProject(build, projectName, { buildCommand: 'vercel build' });
+  await setupProject(build, projectName, {
+    buildCommand: `${binaryPath} build`,
+  });
 
   const { exitCode, stderr } = await build;
 
@@ -2360,14 +2354,12 @@ test('[vercel build] fails when build commad calls vercel build recursively', as
   );
 });
 
-test('[vercel build] fails when build script calls vercel build recursively', async t => {
+// eslint-disable-next-line jest/no-focused-tests
+test.only('[vercel build] fails when build script calls vercel build recursively', async t => {
   const dir = fixture('build-fail-on-recursion-script');
   const projectName = `build-fail-on-recursion-script-${
     Math.random().toString(36).split('.')[1]
   }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(dir, '.vercel'));
 
   const build = execa(binaryPath, ['build', ...defaultArgs], {
     cwd: dir,
