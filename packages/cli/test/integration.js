@@ -2307,11 +2307,10 @@ test.only('[vercel dev] fails when development commad calls vercel dev recursive
     Math.random().toString(36).split('.')[1]
   }`;
 
-  // remove previously linked project if it exists
-  await remove(path.join(dir, '.vercel'));
+  // // remove previously linked project if it exists
+  // await remove(path.join(dir, '.vercel'));
 
-  const dev = execa(binaryPath, ['dev', ...defaultArgs], {
-    cwd: dir,
+  const dev = execa(binaryPath, ['dev', dir, '--debug', ...defaultArgs], {
     reject: false,
   });
 
