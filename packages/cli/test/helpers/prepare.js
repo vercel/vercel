@@ -19,7 +19,7 @@ const getRevertAliasConfigFile = () => {
     ],
   });
 };
-module.exports = async function prepare(session) {
+module.exports = async function prepare(session, binaryPath) {
   const spec = {
     'static-single-file': {
       'first.png': getImageFile(session, { size: 30 }),
@@ -108,6 +108,23 @@ module.exports = async function prepare(session) {
         {
           scripts: {
             dev: 'now dev',
+          },
+        },
+        null,
+        2
+      ),
+    },
+    'dev-fail-on-recursion-command': {
+      'package.json': '{}',
+    },
+    'build-fail-on-recursion-command': {
+      'package.json': '{}',
+    },
+    'build-fail-on-recursion-script': {
+      'package.json': JSON.stringify(
+        {
+          scripts: {
+            build: `${binaryPath} build`,
           },
         },
         null,
