@@ -256,9 +256,7 @@ async function setupProject(process, projectName, overrides) {
   await waitForPrompt(process, chunk => /Set up [^?]+\?/.test(chunk));
   process.stdin.write('yes\n');
 
-  await waitForPrompt(process, chunk =>
-    chunk.includes('Which scope should contain your project?')
-  );
+  await waitForPrompt(process, chunk => /Which scope [^?]+\?/.test(chunk));
   process.stdin.write('\n');
 
   await waitForPrompt(process, chunk =>
