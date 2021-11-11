@@ -71,9 +71,12 @@ describe('convert-runtime-to-plugin', () => {
 
     const funcManifest = JSON.parse(output['functions-manifest.json']);
     expect(funcManifest).toMatchObject({
-      'api/index.py': lambdaOptions,
-      'api/users/get.py': lambdaOptions,
-      'api/users/post.py': { ...lambdaOptions, memory: 3008 },
+      version: 1,
+      pages: {
+        'api/index.py': lambdaOptions,
+        'api/users/get.py': lambdaOptions,
+        'api/users/post.py': { ...lambdaOptions, memory: 3008 },
+      },
     });
 
     const indexJson = JSON.parse(output.server.pages.api['index.py.nft.json']);
