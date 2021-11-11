@@ -57,7 +57,7 @@ export default async function main(client: Client) {
       )} script in ${cmd('package.json')}`
     );
     client.output.error(
-      `Learn More: http://err.sh/vercel/recursive-invocation`
+      `Learn More: https://vercel.com/docs/errors#errors/recursive-invocation-of-commands`
     );
     return 1;
   } else {
@@ -106,22 +106,21 @@ export default async function main(client: Client) {
     if (pkg) {
       const { scripts } = pkg as PackageJson;
 
-      if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(
-          `The ${cmd('dev')} script in ${cmd(
-            'package.json'
-          )} must not contain ${cmd('now dev')}`
+      if (
+        scripts &&
+        scripts.dev &&
+        /\b(now|vercel)\b\W+\bdev\b/.test(scripts.dev)
+      ) {
+        client.output.error(
+          `${cmd(
+            `${getPkgName()} dev`
+          )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
+            'dev'
+          )} script in ${cmd('package.json')}`
         );
-        output.error(`Learn More: http://err.sh/vercel/now-dev-as-dev-script`);
-        return 1;
-      }
-      if (scripts && scripts.dev && /\bvercel\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(
-          `The ${cmd('dev')} script in ${cmd(
-            'package.json'
-          )} must not contain ${cmd('vercel dev')}`
+        client.output.error(
+          `Learn More: https://vercel.com/docs/errors#errors/recursive-invocation-of-commands`
         );
-        output.error(`Learn More: http://err.sh/vercel/now-dev-as-dev-script`);
         return 1;
       }
     }

@@ -87,7 +87,7 @@ export default async function main(client: Client) {
       )} script in ${cmd('package.json')}`
     );
     client.output.error(
-      `Learn More: http://err.sh/vercel/recursive-invocation`
+      `Learn More: https://vercel.com/docs/errors#errors/recursive-invocation-of-commands`
     );
     return 1;
   } else {

@@ -2286,13 +2286,13 @@ test('whoami', async t => {
   t.is(stdout, contextName, formatOutput({ stdout, stderr }));
 });
 
-test('fail `now dev` dev script without now.json', async t => {
+test('[vercel dev] fails when dev script calls vercel dev recursively', async t => {
   const deploymentPath = fixture('now-dev-fail-dev-script');
   const { exitCode, stderr } = await execute(['dev', deploymentPath]);
 
   t.is(exitCode, 1);
   t.true(
-    stderr.includes('must not contain `now dev`'),
+    stderr.includes('must not recursively invoke itself'),
     `Received instead: "${stderr}"`
   );
 });
