@@ -51,21 +51,21 @@ export default async function main(client: Client) {
   client.output.log(
     `__VERCEL_DEV_RUNNING = ${process.env.__VERCEL_DEV_RUNNING}`
   );
-  // if (process.env.__VERCEL_DEV_RUNNING) {
-  //   client.output.error(
-  //     `${cmd(
-  //       `${getPkgName()} dev`
-  //     )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
-  //       'dev'
-  //     )} script in ${cmd('package.json')}`
-  //   );
-  //   client.output.error(
-  //     `Learn More: http://err.sh/vercel/recursive-invocation`
-  //   );
-  //   return 1;
-  // } else {
-  //   process.env.__VERCEL_DEV_RUNNING = '1';
-  // }
+  if (process.env.__VERCEL_DEV_RUNNING) {
+    client.output.error(
+      `${cmd(
+        `${getPkgName()} dev`
+      )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
+        'dev'
+      )} script in ${cmd('package.json')}`
+    );
+    client.output.error(
+      `Learn More: http://err.sh/vercel/recursive-invocation`
+    );
+    return 1;
+  } else {
+    process.env.__VERCEL_DEV_RUNNING = '1';
+  }
 
   let argv;
   let args;

@@ -2317,7 +2317,7 @@ test.only('[vercel dev] fails when development commad calls vercel dev recursive
   dev.stdout.pipe(process.stdout);
   dev.stderr.pipe(process.stderr);
 
-  await setupProject(dev, projectName, { devCommand: 'vercel dev' });
+  await setupProject(dev, projectName, { devCommand: 'vercel dev --debug' });
 
   const { exitCode, stderr } = await dev;
 
