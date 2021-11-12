@@ -250,13 +250,15 @@ export async function linkFolderToProject(
     let contentModified = false;
 
     if (!gitIgnore.split(EOL).includes(VERCEL_DIR)) {
-      gitIgnore += `${gitIgnore.endsWith(EOL) ? '' : EOL}${VERCEL_DIR}${EOL}`;
+      gitIgnore += `${
+        gitIgnore.endsWith(EOL) || gitIgnore.length === 0 ? '' : EOL
+      }${VERCEL_DIR}${EOL}`;
       contentModified = true;
     }
 
     if (!gitIgnore.split(EOL).includes(VERCEL_OUTPUT_DIR)) {
       gitIgnore += `${
-        gitIgnore.endsWith(EOL) ? '' : EOL
+        gitIgnore.endsWith(EOL) || gitIgnore.length === 0 ? '' : EOL
       }${VERCEL_OUTPUT_DIR}${EOL}`;
       contentModified = true;
     }
