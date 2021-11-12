@@ -36,7 +36,7 @@ interface CreateLambdaOptions {
 
 interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
-  config?: Config;
+  config?: Pick<Config, 'functions'>;
 }
 
 export const FILES_SYMBOL = Symbol('files');

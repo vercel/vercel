@@ -35,6 +35,7 @@ import {
   debug,
   isSymbolicLink,
   runNpmInstall,
+  updateFunctionsManifest,
   walkParentDirs,
 } from '@vercel/build-utils';
 import { FromSchema } from 'json-schema-to-ts';
@@ -482,27 +483,13 @@ export async function buildEntrypoint({
     await finishPromise;
   }
 
-  // Update the `functions-mainifest.json` file with this entrypoint
-  // TODO NATE: turn this into a `@vercel/plugin-utils` helper function?
-  const functionsManifestPath = join(outputDirPath, 'functions-manifest.json');
-  let functionsManifest: any = {};
-  try {
-    functionsManifest = JSON.parse(
-      await fsp.readFile(functionsManifestPath, 'utf8')
-    );
-  } catch (_err) {
-    // ignore...
-  }
-  if (!functionsManifest.version) functionsManifest.version = 1;
-  if (!functionsManifest.pages) functionsManifest.pages = {};
-  functionsManifest.pages[entrypointWithoutExtIndex] = {
-    handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
-    runtime: nodeVersion.runtime,
+  const pages = {
+    [entrypointWithoutExtIndex]: {
+      handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
+      runtime: nodeVersion.runtime,
+    },
   };
-  await fsp.writeFile(
-    functionsManifestPath,
-    JSON.stringify(functionsManifest, null, 2)
-  );
+  await updateFunctionsManifest({ workPath, pages });
 
   // Update the `routes-mainifest.json` file with the wildcard route
   // when the entrypoint is dynamic (i.e. `/api/[id].ts`).
