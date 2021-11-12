@@ -6,6 +6,7 @@ import {
   readlinkSync,
   statSync,
   promises as fsp,
+  existsSync,
 } from 'fs';
 import {
   basename,
@@ -118,9 +119,14 @@ async function downloadInstallAndBundle({
   const nodeVersion = await getNodeVersion(entrypointFsDirname);
   const spawnOpts = getSpawnOptions({}, nodeVersion);
 
-  const installTime = Date.now();
-  await runNpmInstall(entrypointFsDirname, [], spawnOpts, {}, nodeVersion);
-  debug(`Install complete [${Date.now() - installTime}ms]`);
+  // Only run when `package.json` exists.
+  if (existsSync(join(entrypointFsDirname, 'package.json'))) {
+    const installTime = Date.now();
+    await runNpmInstall(entrypointFsDirname, [], spawnOpts, {}, nodeVersion);
+    debug(`Install complete [${Date.now() - installTime}ms]`);
+  } else {
+    debug(`Skip install command for \`vercel-plugin-node\`.`);
+  }
 
   return {
     nodeVersion,

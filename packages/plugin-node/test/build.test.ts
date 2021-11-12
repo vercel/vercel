@@ -11,6 +11,7 @@ import {
   Headers,
 } from 'node-fetch';
 import { build } from '../src';
+import { runNpmInstall } from '@vercel/build-utils';
 
 interface TestParams {
   fixture: string;
@@ -107,6 +108,10 @@ function withFixture<T>(
         status,
         headers,
       });
+    }
+
+    if (await fsp.lstat(join(fixture, 'package.json')).catch(() => false)) {
+      await runNpmInstall(fixture);
     }
 
     await build({ workPath: fixture });
