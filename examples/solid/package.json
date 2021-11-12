@@ -1,0 +1,19 @@
+{
+  "name": "solid-app",
+  "version": "0.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "vite": "^2.6.13",
+    "vite-plugin-solid": "^2.1.2"
+  },
+  "dependencies": {
+    "solid-js": "^1.1.1"
+  }
+}

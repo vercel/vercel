@@ -555,6 +555,94 @@ export const frameworks = [
     ],
   },
   {
+    name: 'SolidStart',
+    slug: 'solidstart',
+    demo: 'https://solidstart.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/solid.svg',
+    tagline:
+      'A Reactive JavaScript Library for Building User Interfaces.',
+    description: 'A Solid app, created with SolidStart.',
+    website: 'https://solidjs.com',
+    envPrefix: 'VITE_',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-js":\\s*".+?"[^}]*}',
+        },
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-start":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `solid-start build`',
+      },
+      devCommand: {
+        placeholder: '`npm start` or `solid-start dev`',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'solid-start',
+    devCommand: 'solid-start dev',
+    buildCommand: 'solid-start build',
+    getFsOutputDir: async () => 'dist',
+    getOutputDirName: async () => 'dist',
+  },
+  {
+    name: 'Solid',
+    slug: 'solid',
+    demo: 'https://solid.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/solid.svg',
+    tagline:
+      'A Reactive JavaScript Library for Building User Interfaces.',
+    description: 'A Solid app, created with Vite.',
+    website: 'https://solidjs.com',
+    envPrefix: 'VITE_',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-js":\\s*".+?"[^}]*}',
+        },
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"vite":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vite build`',
+      },
+      devCommand: {
+        placeholder: '`npm start` or `vite`',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'vite',
+    devCommand: 'vite',
+    buildCommand: 'vite build',
+    getFsOutputDir: async () => 'dist',
+    getOutputDirName: async () => 'dist',
+  },
+  {
     name: 'Dojo',
     slug: 'dojo',
     demo: 'https://dojo.examples.vercel.com',
