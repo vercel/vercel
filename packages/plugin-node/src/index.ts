@@ -516,8 +516,13 @@ export async function buildEntrypoint({
     pageOutput
   );
 
+  let pageKey = relative(pagesDir, pageOutput);
+  if (process.platform === 'win32') {
+    pageKey = pageKey.replace(/\\/gm, '/');
+  }
+
   const pages = {
-    [relative(pagesDir, pageOutput)]: {
+    [pageKey]: {
       handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
       runtime: nodeVersion.runtime,
     },
