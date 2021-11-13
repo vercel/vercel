@@ -96,7 +96,7 @@ function withFixture<T>(
           });
           zip.end();
 
-          const handler = path.posix.join(
+          const handler = path.join(
             '.output/server/pages',
             path.dirname(fnKey),
             functionManifest.handler
