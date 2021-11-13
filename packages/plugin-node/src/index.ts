@@ -8,7 +8,7 @@ import {
   promises as fsp,
   existsSync,
 } from 'fs';
-import path, {
+import {
   basename,
   dirname,
   extname,
@@ -499,13 +499,7 @@ export async function buildEntrypoint({
     // This means everything has to be mounted to the `dirname` of the entrypoint.
     nftFiles.push({
       input: relative(dirname(nftOutput), outPath),
-      output: path.join(
-        '.output',
-        'server',
-        'pages',
-        dirname(entrypoint),
-        filename
-      ),
+      output: join('.output', 'server', 'pages', dirname(entrypoint), filename),
     });
   }
 
