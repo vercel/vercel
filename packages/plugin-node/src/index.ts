@@ -8,7 +8,7 @@ import {
   promises as fsp,
   existsSync,
 } from 'fs';
-import {
+import path, {
   basename,
   dirname,
   extname,
@@ -517,7 +517,7 @@ export async function buildEntrypoint({
   );
 
   const pages = {
-    [relative(pagesDir, pageOutput)]: {
+    [path.posix.relative(pagesDir, pageOutput)]: {
       handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
       runtime: nodeVersion.runtime,
     },
