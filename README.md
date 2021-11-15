@@ -36,3 +36,7 @@ As always, you should use `yarn test-unit` to run the tests and see if your chan
 ## How to Create a Release
 
 If you have write access to this repository, you can read more about how to publish a release [here](https://github.com/vercel/vercel/wiki/Creating-a-Release).
+
+## Test
+
+This is a test.
