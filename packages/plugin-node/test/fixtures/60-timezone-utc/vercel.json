@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "builds": [{ "src": "api/**/*.js", "use": "@vercel/node" }],
+  "probes": [
+    {
+      "path": "/api/offset.js",
+      "mustContain": "RANDOMNESS_PLACEHOLDER:offset:0"
+    }
+  ]
+}

@@ -194,8 +194,8 @@ async function findDestinationMatch(
   user: User,
   teams: Team[]
 ) {
-  if (user.uid === destination || user.username === destination) {
-    return user.uid;
+  if (user.id === destination || user.username === destination) {
+    return user.id;
   }
 
   for (const team of teams) {

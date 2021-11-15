@@ -56,7 +56,7 @@ export default async function list(client: Client): Promise<number> {
   }
 
   if (accountIsCurrent) {
-    currentTeam = user.uid;
+    currentTeam = user.id;
   }
 
   const teamList = teams.map(({ id, slug, name }) => ({
@@ -67,7 +67,7 @@ export default async function list(client: Client): Promise<number> {
   }));
 
   teamList.unshift({
-    id: user.uid,
+    id: user.id,
     name: user.email,
     value: user.username || user.email,
     current: accountIsCurrent ? chars.tick : '',

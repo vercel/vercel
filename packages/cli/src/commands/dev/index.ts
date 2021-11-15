@@ -48,6 +48,22 @@ const help = () => {
 };
 
 export default async function main(client: Client) {
+  if (process.env.__VERCEL_DEV_RUNNING) {
+    client.output.error(
+      `${cmd(
+        `${getPkgName()} dev`
+      )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
+        'dev'
+      )} script in ${cmd('package.json')}`
+    );
+    client.output.error(
+      `Learn More: https://vercel.link/recursive-invocation-of-commands`
+    );
+    return 1;
+  } else {
+    process.env.__VERCEL_DEV_RUNNING = '1';
+  }
+
   let argv;
   let args;
   const { output } = client;
@@ -90,22 +106,21 @@ export default async function main(client: Client) {
     if (pkg) {
       const { scripts } = pkg as PackageJson;
 
-      if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(
-          `The ${cmd('dev')} script in ${cmd(
-            'package.json'
-          )} must not contain ${cmd('now dev')}`
+      if (
+        scripts &&
+        scripts.dev &&
+        /\b(now|vercel)\b\W+\bdev\b/.test(scripts.dev)
+      ) {
+        client.output.error(
+          `${cmd(
+            `${getPkgName()} dev`
+          )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
+            'dev'
+          )} script in ${cmd('package.json')}`
         );
-        output.error(`Learn More: http://err.sh/vercel/now-dev-as-dev-script`);
-        return 1;
-      }
-      if (scripts && scripts.dev && /\bvercel\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(
-          `The ${cmd('dev')} script in ${cmd(
-            'package.json'
-          )} must not contain ${cmd('vercel dev')}`
+        client.output.error(
+          `Learn More: https://vercel.link/recursive-invocation-of-commands`
         );
-        output.error(`Learn More: http://err.sh/vercel/now-dev-as-dev-script`);
         return 1;
       }
     }
@@ -121,7 +136,7 @@ export default async function main(client: Client) {
   } catch (err) {
     if (err.code === 'ENOTFOUND') {
       // Error message will look like the following:
-      // "request to https://api.vercel.com/www/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
+      // "request to https://api.vercel.com/v2/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
       const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
       if (matches && matches[1]) {
         const hostname = matches[1];

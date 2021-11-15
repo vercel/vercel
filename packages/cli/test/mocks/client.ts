@@ -56,7 +56,6 @@ export class MockClient extends Client {
     this.output = new Output();
     this.mockOutput = jest.fn();
     this.output.print = s => {
-      //process.stdout.write(s);
       return this.mockOutput(s);
     };
 
@@ -69,6 +68,12 @@ export class MockClient extends Client {
     this.output.spinner = () => {};
 
     this.scenario = Router();
+
+    this.output.isTTY = true;
+  }
+
+  get outputBuffer() {
+    return this.mockOutput.mock.calls.map(c => c[0]).join('');
   }
 
   async startMockServer() {
