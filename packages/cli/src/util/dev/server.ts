@@ -1358,13 +1358,20 @@ export default class DevServer {
       this.cwd,
       this.output
     );
-    for (let plugin of devMiddlewarePlugins) {
-      const result = await plugin.plugin.runDevMiddleware(req, res, this.cwd);
-      if (result.finished) {
-        return result;
+    try {
+      for (let plugin of devMiddlewarePlugins) {
+        const result = await plugin.plugin.runDevMiddleware(req, res, this.cwd);
+        if (result.finished) {
+          return result;
+        }
       }
+      return { finished: false };
+    } catch (e) {
+      return {
+        finished: true,
+        error: e,
+      };
     }
-    return { finished: false };
   };
 
   /**
@@ -2154,7 +2161,10 @@ export default class DevServer {
       process.stdout.write(data.replace(proxyPort, devPort));
     });
 
-    p.on('exit', () => {
+    p.on('exit', (code: number) => {
+      if (code > 0) {
+        process.exit(code);
+      }
       this.devProcessPort = undefined;
     });
 

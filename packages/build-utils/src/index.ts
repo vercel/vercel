@@ -82,6 +82,10 @@ export { detectFramework } from './detect-framework';
 export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
+export {
+  convertRuntimeToPlugin,
+  updateFunctionsManifest,
+} from './convert-runtime-to-plugin';
 
 export * from './schemas';
 export * from './types';

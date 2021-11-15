@@ -252,10 +252,69 @@ const createUser = async () => {
 
 const getConfigAuthPath = () => path.join(globalDir, 'auth.json');
 
+async function setupProject(process, projectName, overrides) {
+  await waitForPrompt(process, chunk => /Set up [^?]+\?/.test(chunk));
+  process.stdin.write('yes\n');
+
+  await waitForPrompt(process, chunk => /Which scope [^?]+\?/.test(chunk));
+  process.stdin.write('\n');
+
+  await waitForPrompt(process, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  process.stdin.write('no\n');
+
+  await waitForPrompt(process, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  process.stdin.write(`${projectName}\n`);
+
+  await waitForPrompt(process, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  process.stdin.write('\n');
+
+  await waitForPrompt(process, chunk =>
+    chunk.includes('Want to override the settings?')
+  );
+
+  if (overrides) {
+    process.stdin.write('yes\n');
+
+    const { buildCommand, outputDirectory, devCommand } = overrides;
+
+    await waitForPrompt(process, chunk =>
+      chunk.includes(
+        'Which settings would you like to overwrite (select multiple)?'
+      )
+    );
+    process.stdin.write('a\n'); // 'a' means select all
+
+    await waitForPrompt(process, chunk =>
+      chunk.includes(`What's your Build Command?`)
+    );
+    process.stdin.write(`${buildCommand ?? ''}\n`);
+
+    await waitForPrompt(process, chunk =>
+      chunk.includes(`What's your Output Directory?`)
+    );
+    process.stdin.write(`${outputDirectory ?? ''}\n`);
+
+    await waitForPrompt(process, chunk =>
+      chunk.includes(`What's your Development Command?`)
+    );
+    process.stdin.write(`${devCommand ?? ''}\n`);
+  } else {
+    process.stdin.write('no\n');
+  }
+
+  await waitForPrompt(process, chunk => chunk.includes('Linked to'));
+}
+
 test.before(async () => {
   try {
     await createUser();
-    await prepareFixtures(contextName);
+    await prepareFixtures(contextName, binaryPath);
   } catch (err) {
     console.log('Failed `test.before`');
     console.log(err);
@@ -2213,13 +2272,93 @@ test('whoami', async t => {
   t.is(stdout, contextName, formatOutput({ stdout, stderr }));
 });
 
-test('fail `now dev` dev script without now.json', async t => {
+test('[vercel dev] fails when dev script calls vercel dev recursively', async t => {
   const deploymentPath = fixture('now-dev-fail-dev-script');
   const { exitCode, stderr } = await execute(['dev', deploymentPath]);
 
   t.is(exitCode, 1);
   t.true(
-    stderr.includes('must not contain `now dev`'),
+    stderr.includes('must not recursively invoke itself'),
+    `Received instead: "${stderr}"`
+  );
+});
+
+test('[vercel dev] fails when development commad calls vercel dev recursively', async t => {
+  const dir = fixture('dev-fail-on-recursion-command');
+  const projectName = `dev-fail-on-recursion-command-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  const dev = execa(binaryPath, ['dev', ...defaultArgs], {
+    cwd: dir,
+    reject: false,
+  });
+
+  await setupProject(dev, projectName, {
+    devCommand: `${binaryPath} dev`,
+  });
+
+  const { exitCode, stderr } = await dev;
+
+  t.is(exitCode, 1);
+  t.true(
+    stderr.includes('must not recursively invoke itself'),
+    `Received instead: "${stderr}"`
+  );
+});
+
+test('[vercel build] fails when build commad calls vercel build recursively', async t => {
+  const dir = fixture('build-fail-on-recursion-command');
+  const projectName = `build-fail-on-recursion-command-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  const build = execa(binaryPath, ['build', ...defaultArgs], {
+    cwd: dir,
+    reject: false,
+  });
+
+  await waitForPrompt(build, chunk =>
+    chunk.includes('No Project Settings found locally')
+  );
+  build.stdin.write('yes\n');
+
+  await setupProject(build, projectName, {
+    buildCommand: `${binaryPath} build`,
+  });
+
+  const { exitCode, stderr } = await build;
+
+  t.is(exitCode, 1);
+  t.true(
+    stderr.includes('must not recursively invoke itself'),
+    `Received instead: "${stderr}"`
+  );
+});
+
+test('[vercel build] fails when build script calls vercel build recursively', async t => {
+  const dir = fixture('build-fail-on-recursion-script');
+  const projectName = `build-fail-on-recursion-script-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  const build = execa(binaryPath, ['build', ...defaultArgs], {
+    cwd: dir,
+    reject: false,
+  });
+
+  await waitForPrompt(build, chunk =>
+    chunk.includes('No Project Settings found locally')
+  );
+  build.stdin.write('yes\n');
+
+  await setupProject(build, projectName);
+
+  const { exitCode, stderr } = await build;
+
+  t.is(exitCode, 1);
+  t.true(
+    stderr.includes('must not recursively invoke itself'),
     `Received instead: "${stderr}"`
   );
 });
@@ -2669,59 +2808,10 @@ test('should show prompts to set up project during first deploy', async t => {
 
   const now = execa(binaryPath, [dir, ...defaultArgs]);
 
-  await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
-  now.stdin.write('yes\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Which scope do you want to deploy to?')
-  );
-  now.stdin.write('\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Link to existing project?')
-  );
-  now.stdin.write('no\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
-  now.stdin.write(`${projectName}\n`);
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
-  now.stdin.write('\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes('Want to override the settings?')
-  );
-  now.stdin.write('yes\n');
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes(
-      'Which settings would you like to overwrite (select multiple)?'
-    )
-  );
-  now.stdin.write('a\n'); // 'a' means select all
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes(`What's your Build Command?`)
-  );
-  now.stdin.write(
-    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
-  );
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes(`What's your Output Directory?`)
-  );
-  now.stdin.write(`o\n`);
-
-  await waitForPrompt(now, chunk =>
-    chunk.includes(`What's your Development Command?`)
-  );
-  now.stdin.write(`\n`);
-
-  await waitForPrompt(now, chunk => chunk.includes('Linked to'));
+  await setupProject(now, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
 
   const output = await now;
 
@@ -3287,55 +3377,10 @@ test('[vc link] should show prompts to set up project', async t => {
 
   const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
 
-  await waitForPrompt(vc, chunk => /Set up [^?]+\?/.test(chunk));
-  vc.stdin.write('yes\n');
-
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('Which scope should contain your project?')
-  );
-  vc.stdin.write('\n');
-
-  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
-  vc.stdin.write('no\n');
-
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
-  vc.stdin.write(`${projectName}\n`);
-
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
-  vc.stdin.write('\n');
-
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('Want to override the settings?')
-  );
-  vc.stdin.write('yes\n');
-
-  await waitForPrompt(vc, chunk =>
-    chunk.includes(
-      'Which settings would you like to overwrite (select multiple)?'
-    )
-  );
-  vc.stdin.write('a\n'); // 'a' means select all
-
-  await waitForPrompt(vc, chunk =>
-    chunk.includes(`What's your Build Command?`)
-  );
-  vc.stdin.write(`mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`);
-
-  await waitForPrompt(vc, chunk =>
-    chunk.includes(`What's your Output Directory?`)
-  );
-  vc.stdin.write(`o\n`);
-
-  await waitForPrompt(vc, chunk =>
-    chunk.includes(`What's your Development Command?`)
-  );
-  vc.stdin.write(`\n`);
-
-  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
+  await setupProject(vc, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
 
   const output = await vc;
 
@@ -3394,6 +3439,29 @@ test('[vc link --confirm] should not show prompts and autolink', async t => {
   );
 });
 
+test('[vc link] should not duplicate paths in .gitignore', async t => {
+  const dir = fixture('project-link-gitignore');
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['link', '--confirm', ...defaultArgs],
+    { cwd: dir, reject: false }
+  );
+
+  // Ensure the exit code is right
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  // Ensure the message is correct pattern
+  t.regex(stderr, /Linked to /m);
+
+  // Ensure .gitignore is created
+  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+  t.is(gitignore, '.output\n.vercel\n');
+});
+
 test('[vc dev] should show prompts to set up project', async t => {
   const dir = fixture('project-link-dev');
   const port = 58352;
@@ -3408,59 +3476,10 @@ test('[vc dev] should show prompts to set up project', async t => {
     cwd: dir,
   });
 
-  await waitForPrompt(dev, chunk => /Set up and develop [^?]+\?/.test(chunk));
-  dev.stdin.write('yes\n');
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes('Which scope should contain your project?')
-  );
-  dev.stdin.write('\n');
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes('Link to existing project?')
-  );
-  dev.stdin.write('no\n');
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
-  dev.stdin.write(`${projectName}\n`);
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
-  dev.stdin.write('\n');
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes('Want to override the settings?')
-  );
-  dev.stdin.write('yes\n');
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes(
-      'Which settings would you like to overwrite (select multiple)?'
-    )
-  );
-  dev.stdin.write('a\n'); // 'a' means select all
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes(`What's your Build Command?`)
-  );
-  dev.stdin.write(
-    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
-  );
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes(`What's your Output Directory?`)
-  );
-  dev.stdin.write(`o\n`);
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes(`What's your Development Command?`)
-  );
-  dev.stdin.write(`\n`);
-
-  await waitForPrompt(dev, chunk => chunk.includes('Linked to'));
+  await setupProject(dev, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+  });
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
@@ -3560,59 +3579,12 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
     cwd: dir,
   });
 
-  await waitForPrompt(dev, chunk => /Set up and develop [^?]+\?/.test(chunk));
-  dev.stdin.write('yes\n');
+  await setupProject(dev, projectName, {
+    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+    outputDirectory: 'o',
+    devCommand: 'node server.js',
+  });
 
-  await waitForPrompt(dev, chunk =>
-    chunk.includes('Which scope should contain your project?')
-  );
-  dev.stdin.write('\n');
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes('Link to existing project?')
-  );
-  dev.stdin.write('no\n');
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
-  dev.stdin.write(`${projectName}\n`);
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
-  dev.stdin.write('\n');
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes('Want to override the settings?')
-  );
-  dev.stdin.write('yes\n');
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes(
-      'Which settings would you like to overwrite (select multiple)?'
-    )
-  );
-  dev.stdin.write('a\n'); // 'a' means select all
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes(`What's your Build Command?`)
-  );
-  dev.stdin.write(
-    `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html\n`
-  );
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes(`What's your Output Directory?`)
-  );
-  dev.stdin.write(`o\n`);
-
-  await waitForPrompt(dev, chunk =>
-    chunk.includes(`What's your Development Command?`)
-  );
-  dev.stdin.write(`node server.js\n`);
-
-  await waitForPrompt(dev, chunk => chunk.includes('Linked to'));
   await waitForPrompt(dev, chunk => chunk.includes('Ready! Available at'));
 
   // Ensure that `vc dev` also works

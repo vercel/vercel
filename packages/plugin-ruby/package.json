@@ -1,0 +1,27 @@
+{
+  "private": false,
+  "name": "vercel-plugin-ruby",
+  "version": "1.0.0-canary.2",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/vercel-plugin-ruby"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "tsc"
+  },
+  "dependencies": {
+    "@vercel/build-utils": "2.12.3-canary.18",
+    "@vercel/ruby": "1.2.8-canary.4"
+  },
+  "devDependencies": {
+    "@types/node": "*",
+    "typescript": "4.3.4"
+  }
+}

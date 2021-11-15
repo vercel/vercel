@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import { join, dirname, relative } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
-import { FILES_SYMBOL, Lambda } from './lambda';
+import { FILES_SYMBOL, getLambdaOptionsFromFunction, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuilderFunctions, BuildOptions, Files } from './types';
 import minimatch from 'minimatch';
@@ -12,7 +12,7 @@ import minimatch from 'minimatch';
  * @param buildRuntime - a legacy build() function from a Runtime
  * @param ext - the file extension, for example `.py`
  */
-export async function convertRuntimeToPlugin(
+export function convertRuntimeToPlugin(
   buildRuntime: (options: BuildOptions) => Promise<{ output: Lambda }>,
   ext: string
 ) {
@@ -21,8 +21,8 @@ export async function convertRuntimeToPlugin(
     const files = await glob('**', opts);
     delete files['vercel.json']; // Builders/Runtimes didn't have vercel.json
     const entrypoints = await glob(`api/**/*${ext}`, opts);
-    const functionsManifest: { [key: string]: any } = {};
-    const functions = await readVercelConfigFunctions(workPath);
+    const pages: { [key: string]: any } = {};
+    const { functions = {} } = await readVercelConfig(workPath);
     const traceDir = join(workPath, '.output', 'runtime-traced-files');
     await fs.ensureDir(traceDir);
 
@@ -44,11 +44,11 @@ export async function convertRuntimeToPlugin(
         },
       });
 
-      functionsManifest[entrypoint] = {
+      pages[entrypoint] = {
         handler: output.handler,
         runtime: output.runtime,
-        memory: config.memory || output.memory,
-        maxDuration: config.maxDuration || output.maxDuration,
+        memory: output.memory,
+        maxDuration: output.maxDuration,
         environment: output.environment,
         allowQuery: output.allowQuery,
         regions: output.regions,
@@ -98,10 +98,7 @@ export async function convertRuntimeToPlugin(
       await fs.writeFile(nft, json);
     }
 
-    await fs.writeFile(
-      join(workPath, '.output', 'functions-manifest.json'),
-      JSON.stringify(functionsManifest)
-    );
+    await updateFunctionsManifest({ workPath, pages });
   };
 }
 
@@ -115,18 +112,60 @@ async function linkOrCopy(existingPath: string, newPath: string) {
   }
 }
 
-async function readVercelConfigFunctions(
-  workPath: string
-): Promise<BuilderFunctions> {
-  const vercelJsonPath = join(workPath, 'vercel.json');
+async function readJson(filePath: string): Promise<{ [key: string]: any }> {
   try {
-    const str = await fs.readFile(vercelJsonPath, 'utf8');
-    const obj = JSON.parse(str);
-    return obj.functions || {};
+    const str = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(str);
   } catch (err) {
     if (err.code === 'ENOENT') {
       return {};
     }
     throw err;
   }
+}
+
+async function readVercelConfig(
+  workPath: string
+): Promise<{ functions?: BuilderFunctions; regions?: string[] }> {
+  const vercelJsonPath = join(workPath, 'vercel.json');
+  return readJson(vercelJsonPath);
+}
+
+/**
+ * If `.output/functions-manifest.json` exists, append to the pages
+ * property. Otherwise write a new file. This will also read `vercel.json`
+ * and apply relevant `functions` property config.
+ */
+export async function updateFunctionsManifest({
+  workPath,
+  pages,
+}: {
+  workPath: string;
+  pages: { [key: string]: any };
+}) {
+  const functionsManifestPath = join(
+    workPath,
+    '.output',
+    'functions-manifest.json'
+  );
+  const vercelConfig = await readVercelConfig(workPath);
+  const functionsManifest = await readJson(functionsManifestPath);
+
+  if (!functionsManifest.version) functionsManifest.version = 1;
+  if (!functionsManifest.pages) functionsManifest.pages = {};
+
+  for (const [pageKey, pageConfig] of Object.entries(pages)) {
+    const fnConfig = await getLambdaOptionsFromFunction({
+      sourceFile: pageKey,
+      config: vercelConfig,
+    });
+    functionsManifest.pages[pageKey] = {
+      ...pageConfig,
+      memory: fnConfig.memory || pageConfig.memory,
+      maxDuration: fnConfig.maxDuration || pageConfig.maxDuration,
+      regions: vercelConfig.regions || pageConfig.regions,
+    };
+  }
+
+  await fs.writeFile(functionsManifestPath, JSON.stringify(functionsManifest));
 }

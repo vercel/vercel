@@ -6,6 +6,7 @@ import {
   readlinkSync,
   statSync,
   promises as fsp,
+  existsSync,
 } from 'fs';
 import {
   basename,
@@ -35,6 +36,7 @@ import {
   debug,
   isSymbolicLink,
   runNpmInstall,
+  updateFunctionsManifest,
   walkParentDirs,
 } from '@vercel/build-utils';
 import { FromSchema } from 'json-schema-to-ts';
@@ -43,6 +45,7 @@ import { AbortController } from 'abort-controller';
 import { Register, register } from './typescript';
 import { pageToRoute } from './router/page-to-route';
 import { isDynamicRoute } from './router/is-dynamic';
+import crypto from 'crypto';
 
 export { shouldServe };
 export {
@@ -117,9 +120,14 @@ async function downloadInstallAndBundle({
   const nodeVersion = await getNodeVersion(entrypointFsDirname);
   const spawnOpts = getSpawnOptions({}, nodeVersion);
 
-  const installTime = Date.now();
-  await runNpmInstall(entrypointFsDirname, [], spawnOpts, {}, nodeVersion);
-  debug(`Install complete [${Date.now() - installTime}ms]`);
+  // Only run when `package.json` exists.
+  if (existsSync(join(entrypointFsDirname, 'package.json'))) {
+    const installTime = Date.now();
+    await runNpmInstall(entrypointFsDirname, [], spawnOpts, {}, nodeVersion);
+    debug(`Install complete [${Date.now() - installTime}ms]`);
+  } else {
+    debug(`Skip install command for \`vercel-plugin-node\`.`);
+  }
 
   return {
     nodeVersion,
@@ -383,20 +391,23 @@ export async function buildEntrypoint({
   entrypoint: string;
   config: FunctionConfig;
 }) {
+  // Unique hash that will be used as directory name for `.output`.
+  const entrypointHash = crypto
+    .createHash('sha256')
+    .update(entrypoint)
+    .digest('hex');
   const outputDirPath = join(workPath, '.output');
+
   const { dir, name } = parsePath(entrypoint);
   const entrypointWithoutExt = join('/', dir, name);
-  const entrypointWithoutExtIndex = join(
-    dir,
-    name,
-    name === 'index' ? '' : 'index'
-  );
-  const outputWorkPath = join(
-    outputDirPath,
-    'server/pages',
-    entrypointWithoutExtIndex
-  );
+  const outputWorkPath = join(outputDirPath, 'inputs', entrypointHash);
+  const pagesDir = join(outputDirPath, 'server', 'pages');
+  const pageOutput = join(pagesDir, renameTStoJS(entrypoint));
+  const nftOutput = `${pageOutput}.nft.json`;
+
   await fsp.mkdir(outputWorkPath, { recursive: true });
+  await fsp.mkdir(parsePath(pageOutput).dir, { recursive: true });
+
   console.log(`Compiling "${entrypoint}" to "${outputWorkPath}"`);
 
   const shouldAddHelpers =
@@ -470,6 +481,8 @@ export async function buildEntrypoint({
     ...launcherFiles,
   };
 
+  const nftFiles: { input: string; output: string }[] = [];
+
   for (const filename of Object.keys(files)) {
     const outPath = join(outputWorkPath, filename);
     const file = files[filename];
@@ -480,29 +493,41 @@ export async function buildEntrypoint({
     const finishPromise = once(ws, 'finish');
     file.toStream().pipe(ws);
     await finishPromise;
+
+    // The `handler` will be `.output/server/pages/api/subdirectory/___vc/__launcher.launcher`
+    // or `.output/server/pages/api/___vc/__launcher.launcher`.
+    // This means everything has to be mounted to the `dirname` of the entrypoint.
+    nftFiles.push({
+      input: relative(dirname(nftOutput), outPath),
+      output: join('.output', 'server', 'pages', dirname(entrypoint), filename),
+    });
   }
 
-  // Update the `functions-mainifest.json` file with this entrypoint
-  // TODO NATE: turn this into a `@vercel/plugin-utils` helper function?
-  const functionsManifestPath = join(outputDirPath, 'functions-manifest.json');
-  let functionsManifest: any = {};
-  try {
-    functionsManifest = JSON.parse(
-      await fsp.readFile(functionsManifestPath, 'utf8')
-    );
-  } catch (_err) {
-    // ignore...
-  }
-  if (!functionsManifest.version) functionsManifest.version = 1;
-  if (!functionsManifest.pages) functionsManifest.pages = {};
-  functionsManifest.pages[entrypointWithoutExtIndex] = {
-    handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
-    runtime: nodeVersion.runtime,
-  };
   await fsp.writeFile(
-    functionsManifestPath,
-    JSON.stringify(functionsManifest, null, 2)
+    nftOutput,
+    JSON.stringify({
+      version: 1,
+      files: nftFiles,
+    })
   );
+
+  await fsp.copyFile(
+    join(outputWorkPath, renameTStoJS(entrypoint)),
+    pageOutput
+  );
+
+  let pageKey = relative(pagesDir, pageOutput);
+  if (process.platform === 'win32') {
+    pageKey = pageKey.replace(/\\/gm, '/');
+  }
+
+  const pages = {
+    [pageKey]: {
+      handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
+      runtime: nodeVersion.runtime,
+    },
+  };
+  await updateFunctionsManifest({ workPath, pages });
 
   // Update the `routes-mainifest.json` file with the wildcard route
   // when the entrypoint is dynamic (i.e. `/api/[id].ts`).
