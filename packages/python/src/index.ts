@@ -163,7 +163,7 @@ export const build = async ({
   await writeFile(join(workPath, `${handlerPyFilename}.py`), handlerPyContents);
 
   // Use the system-installed version of `python3` when running via `vercel dev`
-  const runtime = meta.isDev ? 'python3' : 'python3.6';
+  const runtime = meta.isDev ? 'python3' : 'python3.9';
 
   const globOptions: GlobOptions = {
     cwd: workPath,

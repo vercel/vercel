@@ -1,6 +1,6 @@
 import execa from 'execa';
 import { Meta, debug } from '@vercel/build-utils';
-const pipPath = 'pip3';
+const pipPath = 'pip3.9';
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
