@@ -164,7 +164,7 @@ export default async function processDeployment({
         printInspectUrl(output, event.payload.inspectorUrl, deployStamp);
 
         if (quiet) {
-          process.stdout.write(`https://${event.payload.url}`);
+          process.stdout.write(`https://${event.payload.url}\n`);
         }
 
         output.spinner(
