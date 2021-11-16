@@ -305,11 +305,13 @@ export default async function main(client: Client) {
       spawnOpts
     );
   }
+  // don't trust framework detection here because they might be switching to next on a branch
+  const isNextJs = fs.existsSync(join(cwd, '.next'));
 
   if (!fs.existsSync(join(cwd, OUTPUT_DIR))) {
     let outputDir = join(OUTPUT_DIR, 'static');
     let distDir = await framework.getFsOutputDir(cwd);
-    if (framework.slug === 'nextjs') {
+    if (isNextJs) {
       outputDir = OUTPUT_DIR;
     }
     const copyStamp = stamp();
@@ -393,7 +395,7 @@ export default async function main(client: Client) {
     }
 
     // Special Next.js processing.
-    if (framework.slug === 'nextjs') {
+    if (isNextJs) {
       // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
       const tempStatic = '___static';
       await fs.rename(
