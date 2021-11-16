@@ -60,13 +60,10 @@ import { getCommandName } from '../../util/pkg-name';
 import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url';
 import { Output } from '../../util/output';
 import { help } from './args';
+import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 
 export default async (client: Client) => {
-  const {
-    apiUrl,
-    output,
-    authConfig: { token },
-  } = client;
+  const { output } = client;
 
   let argv = null;
 
@@ -82,6 +79,7 @@ export default async (client: Client) => {
       // This is not an array in favor of matching
       // the config property name.
       '--regions': String,
+      '--prebuilt': Boolean,
       '--prod': Boolean,
       '--confirm': Boolean,
       '-f': '--force',
@@ -157,10 +155,8 @@ export default async (client: Client) => {
     }
   }
 
-  const { log, debug, error, warn } = output;
-  const debugEnabled = argv['--debug'];
+  const { log, debug, error, warn, isTTY } = output;
 
-  const { isTTY } = process.stdout;
   const quiet = !isTTY;
 
   // check paths
@@ -436,11 +432,8 @@ export default async (client: Client) => {
 
   const currentTeam = org?.type === 'team' ? org.id : undefined;
   const now = new Now({
-    apiUrl,
-    token,
-    debug: debugEnabled,
+    client,
     currentTeam,
-    output,
   });
   let deployStamp = stamp();
   let deployment = null;
@@ -452,6 +445,7 @@ export default async (client: Client) => {
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
       withCache: argv['--with-cache'],
+      prebuilt: argv['--prebuilt'],
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
       type: null,
@@ -531,6 +525,20 @@ export default async (client: Client) => {
 
     if (deployment.readyState === 'CANCELED') {
       output.print('The deployment has been canceled.\n');
+      return 1;
+    }
+
+    if (deployment.checksConclusion === 'failed') {
+      const { checks } = await getDeploymentChecks(client, deployment.id);
+      const counters = new Map<string, number>();
+      checks.forEach(c => {
+        counters.set(c.conclusion, (counters.get(c.conclusion) ?? 0) + 1);
+      });
+
+      const counterList = Array.from(counters)
+        .map(([name, no]) => `${no} ${name}`)
+        .join(', ');
+      output.error(`Running Checks: ${counterList}`);
       return 1;
     }
 

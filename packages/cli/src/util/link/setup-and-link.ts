@@ -43,13 +43,7 @@ export default async function setupAndLink(
     projectName,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
-  const {
-    authConfig: { token },
-    localConfig,
-    apiUrl,
-    output,
-    config,
-  } = client;
+  const { localConfig, output, config } = client;
   const debug = output.isDebugEnabled();
 
   const isFile = !isDirectory(path);
@@ -153,10 +147,7 @@ export default async function setupAndLink(
 
     if (isZeroConfig) {
       const now = new Now({
-        apiUrl,
-        token,
-        debug,
-        output,
+        client,
         currentTeam: config.currentTeam,
       });
       const createArgs: CreateOptions = {

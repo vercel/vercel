@@ -89,6 +89,7 @@ import {
 } from './types';
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
+import { loadCliPlugins } from '../plugins';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -1349,6 +1350,30 @@ export default class DevServer {
     return false;
   };
 
+  runDevMiddleware = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ) => {
+    const { devMiddlewarePlugins } = await loadCliPlugins(
+      this.cwd,
+      this.output
+    );
+    try {
+      for (let plugin of devMiddlewarePlugins) {
+        const result = await plugin.plugin.runDevMiddleware(req, res, this.cwd);
+        if (result.finished) {
+          return result;
+        }
+      }
+      return { finished: false };
+    } catch (e) {
+      return {
+        finished: true,
+        error: e,
+      };
+    }
+  };
+
   /**
    * Serve project directory as a v2 deployment.
    */
@@ -1415,6 +1440,36 @@ export default class DevServer {
     let statusCode: number | undefined;
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
+
+    const middlewareResult = await this.runDevMiddleware(req, res);
+
+    if (middlewareResult) {
+      if (middlewareResult.error) {
+        this.sendError(
+          req,
+          res,
+          requestId,
+          'EDGE_FUNCTION_INVOCATION_FAILED',
+          500
+        );
+        return;
+      }
+      if (middlewareResult.finished) {
+        return;
+      }
+
+      if (middlewareResult.pathname) {
+        const origUrl = url.parse(req.url || '/', true);
+        origUrl.pathname = middlewareResult.pathname;
+        prevUrl = url.format(origUrl);
+      }
+      if (middlewareResult.query && prevUrl) {
+        const origUrl = url.parse(req.url || '/', true);
+        delete origUrl.search;
+        Object.assign(origUrl.query, middlewareResult.query);
+        prevUrl = url.format(origUrl);
+      }
+    }
 
     for (const phase of phases) {
       statusCode = undefined;
@@ -2106,7 +2161,10 @@ export default class DevServer {
       process.stdout.write(data.replace(proxyPort, devPort));
     });
 
-    p.on('exit', () => {
+    p.on('exit', (code: number) => {
+      if (code > 0) {
+        process.exit(code);
+      }
       this.devProcessPort = undefined;
     });
 

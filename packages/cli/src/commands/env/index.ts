@@ -1,18 +1,16 @@
 import chalk from 'chalk';
-
-import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { getLinkedProject } from '../../util/projects/link';
 import Client from '../../util/client';
+import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import getArgs from '../../util/get-args';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand';
+import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import { getCommandName, getPkgName } from '../../util/pkg-name';
-
+import { getLinkedProject } from '../../util/projects/link';
 import add from './add';
-import pull from './pull';
 import ls from './ls';
+import pull from './pull';
 import rm from './rm';
 
 const help = () => {
@@ -139,6 +137,13 @@ export default async function main(client: Client) {
       case 'rm':
         return rm(client, project, argv, args, output);
       case 'pull':
+        output.warn(
+          `${getCommandName(
+            'env pull'
+          )} is deprecated and will be removed in future releases. Run ${getCommandName(
+            'pull'
+          )} instead.`
+        );
         return pull(client, project, argv, args, output);
       default:
         output.error(getInvalidSubcommand(COMMAND_CONFIG));

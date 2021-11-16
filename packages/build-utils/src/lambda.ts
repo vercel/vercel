@@ -20,6 +20,7 @@ interface LambdaOptions {
   maxDuration?: number;
   environment: Environment;
   allowQuery?: string[];
+  regions?: string[];
 }
 
 interface CreateLambdaOptions {
@@ -30,12 +31,15 @@ interface CreateLambdaOptions {
   maxDuration?: number;
   environment?: Environment;
   allowQuery?: string[];
+  regions?: string[];
 }
 
 interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
-  config?: Config;
+  config?: Pick<Config, 'functions'>;
 }
+
+export const FILES_SYMBOL = Symbol('files');
 
 export class Lambda {
   public type: 'Lambda';
@@ -46,6 +50,7 @@ export class Lambda {
   public maxDuration?: number;
   public environment: Environment;
   public allowQuery?: string[];
+  public regions?: string[];
 
   constructor({
     zipBuffer,
@@ -55,6 +60,7 @@ export class Lambda {
     memory,
     environment,
     allowQuery,
+    regions,
   }: LambdaOptions) {
     this.type = 'Lambda';
     this.zipBuffer = zipBuffer;
@@ -64,6 +70,7 @@ export class Lambda {
     this.maxDuration = maxDuration;
     this.environment = environment;
     this.allowQuery = allowQuery;
+    this.regions = regions;
   }
 }
 
@@ -78,6 +85,7 @@ export async function createLambda({
   maxDuration,
   environment = {},
   allowQuery,
+  regions,
 }: CreateLambdaOptions): Promise<Lambda> {
   assert(typeof files === 'object', '"files" must be an object');
   assert(typeof handler === 'string', '"handler" is not a string');
@@ -100,18 +108,30 @@ export async function createLambda({
     );
   }
 
+  if (regions !== undefined) {
+    assert(Array.isArray(regions), '"regions" is not an Array');
+    assert(
+      regions.every(r => typeof r === 'string'),
+      '"regions" is not a string Array'
+    );
+  }
+
   await sema.acquire();
 
   try {
     const zipBuffer = await createZip(files);
-    return new Lambda({
+    const lambda = new Lambda({
       zipBuffer,
       handler,
       runtime,
       memory,
       maxDuration,
       environment,
+      regions,
     });
+    // @ts-ignore This symbol is a private API
+    lambda[FILES_SYMBOL] = files;
+    return lambda;
   } finally {
     sema.release();
   }

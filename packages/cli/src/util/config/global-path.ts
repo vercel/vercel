@@ -18,12 +18,8 @@ export const isDirectory = (path: string): boolean => {
 const getGlobalPathConfig = (): string => {
   let customPath: string | undefined;
 
-  try {
-    const argv = getArgs(process.argv.slice(2), {});
-    customPath = argv['--global-config'];
-  } catch (_error) {
-    // args are optional so consume error
-  }
+  const argv = getArgs(process.argv.slice(2), {}, { permissive: true });
+  customPath = argv['--global-config'];
 
   const vercelDirectories = XDGAppPaths('com.vercel.cli').dataDirs();
 

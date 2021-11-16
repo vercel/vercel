@@ -18,9 +18,10 @@ export const help = () => `
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
       inspect              [id]        Displays information related to a deployment
-      link                             Link local directory to a Vercel Project
+      link                 [path]      Link local directory to a Vercel Project
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
+      pull                 [path]      Pull your Project Settings from the cloud
       switch               [scope]     Switches between teams and your personal account
       help                 [cmd]       Displays complete help for [cmd]
 

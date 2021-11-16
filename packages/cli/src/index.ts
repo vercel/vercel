@@ -160,18 +160,26 @@ const main = async () => {
   //  * a path to deploy (as in: `vercel path/`)
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
+  const isBuildOrDev =
+    targetOrSubcommand === 'build' || targetOrSubcommand === 'dev';
 
-  output.print(
-    `${chalk.grey(
-      `${getTitleName()} CLI ${pkg.version}${
-        targetOrSubcommand === 'dev' ? ' dev (beta)' : ''
-      }${
-        isCanary || targetOrSubcommand === 'dev'
-          ? ' — https://vercel.com/feedback'
-          : ''
-      }`
-    )}\n`
-  );
+  if (isBuildOrDev) {
+    console.log(
+      `${chalk.grey(
+        `${getTitleName()} CLI ${
+          pkg.version
+        } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
+      )}`
+    );
+  } else {
+    output.print(
+      `${chalk.grey(
+        `${getTitleName()} CLI ${pkg.version}${
+          isCanary ? ' — https://vercel.com/feedback' : ''
+        }`
+      )}\n`
+    );
+  }
 
   // Handle `--version` directly
   if (!targetOrSubcommand && argv['--version']) {
@@ -286,7 +294,14 @@ const main = async () => {
 
   let authConfig = null;
 
-  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'update'];
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'update',
+    'build',
+  ];
 
   if (authConfigExists) {
     try {
@@ -393,20 +408,33 @@ const main = async () => {
       } else if (commands.has(singular)) {
         alternative = singular;
       }
-      console.error(
-        error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
-            `\nIf you wish to deploy the ${fileType} ${param(
-              targetOrSubcommand
-            )}, first run "cd ${targetOrSubcommand}". ` +
+      if (targetOrSubcommand === 'build') {
+        output.note(
+          `If you wish to deploy the ${fileType} ${param(
+            targetOrSubcommand
+          )}, run ${getCommandName('deploy build')}.` +
             (alternative
               ? `\nIf you wish to use the subcommand ${param(
                   targetOrSubcommand
                 )}, use ${param(alternative)} instead.`
               : '')
-        )
-      );
-      return 1;
+        );
+      } else {
+        console.error(
+          error(
+            `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
+              `\nIf you wish to deploy the ${fileType} ${param(
+                targetOrSubcommand
+              )}, first run "cd ${targetOrSubcommand}". ` +
+              (alternative
+                ? `\nIf you wish to use the subcommand ${param(
+                    targetOrSubcommand
+                  )}, use ${param(alternative)} instead.`
+                : '')
+          )
+        );
+        return 1;
+      }
     }
 
     if (subcommandExists) {
@@ -550,7 +578,7 @@ const main = async () => {
       return 1;
     }
 
-    if (user.uid === scope || user.email === scope || user.username === scope) {
+    if (user.id === scope || user.email === scope || user.username === scope) {
       delete client.config.currentTeam;
     } else {
       let teams = [];
@@ -601,6 +629,9 @@ const main = async () => {
       case 'billing':
         func = await import('./commands/billing');
         break;
+      case 'build':
+        func = await import('./commands/build');
+        break;
       case 'certs':
         func = await import('./commands/certs');
         break;
@@ -642,6 +673,9 @@ const main = async () => {
         break;
       case 'projects':
         func = await import('./commands/projects');
+        break;
+      case 'pull':
+        func = await import('./commands/pull');
         break;
       case 'remove':
         func = await import('./commands/remove');
@@ -687,7 +721,7 @@ const main = async () => {
   } catch (err) {
     if (err.code === 'ENOTFOUND') {
       // Error message will look like the following:
-      // "request to https://api.vercel.com/www/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
+      // "request to https://api.vercel.com/v2/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
       const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
       if (matches && matches[1]) {
         const hostname = matches[1];

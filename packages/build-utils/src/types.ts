@@ -10,6 +10,7 @@ export interface File {
   mode: number;
   contentType?: string;
   toStream: () => NodeJS.ReadableStream;
+  toStreamAsync?: () => Promise<NodeJS.ReadableStream>;
   /**
    * The absolute path to the file in the filesystem
    */
