@@ -5,7 +5,7 @@ describe('getUpdateCommand', () => {
   it('should detect update command', async () => {
     const updateCommand = await getUpdateCommand();
     expect(updateCommand).toEqual(
-      `yarn add vercel@${isCanary() ? 'canary' : 'latest'}`
+      `npm i -g vercel@${isCanary() ? 'canary' : 'latest'}`
     );
   });
 });
