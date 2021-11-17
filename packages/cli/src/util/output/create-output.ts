@@ -132,7 +132,7 @@ export class Output {
         this._spinner = wait(message, delay);
       }
     } else {
-      console.log(message);
+      this.print(`${message}\n`);
     }
   };
 
