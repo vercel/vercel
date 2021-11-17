@@ -1,3 +1,5 @@
+![Solid Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/solid.svg)
+
 # Solid Example
 
 This is a small example of a [Solid](https://solidjs.com/) site that can be deployed with Vercel and zero-configuration. If you want server side rendering we recommend our [SolidStart example](https://github.com/vercel/vercel/tree/main/examples/solidstart.

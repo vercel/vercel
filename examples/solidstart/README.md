@@ -1,3 +1,5 @@
+![Solid Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/solid.svg)
+
 # SolidStart
 
 Everything you need to build a Solid project, powered by [`solid-start`](https://github.com/ryansolid/solid-start/tree/main/packages/start);
