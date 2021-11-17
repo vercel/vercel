@@ -1,6 +1,7 @@
 import execa from 'execa';
 import { Meta, debug } from '@vercel/build-utils';
 const pipPath = 'pip3.9';
+const pythonPath = 'python3.9';
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -12,7 +13,7 @@ print(spec.origin)
 async function isInstalled(dependency: string, cwd: string) {
   try {
     const { stdout } = await execa(
-      'python3',
+      pythonPath,
       ['-c', makeDependencyCheckCode(dependency)],
       {
         stdio: 'pipe',
@@ -36,7 +37,7 @@ pkg_resources.require(dependencies)
 async function areRequirementsInstalled(requirementsPath: string, cwd: string) {
   try {
     await execa(
-      'python3',
+      pythonPath,
       ['-c', makeRequirementsCheckCode(requirementsPath)],
       {
         stdio: 'pipe',
