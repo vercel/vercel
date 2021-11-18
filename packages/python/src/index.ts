@@ -13,6 +13,7 @@ import {
   createLambda,
   shouldServe,
   debug,
+  NowBuildError,
 } from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 
@@ -58,9 +59,9 @@ export const build = async ({
   meta = {},
   config,
 }: BuildOptions) => {
-  let pipPath = 'pip3.9';
-  let pythonPath = 'python3.9';
-  let pythonRuntime = 'python3.9';
+  let pipPath = meta.isDev ? 'pip3' : 'pip3.9';
+  let pythonPath = meta.isDev ? 'python3' : 'python3.9';
+  let pythonRuntime = meta.isDev ? 'python3' : 'python3.9';
 
   workPath = await downloadFilesInWorkPath({
     workPath,
@@ -110,11 +111,19 @@ export const build = async ({
   if (pipfileLockDir) {
     debug('Found "Pipfile.lock"');
 
-    const pipefile = await readFile(join(pipfileLockDir, 'Pipfile'), 'utf8');
-    if (pipefile.includes('python_version = "3.6"')) {
-      pipPath = 'pip3.6';
-      pythonPath = 'python3.6';
-      pythonRuntime = 'python3.6';
+    try {
+      const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
+      const obj = JSON.parse(json);
+      if (!meta.isDev && obj?._meta?.requires?.python_version === '3.6') {
+        pipPath = 'pip3.6';
+        pythonPath = 'python3.6';
+        pythonRuntime = 'python3.6';
+      }
+    } catch (err) {
+      throw new NowBuildError({
+        code: 'INVALID_PIPFILE_LOCK',
+        message: 'Unable to parse Pipfile.lock',
+      });
     }
 
     // Convert Pipenv.Lock to requirements.txt.
