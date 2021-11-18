@@ -58,6 +58,10 @@ export const build = async ({
   meta = {},
   config,
 }: BuildOptions) => {
+  let pipPath = 'pip3.9';
+  let pythonPath = 'python3.9';
+  let pythonRuntime = 'python3.9';
+
   workPath = await downloadFilesInWorkPath({
     workPath,
     files: originalFiles,
@@ -86,6 +90,8 @@ export const build = async ({
   console.log('Installing required dependencies...');
 
   await installRequirement({
+    pythonPath,
+    pipPath,
     dependency: 'werkzeug',
     version: '1.0.1',
     workPath,
@@ -104,12 +110,21 @@ export const build = async ({
   if (pipfileLockDir) {
     debug('Found "Pipfile.lock"');
 
+    const pipefile = await readFile(join(pipfileLockDir, 'Pipfile'), 'utf8');
+    if (pipefile.includes('python_version = "3.6"')) {
+      pipPath = 'pip3.6';
+      pythonPath = 'python3.6';
+      pythonRuntime = 'python3.6';
+    }
+
     // Convert Pipenv.Lock to requirements.txt.
     // We use a different`workPath` here because we want `pipfile-requirements` and it's dependencies
     // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
     // it into a separate folder.
     const tempDir = await getWriteableDirectory();
     await installRequirement({
+      pythonPath,
+      pipPath,
       dependency: 'pipfile-requirements',
       version: '0.3.0',
       workPath: tempDir,
@@ -131,6 +146,8 @@ export const build = async ({
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
     await installRequirementsFile({
+      pythonPath,
+      pipPath,
       filePath: requirementsTxtPath,
       workPath,
       meta,
@@ -139,6 +156,8 @@ export const build = async ({
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
     await installRequirementsFile({
+      pythonPath,
+      pipPath,
       filePath: requirementsTxtPath,
       workPath,
       meta,
@@ -164,7 +183,7 @@ export const build = async ({
   await writeFile(join(workPath, `${handlerPyFilename}.py`), handlerPyContents);
 
   // Use the system-installed version of `python3` when running via `vercel dev`
-  const runtime = meta.isDev ? 'python3' : 'python3.9';
+  const runtime = meta.isDev ? 'python3' : pythonRuntime;
 
   const globOptions: GlobOptions = {
     cwd: workPath,
