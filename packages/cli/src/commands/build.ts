@@ -669,7 +669,16 @@ export async function runPackageJsonScript(
 
 async function linkOrCopy(existingPath: string, newPath: string) {
   try {
-    await fs.createLink(existingPath, newPath);
+    if (
+      newPath.endsWith('.nft.json') ||
+      newPath.endsWith('middleware-manifest.json')
+    ) {
+      await fs.copy(existingPath, newPath, {
+        overwrite: true,
+      });
+    } else {
+      await fs.createSymlink(existingPath, newPath, 'file');
+    }
   } catch (err: any) {
     // eslint-disable-line
     // If a hard link to the same file already exists
@@ -678,7 +687,9 @@ async function linkOrCopy(existingPath: string, newPath: string) {
     // In some VERY rare cases (1 in a thousand), hard-link creation fails on Windows.
     // In that case, we just fall back to copying.
     // This issue is reproducible with "pnpm add @material-ui/icons@4.9.1"
-    await fs.copyFile(existingPath, newPath);
+    await fs.copy(existingPath, newPath, {
+      overwrite: true,
+    });
   }
 }
 
