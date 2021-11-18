@@ -572,41 +572,41 @@ export default async function main(client: Client) {
   }
 
   // Build Plugins
-  if (plugins?.buildPlugins && plugins.buildPlugins.length > 0) {
-    console.log(
-      `Running ${plugins.pluginCount} CLI ${pluralize(
-        'Plugin',
-        plugins.pluginCount
-      )} after Build Command:`
-    );
-    for (let item of plugins.buildPlugins) {
-      const { name, plugin, color } = item;
-      if (typeof plugin.build === 'function') {
-        const pluginStamp = stamp();
-        const fullName = name + '.build';
-        const prefix = chalk.gray('  > ') + color(fullName + ':');
-        client.output.debug(`Running ${fullName}:`);
-        try {
-          console.log = (...args: any[]) => prefixedLog(prefix, args, origLog);
-          console.error = (...args: any[]) =>
-            prefixedLog(prefix, args, origErr);
-          await plugin.build({
-            workPath: cwd,
-          });
-          client.output.debug(
-            `Completed ${fullName} ${chalk.dim(`${pluginStamp()}`)}`
-          );
-        } catch (error) {
-          client.output.error(`${prefix} failed`);
-          handleError(error, { debug });
-          return 1;
-        } finally {
-          console.log = origLog;
-          console.error = origLog;
-        }
-      }
-    }
-  }
+  // if (plugins?.buildPlugins && plugins.buildPlugins.length > 0) {
+  //   console.log(
+  //     `Running ${plugins.pluginCount} CLI ${pluralize(
+  //       'Plugin',
+  //       plugins.pluginCount
+  //     )} after Build Command:`
+  //   );
+  //   for (let item of plugins.buildPlugins) {
+  //     const { name, plugin, color } = item;
+  //     if (typeof plugin.build === 'function') {
+  //       const pluginStamp = stamp();
+  //       const fullName = name + '.build';
+  //       const prefix = chalk.gray('  > ') + color(fullName + ':');
+  //       client.output.debug(`Running ${fullName}:`);
+  //       try {
+  //         console.log = (...args: any[]) => prefixedLog(prefix, args, origLog);
+  //         console.error = (...args: any[]) =>
+  //           prefixedLog(prefix, args, origErr);
+  //         await plugin.build({
+  //           workPath: cwd,
+  //         });
+  //         client.output.debug(
+  //           `Completed ${fullName} ${chalk.dim(`${pluginStamp()}`)}`
+  //         );
+  //       } catch (error) {
+  //         client.output.error(`${prefix} failed`);
+  //         handleError(error, { debug });
+  //         return 1;
+  //       } finally {
+  //         console.log = origLog;
+  //         console.error = origLog;
+  //       }
+  //     }
+  //   }
+  // }
 
   console.log(
     `${prependEmoji(
@@ -669,7 +669,13 @@ export async function runPackageJsonScript(
 
 async function linkOrCopy(existingPath: string, newPath: string) {
   try {
-    await fs.createLink(existingPath, newPath);
+    if (newPath.endsWith('.json')) {
+      await fs.copy(existingPath, newPath, {
+        overwrite: true,
+      });
+    } else {
+      await fs.createSymlink(existingPath, newPath, 'file');
+    }
   } catch (err: any) {
     // eslint-disable-line
     // If a hard link to the same file already exists
@@ -678,7 +684,9 @@ async function linkOrCopy(existingPath: string, newPath: string) {
     // In some VERY rare cases (1 in a thousand), hard-link creation fails on Windows.
     // In that case, we just fall back to copying.
     // This issue is reproducible with "pnpm add @material-ui/icons@4.9.1"
-    await fs.copyFile(existingPath, newPath);
+    await fs.copy(existingPath, newPath, {
+      overwrite: true,
+    });
   }
 }
 
