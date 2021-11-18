@@ -667,19 +667,38 @@ export async function runPackageJsonScript(
   return true;
 }
 
+async function linkOrCopy(existingPath: string, newPath: string) {
+  try {
+    if (
+      newPath.endsWith('.nft.json') ||
+      newPath.endsWith('middleware-manifest.json') ||
+      newPath.endsWith('required-server-files.json')
+    ) {
+      await fs.copy(existingPath, newPath, {
+        overwrite: true,
+      });
+    } else {
+      await fs.createSymlink(existingPath, newPath, 'file');
+    }
+  } catch (err: any) {
+    // eslint-disable-line
+    // If a symlink to the same file already exists
+    // then trying to copy it will make an empty file from it.
+    if (err['code'] === 'EEXIST') return;
+    // In some VERY rare cases (1 in a thousand), symlink creation fails on Windows.
+    // In that case, we just fall back to copying.
+    // This issue is reproducible with "pnpm add @material-ui/icons@4.9.1"
+    await fs.copy(existingPath, newPath, {
+      overwrite: true,
+    });
+  }
+}
+
 async function smartCopy(client: Client, from: string, to: string) {
   sema.acquire();
   try {
     client.output.debug(`Copying from ${from} to ${to}`);
-    // These files will be mutated later on in the command, so we need to copy them
-    // instead of linking them to preserve the original files.
-    if (to.endsWith('.nft.json') || to.endsWith('middleware-manifest.json')) {
-      await fs.copy(from, to, {
-        overwrite: true,
-      });
-    } else {
-      await fs.createSymlink(from, to, 'file');
-    }
+    await linkOrCopy(from, to);
   } finally {
     sema.release();
   }
