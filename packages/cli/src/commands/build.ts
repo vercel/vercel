@@ -171,15 +171,15 @@ export default async function main(client: Client) {
 
   const buildState = { ...project.settings };
 
-  client.output.log(`Retrieved Project Settings:`);
-  client.output.print(
-    chalk.dim(`  - ${chalk.bold(`Framework Preset:`)} ${framework.name}\n`)
+  console.log(`Retrieved Project Settings:`);
+  console.log(
+    chalk.dim(`  - ${chalk.bold(`Framework Preset:`)} ${framework.name}`)
   );
 
   for (let field of fields) {
     const defaults = (framework.settings as any)[field.value];
     if (defaults) {
-      client.output.print(
+      console.log(
         chalk.dim(
           `  - ${chalk.bold(`${field.name}:`)} ${`${
             project.settings[field.value]
@@ -187,7 +187,7 @@ export default async function main(client: Client) {
               : isSettingValue(defaults)
               ? defaults.value
               : chalk.italic(`${defaults.placeholder}`)
-          }`}\n`
+          }`}`
         )
       );
     }
@@ -203,14 +203,14 @@ export default async function main(client: Client) {
   }
 
   if (loadedEnvFiles.length > 0) {
-    client.output.log(
+    console.log(
       `Loaded Environment Variables from ${loadedEnvFiles.length} ${pluralize(
         'file',
         loadedEnvFiles.length
       )}:`
     );
     for (let envFile of loadedEnvFiles) {
-      client.output.print(chalk.dim(`  - ${envFile.path}\n`));
+      console.log(chalk.dim(`  - ${envFile.path}`));
     }
   }
 
@@ -241,7 +241,7 @@ export default async function main(client: Client) {
   };
 
   if (plugins?.pluginCount && plugins?.pluginCount > 0) {
-    client.output.log(
+    console.log(
       `Loaded ${plugins.pluginCount} CLI ${pluralize(
         'Plugin',
         plugins.pluginCount
@@ -249,7 +249,7 @@ export default async function main(client: Client) {
     );
     // preBuild Plugins
     if (plugins.preBuildPlugins.length > 0) {
-      client.output.log(
+      console.log(
         `Running ${plugins.pluginCount} CLI ${pluralize(
           'Plugin',
           plugins.pluginCount
@@ -288,7 +288,7 @@ export default async function main(client: Client) {
   fs.removeSync(join(cwd, OUTPUT_DIR));
 
   if (typeof buildState.buildCommand === 'string') {
-    client.output.log(`Running Build Command: ${cmd(buildState.buildCommand)}`);
+    console.log(`Running Build Command: ${cmd(buildState.buildCommand)}`);
     await execCommand(buildState.buildCommand, {
       ...spawnOpts,
       // Yarn v2 PnP mode may be activated, so force
@@ -354,7 +354,7 @@ export default async function main(client: Client) {
       )
     );
     client.output.stopSpinner();
-    client.output.log(
+    console.log(
       `Copied ${files.length.toLocaleString()} files from ${param(
         distDir
       )} to ${param(outputDir)} ${copyStamp()}`
@@ -575,7 +575,7 @@ export default async function main(client: Client) {
 
   // Build Plugins
   if (plugins?.buildPlugins && plugins.buildPlugins.length > 0) {
-    client.output.log(
+    console.log(
       `Running ${plugins.pluginCount} CLI ${pluralize(
         'Plugin',
         plugins.pluginCount
@@ -610,13 +610,13 @@ export default async function main(client: Client) {
     }
   }
 
-  client.output.print(
+  console.log(
     `${prependEmoji(
       `Build Completed in ${chalk.bold(OUTPUT_DIR)} ${chalk.gray(
         buildStamp()
       )}`,
       emoji('success')
-    )}\n`
+    )}`
   );
 
   return 0;
@@ -662,9 +662,9 @@ export async function runPackageJsonScript(
     }
   }
 
-  client.output.log(`Running Build Command: ${cmd(opts.prettyCommand)}\n`);
+  console.log(`Running Build Command: ${cmd(opts.prettyCommand)}\n`);
   await spawnAsync(cliType, ['run', scriptName], opts);
-  client.output.print('\n'); // give it some room
+  console.log(); // give it some room
   client.output.debug(`Script complete [${Date.now() - runScriptTime}ms]`);
   return true;
 }
