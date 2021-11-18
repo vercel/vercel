@@ -667,24 +667,19 @@ export async function runPackageJsonScript(
   return true;
 }
 
-async function linkOrCopy(existingPath: string, newPath: string) {
-  if (
-    newPath.endsWith('.nft.json') ||
-    newPath.endsWith('middleware-manifest.json')
-  ) {
-    await fs.copy(existingPath, newPath, {
-      overwrite: true,
-    });
-  } else {
-    await fs.createSymlink(existingPath, newPath, 'file');
-  }
-}
-
 async function smartCopy(client: Client, from: string, to: string) {
   sema.acquire();
   try {
     client.output.debug(`Copying from ${from} to ${to}`);
-    await linkOrCopy(from, to);
+    // These files will be mutated later on in the command, so we need to copy them
+    // instead of linking them to preserve the original files.
+    if (to.endsWith('.nft.json') || to.endsWith('middleware-manifest.json')) {
+      await fs.copy(from, to, {
+        overwrite: true,
+      });
+    } else {
+      await fs.createSymlink(from, to, 'file');
+    }
   } finally {
     sema.release();
   }
