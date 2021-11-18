@@ -67,14 +67,14 @@ async function pipInstall(workPath: string, args: string[]) {
     target,
     ...args,
   ];
-  debug(`Running "pip3 ${cmdArgs.join(' ')}"...`);
+  const pretty = `${pipPath} ${cmdArgs.join(' ')}`;
+  debug(`Running "${pretty}"...`);
   try {
     await execa(pipPath, cmdArgs, {
       cwd: workPath,
-      stdio: 'pipe',
     });
   } catch (err) {
-    console.log(`Failed to run "pip3 ${cmdArgs.join(' ')}"`);
+    console.log(`Failed to run "${pretty}"`);
     throw err;
   }
 }

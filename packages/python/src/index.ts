@@ -22,6 +22,7 @@ async function pipenvConvert(cmd: string, srcDir: string) {
     const out = await execa.stdout(cmd, [], {
       cwd: srcDir,
     });
+    debug('Contents of requirements.txt is: ' + out);
     fs.writeFileSync(join(srcDir, 'requirements.txt'), out);
   } catch (err) {
     console.log('Failed to run "pipfile2req"');
