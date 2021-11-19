@@ -1,6 +1,5 @@
 import execa from 'execa';
 import { Meta, debug } from '@vercel/build-utils';
-const pipPath = 'pip3';
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -9,10 +8,14 @@ spec = util.find_spec(dep)
 print(spec.origin)
 `;
 
-async function isInstalled(dependency: string, cwd: string) {
+async function isInstalled(
+  pythonPath: string,
+  dependency: string,
+  cwd: string
+) {
   try {
     const { stdout } = await execa(
-      'python3',
+      pythonPath,
       ['-c', makeDependencyCheckCode(dependency)],
       {
         stdio: 'pipe',
@@ -33,10 +36,14 @@ dependencies = distutils.text_file.TextFile(filename='${requirementsPath}').read
 pkg_resources.require(dependencies)
 `;
 
-async function areRequirementsInstalled(requirementsPath: string, cwd: string) {
+async function areRequirementsInstalled(
+  pythonPath: string,
+  requirementsPath: string,
+  cwd: string
+) {
   try {
     await execa(
-      'python3',
+      pythonPath,
       ['-c', makeRequirementsCheckCode(requirementsPath)],
       {
         stdio: 'pipe',
@@ -49,7 +56,7 @@ async function areRequirementsInstalled(requirementsPath: string, cwd: string) {
   }
 }
 
-async function pipInstall(workPath: string, args: string[]) {
+async function pipInstall(pipPath: string, workPath: string, args: string[]) {
   const target = '.';
   // See: https://github.com/pypa/pip/issues/4222#issuecomment-417646535
   //
@@ -66,19 +73,21 @@ async function pipInstall(workPath: string, args: string[]) {
     target,
     ...args,
   ];
-  debug(`Running "pip3 ${cmdArgs.join(' ')}"...`);
+  const pretty = `${pipPath} ${cmdArgs.join(' ')}`;
+  debug(`Running "${pretty}"...`);
   try {
     await execa(pipPath, cmdArgs, {
       cwd: workPath,
-      stdio: 'pipe',
     });
   } catch (err) {
-    console.log(`Failed to run "pip3 ${cmdArgs.join(' ')}"`);
+    console.log(`Failed to run "${pretty}"`);
     throw err;
   }
 }
 
 interface InstallRequirementArg {
+  pythonPath: string;
+  pipPath: string;
   dependency: string;
   version: string;
   workPath: string;
@@ -91,23 +100,27 @@ interface InstallRequirementArg {
 // so vc_init should do runtime version checks to be compatible with any recent
 // version of its dependencies
 export async function installRequirement({
+  pythonPath,
+  pipPath,
   dependency,
   version,
   workPath,
   meta,
   args = [],
 }: InstallRequirementArg) {
-  if (meta.isDev && (await isInstalled(dependency, workPath))) {
+  if (meta.isDev && (await isInstalled(pythonPath, dependency, workPath))) {
     debug(
       `Skipping ${dependency} dependency installation, already installed in ${workPath}`
     );
     return;
   }
   const exact = `${dependency}==${version}`;
-  await pipInstall(workPath, [exact, ...args]);
+  await pipInstall(pipPath, workPath, [exact, ...args]);
 }
 
 interface InstallRequirementsFileArg {
+  pythonPath: string;
+  pipPath: string;
   filePath: string;
   workPath: string;
   meta: Meta;
@@ -115,14 +128,19 @@ interface InstallRequirementsFileArg {
 }
 
 export async function installRequirementsFile({
+  pythonPath,
+  pipPath,
   filePath,
   workPath,
   meta,
   args = [],
 }: InstallRequirementsFileArg) {
-  if (meta.isDev && (await areRequirementsInstalled(filePath, workPath))) {
+  if (
+    meta.isDev &&
+    (await areRequirementsInstalled(pythonPath, filePath, workPath))
+  ) {
     debug(`Skipping requirements file installation, already installed`);
     return;
   }
-  await pipInstall(workPath, ['--upgrade', '-r', filePath, ...args]);
+  await pipInstall(pipPath, workPath, ['--upgrade', '-r', filePath, ...args]);
 }
