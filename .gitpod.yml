@@ -1,0 +1,9 @@
+# List the start up tasks. Learn more https://www.gitpod.io/docs/config-start-tasks/
+tasks:
+  - init: |
+      yarn install 
+      yarn build
+      cd ./packages/cli
+      yarn link
+      export PATH=$PATH:~/.yarn/bin
+    command: vercel
