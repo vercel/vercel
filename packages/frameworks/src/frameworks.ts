@@ -1977,7 +1977,6 @@ export const frameworks = [
         placeholder: 'parcel',
       },
       outputDirectory: {
-        placeholder: 'dist',
         value: 'dist'
       },
     },
