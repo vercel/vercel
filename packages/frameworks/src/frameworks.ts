@@ -583,17 +583,15 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `solid-start build`',
+        value: 'solid-start build',
       },
       devCommand: {
-        value: '`solid-start dev`',
+        value: 'solid-start dev',
       },
       outputDirectory: {
         value: '.output',
       },
     },
-    dependency: 'solid-start',
-    devCommand: 'solid-start dev',
-    buildCommand: 'solid-start build',
     getFsOutputDir: async () => '.output',
     getOutputDirName: async () => '.output',
   },
