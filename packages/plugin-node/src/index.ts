@@ -36,6 +36,7 @@ import {
   isSymbolicLink,
   runNpmInstall,
   updateFunctionsManifest,
+  updateRoutesManifest,
   walkParentDirs,
   normalizePath,
   runPackageJsonScript,
@@ -550,21 +551,10 @@ export async function buildEntrypoint({
   // Update the `routes-mainifest.json` file with the wildcard route
   // when the entrypoint is dynamic (i.e. `/api/[id].ts`).
   if (isDynamicRoute(entrypointWithoutExt)) {
-    const routesManifestPath = join(outputDirPath, 'routes-manifest.json');
-    let routesManifest: any = {};
-    try {
-      routesManifest = JSON.parse(
-        await fsp.readFile(routesManifestPath, 'utf8')
-      );
-    } catch (_err) {
-      // ignore...
-    }
-    if (!routesManifest.dynamicRoutes) routesManifest.dynamicRoutes = [];
-    routesManifest.dynamicRoutes.push(pageToRoute(entrypointWithoutExt));
-    await fsp.writeFile(
-      routesManifestPath,
-      JSON.stringify(routesManifest, null, 2)
-    );
+    await updateRoutesManifest({
+      workPath,
+      dynamicRoutes: [pageToRoute(entrypointWithoutExt)],
+    });
   }
 }
 
