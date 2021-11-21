@@ -369,7 +369,7 @@ describe('build()', () => {
       );
 
       const resB = await fetch('/api/profile');
-      expect(await resB.text()).toMatchSnapshot();
+      expect(await resB.text()).toEqual('true');
     })
   );
 });

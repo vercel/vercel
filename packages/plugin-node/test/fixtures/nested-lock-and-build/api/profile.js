@@ -1,5 +1,9 @@
-const text2Svg = require('text-svg');
+const isSvg = require('is-svg');
 
 module.exports = (req, res) => {
-  res.end(text2Svg('My name is Chika-chika Slim Shady', { color: 'blue' }));
+  res.end(
+    isSvg(
+      '<svg xmlns="http://www.w3.org/2000/svg"><path fill="#00CD9F"/></svg>'
+    ).toString()
+  );
 };

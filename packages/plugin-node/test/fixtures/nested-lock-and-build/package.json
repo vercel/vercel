@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "text-svg": "1.0.4"
+    "is-svg": "4.3.1"
   }
 }
