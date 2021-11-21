@@ -6,7 +6,6 @@ import {
   readlinkSync,
   statSync,
   promises as fsp,
-  existsSync,
 } from 'fs';
 import {
   basename,
@@ -38,6 +37,8 @@ import {
   runNpmInstall,
   updateFunctionsManifest,
   walkParentDirs,
+  normalizePath,
+  runPackageJsonScript,
 } from '@vercel/build-utils';
 import { FromSchema } from 'json-schema-to-ts';
 import { getConfig, BaseFunctionConfigSchema } from '@vercel/static-config';
@@ -67,6 +68,7 @@ const { makeVercelLauncher, makeAwsLauncher } = require_(
 interface DownloadOptions {
   entrypoint: string;
   workPath: string;
+  installedPaths?: Set<string>;
 }
 
 interface PortInfo {
@@ -112,21 +114,46 @@ const BRIDGE_FILENAME = '__bridge.js';
 const HELPERS_FILENAME = '__helpers.js';
 const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support.js';
 
-async function downloadInstallAndBundle({
+async function maybeInstallAndBuild({
   entrypoint,
   workPath,
+  installedPaths,
 }: DownloadOptions) {
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const nodeVersion = await getNodeVersion(entrypointFsDirname);
   const spawnOpts = getSpawnOptions({}, nodeVersion);
 
-  // Only run when `package.json` exists.
-  if (existsSync(join(entrypointFsDirname, 'package.json'))) {
-    const installTime = Date.now();
-    await runNpmInstall(entrypointFsDirname, [], spawnOpts, {}, nodeVersion);
-    debug(`Install complete [${Date.now() - installTime}ms]`);
-  } else {
-    debug(`Skip install command for \`vercel-plugin-node\`.`);
+  const lastPath = await walkParentDirs({
+    base: workPath,
+    start: entrypointFsDirname,
+    filename: 'package.json',
+  });
+
+  if (!lastPath || dirname(lastPath) === workPath) {
+    debug(`Skip install command in \`vercel-plugin-node\` for ${entrypoint}.`);
+  } else if (lastPath) {
+    if (!installedPaths?.has(lastPath)) {
+      installedPaths?.add(lastPath);
+      const installTime = Date.now();
+      await runNpmInstall(dirname(lastPath), [], spawnOpts, {}, nodeVersion);
+      debug(
+        `Install complete [${Date.now() - installTime}ms] for ${relative(
+          workPath,
+          lastPath
+        )}`
+      );
+
+      await runPackageJsonScript(
+        dirname(lastPath),
+        // Don't consider "build" script since its intended for frontend code
+        ['vercel-build', 'now-build'],
+        spawnOpts
+      );
+    } else {
+      debug(
+        `Skip install command in \`vercel-plugin-node\` for ${entrypoint}. Already installed for other entrypoint.`
+      );
+    }
   }
 
   return {
@@ -354,6 +381,7 @@ function getAWSLambdaHandler(entrypoint: string, config: FunctionConfig) {
 export async function build({ workPath }: { workPath: string }) {
   const project = new Project();
   const entrypoints = await glob('api/**/*.[jt]s', workPath);
+  const installedPaths = new Set<string>();
   for (const entrypoint of Object.keys(entrypoints)) {
     // Dotfiles are not compiled
     if (entrypoint.includes('/.')) continue;
@@ -378,7 +406,7 @@ export async function build({ workPath }: { workPath: string }) {
       continue;
     }
 
-    await buildEntrypoint({ workPath, entrypoint, config });
+    await buildEntrypoint({ workPath, entrypoint, config, installedPaths });
   }
 }
 
@@ -386,10 +414,12 @@ export async function buildEntrypoint({
   workPath,
   entrypoint,
   config,
+  installedPaths,
 }: {
   workPath: string;
   entrypoint: string;
   config: FunctionConfig;
+  installedPaths?: Set<string>;
 }) {
   // Unique hash that will be used as directory name for `.output`.
   const entrypointHash = crypto
@@ -414,20 +444,12 @@ export async function buildEntrypoint({
     config.helpers !== false && process.env.NODEJS_HELPERS !== '0';
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
-  const { nodeVersion } = await downloadInstallAndBundle({
+  const { nodeVersion } = await maybeInstallAndBuild({
     entrypoint,
     workPath,
+    installedPaths,
   });
   const entrypointPath = join(workPath, entrypoint);
-
-  // TODO NATE: do we want to run the build script?
-  // The frontend build command probably already did this
-  //await runPackageJsonScript(
-  //  entrypointFsDirname,
-  //  // Don't consider "build" script since its intended for frontend code
-  //  ['vercel-build', 'now-build'],
-  //  spawnOpts
-  //);
 
   debug('Tracing input files...');
   const traceTime = Date.now();
@@ -438,11 +460,12 @@ export async function buildEntrypoint({
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
-  const getFileName = (str: string) => `___vc/${str}`;
+  // Has to be in `dirname(entrypoint)` because the `handler` will be prefixed with this path.
+  const getVCFileName = (str: string) => `${dirname(entrypoint)}/___vc/${str}`;
 
   const launcher = awsLambdaHandler ? makeAwsLauncher : makeVercelLauncher;
   const launcherSource = launcher({
-    entrypointPath: `../${renameTStoJS(relative(workPath, entrypointPath))}`,
+    entrypointPath: `../${renameTStoJS(basename(entrypoint))}`,
     bridgePath: `./${BRIDGE_FILENAME}`,
     helpersPath: `./${HELPERS_FILENAME}`,
     sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
@@ -452,25 +475,25 @@ export async function buildEntrypoint({
   });
 
   const launcherFiles: Files = {
-    [getFileName('package.json')]: new FileBlob({
+    [getVCFileName('package.json')]: new FileBlob({
       data: JSON.stringify({ type: 'commonjs' }),
     }),
-    [getFileName(LAUNCHER_FILENAME)]: new FileBlob({
+    [getVCFileName(LAUNCHER_FILENAME)]: new FileBlob({
       data: launcherSource,
     }),
-    [getFileName(BRIDGE_FILENAME)]: new FileFsRef({
+    [getVCFileName(BRIDGE_FILENAME)]: new FileFsRef({
       fsPath: join(DIST_DIR, 'bridge.js'),
     }),
   };
 
   if (shouldAddSourcemapSupport) {
-    launcherFiles[getFileName(SOURCEMAP_SUPPORT_FILENAME)] = new FileFsRef({
+    launcherFiles[getVCFileName(SOURCEMAP_SUPPORT_FILENAME)] = new FileFsRef({
       fsPath: join(DIST_DIR, 'source-map-support.js'),
     });
   }
 
   if (shouldAddHelpers) {
-    launcherFiles[getFileName(HELPERS_FILENAME)] = new FileFsRef({
+    launcherFiles[getVCFileName(HELPERS_FILENAME)] = new FileFsRef({
       fsPath: join(DIST_DIR, 'helpers.js'),
     });
   }
@@ -499,7 +522,7 @@ export async function buildEntrypoint({
     // This means everything has to be mounted to the `dirname` of the entrypoint.
     nftFiles.push({
       input: relative(dirname(nftOutput), outPath),
-      output: join('.output', 'server', 'pages', dirname(entrypoint), filename),
+      output: join('.output', 'server', 'pages', filename),
     });
   }
 
@@ -516,14 +539,9 @@ export async function buildEntrypoint({
     pageOutput
   );
 
-  let pageKey = relative(pagesDir, pageOutput);
-  if (process.platform === 'win32') {
-    pageKey = pageKey.replace(/\\/gm, '/');
-  }
-
   const pages = {
-    [pageKey]: {
-      handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
+    [normalizePath(relative(pagesDir, pageOutput))]: {
+      handler: `___vc/${LAUNCHER_FILENAME.slice(0, -3)}.launcher`,
       runtime: nodeVersion.runtime,
     },
   };

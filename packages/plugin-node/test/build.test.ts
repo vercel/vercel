@@ -348,4 +348,28 @@ describe('build()', () => {
       expect(body3.includes('GraphQL Playground')).toEqual(true);
     })
   );
+
+  it(
+    'should build "nested-lock-and-build"',
+    withFixture('nested-lock-and-build', async ({ fetch }) => {
+      const resA = await fetch('/api/users/[id]');
+
+      expect(resA.headers.get('x-date')).toEqual('2021-11-20T20:00:00.000Z');
+
+      const body = await resA.text();
+      expect(body).toEqual(
+        ' _______________________________\n' +
+          '< Hello from /api/users/[id].js >\n' +
+          ' -------------------------------\n' +
+          '        \\   ^__^\n' +
+          '         \\  (oo)\\_______\n' +
+          '            (__)\\       )\\/\\\n' +
+          '                ||----w |\n' +
+          '                ||     ||'
+      );
+
+      const resB = await fetch('/api/profile');
+      expect(await resB.text()).toMatchSnapshot();
+    })
+  );
 });
