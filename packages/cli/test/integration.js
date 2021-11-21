@@ -2683,7 +2683,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   const url = new URL(output.stdout);
 
   // Should time out
-  url.pathname = '/api/wait-for/4';
+  url.pathname = '/api/wait-for/5';
   const response1 = await fetch(url.href);
   t.is(
     response1.status,
@@ -2692,7 +2692,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   );
 
   // Should not time out
-  url.pathname = '/api/wait-for/2';
+  url.pathname = '/api/wait-for/1';
   const response2 = await fetch(url.href);
   t.is(
     response2.status,
@@ -3451,6 +3451,29 @@ test('[vc link --confirm] should not show prompts and autolink', async t => {
     true,
     'README.txt should be created'
   );
+});
+
+test('[vc link] should not duplicate paths in .gitignore', async t => {
+  const dir = fixture('project-link-gitignore');
+
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['link', '--confirm', ...defaultArgs],
+    { cwd: dir, reject: false }
+  );
+
+  // Ensure the exit code is right
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  // Ensure the message is correct pattern
+  t.regex(stderr, /Linked to /m);
+
+  // Ensure .gitignore is created
+  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+  t.is(gitignore, '.output\n.vercel\n');
 });
 
 test('[vc dev] should show prompts to set up project', async t => {

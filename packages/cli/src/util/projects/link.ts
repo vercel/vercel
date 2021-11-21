@@ -244,20 +244,27 @@ export async function linkFolderToProject(
   try {
     const gitIgnorePath = join(path, '.gitignore');
 
-    const gitIgnore = await readFile(gitIgnorePath, 'utf8').catch(() => null);
-    const EOL = gitIgnore && gitIgnore.includes('\r\n') ? '\r\n' : os.EOL;
+    let gitIgnore =
+      (await readFile(gitIgnorePath, 'utf8').catch(() => null)) ?? '';
+    const EOL = gitIgnore.includes('\r\n') ? '\r\n' : os.EOL;
+    let contentModified = false;
 
-    if (
-      !gitIgnore ||
-      !gitIgnore.split(EOL).includes(VERCEL_DIR) ||
-      !gitIgnore.split(EOL).includes(VERCEL_OUTPUT_DIR)
-    ) {
-      await writeFile(
-        gitIgnorePath,
-        gitIgnore
-          ? `${gitIgnore}${EOL}${VERCEL_DIR}${EOL}${VERCEL_OUTPUT_DIR}${EOL}`
-          : `${VERCEL_DIR}${EOL}${VERCEL_OUTPUT_DIR}${EOL}`
-      );
+    if (!gitIgnore.split(EOL).includes(VERCEL_DIR)) {
+      gitIgnore += `${
+        gitIgnore.endsWith(EOL) || gitIgnore.length === 0 ? '' : EOL
+      }${VERCEL_DIR}${EOL}`;
+      contentModified = true;
+    }
+
+    if (!gitIgnore.split(EOL).includes(VERCEL_OUTPUT_DIR)) {
+      gitIgnore += `${
+        gitIgnore.endsWith(EOL) || gitIgnore.length === 0 ? '' : EOL
+      }${VERCEL_OUTPUT_DIR}${EOL}`;
+      contentModified = true;
+    }
+
+    if (contentModified) {
+      await writeFile(gitIgnorePath, gitIgnore);
       isGitIgnoreUpdated = true;
     }
   } catch (error) {

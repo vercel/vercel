@@ -365,6 +365,10 @@ module.exports = async function prepare(session, binaryPath) {
     'project-link-dev': {
       'package.json': '{}',
     },
+    'project-link-gitignore': {
+      'package.json': '{}',
+      '.gitignore': '.output',
+    },
     'project-link-legacy': {
       'index.html': 'Hello',
       'vercel.json': '{"builds":[{"src":"*.html","use":"@vercel/static"}]}',

@@ -30,10 +30,7 @@ import { getCommandName, getPkgName } from '../util/pkg-name';
 import { loadCliPlugins } from '../util/plugins';
 import { findFramework } from '../util/projects/find-framework';
 import { VERCEL_DIR } from '../util/projects/link';
-import {
-  ProjectLinkAndSettings,
-  readProjectSettings,
-} from '../util/projects/project-settings';
+import { readProjectSettings } from '../util/projects/project-settings';
 import pull from './pull';
 
 const sema = new Sema(16, {
@@ -67,15 +64,6 @@ const help = () => {
 };
 
 const OUTPUT_DIR = '.output';
-
-const fields: {
-  name: string;
-  value: keyof ProjectLinkAndSettings['settings'];
-}[] = [
-  { name: 'Build Command', value: 'buildCommand' },
-  { name: 'Output Directory', value: 'outputDirectory' },
-  { name: 'Root Directory', value: 'rootDirectory' },
-];
 
 export default async function main(client: Client) {
   if (process.env.__VERCEL_BUILD_RUNNING) {
@@ -168,47 +156,57 @@ export default async function main(client: Client) {
   }
 
   const buildState = { ...project.settings };
-
-  client.output.log(`Retrieved Project Settings:`);
-  client.output.print(
-    chalk.dim(`  - ${chalk.bold(`Framework Preset:`)} ${framework.name}\n`)
+  const formatSetting = (
+    name: string,
+    override: string | null | undefined,
+    defaults: typeof framework.settings.outputDirectory
+  ) =>
+    `  - ${chalk.bold(`${name}:`)} ${`${
+      override
+        ? override + ` (override)`
+        : 'placeholder' in defaults
+        ? chalk.italic(`${defaults.placeholder}`)
+        : defaults.value
+    }`}`;
+  console.log(`Retrieved Project Settings:`);
+  console.log(
+    chalk.dim(`  - ${chalk.bold(`Framework Preset:`)} ${framework.name}`)
+  );
+  console.log(
+    chalk.dim(
+      formatSetting(
+        'Build Command',
+        project.settings.buildCommand,
+        framework.settings.buildCommand
+      )
+    )
+  );
+  console.log(
+    chalk.dim(
+      formatSetting(
+        'Output Directory',
+        project.settings.outputDirectory,
+        framework.settings.outputDirectory
+      )
+    )
   );
 
-  for (let field of fields) {
-    const defaults = (framework.settings as any)[field.value];
-    if (defaults) {
-      client.output.print(
-        chalk.dim(
-          `  - ${chalk.bold(`${field.name}:`)} ${`${
-            project.settings[field.value]
-              ? project.settings[field.value] + ` (override)`
-              : isSettingValue(defaults)
-              ? defaults.value
-              : chalk.italic(`${defaults.placeholder}`)
-          }`}\n`
-        )
-      );
-    }
-    if (field.value != 'buildCommand') {
-      (buildState as any)[field.value] = project.settings[field.value]
-        ? project.settings[field.value]
-        : defaults
-        ? isSettingValue(defaults)
-          ? defaults.value
-          : null
-        : null;
-    }
-  }
+  buildState.outputDirectory =
+    project.settings.outputDirectory ||
+    (isSettingValue(framework.settings.outputDirectory)
+      ? framework.settings.outputDirectory.value
+      : null);
+  buildState.rootDirectory = project.settings.rootDirectory;
 
   if (loadedEnvFiles.length > 0) {
-    client.output.log(
+    console.log(
       `Loaded Environment Variables from ${loadedEnvFiles.length} ${pluralize(
         'file',
         loadedEnvFiles.length
       )}:`
     );
     for (let envFile of loadedEnvFiles) {
-      client.output.print(chalk.dim(`  - ${envFile.path}\n`));
+      console.log(chalk.dim(`  - ${envFile.path}`));
     }
   }
 
@@ -239,7 +237,7 @@ export default async function main(client: Client) {
   };
 
   if (plugins?.pluginCount && plugins?.pluginCount > 0) {
-    client.output.log(
+    console.log(
       `Loaded ${plugins.pluginCount} CLI ${pluralize(
         'Plugin',
         plugins.pluginCount
@@ -247,7 +245,7 @@ export default async function main(client: Client) {
     );
     // preBuild Plugins
     if (plugins.preBuildPlugins.length > 0) {
-      client.output.log(
+      console.log(
         `Running ${plugins.pluginCount} CLI ${pluralize(
           'Plugin',
           plugins.pluginCount
@@ -285,17 +283,19 @@ export default async function main(client: Client) {
   // Clean the output directory
   fs.removeSync(join(cwd, OUTPUT_DIR));
 
+  // Yarn v2 PnP mode may be activated, so force
+  // "node-modules" linker style
+  const env = {
+    YARN_NODE_LINKER: 'node-modules',
+    ...spawnOpts.env,
+  };
+
   if (typeof buildState.buildCommand === 'string') {
-    client.output.log(`Running Build Command: ${cmd(buildState.buildCommand)}`);
+    console.log(`Running Build Command: ${cmd(buildState.buildCommand)}`);
     await execCommand(buildState.buildCommand, {
       ...spawnOpts,
-      // Yarn v2 PnP mode may be activated, so force
-      // "node-modules" linker style
-      env: {
-        YARN_NODE_LINKER: 'node-modules',
-        ...spawnOpts.env,
-      },
-      cwd: cwd,
+      env,
+      cwd,
     });
   } else if (fs.existsSync(join(cwd, 'package.json'))) {
     await runPackageJsonScript(
@@ -304,6 +304,15 @@ export default async function main(client: Client) {
       ['vercel-build', 'now-build', 'build'],
       spawnOpts
     );
+  } else if (typeof framework.settings.buildCommand.value === 'string') {
+    console.log(
+      `Running Build Command: ${cmd(framework.settings.buildCommand.value)}`
+    );
+    await execCommand(framework.settings.buildCommand.value, {
+      ...spawnOpts,
+      env,
+      cwd,
+    });
   }
 
   if (!fs.existsSync(join(cwd, OUTPUT_DIR))) {
@@ -352,7 +361,7 @@ export default async function main(client: Client) {
       )
     );
     client.output.stopSpinner();
-    client.output.log(
+    console.log(
       `Copied ${files.length.toLocaleString()} files from ${param(
         distDir
       )} to ${param(outputDir)} ${copyStamp()}`
@@ -573,7 +582,7 @@ export default async function main(client: Client) {
 
   // Build Plugins
   if (plugins?.buildPlugins && plugins.buildPlugins.length > 0) {
-    client.output.log(
+    console.log(
       `Running ${plugins.pluginCount} CLI ${pluralize(
         'Plugin',
         plugins.pluginCount
@@ -608,13 +617,13 @@ export default async function main(client: Client) {
     }
   }
 
-  client.output.print(
+  console.log(
     `${prependEmoji(
       `Build Completed in ${chalk.bold(OUTPUT_DIR)} ${chalk.gray(
         buildStamp()
       )}`,
       emoji('success')
-    )}\n`
+    )}`
   );
 
   return 0;
@@ -660,25 +669,37 @@ export async function runPackageJsonScript(
     }
   }
 
-  client.output.log(`Running Build Command: ${cmd(opts.prettyCommand)}\n`);
+  console.log(`Running Build Command: ${cmd(opts.prettyCommand)}\n`);
   await spawnAsync(cliType, ['run', scriptName], opts);
-  client.output.print('\n'); // give it some room
+  console.log(); // give it some room
   client.output.debug(`Script complete [${Date.now() - runScriptTime}ms]`);
   return true;
 }
 
 async function linkOrCopy(existingPath: string, newPath: string) {
   try {
-    await fs.createLink(existingPath, newPath);
+    if (
+      newPath.endsWith('.nft.json') ||
+      newPath.endsWith('middleware-manifest.json') ||
+      newPath.endsWith('required-server-files.json')
+    ) {
+      await fs.copy(existingPath, newPath, {
+        overwrite: true,
+      });
+    } else {
+      await fs.createSymlink(existingPath, newPath, 'file');
+    }
   } catch (err: any) {
     // eslint-disable-line
-    // If a hard link to the same file already exists
+    // If a symlink to the same file already exists
     // then trying to copy it will make an empty file from it.
     if (err['code'] === 'EEXIST') return;
-    // In some VERY rare cases (1 in a thousand), hard-link creation fails on Windows.
+    // In some VERY rare cases (1 in a thousand), symlink creation fails on Windows.
     // In that case, we just fall back to copying.
     // This issue is reproducible with "pnpm add @material-ui/icons@4.9.1"
-    await fs.copyFile(existingPath, newPath);
+    await fs.copy(existingPath, newPath, {
+      overwrite: true,
+    });
   }
 }
 

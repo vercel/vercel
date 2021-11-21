@@ -1,6 +1,7 @@
-import { join } from 'path';
+import path from 'path';
 import { parse } from 'url';
 import { promises as fsp } from 'fs';
+import { ZipFile } from 'yazl';
 import { createFunction, Lambda } from '@vercel/fun';
 import {
   Request,
@@ -11,6 +12,7 @@ import {
   Headers,
 } from 'node-fetch';
 import { build } from '../src';
+import { runNpmInstall, streamToBuffer } from '@vercel/build-utils';
 
 interface TestParams {
   fixture: string;
@@ -50,40 +52,64 @@ function withFixture<T>(
   t: (props: TestParams) => Promise<T>
 ): () => Promise<T> {
   return async () => {
-    const fixture = join(__dirname, 'fixtures', name);
+    const fixture = path.join(__dirname, 'fixtures', name);
     const functions = new Map<string, Lambda>();
 
     async function fetch(r: RequestInfo, init?: RequestInit) {
       const req = new Request(r, init);
       const url = parse(req.url);
-      const pathWithIndex = join(
-        url.pathname!,
-        url.pathname!.endsWith('/index') ? '' : 'index'
-      ).substring(1);
+      const functionPath = url.pathname!.substring(1);
 
       let status = 404;
       let headers: HeadersInit = {};
       let body: string | Buffer = 'Function not found';
 
-      let fn = functions.get(pathWithIndex);
+      let fn = functions.get(functionPath);
       if (!fn) {
         const manifest = JSON.parse(
           await fsp.readFile(
-            join(fixture, '.output/functions-manifest.json'),
+            path.join(fixture, '.output/functions-manifest.json'),
             'utf8'
           )
         );
-        const functionManifest = manifest.pages[pathWithIndex];
+
+        const keyFile = `${functionPath}.js`;
+        const keyIndex = `${functionPath}/index.js`;
+        const fnKey = keyFile in manifest.pages ? keyFile : keyIndex;
+        const functionManifest = manifest.pages[fnKey];
+
         if (functionManifest) {
-          const dir = join(fixture, '.output/server/pages', pathWithIndex);
+          const entry = path.join(fixture, '.output/server/pages', fnKey);
+          const nftFile = JSON.parse(
+            await fsp.readFile(`${entry}.nft.json`, 'utf8')
+          );
+
+          const zip = new ZipFile();
+          zip.addFile(
+            path.join(fixture, '.output/server/pages', fnKey),
+            path.join('.output/server/pages', fnKey)
+          );
+
+          nftFile.files.forEach((f: { input: string; output: string }) => {
+            const input = path.join(path.dirname(entry), f.input);
+            zip.addFile(input, f.output);
+          });
+          zip.end();
+
+          const handler = path.posix.join(
+            '.output/server/pages',
+            path.dirname(fnKey),
+            functionManifest.handler
+          );
+
           fn = await createFunction({
             Code: {
-              Directory: dir,
+              ZipFile: await streamToBuffer(zip.outputStream),
             },
-            Handler: functionManifest.handler,
+            Handler: handler,
             Runtime: functionManifest.runtime,
           });
-          functions.set(pathWithIndex, fn);
+          functions.set(functionPath, fn);
         }
       }
 
@@ -107,6 +133,12 @@ function withFixture<T>(
         status,
         headers,
       });
+    }
+
+    if (
+      await fsp.lstat(path.join(fixture, 'package.json')).catch(() => false)
+    ) {
+      await runNpmInstall(fixture);
     }
 
     await build({ workPath: fixture });
