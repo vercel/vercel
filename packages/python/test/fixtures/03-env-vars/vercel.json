@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "builds": [{ "src": "index.py", "use": "@vercel/python" }],
+  "env": {
+    "RANDOMNESS": "RANDOMNESS_PLACEHOLDER"
+  },
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "RANDOMNESS_PLACEHOLDER:env",
+      "logMustContain": "Warning: Python version \"3.6\" detected in Pipfile.lock will reach End-Of-Life December 2021. Please upgrade."
+    }
+  ]
+}
