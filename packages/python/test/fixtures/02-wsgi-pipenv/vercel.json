@@ -5,7 +5,7 @@
     {
       "path": "/",
       "mustContain": "wsgi:RANDOMNESS_PLACEHOLDER",
-      "logMustContain": "Warning: Invalid Python version \"3.7\" detected in Pipfile.lock will be ignored. http://vercel.link/python-version"
+      "logMustContain": "Warning: Python version \"3.6\" detected in Pipfile.lock will reach End-Of-Life December 2021. Please upgrade."
     }
   ]
 }

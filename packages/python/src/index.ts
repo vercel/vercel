@@ -121,7 +121,7 @@ export const build = async ({
           pythonPath = 'python3.6';
           pythonRuntime = 'python3.6';
           console.warn(
-            `Warning: Python version "${version}" detected in Pipfile.lock is deprecated and will reach End-Of-Life December 2021.`
+            `Warning: Python version "${version}" detected in Pipfile.lock will reach End-Of-Life December 2021. Please upgrade. http://vercel.link/python-version`
           );
         } else if (version === '3.9') {
           pipPath = 'pip3.9';
