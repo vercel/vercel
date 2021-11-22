@@ -687,7 +687,7 @@ async function linkOrCopy(existingPath: string, newPath: string) {
         overwrite: true,
       });
     } else {
-      await fs.createSymlink(existingPath, newPath, 'file');
+      await fs.createLink(existingPath, newPath);
     }
   } catch (err: any) {
     // eslint-disable-line
