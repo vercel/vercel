@@ -316,55 +316,76 @@ export default async function main(client: Client) {
   }
 
   if (!fs.existsSync(join(cwd, OUTPUT_DIR))) {
-    let outputDir = join(OUTPUT_DIR, 'static');
     let distDir = await framework.getFsOutputDir(cwd);
+    const distDirAbsolute = resolve(cwd, distDir);
+    let outputDir = join(OUTPUT_DIR, 'static');
     if (framework.slug === 'nextjs') {
       outputDir = OUTPUT_DIR;
     }
+    const outputDirAbsolute = resolve(cwd, outputDir);
     const copyStamp = stamp();
     await fs.ensureDir(join(cwd, outputDir));
-    const relativeDistDir = relative(cwd, distDir);
+
     client.output.spinner(
       `Copying files from ${param(distDir)} to ${param(outputDir)}`
     );
-    const files = await glob(join(relativeDistDir, '**'), {
-      ignore: [
-        'node_modules/**',
-        '.vercel/**',
-        '.env',
-        '.env.*',
-        '.*ignore',
-        '_middleware.ts',
-        '_middleware.mts',
-        '_middleware.cts',
-        '_middleware.mjs',
-        '_middleware.cjs',
-        '_middleware.js',
-        'api/**',
-        '.git/**',
-        '.next/cache/**',
-      ],
-      nodir: true,
-      dot: true,
-      cwd,
-      absolute: true,
-    });
+
+    // copy files that are going to be mutated later in this script
+    const files = await glob(
+      join(
+        relative(cwd, distDir),
+        '**/{*.nft.json,middleware-manifest.json,required-server-files.json}'
+      ),
+      {
+        ignore: [
+          'node_modules/**',
+          '.vercel/**',
+          '.env',
+          '.env.*',
+          '.*ignore',
+          '_middleware.ts',
+          '_middleware.mts',
+          '_middleware.cts',
+          '_middleware.mjs',
+          '_middleware.cjs',
+          '_middleware.js',
+          'api/**',
+          '.git/**',
+          '.next/cache/**',
+        ],
+        nodir: true,
+        dot: true,
+        cwd,
+        absolute: true,
+      }
+    );
+
     await Promise.all(
-      files.map(f =>
-        smartCopy(
+      files.map(async f => {
+        await smartCopy(
           client,
           f,
-          distDir === '.'
-            ? join(cwd, outputDir, relative(cwd, f))
-            : f.replace(distDir, outputDir)
-        )
-      )
+          resolve(outputDirAbsolute, relative(distDirAbsolute, f)),
+          {
+            overwrite: true,
+          }
+        );
+      })
     );
+
+    // symlink the rest of the files/directories
+    await symlinkNonExistingPaths(
+      client,
+      cwd,
+      distDirAbsolute,
+      outputDirAbsolute
+    );
+
     client.output.stopSpinner();
     console.log(
-      `Copied ${files.length.toLocaleString()} files from ${param(
-        distDir
-      )} to ${param(outputDir)} ${copyStamp()}`
+      `Copied files from ${param(distDir)} to ${param(
+        outputDir
+      )} ${copyStamp()}`
     );
 
     const buildManifestPath = join(cwd, OUTPUT_DIR, 'build-manifest.json');
@@ -409,8 +430,7 @@ export default async function main(client: Client) {
         join(cwd, OUTPUT_DIR, 'static'),
         join(cwd, OUTPUT_DIR, tempStatic)
       );
-      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'static', '_next', 'static'));
-      await fs.rename(
+      await fs.move(
         join(cwd, OUTPUT_DIR, tempStatic),
         join(cwd, OUTPUT_DIR, 'static', '_next', 'static')
       );
@@ -453,37 +473,21 @@ export default async function main(client: Client) {
       // `public`, then`static`). We can't read both at the same time because that would mean we'd
       // read public for old Next.js versions that don't support it, which might be breaking (and
       // we don't want to make vercel build specific framework versions).
-      const publicFiles = await glob('public/**', {
-        nodir: true,
-        dot: true,
-        cwd,
-        absolute: true,
-      });
-      if (publicFiles.length > 0) {
-        await Promise.all(
-          publicFiles.map(f =>
-            smartCopy(
-              client,
-              f,
-              f.replace('public', join(OUTPUT_DIR, 'static'))
-            )
-          )
-        );
-      } else {
-        const staticFiles = await glob('static/**', {
-          nodir: true,
-          dot: true,
+      const publicPath = join(cwd, 'public');
+      const staticPath = join(cwd, 'static');
+      if (await fs.pathExists(publicPath)) {
+        await symlinkNonExistingPaths(
+          client,
           cwd,
-          absolute: true,
-        });
-        await Promise.all(
-          staticFiles.map(f =>
-            smartCopy(
-              client,
-              f,
-              f.replace('static', join(OUTPUT_DIR, 'static', 'static'))
-            )
-          )
+          publicPath,
+          join(cwd, OUTPUT_DIR, 'static')
+        );
+      } else if (await fs.pathExists(staticPath)) {
+        await symlinkNonExistingPaths(
+          client,
+          cwd,
+          staticPath,
+          join(cwd, OUTPUT_DIR, 'static')
         );
       }
 
@@ -676,19 +680,80 @@ export async function runPackageJsonScript(
   return true;
 }
 
-async function linkOrCopy(existingPath: string, newPath: string) {
+async function symlinkNonExistingPaths(
+  client: Client,
+  cwd: string,
+  src: string,
+  dest: string
+) {
+  const files = await glob(join(relative(cwd, src), '*'), {
+    ignore: [
+      'node_modules/**',
+      '.vercel/**',
+      '.env',
+      '.env.*',
+      '.*ignore',
+      '_middleware.ts',
+      '_middleware.mts',
+      '_middleware.cts',
+      '_middleware.mjs',
+      '_middleware.cjs',
+      '_middleware.js',
+      'api/**',
+      '.git/**',
+      '.next/cache/**',
+    ],
+    dot: true,
+    cwd,
+    absolute: true,
+  });
+  await Promise.all(
+    files.map(async f => {
+      const srcPath = f;
+      const destPath = resolve(dest, relative(src, f));
+
+      const srcStats = await fs.lstat(srcPath);
+      const type = srcStats.isDirectory() ? 'dir' : 'file';
+
+      try {
+        const destStats = await fs.lstat(destPath);
+        if (destStats.isDirectory()) {
+          await symlinkNonExistingPaths(client, cwd, srcPath, destPath);
+        }
+      } catch (err: any) {
+        if (err.code === 'ENOENT') {
+          await smartSymlink(client, srcPath, destPath, type);
+        }
+      }
+    })
+  );
+}
+
+async function smartCopy(
+  client: Client,
+  from: string,
+  to: string,
+  opts?: fs.CopyOptions
+) {
+  sema.acquire();
   try {
-    if (
-      newPath.endsWith('.nft.json') ||
-      newPath.endsWith('middleware-manifest.json') ||
-      newPath.endsWith('required-server-files.json')
-    ) {
-      await fs.copy(existingPath, newPath, {
-        overwrite: true,
-      });
-    } else {
-      await fs.createSymlink(existingPath, newPath, 'file');
-    }
+    client.output.debug(`Copying from ${from} to ${to}`);
+    await fs.copy(from, to, opts);
+  } finally {
+    sema.release();
+  }
+}
+
+async function smartSymlink(
+  client: Client,
+  from: string,
+  to: string,
+  type: fs.SymlinkType
+) {
+  sema.acquire();
+  try {
+    client.output.debug(`Symlinking from ${from} to ${to}`);
+    await fs.createSymlink(from, to, type);
   } catch (err: any) {
     // eslint-disable-line
     // If a symlink to the same file already exists
@@ -697,17 +762,9 @@ async function linkOrCopy(existingPath: string, newPath: string) {
     // In some VERY rare cases (1 in a thousand), symlink creation fails on Windows.
     // In that case, we just fall back to copying.
     // This issue is reproducible with "pnpm add @material-ui/icons@4.9.1"
-    await fs.copy(existingPath, newPath, {
+    await fs.copy(from, to, {
       overwrite: true,
     });
-  }
-}
-
-async function smartCopy(client: Client, from: string, to: string) {
-  sema.acquire();
-  try {
-    client.output.debug(`Copying from ${from} to ${to}`);
-    await linkOrCopy(from, to);
   } finally {
     sema.release();
   }
@@ -767,7 +824,7 @@ async function resolveNftToOutput({
       const { ext } = parse(fullInput);
       const raw = await fs.readFile(fullInput);
       const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
-      smartCopy(client, fullInput, newFilePath);
+      await smartSymlink(client, fullInput, newFilePath, 'file');
 
       // We have to use `baseDir` instead of `cwd`, because we want to
       // mount everything from there (especially `node_modules`).
