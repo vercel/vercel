@@ -1,6 +1,6 @@
 import path from 'path';
 import { parse } from 'url';
-import fs, { promises as fsp } from 'fs';
+import { promises as fsp } from 'fs';
 import { ZipFile } from 'yazl';
 import { createFunction, Lambda } from '@vercel/fun';
 import {
@@ -53,7 +53,7 @@ function withFixture<T>(
 ): () => Promise<T> {
   return async () => {
     const fixture = path.join(__dirname, 'fixtures', name);
-    fs.rmdirSync(path.join(fixture, '.output'), { recursive: true });
+    await fsp.rmdir(path.join(fixture, '.output'), { recursive: true });
 
     const functions = new Map<string, Lambda>();
 
