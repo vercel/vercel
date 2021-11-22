@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [{ "src": "**/**.py", "use": "@vercel/python" }],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "pip:RANDOMNESS_PLACEHOLDER",
+      "logMustContain": "Warning: Python version \"3.6\" detected in Pipfile.lock is deprecated and will reach End-Of-Life December 2021."
+    }
+  ]
+}
