@@ -169,3 +169,34 @@ export async function updateFunctionsManifest({
 
   await fs.writeFile(functionsManifestPath, JSON.stringify(functionsManifest));
 }
+
+/**
+ * Will append routes to the `routes-manifest.json` file.
+ * If the file does not exist, it'll be created.
+ */
+export async function updateRoutesManifest({
+  workPath,
+  dynamicRoutes,
+}: {
+  workPath: string;
+  dynamicRoutes?: {
+    page: string;
+    regex: string;
+    namedRegex?: string;
+    routeKeys?: { [named: string]: string };
+  }[];
+}) {
+  const routesManifestPath = join(workPath, '.output', 'routes-manifest.json');
+
+  const routesManifest = await readJson(routesManifestPath);
+
+  if (!routesManifest.version) routesManifest.version = 1;
+  if (routesManifest.pages404 === undefined) routesManifest.pages404 = true;
+
+  if (dynamicRoutes) {
+    if (!routesManifest.dynamicRoutes) routesManifest.dynamicRoutes = [];
+    routesManifest.dynamicRoutes.push(...dynamicRoutes);
+  }
+
+  await fs.writeFile(routesManifestPath, JSON.stringify(routesManifest));
+}
