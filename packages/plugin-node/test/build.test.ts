@@ -53,6 +53,8 @@ function withFixture<T>(
 ): () => Promise<T> {
   return async () => {
     const fixture = path.join(__dirname, 'fixtures', name);
+    await fsp.rmdir(path.join(fixture, '.output'), { recursive: true });
+
     const functions = new Map<string, Lambda>();
 
     async function fetch(r: RequestInfo, init?: RequestInit) {
@@ -346,6 +348,30 @@ describe('build()', () => {
       const res3 = await fetch('/api/graphql');
       const body3 = await res3.text();
       expect(body3.includes('GraphQL Playground')).toEqual(true);
+    })
+  );
+
+  it(
+    'should build "nested-lock-and-build"',
+    withFixture('nested-lock-and-build', async ({ fetch }) => {
+      const resA = await fetch('/api/users/[id]');
+
+      expect(resA.headers.get('x-date')).toEqual('2021-11-20T20:00:00.000Z');
+
+      const body = await resA.text();
+      expect(body).toEqual(
+        ' _______________________________\n' +
+          '< Hello from /api/users/[id].js >\n' +
+          ' -------------------------------\n' +
+          '        \\   ^__^\n' +
+          '         \\  (oo)\\_______\n' +
+          '            (__)\\       )\\/\\\n' +
+          '                ||----w |\n' +
+          '                ||     ||'
+      );
+
+      const resB = await fetch('/api/profile');
+      expect(await resB.text()).toEqual('true');
     })
   );
 });

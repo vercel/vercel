@@ -85,6 +85,7 @@ export { normalizePath } from './fs/normalize-path';
 export {
   convertRuntimeToPlugin,
   updateFunctionsManifest,
+  updateRoutesManifest,
 } from './convert-runtime-to-plugin';
 
 export * from './schemas';
