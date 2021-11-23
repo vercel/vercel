@@ -143,7 +143,16 @@ function withFixture<T>(
       await runNpmInstall(fixture);
     }
 
-    await build({ workPath: fixture });
+    let vercelConfig = {};
+    try {
+      vercelConfig = JSON.parse(
+        await fsp.readFile(path.join(fixture, 'vercel.json'), 'utf8')
+      );
+    } catch (e) {
+      // Consume error
+    }
+
+    await build({ vercelConfig, workPath: fixture });
 
     try {
       return await t({ fixture, fetch });
