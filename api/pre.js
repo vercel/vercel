@@ -10,6 +10,10 @@ async function main() {
         dirname: __dirname,
         filesInCurrent: fs.readdirSync(__dirname),
         filesInParent: fs.readdirSync(path.join(__dirname, '..')),
+        filesInPackages: fs.readdirSync(path.join(__dirname, '..', 'packages')),
+        filesInFrameworks: fs.readdirSync(
+          path.join(__dirname, '..', 'packages', 'frameworks')
+        ),
       },
       null,
       2
