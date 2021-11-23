@@ -48,6 +48,7 @@ import { Register, register } from './typescript';
 import { pageToRoute } from './router/page-to-route';
 import { isDynamicRoute } from './router/is-dynamic';
 import crypto from 'crypto';
+import type { VercelConfig } from '@vercel/client';
 
 export { shouldServe };
 export {
@@ -383,7 +384,7 @@ export async function build({
   vercelConfig,
   workPath,
 }: {
-  vercelConfig: any;
+  vercelConfig: VercelConfig;
   workPath: string;
 }) {
   const project = new Project();
@@ -430,7 +431,7 @@ export async function buildEntrypoint({
   config,
   installedPaths,
 }: {
-  vercelConfig: any;
+  vercelConfig: VercelConfig;
   workPath: string;
   entrypoint: string;
   config: FunctionConfig;
