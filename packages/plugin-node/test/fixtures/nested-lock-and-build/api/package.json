@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "vercel-build": "node ./script.js"
+  },
+  "dependencies": {
+    "cowsay": "1.5.0"
+  }
+}

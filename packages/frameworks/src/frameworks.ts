@@ -43,6 +43,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `blitz build`',
+        value: 'blitz build',
       },
       devCommand: {
         value: 'blitz start',
@@ -51,8 +52,6 @@ export const frameworks = [
         placeholder: 'Next.js default',
       },
     },
-    devCommand: 'blitz start',
-    buildCommand: 'blitz build',
     getFsOutputDir: async () => '.next',
     getOutputDirName: async () => 'public',
   },
@@ -83,6 +82,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `next build`',
+        value: 'next build',
       },
       devCommand: {
         value: 'next dev --port $PORT',
@@ -98,8 +98,6 @@ export const frameworks = [
         dependencies: ['next-plugin-sentry', 'next-sentry-source-maps'],
       },
     ],
-    devCommand: 'next dev --port $PORT',
-    buildCommand: 'next build',
     getFsOutputDir: async () => '.next',
     getOutputDirName: async () => 'public',
     cachePattern: '.next/cache/**',
@@ -131,6 +129,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `gatsby build`',
+        value: 'gatsby build',
       },
       devCommand: {
         value: 'gatsby develop --port $PORT',
@@ -141,8 +140,6 @@ export const frameworks = [
       },
     },
     dependency: 'gatsby',
-    devCommand: 'gatsby develop --port $PORT',
-    buildCommand: 'gatsby build',
     getOutputDirName: async () => 'public',
     getFsOutputDir: async () => 'public',
     defaultRoutes: async (dirPrefix: string) => {
@@ -219,6 +216,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `hexo generate`',
+        value: 'hexo generate',
       },
       devCommand: {
         value: 'hexo server --port $PORT',
@@ -229,8 +227,6 @@ export const frameworks = [
       },
     },
     dependency: 'hexo',
-    devCommand: 'hexo server --port $PORT',
-    buildCommand: 'hexo generate',
     getFsOutputDir: async () => 'public',
     getOutputDirName: async () => 'public',
   },
@@ -259,6 +255,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `npx @11ty/eleventy`',
+        value: 'npx @11ty/eleventy',
       },
       devCommand: {
         value: 'npx @11ty/eleventy --serve --watch --port $PORT',
@@ -269,8 +266,6 @@ export const frameworks = [
       },
     },
     dependency: '@11ty/eleventy',
-    devCommand: 'npx @11ty/eleventy --serve --watch --port $PORT',
-    buildCommand: 'npx @11ty/eleventy',
     getFsOutputDir: async () => '_site',
     getOutputDirName: async () => '_site',
     cachePattern: '.cache/**',
@@ -300,6 +295,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `docusaurus build`',
+        value: 'docusaurus build',
       },
       devCommand: {
         value: 'docusaurus start --port $PORT',
@@ -310,8 +306,6 @@ export const frameworks = [
       },
     },
     dependency: '@docusaurus/core',
-    devCommand: 'docusaurus start --port $PORT',
-    buildCommand: 'docusaurus build',
     getFsOutputDir: async (dirPrefix: string) => {
       const base = 'build';
       try {
@@ -456,6 +450,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `docusaurus-build`',
+        value: 'docusaurus-build',
       },
       devCommand: {
         value: 'docusaurus-start --port $PORT',
@@ -466,8 +461,6 @@ export const frameworks = [
       },
     },
     dependency: 'docusaurus',
-    devCommand: 'docusaurus-start --port $PORT',
-    buildCommand: 'docusaurus-build',
     getFsOutputDir: async (dirPrefix: string) => {
       const base = 'build';
       try {
@@ -523,6 +516,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `preact build`',
+        value: 'preact build',
       },
       devCommand: {
         value: 'preact watch --port $PORT',
@@ -533,8 +527,6 @@ export const frameworks = [
       },
     },
     dependency: 'preact-cli',
-    devCommand: 'preact watch --port $PORT',
-    buildCommand: 'preact build',
     getFsOutputDir: async () => 'build',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
@@ -581,6 +573,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `dojo build`',
+        value: 'dojo build',
       },
       devCommand: {
         value: 'dojo build -m dev -w -s -p $PORT',
@@ -591,8 +584,6 @@ export const frameworks = [
       },
     },
     dependency: '@dojo/cli',
-    devCommand: 'dojo build -m dev -w -s -p $PORT',
-    buildCommand: 'dojo build',
     getFsOutputDir: async () => 'output/dist',
     getOutputDirName: async () => join('output', 'dist'),
     defaultRoutes: [
@@ -649,6 +640,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `ember build`',
+        value: 'ember build',
       },
       devCommand: {
         value: 'ember serve --port $PORT',
@@ -659,8 +651,6 @@ export const frameworks = [
       },
     },
     dependency: 'ember-cli',
-    devCommand: 'ember serve --port $PORT',
-    buildCommand: 'ember build',
     getFsOutputDir: async () => 'dist',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
@@ -705,6 +695,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `vue-cli-service build`',
+        value: 'vue-cli-service build',
       },
       devCommand: {
         value: 'vue-cli-service serve --port $PORT',
@@ -715,8 +706,6 @@ export const frameworks = [
       },
     },
     dependency: '@vue/cli-service',
-    devCommand: 'vue-cli-service serve --port $PORT',
-    buildCommand: 'vue-cli-service build',
     getFsOutputDir: async () => 'dist',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
@@ -783,6 +772,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `ng build && scully`',
+        value: 'ng build && scully',
       },
       devCommand: {
         value: 'ng serve --port $PORT',
@@ -793,8 +783,6 @@ export const frameworks = [
       },
     },
     dependency: '@scullyio/init',
-    devCommand: 'ng serve --port $PORT',
-    buildCommand: 'ng build && scully',
     getFsOutputDir: async () => 'dist',
     getOutputDirName: async () => 'dist/static',
   },
@@ -822,6 +810,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `ng build`',
+        value: 'ng build',
       },
       devCommand: {
         value: 'ng serve --port $PORT',
@@ -831,8 +820,6 @@ export const frameworks = [
       },
     },
     dependency: '@ionic/angular',
-    devCommand: 'ng serve --port $PORT',
-    buildCommand: 'ng build',
     getFsOutputDir: async () => 'www',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
@@ -876,6 +863,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `ng build`',
+        value: 'ng build',
       },
       devCommand: {
         value: 'ng serve --port $PORT',
@@ -886,8 +874,6 @@ export const frameworks = [
       },
     },
     dependency: '@angular/cli',
-    devCommand: 'ng serve --port $PORT',
-    buildCommand: 'ng build',
     getFsOutputDir: async () => 'dist',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'dist';
@@ -945,6 +931,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `polymer build`',
+        value: 'polymer build',
       },
       devCommand: {
         value: 'polymer serve --port $PORT',
@@ -955,8 +942,6 @@ export const frameworks = [
       },
     },
     dependency: 'polymer-cli',
-    devCommand: 'polymer serve --port $PORT',
-    buildCommand: 'polymer build',
     getFsOutputDir: async () => 'build',
     getOutputDirName: async (dirPrefix: string) => {
       const base = 'build';
@@ -1016,6 +1001,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `rollup -c`',
+        value: 'rollup -c',
       },
       devCommand: {
         value: 'rollup -c -w',
@@ -1025,8 +1011,6 @@ export const frameworks = [
       },
     },
     dependency: 'sirv-cli',
-    devCommand: 'rollup -c -w',
-    buildCommand: 'rollup -c',
     getFsOutputDir: async () => 'public',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
@@ -1070,6 +1054,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `svelte-kit build`',
+        value: 'svelte-kit build',
       },
       devCommand: {
         value: 'svelte-kit dev --port $PORT',
@@ -1079,8 +1064,6 @@ export const frameworks = [
         placeholder: 'public',
       },
     },
-    devCommand: 'svelte-kit dev --port $PORT',
-    buildCommand: 'svelte-kit build',
     getFsOutputDir: async () => '.output',
     getOutputDirName: async () => 'public',
   },
@@ -1108,6 +1091,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `react-scripts build`',
+        value: 'react-scripts build',
       },
       devCommand: {
         value: 'react-scripts start',
@@ -1117,8 +1101,6 @@ export const frameworks = [
       },
     },
     dependency: '@ionic/react',
-    devCommand: 'react-scripts start',
-    buildCommand: 'react-scripts build',
     getFsOutputDir: async () => 'build',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
@@ -1216,6 +1198,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `react-scripts build`',
+        value: 'react-scripts build',
       },
       devCommand: {
         value: 'react-scripts start',
@@ -1225,8 +1208,6 @@ export const frameworks = [
       },
     },
     dependency: 'react-scripts',
-    devCommand: 'react-scripts start',
-    buildCommand: 'react-scripts build',
     getFsOutputDir: async () => 'build',
     getOutputDirName: async () => 'build',
     defaultRoutes: [
@@ -1318,6 +1299,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `gridsome build`',
+        value: 'gridsome build',
       },
       devCommand: {
         value: 'gridsome develop -p $PORT',
@@ -1328,8 +1310,6 @@ export const frameworks = [
       },
     },
     dependency: 'gridsome',
-    devCommand: 'gridsome develop -p $PORT',
-    buildCommand: 'gridsome build',
     getFsOutputDir: async () => 'dist',
     getOutputDirName: async () => 'dist',
   },
@@ -1357,6 +1337,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `umi build`',
+        value: 'umi build',
       },
       devCommand: {
         value: 'umi dev --port $PORT',
@@ -1367,8 +1348,6 @@ export const frameworks = [
       },
     },
     dependency: 'umi',
-    devCommand: 'umi dev --port $PORT',
-    buildCommand: 'umi build',
     getFsOutputDir: async () => 'dist',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
@@ -1412,6 +1391,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `sapper export`',
+        value: 'sapper export',
       },
       devCommand: {
         value: 'sapper dev --port $PORT',
@@ -1422,8 +1402,6 @@ export const frameworks = [
       },
     },
     dependency: 'sapper',
-    devCommand: 'sapper dev --port $PORT',
-    buildCommand: 'sapper export',
     getFsOutputDir: async () => '__sapper__/export',
     getOutputDirName: async () => '__sapper__/export',
   },
@@ -1451,6 +1429,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `saber build`',
+        value: 'saber build',
       },
       devCommand: {
         value: 'saber --port $PORT',
@@ -1461,8 +1440,6 @@ export const frameworks = [
       },
     },
     dependency: 'saber',
-    devCommand: 'saber --port $PORT',
-    buildCommand: 'saber build',
     getFsOutputDir: async () => 'public',
     getOutputDirName: async () => 'public',
     defaultRoutes: [
@@ -1521,6 +1498,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `stencil build`',
+        value: 'stencil build',
       },
       devCommand: {
         value: 'stencil build --dev --watch --serve --port $PORT',
@@ -1531,8 +1509,6 @@ export const frameworks = [
       },
     },
     dependency: '@stencil/core',
-    devCommand: 'stencil build --dev --watch --serve --port $PORT',
-    buildCommand: 'stencil build',
     getFsOutputDir: async () => 'www',
     getOutputDirName: async () => 'www',
     defaultRoutes: [
@@ -1611,6 +1587,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `nuxt generate`',
+        value: 'nuxt generate',
       },
       devCommand: {
         value: 'nuxt',
@@ -1620,8 +1597,6 @@ export const frameworks = [
       },
     },
     dependency: 'nuxt',
-    devCommand: 'nuxt',
-    buildCommand: 'nuxt generate',
     getFsOutputDir: async () => '.output',
     getOutputDirName: async () => 'dist',
     cachePattern: '.nuxt/**',
@@ -1680,8 +1655,6 @@ export const frameworks = [
         placeholder: 'RedwoodJS default',
       },
     },
-    devCommand: 'yarn rw dev --fwd="--port=$PORT --open=false',
-    buildCommand: 'yarn rw deploy vercel',
     getFsOutputDir: async () => 'public',
     getOutputDirName: async () => 'public',
   },
@@ -1717,6 +1690,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `hugo -D --gc`',
+        value: 'hugo -D --gc',
       },
       devCommand: {
         value: 'hugo server -D -w -p $PORT',
@@ -1726,8 +1700,6 @@ export const frameworks = [
         placeholder: '`public` or `publishDir` from the `config` file',
       },
     },
-    devCommand: 'hugo server -D -w -p $PORT',
-    buildCommand: 'hugo -D --gc',
     getFsOutputDir: async (dirPrefix: string): Promise<string> => {
       type HugoConfig = { publishDir?: string };
       const config = await readConfigFile<HugoConfig>(
@@ -1772,6 +1744,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `jekyll build`',
+        value: 'jekyll build',
       },
       devCommand: {
         value: 'bundle exec jekyll serve --watch --port $PORT',
@@ -1781,8 +1754,6 @@ export const frameworks = [
         placeholder: '`_site` or `destination` from `_config.yml`',
       },
     },
-    devCommand: 'bundle exec jekyll serve --watch --port $PORT',
-    buildCommand: 'jekyll build',
     getFsOutputDir: async (dirPrefix: string): Promise<string> => {
       type JekyllConfig = { destination?: string };
       const config = await readConfigFile<JekyllConfig>(
@@ -1821,6 +1792,7 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `brunch build --production`',
+        value: 'brunch build --production',
       },
       devCommand: {
         value: 'brunch watch --server --port $PORT',
@@ -1830,8 +1802,6 @@ export const frameworks = [
         value: 'public',
       },
     },
-    devCommand: 'brunch watch --server --port $PORT',
-    buildCommand: 'brunch build --production',
     getFsOutputDir: async () => 'public',
     getOutputDirName: async () => 'public',
   },
@@ -1856,18 +1826,17 @@ export const frameworks = [
         value: 'bundle install',
       },
       buildCommand: {
-        value: '`npm run build` or `bundle exec middleman build`',
+        placeholder: '`npm run build` or `bundle exec middleman build`',
+        value: 'bundle exec middleman build',
       },
       devCommand: {
-        value: 'bundle exec middleman server -p $PORT',
         placeholder: 'bundle exec middleman server',
+        value: 'bundle exec middleman server -p $PORT',
       },
       outputDirectory: {
         value: 'build',
       },
     },
-    devCommand: 'bundle exec middleman server -p $PORT',
-    buildCommand: 'bundle exec middleman build',
     getFsOutputDir: async () => 'build',
     getOutputDirName: async () => 'build',
     cachePattern: '{vendor/bin,vendor/cache,vendor/bundle}/**',
@@ -1896,15 +1865,13 @@ export const frameworks = [
         value: 'zola build',
       },
       devCommand: {
-        value: 'zola serve --port $PORT',
         placeholder: 'zola serve',
+        value: 'zola serve --port $PORT',
       },
       outputDirectory: {
         value: 'public',
       },
     },
-    devCommand: 'zola serve --port $PORT',
-    buildCommand: 'zola build',
     getFsOutputDir: async () => 'public',
     getOutputDirName: async () => 'public',
     defaultVersion: '0.13.0',
@@ -1934,17 +1901,17 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `vite build`',
+        value: 'vite build',
       },
       devCommand: {
         placeholder: 'vite',
+        value: 'vite',
       },
       outputDirectory: {
         value: 'dist',
       },
     },
     dependency: 'vite',
-    devCommand: 'vite',
-    buildCommand: 'vite build',
     getFsOutputDir: async () => 'dist',
     getOutputDirName: async () => 'dist',
   },
@@ -1972,17 +1939,17 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run build` or `parcel build`',
+        value: 'parcel build',
       },
       devCommand: {
         placeholder: 'parcel',
+        value: 'parcel',
       },
       outputDirectory: {
-        placeholder: 'dist',
+        value: 'dist',
       },
     },
     dependency: 'parcel',
-    devCommand: 'parcel',
-    buildCommand: 'parcel build',
     getFsOutputDir: async () => 'dist',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
@@ -2016,16 +1983,16 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`npm run vercel-build` or `npm run build`',
+        value: null,
       },
       devCommand: {
         placeholder: 'None',
+        value: null,
       },
       outputDirectory: {
         placeholder: '`public` if it exists, or `.`',
       },
     },
-    devCommand: null,
-    buildCommand: null,
     getFsOutputDir: async (dirPrefix: string): Promise<string> => {
       // Public if it exists or `.`
       let base = 'public';
