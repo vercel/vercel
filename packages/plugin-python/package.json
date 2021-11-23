@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@vercel/build-utils": "2.12.3-canary.20",
-    "@vercel/python": "2.1.0"
+    "@vercel/python": "2.1.1"
   },
   "devDependencies": {
     "@types/node": "*",
