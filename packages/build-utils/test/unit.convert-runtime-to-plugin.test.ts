@@ -135,6 +135,13 @@ describe('convert-runtime-to-plugin', () => {
       ],
       dynamicRoutes: [
         {
+          page: '/api/project/[aid]/[bid]/index',
+          regex: '^/api/project/([^/]+)/([^/]+)(/|/index|/index\\.py)?$',
+          routeKeys: { aid: 'aid', bid: 'bid' },
+          namedRegex:
+            '^/api/project/(?<aid>[^/]+)/(?<bid>[^/]+)(/|/index|/index\\.py)?$',
+        },
+        {
           page: '/api/db/[id]',
           regex: '^/api/db/([^/]+)$',
           routeKeys: { id: 'id' },
@@ -154,6 +161,11 @@ describe('convert-runtime-to-plugin', () => {
         {
           input: '../../../../runtime-traced-files/api/index.py',
           output: 'api/index.py',
+        },
+        {
+          input:
+            '../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          output: 'api/project/[aid]/[bid]/index.py',
         },
         {
           input: '../../../../runtime-traced-files/api/users/get.py',
@@ -193,6 +205,11 @@ describe('convert-runtime-to-plugin', () => {
           output: 'api/index.py',
         },
         {
+          input:
+            '../../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          output: 'api/project/[aid]/[bid]/index.py',
+        },
+        {
           input: '../../../../../runtime-traced-files/api/users/get.py',
           output: 'api/users/get.py',
         },
@@ -228,6 +245,11 @@ describe('convert-runtime-to-plugin', () => {
         {
           input: '../../../../../runtime-traced-files/api/index.py',
           output: 'api/index.py',
+        },
+        {
+          input:
+            '../../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          output: 'api/project/[aid]/[bid]/index.py',
         },
         {
           input: '../../../../../runtime-traced-files/api/users/get.py',
