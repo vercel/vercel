@@ -22,8 +22,8 @@ export const frameworks = [
     slug: 'remix',
     demo: 'https://remix.examples.vercel.com',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/preact.svg',
-    tagline: 'Focused on web fundamentals and modern UX.',
-    description: 'Build Better Websites',
+    tagline: 'Build Better Websites',
+    description: 'A new Remix app — the result of running `npx create-remix`.',
     website: 'https://remix.run',
     detectors: {
       every: [
@@ -39,8 +39,8 @@ export const frameworks = [
         placeholder: '`yarn install` or `npm install`',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `preact build`',
         value: 'remix build',
+        placeholder: '`npm run build` or `remix build`',
       },
       devCommand: {
         value: 'remix dev --port $PORT',
