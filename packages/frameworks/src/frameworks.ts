@@ -43,7 +43,7 @@ export const frameworks = [
         placeholder: '`npm run build` or `remix build`',
       },
       devCommand: {
-        value: 'remix dev --port $PORT',
+        value: 'remix dev',
         placeholder: 'remix dev',
       },
       outputDirectory: {
