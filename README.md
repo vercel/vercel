@@ -17,7 +17,7 @@ We provide a **frictionless developer experience** to take care of the hard thin
 
 We make it easy for frontend teams to **develop, preview, and ship** delightful user experiences, where performance is the default.
 
-Get started by [Importing a Git Project](https://vercel.com/new) and use `git push` to deploy. Alternatively, you can [install Vercel CLI](https://vercel.com/cli).
+Get started by [Importing a Git Repository](https://vercel.com/new) and use `git push` to deploy. Alternatively, you can [install Vercel CLI](https://vercel.com/cli).
 
 ## Documentation
 
