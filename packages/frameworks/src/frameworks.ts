@@ -18,6 +18,59 @@ const { readdir, readFile, unlink } = promises;
 
 export const frameworks = [
   {
+    name: 'Remix',
+    slug: 'remix',
+    demo: 'https://remix.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/preact.svg',
+    tagline: 'Focused on web fundamentals and modern UX.',
+    description: 'Build Better Websites',
+    website: 'https://remix.run',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"remix":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `preact build`',
+        value: 'remix build',
+      },
+      devCommand: {
+        value: 'preact watch --port $PORT',
+        placeholder: 'remix watch',
+      },
+      outputDirectory: {
+        value: 'public',
+      },
+    },
+    dependency: 'remix',
+    getFsOutputDir: async () => 'public',
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/api',
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        destination: '/api',
+      },
+    ],
+  },
+  {
     name: 'Blitz.js',
     slug: 'blitzjs',
     demo: 'https://blitzjs.examples.vercel.com',
