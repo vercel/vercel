@@ -112,7 +112,7 @@ export const frameworks = [
     description:
       'A Gatsby app, using the default starter theme and a Serverless Function API.',
     website: 'https://gatsbyjs.org',
-    sort: 2,
+    sort: 5,
     envPrefix: 'GATSBY_',
     detectors: {
       every: [
@@ -192,6 +192,74 @@ export const frameworks = [
     cachePattern: '{.cache,public}/**',
   },
   {
+    name: 'Remix',
+    slug: 'remix',
+    demo: 'https://remix.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/remix.svg',
+    tagline: 'Build Better Websites',
+    description: 'A new Remix app — the result of running `npx create-remix`.',
+    website: 'https://remix.run',
+    sort: 6,
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"remix":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        value: 'remix build',
+        placeholder: '`npm run build` or `remix build`',
+      },
+      devCommand: {
+        value: 'remix dev',
+        placeholder: 'remix dev',
+      },
+      outputDirectory: {
+        value: 'public',
+      },
+    },
+    dependency: 'remix',
+    getFsOutputDir: async () => 'public',
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        src: '^/build/(.*)$',
+        headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/api',
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        destination: '/api',
+      },
+    ],
+    defaultHeaders: [
+      {
+        source: '^/build/(.*)$',
+        regex: '^/build/(.*)$',
+        headers: [
+          { key: 'cache-control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+    ]
+  },
+  {
     name: 'Hexo',
     slug: 'hexo',
     demo: 'https://hexo.examples.vercel.com',
@@ -200,7 +268,6 @@ export const frameworks = [
       'Hexo is a fast, simple & powerful blog framework powered by Node.js.',
     description: 'A Hexo site, created with the Hexo CLI.',
     website: 'https://hexo.io',
-    sort: 3,
     detectors: {
       every: [
         {
@@ -239,7 +306,6 @@ export const frameworks = [
       '11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll.',
     description: 'An Eleventy site, created with npm init.',
     website: 'https://www.11ty.dev',
-    sort: 4,
     detectors: {
       every: [
         {
@@ -981,6 +1047,7 @@ export const frameworks = [
       'Svelte lets you write high performance reactive apps with significantly less boilerplate.',
     description: 'A basic Svelte app using the default template.',
     website: 'https://svelte.dev',
+    sort: 3,
     detectors: {
       every: [
         {
@@ -1177,6 +1244,7 @@ export const frameworks = [
     description:
       'A React app, bootstrapped with create-react-app, and a Serverless Function API.',
     website: 'https://create-react-app.dev',
+    sort: 4,
     envPrefix: 'REACT_APP_',
     detectors: {
       some: [
@@ -1571,6 +1639,7 @@ export const frameworks = [
       'Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.',
     description: 'A Nuxt.js app, bootstrapped with create-nuxt-app.',
     website: 'https://nuxtjs.org',
+    sort: 2,
     envPrefix: 'NUXT_ENV_',
     detectors: {
       every: [
@@ -1667,7 +1736,6 @@ export const frameworks = [
       'Hugo is the world’s fastest framework for building websites, written in Go.',
     description: 'A Hugo site, created with the Hugo CLI.',
     website: 'https://gohugo.io',
-    sort: 5,
     detectors: {
       some: [
         {
