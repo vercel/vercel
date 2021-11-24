@@ -91,6 +91,7 @@ describe('convert-runtime-to-plugin', () => {
     const output = await fsToJson(join(workPath, '.output'));
     expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
+      'routes-manifest.json': expect.stringContaining('{'),
       'runtime-traced-files': lambdaFiles,
       server: {
         pages: {
@@ -118,10 +119,38 @@ describe('convert-runtime-to-plugin', () => {
       },
     });
 
+    const routesManifest = JSON.parse(output['routes-manifest.json']);
+    expect(routesManifest).toMatchObject({
+      version: 3,
+      pages404: true,
+      redirects: [],
+      rewrites: [
+        /* TODO: `handle: miss`
+        {
+          source: "^/api/(.+)(?:\\.(?:py))$",
+          destination: "/api/db/[id]?id=$1",
+          regex: "^/api/(.+)(?:\\.(?:py))$"
+        }
+        */
+      ],
+      dynamicRoutes: [
+        {
+          page: '/api/db/[id]',
+          regex: '^/api/db/([^/]+)$',
+          routeKeys: { id: 'id' },
+          namedRegex: '^/api/db/(?<id>[^/]+)$',
+        },
+      ],
+    });
+
     const indexJson = JSON.parse(output.server.pages.api['index.py.nft.json']);
     expect(indexJson).toMatchObject({
       version: 1,
       files: [
+        {
+          input: '../../../../runtime-traced-files/api/db/[id].py',
+          output: 'api/db/[id].py',
+        },
         {
           input: '../../../../runtime-traced-files/api/index.py',
           output: 'api/index.py',
@@ -156,6 +185,10 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
+          input: '../../../../../runtime-traced-files/api/db/[id].py',
+          output: 'api/db/[id].py',
+        },
+        {
           input: '../../../../../runtime-traced-files/api/index.py',
           output: 'api/index.py',
         },
@@ -188,6 +221,10 @@ describe('convert-runtime-to-plugin', () => {
     expect(postJson).toMatchObject({
       version: 1,
       files: [
+        {
+          input: '../../../../../runtime-traced-files/api/db/[id].py',
+          output: 'api/db/[id].py',
+        },
         {
           input: '../../../../../runtime-traced-files/api/index.py',
           output: 'api/index.py',

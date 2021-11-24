@@ -116,9 +116,10 @@ export function convertRuntimeToPlugin(
     const {
       warnings,
       errors,
-      defaultRoutes,
+      //defaultRoutes,
       redirectRoutes,
-      rewriteRoutes,
+      //rewriteRoutes,
+      dynamicRoutesWithKeys,
       // errorRoutes, already handled by pages404
     } = await detectBuilders(Object.keys(files), null, {
       tag: 'latest',
@@ -137,29 +138,33 @@ export function convertRuntimeToPlugin(
       warnings.forEach(warning => console.warn(warning.message, warning.link));
     }
 
-    const redirects = redirectRoutes?.map(r => ({
-      source: r.src || '',
-      destination:
-        'headers' in r && r.headers?.Location ? r.headers.Location : '',
-      statusCode: 'status' in r && r.status ? r.status : 307,
-      regex: r.src || '',
-    }));
+    const redirects = redirectRoutes
+      ?.filter(r => r.src && 'headers' in r)
+      ?.map(r => ({
+        source: r.src || '',
+        destination:
+          'headers' in r && r.headers?.Location ? r.headers.Location : '',
+        statusCode: 'status' in r && r.status ? r.status : 307,
+        regex: r.src || '',
+      }));
 
-    const rewrites = rewriteRoutes?.map(r => ({
-      source: r.src || '',
-      destination: r.dest || '',
-      regex: r.src || '',
-    }));
-
-    const dynamicRoutes = defaultRoutes?.map(r => ({
-      page: r.src || '',
-      regex: r.src || '',
-    }));
+    const dynamicRoutes = dynamicRoutesWithKeys?.map(r => {
+      const keys = Object.keys(r.routeKeys);
+      return {
+        page: '/' + r.fileName.slice(0, -ext.length),
+        regex: r.regex,
+        routeKeys: r.routeKeys,
+        namedRegex: r.regex
+          .split('([^/]+)')
+          .map((str, i) => str + (keys[i] ? `(?<${keys[i]}>[^/]+)` : ''))
+          .join(''),
+      };
+    });
 
     await updateRoutesManifest({
       workPath,
       redirects,
-      rewrites,
+      rewrites: [],
       dynamicRoutes,
     });
   };

@@ -16,6 +16,12 @@ interface ErrorResponse {
   link?: string;
 }
 
+interface DynamicRoutesWithKeys {
+  fileName: string;
+  regex: string;
+  routeKeys: { [key: string]: string };
+}
+
 interface Options {
   tag?: 'canary' | 'latest' | string;
   functions?: BuilderFunctions;
@@ -96,6 +102,7 @@ export async function detectBuilders(
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
+  dynamicRoutesWithKeys: DynamicRoutesWithKeys[] | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
@@ -114,6 +121,7 @@ export async function detectBuilders(
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
+      dynamicRoutesWithKeys: null,
     };
   }
 
@@ -157,13 +165,14 @@ export async function detectBuilders(
 
   const apiRoutes: Source[] = [];
   const dynamicRoutes: Source[] = [];
+  const dynamicRoutesWithKeys: DynamicRoutesWithKeys[] = [];
 
   // API
   for (const fileName of sortedFiles) {
     const apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
-      const { routeError, apiRoute, isDynamic } = getApiRoute(
+      const { routeError, apiRoute, isDynamic, routeKeys } = getApiRoute(
         fileName,
         apiSortedFiles,
         options,
@@ -179,6 +188,7 @@ export async function detectBuilders(
           redirectRoutes: null,
           rewriteRoutes: null,
           errorRoutes: null,
+          dynamicRoutesWithKeys: null,
         };
       }
 
@@ -186,6 +196,11 @@ export async function detectBuilders(
         apiRoutes.push(apiRoute);
         if (isDynamic) {
           dynamicRoutes.push(apiRoute);
+          dynamicRoutesWithKeys.push({
+            fileName,
+            regex: apiRoute.src,
+            routeKeys,
+          });
         }
       }
 
@@ -257,6 +272,7 @@ export async function detectBuilders(
         defaultRoutes: null,
         rewriteRoutes: null,
         errorRoutes: null,
+        dynamicRoutesWithKeys: null,
       };
     }
 
@@ -299,6 +315,7 @@ export async function detectBuilders(
       defaultRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
+      dynamicRoutesWithKeys: null,
     };
   }
 
@@ -342,6 +359,7 @@ export async function detectBuilders(
     defaultRoutes: routesResult.defaultRoutes,
     rewriteRoutes: routesResult.rewriteRoutes,
     errorRoutes: routesResult.errorRoutes,
+    dynamicRoutesWithKeys,
   };
 }
 
@@ -675,6 +693,7 @@ function getApiRoute(
 ): {
   apiRoute: Source | null;
   isDynamic: boolean;
+  routeKeys: { [key: string]: string };
   routeError: ErrorResponse | null;
 } {
   const conflictingSegment = getConflictingSegment(fileName);
@@ -683,6 +702,7 @@ function getApiRoute(
     return {
       apiRoute: null,
       isDynamic: false,
+      routeKeys: {},
       routeError: {
         code: 'conflicting_path_segment',
         message:
@@ -703,6 +723,7 @@ function getApiRoute(
     return {
       apiRoute: null,
       isDynamic: false,
+      routeKeys: {},
       routeError: {
         code: 'conflicting_file_path',
         message:
@@ -722,6 +743,7 @@ function getApiRoute(
   return {
     apiRoute: out.route,
     isDynamic: out.isDynamic,
+    routeKeys: out.routeKeys,
     routeError: null,
   };
 }
@@ -867,11 +889,12 @@ function createRouteFromPath(
   filePath: string,
   featHandleMiss: boolean,
   cleanUrls: boolean
-): { route: Source; isDynamic: boolean } {
+): { route: Source; isDynamic: boolean; routeKeys: { [key: string]: string } } {
   const parts = filePath.split('/');
 
   let counter = 1;
   const query: string[] = [];
+  const routeKeys: { [key: string]: string } = {};
   let isDynamic = false;
 
   const srcParts = parts.map((segment, i): string => {
@@ -881,6 +904,7 @@ function createRouteFromPath(
     if (name !== null) {
       // We can't use `URLSearchParams` because `$` would get escaped
       query.push(`${name}=$${counter++}`);
+      routeKeys[name] = name;
       isDynamic = true;
       return `([^/]+)`;
     } else if (isLast) {
@@ -929,7 +953,7 @@ function createRouteFromPath(
     };
   }
 
-  return { route, isDynamic };
+  return { route, isDynamic, routeKeys };
 }
 
 function getRouteResult(
