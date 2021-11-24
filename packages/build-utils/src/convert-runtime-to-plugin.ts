@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import { join, dirname, relative } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
+import { detectBuilders } from './detect-builders';
 import { FILES_SYMBOL, getLambdaOptionsFromFunction, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuilderFunctions, BuildOptions, Files } from './types';
@@ -21,7 +22,12 @@ export function convertRuntimeToPlugin(
     vercelConfig,
     workPath,
   }: {
-    vercelConfig: { functions?: BuilderFunctions; regions?: string[] };
+    vercelConfig: {
+      functions?: BuilderFunctions;
+      regions?: string[];
+      trailingSlash?: boolean;
+      cleanUrls?: boolean;
+    };
     workPath: string;
   }) {
     const opts = { cwd: workPath };
@@ -29,7 +35,7 @@ export function convertRuntimeToPlugin(
     delete files['vercel.json']; // Builders/Runtimes didn't have vercel.json
     const entrypoints = await glob(`api/**/*${ext}`, opts);
     const pages: { [key: string]: any } = {};
-    const { functions = {} } = vercelConfig;
+    const { functions = {}, cleanUrls, trailingSlash } = vercelConfig;
     const traceDir = join(workPath, '.output', 'runtime-traced-files');
     await fs.ensureDir(traceDir);
 
@@ -106,6 +112,56 @@ export function convertRuntimeToPlugin(
     }
 
     await updateFunctionsManifest({ vercelConfig, workPath, pages });
+
+    const {
+      warnings,
+      errors,
+      defaultRoutes,
+      redirectRoutes,
+      rewriteRoutes,
+      // errorRoutes, already handled by pages404
+    } = await detectBuilders(Object.keys(files), null, {
+      tag: 'latest',
+      functions: functions,
+      projectSettings: undefined,
+      featHandleMiss: true,
+      cleanUrls,
+      trailingSlash,
+    });
+
+    if (errors) {
+      throw new Error(errors[0].message);
+    }
+
+    if (warnings) {
+      warnings.forEach(warning => console.warn(warning.message, warning.link));
+    }
+
+    const redirects = redirectRoutes?.map(r => ({
+      source: r.src || '',
+      destination:
+        'headers' in r && r.headers?.Location ? r.headers.Location : '',
+      statusCode: 'status' in r && r.status ? r.status : 307,
+      regex: r.src || '',
+    }));
+
+    const rewrites = rewriteRoutes?.map(r => ({
+      source: r.src || '',
+      destination: r.dest || '',
+      regex: r.src || '',
+    }));
+
+    const dynamicRoutes = defaultRoutes?.map(r => ({
+      page: r.src || '',
+      regex: r.src || '',
+    }));
+
+    await updateRoutesManifest({
+      workPath,
+      redirects,
+      rewrites,
+      dynamicRoutes,
+    });
   };
 }
 
@@ -172,15 +228,44 @@ export async function updateFunctionsManifest({
 }
 
 /**
- * Will append routes to the `routes-manifest.json` file.
- * If the file does not exist, it'll be created.
+ * Append routes to the `routes-manifest.json` file.
+ * If the file does not exist, it will be created.
  */
 export async function updateRoutesManifest({
   workPath,
+  redirects,
+  rewrites,
+  headers,
   dynamicRoutes,
+  staticRoutes,
 }: {
   workPath: string;
+  redirects?: {
+    source: string;
+    destination: string;
+    statusCode: number;
+    regex: string;
+  }[];
+  rewrites?: {
+    source: string;
+    destination: string;
+    regex: string;
+  }[];
+  headers?: {
+    source: string;
+    headers: {
+      key: string;
+      value: string;
+    }[];
+    regex: string;
+  }[];
   dynamicRoutes?: {
+    page: string;
+    regex: string;
+    namedRegex?: string;
+    routeKeys?: { [named: string]: string };
+  }[];
+  staticRoutes?: {
     page: string;
     regex: string;
     namedRegex?: string;
@@ -191,12 +276,32 @@ export async function updateRoutesManifest({
 
   const routesManifest = await readJson(routesManifestPath);
 
-  if (!routesManifest.version) routesManifest.version = 1;
+  if (!routesManifest.version) routesManifest.version = 3;
   if (routesManifest.pages404 === undefined) routesManifest.pages404 = true;
+
+  if (redirects) {
+    if (!routesManifest.redirects) routesManifest.redirects = [];
+    routesManifest.redirects.push(...redirects);
+  }
+
+  if (rewrites) {
+    if (!routesManifest.rewrites) routesManifest.rewrites = [];
+    routesManifest.rewrites.push(...rewrites);
+  }
+
+  if (headers) {
+    if (!routesManifest.headers) routesManifest.headers = [];
+    routesManifest.headers.push(...headers);
+  }
 
   if (dynamicRoutes) {
     if (!routesManifest.dynamicRoutes) routesManifest.dynamicRoutes = [];
     routesManifest.dynamicRoutes.push(...dynamicRoutes);
+  }
+
+  if (staticRoutes) {
+    if (!routesManifest.staticRoutes) routesManifest.staticRoutes = [];
+    routesManifest.staticRoutes.push(...staticRoutes);
   }
 
   await fs.writeFile(routesManifestPath, JSON.stringify(routesManifest));
