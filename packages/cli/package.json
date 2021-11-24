@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "23.1.3-canary.38",
+  "version": "23.1.3-canary.39",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -43,14 +43,14 @@
     "node": ">= 12"
   },
   "dependencies": {
-    "@vercel/build-utils": "2.12.3-canary.20",
+    "@vercel/build-utils": "2.12.3-canary.21",
     "@vercel/go": "1.2.4-canary.4",
     "@vercel/node": "1.12.2-canary.7",
-    "@vercel/python": "2.1.1",
+    "@vercel/python": "2.1.2-canary.0",
     "@vercel/ruby": "1.2.8-canary.4",
     "update-notifier": "4.1.0",
     "vercel-plugin-middleware": "0.0.0-canary.7",
-    "vercel-plugin-node": "1.12.2-canary.11"
+    "vercel-plugin-node": "1.12.2-canary.12"
   },
   "devDependencies": {
     "@next/env": "11.1.2",
@@ -90,7 +90,7 @@
     "@types/update-notifier": "5.1.0",
     "@types/which": "1.3.2",
     "@types/write-json-file": "2.2.1",
-    "@vercel/frameworks": "0.5.1-canary.12",
+    "@vercel/frameworks": "0.5.1-canary.13",
     "@vercel/ncc": "0.24.0",
     "@vercel/nft": "0.17.0",
     "@zeit/fun": "0.11.2",
