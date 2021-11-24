@@ -21,7 +21,7 @@ Get started by [Importing a Git Repository](https://vercel.com/new) and use `git
 
 ## Documentation
 
-For details on how to use Vercel, check out our [documentation](https://vercel.com/docs).
+For details on how to use Vercel, check out the [documentation](https://vercel.com/docs).
 
 ## Caught a Bug?
 
