@@ -17,6 +17,7 @@ import ogGlob from 'glob';
 import { isAbsolute, join, parse, relative, resolve } from 'path';
 import pluralize from 'pluralize';
 import Client from '../util/client';
+import { VercelConfig } from '../util/dev/types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
@@ -590,6 +591,14 @@ export default async function main(client: Client) {
         plugins.pluginCount
       )} after Build Command:`
     );
+    let vercelConfig: VercelConfig = {};
+    try {
+      vercelConfig = await fs.readJSON(join(cwd, 'vercel.json'));
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        throw new Error(`Failed to read vercel.json: ${error.message}`);
+      }
+    }
     for (let item of plugins.buildPlugins) {
       const { name, plugin, color } = item;
       if (typeof plugin.build === 'function') {
@@ -602,6 +611,7 @@ export default async function main(client: Client) {
           console.error = (...args: any[]) =>
             prefixedLog(prefix, args, origErr);
           await plugin.build({
+            vercelConfig,
             workPath: cwd,
           });
           client.output.debug(

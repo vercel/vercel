@@ -16,13 +16,20 @@ export function convertRuntimeToPlugin(
   buildRuntime: (options: BuildOptions) => Promise<{ output: Lambda }>,
   ext: string
 ) {
-  return async function build({ workPath }: { workPath: string }) {
+  // This `build()` signature should match `plugin.build()` signature in `vercel build`.
+  return async function build({
+    vercelConfig,
+    workPath,
+  }: {
+    vercelConfig: { functions?: BuilderFunctions; regions?: string[] };
+    workPath: string;
+  }) {
     const opts = { cwd: workPath };
     const files = await glob('**', opts);
     delete files['vercel.json']; // Builders/Runtimes didn't have vercel.json
     const entrypoints = await glob(`api/**/*${ext}`, opts);
     const pages: { [key: string]: any } = {};
-    const { functions = {} } = await readVercelConfig(workPath);
+    const { functions = {} } = vercelConfig;
     const traceDir = join(workPath, '.output', 'runtime-traced-files');
     await fs.ensureDir(traceDir);
 
@@ -98,7 +105,7 @@ export function convertRuntimeToPlugin(
       await fs.writeFile(nft, json);
     }
 
-    await updateFunctionsManifest({ workPath, pages });
+    await updateFunctionsManifest({ vercelConfig, workPath, pages });
   };
 }
 
@@ -124,22 +131,17 @@ async function readJson(filePath: string): Promise<{ [key: string]: any }> {
   }
 }
 
-async function readVercelConfig(
-  workPath: string
-): Promise<{ functions?: BuilderFunctions; regions?: string[] }> {
-  const vercelJsonPath = join(workPath, 'vercel.json');
-  return readJson(vercelJsonPath);
-}
-
 /**
  * If `.output/functions-manifest.json` exists, append to the pages
  * property. Otherwise write a new file. This will also read `vercel.json`
  * and apply relevant `functions` property config.
  */
 export async function updateFunctionsManifest({
+  vercelConfig,
   workPath,
   pages,
 }: {
+  vercelConfig: { functions?: BuilderFunctions; regions?: string[] };
   workPath: string;
   pages: { [key: string]: any };
 }) {
@@ -148,7 +150,6 @@ export async function updateFunctionsManifest({
     '.output',
     'functions-manifest.json'
   );
-  const vercelConfig = await readVercelConfig(workPath);
   const functionsManifest = await readJson(functionsManifestPath);
 
   if (!functionsManifest.version) functionsManifest.version = 1;
