@@ -55,6 +55,11 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
     defaultRoutes: [
       {
+        src: '^/build/(.*)$',
+        headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
         handle: 'filesystem',
       },
       {
@@ -69,6 +74,15 @@ export const frameworks = [
         destination: '/api',
       },
     ],
+    defaultHeaders: [
+      {
+        source: '^/build/(.*)$',
+        regex: '^/build/(.*)$',
+        headers: [
+          { key: 'cache-control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+    ]
   },
   {
     name: 'Blitz.js',
