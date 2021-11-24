@@ -43,8 +43,8 @@ export const frameworks = [
         value: 'remix build',
       },
       devCommand: {
-        value: 'preact watch --port $PORT',
-        placeholder: 'remix watch',
+        value: 'remix dev --port $PORT',
+        placeholder: 'remix dev',
       },
       outputDirectory: {
         value: 'public',
