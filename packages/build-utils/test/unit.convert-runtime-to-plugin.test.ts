@@ -18,14 +18,52 @@ async function fsToJson(dir: string, output: Record<string, any> = {}) {
   return output;
 }
 
-const workPath = join(__dirname, 'walk', 'python-api');
+const invalidFuncWorkpath = join(
+  __dirname,
+  'convert-runtime',
+  'invalid-functions'
+);
+const pythonApiWorkpath = join(__dirname, 'convert-runtime', 'python-api');
 
 describe('convert-runtime-to-plugin', () => {
   afterEach(async () => {
-    await fs.remove(join(workPath, '.output'));
+    await fs.remove(join(invalidFuncWorkpath, '.output'));
+    await fs.remove(join(pythonApiWorkpath, '.output'));
+  });
+
+  it('should error with invalid functions prop', async () => {
+    const workPath = invalidFuncWorkpath;
+    const lambdaOptions = {
+      handler: 'index.handler',
+      runtime: 'nodejs14.x',
+      memory: 512,
+      maxDuration: 5,
+      environment: {},
+      regions: ['sfo1'],
+    };
+
+    const buildRuntime = async (opts: BuildOptions) => {
+      const lambda = await createLambda({
+        files: opts.files,
+        ...lambdaOptions,
+      });
+      return { output: lambda };
+    };
+
+    const lambdaFiles = await fsToJson(workPath);
+    const vercelConfig = JSON.parse(lambdaFiles['vercel.json']);
+    delete lambdaFiles['vercel.json'];
+    const build = await convertRuntimeToPlugin(buildRuntime, '.js');
+
+    expect(build({ vercelConfig, workPath })).rejects.toThrow(
+      new Error(
+        'The pattern "api/doesnt-exist.rb" defined in `functions` doesn\'t match any Serverless Functions inside the `api` directory.'
+      )
+    );
   });
 
   it('should create correct fileystem for python', async () => {
+    const workPath = pythonApiWorkpath;
     const lambdaOptions = {
       handler: 'index.handler',
       runtime: 'python3.9',
@@ -53,6 +91,7 @@ describe('convert-runtime-to-plugin', () => {
     const output = await fsToJson(join(workPath, '.output'));
     expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
+      'routes-manifest.json': expect.stringContaining('{'),
       'runtime-traced-files': lambdaFiles,
       server: {
         pages: {
@@ -80,13 +119,53 @@ describe('convert-runtime-to-plugin', () => {
       },
     });
 
+    const routesManifest = JSON.parse(output['routes-manifest.json']);
+    expect(routesManifest).toMatchObject({
+      version: 3,
+      pages404: true,
+      redirects: [],
+      rewrites: [
+        /* TODO: `handle: miss`
+        {
+          source: "^/api/(.+)(?:\\.(?:py))$",
+          destination: "/api/db/[id]?id=$1",
+          regex: "^/api/(.+)(?:\\.(?:py))$"
+        }
+        */
+      ],
+      dynamicRoutes: [
+        {
+          page: '/api/project/[aid]/[bid]/index',
+          regex: '^/api/project/([^/]+)/([^/]+)(/|/index|/index\\.py)?$',
+          routeKeys: { aid: 'aid', bid: 'bid' },
+          namedRegex:
+            '^/api/project/(?<aid>[^/]+)/(?<bid>[^/]+)(/|/index|/index\\.py)?$',
+        },
+        {
+          page: '/api/db/[id]',
+          regex: '^/api/db/([^/]+)$',
+          routeKeys: { id: 'id' },
+          namedRegex: '^/api/db/(?<id>[^/]+)$',
+        },
+      ],
+    });
+
     const indexJson = JSON.parse(output.server.pages.api['index.py.nft.json']);
     expect(indexJson).toMatchObject({
       version: 1,
       files: [
         {
+          input: '../../../../runtime-traced-files/api/db/[id].py',
+          output: 'api/db/[id].py',
+        },
+        {
           input: '../../../../runtime-traced-files/api/index.py',
           output: 'api/index.py',
+        },
+        {
+          input:
+            '../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          output: 'api/project/[aid]/[bid]/index.py',
         },
         {
           input: '../../../../runtime-traced-files/api/users/get.py',
@@ -118,8 +197,17 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
+          input: '../../../../../runtime-traced-files/api/db/[id].py',
+          output: 'api/db/[id].py',
+        },
+        {
           input: '../../../../../runtime-traced-files/api/index.py',
           output: 'api/index.py',
+        },
+        {
+          input:
+            '../../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          output: 'api/project/[aid]/[bid]/index.py',
         },
         {
           input: '../../../../../runtime-traced-files/api/users/get.py',
@@ -151,8 +239,17 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
+          input: '../../../../../runtime-traced-files/api/db/[id].py',
+          output: 'api/db/[id].py',
+        },
+        {
           input: '../../../../../runtime-traced-files/api/index.py',
           output: 'api/index.py',
+        },
+        {
+          input:
+            '../../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          output: 'api/project/[aid]/[bid]/index.py',
         },
         {
           input: '../../../../../runtime-traced-files/api/users/get.py',
