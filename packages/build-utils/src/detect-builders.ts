@@ -16,12 +16,6 @@ interface ErrorResponse {
   link?: string;
 }
 
-interface DynamicRoutesWithKeys {
-  fileName: string;
-  regex: string;
-  routeKeys: { [key: string]: string };
-}
-
 interface Options {
   tag?: 'canary' | 'latest' | string;
   functions?: BuilderFunctions;
@@ -102,7 +96,7 @@ export async function detectBuilders(
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
-  dynamicRoutesWithKeys: DynamicRoutesWithKeys[] | null;
+  limitedRoutes: LimitedRoutes | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
@@ -121,7 +115,7 @@ export async function detectBuilders(
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
-      dynamicRoutesWithKeys: null,
+      limitedRoutes: null,
     };
   }
 
@@ -165,14 +159,13 @@ export async function detectBuilders(
 
   const apiRoutes: Source[] = [];
   const dynamicRoutes: Source[] = [];
-  const dynamicRoutesWithKeys: DynamicRoutesWithKeys[] = [];
 
   // API
   for (const fileName of sortedFiles) {
     const apiBuilder = maybeGetApiBuilder(fileName, apiMatches, options);
 
     if (apiBuilder) {
-      const { routeError, apiRoute, isDynamic, routeKeys } = getApiRoute(
+      const { routeError, apiRoute, isDynamic } = getApiRoute(
         fileName,
         apiSortedFiles,
         options,
@@ -188,7 +181,7 @@ export async function detectBuilders(
           redirectRoutes: null,
           rewriteRoutes: null,
           errorRoutes: null,
-          dynamicRoutesWithKeys: null,
+          limitedRoutes: null,
         };
       }
 
@@ -196,11 +189,6 @@ export async function detectBuilders(
         apiRoutes.push(apiRoute);
         if (isDynamic) {
           dynamicRoutes.push(apiRoute);
-          dynamicRoutesWithKeys.push({
-            fileName,
-            regex: apiRoute.src,
-            routeKeys,
-          });
         }
       }
 
@@ -272,7 +260,7 @@ export async function detectBuilders(
         defaultRoutes: null,
         rewriteRoutes: null,
         errorRoutes: null,
-        dynamicRoutesWithKeys: null,
+        limitedRoutes: null,
       };
     }
 
@@ -315,7 +303,7 @@ export async function detectBuilders(
       defaultRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
-      dynamicRoutesWithKeys: null,
+      limitedRoutes: null,
     };
   }
 
@@ -343,6 +331,7 @@ export async function detectBuilders(
   }
 
   const routesResult = getRouteResult(
+    pkg,
     apiRoutes,
     dynamicRoutes,
     usedOutputDirectory,
@@ -359,7 +348,7 @@ export async function detectBuilders(
     defaultRoutes: routesResult.defaultRoutes,
     rewriteRoutes: routesResult.rewriteRoutes,
     errorRoutes: routesResult.errorRoutes,
-    dynamicRoutesWithKeys,
+    limitedRoutes: routesResult.limitedRoutes,
   };
 }
 
@@ -693,7 +682,6 @@ function getApiRoute(
 ): {
   apiRoute: Source | null;
   isDynamic: boolean;
-  routeKeys: { [key: string]: string };
   routeError: ErrorResponse | null;
 } {
   const conflictingSegment = getConflictingSegment(fileName);
@@ -702,7 +690,6 @@ function getApiRoute(
     return {
       apiRoute: null,
       isDynamic: false,
-      routeKeys: {},
       routeError: {
         code: 'conflicting_path_segment',
         message:
@@ -723,7 +710,6 @@ function getApiRoute(
     return {
       apiRoute: null,
       isDynamic: false,
-      routeKeys: {},
       routeError: {
         code: 'conflicting_file_path',
         message:
@@ -743,7 +729,6 @@ function getApiRoute(
   return {
     apiRoute: out.route,
     isDynamic: out.isDynamic,
-    routeKeys: out.routeKeys,
     routeError: null,
   };
 }
@@ -889,12 +874,11 @@ function createRouteFromPath(
   filePath: string,
   featHandleMiss: boolean,
   cleanUrls: boolean
-): { route: Source; isDynamic: boolean; routeKeys: { [key: string]: string } } {
+): { route: Source; isDynamic: boolean } {
   const parts = filePath.split('/');
 
   let counter = 1;
   const query: string[] = [];
-  const routeKeys: { [key: string]: string } = {};
   let isDynamic = false;
 
   const srcParts = parts.map((segment, i): string => {
@@ -904,7 +888,6 @@ function createRouteFromPath(
     if (name !== null) {
       // We can't use `URLSearchParams` because `$` would get escaped
       query.push(`${name}=$${counter++}`);
-      routeKeys[name] = name;
       isDynamic = true;
       return `([^/]+)`;
     } else if (isLast) {
@@ -953,10 +936,17 @@ function createRouteFromPath(
     };
   }
 
-  return { route, isDynamic, routeKeys };
+  return { route, isDynamic };
+}
+
+interface LimitedRoutes {
+  defaultRoutes: Route[];
+  redirectRoutes: Route[];
+  rewriteRoutes: Route[];
 }
 
 function getRouteResult(
+  pkg: PackageJson | undefined | null,
   apiRoutes: Source[],
   dynamicRoutes: Source[],
   outputDirectory: string,
@@ -968,11 +958,18 @@ function getRouteResult(
   redirectRoutes: Route[];
   rewriteRoutes: Route[];
   errorRoutes: Route[];
+  limitedRoutes: LimitedRoutes;
 } {
+  const deps = Object.assign({}, pkg?.dependencies, pkg?.devDependencies);
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
+  const limitedRoutes: LimitedRoutes = {
+    defaultRoutes: [],
+    redirectRoutes: [],
+    rewriteRoutes: [],
+  };
   const framework = frontendBuilder?.config?.framework || '';
   const isNextjs =
     framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
@@ -980,14 +977,43 @@ function getRouteResult(
 
   if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
+      // Exclude extension names if the corresponding plugin is not found in package.json
+      // detectBuilders({ignoreRoutesForBuilders: ['@vercel/python']})
+      // return a copy of routes.
+      // We should exclud errorRoutes and
       const extSet = detectApiExtensions(apiBuilders);
+      const withTag = options.tag ? `@${options.tag}` : '';
+      const extSetLimited = detectApiExtensions(
+        apiBuilders.filter(b => {
+          if (
+            b.use === `@vercel/python${withTag}` &&
+            !('vercel-plugin-python' in deps)
+          ) {
+            return false;
+          }
+          if (
+            b.use === `@vercel/go${withTag}` &&
+            !('vercel-plugin-go' in deps)
+          ) {
+            return false;
+          }
+          if (
+            b.use === `@vercel/ruby${withTag}` &&
+            !('vercel-plugin-ruby' in deps)
+          ) {
+            return false;
+          }
+          return true;
+        })
+      );
 
       if (extSet.size > 0) {
-        const exts = Array.from(extSet)
+        const extGroup = `(?:\\.(?:${Array.from(extSet)
           .map(ext => ext.slice(1))
-          .join('|');
-
-        const extGroup = `(?:\\.(?:${exts}))`;
+          .join('|')}))`;
+        const extGroupLimited = `(?:\\.(?:${Array.from(extSetLimited)
+          .map(ext => ext.slice(1))
+          .join('|')}))`;
 
         if (options.cleanUrls) {
           redirectRoutes.push({
@@ -1003,6 +1029,20 @@ function getRouteResult(
             },
             status: 308,
           });
+
+          limitedRoutes.redirectRoutes.push({
+            src: `^/(api(?:.+)?)/index${extGroupLimited}?/?$`,
+            headers: { Location: options.trailingSlash ? '/$1/' : '/$1' },
+            status: 308,
+          });
+
+          limitedRoutes.redirectRoutes.push({
+            src: `^/api/(.+)${extGroupLimited}/?$`,
+            headers: {
+              Location: options.trailingSlash ? '/api/$1/' : '/api/$1',
+            },
+            status: 308,
+          });
         } else {
           defaultRoutes.push({ handle: 'miss' });
           defaultRoutes.push({
@@ -1010,10 +1050,18 @@ function getRouteResult(
             dest: '/api/$1',
             check: true,
           });
+
+          limitedRoutes.defaultRoutes.push({ handle: 'miss' });
+          limitedRoutes.defaultRoutes.push({
+            src: `^/api/(.+)${extGroupLimited}$`,
+            dest: '/api/$1',
+            check: true,
+          });
         }
       }
 
       rewriteRoutes.push(...dynamicRoutes);
+      limitedRoutes.rewriteRoutes.push(...dynamicRoutes);
 
       if (typeof ignoreRuntimes === 'undefined') {
         // This route is only necessary to hide the directory listing
@@ -1064,6 +1112,7 @@ function getRouteResult(
     redirectRoutes,
     rewriteRoutes,
     errorRoutes,
+    limitedRoutes,
   };
 }
 
