@@ -31,37 +31,6 @@ describe('convert-runtime-to-plugin', () => {
     await fs.remove(join(pythonApiWorkpath, '.output'));
   });
 
-  it('should error with invalid functions prop', async () => {
-    const workPath = invalidFuncWorkpath;
-    const lambdaOptions = {
-      handler: 'index.handler',
-      runtime: 'nodejs14.x',
-      memory: 512,
-      maxDuration: 5,
-      environment: {},
-      regions: ['sfo1'],
-    };
-
-    const buildRuntime = async (opts: BuildOptions) => {
-      const lambda = await createLambda({
-        files: opts.files,
-        ...lambdaOptions,
-      });
-      return { output: lambda };
-    };
-
-    const lambdaFiles = await fsToJson(workPath);
-    const vercelConfig = JSON.parse(lambdaFiles['vercel.json']);
-    delete lambdaFiles['vercel.json'];
-    const build = await convertRuntimeToPlugin(buildRuntime, '.js');
-
-    expect(build({ vercelConfig, workPath })).rejects.toThrow(
-      new Error(
-        'The pattern "api/doesnt-exist.rb" defined in `functions` doesn\'t match any Serverless Functions inside the `api` directory.'
-      )
-    );
-  });
-
   it('should create correct fileystem for python', async () => {
     const workPath = pythonApiWorkpath;
     const lambdaOptions = {
@@ -70,7 +39,6 @@ describe('convert-runtime-to-plugin', () => {
       memory: 512,
       maxDuration: 5,
       environment: {},
-      regions: ['sfo1'],
     };
 
     const buildRuntime = async (opts: BuildOptions) => {
@@ -91,7 +59,6 @@ describe('convert-runtime-to-plugin', () => {
     const output = await fsToJson(join(workPath, '.output'));
     expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
-      'routes-manifest.json': expect.stringContaining('{'),
       'runtime-traced-files': lambdaFiles,
       server: {
         pages: {
@@ -117,37 +84,6 @@ describe('convert-runtime-to-plugin', () => {
         'api/users/get.py': lambdaOptions,
         'api/users/post.py': { ...lambdaOptions, memory: 3008 },
       },
-    });
-
-    const routesManifest = JSON.parse(output['routes-manifest.json']);
-    expect(routesManifest).toMatchObject({
-      version: 3,
-      pages404: true,
-      redirects: [],
-      rewrites: [
-        /* TODO: `handle: miss`
-        {
-          source: "^/api/(.+)(?:\\.(?:py))$",
-          destination: "/api/db/[id]?id=$1",
-          regex: "^/api/(.+)(?:\\.(?:py))$"
-        }
-        */
-      ],
-      dynamicRoutes: [
-        {
-          page: '/api/project/[aid]/[bid]/index',
-          regex: '^/api/project/([^/]+)/([^/]+)(/|/index|/index\\.py)?$',
-          routeKeys: { aid: 'aid', bid: 'bid' },
-          namedRegex:
-            '^/api/project/(?<aid>[^/]+)/(?<bid>[^/]+)(/|/index|/index\\.py)?$',
-        },
-        {
-          page: '/api/db/[id]',
-          regex: '^/api/db/([^/]+)$',
-          routeKeys: { id: 'id' },
-          namedRegex: '^/api/db/(?<id>[^/]+)$',
-        },
-      ],
     });
 
     const indexJson = JSON.parse(output.server.pages.api['index.py.nft.json']);

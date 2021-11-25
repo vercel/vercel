@@ -2,7 +2,6 @@ import fs from 'fs-extra';
 import { join, dirname, relative } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
-import { detectBuilders } from './detect-builders';
 import { FILES_SYMBOL, getLambdaOptionsFromFunction, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuilderFunctions, BuildOptions, Files } from './types';
@@ -25,8 +24,6 @@ export function convertRuntimeToPlugin(
     vercelConfig: {
       functions?: BuilderFunctions;
       regions?: string[];
-      trailingSlash?: boolean;
-      cleanUrls?: boolean;
     };
     workPath: string;
   }) {
@@ -35,7 +32,7 @@ export function convertRuntimeToPlugin(
     delete files['vercel.json']; // Builders/Runtimes didn't have vercel.json
     const entrypoints = await glob(`api/**/*${ext}`, opts);
     const pages: { [key: string]: any } = {};
-    const { functions = {}, cleanUrls, trailingSlash } = vercelConfig;
+    const { functions = {} } = vercelConfig;
     const traceDir = join(workPath, '.output', 'runtime-traced-files');
     await fs.ensureDir(traceDir);
 
@@ -64,7 +61,7 @@ export function convertRuntimeToPlugin(
         maxDuration: output.maxDuration,
         environment: output.environment,
         allowQuery: output.allowQuery,
-        regions: output.regions,
+        //regions: output.regions,
       };
 
       // @ts-ignore This symbol is a private API
@@ -112,61 +109,6 @@ export function convertRuntimeToPlugin(
     }
 
     await updateFunctionsManifest({ vercelConfig, workPath, pages });
-
-    const {
-      warnings,
-      errors,
-      //defaultRoutes,
-      redirectRoutes,
-      //rewriteRoutes,
-      dynamicRoutesWithKeys,
-      // errorRoutes, already handled by pages404
-    } = await detectBuilders(Object.keys(files), null, {
-      tag: 'latest',
-      functions: functions,
-      projectSettings: undefined,
-      featHandleMiss: true,
-      cleanUrls,
-      trailingSlash,
-    });
-
-    if (errors) {
-      throw new Error(errors[0].message);
-    }
-
-    if (warnings) {
-      warnings.forEach(warning => console.warn(warning.message, warning.link));
-    }
-
-    const redirects = redirectRoutes
-      ?.filter(r => r.src && 'headers' in r)
-      ?.map(r => ({
-        source: r.src || '',
-        destination:
-          'headers' in r && r.headers?.Location ? r.headers.Location : '',
-        statusCode: 'status' in r && r.status ? r.status : 307,
-        regex: r.src || '',
-      }));
-
-    const dynamicRoutes = dynamicRoutesWithKeys?.map(r => {
-      const keys = Object.keys(r.routeKeys);
-      return {
-        page: '/' + r.fileName.slice(0, -ext.length),
-        regex: r.regex,
-        routeKeys: r.routeKeys,
-        namedRegex: r.regex
-          .split('([^/]+)')
-          .map((str, i) => str + (keys[i] ? `(?<${keys[i]}>[^/]+)` : ''))
-          .join(''),
-      };
-    });
-
-    await updateRoutesManifest({
-      workPath,
-      redirects,
-      rewrites: [],
-      dynamicRoutes,
-    });
   };
 }
 
