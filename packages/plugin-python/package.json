@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "vercel-plugin-python",
-  "version": "1.0.0-canary.9",
+  "version": "1.0.0-canary.10",
   "main": "dist/index.js",
   "license": "MIT",
   "files": [
@@ -17,7 +17,7 @@
     "prepublishOnly": "tsc"
   },
   "dependencies": {
-    "@vercel/build-utils": "2.12.3-canary.23",
+    "@vercel/build-utils": "2.12.3-canary.24",
     "@vercel/python": "2.1.2-canary.0"
   },
   "devDependencies": {
