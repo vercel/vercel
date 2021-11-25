@@ -251,8 +251,8 @@ export const frameworks = [
     ],
     defaultHeaders: [
       {
-        source: '^/build/(.*)$',
-        regex: '^/build/(.*)$',
+        source: '/build/(.*)',
+        regex: '/build/(.*)',
         headers: [
           { key: 'cache-control', value: 'public, max-age=31536000, immutable' },
         ],
