@@ -14,7 +14,7 @@ import { assert } from 'console';
 import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import ogGlob from 'glob';
-import { isAbsolute, join, parse, relative, resolve } from 'path';
+import { dirname, isAbsolute, join, parse, relative, resolve } from 'path';
 import pluralize from 'pluralize';
 import Client from '../util/client';
 import { VercelConfig } from '../util/dev/types';
@@ -329,22 +329,40 @@ export default async function main(client: Client) {
       cwd,
     });
   }
-  // don't trust framework detection here because they might be switching to next on a branch
-  const isNextJs = fs.existsSync(join(cwd, '.next'));
 
   if (!fs.existsSync(join(cwd, OUTPUT_DIR))) {
-    let outputDir = join(OUTPUT_DIR, 'static');
-    let distDir = await framework.getFsOutputDir(cwd);
-    if (isNextJs) {
-      outputDir = OUTPUT_DIR;
+    let dotNextDir: string | null = null;
+
+    if (fs.existsSync(join(cwd, '.next'))) {
+      dotNextDir = join(cwd, '.next');
+      client.output.debug(`Found ${param('.next')} directory.`);
+    } else if (
+      buildState.outputDirectory &&
+      fs.existsSync(join(cwd, buildState.outputDirectory, 'BUILD_ID'))
+    ) {
+      dotNextDir = join(cwd, buildState.outputDirectory);
+      client.output.debug(
+        `Consider ${param(buildState.outputDirectory)} as ${param(
+          '.next'
+        )} output.`
+      );
     }
-    const copyStamp = stamp();
+
+    // don't trust framework detection here because they might be switching to next on a branch
+    const isNextOutput =
+      Boolean(dotNextDir) ||
+      framework.slug === 'nextjs' ||
+      framework.slug === 'blitzjs';
+    const outputDir = isNextOutput ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
+    const distDir = dotNextDir || (await framework.getFsOutputDir(cwd));
+
     await fs.ensureDir(join(cwd, outputDir));
-    const relativeDistDir = relative(cwd, distDir);
+
+    const copyStamp = stamp();
     client.output.spinner(
       `Copying files from ${param(distDir)} to ${param(outputDir)}`
     );
-    const files = await glob(join(relativeDistDir, '**'), {
+    const files = await glob(join(relative(cwd, distDir), '**'), {
       ignore: [
         'node_modules/**',
         '.vercel/**',
@@ -392,6 +410,7 @@ export default async function main(client: Client) {
         `Generating build manifest: ${param(buildManifestPath)}`
       );
       const buildManifest = {
+        version: 1,
         cache: framework.cachePattern ? [framework.cachePattern] : [],
       };
       await fs.writeJSON(buildManifestPath, buildManifest, { spaces: 2 });
@@ -419,17 +438,14 @@ export default async function main(client: Client) {
     }
 
     // Special Next.js processing.
-    if (isNextJs) {
+    if (isNextOutput) {
       // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
       const tempStatic = '___static';
+      await fs.rename(join(outputDir, 'static'), join(outputDir, tempStatic));
+      await fs.mkdirp(join(outputDir, 'static', '_next', 'static'));
       await fs.rename(
-        join(cwd, OUTPUT_DIR, 'static'),
-        join(cwd, OUTPUT_DIR, tempStatic)
-      );
-      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'static', '_next', 'static'));
-      await fs.rename(
-        join(cwd, OUTPUT_DIR, tempStatic),
-        join(cwd, OUTPUT_DIR, 'static', '_next', 'static')
+        join(outputDir, tempStatic),
+        join(outputDir, 'static', '_next', 'static')
       );
 
       // Next.js might reference files from the `static` directory in `middleware-manifest.json`.
@@ -470,10 +486,12 @@ export default async function main(client: Client) {
       // `public`, then`static`). We can't read both at the same time because that would mean we'd
       // read public for old Next.js versions that don't support it, which might be breaking (and
       // we don't want to make vercel build specific framework versions).
+      const nextSrcDirectory = dirname(distDir);
+
       const publicFiles = await glob('public/**', {
         nodir: true,
         dot: true,
-        cwd,
+        cwd: nextSrcDirectory,
         absolute: true,
       });
       if (publicFiles.length > 0) {
@@ -490,7 +508,7 @@ export default async function main(client: Client) {
         const staticFiles = await glob('static/**', {
           nodir: true,
           dot: true,
-          cwd,
+          cwd: nextSrcDirectory,
           absolute: true,
         });
         await Promise.all(
@@ -517,6 +535,7 @@ export default async function main(client: Client) {
       const nftFiles = await glob(join(OUTPUT_DIR, '**', '*.nft.json'), {
         nodir: true,
         dot: true,
+        ignore: ['cache/**'],
         cwd,
         absolute: true,
       });
@@ -553,6 +572,7 @@ export default async function main(client: Client) {
             baseDir,
             outputDir: OUTPUT_DIR,
             nftFileName: f.replace(ext, '.js.nft.json'),
+            distDir,
             nft: {
               version: 1,
               files: Array.from(fileList).map(fileListEntry =>
@@ -570,10 +590,12 @@ export default async function main(client: Client) {
             outputDir: OUTPUT_DIR,
             nftFileName: f,
             nft: json,
+            distDir,
           });
         }
       }
 
+      client.output.debug(`Resolve ${param('required-server-files.json')}.`);
       const requiredServerFilesPath = join(
         OUTPUT_DIR,
         'required-server-files.json'
@@ -772,21 +794,34 @@ async function resolveNftToOutput({
   baseDir,
   outputDir,
   nftFileName,
+  distDir,
   nft,
 }: {
   client: Client;
   baseDir: string;
   outputDir: string;
   nftFileName: string;
+  distDir: string;
   nft: NftFile;
 }) {
   client.output.debug(`Processing and resolving ${nftFileName}`);
   await fs.ensureDir(join(outputDir, 'inputs'));
   const newFilesList: NftFile['files'] = [];
+
+  // If `distDir` is a subdirectory, then the input has to be resolved to where the `.output` directory will be.
+  const relNftFileName = relative(outputDir, nftFileName);
+  const origNftFilename = join(distDir, relNftFileName);
+
+  if (relNftFileName.startsWith('cache/')) {
+    // No need to process the `cache/` directory.
+    // Paths in it might also not be relative to `cache` itself.
+    return;
+  }
+
   for (let fileEntity of nft.files) {
-    const relativeInput: string =
+    const relativeInput =
       typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
-    const fullInput = resolve(join(parse(nftFileName).dir, relativeInput));
+    const fullInput = resolve(join(parse(origNftFilename).dir, relativeInput));
 
     // if the resolved path is NOT in the .output directory we move in it there
     if (!fullInput.includes(outputDir)) {
