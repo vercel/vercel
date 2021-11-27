@@ -286,10 +286,22 @@ export default async function main(client: Client) {
 
   // Yarn v2 PnP mode may be activated, so force
   // "node-modules" linker style
-  const env = {
+  const env: Record<string, string | undefined> = {
     YARN_NODE_LINKER: 'node-modules',
     ...spawnOpts.env,
   };
+
+  if (framework && process.env.VERCEL_URL && 'envPrefix' in framework) {
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('VERCEL_')) {
+        const newKey = `${framework.envPrefix}${key}`;
+        // Set `process.env` and `env` to make sure the variables are
+        // available the the `build` step and the CLI Plugins.
+        process.env[newKey] = process.env[newKey] || process.env[key];
+        env[newKey] = process.env[newKey];
+      }
+    }
+  }
 
   if (typeof buildState.buildCommand === 'string') {
     console.log(`Running Build Command: ${cmd(buildState.buildCommand)}`);
