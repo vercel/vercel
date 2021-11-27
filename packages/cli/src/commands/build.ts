@@ -300,7 +300,7 @@ export default async function main(client: Client) {
 
   // Yarn v2 PnP mode may be activated, so force
   // "node-modules" linker style
-  const env: Record<string, string | undefined> = {
+  const env = {
     YARN_NODE_LINKER: 'node-modules',
     ...spawnOpts.env,
   };
