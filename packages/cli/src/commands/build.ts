@@ -443,7 +443,7 @@ export default async function main(client: Client) {
       const tempStatic = '___static';
       await fs.rename(
         join(cwd, OUTPUT_DIR, 'static'),
-        join(outputDir, tempStatic)
+        join(cwd, OUTPUT_DIR, tempStatic)
       );
       await fs.mkdirp(join(cwd, OUTPUT_DIR, 'static', '_next', 'static'));
       await fs.rename(
@@ -619,11 +619,14 @@ export default async function main(client: Client) {
         ...requiredServerFilesJson,
         appDir: '.',
         files: requiredServerFilesJson.files.map((i: string) => {
-          const absolutePath = join(cwd, i.replace('.next', '.output'));
+          const originalPath = join(dirname(distDir), i);
+          const relPath = join(OUTPUT_DIR, relative(distDir, originalPath));
+
+          const absolutePath = join(cwd, relPath);
           const output = relative(baseDir, absolutePath);
 
           return {
-            input: i.replace('.next', '.output'),
+            input: relPath,
             output,
           };
         }),
@@ -836,7 +839,7 @@ async function resolveNftToOutput({
     const fullInput = resolve(join(parse(origNftFilename).dir, relativeInput));
 
     // if the resolved path is NOT in the .output directory we move in it there
-    if (!fullInput.includes(outputDir)) {
+    if (!fullInput.includes(distDir)) {
       const { ext } = parse(fullInput);
       const raw = await fs.readFile(fullInput);
       const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
