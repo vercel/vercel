@@ -136,9 +136,11 @@ export default async function main(client: Client) {
   });
 
   // Set process.env with loaded environment variables
-  await processEnv(loadedEnvFiles);
+  processEnv(loadedEnvFiles);
 
-  const spawnOpts = {
+  const spawnOpts: {
+    env: Record<string, string | undefined>;
+  } = {
     env: { ...combinedEnv, VERCEL: '1' },
   };
 
@@ -284,24 +286,24 @@ export default async function main(client: Client) {
   // Clean the output directory
   fs.removeSync(join(cwd, OUTPUT_DIR));
 
+  if (framework && process.env.VERCEL_URL && 'envPrefix' in framework) {
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('VERCEL_')) {
+        const newKey = `${framework.envPrefix}${key}`;
+        // Set `process.env` and `spawnOpts.env` to make sure the variables are
+        // available to the `build` step and the CLI Plugins.
+        process.env[newKey] = process.env[newKey] || process.env[key];
+        spawnOpts.env[newKey] = process.env[newKey];
+      }
+    }
+  }
+
   // Yarn v2 PnP mode may be activated, so force
   // "node-modules" linker style
   const env: Record<string, string | undefined> = {
     YARN_NODE_LINKER: 'node-modules',
     ...spawnOpts.env,
   };
-
-  if (framework && process.env.VERCEL_URL && 'envPrefix' in framework) {
-    for (const key of Object.keys(process.env)) {
-      if (key.startsWith('VERCEL_')) {
-        const newKey = `${framework.envPrefix}${key}`;
-        // Set `process.env` and `env` to make sure the variables are
-        // available the the `build` step and the CLI Plugins.
-        process.env[newKey] = process.env[newKey] || process.env[key];
-        env[newKey] = process.env[newKey];
-      }
-    }
-  }
 
   if (typeof buildState.buildCommand === 'string') {
     console.log(`Running Build Command: ${cmd(buildState.buildCommand)}`);
