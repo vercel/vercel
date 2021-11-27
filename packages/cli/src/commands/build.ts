@@ -441,11 +441,14 @@ export default async function main(client: Client) {
     if (isNextOutput) {
       // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
       const tempStatic = '___static';
-      await fs.rename(join(outputDir, 'static'), join(outputDir, tempStatic));
-      await fs.mkdirp(join(outputDir, 'static', '_next', 'static'));
       await fs.rename(
-        join(outputDir, tempStatic),
-        join(outputDir, 'static', '_next', 'static')
+        join(cwd, OUTPUT_DIR, 'static'),
+        join(outputDir, tempStatic)
+      );
+      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'static', '_next', 'static'));
+      await fs.rename(
+        join(cwd, OUTPUT_DIR, tempStatic),
+        join(cwd, OUTPUT_DIR, 'static', '_next', 'static')
       );
 
       // Next.js might reference files from the `static` directory in `middleware-manifest.json`.
@@ -500,7 +503,11 @@ export default async function main(client: Client) {
             smartCopy(
               client,
               f,
-              f.replace('public', join(OUTPUT_DIR, 'static'))
+              join(
+                OUTPUT_DIR,
+                'static',
+                relative(join(dirname(distDir), 'public'), f)
+              )
             )
           )
         );
@@ -516,7 +523,12 @@ export default async function main(client: Client) {
             smartCopy(
               client,
               f,
-              f.replace('static', join(OUTPUT_DIR, 'static', 'static'))
+              join(
+                OUTPUT_DIR,
+                'static',
+                'static',
+                relative(join(dirname(distDir), 'static'), f)
+              )
             )
           )
         );
