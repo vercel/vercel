@@ -333,28 +333,30 @@ export default async function main(client: Client) {
   if (!fs.existsSync(join(cwd, OUTPUT_DIR))) {
     let dotNextDir: string | null = null;
 
-    if (fs.existsSync(join(cwd, '.next'))) {
+    // If a custom `outputDirectory` was set, we'll need to verify
+    // if it's `.next` output, or just static output.
+    const userOutputDirectory = project.settings.outputDirectory;
+
+    if (typeof userOutputDirectory === 'string') {
+      if (fs.existsSync(join(cwd, userOutputDirectory, 'BUILD_ID'))) {
+        dotNextDir = join(cwd, userOutputDirectory);
+        client.output.debug(
+          `Consider ${param(userOutputDirectory)} as ${param('.next')} output.`
+        );
+      }
+    } else if (fs.existsSync(join(cwd, '.next'))) {
       dotNextDir = join(cwd, '.next');
       client.output.debug(`Found ${param('.next')} directory.`);
-    } else if (
-      buildState.outputDirectory &&
-      fs.existsSync(join(cwd, buildState.outputDirectory, 'BUILD_ID'))
-    ) {
-      dotNextDir = join(cwd, buildState.outputDirectory);
-      client.output.debug(
-        `Consider ${param(buildState.outputDirectory)} as ${param(
-          '.next'
-        )} output.`
-      );
     }
 
-    // don't trust framework detection here because they might be switching to next on a branch
-    const isNextOutput =
-      Boolean(dotNextDir) ||
-      framework.slug === 'nextjs' ||
-      framework.slug === 'blitzjs';
+    // We cannot rely on the `framework` alone, as it might be a static export,
+    // and the current build might use a differnt project that's not in the settings.
+    const isNextOutput = Boolean(dotNextDir);
     const outputDir = isNextOutput ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
-    const distDir = dotNextDir || (await framework.getFsOutputDir(cwd));
+    const distDir =
+      dotNextDir ||
+      userOutputDirectory ||
+      (await framework.getFsOutputDir(cwd));
 
     await fs.ensureDir(join(cwd, outputDir));
 
