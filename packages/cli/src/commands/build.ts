@@ -298,6 +298,9 @@ export default async function main(client: Client) {
     }
   }
 
+  // Required for Next.js to produce the correct `.nft.json` files.
+  spawnOpts.env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT = baseDir;
+
   // Yarn v2 PnP mode may be activated, so force
   // "node-modules" linker style
   const env = {
