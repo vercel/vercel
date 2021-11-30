@@ -132,12 +132,12 @@ export async function build({
         'did not find a vendor directory but found a Gemfile, bundling gems...'
       );
 
-      const gemFileAtRoot = relative(workPath, gemfilePath) === gemfileName;
+      const fileAtRoot = relative(workPath, gemfilePath) === gemfileName;
 
       // If the `Gemfile` is located in the Root Directory of the project and
       // the new File System API is used (`avoidTopLevelInstall`), the Install Command
       // will have already installed its dependencies, so we don't need to do it again.
-      if (meta.avoidTopLevelInstall && gemFileAtRoot) {
+      if (meta.avoidTopLevelInstall && fileAtRoot) {
         debug('Skipping `bundle install` — already handled by Install Command');
       } else {
         // try installing. this won't work if native extesions are required.
