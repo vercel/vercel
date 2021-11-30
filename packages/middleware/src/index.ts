@@ -51,6 +51,18 @@ async function getMiddlewareFile(workingDirectory: string) {
   return middlewareFiles[0];
 }
 
+function makeDefineObject() {
+  const defineObject: Record<string, string> = {};
+  for (const envVar in process.env) {
+    if (process.env[envVar] != null) {
+      defineObject[`process.env.${envVar}`] = JSON.stringify(
+        process.env[envVar]
+      );
+    }
+  }
+  return defineObject;
+}
+
 export async function build({ workPath }: { workPath: string }) {
   const entriesPath = join(workPath, ENTRIES_NAME);
   const middlewareFile = await getMiddlewareFile(workPath);
@@ -67,6 +79,7 @@ export async function build({ workPath }: { workPath: string }) {
       entryPoints: [entriesPath],
       bundle: true,
       absWorkingDir: workPath,
+      define: makeDefineObject(),
       outfile: join(workPath, '.output/server/pages/_middleware.js'),
     });
   } finally {

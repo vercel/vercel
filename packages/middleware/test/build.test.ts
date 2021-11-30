@@ -54,4 +54,29 @@ describe('build()', () => {
       (unhandledResponse.response as Response).headers.get('x-middleware-next')
     ).toEqual('1');
   });
+  it('should build simple middleware with env vars', async () => {
+    const expectedEnvVar = 'expected-env-var';
+    const fixture = join(__dirname, 'fixtures/env');
+    process.env.ENV_VAR_SHOULD_BE_DEFINED = expectedEnvVar;
+    await build({
+      workPath: fixture,
+    });
+    // env var should be inlined in the output
+    delete process.env.ENV_VAR_SHOULD_BE_DEFINED;
+
+    const outputFile = join(fixture, '.output/server/pages/_middleware.js');
+    expect(await fsp.stat(outputFile)).toBeTruthy();
+
+    require(outputFile);
+    //@ts-ignore
+    const middleware = global._ENTRIES['middleware_pages/_middleware'].default;
+    expect(typeof middleware).toStrictEqual('function');
+    const handledResponse = await middleware({
+      request: {},
+    });
+    expect(String(handledResponse.response.body)).toEqual(expectedEnvVar);
+    expect(
+      (handledResponse.response as Response).headers.get('x-middleware-next')
+    ).toEqual(null);
+  });
 });
