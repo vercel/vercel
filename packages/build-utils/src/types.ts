@@ -28,6 +28,7 @@ export interface Config {
     | boolean
     | number
     | { [key: string]: string }
+    | BuilderFunctions
     | undefined;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
@@ -39,6 +40,7 @@ export interface Config {
   debug?: boolean;
   zeroConfig?: boolean;
   import?: { [key: string]: string };
+  functions?: BuilderFunctions;
   outputDirectory?: string;
   installCommand?: string;
   buildCommand?: string;
@@ -338,4 +340,14 @@ export interface Builder {
   use: string;
   src?: string;
   config?: Config;
+}
+
+export interface BuilderFunctions {
+  [key: string]: {
+    memory?: number;
+    maxDuration?: number;
+    runtime?: string;
+    includeFiles?: string;
+    excludeFiles?: string;
+  };
 }
