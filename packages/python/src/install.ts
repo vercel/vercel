@@ -1,4 +1,4 @@
-import { relative } from 'path';
+import { relative, basename } from 'path';
 import execa from 'execa';
 import { Meta, debug } from '@vercel/build-utils';
 
@@ -137,7 +137,7 @@ export async function installRequirementsFile({
   args = [],
 }: InstallRequirementsFileArg) {
   const requirementsTxtAtRoot =
-    relative(workPath, filePath) === 'requirements.txt';
+    relative(workPath, filePath) === basename(filePath);
 
   // If the `requirements.txt` file is located in the Root Directory of the project and
   // the new File System API is used (`avoidTopLevelInstall`), the Install Command
