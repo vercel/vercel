@@ -298,6 +298,9 @@ export default async function main(client: Client) {
     }
   }
 
+  // Required for Next.js to produce the correct `.nft.json` files.
+  spawnOpts.env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT = baseDir;
+
   // Yarn v2 PnP mode may be activated, so force
   // "node-modules" linker style
   const env = {
@@ -621,16 +624,18 @@ export default async function main(client: Client) {
         ...requiredServerFilesJson,
         appDir: '.',
         files: requiredServerFilesJson.files.map((i: string) => {
-          const originalPath = join(dirname(distDir), i);
+          const originalPath = join(requiredServerFilesJson.appDir, i);
           const relPath = join(OUTPUT_DIR, relative(distDir, originalPath));
 
           const absolutePath = join(cwd, relPath);
           const output = relative(baseDir, absolutePath);
 
-          return {
-            input: relPath,
-            output,
-          };
+          return relPath === output
+            ? relPath
+            : {
+                input: relPath,
+                output,
+              };
         }),
       });
     }
