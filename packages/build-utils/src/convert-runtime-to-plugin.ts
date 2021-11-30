@@ -2,10 +2,9 @@ import fs from 'fs-extra';
 import { join, dirname, relative } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
-import { FILES_SYMBOL, getLambdaOptionsFromFunction, Lambda } from './lambda';
+import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
-import type { BuilderFunctions, BuildOptions, Files } from './types';
-import minimatch from 'minimatch';
+import type { BuildOptions, Files } from './types';
 
 /**
  * Convert legacy Runtime to a Plugin.
@@ -17,40 +16,22 @@ export function convertRuntimeToPlugin(
   ext: string
 ) {
   // This `build()` signature should match `plugin.build()` signature in `vercel build`.
-  return async function build({
-    vercelConfig,
-    workPath,
-  }: {
-    vercelConfig: {
-      functions?: BuilderFunctions;
-      regions?: string[];
-    };
-    workPath: string;
-  }) {
+  return async function build({ workPath }: { workPath: string }) {
     const opts = { cwd: workPath };
     const files = await glob('**', opts);
     delete files['vercel.json']; // Builders/Runtimes didn't have vercel.json
     const entrypoints = await glob(`api/**/*${ext}`, opts);
     const pages: { [key: string]: any } = {};
-    const { functions = {} } = vercelConfig;
     const traceDir = join(workPath, '.output', 'runtime-traced-files');
     await fs.ensureDir(traceDir);
 
     for (const entrypoint of Object.keys(entrypoints)) {
-      const key =
-        Object.keys(functions).find(
-          src => src === entrypoint || minimatch(entrypoint, src)
-        ) || '';
-      const config = functions[key] || {};
-
       const { output } = await buildRuntime({
         files,
         entrypoint,
         workPath,
         config: {
           zeroConfig: true,
-          includeFiles: config.includeFiles,
-          excludeFiles: config.excludeFiles,
         },
         meta: {
           avoidTopLevelInstall: true,
@@ -64,7 +45,6 @@ export function convertRuntimeToPlugin(
         maxDuration: output.maxDuration,
         environment: output.environment,
         allowQuery: output.allowQuery,
-        //regions: output.regions,
       };
 
       // @ts-ignore This symbol is a private API
@@ -111,7 +91,7 @@ export function convertRuntimeToPlugin(
       await fs.writeFile(nft, json);
     }
 
-    await updateFunctionsManifest({ vercelConfig, workPath, pages });
+    await updateFunctionsManifest({ workPath, pages });
   };
 }
 
@@ -139,15 +119,12 @@ async function readJson(filePath: string): Promise<{ [key: string]: any }> {
 
 /**
  * If `.output/functions-manifest.json` exists, append to the pages
- * property. Otherwise write a new file. This will also read `vercel.json`
- * and apply relevant `functions` property config.
+ * property. Otherwise write a new file.
  */
 export async function updateFunctionsManifest({
-  vercelConfig,
   workPath,
   pages,
 }: {
-  vercelConfig: { functions?: BuilderFunctions; regions?: string[] };
   workPath: string;
   pages: { [key: string]: any };
 }) {
@@ -162,16 +139,7 @@ export async function updateFunctionsManifest({
   if (!functionsManifest.pages) functionsManifest.pages = {};
 
   for (const [pageKey, pageConfig] of Object.entries(pages)) {
-    const fnConfig = await getLambdaOptionsFromFunction({
-      sourceFile: pageKey,
-      config: vercelConfig,
-    });
-    functionsManifest.pages[pageKey] = {
-      ...pageConfig,
-      memory: fnConfig.memory || pageConfig.memory,
-      maxDuration: fnConfig.maxDuration || pageConfig.maxDuration,
-      regions: vercelConfig.regions || pageConfig.regions,
-    };
+    functionsManifest.pages[pageKey] = { ...pageConfig };
   }
 
   await fs.writeFile(functionsManifestPath, JSON.stringify(functionsManifest));
