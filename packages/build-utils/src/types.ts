@@ -58,6 +58,7 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
+  avoidTopLevelInstall?: boolean;
 }
 
 export interface AnalyzeOptions {
