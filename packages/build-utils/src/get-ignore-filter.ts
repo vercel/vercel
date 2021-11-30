@@ -25,8 +25,11 @@ export default async function (
   const readFile = async (p: string) => {
     try {
       return await fs.readFile(p, 'utf8');
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('ENOENT')) {
+    } catch (error: any) {
+      if (
+        error.code === 'ENOENT' ||
+        (error instanceof Error && error.message.includes('ENOENT'))
+      ) {
         return undefined;
       }
 
