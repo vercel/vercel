@@ -1,3 +1,4 @@
+import { relative } from 'path';
 import execa from 'execa';
 import { Meta, debug } from '@vercel/build-utils';
 
@@ -135,6 +136,19 @@ export async function installRequirementsFile({
   meta,
   args = [],
 }: InstallRequirementsFileArg) {
+  const requirementsTxtAtRoot =
+    relative(workPath, filePath) === 'requirements.txt';
+
+  // If the `requirements.txt` file is located in the Root Directory of the project and
+  // the new File System API is used (`avoidTopLevelInstall`), the Install Command
+  // will have already installed its dependencies, so we don't need to do it again.
+  if (meta.avoidTopLevelInstall && requirementsTxtAtRoot) {
+    debug(
+      `Skipping requirements file installation, already installed by Install Command`
+    );
+    return;
+  }
+
   if (
     meta.isDev &&
     (await areRequirementsInstalled(pythonPath, filePath, workPath))
