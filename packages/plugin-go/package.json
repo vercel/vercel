@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "vercel-plugin-go",
-  "version": "1.0.0-canary.10",
+  "version": "1.0.0-canary.11",
   "main": "dist/index.js",
   "license": "MIT",
   "files": [
@@ -17,7 +17,7 @@
     "prepublishOnly": "tsc"
   },
   "dependencies": {
-    "@vercel/build-utils": "2.12.3-canary.25",
+    "@vercel/build-utils": "2.12.3-canary.26",
     "@vercel/go": "1.2.4-canary.4"
   },
   "devDependencies": {
