@@ -5,13 +5,13 @@ import {
   GlobOptions,
   scanParentDirs,
   spawnAsync,
-  getInputHash,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import Sema from 'async-sema';
 import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
 import { assert } from 'console';
+import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import ogGlob from 'glob';
 import { dirname, isAbsolute, join, parse, relative, resolve } from 'path';
@@ -786,6 +786,16 @@ async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
   });
 }
 
+/**
+ * Computes a hash for the given buf.
+ *
+ * @param {Buffer} file data
+ * @return {String} hex digest
+ */
+function hash(buf: Buffer): string {
+  return createHash('sha1').update(buf).digest('hex');
+}
+
 interface NftFile {
   version: number;
   files: (string | { input: string; output: string })[];
@@ -834,7 +844,7 @@ async function resolveNftToOutput({
     if (!fullInput.includes(distDir)) {
       const { ext } = parse(fullInput);
       const raw = await fs.readFile(fullInput);
-      const newFilePath = join(outputDir, 'inputs', getInputHash(raw) + ext);
+      const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
       smartCopy(client, fullInput, newFilePath);
 
       // We have to use `baseDir` instead of `cwd`, because we want to
