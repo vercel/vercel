@@ -81,7 +81,7 @@ describe('convert-runtime-to-plugin', () => {
       pages: {
         'api/index.py': lambdaOptions,
         'api/users/get.py': lambdaOptions,
-        'api/users/post.py': { ...lambdaOptions, memory: 3008 },
+        'api/users/post.py': { ...lambdaOptions, memory: 512 },
       },
     });
 
