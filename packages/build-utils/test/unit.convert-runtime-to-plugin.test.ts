@@ -61,8 +61,11 @@ describe('convert-runtime-to-plugin', () => {
 
     const output = await fsToJson(join(workPath, '.output'));
 
-    const toMatch: any = {
+    expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
+      inputs: {
+        inputsDirectory: lambdaFiles,
+      },
       server: {
         pages: {
           api: {
@@ -77,11 +80,7 @@ describe('convert-runtime-to-plugin', () => {
           },
         },
       },
-    };
-
-    toMatch[inputsDirectory] = lambdaFiles;
-
-    expect(output).toMatchObject(toMatch);
+    });
 
     const funcManifest = JSON.parse(output['functions-manifest.json']);
     expect(funcManifest).toMatchObject({
