@@ -50,6 +50,15 @@ export function convertRuntimeToPlugin(
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
 
+      // `.output` was already created by the Build Command, so we have
+      // to ensure its contents don't get bundled into the Lambda. Similarily,
+      // we don't want to bundle anything from `.vercel` either.
+      for (const file in lambdaFiles) {
+        if (file.startsWith('.output') || file.startsWith('.vercel')) {
+          delete lambdaFiles[file];
+        }
+      }
+
       const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
       await fs.ensureDir(dirname(entry));
       await linkOrCopy(files[entrypoint].fsPath, entry);
