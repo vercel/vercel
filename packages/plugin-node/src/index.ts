@@ -48,7 +48,6 @@ import { Register, register } from './typescript';
 import { pageToRoute } from './router/page-to-route';
 import { isDynamicRoute } from './router/is-dynamic';
 import crypto from 'crypto';
-import type { VercelConfig } from '@vercel/client';
 
 export { shouldServe };
 export {
@@ -380,13 +379,7 @@ function getAWSLambdaHandler(entrypoint: string, config: FunctionConfig) {
 }
 
 // TODO NATE: turn this into a `@vercel/plugin-utils` helper function?
-export async function build({
-  vercelConfig,
-  workPath,
-}: {
-  vercelConfig: VercelConfig;
-  workPath: string;
-}) {
+export async function build({ workPath }: { workPath: string }) {
   const project = new Project();
   const entrypoints = await glob('api/**/*.[jt]s', workPath);
   const installedPaths = new Set<string>();
@@ -415,7 +408,6 @@ export async function build({
     }
 
     await buildEntrypoint({
-      vercelConfig,
       workPath,
       entrypoint,
       config,
@@ -425,13 +417,11 @@ export async function build({
 }
 
 export async function buildEntrypoint({
-  vercelConfig,
   workPath,
   entrypoint,
   config,
   installedPaths,
 }: {
-  vercelConfig: VercelConfig;
   workPath: string;
   entrypoint: string;
   config: FunctionConfig;
@@ -561,7 +551,7 @@ export async function buildEntrypoint({
       runtime: nodeVersion.runtime,
     },
   };
-  await updateFunctionsManifest({ vercelConfig, workPath, pages });
+  await updateFunctionsManifest({ workPath, pages });
 
   // Update the `routes-mainifest.json` file with the wildcard route
   // when the entrypoint is dynamic (i.e. `/api/[id].ts`).
