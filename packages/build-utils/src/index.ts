@@ -34,6 +34,7 @@ import { NowBuildError } from './errors';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import debug from './debug';
+import getIgnoreFilter from './get-ignore-filter';
 
 export {
   FileBlob,
@@ -71,6 +72,7 @@ export {
   isSymbolicLink,
   getLambdaOptionsFromFunction,
   scanParentDirs,
+  getIgnoreFilter,
 };
 
 export {

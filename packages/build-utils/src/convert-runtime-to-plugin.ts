@@ -5,7 +5,7 @@ import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
-import { getInputHash } from '.';
+import { getIgnoreFilter, getInputHash } from '.';
 
 /**
  * Convert legacy Runtime to a Plugin.
@@ -18,16 +18,31 @@ export function convertRuntimeToPlugin(
 ) {
   // This `build()` signature should match `plugin.build()` signature in `vercel build`.
   return async function build({ workPath }: { workPath: string }) {
-    const opts = {
-      cwd: workPath,
-      // `.output` was already created by the Build Command, so we have
-      // to ensure its contents don't get bundled into the Lambda. Similarily,
-      // we don't want to bundle anything from `.vercel` either. Lastly,
-      // Builders/Runtimes didn't have `vercel.json`.
-      ignore: ['.output/**', '.vercel/**', 'vercel.json'],
-    };
-
+    const opts = { cwd: workPath };
     const files = await glob('**', opts);
+
+    // `.output` was already created by the Build Command, so we have
+    // to ensure its contents don't get bundled into the Lambda. Similarily,
+    // we don't want to bundle anything from `.vercel` either. Lastly,
+    // Builders/Runtimes didn't have `vercel.json` or `now.json`.
+    const ignoredPaths = ['.output', '.vercel', 'vercel.json', 'now.json'];
+
+    // We also don't want to provide any files to Runtimes that were ignored
+    // through `.vercelignore` or `.nowignore`, because the Build Step does the same.
+    const ignoreFilter = await getIgnoreFilter(workPath);
+
+    // We're not passing this as an `ignore` filter to the `glob` function above,
+    // so that we can re-use exactly the same `getIgnoreFilter` method that the
+    // Build Step uses (literally the same code).
+    for (const file in files) {
+      const isNative = ignoredPaths.some(item => {
+        return file.startsWith(item);
+      });
+
+      if (isNative || ignoreFilter(file)) {
+        delete files[file];
+      }
+    }
 
     const entrypointPattern = `api/**/*${ext}`;
     const entrypoints = await glob(entrypointPattern, opts);
