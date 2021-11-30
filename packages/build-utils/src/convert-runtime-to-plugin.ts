@@ -5,6 +5,7 @@ import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
+import { getInputHash } from '.';
 
 /**
  * Convert legacy Runtime to a Plugin.
@@ -19,10 +20,19 @@ export function convertRuntimeToPlugin(
   return async function build({ workPath }: { workPath: string }) {
     const opts = { cwd: workPath };
     const files = await glob('**', opts);
+
     delete files['vercel.json']; // Builders/Runtimes didn't have vercel.json
-    const entrypoints = await glob(`api/**/*${ext}`, opts);
+
+    const entrypointPattern = `api/**/*${ext}`;
+    const entrypoints = await glob(entrypointPattern, opts);
     const pages: { [key: string]: any } = {};
-    const traceDir = join(workPath, '.output', 'runtime-traced-files');
+    const traceDir = join(
+      workPath,
+      '.output',
+      'inputs',
+      getInputHash(entrypointPattern)
+    );
+
     await fs.ensureDir(traceDir);
 
     for (const entrypoint of Object.keys(entrypoints)) {
