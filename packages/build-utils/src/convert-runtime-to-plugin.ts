@@ -52,6 +52,9 @@ export function convertRuntimeToPlugin(
           includeFiles: config.includeFiles,
           excludeFiles: config.excludeFiles,
         },
+        meta: {
+          avoidTopLevelInstall: true,
+        },
       });
 
       pages[entrypoint] = {
