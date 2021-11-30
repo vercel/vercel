@@ -50,11 +50,10 @@ describe('convert-runtime-to-plugin', () => {
     };
 
     const lambdaFiles = await fsToJson(workPath);
-    const vercelConfig = JSON.parse(lambdaFiles['vercel.json']);
     delete lambdaFiles['vercel.json'];
     const build = await convertRuntimeToPlugin(buildRuntime, '.py');
 
-    await build({ vercelConfig, workPath });
+    await build({ workPath });
 
     const output = await fsToJson(join(workPath, '.output'));
     expect(output).toMatchObject({
