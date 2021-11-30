@@ -18,10 +18,16 @@ export function convertRuntimeToPlugin(
 ) {
   // This `build()` signature should match `plugin.build()` signature in `vercel build`.
   return async function build({ workPath }: { workPath: string }) {
-    const opts = { cwd: workPath };
-    const files = await glob('**', opts);
+    const opts = {
+      cwd: workPath,
+      // `.output` was already created by the Build Command, so we have
+      // to ensure its contents don't get bundled into the Lambda. Similarily,
+      // we don't want to bundle anything from `.vercel` either. Lastly,
+      // Builders/Runtimes didn't have `vercel.json`.
+      ignore: ['.output/**', '.vercel/**', 'vercel.json'],
+    };
 
-    delete files['vercel.json']; // Builders/Runtimes didn't have vercel.json
+    const files = await glob('**', opts);
 
     const entrypointPattern = `api/**/*${ext}`;
     const entrypoints = await glob(entrypointPattern, opts);
@@ -59,15 +65,6 @@ export function convertRuntimeToPlugin(
 
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
-
-      // `.output` was already created by the Build Command, so we have
-      // to ensure its contents don't get bundled into the Lambda. Similarily,
-      // we don't want to bundle anything from `.vercel` either.
-      for (const file in lambdaFiles) {
-        if (file.startsWith('.output') || file.startsWith('.vercel')) {
-          delete lambdaFiles[file];
-        }
-      }
 
       const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
       await fs.ensureDir(dirname(entry));
