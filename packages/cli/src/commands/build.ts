@@ -38,6 +38,10 @@ const sema = new Sema(16, {
   capacity: 100,
 });
 
+const nftSema = new Sema(16, {
+  capacity: 100,
+});
+
 const help = () => {
   return console.log(`
   ${chalk.bold(`${logo} ${getPkgName()} build`)}
@@ -834,38 +838,61 @@ async function resolveNftToOutput({
     // Paths in it might also not be relative to `cache` itself.
     return;
   }
-  const promises = [];
+  const hashAndCopyPromises = [];
+
   for (let fileEntity of nft.files) {
     const relativeInput =
       typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
     const fullInput = resolve(join(parse(origNftFilename).dir, relativeInput));
-
     // if the resolved path is NOT in the .output directory we move in it there
     if (!fullInput.includes(distDir)) {
-      const { ext } = parse(fullInput);
-      const raw = await fs.readFile(fullInput);
-      const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
-
-      // We have to use `baseDir` instead of `cwd`, because we want to
-      // mount everything from there (especially `node_modules`).
-      // This is important for NPM Workspaces where `node_modules` is not
-      // in the directory of the workspace.
-      const output = relative(baseDir, fullInput).replace('.output', '.next');
-      promises.push(smartCopy(client, fullInput, newFilePath));
-      newFilesList.push({
-        input: relative(parse(nftFileName).dir, newFilePath),
-        output,
-      });
+      hashAndCopyPromises.push(
+        hashAndCopy({ client, nftFileName, fullInput, outputDir, baseDir })
+      );
     } else {
       newFilesList.push(relativeInput);
     }
   }
   // Await all the promises to make sure all the files are copied.
   // Recall that `smartCopy` is async semaphore-protected.
-  await Promise.all(promises);
+  const moreNewFiles = await Promise.all(hashAndCopyPromises);
   // Update the .nft.json with new input and output mapping
   await fs.writeJSON(nftFileName, {
     ...nft,
-    files: newFilesList,
+    files: [...newFilesList, ...moreNewFiles],
   });
+}
+
+async function hashAndCopy({
+  client,
+  nftFileName,
+  fullInput,
+  outputDir,
+  baseDir,
+}: {
+  client: Client;
+  nftFileName: string;
+  fullInput: string;
+  outputDir: string;
+  baseDir: string;
+}) {
+  nftSema.acquire();
+  try {
+    const { ext } = parse(fullInput);
+    const raw = await fs.readFile(fullInput);
+    const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
+
+    // We have to use `baseDir` instead of `cwd`, because we want to
+    // mount everything from there (especially `node_modules`).
+    // This is important for NPM Workspaces where `node_modules` is not
+    // in the directory of the workspace.
+    const output = relative(baseDir, fullInput).replace('.output', '.next');
+    await smartCopy(client, fullInput, newFilePath);
+    return {
+      input: relative(parse(nftFileName).dir, newFilePath),
+      output,
+    };
+  } finally {
+    nftSema.release();
+  }
 }
