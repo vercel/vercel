@@ -3,7 +3,7 @@
     <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
     <h3 align="center">Vercel</h3>
   </a>
-  <p align="center">Develop. Preview. Ship. Test. Another try.</p>
+  <p align="center">Develop. Preview. Ship.</p>
 </p>
 
 [![CI Status](https://github.com/vercel/vercel/actions/workflows/test-unit.yml/badge.svg)](https://github.com/vercel/vercel/actions/workflows/test-unit.yml)
@@ -36,8 +36,3 @@ As always, you should use `yarn test-unit` to run the tests and see if your chan
 ## How to Create a Release
 
 If you have write access to this repository, you can read more about how to publish a release [here](https://github.com/vercel/vercel/wiki/Creating-a-Release).
-
-## Test
-
-This is a test.
-Test7
