@@ -834,7 +834,7 @@ async function resolveNftToOutput({
     // Paths in it might also not be relative to `cache` itself.
     return;
   }
-
+  const promises = [];
   for (let fileEntity of nft.files) {
     const relativeInput =
       typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
@@ -845,14 +845,13 @@ async function resolveNftToOutput({
       const { ext } = parse(fullInput);
       const raw = await fs.readFile(fullInput);
       const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
-      smartCopy(client, fullInput, newFilePath);
 
       // We have to use `baseDir` instead of `cwd`, because we want to
       // mount everything from there (especially `node_modules`).
       // This is important for NPM Workspaces where `node_modules` is not
       // in the directory of the workspace.
       const output = relative(baseDir, fullInput).replace('.output', '.next');
-
+      promises.push(smartCopy(client, fullInput, newFilePath));
       newFilesList.push({
         input: relative(parse(nftFileName).dir, newFilePath),
         output,
@@ -861,6 +860,9 @@ async function resolveNftToOutput({
       newFilesList.push(relativeInput);
     }
   }
+  // Await all the promises to make sure all the files are copied.
+  // Recall that `smartCopy` is async semaphore-protected.
+  await Promise.all(promises);
   // Update the .nft.json with new input and output mapping
   await fs.writeJSON(nftFileName, {
     ...nft,
