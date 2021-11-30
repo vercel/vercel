@@ -5,7 +5,7 @@
   "description": "API for the vercel/vercel repo",
   "main": "index.js",
   "scripts": {
-    "vercel-build": "node ./pre.js && yarn --cwd .. && node ../utils/run.js build all"
+    "vercel-build": "node ./pre.js && node ../utils/run.js build all"
   },
   "dependencies": {
     "@sentry/node": "5.11.1",
