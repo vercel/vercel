@@ -5,15 +5,17 @@ import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
-import { getIgnoreFilter, getInputHash } from '.';
+import { getIgnoreFilter } from '.';
 
 /**
  * Convert legacy Runtime to a Plugin.
  * @param buildRuntime - a legacy build() function from a Runtime
+ * @param packageName - the name of the package, for example `vercel-plugin-python`
  * @param ext - the file extension, for example `.py`
  */
 export function convertRuntimeToPlugin(
   buildRuntime: (options: BuildOptions) => Promise<{ output: Lambda }>,
+  packageName: string,
   ext: string
 ) {
   // This `build()` signature should match `plugin.build()` signature in `vercel build`.
@@ -47,11 +49,13 @@ export function convertRuntimeToPlugin(
     const entrypointPattern = `api/**/*${ext}`;
     const entrypoints = await glob(entrypointPattern, opts);
     const pages: { [key: string]: any } = {};
+    const pluginName = packageName.replace('vercel-plugin-', '');
+
     const traceDir = join(
       workPath,
-      '.output',
-      'inputs',
-      getInputHash(entrypointPattern)
+      `.output`,
+      `inputs`,
+      `api-routes-${pluginName}`
     );
 
     await fs.ensureDir(traceDir);

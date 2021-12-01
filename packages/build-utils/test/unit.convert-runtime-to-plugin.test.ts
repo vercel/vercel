@@ -1,6 +1,6 @@
 import { join } from 'path';
 import fs from 'fs-extra';
-import { BuildOptions, createLambda, getInputHash } from '../src';
+import { BuildOptions, createLambda } from '../src';
 import { convertRuntimeToPlugin } from '../src/convert-runtime-to-plugin';
 
 async function fsToJson(dir: string, output: Record<string, any> = {}) {
@@ -53,17 +53,18 @@ describe('convert-runtime-to-plugin', () => {
     delete lambdaFiles['vercel.json'];
 
     const ext = '.py';
-    const entrypointPattern = `api/**/*${ext}`;
-    const build = await convertRuntimeToPlugin(buildRuntime, ext);
-    const inputsDirectory = getInputHash(entrypointPattern);
+    const packageName = 'vercel-plugin-python';
+    const build = await convertRuntimeToPlugin(buildRuntime, packageName, ext);
 
     await build({ workPath });
 
     const output = await fsToJson(join(workPath, '.output'));
 
-    const toMatch: any = {
+    expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
-      inputs: {},
+      inputs: {
+        'api-routes-python': lambdaFiles,
+      },
       server: {
         pages: {
           api: {
@@ -78,11 +79,7 @@ describe('convert-runtime-to-plugin', () => {
           },
         },
       },
-    };
-
-    toMatch.inputs[inputsDirectory] = lambdaFiles;
-
-    expect(output).toMatchObject(toMatch);
+    });
 
     const funcManifest = JSON.parse(output['functions-manifest.json']);
     expect(funcManifest).toMatchObject({
@@ -99,35 +96,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: `../../../../inputs/${inputsDirectory}/api/db/[id].py`,
+          input: `../../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: `../../../../inputs/${inputsDirectory}/api/index.py`,
+          input: `../../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input: `../../../../inputs/${inputsDirectory}/api/project/[aid]/[bid]/index.py`,
+          input: `../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: `../../../../inputs/${inputsDirectory}/api/users/get.py`,
+          input: `../../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: `../../../../inputs/${inputsDirectory}/api/users/post.py`,
+          input: `../../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: `../../../../inputs/${inputsDirectory}/file.txt`,
+          input: `../../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: `../../../../inputs/${inputsDirectory}/util/date.py`,
+          input: `../../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: `../../../../inputs/${inputsDirectory}/util/math.py`,
+          input: `../../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -140,35 +137,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: `../../../../../inputs/${inputsDirectory}/api/db/[id].py`,
+          input: `../../../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/api/index.py`,
+          input: `../../../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/api/project/[aid]/[bid]/index.py`,
+          input: `../../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/api/users/get.py`,
+          input: `../../../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/api/users/post.py`,
+          input: `../../../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/file.txt`,
+          input: `../../../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/util/date.py`,
+          input: `../../../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/util/math.py`,
+          input: `../../../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -181,35 +178,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: `../../../../../inputs/${inputsDirectory}/api/db/[id].py`,
+          input: `../../../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/api/index.py`,
+          input: `../../../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/api/project/[aid]/[bid]/index.py`,
+          input: `../../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/api/users/get.py`,
+          input: `../../../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/api/users/post.py`,
+          input: `../../../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/file.txt`,
+          input: `../../../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/util/date.py`,
+          input: `../../../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: `../../../../../inputs/${inputsDirectory}/util/math.py`,
+          input: `../../../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],

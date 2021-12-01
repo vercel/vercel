@@ -428,7 +428,7 @@ export async function buildEntrypoint({
   installedPaths?: Set<string>;
 }) {
   // Unique hash that will be used as directory name for `.output`.
-  const entrypointHash = getInputHash(entrypoint);
+  const entrypointHash = 'api-routes-node-' + getInputHash(entrypoint);
   const outputDirPath = join(workPath, '.output');
 
   const { dir, name } = parsePath(entrypoint);
