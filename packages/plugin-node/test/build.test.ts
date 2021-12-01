@@ -248,28 +248,6 @@ describe('build()', () => {
     })
   );
 
-  // Tests the `includeFiles` config option
-  it(
-    'should build "include-files"',
-    withFixture('include-files', async ({ fetch }) => {
-      const res = await fetch('/api');
-      const body = await res.text();
-      expect(body.includes('hello Vercel!')).toEqual(true);
-
-      const res2 = await fetch('/api/include-ts-file');
-      const body2 = await res2.text();
-      expect(body2.includes("const foo = 'hello TS!'")).toEqual(true);
-
-      const res3 = await fetch('/api/root');
-      const body3 = await res3.text();
-      expect(body3.includes('hello Root!')).toEqual(true);
-
-      const res4 = await fetch('/api/accepts-string');
-      const body4 = await res4.text();
-      expect(body4.includes('hello String!')).toEqual(true);
-    })
-  );
-
   // Tests the Vercel helper properties / functions
   it(
     'should build "helpers"',

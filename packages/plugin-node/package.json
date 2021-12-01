@@ -39,16 +39,13 @@
     "@vercel/ncc": "0.24.0",
     "@vercel/nft": "0.14.0",
     "@vercel/node-bridge": "2.1.1-canary.2",
-    "@vercel/static-config": "0.0.1-canary.0",
     "abort-controller": "3.0.0",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",
-    "json-schema-to-ts": "1.6.4",
     "node-fetch": "2",
     "source-map-support": "0.5.12",
     "test-listen": "1.1.0",
-    "ts-morph": "12.0.0",
     "yazl": "2.5.1"
   },
   "jest": {

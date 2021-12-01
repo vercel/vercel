@@ -17,7 +17,6 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
-import { Project } from 'ts-morph';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
@@ -42,8 +41,6 @@ import {
   runPackageJsonScript,
   getInputHash,
 } from '@vercel/build-utils';
-import { FromSchema } from 'json-schema-to-ts';
-import { getConfig, BaseFunctionConfigSchema } from '@vercel/static-config';
 import { AbortController } from 'abort-controller';
 import { Register, register } from './typescript';
 import { pageToRoute } from './router/page-to-route';
@@ -79,31 +76,6 @@ interface PortInfo {
 function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
-
-const FunctionConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    ...BaseFunctionConfigSchema.properties,
-    helpers: {
-      type: 'boolean',
-    },
-    nodeVersion: {
-      type: 'string',
-    },
-    awsHandlerName: {
-      type: 'string',
-    },
-    excludeFiles: {
-      oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
-    },
-    includeFiles: {
-      oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
-    },
-  },
-} as const;
-
-type FunctionConfig = FromSchema<typeof FunctionConfigSchema>;
 
 const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 
@@ -175,8 +147,7 @@ function renameTStoJS(path: string) {
 
 async function compile(
   baseDir: string,
-  entrypointPath: string,
-  config: FunctionConfig
+  entrypointPath: string
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -189,28 +160,6 @@ async function compile(
   const pkgCache = new Map<string, { type?: string }>();
 
   let shouldAddSourcemapSupport = false;
-
-  if (config.includeFiles) {
-    const includeFiles =
-      typeof config.includeFiles === 'string'
-        ? [config.includeFiles]
-        : config.includeFiles;
-    const rel = includeFiles.map(f => {
-      return relative(baseDir, join(dirname(entrypointPath), f));
-    });
-
-    for (const pattern of rel) {
-      const files = await glob(pattern, baseDir);
-      await Promise.all(
-        Object.values(files).map(async entry => {
-          const { fsPath } = entry;
-          const relPath = relative(baseDir, fsPath);
-          fsCache.set(relPath, entry);
-          preparedFiles[relPath] = entry;
-        })
-      );
-    }
-  }
 
   debug(
     'Tracing input files: ' +
@@ -244,7 +193,6 @@ async function compile(
       processCwd: baseDir,
       ts: true,
       mixedModules: true,
-      //ignore: config.excludeFiles,
       readFile(fsPath: string): Buffer | string | null {
         const relPath = relative(baseDir, fsPath);
         const cached = sourceCache.get(relPath);
@@ -370,8 +318,8 @@ async function compile(
   };
 }
 
-function getAWSLambdaHandler(entrypoint: string, config: FunctionConfig) {
-  const handler = config.awsHandlerName || process.env.NODEJS_AWS_HANDLER_NAME;
+function getAWSLambdaHandler(entrypoint: string) {
+  const handler = process.env.NODEJS_AWS_HANDLER_NAME;
   if (handler) {
     const { dir, name } = parsePath(entrypoint);
     return `${join(dir, name)}.${handler}`;
@@ -380,7 +328,6 @@ function getAWSLambdaHandler(entrypoint: string, config: FunctionConfig) {
 
 // TODO NATE: turn this into a `@vercel/plugin-utils` helper function?
 export async function build({ workPath }: { workPath: string }) {
-  const project = new Project();
   const entrypoints = await glob('api/**/*.[jt]s', workPath);
   const installedPaths = new Set<string>();
   for (const entrypoint of Object.keys(entrypoints)) {
@@ -396,21 +343,9 @@ export async function build({ workPath }: { workPath: string }) {
     // TypeScript definition files are not compiled
     if (entrypoint.endsWith('.d.ts')) continue;
 
-    const absEntrypoint = join(workPath, entrypoint);
-    const config =
-      getConfig(project, absEntrypoint, FunctionConfigSchema) || {};
-
-    // No config exported means "node", but if there is a config
-    // and "runtime" is defined, but it is not "node" then don't
-    // compile this file.
-    if (config.runtime && config.runtime !== 'node') {
-      continue;
-    }
-
     await buildEntrypoint({
       workPath,
       entrypoint,
-      config,
       installedPaths,
     });
   }
@@ -419,12 +354,10 @@ export async function build({ workPath }: { workPath: string }) {
 export async function buildEntrypoint({
   workPath,
   entrypoint,
-  config,
   installedPaths,
 }: {
   workPath: string;
   entrypoint: string;
-  config: FunctionConfig;
   installedPaths?: Set<string>;
 }) {
   // Unique hash that will be used as directory name for `.output`.
@@ -443,9 +376,8 @@ export async function buildEntrypoint({
 
   console.log(`Compiling "${entrypoint}" to "${outputWorkPath}"`);
 
-  const shouldAddHelpers =
-    config.helpers !== false && process.env.NODEJS_HELPERS !== '0';
-  const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
+  const shouldAddHelpers = process.env.NODEJS_HELPERS !== '0';
+  const awsLambdaHandler = getAWSLambdaHandler(entrypoint);
 
   const { nodeVersion } = await maybeInstallAndBuild({
     entrypoint,
@@ -458,8 +390,7 @@ export async function buildEntrypoint({
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
     workPath,
-    entrypointPath,
-    config
+    entrypointPath
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
