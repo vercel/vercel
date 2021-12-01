@@ -51,14 +51,20 @@ describe('convert-runtime-to-plugin', () => {
 
     const lambdaFiles = await fsToJson(workPath);
     delete lambdaFiles['vercel.json'];
-    const build = await convertRuntimeToPlugin(buildRuntime, '.py');
+
+    const ext = '.py';
+    const packageName = 'vercel-plugin-python';
+    const build = await convertRuntimeToPlugin(buildRuntime, packageName, ext);
 
     await build({ workPath });
 
     const output = await fsToJson(join(workPath, '.output'));
+
     expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
-      'runtime-traced-files': lambdaFiles,
+      inputs: {
+        'api-routes-python': lambdaFiles,
+      },
       server: {
         pages: {
           api: {
@@ -90,36 +96,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: '../../../../runtime-traced-files/api/db/[id].py',
+          input: `../../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: '../../../../runtime-traced-files/api/index.py',
+          input: `../../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input:
-            '../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          input: `../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: '../../../../runtime-traced-files/api/users/get.py',
+          input: `../../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: '../../../../runtime-traced-files/api/users/post.py',
+          input: `../../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: '../../../../runtime-traced-files/file.txt',
+          input: `../../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: '../../../../runtime-traced-files/util/date.py',
+          input: `../../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: '../../../../runtime-traced-files/util/math.py',
+          input: `../../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -132,36 +137,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: '../../../../../runtime-traced-files/api/db/[id].py',
+          input: `../../../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/index.py',
+          input: `../../../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input:
-            '../../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          input: `../../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/get.py',
+          input: `../../../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/post.py',
+          input: `../../../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: '../../../../../runtime-traced-files/file.txt',
+          input: `../../../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: '../../../../../runtime-traced-files/util/date.py',
+          input: `../../../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: '../../../../../runtime-traced-files/util/math.py',
+          input: `../../../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -174,36 +178,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: '../../../../../runtime-traced-files/api/db/[id].py',
+          input: `../../../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/index.py',
+          input: `../../../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input:
-            '../../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          input: `../../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/get.py',
+          input: `../../../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/post.py',
+          input: `../../../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: '../../../../../runtime-traced-files/file.txt',
+          input: `../../../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: '../../../../../runtime-traced-files/util/date.py',
+          input: `../../../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: '../../../../../runtime-traced-files/util/math.py',
+          input: `../../../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],

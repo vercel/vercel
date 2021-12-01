@@ -40,6 +40,7 @@ import {
   walkParentDirs,
   normalizePath,
   runPackageJsonScript,
+  getInputHash,
 } from '@vercel/build-utils';
 import { FromSchema } from 'json-schema-to-ts';
 import { getConfig, BaseFunctionConfigSchema } from '@vercel/static-config';
@@ -47,7 +48,6 @@ import { AbortController } from 'abort-controller';
 import { Register, register } from './typescript';
 import { pageToRoute } from './router/page-to-route';
 import { isDynamicRoute } from './router/is-dynamic';
-import crypto from 'crypto';
 
 export { shouldServe };
 export {
@@ -428,10 +428,7 @@ export async function buildEntrypoint({
   installedPaths?: Set<string>;
 }) {
   // Unique hash that will be used as directory name for `.output`.
-  const entrypointHash = crypto
-    .createHash('sha256')
-    .update(entrypoint)
-    .digest('hex');
+  const entrypointHash = 'api-routes-node-' + getInputHash(entrypoint);
   const outputDirPath = join(workPath, '.output');
 
   const { dir, name } = parsePath(entrypoint);
