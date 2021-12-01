@@ -71,7 +71,7 @@ it('should re-create symlinks properly', async () => {
   assert(aStat.isFile());
 });
 
-it('should re-create symlinks properly [2]', async () => {
+it('should re-create symlinks properly (**/node_modules/**)', async () => {
   if (process.platform === 'win32') {
     console.log('Skipping test on windows');
     return;
@@ -79,22 +79,18 @@ it('should re-create symlinks properly [2]', async () => {
   const files = await glob('**/node-modules/**', path.join(__dirname, 'symlinks-node-modules'));
   assert.equal(Object.keys(files).length, 2);
 
-/*
   const outDir = path.join(__dirname, 'symlinks-out');
   await fs.remove(outDir);
 
   const files2 = await download(files, outDir);
-  assert.equal(Object.keys(files2).length, 4);
+  assert.equal(Object.keys(files2).length, 2);
 
-  const [linkStat, linkDirStat, aStat] = await Promise.all([
-    fs.lstat(path.join(outDir, 'link.txt')),
-    fs.lstat(path.join(outDir, 'link-dir')),
-    fs.lstat(path.join(outDir, 'a.txt')),
+  const [linkDirStat, bStat] = await Promise.all([
+    fs.lstat(path.join(outDir, 'node-modules/link-dir')),
+    fs.lstat(path.join(outDir, 'dir/node-modules/b.txt')),
   ]);
-  assert(linkStat.isSymbolicLink());
   assert(linkDirStat.isSymbolicLink());
-  assert(aStat.isFile());
-*/
+  assert(bStat.isFile());
 });
 
 it('should create zip files with symlinks properly', async () => {
