@@ -77,7 +77,7 @@ it('should re-create symlinks properly [2]', async () => {
     return;
   }
   const files = await glob('**/node-modules/**', path.join(__dirname, 'symlinks-node-modules'));
-  assert.equal(Object.keys(files).length, 3);
+  assert.equal(Object.keys(files).length, 2);
 
 /*
   const outDir = path.join(__dirname, 'symlinks-out');

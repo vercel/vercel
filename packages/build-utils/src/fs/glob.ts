@@ -51,19 +51,13 @@ export default async function glob(
 
       if (sc && sc.isDirectory()) { // ... and also a directory
         // console.log('dir+sym', abs);
-
-/*
-        const d = path.dirname(abs);
-        const b = path.basename(abs);
-        const c = options.cache[d];
+        const c = options.cache[abs];
 
         if (Array.isArray(c)) {
-          // 'vercel/40180cd6-path0/node_modules': [ '@algolia', 'next-site' ]
-          // is transformed to
-          // 'vercel/40180cd6-path0/node_modules': [ '@algolia' ]
-          options.cache[d] = c.filter((f) => f !== b);
+          for (const sub of c) {
+            options.cache[path.join(abs, sub)] = false;
+          }
         }
-*/
       }
     }
   }
