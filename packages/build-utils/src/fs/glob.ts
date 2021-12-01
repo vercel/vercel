@@ -55,6 +55,7 @@ export default async function glob(
 
         if (Array.isArray(c)) {
           for (const sub of c) {
+            // suppressing it's content entries prevents the second run of vanillaGlob from following it
             options.cache[path.join(abs, sub)] = false;
           }
         }
