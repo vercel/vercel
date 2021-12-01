@@ -2,7 +2,7 @@
 
 source "https://rubygems.org"
 
-ruby "~> 2.5.0"
+ruby "~> 2.z.0"
 
 gem "cowsay", "~> 0.3.0"
 
