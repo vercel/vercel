@@ -1,6 +1,6 @@
 import { join } from 'path';
 import fs from 'fs-extra';
-import { BuildOptions, createLambda } from '../src';
+import { BuildOptions, createLambda, getInputHash } from '../src';
 import { convertRuntimeToPlugin } from '../src/convert-runtime-to-plugin';
 
 async function fsToJson(dir: string, output: Record<string, any> = {}) {
@@ -51,14 +51,19 @@ describe('convert-runtime-to-plugin', () => {
 
     const lambdaFiles = await fsToJson(workPath);
     delete lambdaFiles['vercel.json'];
-    const build = await convertRuntimeToPlugin(buildRuntime, '.py');
+
+    const ext = '.py';
+    const entrypointPattern = `api/**/*${ext}`;
+    const build = await convertRuntimeToPlugin(buildRuntime, ext);
+    const inputsDirectory = getInputHash(entrypointPattern);
 
     await build({ workPath });
 
     const output = await fsToJson(join(workPath, '.output'));
-    expect(output).toMatchObject({
+
+    const toMatch: any = {
       'functions-manifest.json': expect.stringContaining('{'),
-      'runtime-traced-files': lambdaFiles,
+      inputs: {},
       server: {
         pages: {
           api: {
@@ -73,7 +78,11 @@ describe('convert-runtime-to-plugin', () => {
           },
         },
       },
-    });
+    };
+
+    toMatch.inputs[inputsDirectory] = lambdaFiles;
+
+    expect(output).toMatchObject(toMatch);
 
     const funcManifest = JSON.parse(output['functions-manifest.json']);
     expect(funcManifest).toMatchObject({
@@ -90,36 +99,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: '../../../../runtime-traced-files/api/db/[id].py',
+          input: `../../../../inputs/${inputsDirectory}/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: '../../../../runtime-traced-files/api/index.py',
+          input: `../../../../inputs/${inputsDirectory}/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input:
-            '../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          input: `../../../../inputs/${inputsDirectory}/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: '../../../../runtime-traced-files/api/users/get.py',
+          input: `../../../../inputs/${inputsDirectory}/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: '../../../../runtime-traced-files/api/users/post.py',
+          input: `../../../../inputs/${inputsDirectory}/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: '../../../../runtime-traced-files/file.txt',
+          input: `../../../../inputs/${inputsDirectory}/file.txt`,
           output: 'file.txt',
         },
         {
-          input: '../../../../runtime-traced-files/util/date.py',
+          input: `../../../../inputs/${inputsDirectory}/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: '../../../../runtime-traced-files/util/math.py',
+          input: `../../../../inputs/${inputsDirectory}/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -132,36 +140,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: '../../../../../runtime-traced-files/api/db/[id].py',
+          input: `../../../../../inputs/${inputsDirectory}/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/index.py',
+          input: `../../../../../inputs/${inputsDirectory}/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input:
-            '../../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          input: `../../../../../inputs/${inputsDirectory}/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/get.py',
+          input: `../../../../../inputs/${inputsDirectory}/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/post.py',
+          input: `../../../../../inputs/${inputsDirectory}/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: '../../../../../runtime-traced-files/file.txt',
+          input: `../../../../../inputs/${inputsDirectory}/file.txt`,
           output: 'file.txt',
         },
         {
-          input: '../../../../../runtime-traced-files/util/date.py',
+          input: `../../../../../inputs/${inputsDirectory}/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: '../../../../../runtime-traced-files/util/math.py',
+          input: `../../../../../inputs/${inputsDirectory}/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -174,36 +181,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: '../../../../../runtime-traced-files/api/db/[id].py',
+          input: `../../../../../inputs/${inputsDirectory}/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/index.py',
+          input: `../../../../../inputs/${inputsDirectory}/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input:
-            '../../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          input: `../../../../../inputs/${inputsDirectory}/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/get.py',
+          input: `../../../../../inputs/${inputsDirectory}/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/post.py',
+          input: `../../../../../inputs/${inputsDirectory}/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: '../../../../../runtime-traced-files/file.txt',
+          input: `../../../../../inputs/${inputsDirectory}/file.txt`,
           output: 'file.txt',
         },
         {
-          input: '../../../../../runtime-traced-files/util/date.py',
+          input: `../../../../../inputs/${inputsDirectory}/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: '../../../../../runtime-traced-files/util/math.py',
+          input: `../../../../../inputs/${inputsDirectory}/util/math.py`,
           output: 'util/math.py',
         },
       ],
