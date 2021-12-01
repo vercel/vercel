@@ -2,45 +2,78 @@ import fs from 'fs-extra';
 import { join, dirname, relative } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
-import { FILES_SYMBOL, getLambdaOptionsFromFunction, Lambda } from './lambda';
+import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
-import type { BuilderFunctions, BuildOptions, Files } from './types';
-import minimatch from 'minimatch';
+import type { BuildOptions, Files } from './types';
+import { getIgnoreFilter } from '.';
 
 /**
  * Convert legacy Runtime to a Plugin.
  * @param buildRuntime - a legacy build() function from a Runtime
+ * @param packageName - the name of the package, for example `vercel-plugin-python`
  * @param ext - the file extension, for example `.py`
  */
 export function convertRuntimeToPlugin(
   buildRuntime: (options: BuildOptions) => Promise<{ output: Lambda }>,
+  packageName: string,
   ext: string
 ) {
+  // This `build()` signature should match `plugin.build()` signature in `vercel build`.
   return async function build({ workPath }: { workPath: string }) {
     const opts = { cwd: workPath };
     const files = await glob('**', opts);
-    delete files['vercel.json']; // Builders/Runtimes didn't have vercel.json
-    const entrypoints = await glob(`api/**/*${ext}`, opts);
+
+    // `.output` was already created by the Build Command, so we have
+    // to ensure its contents don't get bundled into the Lambda. Similarily,
+    // we don't want to bundle anything from `.vercel` either. Lastly,
+    // Builders/Runtimes didn't have `vercel.json` or `now.json`.
+    const ignoredPaths = ['.output', '.vercel', 'vercel.json', 'now.json'];
+
+    // We also don't want to provide any files to Runtimes that were ignored
+    // through `.vercelignore` or `.nowignore`, because the Build Step does the same.
+    const ignoreFilter = await getIgnoreFilter(workPath);
+
+    // We're not passing this as an `ignore` filter to the `glob` function above,
+    // so that we can re-use exactly the same `getIgnoreFilter` method that the
+    // Build Step uses (literally the same code).
+    for (const file in files) {
+      const isNative = ignoredPaths.some(item => {
+        return file.startsWith(item);
+      });
+
+      if (isNative || ignoreFilter(file)) {
+        delete files[file];
+      }
+    }
+
+    const entrypointPattern = `api/**/*${ext}`;
+    const entrypoints = await glob(entrypointPattern, opts);
     const pages: { [key: string]: any } = {};
-    const { functions = {} } = await readVercelConfig(workPath);
-    const traceDir = join(workPath, '.output', 'runtime-traced-files');
+    const pluginName = packageName.replace('vercel-plugin-', '');
+
+    const traceDir = join(
+      workPath,
+      `.output`,
+      `inputs`,
+      // Legacy Runtimes can only provide API Routes, so that's
+      // why we can use this prefix for all of them. Here, we have to
+      // make sure to not use a cryptic hash name, because people
+      // need to be able to easily inspect the output.
+      `api-routes-${pluginName}`
+    );
+
     await fs.ensureDir(traceDir);
 
     for (const entrypoint of Object.keys(entrypoints)) {
-      const key =
-        Object.keys(functions).find(
-          src => src === entrypoint || minimatch(entrypoint, src)
-        ) || '';
-      const config = functions[key] || {};
-
       const { output } = await buildRuntime({
         files,
         entrypoint,
         workPath,
         config: {
           zeroConfig: true,
-          includeFiles: config.includeFiles,
-          excludeFiles: config.excludeFiles,
+        },
+        meta: {
+          avoidTopLevelInstall: true,
         },
       });
 
@@ -51,7 +84,6 @@ export function convertRuntimeToPlugin(
         maxDuration: output.maxDuration,
         environment: output.environment,
         allowQuery: output.allowQuery,
-        regions: output.regions,
       };
 
       // @ts-ignore This symbol is a private API
@@ -124,17 +156,9 @@ async function readJson(filePath: string): Promise<{ [key: string]: any }> {
   }
 }
 
-async function readVercelConfig(
-  workPath: string
-): Promise<{ functions?: BuilderFunctions; regions?: string[] }> {
-  const vercelJsonPath = join(workPath, 'vercel.json');
-  return readJson(vercelJsonPath);
-}
-
 /**
  * If `.output/functions-manifest.json` exists, append to the pages
- * property. Otherwise write a new file. This will also read `vercel.json`
- * and apply relevant `functions` property config.
+ * property. Otherwise write a new file.
  */
 export async function updateFunctionsManifest({
   workPath,
@@ -148,24 +172,94 @@ export async function updateFunctionsManifest({
     '.output',
     'functions-manifest.json'
   );
-  const vercelConfig = await readVercelConfig(workPath);
   const functionsManifest = await readJson(functionsManifestPath);
 
   if (!functionsManifest.version) functionsManifest.version = 1;
   if (!functionsManifest.pages) functionsManifest.pages = {};
 
   for (const [pageKey, pageConfig] of Object.entries(pages)) {
-    const fnConfig = await getLambdaOptionsFromFunction({
-      sourceFile: pageKey,
-      config: vercelConfig,
-    });
-    functionsManifest.pages[pageKey] = {
-      ...pageConfig,
-      memory: fnConfig.memory || pageConfig.memory,
-      maxDuration: fnConfig.maxDuration || pageConfig.maxDuration,
-      regions: vercelConfig.regions || pageConfig.regions,
-    };
+    functionsManifest.pages[pageKey] = { ...pageConfig };
   }
 
   await fs.writeFile(functionsManifestPath, JSON.stringify(functionsManifest));
+}
+
+/**
+ * Append routes to the `routes-manifest.json` file.
+ * If the file does not exist, it will be created.
+ */
+export async function updateRoutesManifest({
+  workPath,
+  redirects,
+  rewrites,
+  headers,
+  dynamicRoutes,
+  staticRoutes,
+}: {
+  workPath: string;
+  redirects?: {
+    source: string;
+    destination: string;
+    statusCode: number;
+    regex: string;
+  }[];
+  rewrites?: {
+    source: string;
+    destination: string;
+    regex: string;
+  }[];
+  headers?: {
+    source: string;
+    headers: {
+      key: string;
+      value: string;
+    }[];
+    regex: string;
+  }[];
+  dynamicRoutes?: {
+    page: string;
+    regex: string;
+    namedRegex?: string;
+    routeKeys?: { [named: string]: string };
+  }[];
+  staticRoutes?: {
+    page: string;
+    regex: string;
+    namedRegex?: string;
+    routeKeys?: { [named: string]: string };
+  }[];
+}) {
+  const routesManifestPath = join(workPath, '.output', 'routes-manifest.json');
+
+  const routesManifest = await readJson(routesManifestPath);
+
+  if (!routesManifest.version) routesManifest.version = 3;
+  if (routesManifest.pages404 === undefined) routesManifest.pages404 = true;
+
+  if (redirects) {
+    if (!routesManifest.redirects) routesManifest.redirects = [];
+    routesManifest.redirects.push(...redirects);
+  }
+
+  if (rewrites) {
+    if (!routesManifest.rewrites) routesManifest.rewrites = [];
+    routesManifest.rewrites.push(...rewrites);
+  }
+
+  if (headers) {
+    if (!routesManifest.headers) routesManifest.headers = [];
+    routesManifest.headers.push(...headers);
+  }
+
+  if (dynamicRoutes) {
+    if (!routesManifest.dynamicRoutes) routesManifest.dynamicRoutes = [];
+    routesManifest.dynamicRoutes.push(...dynamicRoutes);
+  }
+
+  if (staticRoutes) {
+    if (!routesManifest.staticRoutes) routesManifest.staticRoutes = [];
+    routesManifest.staticRoutes.push(...staticRoutes);
+  }
+
+  await fs.writeFile(routesManifestPath, JSON.stringify(routesManifest));
 }

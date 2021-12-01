@@ -2630,7 +2630,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   const url = new URL(output.stdout);
 
   // Should time out
-  url.pathname = '/api/wait-for/4';
+  url.pathname = '/api/wait-for/5';
   const response1 = await fetch(url.href);
   t.is(
     response1.status,
@@ -2639,7 +2639,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   );
 
   // Should not time out
-  url.pathname = '/api/wait-for/2';
+  url.pathname = '/api/wait-for/1';
   const response2 = await fetch(url.href);
   t.is(
     response2.status,

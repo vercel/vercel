@@ -14,9 +14,10 @@ import { assert } from 'console';
 import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import ogGlob from 'glob';
-import { isAbsolute, join, parse, relative, resolve } from 'path';
+import { dirname, isAbsolute, join, parse, relative, resolve } from 'path';
 import pluralize from 'pluralize';
 import Client from '../util/client';
+import { VercelConfig } from '../util/dev/types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
@@ -30,10 +31,7 @@ import { getCommandName, getPkgName } from '../util/pkg-name';
 import { loadCliPlugins } from '../util/plugins';
 import { findFramework } from '../util/projects/find-framework';
 import { VERCEL_DIR } from '../util/projects/link';
-import {
-  ProjectLinkAndSettings,
-  readProjectSettings,
-} from '../util/projects/project-settings';
+import { readProjectSettings } from '../util/projects/project-settings';
 import pull from './pull';
 
 const sema = new Sema(16, {
@@ -67,15 +65,6 @@ const help = () => {
 };
 
 const OUTPUT_DIR = '.output';
-
-const fields: {
-  name: string;
-  value: keyof ProjectLinkAndSettings['settings'];
-}[] = [
-  { name: 'Build Command', value: 'buildCommand' },
-  { name: 'Output Directory', value: 'outputDirectory' },
-  { name: 'Root Directory', value: 'rootDirectory' },
-];
 
 export default async function main(client: Client) {
   if (process.env.__VERCEL_BUILD_RUNNING) {
@@ -147,9 +136,11 @@ export default async function main(client: Client) {
   });
 
   // Set process.env with loaded environment variables
-  await processEnv(loadedEnvFiles);
+  processEnv(loadedEnvFiles);
 
-  const spawnOpts = {
+  const spawnOpts: {
+    env: Record<string, string | undefined>;
+  } = {
     env: { ...combinedEnv, VERCEL: '1' },
   };
 
@@ -168,37 +159,47 @@ export default async function main(client: Client) {
   }
 
   const buildState = { ...project.settings };
-
+  const formatSetting = (
+    name: string,
+    override: string | null | undefined,
+    defaults: typeof framework.settings.outputDirectory
+  ) =>
+    `  - ${chalk.bold(`${name}:`)} ${`${
+      override
+        ? override + ` (override)`
+        : 'placeholder' in defaults
+        ? chalk.italic(`${defaults.placeholder}`)
+        : defaults.value
+    }`}`;
   console.log(`Retrieved Project Settings:`);
   console.log(
     chalk.dim(`  - ${chalk.bold(`Framework Preset:`)} ${framework.name}`)
   );
+  console.log(
+    chalk.dim(
+      formatSetting(
+        'Build Command',
+        project.settings.buildCommand,
+        framework.settings.buildCommand
+      )
+    )
+  );
+  console.log(
+    chalk.dim(
+      formatSetting(
+        'Output Directory',
+        project.settings.outputDirectory,
+        framework.settings.outputDirectory
+      )
+    )
+  );
 
-  for (let field of fields) {
-    const defaults = (framework.settings as any)[field.value];
-    if (defaults) {
-      console.log(
-        chalk.dim(
-          `  - ${chalk.bold(`${field.name}:`)} ${`${
-            project.settings[field.value]
-              ? project.settings[field.value] + ` (override)`
-              : isSettingValue(defaults)
-              ? defaults.value
-              : chalk.italic(`${defaults.placeholder}`)
-          }`}`
-        )
-      );
-    }
-    if (field.value != 'buildCommand') {
-      (buildState as any)[field.value] = project.settings[field.value]
-        ? project.settings[field.value]
-        : defaults
-        ? isSettingValue(defaults)
-          ? defaults.value
-          : null
-        : null;
-    }
-  }
+  buildState.outputDirectory =
+    project.settings.outputDirectory ||
+    (isSettingValue(framework.settings.outputDirectory)
+      ? framework.settings.outputDirectory.value
+      : null);
+  buildState.rootDirectory = project.settings.rootDirectory;
 
   if (loadedEnvFiles.length > 0) {
     console.log(
@@ -285,17 +286,34 @@ export default async function main(client: Client) {
   // Clean the output directory
   fs.removeSync(join(cwd, OUTPUT_DIR));
 
+  if (framework && process.env.VERCEL_URL && 'envPrefix' in framework) {
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('VERCEL_')) {
+        const newKey = `${framework.envPrefix}${key}`;
+        // Set `process.env` and `spawnOpts.env` to make sure the variables are
+        // available to the `build` step and the CLI Plugins.
+        process.env[newKey] = process.env[newKey] || process.env[key];
+        spawnOpts.env[newKey] = process.env[newKey];
+      }
+    }
+  }
+
+  // Required for Next.js to produce the correct `.nft.json` files.
+  spawnOpts.env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT = baseDir;
+
+  // Yarn v2 PnP mode may be activated, so force
+  // "node-modules" linker style
+  const env = {
+    YARN_NODE_LINKER: 'node-modules',
+    ...spawnOpts.env,
+  };
+
   if (typeof buildState.buildCommand === 'string') {
     console.log(`Running Build Command: ${cmd(buildState.buildCommand)}`);
     await execCommand(buildState.buildCommand, {
       ...spawnOpts,
-      // Yarn v2 PnP mode may be activated, so force
-      // "node-modules" linker style
-      env: {
-        YARN_NODE_LINKER: 'node-modules',
-        ...spawnOpts.env,
-      },
-      cwd: cwd,
+      env,
+      cwd,
     });
   } else if (fs.existsSync(join(cwd, 'package.json'))) {
     await runPackageJsonScript(
@@ -304,21 +322,52 @@ export default async function main(client: Client) {
       ['vercel-build', 'now-build', 'build'],
       spawnOpts
     );
+  } else if (typeof framework.settings.buildCommand.value === 'string') {
+    console.log(
+      `Running Build Command: ${cmd(framework.settings.buildCommand.value)}`
+    );
+    await execCommand(framework.settings.buildCommand.value, {
+      ...spawnOpts,
+      env,
+      cwd,
+    });
   }
 
   if (!fs.existsSync(join(cwd, OUTPUT_DIR))) {
-    let outputDir = join(OUTPUT_DIR, 'static');
-    let distDir = await framework.getFsOutputDir(cwd);
-    if (framework.slug === 'nextjs') {
-      outputDir = OUTPUT_DIR;
+    let dotNextDir: string | null = null;
+
+    // If a custom `outputDirectory` was set, we'll need to verify
+    // if it's `.next` output, or just static output.
+    const userOutputDirectory = project.settings.outputDirectory;
+
+    if (typeof userOutputDirectory === 'string') {
+      if (fs.existsSync(join(cwd, userOutputDirectory, 'BUILD_ID'))) {
+        dotNextDir = join(cwd, userOutputDirectory);
+        client.output.debug(
+          `Consider ${param(userOutputDirectory)} as ${param('.next')} output.`
+        );
+      }
+    } else if (fs.existsSync(join(cwd, '.next'))) {
+      dotNextDir = join(cwd, '.next');
+      client.output.debug(`Found ${param('.next')} directory.`);
     }
-    const copyStamp = stamp();
+
+    // We cannot rely on the `framework` alone, as it might be a static export,
+    // and the current build might use a differnt project that's not in the settings.
+    const isNextOutput = Boolean(dotNextDir);
+    const outputDir = isNextOutput ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
+    const distDir =
+      dotNextDir ||
+      userOutputDirectory ||
+      (await framework.getFsOutputDir(cwd));
+
     await fs.ensureDir(join(cwd, outputDir));
-    const relativeDistDir = relative(cwd, distDir);
+
+    const copyStamp = stamp();
     client.output.spinner(
       `Copying files from ${param(distDir)} to ${param(outputDir)}`
     );
-    const files = await glob(join(relativeDistDir, '**'), {
+    const files = await glob(join(relative(cwd, distDir), '**'), {
       ignore: [
         'node_modules/**',
         '.vercel/**',
@@ -366,6 +415,7 @@ export default async function main(client: Client) {
         `Generating build manifest: ${param(buildManifestPath)}`
       );
       const buildManifest = {
+        version: 1,
         cache: framework.cachePattern ? [framework.cachePattern] : [],
       };
       await fs.writeJSON(buildManifestPath, buildManifest, { spaces: 2 });
@@ -393,7 +443,7 @@ export default async function main(client: Client) {
     }
 
     // Special Next.js processing.
-    if (framework.slug === 'nextjs') {
+    if (isNextOutput) {
       // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
       const tempStatic = '___static';
       await fs.rename(
@@ -444,10 +494,12 @@ export default async function main(client: Client) {
       // `public`, then`static`). We can't read both at the same time because that would mean we'd
       // read public for old Next.js versions that don't support it, which might be breaking (and
       // we don't want to make vercel build specific framework versions).
+      const nextSrcDirectory = dirname(distDir);
+
       const publicFiles = await glob('public/**', {
         nodir: true,
         dot: true,
-        cwd,
+        cwd: nextSrcDirectory,
         absolute: true,
       });
       if (publicFiles.length > 0) {
@@ -456,7 +508,11 @@ export default async function main(client: Client) {
             smartCopy(
               client,
               f,
-              f.replace('public', join(OUTPUT_DIR, 'static'))
+              join(
+                OUTPUT_DIR,
+                'static',
+                relative(join(dirname(distDir), 'public'), f)
+              )
             )
           )
         );
@@ -464,7 +520,7 @@ export default async function main(client: Client) {
         const staticFiles = await glob('static/**', {
           nodir: true,
           dot: true,
-          cwd,
+          cwd: nextSrcDirectory,
           absolute: true,
         });
         await Promise.all(
@@ -472,7 +528,12 @@ export default async function main(client: Client) {
             smartCopy(
               client,
               f,
-              f.replace('static', join(OUTPUT_DIR, 'static', 'static'))
+              join(
+                OUTPUT_DIR,
+                'static',
+                'static',
+                relative(join(dirname(distDir), 'static'), f)
+              )
             )
           )
         );
@@ -491,6 +552,7 @@ export default async function main(client: Client) {
       const nftFiles = await glob(join(OUTPUT_DIR, '**', '*.nft.json'), {
         nodir: true,
         dot: true,
+        ignore: ['cache/**'],
         cwd,
         absolute: true,
       });
@@ -527,6 +589,7 @@ export default async function main(client: Client) {
             baseDir,
             outputDir: OUTPUT_DIR,
             nftFileName: f.replace(ext, '.js.nft.json'),
+            distDir,
             nft: {
               version: 1,
               files: Array.from(fileList).map(fileListEntry =>
@@ -544,10 +607,12 @@ export default async function main(client: Client) {
             outputDir: OUTPUT_DIR,
             nftFileName: f,
             nft: json,
+            distDir,
           });
         }
       }
 
+      client.output.debug(`Resolve ${param('required-server-files.json')}.`);
       const requiredServerFilesPath = join(
         OUTPUT_DIR,
         'required-server-files.json'
@@ -559,13 +624,18 @@ export default async function main(client: Client) {
         ...requiredServerFilesJson,
         appDir: '.',
         files: requiredServerFilesJson.files.map((i: string) => {
-          const absolutePath = join(cwd, i.replace('.next', '.output'));
+          const originalPath = join(requiredServerFilesJson.appDir, i);
+          const relPath = join(OUTPUT_DIR, relative(distDir, originalPath));
+
+          const absolutePath = join(cwd, relPath);
           const output = relative(baseDir, absolutePath);
 
-          return {
-            input: i.replace('.next', '.output'),
-            output,
-          };
+          return relPath === output
+            ? relPath
+            : {
+                input: relPath,
+                output,
+              };
         }),
       });
     }
@@ -579,6 +649,14 @@ export default async function main(client: Client) {
         plugins.pluginCount
       )} after Build Command:`
     );
+    let vercelConfig: VercelConfig = {};
+    try {
+      vercelConfig = await fs.readJSON(join(cwd, 'vercel.json'));
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        throw new Error(`Failed to read vercel.json: ${error.message}`);
+      }
+    }
     for (let item of plugins.buildPlugins) {
       const { name, plugin, color } = item;
       if (typeof plugin.build === 'function') {
@@ -591,6 +669,7 @@ export default async function main(client: Client) {
           console.error = (...args: any[]) =>
             prefixedLog(prefix, args, origErr);
           await plugin.build({
+            vercelConfig,
             workPath: cwd,
           });
           client.output.debug(
@@ -669,16 +748,28 @@ export async function runPackageJsonScript(
 
 async function linkOrCopy(existingPath: string, newPath: string) {
   try {
-    await fs.createLink(existingPath, newPath);
+    if (
+      newPath.endsWith('.nft.json') ||
+      newPath.endsWith('middleware-manifest.json') ||
+      newPath.endsWith('required-server-files.json')
+    ) {
+      await fs.copy(existingPath, newPath, {
+        overwrite: true,
+      });
+    } else {
+      await fs.createLink(existingPath, newPath);
+    }
   } catch (err: any) {
     // eslint-disable-line
-    // If a hard link to the same file already exists
+    // If a symlink to the same file already exists
     // then trying to copy it will make an empty file from it.
     if (err['code'] === 'EEXIST') return;
-    // In some VERY rare cases (1 in a thousand), hard-link creation fails on Windows.
+    // In some VERY rare cases (1 in a thousand), symlink creation fails on Windows.
     // In that case, we just fall back to copying.
     // This issue is reproducible with "pnpm add @material-ui/icons@4.9.1"
-    await fs.copyFile(existingPath, newPath);
+    await fs.copy(existingPath, newPath, {
+      overwrite: true,
+    });
   }
 }
 
@@ -725,24 +816,37 @@ async function resolveNftToOutput({
   baseDir,
   outputDir,
   nftFileName,
+  distDir,
   nft,
 }: {
   client: Client;
   baseDir: string;
   outputDir: string;
   nftFileName: string;
+  distDir: string;
   nft: NftFile;
 }) {
   client.output.debug(`Processing and resolving ${nftFileName}`);
   await fs.ensureDir(join(outputDir, 'inputs'));
   const newFilesList: NftFile['files'] = [];
+
+  // If `distDir` is a subdirectory, then the input has to be resolved to where the `.output` directory will be.
+  const relNftFileName = relative(outputDir, nftFileName);
+  const origNftFilename = join(distDir, relNftFileName);
+
+  if (relNftFileName.startsWith('cache/')) {
+    // No need to process the `cache/` directory.
+    // Paths in it might also not be relative to `cache` itself.
+    return;
+  }
+
   for (let fileEntity of nft.files) {
-    const relativeInput: string =
+    const relativeInput =
       typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
-    const fullInput = resolve(join(parse(nftFileName).dir, relativeInput));
+    const fullInput = resolve(join(parse(origNftFilename).dir, relativeInput));
 
     // if the resolved path is NOT in the .output directory we move in it there
-    if (!fullInput.includes(outputDir)) {
+    if (!fullInput.includes(distDir)) {
       const { ext } = parse(fullInput);
       const raw = await fs.readFile(fullInput);
       const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
