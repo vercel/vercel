@@ -5,24 +5,63 @@ import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
+import { getIgnoreFilter } from '.';
 
 /**
  * Convert legacy Runtime to a Plugin.
  * @param buildRuntime - a legacy build() function from a Runtime
+ * @param packageName - the name of the package, for example `vercel-plugin-python`
  * @param ext - the file extension, for example `.py`
  */
 export function convertRuntimeToPlugin(
   buildRuntime: (options: BuildOptions) => Promise<{ output: Lambda }>,
+  packageName: string,
   ext: string
 ) {
   // This `build()` signature should match `plugin.build()` signature in `vercel build`.
   return async function build({ workPath }: { workPath: string }) {
     const opts = { cwd: workPath };
     const files = await glob('**', opts);
-    delete files['vercel.json']; // Builders/Runtimes didn't have vercel.json
-    const entrypoints = await glob(`api/**/*${ext}`, opts);
+
+    // `.output` was already created by the Build Command, so we have
+    // to ensure its contents don't get bundled into the Lambda. Similarily,
+    // we don't want to bundle anything from `.vercel` either. Lastly,
+    // Builders/Runtimes didn't have `vercel.json` or `now.json`.
+    const ignoredPaths = ['.output', '.vercel', 'vercel.json', 'now.json'];
+
+    // We also don't want to provide any files to Runtimes that were ignored
+    // through `.vercelignore` or `.nowignore`, because the Build Step does the same.
+    const ignoreFilter = await getIgnoreFilter(workPath);
+
+    // We're not passing this as an `ignore` filter to the `glob` function above,
+    // so that we can re-use exactly the same `getIgnoreFilter` method that the
+    // Build Step uses (literally the same code).
+    for (const file in files) {
+      const isNative = ignoredPaths.some(item => {
+        return file.startsWith(item);
+      });
+
+      if (isNative || ignoreFilter(file)) {
+        delete files[file];
+      }
+    }
+
+    const entrypointPattern = `api/**/*${ext}`;
+    const entrypoints = await glob(entrypointPattern, opts);
     const pages: { [key: string]: any } = {};
-    const traceDir = join(workPath, '.output', 'runtime-traced-files');
+    const pluginName = packageName.replace('vercel-plugin-', '');
+
+    const traceDir = join(
+      workPath,
+      `.output`,
+      `inputs`,
+      // Legacy Runtimes can only provide API Routes, so that's
+      // why we can use this prefix for all of them. Here, we have to
+      // make sure to not use a cryptic hash name, because people
+      // need to be able to easily inspect the output.
+      `api-routes-${pluginName}`
+    );
+
     await fs.ensureDir(traceDir);
 
     for (const entrypoint of Object.keys(entrypoints)) {
