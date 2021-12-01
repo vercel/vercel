@@ -37,10 +37,33 @@ export default async function glob(
 
   const results: FsFiles = {};
 
-  options.symlinks = {};
+  options.cache = {};
   options.statCache = {};
+  options.symlinks = {};
   options.stat = true;
   options.dot = true;
+
+  await vanillaGlob(pattern, options); // populates the caches
+
+  for (const [ abs, isSym ] of Object.entries(options.symlinks)) { // vercel/40180cd6-path0/node_modules/next-site is a symlink
+    if (isSym) {
+      const sc = options.statCache[abs]!;
+
+      if (sc && sc.isDirectory()) { // ... and also a directory
+        // console.log('dir+sym', abs);
+        const d = path.dirname(abs);
+        const b = path.basename(abs);
+        const c = options.cache[d];
+
+        if (Array.isArray(c)) {
+          // 'vercel/40180cd6-path0/node_modules': [ '@algolia', 'next-site' ]
+          // is transformed to
+          // 'vercel/40180cd6-path0/node_modules': [ '@algolia' ]
+          options.cache[d] = c.filter((f) => f !== b);
+        }
+      }
+    }
+  }
 
   const files = await vanillaGlob(pattern, options);
 
