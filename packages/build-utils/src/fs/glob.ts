@@ -37,9 +37,9 @@ export default async function glob(
 
   const results: FsFiles = {};
 
-  options.cache = {};
-  options.statCache = {};
   options.symlinks = {};
+  options.statCache = {};
+  options.cache = {};
   options.stat = true;
   options.dot = true;
 
