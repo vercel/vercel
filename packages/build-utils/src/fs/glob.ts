@@ -51,6 +51,8 @@ export default async function glob(
 
       if (sc && sc.isDirectory()) { // ... and also a directory
         // console.log('dir+sym', abs);
+
+/*
         const d = path.dirname(abs);
         const b = path.basename(abs);
         const c = options.cache[d];
@@ -61,6 +63,7 @@ export default async function glob(
           // 'vercel/40180cd6-path0/node_modules': [ '@algolia' ]
           options.cache[d] = c.filter((f) => f !== b);
         }
+*/
       }
     }
   }

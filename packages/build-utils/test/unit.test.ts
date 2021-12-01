@@ -71,6 +71,32 @@ it('should re-create symlinks properly', async () => {
   assert(aStat.isFile());
 });
 
+it('should re-create symlinks properly [2]', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
+  const files = await glob('**/node-modules/**', path.join(__dirname, 'symlinks-node-modules'));
+  assert.equal(Object.keys(files).length, 3);
+
+/*
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+
+  const files2 = await download(files, outDir);
+  assert.equal(Object.keys(files2).length, 4);
+
+  const [linkStat, linkDirStat, aStat] = await Promise.all([
+    fs.lstat(path.join(outDir, 'link.txt')),
+    fs.lstat(path.join(outDir, 'link-dir')),
+    fs.lstat(path.join(outDir, 'a.txt')),
+  ]);
+  assert(linkStat.isSymbolicLink());
+  assert(linkDirStat.isSymbolicLink());
+  assert(aStat.isFile());
+*/
+});
+
 it('should create zip files with symlinks properly', async () => {
   if (process.platform === 'win32') {
     console.log('Skipping test on windows');
