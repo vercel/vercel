@@ -15,7 +15,7 @@ const ajv = new Ajv();
 export const BaseFunctionConfigSchema = {
   type: 'object',
   properties: {
-    runtime: { type: 'string' },
+    use: { type: 'string' },
     memory: { type: 'number' },
     maxDuration: { type: 'number' },
     regions: {
