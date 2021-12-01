@@ -55,6 +55,8 @@ export function convertRuntimeToPlugin(
       workPath,
       `.output`,
       `inputs`,
+      // Legacy Runtimes can only provide API Routes, so that's
+      // why we can use this prefix for all of them.
       `api-routes-${pluginName}`
     );
 
