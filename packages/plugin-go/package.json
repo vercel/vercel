@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "vercel-plugin-go",
-  "version": "1.0.0-canary.13",
+  "version": "1.0.0-canary.14",
   "main": "dist/src/index.js",
   "license": "MIT",
   "files": [
