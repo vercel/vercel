@@ -87,7 +87,7 @@ export async function build({ workPath }: { workPath: string }) {
     sortingIndex: 1,
   };
 
-  updateFunctionsManifest({ workPath, pages });
+  await updateFunctionsManifest({ workPath, pages });
 }
 
 const stringifyQuery = (req: IncomingMessage, query: ParsedUrlQuery) => {
