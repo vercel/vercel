@@ -2,7 +2,7 @@
   "private": false,
   "name": "vercel-plugin-python",
   "version": "1.0.0-canary.16",
-  "main": "dist/src/index.js",
+  "main": "dist/index.js",
   "license": "MIT",
   "files": [
     "dist"

@@ -13,7 +13,6 @@
     "outDir": "dist",
     "types": ["node"],
     "strict": true,
-    "target": "esnext",
-    "resolveJsonModule": true
+    "target": "esnext"
   }
 }
