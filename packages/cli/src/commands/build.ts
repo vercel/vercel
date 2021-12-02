@@ -13,7 +13,7 @@ import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
 import { assert } from 'console';
 import { createHash } from 'crypto';
-import fs, { mkdirp } from 'fs-extra';
+import fs from 'fs-extra';
 import ogGlob from 'glob';
 import { dirname, isAbsolute, join, parse, relative, resolve } from 'path';
 import pluralize from 'pluralize';
@@ -356,8 +356,15 @@ export default async function main(client: Client) {
     // We cannot rely on the `framework` alone, as it might be a static export,
     // and the current build might use a differnt project that's not in the settings.
     const isNextOutput = Boolean(dotNextDir);
-    const outputDir = isNextOutput ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
+    const nextExport = dotNextDir
+      ? await getNextExportStatus(dotNextDir)
+      : null;
+    const outputDir =
+      isNextOutput && !nextExport ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
     const distDir =
+      (nextExport?.exportDetail.outDirectory
+        ? relative(cwd, nextExport.exportDetail.outDirectory)
+        : false) ||
       dotNextDir ||
       userOutputDirectory ||
       (await framework.getFsOutputDir(cwd));
@@ -444,55 +451,36 @@ export default async function main(client: Client) {
     }
 
     // Special Next.js processing.
-    const exportStatus = dotNextDir
-      ? await getNextExportStatus(dotNextDir)
-      : null;
-
-    if (dotNextDir && exportStatus) {
+    if (dotNextDir && nextExport) {
       client.output.debug('Found `next export` output.');
 
-      const tempOutput = join(cwd, '.output___tmp');
-      const outputFiles = await buildUtilsGlob(
-        '**',
-        exportStatus.exportDetail.outDirectory
+      const htmlFiles = await buildUtilsGlob(
+        '**/*.html',
+        join(cwd, OUTPUT_DIR, 'static')
       );
 
-      if (exportStatus.exportDetail.success !== true) {
+      if (nextExport.exportDetail.success !== true) {
         client.output.error(
           `Export of Next.js app failed. Please check your build logs.`
         );
         process.exit(1);
       }
 
-      await mkdirp(join(tempOutput, 'server', 'pages'));
-      await mkdirp(join(tempOutput, 'static'));
-
-      const sema = new Sema(10); // Arbitrary
+      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'server', 'pages'));
+      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'static'));
 
       await Promise.all(
-        Object.keys(outputFiles).map(async fileName => {
+        Object.keys(htmlFiles).map(async fileName => {
           await sema.acquire();
 
-          const absoluteFilePath = join(
-            exportStatus.exportDetail.outDirectory,
-            fileName
-          );
+          const input = join(cwd, OUTPUT_DIR, 'static', fileName);
+          const target = join(cwd, OUTPUT_DIR, 'server', 'pages', fileName);
 
-          if (fileName.endsWith('.html')) {
-            await smartCopy(
-              client,
-              absoluteFilePath,
-              join(tempOutput, 'server', 'pages', fileName)
-            );
-          } else {
-            await smartCopy(
-              client,
-              absoluteFilePath,
-              join(tempOutput, 'static', fileName)
-            );
-          }
+          await fs.mkdirp(dirname(target));
 
-          sema.release();
+          await fs.promises.rename(input, target).finally(() => {
+            sema.release();
+          });
         })
       );
 
@@ -502,11 +490,8 @@ export default async function main(client: Client) {
         'routes-manifest.json',
         'build-manifest.json',
       ]) {
-        await smartCopy(client, join(dotNextDir, file), join(tempOutput, file));
+        await smartCopy(client, join(dotNextDir, file), join(OUTPUT_DIR, file));
       }
-
-      await fs.rmdir(join(cwd, OUTPUT_DIR), { recursive: true });
-      await fs.rename(tempOutput, join(cwd, OUTPUT_DIR));
     } else if (isNextOutput) {
       // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
       const tempStatic = '___static';
