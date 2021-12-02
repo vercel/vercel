@@ -13,10 +13,18 @@ import { getIgnoreFilter } from '.';
 // Builders/Runtimes didn't have `vercel.json` or `now.json`.
 const ignoredPaths = ['.output', '.vercel', 'vercel.json', 'now.json'];
 
-const shouldIgnorePath = (file: string, ignoreFilter: any) => {
+const shouldIgnorePath = (
+  file: string,
+  ignoreFilter: any,
+  ignoreFile: boolean
+) => {
   const isNative = ignoredPaths.some(item => {
     return file.startsWith(item);
   });
+
+  if (!ignoreFile) {
+    return isNative;
+  }
 
   return isNative || ignoreFilter(file);
 };
@@ -46,7 +54,7 @@ export function convertRuntimeToPlugin(
     // Build Step uses (literally the same code). Note that this exclusion only applies
     // when deploying. Locally, another exclusion further below is needed.
     for (const file in files) {
-      if (shouldIgnorePath(file, ignoreFilter)) {
+      if (shouldIgnorePath(file, ignoreFilter, true)) {
         delete files[file];
       }
     }
@@ -99,7 +107,7 @@ export function convertRuntimeToPlugin(
       // files isn't used by the Legacy Runtimes, so we need to apply the filters
       // to the outputs that they are returning instead.
       for (const file in lambdaFiles) {
-        if (shouldIgnorePath(file, ignoreFilter)) {
+        if (shouldIgnorePath(file, ignoreFilter, false)) {
           delete files[file];
         }
       }
