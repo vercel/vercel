@@ -4,7 +4,7 @@
 *                                        @TooTallNate
 /.github/workflows                       @AndyBitz @styfle
 /packages/frameworks                     @AndyBitz
-/packages/cli/src/commands/build         @TooTallNate @styfle @AndyBitz @gdborton
+/packages/cli/src/commands/build         @TooTallNate @styfle @AndyBitz @gdborton @jaredpalmer
 /packages/cli/src/commands/dev           @TooTallNate @styfle @AndyBitz
 /packages/cli/src/util/dev               @TooTallNate @styfle @AndyBitz
 /packages/cli/src/commands/domains       @javivelasco @mglagola @anatrajkovska
