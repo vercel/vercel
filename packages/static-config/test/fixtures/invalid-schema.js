@@ -1,3 +1,3 @@
 export const config = {
-  runtime: 0,
+  use: 0,
 };
