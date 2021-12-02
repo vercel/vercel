@@ -32,16 +32,34 @@ describe('convert-runtime-to-plugin', () => {
   });
 
   it('should create correct fileystem for python', async () => {
+    const ext = '.py';
     const workPath = pythonApiWorkpath;
+    const handlerName = 'vc__handler__python';
+    const handlerFileName = handlerName + ext;
+
     const lambdaOptions = {
-      handler: 'index.handler',
+      handler: `${handlerName}.vc_handler`,
       runtime: 'python3.9',
       memory: 512,
       maxDuration: 5,
       environment: {},
     };
 
+    const writeLauncher = async () => {
+      await fs.writeFile(join(workPath, handlerFileName), '# handler');
+    };
+
+    // TODO: This should be possible to remove by re-arranging the code, but
+    // it doesn't influence the reliability of the test. It's just that this test
+    // reads files even before the build was run, so they don't yet contain a launcher,
+    // which this addition is guaranteeing. We'll just have to change reading
+    // the files at a different position.
+    await writeLauncher();
+
     const buildRuntime = async (opts: BuildOptions) => {
+      // This is the usual time at which a Legacy Runtime writes its Lambda launcher.
+      await writeLauncher();
+
       const lambda = await createLambda({
         files: opts.files,
         ...lambdaOptions,
@@ -50,15 +68,15 @@ describe('convert-runtime-to-plugin', () => {
     };
 
     const lambdaFiles = await fsToJson(workPath);
-    delete lambdaFiles['vercel.json'];
-
-    const ext = '.py';
     const packageName = 'vercel-plugin-python';
     const build = await convertRuntimeToPlugin(buildRuntime, packageName, ext);
 
     await build({ workPath });
 
     const output = await fsToJson(join(workPath, '.output'));
+
+    delete lambdaFiles['vercel.json'];
+    delete lambdaFiles['vc__handler__python.py'];
 
     expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
@@ -68,12 +86,12 @@ describe('convert-runtime-to-plugin', () => {
       server: {
         pages: {
           api: {
-            'index.py': expect.stringContaining('index'),
+            'index.py': expect.stringContaining('handler'),
             'index.py.nft.json': expect.stringContaining('{'),
             users: {
-              'get.py': expect.stringContaining('get'),
+              'get.py': expect.stringContaining('handler'),
               'get.py.nft.json': expect.stringContaining('{'),
-              'post.py': expect.stringContaining('post'),
+              'post.py': expect.stringContaining('handler'),
               'post.py.nft.json': expect.stringContaining('{'),
             },
           },
@@ -96,35 +114,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: `../../../../inputs/api-routes-python/api/db/[id].py`,
+          input: `../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: `../../../../inputs/api-routes-python/api/index.py`,
+          input: `../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input: `../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
+          input: `../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: `../../../../inputs/api-routes-python/api/users/get.py`,
+          input: `../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: `../../../../inputs/api-routes-python/api/users/post.py`,
+          input: `../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: `../../../../inputs/api-routes-python/file.txt`,
+          input: `../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: `../../../../inputs/api-routes-python/util/date.py`,
+          input: `../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: `../../../../inputs/api-routes-python/util/math.py`,
+          input: `../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -137,35 +155,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: `../../../../../inputs/api-routes-python/api/db/[id].py`,
+          input: `../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/index.py`,
+          input: `../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
+          input: `../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/users/get.py`,
+          input: `../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/users/post.py`,
+          input: `../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/file.txt`,
+          input: `../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: `../../../../../inputs/api-routes-python/util/date.py`,
+          input: `../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/util/math.py`,
+          input: `../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -178,35 +196,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: `../../../../../inputs/api-routes-python/api/db/[id].py`,
+          input: `../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/index.py`,
+          input: `../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
+          input: `../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/users/get.py`,
+          input: `../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/users/post.py`,
+          input: `../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/file.txt`,
+          input: `../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: `../../../../../inputs/api-routes-python/util/date.py`,
+          input: `../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/util/math.py`,
+          input: `../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
