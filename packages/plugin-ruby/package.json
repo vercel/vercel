@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "vercel-plugin-ruby",
-  "version": "1.0.0-canary.18",
+  "version": "1.0.0-canary.19",
   "main": "dist/index.js",
   "license": "MIT",
   "files": [
@@ -17,7 +17,7 @@
     "prepublishOnly": "tsc"
   },
   "dependencies": {
-    "@vercel/build-utils": "2.12.3-canary.31",
+    "@vercel/build-utils": "2.12.3-canary.32",
     "@vercel/ruby": "1.2.8-canary.6"
   },
   "devDependencies": {

@@ -222,7 +222,7 @@ export function convertRuntimeToPlugin(
       const json = JSON.stringify({
         version: 1,
         files: tracedFiles.map(file => ({
-          input: normalizePath(relative(nft, file.absolutePath)),
+          input: normalizePath(relative(dirname(nft), file.absolutePath)),
           output: normalizePath(file.relativePath),
         })),
       });
