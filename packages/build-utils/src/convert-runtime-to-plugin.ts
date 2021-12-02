@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { join, dirname } from 'path';
+import { join, dirname, basename } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
@@ -92,7 +92,7 @@ export function convertRuntimeToPlugin(
 
       const handler = output.handler;
       const handlerMethod = handler.split('.').reverse()[0];
-      const handlerFile = handler.replace(`.${handlerMethod}`, '');
+      const handlerFileName = handler.replace(`.${handlerMethod}`, '');
 
       pages[entrypoint] = {
         handler: handler,
@@ -116,9 +116,19 @@ export function convertRuntimeToPlugin(
         }
       }
 
+      const handlerFilePath = Object.keys(lambdaFiles).find(item => {
+        return basename(item) === handlerFileName;
+      });
+
+      if (!handlerFilePath) {
+        throw new Error(
+          `Could not find a handler file. Please ensure that the list of \`files\` defined for the returned \`Lambda\` contains a file with the name ${handlerFileName} (+ any extension).`
+        );
+      }
+
       const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
       await fs.ensureDir(dirname(entry));
-      await linkOrCopy(files[handlerFile].fsPath, entry);
+      await linkOrCopy(files[handlerFilePath].fsPath, entry);
 
       const tracedFiles: string[] = [];
 
