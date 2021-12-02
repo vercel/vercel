@@ -69,7 +69,7 @@ export function convertRuntimeToPlugin(
     const sourceFilesPreBuild = await getSourceFiles(workPath, ignoreFilter);
 
     const entrypointPattern = `api/**/*${ext}`;
-    const entrypoints = await glob(entrypointPattern, opts);
+    const entrypoints = await glob(entrypointPattern, { cwd: workPath });
     const pages: { [key: string]: any } = {};
     const pluginName = packageName.replace('vercel-plugin-', '');
 
