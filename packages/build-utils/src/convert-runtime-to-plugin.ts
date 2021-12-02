@@ -68,8 +68,6 @@ export function convertRuntimeToPlugin(
     // before the Legacy Runtime has even started to build.
     const sourceFilesPreBuild = await getSourceFiles(workPath, ignoreFilter);
 
-    console.log(sourceFilesPreBuild);
-
     // Instead of doing another `glob` to get all the matching source files,
     // we'll filter the list of existing files down to only the ones
     // that are matching the entrypoint pattern, so we're first creating
@@ -86,7 +84,6 @@ export function convertRuntimeToPlugin(
       }
     }
 
-    console.log(entrypoints);
     const pages: { [key: string]: any } = {};
     const pluginName = packageName.replace('vercel-plugin-', '');
 
