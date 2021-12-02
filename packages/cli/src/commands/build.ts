@@ -612,32 +612,37 @@ export default async function main(client: Client) {
         }
       }
 
-      client.output.debug(`Resolve ${param('required-server-files.json')}.`);
       const requiredServerFilesPath = join(
         OUTPUT_DIR,
         'required-server-files.json'
       );
-      const requiredServerFilesJson = await fs.readJSON(
-        requiredServerFilesPath
-      );
-      await fs.writeJSON(requiredServerFilesPath, {
-        ...requiredServerFilesJson,
-        appDir: '.',
-        files: requiredServerFilesJson.files.map((i: string) => {
-          const originalPath = join(requiredServerFilesJson.appDir, i);
-          const relPath = join(OUTPUT_DIR, relative(distDir, originalPath));
 
-          const absolutePath = join(cwd, relPath);
-          const output = relative(baseDir, absolutePath);
+      if (fs.existsSync(requiredServerFilesPath)) {
+        client.output.debug(`Resolve ${param('required-server-files.json')}.`);
 
-          return relPath === output
-            ? relPath
-            : {
-                input: relPath,
-                output,
-              };
-        }),
-      });
+        const requiredServerFilesJson = await fs.readJSON(
+          requiredServerFilesPath
+        );
+
+        await fs.writeJSON(requiredServerFilesPath, {
+          ...requiredServerFilesJson,
+          appDir: '.',
+          files: requiredServerFilesJson.files.map((i: string) => {
+            const originalPath = join(requiredServerFilesJson.appDir, i);
+            const relPath = join(OUTPUT_DIR, relative(distDir, originalPath));
+
+            const absolutePath = join(cwd, relPath);
+            const output = relative(baseDir, absolutePath);
+
+            return relPath === output
+              ? relPath
+              : {
+                  input: relPath,
+                  output,
+                };
+          }),
+        });
+      }
     }
   }
 
