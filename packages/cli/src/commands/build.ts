@@ -5,6 +5,7 @@ import {
   GlobOptions,
   scanParentDirs,
   spawnAsync,
+  glob as buildUtilsGlob,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import Sema from 'async-sema';
@@ -12,7 +13,7 @@ import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
 import { assert } from 'console';
 import { createHash } from 'crypto';
-import fs from 'fs-extra';
+import fs, { mkdirp } from 'fs-extra';
 import ogGlob from 'glob';
 import { dirname, isAbsolute, join, parse, relative, resolve } from 'path';
 import pluralize from 'pluralize';
@@ -443,7 +444,68 @@ export default async function main(client: Client) {
     }
 
     // Special Next.js processing.
-    if (isNextOutput) {
+    const exportStatus = dotNextDir
+      ? await getNextExportStatus(dotNextDir)
+      : null;
+
+    if (dotNextDir && exportStatus) {
+      const tempOutput = join(cwd, '.output___tmp');
+      const outputFiles = await buildUtilsGlob(
+        '**',
+        exportStatus.exportDetail.outDirectory
+      );
+
+      if (exportStatus.exportDetail.success !== true) {
+        client.output.error(
+          `Export of Next.js app failed. Please check your build logs.`
+        );
+        process.exit(1);
+      }
+
+      await mkdirp(join(tempOutput, 'server', 'pages'));
+      await mkdirp(join(tempOutput, 'static'));
+
+      const sema = new Sema(10); // Arbitrary
+
+      await Promise.all(
+        Object.keys(outputFiles).map(async fileName => {
+          await sema.acquire();
+
+          const absoluteFilePath = join(
+            exportStatus.exportDetail.outDirectory,
+            fileName
+          );
+
+          if (fileName.endsWith('.html')) {
+            await smartCopy(
+              client,
+              absoluteFilePath,
+              join(tempOutput, 'server', 'pages', fileName)
+            );
+          } else {
+            await smartCopy(
+              client,
+              absoluteFilePath,
+              join(tempOutput, 'static', fileName)
+            );
+          }
+
+          sema.release();
+        })
+      );
+
+      for (const file of [
+        'BUILD_ID',
+        'images-manifest.json',
+        'routes-manifest.json',
+        'build-manifest.json',
+      ]) {
+        await smartCopy(client, join(dotNextDir, file), join(tempOutput, file));
+      }
+
+      await fs.rmdir(join(cwd, OUTPUT_DIR), { recursive: true });
+      await fs.rename(tempOutput, join(cwd, OUTPUT_DIR));
+    } else if (isNextOutput) {
       // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
       const tempStatic = '___static';
       await fs.rename(
@@ -876,4 +938,49 @@ async function resolveNftToOutput({
     ...nft,
     files: newFilesList,
   });
+}
+
+/**
+ * Files will only exist when `next export` was used.
+ */
+async function getNextExportStatus(dotNextDir: string) {
+  const exportDetail: {
+    success: boolean;
+    outDirectory: string;
+  } | null = await fs
+    .readJson(join(dotNextDir, 'export-detail.json'))
+    .catch(error => {
+      if (error.code === 'ENOENT') {
+        return null;
+      }
+
+      throw error;
+    });
+
+  if (!exportDetail) {
+    return null;
+  }
+
+  const exportMarker: {
+    version: 1;
+    exportTrailingSlash: boolean;
+    hasExportPathMap: boolean;
+  } | null = await fs
+    .readJSON(join(dotNextDir, 'export-marker.json'))
+    .catch(error => {
+      if (error.code === 'ENOENT') {
+        return null;
+      }
+
+      throw error;
+    });
+
+  return {
+    exportDetail,
+    exportMarker: {
+      trailingSlash: exportMarker?.hasExportPathMap
+        ? exportMarker.exportTrailingSlash
+        : false,
+    },
+  };
 }
