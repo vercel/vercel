@@ -414,7 +414,7 @@ test.afterEach(async () => {
   );
 });
 
-test.concurrent(
+test(
   '[vercel dev] redwoodjs example',
   testFixtureStdio(
     'redwoodjs',
@@ -432,7 +432,7 @@ test.concurrent(
   )
 );
 
-test.concurrent('[vercel dev] prints `npm install` errors', async t => {
+test('[vercel dev] prints `npm install` errors', async t => {
   const dir = fixture('runtime-not-installed');
   const result = await exec(dir);
   t.truthy(result.stderr.includes('npm ERR! 404'));
@@ -444,182 +444,173 @@ test.concurrent('[vercel dev] prints `npm install` errors', async t => {
   );
 });
 
-test.concurrent(
-  '[vercel dev] `vercel.json` should be invalidated if deleted',
-  async t => {
-    const dir = fixture('invalidate-vercel-config');
-    const configPath = join(dir, 'vercel.json');
-    const originalConfig = await fs.readJSON(configPath);
-    const { dev, port, readyResolver } = await testFixture(dir);
+test('[vercel dev] `vercel.json` should be invalidated if deleted', async t => {
+  const dir = fixture('invalidate-vercel-config');
+  const configPath = join(dir, 'vercel.json');
+  const originalConfig = await fs.readJSON(configPath);
+  const { dev, port, readyResolver } = await testFixture(dir);
 
-    try {
-      await readyResolver;
+  try {
+    await readyResolver;
 
-      {
-        // Env var should be set from `vercel.json`
-        const res = await fetch(`http://localhost:${port}/api`);
-        const body = await res.json();
-        t.is(body.FOO, 'bar');
-      }
-
-      {
-        // Env var should not be set after `vercel.json` is deleted
-        await fs.remove(configPath);
-
-        const res = await fetch(`http://localhost:${port}/api`);
-        const body = await res.json();
-        t.is(body.FOO, undefined);
-      }
-    } finally {
-      dev.kill('SIGTERM');
-      await fs.writeJSON(configPath, originalConfig);
+    {
+      // Env var should be set from `vercel.json`
+      const res = await fetch(`http://localhost:${port}/api`);
+      const body = await res.json();
+      t.is(body.FOO, 'bar');
     }
+
+    {
+      // Env var should not be set after `vercel.json` is deleted
+      await fs.remove(configPath);
+
+      const res = await fetch(`http://localhost:${port}/api`);
+      const body = await res.json();
+      t.is(body.FOO, undefined);
+    }
+  } finally {
+    dev.kill('SIGTERM');
+    await fs.writeJSON(configPath, originalConfig);
   }
-);
+});
 
-test.concurrent(
-  '[vercel dev] reflects changes to config and env without restart',
-  async t => {
-    const dir = fixture('node-helpers');
-    const configPath = join(dir, 'vercel.json');
-    const originalConfig = await fs.readJSON(configPath);
-    const { dev, port, readyResolver } = await testFixture(dir);
+test('[vercel dev] reflects changes to config and env without restart', async t => {
+  const dir = fixture('node-helpers');
+  const configPath = join(dir, 'vercel.json');
+  const originalConfig = await fs.readJSON(configPath);
+  const { dev, port, readyResolver } = await testFixture(dir);
 
-    try {
-      await readyResolver;
+  try {
+    await readyResolver;
 
-      {
-        // Node.js helpers should be available by default
-        const res = await fetch(`http://localhost:${port}/?foo=bar`);
-        const body = await res.json();
-        t.is(body.hasHelpers, true);
-        t.is(body.query.foo, 'bar');
-      }
+    {
+      // Node.js helpers should be available by default
+      const res = await fetch(`http://localhost:${port}/?foo=bar`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'bar');
+    }
 
-      {
-        // Disable the helpers via `config.helpers = false`
-        const config = {
-          ...originalConfig,
-          builds: [
-            {
-              ...originalConfig.builds[0],
-              config: {
-                helpers: false,
-              },
-            },
-          ],
-        };
-        await fs.writeJSON(configPath, config);
-
-        const res = await fetch(`http://localhost:${port}/?foo=bar`);
-        const body = await res.json();
-        t.is(body.hasHelpers, false);
-        t.is(body.query, undefined);
-      }
-
-      {
-        // Enable the helpers via `config.helpers = true`
-        const config = {
-          ...originalConfig,
-          builds: [
-            {
-              ...originalConfig.builds[0],
-              config: {
-                helpers: true,
-              },
-            },
-          ],
-        };
-        await fs.writeJSON(configPath, config);
-
-        const res = await fetch(`http://localhost:${port}/?foo=baz`);
-        const body = await res.json();
-        t.is(body.hasHelpers, true);
-        t.is(body.query.foo, 'baz');
-      }
-
-      {
-        // Disable the helpers via `NODEJS_HELPERS = '0'`
-        const config = {
-          ...originalConfig,
-          build: {
-            env: {
-              NODEJS_HELPERS: '0',
+    {
+      // Disable the helpers via `config.helpers = false`
+      const config = {
+        ...originalConfig,
+        builds: [
+          {
+            ...originalConfig.builds[0],
+            config: {
+              helpers: false,
             },
           },
-        };
-        await fs.writeJSON(configPath, config);
+        ],
+      };
+      await fs.writeJSON(configPath, config);
 
-        const res = await fetch(`http://localhost:${port}/?foo=baz`);
-        const body = await res.json();
-        t.is(body.hasHelpers, false);
-        t.is(body.query, undefined);
-      }
+      const res = await fetch(`http://localhost:${port}/?foo=bar`);
+      const body = await res.json();
+      t.is(body.hasHelpers, false);
+      t.is(body.query, undefined);
+    }
 
-      {
-        // Enable the helpers via `NODEJS_HELPERS = '1'`
-        const config = {
-          ...originalConfig,
-          build: {
-            env: {
-              NODEJS_HELPERS: '1',
+    {
+      // Enable the helpers via `config.helpers = true`
+      const config = {
+        ...originalConfig,
+        builds: [
+          {
+            ...originalConfig.builds[0],
+            config: {
+              helpers: true,
             },
           },
-        };
-        await fs.writeJSON(configPath, config);
+        ],
+      };
+      await fs.writeJSON(configPath, config);
 
-        const res = await fetch(`http://localhost:${port}/?foo=boo`);
-        const body = await res.json();
-        t.is(body.hasHelpers, true);
-        t.is(body.query.foo, 'boo');
-      }
-    } finally {
-      dev.kill('SIGTERM');
-      await fs.writeJSON(configPath, originalConfig);
+      const res = await fetch(`http://localhost:${port}/?foo=baz`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'baz');
     }
-  }
-);
 
-test.concurrent(
-  '[vercel dev] `@vercel/node` TypeScript should be resolved by default',
-  async t => {
-    // The purpose of this test is to test that `@vercel/node` can properly
-    // resolve the default "typescript" module when the project doesn't include
-    // its own version. To properly test for this, a fixture needs to be created
-    // *outside* of the `vercel` repo, since otherwise the root-level
-    // "node_modules/typescript" is resolved as relative to the project, and
-    // not relative to `@vercel/node` which is what we are testing for here.
-    const dir = join(os.tmpdir(), 'vercel-node-typescript-resolve-test');
-    const apiDir = join(dir, 'api');
-    await fs.mkdirp(apiDir);
-    await fs.writeFile(
-      join(apiDir, 'hello.js'),
-      'export default (req, res) => { res.end("world"); }'
-    );
+    {
+      // Disable the helpers via `NODEJS_HELPERS = '0'`
+      const config = {
+        ...originalConfig,
+        build: {
+          env: {
+            NODEJS_HELPERS: '0',
+          },
+        },
+      };
+      await fs.writeJSON(configPath, config);
 
-    const { dev, port, readyResolver } = await testFixture(dir);
-
-    try {
-      await readyResolver;
-
-      const res = await fetch(`http://localhost:${port}/api/hello`);
-      const body = await res.text();
-      t.is(body, 'world');
-    } finally {
-      dev.kill('SIGTERM');
-      await fs.remove(dir);
+      const res = await fetch(`http://localhost:${port}/?foo=baz`);
+      const body = await res.json();
+      t.is(body.hasHelpers, false);
+      t.is(body.query, undefined);
     }
-  }
-);
 
-test.concurrent(
+    {
+      // Enable the helpers via `NODEJS_HELPERS = '1'`
+      const config = {
+        ...originalConfig,
+        build: {
+          env: {
+            NODEJS_HELPERS: '1',
+          },
+        },
+      };
+      await fs.writeJSON(configPath, config);
+
+      const res = await fetch(`http://localhost:${port}/?foo=boo`);
+      const body = await res.json();
+      t.is(body.hasHelpers, true);
+      t.is(body.query.foo, 'boo');
+    }
+  } finally {
+    dev.kill('SIGTERM');
+    await fs.writeJSON(configPath, originalConfig);
+  }
+});
+
+test('[vercel dev] `@vercel/node` TypeScript should be resolved by default', async t => {
+  // The purpose of this test is to test that `@vercel/node` can properly
+  // resolve the default "typescript" module when the project doesn't include
+  // its own version. To properly test for this, a fixture needs to be created
+  // *outside* of the `vercel` repo, since otherwise the root-level
+  // "node_modules/typescript" is resolved as relative to the project, and
+  // not relative to `@vercel/node` which is what we are testing for here.
+  const dir = join(os.tmpdir(), 'vercel-node-typescript-resolve-test');
+  const apiDir = join(dir, 'api');
+  await fs.mkdirp(apiDir);
+  await fs.writeFile(
+    join(apiDir, 'hello.js'),
+    'export default (req, res) => { res.end("world"); }'
+  );
+
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/api/hello`);
+    const body = await res.text();
+    t.is(body, 'world');
+  } finally {
+    dev.kill('SIGTERM');
+    await fs.remove(dir);
+  }
+});
+
+test(
   '[vercel dev] validate routes that use `check: true`',
   testFixtureStdio('routes-check-true', async testPath => {
     await testPath(200, '/blog/post', 'Blog Home');
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] validate routes that use `check: true` and `status` code',
   testFixtureStdio('routes-check-true-status', async testPath => {
     await testPath(403, '/secret');
@@ -628,7 +619,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] validate routes that use custom 404 page',
   testFixtureStdio('routes-custom-404', async testPath => {
     await testPath(200, '/', 'Home Page');
@@ -639,7 +630,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] handles miss after route',
   testFixtureStdio('handle-miss-after-route', async testPath => {
     await testPath(200, '/post', 'Blog Post Page', {
@@ -649,7 +640,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] handles miss after rewrite',
   testFixtureStdio('handle-miss-after-rewrite', async testPath => {
     await testPath(200, '/post', 'Blog Post Page', {
@@ -667,7 +658,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] does not display directory listing after 404',
   testFixtureStdio('handle-miss-hide-dir-list', async testPath => {
     await testPath(404, '/post');
@@ -675,7 +666,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] should preserve query string even after miss phase',
   testFixtureStdio('handle-miss-querystring', async testPath => {
     await testPath(200, '/', 'Index Page');
@@ -688,28 +679,28 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] handles hit after handle: filesystem',
   testFixtureStdio('handle-hit-after-fs', async testPath => {
     await testPath(200, '/blog.html', 'Blog Page', { test: '1' });
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] handles hit after dest',
   testFixtureStdio('handle-hit-after-dest', async testPath => {
     await testPath(200, '/post', 'Blog Post', { test: '1', override: 'one' });
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] handles hit after rewrite',
   testFixtureStdio('handle-hit-after-rewrite', async testPath => {
     await testPath(200, '/post', 'Blog Post', { test: '1', override: 'one' });
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] should serve the public directory and api functions',
   testFixtureStdio('public-and-api', async testPath => {
     await testPath(200, '/', 'This is the home page');
@@ -723,7 +714,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] should allow user rewrites for path segment files',
   testFixtureStdio('test-zero-config-rewrite', async testPath => {
     await testPath(404, '/');
@@ -736,7 +727,7 @@ test.concurrent(
   })
 );
 
-test.concurrent('[vercel dev] validate builds', async t => {
+test('[vercel dev] validate builds', async t => {
   const directory = fixture('invalid-builds');
   const output = await exec(directory);
 
@@ -747,7 +738,7 @@ test.concurrent('[vercel dev] validate builds', async t => {
   );
 });
 
-test.concurrent('[vercel dev] validate routes', async t => {
+test('[vercel dev] validate routes', async t => {
   const directory = fixture('invalid-routes');
   const output = await exec(directory);
 
@@ -758,7 +749,7 @@ test.concurrent('[vercel dev] validate routes', async t => {
   );
 });
 
-test.concurrent('[vercel dev] validate cleanUrls', async t => {
+test('[vercel dev] validate cleanUrls', async t => {
   const directory = fixture('invalid-clean-urls');
   const output = await exec(directory);
 
@@ -769,7 +760,7 @@ test.concurrent('[vercel dev] validate cleanUrls', async t => {
   );
 });
 
-test.concurrent('[vercel dev] validate trailingSlash', async t => {
+test('[vercel dev] validate trailingSlash', async t => {
   const directory = fixture('invalid-trailing-slash');
   const output = await exec(directory);
 
@@ -780,7 +771,7 @@ test.concurrent('[vercel dev] validate trailingSlash', async t => {
   );
 });
 
-test.concurrent('[vercel dev] validate rewrites', async t => {
+test('[vercel dev] validate rewrites', async t => {
   const directory = fixture('invalid-rewrites');
   const output = await exec(directory);
 
@@ -791,7 +782,7 @@ test.concurrent('[vercel dev] validate rewrites', async t => {
   );
 });
 
-test.concurrent('[vercel dev] validate redirects', async t => {
+test('[vercel dev] validate redirects', async t => {
   const directory = fixture('invalid-redirects');
   const output = await exec(directory);
 
@@ -802,7 +793,7 @@ test.concurrent('[vercel dev] validate redirects', async t => {
   );
 });
 
-test.concurrent('[vercel dev] validate headers', async t => {
+test('[vercel dev] validate headers', async t => {
   const directory = fixture('invalid-headers');
   const output = await exec(directory);
 
@@ -813,7 +804,7 @@ test.concurrent('[vercel dev] validate headers', async t => {
   );
 });
 
-test.concurrent('[vercel dev] validate mixed routes and rewrites', async t => {
+test('[vercel dev] validate mixed routes and rewrites', async t => {
   const directory = fixture('invalid-mixed-routes-rewrites');
   const output = await exec(directory);
 
@@ -826,7 +817,7 @@ test.concurrent('[vercel dev] validate mixed routes and rewrites', async t => {
 });
 
 // Test seems unstable: It won't return sometimes.
-test.concurrent('[vercel dev] validate env var names', async t => {
+test('[vercel dev] validate env var names', async t => {
   const directory = fixture('invalid-env-var-name');
   const { dev } = await testFixture(directory, { stdio: 'pipe' });
 
@@ -863,7 +854,7 @@ test.concurrent('[vercel dev] validate env var names', async t => {
   t.pass();
 });
 
-test.concurrent(
+test(
   '[vercel dev] test rewrites with segments serve correct content',
   testFixtureStdio('test-rewrites-with-segments', async testPath => {
     await testPath(200, '/api/users/first', 'first');
@@ -874,14 +865,14 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async testPath => {
     await testPath(200, '/hello', 'Hello World');
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] test rewrites and redirects serve correct external content',
   testFixtureStdio('test-external-rewrites-and-redirects', async testPath => {
     const vcRobots = `https://vercel.com/robots.txt`;
@@ -895,7 +886,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] test rewrites and redirects is case sensitive',
   testFixtureStdio('test-routing-case-sensitive', async testPath => {
     await testPath(200, '/Path', 'UPPERCASE');
@@ -909,7 +900,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] test cleanUrls serve correct content',
   testFixtureStdio('test-clean-urls', async testPath => {
     await testPath(200, '/', 'Index Page');
@@ -935,7 +926,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] test cleanUrls serve correct content when using `outputDirectory`',
   testFixtureStdio('test-clean-urls-with-output-directory', async testPath => {
     await testPath(200, '/', 'Index Page');
@@ -961,7 +952,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] should serve custom 404 when `cleanUrls: true`',
   testFixtureStdio('test-clean-urls-custom-404', async testPath => {
     await testPath(200, '/', 'This is the home page');
@@ -972,7 +963,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] test cleanUrls and trailingSlash serve correct content',
   testFixtureStdio('test-clean-urls-trailing-slash', async testPath => {
     await testPath(200, '/', 'Index Page');
@@ -999,7 +990,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] test cors headers work with OPTIONS',
   testFixtureStdio('test-cors-routes', async testPath => {
     const headers = {
@@ -1022,7 +1013,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] test trailingSlash true serve correct content',
   testFixtureStdio('test-trailing-slash', async testPath => {
     await testPath(200, '/', 'Index Page');
@@ -1044,7 +1035,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] should serve custom 404 when `trailingSlash: true`',
   testFixtureStdio('test-trailing-slash-custom-404', async testPath => {
     await testPath(200, '/', 'This is the home page');
@@ -1054,7 +1045,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] test trailingSlash false serve correct content',
   testFixtureStdio('test-trailing-slash-false', async testPath => {
     await testPath(200, '/', 'Index Page');
@@ -1081,7 +1072,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] throw when invalid builder routes detected',
   testFixtureStdio(
     'invalid-builder-routes',
@@ -1096,14 +1087,14 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] support legacy `@now` scope runtimes',
   testFixtureStdio('legacy-now-runtime', async testPath => {
     await testPath(200, '/', /A simple deployment with the Vercel API!/m);
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] support dynamic next.js routes in monorepos',
   testFixtureStdio('monorepo-dynamic-paths', async testPath => {
     await testPath(200, '/', /This is our homepage/m);
@@ -1116,7 +1107,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] 00-list-directory',
   testFixtureStdio(
     '00-list-directory',
@@ -1130,7 +1121,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 01-node',
   testFixtureStdio('01-node', async testPath => {
     await testPath(200, '/', /A simple deployment with the Vercel API!/m);
@@ -1138,7 +1129,7 @@ test.concurrent(
 );
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
-test.concurrent('[vercel dev] 02-angular-node', async t => {
+test('[vercel dev] 02-angular-node', async t => {
   if (shouldSkip(t, '02-angular-node', '10.x')) return;
 
   const directory = fixture('02-angular-node');
@@ -1178,7 +1169,7 @@ test.concurrent('[vercel dev] 02-angular-node', async t => {
   }
 });
 
-test.concurrent(
+test(
   '[vercel dev] 03-aurelia',
   testFixtureStdio(
     '03-aurelia',
@@ -1189,21 +1180,21 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 04-create-react-app',
   testFixtureStdio('04-create-react-app', async testPath => {
     await testPath(200, '/', /React App/m);
   })
 );
 /*
-test.concurrent(
+test(
   '[vercel dev] 05-gatsby',
   testFixtureStdio('05-gatsby', async testPath => {
     await testPath(200, '/', /Gatsby Default Starter/m);
   })
 );
 */
-test.concurrent(
+test(
   '[vercel dev] 06-gridsome',
   testFixtureStdio('06-gridsome', async testPath => {
     await testPath(200, '/');
@@ -1217,7 +1208,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] 07-hexo-node',
   testFixtureStdio('07-hexo-node', async testPath => {
     await testPath(200, '/', /Hexo \+ Node.js API/m);
@@ -1227,7 +1218,7 @@ test.concurrent(
   })
 );
 
-test.concurrent('[vercel dev] 08-hugo', async t => {
+test('[vercel dev] 08-hugo', async t => {
   if (process.platform === 'darwin') {
     // Update PATH to find the Hugo executable installed via GH Actions
     process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
@@ -1243,7 +1234,7 @@ test.concurrent('[vercel dev] 08-hugo', async t => {
   }
 });
 
-test.concurrent(
+test(
   '[vercel dev] 10-nextjs-node',
   testFixtureStdio('10-nextjs-node', async testPath => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
@@ -1255,7 +1246,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] 10a-nextjs-routes',
   testFixtureStdio('10a-nextjs-routes', async testPath => {
     await testPath(200, '/', /Next.js with routes/m);
@@ -1263,7 +1254,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] 12-polymer-node',
   testFixtureStdio(
     '12-polymer-node',
@@ -1275,7 +1266,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 13-preact-node',
   testFixtureStdio(
     '13-preact-node',
@@ -1287,7 +1278,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 14-svelte-node',
   testFixtureStdio(
     '14-svelte-node',
@@ -1299,7 +1290,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 16-vue-node',
   testFixtureStdio(
     '16-vue-node',
@@ -1311,7 +1302,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 17-vuepress-node',
   testFixtureStdio(
     '17-vuepress-node',
@@ -1323,7 +1314,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] double slashes redirect',
   testFixtureStdio(
     '01-node',
@@ -1371,7 +1362,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 18-marko',
   testFixtureStdio(
     '18-marko',
@@ -1382,7 +1373,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 19-mithril',
   testFixtureStdio(
     '19-mithril',
@@ -1393,7 +1384,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 20-riot',
   testFixtureStdio(
     '20-riot',
@@ -1404,7 +1395,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 21-charge',
   testFixtureStdio(
     '21-charge',
@@ -1415,7 +1406,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 22-brunch',
   testFixtureStdio(
     '22-brunch',
@@ -1426,7 +1417,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 23-docusaurus',
   testFixtureStdio(
     '23-docusaurus',
@@ -1437,7 +1428,7 @@ test.concurrent(
   )
 );
 
-test.concurrent('[vercel dev] 24-ember', async t => {
+test('[vercel dev] 24-ember', async t => {
   if (shouldSkip(t, '24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
 
   const tester = testFixtureStdio(
@@ -1451,7 +1442,7 @@ test.concurrent('[vercel dev] 24-ember', async t => {
   await tester(t);
 });
 
-test.concurrent(
+test(
   '[vercel dev] temporary directory listing',
   testFixtureStdio(
     'temporary-directory-listing',
@@ -1484,58 +1475,50 @@ test.concurrent(
   )
 );
 
-test.concurrent(
-  '[vercel dev] add a `package.json` to trigger `@vercel/static-build`',
-  async t => {
-    const directory = fixture('trigger-static-build');
+test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', async t => {
+  const directory = fixture('trigger-static-build');
 
-    await fs.unlink(join(directory, 'package.json')).catch(() => null);
+  await fs.unlink(join(directory, 'package.json')).catch(() => null);
 
-    await fs.unlink(join(directory, 'public', 'index.txt')).catch(() => null);
+  await fs.unlink(join(directory, 'public', 'index.txt')).catch(() => null);
 
-    await fs.rmdir(join(directory, 'public')).catch(() => null);
+  await fs.rmdir(join(directory, 'public')).catch(() => null);
 
-    const tester = testFixtureStdio(
-      'trigger-static-build',
-      async (_testPath, t, port) => {
-        {
-          const response = await fetch(`http://localhost:${port}`);
-          validateResponseHeaders(t, response);
-          const body = await response.text();
-          t.is(body.trim(), 'hello:index.txt');
-        }
+  const tester = testFixtureStdio(
+    'trigger-static-build',
+    async (_testPath, t, port) => {
+      {
+        const response = await fetch(`http://localhost:${port}`);
+        validateResponseHeaders(t, response);
+        const body = await response.text();
+        t.is(body.trim(), 'hello:index.txt');
+      }
 
-        const rnd = Math.random().toString();
-        const pkg = {
-          private: true,
-          scripts: {
-            build: `mkdir -p public && echo ${rnd} > public/index.txt`,
-          },
-        };
+      const rnd = Math.random().toString();
+      const pkg = {
+        private: true,
+        scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` },
+      };
 
-        await fs.writeFile(
-          join(directory, 'package.json'),
-          JSON.stringify(pkg)
-        );
+      await fs.writeFile(join(directory, 'package.json'), JSON.stringify(pkg));
 
-        // Wait until file events have been processed
-        await sleep(ms('2s'));
+      // Wait until file events have been processed
+      await sleep(ms('2s'));
 
-        {
-          const response = await fetch(`http://localhost:${port}`);
-          validateResponseHeaders(t, response);
-          const body = await response.text();
-          t.is(body.trim(), rnd);
-        }
-      },
-      { skipDeploy: true }
-    );
+      {
+        const response = await fetch(`http://localhost:${port}`);
+        validateResponseHeaders(t, response);
+        const body = await response.text();
+        t.is(body.trim(), rnd);
+      }
+    },
+    { skipDeploy: true }
+  );
 
-    await tester(t);
-  }
-);
+  await tester(t);
+});
 
-test.concurrent('[vercel dev] no build matches warning', async t => {
+test('[vercel dev] no build matches warning', async t => {
   const directory = fixture('no-build-matches');
   const { dev } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -1560,7 +1543,7 @@ test.concurrent('[vercel dev] no build matches warning', async t => {
   }
 });
 
-test.concurrent(
+test(
   '[vercel dev] do not recursivly check the path',
   testFixtureStdio('handle-filesystem-missing', async testPath => {
     await testPath(200, '/', /hello/m);
@@ -1568,7 +1551,7 @@ test.concurrent(
   })
 );
 
-test.concurrent('[vercel dev] render warning for empty cwd dir', async t => {
+test('[vercel dev] render warning for empty cwd dir', async t => {
   const directory = fixture('empty');
   const { dev, port } = await testFixture(directory, {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -1598,60 +1581,54 @@ test.concurrent('[vercel dev] render warning for empty cwd dir', async t => {
   }
 });
 
-test.concurrent(
-  '[vercel dev] do not rebuild for changes in the output directory',
-  async t => {
-    const directory = fixture('output-is-source');
+test('[vercel dev] do not rebuild for changes in the output directory', async t => {
+  const directory = fixture('output-is-source');
 
-    const { dev, port } = await testFixture(directory, {
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+  const { dev, port } = await testFixture(directory, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
-    try {
-      dev.unref();
+  try {
+    dev.unref();
 
-      let stderr = [];
-      const start = Date.now();
+    let stderr = [];
+    const start = Date.now();
 
-      dev.stderr.on('data', str => stderr.push(str));
+    dev.stderr.on('data', str => stderr.push(str));
 
-      while (stderr.join('').includes('Ready') === false) {
-        await sleep(ms('3s'));
-
-        if (Date.now() - start > ms('30s')) {
-          console.log('stderr:', stderr.join(''));
-          break;
-        }
-      }
-
-      const resp1 = await fetch(`http://localhost:${port}`);
-      const text1 = await resp1.text();
-      t.is(text1.trim(), 'hello first', stderr.join(''));
-
-      await fs.writeFile(
-        join(directory, 'public', 'index.html'),
-        'hello second'
-      );
-
+    while (stderr.join('').includes('Ready') === false) {
       await sleep(ms('3s'));
 
-      const resp2 = await fetch(`http://localhost:${port}`);
-      const text2 = await resp2.text();
-      t.is(text2.trim(), 'hello second', stderr.join(''));
-    } finally {
-      dev.kill('SIGTERM');
+      if (Date.now() - start > ms('30s')) {
+        console.log('stderr:', stderr.join(''));
+        break;
+      }
     }
-  }
-);
 
-test.concurrent(
+    const resp1 = await fetch(`http://localhost:${port}`);
+    const text1 = await resp1.text();
+    t.is(text1.trim(), 'hello first', stderr.join(''));
+
+    await fs.writeFile(join(directory, 'public', 'index.html'), 'hello second');
+
+    await sleep(ms('3s'));
+
+    const resp2 = await fetch(`http://localhost:${port}`);
+    const text2 = await resp2.text();
+    t.is(text2.trim(), 'hello second', stderr.join(''));
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test(
   '[vercel dev] 25-nextjs-src-dir',
   testFixtureStdio('25-nextjs-src-dir', async testPath => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] 26-nextjs-secrets',
   testFixtureStdio(
     '26-nextjs-secrets',
@@ -1663,7 +1640,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 27-zero-config-env',
   testFixtureStdio(
     '27-zero-config-env',
@@ -1675,7 +1652,7 @@ test.concurrent(
   )
 );
 
-test.concurrent(
+test(
   '[vercel dev] 28-vercel-json-and-ignore',
   testFixtureStdio('28-vercel-json-and-ignore', async testPath => {
     await testPath(200, '/api/one', 'One');
@@ -1684,7 +1661,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] 30-next-image-optimization',
   testFixtureStdio('30-next-image-optimization', async testPath => {
     const toUrl = (url, w, q) => {
@@ -1755,7 +1732,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] 40-mixed-modules',
   testFixtureStdio('40-mixed-modules', async testPath => {
     await testPath(200, '/entrypoint.js', 'mixed-modules:js');
@@ -1774,7 +1751,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
   testFixtureStdio('python-flask', async testPath => {
     const name = 'Alice';
@@ -1789,7 +1766,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] Use custom runtime from the "functions" property',
   testFixtureStdio('custom-runtime', async testPath => {
     await testPath(200, `/api/user`, /Hello, from Bash!/m);
@@ -1797,7 +1774,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] Should work with nested `tsconfig.json` files',
   testFixtureStdio('nested-tsconfig', async testPath => {
     await testPath(200, `/`, /Nested tsconfig.json test page/);
@@ -1805,7 +1782,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] Should force `tsc` option "module: commonjs" for `startDevServer()`',
   testFixtureStdio('force-module-commonjs', async testPath => {
     await testPath(200, `/`, /Force &quot;module: commonjs&quot; test page/);
@@ -1822,7 +1799,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] should prioritize index.html over other file named index.*',
   testFixtureStdio('index-html-priority', async testPath => {
     await testPath(200, '/', 'This is index.html');
@@ -1830,7 +1807,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] Should support `*.go` API serverless functions',
   testFixtureStdio('go', async testPath => {
     await testPath(200, `/api`, 'This is the index page');
@@ -1843,7 +1820,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] Should set the `ts-node` "target" to match Node.js version',
   testFixtureStdio('node-ts-node-target', async testPath => {
     await testPath(200, `/api/subclass`, '{"ok":true}');
@@ -1875,7 +1852,7 @@ test.concurrent(
   })
 );
 
-test.concurrent(
+test(
   '[vercel dev] Do not fail if `src` is missing',
   testFixtureStdio('missing-src-property', async testPath => {
     await testPath(200, '/', /hello:index.txt/m);
