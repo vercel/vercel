@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { join, dirname, parse } from 'path';
+import { join, dirname, parse, relative } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
@@ -88,7 +88,9 @@ export function convertRuntimeToPlugin(
     const pages: { [key: string]: any } = {};
     const pluginName = packageName.replace('vercel-plugin-', '');
 
-    const traceDirInputs = join(
+    const traceDir = join(
+      workPath,
+      `.output`,
       `inputs`,
       // Legacy Runtimes can only provide API Routes, so that's
       // why we can use this prefix for all of them. Here, we have to
@@ -96,8 +98,6 @@ export function convertRuntimeToPlugin(
       // need to be able to easily inspect the output.
       `api-routes-${pluginName}`
     );
-
-    const traceDir = join(workPath, `.output`, traceDirInputs);
 
     await fs.ensureDir(traceDir);
 
@@ -186,7 +186,10 @@ export function convertRuntimeToPlugin(
 
       await Promise.all(toRemove);
 
-      const tracedFiles: string[] = [];
+      const tracedFiles: {
+        absolutePath: string;
+        relativePath: string;
+      }[] = [];
 
       Object.entries(lambdaFiles).forEach(async ([relPath, file]) => {
         const newPath = join(traceDir, relPath);
@@ -196,7 +199,7 @@ export function convertRuntimeToPlugin(
           return;
         }
 
-        tracedFiles.push(relPath);
+        tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
 
         if (file.fsPath) {
           await linkOrCopy(file.fsPath, newPath);
@@ -218,12 +221,10 @@ export function convertRuntimeToPlugin(
 
       const json = JSON.stringify({
         version: 1,
-        files: tracedFiles.map(file => {
-          return {
-            input: normalizePath(join('../../..', traceDirInputs, file)),
-            output: normalizePath(file),
-          };
-        }),
+        files: tracedFiles.map(file => ({
+          input: normalizePath(relative(nft, file.absolutePath)),
+          output: normalizePath(file.relativePath),
+        })),
       });
 
       await fs.ensureDir(dirname(nft));
