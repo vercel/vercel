@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { join, dirname, relative } from 'path';
+import { join, dirname } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
@@ -64,9 +64,7 @@ export function convertRuntimeToPlugin(
     const pages: { [key: string]: any } = {};
     const pluginName = packageName.replace('vercel-plugin-', '');
 
-    const traceDir = join(
-      workPath,
-      `.output`,
+    const traceDirInputs = join(
       `inputs`,
       // Legacy Runtimes can only provide API Routes, so that's
       // why we can use this prefix for all of them. Here, we have to
@@ -74,6 +72,8 @@ export function convertRuntimeToPlugin(
       // need to be able to easily inspect the output.
       `api-routes-${pluginName}`
     );
+
+    const traceDir = join(workPath, `.output`, traceDirInputs);
 
     await fs.ensureDir(traceDir);
 
@@ -116,14 +116,11 @@ export function convertRuntimeToPlugin(
       await fs.ensureDir(dirname(entry));
       await linkOrCopy(files[entrypoint].fsPath, entry);
 
-      const tracedFiles: {
-        absolutePath: string;
-        relativePath: string;
-      }[] = [];
+      const tracedFiles: string[] = [];
 
       Object.entries(lambdaFiles).forEach(async ([relPath, file]) => {
         const newPath = join(traceDir, relPath);
-        tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
+        tracedFiles.push(relPath);
         if (file.fsPath) {
           await linkOrCopy(file.fsPath, newPath);
         } else if (file.type === 'FileBlob') {
@@ -139,15 +136,17 @@ export function convertRuntimeToPlugin(
         '.output',
         'server',
         'pages',
-        'api',
         `${entrypoint}.nft.json`
       );
+
       const json = JSON.stringify({
         version: 1,
-        files: tracedFiles.map(f => ({
-          input: normalizePath(relative(nft, f.absolutePath)),
-          output: normalizePath(f.relativePath),
-        })),
+        files: tracedFiles.map(file => {
+          return {
+            input: normalizePath(join('../../..', traceDirInputs, file)),
+            output: normalizePath(file),
+          };
+        }),
       });
 
       await fs.ensureDir(dirname(nft));
