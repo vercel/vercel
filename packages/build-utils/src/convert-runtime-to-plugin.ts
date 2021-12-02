@@ -37,7 +37,8 @@ const getSourceFiles = async (workPath: string, ignoreFilter: any) => {
   // We're not passing this as an `ignore` filter to the `glob` function above,
   // so that we can re-use exactly the same `getIgnoreFilter` method that the
   // Build Step uses (literally the same code). Note that this exclusion only applies
-  // when deploying. Locally, another exclusion further below is needed.
+  // when deploying. Locally, another exclusion is needed, which is handled
+  // further below in the `convertRuntimeToPlugin` function.
   for (const file in list) {
     if (shouldIgnorePath(file, ignoreFilter, true)) {
       delete list[file];
