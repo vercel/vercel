@@ -87,18 +87,22 @@ export function convertRuntimeToPlugin(
 
     const pages: { [key: string]: any } = {};
     const pluginName = packageName.replace('vercel-plugin-', '');
+    const outputPath = join(workPath, '.output');
 
-    const traceDir = join(
-      workPath,
-      `.output`,
-      `inputs`,
-      // Legacy Runtimes can only provide API Routes, so that's
-      // why we can use this prefix for all of them. Here, we have to
-      // make sure to not use a cryptic hash name, because people
-      // need to be able to easily inspect the output.
-      `api-routes-${pluginName}`
-    );
+    // Legacy Runtimes can only provide API Routes, so that's
+    // why we can use this prefix for all of them. Here, we have to
+    // make sure to not use a cryptic hash name, because people
+    // need to be able to easily inspect the output.
+    const inputPath = join('inputs', `api-routes-${pluginName}`);
 
+    // This is where any dependencies of the Lambdas exposed by
+    // the Legacy Runtime will be placed, so that the platform can
+    // automatically do smart bundling and make multiple API Routes
+    // use the same files if they need to, without actually duplicating
+    // the files on the disk.
+    const traceDir = join(outputPath, inputPath);
+
+    // The directory doesn't yet exist, so we'll create it.
     await fs.ensureDir(traceDir);
 
     for (const entrypoint of Object.keys(entrypoints)) {
@@ -221,10 +225,16 @@ export function convertRuntimeToPlugin(
 
       const json = JSON.stringify({
         version: 1,
-        files: tracedFiles.map(file => ({
-          input: normalizePath(relative(nft, file.absolutePath)),
-          output: normalizePath(file.relativePath),
-        })),
+        files: tracedFiles.map(file => {
+          const { absolutePath, relativePath } = file;
+          const climbHigher = relative(absolutePath, outputPath);
+          const climbLower = join(climbHigher, inputPath, relativePath);
+
+          return {
+            input: normalizePath(climbLower),
+            output: normalizePath(relativePath),
+          };
+        }),
       });
 
       await fs.ensureDir(dirname(nft));
