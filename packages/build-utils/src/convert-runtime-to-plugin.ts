@@ -136,7 +136,7 @@ export function convertRuntimeToPlugin(
       // Legacy Runtimes will pollute `workPath` with files like the Lambda handler,
       // so we need to clean those up. The only one we can reliably clean up without storing
       // state about what was originally present is the handler.
-      await fs.rm(handlerFileOrigin);
+      await fs.remove(handlerFileOrigin);
 
       const tracedFiles: string[] = [];
 
