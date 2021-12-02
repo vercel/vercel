@@ -139,6 +139,7 @@ export function convertRuntimeToPlugin(
         '.output',
         'server',
         'pages',
+        'api',
         `${entrypoint}.nft.json`
       );
       const json = JSON.stringify({
