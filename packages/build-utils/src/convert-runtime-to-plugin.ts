@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { join, dirname, relative } from 'path';
+import { join, dirname, parse, relative } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
@@ -29,6 +29,25 @@ const shouldIgnorePath = (
   return isNative || ignoreFilter(file);
 };
 
+const getSourceFiles = async (workPath: string, ignoreFilter: any) => {
+  const list = await glob('**', {
+    cwd: workPath,
+  });
+
+  // We're not passing this as an `ignore` filter to the `glob` function above,
+  // so that we can re-use exactly the same `getIgnoreFilter` method that the
+  // Build Step uses (literally the same code). Note that this exclusion only applies
+  // when deploying. Locally, another exclusion is needed, which is handled
+  // further below in the `convertRuntimeToPlugin` function.
+  for (const file in list) {
+    if (shouldIgnorePath(file, ignoreFilter, true)) {
+      delete list[file];
+    }
+  }
+
+  return list;
+};
+
 /**
  * Convert legacy Runtime to a Plugin.
  * @param buildRuntime - a legacy build() function from a Runtime
@@ -42,25 +61,30 @@ export function convertRuntimeToPlugin(
 ) {
   // This `build()` signature should match `plugin.build()` signature in `vercel build`.
   return async function build({ workPath }: { workPath: string }) {
-    const opts = { cwd: workPath };
-    const files = await glob('**', opts);
-
     // We also don't want to provide any files to Runtimes that were ignored
     // through `.vercelignore` or `.nowignore`, because the Build Step does the same.
     const ignoreFilter = await getIgnoreFilter(workPath);
 
-    // We're not passing this as an `ignore` filter to the `glob` function above,
-    // so that we can re-use exactly the same `getIgnoreFilter` method that the
-    // Build Step uses (literally the same code). Note that this exclusion only applies
-    // when deploying. Locally, another exclusion further below is needed.
-    for (const file in files) {
-      if (shouldIgnorePath(file, ignoreFilter, true)) {
-        delete files[file];
+    // Retrieve the files that are currently available on the File System,
+    // before the Legacy Runtime has even started to build.
+    const sourceFilesPreBuild = await getSourceFiles(workPath, ignoreFilter);
+
+    // Instead of doing another `glob` to get all the matching source files,
+    // we'll filter the list of existing files down to only the ones
+    // that are matching the entrypoint pattern, so we're first creating
+    // a clean new list to begin.
+    const entrypoints = Object.assign({}, sourceFilesPreBuild);
+
+    const entrypointMatch = new RegExp(`^api/.*${ext}$`);
+
+    // Up next, we'll strip out the files from the list of entrypoints
+    // that aren't actually considered entrypoints.
+    for (const file in entrypoints) {
+      if (!entrypointMatch.test(file)) {
+        delete entrypoints[file];
       }
     }
 
-    const entrypointPattern = `api/**/*${ext}`;
-    const entrypoints = await glob(entrypointPattern, opts);
     const pages: { [key: string]: any } = {};
     const pluginName = packageName.replace('vercel-plugin-', '');
 
@@ -79,7 +103,7 @@ export function convertRuntimeToPlugin(
 
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
-        files,
+        files: sourceFilesPreBuild,
         entrypoint,
         workPath,
         config: {
@@ -90,8 +114,28 @@ export function convertRuntimeToPlugin(
         },
       });
 
+      // Legacy Runtimes tend to pollute the `workPath` with compiled results,
+      // because the `workPath` used to be a place that was a place where they could
+      // just put anything, but nowadays it's the working directory of the `vercel build`
+      // command, which is the place where the developer keeps their source files,
+      // so we don't want to pollute this space unnecessarily. That means we have to clean
+      // up files that were created by the build, which is done further below.
+      const sourceFilesAfterBuild = await getSourceFiles(
+        workPath,
+        ignoreFilter
+      );
+
+      // Further down, we will need the filename of the Lambda handler
+      // for placing it inside `server/pages/api`, but because Legacy Runtimes
+      // don't expose the filename directly, we have to construct it
+      // from the handler name, and then find the matching file further below,
+      // because we don't yet know its extension here.
+      const handler = output.handler;
+      const handlerMethod = handler.split('.').reverse()[0];
+      const handlerFileName = handler.replace(`.${handlerMethod}`, '');
+
       pages[entrypoint] = {
-        handler: output.handler,
+        handler: handler,
         runtime: output.runtime,
         memory: output.memory,
         maxDuration: output.maxDuration,
@@ -112,9 +156,35 @@ export function convertRuntimeToPlugin(
         }
       }
 
+      const handlerFilePath = Object.keys(lambdaFiles).find(item => {
+        return parse(item).name === handlerFileName;
+      });
+
+      const handlerFileOrigin = lambdaFiles[handlerFilePath || ''].fsPath;
+
+      if (!handlerFileOrigin) {
+        throw new Error(
+          `Could not find a handler file. Please ensure that the list of \`files\` defined for the returned \`Lambda\` contains a file with the name ${handlerFileName} (+ any extension).`
+        );
+      }
+
       const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
+
       await fs.ensureDir(dirname(entry));
-      await linkOrCopy(files[entrypoint].fsPath, entry);
+      await linkOrCopy(handlerFileOrigin, entry);
+
+      const toRemove = [];
+
+      // You can find more details about this at the point where the
+      // `sourceFilesAfterBuild` is created originally.
+      for (const file in sourceFilesAfterBuild) {
+        if (!sourceFilesPreBuild[file]) {
+          const path = sourceFilesAfterBuild[file].fsPath;
+          toRemove.push(fs.remove(path));
+        }
+      }
+
+      await Promise.all(toRemove);
 
       const tracedFiles: {
         absolutePath: string;
@@ -123,7 +193,14 @@ export function convertRuntimeToPlugin(
 
       Object.entries(lambdaFiles).forEach(async ([relPath, file]) => {
         const newPath = join(traceDir, relPath);
+
+        // The handler was already moved into position above.
+        if (relPath === handlerFilePath) {
+          return;
+        }
+
         tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
+
         if (file.fsPath) {
           await linkOrCopy(file.fsPath, newPath);
         } else if (file.type === 'FileBlob') {
@@ -141,11 +218,12 @@ export function convertRuntimeToPlugin(
         'pages',
         `${entrypoint}.nft.json`
       );
+
       const json = JSON.stringify({
         version: 1,
-        files: tracedFiles.map(f => ({
-          input: normalizePath(relative(nft, f.absolutePath)),
-          output: normalizePath(f.relativePath),
+        files: tracedFiles.map(file => ({
+          input: normalizePath(relative(nft, file.absolutePath)),
+          output: normalizePath(file.relativePath),
         })),
       });
 
