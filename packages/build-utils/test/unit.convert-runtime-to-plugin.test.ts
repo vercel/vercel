@@ -1,6 +1,6 @@
 import { join } from 'path';
 import fs from 'fs-extra';
-import { BuildOptions, createLambda } from '../src';
+import { BuildOptions, createLambda, FileFsRef } from '../src';
 import { convertRuntimeToPlugin } from '../src/convert-runtime-to-plugin';
 
 async function fsToJson(dir: string, output: Record<string, any> = {}) {
@@ -32,9 +32,13 @@ describe('convert-runtime-to-plugin', () => {
   });
 
   it('should create correct fileystem for python', async () => {
+    const ext = '.py';
     const workPath = pythonApiWorkpath;
+    const handlerName = 'vc__handler__python';
+    const handlerFileName = handlerName + ext;
+
     const lambdaOptions = {
-      handler: 'index.handler',
+      handler: `${handlerName}.vc_handler`,
       runtime: 'python3.9',
       memory: 512,
       maxDuration: 5,
@@ -42,6 +46,15 @@ describe('convert-runtime-to-plugin', () => {
     };
 
     const buildRuntime = async (opts: BuildOptions) => {
+      const handlerPath = join(workPath, handlerFileName);
+
+      // This is the usual time at which a Legacy Runtime writes its Lambda launcher.
+      await fs.writeFile(handlerPath, '# handler');
+
+      opts.files[handlerFileName] = new FileFsRef({
+        fsPath: handlerPath,
+      });
+
       const lambda = await createLambda({
         files: opts.files,
         ...lambdaOptions,
@@ -50,15 +63,15 @@ describe('convert-runtime-to-plugin', () => {
     };
 
     const lambdaFiles = await fsToJson(workPath);
-    delete lambdaFiles['vercel.json'];
-
-    const ext = '.py';
     const packageName = 'vercel-plugin-python';
     const build = await convertRuntimeToPlugin(buildRuntime, packageName, ext);
 
     await build({ workPath });
 
     const output = await fsToJson(join(workPath, '.output'));
+
+    delete lambdaFiles['vercel.json'];
+    delete lambdaFiles['vc__handler__python.py'];
 
     expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
@@ -68,12 +81,12 @@ describe('convert-runtime-to-plugin', () => {
       server: {
         pages: {
           api: {
-            'index.py': expect.stringContaining('index'),
+            'index.py': expect.stringContaining('handler'),
             'index.py.nft.json': expect.stringContaining('{'),
             users: {
-              'get.py': expect.stringContaining('get'),
+              'get.py': expect.stringContaining('handler'),
               'get.py.nft.json': expect.stringContaining('{'),
-              'post.py': expect.stringContaining('post'),
+              'post.py': expect.stringContaining('handler'),
               'post.py.nft.json': expect.stringContaining('{'),
             },
           },
