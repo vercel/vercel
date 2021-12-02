@@ -490,7 +490,12 @@ export default async function main(client: Client) {
         'routes-manifest.json',
         'build-manifest.json',
       ]) {
-        await smartCopy(client, join(dotNextDir, file), join(OUTPUT_DIR, file));
+        const input = join(dotNextDir, file);
+
+        if (fs.existsSync(input)) {
+          // Do not use `smartCopy`, since we want to overwrite if they already exist.
+          await fs.copyFile(input, join(OUTPUT_DIR, file));
+        }
       }
     } else if (isNextOutput) {
       // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
