@@ -4,26 +4,26 @@
 *                                        @TooTallNate
 /.github/workflows                       @AndyBitz @styfle
 /packages/frameworks                     @AndyBitz
-/packages/cli/src/commands/build     @TooTallNate @styfle @AndyBitz @gdborton
-/packages/cli/src/commands/dev       @TooTallNate @styfle @AndyBitz
-/packages/cli/src/util/dev           @TooTallNate @styfle @AndyBitz
-/packages/cli/src/commands/domains   @javivelasco @mglagola @anatrajkovska
-/packages/cli/src/commands/certs     @javivelasco @mglagola @anatrajkovska
-/packages/cli/src/commands/env       @styfle @lucleray
-/packages/client                     @rdev @styfle @TooTallNate
-/packages/build-utils                @styfle @AndyBitz @TooTallNate
-/packages/middleware                 @gdborton @javivelasco
-/packages/node                       @styfle @TooTallNate @lucleray
-/packages/node-bridge                @styfle @TooTallNate @lucleray
-/packages/next                       @Timer @ijjk
-/packages/go                         @styfle @TooTallNate
-/packages/python                     @styfle @TooTallNate
-/packages/ruby                       @styfle @coetry @TooTallNate
-/packages/static-build               @styfle @AndyBitz
-/packages/routing-utils              @styfle @dav-is @ijjk
-/examples                                @mcsdevv @timothyis
+/packages/cli/src/commands/build         @TooTallNate @styfle @AndyBitz @gdborton
+/packages/cli/src/commands/dev           @TooTallNate @styfle @AndyBitz
+/packages/cli/src/util/dev               @TooTallNate @styfle @AndyBitz
+/packages/cli/src/commands/domains       @javivelasco @mglagola @anatrajkovska
+/packages/cli/src/commands/certs         @javivelasco @mglagola @anatrajkovska
+/packages/cli/src/commands/env           @styfle @lucleray
+/packages/client                         @rdev @styfle @TooTallNate
+/packages/build-utils                    @styfle @AndyBitz @TooTallNate
+/packages/middleware                     @gdborton @javivelasco
+/packages/node                           @styfle @TooTallNate @lucleray
+/packages/node-bridge                    @styfle @TooTallNate @lucleray
+/packages/next                           @Timer @ijjk
+/packages/go                             @styfle @TooTallNate
+/packages/python                         @styfle @TooTallNate
+/packages/ruby                           @styfle @TooTallNate
+/packages/static-build                   @styfle @AndyBitz
+/packages/routing-utils                  @styfle @dav-is @ijjk
+/examples                                @mcsdevv
 /examples/create-react-app               @Timer
 /examples/nextjs                         @timneutkens @Timer
-/examples/hugo                           @mcsdevv @timothyis @styfle
-/examples/jekyll                         @mcsdevv @timothyis @styfle
-/examples/zola                           @mcsdevv @timothyis @styfle
+/examples/hugo                           @mcsdevv @styfle
+/examples/jekyll                         @mcsdevv @styfle
+/examples/zola                           @mcsdevv @styfle
