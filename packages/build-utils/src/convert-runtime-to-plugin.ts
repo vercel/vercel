@@ -29,6 +29,24 @@ const shouldIgnorePath = (
   return isNative || ignoreFilter(file);
 };
 
+const getSourceFiles = async (workPath: string, ignoreFilter: any) => {
+  const list = await glob('**', {
+    cwd: workPath,
+  });
+
+  // We're not passing this as an `ignore` filter to the `glob` function above,
+  // so that we can re-use exactly the same `getIgnoreFilter` method that the
+  // Build Step uses (literally the same code). Note that this exclusion only applies
+  // when deploying. Locally, another exclusion further below is needed.
+  for (const file in list) {
+    if (shouldIgnorePath(file, ignoreFilter, true)) {
+      delete list[file];
+    }
+  }
+
+  return list;
+};
+
 /**
  * Convert legacy Runtime to a Plugin.
  * @param buildRuntime - a legacy build() function from a Runtime
@@ -42,22 +60,13 @@ export function convertRuntimeToPlugin(
 ) {
   // This `build()` signature should match `plugin.build()` signature in `vercel build`.
   return async function build({ workPath }: { workPath: string }) {
-    const opts = { cwd: workPath };
-    const files = await glob('**', opts);
-
     // We also don't want to provide any files to Runtimes that were ignored
     // through `.vercelignore` or `.nowignore`, because the Build Step does the same.
     const ignoreFilter = await getIgnoreFilter(workPath);
 
-    // We're not passing this as an `ignore` filter to the `glob` function above,
-    // so that we can re-use exactly the same `getIgnoreFilter` method that the
-    // Build Step uses (literally the same code). Note that this exclusion only applies
-    // when deploying. Locally, another exclusion further below is needed.
-    for (const file in files) {
-      if (shouldIgnorePath(file, ignoreFilter, true)) {
-        delete files[file];
-      }
-    }
+    // Retrieve the files that are currently available on the File System,
+    // before the Legacy Runtime has even started to build.
+    const sourceFilesPreBuild = await getSourceFiles(workPath, ignoreFilter);
 
     const entrypointPattern = `api/**/*${ext}`;
     const entrypoints = await glob(entrypointPattern, opts);
@@ -79,7 +88,7 @@ export function convertRuntimeToPlugin(
 
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
-        files,
+        files: sourceFilesPreBuild,
         entrypoint,
         workPath,
         config: {
@@ -89,6 +98,17 @@ export function convertRuntimeToPlugin(
           avoidTopLevelInstall: true,
         },
       });
+
+      // Legacy Runtimes tend to pollute the `workPath` with compiled results,
+      // because the `workPath` used to be a place that was a place where they could
+      // just put anything, but nowadays it's the working directory of the `vercel build`
+      // command, which is the place where the developer keeps their source files,
+      // so we don't want to pollute this space unnecessarily. That means we have to clean
+      // up files that were created by the build, which is done further below.
+      const sourceFilesAfterBuild = await getSourceFiles(
+        workPath,
+        ignoreFilter
+      );
 
       // Further down, we will need the filename of the Lambda handler
       // for placing it inside `server/pages/api`, but because Legacy Runtimes
@@ -138,10 +158,18 @@ export function convertRuntimeToPlugin(
       await fs.ensureDir(dirname(entry));
       await linkOrCopy(handlerFileOrigin, entry);
 
-      // Legacy Runtimes will pollute `workPath` with files like the Lambda handler,
-      // so we need to clean those up. The only one we can reliably clean up without storing
-      // state about what was originally present is the handler.
-      await fs.remove(handlerFileOrigin);
+      const toRemove = [];
+
+      // You can find more details about this at the point where the
+      // `sourceFilesAfterBuild` is created originally.
+      for (const file in sourceFilesAfterBuild) {
+        if (!sourceFilesPreBuild[file]) {
+          const path = sourceFilesAfterBuild[file].fsPath;
+          toRemove.push(fs.remove(path));
+        }
+      }
+
+      await Promise.all(toRemove);
 
       const tracedFiles: string[] = [];
 
