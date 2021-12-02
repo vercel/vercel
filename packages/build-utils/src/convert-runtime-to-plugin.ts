@@ -90,8 +90,12 @@ export function convertRuntimeToPlugin(
         },
       });
 
+      const handler = output.handler;
+      const handlerMethod = handler.split('.').reverse()[0];
+      const handlerFile = handler.replace(`.${handlerMethod}`, '');
+
       pages[entrypoint] = {
-        handler: output.handler,
+        handler: handler,
         runtime: output.runtime,
         memory: output.memory,
         maxDuration: output.maxDuration,
@@ -114,13 +118,17 @@ export function convertRuntimeToPlugin(
 
       const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
       await fs.ensureDir(dirname(entry));
-      await linkOrCopy(files[entrypoint].fsPath, entry);
+      await linkOrCopy(files[handlerFile].fsPath, entry);
 
       const tracedFiles: string[] = [];
 
       Object.entries(lambdaFiles).forEach(async ([relPath, file]) => {
         const newPath = join(traceDir, relPath);
-        tracedFiles.push(relPath);
+
+        if (newPath !== handlerFile) {
+          tracedFiles.push(relPath);
+        }
+
         if (file.fsPath) {
           await linkOrCopy(file.fsPath, newPath);
         } else if (file.type === 'FileBlob') {
