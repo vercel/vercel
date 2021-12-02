@@ -135,7 +135,7 @@ export function convertRuntimeToPlugin(
       Object.entries(lambdaFiles).forEach(async ([relPath, file]) => {
         const newPath = join(traceDir, relPath);
 
-        if (newPath !== handlerFile) {
+        if (newPath !== handlerFilePath) {
           tracedFiles.push(relPath);
         }
 
