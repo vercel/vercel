@@ -68,8 +68,25 @@ export function convertRuntimeToPlugin(
     // before the Legacy Runtime has even started to build.
     const sourceFilesPreBuild = await getSourceFiles(workPath, ignoreFilter);
 
-    const entrypointPattern = `api/**/*${ext}`;
-    const entrypoints = await glob(entrypointPattern, { cwd: workPath });
+    console.log(sourceFilesPreBuild);
+
+    // Instead of doing another `glob` to get all the matching source files,
+    // we'll filter the list of existing files down to only the ones
+    // that are matching the entrypoint pattern, so we're first creating
+    // a clean new list to begin.
+    const entrypoints = Object.assign({}, sourceFilesPreBuild);
+
+    const entrypointMatch = new RegExp(`^api/.*${ext}$`);
+
+    // Up next, we'll strip out the files from the list of entrypoints
+    // that aren't actually considered entrypoints.
+    for (const file in entrypoints) {
+      if (!entrypointMatch.test(file)) {
+        delete entrypoints[file];
+      }
+    }
+
+    console.log(entrypoints);
     const pages: { [key: string]: any } = {};
     const pluginName = packageName.replace('vercel-plugin-', '');
 
