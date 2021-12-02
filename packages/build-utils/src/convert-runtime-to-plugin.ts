@@ -120,14 +120,15 @@ export function convertRuntimeToPlugin(
         return parse(item).name === handlerFileName;
       });
 
-      if (!handlerFilePath) {
+      const handlerFileOrigin = lambdaFiles[handlerFilePath || ''].fsPath;
+
+      if (!handlerFileOrigin) {
         throw new Error(
           `Could not find a handler file. Please ensure that the list of \`files\` defined for the returned \`Lambda\` contains a file with the name ${handlerFileName} (+ any extension).`
         );
       }
 
       const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
-      const handlerFileOrigin = files[handlerFilePath].fsPath;
 
       await fs.ensureDir(dirname(entry));
       await linkOrCopy(handlerFileOrigin, entry);
