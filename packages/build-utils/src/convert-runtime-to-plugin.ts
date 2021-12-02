@@ -127,7 +127,7 @@ export function convertRuntimeToPlugin(
 
       // Further down, we will need the filename of the Lambda handler
       // for placing it inside `server/pages/api`, but because Legacy Runtimes
-      // don't expose the that filename directly, we have to construct it
+      // don't expose the filename directly, we have to construct it
       // from the handler name, and then find the matching file further below,
       // because we don't yet know its extension here.
       const handler = output.handler;
