@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "vercel-plugin-ruby",
-  "version": "1.0.0-canary.14",
+  "version": "1.0.0-canary.15",
   "main": "dist/index.js",
   "license": "MIT",
   "files": [
