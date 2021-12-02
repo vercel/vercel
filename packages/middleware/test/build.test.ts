@@ -62,7 +62,7 @@ describe('build()', () => {
     ).toEqual('1');
   });
 
-  it('should create a middlware that runs in strict mode', async () => {
+  it('should create a middleware that runs in strict mode', async () => {
     const { middleware } = await setupFixture('use-strict');
     const response = await middleware({
       request: {},
