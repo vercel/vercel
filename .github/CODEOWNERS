@@ -10,7 +10,7 @@
 /packages/cli/src/commands/domains       @javivelasco @mglagola @anatrajkovska
 /packages/cli/src/commands/certs         @javivelasco @mglagola @anatrajkovska
 /packages/cli/src/commands/env           @styfle @lucleray
-/packages/client                         @rdev @styfle @TooTallNate
+/packages/client                         @styfle @TooTallNate
 /packages/build-utils                    @styfle @AndyBitz @TooTallNate
 /packages/middleware                     @gdborton @javivelasco
 /packages/node                           @styfle @TooTallNate @lucleray
