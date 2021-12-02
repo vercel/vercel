@@ -7,6 +7,28 @@ import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
 import { getIgnoreFilter } from '.';
 
+// `.output` was already created by the Build Command, so we have
+// to ensure its contents don't get bundled into the Lambda. Similarily,
+// we don't want to bundle anything from `.vercel` either. Lastly,
+// Builders/Runtimes didn't have `vercel.json` or `now.json`.
+const ignoredPaths = ['.output', '.vercel', 'vercel.json', 'now.json'];
+
+const shouldIgnorePath = (
+  file: string,
+  ignoreFilter: any,
+  ignoreFile: boolean
+) => {
+  const isNative = ignoredPaths.some(item => {
+    return file.startsWith(item);
+  });
+
+  if (!ignoreFile) {
+    return isNative;
+  }
+
+  return isNative || ignoreFilter(file);
+};
+
 /**
  * Convert legacy Runtime to a Plugin.
  * @param buildRuntime - a legacy build() function from a Runtime
@@ -23,25 +45,16 @@ export function convertRuntimeToPlugin(
     const opts = { cwd: workPath };
     const files = await glob('**', opts);
 
-    // `.output` was already created by the Build Command, so we have
-    // to ensure its contents don't get bundled into the Lambda. Similarily,
-    // we don't want to bundle anything from `.vercel` either. Lastly,
-    // Builders/Runtimes didn't have `vercel.json` or `now.json`.
-    const ignoredPaths = ['.output', '.vercel', 'vercel.json', 'now.json'];
-
     // We also don't want to provide any files to Runtimes that were ignored
     // through `.vercelignore` or `.nowignore`, because the Build Step does the same.
     const ignoreFilter = await getIgnoreFilter(workPath);
 
     // We're not passing this as an `ignore` filter to the `glob` function above,
     // so that we can re-use exactly the same `getIgnoreFilter` method that the
-    // Build Step uses (literally the same code).
+    // Build Step uses (literally the same code). Note that this exclusion only applies
+    // when deploying. Locally, another exclusion further below is needed.
     for (const file in files) {
-      const isNative = ignoredPaths.some(item => {
-        return file.startsWith(item);
-      });
-
-      if (isNative || ignoreFilter(file)) {
+      if (shouldIgnorePath(file, ignoreFilter, true)) {
         delete files[file];
       }
     }
@@ -88,6 +101,16 @@ export function convertRuntimeToPlugin(
 
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
+
+      // When deploying, the `files` that are passed to the Legacy Runtimes already
+      // have certain files that are ignored stripped, but locally, that list of
+      // files isn't used by the Legacy Runtimes, so we need to apply the filters
+      // to the outputs that they are returning instead.
+      for (const file in lambdaFiles) {
+        if (shouldIgnorePath(file, ignoreFilter, false)) {
+          delete files[file];
+        }
+      }
 
       const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
       await fs.ensureDir(dirname(entry));
