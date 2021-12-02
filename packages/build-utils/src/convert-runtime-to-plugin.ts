@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { join, dirname, basename } from 'path';
+import { join, dirname, parse } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
@@ -117,7 +117,7 @@ export function convertRuntimeToPlugin(
       }
 
       const handlerFilePath = Object.keys(lambdaFiles).find(item => {
-        return basename(item) === handlerFileName;
+        return parse(item).name === handlerFileName;
       });
 
       if (!handlerFilePath) {
@@ -127,8 +127,15 @@ export function convertRuntimeToPlugin(
       }
 
       const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
+      const handlerFileOrigin = files[handlerFilePath].fsPath;
+
       await fs.ensureDir(dirname(entry));
-      await linkOrCopy(files[handlerFilePath].fsPath, entry);
+      await linkOrCopy(handlerFileOrigin, entry);
+
+      // Legacy Runtimes will pollute `workPath` with files like the Lambda handler,
+      // so we need to clean those up. The only one we can reliably clean up without storing
+      // state about what was originally present is the handler.
+      await fs.rm(handlerFileOrigin);
 
       const tracedFiles: string[] = [];
 
