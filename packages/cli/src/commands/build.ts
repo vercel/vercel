@@ -449,6 +449,8 @@ export default async function main(client: Client) {
       : null;
 
     if (dotNextDir && exportStatus) {
+      client.output.debug('Found `next export` output.');
+
       const tempOutput = join(cwd, '.output___tmp');
       const outputFiles = await buildUtilsGlob(
         '**',
