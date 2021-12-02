@@ -1,6 +1,6 @@
 import { join } from 'path';
 import fs from 'fs-extra';
-import { BuildOptions, createLambda } from '../src';
+import { BuildOptions, createLambda, FileFsRef } from '../src';
 import { convertRuntimeToPlugin } from '../src/convert-runtime-to-plugin';
 
 async function fsToJson(dir: string, output: Record<string, any> = {}) {
@@ -45,20 +45,15 @@ describe('convert-runtime-to-plugin', () => {
       environment: {},
     };
 
-    const writeLauncher = async () => {
-      await fs.writeFile(join(workPath, handlerFileName), '# handler');
-    };
-
-    // TODO: This should be possible to remove by re-arranging the code, but
-    // it doesn't influence the reliability of the test. It's just that this test
-    // reads files even before the build was run, so they don't yet contain a launcher,
-    // which this addition is guaranteeing. We'll just have to change reading
-    // the files at a different position.
-    await writeLauncher();
-
     const buildRuntime = async (opts: BuildOptions) => {
+      const handlerPath = join(workPath, handlerFileName);
+
       // This is the usual time at which a Legacy Runtime writes its Lambda launcher.
-      await writeLauncher();
+      await fs.writeFile(handlerPath, '# handler');
+
+      opts.files[handlerFileName] = new FileFsRef({
+        fsPath: handlerPath,
+      });
 
       const lambda = await createLambda({
         files: opts.files,
