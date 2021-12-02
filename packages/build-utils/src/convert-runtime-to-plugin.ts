@@ -108,7 +108,7 @@ export function convertRuntimeToPlugin(
       // to the outputs that they are returning instead.
       for (const file in lambdaFiles) {
         if (shouldIgnorePath(file, ignoreFilter, false)) {
-          delete files[file];
+          delete lambdaFiles[file];
         }
       }
 
