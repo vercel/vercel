@@ -15,7 +15,7 @@
     "test": "jest",
     "test-unit": "jest --coverage --verbose",
     "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
-    "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
+    "test-integration-dev": "ava test/dev/integration.js --fail-fast --verbose",
     "prepublishOnly": "yarn build",
     "coverage": "codecov",
     "build": "node -r ts-eager/register ./scripts/build.ts",
