@@ -109,35 +109,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: `../../../../inputs/api-routes-python/api/db/[id].py`,
+          input: `../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: `../../../../inputs/api-routes-python/api/index.py`,
+          input: `../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input: `../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
+          input: `../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: `../../../../inputs/api-routes-python/api/users/get.py`,
+          input: `../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: `../../../../inputs/api-routes-python/api/users/post.py`,
+          input: `../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: `../../../../inputs/api-routes-python/file.txt`,
+          input: `../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: `../../../../inputs/api-routes-python/util/date.py`,
+          input: `../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: `../../../../inputs/api-routes-python/util/math.py`,
+          input: `../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -150,35 +150,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: `../../../../../inputs/api-routes-python/api/db/[id].py`,
+          input: `../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/index.py`,
+          input: `../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
+          input: `../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/users/get.py`,
+          input: `../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/users/post.py`,
+          input: `../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/file.txt`,
+          input: `../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: `../../../../../inputs/api-routes-python/util/date.py`,
+          input: `../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/util/math.py`,
+          input: `../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -191,35 +191,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: `../../../../../inputs/api-routes-python/api/db/[id].py`,
+          input: `../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/index.py`,
+          input: `../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
+          input: `../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/users/get.py`,
+          input: `../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/api/users/post.py`,
+          input: `../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/file.txt`,
+          input: `../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: `../../../../../inputs/api-routes-python/util/date.py`,
+          input: `../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: `../../../../../inputs/api-routes-python/util/math.py`,
+          input: `../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
