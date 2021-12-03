@@ -146,7 +146,7 @@ export function convertRuntimeToPlugin(
       });
 
       const { handler } = output;
-      const handlerMethod = handler.split('.').reverse()[0];
+      const handlerMethod = handler.split('.').pop();
       const handlerFileName = handler.replace(`.${handlerMethod}`, '');
 
       // For compiled languages, the launcher file for the Lambda generated
