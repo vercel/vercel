@@ -3,6 +3,30 @@ import { promises as fsp } from 'fs';
 import { build } from '../src';
 import { Response } from 'node-fetch';
 
+const setupFixture = async (fixture: string) => {
+  const fixturePath = join(__dirname, `fixtures/${fixture}`);
+  await build({
+    workPath: fixturePath,
+  });
+
+  const functionsManifest = JSON.parse(
+    await fsp.readFile(
+      join(fixturePath, '.output/functions-manifest.json'),
+      'utf8'
+    )
+  );
+
+  const outputFile = join(fixturePath, '.output/server/pages/_middleware.js');
+  expect(await fsp.stat(outputFile)).toBeTruthy();
+  require(outputFile);
+  //@ts-ignore
+  const middleware = global._ENTRIES['middleware_pages/_middleware'].default;
+  return {
+    middleware,
+    functionsManifest,
+  };
+};
+
 describe('build()', () => {
   beforeEach(() => {
     //@ts-ignore
@@ -15,25 +39,9 @@ describe('build()', () => {
     delete global._ENTRIES;
   });
   it('should build simple middleware', async () => {
-    const fixture = join(__dirname, 'fixtures/simple');
-    await build({
-      workPath: fixture,
-    });
+    const { functionsManifest, middleware } = await setupFixture('simple');
 
-    const middlewareManifest = JSON.parse(
-      await fsp.readFile(
-        join(fixture, '.output/server/middleware-manifest.json'),
-        'utf8'
-      )
-    );
-    expect(middlewareManifest).toMatchSnapshot();
-
-    const outputFile = join(fixture, '.output/server/pages/_middleware.js');
-    expect(await fsp.stat(outputFile)).toBeTruthy();
-
-    require(outputFile);
-    //@ts-ignore
-    const middleware = global._ENTRIES['middleware_pages/_middleware'].default;
+    expect(functionsManifest).toMatchSnapshot();
     expect(typeof middleware).toStrictEqual('function');
     const handledResponse = await middleware({
       request: {
@@ -54,6 +62,7 @@ describe('build()', () => {
       (unhandledResponse.response as Response).headers.get('x-middleware-next')
     ).toEqual('1');
   });
+
   it('should build simple middleware with env vars', async () => {
     const expectedEnvVar = 'expected-env-var';
     const fixture = join(__dirname, 'fixtures/env');
@@ -78,5 +87,13 @@ describe('build()', () => {
     expect(
       (handledResponse.response as Response).headers.get('x-middleware-next')
     ).toEqual(null);
+  });
+
+  it('should create a middleware that runs in strict mode', async () => {
+    const { middleware } = await setupFixture('use-strict');
+    const response = await middleware({
+      request: {},
+    });
+    expect(String(response.response.body)).toEqual('is strict mode? yes');
   });
 });

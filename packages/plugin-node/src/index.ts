@@ -40,6 +40,7 @@ import {
   walkParentDirs,
   normalizePath,
   runPackageJsonScript,
+  getInputHash,
 } from '@vercel/build-utils';
 import { FromSchema } from 'json-schema-to-ts';
 import { getConfig, BaseFunctionConfigSchema } from '@vercel/static-config';
@@ -47,8 +48,6 @@ import { AbortController } from 'abort-controller';
 import { Register, register } from './typescript';
 import { pageToRoute } from './router/page-to-route';
 import { isDynamicRoute } from './router/is-dynamic';
-import crypto from 'crypto';
-import type { VercelConfig } from '@vercel/client';
 
 export { shouldServe };
 export {
@@ -380,13 +379,7 @@ function getAWSLambdaHandler(entrypoint: string, config: FunctionConfig) {
 }
 
 // TODO NATE: turn this into a `@vercel/plugin-utils` helper function?
-export async function build({
-  vercelConfig,
-  workPath,
-}: {
-  vercelConfig: VercelConfig;
-  workPath: string;
-}) {
+export async function build({ workPath }: { workPath: string }) {
   const project = new Project();
   const entrypoints = await glob('api/**/*.[jt]s', workPath);
   const installedPaths = new Set<string>();
@@ -408,14 +401,13 @@ export async function build({
       getConfig(project, absEntrypoint, FunctionConfigSchema) || {};
 
     // No config exported means "node", but if there is a config
-    // and "runtime" is defined, but it is not "node" then don't
+    // and "use" is defined, but it is not "node" then don't
     // compile this file.
-    if (config.runtime && config.runtime !== 'node') {
+    if (config.use && config.use !== 'node') {
       continue;
     }
 
     await buildEntrypoint({
-      vercelConfig,
       workPath,
       entrypoint,
       config,
@@ -425,23 +417,18 @@ export async function build({
 }
 
 export async function buildEntrypoint({
-  vercelConfig,
   workPath,
   entrypoint,
   config,
   installedPaths,
 }: {
-  vercelConfig: VercelConfig;
   workPath: string;
   entrypoint: string;
   config: FunctionConfig;
   installedPaths?: Set<string>;
 }) {
   // Unique hash that will be used as directory name for `.output`.
-  const entrypointHash = crypto
-    .createHash('sha256')
-    .update(entrypoint)
-    .digest('hex');
+  const entrypointHash = 'api-routes-node-' + getInputHash(entrypoint);
   const outputDirPath = join(workPath, '.output');
 
   const { dir, name } = parsePath(entrypoint);
@@ -561,7 +548,7 @@ export async function buildEntrypoint({
       runtime: nodeVersion.runtime,
     },
   };
-  await updateFunctionsManifest({ vercelConfig, workPath, pages });
+  await updateFunctionsManifest({ workPath, pages });
 
   // Update the `routes-mainifest.json` file with the wildcard route
   // when the entrypoint is dynamic (i.e. `/api/[id].ts`).
