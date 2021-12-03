@@ -2,8 +2,8 @@
 
 exports[`build() should build simple middleware 1`] = `
 Object {
-  "middleware": Object {
-    "/": Object {
+  "pages": Object {
+    "_middleware.js": Object {
       "env": Array [],
       "files": Array [
         "server/pages/_middleware.js",
@@ -11,11 +11,10 @@ Object {
       "name": "pages/_middleware",
       "page": "/",
       "regexp": "^/.*$",
+      "runtime": "web",
+      "sortingIndex": 1,
     },
   },
-  "sortedMiddleware": Array [
-    "/",
-  ],
   "version": 1,
 }
 `;

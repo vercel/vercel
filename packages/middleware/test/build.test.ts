@@ -9,9 +9,9 @@ const setupFixture = async (fixture: string) => {
     workPath: fixturePath,
   });
 
-  const middlewareManifest = JSON.parse(
+  const functionsManifest = JSON.parse(
     await fsp.readFile(
-      join(fixturePath, '.output/server/middleware-manifest.json'),
+      join(fixturePath, '.output/server/functions-manifest.json'),
       'utf8'
     )
   );
@@ -23,7 +23,7 @@ const setupFixture = async (fixture: string) => {
   const middleware = global._ENTRIES['middleware_pages/_middleware'].default;
   return {
     middleware,
-    middlewareManifest,
+    functionsManifest,
   };
 };
 
@@ -39,8 +39,9 @@ describe('build()', () => {
     delete global._ENTRIES;
   });
   it('should build simple middleware', async () => {
-    const { middlewareManifest, middleware } = await setupFixture('simple');
-    expect(middlewareManifest).toMatchSnapshot();
+    const { functionsManifest, middleware } = await setupFixture('simple');
+
+    expect(functionsManifest).toMatchSnapshot();
     expect(typeof middleware).toStrictEqual('function');
     const handledResponse = await middleware({
       request: {
