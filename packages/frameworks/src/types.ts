@@ -162,9 +162,9 @@ export interface Framework {
   dependency?: string;
   /**
    * Function that returns the name of the directory that the framework outputs
-   * its build results to. In some cases this is read from a configuration file.
+   * its File System API build results to, usually called `.output`.
    */
-  getFsOutputDir: (dirPrefix: string) => Promise<string>;
+  getFsOutputDir?: (dirPrefix: string) => Promise<string>;
   /**
    * Function that returns the name of the directory that the framework outputs
    * its STATIC build results to. In some cases this is read from a configuration file.

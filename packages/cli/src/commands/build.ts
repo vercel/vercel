@@ -353,13 +353,12 @@ export default async function main(client: Client) {
     }
 
     // We cannot rely on the `framework` alone, as it might be a static export,
-    // and the current build might use a differnt project that's not in the settings.
+    // and the current build might use a different project that's not in the settings.
     const isNextOutput = Boolean(dotNextDir);
     const outputDir = isNextOutput ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
+    const getDistDir = framework.getFsOutputDir || framework.getOutputDirName;
     const distDir =
-      dotNextDir ||
-      userOutputDirectory ||
-      (await framework.getFsOutputDir(cwd));
+      dotNextDir || userOutputDirectory || (await getDistDir(cwd));
 
     await fs.ensureDir(join(cwd, outputDir));
 
