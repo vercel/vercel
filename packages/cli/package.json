@@ -47,7 +47,7 @@
     "@vercel/go": "1.2.4-canary.4",
     "@vercel/node": "1.12.2-canary.7",
     "@vercel/python": "2.1.2-canary.1",
-    "@vercel/ruby": "1.2.8-canary.7",
+    "@vercel/ruby": "1.2.9",
     "update-notifier": "4.1.0",
     "vercel-plugin-middleware": "0.0.0-canary.10",
     "vercel-plugin-node": "1.12.2-canary.26"
