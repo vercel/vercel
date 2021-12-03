@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { join, dirname, parse, relative } from 'path';
+import { join, parse, relative, dirname, basename, extname } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
@@ -128,15 +128,6 @@ export function convertRuntimeToPlugin(
         ignoreFilter
       );
 
-      // Further down, we will need the filename of the Lambda handler
-      // for placing it inside `server/pages/api`, but because Legacy Runtimes
-      // don't expose the filename directly, we have to construct it
-      // from the handler name, and then find the matching file further below,
-      // because we don't yet know its extension here.
-      const handler = output.handler;
-      const handlerMethod = handler.split('.').reverse()[0];
-      const handlerFileName = handler.replace(`.${handlerMethod}`, '');
-
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
 
@@ -150,9 +141,24 @@ export function convertRuntimeToPlugin(
         }
       }
 
-      const handlerFilePath = Object.keys(lambdaFiles).find(item => {
-        return parse(item).name === handlerFileName;
+      let handlerFilePath = Object.keys(lambdaFiles).find(item => {
+        return parse(item).name === output.handler;
       });
+
+      const { handler } = output;
+      const handlerMethod = handler.split('.').reverse()[0];
+      const handlerFileName = handler.replace(`.${handlerMethod}`, '');
+
+      // For compiled languages, the launcher file for the Lambda generated
+      // by the Legacy Runtime matches the `handler` defined for it, but for
+      // interpreted languages, the `handler` consists of the launcher file name
+      // without an extension, plus the name of the method inside of that file
+      // that should be invoked, so we have to construct the file path explicitly.
+      if (!handlerFilePath) {
+        handlerFilePath = Object.keys(lambdaFiles).find(item => {
+          return parse(item).name === handlerFileName;
+        });
+      }
 
       const handlerFileOrigin = lambdaFiles[handlerFilePath || ''].fsPath;
 
@@ -162,7 +168,9 @@ export function convertRuntimeToPlugin(
         );
       }
 
-      const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
+      const entryRoot = join(workPath, '.output', 'server', 'pages');
+      const entryBase = basename(entrypoint).replace(ext, extname(handler));
+      const entry = join(entryRoot, dirname(entrypoint), entryBase);
 
       // We never want to link here, only copy, because the launcher
       // file often has the same name for every entrypoint, which means that
@@ -305,12 +313,14 @@ export function convertRuntimeToPlugin(
         ...newDirectoriesEntrypoint,
       ]);
 
-      const apiRouteHandler = `${parse(entry).name}.${handlerMethod}`;
-
       // Add an entry that will later on be added to the `functions-manifest.json`
       // file that is placed inside of the `.output` directory.
       pages[entrypoint] = {
-        handler: apiRouteHandler,
+        // Because the underlying file used as a handler was placed
+        // inside `.output/server/pages/api`, it no longer has the name it originally
+        // had and is now named after the API Route that it's responsible for,
+        // so we have to adjust the name of the Lambda handler accordingly.
+        handler: handler.replace(handlerFileName, parse(entry).name),
         runtime: output.runtime,
         memory: output.memory,
         maxDuration: output.maxDuration,
