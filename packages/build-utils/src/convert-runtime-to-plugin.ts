@@ -101,7 +101,7 @@ export function convertRuntimeToPlugin(
 
     await fs.ensureDir(traceDir);
 
-    let newFilesRuntime: Set<string> = new Set();
+    let newPathsRuntime: Set<string> = new Set();
     let linkersRuntime: Array<Promise<void>> = [];
 
     for (const entrypoint of Object.keys(entrypoints)) {
@@ -176,14 +176,14 @@ export function convertRuntimeToPlugin(
       await fs.ensureDir(dirname(entry));
       await linkOrCopy(handlerFileOrigin, entry);
 
-      const newFilesEntrypoint: Set<string> = new Set();
+      const newPathsEntrypoint: Set<string> = new Set();
 
       // You can find more details about this at the point where the
       // `sourceFilesAfterBuild` is created originally.
       for (const file in sourceFilesAfterBuild) {
         if (!sourceFilesPreBuild[file]) {
           const path = sourceFilesAfterBuild[file].fsPath;
-          newFilesEntrypoint.add(path);
+          newPathsEntrypoint.add(path);
         }
       }
 
@@ -216,7 +216,7 @@ export function convertRuntimeToPlugin(
             // the Legacy Runtime. This is likely to overwrite the destination on subsequent
             // runs, but that's also how `workPath` used to work originally, without
             // the File System API (meaning that there was one `workPath` for all entrypoints).
-            if (newFilesEntrypoint.has(fsPath)) {
+            if (newPathsEntrypoint.has(fsPath)) {
               debug(`Copying from ${fsPath} to ${newPath}`);
               await fs.copyFile(fsPath, newPath);
             } else {
@@ -255,7 +255,7 @@ export function convertRuntimeToPlugin(
       // Extend the list of files that were created by the Legacy Runtime
       // with the list of files that were created for the entrypoint
       // that was just processed above.
-      newFilesRuntime = new Set([...newFilesRuntime, ...newFilesEntrypoint]);
+      newPathsRuntime = new Set([...newPathsRuntime, ...newPathsEntrypoint]);
     }
 
     // Instead of of waiting for all of the linking to be done for every
@@ -266,7 +266,7 @@ export function convertRuntimeToPlugin(
 
     // A list of all the files that were created by the Legacy Runtime,
     // which we'd like to remove from the File System.
-    const toRemove = Array.from(newFilesRuntime).map(file => fs.remove(file));
+    const toRemove = Array.from(newPathsRuntime).map(file => fs.remove(file));
 
     // Once all the entrypoints have been processed, we'd like to
     // remove all the files from `workPath` that originally weren't present
