@@ -5,7 +5,7 @@ import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
-import { getIgnoreFilter } from '.';
+import { debug, getIgnoreFilter } from '.';
 
 // `.output` was already created by the Build Command, so we have
 // to ensure its contents don't get bundled into the Lambda. Similarily,
@@ -102,6 +102,7 @@ export function convertRuntimeToPlugin(
     await fs.ensureDir(traceDir);
 
     let newFilesRuntime: Set<string> = new Set();
+    let linkersRuntime: Array<Promise<void>> = [];
 
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
@@ -191,39 +192,44 @@ export function convertRuntimeToPlugin(
         relativePath: string;
       }[] = [];
 
-      Object.entries(lambdaFiles).forEach(async ([relPath, file]) => {
-        const newPath = join(traceDir, relPath);
+      const linkers = Object.entries(lambdaFiles).map(
+        async ([relPath, file]) => {
+          const newPath = join(traceDir, relPath);
 
-        // The handler was already moved into position above.
-        if (relPath === handlerFilePath) {
-          return;
-        }
-
-        tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
-        const { fsPath, type } = file;
-
-        if (fsPath) {
-          // With this, we're making sure that files in the `workPath` that existed
-          // before the Legacy Runtime was invoked (source files) are linked from
-          // `.output` instead of copying there (the latter only happens if linking fails),
-          // which is the fastest solution. However, files that are created fresh
-          // by the Legacy Runtimes are always copied, because their link destinations
-          // are likely to be overwritten every time an entrypoint is processed by
-          // the Legacy Runtime. This is likely to overwrite the destination on subsequent
-          // runs, but that's also how `workPath` used to work originally, without
-          // the File System API (meaning that there was one `workPath` for all entrypoints).
-          if (newFilesEntrypoint.has(fsPath)) {
-            await fs.copyFile(fsPath, newPath);
-          } else {
-            await linkOrCopy(fsPath, newPath);
+          // The handler was already moved into position above.
+          if (relPath === handlerFilePath) {
+            return;
           }
-        } else if (type === 'FileBlob') {
-          const { data, mode } = file as FileBlob;
-          await fs.writeFile(newPath, data, { mode });
-        } else {
-          throw new Error(`Unknown file type: ${type}`);
+
+          tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
+          const { fsPath, type } = file;
+
+          if (fsPath) {
+            // With this, we're making sure that files in the `workPath` that existed
+            // before the Legacy Runtime was invoked (source files) are linked from
+            // `.output` instead of copying there (the latter only happens if linking fails),
+            // which is the fastest solution. However, files that are created fresh
+            // by the Legacy Runtimes are always copied, because their link destinations
+            // are likely to be overwritten every time an entrypoint is processed by
+            // the Legacy Runtime. This is likely to overwrite the destination on subsequent
+            // runs, but that's also how `workPath` used to work originally, without
+            // the File System API (meaning that there was one `workPath` for all entrypoints).
+            if (newFilesEntrypoint.has(fsPath)) {
+              debug(`Copying from ${fsPath} to ${newPath}`);
+              await fs.copyFile(fsPath, newPath);
+            } else {
+              await linkOrCopy(fsPath, newPath);
+            }
+          } else if (type === 'FileBlob') {
+            const { data, mode } = file as FileBlob;
+            await fs.writeFile(newPath, data, { mode });
+          } else {
+            throw new Error(`Unknown file type: ${type}`);
+          }
         }
-      });
+      );
+
+      linkersRuntime = linkersRuntime.concat(linkers);
 
       const nft = join(
         workPath,
@@ -249,6 +255,12 @@ export function convertRuntimeToPlugin(
       // that was just processed above.
       newFilesRuntime = new Set([...newFilesRuntime, ...newFilesEntrypoint]);
     }
+
+    // Instead of of waiting for all of the linking to be done for every
+    // entrypoint before processing the next one, we immediately handle all
+    // of them one after the other, while then waiting for the linking
+    // to finish right here, before we clean up newly created files below.
+    await Promise.all(linkersRuntime);
 
     // A list of all the files that were created by the Legacy Runtime,
     // which we'd like to remove from the File System.
