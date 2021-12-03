@@ -5,7 +5,7 @@ import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
-import { getIgnoreFilter } from '.';
+import { debug, getIgnoreFilter } from '.';
 
 // `.output` was already created by the Build Command, so we have
 // to ensure its contents don't get bundled into the Lambda. Similarily,
@@ -101,6 +101,9 @@ export function convertRuntimeToPlugin(
 
     await fs.ensureDir(traceDir);
 
+    let newPathsRuntime: Set<string> = new Set();
+    let linkersRuntime: Array<Promise<void>> = [];
+
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
         files: sourceFilesPreBuild,
@@ -134,15 +137,6 @@ export function convertRuntimeToPlugin(
       const handlerMethod = handler.split('.').reverse()[0];
       const handlerFileName = handler.replace(`.${handlerMethod}`, '');
 
-      pages[entrypoint] = {
-        handler: handler,
-        runtime: output.runtime,
-        memory: output.memory,
-        maxDuration: output.maxDuration,
-        environment: output.environment,
-        allowQuery: output.allowQuery,
-      };
-
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
 
@@ -170,46 +164,118 @@ export function convertRuntimeToPlugin(
 
       const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
 
+      // We never want to link here, only copy, because the launcher
+      // file often has the same name for every entrypoint, which means that
+      // every build for every entrypoint overwrites the launcher of the previous
+      // one, so linking would end with a broken reference.
       await fs.ensureDir(dirname(entry));
-      await linkOrCopy(handlerFileOrigin, entry);
+      await fs.copy(handlerFileOrigin, entry);
 
-      const toRemove = [];
+      const newFilesEntrypoint: Array<string> = [];
+      const newDirectoriesEntrypoint: Array<string> = [];
 
-      // You can find more details about this at the point where the
-      // `sourceFilesAfterBuild` is created originally.
+      const preBuildFiles = Object.values(sourceFilesPreBuild).map(file => {
+        return file.fsPath;
+      });
+
+      // Generate a list of directories and files that weren't present
+      // before the entrypoint was processed by the Legacy Runtime, so
+      // that we can perform a cleanup later. We need to divide into files
+      // and directories because only cleaning up files might leave empty
+      // directories, and listing directories separately also speeds up the
+      // build because we can just delete them, which wipes all of their nested
+      // paths, instead of iterating through all files that should be deleted.
       for (const file in sourceFilesAfterBuild) {
         if (!sourceFilesPreBuild[file]) {
           const path = sourceFilesAfterBuild[file].fsPath;
-          toRemove.push(fs.remove(path));
+          const dirPath = dirname(path);
+
+          // If none of the files that were present before the entrypoint
+          // was processed are contained within the directory we're looking
+          // at right now, then we know it's a newly added directory
+          // and it can therefore be removed later on.
+          const isNewDir = !preBuildFiles.some(filePath => {
+            return dirname(filePath).startsWith(dirPath);
+          });
+
+          // Check out the list of tracked directories that were
+          // newly added and see if one of them contains the path
+          // we're looking at.
+          const hasParentDir = newDirectoriesEntrypoint.some(dir => {
+            return path.startsWith(dir);
+          });
+
+          // If we have already tracked a directory that was newly
+          // added that sits above the file or directory that we're
+          // looking at, we don't need to add more entries to the list
+          // because when the parent will get removed in the future,
+          // all of its children (and therefore the path we're looking at)
+          // will automatically get removed anyways.
+          if (hasParentDir) {
+            continue;
+          }
+
+          if (isNewDir) {
+            newDirectoriesEntrypoint.push(dirPath);
+          } else {
+            newFilesEntrypoint.push(path);
+          }
         }
       }
-
-      await Promise.all(toRemove);
 
       const tracedFiles: {
         absolutePath: string;
         relativePath: string;
       }[] = [];
 
-      Object.entries(lambdaFiles).forEach(async ([relPath, file]) => {
-        const newPath = join(traceDir, relPath);
+      const linkers = Object.entries(lambdaFiles).map(
+        async ([relPath, file]) => {
+          const newPath = join(traceDir, relPath);
 
-        // The handler was already moved into position above.
-        if (relPath === handlerFilePath) {
-          return;
+          // The handler was already moved into position above.
+          if (relPath === handlerFilePath) {
+            return;
+          }
+
+          tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
+          const { fsPath, type } = file;
+
+          if (fsPath) {
+            await fs.ensureDir(dirname(newPath));
+
+            const isNewFile = newFilesEntrypoint.includes(fsPath);
+
+            const isInsideNewDirectory = newDirectoriesEntrypoint.some(
+              dirPath => {
+                return fsPath.startsWith(dirPath);
+              }
+            );
+
+            // With this, we're making sure that files in the `workPath` that existed
+            // before the Legacy Runtime was invoked (source files) are linked from
+            // `.output` instead of copying there (the latter only happens if linking fails),
+            // which is the fastest solution. However, files that are created fresh
+            // by the Legacy Runtimes are always copied, because their link destinations
+            // are likely to be overwritten every time an entrypoint is processed by
+            // the Legacy Runtime. This is likely to overwrite the destination on subsequent
+            // runs, but that's also how `workPath` used to work originally, without
+            // the File System API (meaning that there was one `workPath` for all entrypoints).
+            if (isNewFile || isInsideNewDirectory) {
+              debug(`Copying from ${fsPath} to ${newPath}`);
+              await fs.copy(fsPath, newPath);
+            } else {
+              await linkOrCopy(fsPath, newPath);
+            }
+          } else if (type === 'FileBlob') {
+            const { data, mode } = file as FileBlob;
+            await fs.writeFile(newPath, data, { mode });
+          } else {
+            throw new Error(`Unknown file type: ${type}`);
+          }
         }
+      );
 
-        tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
-
-        if (file.fsPath) {
-          await linkOrCopy(file.fsPath, newPath);
-        } else if (file.type === 'FileBlob') {
-          const { data, mode } = file as FileBlob;
-          await fs.writeFile(newPath, data, { mode });
-        } else {
-          throw new Error(`Unknown file type: ${file.type}`);
-        }
-      });
+      linkersRuntime = linkersRuntime.concat(linkers);
 
       const nft = join(
         workPath,
@@ -229,8 +295,52 @@ export function convertRuntimeToPlugin(
 
       await fs.ensureDir(dirname(nft));
       await fs.writeFile(nft, json);
+
+      // Extend the list of directories and files that were created by the
+      // Legacy Runtime with the list of directories and files that were
+      // created for the entrypoint that was just processed above.
+      newPathsRuntime = new Set([
+        ...newPathsRuntime,
+        ...newFilesEntrypoint,
+        ...newDirectoriesEntrypoint,
+      ]);
+
+      const apiRouteHandler = `${parse(entry).name}.${handlerMethod}`;
+
+      // Add an entry that will later on be added to the `functions-manifest.json`
+      // file that is placed inside of the `.output` directory.
+      pages[entrypoint] = {
+        handler: apiRouteHandler,
+        runtime: output.runtime,
+        memory: output.memory,
+        maxDuration: output.maxDuration,
+        environment: output.environment,
+        allowQuery: output.allowQuery,
+      };
     }
 
+    // Instead of of waiting for all of the linking to be done for every
+    // entrypoint before processing the next one, we immediately handle all
+    // of them one after the other, while then waiting for the linking
+    // to finish right here, before we clean up newly created files below.
+    await Promise.all(linkersRuntime);
+
+    // A list of all the files that were created by the Legacy Runtime,
+    // which we'd like to remove from the File System.
+    const toRemove = Array.from(newPathsRuntime).map(path => {
+      debug(`Removing ${path} as part of cleanup`);
+      return fs.remove(path);
+    });
+
+    // Once all the entrypoints have been processed, we'd like to
+    // remove all the files from `workPath` that originally weren't present
+    // before the Legacy Runtime began running, because the `workPath`
+    // is nowadays the directory in which the user keeps their source code, since
+    // we're no longer running separate parallel builds for every Legacy Runtime.
+    await Promise.all(toRemove);
+
+    // Add any Serverless Functions that were exposed by the Legacy Runtime
+    // to the `functions-manifest.json` file provided in `.output`.
     await updateFunctionsManifest({ workPath, pages });
   };
 }
