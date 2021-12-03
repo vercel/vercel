@@ -5,6 +5,7 @@ import { promises as fsp } from 'fs';
 import { IncomingMessage, ServerResponse } from 'http';
 import libGlob from 'glob';
 import Proxy from 'http-proxy';
+import { updateFunctionsManifest } from '@vercel/build-utils';
 
 import { run } from './websandbox';
 import type { FetchEventResult } from './websandbox/types';
@@ -73,26 +74,20 @@ export async function build({ workPath }: { workPath: string }) {
     await fsp.unlink(entriesPath);
   }
 
-  // Write middleware manifest
-  const middlewareManifest = {
-    version: 1,
-    sortedMiddleware: ['/'],
-    middleware: {
-      '/': {
-        env: [],
-        files: ['server/pages/_middleware.js'],
-        name: 'pages/_middleware',
-        page: '/',
-        regexp: '^/.*$',
-      },
-    },
+  const fileName = basename(middlewareFile);
+  const pages: { [key: string]: any } = {};
+
+  pages[fileName] = {
+    runtime: 'web',
+    env: [],
+    files: ['server/pages/_middleware.js'],
+    name: 'pages/_middleware',
+    page: '/',
+    regexp: '^/.*$',
+    sortingIndex: 1,
   };
-  const middlewareManifestData = JSON.stringify(middlewareManifest, null, 2);
-  const middlewareManifestPath = join(
-    workPath,
-    '.output/server/middleware-manifest.json'
-  );
-  await fsp.writeFile(middlewareManifestPath, middlewareManifestData);
+
+  await updateFunctionsManifest({ workPath, pages });
 }
 
 const stringifyQuery = (req: IncomingMessage, query: ParsedUrlQuery) => {

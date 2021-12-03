@@ -22,7 +22,7 @@ describe('build()', () => {
 
     const middlewareManifest = JSON.parse(
       await fsp.readFile(
-        join(fixture, '.output/server/middleware-manifest.json'),
+        join(fixture, '.output/functions-manifest.json'),
         'utf8'
       )
     );
