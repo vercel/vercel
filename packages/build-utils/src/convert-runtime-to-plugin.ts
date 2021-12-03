@@ -203,10 +203,6 @@ export function convertRuntimeToPlugin(
             return dirname(filePath).startsWith(dirPath);
           });
 
-          console.log(`New Dir: ${isNewDir}`);
-          console.log(path);
-          console.log(dirPath);
-
           // Check out the list of tracked directories that were
           // newly added and see if one of them contains the path
           // we're looking at.
