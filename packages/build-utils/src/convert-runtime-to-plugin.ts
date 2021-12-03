@@ -307,8 +307,8 @@ export function convertRuntimeToPlugin(
 
       const apiRouteHandler = `${parse(entry).name}.${handlerMethod}`;
 
-      // Add an entry that will later on be added to `functions-manifest.json`
-      // that is placed inside of the `.output` directory.
+      // Add an entry that will later on be added to the `functions-manifest.json`
+      // file that is placed inside of the `.output` directory.
       pages[entrypoint] = {
         handler: apiRouteHandler,
         runtime: output.runtime,
