@@ -176,14 +176,59 @@ export function convertRuntimeToPlugin(
       await fs.ensureDir(dirname(entry));
       await linkOrCopy(handlerFileOrigin, entry);
 
-      const newPathsEntrypoint: Set<string> = new Set();
+      const newFilesEntrypoint: Array<string> = [];
+      const newDirectoriesEntrypoint: Array<string> = [];
 
-      // You can find more details about this at the point where the
-      // `sourceFilesAfterBuild` is created originally.
+      const preBuildFiles = Object.values(sourceFilesPreBuild).map(file => {
+        return file.fsPath;
+      });
+
+      // Generate a list of directories and files that weren't present
+      // before the entrypoint was processed by the Legacy Runtime, so
+      // that we can perform a cleanup later. We need to device into files
+      // and directories because only cleaning up files might leave empty
+      // directories, and listing directories separately also speeds up the
+      // build because we can just delete them, which wipes all of their nested
+      // paths, instead of iterating through all files that should be deleted.
       for (const file in sourceFilesAfterBuild) {
         if (!sourceFilesPreBuild[file]) {
           const path = sourceFilesAfterBuild[file].fsPath;
-          newPathsEntrypoint.add(path);
+          const dirPath = dirname(path);
+
+          // If none of the files that were present before the entrypoint
+          // was processed are contained within the directory we're looking
+          // at right now, then we know it's a newly added directory
+          // and it can therefore be removed later on.
+          const isNewDir = !preBuildFiles.some(filePath => {
+            return dirname(filePath).startsWith(dirPath);
+          });
+
+          console.log(`New Dir: ${isNewDir}`);
+          console.log(path);
+          console.log(dirPath);
+
+          // Check out the list of tracked directories that were
+          // newly added and see if one of them contains the path
+          // we're looking at.
+          const hasParentDir = newDirectoriesEntrypoint.some(dir => {
+            return path.startsWith(dir);
+          });
+
+          // If we have already tracked a directory that was newly
+          // added that sits above the file or directory that we're
+          // looking at, we don't need to add more entries to the list
+          // because when the parent will get removed in the future,
+          // all of its children (and therefore the path we're looking at)
+          // will automatically get removed anyways.
+          if (hasParentDir) {
+            continue;
+          }
+
+          if (isNewDir) {
+            newDirectoriesEntrypoint.push(dirPath);
+          } else {
+            newFilesEntrypoint.push(path);
+          }
         }
       }
 
@@ -207,6 +252,14 @@ export function convertRuntimeToPlugin(
           if (fsPath) {
             await fs.ensureDir(dirname(newPath));
 
+            const isNewFile = newFilesEntrypoint.includes(fsPath);
+
+            const isInsideNewDirectory = newDirectoriesEntrypoint.some(
+              dirPath => {
+                return fsPath.startsWith(dirPath);
+              }
+            );
+
             // With this, we're making sure that files in the `workPath` that existed
             // before the Legacy Runtime was invoked (source files) are linked from
             // `.output` instead of copying there (the latter only happens if linking fails),
@@ -216,9 +269,9 @@ export function convertRuntimeToPlugin(
             // the Legacy Runtime. This is likely to overwrite the destination on subsequent
             // runs, but that's also how `workPath` used to work originally, without
             // the File System API (meaning that there was one `workPath` for all entrypoints).
-            if (newPathsEntrypoint.has(fsPath)) {
+            if (isNewFile || isInsideNewDirectory) {
               debug(`Copying from ${fsPath} to ${newPath}`);
-              await fs.copyFile(fsPath, newPath);
+              await fs.copy(fsPath, newPath);
             } else {
               await linkOrCopy(fsPath, newPath);
             }
@@ -252,10 +305,14 @@ export function convertRuntimeToPlugin(
       await fs.ensureDir(dirname(nft));
       await fs.writeFile(nft, json);
 
-      // Extend the list of files that were created by the Legacy Runtime
-      // with the list of files that were created for the entrypoint
-      // that was just processed above.
-      newPathsRuntime = new Set([...newPathsRuntime, ...newPathsEntrypoint]);
+      // Extend the list of directories and files that were created by the
+      // Legacy Runtime with the list of directories and files that were
+      // created for the entrypoint that was just processed above.
+      newPathsRuntime = new Set([
+        ...newPathsRuntime,
+        ...newFilesEntrypoint,
+        ...newDirectoriesEntrypoint,
+      ]);
     }
 
     // Instead of of waiting for all of the linking to be done for every
@@ -266,7 +323,10 @@ export function convertRuntimeToPlugin(
 
     // A list of all the files that were created by the Legacy Runtime,
     // which we'd like to remove from the File System.
-    const toRemove = Array.from(newPathsRuntime).map(file => fs.remove(file));
+    const toRemove = Array.from(newPathsRuntime).map(path => {
+      debug(`Removing ${path} as part of cleanup`);
+      return fs.remove(path);
+    });
 
     // Once all the entrypoints have been processed, we'd like to
     // remove all the files from `workPath` that originally weren't present
