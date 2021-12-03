@@ -11,7 +11,7 @@ const setupFixture = async (fixture: string) => {
 
   const functionsManifest = JSON.parse(
     await fsp.readFile(
-      join(fixturePath, '.output/server/functions-manifest.json'),
+      join(fixturePath, '.output/functions-manifest.json'),
       'utf8'
     )
   );
