@@ -1,6 +1,6 @@
 {
   "name": "vercel-plugin-middleware",
-  "version": "0.0.0-canary.9",
+  "version": "0.0.0-canary.10",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "",
@@ -30,7 +30,7 @@
     "@types/node-fetch": "^2",
     "@types/ua-parser-js": "0.7.36",
     "@types/uuid": "8.3.1",
-    "@vercel/build-utils": "2.12.3-canary.33",
+    "@vercel/build-utils": "2.12.3-canary.34",
     "@vercel/ncc": "0.24.0",
     "cookie": "0.4.1",
     "formdata-node": "4.3.1",
