@@ -307,7 +307,7 @@ export function convertRuntimeToPlugin(
 
       // Add an entry that will later on be added to the `functions-manifest.json`
       // file that is placed inside of the `.output` directory.
-      pages[entryPath] = {
+      pages[normalizePath(entryPath)] = {
         // Because the underlying file used as a handler was placed
         // inside `.output/server/pages/api`, it no longer has the name it originally
         // had and is now named after the API Route that it's responsible for,
