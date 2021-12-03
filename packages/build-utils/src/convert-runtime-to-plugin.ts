@@ -185,7 +185,7 @@ export function convertRuntimeToPlugin(
 
       // Generate a list of directories and files that weren't present
       // before the entrypoint was processed by the Legacy Runtime, so
-      // that we can perform a cleanup later. We need to device into files
+      // that we can perform a cleanup later. We need to divide into files
       // and directories because only cleaning up files might leave empty
       // directories, and listing directories separately also speeds up the
       // build because we can just delete them, which wipes all of their nested
@@ -327,7 +327,7 @@ export function convertRuntimeToPlugin(
     // Once all the entrypoints have been processed, we'd like to
     // remove all the files from `workPath` that originally weren't present
     // before the Legacy Runtime began running, because the `workPath`
-    // is nowadays the directorry in which the user keeps their source code, since
+    // is nowadays the directory in which the user keeps their source code, since
     // we're no longer running separate parallel builds for every Legacy Runtime.
     await Promise.all(toRemove);
 
