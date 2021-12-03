@@ -146,6 +146,7 @@ export function convertRuntimeToPlugin(
       const { handler } = output;
       const handlerMethod = handler.split('.').reverse()[0];
       const handlerFileName = handler.replace(`.${handlerMethod}`, '');
+      const handlerFileBase = handlerFileName + ext;
 
       // For compiled languages, the launcher file for the Lambda generated
       // by the Legacy Runtime matches the `handler` defined for it, but for
@@ -153,12 +154,12 @@ export function convertRuntimeToPlugin(
       // without an extension, plus the name of the method inside of that file
       // that should be invoked, so we have to construct the file path explicitly.
       if (!handlerFile) {
-        handlerFile = lambdaFiles[join(workPath, handlerFileName, ext)];
+        handlerFile = lambdaFiles[join(workPath, handlerFileBase)];
       }
 
       if (!handlerFile || !handlerFile.fsPath) {
         throw new Error(
-          `Could not find a handler file. Please ensure that the list of \`files\` defined for the returned \`Lambda\` contains a file with the name ${handlerFileName} (+ any extension).`
+          `Could not find a handler file. Please ensure that \`files\` for the returned \`Lambda\` contains an \`FileFsRef\` named "${handlerFileBase}" with a valid \`fsPath\`.`
         );
       }
 
