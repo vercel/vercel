@@ -137,15 +137,6 @@ export function convertRuntimeToPlugin(
       const handlerMethod = handler.split('.').reverse()[0];
       const handlerFileName = handler.replace(`.${handlerMethod}`, '');
 
-      pages[entrypoint] = {
-        handler: handler,
-        runtime: output.runtime,
-        memory: output.memory,
-        maxDuration: output.maxDuration,
-        environment: output.environment,
-        allowQuery: output.allowQuery,
-      };
-
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
 
@@ -173,8 +164,12 @@ export function convertRuntimeToPlugin(
 
       const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
 
+      // We never want to link here, only copy, because the launcher
+      // file often has the same name for every entrypoint, which means that
+      // every build for every entrypoint overwrites the launcher of the previous
+      // one, so linking would end with a broken reference.
       await fs.ensureDir(dirname(entry));
-      await linkOrCopy(handlerFileOrigin, entry);
+      await fs.copy(handlerFileOrigin, entry);
 
       const newFilesEntrypoint: Array<string> = [];
       const newDirectoriesEntrypoint: Array<string> = [];
@@ -309,6 +304,19 @@ export function convertRuntimeToPlugin(
         ...newFilesEntrypoint,
         ...newDirectoriesEntrypoint,
       ]);
+
+      const apiRouteHandler = `${parse(entry).name}.${handlerMethod}`;
+
+      // Add an entry that will later on be added to `functions-manifest.json`
+      // that is placed inside of the `.output` directory.
+      pages[entrypoint] = {
+        handler: apiRouteHandler,
+        runtime: output.runtime,
+        memory: output.memory,
+        maxDuration: output.maxDuration,
+        environment: output.environment,
+        allowQuery: output.allowQuery,
+      };
     }
 
     // Instead of of waiting for all of the linking to be done for every
