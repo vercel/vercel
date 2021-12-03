@@ -449,7 +449,7 @@ export default async function main(client: Client) {
     }
 
     // Special Next.js processing.
-    if (dotNextDir && nextExport) {
+    if (nextExport) {
       client.output.debug('Found `next export` output.');
 
       const htmlFiles = await buildUtilsGlob(
@@ -488,7 +488,7 @@ export default async function main(client: Client) {
         'routes-manifest.json',
         'build-manifest.json',
       ]) {
-        const input = join(dotNextDir, file);
+        const input = join(nextExport.dotNextDir, file);
 
         if (fs.existsSync(input)) {
           // Do not use `smartCopy`, since we want to overwrite if they already exist.
@@ -970,6 +970,7 @@ async function getNextExportStatus(dotNextDir: string | null) {
     });
 
   return {
+    dotNextDir,
     exportDetail,
     exportMarker: {
       trailingSlash: exportMarker?.hasExportPathMap
