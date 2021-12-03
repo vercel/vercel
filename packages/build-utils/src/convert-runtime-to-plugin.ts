@@ -144,7 +144,7 @@ export function convertRuntimeToPlugin(
       let handlerFile = lambdaFiles[join(workPath, output.handler)];
 
       const { handler } = output;
-      const handlerMethod = handler.split('.').reverse()[0];
+      const handlerMethod = handler.split('.').pop();
       const handlerFileName = handler.replace(`.${handlerMethod}`, '');
       const handlerFileBase = handlerFileName + ext;
 
