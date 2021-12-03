@@ -287,13 +287,7 @@ export function convertRuntimeToPlugin(
 
       linkersRuntime = linkersRuntime.concat(linkers);
 
-      const nft = join(
-        workPath,
-        '.output',
-        'server',
-        'pages',
-        `${entrypoint}.nft.json`
-      );
+      const nft = `${entry}.nft.json`;
 
       const json = JSON.stringify({
         version: 1,
