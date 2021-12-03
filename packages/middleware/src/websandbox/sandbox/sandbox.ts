@@ -114,6 +114,7 @@ export async function run(params: {
     const content = readFileSync(params.path, 'utf-8');
     const esBuildResult = esbuild.transformSync(content, {
       format: 'cjs',
+      banner: '"use strict";',
     });
     const x = vm.runInNewContext(m.wrap(esBuildResult.code), cache.sandbox, {
       filename: params.path,
@@ -163,6 +164,7 @@ function sandboxRequire(referrer: string, specifier: string) {
 
   const transformOptions: esbuild.TransformOptions = {
     format: 'cjs',
+    banner: '"use strict";',
   };
   if (extname(resolved) === '.json') {
     transformOptions.loader = 'json';
