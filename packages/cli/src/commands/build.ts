@@ -356,9 +356,7 @@ export default async function main(client: Client) {
     // We cannot rely on the `framework` alone, as it might be a static export,
     // and the current build might use a differnt project that's not in the settings.
     const isNextOutput = Boolean(dotNextDir);
-    const nextExport = dotNextDir
-      ? await getNextExportStatus(dotNextDir)
-      : null;
+    const nextExport = await getNextExportStatus(dotNextDir);
     const outputDir =
       isNextOutput && !nextExport ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
     const distDir =
@@ -935,7 +933,11 @@ async function resolveNftToOutput({
 /**
  * Files will only exist when `next export` was used.
  */
-async function getNextExportStatus(dotNextDir: string) {
+async function getNextExportStatus(dotNextDir: string | null) {
+  if (!dotNextDir) {
+    return null;
+  }
+
   const exportDetail: {
     success: boolean;
     outDirectory: string;
