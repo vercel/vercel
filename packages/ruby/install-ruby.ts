@@ -55,7 +55,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       if (isDiscontinued(selection)) {
         const latest = getLatestRubyVersion();
         const intro = `Found \`Gemfile\` with discontinued Ruby version: \`${line}.\``;
-        const hint = `Please set \`ruby "~> ${latest.range}"\` in your \`Gemfile\` to use Ruby ${latest.major}.`;
+        const hint = `Please set \`ruby "~> ${latest.range}"\` in your \`Gemfile\` to use Ruby ${latest.range}.`;
         const upstream =
           'This change is the result of a decision made by an upstream infrastructure provider (AWS).';
         throw new NowBuildError({
