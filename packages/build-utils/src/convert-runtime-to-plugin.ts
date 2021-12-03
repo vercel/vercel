@@ -101,6 +101,8 @@ export function convertRuntimeToPlugin(
 
     await fs.ensureDir(traceDir);
 
+    let newFilesRuntime: Set<string> = new Set();
+
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
         files: sourceFilesPreBuild,
@@ -173,18 +175,16 @@ export function convertRuntimeToPlugin(
       await fs.ensureDir(dirname(entry));
       await linkOrCopy(handlerFileOrigin, entry);
 
-      const toRemove = [];
+      const newFilesEntrypoint: Set<string> = new Set();
 
       // You can find more details about this at the point where the
       // `sourceFilesAfterBuild` is created originally.
       for (const file in sourceFilesAfterBuild) {
         if (!sourceFilesPreBuild[file]) {
           const path = sourceFilesAfterBuild[file].fsPath;
-          toRemove.push(fs.remove(path));
+          newFilesEntrypoint.add(path);
         }
       }
-
-      await Promise.all(toRemove);
 
       const tracedFiles: {
         absolutePath: string;
@@ -200,14 +200,28 @@ export function convertRuntimeToPlugin(
         }
 
         tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
+        const { fsPath, type } = file;
 
-        if (file.fsPath) {
-          await linkOrCopy(file.fsPath, newPath);
-        } else if (file.type === 'FileBlob') {
+        if (fsPath) {
+          // With this, we're making sure that files in the `workPath` that existed
+          // before the Legacy Runtime was invoked (source files) are linked from
+          // `.output` instead of copying there (the latter only happens if linking fails),
+          // which is the fastest solution. However, files that are created fresh
+          // by the Legacy Runtimes are always copied, because their link destinations
+          // are likely to be overwritten every time an entrypoint is processed by
+          // the Legacy Runtime. This is likely to overwrite the destination on subsequent
+          // runs, but that's also how `workPath` used to work originally, without
+          // the File System API (meaning that there was one `workPath` for all entrypoints).
+          if (newFilesEntrypoint.has(fsPath)) {
+            await fs.copyFile(fsPath, newPath);
+          } else {
+            await linkOrCopy(fsPath, newPath);
+          }
+        } else if (type === 'FileBlob') {
           const { data, mode } = file as FileBlob;
           await fs.writeFile(newPath, data, { mode });
         } else {
-          throw new Error(`Unknown file type: ${file.type}`);
+          throw new Error(`Unknown file type: ${type}`);
         }
       });
 
@@ -229,8 +243,26 @@ export function convertRuntimeToPlugin(
 
       await fs.ensureDir(dirname(nft));
       await fs.writeFile(nft, json);
+
+      // Extend the list of files that were created by the Legacy Runtime
+      // with the list of files that were created for the entrypoint
+      // that was just processed above.
+      newFilesRuntime = new Set([...newFilesRuntime, ...newFilesEntrypoint]);
     }
 
+    // A list of all the files that were created by the Legacy Runtime,
+    // which we'd like to remove from the File System.
+    const toRemove = Array.from(newFilesRuntime).map(file => fs.remove(file));
+
+    // Once all the entrypoints have been processed, we'd like to
+    // remove all the files from `workPath` that originally weren't present
+    // before the Legacy Runtime began running, because the `workPath`
+    // is nowadays the directorry in which the user keeps their source code, since
+    // we're no longer running separate parallel builds for every Legacy Runtime.
+    await Promise.all(toRemove);
+
+    // Add any Serverless Functions that were exposed by the Legacy Runtime
+    // to the `functions-manifest.json` file provided in `.output`.
     await updateFunctionsManifest({ workPath, pages });
   };
 }
