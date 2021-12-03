@@ -141,9 +141,7 @@ export function convertRuntimeToPlugin(
         }
       }
 
-      let handlerFilePath = Object.keys(lambdaFiles).find(item => {
-        return parse(item).name === output.handler;
-      });
+      let handlerFile = lambdaFiles[join(workPath, output.handler)];
 
       const { handler } = output;
       const handlerMethod = handler.split('.').reverse()[0];
@@ -154,32 +152,29 @@ export function convertRuntimeToPlugin(
       // interpreted languages, the `handler` consists of the launcher file name
       // without an extension, plus the name of the method inside of that file
       // that should be invoked, so we have to construct the file path explicitly.
-      if (!handlerFilePath) {
-        handlerFilePath = Object.keys(lambdaFiles).find(item => {
-          return parse(item).name === handlerFileName;
-        });
+      if (!handlerFile) {
+        handlerFile = lambdaFiles[join(workPath, handlerFileName, ext)];
       }
 
-      const handlerFileOrigin = lambdaFiles[handlerFilePath || ''].fsPath;
-      const handlerExtName = extname(handlerFilePath || '');
-
-      if (!handlerFileOrigin) {
+      if (!handlerFile || !handlerFile.fsPath) {
         throw new Error(
           `Could not find a handler file. Please ensure that the list of \`files\` defined for the returned \`Lambda\` contains a file with the name ${handlerFileName} (+ any extension).`
         );
       }
 
+      const handlerExtName = extname(handlerFile.fsPath);
+
       const entryRoot = join(workPath, '.output', 'server', 'pages');
-      const entryDir = dirname(entrypoint);
       const entryBase = basename(entrypoint).replace(ext, handlerExtName);
-      const entry = join(entryRoot, entryDir, entryBase);
+      const entryPath = join(dirname(entrypoint), entryBase);
+      const entry = join(entryRoot, entryPath);
 
       // We never want to link here, only copy, because the launcher
       // file often has the same name for every entrypoint, which means that
       // every build for every entrypoint overwrites the launcher of the previous
       // one, so linking would end with a broken reference.
       await fs.ensureDir(dirname(entry));
-      await fs.copy(handlerFileOrigin, entry);
+      await fs.copy(handlerFile.fsPath, entry);
 
       const newFilesEntrypoint: Array<string> = [];
       const newDirectoriesEntrypoint: Array<string> = [];
@@ -243,7 +238,7 @@ export function convertRuntimeToPlugin(
           const newPath = join(traceDir, relPath);
 
           // The handler was already moved into position above.
-          if (relPath === handlerFilePath) {
+          if (relPath === entryPath) {
             return;
           }
 
@@ -311,7 +306,7 @@ export function convertRuntimeToPlugin(
 
       // Add an entry that will later on be added to the `functions-manifest.json`
       // file that is placed inside of the `.output` directory.
-      pages[join(entryDir, entryBase)] = {
+      pages[entryPath] = {
         // Because the underlying file used as a handler was placed
         // inside `.output/server/pages/api`, it no longer has the name it originally
         // had and is now named after the API Route that it's responsible for,
