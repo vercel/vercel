@@ -148,7 +148,6 @@ export function convertRuntimeToPlugin(
       const { handler } = output;
       const handlerMethod = handler.split('.').reverse()[0];
       const handlerFileName = handler.replace(`.${handlerMethod}`, '');
-      const handlerExtName = extname(handlerFileName);
 
       // For compiled languages, the launcher file for the Lambda generated
       // by the Legacy Runtime matches the `handler` defined for it, but for
@@ -162,6 +161,7 @@ export function convertRuntimeToPlugin(
       }
 
       const handlerFileOrigin = lambdaFiles[handlerFilePath || ''].fsPath;
+      const handlerExtName = extname(handlerFilePath || '');
 
       if (!handlerFileOrigin) {
         throw new Error(
