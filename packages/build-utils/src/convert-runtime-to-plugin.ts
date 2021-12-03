@@ -205,6 +205,8 @@ export function convertRuntimeToPlugin(
           const { fsPath, type } = file;
 
           if (fsPath) {
+            await fs.ensureDir(dirname(newPath));
+
             // With this, we're making sure that files in the `workPath` that existed
             // before the Legacy Runtime was invoked (source files) are linked from
             // `.output` instead of copying there (the latter only happens if linking fails),
