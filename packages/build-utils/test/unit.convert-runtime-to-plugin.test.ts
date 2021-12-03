@@ -98,9 +98,13 @@ describe('convert-runtime-to-plugin', () => {
     expect(funcManifest).toMatchObject({
       version: 1,
       pages: {
-        'api/index.py': lambdaOptions,
-        'api/users/get.py': lambdaOptions,
-        'api/users/post.py': { ...lambdaOptions, memory: 512 },
+        'api/index.py': { ...lambdaOptions, handler: 'index.vc_handler' },
+        'api/users/get.py': { ...lambdaOptions, handler: 'get.vc_handler' },
+        'api/users/post.py': {
+          ...lambdaOptions,
+          handler: 'post.vc_handler',
+          memory: 512,
+        },
       },
     });
 
