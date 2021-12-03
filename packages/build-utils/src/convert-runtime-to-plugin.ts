@@ -141,7 +141,7 @@ export function convertRuntimeToPlugin(
         }
       }
 
-      let handlerFile = lambdaFiles[join(workPath, output.handler)];
+      let handlerFile = lambdaFiles[output.handler];
 
       const { handler } = output;
       const handlerMethod = handler.split('.').pop();
@@ -154,7 +154,7 @@ export function convertRuntimeToPlugin(
       // without an extension, plus the name of the method inside of that file
       // that should be invoked, so we have to construct the file path explicitly.
       if (!handlerFile) {
-        handlerFile = lambdaFiles[join(workPath, handlerFileBase)];
+        handlerFile = lambdaFiles[handlerFileBase];
       }
 
       if (!handlerFile || !handlerFile.fsPath) {
