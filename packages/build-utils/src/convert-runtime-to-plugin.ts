@@ -169,8 +169,9 @@ export function convertRuntimeToPlugin(
       }
 
       const entryRoot = join(workPath, '.output', 'server', 'pages');
+      const entryDir = dirname(entrypoint);
       const entryBase = basename(entrypoint).replace(ext, extname(handler));
-      const entry = join(entryRoot, dirname(entrypoint), entryBase);
+      const entry = join(entryRoot, entryDir, entryBase);
 
       // We never want to link here, only copy, because the launcher
       // file often has the same name for every entrypoint, which means that
@@ -315,7 +316,7 @@ export function convertRuntimeToPlugin(
 
       // Add an entry that will later on be added to the `functions-manifest.json`
       // file that is placed inside of the `.output` directory.
-      pages[entrypoint] = {
+      pages[join(entryDir, entryBase)] = {
         // Because the underlying file used as a handler was placed
         // inside `.output/server/pages/api`, it no longer has the name it originally
         // had and is now named after the API Route that it's responsible for,
