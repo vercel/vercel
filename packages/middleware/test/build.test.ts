@@ -68,8 +68,6 @@ describe('build()', () => {
     const response = await middleware({
       request: {},
     });
-    expect(String(response.response.body)).toEqual(
-      'is strict mode? (next.js) yes'
-    );
+    expect(String(response.response.body)).toEqual('is strict mode? yes');
   });
 });

@@ -391,7 +391,7 @@ describe('DevServer', () => {
     testFixture('edge-middleware-strict', async server => {
       const response = await fetch(`${server.address}/index.html`);
       const body = await response.text();
-      expect(body).toStrictEqual('is strict mode? (next.js) yes');
+      expect(body).toStrictEqual('is strict mode? yes');
     })
   );
 });
