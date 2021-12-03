@@ -23,8 +23,8 @@ const SUPPORTED_EXTENSIONS = ['.js', '.ts'];
 
 // File name of the `entries.js` file that gets copied into the
 // project directory. Use a name that is unlikely to conflict.
-const TMP_ENTRIES_NAME = '.output/server/pages/___vc_entries.js';
-const TMP_MIDDLEWARE_BUNDLE = '.output/server/pages/_temp_middleware.js';
+const TMP_ENTRIES_NAME = '.output/inputs/middleware/___vc_entries.js';
+const TMP_MIDDLEWARE_BUNDLE = '.output/inputs/middleware/_temp_middleware.js';
 
 async function getMiddlewareFile(workingDirectory: string) {
   // Only the root-level `_middleware.*` files are considered.
