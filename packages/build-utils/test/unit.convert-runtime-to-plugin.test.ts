@@ -1,6 +1,6 @@
 import { join } from 'path';
 import fs from 'fs-extra';
-import { BuildOptions, createLambda } from '../src';
+import { BuildOptions, createLambda, FileFsRef } from '../src';
 import { convertRuntimeToPlugin } from '../src/convert-runtime-to-plugin';
 
 async function fsToJson(dir: string, output: Record<string, any> = {}) {
@@ -32,9 +32,13 @@ describe('convert-runtime-to-plugin', () => {
   });
 
   it('should create correct fileystem for python', async () => {
+    const ext = '.py';
     const workPath = pythonApiWorkpath;
+    const handlerName = 'vc__handler__python';
+    const handlerFileName = handlerName + ext;
+
     const lambdaOptions = {
-      handler: 'index.handler',
+      handler: `${handlerName}.vc_handler`,
       runtime: 'python3.9',
       memory: 512,
       maxDuration: 5,
@@ -42,6 +46,15 @@ describe('convert-runtime-to-plugin', () => {
     };
 
     const buildRuntime = async (opts: BuildOptions) => {
+      const handlerPath = join(workPath, handlerFileName);
+
+      // This is the usual time at which a Legacy Runtime writes its Lambda launcher.
+      await fs.writeFile(handlerPath, '# handler');
+
+      opts.files[handlerFileName] = new FileFsRef({
+        fsPath: handlerPath,
+      });
+
       const lambda = await createLambda({
         files: opts.files,
         ...lambdaOptions,
@@ -50,24 +63,30 @@ describe('convert-runtime-to-plugin', () => {
     };
 
     const lambdaFiles = await fsToJson(workPath);
-    delete lambdaFiles['vercel.json'];
-    const build = await convertRuntimeToPlugin(buildRuntime, '.py');
+    const packageName = 'vercel-plugin-python';
+    const build = await convertRuntimeToPlugin(buildRuntime, packageName, ext);
 
     await build({ workPath });
 
     const output = await fsToJson(join(workPath, '.output'));
+
+    delete lambdaFiles['vercel.json'];
+    delete lambdaFiles['vc__handler__python.py'];
+
     expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
-      'runtime-traced-files': lambdaFiles,
+      inputs: {
+        'api-routes-python': lambdaFiles,
+      },
       server: {
         pages: {
           api: {
-            'index.py': expect.stringContaining('index'),
+            'index.py': expect.stringContaining('handler'),
             'index.py.nft.json': expect.stringContaining('{'),
             users: {
-              'get.py': expect.stringContaining('get'),
+              'get.py': expect.stringContaining('handler'),
               'get.py.nft.json': expect.stringContaining('{'),
-              'post.py': expect.stringContaining('post'),
+              'post.py': expect.stringContaining('handler'),
               'post.py.nft.json': expect.stringContaining('{'),
             },
           },
@@ -79,9 +98,13 @@ describe('convert-runtime-to-plugin', () => {
     expect(funcManifest).toMatchObject({
       version: 1,
       pages: {
-        'api/index.py': lambdaOptions,
-        'api/users/get.py': lambdaOptions,
-        'api/users/post.py': { ...lambdaOptions, memory: 512 },
+        'api/index.py': { ...lambdaOptions, handler: 'index.vc_handler' },
+        'api/users/get.py': { ...lambdaOptions, handler: 'get.vc_handler' },
+        'api/users/post.py': {
+          ...lambdaOptions,
+          handler: 'post.vc_handler',
+          memory: 512,
+        },
       },
     });
 
@@ -90,36 +113,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: '../../../../runtime-traced-files/api/db/[id].py',
+          input: `../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: '../../../../runtime-traced-files/api/index.py',
+          input: `../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input:
-            '../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          input: `../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: '../../../../runtime-traced-files/api/users/get.py',
+          input: `../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: '../../../../runtime-traced-files/api/users/post.py',
+          input: `../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: '../../../../runtime-traced-files/file.txt',
+          input: `../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: '../../../../runtime-traced-files/util/date.py',
+          input: `../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: '../../../../runtime-traced-files/util/math.py',
+          input: `../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -132,36 +154,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: '../../../../../runtime-traced-files/api/db/[id].py',
+          input: `../../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/index.py',
+          input: `../../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input:
-            '../../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          input: `../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/get.py',
+          input: `../../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/post.py',
+          input: `../../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: '../../../../../runtime-traced-files/file.txt',
+          input: `../../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: '../../../../../runtime-traced-files/util/date.py',
+          input: `../../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: '../../../../../runtime-traced-files/util/math.py',
+          input: `../../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],
@@ -174,36 +195,35 @@ describe('convert-runtime-to-plugin', () => {
       version: 1,
       files: [
         {
-          input: '../../../../../runtime-traced-files/api/db/[id].py',
+          input: `../../../../inputs/api-routes-python/api/db/[id].py`,
           output: 'api/db/[id].py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/index.py',
+          input: `../../../../inputs/api-routes-python/api/index.py`,
           output: 'api/index.py',
         },
         {
-          input:
-            '../../../../../runtime-traced-files/api/project/[aid]/[bid]/index.py',
+          input: `../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
           output: 'api/project/[aid]/[bid]/index.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/get.py',
+          input: `../../../../inputs/api-routes-python/api/users/get.py`,
           output: 'api/users/get.py',
         },
         {
-          input: '../../../../../runtime-traced-files/api/users/post.py',
+          input: `../../../../inputs/api-routes-python/api/users/post.py`,
           output: 'api/users/post.py',
         },
         {
-          input: '../../../../../runtime-traced-files/file.txt',
+          input: `../../../../inputs/api-routes-python/file.txt`,
           output: 'file.txt',
         },
         {
-          input: '../../../../../runtime-traced-files/util/date.py',
+          input: `../../../../inputs/api-routes-python/util/date.py`,
           output: 'util/date.py',
         },
         {
-          input: '../../../../../runtime-traced-files/util/math.py',
+          input: `../../../../inputs/api-routes-python/util/math.py`,
           output: 'util/math.py',
         },
       ],

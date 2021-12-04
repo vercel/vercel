@@ -5,6 +5,7 @@ import { promises as fsp } from 'fs';
 import { IncomingMessage, ServerResponse } from 'http';
 import libGlob from 'glob';
 import Proxy from 'http-proxy';
+import { updateFunctionsManifest } from '@vercel/build-utils';
 
 import { run } from './websandbox';
 import type { FetchEventResult } from './websandbox/types';
@@ -22,7 +23,8 @@ const SUPPORTED_EXTENSIONS = ['.js', '.ts'];
 
 // File name of the `entries.js` file that gets copied into the
 // project directory. Use a name that is unlikely to conflict.
-const ENTRIES_NAME = '___vc_entries.js';
+const TMP_ENTRIES_NAME = '.output/inputs/middleware/___vc_entries.js';
+const TMP_MIDDLEWARE_BUNDLE = '.output/inputs/middleware/_temp_middleware.js';
 
 async function getMiddlewareFile(workingDirectory: string) {
   // Only the root-level `_middleware.*` files are considered.
@@ -52,17 +54,36 @@ async function getMiddlewareFile(workingDirectory: string) {
 }
 
 export async function build({ workPath }: { workPath: string }) {
-  const entriesPath = join(workPath, ENTRIES_NAME);
+  const entriesPath = join(workPath, TMP_ENTRIES_NAME);
+  const transientFilePath = join(workPath, TMP_MIDDLEWARE_BUNDLE);
   const middlewareFile = await getMiddlewareFile(workPath);
   if (!middlewareFile) return;
 
   console.log('Compiling middleware file: %j', middlewareFile);
 
-  // Create `_ENTRIES` wrapper
-  await fsp.copyFile(join(__dirname, 'entries.js'), entriesPath);
-
-  // Build
+  /**
+   * Two builds happen here, because esbuild doesn't offer a way to add a banner
+   * to individual input files, and the entries wrapper relies on running in
+   * non-strict mode to access the ENTRIES global.
+   *
+   * To work around this, we bundle the middleware directly and add
+   * 'use strict'; to make the entire bundle run in strict mode. We then bundle
+   * a second time, adding the global ENTRIES wrapper and preserving the
+   * 'use strict' for the entire scope of the original bundle.
+   */
   try {
+    await esbuild.build({
+      entryPoints: [middlewareFile],
+      bundle: true,
+      absWorkingDir: workPath,
+      outfile: transientFilePath,
+      banner: {
+        js: '"use strict";',
+      },
+      format: 'cjs',
+    });
+    // Create `_ENTRIES` wrapper
+    await fsp.copyFile(join(__dirname, 'entries.js'), entriesPath);
     await esbuild.build({
       entryPoints: [entriesPath],
       bundle: true,
@@ -70,29 +91,24 @@ export async function build({ workPath }: { workPath: string }) {
       outfile: join(workPath, '.output/server/pages/_middleware.js'),
     });
   } finally {
+    await fsp.unlink(transientFilePath);
     await fsp.unlink(entriesPath);
   }
 
-  // Write middleware manifest
-  const middlewareManifest = {
-    version: 1,
-    sortedMiddleware: ['/'],
-    middleware: {
-      '/': {
-        env: [],
-        files: ['server/pages/_middleware.js'],
-        name: 'pages/_middleware',
-        page: '/',
-        regexp: '^/.*$',
-      },
-    },
+  const fileName = basename(middlewareFile);
+  const pages: { [key: string]: any } = {};
+
+  pages[fileName] = {
+    runtime: 'web',
+    env: [],
+    files: ['server/pages/_middleware.js'],
+    name: 'pages/_middleware',
+    page: '/',
+    regexp: '^/.*$',
+    sortingIndex: 1,
   };
-  const middlewareManifestData = JSON.stringify(middlewareManifest, null, 2);
-  const middlewareManifestPath = join(
-    workPath,
-    '.output/server/middleware-manifest.json'
-  );
-  await fsp.writeFile(middlewareManifestPath, middlewareManifestData);
+
+  await updateFunctionsManifest({ workPath, pages });
 }
 
 const stringifyQuery = (req: IncomingMessage, query: ParsedUrlQuery) => {
