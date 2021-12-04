@@ -104,6 +104,9 @@ export function convertRuntimeToPlugin(
     let newPathsRuntime: Set<string> = new Set();
     let linkersRuntime: Array<Promise<void>> = [];
 
+    const entryDir = join('.output', 'server', 'pages');
+    const entryRoot = join(workPath, entryDir);
+
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
         files: sourceFilesPreBuild,
@@ -166,7 +169,6 @@ export function convertRuntimeToPlugin(
 
       const handlerExtName = extname(handlerFile.fsPath);
 
-      const entryRoot = join(workPath, '.output', 'server', 'pages');
       const entryBase = basename(entrypoint).replace(ext, handlerExtName);
       const entryPath = join(dirname(entrypoint), entryBase);
       const entry = join(entryRoot, entryPath);
@@ -290,7 +292,9 @@ export function convertRuntimeToPlugin(
         version: 1,
         files: tracedFiles.map(file => ({
           input: normalizePath(relative(dirname(nft), file.absolutePath)),
-          output: normalizePath(file.relativePath),
+          // We'd like to place all the dependency files right next
+          // to the final launcher file inside of the Lambda.
+          output: normalizePath(join(entryDir, 'api', file.relativePath)),
         })),
       });
 
