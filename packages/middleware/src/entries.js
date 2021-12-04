@@ -1,4 +1,4 @@
-import * as middleware from './_middleware';
+import * as middleware from './_temp_middleware';
 _ENTRIES = typeof _ENTRIES === 'undefined' ? {} : _ENTRIES;
 _ENTRIES['middleware_pages/_middleware'] = {
   default: async function (ev) {
