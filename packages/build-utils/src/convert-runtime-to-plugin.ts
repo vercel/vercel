@@ -141,12 +141,12 @@ export function convertRuntimeToPlugin(
         }
       }
 
-      let handlerFile = lambdaFiles[output.handler];
+      let handlerFileBase = output.handler;
+      let handlerFile = lambdaFiles[handlerFileBase];
 
       const { handler } = output;
       const handlerMethod = handler.split('.').pop();
       const handlerFileName = handler.replace(`.${handlerMethod}`, '');
-      const handlerFileBase = handlerFileName + ext;
 
       // For compiled languages, the launcher file for the Lambda generated
       // by the Legacy Runtime matches the `handler` defined for it, but for
@@ -154,6 +154,7 @@ export function convertRuntimeToPlugin(
       // without an extension, plus the name of the method inside of that file
       // that should be invoked, so we have to construct the file path explicitly.
       if (!handlerFile) {
+        handlerFileBase = handlerFileName + ext;
         handlerFile = lambdaFiles[handlerFileBase];
       }
 
@@ -239,7 +240,7 @@ export function convertRuntimeToPlugin(
           const newPath = join(traceDir, relPath);
 
           // The handler was already moved into position above.
-          if (relPath === entryPath) {
+          if (relPath === handlerFileBase) {
             return;
           }
 
