@@ -57,7 +57,7 @@ function makeDefineObject() {
   const defineObject: Record<string, string> = {};
   for (const envVar in process.env) {
     if (process.env[envVar] != null) {
-      defineObject[`process.env.${envVar}`] = JSON.stringify(
+      defineObject[`process.env[${JSON.stringify(envVar)}]`] = JSON.stringify(
         process.env[envVar]
       );
     }
