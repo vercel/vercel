@@ -17,6 +17,7 @@ import {
   UrlWithParsedQuery,
 } from 'url';
 import { toNodeHeaders } from './websandbox/utils';
+import { nodeProcessPolyfillPlugin } from './esbuild-plugins';
 
 const glob = util.promisify(libGlob);
 const SUPPORTED_EXTENSIONS = ['.js', '.ts'];
@@ -53,18 +54,6 @@ async function getMiddlewareFile(workingDirectory: string) {
   return middlewareFiles[0];
 }
 
-function makeDefineObject() {
-  const defineObject: Record<string, string> = {};
-  for (const envVar in process.env) {
-    if (process.env[envVar] != null) {
-      defineObject[`process.env[${JSON.stringify(envVar)}]`] = JSON.stringify(
-        process.env[envVar]
-      );
-    }
-  }
-  return defineObject;
-}
-
 export async function build({ workPath }: { workPath: string }) {
   const entriesPath = join(workPath, TMP_ENTRIES_NAME);
   const transientFilePath = join(workPath, TMP_MIDDLEWARE_BUNDLE);
@@ -92,6 +81,7 @@ export async function build({ workPath }: { workPath: string }) {
       banner: {
         js: '"use strict";',
       },
+      plugins: [nodeProcessPolyfillPlugin({ envOverride: process.env })],
       format: 'cjs',
     });
     // Create `_ENTRIES` wrapper
@@ -100,7 +90,6 @@ export async function build({ workPath }: { workPath: string }) {
       entryPoints: [entriesPath],
       bundle: true,
       absWorkingDir: workPath,
-      define: makeDefineObject(),
       outfile: join(workPath, '.output/server/pages/_middleware.js'),
     });
   } finally {
