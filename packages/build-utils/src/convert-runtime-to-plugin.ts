@@ -353,13 +353,7 @@ export function convertRuntimeToPlugin(
 }
 
 async function linkOrCopy(existingPath: string, newPath: string) {
-  try {
-    await fs.createLink(existingPath, newPath);
-  } catch (err: any) {
-    if (err.code !== 'EEXIST') {
-      await fs.copyFile(existingPath, newPath);
-    }
-  }
+  await fs.copyFile(existingPath, newPath);
 }
 
 async function readJson(filePath: string): Promise<{ [key: string]: any }> {
