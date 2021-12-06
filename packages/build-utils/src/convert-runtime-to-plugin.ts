@@ -248,35 +248,9 @@ export function convertRuntimeToPlugin(
           }
 
           tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
-          const { fsPath, type } = file;
+          const { type } = file;
 
-          if (fsPath) {
-            await fs.ensureDir(dirname(newPath));
-
-            const isNewFile = newFilesEntrypoint.includes(fsPath);
-
-            const isInsideNewDirectory = newDirectoriesEntrypoint.some(
-              dirPath => {
-                return fsPath.startsWith(dirPath);
-              }
-            );
-
-            // With this, we're making sure that files in the `workPath` that existed
-            // before the Legacy Runtime was invoked (source files) are linked from
-            // `.output` instead of copying there (the latter only happens if linking fails),
-            // which is the fastest solution. However, files that are created fresh
-            // by the Legacy Runtimes are always copied, because their link destinations
-            // are likely to be overwritten every time an entrypoint is processed by
-            // the Legacy Runtime. This is likely to overwrite the destination on subsequent
-            // runs, but that's also how `workPath` used to work originally, without
-            // the File System API (meaning that there was one `workPath` for all entrypoints).
-            if (isNewFile || isInsideNewDirectory) {
-              debug(`Copying from ${fsPath} to ${newPath}`);
-              await fs.copy(fsPath, newPath);
-            } else {
-              await linkOrCopy(fsPath, newPath);
-            }
-          } else if (type === 'FileBlob') {
+          if (type === 'FileBlob') {
             const { data, mode } = file as FileBlob;
             await fs.writeFile(newPath, data, { mode });
           } else {
@@ -291,12 +265,9 @@ export function convertRuntimeToPlugin(
 
       const json = JSON.stringify({
         version: 2,
-        files: tracedFiles.map(file => ({
-          input: normalizePath(relative(dirname(nft), file.absolutePath)),
-          // We'd like to place all the dependency files right next
-          // to the final launcher file inside of the Lambda.
-          output: normalizePath(file.relativePath),
-        })),
+        files: tracedFiles.map(file => {
+          return normalizePath(relative(dirname(nft), file.absolutePath));
+        }),
       });
 
       await fs.ensureDir(dirname(nft));
@@ -351,16 +322,6 @@ export function convertRuntimeToPlugin(
     // to the `functions-manifest.json` file provided in `.output`.
     await updateFunctionsManifest({ workPath, pages });
   };
-}
-
-async function linkOrCopy(existingPath: string, newPath: string) {
-  try {
-    await fs.createLink(existingPath, newPath);
-  } catch (err: any) {
-    if (err.code !== 'EEXIST') {
-      await fs.copyFile(existingPath, newPath);
-    }
-  }
 }
 
 async function readJson(filePath: string): Promise<{ [key: string]: any }> {
