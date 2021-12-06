@@ -668,15 +668,7 @@ export default async function main(client: Client) {
             const originalPath = join(requiredServerFilesJson.appDir, i);
             const relPath = join(OUTPUT_DIR, relative(distDir, originalPath));
 
-            const absolutePath = join(cwd, relPath);
-            const output = relative(baseDir, absolutePath);
-
-            return relPath === output
-              ? relPath
-              : {
-                  input: relPath,
-                  output,
-                };
+            return relPath;
           }),
         });
       }
