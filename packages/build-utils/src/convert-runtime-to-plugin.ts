@@ -248,13 +248,15 @@ export function convertRuntimeToPlugin(
           }
 
           tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
-          const { type } = file;
+          const { fsPath, type } = file;
 
           if (type === 'FileBlob') {
             const { data, mode } = file as FileBlob;
             await fs.writeFile(newPath, data, { mode });
-          } else if (type !== 'FileBlob') {
-            throw new Error(`Unknown file type: ${type}`);
+          } else if (!fsPath) {
+            throw new Error(
+              'Ensure that `files` contains `FileFsRef` or `FileBlob` entries with a valid `fsPath`'
+            );
           }
         }
       );
