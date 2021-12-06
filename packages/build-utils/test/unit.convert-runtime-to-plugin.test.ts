@@ -96,7 +96,7 @@ describe('convert-runtime-to-plugin', () => {
 
     const funcManifest = JSON.parse(output['functions-manifest.json']);
     expect(funcManifest).toMatchObject({
-      version: 1,
+      version: 2,
       pages: {
         'api/index.py': { ...lambdaOptions, handler: 'index.vc_handler' },
         'api/users/get.py': { ...lambdaOptions, handler: 'get.vc_handler' },
@@ -110,7 +110,7 @@ describe('convert-runtime-to-plugin', () => {
 
     const indexJson = JSON.parse(output.server.pages.api['index.py.nft.json']);
     expect(indexJson).toMatchObject({
-      version: 1,
+      version: 2,
       files: [
         {
           input: `../../../inputs/api-routes-python/api/db/[id].py`,
@@ -151,7 +151,7 @@ describe('convert-runtime-to-plugin', () => {
       output.server.pages.api.users['get.py.nft.json']
     );
     expect(getJson).toMatchObject({
-      version: 1,
+      version: 2,
       files: [
         {
           input: `../../../../inputs/api-routes-python/api/db/[id].py`,
@@ -192,7 +192,7 @@ describe('convert-runtime-to-plugin', () => {
       output.server.pages.api.users['post.py.nft.json']
     );
     expect(postJson).toMatchObject({
-      version: 1,
+      version: 2,
       files: [
         {
           input: `../../../../inputs/api-routes-python/api/db/[id].py`,

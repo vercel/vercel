@@ -104,6 +104,9 @@ export function convertRuntimeToPlugin(
     let newPathsRuntime: Set<string> = new Set();
     let linkersRuntime: Array<Promise<void>> = [];
 
+    const entryDir = join('.output', 'server', 'pages');
+    const entryRoot = join(workPath, entryDir);
+
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
         files: sourceFilesPreBuild,
@@ -114,6 +117,7 @@ export function convertRuntimeToPlugin(
         },
         meta: {
           avoidTopLevelInstall: true,
+          skipDownload: true,
         },
       });
 
@@ -166,7 +170,6 @@ export function convertRuntimeToPlugin(
 
       const handlerExtName = extname(handlerFile.fsPath);
 
-      const entryRoot = join(workPath, '.output', 'server', 'pages');
       const entryBase = basename(entrypoint).replace(ext, handlerExtName);
       const entryPath = join(dirname(entrypoint), entryBase);
       const entry = join(entryRoot, entryPath);
@@ -287,9 +290,11 @@ export function convertRuntimeToPlugin(
       const nft = `${entry}.nft.json`;
 
       const json = JSON.stringify({
-        version: 1,
+        version: 2,
         files: tracedFiles.map(file => ({
           input: normalizePath(relative(dirname(nft), file.absolutePath)),
+          // We'd like to place all the dependency files right next
+          // to the final launcher file inside of the Lambda.
           output: normalizePath(file.relativePath),
         })),
       });
@@ -388,7 +393,7 @@ export async function updateFunctionsManifest({
   );
   const functionsManifest = await readJson(functionsManifestPath);
 
-  if (!functionsManifest.version) functionsManifest.version = 1;
+  if (!functionsManifest.version) functionsManifest.version = 2;
   if (!functionsManifest.pages) functionsManifest.pages = {};
 
   for (const [pageKey, pageConfig] of Object.entries(pages)) {
