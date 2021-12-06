@@ -12,10 +12,9 @@ import Sema from 'async-sema';
 import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
 import { assert } from 'console';
-import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import ogGlob from 'glob';
-import { dirname, isAbsolute, join, parse, relative, resolve } from 'path';
+import { dirname, isAbsolute, join, parse, relative } from 'path';
 import pluralize from 'pluralize';
 import Client from '../util/client';
 import { VercelConfig } from '../util/dev/types';
@@ -637,30 +636,15 @@ export default async function main(client: Client) {
             ],
           });
           fileList.delete(relative(cwd, f));
-          await resolveNftToOutput({
-            client,
-            baseDir,
-            outputDir: OUTPUT_DIR,
-            nftFileName: f.replace(ext, '.js.nft.json'),
-            distDir,
-            nft: {
-              version: 2,
-              files: Array.from(fileList).map(fileListEntry =>
-                relative(dir, fileListEntry)
-              ),
-            },
-          });
-        }
-      } else {
-        for (let f of nftFiles) {
-          const json = await fs.readJson(f);
-          await resolveNftToOutput({
-            client,
-            baseDir,
-            outputDir: OUTPUT_DIR,
-            nftFileName: f,
-            nft: json,
-            distDir,
+
+          const nftFileName = f.replace(ext, '.js.nft.json');
+          client.output.debug(`Creating ${nftFileName}`);
+
+          await fs.writeJSON(nftFileName, {
+            version: 2,
+            files: Array.from(fileList).map(fileListEntry =>
+              relative(dir, fileListEntry)
+            ),
           });
         }
       }
@@ -846,88 +830,6 @@ async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
     ogGlob(pattern, options, (err, files) => {
       err ? reject(err) : resolve(files);
     });
-  });
-}
-
-/**
- * Computes a hash for the given buf.
- *
- * @param {Buffer} file data
- * @return {String} hex digest
- */
-function hash(buf: Buffer): string {
-  return createHash('sha1').update(buf).digest('hex');
-}
-
-interface NftFile {
-  version: number;
-  files: (string | { input: string; output: string })[];
-}
-
-// resolveNftToOutput takes nft file and moves all of its trace files
-// into the specified directory + `inputs`, (renaming them to their hash + ext) and
-// subsequently updating the original nft file accordingly. This is done
-// to make the `.output` directory be self-contained, so that it works
-// properly with `vc --prebuilt`.
-async function resolveNftToOutput({
-  client,
-  baseDir,
-  outputDir,
-  nftFileName,
-  distDir,
-  nft,
-}: {
-  client: Client;
-  baseDir: string;
-  outputDir: string;
-  nftFileName: string;
-  distDir: string;
-  nft: NftFile;
-}) {
-  client.output.debug(`Processing and resolving ${nftFileName}`);
-  await fs.ensureDir(join(outputDir, 'inputs'));
-  const newFilesList: NftFile['files'] = [];
-
-  // If `distDir` is a subdirectory, then the input has to be resolved to where the `.output` directory will be.
-  const relNftFileName = relative(outputDir, nftFileName);
-  const origNftFilename = join(distDir, relNftFileName);
-
-  if (relNftFileName.startsWith('cache/')) {
-    // No need to process the `cache/` directory.
-    // Paths in it might also not be relative to `cache` itself.
-    return;
-  }
-
-  for (let fileEntity of nft.files) {
-    const relativeInput =
-      typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
-    const fullInput = resolve(join(parse(origNftFilename).dir, relativeInput));
-
-    // if the resolved path is NOT in the .output directory we move in it there
-    if (!fullInput.includes(distDir)) {
-      const { ext } = parse(fullInput);
-      const raw = await fs.readFile(fullInput);
-      const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
-      smartCopy(client, fullInput, newFilePath);
-
-      // We have to use `baseDir` instead of `cwd`, because we want to
-      // mount everything from there (especially `node_modules`).
-      // This is important for NPM Workspaces where `node_modules` is not
-      // in the directory of the workspace.
-      const output = relative(baseDir, fullInput).replace('.output', '.next');
-
-      newFilesList.push({
-        input: relative(parse(nftFileName).dir, newFilePath),
-        output,
-      });
-    } else {
-      newFilesList.push(relativeInput);
-    }
-  }
-  // Update the .nft.json with new input and output mapping
-  await fs.writeJSON(nftFileName, {
-    ...nft,
-    files: newFilesList,
   });
 }
 
