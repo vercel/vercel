@@ -2,12 +2,8 @@ import path from 'path';
 import * as esbuild from 'esbuild';
 
 const processInjectFile = `
-const env = {};
-
 // envOverride is passed by esbuild plugin
-if (typeof envOverride === 'object') {
-    Object.assign(env, envOverride || {});
-}
+const env = envOverride
 function cwd() {
     return '/'
 }
@@ -22,9 +18,7 @@ export const process = {
 };
 `;
 
-export function nodeProcessPolyfillPlugin({
-  envOverride = {},
-} = {}): esbuild.Plugin {
+export function nodeProcessPolyfillPlugin({ env = {} } = {}): esbuild.Plugin {
   return {
     name: 'node-process-polyfill',
     setup({ initialOptions, onResolve, onLoad }) {
@@ -37,7 +31,7 @@ export function nodeProcessPolyfillPlugin({
 
       onLoad({ filter: /_virtual-process-polyfill_\.js/ }, () => {
         const contents = `const envOverride = ${JSON.stringify(
-          envOverride
+          env
         )};\n${processInjectFile}`;
         return {
           loader: 'js',

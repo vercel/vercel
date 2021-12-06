@@ -81,7 +81,7 @@ export async function build({ workPath }: { workPath: string }) {
       banner: {
         js: '"use strict";',
       },
-      plugins: [nodeProcessPolyfillPlugin({ envOverride: process.env })],
+      plugins: [nodeProcessPolyfillPlugin({ env: process.env })],
       format: 'cjs',
     });
     // Create `_ENTRIES` wrapper
