@@ -253,7 +253,7 @@ export function convertRuntimeToPlugin(
           if (type === 'FileBlob') {
             const { data, mode } = file as FileBlob;
             await fs.writeFile(newPath, data, { mode });
-          } else {
+          } else if (type !== 'FileBlob') {
             throw new Error(`Unknown file type: ${type}`);
           }
         }
