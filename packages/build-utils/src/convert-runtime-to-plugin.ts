@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { join, dirname, parse, relative } from 'path';
+import { join, parse, relative, dirname, basename, extname } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
@@ -104,6 +104,9 @@ export function convertRuntimeToPlugin(
     let newPathsRuntime: Set<string> = new Set();
     let linkersRuntime: Array<Promise<void>> = [];
 
+    const entryDir = join('.output', 'server', 'pages');
+    const entryRoot = join(workPath, entryDir);
+
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
         files: sourceFilesPreBuild,
@@ -114,6 +117,7 @@ export function convertRuntimeToPlugin(
         },
         meta: {
           avoidTopLevelInstall: true,
+          skipDownload: true,
         },
       });
 
@@ -128,15 +132,6 @@ export function convertRuntimeToPlugin(
         ignoreFilter
       );
 
-      // Further down, we will need the filename of the Lambda handler
-      // for placing it inside `server/pages/api`, but because Legacy Runtimes
-      // don't expose the filename directly, we have to construct it
-      // from the handler name, and then find the matching file further below,
-      // because we don't yet know its extension here.
-      const handler = output.handler;
-      const handlerMethod = handler.split('.').reverse()[0];
-      const handlerFileName = handler.replace(`.${handlerMethod}`, '');
-
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
 
@@ -150,26 +145,41 @@ export function convertRuntimeToPlugin(
         }
       }
 
-      const handlerFilePath = Object.keys(lambdaFiles).find(item => {
-        return parse(item).name === handlerFileName;
-      });
+      let handlerFileBase = output.handler;
+      let handlerFile = lambdaFiles[handlerFileBase];
 
-      const handlerFileOrigin = lambdaFiles[handlerFilePath || ''].fsPath;
+      const { handler } = output;
+      const handlerMethod = handler.split('.').pop();
+      const handlerFileName = handler.replace(`.${handlerMethod}`, '');
 
-      if (!handlerFileOrigin) {
+      // For compiled languages, the launcher file for the Lambda generated
+      // by the Legacy Runtime matches the `handler` defined for it, but for
+      // interpreted languages, the `handler` consists of the launcher file name
+      // without an extension, plus the name of the method inside of that file
+      // that should be invoked, so we have to construct the file path explicitly.
+      if (!handlerFile) {
+        handlerFileBase = handlerFileName + ext;
+        handlerFile = lambdaFiles[handlerFileBase];
+      }
+
+      if (!handlerFile || !handlerFile.fsPath) {
         throw new Error(
-          `Could not find a handler file. Please ensure that the list of \`files\` defined for the returned \`Lambda\` contains a file with the name ${handlerFileName} (+ any extension).`
+          `Could not find a handler file. Please ensure that \`files\` for the returned \`Lambda\` contains an \`FileFsRef\` named "${handlerFileBase}" with a valid \`fsPath\`.`
         );
       }
 
-      const entry = join(workPath, '.output', 'server', 'pages', entrypoint);
+      const handlerExtName = extname(handlerFile.fsPath);
+
+      const entryBase = basename(entrypoint).replace(ext, handlerExtName);
+      const entryPath = join(dirname(entrypoint), entryBase);
+      const entry = join(entryRoot, entryPath);
 
       // We never want to link here, only copy, because the launcher
       // file often has the same name for every entrypoint, which means that
       // every build for every entrypoint overwrites the launcher of the previous
       // one, so linking would end with a broken reference.
       await fs.ensureDir(dirname(entry));
-      await fs.copy(handlerFileOrigin, entry);
+      await fs.copy(handlerFile.fsPath, entry);
 
       const newFilesEntrypoint: Array<string> = [];
       const newDirectoriesEntrypoint: Array<string> = [];
@@ -233,7 +243,7 @@ export function convertRuntimeToPlugin(
           const newPath = join(traceDir, relPath);
 
           // The handler was already moved into position above.
-          if (relPath === handlerFilePath) {
+          if (relPath === handlerFileBase) {
             return;
           }
 
@@ -277,19 +287,15 @@ export function convertRuntimeToPlugin(
 
       linkersRuntime = linkersRuntime.concat(linkers);
 
-      const nft = join(
-        workPath,
-        '.output',
-        'server',
-        'pages',
-        `${entrypoint}.nft.json`
-      );
+      const nft = `${entry}.nft.json`;
 
       const json = JSON.stringify({
         version: 1,
         files: tracedFiles.map(file => ({
           input: normalizePath(relative(dirname(nft), file.absolutePath)),
-          output: normalizePath(file.relativePath),
+          // We'd like to place all the dependency files right next
+          // to the final launcher file inside of the Lambda.
+          output: normalizePath(join(entryDir, 'api', file.relativePath)),
         })),
       });
 
@@ -305,12 +311,14 @@ export function convertRuntimeToPlugin(
         ...newDirectoriesEntrypoint,
       ]);
 
-      const apiRouteHandler = `${parse(entry).name}.${handlerMethod}`;
-
       // Add an entry that will later on be added to the `functions-manifest.json`
       // file that is placed inside of the `.output` directory.
-      pages[entrypoint] = {
-        handler: apiRouteHandler,
+      pages[normalizePath(entryPath)] = {
+        // Because the underlying file used as a handler was placed
+        // inside `.output/server/pages/api`, it no longer has the name it originally
+        // had and is now named after the API Route that it's responsible for,
+        // so we have to adjust the name of the Lambda handler accordingly.
+        handler: handler.replace(handlerFileName, parse(entry).name),
         runtime: output.runtime,
         memory: output.memory,
         maxDuration: output.maxDuration,
