@@ -241,7 +241,7 @@ export function convertRuntimeToPlugin(
 
             if (!fsPath) {
               throw new Error(
-                'File "${file}" is missing valid `fsPath` property'
+                `File "${file}" is missing valid \`fsPath\` property`
               );
             }
 
