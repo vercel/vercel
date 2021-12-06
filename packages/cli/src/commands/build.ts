@@ -644,7 +644,7 @@ export default async function main(client: Client) {
             nftFileName: f.replace(ext, '.js.nft.json'),
             distDir,
             nft: {
-              version: 1,
+              version: 2,
               files: Array.from(fileList).map(fileListEntry =>
                 relative(dir, fileListEntry)
               ),

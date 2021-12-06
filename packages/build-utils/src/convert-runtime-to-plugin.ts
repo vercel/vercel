@@ -290,12 +290,12 @@ export function convertRuntimeToPlugin(
       const nft = `${entry}.nft.json`;
 
       const json = JSON.stringify({
-        version: 1,
+        version: 2,
         files: tracedFiles.map(file => ({
           input: normalizePath(relative(dirname(nft), file.absolutePath)),
           // We'd like to place all the dependency files right next
           // to the final launcher file inside of the Lambda.
-          output: normalizePath(join(entryDir, 'api', file.relativePath)),
+          output: normalizePath(file.relativePath),
         })),
       });
 
@@ -393,7 +393,7 @@ export async function updateFunctionsManifest({
   );
   const functionsManifest = await readJson(functionsManifestPath);
 
-  if (!functionsManifest.version) functionsManifest.version = 1;
+  if (!functionsManifest.version) functionsManifest.version = 2;
   if (!functionsManifest.pages) functionsManifest.pages = {};
 
   for (const [pageKey, pageConfig] of Object.entries(pages)) {
