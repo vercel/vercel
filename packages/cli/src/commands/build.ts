@@ -354,18 +354,19 @@ export default async function main(client: Client) {
     }
 
     // We cannot rely on the `framework` alone, as it might be a static export,
-    // and the current build might use a differnt project that's not in the settings.
+    // and the current build might use a different project that's not in the settings.
     const isNextOutput = Boolean(dotNextDir);
     const nextExport = await getNextExportStatus(dotNextDir);
     const outputDir =
       isNextOutput && !nextExport ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
+    const getDistDir = framework.getFsOutputDir || framework.getOutputDirName;
     const distDir =
       (nextExport?.exportDetail.outDirectory
         ? relative(cwd, nextExport.exportDetail.outDirectory)
         : false) ||
       dotNextDir ||
       userOutputDirectory ||
-      (await framework.getFsOutputDir(cwd));
+      (await getDistDir(cwd));
 
     await fs.ensureDir(join(cwd, outputDir));
 
