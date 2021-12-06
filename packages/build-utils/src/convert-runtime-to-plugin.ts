@@ -117,6 +117,7 @@ export function convertRuntimeToPlugin(
         },
         meta: {
           avoidTopLevelInstall: true,
+          skipDownload: true,
         },
       });
 
