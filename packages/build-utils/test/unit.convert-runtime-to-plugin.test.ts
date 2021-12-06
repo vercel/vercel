@@ -62,6 +62,7 @@ describe('convert-runtime-to-plugin', () => {
       return { output: lambda };
     };
 
+    const lambdaFiles = await fsToJson(workPath);
     const packageName = 'vercel-plugin-python';
     const build = await convertRuntimeToPlugin(buildRuntime, packageName, ext);
 
@@ -69,8 +70,14 @@ describe('convert-runtime-to-plugin', () => {
 
     const output = await fsToJson(join(workPath, '.output'));
 
+    delete lambdaFiles['vercel.json'];
+    delete lambdaFiles['vc__handler__python.py'];
+
     expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
+      inputs: {
+        'api-routes-python': lambdaFiles,
+      },
       server: {
         pages: {
           api: {
@@ -105,14 +112,38 @@ describe('convert-runtime-to-plugin', () => {
     expect(indexJson).toMatchObject({
       version: 2,
       files: [
-        '../../../../api/db/[id].py',
-        '../../../../api/index.py',
-        '../../../../api/project/[aid]/[bid]/index.py',
-        '../../../../api/users/get.py',
-        '../../../../api/users/post.py',
-        '../../../../file.txt',
-        '../../../../util/date.py',
-        '../../../../util/math.py',
+        {
+          input: `../../../inputs/api-routes-python/api/db/[id].py`,
+          output: 'api/db/[id].py',
+        },
+        {
+          input: `../../../inputs/api-routes-python/api/index.py`,
+          output: 'api/index.py',
+        },
+        {
+          input: `../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
+          output: 'api/project/[aid]/[bid]/index.py',
+        },
+        {
+          input: `../../../inputs/api-routes-python/api/users/get.py`,
+          output: 'api/users/get.py',
+        },
+        {
+          input: `../../../inputs/api-routes-python/api/users/post.py`,
+          output: 'api/users/post.py',
+        },
+        {
+          input: `../../../inputs/api-routes-python/file.txt`,
+          output: 'file.txt',
+        },
+        {
+          input: `../../../inputs/api-routes-python/util/date.py`,
+          output: 'util/date.py',
+        },
+        {
+          input: `../../../inputs/api-routes-python/util/math.py`,
+          output: 'util/math.py',
+        },
       ],
     });
 
@@ -122,14 +153,38 @@ describe('convert-runtime-to-plugin', () => {
     expect(getJson).toMatchObject({
       version: 2,
       files: [
-        '../../../../../api/db/[id].py',
-        '../../../../../api/index.py',
-        '../../../../../api/project/[aid]/[bid]/index.py',
-        '../../../../../api/users/get.py',
-        '../../../../../api/users/post.py',
-        '../../../../../file.txt',
-        '../../../../../util/date.py',
-        '../../../../../util/math.py',
+        {
+          input: `../../../../inputs/api-routes-python/api/db/[id].py`,
+          output: 'api/db/[id].py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/api/index.py`,
+          output: 'api/index.py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
+          output: 'api/project/[aid]/[bid]/index.py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/api/users/get.py`,
+          output: 'api/users/get.py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/api/users/post.py`,
+          output: 'api/users/post.py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/file.txt`,
+          output: 'file.txt',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/util/date.py`,
+          output: 'util/date.py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/util/math.py`,
+          output: 'util/math.py',
+        },
       ],
     });
 
@@ -139,14 +194,38 @@ describe('convert-runtime-to-plugin', () => {
     expect(postJson).toMatchObject({
       version: 2,
       files: [
-        '../../../../../api/db/[id].py',
-        '../../../../../api/index.py',
-        '../../../../../api/project/[aid]/[bid]/index.py',
-        '../../../../../api/users/get.py',
-        '../../../../../api/users/post.py',
-        '../../../../../file.txt',
-        '../../../../../util/date.py',
-        '../../../../../util/math.py',
+        {
+          input: `../../../../inputs/api-routes-python/api/db/[id].py`,
+          output: 'api/db/[id].py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/api/index.py`,
+          output: 'api/index.py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
+          output: 'api/project/[aid]/[bid]/index.py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/api/users/get.py`,
+          output: 'api/users/get.py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/api/users/post.py`,
+          output: 'api/users/post.py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/file.txt`,
+          output: 'file.txt',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/util/date.py`,
+          output: 'util/date.py',
+        },
+        {
+          input: `../../../../inputs/api-routes-python/util/math.py`,
+          output: 'util/math.py',
+        },
       ],
     });
 
