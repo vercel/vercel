@@ -79,16 +79,16 @@ export async function resolveNftJsonFiles(
   await Promise.all(
     existingFiles.map(async file => {
       await semaphore.acquire();
-      const fileName = file.names[0];
-      if (fileName.startsWith('.output') && fileName.endsWith('.nft.json')) {
+      const fsPath = file.names[0];
+      if (fsPath.endsWith('.nft.json')) {
         const json = file.data.toString('utf8');
         const { version, files } = JSON.parse(json) as {
           version: number;
           files: string[];
         };
-        if (version === 1) {
+        if (version === 2) {
           for (let f of files) {
-            resolvedFiles.add(join(dirname(fileName), f));
+            resolvedFiles.add(join(dirname(fsPath), f));
           }
         } else {
           throw new Error(`Invalid nft.json version: ${version}`);
