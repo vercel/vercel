@@ -6,3 +6,4 @@ node_modules
 !tests/fixtures/nowignore/node_modules
 !tests/fixtures/vercelignore-allow-nodemodules/node_modules
 !tests/fixtures/vercelignore-allow-nodemodules/sub/node_modules
+!tests/fixtures/file-system-api/.output

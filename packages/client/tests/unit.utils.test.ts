@@ -54,4 +54,49 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(ignoreList).sort()
     );
   });
+
+  it('should find root files but ignore .output files when prebuilt=false', async () => {
+    const cwd = fixture('file-system-api');
+    const prebuilt = false;
+    const { fileList, ignoreList } = await buildFileTree(
+      cwd,
+      true,
+      noop,
+      prebuilt
+    );
+
+    const expectedFileList = toAbsolutePaths(cwd, ['foo.txt', 'sub/bar.txt']);
+    expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
+      normalizeWindowsPaths(fileList).sort()
+    );
+
+    const expectedIgnoreList = ['.output'];
+    expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
+      normalizeWindowsPaths(ignoreList).sort()
+    );
+  });
+
+  it('should find .output files but ignore other files when prebuilt=true', async () => {
+    const cwd = fixture('file-system-api');
+    const prebuilt = true;
+    const { fileList, ignoreList } = await buildFileTree(
+      cwd,
+      true,
+      noop,
+      prebuilt
+    );
+
+    const expectedFileList = toAbsolutePaths(cwd, [
+      '.output/baz.txt',
+      '.output/sub/qux.txt',
+    ]);
+    expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
+      normalizeWindowsPaths(fileList).sort()
+    );
+
+    const expectedIgnoreList = ['foo.txt', 'sub'];
+    expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
+      normalizeWindowsPaths(ignoreList).sort()
+    );
+  });
 });
