@@ -202,7 +202,7 @@ export function convertRuntimeToPlugin(
           // This is the full entrypoint path, like `./api/test.py`
           `./${entrypoint}`,
           // This is the entrypoint path without extension, like `api/test`
-          entrypoint.replace(ext, ''),
+          entrypoint.slice(0, -ext.length),
         ];
 
         // Generate a list of regular expressions that we can use for
