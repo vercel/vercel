@@ -100,8 +100,6 @@ export function convertRuntimeToPlugin(
 
     await fs.ensureDir(traceDir);
 
-    let newPathsRuntime: Set<string> = new Set();
-
     const entryRoot = join(outputPath, 'server', 'pages');
 
     for (const entrypoint of Object.keys(entrypoints)) {
@@ -117,17 +115,6 @@ export function convertRuntimeToPlugin(
           skipDownload: true,
         },
       });
-
-      // Legacy Runtimes tend to pollute the `workPath` with compiled results,
-      // because the `workPath` used to be a place that was a place where they could
-      // just put anything, but nowadays it's the working directory of the `vercel build`
-      // command, which is the place where the developer keeps their source files,
-      // so we don't want to pollute this space unnecessarily. That means we have to clean
-      // up files that were created by the build, which is done further below.
-      const sourceFilesAfterBuild = await getSourceFiles(
-        workPath,
-        ignoreFilter
-      );
 
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
@@ -173,12 +160,9 @@ export function convertRuntimeToPlugin(
       const entryPath = join(dirname(entrypoint), entryBase);
       const entry = join(entryRoot, entryPath);
 
-      // We never want to link here, only copy, because the launcher
-      // file often has the same name for every entrypoint, which means that
-      // every build for every entrypoint overwrites the launcher of the previous
-      // one, so linking would end with a broken reference.
+      // Create the parent directory of the API Route that will be created
+      // for the current entrypoint inside of `.output/server/pages/api`.
       await fs.ensureDir(dirname(entry));
-      await fs.copy(handlerFile.fsPath, entry);
 
       // For compiled languages, the launcher file will be binary and therefore
       // won't try to import a user-provided request handler (instead, it will
@@ -244,57 +228,15 @@ export function convertRuntimeToPlugin(
         await fs.copy(handlerFile.fsPath, entry);
       }
 
-      const newFilesEntrypoint: Array<string> = [];
-      const newDirectoriesEntrypoint: Array<string> = [];
-
-      const preBuildFiles = Object.values(sourceFilesPreBuild).map(file => {
-        return file.fsPath;
-      });
-
-      // Generate a list of directories and files that weren't present
-      // before the entrypoint was processed by the Legacy Runtime, so
-      // that we can perform a cleanup later. We need to divide into files
-      // and directories because only cleaning up files might leave empty
-      // directories, and listing directories separately also speeds up the
-      // build because we can just delete them, which wipes all of their nested
-      // paths, instead of iterating through all files that should be deleted.
-      for (const file in sourceFilesAfterBuild) {
-        if (!sourceFilesPreBuild[file]) {
-          const path = sourceFilesAfterBuild[file].fsPath;
-          const dirPath = dirname(path);
-
-          // If none of the files that were present before the entrypoint
-          // was processed are contained within the directory we're looking
-          // at right now, then we know it's a newly added directory
-          // and it can therefore be removed later on.
-          const isNewDir = !preBuildFiles.some(filePath => {
-            return dirname(filePath).startsWith(dirPath);
-          });
-
-          // Check out the list of tracked directories that were
-          // newly added and see if one of them contains the path
-          // we're looking at.
-          const hasParentDir = newDirectoriesEntrypoint.some(dir => {
-            return path.startsWith(dir);
-          });
-
-          // If we have already tracked a directory that was newly
-          // added that sits above the file or directory that we're
-          // looking at, we don't need to add more entries to the list
-          // because when the parent will get removed in the future,
-          // all of its children (and therefore the path we're looking at)
-          // will automatically get removed anyways.
-          if (hasParentDir) {
-            continue;
-          }
-
-          if (isNewDir) {
-            newDirectoriesEntrypoint.push(dirPath);
-          } else {
-            newFilesEntrypoint.push(path);
-          }
-        }
-      }
+      // Legacy Runtimes based on interpreted languages will create a new launcher file
+      // for every entrypoint, but they will create each one inside `workPath`, which means that
+      // the launcher for one entrypoint will overwrite the launcher provided for the previous
+      // entrypoint. That's why, above, we copy the file contents into the new destination (and
+      // optionally transform them along the way), instead of linking. We then also want to remove
+      // the copy origin right here, so that the `workPath` doesn't contain a useless launcher file
+      // once the build has finished running.
+      await fs.remove(handlerFile.fsPath);
+      debug(`Removed temporary file "${handlerFile.fsPath}"`);
 
       const nft = `${entry}.nft.json`;
 
@@ -320,17 +262,7 @@ export function convertRuntimeToPlugin(
           .filter(Boolean),
       });
 
-      await fs.ensureDir(dirname(nft));
       await fs.writeFile(nft, json);
-
-      // Extend the list of directories and files that were created by the
-      // Legacy Runtime with the list of directories and files that were
-      // created for the entrypoint that was just processed above.
-      newPathsRuntime = new Set([
-        ...newPathsRuntime,
-        ...newFilesEntrypoint,
-        ...newDirectoriesEntrypoint,
-      ]);
 
       // Add an entry that will later on be added to the `functions-manifest.json`
       // file that is placed inside of the `.output` directory.
@@ -347,20 +279,6 @@ export function convertRuntimeToPlugin(
         allowQuery: output.allowQuery,
       };
     }
-
-    // A list of all the files that were created by the Legacy Runtime,
-    // which we'd like to remove from the File System.
-    const toRemove = Array.from(newPathsRuntime).map(path => {
-      debug(`Removing ${path} as part of cleanup`);
-      return fs.remove(path);
-    });
-
-    // Once all the entrypoints have been processed, we'd like to
-    // remove all the files from `workPath` that originally weren't present
-    // before the Legacy Runtime began running, because the `workPath`
-    // is nowadays the directory in which the user keeps their source code, since
-    // we're no longer running separate parallel builds for every Legacy Runtime.
-    await Promise.all(toRemove);
 
     // Add any Serverless Functions that were exposed by the Legacy Runtime
     // to the `functions-manifest.json` file provided in `.output`.
