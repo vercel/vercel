@@ -3,7 +3,6 @@ import { join, parse, relative, dirname, basename, extname } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
-import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
 import { debug, getIgnoreFilter } from '.';
 
@@ -87,10 +86,10 @@ export function convertRuntimeToPlugin(
 
     const pages: { [key: string]: any } = {};
     const pluginName = packageName.replace('vercel-plugin-', '');
+    const outputPath = join(workPath, '.output');
 
     const traceDir = join(
-      workPath,
-      `.output`,
+      outputPath,
       `inputs`,
       // Legacy Runtimes can only provide API Routes, so that's
       // why we can use this prefix for all of them. Here, we have to
@@ -101,11 +100,7 @@ export function convertRuntimeToPlugin(
 
     await fs.ensureDir(traceDir);
 
-    let newPathsRuntime: Set<string> = new Set();
-    let linkersRuntime: Array<Promise<void>> = [];
-
-    const entryDir = join('.output', 'server', 'pages');
-    const entryRoot = join(workPath, entryDir);
+    const entryRoot = join(outputPath, 'server', 'pages');
 
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
@@ -120,17 +115,6 @@ export function convertRuntimeToPlugin(
           skipDownload: true,
         },
       });
-
-      // Legacy Runtimes tend to pollute the `workPath` with compiled results,
-      // because the `workPath` used to be a place that was a place where they could
-      // just put anything, but nowadays it's the working directory of the `vercel build`
-      // command, which is the place where the developer keeps their source files,
-      // so we don't want to pollute this space unnecessarily. That means we have to clean
-      // up files that were created by the build, which is done further below.
-      const sourceFilesAfterBuild = await getSourceFiles(
-        workPath,
-        ignoreFilter
-      );
 
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
@@ -147,6 +131,7 @@ export function convertRuntimeToPlugin(
 
       let handlerFileBase = output.handler;
       let handlerFile = lambdaFiles[handlerFileBase];
+      let handlerHasImport = false;
 
       const { handler } = output;
       const handlerMethod = handler.split('.').pop();
@@ -160,6 +145,7 @@ export function convertRuntimeToPlugin(
       if (!handlerFile) {
         handlerFileBase = handlerFileName + ext;
         handlerFile = lambdaFiles[handlerFileBase];
+        handlerHasImport = true;
       }
 
       if (!handlerFile || !handlerFile.fsPath) {
@@ -174,142 +160,109 @@ export function convertRuntimeToPlugin(
       const entryPath = join(dirname(entrypoint), entryBase);
       const entry = join(entryRoot, entryPath);
 
-      // We never want to link here, only copy, because the launcher
-      // file often has the same name for every entrypoint, which means that
-      // every build for every entrypoint overwrites the launcher of the previous
-      // one, so linking would end with a broken reference.
+      // Create the parent directory of the API Route that will be created
+      // for the current entrypoint inside of `.output/server/pages/api`.
       await fs.ensureDir(dirname(entry));
-      await fs.copy(handlerFile.fsPath, entry);
 
-      const newFilesEntrypoint: Array<string> = [];
-      const newDirectoriesEntrypoint: Array<string> = [];
+      // For compiled languages, the launcher file will be binary and therefore
+      // won't try to import a user-provided request handler (instead, it will
+      // contain it). But for interpreted languages, the launcher might try to
+      // load a user-provided request handler from the source file instead of bundling
+      // it, so we have to adjust the import statement inside the launcher to point
+      // to the respective source file. Previously, Legacy Runtimes simply expected
+      // the user-provided request-handler to be copied right next to the launcher,
+      // but with the new File System API, files won't be moved around unnecessarily.
+      if (handlerHasImport) {
+        const { fsPath } = handlerFile;
+        const encoding = 'utf-8';
 
-      const preBuildFiles = Object.values(sourceFilesPreBuild).map(file => {
-        return file.fsPath;
-      });
+        // This is the true directory of the user-provided request handler in the
+        // source files, so that's what we will use as an import path in the launcher.
+        const locationPrefix = relative(entry, outputPath);
 
-      // Generate a list of directories and files that weren't present
-      // before the entrypoint was processed by the Legacy Runtime, so
-      // that we can perform a cleanup later. We need to divide into files
-      // and directories because only cleaning up files might leave empty
-      // directories, and listing directories separately also speeds up the
-      // build because we can just delete them, which wipes all of their nested
-      // paths, instead of iterating through all files that should be deleted.
-      for (const file in sourceFilesAfterBuild) {
-        if (!sourceFilesPreBuild[file]) {
-          const path = sourceFilesAfterBuild[file].fsPath;
-          const dirPath = dirname(path);
+        let handlerContent = await fs.readFile(fsPath, encoding);
 
-          // If none of the files that were present before the entrypoint
-          // was processed are contained within the directory we're looking
-          // at right now, then we know it's a newly added directory
-          // and it can therefore be removed later on.
-          const isNewDir = !preBuildFiles.some(filePath => {
-            return dirname(filePath).startsWith(dirPath);
-          });
+        const importPaths = [
+          // This is the full entrypoint path, like `./api/test.py`
+          `./${entrypoint}`,
+          // This is the entrypoint path without extension, like `api/test`
+          entrypoint.slice(0, -ext.length),
+        ];
 
-          // Check out the list of tracked directories that were
-          // newly added and see if one of them contains the path
-          // we're looking at.
-          const hasParentDir = newDirectoriesEntrypoint.some(dir => {
-            return path.startsWith(dir);
-          });
+        // Generate a list of regular expressions that we can use for
+        // finding matches, but only allow matches if the import path is
+        // wrapped inside single (') or double quotes (").
+        const patterns = importPaths.map(path => {
+          // eslint-disable-next-line no-useless-escape
+          return new RegExp(`('|")(${path.replace(/\./g, '\\.')})('|")`, 'g');
+        });
 
-          // If we have already tracked a directory that was newly
-          // added that sits above the file or directory that we're
-          // looking at, we don't need to add more entries to the list
-          // because when the parent will get removed in the future,
-          // all of its children (and therefore the path we're looking at)
-          // will automatically get removed anyways.
-          if (hasParentDir) {
-            continue;
-          }
+        let replacedMatch = null;
 
-          if (isNewDir) {
-            newDirectoriesEntrypoint.push(dirPath);
-          } else {
-            newFilesEntrypoint.push(path);
-          }
-        }
-      }
+        for (const pattern of patterns) {
+          const newContent = handlerContent.replace(
+            pattern,
+            (_, p1, p2, p3) => {
+              return `${p1}${join(locationPrefix, p2)}${p3}`;
+            }
+          );
 
-      const tracedFiles: {
-        absolutePath: string;
-        relativePath: string;
-      }[] = [];
-
-      const linkers = Object.entries(lambdaFiles).map(
-        async ([relPath, file]) => {
-          const newPath = join(traceDir, relPath);
-
-          // The handler was already moved into position above.
-          if (relPath === handlerFileBase) {
-            return;
-          }
-
-          tracedFiles.push({ absolutePath: newPath, relativePath: relPath });
-          const { fsPath, type } = file;
-
-          if (fsPath) {
-            await fs.ensureDir(dirname(newPath));
-
-            const isNewFile = newFilesEntrypoint.includes(fsPath);
-
-            const isInsideNewDirectory = newDirectoriesEntrypoint.some(
-              dirPath => {
-                return fsPath.startsWith(dirPath);
-              }
+          if (newContent !== handlerContent) {
+            debug(
+              `Replaced "${pattern}" inside "${entry}" to ensure correct import of user-provided request handler`
             );
 
-            // With this, we're making sure that files in the `workPath` that existed
-            // before the Legacy Runtime was invoked (source files) are linked from
-            // `.output` instead of copying there (the latter only happens if linking fails),
-            // which is the fastest solution. However, files that are created fresh
-            // by the Legacy Runtimes are always copied, because their link destinations
-            // are likely to be overwritten every time an entrypoint is processed by
-            // the Legacy Runtime. This is likely to overwrite the destination on subsequent
-            // runs, but that's also how `workPath` used to work originally, without
-            // the File System API (meaning that there was one `workPath` for all entrypoints).
-            if (isNewFile || isInsideNewDirectory) {
-              debug(`Copying from ${fsPath} to ${newPath}`);
-              await fs.copy(fsPath, newPath);
-            } else {
-              await linkOrCopy(fsPath, newPath);
-            }
-          } else if (type === 'FileBlob') {
-            const { data, mode } = file as FileBlob;
-            await fs.writeFile(newPath, data, { mode });
-          } else {
-            throw new Error(`Unknown file type: ${type}`);
+            handlerContent = newContent;
+            replacedMatch = true;
           }
         }
-      );
 
-      linkersRuntime = linkersRuntime.concat(linkers);
+        if (!replacedMatch) {
+          new Error(
+            `No replacable matches for "${importPaths[0]}" or "${importPaths[1]}" found in "${fsPath}"`
+          );
+        }
+
+        await fs.writeFile(entry, handlerContent, encoding);
+      } else {
+        await fs.copy(handlerFile.fsPath, entry);
+      }
+
+      // Legacy Runtimes based on interpreted languages will create a new launcher file
+      // for every entrypoint, but they will create each one inside `workPath`, which means that
+      // the launcher for one entrypoint will overwrite the launcher provided for the previous
+      // entrypoint. That's why, above, we copy the file contents into the new destination (and
+      // optionally transform them along the way), instead of linking. We then also want to remove
+      // the copy origin right here, so that the `workPath` doesn't contain a useless launcher file
+      // once the build has finished running.
+      await fs.remove(handlerFile.fsPath);
+      debug(`Removed temporary file "${handlerFile.fsPath}"`);
 
       const nft = `${entry}.nft.json`;
 
       const json = JSON.stringify({
         version: 2,
-        files: tracedFiles.map(file => ({
-          input: normalizePath(relative(dirname(nft), file.absolutePath)),
-          // We'd like to place all the dependency files right next
-          // to the final launcher file inside of the Lambda.
-          output: normalizePath(file.relativePath),
-        })),
+        files: Object.keys(lambdaFiles)
+          .map(file => {
+            const { fsPath } = lambdaFiles[file];
+
+            if (!fsPath) {
+              throw new Error(
+                `File "${file}" is missing valid \`fsPath\` property`
+              );
+            }
+
+            // The handler was already moved into position above.
+            if (file === handlerFileBase) {
+              return;
+            }
+
+            return normalizePath(relative(dirname(nft), fsPath));
+          })
+          .filter(Boolean),
       });
 
-      await fs.ensureDir(dirname(nft));
       await fs.writeFile(nft, json);
-
-      // Extend the list of directories and files that were created by the
-      // Legacy Runtime with the list of directories and files that were
-      // created for the entrypoint that was just processed above.
-      newPathsRuntime = new Set([
-        ...newPathsRuntime,
-        ...newFilesEntrypoint,
-        ...newDirectoriesEntrypoint,
-      ]);
 
       // Add an entry that will later on be added to the `functions-manifest.json`
       // file that is placed inside of the `.output` directory.
@@ -327,40 +280,10 @@ export function convertRuntimeToPlugin(
       };
     }
 
-    // Instead of of waiting for all of the linking to be done for every
-    // entrypoint before processing the next one, we immediately handle all
-    // of them one after the other, while then waiting for the linking
-    // to finish right here, before we clean up newly created files below.
-    await Promise.all(linkersRuntime);
-
-    // A list of all the files that were created by the Legacy Runtime,
-    // which we'd like to remove from the File System.
-    const toRemove = Array.from(newPathsRuntime).map(path => {
-      debug(`Removing ${path} as part of cleanup`);
-      return fs.remove(path);
-    });
-
-    // Once all the entrypoints have been processed, we'd like to
-    // remove all the files from `workPath` that originally weren't present
-    // before the Legacy Runtime began running, because the `workPath`
-    // is nowadays the directory in which the user keeps their source code, since
-    // we're no longer running separate parallel builds for every Legacy Runtime.
-    await Promise.all(toRemove);
-
     // Add any Serverless Functions that were exposed by the Legacy Runtime
     // to the `functions-manifest.json` file provided in `.output`.
     await updateFunctionsManifest({ workPath, pages });
   };
-}
-
-async function linkOrCopy(existingPath: string, newPath: string) {
-  try {
-    await fs.createLink(existingPath, newPath);
-  } catch (err: any) {
-    if (err.code !== 'EEXIST') {
-      await fs.copyFile(existingPath, newPath);
-    }
-  }
 }
 
 async function readJson(filePath: string): Promise<{ [key: string]: any }> {
