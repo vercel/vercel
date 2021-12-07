@@ -208,9 +208,6 @@ export function convertRuntimeToPlugin(
           );
 
           if (newContent !== handlerContent) {
-            console.log(
-              `Replaced "${pattern}" inside "${entry}" to ensure correct import of user-provided request handler`
-            );
             debug(
               `Replaced "${pattern}" inside "${entry}" to ensure correct import of user-provided request handler`
             );
@@ -239,6 +236,7 @@ export function convertRuntimeToPlugin(
       // the copy origin right here, so that the `workPath` doesn't contain a useless launcher file
       // once the build has finished running.
       await fs.remove(handlerFile.fsPath);
+      debug(`Removed temporary file "${handlerFile.fsPath}"`);
 
       const nft = `${entry}.nft.json`;
 
