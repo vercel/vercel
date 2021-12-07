@@ -228,6 +228,8 @@ export function convertRuntimeToPlugin(
 
             handlerContent = replaceAt(
               handlerContent,
+              // We'd like to add one character to the index, to consider
+              // that the import path is wrapped in quotes.
               match.index + 1,
               path,
               join(locationPrefix, path)
