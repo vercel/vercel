@@ -192,10 +192,9 @@ export function convertRuntimeToPlugin(
         const { fsPath } = handlerFile;
         const encoding = 'utf-8';
 
-        // This is the true location of the user-provided request handler in the
+        // This is the true directory of the user-provided request handler in the
         // source files, so that's what we will use as a import path in the launcher.
-        const newLocationPrefix = relative(entry, outputPath);
-        const newLocation = join(newLocationPrefix, entrypoint);
+        const locationPrefix = relative(entry, outputPath);
 
         let handlerContent = await fs.readFile(fsPath, encoding);
 
@@ -220,11 +219,18 @@ export function convertRuntimeToPlugin(
           const matches = handlerContent.matchAll(pattern);
 
           for (const match of matches) {
-            handlerContent = replaceImport(
+            // The import path without quotes
+            const path = match[0].substr(1, match[0].length - 1);
+
+            if (!match.index) {
+              throw new Error('Missing `index` for match');
+            }
+
+            handlerContent = replaceAt(
               handlerContent,
-              match.index,
-              match[0],
-              newLocation
+              match.index + 1,
+              path,
+              join(locationPrefix, path)
             );
 
             replacedMatch = match;
@@ -378,21 +384,14 @@ async function readJson(filePath: string): Promise<{ [key: string]: any }> {
   }
 }
 
-function replaceImport(
-  content?: string,
-  index?: number,
-  match?: string,
-  replacement?: string
+function replaceAt(
+  content: string,
+  index: number,
+  match: string,
+  replacement: string
 ) {
-  if (!content || !index || !match || !replacement) {
-    throw new Error('Missing arguments when replacing string');
-  }
-
-  // The extra `1` numbers are added to ensure that only the content
-  // within the quotes is replaced, regardless of whether double or single
-  // quotes are used.
-  const before = content.substr(0, index + 1);
-  const after = content.substr(index + match.length - 1);
+  const before = content.substr(0, index);
+  const after = content.substr(index + match.length);
 
   return before + replacement + after;
 }
