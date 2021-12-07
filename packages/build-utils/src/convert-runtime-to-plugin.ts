@@ -86,10 +86,10 @@ export function convertRuntimeToPlugin(
 
     const pages: { [key: string]: any } = {};
     const pluginName = packageName.replace('vercel-plugin-', '');
+    const outputPath = join(workPath, '.output');
 
     const traceDir = join(
-      workPath,
-      `.output`,
+      outputPath,
       `inputs`,
       // Legacy Runtimes can only provide API Routes, so that's
       // why we can use this prefix for all of them. Here, we have to
@@ -102,8 +102,7 @@ export function convertRuntimeToPlugin(
 
     let newPathsRuntime: Set<string> = new Set();
 
-    const entryDir = join('.output', 'server', 'pages');
-    const entryRoot = join(workPath, entryDir);
+    const entryRoot = join(outputPath, 'server', 'pages');
 
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
@@ -192,6 +191,8 @@ export function convertRuntimeToPlugin(
       if (handlerHasImport) {
         const { fsPath } = handlerFile;
         const encoding = 'utf-8';
+        const newLocationPrefix = relative(entry, outputPath);
+        const newLocation = join(newLocationPrefix, entrypoint);
 
         let handlerContent = await fs.readFile(fsPath, encoding);
 
@@ -220,7 +221,7 @@ export function convertRuntimeToPlugin(
               handlerContent,
               match.index,
               match[0],
-              'test'
+              newLocation
             );
 
             replacedMatch = match;
