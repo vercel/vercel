@@ -84,11 +84,12 @@ export async function resolveNftJsonFiles(
         const json = file.data.toString('utf8');
         const { version, files } = JSON.parse(json) as {
           version: number;
-          files: string[];
+          files: string[] | { input: string; output: string }[];
         };
         if (version === 1 || version === 2) {
           for (let f of files) {
-            resolvedFiles.add(join(dirname(fsPath), f));
+            const relPath = typeof f === 'string' ? f : f.input;
+            resolvedFiles.add(join(dirname(fsPath), relPath));
           }
         } else {
           console.error(`Invalid nft.json version: ${version}`);
