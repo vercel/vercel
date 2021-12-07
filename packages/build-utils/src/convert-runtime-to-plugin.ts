@@ -145,6 +145,7 @@ export function convertRuntimeToPlugin(
 
       let handlerFileBase = output.handler;
       let handlerFile = lambdaFiles[handlerFileBase];
+      let handlerHasImport = false;
 
       const { handler } = output;
       const handlerMethod = handler.split('.').pop();
@@ -158,6 +159,7 @@ export function convertRuntimeToPlugin(
       if (!handlerFile) {
         handlerFileBase = handlerFileName + ext;
         handlerFile = lambdaFiles[handlerFileBase];
+        handlerHasImport = true;
       }
 
       if (!handlerFile || !handlerFile.fsPath) {
@@ -178,6 +180,44 @@ export function convertRuntimeToPlugin(
       // one, so linking would end with a broken reference.
       await fs.ensureDir(dirname(entry));
       await fs.copy(handlerFile.fsPath, entry);
+
+      // For compiled languages, the launcher file will be binary and therefore
+      // won't try to import a user-provided request handler (instead, it will
+      // contain it). But for interpreted languages, the launcher might try to
+      // load a user-provided request handler from the source file instead of bundling
+      // it, so we have to adjust the import statement inside the launcher to point
+      // to the respective source file. Previously, Legacy Runtimes simply expected
+      // the user-provided request-handler to be copied right next to the launcher,
+      // but with the new File System API, files won't be moved around unnecessarily.
+      if (handlerHasImport) {
+        const encoding = 'utf-8';
+        const handlerContent = await fs.readFile(handlerFile.fsPath, encoding);
+        const extLessEntry = entrypoint.replace(ext, '');
+
+        const importPaths = [
+          // This is the full entrypoint path, like `./api/test.py`
+          // eslint-disable-next-line no-useless-escape
+          `./${entrypoint}`,
+          // This is the entrypoint path without extension, like `api/test`
+          extLessEntry,
+          // This is the entrypoint path in module syntax, like `api.test`
+          extLessEntry.replace(/\//g, '.'),
+        ];
+
+        // Generate a list of regular expressions that we can use for
+        // finding matches, but only allow matches if the import path is
+        // wrapped inside single (') or double quotes (").
+        const patterns = importPaths.map(path => {
+          // eslint-disable-next-line no-useless-escape
+          return new RegExp(`('|")${path.replace(/\./g, '\\.')}('|")`, 'g');
+        });
+
+        console.log(patterns);
+
+        await fs.writeFile(entry, handlerContent, encoding);
+      } else {
+        await fs.copy(handlerFile.fsPath, entry);
+      }
 
       const newFilesEntrypoint: Array<string> = [];
       const newDirectoriesEntrypoint: Array<string> = [];
