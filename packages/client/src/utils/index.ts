@@ -1,7 +1,7 @@
 import { DeploymentFile } from './hashes';
 import { FetchOptions } from '@zeit/fetch';
 import { nodeFetch, zeitFetch } from './fetch';
-import { join, sep, relative } from 'path';
+import { join, sep, relative, posix } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
 type Ignore = ReturnType<typeof ignore>;
@@ -127,7 +127,7 @@ export async function getVercelIgnore(
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   let ignores: string[] = [];
 
-  const outputDir = join(rootDirectory || '', '.output');
+  const outputDir = posix.join(rootDirectory || '', '.output');
 
   if (prebuilt) {
     ignores.push('*');
