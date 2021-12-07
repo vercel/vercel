@@ -236,7 +236,9 @@ export function convertRuntimeToPlugin(
               newPath
             );
 
-            debug(`Replaced "${oldPath}" inside "${entry}" with "${newPath}"`);
+            debug(
+              `Replaced "${oldPath}" inside "${entry}" with "${newPath}" to ensure correct import of user-provided request handler`
+            );
 
             replacedMatch = match;
           }
