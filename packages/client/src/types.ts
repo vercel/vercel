@@ -15,6 +15,7 @@ export interface VercelClientOptions {
   apiUrl?: string;
   force?: boolean;
   prebuilt?: boolean;
+  rootDirectory?: string;
   withCache?: boolean;
   userAgent?: string;
   defaultName?: string;

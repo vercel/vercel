@@ -74,12 +74,7 @@ export default function buildCreateDeployment() {
       debug(`Provided 'path' is a single file`);
     }
 
-    let { fileList } = await buildFileTree(
-      path,
-      clientOptions.isDirectory,
-      debug,
-      clientOptions.prebuilt
-    );
+    let { fileList } = await buildFileTree(path, clientOptions, debug);
 
     let configPath: string | undefined;
     if (!nowConfig) {

@@ -86,12 +86,12 @@ export async function resolveNftJsonFiles(
           version: number;
           files: string[];
         };
-        if (version === 2) {
+        if (version === 1 || version === 2) {
           for (let f of files) {
             resolvedFiles.add(join(dirname(fsPath), f));
           }
         } else {
-          throw new Error(`Invalid nft.json version: ${version}`);
+          console.error(`Invalid nft.json version: ${version}`);
         }
       }
       semaphore.release();
