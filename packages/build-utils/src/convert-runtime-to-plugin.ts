@@ -220,7 +220,8 @@ export function convertRuntimeToPlugin(
 
           for (const match of matches) {
             // The import path without quotes
-            const path = match[0].substr(1, match[0].length - 1);
+            const oldPath = match[0].substr(1, match[0].length - 1);
+            const newPath = join(locationPrefix, oldPath);
 
             if (!match.index) {
               throw new Error('Missing `index` for match');
@@ -231,9 +232,11 @@ export function convertRuntimeToPlugin(
               // We'd like to add one character to the index, to consider
               // that the import path is wrapped in quotes.
               match.index + 1,
-              path,
-              join(locationPrefix, path)
+              oldPath,
+              newPath
             );
+
+            debug(`Replaced "${oldPath}" inside "${entry}" with "${newPath}"`);
 
             replacedMatch = match;
           }
