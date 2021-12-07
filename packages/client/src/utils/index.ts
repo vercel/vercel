@@ -163,7 +163,7 @@ export async function getVercelIgnore(
       '__pycache__',
       'venv',
       'CVS',
-      `${outputDir}`,
+      `.output`,
     ];
   }
   const cwds = Array.isArray(cwd) ? cwd : [cwd];

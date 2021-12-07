@@ -104,7 +104,7 @@ describe('buildFileTree()', () => {
     );
   });
 
-  it('should find root files but ignore .output files when prebuilt=false and rootDirectory=root', async () => {
+  it('should find root files but ignore all .output files when prebuilt=false and rootDirectory=root', async () => {
     const cwd = fixture('file-system-api-root-directory');
     const { fileList, ignoreList } = await buildFileTree(
       cwd,
@@ -112,18 +112,22 @@ describe('buildFileTree()', () => {
       noop
     );
 
-    const expectedFileList = toAbsolutePaths(cwd, ['foo.txt', 'root/bar.txt']);
+    const expectedFileList = toAbsolutePaths(cwd, [
+      'foo.txt',
+      'root/bar.txt',
+      'someother/bar.txt',
+    ]);
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
     );
 
-    const expectedIgnoreList = ['root/.output'];
+    const expectedIgnoreList = ['root/.output', 'someother/.output'];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );
   });
 
-  it('should find .output files but ignore other files when prebuilt=true and rootDirectory=root', async () => {
+  it('should find root/.output files but ignore other files when prebuilt=true and rootDirectory=root', async () => {
     const cwd = fixture('file-system-api-root-directory');
     const { fileList, ignoreList } = await buildFileTree(
       cwd,
@@ -139,7 +143,7 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(fileList).sort()
     );
 
-    const expectedIgnoreList = ['foo.txt', 'root/bar.txt'];
+    const expectedIgnoreList = ['foo.txt', 'root/bar.txt', 'someother'];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );
