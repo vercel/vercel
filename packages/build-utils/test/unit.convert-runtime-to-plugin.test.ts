@@ -62,7 +62,6 @@ describe('convert-runtime-to-plugin', () => {
       return { output: lambda };
     };
 
-    const lambdaFiles = await fsToJson(workPath);
     const packageName = 'vercel-plugin-python';
     const build = await convertRuntimeToPlugin(buildRuntime, packageName, ext);
 
@@ -70,14 +69,8 @@ describe('convert-runtime-to-plugin', () => {
 
     const output = await fsToJson(join(workPath, '.output'));
 
-    delete lambdaFiles['vercel.json'];
-    delete lambdaFiles['vc__handler__python.py'];
-
     expect(output).toMatchObject({
       'functions-manifest.json': expect.stringContaining('{'),
-      inputs: {
-        'api-routes-python': lambdaFiles,
-      },
       server: {
         pages: {
           api: {
@@ -96,7 +89,7 @@ describe('convert-runtime-to-plugin', () => {
 
     const funcManifest = JSON.parse(output['functions-manifest.json']);
     expect(funcManifest).toMatchObject({
-      version: 1,
+      version: 2,
       pages: {
         'api/index.py': { ...lambdaOptions, handler: 'index.vc_handler' },
         'api/users/get.py': { ...lambdaOptions, handler: 'get.vc_handler' },
@@ -110,40 +103,16 @@ describe('convert-runtime-to-plugin', () => {
 
     const indexJson = JSON.parse(output.server.pages.api['index.py.nft.json']);
     expect(indexJson).toMatchObject({
-      version: 1,
+      version: 2,
       files: [
-        {
-          input: `../../../inputs/api-routes-python/api/db/[id].py`,
-          output: '.output/server/pages/api/api/db/[id].py',
-        },
-        {
-          input: `../../../inputs/api-routes-python/api/index.py`,
-          output: '.output/server/pages/api/api/index.py',
-        },
-        {
-          input: `../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
-          output: '.output/server/pages/api/api/project/[aid]/[bid]/index.py',
-        },
-        {
-          input: `../../../inputs/api-routes-python/api/users/get.py`,
-          output: '.output/server/pages/api/api/users/get.py',
-        },
-        {
-          input: `../../../inputs/api-routes-python/api/users/post.py`,
-          output: '.output/server/pages/api/api/users/post.py',
-        },
-        {
-          input: `../../../inputs/api-routes-python/file.txt`,
-          output: '.output/server/pages/api/file.txt',
-        },
-        {
-          input: `../../../inputs/api-routes-python/util/date.py`,
-          output: '.output/server/pages/api/util/date.py',
-        },
-        {
-          input: `../../../inputs/api-routes-python/util/math.py`,
-          output: '.output/server/pages/api/util/math.py',
-        },
+        '../../../../api/db/[id].py',
+        '../../../../api/index.py',
+        '../../../../api/project/[aid]/[bid]/index.py',
+        '../../../../api/users/get.py',
+        '../../../../api/users/post.py',
+        '../../../../file.txt',
+        '../../../../util/date.py',
+        '../../../../util/math.py',
       ],
     });
 
@@ -151,40 +120,16 @@ describe('convert-runtime-to-plugin', () => {
       output.server.pages.api.users['get.py.nft.json']
     );
     expect(getJson).toMatchObject({
-      version: 1,
+      version: 2,
       files: [
-        {
-          input: `../../../../inputs/api-routes-python/api/db/[id].py`,
-          output: '.output/server/pages/api/api/db/[id].py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/api/index.py`,
-          output: '.output/server/pages/api/api/index.py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
-          output: '.output/server/pages/api/api/project/[aid]/[bid]/index.py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/api/users/get.py`,
-          output: '.output/server/pages/api/api/users/get.py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/api/users/post.py`,
-          output: '.output/server/pages/api/api/users/post.py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/file.txt`,
-          output: '.output/server/pages/api/file.txt',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/util/date.py`,
-          output: '.output/server/pages/api/util/date.py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/util/math.py`,
-          output: '.output/server/pages/api/util/math.py',
-        },
+        '../../../../../api/db/[id].py',
+        '../../../../../api/index.py',
+        '../../../../../api/project/[aid]/[bid]/index.py',
+        '../../../../../api/users/get.py',
+        '../../../../../api/users/post.py',
+        '../../../../../file.txt',
+        '../../../../../util/date.py',
+        '../../../../../util/math.py',
       ],
     });
 
@@ -192,40 +137,16 @@ describe('convert-runtime-to-plugin', () => {
       output.server.pages.api.users['post.py.nft.json']
     );
     expect(postJson).toMatchObject({
-      version: 1,
+      version: 2,
       files: [
-        {
-          input: `../../../../inputs/api-routes-python/api/db/[id].py`,
-          output: '.output/server/pages/api/api/db/[id].py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/api/index.py`,
-          output: '.output/server/pages/api/api/index.py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/api/project/[aid]/[bid]/index.py`,
-          output: '.output/server/pages/api/api/project/[aid]/[bid]/index.py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/api/users/get.py`,
-          output: '.output/server/pages/api/api/users/get.py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/api/users/post.py`,
-          output: '.output/server/pages/api/api/users/post.py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/file.txt`,
-          output: '.output/server/pages/api/file.txt',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/util/date.py`,
-          output: '.output/server/pages/api/util/date.py',
-        },
-        {
-          input: `../../../../inputs/api-routes-python/util/math.py`,
-          output: '.output/server/pages/api/util/math.py',
-        },
+        '../../../../../api/db/[id].py',
+        '../../../../../api/index.py',
+        '../../../../../api/project/[aid]/[bid]/index.py',
+        '../../../../../api/users/get.py',
+        '../../../../../api/users/post.py',
+        '../../../../../file.txt',
+        '../../../../../util/date.py',
+        '../../../../../util/math.py',
       ],
     });
 
