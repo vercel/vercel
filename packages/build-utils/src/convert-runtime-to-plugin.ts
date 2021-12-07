@@ -210,37 +210,26 @@ export function convertRuntimeToPlugin(
         // wrapped inside single (') or double quotes (").
         const patterns = importPaths.map(path => {
           // eslint-disable-next-line no-useless-escape
-          return new RegExp(`('|")${path.replace(/\./g, '\\.')}('|")`, 'g');
+          return new RegExp(`('|")(${path.replace(/\./g, '\\.')})('|")`, 'g');
         });
 
         let replacedMatch = null;
 
         for (const pattern of patterns) {
-          const matches = handlerContent.matchAll(pattern);
-
-          for (const match of matches) {
-            // The import path without quotes
-            const oldPath = match[0].substr(1, match[0].length - 1);
-            const newPath = join(locationPrefix, oldPath);
-
-            if (!match.index) {
-              throw new Error('Missing `index` for match');
+          const newContent = handlerContent.replace(
+            pattern,
+            (_, p1, p2, p3) => {
+              return `${p1}${join(locationPrefix, p2)}${p3}`;
             }
+          );
 
-            handlerContent = replaceAt(
-              handlerContent,
-              // We'd like to add one character to the index, to consider
-              // that the import path is wrapped in quotes.
-              match.index + 1,
-              oldPath,
-              newPath
-            );
-
+          if (newContent !== handlerContent) {
             debug(
-              `Replaced "${oldPath}" inside "${entry}" with "${newPath}" to ensure correct import of user-provided request handler`
+              `Replaced "${pattern}" inside "${entry}" to ensure correct import of user-provided request handler`
             );
 
-            replacedMatch = match;
+            handlerContent = newContent;
+            replacedMatch = true;
           }
         }
 
@@ -389,18 +378,6 @@ async function readJson(filePath: string): Promise<{ [key: string]: any }> {
     }
     throw err;
   }
-}
-
-function replaceAt(
-  content: string,
-  index: number,
-  match: string,
-  replacement: string
-) {
-  const before = content.substr(0, index);
-  const after = content.substr(index + match.length);
-
-  return before + replacement + after;
 }
 
 /**
