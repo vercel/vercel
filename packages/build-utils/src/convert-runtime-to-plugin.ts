@@ -193,7 +193,7 @@ export function convertRuntimeToPlugin(
         const encoding = 'utf-8';
 
         // This is the true directory of the user-provided request handler in the
-        // source files, so that's what we will use as a import path in the launcher.
+        // source files, so that's what we will use as an import path in the launcher.
         const locationPrefix = relative(entry, outputPath);
 
         let handlerContent = await fs.readFile(fsPath, encoding);
