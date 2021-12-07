@@ -86,10 +86,10 @@ export function convertRuntimeToPlugin(
 
     const pages: { [key: string]: any } = {};
     const pluginName = packageName.replace('vercel-plugin-', '');
+    const outputPath = join(workPath, '.output');
 
     const traceDir = join(
-      workPath,
-      `.output`,
+      outputPath,
       `inputs`,
       // Legacy Runtimes can only provide API Routes, so that's
       // why we can use this prefix for all of them. Here, we have to
@@ -102,8 +102,7 @@ export function convertRuntimeToPlugin(
 
     let newPathsRuntime: Set<string> = new Set();
 
-    const entryDir = join('.output', 'server', 'pages');
-    const entryRoot = join(workPath, entryDir);
+    const entryRoot = join(outputPath, 'server', 'pages');
 
     for (const entrypoint of Object.keys(entrypoints)) {
       const { output } = await buildRuntime({
@@ -145,6 +144,7 @@ export function convertRuntimeToPlugin(
 
       let handlerFileBase = output.handler;
       let handlerFile = lambdaFiles[handlerFileBase];
+      let handlerHasImport = false;
 
       const { handler } = output;
       const handlerMethod = handler.split('.').pop();
@@ -158,6 +158,7 @@ export function convertRuntimeToPlugin(
       if (!handlerFile) {
         handlerFileBase = handlerFileName + ext;
         handlerFile = lambdaFiles[handlerFileBase];
+        handlerHasImport = true;
       }
 
       if (!handlerFile || !handlerFile.fsPath) {
@@ -178,6 +179,70 @@ export function convertRuntimeToPlugin(
       // one, so linking would end with a broken reference.
       await fs.ensureDir(dirname(entry));
       await fs.copy(handlerFile.fsPath, entry);
+
+      // For compiled languages, the launcher file will be binary and therefore
+      // won't try to import a user-provided request handler (instead, it will
+      // contain it). But for interpreted languages, the launcher might try to
+      // load a user-provided request handler from the source file instead of bundling
+      // it, so we have to adjust the import statement inside the launcher to point
+      // to the respective source file. Previously, Legacy Runtimes simply expected
+      // the user-provided request-handler to be copied right next to the launcher,
+      // but with the new File System API, files won't be moved around unnecessarily.
+      if (handlerHasImport) {
+        const { fsPath } = handlerFile;
+        const encoding = 'utf-8';
+
+        // This is the true directory of the user-provided request handler in the
+        // source files, so that's what we will use as an import path in the launcher.
+        const locationPrefix = relative(entry, outputPath);
+
+        let handlerContent = await fs.readFile(fsPath, encoding);
+
+        const importPaths = [
+          // This is the full entrypoint path, like `./api/test.py`
+          `./${entrypoint}`,
+          // This is the entrypoint path without extension, like `api/test`
+          entrypoint.slice(0, -ext.length),
+        ];
+
+        // Generate a list of regular expressions that we can use for
+        // finding matches, but only allow matches if the import path is
+        // wrapped inside single (') or double quotes (").
+        const patterns = importPaths.map(path => {
+          // eslint-disable-next-line no-useless-escape
+          return new RegExp(`('|")(${path.replace(/\./g, '\\.')})('|")`, 'g');
+        });
+
+        let replacedMatch = null;
+
+        for (const pattern of patterns) {
+          const newContent = handlerContent.replace(
+            pattern,
+            (_, p1, p2, p3) => {
+              return `${p1}${join(locationPrefix, p2)}${p3}`;
+            }
+          );
+
+          if (newContent !== handlerContent) {
+            debug(
+              `Replaced "${pattern}" inside "${entry}" to ensure correct import of user-provided request handler`
+            );
+
+            handlerContent = newContent;
+            replacedMatch = true;
+          }
+        }
+
+        if (!replacedMatch) {
+          new Error(
+            `No replacable matches for "${importPaths[0]}" or "${importPaths[1]}" found in "${fsPath}"`
+          );
+        }
+
+        await fs.writeFile(entry, handlerContent, encoding);
+      } else {
+        await fs.copy(handlerFile.fsPath, entry);
+      }
 
       const newFilesEntrypoint: Array<string> = [];
       const newDirectoriesEntrypoint: Array<string> = [];
