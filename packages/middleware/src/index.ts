@@ -17,6 +17,7 @@ import {
   UrlWithParsedQuery,
 } from 'url';
 import { toNodeHeaders } from './websandbox/utils';
+import { nodeProcessPolyfillPlugin } from './esbuild-plugins';
 
 const glob = util.promisify(libGlob);
 const SUPPORTED_EXTENSIONS = ['.js', '.ts'];
@@ -80,6 +81,7 @@ export async function build({ workPath }: { workPath: string }) {
       banner: {
         js: '"use strict";',
       },
+      plugins: [nodeProcessPolyfillPlugin({ env: process.env })],
       format: 'cjs',
     });
     // Create `_ENTRIES` wrapper
