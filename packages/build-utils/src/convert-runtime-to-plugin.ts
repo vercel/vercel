@@ -192,16 +192,12 @@ export function convertRuntimeToPlugin(
       if (handlerHasImport) {
         const encoding = 'utf-8';
         const handlerContent = await fs.readFile(handlerFile.fsPath, encoding);
-        const extLessEntry = entrypoint.replace(ext, '');
 
         const importPaths = [
           // This is the full entrypoint path, like `./api/test.py`
-          // eslint-disable-next-line no-useless-escape
           `./${entrypoint}`,
           // This is the entrypoint path without extension, like `api/test`
-          extLessEntry,
-          // This is the entrypoint path in module syntax, like `api.test`
-          extLessEntry.replace(/\//g, '.'),
+          entrypoint.replace(ext, ''),
         ];
 
         // Generate a list of regular expressions that we can use for
