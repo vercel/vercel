@@ -191,6 +191,9 @@ export function convertRuntimeToPlugin(
       if (handlerHasImport) {
         const { fsPath } = handlerFile;
         const encoding = 'utf-8';
+
+        // This is the true location of the user-provided request handler in the
+        // source files, so that's what we will use as a import path in the launcher.
         const newLocationPrefix = relative(entry, outputPath);
         const newLocation = join(newLocationPrefix, entrypoint);
 
