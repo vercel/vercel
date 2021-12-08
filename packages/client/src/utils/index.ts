@@ -266,39 +266,31 @@ export const prepareFiles = (
   files: Map<string, DeploymentFile>,
   clientOptions: VercelClientOptions
 ): PreparedFile[] => {
-  const preparedFiles = [...files.keys()].reduce(
-    (acc: PreparedFile[], sha: string): PreparedFile[] => {
-      const next = [...acc];
+  const preparedFiles: PreparedFile[] = [];
+  for (const [sha, file] of files) {
+    for (const name of file.names) {
+      let fileName: string;
 
-      const file = files.get(sha) as DeploymentFile;
-
-      for (const name of file.names) {
-        let fileName: string;
-
-        if (clientOptions.isDirectory) {
-          // Directory
-          fileName =
-            typeof clientOptions.path === 'string'
-              ? relative(clientOptions.path, name)
-              : name;
-        } else {
-          // Array of files or single file
-          const segments = name.split(sep);
-          fileName = segments[segments.length - 1];
-        }
-
-        next.push({
-          file: isWin ? fileName.replace(/\\/g, '/') : fileName,
-          size: file.data.byteLength || file.data.length,
-          mode: file.mode,
-          sha,
-        });
+      if (clientOptions.isDirectory) {
+        // Directory
+        fileName =
+          typeof clientOptions.path === 'string'
+            ? relative(clientOptions.path, name)
+            : name;
+      } else {
+        // Array of files or single file
+        const segments = name.split(sep);
+        fileName = segments[segments.length - 1];
       }
 
-      return next;
-    },
-    []
-  );
+      preparedFiles.push({
+        file: isWin ? fileName.replace(/\\/g, '/') : fileName,
+        size: file.data.byteLength || file.data.length,
+        mode: file.mode,
+        sha,
+      });
+    }
+  }
 
   return preparedFiles;
 };
