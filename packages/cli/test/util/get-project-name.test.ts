@@ -10,30 +10,12 @@ describe('getProjectName', () => {
     expect(project).toEqual('abc');
   });
 
-  it('should work with now.json', () => {
+  it('should work with `vercel.json` config', () => {
     const project = getProjectName({
       argv: {},
       nowConfig: { name: 'abc' },
     });
     expect(project).toEqual('abc');
-  });
-
-  it('should work with a file', () => {
-    const project = getProjectName({
-      argv: {},
-      nowConfig: {},
-      isFile: true,
-    });
-    expect(project).toEqual('files');
-  });
-
-  it('should work with a multiple files', () => {
-    const project = getProjectName({
-      argv: {},
-      nowConfig: {},
-      paths: ['/tmp/aa/abc.png', '/tmp/aa/bbc.png'],
-    });
-    expect(project).toEqual('files');
   });
 
   it('should work with a directory', () => {
