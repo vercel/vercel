@@ -1,4 +1,3 @@
-import { relative, basename } from 'path';
 import execa from 'execa';
 import { Meta, debug } from '@vercel/build-utils';
 
@@ -136,17 +135,10 @@ export async function installRequirementsFile({
   meta,
   args = [],
 }: InstallRequirementsFileArg) {
-  const fileAtRoot = relative(workPath, filePath) === basename(filePath);
-
-  // If the `requirements.txt` file is located in the Root Directory of the project and
-  // the new File System API is used (`avoidTopLevelInstall`), the Install Command
-  // will have already installed its dependencies, so we don't need to do it again.
-  if (meta.avoidTopLevelInstall && fileAtRoot) {
-    debug(
-      `Skipping requirements file installation, already installed by Install Command`
-    );
-    return;
-  }
+  // The Vercel platform already handles `requirements.txt` for frontend projects,
+  // but the installation logic there is different, because it seems to install all
+  // of the dependencies globally, whereas, for this Runtime, we want it to happen only
+  // locally, so we'll run a separate installation.
 
   if (
     meta.isDev &&
