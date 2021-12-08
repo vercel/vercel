@@ -183,8 +183,13 @@ export function convertRuntimeToPlugin(
         let handlerContent = await fs.readFile(fsPath, encoding);
 
         const importPaths = [
-          // This is the full entrypoint path, like `./api/test.py`
-          `./${entrypoint}`,
+          // This is the full entrypoint path, like `./api/test.py`. In our tests
+          // Python didn't support importing from a parent directory without using different
+          // code in the launcher that registers it as a location for modules and then changing
+          // the importing syntax, but continuing to import it like before seems to work. If
+          // other languages need this, we should consider excluding Python explicitly.
+          // `./${entrypoint}`,
+
           // This is the entrypoint path without extension, like `api/test`
           entrypoint.slice(0, -ext.length),
         ];
