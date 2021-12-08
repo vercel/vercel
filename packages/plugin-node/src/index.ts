@@ -401,9 +401,9 @@ export async function build({ workPath }: { workPath: string }) {
       getConfig(project, absEntrypoint, FunctionConfigSchema) || {};
 
     // No config exported means "node", but if there is a config
-    // and "runtime" is defined, but it is not "node" then don't
+    // and "use" is defined, but it is not "node" then don't
     // compile this file.
-    if (config.runtime && config.runtime !== 'node') {
+    if (config.use && config.use !== 'node') {
       continue;
     }
 

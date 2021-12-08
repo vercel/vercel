@@ -968,7 +968,7 @@ export default class DevServer {
         socket.destroy();
         return;
       }
-      const target = `http://localhost:${this.devProcessPort}`;
+      const target = `http://127.0.0.1:${this.devProcessPort}`;
       this.output.debug(`Detected "upgrade" event, proxying to ${target}`);
       this.proxy.ws(req, socket, head, { target });
     });
@@ -1663,7 +1663,7 @@ export default class DevServer {
     if (!match) {
       // If the dev command is started, then proxy to it
       if (this.devProcessPort) {
-        const upstream = `http://localhost:${this.devProcessPort}`;
+        const upstream = `http://127.0.0.1:${this.devProcessPort}`;
         debug(`Proxying to frontend dev server: ${upstream}`);
 
         // Add the Vercel platform proxy request headers
@@ -1810,7 +1810,7 @@ export default class DevServer {
         return proxyPass(
           req,
           res,
-          `http://localhost:${port}`,
+          `http://127.0.0.1:${port}`,
           this,
           requestId,
           false
@@ -1847,7 +1847,7 @@ export default class DevServer {
       return proxyPass(
         req,
         res,
-        `http://localhost:${this.devProcessPort}`,
+        `http://127.0.0.1:${this.devProcessPort}`,
         this,
         requestId,
         false

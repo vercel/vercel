@@ -12,7 +12,6 @@
     "noUnusedParameters": true,
     "outDir": "dist",
     "strict": true,
-    "target": "esnext",
-    "resolveJsonModule": true
+    "target": "esnext"
   }
 }

@@ -5,16 +5,16 @@ import {
   GlobOptions,
   scanParentDirs,
   spawnAsync,
+  glob as buildUtilsGlob,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import Sema from 'async-sema';
 import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
 import { assert } from 'console';
-import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import ogGlob from 'glob';
-import { dirname, isAbsolute, join, parse, relative, resolve } from 'path';
+import { dirname, isAbsolute, join, parse, relative } from 'path';
 import pluralize from 'pluralize';
 import Client from '../util/client';
 import { VercelConfig } from '../util/dev/types';
@@ -353,13 +353,19 @@ export default async function main(client: Client) {
     }
 
     // We cannot rely on the `framework` alone, as it might be a static export,
-    // and the current build might use a differnt project that's not in the settings.
+    // and the current build might use a different project that's not in the settings.
     const isNextOutput = Boolean(dotNextDir);
-    const outputDir = isNextOutput ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
+    const nextExport = await getNextExportStatus(dotNextDir);
+    const outputDir =
+      isNextOutput && !nextExport ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
+    const getDistDir = framework.getFsOutputDir || framework.getOutputDirName;
     const distDir =
+      (nextExport?.exportDetail.outDirectory
+        ? relative(cwd, nextExport.exportDetail.outDirectory)
+        : false) ||
       dotNextDir ||
       userOutputDirectory ||
-      (await framework.getFsOutputDir(cwd));
+      (await getDistDir(cwd));
 
     await fs.ensureDir(join(cwd, outputDir));
 
@@ -443,7 +449,53 @@ export default async function main(client: Client) {
     }
 
     // Special Next.js processing.
-    if (isNextOutput) {
+    if (nextExport) {
+      client.output.debug('Found `next export` output.');
+
+      const htmlFiles = await buildUtilsGlob(
+        '**/*.html',
+        join(cwd, OUTPUT_DIR, 'static')
+      );
+
+      if (nextExport.exportDetail.success !== true) {
+        client.output.error(
+          `Export of Next.js app failed. Please check your build logs.`
+        );
+        process.exit(1);
+      }
+
+      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'server', 'pages'));
+      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'static'));
+
+      await Promise.all(
+        Object.keys(htmlFiles).map(async fileName => {
+          await sema.acquire();
+
+          const input = join(cwd, OUTPUT_DIR, 'static', fileName);
+          const target = join(cwd, OUTPUT_DIR, 'server', 'pages', fileName);
+
+          await fs.mkdirp(dirname(target));
+
+          await fs.promises.rename(input, target).finally(() => {
+            sema.release();
+          });
+        })
+      );
+
+      for (const file of [
+        'BUILD_ID',
+        'images-manifest.json',
+        'routes-manifest.json',
+        'build-manifest.json',
+      ]) {
+        const input = join(nextExport.dotNextDir, file);
+
+        if (fs.existsSync(input)) {
+          // Do not use `smartCopy`, since we want to overwrite if they already exist.
+          await fs.copyFile(input, join(OUTPUT_DIR, file));
+        }
+      }
+    } else if (isNextOutput) {
       // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
       const tempStatic = '___static';
       await fs.rename(
@@ -584,60 +636,42 @@ export default async function main(client: Client) {
             ],
           });
           fileList.delete(relative(cwd, f));
-          await resolveNftToOutput({
-            client,
-            baseDir,
-            outputDir: OUTPUT_DIR,
-            nftFileName: f.replace(ext, '.js.nft.json'),
-            distDir,
-            nft: {
-              version: 1,
-              files: Array.from(fileList).map(fileListEntry =>
-                relative(dir, fileListEntry)
-              ),
-            },
-          });
-        }
-      } else {
-        for (let f of nftFiles) {
-          const json = await fs.readJson(f);
-          await resolveNftToOutput({
-            client,
-            baseDir,
-            outputDir: OUTPUT_DIR,
-            nftFileName: f,
-            nft: json,
-            distDir,
+
+          const nftFileName = f.replace(ext, '.js.nft.json');
+          client.output.debug(`Creating ${nftFileName}`);
+
+          await fs.writeJSON(nftFileName, {
+            version: 2,
+            files: Array.from(fileList).map(fileListEntry =>
+              relative(dir, fileListEntry)
+            ),
           });
         }
       }
 
-      client.output.debug(`Resolve ${param('required-server-files.json')}.`);
       const requiredServerFilesPath = join(
         OUTPUT_DIR,
         'required-server-files.json'
       );
-      const requiredServerFilesJson = await fs.readJSON(
-        requiredServerFilesPath
-      );
-      await fs.writeJSON(requiredServerFilesPath, {
-        ...requiredServerFilesJson,
-        appDir: '.',
-        files: requiredServerFilesJson.files.map((i: string) => {
-          const originalPath = join(requiredServerFilesJson.appDir, i);
-          const relPath = join(OUTPUT_DIR, relative(distDir, originalPath));
 
-          const absolutePath = join(cwd, relPath);
-          const output = relative(baseDir, absolutePath);
+      if (fs.existsSync(requiredServerFilesPath)) {
+        client.output.debug(`Resolve ${param('required-server-files.json')}.`);
 
-          return relPath === output
-            ? relPath
-            : {
-                input: relPath,
-                output,
-              };
-        }),
-      });
+        const requiredServerFilesJson = await fs.readJSON(
+          requiredServerFilesPath
+        );
+
+        await fs.writeJSON(requiredServerFilesPath, {
+          ...requiredServerFilesJson,
+          appDir: '.',
+          files: requiredServerFilesJson.files.map((i: string) => {
+            const originalPath = join(requiredServerFilesJson.appDir, i);
+            const relPath = join(OUTPUT_DIR, relative(distDir, originalPath));
+
+            return relPath;
+          }),
+        });
+      }
     }
   }
 
@@ -792,83 +826,51 @@ async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
 }
 
 /**
- * Computes a hash for the given buf.
- *
- * @param {Buffer} file data
- * @return {String} hex digest
+ * Files will only exist when `next export` was used.
  */
-function hash(buf: Buffer): string {
-  return createHash('sha1').update(buf).digest('hex');
-}
-
-interface NftFile {
-  version: number;
-  files: (string | { input: string; output: string })[];
-}
-
-// resolveNftToOutput takes nft file and moves all of its trace files
-// into the specified directory + `inputs`, (renaming them to their hash + ext) and
-// subsequently updating the original nft file accordingly. This is done
-// to make the `.output` directory be self-contained, so that it works
-// properly with `vc --prebuilt`.
-async function resolveNftToOutput({
-  client,
-  baseDir,
-  outputDir,
-  nftFileName,
-  distDir,
-  nft,
-}: {
-  client: Client;
-  baseDir: string;
-  outputDir: string;
-  nftFileName: string;
-  distDir: string;
-  nft: NftFile;
-}) {
-  client.output.debug(`Processing and resolving ${nftFileName}`);
-  await fs.ensureDir(join(outputDir, 'inputs'));
-  const newFilesList: NftFile['files'] = [];
-
-  // If `distDir` is a subdirectory, then the input has to be resolved to where the `.output` directory will be.
-  const relNftFileName = relative(outputDir, nftFileName);
-  const origNftFilename = join(distDir, relNftFileName);
-
-  if (relNftFileName.startsWith('cache/')) {
-    // No need to process the `cache/` directory.
-    // Paths in it might also not be relative to `cache` itself.
-    return;
+async function getNextExportStatus(dotNextDir: string | null) {
+  if (!dotNextDir) {
+    return null;
   }
 
-  for (let fileEntity of nft.files) {
-    const relativeInput =
-      typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
-    const fullInput = resolve(join(parse(origNftFilename).dir, relativeInput));
+  const exportDetail: {
+    success: boolean;
+    outDirectory: string;
+  } | null = await fs
+    .readJson(join(dotNextDir, 'export-detail.json'))
+    .catch(error => {
+      if (error.code === 'ENOENT') {
+        return null;
+      }
 
-    // if the resolved path is NOT in the .output directory we move in it there
-    if (!fullInput.includes(distDir)) {
-      const { ext } = parse(fullInput);
-      const raw = await fs.readFile(fullInput);
-      const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
-      smartCopy(client, fullInput, newFilePath);
+      throw error;
+    });
 
-      // We have to use `baseDir` instead of `cwd`, because we want to
-      // mount everything from there (especially `node_modules`).
-      // This is important for NPM Workspaces where `node_modules` is not
-      // in the directory of the workspace.
-      const output = relative(baseDir, fullInput).replace('.output', '.next');
-
-      newFilesList.push({
-        input: relative(parse(nftFileName).dir, newFilePath),
-        output,
-      });
-    } else {
-      newFilesList.push(relativeInput);
-    }
+  if (!exportDetail) {
+    return null;
   }
-  // Update the .nft.json with new input and output mapping
-  await fs.writeJSON(nftFileName, {
-    ...nft,
-    files: newFilesList,
-  });
+
+  const exportMarker: {
+    version: 1;
+    exportTrailingSlash: boolean;
+    hasExportPathMap: boolean;
+  } | null = await fs
+    .readJSON(join(dotNextDir, 'export-marker.json'))
+    .catch(error => {
+      if (error.code === 'ENOENT') {
+        return null;
+      }
+
+      throw error;
+    });
+
+  return {
+    dotNextDir,
+    exportDetail,
+    exportMarker: {
+      trailingSlash: exportMarker?.hasExportPathMap
+        ? exportMarker.exportTrailingSlash
+        : false,
+    },
+  };
 }

@@ -446,6 +446,7 @@ export default async (client: Client) => {
       forceNew: argv['--force'],
       withCache: argv['--with-cache'],
       prebuilt: argv['--prebuilt'],
+      rootDirectory,
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
       type: null,
