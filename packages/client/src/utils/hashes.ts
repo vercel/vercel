@@ -58,7 +58,9 @@ export async function hashes(
       const entry = map.get(h);
 
       if (entry) {
-        entry.names.push(name);
+        if (entry.names[0] !== name) {
+          entry.names.push(name);
+        }
       } else {
         map.set(h, { names: [name], data, mode });
       }
