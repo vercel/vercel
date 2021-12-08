@@ -351,3 +351,12 @@ export interface BuilderFunctions {
     excludeFiles?: string;
   };
 }
+
+export interface ProjectSettings {
+  framework?: string | null;
+  devCommand?: string | null;
+  installCommand?: string | null;
+  buildCommand?: string | null;
+  outputDirectory?: string | null;
+  createdAt?: number;
+}

@@ -3,7 +3,13 @@ import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
 import { Route, Source } from '@vercel/routing-utils';
 import frameworkList, { Framework } from '@vercel/frameworks';
-import { PackageJson, Builder, Config, BuilderFunctions } from './types';
+import {
+  PackageJson,
+  Builder,
+  Config,
+  BuilderFunctions,
+  ProjectSettings,
+} from './types';
 import { isOfficialRuntime } from './';
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
@@ -20,14 +26,7 @@ interface Options {
   tag?: 'canary' | 'latest' | string;
   functions?: BuilderFunctions;
   ignoreBuildScript?: boolean;
-  projectSettings?: {
-    framework?: string | null;
-    devCommand?: string | null;
-    installCommand?: string | null;
-    buildCommand?: string | null;
-    outputDirectory?: string | null;
-    createdAt?: number;
-  };
+  projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
   trailingSlash?: boolean;
   featHandleMiss?: boolean;
