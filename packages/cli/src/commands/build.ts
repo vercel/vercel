@@ -649,6 +649,34 @@ export default async function main(client: Client) {
         }
       }
 
+      // If `.output` is not in the same dir as `.next`, we'll need to modify the
+      // `.nft.json` files to ensure they will still point to the correct location.
+      if (dirname(join(cwd, OUTPUT_DIR)) !== dirname(distDir)) {
+        const sema = new Sema(100);
+        await Promise.all(
+          nftFiles.map(async nftFile => {
+            await sema.acquire();
+
+            const data: { files: string[] } = await fs.readJSON(nftFile);
+            const nextFiles = data.files.map(file => {
+              const originalNftPath = join(
+                distDir,
+                relative(OUTPUT_DIR, nftFile)
+              );
+              const absolutePath = join(dirname(originalNftPath), file);
+              return relative(join(cwd, OUTPUT_DIR), absolutePath);
+            });
+
+            await fs.writeJSON(nftFile, {
+              ...data,
+              files: nextFiles,
+            });
+
+            sema.release();
+          })
+        );
+      }
+
       const requiredServerFilesPath = join(
         OUTPUT_DIR,
         'required-server-files.json'
