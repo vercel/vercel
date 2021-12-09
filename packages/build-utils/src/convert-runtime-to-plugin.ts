@@ -4,7 +4,7 @@ import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
 import type { BuildOptions, Files } from './types';
-import { debug, getIgnoreFilter } from '.';
+import { FileFsRef, debug, getIgnoreFilter } from '.';
 
 // `.output` was already created by the Build Command, so we have
 // to ensure its contents don't get bundled into the Lambda. Similarily,
@@ -119,15 +119,37 @@ export function convertRuntimeToPlugin(
       // @ts-ignore This symbol is a private API
       const lambdaFiles: Files = output[FILES_SYMBOL];
 
-      // When deploying, the `files` that are passed to the Legacy Runtimes already
-      // have certain files that are ignored stripped, but locally, that list of
-      // files isn't used by the Legacy Runtimes, so we need to apply the filters
-      // to the outputs that they are returning instead.
+      // A list of in-memory `FileBlob` references that we'd like to write onto the
+      // file system, so that they can be passed on as `FileFsRef` instead.
+      const lambdaFileBlobs: Array<Promise<void>> = [];
+
       for (const file in lambdaFiles) {
+        // When deploying, the `files` that are passed to the Legacy Runtimes already
+        // have certain files that are ignored stripped, but locally, that list of
+        // files isn't used by the Legacy Runtimes, so we need to apply the filters
+        // to the outputs that they are returning instead.
         if (shouldIgnorePath(file, ignoreFilter, false)) {
           delete lambdaFiles[file];
         }
+
+        const details = lambdaFiles[file];
+
+        // If a Legacy Runtime chooses to return `FileBlob` items in the `files` provided
+        // for its Lambda, we'd like to convert them into `FileFsRef` for further use, since
+        // the File System API doesn't support transferring files to it in memory.
+        if (details.type === 'FileBlob') {
+          const fsPath = join(workPath, file);
+          const writer = fs.writeFile(fsPath, details.data);
+
+          lambdaFiles[file] = new FileFsRef({ fsPath });
+
+          lambdaFileBlobs.push(writer);
+        }
       }
+
+      // Wait until all `FileBlob` items were written onto the file system,
+      // so that their respective `FileFsRef` items will have a working `fsPath`.
+      await Promise.all(lambdaFileBlobs);
 
       let handlerFileBase = output.handler;
       let handlerFile = lambdaFiles[handlerFileBase];
