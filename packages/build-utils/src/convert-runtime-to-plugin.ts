@@ -174,7 +174,7 @@ export function convertRuntimeToPlugin(
 
       if (!handlerFile || !handlerFile.fsPath) {
         throw new Error(
-          `Could not find a handler file. Please ensure that \`files\` for the returned \`Lambda\` contains an \`FileFsRef\` named "${handlerFileBase}" with a valid \`fsPath\`.`
+          `Could not find a handler file. Please ensure that \`files\` for the returned \`Lambda\` contains a \`FileFsRef\` or \`FileBlob\` named "${handlerFileBase}".`
         );
       }
 
