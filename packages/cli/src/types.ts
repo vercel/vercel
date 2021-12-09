@@ -1,3 +1,5 @@
+export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
+
 export type Primitive =
   | bigint
   | boolean
@@ -239,16 +241,6 @@ export interface ProjectEnvVariable {
   gitBranch?: string;
 }
 
-export interface ProjectSettings {
-  framework?: string | null;
-  devCommand?: string | null;
-  buildCommand?: string | null;
-  outputDirectory?: string | null;
-  rootDirectory?: string | null;
-  autoExposeSystemEnvs?: boolean;
-  directoryListing?: boolean;
-}
-
 export interface Project extends ProjectSettings {
   id: string;
   name: string;
@@ -260,8 +252,6 @@ export interface Project extends ProjectSettings {
   framework?: string | null;
   rootDirectory?: string | null;
   latestDeployments?: Partial<Deployment>[];
-  autoExposeSystemEnvs?: boolean;
-  sourceFilesOutsideRootDirectory: boolean;
 }
 
 export interface Org {

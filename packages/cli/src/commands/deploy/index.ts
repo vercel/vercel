@@ -192,7 +192,7 @@ export default async (client: Client) => {
 
   let newProjectName = null;
   let rootDirectory = project ? project.rootDirectory : null;
-  let sourceFilesOutsideRootDirectory = true;
+  let sourceFilesOutsideRootDirectory: boolean | undefined = true;
 
   if (status === 'not_linked') {
     const shouldStartSetup =

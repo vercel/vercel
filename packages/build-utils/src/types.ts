@@ -361,5 +361,10 @@ export interface ProjectSettings {
   installCommand?: string | null;
   buildCommand?: string | null;
   outputDirectory?: string | null;
+  rootDirectory?: string | null;
   createdAt?: number;
+  autoExposeSystemEnvs?: boolean;
+  sourceFilesOutsideRootDirectory?: boolean;
+  directoryListing?: boolean;
+  gitForkProtection?: boolean;
 }

@@ -40,6 +40,7 @@ import {
   detectApiExtensions,
   spawnCommand,
   isOfficialRuntime,
+  detectFileSystemAPI,
 } from '@vercel/build-utils';
 import frameworkList from '@vercel/frameworks';
 
@@ -597,6 +598,20 @@ export default class DevServer {
         warnings.forEach(warning =>
           this.output.warn(warning.message, null, warning.link, warning.action)
         );
+      }
+
+      const detectResult = await detectFileSystemAPI({
+        files,
+        builders: builders || [],
+        projectSettings: projectSettings || this.projectSettings || {},
+        vercelConfig,
+        pkg,
+        tag: '',
+        enableFlag: true,
+      });
+
+      if (detectResult.reason) {
+        this.output.warn('Unable to use latest API: ' + detectResult.reason);
       }
 
       if (builders) {
