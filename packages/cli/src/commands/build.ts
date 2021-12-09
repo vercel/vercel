@@ -8,8 +8,6 @@ import {
   glob as buildUtilsGlob,
   detectFileSystemAPI,
   detectBuilders,
-  DetectorFilesystem,
-  Files,
   PackageJson,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
@@ -162,25 +160,25 @@ export default async function main(client: Client) {
     throw vercelConfig;
   }
 
-  const globFiles = await buildUtilsGlob('**', { cwd });
-  const zeroConfig = await detectBuilders(Object.keys(globFiles), pkg);
-  const vfs = new VirtualFilesystem(globFiles);
-  const builder = await detectFileSystemAPI({
-    vfs,
-    projectSettings: project.settings,
-    builders: zeroConfig.builders || [],
-    pkg,
-    functions: vercelConfig?.functions,
-    enableFlag: true,
-  });
+  if (!process.env.NOW_BUILDER) {
+    // This validation is only necessary when
+    // a user runs `vercel build` locally.
+    const globFiles = await buildUtilsGlob('**', { cwd });
+    const zeroConfig = await detectBuilders(Object.keys(globFiles), pkg);
+    const { reason } = await detectFileSystemAPI({
+      files: globFiles,
+      projectSettings: project.settings,
+      builders: zeroConfig.builders || [],
+      pkg,
+      vercelConfig,
+      tag: '',
+      enableFlag: true,
+    });
 
-  if (!builder) {
-    client.output.error(
-      `This project is using legacy features that do not work with ${cmd(
-        `${getPkgName()} build`
-      )}.`
-    );
-    return 1;
+    if (reason) {
+      client.output.error(`${cmd(`${getPkgName()} build`)} failed: ${reason}`);
+      return 1;
+    }
   }
 
   const framework = findFramework(project.settings.framework);
@@ -910,37 +908,4 @@ async function getNextExportStatus(dotNextDir: string | null) {
         : false,
     },
   };
-}
-
-class VirtualFilesystem extends DetectorFilesystem {
-  private files: Files;
-
-  constructor(files: Files) {
-    super();
-    this.files = files;
-  }
-
-  async _hasPath(path: string): Promise<boolean> {
-    for (const file in this.files) {
-      if (file.startsWith(path)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  async _isFile(name: string): Promise<boolean> {
-    return this.files[name] !== undefined;
-  }
-
-  async _readFile(name: string): Promise<Buffer> {
-    const file = this.files[name];
-
-    if (!file || !file.fsPath) {
-      throw new Error(`File does not exist: ${file}`);
-    }
-
-    return fs.readFile(file.fsPath);
-  }
 }

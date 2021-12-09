@@ -29,7 +29,9 @@ export interface Config {
     | number
     | { [key: string]: string }
     | BuilderFunctions
-    | undefined;
+    | ProjectSettings
+    | undefined
+    | null;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
@@ -41,11 +43,12 @@ export interface Config {
   zeroConfig?: boolean;
   import?: { [key: string]: string };
   functions?: BuilderFunctions;
+  projectSettings?: ProjectSettings;
   outputDirectory?: string;
   installCommand?: string;
   buildCommand?: string;
   devCommand?: string;
-  framework?: string;
+  framework?: string | null;
   nodeVersion?: string;
 }
 
