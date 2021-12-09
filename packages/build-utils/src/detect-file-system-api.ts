@@ -3,7 +3,6 @@ import { isOfficialRuntime } from './';
 import type {
   Builder,
   BuilderFunctions,
-  Files,
   PackageJson,
   ProjectSettings,
 } from './types';
@@ -23,7 +22,7 @@ export async function detectFileSystemAPI({
   tag,
   enableFlag = false,
 }: {
-  files: Files;
+  files: { [relPath: string]: any };
   projectSettings: ProjectSettings;
   builders: Builder[];
   vercelConfig:
@@ -62,6 +61,14 @@ export async function detectFileSystemAPI({
     };
   }
 
+  if (Object.values(vercelConfig?.functions || {}).some(fn => !!fn.runtime)) {
+    return {
+      fsApiBuilder: null,
+      reason:
+        'Detected `functions.runtime` in vercel.json. Please remove it in favor of CLI plugins.',
+    };
+  }
+
   if (process.env.HUGO_VERSION) {
     return {
       fsApiBuilder: null,
@@ -79,14 +86,6 @@ export async function detectFileSystemAPI({
       fsApiBuilder: null,
       reason:
         'Detected `GUTENBERG_VERSION` environment variable. Please remove it.',
-    };
-  }
-
-  if (Object.values(vercelConfig?.functions || {}).some(fn => !!fn.runtime)) {
-    return {
-      fsApiBuilder: null,
-      reason:
-        'Detected `functions.runtime` in vercel.json. Please remove it in favor of CLI plugins.',
     };
   }
 
@@ -140,7 +139,7 @@ export async function detectFileSystemAPI({
     if (projectSettings?.outputDirectory) {
       return {
         fsApiBuilder: null,
-        reason: `Detected Next.js with Output Directory \`${projectSettings?.outputDirectory}\` override. Please change it back to the default.`,
+        reason: `Detected Next.js with Output Directory \`${projectSettings.outputDirectory}\` override. Please change it back to the default.`,
       };
     }
     const versionRange = deps['next'];
@@ -158,7 +157,7 @@ export async function detectFileSystemAPI({
       if (!fixedVersion || !semver.gte(fixedVersion, '12.0.0')) {
         return {
           fsApiBuilder: null,
-          reason: `Detected old Next.js version ${versionRange}. Please run \`npm i next@latest\` to upgrade.`,
+          reason: `Detected legacy Next.js version "${versionRange}" in package.json. Please run \`npm i next@latest\` to upgrade.`,
         };
       }
     }
