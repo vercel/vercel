@@ -600,7 +600,7 @@ export default class DevServer {
         );
       }
 
-      const detectResult = await detectFileSystemAPI({
+      const { reason, metadata } = await detectFileSystemAPI({
         files,
         builders: builders || [],
         projectSettings: projectSettings || this.projectSettings || {},
@@ -610,8 +610,20 @@ export default class DevServer {
         enableFlag: true,
       });
 
-      if (detectResult.reason) {
-        this.output.warn('Unable to use latest API: ' + detectResult.reason);
+      if (reason) {
+        if (metadata.hasMiddleware) {
+          this.output.error(
+            `Detected middleware usage which requires the latest API. ${reason}`
+          );
+          await this.exit();
+        } else if (metadata.plugins.length > 0) {
+          this.output.error(
+            `Detected CLI plugins which requires the latest API. ${reason}`
+          );
+          await this.exit();
+        } else {
+          this.output.warn(`Unable to use latest API. ${reason}`);
+        }
       }
 
       if (builders) {

@@ -7,6 +7,12 @@ import type {
   ProjectSettings,
 } from './types';
 
+interface Metadata {
+  plugins: string[];
+  hasDotOutput: boolean;
+  hasMiddleware: boolean;
+}
+
 const enableFileSystemApiFrameworks = new Set(['solidstart']);
 
 /**
@@ -33,10 +39,14 @@ export async function detectFileSystemAPI({
   tag: string | undefined;
   enableFlag: boolean | undefined;
 }): Promise<
-  | { fsApiBuilder: Builder; reason: null }
-  | { fsApiBuilder: null; reason: string }
+  | { metadata: Metadata; fsApiBuilder: Builder; reason: null }
+  | { metadata: Metadata; fsApiBuilder: null; reason: string }
 > {
   const framework = projectSettings.framework || '';
+  const deps = Object.assign({}, pkg?.dependencies, pkg?.devDependencies);
+  const plugins = Object.keys(deps).filter(dep =>
+    dep.startsWith('vercel-plugin-')
+  );
   const hasDotOutput = Object.keys(files).some(file =>
     file.startsWith('.output/')
   );
@@ -44,17 +54,24 @@ export async function detectFileSystemAPI({
     files['_middleware.js'] || files['_middleware.ts']
   );
 
+  const metadata: Metadata = {
+    plugins,
+    hasDotOutput,
+    hasMiddleware,
+  };
+
   const isEnabled =
     enableFlag ||
     hasMiddleware ||
     hasDotOutput ||
     enableFileSystemApiFrameworks.has(framework);
   if (!isEnabled) {
-    return { fsApiBuilder: null, reason: 'Flag not enabled.' };
+    return { metadata, fsApiBuilder: null, reason: 'Flag not enabled.' };
   }
 
   if (vercelConfig?.builds && vercelConfig.builds.length > 0) {
     return {
+      metadata,
       fsApiBuilder: null,
       reason:
         'Detected `builds` in vercel.json. Please remove it in favor of CLI plugins.',
@@ -63,6 +80,7 @@ export async function detectFileSystemAPI({
 
   if (Object.values(vercelConfig?.functions || {}).some(fn => !!fn.runtime)) {
     return {
+      metadata,
       fsApiBuilder: null,
       reason:
         'Detected `functions.runtime` in vercel.json. Please remove it in favor of CLI plugins.',
@@ -71,25 +89,29 @@ export async function detectFileSystemAPI({
 
   if (process.env.HUGO_VERSION) {
     return {
+      metadata,
       fsApiBuilder: null,
       reason: 'Detected `HUGO_VERSION` environment variable. Please remove it.',
     };
   }
+
   if (process.env.ZOLA_VERSION) {
     return {
+      metadata,
       fsApiBuilder: null,
       reason: 'Detected `ZOLA_VERSION` environment variable. Please remove it.',
     };
   }
+
   if (process.env.GUTENBERG_VERSION) {
     return {
+      metadata,
       fsApiBuilder: null,
       reason:
         'Detected `GUTENBERG_VERSION` environment variable. Please remove it.',
     };
   }
 
-  const deps = Object.assign({}, pkg?.dependencies, pkg?.devDependencies);
   const invalidBuilder = builders.find(({ use }) => {
     const valid =
       isOfficialRuntime('go', use) ||
@@ -104,6 +126,7 @@ export async function detectFileSystemAPI({
 
   if (invalidBuilder) {
     return {
+      metadata,
       fsApiBuilder: null,
       reason: `Detected \`${invalidBuilder.use}\` in vercel.json. Please remove it in favor of CLI plugins.`,
     };
@@ -114,6 +137,7 @@ export async function detectFileSystemAPI({
       const plugin = 'vercel-plugin-' + lang;
       if (isOfficialRuntime(lang, use) && !deps[plugin]) {
         return {
+          metadata,
           fsApiBuilder: null,
           reason: `Detected \`${lang}\` Serverless Function usage without plugin \`${plugin}\`. Please run \`npm i ${plugin}\`.`,
         };
@@ -127,6 +151,7 @@ export async function detectFileSystemAPI({
     framework === 'redwoodjs'
   ) {
     return {
+      metadata,
       fsApiBuilder: null,
       reason: `Detected framework \`${framework}\` that only supports legacy File System API. Please contact the framework author.`,
     };
@@ -138,6 +163,7 @@ export async function detectFileSystemAPI({
     // location as `.output`, which can break imports (not just nft.json files).
     if (projectSettings?.outputDirectory) {
       return {
+        metadata,
         fsApiBuilder: null,
         reason: `Detected Next.js with Output Directory \`${projectSettings.outputDirectory}\` override. Please change it back to the default.`,
       };
@@ -145,6 +171,7 @@ export async function detectFileSystemAPI({
     const versionRange = deps['next'];
     if (!versionRange) {
       return {
+        metadata,
         fsApiBuilder: null,
         reason: `Detected Next.js in Project Settings but missing \`next\` package.json dependencies. Please run \`npm i next\`.`,
       };
@@ -156,6 +183,7 @@ export async function detectFileSystemAPI({
 
       if (!fixedVersion || !semver.gte(fixedVersion, '12.0.0')) {
         return {
+          metadata,
           fsApiBuilder: null,
           reason: `Detected legacy Next.js version "${versionRange}" in package.json. Please run \`npm i next@latest\` to upgrade.`,
         };
@@ -184,5 +212,5 @@ export async function detectFileSystemAPI({
       hasDotOutput,
     },
   };
-  return { reason: null, fsApiBuilder };
+  return { metadata, fsApiBuilder, reason: null };
 }

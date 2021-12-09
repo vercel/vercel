@@ -22,6 +22,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected `builds` in vercel.json. Please remove it in favor of CLI plugins.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -50,6 +51,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected `functions.runtime` in vercel.json. Please remove it in favor of CLI plugins.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -68,6 +70,7 @@ describe('Test `detectFileSystemAPI`', () => {
     expect(result).toEqual({
       fsApiBuilder: null,
       reason: 'Detected `HUGO_VERSION` environment variable. Please remove it.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
     delete process.env.HUGO_VERSION;
   });
@@ -87,6 +90,7 @@ describe('Test `detectFileSystemAPI`', () => {
     expect(result).toEqual({
       fsApiBuilder: null,
       reason: 'Detected `ZOLA_VERSION` environment variable. Please remove it.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
     delete process.env.ZOLA_VERSION;
   });
@@ -107,6 +111,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected `GUTENBERG_VERSION` environment variable. Please remove it.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
     delete process.env.GUTENBERG_VERSION;
   });
@@ -125,6 +130,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected `go` Serverless Function usage without plugin `vercel-plugin-go`. Please run `npm i vercel-plugin-go`.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -142,6 +148,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected `python` Serverless Function usage without plugin `vercel-plugin-python`. Please run `npm i vercel-plugin-python`.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -159,6 +166,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected `ruby` Serverless Function usage without plugin `vercel-plugin-ruby`. Please run `npm i vercel-plugin-ruby`.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -185,6 +193,11 @@ describe('Test `detectFileSystemAPI`', () => {
         },
       },
       reason: null,
+      metadata: {
+        hasDotOutput: false,
+        hasMiddleware: false,
+        plugins: ['vercel-plugin-go'],
+      },
     });
   });
 
@@ -211,6 +224,11 @@ describe('Test `detectFileSystemAPI`', () => {
         },
       },
       reason: null,
+      metadata: {
+        hasDotOutput: false,
+        hasMiddleware: false,
+        plugins: ['vercel-plugin-python'],
+      },
     });
   });
 
@@ -237,6 +255,11 @@ describe('Test `detectFileSystemAPI`', () => {
         },
       },
       reason: null,
+      metadata: {
+        hasDotOutput: false,
+        hasMiddleware: false,
+        plugins: ['vercel-plugin-ruby'],
+      },
     });
   });
 
@@ -254,6 +277,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected framework `nuxtjs` that only supports legacy File System API. Please contact the framework author.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -271,6 +295,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected framework `sveltekit` that only supports legacy File System API. Please contact the framework author.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -288,6 +313,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected framework `redwoodjs` that only supports legacy File System API. Please contact the framework author.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -305,6 +331,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected Next.js with Output Directory `dist` override. Please change it back to the default.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -322,6 +349,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected Next.js in Project Settings but missing `next` package.json dependencies. Please run `npm i next`.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -339,6 +367,7 @@ describe('Test `detectFileSystemAPI`', () => {
       fsApiBuilder: null,
       reason:
         'Detected legacy Next.js version "^9.0.0" in package.json. Please run `npm i next@latest` to upgrade.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
     });
   });
 
@@ -365,6 +394,7 @@ describe('Test `detectFileSystemAPI`', () => {
         },
       },
       reason: null,
+      metadata: { hasDotOutput: false, hasMiddleware: true, plugins: [] },
     });
   });
 
@@ -391,6 +421,7 @@ describe('Test `detectFileSystemAPI`', () => {
         },
       },
       reason: null,
+      metadata: { hasDotOutput: true, hasMiddleware: false, plugins: [] },
     });
   });
 });
