@@ -1,6 +1,0 @@
-{
-  "private": true,
-  "dependencies": {
-    "sharp": "0.23.0"
-  }
-}

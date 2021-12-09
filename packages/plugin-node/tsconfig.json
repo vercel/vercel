@@ -1,16 +1,18 @@
 {
   "compilerOptions": {
-    "strict": true,
+    "declaration": false,
     "esModuleInterop": true,
     "lib": ["esnext"],
-    "target": "es2019",
     "module": "commonjs",
-    "outDir": "dist",
-    "sourceMap": false,
-    "declaration": true,
     "moduleResolution": "node",
-    "typeRoots": ["./@types", "./node_modules/@types"]
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "outDir": "dist",
+    "types": ["node"],
+    "strict": true,
+    "target": "esnext"
+  }
 }
