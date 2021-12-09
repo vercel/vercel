@@ -3,6 +3,7 @@ import { join, parse, relative, dirname, basename, extname } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
 import { FILES_SYMBOL, Lambda } from './lambda';
+import type FileBlob from './file-blob';
 import type { BuildOptions, Files } from './types';
 import { FileFsRef, debug, getIgnoreFilter } from '.';
 
@@ -139,7 +140,8 @@ export function convertRuntimeToPlugin(
         // the File System API doesn't support transferring files to it in memory.
         if (details.type === 'FileBlob') {
           const fsPath = join(workPath, file);
-          const writer = fs.writeFile(fsPath, details.data);
+          const { data, mode } = details as FileBlob;
+          const writer = fs.writeFile(fsPath, data, { mode });
 
           lambdaFiles[file] = new FileFsRef({ fsPath });
 

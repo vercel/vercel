@@ -15,7 +15,6 @@ export interface File {
    * The absolute path to the file in the filesystem
    */
   fsPath?: string;
-  data?: string | Buffer;
 }
 
 export interface Files {
