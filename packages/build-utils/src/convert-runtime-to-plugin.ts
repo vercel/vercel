@@ -141,7 +141,11 @@ export function convertRuntimeToPlugin(
         if (details.type === 'FileBlob') {
           const fsPath = join(workPath, file);
           const { data, mode } = details as FileBlob;
-          const writer = fs.writeFile(fsPath, data, { mode });
+
+          const writer = (async () => {
+            await fs.ensureDir(dirname(fsPath));
+            await fs.writeFile(fsPath, data, { mode });
+          })();
 
           lambdaFiles[file] = new FileFsRef({ fsPath });
 
