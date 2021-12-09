@@ -584,7 +584,6 @@ export const frameworks = [
         value: '.output',
       },
     },
-    getFsOutputDir: async () => '.output',
     getOutputDirName: async () => '.output',
   },
   {
