@@ -6,6 +6,11 @@ import {
   scanParentDirs,
   spawnAsync,
   glob as buildUtilsGlob,
+  detectFileSystemAPI,
+  detectBuilders,
+  DetectorFilesystem,
+  Files,
+  PackageJson,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import Sema from 'async-sema';
@@ -19,6 +24,7 @@ import pluralize from 'pluralize';
 import Client from '../util/client';
 import { VercelConfig } from '../util/dev/types';
 import { emoji, prependEmoji } from '../util/emoji';
+import { CantParseJSONFile } from '../util/errors-ts';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
 import confirm from '../util/input/confirm';
@@ -32,6 +38,7 @@ import { loadCliPlugins } from '../util/plugins';
 import { findFramework } from '../util/projects/find-framework';
 import { VERCEL_DIR } from '../util/projects/link';
 import { readProjectSettings } from '../util/projects/project-settings';
+import readJSONFile from '../util/read-json-file';
 import pull from './pull';
 
 const sema = new Sema(16, {
@@ -145,6 +152,36 @@ export default async function main(client: Client) {
   };
 
   process.chdir(cwd);
+
+  const pkg = await readJSONFile<PackageJson>('./package.json');
+  if (pkg instanceof CantParseJSONFile) {
+    throw pkg;
+  }
+  const vercelConfig = await readJSONFile<VercelConfig>('./vercel.json');
+  if (vercelConfig instanceof CantParseJSONFile) {
+    throw vercelConfig;
+  }
+
+  const globFiles = await buildUtilsGlob('**', { cwd });
+  const zeroConfig = await detectBuilders(Object.keys(globFiles), pkg);
+  const vfs = new VirtualFilesystem(globFiles);
+  const builder = await detectFileSystemAPI({
+    vfs,
+    projectSettings: project.settings,
+    builders: zeroConfig.builders || [],
+    pkg,
+    functions: vercelConfig?.functions,
+    enableFlag: true,
+  });
+
+  if (!builder) {
+    client.output.error(
+      `This project is using legacy features that do not work with ${cmd(
+        `${getPkgName()} build`
+      )}.`
+    );
+    return 1;
+  }
 
   const framework = findFramework(project.settings.framework);
   // If this is undefined, we bail. If it is null, then findFramework should return "Other",
@@ -873,4 +910,37 @@ async function getNextExportStatus(dotNextDir: string | null) {
         : false,
     },
   };
+}
+
+class VirtualFilesystem extends DetectorFilesystem {
+  private files: Files;
+
+  constructor(files: Files) {
+    super();
+    this.files = files;
+  }
+
+  async _hasPath(path: string): Promise<boolean> {
+    for (const file in this.files) {
+      if (file.startsWith(path)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  async _isFile(name: string): Promise<boolean> {
+    return this.files[name] !== undefined;
+  }
+
+  async _readFile(name: string): Promise<Buffer> {
+    const file = this.files[name];
+
+    if (!file || !file.fsPath) {
+      throw new Error(`File does not exist: ${file}`);
+    }
+
+    return fs.readFile(file.fsPath);
+  }
 }

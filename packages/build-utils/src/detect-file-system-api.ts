@@ -1,9 +1,9 @@
 import semver from 'semver';
 import { isOfficialRuntime } from './';
-import {
+import type { DetectorFilesystem } from './detectors/filesystem';
+import type {
   Builder,
   BuilderFunctions,
-  Files,
   PackageJson,
   ProjectSettings,
 } from './types';
@@ -15,29 +15,32 @@ const enableFileSystemApiFrameworks = new Set(['solidstart']);
  * we'll return the new Builder here, otherwise return `null`.
  */
 export async function detectFileSystemAPI({
-  framework,
-  files,
+  vfs,
+  projectSettings,
   builders,
   functions,
   pkg,
-  projectSettings,
-  enableFlag,
+  tag = '',
+  enableFlag = false,
 }: {
-  framework: string;
-  files: Files;
+  vfs: DetectorFilesystem;
+  projectSettings: ProjectSettings;
   builders: Builder[];
   functions: BuilderFunctions | undefined;
   pkg: PackageJson | null | undefined;
-  projectSettings: ProjectSettings;
+  tag?: string;
   enableFlag?: boolean;
 }) {
-  const isEnabled = Boolean(
-    enableFlag ||
-      hasMiddleware(files) ||
-      hasDotOutput(files) ||
-      enableFileSystemApiFrameworks.has(framework)
-  );
+  const framework = projectSettings.framework || '';
+  const hasDotOutput = vfs.hasPath('.output');
+  const hasMiddleware =
+    vfs.isFile('_middleware.js') || vfs.isFile('_middleware.ts');
 
+  const isEnabled =
+    enableFlag ||
+    hasMiddleware ||
+    hasDotOutput ||
+    enableFileSystemApiFrameworks.has(framework);
   if (!isEnabled) {
     return null;
   }
@@ -77,7 +80,7 @@ export async function detectFileSystemAPI({
     return null;
   }
 
-  if (framework === 'nextjs' && !hasDotOutput(files)) {
+  if (framework === 'nextjs' && !hasDotOutput) {
     // Use the old pipeline if a custom output directory was specified for Next.js
     // because `vercel build` cannot ensure that the directory will be in the same
     // location as `.output`, which can break imports (not just nft.json files).
@@ -106,29 +109,18 @@ export async function detectFileSystemAPI({
       isOfficialRuntime('static-build', use)
   );
   const config = frontendBuilder?.config || {};
-
-  // Use either `package.json` or the first file it finds.
-  const src =
-    (files['package.json'] ? 'package.json' : Object.keys(files)[0]) || '**';
+  const withTag = tag ? `@${tag}` : '';
 
   return {
-    use: '@vercelruntimes/file-system-api@canary',
-    src,
+    use: `@vercelruntimes/file-system-api${withTag}`,
+    src: '**',
     config: {
       ...config,
       fileSystemAPI: true,
       framework: config.framework || framework || null,
       projectSettings: projectSettings,
-      hasMiddleware: hasMiddleware(files),
-      hasDotOutput: hasDotOutput(files),
+      hasMiddleware,
+      hasDotOutput,
     },
   };
-}
-
-export function hasMiddleware(files: Files) {
-  return Boolean(files['_middleware.js'] || files['_middleware.ts']);
-}
-
-export function hasDotOutput(files: Files) {
-  return Object.keys(files).some(file => file.startsWith('.output/'));
 }
