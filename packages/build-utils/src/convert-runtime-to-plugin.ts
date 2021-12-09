@@ -111,6 +111,9 @@ export function convertRuntimeToPlugin(
       // file system, so that they can be passed on as `FileFsRef` instead.
       const lambdaFileBlobs: Array<Promise<void>> = [];
 
+      // The path of the directory that contains the entrypoint file
+      const entryDir = dirname(entrypoint);
+
       for (const file in lambdaFiles) {
         // When deploying, the `files` that are passed to the Legacy Runtimes already
         // have certain files that are ignored stripped, but locally, that list of
@@ -126,7 +129,8 @@ export function convertRuntimeToPlugin(
         // for its Lambda, we'd like to convert them into `FileFsRef` for further use, since
         // the File System API doesn't support transferring files to it in memory.
         if (details.type === 'FileBlob') {
-          const fsPath = join(workPath, file);
+          const target = file.startsWith('__') ? file : `__${file}`;
+          const fsPath = join(entryRoot, entryDir, target);
           const { data, mode } = details as FileBlob;
 
           const writer = (async () => {
@@ -175,7 +179,7 @@ export function convertRuntimeToPlugin(
       const handlerExtName = extname(handlerFile.fsPath);
 
       const entryBase = basename(entrypoint).replace(ext, handlerExtName);
-      const entryPath = join(dirname(entrypoint), entryBase);
+      const entryPath = join(entryDir, entryBase);
       const entry = join(entryRoot, entryPath);
 
       // Create the parent directory of the API Route that will be created
