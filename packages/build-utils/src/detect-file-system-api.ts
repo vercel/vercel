@@ -17,7 +17,8 @@ const enableFileSystemApiFrameworks = new Set(['solidstart']);
 
 /**
  * If the Deployment can be built with the new File System API,
- * we'll return the new Builder here, otherwise return `null`.
+ * return the new Builder. Otherwise an "Exclusion Condition"
+ * was hit so return `null` builder with a `reason` for exclusion.
  */
 export async function detectFileSystemAPI({
   files,
@@ -168,8 +169,8 @@ export async function detectFileSystemAPI({
         reason: `Detected Next.js with Output Directory \`${projectSettings.outputDirectory}\` override. Please change it back to the default.`,
       };
     }
-    const versionRange = deps['next'];
-    if (!versionRange) {
+    const nextVersion = deps['next'];
+    if (!nextVersion) {
       return {
         metadata,
         fsApiBuilder: null,
@@ -177,15 +178,35 @@ export async function detectFileSystemAPI({
       };
     }
 
-    // TODO: We'll need to check the lockfile if one is present.
-    if (versionRange !== 'latest' && versionRange !== 'canary') {
-      const fixedVersion = semver.valid(semver.coerce(versionRange) || '');
+    // TODO: Read version from lockfile instead of package.json
+    if (nextVersion !== 'latest' && nextVersion !== 'canary') {
+      const fixedVersion = semver.valid(semver.coerce(nextVersion) || '');
 
       if (!fixedVersion || !semver.gte(fixedVersion, '12.0.0')) {
         return {
           metadata,
           fsApiBuilder: null,
-          reason: `Detected legacy Next.js version "${versionRange}" in package.json. Please run \`npm i next@latest\` to upgrade.`,
+          reason: `Detected legacy Next.js version "${nextVersion}" in package.json. Please run \`npm i next@latest\` to upgrade.`,
+        };
+      }
+    }
+  }
+
+  if (!hasDotOutput) {
+    // TODO: Read version from lockfile instead of package.json
+    const vercelCliVersion = deps['vercel'];
+    if (
+      vercelCliVersion &&
+      vercelCliVersion !== 'latest' &&
+      vercelCliVersion !== 'canary'
+    ) {
+      const fixedVersion = semver.valid(semver.coerce(vercelCliVersion) || '');
+      // TODO: we might want to use '24.0.0' once its released
+      if (!fixedVersion || !semver.gte(fixedVersion, '23.1.3-canary.68')) {
+        return {
+          metadata,
+          fsApiBuilder: null,
+          reason: `Detected legacy Vercel CLI version "${vercelCliVersion}" in package.json. Please run \`npm i vercel@latest\` to upgrade.`,
         };
       }
     }
