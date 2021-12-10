@@ -81,6 +81,7 @@ export {
   detectApiDirectory,
   detectApiExtensions,
 } from './detect-builders';
+export { detectFileSystemAPI } from './detect-file-system-api';
 export { detectFramework } from './detect-framework';
 export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';

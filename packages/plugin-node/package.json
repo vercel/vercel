@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "vercel-plugin-node",
-  "version": "1.12.2-canary.34",
+  "version": "1.12.2-canary.35",
   "main": "dist/index.js",
   "license": "MIT",
   "files": [
