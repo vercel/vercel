@@ -148,8 +148,7 @@ export function convertRuntimeToPlugin(
         // for its Lambda, we'd like to convert them into `FileFsRef` for further use, since
         // the File System API doesn't support transferring files to it in memory.
         if (details.type === 'FileBlob') {
-          const target = file.startsWith('__') ? file : `__${file}`;
-          const fsPath = join(entryRoot, entryDir, target);
+          const fsPath = join(traceDir, file);
           const { data, mode } = details as FileBlob;
 
           const writer = (async () => {
