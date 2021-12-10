@@ -6,6 +6,9 @@ import {
   scanParentDirs,
   spawnAsync,
   glob as buildUtilsGlob,
+  detectFileSystemAPI,
+  detectBuilders,
+  PackageJson,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import Sema from 'async-sema';
@@ -19,6 +22,7 @@ import pluralize from 'pluralize';
 import Client from '../util/client';
 import { VercelConfig } from '../util/dev/types';
 import { emoji, prependEmoji } from '../util/emoji';
+import { CantParseJSONFile } from '../util/errors-ts';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
 import confirm from '../util/input/confirm';
@@ -32,6 +36,7 @@ import { loadCliPlugins } from '../util/plugins';
 import { findFramework } from '../util/projects/find-framework';
 import { VERCEL_DIR } from '../util/projects/link';
 import { readProjectSettings } from '../util/projects/project-settings';
+import readJSONFile from '../util/read-json-file';
 import pull from './pull';
 
 const sema = new Sema(16, {
@@ -145,6 +150,36 @@ export default async function main(client: Client) {
   };
 
   process.chdir(cwd);
+
+  const pkg = await readJSONFile<PackageJson>('./package.json');
+  if (pkg instanceof CantParseJSONFile) {
+    throw pkg;
+  }
+  const vercelConfig = await readJSONFile<VercelConfig>('./vercel.json');
+  if (vercelConfig instanceof CantParseJSONFile) {
+    throw vercelConfig;
+  }
+
+  if (!process.env.NOW_BUILDER) {
+    // This validation is only necessary when
+    // a user runs `vercel build` locally.
+    const globFiles = await buildUtilsGlob('**', { cwd });
+    const zeroConfig = await detectBuilders(Object.keys(globFiles), pkg);
+    const { reason } = await detectFileSystemAPI({
+      files: globFiles,
+      projectSettings: project.settings,
+      builders: zeroConfig.builders || [],
+      pkg,
+      vercelConfig,
+      tag: '',
+      enableFlag: true,
+    });
+
+    if (reason) {
+      client.output.error(`${cmd(`${getPkgName()} build`)} failed: ${reason}`);
+      return 1;
+    }
+  }
 
   const framework = findFramework(project.settings.framework);
   // If this is undefined, we bail. If it is null, then findFramework should return "Other",

@@ -40,6 +40,7 @@ import {
   detectApiExtensions,
   spawnCommand,
   isOfficialRuntime,
+  detectFileSystemAPI,
 } from '@vercel/build-utils';
 import frameworkList from '@vercel/frameworks';
 
@@ -597,6 +598,32 @@ export default class DevServer {
         warnings.forEach(warning =>
           this.output.warn(warning.message, null, warning.link, warning.action)
         );
+      }
+
+      const { reason, metadata } = await detectFileSystemAPI({
+        files,
+        builders: builders || [],
+        projectSettings: projectSettings || this.projectSettings || {},
+        vercelConfig,
+        pkg,
+        tag: '',
+        enableFlag: true,
+      });
+
+      if (reason) {
+        if (metadata.hasMiddleware) {
+          this.output.error(
+            `Detected middleware usage which requires the latest API. ${reason}`
+          );
+          await this.exit();
+        } else if (metadata.plugins.length > 0) {
+          this.output.error(
+            `Detected CLI plugins which requires the latest API. ${reason}`
+          );
+          await this.exit();
+        } else {
+          this.output.warn(`Unable to use latest API. ${reason}`);
+        }
       }
 
       if (builders) {

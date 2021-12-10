@@ -39,12 +39,12 @@ export default async function getConfig(
     output.debug(
       `Found config in provided --local-config path ${localFilePath}`
     );
-    const localConfig = await readJSONFile(localFilePath);
+    const localConfig = await readJSONFile<VercelConfig>(localFilePath);
     if (localConfig instanceof CantParseJSONFile) {
       return localConfig;
     }
     if (localConfig !== null) {
-      config = localConfig as VercelConfig;
+      config = localConfig;
       config[fileNameSymbol] = configFile;
       return config;
     }
@@ -54,8 +54,8 @@ export default async function getConfig(
   const vercelFilePath = path.resolve(localPath, 'vercel.json');
   const nowFilePath = path.resolve(localPath, 'now.json');
   const [vercelConfig, nowConfig] = await Promise.all([
-    readJSONFile(vercelFilePath),
-    readJSONFile(nowFilePath),
+    readJSONFile<VercelConfig>(vercelFilePath),
+    readJSONFile<VercelConfig>(nowFilePath),
   ]);
   if (vercelConfig instanceof CantParseJSONFile) {
     return vercelConfig;
@@ -68,13 +68,13 @@ export default async function getConfig(
   }
   if (vercelConfig !== null) {
     output.debug(`Found config in file "${vercelFilePath}"`);
-    config = vercelConfig as VercelConfig;
+    config = vercelConfig;
     config[fileNameSymbol] = 'vercel.json';
     return config;
   }
   if (nowConfig !== null) {
     output.debug(`Found config in file "${nowFilePath}"`);
-    config = nowConfig as VercelConfig;
+    config = nowConfig;
     config[fileNameSymbol] = 'now.json';
     return config;
   }
