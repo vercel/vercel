@@ -371,6 +371,24 @@ describe('Test `detectFileSystemAPI`', () => {
     });
   });
 
+  it('should error when vercel cli is older version', async () => {
+    const result = await detectFileSystemAPI({
+      files: { 'pages/foo.js': 'console.log("foo")' },
+      projectSettings: { framework: 'nextjs' },
+      builders: [{ use: '@vercel/next', src: 'package.json' }],
+      vercelConfig: null,
+      pkg: { dependencies: { next: '^12.1.0', vercel: '^23.1.1' } },
+      tag: '',
+      enableFlag: true,
+    });
+    expect(result).toEqual({
+      fsApiBuilder: null,
+      reason:
+        'Detected legacy Vercel CLI version "^23.1.1" in package.json. Please run `npm i vercel@latest` to upgrade.',
+      metadata: { hasDotOutput: false, hasMiddleware: false, plugins: [] },
+    });
+  });
+
   it('should succeed when middleware detected', async () => {
     const result = await detectFileSystemAPI({
       files: { '_middleware.js': 'print("foo")' },
