@@ -86,7 +86,20 @@ export function convertRuntimeToPlugin(
     }
 
     const pages: { [key: string]: any } = {};
+    const pluginName = packageName.replace('vercel-plugin-', '');
     const outputPath = join(workPath, '.output');
+
+    const traceDir = join(
+      outputPath,
+      `inputs`,
+      // Legacy Runtimes can only provide API Routes, so that's
+      // why we can use this prefix for all of them. Here, we have to
+      // make sure to not use a cryptic hash name, because people
+      // need to be able to easily inspect the output.
+      `api-routes-${pluginName}`
+    );
+
+    await fs.ensureDir(traceDir);
 
     const entryRoot = join(outputPath, 'server', 'pages');
 
@@ -176,9 +189,6 @@ export function convertRuntimeToPlugin(
         handlerFile = lambdaFiles[handlerFileBase];
         handlerHasImport = true;
       }
-
-      // This might be removable later on
-      console.log(packageName);
 
       if (!handlerFile || !handlerFile.fsPath) {
         throw new Error(
