@@ -127,12 +127,6 @@ export function convertRuntimeToPlugin(
       // The path of the directory that contains the entrypoint file
       const entryDir = dirname(entrypoint);
 
-      // Legacy Runtimes will try to write all of their temporary files into `workPath`,
-      // but since, with the new File System API, that is the directory that contains the
-      // user's source code, we're ensuring that some files don't end up there and
-      // are instead moved into into `.output`, where they don't pollute the source file tree.
-      const relocatedFiles: { [key: string]: string } = {};
-
       for (const file in lambdaFiles) {
         // When deploying, the `files` that are passed to the Legacy Runtimes already
         // have certain files that are ignored stripped, but locally, that list of
@@ -157,10 +151,6 @@ export function convertRuntimeToPlugin(
           })();
 
           lambdaFiles[file] = new FileFsRef({ fsPath });
-
-          // Update the list of files that were relocated by this utility, so that
-          // we can adjust the launcher later on and it remains able to find them.
-          relocatedFiles[join(workPath, file)] = fsPath;
 
           lambdaFileBlobs.push(writer);
         }
@@ -273,10 +263,6 @@ export function convertRuntimeToPlugin(
       } else {
         await fs.copy(handlerFile.fsPath, entry);
       }
-
-      // Update the list of files that were relocated by this utility, so that
-      // we can adjust the launcher later on and it remains able to find them.
-      relocatedFiles[handlerFile.fsPath] = entry;
 
       // Legacy Runtimes based on interpreted languages will create a new launcher file
       // for every entrypoint, but they will create each one inside `workPath`, which means that
