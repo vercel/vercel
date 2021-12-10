@@ -12,6 +12,8 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout
+      uses: actions/checkout@v1
     - name: Check Release
       id: check-release
       run: |
@@ -32,9 +34,6 @@ jobs:
       uses: actions/setup-node@v2
       with:
         node-version: 14
-    - name: Checkout
-      if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      uses: actions/checkout@v1
     - name: Install
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       run: yarn install --check-files --frozen-lockfile --network-timeout 1000000
