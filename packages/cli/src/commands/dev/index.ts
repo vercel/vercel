@@ -113,26 +113,18 @@ export default async function main(client: Client) {
       return 1;
     }
 
-    if (pkg) {
-      const { scripts } = pkg;
-
-      if (
-        scripts &&
-        scripts.dev &&
-        /\b(now|vercel)\b\W+\bdev\b/.test(scripts.dev)
-      ) {
-        client.output.error(
-          `${cmd(
-            `${getPkgName()} dev`
-          )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
-            'dev'
-          )} script in ${cmd('package.json')}`
-        );
-        client.output.error(
-          `Learn More: https://vercel.link/recursive-invocation-of-commands`
-        );
-        return 1;
-      }
+    if (/\b(now|vercel)\b\W+\bdev\b/.test(pkg?.scripts?.dev || '')) {
+      client.output.error(
+        `${cmd(
+          `${getPkgName()} dev`
+        )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
+          'dev'
+        )} script in ${cmd('package.json')}`
+      );
+      client.output.error(
+        `Learn More: https://vercel.link/recursive-invocation-of-commands`
+      );
+      return 1;
     }
   }
 
