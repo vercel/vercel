@@ -580,6 +580,46 @@ export const frameworks = [
     ],
   },
   {
+    name: 'SolidStart',
+    slug: 'solidstart',
+    demo: 'https://solidstart.examples.vercel.com',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/solid.svg',
+    tagline: 'Simple and performant reactivity for building user interfaces.',
+    description: 'A Solid app, created with SolidStart.',
+    website: 'https://solidjs.com',
+    envPrefix: 'VITE_',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-js":\\s*".+?"[^}]*}',
+        },
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-start":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `solid-start build`',
+        value: 'solid-start build',
+      },
+      devCommand: {
+        value: 'solid-start dev',
+      },
+      outputDirectory: {
+        value: '.output',
+      },
+    },
+    getOutputDirName: async () => '.output',
+  },
+  {
     name: 'Dojo',
     slug: 'dojo',
     demo: 'https://dojo.examples.vercel.com',
