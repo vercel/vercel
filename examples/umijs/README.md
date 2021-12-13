@@ -1,4 +1,4 @@
-![UmiJS Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/umi.svg)
+![UmiJS Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/umi.svg)
 
 # UmiJS Example
 

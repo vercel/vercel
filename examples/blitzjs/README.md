@@ -1,4 +1,4 @@
-![Blitz Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/blitz.svg)
+![Blitz Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/blitz.svg)
 
 # Blitz.js Example
 
