@@ -1,4 +1,4 @@
-![Eleventy Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/eleventy.svg)
+![Eleventy Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/eleventy.svg)
 
 # Eleventy Example
 

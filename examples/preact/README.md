@@ -1,4 +1,4 @@
-![Preact Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/preact.svg)
+![Preact Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/preact.svg)
 
 # Preact Example
 

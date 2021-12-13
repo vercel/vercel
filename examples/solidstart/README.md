@@ -1,4 +1,4 @@
-![Solid Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/solid.svg)
+![Solid Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/solid.svg)
 
 # SolidStart
 

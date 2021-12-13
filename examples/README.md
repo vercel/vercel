@@ -14,9 +14,9 @@ Vercel is a cloud platform for static frontends and serverless functions. It ena
 
 This repository consists of multiple examples, created for use with the [Vercel](https://vercel.com) platform. In addition to this, it also contains:
 
-- [Code of Conduct](https://github.com/vercel/vercel/blob/master/.github/CODE_OF_CONDUCT.md) - our Code of Conduct, adapted from the [Contributor Covenant](http://contributor-covenant.org)
-- [Contributing Guidelines](https://github.com/vercel/vercel/blob/master/.github/CONTRIBUTING.md) - a guide on how to contribute to the examples repository
-- [License](https://github.com/vercel/vercel/blob/master/LICENSE) - the standard MIT license under which these examples are published
+- [Code of Conduct](https://github.com/vercel/vercel/blob/main/.github/CODE_OF_CONDUCT.md) - our Code of Conduct, adapted from the [Contributor Covenant](http://contributor-covenant.org)
+- [Contributing Guidelines](https://github.com/vercel/vercel/blob/main/.github/CONTRIBUTING.md) - a guide on how to contribute to the examples repository
+- [License](https://github.com/vercel/vercel/blob/main/LICENSE) - the standard MIT license under which these examples are published
 
 We recommend familiarizing yourself with the above sections, particularly if you are looking to make a contribution.
 
@@ -60,7 +60,7 @@ If you would like to upgrade a project to take advantage of zero configuration, 
 
 ## How to Contribute
 
-Contributing examples should be an enjoyable experience, as such we have created a set of [contributing guidelines](https://github.com/vercel/vercel/blob/master/.github/CONTRIBUTING.md) to help you do so.
+Contributing examples should be an enjoyable experience, as such we have created a set of [contributing guidelines](https://github.com/vercel/vercel/blob/main/.github/CONTRIBUTING.md) to help you do so.
 
 The guidelines cover important information such as the requirements for new examples and where to get help if you have any questions.
 
@@ -76,7 +76,7 @@ When submitting an issue, please thoroughly and concisely describe the problem y
 
 ## License
 
-This repository is an open source project. See the [License](https://github.com/vercel/vercel/blob/master/LICENSE).
+This repository is an open source project. See the [License](https://github.com/vercel/vercel/blob/main/LICENSE).
 
 ## Get In Touch
 
