@@ -11,7 +11,7 @@ export default async function inputProject(
   client: Client,
   org: Org,
   detectedProjectName: string,
-  autoConfirm: boolean
+  autoConfirm = false
 ): Promise<Project | string> {
   const { output } = client;
   const slugifiedName = slugify(detectedProjectName);

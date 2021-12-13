@@ -40,6 +40,7 @@ import {
   detectApiExtensions,
   spawnCommand,
   isOfficialRuntime,
+  detectFileSystemAPI,
 } from '@vercel/build-utils';
 import frameworkList from '@vercel/frameworks';
 
@@ -599,6 +600,32 @@ export default class DevServer {
         );
       }
 
+      const { reason, metadata } = await detectFileSystemAPI({
+        files,
+        builders: builders || [],
+        projectSettings: projectSettings || this.projectSettings || {},
+        vercelConfig,
+        pkg,
+        tag: '',
+        enableFlag: true,
+      });
+
+      if (reason) {
+        if (metadata.hasMiddleware) {
+          this.output.error(
+            `Detected middleware usage which requires the latest API. ${reason}`
+          );
+          await this.exit();
+        } else if (metadata.plugins.length > 0) {
+          this.output.error(
+            `Detected CLI plugins which requires the latest API. ${reason}`
+          );
+          await this.exit();
+        } else {
+          this.output.warn(`Unable to use latest API. ${reason}`);
+        }
+      }
+
       if (builders) {
         if (this.devCommand) {
           builders = builders.filter(filterFrontendBuilds);
@@ -968,7 +995,7 @@ export default class DevServer {
         socket.destroy();
         return;
       }
-      const target = `http://localhost:${this.devProcessPort}`;
+      const target = `http://127.0.0.1:${this.devProcessPort}`;
       this.output.debug(`Detected "upgrade" event, proxying to ${target}`);
       this.proxy.ws(req, socket, head, { target });
     });
@@ -1663,7 +1690,7 @@ export default class DevServer {
     if (!match) {
       // If the dev command is started, then proxy to it
       if (this.devProcessPort) {
-        const upstream = `http://localhost:${this.devProcessPort}`;
+        const upstream = `http://127.0.0.1:${this.devProcessPort}`;
         debug(`Proxying to frontend dev server: ${upstream}`);
 
         // Add the Vercel platform proxy request headers
@@ -1810,7 +1837,7 @@ export default class DevServer {
         return proxyPass(
           req,
           res,
-          `http://localhost:${port}`,
+          `http://127.0.0.1:${port}`,
           this,
           requestId,
           false
@@ -1847,7 +1874,7 @@ export default class DevServer {
       return proxyPass(
         req,
         res,
-        `http://localhost:${this.devProcessPort}`,
+        `http://127.0.0.1:${this.devProcessPort}`,
         this,
         requestId,
         false

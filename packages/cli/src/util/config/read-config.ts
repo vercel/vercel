@@ -6,14 +6,14 @@ import getLocalConfigPath from './local-path';
 
 export default async function readConfig(dir: string) {
   const pkgFilePath = getLocalConfigPath(join(process.cwd(), dir));
-  const result = await readJSONFile(pkgFilePath);
+  const result = await readJSONFile<VercelConfig>(pkgFilePath);
 
   if (result instanceof CantParseJSONFile) {
     return result;
   }
 
   if (result) {
-    return result as VercelConfig;
+    return result;
   }
 
   return null;

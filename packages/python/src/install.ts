@@ -135,6 +135,11 @@ export async function installRequirementsFile({
   meta,
   args = [],
 }: InstallRequirementsFileArg) {
+  // The Vercel platform already handles `requirements.txt` for frontend projects,
+  // but the installation logic there is different, because it seems to install all
+  // of the dependencies globally, whereas, for this Runtime, we want it to happen only
+  // locally, so we'll run a separate installation.
+
   if (
     meta.isDev &&
     (await areRequirementsInstalled(pythonPath, filePath, workPath))

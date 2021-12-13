@@ -114,10 +114,24 @@ export const build = async ({
     try {
       const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
       const obj = JSON.parse(json);
-      if (!meta.isDev && obj?._meta?.requires?.python_version === '3.6') {
-        pipPath = 'pip3.6';
-        pythonPath = 'python3.6';
-        pythonRuntime = 'python3.6';
+      const version = obj?._meta?.requires?.python_version;
+      if (!meta.isDev) {
+        if (version === '3.6') {
+          pipPath = 'pip3.6';
+          pythonPath = 'python3.6';
+          pythonRuntime = 'python3.6';
+          console.warn(
+            `Warning: Python version "${version}" detected in Pipfile.lock will reach End-Of-Life December 2021. Please upgrade. http://vercel.link/python-version`
+          );
+        } else if (version === '3.9') {
+          pipPath = 'pip3.9';
+          pythonPath = 'python3.9';
+          pythonRuntime = 'python3.9';
+        } else {
+          console.warn(
+            `Warning: Invalid Python version "${version}" detected in Pipfile.lock will be ignored. http://vercel.link/python-version`
+          );
+        }
       }
     } catch (err) {
       throw new NowBuildError({

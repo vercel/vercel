@@ -52,6 +52,7 @@ export default async function processDeployment({
   isSettingUpProject: boolean;
   skipAutoDetectionConfirmation?: boolean;
   cwd?: string;
+  rootDirectory?: string;
 }) {
   let {
     now,
@@ -64,6 +65,7 @@ export default async function processDeployment({
     nowConfig,
     quiet,
     prebuilt,
+    rootDirectory,
   } = args;
 
   const { debug } = output;
@@ -86,6 +88,7 @@ export default async function processDeployment({
     force,
     withCache,
     prebuilt,
+    rootDirectory,
     skipAutoDetectionConfirmation,
   };
 

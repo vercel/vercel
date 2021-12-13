@@ -30,13 +30,13 @@ export interface NowOptions {
 export interface CreateOptions {
   // Legacy
   nowConfig?: VercelConfig;
-  isFile?: boolean;
 
   // Latest
   name: string;
   project?: string;
   wantsPublic: boolean;
   prebuilt?: boolean;
+  rootDirectory?: string;
   meta: Dictionary<string>;
   regions?: string[];
   quiet?: boolean;
@@ -113,6 +113,7 @@ export default class Now extends EventEmitter {
       name,
       project,
       prebuilt = false,
+      rootDirectory,
       wantsPublic,
       meta,
       regions,
@@ -168,6 +169,7 @@ export default class Now extends EventEmitter {
       skipAutoDetectionConfirmation,
       cwd,
       prebuilt,
+      rootDirectory,
     });
 
     if (deployment && deployment.warnings) {

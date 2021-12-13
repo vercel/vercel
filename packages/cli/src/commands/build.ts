@@ -5,19 +5,24 @@ import {
   GlobOptions,
   scanParentDirs,
   spawnAsync,
+  glob as buildUtilsGlob,
+  detectFileSystemAPI,
+  detectBuilders,
+  PackageJson,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import Sema from 'async-sema';
 import chalk from 'chalk';
 import { SpawnOptions } from 'child_process';
 import { assert } from 'console';
-import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import ogGlob from 'glob';
-import { isAbsolute, join, parse, relative, resolve } from 'path';
+import { dirname, isAbsolute, join, parse, relative } from 'path';
 import pluralize from 'pluralize';
 import Client from '../util/client';
+import { VercelConfig } from '../util/dev/types';
 import { emoji, prependEmoji } from '../util/emoji';
+import { CantParseJSONFile } from '../util/errors-ts';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
 import confirm from '../util/input/confirm';
@@ -31,6 +36,7 @@ import { loadCliPlugins } from '../util/plugins';
 import { findFramework } from '../util/projects/find-framework';
 import { VERCEL_DIR } from '../util/projects/link';
 import { readProjectSettings } from '../util/projects/project-settings';
+import readJSONFile from '../util/read-json-file';
 import pull from './pull';
 
 const sema = new Sema(16, {
@@ -135,13 +141,45 @@ export default async function main(client: Client) {
   });
 
   // Set process.env with loaded environment variables
-  await processEnv(loadedEnvFiles);
+  processEnv(loadedEnvFiles);
 
-  const spawnOpts = {
+  const spawnOpts: {
+    env: Record<string, string | undefined>;
+  } = {
     env: { ...combinedEnv, VERCEL: '1' },
   };
 
   process.chdir(cwd);
+
+  const pkg = await readJSONFile<PackageJson>('./package.json');
+  if (pkg instanceof CantParseJSONFile) {
+    throw pkg;
+  }
+  const vercelConfig = await readJSONFile<VercelConfig>('./vercel.json');
+  if (vercelConfig instanceof CantParseJSONFile) {
+    throw vercelConfig;
+  }
+
+  if (!process.env.NOW_BUILDER) {
+    // This validation is only necessary when
+    // a user runs `vercel build` locally.
+    const globFiles = await buildUtilsGlob('**', { cwd });
+    const zeroConfig = await detectBuilders(Object.keys(globFiles), pkg);
+    const { reason } = await detectFileSystemAPI({
+      files: globFiles,
+      projectSettings: project.settings,
+      builders: zeroConfig.builders || [],
+      pkg,
+      vercelConfig,
+      tag: '',
+      enableFlag: true,
+    });
+
+    if (reason) {
+      client.output.error(`${cmd(`${getPkgName()} build`)} failed: ${reason}`);
+      return 1;
+    }
+  }
 
   const framework = findFramework(project.settings.framework);
   // If this is undefined, we bail. If it is null, then findFramework should return "Other",
@@ -283,6 +321,21 @@ export default async function main(client: Client) {
   // Clean the output directory
   fs.removeSync(join(cwd, OUTPUT_DIR));
 
+  if (framework && process.env.VERCEL_URL && 'envPrefix' in framework) {
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('VERCEL_')) {
+        const newKey = `${framework.envPrefix}${key}`;
+        // Set `process.env` and `spawnOpts.env` to make sure the variables are
+        // available to the `build` step and the CLI Plugins.
+        process.env[newKey] = process.env[newKey] || process.env[key];
+        spawnOpts.env[newKey] = process.env[newKey];
+      }
+    }
+  }
+
+  // Required for Next.js to produce the correct `.nft.json` files.
+  spawnOpts.env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT = baseDir;
+
   // Yarn v2 PnP mode may be activated, so force
   // "node-modules" linker style
   const env = {
@@ -316,18 +369,46 @@ export default async function main(client: Client) {
   }
 
   if (!fs.existsSync(join(cwd, OUTPUT_DIR))) {
-    let outputDir = join(OUTPUT_DIR, 'static');
-    let distDir = await framework.getFsOutputDir(cwd);
-    if (framework.slug === 'nextjs') {
-      outputDir = OUTPUT_DIR;
+    let dotNextDir: string | null = null;
+
+    // If a custom `outputDirectory` was set, we'll need to verify
+    // if it's `.next` output, or just static output.
+    const userOutputDirectory = project.settings.outputDirectory;
+
+    if (typeof userOutputDirectory === 'string') {
+      if (fs.existsSync(join(cwd, userOutputDirectory, 'BUILD_ID'))) {
+        dotNextDir = join(cwd, userOutputDirectory);
+        client.output.debug(
+          `Consider ${param(userOutputDirectory)} as ${param('.next')} output.`
+        );
+      }
+    } else if (fs.existsSync(join(cwd, '.next'))) {
+      dotNextDir = join(cwd, '.next');
+      client.output.debug(`Found ${param('.next')} directory.`);
     }
-    const copyStamp = stamp();
+
+    // We cannot rely on the `framework` alone, as it might be a static export,
+    // and the current build might use a different project that's not in the settings.
+    const isNextOutput = Boolean(dotNextDir);
+    const nextExport = await getNextExportStatus(dotNextDir);
+    const outputDir =
+      isNextOutput && !nextExport ? OUTPUT_DIR : join(OUTPUT_DIR, 'static');
+    const getDistDir = framework.getFsOutputDir || framework.getOutputDirName;
+    const distDir =
+      (nextExport?.exportDetail.outDirectory
+        ? relative(cwd, nextExport.exportDetail.outDirectory)
+        : false) ||
+      dotNextDir ||
+      userOutputDirectory ||
+      (await getDistDir(cwd));
+
     await fs.ensureDir(join(cwd, outputDir));
-    const relativeDistDir = relative(cwd, distDir);
+
+    const copyStamp = stamp();
     client.output.spinner(
       `Copying files from ${param(distDir)} to ${param(outputDir)}`
     );
-    const files = await glob(join(relativeDistDir, '**'), {
+    const files = await glob(join(relative(cwd, distDir), '**'), {
       ignore: [
         'node_modules/**',
         '.vercel/**',
@@ -375,6 +456,7 @@ export default async function main(client: Client) {
         `Generating build manifest: ${param(buildManifestPath)}`
       );
       const buildManifest = {
+        version: 1,
         cache: framework.cachePattern ? [framework.cachePattern] : [],
       };
       await fs.writeJSON(buildManifestPath, buildManifest, { spaces: 2 });
@@ -402,7 +484,53 @@ export default async function main(client: Client) {
     }
 
     // Special Next.js processing.
-    if (framework.slug === 'nextjs') {
+    if (nextExport) {
+      client.output.debug('Found `next export` output.');
+
+      const htmlFiles = await buildUtilsGlob(
+        '**/*.html',
+        join(cwd, OUTPUT_DIR, 'static')
+      );
+
+      if (nextExport.exportDetail.success !== true) {
+        client.output.error(
+          `Export of Next.js app failed. Please check your build logs.`
+        );
+        process.exit(1);
+      }
+
+      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'server', 'pages'));
+      await fs.mkdirp(join(cwd, OUTPUT_DIR, 'static'));
+
+      await Promise.all(
+        Object.keys(htmlFiles).map(async fileName => {
+          await sema.acquire();
+
+          const input = join(cwd, OUTPUT_DIR, 'static', fileName);
+          const target = join(cwd, OUTPUT_DIR, 'server', 'pages', fileName);
+
+          await fs.mkdirp(dirname(target));
+
+          await fs.promises.rename(input, target).finally(() => {
+            sema.release();
+          });
+        })
+      );
+
+      for (const file of [
+        'BUILD_ID',
+        'images-manifest.json',
+        'routes-manifest.json',
+        'build-manifest.json',
+      ]) {
+        const input = join(nextExport.dotNextDir, file);
+
+        if (fs.existsSync(input)) {
+          // Do not use `smartCopy`, since we want to overwrite if they already exist.
+          await fs.copyFile(input, join(OUTPUT_DIR, file));
+        }
+      }
+    } else if (isNextOutput) {
       // The contents of `.output/static` should be placed inside of `.output/static/_next/static`
       const tempStatic = '___static';
       await fs.rename(
@@ -453,10 +581,12 @@ export default async function main(client: Client) {
       // `public`, then`static`). We can't read both at the same time because that would mean we'd
       // read public for old Next.js versions that don't support it, which might be breaking (and
       // we don't want to make vercel build specific framework versions).
+      const nextSrcDirectory = dirname(distDir);
+
       const publicFiles = await glob('public/**', {
         nodir: true,
         dot: true,
-        cwd,
+        cwd: nextSrcDirectory,
         absolute: true,
       });
       if (publicFiles.length > 0) {
@@ -465,7 +595,11 @@ export default async function main(client: Client) {
             smartCopy(
               client,
               f,
-              f.replace('public', join(OUTPUT_DIR, 'static'))
+              join(
+                OUTPUT_DIR,
+                'static',
+                relative(join(dirname(distDir), 'public'), f)
+              )
             )
           )
         );
@@ -473,7 +607,7 @@ export default async function main(client: Client) {
         const staticFiles = await glob('static/**', {
           nodir: true,
           dot: true,
-          cwd,
+          cwd: nextSrcDirectory,
           absolute: true,
         });
         await Promise.all(
@@ -481,7 +615,12 @@ export default async function main(client: Client) {
             smartCopy(
               client,
               f,
-              f.replace('static', join(OUTPUT_DIR, 'static', 'static'))
+              join(
+                OUTPUT_DIR,
+                'static',
+                'static',
+                relative(join(dirname(distDir), 'static'), f)
+              )
             )
           )
         );
@@ -500,6 +639,7 @@ export default async function main(client: Client) {
       const nftFiles = await glob(join(OUTPUT_DIR, '**', '*.nft.json'), {
         nodir: true,
         dot: true,
+        ignore: ['cache/**'],
         cwd,
         absolute: true,
       });
@@ -531,28 +671,15 @@ export default async function main(client: Client) {
             ],
           });
           fileList.delete(relative(cwd, f));
-          await resolveNftToOutput({
-            client,
-            baseDir,
-            outputDir: OUTPUT_DIR,
-            nftFileName: f.replace(ext, '.js.nft.json'),
-            nft: {
-              version: 1,
-              files: Array.from(fileList).map(fileListEntry =>
-                relative(dir, fileListEntry)
-              ),
-            },
-          });
-        }
-      } else {
-        for (let f of nftFiles) {
-          const json = await fs.readJson(f);
-          await resolveNftToOutput({
-            client,
-            baseDir,
-            outputDir: OUTPUT_DIR,
-            nftFileName: f,
-            nft: json,
+
+          const nftFileName = f.replace(ext, '.js.nft.json');
+          client.output.debug(`Creating ${nftFileName}`);
+
+          await fs.writeJSON(nftFileName, {
+            version: 2,
+            files: Array.from(fileList).map(fileListEntry =>
+              relative(dir, fileListEntry)
+            ),
           });
         }
       }
@@ -561,22 +688,25 @@ export default async function main(client: Client) {
         OUTPUT_DIR,
         'required-server-files.json'
       );
-      const requiredServerFilesJson = await fs.readJSON(
-        requiredServerFilesPath
-      );
-      await fs.writeJSON(requiredServerFilesPath, {
-        ...requiredServerFilesJson,
-        appDir: '.',
-        files: requiredServerFilesJson.files.map((i: string) => {
-          const absolutePath = join(cwd, i.replace('.next', '.output'));
-          const output = relative(baseDir, absolutePath);
 
-          return {
-            input: i.replace('.next', '.output'),
-            output,
-          };
-        }),
-      });
+      if (fs.existsSync(requiredServerFilesPath)) {
+        client.output.debug(`Resolve ${param('required-server-files.json')}.`);
+
+        const requiredServerFilesJson = await fs.readJSON(
+          requiredServerFilesPath
+        );
+
+        await fs.writeJSON(requiredServerFilesPath, {
+          ...requiredServerFilesJson,
+          appDir: '.',
+          files: requiredServerFilesJson.files.map((i: string) => {
+            const originalPath = join(requiredServerFilesJson.appDir, i);
+            const relPath = join(OUTPUT_DIR, relative(distDir, originalPath));
+
+            return relPath;
+          }),
+        });
+      }
     }
   }
 
@@ -588,6 +718,14 @@ export default async function main(client: Client) {
         plugins.pluginCount
       )} after Build Command:`
     );
+    let vercelConfig: VercelConfig = {};
+    try {
+      vercelConfig = await fs.readJSON(join(cwd, 'vercel.json'));
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        throw new Error(`Failed to read vercel.json: ${error.message}`);
+      }
+    }
     for (let item of plugins.buildPlugins) {
       const { name, plugin, color } = item;
       if (typeof plugin.build === 'function') {
@@ -600,6 +738,7 @@ export default async function main(client: Client) {
           console.error = (...args: any[]) =>
             prefixedLog(prefix, args, origErr);
           await plugin.build({
+            vercelConfig,
             workPath: cwd,
           });
           client.output.debug(
@@ -687,7 +826,7 @@ async function linkOrCopy(existingPath: string, newPath: string) {
         overwrite: true,
       });
     } else {
-      await fs.createSymlink(existingPath, newPath, 'file');
+      await fs.createLink(existingPath, newPath);
     }
   } catch (err: any) {
     // eslint-disable-line
@@ -722,70 +861,51 @@ async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
 }
 
 /**
- * Computes a hash for the given buf.
- *
- * @param {Buffer} file data
- * @return {String} hex digest
+ * Files will only exist when `next export` was used.
  */
-function hash(buf: Buffer): string {
-  return createHash('sha1').update(buf).digest('hex');
-}
-
-interface NftFile {
-  version: number;
-  files: (string | { input: string; output: string })[];
-}
-
-// resolveNftToOutput takes nft file and moves all of its trace files
-// into the specified directory + `inputs`, (renaming them to their hash + ext) and
-// subsequently updating the original nft file accordingly. This is done
-// to make the `.output` directory be self-contained, so that it works
-// properly with `vc --prebuilt`.
-async function resolveNftToOutput({
-  client,
-  baseDir,
-  outputDir,
-  nftFileName,
-  nft,
-}: {
-  client: Client;
-  baseDir: string;
-  outputDir: string;
-  nftFileName: string;
-  nft: NftFile;
-}) {
-  client.output.debug(`Processing and resolving ${nftFileName}`);
-  await fs.ensureDir(join(outputDir, 'inputs'));
-  const newFilesList: NftFile['files'] = [];
-  for (let fileEntity of nft.files) {
-    const relativeInput: string =
-      typeof fileEntity === 'string' ? fileEntity : fileEntity.input;
-    const fullInput = resolve(join(parse(nftFileName).dir, relativeInput));
-
-    // if the resolved path is NOT in the .output directory we move in it there
-    if (!fullInput.includes(outputDir)) {
-      const { ext } = parse(fullInput);
-      const raw = await fs.readFile(fullInput);
-      const newFilePath = join(outputDir, 'inputs', hash(raw) + ext);
-      smartCopy(client, fullInput, newFilePath);
-
-      // We have to use `baseDir` instead of `cwd`, because we want to
-      // mount everything from there (especially `node_modules`).
-      // This is important for NPM Workspaces where `node_modules` is not
-      // in the directory of the workspace.
-      const output = relative(baseDir, fullInput).replace('.output', '.next');
-
-      newFilesList.push({
-        input: relative(parse(nftFileName).dir, newFilePath),
-        output,
-      });
-    } else {
-      newFilesList.push(relativeInput);
-    }
+async function getNextExportStatus(dotNextDir: string | null) {
+  if (!dotNextDir) {
+    return null;
   }
-  // Update the .nft.json with new input and output mapping
-  await fs.writeJSON(nftFileName, {
-    ...nft,
-    files: newFilesList,
-  });
+
+  const exportDetail: {
+    success: boolean;
+    outDirectory: string;
+  } | null = await fs
+    .readJson(join(dotNextDir, 'export-detail.json'))
+    .catch(error => {
+      if (error.code === 'ENOENT') {
+        return null;
+      }
+
+      throw error;
+    });
+
+  if (!exportDetail) {
+    return null;
+  }
+
+  const exportMarker: {
+    version: 1;
+    exportTrailingSlash: boolean;
+    hasExportPathMap: boolean;
+  } | null = await fs
+    .readJSON(join(dotNextDir, 'export-marker.json'))
+    .catch(error => {
+      if (error.code === 'ENOENT') {
+        return null;
+      }
+
+      throw error;
+    });
+
+  return {
+    dotNextDir,
+    exportDetail,
+    exportMarker: {
+      trailingSlash: exportMarker?.hasExportPathMap
+        ? exportMarker.exportTrailingSlash
+        : false,
+    },
+  };
 }

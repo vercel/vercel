@@ -332,7 +332,7 @@ This is an abstract enumeration type that is implemented by one of the following
 - `nodejs10.x`
 - `go1.x`
 - `java11`
-- `python3.8`
+- `python3.9`
 - `python3.6`
 - `dotnetcore2.1`
 - `ruby2.5`
@@ -398,12 +398,12 @@ This utility allows you to _scan_ the filesystem and return a [`Files`](#files) 
 The following trivial example downloads everything to the filesystem, only to return it back (therefore just re-creating the passed-in [`Files`](#files)):
 
 ```js
-const { glob, download } = require('@vercel/build-utils')
+const { glob, download } = require('@vercel/build-utils');
 
 exports.build = ({ files, workPath }) => {
-  await download(files, workPath)
-  return glob('**', workPath)
-}
+  await download(files, workPath);
+  return glob('**', workPath);
+};
 ```
 
 ### `getWritableDirectory()`
