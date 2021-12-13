@@ -14,6 +14,7 @@ import dev from './dev';
 import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
 import { getPkgName, getCommandName } from '../../util/pkg-name';
+import { CantParseJSONFile } from '../../util/errors-ts';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -107,8 +108,13 @@ export default async function main(client: Client) {
   if (!vercelConfig || !hasBuilds) {
     const pkg = await readJSONFile<PackageJson>(path.join(dir, 'package.json'));
 
+    if (pkg instanceof CantParseJSONFile) {
+      client.output.error('Could not parse package.json');
+      return 1;
+    }
+
     if (pkg) {
-      const { scripts } = pkg as PackageJson;
+      const { scripts } = pkg;
 
       if (
         scripts &&
