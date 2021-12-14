@@ -1105,6 +1105,7 @@ export const frameworks = [
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit app optimized to work for serverless.',
     website: 'https://kit.svelte.dev',
+    envPrefix: 'VITE_',
     detectors: {
       every: [
         {
