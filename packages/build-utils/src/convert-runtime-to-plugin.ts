@@ -53,7 +53,7 @@ const getSourceFiles = async (workPath: string, ignoreFilter: any) => {
  * @param packageName - the name of the package, for example `vercel-plugin-python`
  * @param ext - the file extension, for example `.py`
  */
-export function convertRuntimeToPlugin(
+export function _experimental_convertRuntimeToPlugin(
   buildRuntime: (options: BuildOptions) => Promise<{ output: Lambda }>,
   packageName: string,
   ext: string
@@ -287,7 +287,7 @@ export function convertRuntimeToPlugin(
 
     // Add any Serverless Functions that were exposed by the Legacy Runtime
     // to the `functions-manifest.json` file provided in `.output`.
-    await updateFunctionsManifest({ workPath, pages });
+    await _experimental_updateFunctionsManifest({ workPath, pages });
   };
 }
 
@@ -307,7 +307,7 @@ async function readJson(filePath: string): Promise<{ [key: string]: any }> {
  * If `.output/functions-manifest.json` exists, append to the pages
  * property. Otherwise write a new file.
  */
-export async function updateFunctionsManifest({
+export async function _experimental_updateFunctionsManifest({
   workPath,
   pages,
 }: {
@@ -335,7 +335,7 @@ export async function updateFunctionsManifest({
  * Append routes to the `routes-manifest.json` file.
  * If the file does not exist, it will be created.
  */
-export async function updateRoutesManifest({
+export async function _experimental_updateRoutesManifest({
   workPath,
   redirects,
   rewrites,
