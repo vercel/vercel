@@ -8,7 +8,6 @@ import {
 } from './errors-ts';
 import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
-import readPackage from './read-package';
 import { VercelConfig } from './dev/types';
 import { Output } from './output';
 
@@ -79,30 +78,6 @@ export default async function getConfig(
     return config;
   }
 
-  // Finally try with the package
-  const pkgFilePath = path.resolve(localPath, 'package.json');
-  const pkgConfig = await readConfigFromPackage(pkgFilePath);
-  if (pkgConfig instanceof CantParseJSONFile) {
-    return pkgConfig;
-  }
-  if (pkgConfig) {
-    output.debug(`Found config in package ${pkgFilePath}`);
-    config = pkgConfig as VercelConfig;
-    config[fileNameSymbol] = 'package.json';
-    return config;
-  }
-
   // If we couldn't find the config anywhere return error
-  return new CantFindConfig(
-    [vercelFilePath, nowFilePath, pkgFilePath].map(humanizePath)
-  );
-}
-
-async function readConfigFromPackage(file: string) {
-  const result = await readPackage(file);
-  if (result instanceof CantParseJSONFile) {
-    return result;
-  }
-
-  return result !== null ? result.now : null;
+  return new CantFindConfig([vercelFilePath, nowFilePath].map(humanizePath));
 }

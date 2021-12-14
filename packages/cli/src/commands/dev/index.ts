@@ -11,9 +11,10 @@ import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
 import dev from './dev';
-import readPackage from '../../util/read-package';
 import readConfig from '../../util/config/read-config';
+import readJSONFile from '../../util/read-json-file';
 import { getPkgName, getCommandName } from '../../util/pkg-name';
+import { CantParseJSONFile } from '../../util/errors-ts';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -96,33 +97,34 @@ export default async function main(client: Client) {
 
   const [dir = '.'] = args;
 
-  const nowJson = await readConfig(dir);
-  // @ts-ignore: Because `nowJson` could be one of three different types
-  const hasBuilds = nowJson && nowJson.builds && nowJson.builds.length > 0;
+  const vercelConfig = await readConfig(dir);
 
-  if (!nowJson || !hasBuilds) {
-    const pkg = await readPackage(path.join(dir, 'package.json'));
+  const hasBuilds =
+    vercelConfig &&
+    'builds' in vercelConfig &&
+    vercelConfig.builds &&
+    vercelConfig.builds.length > 0;
 
-    if (pkg) {
-      const { scripts } = pkg as PackageJson;
+  if (!vercelConfig || !hasBuilds) {
+    const pkg = await readJSONFile<PackageJson>(path.join(dir, 'package.json'));
 
-      if (
-        scripts &&
-        scripts.dev &&
-        /\b(now|vercel)\b\W+\bdev\b/.test(scripts.dev)
-      ) {
-        client.output.error(
-          `${cmd(
-            `${getPkgName()} dev`
-          )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
-            'dev'
-          )} script in ${cmd('package.json')}`
-        );
-        client.output.error(
-          `Learn More: https://vercel.link/recursive-invocation-of-commands`
-        );
-        return 1;
-      }
+    if (pkg instanceof CantParseJSONFile) {
+      client.output.error('Could not parse package.json');
+      return 1;
+    }
+
+    if (/\b(now|vercel)\b\W+\bdev\b/.test(pkg?.scripts?.dev || '')) {
+      client.output.error(
+        `${cmd(
+          `${getPkgName()} dev`
+        )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
+          'dev'
+        )} script in ${cmd('package.json')}`
+      );
+      client.output.error(
+        `Learn More: https://vercel.link/recursive-invocation-of-commands`
+      );
+      return 1;
     }
   }
 
