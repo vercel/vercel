@@ -3,6 +3,7 @@ import assert from 'assert';
 import vanillaGlob_ from 'glob';
 import { promisify } from 'util';
 import { lstat, Stats } from 'fs-extra';
+import { normalizePath } from './normalize-path';
 import FileFsRef from '../file-fs-ref';
 
 export type GlobOptions = vanillaGlob_.IOptions;
@@ -45,7 +46,7 @@ export default async function glob(
   const files = await vanillaGlob(pattern, options);
 
   for (const relativePath of files) {
-    const fsPath = path.join(options.cwd!, relativePath).replace(/\\/g, '/');
+    const fsPath = normalizePath(path.join(options.cwd!, relativePath));
     let stat: Stats = options.statCache![fsPath] as Stats;
     assert(
       stat,

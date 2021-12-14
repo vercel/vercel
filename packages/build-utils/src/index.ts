@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
@@ -33,6 +34,7 @@ import { NowBuildError } from './errors';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import debug from './debug';
+import getIgnoreFilter from './get-ignore-filter';
 
 export {
   FileBlob,
@@ -70,6 +72,7 @@ export {
   isSymbolicLink,
   getLambdaOptionsFromFunction,
   scanParentDirs,
+  getIgnoreFilter,
 };
 
 export {
@@ -78,9 +81,16 @@ export {
   detectApiDirectory,
   detectApiExtensions,
 } from './detect-builders';
+export { detectFileSystemAPI } from './detect-file-system-api';
 export { detectFramework } from './detect-framework';
 export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';
+export { normalizePath } from './fs/normalize-path';
+export {
+  convertRuntimeToPlugin,
+  updateFunctionsManifest,
+  updateRoutesManifest,
+} from './convert-runtime-to-plugin';
 
 export * from './schemas';
 export * from './types';
@@ -125,4 +135,12 @@ export const getPlatformEnv = (name: string): string | undefined => {
     return v;
   }
   return n;
+};
+
+/**
+ * Helper function for generating file or directories names in `.output/inputs`
+ * for dependencies of files provided to the File System API.
+ */
+export const getInputHash = (source: Buffer | string): string => {
+  return createHash('sha1').update(source).digest('hex');
 };

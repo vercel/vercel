@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import fs from 'fs-extra';
 import { Sema } from 'async-sema';
+import { join, dirname } from 'path';
 
 export interface DeploymentFile {
   names: string[];
@@ -15,9 +16,7 @@ export interface DeploymentFile {
  * @return {String} hex digest
  */
 function hash(buf: Buffer): string {
-  return createHash('sha1')
-    .update(buf)
-    .digest('hex');
+  return createHash('sha1').update(buf).digest('hex');
 }
 
 /**
@@ -39,34 +38,68 @@ export const mapToObject = (
 /**
  * Computes hashes for the contents of each file given.
  *
- * @param {Array} of {String} full paths
- * @return {Map}
+ * @param files - absolute file paths
+ * @param map - optional map of files to append
+ * @return Map of hash digest to file object
  */
-async function hashes(files: string[]): Promise<Map<string, DeploymentFile>> {
-  const map = new Map<string, DeploymentFile>();
+export async function hashes(
+  files: string[],
+  map = new Map<string, DeploymentFile>()
+): Promise<Map<string, DeploymentFile>> {
   const semaphore = new Sema(100);
 
   await Promise.all(
-    files.map(
-      async (name: string): Promise<void> => {
-        await semaphore.acquire();
-        const data = await fs.readFile(name);
-        const { mode } = await fs.stat(name);
+    files.map(async (name: string): Promise<void> => {
+      await semaphore.acquire();
+      const data = await fs.readFile(name);
+      const { mode } = await fs.stat(name);
 
-        const h = hash(data);
-        const entry = map.get(h);
+      const h = hash(data);
+      const entry = map.get(h);
 
-        if (entry) {
-          entry.names.push(name);
-        } else {
-          map.set(h, { names: [name], data, mode });
-        }
-
-        semaphore.release();
+      if (entry) {
+        const names = new Set(entry.names);
+        names.add(name);
+        entry.names = [...names];
+      } else {
+        map.set(h, { names: [name], data, mode });
       }
-    )
+
+      semaphore.release();
+    })
   );
   return map;
 }
 
-export default hashes;
+export async function resolveNftJsonFiles(
+  hashedFiles: Map<string, DeploymentFile>
+): Promise<string[]> {
+  const semaphore = new Sema(100);
+  const existingFiles = Array.from(hashedFiles.values());
+  const resolvedFiles = new Set<string>();
+
+  await Promise.all(
+    existingFiles.map(async file => {
+      await semaphore.acquire();
+      const fsPath = file.names[0];
+      if (fsPath.endsWith('.nft.json')) {
+        const json = file.data.toString('utf8');
+        const { version, files } = JSON.parse(json) as {
+          version: number;
+          files: string[] | { input: string; output: string }[];
+        };
+        if (version === 1 || version === 2) {
+          for (let f of files) {
+            const relPath = typeof f === 'string' ? f : f.input;
+            resolvedFiles.add(join(dirname(fsPath), relPath));
+          }
+        } else {
+          console.error(`Invalid nft.json version: ${version}`);
+        }
+      }
+      semaphore.release();
+    })
+  );
+
+  return Array.from(resolvedFiles);
+}

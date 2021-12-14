@@ -95,6 +95,9 @@ export const routesSchema = {
               maxLength: 32,
             },
           },
+          caseSensitive: {
+            type: 'boolean',
+          },
           important: {
             type: 'boolean',
           },

@@ -2,7 +2,7 @@ import ms from 'https://denopkg.com/TooTallNate/ms';
 import { readerFromStreamReader } from 'https://deno.land/std@0.107.0/io/streams.ts';
 
 export const config = {
-  runtime: 'deno',
+  use: 'deno',
   location: 'https://example.com/page',
 };
 

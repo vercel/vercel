@@ -1,5 +1,6 @@
-const { parse } = require('url');
+const { parse, pathToFileURL } = require('url');
 const { createServer, Server } = require('http');
+const { isAbsolute } = require('path');
 const { Bridge } = require('./bridge.js');
 
 /**
@@ -15,8 +16,9 @@ function makeVercelLauncher(config) {
     shouldAddSourcemapSupport = false,
   } = config;
   return `
-const { parse } = require('url');
+const { parse, pathToFileURL } = require('url');
 const { createServer, Server } = require('http');
+const { isAbsolute } = require('path');
 const { Bridge } = require(${JSON.stringify(bridgePath)});
 ${
   shouldAddSourcemapSupport
@@ -60,13 +62,15 @@ function getVercelLauncher({
       process.env.NODE_ENV = region === 'dev1' ? 'development' : 'production';
     }
 
-    async function getListener() {
+    /**
+     * @param {string} p - entrypointPath
+     */
+    async function getListener(p) {
       let listener = useRequire
-        ? require(entrypointPath)
-        : await import(entrypointPath);
+        ? require(p)
+        : await import(isAbsolute(p) ? pathToFileURL(p).href : p);
 
-      // In some cases we might have nested default props
-      // due to TS => JS
+      // In some cases we might have nested default props due to TS => JS
       for (let i = 0; i < 5; i++) {
         if (listener.default) listener = listener.default;
       }
@@ -74,7 +78,7 @@ function getVercelLauncher({
       return listener;
     }
 
-    getListener()
+    getListener(entrypointPath)
       .then(listener => {
         if (typeof listener.listen === 'function') {
           Server.prototype.listen = originalListen;

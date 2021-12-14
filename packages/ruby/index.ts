@@ -1,4 +1,4 @@
-import { join, dirname } from 'path';
+import { join, dirname, relative } from 'path';
 import execa from 'execa';
 import {
   ensureDir,
@@ -85,10 +85,12 @@ export async function build({
 }: BuildOptions) {
   await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
+  const gemfileName = 'Gemfile';
+
   const gemfilePath = await walkParentDirs({
     base: workPath,
     start: entrypointFsDirname,
-    filename: 'Gemfile',
+    filename: gemfileName,
   });
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
@@ -130,15 +132,24 @@ export async function build({
         'did not find a vendor directory but found a Gemfile, bundling gems...'
       );
 
-      // try installing. this won't work if native extesions are required.
-      // if that's the case, gems should be vendored locally before deploying.
-      try {
-        await bundleInstall(bundlerPath, bundleDir, gemfilePath);
-      } catch (err) {
-        debug(
-          'unable to build gems from Gemfile. vendor the gems locally with "bundle install --deployment" and retry.'
-        );
-        throw err;
+      const fileAtRoot = relative(workPath, gemfilePath) === gemfileName;
+
+      // If the `Gemfile` is located in the Root Directory of the project and
+      // the new File System API is used (`avoidTopLevelInstall`), the Install Command
+      // will have already installed its dependencies, so we don't need to do it again.
+      if (meta.avoidTopLevelInstall && fileAtRoot) {
+        debug('Skipping `bundle install` — already handled by Install Command');
+      } else {
+        // try installing. this won't work if native extesions are required.
+        // if that's the case, gems should be vendored locally before deploying.
+        try {
+          await bundleInstall(bundlerPath, bundleDir, gemfilePath);
+        } catch (err) {
+          debug(
+            'unable to build gems from Gemfile. vendor the gems locally with "bundle install --deployment" and retry.'
+          );
+          throw err;
+        }
       }
     }
   } else {

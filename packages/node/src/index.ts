@@ -339,6 +339,9 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   return '';
 }
 
+// Ensures that everything from `types.ts` is exported in the final `index.d.ts` file.
+export * from './types';
+
 export const version = 3;
 
 export async function build({

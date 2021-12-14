@@ -125,10 +125,14 @@ export class Output {
       this.debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       return;
     }
-    if (this._spinner) {
-      this._spinner.text = message;
+    if (this.isTTY) {
+      if (this._spinner) {
+        this._spinner.text = message;
+      } else {
+        this._spinner = wait(message, delay);
+      }
     } else {
-      this._spinner = wait(message, delay);
+      this.print(`${message}\n`);
     }
   };
 

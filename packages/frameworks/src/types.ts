@@ -26,7 +26,7 @@ export interface SettingValue {
    * A predefined setting for the detected framework
    * @example "next dev --port $PORT"
    */
-  value: string;
+  value: string | null;
   placeholder?: string;
 }
 
@@ -129,11 +129,11 @@ export interface Framework {
     /**
      * Default Build Command or a placeholder
      */
-    buildCommand: Setting;
+    buildCommand: SettingValue;
     /**
      * Default Development Command or a placeholder
      */
-    devCommand: Setting;
+    devCommand: SettingValue;
     /**
      * Default Output Directory
      */
@@ -157,13 +157,14 @@ export interface Framework {
   /**
    * Name of a dependency in `package.json` to detect this framework.
    * @example "hexo"
+   * @deprecated use `detectors` instead (new frameworks should not use this prop)
    */
   dependency?: string;
   /**
    * Function that returns the name of the directory that the framework outputs
-   * its build results to. In some cases this is read from a configuration file.
+   * its File System API build results to, usually called `.output`.
    */
-  getFsOutputDir: (dirPrefix: string) => Promise<string>;
+  getFsOutputDir?: (dirPrefix: string) => Promise<string>;
   /**
    * Function that returns the name of the directory that the framework outputs
    * its STATIC build results to. In some cases this is read from a configuration file.
@@ -201,16 +202,6 @@ export interface Framework {
    * @example ".cache/**"
    */
   cachePattern?: string;
-  /**
-   * The default build command for the framework.
-   * @example "next build"
-   */
-  buildCommand: string | null;
-  /**
-   * The default development command for the framework.
-   * @example "next dev"
-   */
-  devCommand: string | null;
   /**
    * The default version of the framework command that is available within the
    * build image. Usually an environment variable can be set to override this.

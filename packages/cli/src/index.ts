@@ -160,24 +160,26 @@ const main = async () => {
   //  * a path to deploy (as in: `vercel path/`)
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
+  const isBuildOrDev =
+    targetOrSubcommand === 'build' || targetOrSubcommand === 'dev';
 
-  output.print(
-    `${chalk.grey(
-      `${getTitleName()} CLI ${pkg.version}${
-        targetOrSubcommand === 'dev'
-          ? ' dev (beta)'
-          : targetOrSubcommand === 'build'
-          ? ' build (beta)'
-          : ''
-      }${
-        isCanary ||
-        targetOrSubcommand === 'dev' ||
-        targetOrSubcommand === 'build'
-          ? ' — https://vercel.com/feedback'
-          : ''
-      }`
-    )}\n`
-  );
+  if (isBuildOrDev) {
+    console.log(
+      `${chalk.grey(
+        `${getTitleName()} CLI ${
+          pkg.version
+        } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
+      )}`
+    );
+  } else {
+    output.print(
+      `${chalk.grey(
+        `${getTitleName()} CLI ${pkg.version}${
+          isCanary ? ' — https://vercel.com/feedback' : ''
+        }`
+      )}\n`
+    );
+  }
 
   // Handle `--version` directly
   if (!targetOrSubcommand && argv['--version']) {

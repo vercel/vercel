@@ -28,6 +28,7 @@ export type Source = {
   methods?: string[];
   continue?: boolean;
   override?: boolean;
+  caseSensitive?: boolean;
   check?: boolean;
   important?: boolean;
   status?: number;
