@@ -25,33 +25,33 @@
           "dist/**"
         ]
       },
-      "go#build": {
+      "@vercel/go#build": {
         "dependsOn": [
-          "@vercel/build-utils#builds"
+          "@vercel/build-utils#build"
         ],
         "outputs": [
           "dist/**"
         ]
       },
-      "node#build": {
+      "@vercel/node#build": {
         "dependsOn": [
-          "@vercel/build-utils#builds"
+          "@vercel/build-utils#build"
         ],
         "outputs": [
           "dist/**"
         ]
       },
-      "python#build": {
+      "@vercel/python#build": {
         "dependsOn": [
-          "@vercel/build-utils#builds"
+          "@vercel/build-utils#build"
         ],
         "outputs": [
           "dist/**"
         ]
       },
-      "ruby#build": {
+      "@vercel/ruby#build": {
         "dependsOn": [
-          "@vercel/build-utils#builds"
+          "@vercel/build-utils#build"
         ],
         "outputs": [
           "dist/**"
