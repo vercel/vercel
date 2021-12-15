@@ -25,38 +25,6 @@
           "dist/**"
         ]
       },
-      "@vercel/go#build": {
-        "dependsOn": [
-          "@vercel/build-utils#build"
-        ],
-        "outputs": [
-          "dist/**"
-        ]
-      },
-      "@vercel/node#build": {
-        "dependsOn": [
-          "@vercel/build-utils#build"
-        ],
-        "outputs": [
-          "dist/**"
-        ]
-      },
-      "@vercel/python#build": {
-        "dependsOn": [
-          "@vercel/build-utils#build"
-        ],
-        "outputs": [
-          "dist/**"
-        ]
-      },
-      "@vercel/ruby#build": {
-        "dependsOn": [
-          "@vercel/build-utils#build"
-        ],
-        "outputs": [
-          "dist/**"
-        ]
-      },
       "test-unit": {
         "dependsOn": [
           "^build"
