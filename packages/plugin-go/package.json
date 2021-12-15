@@ -17,7 +17,7 @@
     "prepublishOnly": "tsc"
   },
   "dependencies": {
-    "@vercel/build-utils": "2.12.3-canary.47",
+    "@vercel/build-utils": "2.13.0",
     "@vercel/go": "1.2.4-canary.4"
   },
   "devDependencies": {

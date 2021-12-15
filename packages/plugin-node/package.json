@@ -34,7 +34,7 @@
     "@types/node-fetch": "2",
     "@types/test-listen": "1.1.0",
     "@types/yazl": "2.4.2",
-    "@vercel/build-utils": "2.12.3-canary.47",
+    "@vercel/build-utils": "2.13.0",
     "@vercel/fun": "1.0.3",
     "@vercel/ncc": "0.24.0",
     "@vercel/nft": "0.14.0",
