@@ -1,4 +1,3 @@
-import { createHash } from 'crypto';
 import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
@@ -87,9 +86,9 @@ export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
 export {
-  convertRuntimeToPlugin,
-  updateFunctionsManifest,
-  updateRoutesManifest,
+  _experimental_convertRuntimeToPlugin,
+  _experimental_updateFunctionsManifest,
+  _experimental_updateRoutesManifest,
 } from './convert-runtime-to-plugin';
 
 export * from './schemas';
@@ -135,12 +134,4 @@ export const getPlatformEnv = (name: string): string | undefined => {
     return v;
   }
   return n;
-};
-
-/**
- * Helper function for generating file or directories names in `.output/inputs`
- * for dependencies of files provided to the File System API.
- */
-export const getInputHash = (source: Buffer | string): string => {
-  return createHash('sha1').update(source).digest('hex');
 };

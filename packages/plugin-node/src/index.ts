@@ -1,4 +1,5 @@
 import { fork, spawn } from 'child_process';
+import { createHash } from 'crypto';
 import {
   createWriteStream,
   readFileSync,
@@ -35,12 +36,11 @@ import {
   debug,
   isSymbolicLink,
   runNpmInstall,
-  updateFunctionsManifest,
-  updateRoutesManifest,
+  _experimental_updateFunctionsManifest,
+  _experimental_updateRoutesManifest,
   walkParentDirs,
   normalizePath,
   runPackageJsonScript,
-  getInputHash,
 } from '@vercel/build-utils';
 import { FromSchema } from 'json-schema-to-ts';
 import { getConfig, BaseFunctionConfigSchema } from '@vercel/static-config';
@@ -428,7 +428,8 @@ export async function buildEntrypoint({
   installedPaths?: Set<string>;
 }) {
   // Unique hash that will be used as directory name for `.output`.
-  const entrypointHash = 'api-routes-node-' + getInputHash(entrypoint);
+  const entrypointHash =
+    'api-routes-node-' + createHash('sha1').update(entrypoint).digest('hex');
   const outputDirPath = join(workPath, '.output');
 
   const { dir, name } = parsePath(entrypoint);
@@ -548,12 +549,12 @@ export async function buildEntrypoint({
       runtime: nodeVersion.runtime,
     },
   };
-  await updateFunctionsManifest({ workPath, pages });
+  await _experimental_updateFunctionsManifest({ workPath, pages });
 
   // Update the `routes-mainifest.json` file with the wildcard route
   // when the entrypoint is dynamic (i.e. `/api/[id].ts`).
   if (isDynamicRoute(entrypointWithoutExt)) {
-    await updateRoutesManifest({
+    await _experimental_updateRoutesManifest({
       workPath,
       dynamicRoutes: [pageToRoute(entrypointWithoutExt)],
     });

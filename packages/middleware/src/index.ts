@@ -5,7 +5,7 @@ import { promises as fsp } from 'fs';
 import { IncomingMessage, ServerResponse } from 'http';
 import libGlob from 'glob';
 import Proxy from 'http-proxy';
-import { updateFunctionsManifest } from '@vercel/build-utils';
+import { _experimental_updateFunctionsManifest } from '@vercel/build-utils';
 
 import { run } from './websandbox';
 import type { FetchEventResult } from './websandbox/types';
@@ -110,7 +110,7 @@ export async function build({ workPath }: { workPath: string }) {
     sortingIndex: 1,
   };
 
-  await updateFunctionsManifest({ workPath, pages });
+  await _experimental_updateFunctionsManifest({ workPath, pages });
 }
 
 const stringifyQuery = (req: IncomingMessage, query: ParsedUrlQuery) => {

@@ -1,7 +1,7 @@
 import { join } from 'path';
 import fs from 'fs-extra';
 import { BuildOptions, createLambda, FileFsRef } from '../src';
-import { convertRuntimeToPlugin } from '../src/convert-runtime-to-plugin';
+import { _experimental_convertRuntimeToPlugin } from '../src/convert-runtime-to-plugin';
 
 async function fsToJson(dir: string, output: Record<string, any> = {}) {
   const files = await fs.readdir(dir);
@@ -63,7 +63,11 @@ describe('convert-runtime-to-plugin', () => {
     };
 
     const packageName = 'vercel-plugin-python';
-    const build = await convertRuntimeToPlugin(buildRuntime, packageName, ext);
+    const build = await _experimental_convertRuntimeToPlugin(
+      buildRuntime,
+      packageName,
+      ext
+    );
 
     await build({ workPath });
 
