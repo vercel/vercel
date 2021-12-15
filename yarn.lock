@@ -11827,6 +11827,13 @@ tunnel-agent@^0.6.0:
   dependencies:
     safe-buffer "^5.0.1"
 
+turbo@1.0.12:
+  version "1.0.12"
+  resolved "https://registry.yarnpkg.com/turbo/-/turbo-1.0.12.tgz#268254ccd58303a3756eddeaf37a270d69acf36e"
+  integrity sha512-Bw8cUAcz58+9IVyfotYOF3J6+oumCftetq9r+caop0vztRXSQ/O4Iv58tNPjGyZ9RNee6OjZb6KhV/csWD+p0Q==
+  dependencies:
+    zlib "^1.0.5"
+
 tweetnacl@^0.14.3, tweetnacl@~0.14.0:
   version "0.14.5"
   resolved "https://registry.yarnpkg.com/tweetnacl/-/tweetnacl-0.14.5.tgz#5ae68177f192d4456269d108afa93ff8743f4f64"
@@ -12637,3 +12644,8 @@ yn@3.1.1, yn@^3.0.0:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/yn/-/yn-3.1.1.tgz#1e87401a09d767c1d5eab26a6e4c185182d2eb50"
   integrity sha512-Ux4ygGWsu2c7isFWe8Yu1YluJmqVhxqK2cLXNQA5AcC3QfbGNpM7fu0Y8b/z16pXLnFxZYvWhd3fhBY9DLmC6Q==
+
+zlib@^1.0.5:
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/zlib/-/zlib-1.0.5.tgz#6e7c972fc371c645a6afb03ab14769def114fcc0"
+  integrity sha1-bnyXL8NxxkWmr7A6sUdp3vEU/MA=
