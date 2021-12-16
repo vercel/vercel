@@ -28,3 +28,4 @@ test/lib/deployment/failed-page.txt
 __pycache__
 .vercel
 .output
+.turbo

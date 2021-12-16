@@ -34,7 +34,7 @@ jobs:
       - run: git diff origin/main...HEAD --name-only
       - run: yarn install --network-timeout 1000000
       - run: yarn run build
-      - run: yarn test-integration-cli --clean false
+      - run: yarn test-integration-cli
         env:
           VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
           VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}
