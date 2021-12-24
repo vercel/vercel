@@ -1,0 +1,20 @@
+{
+  "scripts": {
+    "dev": "solid-start dev",
+    "build": "solid-start build",
+    "start": "solid-start start"
+  },
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "solid-app-router": "^0.1.14",
+    "solid-js": "^1.2.6",
+    "solid-meta": "^0.27.2",
+    "solid-start": "next",
+    "solid-start-vercel": "next",
+    "vite": "^2.7.1"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

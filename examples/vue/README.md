@@ -1,4 +1,4 @@
-![Vue.js Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/vue.svg)
+![Vue.js Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/vue.svg)
 
 # Vue.js Example
 

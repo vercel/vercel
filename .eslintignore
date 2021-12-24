@@ -1,11 +1,10 @@
 node_modules
 dist
 examples
-packages/build-utils/test/fixtures
+packages/*/test/fixtures
 packages/cli/@types
 packages/cli/download
 packages/cli/dist
-packages/cli/test/fixtures
 packages/cli/test/dev/fixtures
 packages/cli/bin
 packages/cli/link
@@ -13,6 +12,6 @@ packages/cli/src/util/dev/templates/*.ts
 packages/client/tests/fixtures
 packages/client/lib
 packages/node/src/bridge.ts
-packages/node/test/fixtures
 packages/node-bridge/bridge.js
 packages/node-bridge/launcher.js
+packages/middleware/src/entries.js

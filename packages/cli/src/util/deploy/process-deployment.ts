@@ -47,10 +47,12 @@ export default async function processDeployment({
   force?: boolean;
   withCache?: boolean;
   org: Org;
+  prebuilt: boolean;
   projectName: string;
   isSettingUpProject: boolean;
   skipAutoDetectionConfirmation?: boolean;
   cwd?: string;
+  rootDirectory?: string;
 }) {
   let {
     now,
@@ -62,6 +64,8 @@ export default async function processDeployment({
     withCache,
     nowConfig,
     quiet,
+    prebuilt,
+    rootDirectory,
   } = args;
 
   const { debug } = output;
@@ -83,6 +87,8 @@ export default async function processDeployment({
     path: paths[0],
     force,
     withCache,
+    prebuilt,
+    rootDirectory,
     skipAutoDetectionConfirmation,
   };
 
@@ -179,8 +185,24 @@ export default async function processDeployment({
         return event.payload;
       }
 
-      if (event.type === 'ready') {
+      // If `checksState` is present, we can only continue to "Completing" if the checks finished,
+      // otherwise we might show "Completing" before "Running Checks".
+      if (
+        event.type === 'ready' &&
+        (event.payload.checksState
+          ? event.payload.checksState === 'completed'
+          : true)
+      ) {
         output.spinner('Completing', 0);
+      }
+
+      if (event.type === 'checks-running') {
+        output.spinner('Running Checks', 0);
+      }
+
+      if (event.type === 'checks-conclusion-failed') {
+        output.stopSpinner();
+        return event.payload;
       }
 
       // Handle error events

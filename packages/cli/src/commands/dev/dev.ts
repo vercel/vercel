@@ -6,7 +6,6 @@ import { ProjectEnvVariable } from '../../types';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { getFrameworks } from '../../util/get-frameworks';
-import { isSettingValue } from '../../util/is-setting-value';
 import { ProjectSettings } from '../../types';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import setupAndLink from '../../util/link/setup-and-link';
@@ -71,9 +70,9 @@ export default async function dev(
           frameworkSlug = framework.slug;
         }
 
-        const defaults = framework.settings.devCommand;
-        if (isSettingValue(defaults)) {
-          devCommand = defaults.value;
+        const defaults = framework.settings.devCommand.value;
+        if (defaults) {
+          devCommand = defaults;
         }
       }
     }

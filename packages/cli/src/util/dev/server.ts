@@ -40,6 +40,7 @@ import {
   detectApiExtensions,
   spawnCommand,
   isOfficialRuntime,
+  detectFileSystemAPI,
 } from '@vercel/build-utils';
 import frameworkList from '@vercel/frameworks';
 
@@ -89,6 +90,7 @@ import {
 } from './types';
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
+import { loadCliPlugins } from '../plugins';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -598,6 +600,32 @@ export default class DevServer {
         );
       }
 
+      const { reason, metadata } = await detectFileSystemAPI({
+        files,
+        builders: builders || [],
+        projectSettings: projectSettings || this.projectSettings || {},
+        vercelConfig,
+        pkg,
+        tag: '',
+        enableFlag: true,
+      });
+
+      if (reason) {
+        if (metadata.hasMiddleware) {
+          this.output.error(
+            `Detected middleware usage which requires the latest API. ${reason}`
+          );
+          await this.exit();
+        } else if (metadata.plugins.length > 0) {
+          this.output.error(
+            `Detected CLI plugins which requires the latest API. ${reason}`
+          );
+          await this.exit();
+        } else {
+          this.output.warn(`Unable to use latest API. ${reason}`);
+        }
+      }
+
       if (builders) {
         if (this.devCommand) {
           builders = builders.filter(filterFrontendBuilds);
@@ -967,7 +995,7 @@ export default class DevServer {
         socket.destroy();
         return;
       }
-      const target = `http://localhost:${this.devProcessPort}`;
+      const target = `http://127.0.0.1:${this.devProcessPort}`;
       this.output.debug(`Detected "upgrade" event, proxying to ${target}`);
       this.proxy.ws(req, socket, head, { target });
     });
@@ -1349,6 +1377,30 @@ export default class DevServer {
     return false;
   };
 
+  runDevMiddleware = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ) => {
+    const { devMiddlewarePlugins } = await loadCliPlugins(
+      this.cwd,
+      this.output
+    );
+    try {
+      for (let plugin of devMiddlewarePlugins) {
+        const result = await plugin.plugin.runDevMiddleware(req, res, this.cwd);
+        if (result.finished) {
+          return result;
+        }
+      }
+      return { finished: false };
+    } catch (e) {
+      return {
+        finished: true,
+        error: e,
+      };
+    }
+  };
+
   /**
    * Serve project directory as a v2 deployment.
    */
@@ -1415,6 +1467,36 @@ export default class DevServer {
     let statusCode: number | undefined;
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
+
+    const middlewareResult = await this.runDevMiddleware(req, res);
+
+    if (middlewareResult) {
+      if (middlewareResult.error) {
+        this.sendError(
+          req,
+          res,
+          requestId,
+          'EDGE_FUNCTION_INVOCATION_FAILED',
+          500
+        );
+        return;
+      }
+      if (middlewareResult.finished) {
+        return;
+      }
+
+      if (middlewareResult.pathname) {
+        const origUrl = url.parse(req.url || '/', true);
+        origUrl.pathname = middlewareResult.pathname;
+        prevUrl = url.format(origUrl);
+      }
+      if (middlewareResult.query && prevUrl) {
+        const origUrl = url.parse(req.url || '/', true);
+        delete origUrl.search;
+        Object.assign(origUrl.query, middlewareResult.query);
+        prevUrl = url.format(origUrl);
+      }
+    }
 
     for (const phase of phases) {
       statusCode = undefined;
@@ -1608,7 +1690,7 @@ export default class DevServer {
     if (!match) {
       // If the dev command is started, then proxy to it
       if (this.devProcessPort) {
-        const upstream = `http://localhost:${this.devProcessPort}`;
+        const upstream = `http://127.0.0.1:${this.devProcessPort}`;
         debug(`Proxying to frontend dev server: ${upstream}`);
 
         // Add the Vercel platform proxy request headers
@@ -1755,7 +1837,7 @@ export default class DevServer {
         return proxyPass(
           req,
           res,
-          `http://localhost:${port}`,
+          `http://127.0.0.1:${port}`,
           this,
           requestId,
           false
@@ -1792,7 +1874,7 @@ export default class DevServer {
       return proxyPass(
         req,
         res,
-        `http://localhost:${this.devProcessPort}`,
+        `http://127.0.0.1:${this.devProcessPort}`,
         this,
         requestId,
         false
@@ -2106,7 +2188,10 @@ export default class DevServer {
       process.stdout.write(data.replace(proxyPort, devPort));
     });
 
-    p.on('exit', () => {
+    p.on('exit', (code: number) => {
+      if (code > 0) {
+        process.exit(code);
+      }
       this.devProcessPort = undefined;
     });
 

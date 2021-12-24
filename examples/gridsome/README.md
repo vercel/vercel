@@ -1,4 +1,4 @@
-![Gridsome Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/gridsome.svg)
+![Gridsome Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/gridsome.svg)
 
 # Gridsome Example
 

@@ -10,6 +10,7 @@ export interface File {
   mode: number;
   contentType?: string;
   toStream: () => NodeJS.ReadableStream;
+  toStreamAsync?: () => Promise<NodeJS.ReadableStream>;
   /**
    * The absolute path to the file in the filesystem
    */
@@ -28,7 +29,9 @@ export interface Config {
     | number
     | { [key: string]: string }
     | BuilderFunctions
-    | undefined;
+    | ProjectSettings
+    | undefined
+    | null;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
@@ -40,11 +43,12 @@ export interface Config {
   zeroConfig?: boolean;
   import?: { [key: string]: string };
   functions?: BuilderFunctions;
+  projectSettings?: ProjectSettings;
   outputDirectory?: string;
   installCommand?: string;
   buildCommand?: string;
   devCommand?: string;
-  framework?: string;
+  framework?: string | null;
   nodeVersion?: string;
 }
 
@@ -57,6 +61,7 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
+  avoidTopLevelInstall?: boolean;
 }
 
 export interface AnalyzeOptions {
@@ -348,4 +353,18 @@ export interface BuilderFunctions {
     includeFiles?: string;
     excludeFiles?: string;
   };
+}
+
+export interface ProjectSettings {
+  framework?: string | null;
+  devCommand?: string | null;
+  installCommand?: string | null;
+  buildCommand?: string | null;
+  outputDirectory?: string | null;
+  rootDirectory?: string | null;
+  createdAt?: number;
+  autoExposeSystemEnvs?: boolean;
+  sourceFilesOutsideRootDirectory?: boolean;
+  directoryListing?: boolean;
+  gitForkProtection?: boolean;
 }

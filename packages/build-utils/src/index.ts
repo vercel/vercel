@@ -33,6 +33,7 @@ import { NowBuildError } from './errors';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import debug from './debug';
+import getIgnoreFilter from './get-ignore-filter';
 
 export {
   FileBlob,
@@ -70,6 +71,7 @@ export {
   isSymbolicLink,
   getLambdaOptionsFromFunction,
   scanParentDirs,
+  getIgnoreFilter,
 };
 
 export {
@@ -78,9 +80,16 @@ export {
   detectApiDirectory,
   detectApiExtensions,
 } from './detect-builders';
+export { detectFileSystemAPI } from './detect-file-system-api';
 export { detectFramework } from './detect-framework';
 export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';
+export { normalizePath } from './fs/normalize-path';
+export {
+  _experimental_convertRuntimeToPlugin,
+  _experimental_updateFunctionsManifest,
+  _experimental_updateRoutesManifest,
+} from './convert-runtime-to-plugin';
 
 export * from './schemas';
 export * from './types';

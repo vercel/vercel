@@ -1,11 +1,9 @@
 import { Stats } from 'fs';
 import { sep, dirname, join, resolve } from 'path';
-import { readJSON, lstat, readlink, readFile, realpath } from 'fs-extra';
+import { lstat, readlink, readFile, realpath } from 'fs-extra';
 import { isCanary } from './is-canary';
 import { getPkgName } from './pkg-name';
 
-// `npm` tacks a bunch of extra properties on the `package.json` file,
-// so check for one of them to determine yarn vs. npm.
 async function isYarn(): Promise<boolean> {
   let s: Stats;
   let binPath = process.argv[1];
@@ -20,8 +18,12 @@ async function isYarn(): Promise<boolean> {
     }
   }
   const pkgPath = join(dirname(binPath), '..', 'package.json');
-  const pkg = await readJSON(pkgPath).catch(() => ({}));
-  return !('_id' in pkg);
+  /*
+   * Generally, pkgPath looks like:
+   * "/Users/username/.config/yarn/global/node_modules/vercel/package.json"
+   * "/usr/local/share/.config/yarn/global/node_modules/vercel/package.json"
+   */
+  return pkgPath.includes(join('yarn', 'global'));
 }
 
 async function getConfigPrefix() {

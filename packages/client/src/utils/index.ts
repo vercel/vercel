@@ -1,7 +1,7 @@
 import { DeploymentFile } from './hashes';
 import { FetchOptions } from '@zeit/fetch';
 import { nodeFetch, zeitFetch } from './fetch';
-import { join, sep, relative } from 'path';
+import { join, sep, relative, posix } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
 type Ignore = ReturnType<typeof ignore>;
@@ -31,6 +31,14 @@ const EVENTS_ARRAY = [
   'notice',
   'tip',
   'canceled',
+  // Checks events
+  'checks-registered',
+  'checks-completed',
+  'checks-running',
+  'checks-conclusion-succeeded',
+  'checks-conclusion-failed',
+  'checks-conclusion-skipped',
+  'checks-conclusion-canceled',
 ] as const;
 
 export type DeploymentEventType = typeof EVENTS_ARRAY[number];
@@ -73,12 +81,16 @@ const maybeRead = async function <T>(path: string, default_: T) {
 
 export async function buildFileTree(
   path: string | string[],
-  isDirectory: boolean,
+  {
+    isDirectory,
+    prebuilt,
+    rootDirectory,
+  }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt' | 'rootDirectory'>,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
   const ignoreList: string[] = [];
   let fileList: string[];
-  let { ig, ignores } = await getVercelIgnore(path);
+  let { ig, ignores } = await getVercelIgnore(path, prebuilt, rootDirectory);
 
   debug(`Found ${ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
@@ -109,36 +121,51 @@ export async function buildFileTree(
 }
 
 export async function getVercelIgnore(
-  cwd: string | string[]
+  cwd: string | string[],
+  prebuilt?: boolean,
+  rootDirectory?: string
 ): Promise<{ ig: Ignore; ignores: string[] }> {
-  const ignores: string[] = [
-    '.hg',
-    '.git',
-    '.gitmodules',
-    '.svn',
-    '.cache',
-    '.next',
-    '.now',
-    '.vercel',
-    '.npmignore',
-    '.dockerignore',
-    '.gitignore',
-    '.*.swp',
-    '.DS_Store',
-    '.wafpicke-*',
-    '.lock-wscript',
-    '.env.local',
-    '.env.*.local',
-    '.venv',
-    'npm-debug.log',
-    'config.gypi',
-    'node_modules',
-    '__pycache__',
-    'venv',
-    'CVS',
-    '.vercel_build_output',
-  ];
+  let ignores: string[] = [];
 
+  const outputDir = posix.join(rootDirectory || '', '.output');
+
+  if (prebuilt) {
+    ignores.push('*');
+    const parts = outputDir.split('/');
+    parts.forEach((_, i) => {
+      const level = parts.slice(0, i + 1).join('/');
+      ignores.push(`!${level}`);
+    });
+    ignores.push(`!${outputDir}/**`);
+  } else {
+    ignores = [
+      '.hg',
+      '.git',
+      '.gitmodules',
+      '.svn',
+      '.cache',
+      '.next',
+      '.now',
+      '.vercel',
+      '.npmignore',
+      '.dockerignore',
+      '.gitignore',
+      '.*.swp',
+      '.DS_Store',
+      '.wafpicke-*',
+      '.lock-wscript',
+      '.env.local',
+      '.env.*.local',
+      '.venv',
+      'npm-debug.log',
+      'config.gypi',
+      'node_modules',
+      '__pycache__',
+      'venv',
+      'CVS',
+      `.output`,
+    ];
+  }
   const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
   const files = await Promise.all(
@@ -239,39 +266,31 @@ export const prepareFiles = (
   files: Map<string, DeploymentFile>,
   clientOptions: VercelClientOptions
 ): PreparedFile[] => {
-  const preparedFiles = [...files.keys()].reduce(
-    (acc: PreparedFile[], sha: string): PreparedFile[] => {
-      const next = [...acc];
+  const preparedFiles: PreparedFile[] = [];
+  for (const [sha, file] of files) {
+    for (const name of file.names) {
+      let fileName: string;
 
-      const file = files.get(sha) as DeploymentFile;
-
-      for (const name of file.names) {
-        let fileName: string;
-
-        if (clientOptions.isDirectory) {
-          // Directory
-          fileName =
-            typeof clientOptions.path === 'string'
-              ? relative(clientOptions.path, name)
-              : name;
-        } else {
-          // Array of files or single file
-          const segments = name.split(sep);
-          fileName = segments[segments.length - 1];
-        }
-
-        next.push({
-          file: isWin ? fileName.replace(/\\/g, '/') : fileName,
-          size: file.data.byteLength || file.data.length,
-          mode: file.mode,
-          sha,
-        });
+      if (clientOptions.isDirectory) {
+        // Directory
+        fileName =
+          typeof clientOptions.path === 'string'
+            ? relative(clientOptions.path, name)
+            : name;
+      } else {
+        // Array of files or single file
+        const segments = name.split(sep);
+        fileName = segments[segments.length - 1];
       }
 
-      return next;
-    },
-    []
-  );
+      preparedFiles.push({
+        file: isWin ? fileName.replace(/\\/g, '/') : fileName,
+        size: file.data.byteLength || file.data.length,
+        mode: file.mode,
+        sha,
+      });
+    }
+  }
 
   return preparedFiles;
 };

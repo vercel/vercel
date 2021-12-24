@@ -1,4 +1,4 @@
-![Docusaurus Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/docusaurus.svg)
+![Docusaurus Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/docusaurus.svg)
 
 # Docusaurus Example
 

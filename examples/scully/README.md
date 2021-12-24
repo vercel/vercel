@@ -1,4 +1,4 @@
-![Scully Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/scully.svg)
+![Scully Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/scully.svg)
 
 # Scully Example
 

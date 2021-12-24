@@ -9,11 +9,22 @@ interface RubyVersion extends NodeVersion {
 
 const allOptions: RubyVersion[] = [
   { major: 2, minor: 7, range: '2.7.x', runtime: 'ruby2.7' },
-  { major: 2, minor: 5, range: '2.5.x', runtime: 'ruby2.5' },
+  {
+    major: 2,
+    minor: 5,
+    range: '2.5.x',
+    runtime: 'ruby2.5',
+    discontinueDate: new Date('2021-11-30'),
+  },
 ];
 
 function getLatestRubyVersion(): RubyVersion {
   return allOptions[0];
+}
+
+function isDiscontinued({ discontinueDate }: RubyVersion): boolean {
+  const today = Date.now();
+  return discontinueDate !== undefined && discontinueDate.getTime() <= today;
 }
 
 function getRubyPath(meta: Meta, gemfileContents: string) {
@@ -37,8 +48,20 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       if (!found) {
         throw new NowBuildError({
           code: 'RUBY_INVALID_VERSION',
-          message: 'Found `Gemfile` with invalid Ruby version: `' + line + '`.',
-          link: 'https://vercel.com/docs/runtimes#official-runtimes/ruby/ruby-version',
+          message: `Found \`Gemfile\` with invalid Ruby version: \`${line}.\``,
+          link: 'http://vercel.link/ruby-version',
+        });
+      }
+      if (isDiscontinued(selection)) {
+        const latest = getLatestRubyVersion();
+        const intro = `Found \`Gemfile\` with discontinued Ruby version: \`${line}.\``;
+        const hint = `Please set \`ruby "~> ${latest.range}"\` in your \`Gemfile\` to use Ruby ${latest.range}.`;
+        const upstream =
+          'This change is the result of a decision made by an upstream infrastructure provider (AWS).';
+        throw new NowBuildError({
+          code: 'RUBY_DISCONTINUED_VERSION',
+          link: 'http://vercel.link/ruby-version',
+          message: `${intro} ${hint} ${upstream}`,
         });
       }
     }
@@ -65,6 +88,23 @@ export async function installBundler(meta: Meta, gemfileContents: string) {
     meta,
     gemfileContents
   );
+
+  // If the new File System API is used (`avoidTopLevelInstall`), the Install Command
+  // will have already installed the dependencies, so we don't need to do it again.
+  if (meta.avoidTopLevelInstall) {
+    debug(
+      `Skipping bundler installation, already installed by Install Command`
+    );
+
+    return {
+      gemHome,
+      rubyPath,
+      gemPath,
+      vendorPath,
+      runtime,
+      bundlerPath: join(gemHome, 'bin', 'bundler'),
+    };
+  }
 
   debug('installing bundler...');
   await execa(gemPath, ['install', 'bundler', '--no-document'], {

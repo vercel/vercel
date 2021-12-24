@@ -1,0 +1,18 @@
+body {
+  text-align: center;
+}
+
+h1 {
+  color: hotpink;
+  font-family: cursive;
+  font-size: 55px;
+}
+
+p {
+  font-family: Helvetica, Arial, sans-serif;
+  line-height: 1.5em;
+}
+
+a {
+  color: dodgerblue;
+}

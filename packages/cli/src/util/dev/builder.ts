@@ -217,13 +217,13 @@ export async function executeBuild(
 
     if (output.maxDuration) {
       throw new Error(
-        'The result of "builder.build()" must not contain `memory`'
+        'The result of "builder.build()" must not contain `maxDuration`'
       );
     }
 
     if (output.memory) {
       throw new Error(
-        'The result of "builder.build()" must not contain `maxDuration`'
+        'The result of "builder.build()" must not contain `memory`'
       );
     }
 

@@ -34,7 +34,7 @@ Finally, [connect your Git repository to Vercel](https://vercel.com/docs/git) an
 
 ## Documentation
 
-For details on how to use Vercel CLI, check out our [documentation](https://vercel.com/docs).
+For details on how to use Vercel CLI, check out our [documentation](https://vercel.com/docs/cli).
 
 ## Local Development
 

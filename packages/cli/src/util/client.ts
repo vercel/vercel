@@ -100,7 +100,7 @@ export default class Client extends EventEmitter {
     let body;
     if (isJSONObject(opts.body)) {
       body = JSON.stringify(opts.body);
-      headers.set('content-type', 'application/json; charset=utf8');
+      headers.set('content-type', 'application/json; charset=utf-8');
     } else {
       body = opts.body;
     }

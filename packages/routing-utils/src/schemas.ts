@@ -95,6 +95,9 @@ export const routesSchema = {
               maxLength: 32,
             },
           },
+          caseSensitive: {
+            type: 'boolean',
+          },
           important: {
             type: 'boolean',
           },
@@ -150,7 +153,11 @@ export const routesSchema = {
               },
             },
           },
+          middleware: {
+            type: 'number',
+          },
           has: hasSchema,
+          missing: hasSchema,
         },
       },
       {
@@ -191,6 +198,7 @@ export const rewritesSchema = {
         maxLength: 4096,
       },
       has: hasSchema,
+      missing: hasSchema,
     },
   },
 } as const;
@@ -229,6 +237,7 @@ export const redirectsSchema = {
         maximum: 999,
       },
       has: hasSchema,
+      missing: hasSchema,
     },
   },
 } as const;
@@ -270,6 +279,7 @@ export const headersSchema = {
         },
       },
       has: hasSchema,
+      missing: hasSchema,
     },
   },
 } as const;

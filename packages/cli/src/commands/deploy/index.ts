@@ -60,13 +60,10 @@ import { getCommandName } from '../../util/pkg-name';
 import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url';
 import { Output } from '../../util/output';
 import { help } from './args';
+import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 
 export default async (client: Client) => {
-  const {
-    apiUrl,
-    output,
-    authConfig: { token },
-  } = client;
+  const { output } = client;
 
   let argv = null;
 
@@ -82,6 +79,7 @@ export default async (client: Client) => {
       // This is not an array in favor of matching
       // the config property name.
       '--regions': String,
+      '--prebuilt': Boolean,
       '--prod': Boolean,
       '--confirm': Boolean,
       '-f': '--force',
@@ -157,10 +155,8 @@ export default async (client: Client) => {
     }
   }
 
-  const { log, debug, error, warn } = output;
-  const debugEnabled = argv['--debug'];
+  const { log, debug, error, warn, isTTY } = output;
 
-  const { isTTY } = process.stdout;
   const quiet = !isTTY;
 
   // check paths
@@ -170,8 +166,8 @@ export default async (client: Client) => {
     return pathValidation.exitCode;
   }
 
-  const { isFile, path } = pathValidation;
-  const autoConfirm = argv['--confirm'] || isFile;
+  const { path } = pathValidation;
+  const autoConfirm = argv['--confirm'];
 
   // deprecate --name
   if (argv['--name']) {
@@ -196,7 +192,7 @@ export default async (client: Client) => {
 
   let newProjectName = null;
   let rootDirectory = project ? project.rootDirectory : null;
-  let sourceFilesOutsideRootDirectory = true;
+  let sourceFilesOutsideRootDirectory: boolean | undefined = true;
 
   if (status === 'not_linked') {
     const shouldStartSetup =
@@ -233,8 +229,7 @@ export default async (client: Client) => {
     // user input.
     const detectedProjectName = getProjectName({
       argv,
-      nowConfig: localConfig || {},
-      isFile,
+      nowConfig: localConfig,
       paths,
     });
 
@@ -437,11 +432,8 @@ export default async (client: Client) => {
 
   const currentTeam = org?.type === 'team' ? org.id : undefined;
   const now = new Now({
-    apiUrl,
-    token,
-    debug: debugEnabled,
+    client,
     currentTeam,
-    output,
   });
   let deployStamp = stamp();
   let deployment = null;
@@ -453,9 +445,10 @@ export default async (client: Client) => {
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
       withCache: argv['--with-cache'],
+      prebuilt: argv['--prebuilt'],
+      rootDirectory,
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
-      isFile,
       type: null,
       nowConfig: localConfig,
       regions,
@@ -477,7 +470,7 @@ export default async (client: Client) => {
       [sourcePath],
       createArgs,
       org,
-      !project && !isFile,
+      !project,
       path
     );
 
@@ -533,6 +526,20 @@ export default async (client: Client) => {
 
     if (deployment.readyState === 'CANCELED') {
       output.print('The deployment has been canceled.\n');
+      return 1;
+    }
+
+    if (deployment.checksConclusion === 'failed') {
+      const { checks } = await getDeploymentChecks(client, deployment.id);
+      const counters = new Map<string, number>();
+      checks.forEach(c => {
+        counters.set(c.conclusion, (counters.get(c.conclusion) ?? 0) + 1);
+      });
+
+      const counterList = Array.from(counters)
+        .map(([name, no]) => `${no} ${name}`)
+        .join(', ');
+      output.error(`Running Checks: ${counterList}`);
       return 1;
     }
 
@@ -646,8 +653,7 @@ export default async (client: Client) => {
     client,
     deployment,
     deployStamp,
-    !argv['--no-clipboard'],
-    isFile
+    !argv['--no-clipboard']
   );
 };
 
@@ -782,8 +788,7 @@ const printDeploymentStatus = async (
     };
   },
   deployStamp: () => string,
-  isClipboardEnabled: boolean,
-  isFile: boolean
+  isClipboardEnabled: boolean
 ) => {
   indications = indications || [];
   const isProdDeployment = target === 'production';
@@ -805,7 +810,7 @@ const printDeploymentStatus = async (
     // print preview/production url
     let previewUrl: string;
     let isWildcard: boolean;
-    if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
+    if (Array.isArray(aliasList) && aliasList.length > 0) {
       const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
       if (previewUrlInfo) {
         isWildcard = previewUrlInfo.isWildcard;

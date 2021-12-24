@@ -6,12 +6,18 @@ const allPackages = [
   'routing-utils',
   'frameworks',
   'build-utils',
+  'static-config',
+  'middleware',
   'client',
   'node-bridge',
   'node',
   'go',
   'python',
   'ruby',
+  'plugin-go',
+  'plugin-node',
+  'plugin-python',
+  'plugin-ruby',
   'cli',
 ];
 
@@ -78,6 +84,15 @@ function runScript(pkgName, script) {
         cwd,
         stdio: 'inherit',
         shell: true,
+        env: {
+          // Only add this for unit tests, as it's not relevant to others.
+          ...(script === 'test-unit'
+            ? {
+                NODE_OPTIONS: '--max-old-space-size=4096',
+              }
+            : null),
+          ...process.env,
+        },
       });
       child.on('error', reject);
       child.on('close', (code, signal) => {

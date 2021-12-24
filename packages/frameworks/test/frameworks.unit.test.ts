@@ -34,7 +34,7 @@ const SchemaSettings = {
       additionalProperties: false,
       properties: {
         value: {
-          type: 'string',
+          type: ['string', 'null'],
         },
         placeholder: {
           type: 'string',
@@ -58,15 +58,7 @@ const Schema = {
   type: 'array',
   items: {
     type: 'object',
-    required: [
-      'name',
-      'slug',
-      'logo',
-      'description',
-      'settings',
-      'buildCommand',
-      'devCommand',
-    ],
+    required: ['name', 'slug', 'logo', 'description', 'settings'],
     properties: {
       name: { type: 'string' },
       slug: { type: ['string', 'null'] },
@@ -138,8 +130,6 @@ const Schema = {
 
       dependency: { type: 'string' },
       cachePattern: { type: 'string' },
-      buildCommand: { type: ['string', 'null'] },
-      devCommand: { type: ['string', 'null'] },
       defaultVersion: { type: 'string' },
     },
   },
