@@ -10,7 +10,7 @@ Deploy your own Angular project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/angular&template=angular)
 
-_Live Example: https://angular.now-examples.now.sh_
+_Live Example: https://angular-now-examples.vercel.app_
 
 ### How We Created This Example
 
