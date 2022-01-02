@@ -2156,7 +2156,7 @@ export default class DevServer {
       .catch(() => false);
 
     if (isNpxAvailable) {
-      command = `npx --no-install ${command}`;
+      command = `npx --no ${command}`;
     } else {
       const isYarnAvailable = await which('yarn')
         .then(() => true)
