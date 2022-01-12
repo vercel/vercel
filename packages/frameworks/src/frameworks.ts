@@ -1103,7 +1103,7 @@ export const frameworks = [
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
-    description: 'A SvelteKit app optimized to work for serverless.',
+    description: 'A SvelteKit app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
     envPrefix: 'VITE_',
     detectors: {
