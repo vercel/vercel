@@ -110,7 +110,7 @@ export const frameworks = [
     tagline:
       'Gatsby helps developers build blazing fast websites and apps with React.',
     description:
-      'A Gatsby app, using the default starter theme and a Serverless Function API.',
+      'A Gatsby starter app with an API Route.',
     website: 'https://gatsbyjs.org',
     sort: 5,
     envPrefix: 'GATSBY_',

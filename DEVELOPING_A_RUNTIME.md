@@ -49,7 +49,7 @@ export const version = 3;
 
 A **required** exported function that returns a Serverless Function.
 
-> What's a Serverless Function? Read about [Serverless Functions](https://vercel.com/docs/v2/serverless-functions/introduction) to learn more.
+> What's a Serverless Function? Read about [Serverless Functions](https://vercel.com/docs/concepts/functions/serverless-functions) to learn more.
 
 **Example:**
 
