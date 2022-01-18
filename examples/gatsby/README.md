@@ -1,8 +1,6 @@
-![Gatsby Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/gatsby.svg)
+# Gatsby
 
-# Gatsby Example
-
-This directory is a brief example of a [Gatsby](https://www.gatsbyjs.org/) app with [Serverless Functions](https://vercel.com/docs/v2/serverless-functions/introduction) that can be deployed with Vercel and zero configuration.
+This directory is a brief example of a [Gatsby](https://www.gatsbyjs.org/) app with [Serverless Functions](https://vercel.com/docs/concepts/functions/serverless-functions) that can be deployed with Vercel and zero configuration.
 
 ## Deploy Your Own
 
@@ -12,10 +10,17 @@ Deploy your own Gatsby project, along with Serverless Functions, with Vercel.
 
 _Live Example: https://gatsby.examples.vercel.com_
 
-### How We Created This Example
+## Running Locally
 
-To get started with Gatsby on Vercel, you can use the [Gatsby CLI](https://www.gatsbyjs.org/docs/gatsby-cli/) to initialize the project:
+To run your Gatsby application and your API Route, you'll need to use the [Vercel CLI](https://vercel.com/cli):
 
 ```shell
-$ gatsby new gatsby-site
+$ npm i -g vercel
+$ vercel
+```
+
+Alternatively, you can remove the API and just use Gatsby:
+
+```shell
+$ yarn develop
 ```
