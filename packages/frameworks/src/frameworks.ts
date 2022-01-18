@@ -20,7 +20,7 @@ export const frameworks = [
   {
     name: 'Blitz.js',
     slug: 'blitzjs',
-    demo: 'https://blitzjs.examples.vercel.com',
+    demo: 'https://blitzjs-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/blitz.svg',
     tagline: 'Blitz.js: The Fullstack React Framework',
     description:
@@ -58,7 +58,7 @@ export const frameworks = [
   {
     name: 'Next.js',
     slug: 'nextjs',
-    demo: 'https://nextjs.examples.vercel.com',
+    demo: 'https://nextjs-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next.svg',
     tagline:
       'Next.js makes you productive with React instantly — whether you want to build static or dynamic sites.',
@@ -105,7 +105,7 @@ export const frameworks = [
   {
     name: 'Gatsby.js',
     slug: 'gatsby',
-    demo: 'https://gatsby.examples.vercel.com',
+    demo: 'https://gatsby.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/gatsby.svg',
     tagline:
       'Gatsby helps developers build blazing fast websites and apps with React.',
@@ -193,7 +193,7 @@ export const frameworks = [
   {
     name: 'Remix',
     slug: 'remix',
-    demo: 'https://remix.examples.vercel.com',
+    demo: 'https://remix-run-template.vercel.app/',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/remix-no-shadow.svg',
     tagline: 'Build Better Websites',
     description: 'A new Remix app — the result of running `npx create-remix`.',
@@ -263,7 +263,7 @@ export const frameworks = [
   {
     name: 'Hexo',
     slug: 'hexo',
-    demo: 'https://hexo.examples.vercel.com',
+    demo: 'https://hexo-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/hexo.svg',
     tagline:
       'Hexo is a fast, simple & powerful blog framework powered by Node.js.',
@@ -300,7 +300,7 @@ export const frameworks = [
   {
     name: 'Eleventy',
     slug: 'eleventy',
-    demo: 'https://eleventy.examples.vercel.com',
+    demo: 'https://eleventy-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/eleventy.svg',
     tagline:
       '11ty is a simpler static site generator written in JavaScript, created to be an alternative to Jekyll.',
@@ -338,7 +338,7 @@ export const frameworks = [
   {
     name: 'Docusaurus 2',
     slug: 'docusaurus-2',
-    demo: 'https://docusaurus-2.examples.vercel.com',
+    demo: 'https://docusaurus-2-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/docusaurus.svg',
     tagline:
       'Docusaurus makes it easy to maintain Open Source documentation websites.',
@@ -477,7 +477,7 @@ export const frameworks = [
   {
     name: 'Docusaurus 1',
     slug: 'docusaurus',
-    demo: 'https://docusaurus.examples.vercel.com',
+    demo: 'https://docusaurus-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/docusaurus.svg',
     tagline:
       'Docusaurus makes it easy to maintain Open Source documentation websites.',
@@ -529,7 +529,7 @@ export const frameworks = [
   {
     name: 'Preact',
     slug: 'preact',
-    demo: 'https://preact.examples.vercel.com',
+    demo: 'https://preact-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/preact.svg',
     tagline:
       'Preact is a fast 3kB alternative to React with the same modern API.',
@@ -582,7 +582,7 @@ export const frameworks = [
   {
     name: 'SolidStart',
     slug: 'solidstart',
-    demo: 'https://solidstart.examples.vercel.com',
+    demo: 'https://solidstart-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/solid.svg',
     tagline: 'Simple and performant reactivity for building user interfaces.',
     description: 'A Solid app, created with SolidStart.',
@@ -622,7 +622,7 @@ export const frameworks = [
   {
     name: 'Dojo',
     slug: 'dojo',
-    demo: 'https://dojo.examples.vercel.com',
+    demo: 'https://dojo-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/dojo.png',
     tagline: 'Dojo is a modern progressive, TypeScript first framework.',
     description:
@@ -691,7 +691,7 @@ export const frameworks = [
   {
     name: 'Ember.js',
     slug: 'ember',
-    demo: 'https://ember.examples.vercel.com',
+    demo: 'https://ember-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/ember.svg',
     tagline:
       'Ember.js helps webapp developers be more productive out of the box.',
@@ -744,7 +744,7 @@ export const frameworks = [
   {
     name: 'Vue.js',
     slug: 'vue',
-    demo: 'https://vue.examples.vercel.com',
+    demo: 'https://vue-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vue.svg',
     tagline:
       'Vue.js is a versatile JavaScript framework that is as approachable as it is performant.',
@@ -822,7 +822,7 @@ export const frameworks = [
   {
     name: 'Scully',
     slug: 'scully',
-    demo: 'https://scully.examples.vercel.com',
+    demo: 'https://scully-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/scullyio-logo.png',
     tagline: 'Scully is a static site generator for Angular.',
     description: 'The Static Site Generator for Angular apps.',
@@ -858,7 +858,7 @@ export const frameworks = [
   {
     name: 'Ionic Angular',
     slug: 'ionic-angular',
-    demo: 'https://ionic-angular.examples.vercel.com',
+    demo: 'https://ionic-angular-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/ionic.svg',
     tagline:
       'Ionic Angular allows you to build mobile PWAs with Angular and the Ionic Framework.',
@@ -910,7 +910,7 @@ export const frameworks = [
   {
     name: 'Angular',
     slug: 'angular',
-    demo: 'https://angular.examples.vercel.com',
+    demo: 'https://angular-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/angular.svg',
     tagline:
       'Angular is a TypeScript-based cross-platform framework from Google.',
@@ -977,7 +977,7 @@ export const frameworks = [
   {
     name: 'Polymer',
     slug: 'polymer',
-    demo: 'https://polymer.examples.vercel.com',
+    demo: 'https://polymer-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/polymer.svg',
     tagline:
       'Polymer is an open-source webapps library from Google, for building using Web Components.',
@@ -1041,7 +1041,7 @@ export const frameworks = [
   {
     name: 'Svelte',
     slug: 'svelte',
-    demo: 'https://svelte.examples.vercel.com',
+    demo: 'https://svelte.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
     tagline:
       'Svelte lets you write high performance reactive apps with significantly less boilerplate.',
@@ -1099,7 +1099,7 @@ export const frameworks = [
   {
     name: 'SvelteKit',
     slug: 'sveltekit',
-    demo: 'https://sveltekit.examples.vercel.com',
+    demo: 'https://sveltekit-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
@@ -1136,7 +1136,7 @@ export const frameworks = [
   {
     name: 'Ionic React',
     slug: 'ionic-react',
-    demo: 'https://ionic-react.examples.vercel.com',
+    demo: 'https://ionic-react-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/ionic.svg',
     tagline:
       'Ionic React allows you to build mobile PWAs with React and the Ionic Framework.',
@@ -1236,7 +1236,7 @@ export const frameworks = [
   {
     name: 'Create React App',
     slug: 'create-react-app',
-    demo: 'https://create-react-app.examples.vercel.com',
+    demo: 'https://create-react-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/react.svg',
     tagline: 'Create React App allows you to get going with React in no time.',
     description:
@@ -1343,7 +1343,7 @@ export const frameworks = [
   {
     name: 'Gridsome',
     slug: 'gridsome',
-    demo: 'https://gridsome.examples.vercel.com',
+    demo: 'https://gridsome-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/gridsome.svg',
     tagline:
       'Gridsome is a Vue.js-powered framework for building websites & apps that are fast by default.',
@@ -1380,7 +1380,7 @@ export const frameworks = [
   {
     name: 'UmiJS',
     slug: 'umijs',
-    demo: 'https://umijs.examples.vercel.com',
+    demo: 'https://umijs-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/umi.svg',
     tagline:
       'UmiJS is an extensible enterprise-level React application framework.',
@@ -1433,7 +1433,7 @@ export const frameworks = [
   {
     name: 'Sapper',
     slug: 'sapper',
-    demo: 'https://sapper.examples.vercel.com',
+    demo: 'https://sapper-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/svelte.svg',
     tagline:
       'Sapper is a framework for building high-performance universal web apps with Svelte.',
@@ -1470,7 +1470,7 @@ export const frameworks = [
   {
     name: 'Saber',
     slug: 'saber',
-    demo: 'https://saber.examples.vercel.com',
+    demo: 'https://saber-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/saber.svg',
     tagline:
       'Saber is a framework for building static sites in Vue.js that supports data from any source.',
@@ -1538,7 +1538,7 @@ export const frameworks = [
   {
     name: 'Stencil',
     slug: 'stencil',
-    demo: 'https://stencil.examples.vercel.com',
+    demo: 'https://stencil.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/stencil.svg',
     tagline:
       'Stencil is a powerful toolchain for building Progressive Web Apps and Design Systems.',
@@ -1625,7 +1625,7 @@ export const frameworks = [
   {
     name: 'Nuxt.js',
     slug: 'nuxtjs',
-    demo: 'https://nuxtjs.examples.vercel.com',
+    demo: 'https://nuxtjs-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/nuxt.svg',
     tagline:
       'Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.',
@@ -1683,7 +1683,7 @@ export const frameworks = [
   {
     name: 'RedwoodJS',
     slug: 'redwoodjs',
-    demo: 'https://redwoodjs.examples.vercel.com',
+    demo: 'https://redwood-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/redwoodjs.svg',
     tagline: 'RedwoodJS is a full-stack framework for the Jamstack.',
     description: 'A RedwoodJS app, bootstraped with create-redwood-app.',
@@ -1720,7 +1720,7 @@ export const frameworks = [
   {
     name: 'Hugo',
     slug: 'hugo',
-    demo: 'https://hugo.examples.vercel.com',
+    demo: 'https://hugo-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/hugo.svg',
     tagline:
       'Hugo is the world’s fastest framework for building websites, written in Go.',
@@ -1773,7 +1773,7 @@ export const frameworks = [
   {
     name: 'Jekyll',
     slug: 'jekyll',
-    demo: 'https://jekyll.examples.vercel.com',
+    demo: 'https://jekyll-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/jekyll.svg',
     tagline:
       'Jekyll makes it super easy to transform your plain text into static websites and blogs.',
@@ -1814,7 +1814,7 @@ export const frameworks = [
   {
     name: 'Brunch',
     slug: 'brunch',
-    demo: 'https://brunch.examples.vercel.com',
+    demo: 'https://brunch-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/brunch.svg',
     tagline:
       'Brunch is a fast and simple webapp build tool with seamless incremental compilation for rapid development.',
@@ -1848,7 +1848,7 @@ export const frameworks = [
   {
     name: 'Middleman',
     slug: 'middleman',
-    demo: 'https://middleman.examples.vercel.com',
+    demo: 'https://middleman-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/middleman.svg',
     tagline:
       'Middleman is a static site generator that uses all the shortcuts and tools in modern web development.',
@@ -1883,7 +1883,7 @@ export const frameworks = [
   {
     name: 'Zola',
     slug: 'zola',
-    demo: 'https://zola.examples.vercel.com',
+    demo: 'https://zola-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/zola.png',
     tagline: 'Everything you need to make a static site engine in one binary.',
     description: 'A Zola app, created with the "Getting Started" tutorial.',
@@ -1917,7 +1917,7 @@ export const frameworks = [
   {
     name: 'Vite',
     slug: 'vite',
-    demo: 'https://vite.examples.vercel.com',
+    demo: 'https://vite-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vite.svg',
     tagline:
       'Vite is a new breed of frontend build tool that significantly improves the frontend development experience.',
@@ -1955,7 +1955,7 @@ export const frameworks = [
   {
     name: 'Parcel',
     slug: 'parcel',
-    demo: 'https://parcel.examples.vercel.com',
+    demo: 'https://parcel-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/parcel.png',
     tagline:
       'Parcel is a zero configuration build tool for the web that scales to projects of any size and complexity.',

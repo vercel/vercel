@@ -2,7 +2,7 @@
 
 # Blitz.js Example
 
-This directory is a brief example of a [Blitz.js](https://blitzjs.com/) project that can be deployed with Vercel and zero configuration.
+This directory is a brief example of a [Blitz.js](https://blitzjs.com/) project that can be deployed to Vercel with zero configuration.
 
 ## Deploy Your Own
 
