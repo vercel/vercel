@@ -1,16 +1,16 @@
-![Vite Logo](https://vitejs.dev/logo.svg)
+# Vite
 
-# Vite Example
+This directory is a brief example of a Vite/Vue.js site that can be deployed to Vercel with zero configuration.
 
-This directory is a brief example of a Vite/Vue.js site that can be deployed with Vercel and zero configuration.
-
-While this project uses Vue.js, Vite supports many popular JS frameworks. See all the supported frameworks here: https://vitejs.dev/guide/#scaffolding-your-first-vite-project
+While this project uses Vue.js, Vite supports many popular JS frameworks. [See all the supported frameworks](https://vitejs.dev/guide/#scaffolding-your-first-vite-project).
 
 ## Deploy Your Own
 
 Deploy your own Vite project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/vite&template=vite)
+
+_Live Example: https://vite-vue-template.vercel.app_
 
 ### How We Created This Example
 

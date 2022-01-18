@@ -23,7 +23,7 @@ As you make changes, you should see your app automatically update in the browser
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/parcel&template=parcel)
 
-_Live Example: https://parcel.examples.vercel.com_
+_Live Example: https://parcel-template.vercel.app_
 
 ### Deploying From Your Terminal
 
