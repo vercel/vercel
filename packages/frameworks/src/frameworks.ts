@@ -1236,11 +1236,11 @@ export const frameworks = [
   {
     name: 'Create React App',
     slug: 'create-react-app',
-    demo: 'https://react-functions.examples.vercel.com',
+    demo: 'https://create-react-app.examples.vercel.com',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/react.svg',
     tagline: 'Create React App allows you to get going with React in no time.',
     description:
-      'A React app, bootstrapped with create-react-app, and a Serverless Function API.',
+      'A client-side React app created with create-react-app.',
     website: 'https://create-react-app.dev',
     sort: 4,
     envPrefix: 'REACT_APP_',
