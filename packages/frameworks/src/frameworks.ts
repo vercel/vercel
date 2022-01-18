@@ -1915,7 +1915,7 @@ export const frameworks = [
   {
     name: 'Vite',
     slug: 'vite',
-    demo: 'https://vite-template.vercel.app',
+    demo: 'https://vite-vue-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vite.svg',
     tagline:
       'Vite is a new breed of frontend build tool that significantly improves the frontend development experience.',
