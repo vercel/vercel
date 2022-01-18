@@ -160,10 +160,8 @@ const main = async () => {
   //  * a path to deploy (as in: `vercel path/`)
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
-  const isBuildOrDev =
-    targetOrSubcommand === 'build' || targetOrSubcommand === 'dev';
 
-  if (isBuildOrDev) {
+  if (targetOrSubcommand === 'dev') {
     console.log(
       `${chalk.grey(
         `${getTitleName()} CLI ${
