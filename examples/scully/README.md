@@ -10,7 +10,7 @@ Deploy your own Scully project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/scully)
 
-_Live Example: https://scully.now-examples.now.sh_
+_Live Example: https://scully.examples.vercel.com_
 
 ### How We Created This Example
 

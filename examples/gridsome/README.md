@@ -10,7 +10,7 @@ Deploy your own Gridsome project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/gridsome&template=gridsome)
 
-_Live Example: https://gridsome.now-examples.now.sh_
+_Live Example: https://gridsome.examples.vercel.com_
 
 ### How We Created This Example
 

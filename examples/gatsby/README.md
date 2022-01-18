@@ -10,7 +10,7 @@ Deploy your own Gatsby project, along with Serverless Functions, with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/gatsby&template=gatsby)
 
-_Live Example: https://gatsby.now-examples.now.sh_
+_Live Example: https://gatsby.examples.vercel.com_
 
 ### How We Created This Example
 

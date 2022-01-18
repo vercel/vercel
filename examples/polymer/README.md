@@ -10,7 +10,7 @@ Deploy your own Polymer project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/polymer&template=polymer)
 
-_Live Example: https://polymer.now-examples.now.sh_
+_Live Example: https://polymer.examples.vercel.com_
 
 ### How We Created This Example
 
