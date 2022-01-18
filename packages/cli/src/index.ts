@@ -161,7 +161,7 @@ const main = async () => {
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  if (targetOrSubcommand === 'dev') {
+  if (targetOrSubcommand === 'build') {
     console.log(
       `${chalk.grey(
         `${getTitleName()} CLI ${
