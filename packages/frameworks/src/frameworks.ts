@@ -109,8 +109,7 @@ export const frameworks = [
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/gatsby.svg',
     tagline:
       'Gatsby helps developers build blazing fast websites and apps with React.',
-    description:
-      'A Gatsby starter app with an API Route.',
+    description: 'A Gatsby starter app with an API Route.',
     website: 'https://gatsbyjs.org',
     sort: 5,
     envPrefix: 'GATSBY_',
@@ -582,7 +581,7 @@ export const frameworks = [
   {
     name: 'SolidStart',
     slug: 'solidstart',
-    demo: 'https://solidstart-template.vercel.app',
+    demo: 'https://solid-start-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/solid.svg',
     tagline: 'Simple and performant reactivity for building user interfaces.',
     description: 'A Solid app, created with SolidStart.',
@@ -1239,8 +1238,7 @@ export const frameworks = [
     demo: 'https://create-react-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/react.svg',
     tagline: 'Create React App allows you to get going with React in no time.',
-    description:
-      'A client-side React app created with create-react-app.',
+    description: 'A client-side React app created with create-react-app.',
     website: 'https://create-react-app.dev',
     sort: 4,
     envPrefix: 'REACT_APP_',
