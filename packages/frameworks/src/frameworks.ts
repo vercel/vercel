@@ -192,7 +192,7 @@ export const frameworks = [
   {
     name: 'Remix',
     slug: 'remix',
-    demo: 'https://remix-run-template.vercel.app/',
+    demo: 'https://remix-run-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/remix-no-shadow.svg',
     tagline: 'Build Better Websites',
     description: 'A new Remix app — the result of running `npx create-remix`.',
