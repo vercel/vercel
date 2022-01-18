@@ -1,6 +1,4 @@
-![Preact Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/preact.svg)
-
-# Preact Example
+# Preact
 
 This directory is a brief example of a [Preact](https://preactjs.com/) app that can be deployed with Vercel and zero configuration.
 
@@ -12,10 +10,21 @@ Deploy your own Preact project with Vercel.
 
 _Live Example: https://preact.examples.vercel.com_
 
-### How We Created This Example
+## Running Locally
 
-To get started with Preact for deployment with Vercel, you can use the [Preact CLI](https://github.com/preactjs/preact-cli) to initialize the project:
+``` bash
+# install dependencies
+npm install
 
-```shell
-$ preact create default my-project
+# serve with hot reload at localhost:8080
+npm run dev
+
+# build for production with minification
+npm run build
+
+# test the production build locally
+npm run serve
+
+# run tests with jest and enzyme
+npm run test
 ```
