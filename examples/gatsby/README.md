@@ -12,6 +12,8 @@ _Live Example: https://gatsby.examples.vercel.com_
 
 ## Running Locally
 
+> **Note:** [Gatsby Functions](https://www.gatsbyjs.com/docs/reference/functions/getting-started/) are not yet supported on Vercel, which is why the API Route is in `/api` instead of `/src/api`.
+
 To run your Gatsby application and your API Route, you'll need to use the [Vercel CLI](https://vercel.com/cli):
 
 ```shell
