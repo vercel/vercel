@@ -1,6 +1,4 @@
-![Vue.js Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/vue.svg)
-
-# Vue.js Example
+# Vue.js
 
 This directory is a brief example of a [Vue.js](https://vuejs.org/) app that can be deployed with Vercel and zero configuration.
 
@@ -12,18 +10,26 @@ Deploy your own Vue.js project with Vercel.
 
 _Live Example: https://vue.examples.vercel.com_
 
-### How We Created This Example
+## Running Locally
 
-To get started with Vue.js deployed with Vercel, you can use the [Vue CLI](https://cli.vuejs.org/guide/creating-a-project.html#vue-create) to initialize the project:
-
-```shell
-$ vue create
+```
+yarn install
 ```
 
-### Deploying From Your Terminal
+#### Compile and hot-reload for development
 
-You can deploy your new Vue.js project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
+```
+yarn serve
+```
 
-```shell
-$ vercel
+#### Compile and minify for production
+
+```
+yarn build
+```
+
+#### Lint and fix files
+
+```
+yarn lint
 ```
