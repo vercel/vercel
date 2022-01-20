@@ -4,7 +4,7 @@ Deploy your [Nuxt.js](https://nuxtjs.org) project to Vercel with zero configurat
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/nuxtjs&template=nuxtjs)
 
-_Live Example: https://nuxtjs.examples.vercel.com/_
+_Live Example: https://nuxtjs-template.vercel.app_
 
 ## Setup
 

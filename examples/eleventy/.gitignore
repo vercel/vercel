@@ -1,4 +1,5 @@
-node_modules
-.env
-.env.build
 _site/
+node_modules/
+package-lock.json
+
+.vercel

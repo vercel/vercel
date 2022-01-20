@@ -1,12 +1,14 @@
-![Solid Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/solid.svg)
-
 # SolidStart
 
-Everything you need to build a Solid project, powered by [`solid-start`](https://github.com/ryansolid/solid-start/tree/main/packages/start);
+This directory is a brief example of a [SolidStart](https://github.com/ryansolid/solid-startp) site that can be deployed to Vercel with zero configuration.
 
 ## Deploy Your Own
 
+Deploy your own SolidStart project with Vercel.
+
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/solidstart&template=solidstart)
+
+_Live Example: https://solid-start-template.vercel.app_
 
 ## Developing
 
