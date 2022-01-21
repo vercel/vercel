@@ -57,9 +57,9 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
     },
     {
-      name: 'should  set YARN_NODE_LINKER if it is not already defined',
+      name: 'should set YARN_NODE_LINKER w/yarn if it is not already defined',
       args: {
-        cliType: 'npm' as CliType,
+        cliType: 'yarn' as CliType,
         nodeVersion: {
           major: 16,
         } as NodeVersion,
@@ -76,7 +76,7 @@ describe('Test `getEnvForPackageManager()`', () => {
     {
       name: 'should not set YARN_NODE_LINKER if it already exists',
       args: {
-        cliType: 'npm' as CliType,
+        cliType: 'yarn' as CliType,
         nodeVersion: {
           major: 16,
         } as NodeVersion,
