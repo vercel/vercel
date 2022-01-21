@@ -328,12 +328,12 @@ export async function runNpmInstall(
   const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
   const env = opts.env ? { ...opts.env } : { ...process.env };
   delete env.NODE_ENV;
-  opts.env = getEnvForPackageManager(
+  opts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     nodeVersion,
-    env
-  );
+    env,
+  });
   let commandArgs: string[];
 
   if (cliType === 'npm') {
@@ -353,12 +353,17 @@ export async function runNpmInstall(
   return spawnAsync(cliType, commandArgs, opts);
 }
 
-export function getEnvForPackageManager(
-  cliType: CliType,
-  lockfileVersion: number | undefined,
-  nodeVersion: NodeVersion | undefined,
-  env: { [x: string]: string | undefined }
-) {
+export function getEnvForPackageManager({
+  cliType,
+  lockfileVersion,
+  nodeVersion,
+  env,
+}: {
+  cliType: CliType;
+  lockfileVersion: number | undefined;
+  nodeVersion: NodeVersion | undefined;
+  env: { [x: string]: string | undefined };
+}) {
   const newEnv: { [x: string]: string | undefined } = { ...env };
   if (cliType === 'npm') {
     if (
@@ -380,20 +385,25 @@ export function getEnvForPackageManager(
   return newEnv;
 }
 
-export async function runCustomInstallCommand(
-  destPath: string,
-  installCommand: string,
-  nodeVersion: NodeVersion,
-  spawnOpts?: SpawnOptions
-) {
+export async function runCustomInstallCommand({
+  destPath,
+  installCommand,
+  nodeVersion,
+  spawnOpts,
+}: {
+  destPath: string;
+  installCommand: string;
+  nodeVersion: NodeVersion;
+  spawnOpts?: SpawnOptions;
+}) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
   const { cliType, lockfileVersion } = await scanParentDirs(destPath);
-  const env = getEnvForPackageManager(
+  const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     nodeVersion,
-    spawnOpts?.env || {}
-  );
+    env: spawnOpts?.env || {},
+  });
   debug(`Running with $PATH:`, env?.PATH || '');
   await execCommand(installCommand, {
     ...spawnOpts,
@@ -425,9 +435,14 @@ export async function runPackageJsonScript(
   const opts: SpawnOptionsExtended = {
     cwd: destPath,
     ...spawnOpts,
-    env: getEnvForPackageManager(cliType, lockfileVersion, undefined, {
-      ...process.env,
-      ...spawnOpts?.env,
+    env: getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      nodeVersion: undefined,
+      env: {
+        ...process.env,
+        ...spawnOpts?.env,
+      },
     }),
   };
 

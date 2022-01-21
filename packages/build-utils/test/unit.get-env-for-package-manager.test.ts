@@ -96,12 +96,12 @@ describe('Test `getEnvForPackageManager()`', () => {
   for (const { name, want, args } of cases) {
     it(name, () => {
       assert.deepStrictEqual(
-        getEnvForPackageManager(
-          args.cliType,
-          args.lockfileVersion,
-          args.nodeVersion,
-          args.env
-        ),
+        getEnvForPackageManager({
+          cliType: args.cliType,
+          lockfileVersion: args.lockfileVersion,
+          nodeVersion: args.nodeVersion,
+          env: args.env,
+        }),
         want
       );
     });
