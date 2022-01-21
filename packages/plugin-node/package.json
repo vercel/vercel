@@ -37,7 +37,7 @@
     "@vercel/build-utils": "2.13.1-canary.0",
     "@vercel/fun": "1.0.3",
     "@vercel/ncc": "0.24.0",
-    "@vercel/nft": "0.14.0",
+    "@vercel/nft": "0.17.4",
     "@vercel/node-bridge": "2.1.1-canary.2",
     "@vercel/static-config": "0.0.1-canary.1",
     "abort-controller": "3.0.0",

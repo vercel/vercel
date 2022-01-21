@@ -93,7 +93,7 @@
     "@vercel/client": "10.2.3-canary.51",
     "@vercel/frameworks": "0.5.1-canary.20",
     "@vercel/ncc": "0.24.0",
-    "@vercel/nft": "0.17.0",
+    "@vercel/nft": "0.17.4",
     "@zeit/fun": "0.11.2",
     "@zeit/source-map-support": "0.6.2",
     "ajv": "6.12.2",
