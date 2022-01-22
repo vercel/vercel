@@ -2015,7 +2015,6 @@ export const frameworks = [
       'The structured content platform.',
     description: 'A Sanity Studio',
     website: 'https://www.sanity.io',
-    sort: 2,
     envPrefix: 'SANITY_STUDIO_',
     detectors: {
       every: [
