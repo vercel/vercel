@@ -2010,7 +2010,7 @@ export const frameworks = [
     name: 'Sanity',
     slug: 'sanity',
     demo: 'https://www.sanity.io/get-started',
-    logo: 'https://cdn.sanity.io/images/3do82whm/next/cd02ce807fbd324cbda82a77cd726c10ff6074d1-128x128.svg',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/sanity.svg',
     tagline:
       'The structured content platform.',
     description: 'A Sanity Studio',
