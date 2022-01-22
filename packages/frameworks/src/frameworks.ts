@@ -2025,7 +2025,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`sanity install`',
+        placeholder: '`yarn install` or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `sanity build`',
