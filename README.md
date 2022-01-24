@@ -3,13 +3,21 @@
     <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
     <h3 align="center">Vercel</h3>
   </a>
-  <p align="center">Develop. Preview. Ship.</p>
 </p>
 
-[![CI Status](https://github.com/vercel/vercel/actions/workflows/test-unit.yml/badge.svg)](https://github.com/vercel/vercel/actions/workflows/test-unit.yml)
-[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/vercel/vercel/discussions)
+<p align="center">
+  Develop. Preview. Ship.
+</p>
 
-## Usage
+<p align="center">
+  <a href="https://vercel.com/docs"><strong>Documentation</strong></a> ·
+  <a href="https://vercel.com/changelog"><strong>Changelog</strong></a> ·
+  <a href="https://vercel.com/templates"><strong>Templates</strong></a> ·
+  <a href="https://vercel.com/cli"><strong>CLI</strong></a>
+</p>
+<br/>
+
+## Vercel
 
 Vercel is a platform for **static sites and frontend frameworks**, built to integrate with your headless content, commerce, or database.
 
@@ -17,22 +25,16 @@ We provide a **frictionless developer experience** to take care of the hard thin
 
 We make it easy for frontend teams to **develop, preview, and ship** delightful user experiences, where performance is the default.
 
-Get started by [Importing a Git Project](https://vercel.com/new) and use `git push` to deploy. Alternatively, you can [install Vercel CLI](https://vercel.com/cli).
+## Deploy
+
+Get started by [importing a project](https://vercel.com/new) or using the [Vercel CLI](https://vercel.com/cli). Then, `git push` to deploy.
 
 ## Documentation
 
 For details on how to use Vercel, check out our [documentation](https://vercel.com/docs).
 
-## Caught a Bug?
+## Contributing
 
-1. [Fork](https://help.github.com/articles/fork-a-repo/) this repository to your own GitHub account and then [clone](https://help.github.com/articles/cloning-a-repository/) it to your local device
-2. Install dependencies with `yarn install`
-3. Compile the code: `yarn build`
-4. Link the package to the global module directory: `cd ./packages/cli && yarn link`
-5. You can start using `vercel` anywhere inside the command line
-
-As always, you should use `yarn test-unit` to run the tests and see if your changes have broken anything.
-
-## How to Create a Release
-
-If you have write access to this repository, you can read more about how to publish a release [here](https://github.com/vercel/vercel/wiki/Creating-a-Release).
+- [Code of Conduct](https://github.com/vercel/vercel/blob/main/.github/CODE_OF_CONDUCT.md)
+- [Contributing Guidelines](https://github.com/vercel/vercel/blob/main/.github/CONTRIBUTING.md)
+- [MIT License](https://github.com/vercel/vercel/blob/main/LICENSE)
