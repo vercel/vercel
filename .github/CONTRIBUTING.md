@@ -2,11 +2,11 @@
 
 When contributing to this repository, please first discuss the change you wish to make via [GitHub Discussions](https://github.com/vercel/vercel/discussions/new) with the owners of this repository before submitting a Pull Request.
 
-Please read our [code of conduct](CODE_OF_CONDUCT.md) and follow it in all your interactions with the project.
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) and follow it in all your interactions with the project.
 
 ## Local development
 
-This project is configured in a monorepo pattern where one repo contains multiple npm packages. Dependencies are installed and managed with `yarn`, not `npm` CLI.
+This project is configured in a monorepo, where one repository contains multiple npm packages. Dependencies are installed and managed with `yarn`, not `npm` CLI.
 
 To get started, execute the following:
 
@@ -23,7 +23,7 @@ Make sure all the tests pass before making changes.
 
 ## Verifying your change
 
-Once you are done with your changes (we even suggest doing it along the way ), make sure all the test still run by running
+Once you are done with your changes (we even suggest doing it along the way), make sure all the test still run by running:
 
 ```
 yarn build && yarn test
