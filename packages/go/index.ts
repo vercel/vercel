@@ -72,11 +72,7 @@ async function initPrivateGit(credentials: string) {
  * which works great for this feature. We also need to add a suffix during `vercel dev`
  * since the entrypoint is already stripped of its suffix before build() is called.
  */
-async function getRenamedEntrypoint(
-  entrypoint: string,
-  files: Files,
-  meta: Meta
-) {
+function getRenamedEntrypoint(entrypoint: string, files: Files, meta: Meta) {
   const filename = basename(entrypoint);
   if (filename.startsWith('[')) {
     const suffix = meta.isDev && !entrypoint.endsWith('.go') ? '.go' : '';
@@ -116,7 +112,7 @@ We highly recommend you leverage Go Modules in your project.
 Learn more: https://github.com/golang/go/wiki/Modules
 `);
   }
-  entrypoint = await getRenamedEntrypoint(entrypoint, files, meta);
+  entrypoint = getRenamedEntrypoint(entrypoint, files, meta);
   const entrypointArr = entrypoint.split(sep);
 
   // eslint-disable-next-line prefer-const
@@ -291,9 +287,13 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
       }
     }
 
+    console.log({ goPackageName, goFuncName });
+
     const mainModGoContents = modMainGoContents
       .replace('__VC_HANDLER_PACKAGE_NAME', goPackageName)
       .replace('__VC_HANDLER_FUNC_NAME', goFuncName);
+
+    console.log(mainModGoContents);
 
     if (isGoModExist && isGoModInRootDir) {
       debug('[mod-root] Write main file to ' + downloadPath);
