@@ -101,7 +101,10 @@ export async function getLinkFromDir<T = ProjectLink>(
   }
 }
 
-async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
+export async function getOrgById(
+  client: Client,
+  orgId: string
+): Promise<Org | null> {
   if (orgId.startsWith('team_')) {
     const team = await getTeamById(client, orgId);
     if (!team) return null;
