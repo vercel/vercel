@@ -136,6 +136,7 @@ export type Deployment = {
   target: string | null;
   ownerId: string;
   projectId: string;
+  inspectorUrl: string;
   meta: {
     [key: string]: any;
   };

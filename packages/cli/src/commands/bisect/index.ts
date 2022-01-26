@@ -14,15 +14,13 @@ import logo from '../../util/output/logo';
 import getArgs from '../../util/get-args';
 import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
-import getInspectUrl from '../../util/deployment/get-inspect-url';
-import { getOrgById } from '../../util/projects/link';
 import { Output } from '../../util/output';
 import { Deployment, PaginationOptions } from '../../types';
 
 interface DeploymentV6
   extends Pick<
     Deployment,
-    'url' | 'target' | 'projectId' | 'ownerId' | 'meta'
+    'url' | 'target' | 'projectId' | 'ownerId' | 'meta' | 'inspectorUrl'
   > {
   createdAt: number;
 }
@@ -125,11 +123,6 @@ export default async function main(client: Client): Promise<number> {
   }
 
   const badDeploymentPromise = getDeployment(client, bad).catch(err => err);
-  const orgPromise = badDeploymentPromise
-    .then(d => {
-      return d instanceof Error ? null : getOrgById(client, d.ownerId);
-    })
-    .catch(err => err);
 
   if (!good.startsWith('https://')) {
     good = `https://${good}`;
@@ -369,11 +362,7 @@ export default async function main(client: Client): Promise<number> {
     result.push(` ${chalk.bold('Commit:')} [${shortSha}] ${firstLine}`);
   }
 
-  const org = await orgPromise;
-  if (org && !(org instanceof Error)) {
-    const inspectUrl = getInspectUrl(lastBad.url, org.slug);
-    result.push(`${chalk.bold('Inspect:')} ${link(inspectUrl)}`);
-  }
+  result.push(`${chalk.bold('Inspect:')} ${link(lastBad.inspectorUrl)}`);
 
   output.print(boxen(result.join('\n'), { padding: 1 }));
   output.print('\n');
