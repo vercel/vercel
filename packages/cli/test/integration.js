@@ -35,7 +35,7 @@ function fetchOverride(url) {
   const parsed = parseUrl(url);
   const { host } = parsed;
   //parsed.host = '54.153.119.80';
-  parsed.host = '54.193.60.54';
+  parsed.host = '54.193.13.231';
   const ipUrl = format(parsed);
   console.log({ url, ipUrl });
   return fetch(ipUrl, {
