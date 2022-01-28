@@ -201,7 +201,7 @@ export default async function main(client: Client): Promise<number> {
 
   if (badDeployment.target !== goodDeployment.target) {
     output.error(
-      `Bad deployment target "${badDeployment.target}" does not match good deployment target "${goodDeployment.target}"`
+      `Bad deployment target "${badDeployment.target || 'preview'}" does not match good deployment target "${goodDeployment.target || 'preview'}"`
     );
     return 1;
   }
