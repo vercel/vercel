@@ -261,31 +261,6 @@ export type TXTVerificationError = {
 };
 
 /**
- * This error is returned when the domain is not verified by nameservers for wildcard alias.
- */
-export class DomainNsNotVerifiedForWildcard extends NowError<
-  'DOMAIN_NS_NOT_VERIFIED_FOR_WILDCARD',
-  {
-    domain: string;
-    nsVerification: NSVerificationError;
-  }
-> {
-  constructor({
-    domain,
-    nsVerification,
-  }: {
-    domain: string;
-    nsVerification: NSVerificationError;
-  }) {
-    super({
-      code: 'DOMAIN_NS_NOT_VERIFIED_FOR_WILDCARD',
-      meta: { domain, nsVerification },
-      message: `The domain ${domain} is not verified by nameservers for wildcard alias.`,
-    });
-  }
-}
-
-/**
  * Used when a domain is validated because we tried to add it to an account
  * via API or for any other reason.
  */

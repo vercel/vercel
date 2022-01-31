@@ -85,10 +85,6 @@ export type Domain = {
   transferredAt?: number | null;
   orderedAt?: number;
   serviceType: 'zeit.world' | 'external' | 'na';
-  verified: boolean;
-  nsVerifiedAt: number | null;
-  txtVerifiedAt: number | null;
-  verificationRecord: string;
   nameservers: string[];
   intendedNameservers: string[];
   creator: {
