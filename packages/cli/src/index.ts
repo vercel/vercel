@@ -161,7 +161,7 @@ const main = async () => {
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  if (targetOrSubcommand === 'build') {
+  if (targetOrSubcommand === 'build' || targetOrSubcommand === 'build2') {
     console.log(
       `${chalk.grey(
         `${getTitleName()} CLI ${
@@ -299,6 +299,7 @@ const main = async () => {
     'init',
     'update',
     'build',
+    'build2',
   ];
 
   if (authConfigExists) {
@@ -629,6 +630,9 @@ const main = async () => {
         break;
       case 'build':
         func = await import('./commands/build');
+        break;
+      case 'build2':
+        func = await import('./commands/build2');
         break;
       case 'certs':
         func = await import('./commands/certs');
