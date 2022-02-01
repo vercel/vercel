@@ -21,18 +21,18 @@ import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
-  File,
-  Files,
-  Meta,
-  PrepareCacheOptions,
-  BuildOptions,
   Config,
-  StartDevServerOptions,
-  StartDevServerResult,
-  glob,
-  download,
+  File,
   FileBlob,
   FileFsRef,
+  Files,
+  FunctionBuild,
+  Meta,
+  PrepareCache,
+  StartDevServer,
+  StartDevServerOptions,
+  glob,
+  download,
   createLambda,
   runNpmInstall,
   runPackageJsonScript,
@@ -135,7 +135,6 @@ async function compile(
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
-  watch: string[];
 }> {
   const inputFiles = new Set<string>([entrypointPath]);
   const preparedFiles: Files = {};
@@ -320,7 +319,6 @@ async function compile(
   return {
     preparedFiles,
     shouldAddSourcemapSupport,
-    watch: fileList,
   };
 }
 
@@ -344,14 +342,14 @@ export * from './types';
 
 export const version = 3;
 
-export async function build({
+export const build: FunctionBuild = async ({
   files,
   entrypoint,
   workPath,
   repoRootPath,
   config = {},
   meta = {},
-}: BuildOptions) {
+}) => {
   const shouldAddHelpers = !(
     config.helpers === false || process.env.NODEJS_HELPERS === '0'
   );
@@ -377,7 +375,7 @@ export async function build({
 
   debug('Tracing input files...');
   const traceTime = Date.now();
-  const { preparedFiles, shouldAddSourcemapSupport, watch } = await compile(
+  const { preparedFiles, shouldAddSourcemapSupport } = await compile(
     workPath,
     baseDir,
     entrypointPath,
@@ -433,19 +431,15 @@ export async function build({
     runtime: nodeVersion.runtime,
   });
 
-  return { output: lambda, watch };
-}
+  return { output: lambda };
+};
 
-export async function prepareCache({
-  workPath,
-}: PrepareCacheOptions): Promise<Files> {
+export const prepareCache: PrepareCache = async ({ workPath }) => {
   const cache = await glob('node_modules/**', workPath);
   return cache;
-}
+};
 
-export async function startDevServer(
-  opts: StartDevServerOptions
-): Promise<StartDevServerResult> {
+export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, config, meta = {} } = opts;
   const entryDir = join(workPath, dirname(entrypoint));
   const projectTsConfig = await walkParentDirs({
@@ -503,7 +497,7 @@ export async function startDevServer(
     const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
     throw new Error(`\`node ${entrypoint}\` failed with ${reason}`);
   }
-}
+};
 
 async function doTypeCheck(
   { entrypoint, workPath, meta = {} }: StartDevServerOptions,

@@ -14,12 +14,11 @@ import {
   remove,
 } from 'fs-extra';
 import {
-  BuildOptions,
-  Meta,
   Files,
-  PrepareCacheOptions,
-  StartDevServerOptions,
-  StartDevServerResult,
+  FunctionBuild,
+  Meta,
+  PrepareCache,
+  StartDevServer,
   glob,
   download,
   createLambda,
@@ -44,7 +43,6 @@ interface Analyzed {
   found?: boolean;
   packageName: string;
   functionName: string;
-  watch: string[];
 }
 
 interface PortInfo {
@@ -93,13 +91,13 @@ async function getRenamedEntrypoint(
 
 export const version = 3;
 
-export async function build({
+export const build: FunctionBuild = async ({
   files,
   entrypoint,
   config,
   workPath,
   meta = {},
-}: BuildOptions) {
+}) => {
   if (process.env.GIT_CREDENTIALS && !meta.isDev) {
     debug('Initialize Git credentials...');
     await initPrivateGit(process.env.GIT_CREDENTIALS);
@@ -456,20 +454,10 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
     environment: {},
   });
 
-  const watch = parsedAnalyzed.watch;
-  let watchSub: string[] = [];
-  // if `entrypoint` located in subdirectory
-  // we will need to concat it with return watch array
-  if (entrypointArr.length > 1) {
-    entrypointArr.pop();
-    watchSub = parsedAnalyzed.watch.map(file => join(...entrypointArr, file));
-  }
-
   return {
     output: lambda,
-    watch: watch.concat(watchSub),
   };
-}
+};
 
 function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
@@ -500,9 +488,7 @@ async function copyDevServer(
   await writeFile(join(dest, 'vercel-dev-server-main.go'), patched);
 }
 
-export async function startDevServer(
-  opts: StartDevServerOptions
-): Promise<StartDevServerResult> {
+export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointDir = dirname(entrypoint);
@@ -595,7 +581,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   } else {
     throw new Error(`Unexpected result type: ${typeof result}`);
   }
-}
+};
 
 export interface CancelablePromise<T> extends Promise<T> {
   cancel: () => void;
@@ -630,9 +616,7 @@ async function waitForPortFile_(opts: {
   }
 }
 
-export async function prepareCache({
-  workPath,
-}: PrepareCacheOptions): Promise<Files> {
+export const prepareCache: PrepareCache = async ({ workPath }) => {
   const cache = await glob(`${cacheDir}/**`, workPath);
   return cache;
-}
+};
