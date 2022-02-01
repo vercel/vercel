@@ -2,7 +2,8 @@ const { join } = require('path');
 const { execSync } = require('child_process');
 const fetch = require('node-fetch');
 
-const filterLog = require('./changelog/filter');
+const normalizeLog = require('./changelog/normalize');
+const groupLog = require('./changelog/group');
 
 process.chdir(join(__dirname, '..'));
 
@@ -14,15 +15,37 @@ async function getLatestStableTag() {
   return tag_name;
 }
 
+function serializeLog(groupedLog) {
+  const serialized = [];
+
+  for (let area of Object.keys(groupedLog)) {
+    if (serialized.length) {
+      // only push a padding-line above area if we already have content
+      serialized.push('');
+    }
+
+    serialized.push(`### ${area}`);
+    serialized.push('');
+
+    for (let line of groupedLog[area]) {
+      serialized.push(`- ${line}`);
+    }
+  }
+
+  return serialized;
+}
+
 function generateLog(tagName) {
   const logLines = execSync(
-    `git log --pretty=format:"- %s [%an]" ${tagName}...HEAD`
+    `git log --pretty=format:"%s [%an]" ${tagName}...HEAD`
   )
     .toString()
     .trim()
     .split('\n');
 
-  return filterLog(logLines);
+  const filteredLog = normalizeLog(logLines);
+  const groupedLog = groupLog(filteredLog);
+  return serializeLog(groupedLog);
 }
 
 function findUniqPackagesAffected(tagName) {
