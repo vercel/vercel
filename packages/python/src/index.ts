@@ -14,6 +14,7 @@ import {
   shouldServe,
   debug,
   NowBuildError,
+  FunctionBuild,
 } from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 
@@ -52,13 +53,13 @@ export async function downloadFilesInWorkPath({
   return workPath;
 }
 
-export const build = async ({
+export const build: FunctionBuild = async ({
   workPath,
   files: originalFiles,
   entrypoint,
   meta = {},
   config,
-}: BuildOptions) => {
+}) => {
   let pipPath = meta.isDev ? 'pip3' : 'pip3.9';
   let pythonPath = meta.isDev ? 'python3' : 'python3.9';
   let pythonRuntime = meta.isDev ? 'python3' : 'python3.9';

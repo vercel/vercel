@@ -1,5 +1,6 @@
 import FileRef from './file-ref';
 import FileFsRef from './file-fs-ref';
+import { Lambda } from './lambda';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -368,3 +369,49 @@ export interface ProjectSettings {
   directoryListing?: boolean;
   gitForkProtection?: boolean;
 }
+
+export interface FrameworkBuilder {
+  version: 2;
+  build: FrameworkBuild;
+  prepareCache?: PrepareCache;
+}
+
+export interface FunctionBuilder {
+  version: 3;
+  build: FunctionBuild;
+  prepareCache?: PrepareCache;
+  startDevServer?: StartDevServer;
+}
+
+type ImageFormat = 'image/avif' | 'image/webp';
+
+export interface Images {
+  domains: string[];
+  sizes: number[];
+  minimumCacheTTL?: number;
+  formats?: ImageFormat[];
+}
+
+export interface BuildResultV2 {
+  // TODO: needs routing-utils for `Route` type
+  //routes: Route[];
+  images?: Images;
+  output: {
+    [key: string]: File | Lambda;
+  };
+  wildcard?: Array<{
+    domain: string;
+    value: string;
+  }>;
+}
+
+export interface BuildResultV3 {
+  output: Lambda;
+}
+
+export type FrameworkBuild = (options: BuildOptions) => Promise<BuildResultV2>;
+export type FunctionBuild = (options: BuildOptions) => Promise<BuildResultV3>;
+export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
+export type StartDevServer = (
+  options: StartDevServerOptions
+) => Promise<StartDevServerResult>;
