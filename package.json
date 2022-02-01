@@ -56,6 +56,7 @@
     "build": "turbo run build",
     "vercel-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
     "pre-commit": "lint-staged",
+    "test": "jest",
     "test-unit": "node utils/run.js test-unit",
     "test-integration-cli": "node utils/run.js test-integration-cli",
     "test-integration-once": "node utils/run.js test-integration-once",
@@ -146,6 +147,13 @@
           "@typescript-eslint/no-explicit-any": 0
         }
       }
+    ]
+  },
+  "jest": {
+    "verbose": false,
+    "testEnvironment": "node",
+    "testMatch": [
+      "<rootDir>/test/**/*.test.js"
     ]
   }
 }
