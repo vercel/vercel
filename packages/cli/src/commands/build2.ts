@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import npa from 'npm-package-arg';
-import { dirname, join, relative } from 'path';
+import { join, relative } from 'path';
 import {
   detectBuilders,
   Files,
@@ -10,8 +10,8 @@ import {
   spawnAsync,
   BuildOptions,
   Config,
-  Builder,
-  //Lambda,
+  FrameworkBuilder,
+  FunctionBuilder,
 } from '@vercel/build-utils';
 import { VercelConfig } from '@vercel/client';
 
@@ -28,6 +28,8 @@ import { VERCEL_DIR } from '../util/projects/link';
 import confirm from '../util/input/confirm';
 import { emoji, prependEmoji } from '../util/emoji';
 import stamp from '../util/output/stamp';
+import { getBuildersToAdd } from '../util/build/builders-to-add';
+import { OUTPUT_DIR, writeBuildResult } from '../util/build/write-build-result';
 
 const help = () => {
   return console.log(`
@@ -55,21 +57,19 @@ const help = () => {
 `);
 };
 
-const OUTPUT_DIR = '.vercel/output';
-
 export default async function main(client: Client) {
   const { output } = client;
 
   // Ensure that `vc build` is not being invoked recursively
   if (process.env.__VERCEL_BUILD_RUNNING) {
-    client.output.error(
+    output.error(
       `${cmd(
         `${cli.name} build`
       )} must not recursively invoke itself. Check the Build Command in the Project Settings or the ${cmd(
         'build'
       )} script in ${cmd('package.json')}`
     );
-    client.output.error(
+    output.error(
       `Learn More: https://vercel.link/recursive-invocation-of-commands`
     );
     return 1;
@@ -118,7 +118,7 @@ export default async function main(client: Client) {
   process.env.VERCEL = '1';
 
   // Load `package.json` and `vercel.json` files
-  const [pkg, vercelConfig] = await Promise.all([
+  let [pkg, vercelConfig] = await Promise.all([
     readJSONFile<PackageJson>('package.json'),
     readJSONFile<VercelConfig>('vercel.json'),
   ]);
@@ -127,63 +127,43 @@ export default async function main(client: Client) {
 
   // Get a list of source files
   const files = (await getFiles(cwd, client)).map(f => relative(cwd, f));
-  console.log({ pkg, vercelConfig, files });
+  //console.log({ pkg, vercelConfig, files });
 
   // Detect the Vercel Builders that will need to be invoked
   const detectedBuilders = await detectBuilders(files, pkg, {
     ...vercelConfig,
     projectSettings: project.settings,
+    featHandleMiss: true,
   });
-  console.log(detectedBuilders);
+  //console.log(detectedBuilders);
 
-  // TOOD: print warnings / errors
+  // TODO: print warnings / errors
 
-  const buildersSpec = new Map<string, npa.Result>();
-  for (const builder of detectedBuilders.builders || []) {
-    const parsed = npa(builder.use);
-    if (typeof parsed.name !== 'string') continue;
-    buildersSpec.set(parsed.name, parsed);
-  }
-  console.log(buildersSpec);
+  const buildersParsed = (detectedBuilders.builders || []).map(b => npa(b.use));
 
   // Add any Builders that are not yet present into `package.json`
-  const deps = {
-    ...pkg?.dependencies,
-    ...pkg?.devDependencies,
-  };
-  const buildersToAdd = new Set<string>();
-  for (const parsed of buildersSpec.values()) {
-    if (typeof parsed.name !== 'string') continue;
-
-    // `@vercel/static` is a special-case built-in Builder,
-    // so it doesn't get added to `package.json`
-    if (parsed.name === '@vercel/static') continue;
-
-    // TODO: add semver parsing when version/tag is present
-    if (!deps[parsed.name]) {
-      buildersToAdd.add(parsed.raw);
-    }
-  }
-  if (!deps['@vercel/build-utils']) {
-    buildersToAdd.add('@vercel/build-utils');
-  }
-  console.log(buildersToAdd);
+  const buildersToAdd = getBuildersToAdd(buildersParsed, pkg);
+  //console.log(buildersToAdd);
   if (buildersToAdd.size > 0) {
     // TODO: ensure `package.json` exists in `cwd`
+    // TODO: run `npm` / `pnpm` based on lockfile presence
     await spawnAsync('yarn', ['add', '--dev', ...buildersToAdd]);
+    pkg = await readJSONFile<PackageJson>('package.json');
   }
 
   // Import Builders
-  const builders = new Map<string, any>();
+  const builders = new Map<string, FrameworkBuilder | FunctionBuilder>();
   const builderPkgs = new Map<string, PackageJson>();
-  for (const name of buildersSpec.keys()) {
+  for (const parsed of buildersParsed) {
+    let { name } = parsed;
+    if (!name) continue;
     const path = require.resolve(name, {
       paths: [cwd, __dirname],
     });
     const pkgPath = require.resolve(`${name}/package.json`, {
       paths: [cwd, __dirname],
     });
-    console.log({ name, path, pkgPath });
+    //console.log({ name, path, pkgPath });
     const [builder, builderPkg] = await Promise.all([
       import(path),
       import(pkgPath),
@@ -212,7 +192,7 @@ export default async function main(client: Client) {
   // Create fresh new output directory
   await fs.mkdirp(OUTPUT_DIR);
 
-  const ops: Promise<void>[] = [];
+  const ops: Promise<Error | void>[] = [];
 
   // Write the `detectedBuilders` result to output dir
   ops.push(
@@ -229,8 +209,12 @@ export default async function main(client: Client) {
     if (typeof name !== 'string') continue;
 
     const builder = builders.get(name);
+    if (!builder) {
+      throw new Error(`Failed to load Builder "${name}"`);
+    }
+
     const builderPkg = builderPkgs.get(name);
-    console.log({ build, name, builder });
+    //console.log({ build, name, builder });
     const buildConfig: Config = {
       ...build.config,
       projectSettings: project.settings,
@@ -251,19 +235,21 @@ export default async function main(client: Client) {
     const buildResult = await builder.build(buildOptions);
 
     // TODO remove
-    delete buildResult.watch;
+    delete (buildResult as any).watch;
 
     console.log({ buildResult });
 
     ops.push(
-      writeBuildResult(buildResult, build, builder, builderPkg!).catch(err => {
-        console.log(err);
-      })
+      writeBuildResult(buildResult, build, builder, builderPkg!).catch(
+        err => err
+      )
     );
   }
 
   // Wait for filesystem operations to complete
-  await Promise.all(ops);
+  // TODO render progress bar?
+  const errors = await Promise.all(ops);
+  console.log(errors);
 
   output.print(
     `${prependEmoji(
@@ -274,97 +260,3 @@ export default async function main(client: Client) {
     )}`
   );
 }
-
-async function writeBuildResult(
-  buildResult: any,
-  build: Builder,
-  builder: any,
-  builderPkg: PackageJson
-) {
-  await fs.mkdirp(dirname(join(OUTPUT_DIR, build.src!)));
-  if (builder.version === 3) {
-    return writeBuildResultV3(buildResult, build, builder, builderPkg);
-  }
-  return writeBuildResultV2(buildResult, build, builder, builderPkg);
-}
-
-// @ts-ignore
-async function writeBuildResultV2(
-  buildResult: any,
-  build: Builder,
-  builder: any,
-  builderPkg: PackageJson
-) {
-  const outputDir = join(OUTPUT_DIR, build.src!);
-  await fs.mkdirp(outputDir);
-  const output = {};
-  /*
-    for (const [path, file] of Object.entries(buildResult.output)) {
-        console.log({ path, file })
-        await fs.mkdirp(join(outputDir, dirname(path)));
-        if (file.type === 'Lambda') {
-
-        } else if (file.type === 'FileFsRef') {
-
-        }
-    }
-    */
-  await Promise.all([
-    //fs.writeFile(join(OUTPUT_DIR, `${build.src}.zip`), output.zipBuffer),
-    fs.writeJSON(
-      join(OUTPUT_DIR, `${build.src}.build-result.json`),
-      {
-        ...buildResult,
-        builder: {
-          name: builderPkg.name,
-          version: builderPkg.version,
-        },
-        watch: undefined,
-        output,
-      },
-      {
-        spaces: 2,
-      }
-    ),
-  ]);
-}
-
-async function writeBuildResultV3(
-  buildResult: any,
-  build: Builder,
-  builder: any,
-  builderPkg: PackageJson
-) {
-  const { output } = buildResult;
-  if (output.type === 'Lambda') {
-    await Promise.all([
-      fs.writeFile(join(OUTPUT_DIR, `${build.src}.zip`), output.zipBuffer),
-      fs.writeJSON(
-        join(OUTPUT_DIR, `${build.src}.build-result.json`),
-        {
-          ...buildResult,
-          builder: {
-            name: builderPkg.name,
-            version: builderPkg.version,
-          },
-          output: {
-            ...output,
-            zipBuffer: undefined,
-          },
-          watch: undefined,
-        },
-        {
-          spaces: 2,
-        }
-      ),
-    ]);
-  } else {
-    throw new Error(`Unsupported output type: "${output.type}`);
-  }
-}
-
-/*
-async function writeLambda(lambda: Lambda, path: string, builderPkg: PackageJson) {
-
-}
-*/
