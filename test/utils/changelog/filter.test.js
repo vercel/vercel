@@ -76,7 +76,7 @@ describe('changelog', () => {
       ]);
     });
 
-    it('should remove "Revert" and be ok not finding the the revertted commit', async () => {
+    it('should NOT remove "Revert" if the reverted commit is not in the current changelog entry', async () => {
       const commits = [
         {
           areas: ['cli'],
@@ -107,6 +107,15 @@ describe('changelog', () => {
 
       let filteredCommits = filterLog(commits);
       expect(filteredCommits).toEqual([
+        {
+          areas: ['cli'],
+          hash: '073f353fcf1944633bb43119c8ffcff46eea0480',
+          message:
+            'This reverts commit 17fd88e044a807adf4ee6ed662cdb7c7556e912d.',
+          revertsHashes: ['17fd88e044a807adf4ee6ed662cdb7c7556e912d'],
+          subject:
+            'Revert "[cli] Add "outDir" to `tsconfig.json` (#6566) [Nathan Rajlich]"',
+        },
         {
           areas: ['frameworks', 'cli'],
           hash: '29a44db8d9377d7f16146817aded57ebfbcff752',
