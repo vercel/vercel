@@ -20,7 +20,7 @@ function parseRevertCommit(message) {
 }
 
 function parseAreas(subject) {
-  const areaChunk = subject.split(' ')?.[0] || '';
+  const areaChunk = subject.split(' ')[0] || '';
   const areas = areaChunk.match(AREA_PATTERN);
   if (!areas) {
     return ['UNCATEGORIZED'];
