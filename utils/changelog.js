@@ -2,7 +2,8 @@ const { join } = require('path');
 const { execSync } = require('child_process');
 const fetch = require('node-fetch');
 
-const normalizeLog = require('./changelog/normalize');
+const parseCommits = require('./changelog/parse');
+const filterLog = require('./changelog/filter');
 const groupLog = require('./changelog/group');
 
 process.chdir(join(__dirname, '..'));
@@ -37,14 +38,15 @@ function serializeLog(groupedLog) {
 
 function generateLog(tagName) {
   const logLines = execSync(
-    `git log --pretty=format:"%s [%an]" ${tagName}...HEAD`
+    `git log --pretty=format:"%s [%an] &&& %H" ${tagName}...HEAD`
   )
     .toString()
     .trim()
     .split('\n');
 
-  const filteredLog = normalizeLog(logLines);
-  const groupedLog = groupLog(filteredLog);
+  const commits = parseCommits(logLines);
+  const filteredCommits = filterLog(commits);
+  const groupedLog = groupLog(filteredCommits);
   return serializeLog(groupedLog);
 }
 
