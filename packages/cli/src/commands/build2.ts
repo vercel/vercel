@@ -1,7 +1,11 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import npa from 'npm-package-arg';
-import { join, relative } from 'path';
+import {
+  join,
+  //normalize,
+  relative,
+} from 'path';
 import {
   detectBuilders,
   Files,
@@ -13,6 +17,7 @@ import {
   FrameworkBuilder,
   FunctionBuilder,
 } from '@vercel/build-utils';
+import { getTransformedRoutes } from '@vercel/routing-utils';
 import { VercelConfig } from '@vercel/client';
 
 import pull from './pull';
@@ -129,6 +134,48 @@ export default async function main(client: Client) {
   const files = (await getFiles(cwd, client)).map(f => relative(cwd, f));
   //console.log({ pkg, vercelConfig, files });
 
+  const routesResult = getTransformedRoutes({ nowConfig: vercelConfig || {} });
+  if (routesResult.error) {
+    //throw new NowBuildError(routesResult.error);
+  }
+
+  if (vercelConfig?.builds && vercelConfig.functions) {
+    /*
+    throw new NowBuildError({
+      code: 'bad_request',
+      message:
+        'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
+      link: 'https://vercel.link/functions-and-builds',
+    });
+    */
+  }
+
+  if (vercelConfig?.builds && vercelConfig.builds.length > 0) {
+    /*
+    console.log(
+      'Warning: Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings',
+    );
+    return {
+      buildSpecs: vercelConfig.builds.map(normalizeBuilderSpecPayload),
+      routes: routesResult.routes || [],
+    };
+    */
+  }
+
+  /*
+  if (deployment.projectSettings?.serverlessFunctionRegion) {
+    if (vercelConfig && vercelConfig.regions && vercelConfig.regions.length > 0) {
+      console.log(
+        'Warning: Due to `regions` existing in your configuration file, the Serverless Function Region defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-region-setting',
+      );
+    } else if (deployment.regions?.length > 0) {
+      console.log(
+        'Warning: Due to `regions` assigned to this deployment, the Serverless Function Region defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-region-setting',
+      );
+    }
+  }
+  */
+
   // Detect the Vercel Builders that will need to be invoked
   const detectedBuilders = await detectBuilders(files, pkg, {
     ...vercelConfig,
@@ -171,17 +218,13 @@ export default async function main(client: Client) {
     builders.set(name, builder);
     builderPkgs.set(name, builderPkg);
   }
-  console.log(builders);
+  //console.log(builders);
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
   for (const path of files) {
     const { mode } = await fs.stat(path);
     filesMap[path] = new FileFsRef({ mode, fsPath: join(cwd, path) });
-    //const extensionless = this.getExtensionlessFile(path);
-    //if (extensionless) {
-    //  this.files[extensionless] = new FileFsRef({ mode, fsPath });
-    //}
   }
 
   // Delete output directory from potential previous build
@@ -237,8 +280,6 @@ export default async function main(client: Client) {
     // TODO remove
     delete (buildResult as any).watch;
 
-    console.log({ buildResult });
-
     ops.push(
       writeBuildResult(buildResult, build, builder, builderPkg!).catch(
         err => err
@@ -260,3 +301,35 @@ export default async function main(client: Client) {
     )}`
   );
 }
+
+/*
+function normalizeBuilderSpecPayload(buildSpecPayload: any) {
+  if (!buildSpecPayload.use) {
+    throw new NowBuildError({
+      code: `invalid_build_specification`,
+      message: 'Field `use` is missing in build specification',
+      link: 'https://vercel.com/docs/configuration#project/builds',
+      action: 'View Documentation',
+    });
+  }
+
+  let src = normalize(buildSpecPayload.src || '**');
+  if (src === '.' || src === './') {
+    throw new NowBuildError({
+      code: `invalid_build_specification`,
+      message: 'A build `src` path resolves to an empty string',
+      link: 'https://vercel.com/docs/configuration#project/builds',
+      action: 'View Documentation',
+    });
+  }
+
+  if (src.startsWith('/')) {
+    src = src.substring(1);
+  }
+
+  return {
+    ...buildSpecPayload,
+    src,
+  };
+}
+*/

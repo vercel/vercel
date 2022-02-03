@@ -22,9 +22,19 @@ export async function writeBuildResult(
 ) {
   const { version } = builder;
   if (version === 2) {
-    return writeBuildResultV2(buildResult as BuildResultV2, build, builderPkg);
+    return writeBuildResultV2(
+      buildResult as BuildResultV2,
+      build,
+      builder,
+      builderPkg
+    );
   } else if (version === 3) {
-    return writeBuildResultV3(buildResult as BuildResultV3, build, builderPkg);
+    return writeBuildResultV3(
+      buildResult as BuildResultV3,
+      build,
+      builder,
+      builderPkg
+    );
   }
   throw new Error(
     `Unsupported Builder version \`${version}\` from "${builderPkg.name}"`
@@ -34,11 +44,11 @@ export async function writeBuildResult(
 async function writeBuildResultV2(
   buildResult: BuildResultV2,
   build: Builder,
+  builder: FrameworkBuilder | FunctionBuilder,
   builderPkg: PackageJson
 ) {
   const output: { [path: string]: any } = {};
   for (const [path, file] of Object.entries(buildResult.output)) {
-    console.log({ path, file });
     if (file.type === 'Lambda') {
       await writeLambda(file as Lambda, path);
       output[path] = {
@@ -66,6 +76,7 @@ async function writeBuildResultV2(
       output,
     },
     build.src!,
+    builder,
     builderPkg
   );
 }
@@ -73,6 +84,7 @@ async function writeBuildResultV2(
 async function writeBuildResultV3(
   buildResult: BuildResultV3,
   build: Builder,
+  builder: FrameworkBuilder | FunctionBuilder,
   builderPkg: PackageJson
 ) {
   const { output } = buildResult;
@@ -89,6 +101,7 @@ async function writeBuildResultV3(
           watch: undefined,
         },
         build.src!,
+        builder,
         builderPkg
       ),
     ]);
@@ -97,7 +110,12 @@ async function writeBuildResultV3(
   }
 }
 
-async function writeMeta(metadata: any, path: string, builderPkg: PackageJson) {
+async function writeMeta(
+  metadata: any,
+  path: string,
+  builder: FrameworkBuilder | FunctionBuilder,
+  builderPkg: PackageJson
+) {
   const dest = join(OUTPUT_DIR, 'meta', `${path}.build-result.json`);
   await fs.mkdirp(dirname(dest));
   const json = {
@@ -105,7 +123,7 @@ async function writeMeta(metadata: any, path: string, builderPkg: PackageJson) {
     builder: {
       name: builderPkg.name,
       version: builderPkg.version,
-      //apiVersion: builder.version
+      apiVersion: builder.version,
     },
     watch: undefined,
   };
