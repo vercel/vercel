@@ -2271,62 +2271,6 @@ test('[vercel dev] fails when development commad calls vercel dev recursively', 
   );
 });
 
-test('[vercel build] fails when build commad calls vercel build recursively', async t => {
-  const dir = fixture('build-fail-on-recursion-command');
-  const projectName = `build-fail-on-recursion-command-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  const build = execa(binaryPath, ['build', ...defaultArgs], {
-    cwd: dir,
-    reject: false,
-  });
-
-  await waitForPrompt(build, chunk =>
-    chunk.includes('No Project Settings found locally')
-  );
-  build.stdin.write('yes\n');
-
-  await setupProject(build, projectName, {
-    buildCommand: `${binaryPath} build`,
-  });
-
-  const { exitCode, stderr } = await build;
-
-  t.is(exitCode, 1);
-  t.true(
-    stderr.includes('must not recursively invoke itself'),
-    `Received instead: "${stderr}"`
-  );
-});
-
-test('[vercel build] fails when build script calls vercel build recursively', async t => {
-  const dir = fixture('build-fail-on-recursion-script');
-  const projectName = `build-fail-on-recursion-script-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  const build = execa(binaryPath, ['build', ...defaultArgs], {
-    cwd: dir,
-    reject: false,
-  });
-
-  await waitForPrompt(build, chunk =>
-    chunk.includes('No Project Settings found locally')
-  );
-  build.stdin.write('yes\n');
-
-  await setupProject(build, projectName);
-
-  const { exitCode, stderr } = await build;
-
-  t.is(exitCode, 1);
-  t.true(
-    stderr.includes('must not recursively invoke itself'),
-    `Received instead: "${stderr}"`
-  );
-});
-
 test('`vercel rm` removes a deployment', async t => {
   const directory = fixture('static-deployment');
 

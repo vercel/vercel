@@ -28,6 +28,8 @@ type Example = {
 
 const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 
+export const isBeta = true;
+
 export default async function init(
   client: Client,
   opts: Partial<Options>,

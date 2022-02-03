@@ -7,17 +7,12 @@ const allPackages = [
   'frameworks',
   'build-utils',
   'static-config',
-  'middleware',
   'client',
   'node-bridge',
   'node',
   'go',
   'python',
   'ruby',
-  'plugin-go',
-  'plugin-node',
-  'plugin-python',
-  'plugin-ruby',
   'cli',
 ];
 
