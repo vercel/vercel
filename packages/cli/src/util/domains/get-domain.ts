@@ -16,7 +16,7 @@ export async function getDomain(
   );
   try {
     const { domain } = await client.fetch<Response>(
-      `/v4/domains/${domainName}`
+      `/v5/domains/${domainName}`
     );
 
     return domain;
