@@ -16,7 +16,6 @@ yarn install
 yarn bootstrap
 yarn build
 yarn lint
-yarn test
 ```
 
 Make sure all the tests pass before making changes.
@@ -26,7 +25,7 @@ Make sure all the tests pass before making changes.
 Once you are done with your changes (we even suggest doing it along the way), make sure all the test still pass by running:
 
 ```
-yarn build && yarn test
+yarn build
 ```
 
 from the root of the project.
