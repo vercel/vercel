@@ -30,6 +30,8 @@ yarn build
 
 from the root of the project.
 
+Running `yarn build` automatically runs the tests.
+
 If any test fails, make sure to fix it along with your changes. See [Interpreting test errors](#Interpreting-test-errors) for more information about how the tests are executed, especially the integration tests.
 
 ## Pull Request Process
