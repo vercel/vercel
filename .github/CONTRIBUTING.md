@@ -23,7 +23,7 @@ Make sure all the tests pass before making changes.
 
 ## Verifying your change
 
-Once you are done with your changes (we even suggest doing it along the way), make sure all the test still run by running:
+Once you are done with your changes (we even suggest doing it along the way), make sure all the test still pass by running:
 
 ```
 yarn build && yarn test
