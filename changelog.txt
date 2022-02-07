@@ -1,0 +1,221 @@
+# Twitter Changelog
+
+https://twitter.com/vercel_changes
+
+
+# Blog Changelog
+
+https://vercel.com/changelog
+
+
+# Release Changelog
+
+### cli
+
+- [cli] Add `vercel bisect` command (#5778) [Nathan Rajlich]
+- [cli] Remove legacy verification handling in `alias` command (#7305) [Mark Glagola]
+- [cli] Use `@vercel/fetch-retry` in CLI integration tests (#7360) [Nathan Rajlich]
+- [cli] Major: remove "now" prop from package.json (#7186) [Steven]
+- [build-utils][cli] Detect file system api usage, abort on "Exclusion Conditions" (#7158) [Steven]
+- [cli] Remove support for single file deployments (#6652) [Nathan Rajlich]
+- [cli] Add `@vercel/client` as a devDependency (#7154) [Steven]
+- [frameworks][cli] Remove duplicate `getFsOutputDir()` definitions (#7124) [Steven]
+- [cli] Ignore `required-server-files.json` if it does not exist (#7111) [Andy]
+- [cli] Use "127.0.0.1" instead of "localhost" in `vc dev` (#7094) [Nathan Rajlich]
+- [cli] Fix metrics crash on some platforms (#7034) [Steven]
+- [frameworks][cli] Consolidate buildCommand and devCommand (#7032) [Steven]
+- [cli] Fix spinner output outside of TTY (#7017) [Miroslav Simulcik]
+- [cli] Fix update command to favor npm (#7018) [Steven]
+- [cli] Fix updating of gitignore in `vercel link` (#6986) [Miroslav Simulcik]
+- [cli] Fix NFT output path for monorepos (#6965) [Andy]
+- [cli] Render an error page when middleware explodes. (#6934) [Gary Borton]
+- [cli] Make sure `vc pull` properly sets `currentTeam` (#6936) [Jared Palmer]
+- [cli] Bundle middleware deps (#6932) [Gary Borton]
+- [cli] Fix integration tests that check `.gitignore` (#6904) [Nathan Rajlich]
+- [cli][client] Add step for checks (#6889) [Andy]
+- [cli] Add CLI login unit test (#6866) [Nathan Rajlich]
+- [cli] Add `vercel pull` command (#6822) [Jared Palmer]
+- [cli] Fix swapped error messages in `executeBuild()`  (#6724) [Katie Byers]
+- [cli] Use getters for `Now` props that mirror `Client` (#6838) [Nathan Rajlich]
+- [cli] Don't pass `teamId` query param to `/verify` token endpoint (#6841) [Nathan Rajlich]
+- [cli] Use `GET /v2/user` endpoint (#6828) [Nathan Rajlich]
+- [cli] Add `outputBuffer` getter and mutable `isTTY` for tests (#6827) [Nathan Rajlich]
+- [cli] Refactor legacy `Now` client to TypeScript (#6650) [Nathan Rajlich]
+- [cli] Rewrite Unit tests to TypeScript + Jest (#6638) [Nathan Rajlich]
+- [cli] Remove broken `vc downgrade` command (#6643) [Nathan Rajlich]
+- [cli] Refactor `src/index` to TypeScript (#6602) [Nathan Rajlich]
+- [cli] Refactor `vc teams` to TypeScript (#6610) [Nathan Rajlich]
+- [cli] Support `--project` flag in `vc link` command (#6614) [Nathan Rajlich]
+- [cli] Update readme (#6622) [Steven]
+- [cli] Show server-side `errorMessage` upon deployment `UNEXPECTED_ERROR` (#6606) [Nathan Rajlich]
+- [cli] Stop installing `@now/build-utils` for `vc dev` (#6604) [Nathan Rajlich]
+- [cli] Refactor a handful of util modules to TypeScript (#6584) [Nathan Rajlich]
+- [cli] Use `client.fetch()` in `vc init` (#6575) [Nathan Rajlich]
+- [cli] Attempt to fix the "lambda-with-3-second-timeout" E2E test (#6579) [Nathan Rajlich]
+- [cli] Remove `withSpinner()` helper (#6576) [Nathan Rajlich]
+- [cli] Remove unnecessary `await` in Dev tests (#6572) [Nathan Rajlich]
+- [cli] Add "outDir" to `tsconfig.json` (#6566) [Nathan Rajlich]
+- [cli] Fix in-flight re-login when there are no existing credentials (#6565) [Nathan Rajlich]
+- [cli] Improved Vercel CLI link (#7151) [Leo Lamprecht]
+- [cli] Remove (beta) for `vc dev`. (#7322) [Lee Robinson]
+- [cli] Bump cert by id endpoint to v6 (#7307) [Mark Glagola]
+- [cli] Change nextjs detection (#7020) [Jared Palmer]
+- [cli] Fix middleware build result. Return middleware next when invalid result. (#6963) [Gary Borton]
+- [cli] Update `@vercel/ncc` to v0.29.2 (#6605) [Nathan Rajlich]
+
+### docs
+
+- [docs] Update README. (#7356) [Lee Robinson]
+- [docs] Update README (#6618) [Lee Robinson]
+
+### examples
+
+- [examples] Update Next.js example CSS styling. (#7337) [Jiachi Liu]
+- [examples] Update all examples to use `.vercel.app` instead of `.vercel.com` (#7320) [Lee Robinson]
+- [examples] Update live example URL for "angular" (#7238) [★ F A I S A L ★]
+- [examples] Update Nuxt template for Nuxt 3 (#7298) [Lee Robinson]
+- [examples] Rename master to main (#7184) [Steven]
+- [frameworks][examples] Add solidstart template (#6984) [Ryan Carniato]
+- [examples] Update Vercel Next.js example template to 12.0.1 (#6905) [Drew Bredvick]
+- [examples] Bump Next.js to 11.1.2 (#6648) [Steven]
+- [examples] Update `angular` example to npm 7 (#6636) [Kaitlyn]
+- [examples] Bump Next.js to 11.1.0 (#6582) [Steven]
+- [examples] Update Preact example to v10. (#7319) [Lee Robinson]
+- [examples] Update Angular example to v13. (#7318) [Lee Robinson]
+- [examples] Update Gatsby example to v4. (#7317) [Lee Robinson]
+- [examples] Update dependencies of Next.js example. (#7316) [Lee Robinson]
+- [examples] Update Svelte example dependencies. (#7315) [Lee Robinson]
+- [examples] Update example to Vue 3. (#7314) [Lee Robinson]
+- [examples] Update example to Eleventy 1.0. (#7313) [Lee Robinson]
+- [examples] Updated SvelteKit example. (#7301) [Stephanie Dietz]
+
+### ci
+
+- [ci] Bump turbo to 1.0.18 (#7202) [Steven]
+- [ci] Add turborepo for faster builds (#7193) [Steven]
+- [ci] Speed up GH publish skip (#7175) [Steven]
+
+### build-utils
+
+- [build-utils] Add `_experimental_` prefix to exported experimental functions (#7190) [Steven]
+- [build-utils] Add exclusion condition for vercel cli version (#7174) [Steven]
+- [build-utils][cli] Detect file system api usage, abort on "Exclusion Conditions" (#7158) [Steven]
+- [build-utils] Add support for writing routes-manifest.json (#7062) [Steven]
+- [build-utils][node] Add `updateFunctionsManifest` function (#6971) [Steven]
+- [build-utils] Add `allowQuery` to Prerender (#6766) [Steven]
+- [build-utils] Fix custom 404 route (#6657) [Steven]
+- [build-utils] Add `allowQuery` to Lambda (#6651) [Steven]
+- [build-utils] check to see that the node version is less then 16 befo… (#6553) [Kaitlyn]
+- [build-utils] Add runCustomInstallCommand build-util (#7345) [Jared Palmer]
+- [build-utils] Adjust import statements inside Runtime launchers (#7148) [Leo Lamprecht]
+- [build-utils] Fixed Lambda handler for compiled languages (#7129) [Leo Lamprecht]
+- [build-utils] Fixed Legacy Runtime output generation (#7127) [Leo Lamprecht]
+- [build-utils] Add regions to lambda options (#6829) [Miroslav Simulcik]
+
+### frameworks
+
+- [frameworks][examples] Add solidstart template (#6984) [Ryan Carniato]
+- [frameworks][cli] Remove duplicate `getFsOutputDir()` definitions (#7124) [Steven]
+- [frameworks] Fix Parcel default output directory to dist (#7029) [Sam Ko]
+- [frameworks][cli] Consolidate buildCommand and devCommand (#7032) [Steven]
+- [frameworks] Fix small typo in "Other" preset description (#6882) [Nathan Rajlich]
+- [example][frameworks] Add support for Parcel framework (#6836) [Devon Govett]
+- [frameworks] Make "vercel dev" work with Ionic Angular projects (#6658) [Matt Netkow]
+- [frameworks] Add Nuxt 3 to framework detection (#6823) [Andy]
+- [client][frameworks][api] Update `readdir()` call with `withFileTypes` (#6554) [Steven]
+- [frameworks] Add  --port $PORT for Vite. (#7378) [Lee Robinson]
+- [frameworks] Add 'VITE_' prefix to SvelteKit framework (#6821) [Dom Eccleston]
+- [frameworks]Update CRA template for v5. (#7312) [Lee Robinson]
+- [frameworks] Renamed the Remix logo file (#7074) [Leo Lamprecht]
+- [frameworks] chore: update remix logo (#7070) [Logan McAnsh]
+- [frameworks] Added Remix to the list of frameworks (#7061) [Leo Lamprecht]
+- [frameworks] bump react-scripts to @latest (#6577) [William Li]
+
+### test
+
+- [test] Skip `runPackageJsonScript()` on windows and macOS (#7176) [Steven]
+- [test] Fix lerna publish for automation token (#6666) [Steven]
+- [test] Fix publish script for Windows (#6591) [Steven]
+- [test] Bump cancel action to 0.9.1 (#7055) [Steven]
+- [test] Make test more reliable for function timeout (#7033) [Steven]
+- [test] Increase CI duration (#7030) [Steven]
+- [test] Fix getting of config paths (#6969) [Miroslav Simulcik]
+
+### client
+
+- [client] Use a Set to prevent duplicates in `hashes()` function (#7159) [Nathan Rajlich]
+- [client] Fix duplicate files when analyzing `nft.json` (#7150) [Steven]
+- [client] Resolve `.nft.json` files when `vc deploy --prebuilt` (#7144) [Steven]
+- [cli][client] Add step for checks (#6889) [Andy]
+- [client][frameworks][api] Update `readdir()` call with `withFileTypes` (#6554) [Steven]
+
+### middleware
+
+- [middleware] Define env vars when building `_middleware.js` with esbuild (#7087) [Tommaso De Rossi]
+- [middleware] Make edge functions be in "strict mode" (#7118) [Gary Borton]
+- [middleware] Fix dependencies (#7125) [Steven]
+- [middleware] Use Functions Manifest for Middleware (#7119) [Leo Lamprecht]
+- [middleware] Fixed middleware tests (#7146) [Leo Lamprecht]
+
+### ruby
+
+- [ruby] Show error when Ruby 2.5.x detected (#7126) [Steven]
+- [go][node][python][ruby] Remove `@now/build-utils` backwards compat hack (#6603) [Nathan Rajlich]
+
+### api
+
+- [api] Use the new File System API (#7108) [Nathan Rajlich]
+- [api] Fix `GET /api/examples/list` output (#6574) [Nathan Rajlich]
+- [client][frameworks][api] Update `readdir()` call with `withFileTypes` (#6554) [Steven]
+
+### python
+
+- [python] Add warning for deprecated version (#7053) [Steven]
+- [python] Upgrade python 3.9 (#7008) [Steven]
+- [python] Use pip `--upgrade` when installing function dependencies (#6683) [Noa]
+- [go][node][python][ruby] Remove `@now/build-utils` backwards compat hack (#6603) [Nathan Rajlich]
+
+### node
+
+- [build-utils][node] Add `updateFunctionsManifest` function (#6971) [Steven]
+- [node] Fix launcher ESM on Windows dev (#6953) [Steven]
+- [node] Bump nft to 0.14.0 (#6727) [Steven]
+- [go][node][python][ruby] Remove `@now/build-utils` backwards compat hack (#6603) [Nathan Rajlich]
+- [node] Fix deprecation message for `NowRequestBody` (#6613) [Johan Eliasson]
+
+### go
+
+- [go] Add support for version 1.17 (#7002) [Steven]
+- [go][node][python][ruby] Remove `@now/build-utils` backwards compat hack (#6603) [Nathan Rajlich]
+
+### routing-utils
+
+- [routing-utils] Add caseSensitive field to routes schema (#6952) [JJ Kasper]
+- [routing-utils] Add `missing` fields (#6872) [Kiko Beats]
+- [routing-utils] Update routes schema for new property (#6860) [JJ Kasper]
+- [routing-utils] Allow passing internal params to convertRewrites (#6742) [JJ Kasper]
+- [routing-utils] Fix host segment replacing (#6713) [JJ Kasper]
+- [routing-utils] Ensure headers with only has items are replaced correctly (#6686) [JJ Kasper]
+- [routing-utils] Update middleware route (#6863) [Javi Velasco]
+
+### example
+
+- [example][frameworks] Add support for Parcel framework (#6836) [Devon Govett]
+- [example] Remove extra trailing slash from Remix demo URL (#7323) [Lee Robinson]
+- [example] Speed up Remix Template (#7077) [Leo Lamprecht]
+- [example] Updated Remix template and ensured correct headers (#7064) [Leo Lamprecht]
+
+### all
+
+- [all] Revert to `@vercel/ncc@0.24.0` (#6749) [Steven]
+- [all] Bump ncc to 0.31.1 (#6700) [Steven]
+
+### node-bridge
+
+- [node-bridge] Fix error in node-bridge from decoded path (#6583) [JJ Kasper]
+
+### static-config
+
+- [static-config] Renamed `runtime` to `use` in static JS config (#7106) [Leo Lamprecht]
+- [static-config] Add to "static-config" to `run.js` script [Nathan Rajlich]
+- [static-config] Add `@vercel/static-config` (#6897) [Nathan Rajlich]
