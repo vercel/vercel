@@ -129,6 +129,13 @@ export type Deployment = {
   created: number;
   createdAt: number;
   creator: { uid: string; username: string };
+  target: string | null;
+  ownerId: string;
+  projectId: string;
+  inspectorUrl: string;
+  meta: {
+    [key: string]: any;
+  };
 };
 
 export type Alias = {
