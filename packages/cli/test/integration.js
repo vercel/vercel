@@ -2728,7 +2728,7 @@ test('should show prompts to set up project during first deploy', async t => {
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.vercel\n.output\n');
+  t.is(gitignore, '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3297,7 +3297,7 @@ test('[vc link] should show prompts to set up project', async t => {
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.vercel\n.output\n');
+  t.is(gitignore, '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3332,7 +3332,7 @@ test('[vc link --confirm] should not show prompts and autolink', async t => {
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.vercel\n.output\n');
+  t.is(gitignore, '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3367,7 +3367,7 @@ test('[vc link] should not duplicate paths in .gitignore', async t => {
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.output\n.vercel\n');
+  t.is(gitignore, '.vercel\n');
 });
 
 test('[vc dev] should show prompts to set up project', async t => {
@@ -3391,7 +3391,7 @@ test('[vc dev] should show prompts to set up project', async t => {
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.vercel\n.output\n');
+  t.is(gitignore, '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3458,7 +3458,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.vercel\n.output\n');
+  t.is(gitignore, '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
