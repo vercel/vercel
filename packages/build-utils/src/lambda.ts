@@ -39,7 +39,7 @@ export class Lambda {
   public allowQuery?: string[];
   public regions?: string[];
   /**
-   * @deprecated
+   * @deprecated Use `await lambda.createZip()` instead.
    */
   public zipBuffer?: Buffer;
 
