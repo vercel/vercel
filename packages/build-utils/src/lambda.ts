@@ -21,6 +21,10 @@ interface LambdaOptions {
   environment?: Environment;
   allowQuery?: string[];
   regions?: string[];
+  /**
+   * @deprecated Use `files` property instead.
+   */
+  zipBuffer?: Buffer;
 }
 
 interface GetLambdaOptionsFromFunctionOptions {
@@ -52,8 +56,11 @@ export class Lambda {
     environment = {},
     allowQuery,
     regions,
+    zipBuffer,
   }: LambdaOptions) {
-    assert(typeof files === 'object', '"files" must be an object');
+    if (!zipBuffer) {
+      assert(typeof files === 'object', '"files" must be an object');
+    }
     assert(typeof handler === 'string', '"handler" is not a string');
     assert(typeof runtime === 'string', '"runtime" is not a string');
     assert(typeof environment === 'object', '"environment" is not an object');
@@ -90,6 +97,7 @@ export class Lambda {
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
+    this.zipBuffer = zipBuffer;
   }
 
   async createZip(): Promise<Buffer> {
