@@ -35,6 +35,7 @@ import {
   BuildResultV3,
   BuilderOutputs,
   EnvConfigs,
+  BuiltLambda,
 } from './types';
 import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
