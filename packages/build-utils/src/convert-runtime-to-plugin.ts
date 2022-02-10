@@ -2,8 +2,8 @@ import fs from 'fs-extra';
 import { join, parse, relative, dirname, basename, extname } from 'path';
 import glob from './fs/glob';
 import { normalizePath } from './fs/normalize-path';
-import { FILES_SYMBOL, Lambda } from './lambda';
-import type { BuildOptions, Files } from './types';
+import { Lambda } from './lambda';
+import type { BuildOptions } from './types';
 import { debug, getIgnoreFilter } from '.';
 
 // `.output` was already created by the Build Command, so we have
@@ -116,8 +116,7 @@ export function _experimental_convertRuntimeToPlugin(
         },
       });
 
-      // @ts-ignore This symbol is a private API
-      const lambdaFiles: Files = output[FILES_SYMBOL];
+      const lambdaFiles = output.files;
 
       // When deploying, the `files` that are passed to the Legacy Runtimes already
       // have certain files that are ignored stripped, but locally, that list of

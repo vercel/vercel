@@ -13,17 +13,6 @@ interface Environment {
 }
 
 interface LambdaOptions {
-  zipBuffer: Buffer;
-  handler: string;
-  runtime: string;
-  memory?: number;
-  maxDuration?: number;
-  environment: Environment;
-  allowQuery?: string[];
-  regions?: string[];
-}
-
-interface CreateLambdaOptions {
   files: Files;
   handler: string;
   runtime: string;
@@ -39,11 +28,9 @@ interface GetLambdaOptionsFromFunctionOptions {
   config?: Pick<Config, 'functions'>;
 }
 
-export const FILES_SYMBOL = Symbol('files');
-
 export class Lambda {
   public type: 'Lambda';
-  public zipBuffer: Buffer;
+  public files: Files;
   public handler: string;
   public runtime: string;
   public memory?: number;
@@ -51,19 +38,51 @@ export class Lambda {
   public environment: Environment;
   public allowQuery?: string[];
   public regions?: string[];
+  /**
+   * @deprecated Use `await lambda.createZip()` instead.
+   */
+  public zipBuffer?: Buffer;
 
   constructor({
-    zipBuffer,
+    files,
     handler,
     runtime,
     maxDuration,
     memory,
-    environment,
+    environment = {},
     allowQuery,
     regions,
   }: LambdaOptions) {
+    assert(typeof files === 'object', '"files" must be an object');
+    assert(typeof handler === 'string', '"handler" is not a string');
+    assert(typeof runtime === 'string', '"runtime" is not a string');
+    assert(typeof environment === 'object', '"environment" is not an object');
+
+    if (memory !== undefined) {
+      assert(typeof memory === 'number', '"memory" is not a number');
+    }
+
+    if (maxDuration !== undefined) {
+      assert(typeof maxDuration === 'number', '"maxDuration" is not a number');
+    }
+
+    if (allowQuery !== undefined) {
+      assert(Array.isArray(allowQuery), '"allowQuery" is not an Array');
+      assert(
+        allowQuery.every(q => typeof q === 'string'),
+        '"allowQuery" is not a string Array'
+      );
+    }
+
+    if (regions !== undefined) {
+      assert(Array.isArray(regions), '"regions" is not an Array');
+      assert(
+        regions.every(r => typeof r === 'string'),
+        '"regions" is not a string Array'
+      );
+    }
     this.type = 'Lambda';
-    this.zipBuffer = zipBuffer;
+    this.files = files;
     this.handler = handler;
     this.runtime = runtime;
     this.memory = memory;
@@ -72,69 +91,34 @@ export class Lambda {
     this.allowQuery = allowQuery;
     this.regions = regions;
   }
+
+  async createZip(): Promise<Buffer> {
+    let { zipBuffer } = this;
+    if (!zipBuffer) {
+      await sema.acquire();
+      try {
+        zipBuffer = await createZip(this.files);
+      } finally {
+        sema.release();
+      }
+    }
+    return zipBuffer;
+  }
 }
 
 const sema = new Sema(10);
 const mtime = new Date(1540000000000);
 
-export async function createLambda({
-  files,
-  handler,
-  runtime,
-  memory,
-  maxDuration,
-  environment = {},
-  allowQuery,
-  regions,
-}: CreateLambdaOptions): Promise<Lambda> {
-  assert(typeof files === 'object', '"files" must be an object');
-  assert(typeof handler === 'string', '"handler" is not a string');
-  assert(typeof runtime === 'string', '"runtime" is not a string');
-  assert(typeof environment === 'object', '"environment" is not an object');
+/**
+ * @deprecated Use `new Lambda()` instead.
+ */
+export async function createLambda(opts: LambdaOptions): Promise<Lambda> {
+  const lambda = new Lambda(opts);
 
-  if (memory !== undefined) {
-    assert(typeof memory === 'number', '"memory" is not a number');
-  }
+  // backwards compat
+  lambda.zipBuffer = await lambda.createZip();
 
-  if (maxDuration !== undefined) {
-    assert(typeof maxDuration === 'number', '"maxDuration" is not a number');
-  }
-
-  if (allowQuery !== undefined) {
-    assert(Array.isArray(allowQuery), '"allowQuery" is not an Array');
-    assert(
-      allowQuery.every(q => typeof q === 'string'),
-      '"allowQuery" is not a string Array'
-    );
-  }
-
-  if (regions !== undefined) {
-    assert(Array.isArray(regions), '"regions" is not an Array');
-    assert(
-      regions.every(r => typeof r === 'string'),
-      '"regions" is not a string Array'
-    );
-  }
-
-  await sema.acquire();
-
-  try {
-    const zipBuffer = await createZip(files);
-    const lambda = new Lambda({
-      zipBuffer,
-      handler,
-      runtime,
-      memory,
-      maxDuration,
-      environment,
-      regions,
-    });
-    // @ts-ignore This symbol is a private API
-    lambda[FILES_SYMBOL] = files;
-    return lambda;
-  } finally {
-    sema.release();
-  }
+  return lambda;
 }
 
 export async function createZip(files: Files): Promise<Buffer> {
@@ -177,7 +161,7 @@ export async function getLambdaOptionsFromFunction({
 }: GetLambdaOptionsFromFunctionOptions): Promise<
   Pick<LambdaOptions, 'memory' | 'maxDuration'>
 > {
-  if (config && config.functions) {
+  if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
         return {
