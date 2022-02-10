@@ -34,7 +34,7 @@
     "@types/test-listen": "1.1.0",
     "@vercel/build-utils": "2.13.1-canary.0",
     "@vercel/ncc": "0.24.0",
-    "@vercel/nft": "0.17.4",
+    "@vercel/nft": "0.17.5",
     "@vercel/node-bridge": "2.1.1-canary.2",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
