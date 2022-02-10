@@ -15,7 +15,7 @@ import {
 } from 'fs-extra';
 import {
   Files,
-  FunctionBuild,
+  BuildV3,
   Meta,
   PrepareCache,
   StartDevServer,
@@ -91,7 +91,7 @@ async function getRenamedEntrypoint(
 
 export const version = 3;
 
-export const build: FunctionBuild = async ({
+export const build: BuildV3 = async ({
   files,
   entrypoint,
   config,

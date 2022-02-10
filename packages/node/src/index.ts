@@ -26,7 +26,7 @@ import {
   FileBlob,
   FileFsRef,
   Files,
-  FunctionBuild,
+  BuildV3,
   Meta,
   PrepareCache,
   StartDevServer,
@@ -342,7 +342,7 @@ export * from './types';
 
 export const version = 3;
 
-export const build: FunctionBuild = async ({
+export const build: BuildV3 = async ({
   files,
   entrypoint,
   workPath,

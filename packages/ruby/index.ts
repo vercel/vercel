@@ -9,7 +9,7 @@ import {
   writeFile,
 } from 'fs-extra';
 import {
-  FunctionBuild,
+  BuildV3,
   download,
   getWriteableDirectory,
   glob,
@@ -76,7 +76,7 @@ async function bundleInstall(
 
 export const version = 3;
 
-export const build: FunctionBuild = async ({
+export const build: BuildV3 = async ({
   workPath,
   files,
   entrypoint,

@@ -14,7 +14,7 @@ import {
   shouldServe,
   debug,
   NowBuildError,
-  FunctionBuild,
+  BuildV3,
 } from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 
@@ -53,7 +53,7 @@ export async function downloadFilesInWorkPath({
   return workPath;
 }
 
-export const build: FunctionBuild = async ({
+export const build: BuildV3 = async ({
   workPath,
   files: originalFiles,
   entrypoint,
