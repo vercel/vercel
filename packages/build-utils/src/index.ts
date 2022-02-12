@@ -2,6 +2,7 @@ import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
 import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
+import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
 import download, { DownloadedFiles, isSymbolicLink } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
@@ -42,6 +43,7 @@ export {
   FileFsRef,
   FileRef,
   Lambda,
+  NodejsLambda,
   createLambda,
   Prerender,
   download,

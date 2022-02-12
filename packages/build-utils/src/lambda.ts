@@ -12,7 +12,7 @@ interface Environment {
   [key: string]: string;
 }
 
-interface LambdaOptions<LauncherConfig = any> {
+export interface LambdaOptions {
   files: Files;
   handler: string;
   runtime: string;
@@ -21,11 +21,6 @@ interface LambdaOptions<LauncherConfig = any> {
   environment?: Environment;
   allowQuery?: string[];
   regions?: string[];
-  /**
-   * Arbitrary configuration that may be applied in order
-   * to have the launcher code added to the Lambda at build-time.
-   */
-  launcher?: LauncherConfig;
   /**
    * @deprecated Use `files` property instead.
    */
@@ -37,7 +32,7 @@ interface GetLambdaOptionsFromFunctionOptions {
   config?: Pick<Config, 'functions'>;
 }
 
-export class Lambda<LauncherConfig = any> {
+export class Lambda {
   type: 'Lambda';
   files: Files;
   handler: string;
@@ -47,13 +42,6 @@ export class Lambda<LauncherConfig = any> {
   environment: Environment;
   allowQuery?: string[];
   regions?: string[];
-
-  /**
-   * Arbitrary configuration that may be applied in order
-   * to have the launcher code added to the Lambda at build-time.
-   */
-  launcher?: LauncherConfig;
-
   /**
    * @deprecated Use `await lambda.createZip()` instead.
    */
@@ -68,9 +56,8 @@ export class Lambda<LauncherConfig = any> {
     environment = {},
     allowQuery,
     regions,
-    launcher,
     zipBuffer,
-  }: LambdaOptions<LauncherConfig>) {
+  }: LambdaOptions) {
     if (!zipBuffer) {
       assert(typeof files === 'object', '"files" must be an object');
     }
@@ -110,7 +97,6 @@ export class Lambda<LauncherConfig = any> {
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
-    this.launcher = launcher;
     this.zipBuffer = zipBuffer;
   }
 
