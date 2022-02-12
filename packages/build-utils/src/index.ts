@@ -32,11 +32,11 @@ import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
 } from './fs/node-version';
-import { NowBuildError } from './errors';
 import streamToBuffer from './fs/stream-to-buffer';
 import shouldServe from './should-serve';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
+import { getPlatformEnv } from './get-platform-env';
 
 export {
   FileBlob,
@@ -71,6 +71,7 @@ export {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   getSpawnOptions,
+  getPlatformEnv,
   streamToBuffer,
   shouldServe,
   debug,
@@ -118,26 +119,4 @@ export const isOfficialRuntime = (desired: string, name?: string): boolean => {
 
 export const isStaticRuntime = (name?: string): boolean => {
   return isOfficialRuntime('static', name);
-};
-
-/**
- * Helper function to support both `VERCEL_` and legacy `NOW_` env vars.
- * Throws an error if *both* env vars are defined.
- */
-export const getPlatformEnv = (name: string): string | undefined => {
-  const vName = `VERCEL_${name}`;
-  const nName = `NOW_${name}`;
-  const v = process.env[vName];
-  const n = process.env[nName];
-  if (typeof v === 'string') {
-    if (typeof n === 'string') {
-      throw new NowBuildError({
-        code: 'CONFLICTING_ENV_VAR_NAMES',
-        message: `Both "${vName}" and "${nName}" env vars are defined. Please only define the "${vName}" env var.`,
-        link: 'https://vercel.link/combining-old-and-new-config',
-      });
-    }
-    return v;
-  }
-  return n;
 };
