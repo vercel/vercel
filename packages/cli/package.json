@@ -94,7 +94,7 @@
     "@vercel/fetch-retry": "5.0.3",
     "@vercel/frameworks": "0.5.1-canary.21",
     "@vercel/ncc": "0.24.0",
-    "@vercel/nft": "0.17.0",
+    "@vercel/nft": "0.17.5",
     "@zeit/fun": "0.11.2",
     "@zeit/source-map-support": "0.6.2",
     "ajv": "6.12.2",

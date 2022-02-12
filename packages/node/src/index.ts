@@ -135,7 +135,6 @@ async function compile(
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
-  watch: string[];
 }> {
   const inputFiles = new Set<string>([entrypointPath]);
   const preparedFiles: Files = {};
@@ -198,7 +197,7 @@ async function compile(
       ts: true,
       mixedModules: true,
       ignore: config.excludeFiles,
-      readFile(fsPath: string): Buffer | string | null {
+      async readFile(fsPath: string): Promise<Buffer | string | null> {
         const relPath = relative(baseDir, fsPath);
         const cached = sourceCache.get(relPath);
         if (cached) return cached.toString();
@@ -256,11 +255,11 @@ async function compile(
       );
       if (
         !symlinkTarget.startsWith('..' + sep) &&
-        fileList.indexOf(symlinkTarget) === -1
+        !fileList.has(symlinkTarget)
       ) {
         const stats = statSync(resolve(baseDir, symlinkTarget));
         if (stats.isFile()) {
-          fileList.push(symlinkTarget);
+          fileList.add(symlinkTarget);
         }
       }
     }
@@ -273,7 +272,7 @@ async function compile(
   }
 
   // Compile ES Modules into CommonJS
-  const esmPaths = esmFileList.filter(
+  const esmPaths = [...esmFileList].filter(
     file =>
       !file.endsWith('.ts') &&
       !file.endsWith('.tsx') &&
@@ -320,7 +319,6 @@ async function compile(
   return {
     preparedFiles,
     shouldAddSourcemapSupport,
-    watch: fileList,
   };
 }
 
@@ -377,7 +375,7 @@ export async function build({
 
   debug('Tracing input files...');
   const traceTime = Date.now();
-  const { preparedFiles, shouldAddSourcemapSupport, watch } = await compile(
+  const { preparedFiles, shouldAddSourcemapSupport } = await compile(
     workPath,
     baseDir,
     entrypointPath,
@@ -433,7 +431,7 @@ export async function build({
     runtime: nodeVersion.runtime,
   });
 
-  return { output: lambda, watch };
+  return { output: lambda };
 }
 
 export async function prepareCache({
