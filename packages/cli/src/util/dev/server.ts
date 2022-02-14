@@ -89,7 +89,6 @@ import {
 } from './types';
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
-import { loadCliPlugins } from '../plugins';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -1350,6 +1349,7 @@ export default class DevServer {
     return false;
   };
 
+  /*
   runDevMiddleware = async (
     req: http.IncomingMessage,
     res: http.ServerResponse
@@ -1373,6 +1373,7 @@ export default class DevServer {
       };
     }
   };
+  */
 
   /**
    * Serve project directory as a v2 deployment.
@@ -1441,6 +1442,7 @@ export default class DevServer {
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
 
+    /*
     const middlewareResult = await this.runDevMiddleware(req, res);
 
     if (middlewareResult) {
@@ -1470,6 +1472,7 @@ export default class DevServer {
         prevUrl = url.format(origUrl);
       }
     }
+    */
 
     for (const phase of phases) {
       statusCode = undefined;
