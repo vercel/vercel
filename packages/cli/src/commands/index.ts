@@ -3,7 +3,6 @@ export default new Map([
   ['aliases', 'alias'],
   ['billing', 'billing'],
   ['bisect', 'bisect'],
-  ['build', 'build'],
   ['cc', 'billing'],
   ['cert', 'certs'],
   ['certs', 'certs'],

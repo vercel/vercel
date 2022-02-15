@@ -23,7 +23,6 @@ const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
 export const VERCEL_DIR = '.vercel';
-export const VERCEL_OUTPUT_DIR = '.output';
 export const VERCEL_DIR_FALLBACK = '.now';
 export const VERCEL_DIR_README = 'README.txt';
 export const VERCEL_DIR_PROJECT = 'project.json';
@@ -253,13 +252,6 @@ export async function linkFolderToProject(
       gitIgnore += `${
         gitIgnore.endsWith(EOL) || gitIgnore.length === 0 ? '' : EOL
       }${VERCEL_DIR}${EOL}`;
-      contentModified = true;
-    }
-
-    if (!gitIgnore.split(EOL).includes(VERCEL_OUTPUT_DIR)) {
-      gitIgnore += `${
-        gitIgnore.endsWith(EOL) || gitIgnore.length === 0 ? '' : EOL
-      }${VERCEL_OUTPUT_DIR}${EOL}`;
       contentModified = true;
     }
 
