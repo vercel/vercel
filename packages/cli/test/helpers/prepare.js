@@ -367,7 +367,7 @@ module.exports = async function prepare(session, binaryPath) {
     },
     'project-link-gitignore': {
       'package.json': '{}',
-      '.gitignore': '.output',
+      '.gitignore': '',
     },
     'project-link-legacy': {
       'index.html': 'Hello',

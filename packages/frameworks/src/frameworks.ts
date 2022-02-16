@@ -1941,7 +1941,7 @@ export const frameworks = [
       },
       devCommand: {
         placeholder: 'vite',
-        value: 'vite',
+        value: 'vite --port $PORT',
       },
       outputDirectory: {
         value: 'dist',
