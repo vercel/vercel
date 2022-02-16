@@ -336,6 +336,7 @@ describe('DevServer', () => {
     })
   );
 
+  /*
   it(
     'should support edge middleware',
     testFixture('edge-middleware', async server => {
@@ -394,4 +395,5 @@ describe('DevServer', () => {
       expect(body).toStrictEqual('is strict mode? yes');
     })
   );
+  */
 });
