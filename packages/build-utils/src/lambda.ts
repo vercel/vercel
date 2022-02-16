@@ -12,7 +12,7 @@ interface Environment {
   [key: string]: string;
 }
 
-interface LambdaOptions {
+export interface LambdaOptions {
   files: Files;
   handler: string;
   runtime: string;
@@ -33,19 +33,19 @@ interface GetLambdaOptionsFromFunctionOptions {
 }
 
 export class Lambda {
-  public type: 'Lambda';
-  public files: Files;
-  public handler: string;
-  public runtime: string;
-  public memory?: number;
-  public maxDuration?: number;
-  public environment: Environment;
-  public allowQuery?: string[];
-  public regions?: string[];
+  type: 'Lambda';
+  files: Files;
+  handler: string;
+  runtime: string;
+  memory?: number;
+  maxDuration?: number;
+  environment: Environment;
+  allowQuery?: string[];
+  regions?: string[];
   /**
    * @deprecated Use `await lambda.createZip()` instead.
    */
-  public zipBuffer?: Buffer;
+  zipBuffer?: Buffer;
 
   constructor({
     files,

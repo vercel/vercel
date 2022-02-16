@@ -21,18 +21,18 @@ import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
-  Config,
   File,
-  FileBlob,
-  FileFsRef,
   Files,
-  BuildV3,
   Meta,
-  PrepareCache,
-  StartDevServer,
+  PrepareCacheOptions,
+  BuildOptions,
+  Config,
   StartDevServerOptions,
+  StartDevServerResult,
   glob,
   download,
+  FileBlob,
+  FileFsRef,
   createLambda,
   runNpmInstall,
   runPackageJsonScript,
@@ -197,7 +197,7 @@ async function compile(
       ts: true,
       mixedModules: true,
       ignore: config.excludeFiles,
-      readFile(fsPath: string): Buffer | string | null {
+      async readFile(fsPath: string): Promise<Buffer | string | null> {
         const relPath = relative(baseDir, fsPath);
         const cached = sourceCache.get(relPath);
         if (cached) return cached.toString();
@@ -255,11 +255,11 @@ async function compile(
       );
       if (
         !symlinkTarget.startsWith('..' + sep) &&
-        fileList.indexOf(symlinkTarget) === -1
+        !fileList.has(symlinkTarget)
       ) {
         const stats = statSync(resolve(baseDir, symlinkTarget));
         if (stats.isFile()) {
-          fileList.push(symlinkTarget);
+          fileList.add(symlinkTarget);
         }
       }
     }
@@ -272,7 +272,7 @@ async function compile(
   }
 
   // Compile ES Modules into CommonJS
-  const esmPaths = esmFileList.filter(
+  const esmPaths = [...esmFileList].filter(
     file =>
       !file.endsWith('.ts') &&
       !file.endsWith('.tsx') &&
@@ -342,14 +342,14 @@ export * from './types';
 
 export const version = 3;
 
-export const build: BuildV3 = async ({
+export async function build({
   files,
   entrypoint,
   workPath,
   repoRootPath,
   config = {},
   meta = {},
-}) => {
+}: BuildOptions) {
   const shouldAddHelpers = !(
     config.helpers === false || process.env.NODEJS_HELPERS === '0'
   );
@@ -432,14 +432,18 @@ export const build: BuildV3 = async ({
   });
 
   return { output: lambda };
-};
+}
 
-export const prepareCache: PrepareCache = async ({ workPath }) => {
+export async function prepareCache({
+  workPath,
+}: PrepareCacheOptions): Promise<Files> {
   const cache = await glob('node_modules/**', workPath);
   return cache;
-};
+}
 
-export const startDevServer: StartDevServer = async opts => {
+export async function startDevServer(
+  opts: StartDevServerOptions
+): Promise<StartDevServerResult> {
   const { entrypoint, workPath, config, meta = {} } = opts;
   const entryDir = join(workPath, dirname(entrypoint));
   const projectTsConfig = await walkParentDirs({
@@ -497,7 +501,7 @@ export const startDevServer: StartDevServer = async opts => {
     const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
     throw new Error(`\`node ${entrypoint}\` failed with ${reason}`);
   }
-};
+}
 
 async function doTypeCheck(
   { entrypoint, workPath, meta = {} }: StartDevServerOptions,
