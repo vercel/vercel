@@ -56,10 +56,6 @@ const help = () => {
 
       ${chalk.cyan(`$ ${pkgName} bisect --bad example-310pce9i0.vercel.app`)}
 
-  ${chalk.gray('–')} Bisect specifying a deployment that was working 3 days ago
-
-      ${chalk.cyan(`$ ${pkgName} bisect --good 3d`)}
-
   ${chalk.gray('–')} Automated bisect with a run script
 
       ${chalk.cyan(`$ ${pkgName} bisect --run ./test.sh`)}
@@ -201,7 +197,11 @@ export default async function main(client: Client): Promise<number> {
 
   if (badDeployment.target !== goodDeployment.target) {
     output.error(
-      `Bad deployment target "${badDeployment.target || 'preview'}" does not match good deployment target "${goodDeployment.target || 'preview'}"`
+      `Bad deployment target "${
+        badDeployment.target || 'preview'
+      }" does not match good deployment target "${
+        goodDeployment.target || 'preview'
+      }"`
     );
     return 1;
   }
