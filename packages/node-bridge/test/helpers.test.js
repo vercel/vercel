@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 const listen = require('test-listen');
 const qs = require('querystring');
 
-const { createServerWithHelpers } = require('../dist/helpers');
+const { createServerWithHelpers } = require('../helpers');
 
 const mockListener = jest.fn();
 const consumeEventMock = jest.fn();
