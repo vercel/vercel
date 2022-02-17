@@ -1,5 +1,11 @@
 /// <reference types="node" />
-import { Server, IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
+import {
+  Server,
+  IncomingHttpHeaders,
+  OutgoingHttpHeaders,
+  ServerResponse,
+  IncomingMessage,
+} from 'http';
 export interface VercelProxyEvent {
   Action: string;
   body: string;
@@ -37,3 +43,25 @@ export type LauncherConfiguration = {
   awsLambdaHandler?: string;
   useRequire?: boolean;
 };
+
+export type VercelRequestCookies = { [key: string]: string };
+export type VercelRequestQuery = { [key: string]: string | string[] };
+export type VercelRequestBody = any;
+
+export type VercelRequest = IncomingMessage & {
+  query: VercelRequestQuery;
+  cookies: VercelRequestCookies;
+  body: VercelRequestBody;
+};
+
+export type VercelResponse = ServerResponse & {
+  send: (body: any) => VercelResponse;
+  json: (jsonBody: any) => VercelResponse;
+  status: (statusCode: number) => VercelResponse;
+  redirect: (statusOrUrl: string | number, url?: string) => VercelResponse;
+};
+
+export type VercelApiHandler = (
+  req: VercelRequest,
+  res: VercelResponse
+) => void;

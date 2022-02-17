@@ -24,11 +24,8 @@ import {
   File,
   Files,
   Meta,
-  PrepareCacheOptions,
-  BuildOptions,
   Config,
   StartDevServerOptions,
-  StartDevServerResult,
   glob,
   download,
   FileBlob,
@@ -42,6 +39,9 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  BuildV3,
+  PrepareCache,
+  StartDevServer,
 } from '@vercel/build-utils';
 
 import { Register, register } from './typescript';
@@ -333,14 +333,14 @@ export * from './types';
 
 export const version = 3;
 
-export async function build({
+export const build: BuildV3 = async ({
   files,
   entrypoint,
   workPath,
   repoRootPath,
   config = {},
   meta = {},
-}: BuildOptions) {
+}) => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
@@ -384,18 +384,14 @@ export async function build({
   });
 
   return { output: lambda };
-}
+};
 
-export async function prepareCache({
-  workPath,
-}: PrepareCacheOptions): Promise<Files> {
+export const prepareCache: PrepareCache = async ({ workPath }) => {
   const cache = await glob('node_modules/**', workPath);
   return cache;
-}
+};
 
-export async function startDevServer(
-  opts: StartDevServerOptions
-): Promise<StartDevServerResult> {
+export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, config, meta = {} } = opts;
   const entryDir = join(workPath, dirname(entrypoint));
   const projectTsConfig = await walkParentDirs({
@@ -453,7 +449,7 @@ export async function startDevServer(
     const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
     throw new Error(`\`node ${entrypoint}\` failed with ${reason}`);
   }
-}
+};
 
 async function doTypeCheck(
   { entrypoint, workPath, meta = {} }: StartDevServerOptions,

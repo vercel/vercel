@@ -1,4 +1,4 @@
-import {
+import type {
   VercelRequest,
   VercelResponse,
   VercelRequestCookies,
@@ -6,7 +6,7 @@ import {
   VercelRequestBody,
 } from './types';
 import { Server } from 'http';
-import type { Bridge } from '@vercel/node-bridge/bridge';
+import type { Bridge } from './bridge';
 
 function getBodyParser(req: VercelRequest, body: Buffer) {
   return function parseBody(): VercelRequestBody {
