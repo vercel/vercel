@@ -2007,6 +2007,50 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Sanity',
+    slug: 'sanity',
+    demo: 'https://sanity-studio-template.vercel.app',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/sanity.svg',
+    tagline:
+      'The structured content platform.',
+    description: 'A Sanity Studio',
+    website: 'https://www.sanity.io',
+    envPrefix: 'SANITY_STUDIO_',
+    detectors: {
+      every: [
+        {
+          path: 'sanity.json',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `sanity build`',
+        value: 'sanity build',
+      },
+      devCommand: {
+        value: 'sanity start --port $PORT',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: '@sanity/cli',
+    getOutputDirName: async () => 'dist',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/other.svg',
