@@ -14,4 +14,6 @@ packages/client/lib
 packages/node/src/bridge.ts
 packages/node-bridge/bridge.js
 packages/node-bridge/launcher.js
+packages/node-bridge/helpers.js
+packages/node-bridge/source-map-support.js
 packages/middleware/src/entries.js
