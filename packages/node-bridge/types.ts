@@ -60,8 +60,3 @@ export type VercelResponse = ServerResponse & {
   status: (statusCode: number) => VercelResponse;
   redirect: (statusOrUrl: string | number, url?: string) => VercelResponse;
 };
-
-export type VercelApiHandler = (
-  req: VercelRequest,
-  res: VercelResponse
-) => void;
