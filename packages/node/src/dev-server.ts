@@ -88,8 +88,7 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { Readable } from 'stream';
 import type { Bridge } from '@vercel/node-bridge/bridge';
-// @ts-ignore - copied to the `dist` output as-is
-import { getVercelLauncher } from './launcher.js';
+import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -120,6 +119,10 @@ async function main() {
     helpersPath: './helpers.js',
     shouldAddHelpers,
     useRequire,
+
+    // not used
+    bridgePath: '',
+    sourcemapSupportPath: '',
   });
   bridge = launcher();
 
