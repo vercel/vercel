@@ -2465,7 +2465,7 @@ async function checkForPort(
   timeout: number
 ): Promise<void> {
   const start = Date.now();
-  while (!(await isPortReachable(port))) {
+  while (!(await isPortReachable(port), { host: '127.0.0.1' })) {
     if (Date.now() - start > timeout) {
       throw new Error(`Detecting port ${port} timed out after ${timeout}ms`);
     }
