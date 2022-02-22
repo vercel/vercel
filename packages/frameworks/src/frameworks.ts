@@ -1766,7 +1766,7 @@ export const frameworks = [
 
       return (config && config.publishDir) || 'public';
     },
-    defaultVersion: '0.58.2',
+    defaultVersion: '0.92.2',
   },
   {
     name: 'Jekyll',
@@ -1910,7 +1910,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultVersion: '0.13.0',
+    defaultVersion: '0.15.3',
   },
   {
     name: 'Vite',
@@ -2011,8 +2011,7 @@ export const frameworks = [
     slug: 'sanity',
     demo: 'https://sanity-studio-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/sanity.svg',
-    tagline:
-      'The structured content platform.',
+    tagline: 'The structured content platform.',
     description: 'A Sanity Studio',
     website: 'https://www.sanity.io',
     envPrefix: 'SANITY_STUDIO_',
