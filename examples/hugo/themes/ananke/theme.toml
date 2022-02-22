@@ -3,13 +3,13 @@
 
 name = "Ananke Gohugo Theme"
 license = "MIT"
-licenselink = "https://github.com/budparr/gohugo-theme-ananke/blob/master/LICENSE.md"
+licenselink = "https://github.com/theNewDynamic/gohugo-theme-ananke/blob/master/LICENSE.md"
 description = "A Base theme for building full featured Hugo sites"
-homepage = "https://github.com/budparr/gohugo-theme-ananke"
-tags = ["website", "starter", "responsive", "Disqus", "blog", "Tachyons", "Multilingual"]
+homepage = "https://github.com/theNewDynamic/gohugo-theme-ananke"
+tags = ["website", "starter", "responsive", "Disqus", "blog", "Tachyons", "Multilingual", "Stackbit"]
 features = ["posts", "shortcodes", "related content", "comments"]
-min_version = "0.30.2"
+min_version = "0.64.0"
 
 [author]
-  name = "Bud Parr"
-  homepage = "https://github.com/budparr"
+  name = "theNewDynamic"
+  homepage = "https://www.thenewdynamic.com/"

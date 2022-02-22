@@ -1,0 +1,38 @@
+[more]
+other = "Mer"
+
+[allTitle]
+other = "Alle {{.Title }}"
+
+[recentTitle]
+other = "Nyeste {{.Title }}"
+
+[readMore]
+other = "Les mer"
+
+[whatsInThis]
+other = "Innhold av {{ .Type }}"
+
+[related]
+other = "Relaterte"
+
+[yourName]
+other = "Ditt navn"
+
+[emailAddress]
+other = "E-postadresse"
+
+[message]
+other = "beskjed"
+
+[emailRequiredNote]
+other = "E-postadresse er påkrevd"
+
+[send]
+other = "Sende"
+
+[taxonomyPageList]
+other = "Below you will find pages that utilize the taxonomy term “{{ .Title }}”"
+
+[pageTitle]
+other = "{{ .Name }} side"

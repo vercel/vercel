@@ -15,3 +15,24 @@ other = "Содержание {{ .Type }}"
 
 [related]
 other = "Схожие"
+
+[yourName]
+other = "Ваше имя"
+
+[emailAddress]
+other = "Адрес электронной почты"
+
+[message]
+other = "Сообщение"
+
+[emailRequiredNote]
+other = "Требуется адрес электронной почты."
+
+[send]
+other = "Отправить"
+
+[taxonomyPageList]
+other = "Ниже вы найдете страницы, на которых используется термин таксономии “{{ .Title }}”"
+
+[pageTitle]
+other = "{{ .Name }} страница"
