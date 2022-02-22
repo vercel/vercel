@@ -11,7 +11,6 @@
   },
   "scripts": {
     "build": "node build",
-    "test-unit": "jest --env node --verbose --runInBand --bail test/helpers.test.js",
     "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
     "prepublishOnly": "node build"
   },

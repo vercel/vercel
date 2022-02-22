@@ -24,16 +24,13 @@ import {
   File,
   Files,
   Meta,
-  PrepareCacheOptions,
-  BuildOptions,
   Config,
   StartDevServerOptions,
-  StartDevServerResult,
   glob,
   download,
   FileBlob,
   FileFsRef,
-  createLambda,
+  NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
   getNodeVersion,
@@ -42,15 +39,15 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  BuildV3,
+  PrepareCache,
+  StartDevServer,
 } from '@vercel/build-utils';
-
-// @ts-ignore - copied to the `dist` output as-is
-import { makeVercelLauncher, makeAwsLauncher } from './launcher.js';
 
 import { Register, register } from './typescript';
 
 export { shouldServe };
-export {
+export type {
   NowRequest,
   NowResponse,
   VercelRequest,
@@ -79,11 +76,6 @@ const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
-
-const LAUNCHER_FILENAME = '__launcher.js';
-const BRIDGE_FILENAME = '__bridge.js';
-const HELPERS_FILENAME = '__helpers.js';
-const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support.js';
 
 async function downloadInstallAndBundle({
   files,
@@ -130,7 +122,6 @@ async function compile(
   workPath: string,
   baseDir: string,
   entrypointPath: string,
-  entrypoint: string,
   config: Config
 ): Promise<{
   preparedFiles: Files;
@@ -230,7 +221,7 @@ async function compile(
   );
 
   for (const warning of warnings) {
-    if (warning && warning.stack) {
+    if (warning?.stack) {
       debug(warning.stack.replace('Error: ', 'Warning: '));
     }
   }
@@ -342,18 +333,14 @@ export * from './types';
 
 export const version = 3;
 
-export async function build({
+export const build: BuildV3 = async ({
   files,
   entrypoint,
   workPath,
   repoRootPath,
   config = {},
   meta = {},
-}: BuildOptions) {
-  const shouldAddHelpers = !(
-    config.helpers === false || process.env.NODEJS_HELPERS === '0'
-  );
-
+}) => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
@@ -379,71 +366,32 @@ export async function build({
     workPath,
     baseDir,
     entrypointPath,
-    entrypoint,
     config
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
-  const getFileName = (str: string) => `___vc/${str}`;
+  const shouldAddHelpers = !(
+    config.helpers === false || process.env.NODEJS_HELPERS === '0'
+  );
 
-  const launcher = awsLambdaHandler ? makeAwsLauncher : makeVercelLauncher;
-
-  const launcherSource = launcher({
-    entrypointPath: `../${renameTStoJS(relative(baseDir, entrypointPath))}`,
-    bridgePath: `./${BRIDGE_FILENAME}`,
-    helpersPath: `./${HELPERS_FILENAME}`,
-    sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
+  const lambda = new NodejsLambda({
+    files: preparedFiles,
+    handler: renameTStoJS(relative(baseDir, entrypointPath)),
+    runtime: nodeVersion.runtime,
     shouldAddHelpers,
     shouldAddSourcemapSupport,
     awsLambdaHandler,
   });
 
-  const launcherFiles: Files = {
-    [getFileName('package.json')]: new FileBlob({
-      data: JSON.stringify({ type: 'commonjs' }),
-    }),
-    [getFileName(LAUNCHER_FILENAME)]: new FileBlob({
-      data: launcherSource,
-    }),
-    [getFileName(BRIDGE_FILENAME)]: new FileFsRef({
-      fsPath: join(__dirname, 'bridge.js'),
-    }),
-  };
-
-  if (shouldAddSourcemapSupport) {
-    launcherFiles[getFileName(SOURCEMAP_SUPPORT_FILENAME)] = new FileFsRef({
-      fsPath: join(__dirname, 'source-map-support.js'),
-    });
-  }
-
-  if (shouldAddHelpers) {
-    launcherFiles[getFileName(HELPERS_FILENAME)] = new FileFsRef({
-      fsPath: join(__dirname, 'helpers.js'),
-    });
-  }
-
-  const lambda = await createLambda({
-    files: {
-      ...preparedFiles,
-      ...launcherFiles,
-    },
-    handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
-    runtime: nodeVersion.runtime,
-  });
-
   return { output: lambda };
-}
+};
 
-export async function prepareCache({
-  workPath,
-}: PrepareCacheOptions): Promise<Files> {
+export const prepareCache: PrepareCache = async ({ workPath }) => {
   const cache = await glob('node_modules/**', workPath);
   return cache;
-}
+};
 
-export async function startDevServer(
-  opts: StartDevServerOptions
-): Promise<StartDevServerResult> {
+export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, config, meta = {} } = opts;
   const entryDir = join(workPath, dirname(entrypoint));
   const projectTsConfig = await walkParentDirs({
@@ -501,7 +449,7 @@ export async function startDevServer(
     const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
     throw new Error(`\`node ${entrypoint}\` failed with ${reason}`);
   }
-}
+};
 
 async function doTypeCheck(
   { entrypoint, workPath, meta = {} }: StartDevServerOptions,
