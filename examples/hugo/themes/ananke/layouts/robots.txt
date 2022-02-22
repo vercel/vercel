@@ -1,7 +1,8 @@
 User-agent: *
 # robotstxt.org - if ENV production variable is false robots will be disallowed.
 {{ if eq (getenv "HUGO_ENV") "production" | or (eq .Site.Params.env "production")  }}
-  Disallow:
+Allow: /
+Sitemap: {{.Site.BaseURL}}/sitemap.xml
 {{ else }}
-  Disallow: /
+Disallow: /
 {{ end }}
