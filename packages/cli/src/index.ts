@@ -161,7 +161,7 @@ const main = async () => {
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  const betaCommands: string[] = ['build2'];
+  const betaCommands: string[] = ['build'];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
@@ -299,7 +299,7 @@ const main = async () => {
     'help',
     'init',
     'update',
-    'build2',
+    'build',
   ];
 
   if (authConfigExists) {
@@ -618,8 +618,8 @@ const main = async () => {
       case 'bisect':
         func = await import('./commands/bisect');
         break;
-      case 'build2':
-        func = await import('./commands/build2');
+      case 'build':
+        func = await import('./commands/build');
         break;
       case 'certs':
         func = await import('./commands/certs');

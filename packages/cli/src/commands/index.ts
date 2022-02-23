@@ -2,7 +2,7 @@ export default new Map([
   ['alias', 'alias'],
   ['aliases', 'alias'],
   ['billing', 'billing'],
-  ['build2', 'build2'],
+  ['build', 'build'],
   ['bisect', 'bisect'],
   ['cc', 'billing'],
   ['cert', 'certs'],
