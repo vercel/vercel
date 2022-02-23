@@ -14,8 +14,8 @@ import {
   spawnAsync,
   BuildOptions,
   Config,
-  FrameworkBuilder,
-  FunctionBuilder,
+  BuilderV2,
+  BuilderV3,
 } from '@vercel/build-utils';
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { VercelConfig } from '@vercel/client';
@@ -199,7 +199,7 @@ export default async function main(client: Client) {
   }
 
   // Import Builders
-  const builders = new Map<string, FrameworkBuilder | FunctionBuilder>();
+  const builders = new Map<string, BuilderV2 | BuilderV3>();
   const builderPkgs = new Map<string, PackageJson>();
   for (const parsed of buildersParsed) {
     let { name } = parsed;

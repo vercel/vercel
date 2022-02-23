@@ -5,8 +5,8 @@ import {
   BuildResultV2,
   BuildResultV3,
   File,
-  FrameworkBuilder,
-  FunctionBuilder,
+  BuilderV2,
+  BuilderV3,
   Lambda,
   PackageJson,
 } from '@vercel/build-utils';
@@ -17,7 +17,7 @@ export const OUTPUT_DIR = '.vercel/output';
 export async function writeBuildResult(
   buildResult: BuildResultV2 | BuildResultV3,
   build: Builder,
-  builder: FrameworkBuilder | FunctionBuilder,
+  builder: BuilderV2 | BuilderV3,
   builderPkg: PackageJson
 ) {
   const { version } = builder;
@@ -44,7 +44,7 @@ export async function writeBuildResult(
 async function writeBuildResultV2(
   buildResult: BuildResultV2,
   build: Builder,
-  builder: FrameworkBuilder | FunctionBuilder,
+  builder: BuilderV2 | BuilderV3,
   builderPkg: PackageJson
 ) {
   const output: { [path: string]: any } = {};
@@ -84,7 +84,7 @@ async function writeBuildResultV2(
 async function writeBuildResultV3(
   buildResult: BuildResultV3,
   build: Builder,
-  builder: FrameworkBuilder | FunctionBuilder,
+  builder: BuilderV2 | BuilderV3,
   builderPkg: PackageJson
 ) {
   const { output } = buildResult;
@@ -113,7 +113,7 @@ async function writeBuildResultV3(
 async function writeMeta(
   metadata: any,
   path: string,
-  builder: FrameworkBuilder | FunctionBuilder,
+  builder: BuilderV2 | BuilderV3,
   builderPkg: PackageJson
 ) {
   const dest = join(OUTPUT_DIR, 'meta', `${path}.build-result.json`);
