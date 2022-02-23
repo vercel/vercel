@@ -370,15 +370,15 @@ export interface ProjectSettings {
   gitForkProtection?: boolean;
 }
 
-export interface FrameworkBuilder {
+export interface BuilderV2 {
   version: 2;
-  build: FrameworkBuild;
+  build: BuildV2;
   prepareCache?: PrepareCache;
 }
 
-export interface FunctionBuilder {
+export interface BuilderV3 {
   version: 3;
-  build: FunctionBuild;
+  build: BuildV3;
   prepareCache?: PrepareCache;
   startDevServer?: StartDevServer;
 }
@@ -393,8 +393,8 @@ export interface Images {
 }
 
 export interface BuildResultV2 {
-  // TODO: needs routing-utils for `Route` type
-  //routes: Route[];
+  // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
+  routes: any[];
   images?: Images;
   output: {
     [key: string]: File | Lambda;
@@ -409,8 +409,8 @@ export interface BuildResultV3 {
   output: Lambda;
 }
 
-export type FrameworkBuild = (options: BuildOptions) => Promise<BuildResultV2>;
-export type FunctionBuild = (options: BuildOptions) => Promise<BuildResultV3>;
+export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
+export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
 export type StartDevServer = (
   options: StartDevServerOptions

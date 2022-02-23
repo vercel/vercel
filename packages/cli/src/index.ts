@@ -161,7 +161,8 @@ const main = async () => {
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  if (targetOrSubcommand === 'build' || targetOrSubcommand === 'build2') {
+  const betaCommands: string[] = ['build2'];
+  if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
         `${getTitleName()} CLI ${
@@ -298,7 +299,6 @@ const main = async () => {
     'help',
     'init',
     'update',
-    'build',
     'build2',
   ];
 
@@ -407,33 +407,20 @@ const main = async () => {
       } else if (commands.has(singular)) {
         alternative = singular;
       }
-      if (targetOrSubcommand === 'build') {
-        output.note(
-          `If you wish to deploy the ${fileType} ${param(
-            targetOrSubcommand
-          )}, run ${getCommandName('deploy build')}.` +
+      console.error(
+        error(
+          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
+            `\nIf you wish to deploy the ${fileType} ${param(
+              targetOrSubcommand
+            )}, first run "cd ${targetOrSubcommand}". ` +
             (alternative
               ? `\nIf you wish to use the subcommand ${param(
                   targetOrSubcommand
                 )}, use ${param(alternative)} instead.`
               : '')
-        );
-      } else {
-        console.error(
-          error(
-            `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
-              `\nIf you wish to deploy the ${fileType} ${param(
-                targetOrSubcommand
-              )}, first run "cd ${targetOrSubcommand}". ` +
-              (alternative
-                ? `\nIf you wish to use the subcommand ${param(
-                    targetOrSubcommand
-                  )}, use ${param(alternative)} instead.`
-                : '')
-          )
-        );
-        return 1;
-      }
+        )
+      );
+      return 1;
     }
 
     if (subcommandExists) {
@@ -628,8 +615,8 @@ const main = async () => {
       case 'billing':
         func = await import('./commands/billing');
         break;
-      case 'build':
-        func = await import('./commands/build');
+      case 'bisect':
+        func = await import('./commands/bisect');
         break;
       case 'build2':
         func = await import('./commands/build2');

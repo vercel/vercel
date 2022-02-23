@@ -28,6 +28,7 @@ export const help = () => `
     ${chalk.dim('Advanced')}
 
       rm | remove          [id]        Removes a deployment
+      bisect                           Use binary search to find the deployment that introduced a bug
       domains              [name]      Manages your domain names
       projects                         Manages your Projects
       dns                  [name]      Manages your DNS records

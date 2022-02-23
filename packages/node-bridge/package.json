@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node-bridge",
-  "version": "2.1.1-canary.2",
+  "version": "2.1.2-canary.0",
   "license": "MIT",
   "main": "./index.js",
   "repository": {
@@ -11,10 +11,12 @@
   "files": [
     "bridge.*",
     "launcher.*",
-    "index.js"
+    "index.js",
+    "helpers.js",
+    "source-map-support.js"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "node build.js",
     "test-unit": "jest --env node --verbose --runInBand --bail"
   },
   "devDependencies": {

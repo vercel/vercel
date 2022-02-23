@@ -15,3 +15,32 @@ other = "Was ist in dieser {{ .Type }}"
 
 [related]
 other = "Ähnliches"
+
+[yourName]
+other = "Dein Name"
+
+[emailAddress]
+other = "Email Adresse"
+
+[message]
+other = "Nachricht"
+
+[emailRequiredNote]
+other = "Eine Email Adresse wird benötigt."
+
+[send]
+other = "Senden"
+
+[taxonomyPageList]
+other = "Beiträge zum Thema “{{ .Title }}”"
+
+[readingTime]
+one = "Eine Minute"
+other = "{{ .Count }} Minuten"
+
+[wordCount]
+one = "Ein Wort"
+other = "{{ .Count }} Wörter"
+
+[pageTitle]
+other = "{{ .Name }} Seite"

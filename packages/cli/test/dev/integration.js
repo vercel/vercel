@@ -1703,13 +1703,11 @@ test(
       fetchOpts('image/webp')
     );
     */
-    await testPath(
-      200,
-      toUrl('/test.svg', 64, 70),
-      null,
-      expectHeader('image/svg+xml'),
-      fetchOpts('image/webp')
-    );
+    /*
+     * Disabled svg in https://github.com/vercel/next.js/pull/34431
+     * We can test for 400 status since config option is not enabled.
+     */
+    await testPath(400, toUrl('/test.svg', 64, 70));
     /* Disabled bmp because `next dev` bypasses
      * and production will convert. Eventually
      * we can enable once `next dev` supports it.
