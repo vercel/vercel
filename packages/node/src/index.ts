@@ -21,15 +21,15 @@ import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
-  Config,
   File,
-  FileBlob,
-  FileFsRef,
   Files,
   Meta,
+  Config,
   StartDevServerOptions,
   glob,
   download,
+  FileBlob,
+  FileFsRef,
   NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
