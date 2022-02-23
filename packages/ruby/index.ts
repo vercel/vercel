@@ -9,7 +9,7 @@ import {
   writeFile,
 } from 'fs-extra';
 import {
-  FunctionBuild,
+  BuildOptions,
   download,
   getWriteableDirectory,
   glob,
@@ -76,13 +76,13 @@ async function bundleInstall(
 
 export const version = 3;
 
-export const build: FunctionBuild = async ({
+export async function build({
   workPath,
   files,
   entrypoint,
   config,
   meta = {},
-}) => {
+}: BuildOptions) {
   await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfileName = 'Gemfile';
@@ -223,4 +223,4 @@ export const build: FunctionBuild = async ({
   });
 
   return { output: lambda };
-};
+}
