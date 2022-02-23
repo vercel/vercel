@@ -1,0 +1,29 @@
+{
+  "root": true,
+  "project": {
+    "name": "vercel-template-blog-studio"
+  },
+  "api": {
+    "projectId": "YOUR_PROJECT_ID",
+    "dataset": "YOUR_DATASET_NAME"
+  },
+  "plugins": [
+    "@sanity/base",
+    "@sanity/default-layout",
+    "@sanity/default-login",
+    "@sanity/desk-tool"
+  ],
+  "env": {
+    "development": {
+      "plugins": [
+        "@sanity/vision"
+      ]
+    }
+  },
+  "parts": [
+    {
+      "name": "part:@sanity/base/schema",
+      "path": "./schemas/schema"
+    }
+  ]
+}

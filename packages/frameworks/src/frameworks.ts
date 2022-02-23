@@ -1766,7 +1766,7 @@ export const frameworks = [
 
       return (config && config.publishDir) || 'public';
     },
-    defaultVersion: '0.58.2',
+    defaultVersion: '0.92.2',
   },
   {
     name: 'Jekyll',
@@ -1910,7 +1910,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultVersion: '0.13.0',
+    defaultVersion: '0.15.3',
   },
   {
     name: 'Vite',
@@ -2003,6 +2003,49 @@ export const frameworks = [
         headers: [
           { key: 'cache-control', value: 's-maxage=31536000, immutable' },
         ],
+      },
+    ],
+  },
+  {
+    name: 'Sanity',
+    slug: 'sanity',
+    demo: 'https://sanity-studio-template.vercel.app',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/sanity.svg',
+    tagline: 'The structured content platform.',
+    description: 'A Sanity Studio',
+    website: 'https://www.sanity.io',
+    envPrefix: 'SANITY_STUDIO_',
+    detectors: {
+      every: [
+        {
+          path: 'sanity.json',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `sanity build`',
+        value: 'sanity build',
+      },
+      devCommand: {
+        value: 'sanity start --port $PORT',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: '@sanity/cli',
+    getOutputDirName: async () => 'dist',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
       },
     ],
   },
