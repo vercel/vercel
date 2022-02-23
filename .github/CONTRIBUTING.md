@@ -16,6 +16,7 @@ yarn install
 yarn bootstrap
 yarn build
 yarn lint
+yarn test-unit
 ```
 
 Make sure all the tests pass before making changes.
@@ -25,12 +26,10 @@ Make sure all the tests pass before making changes.
 Once you are done with your changes (we even suggest doing it along the way), make sure all the test still pass by running:
 
 ```
-yarn build
+yarn test-unit
 ```
 
 from the root of the project.
-
-Running `yarn build` automatically runs the tests.
 
 If any test fails, make sure to fix it along with your changes. See [Interpreting test errors](#Interpreting-test-errors) for more information about how the tests are executed, especially the integration tests.
 
