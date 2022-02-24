@@ -40,7 +40,6 @@ import {
   detectApiExtensions,
   spawnCommand,
   isOfficialRuntime,
-  detectFileSystemAPI,
 } from '@vercel/build-utils';
 import frameworkList from '@vercel/frameworks';
 
@@ -90,7 +89,6 @@ import {
 } from './types';
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
-import { loadCliPlugins } from '../plugins';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -598,32 +596,6 @@ export default class DevServer {
         warnings.forEach(warning =>
           this.output.warn(warning.message, null, warning.link, warning.action)
         );
-      }
-
-      const { reason, metadata } = await detectFileSystemAPI({
-        files,
-        builders: builders || [],
-        projectSettings: projectSettings || this.projectSettings || {},
-        vercelConfig,
-        pkg,
-        tag: '',
-        enableFlag: true,
-      });
-
-      if (reason) {
-        if (metadata.hasMiddleware) {
-          this.output.error(
-            `Detected middleware usage which requires the latest API. ${reason}`
-          );
-          await this.exit();
-        } else if (metadata.plugins.length > 0) {
-          this.output.error(
-            `Detected CLI plugins which requires the latest API. ${reason}`
-          );
-          await this.exit();
-        } else {
-          this.output.warn(`Unable to use latest API. ${reason}`);
-        }
       }
 
       if (builders) {
@@ -1377,6 +1349,7 @@ export default class DevServer {
     return false;
   };
 
+  /*
   runDevMiddleware = async (
     req: http.IncomingMessage,
     res: http.ServerResponse
@@ -1400,6 +1373,7 @@ export default class DevServer {
       };
     }
   };
+  */
 
   /**
    * Serve project directory as a v2 deployment.
@@ -1468,6 +1442,7 @@ export default class DevServer {
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
 
+    /*
     const middlewareResult = await this.runDevMiddleware(req, res);
 
     if (middlewareResult) {
@@ -1497,6 +1472,7 @@ export default class DevServer {
         prevUrl = url.format(origUrl);
       }
     }
+    */
 
     for (const phase of phases) {
       statusCode = undefined;

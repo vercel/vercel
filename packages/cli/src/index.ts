@@ -160,10 +160,9 @@ const main = async () => {
   //  * a path to deploy (as in: `vercel path/`)
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
-  const isBuildOrDev =
-    targetOrSubcommand === 'build' || targetOrSubcommand === 'dev';
 
-  if (isBuildOrDev) {
+  const betaCommands: string[] = [];
+  if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
         `${getTitleName()} CLI ${
@@ -294,14 +293,7 @@ const main = async () => {
 
   let authConfig = null;
 
-  const subcommandsWithoutToken = [
-    'login',
-    'logout',
-    'help',
-    'init',
-    'update',
-    'build',
-  ];
+  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'update'];
 
   if (authConfigExists) {
     try {
@@ -408,33 +400,20 @@ const main = async () => {
       } else if (commands.has(singular)) {
         alternative = singular;
       }
-      if (targetOrSubcommand === 'build') {
-        output.note(
-          `If you wish to deploy the ${fileType} ${param(
-            targetOrSubcommand
-          )}, run ${getCommandName('deploy build')}.` +
+      console.error(
+        error(
+          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
+            `\nIf you wish to deploy the ${fileType} ${param(
+              targetOrSubcommand
+            )}, first run "cd ${targetOrSubcommand}". ` +
             (alternative
               ? `\nIf you wish to use the subcommand ${param(
                   targetOrSubcommand
                 )}, use ${param(alternative)} instead.`
               : '')
-        );
-      } else {
-        console.error(
-          error(
-            `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
-              `\nIf you wish to deploy the ${fileType} ${param(
-                targetOrSubcommand
-              )}, first run "cd ${targetOrSubcommand}". ` +
-              (alternative
-                ? `\nIf you wish to use the subcommand ${param(
-                    targetOrSubcommand
-                  )}, use ${param(alternative)} instead.`
-                : '')
-          )
-        );
-        return 1;
-      }
+        )
+      );
+      return 1;
     }
 
     if (subcommandExists) {
@@ -629,8 +608,8 @@ const main = async () => {
       case 'billing':
         func = await import('./commands/billing');
         break;
-      case 'build':
-        func = await import('./commands/build');
+      case 'bisect':
+        func = await import('./commands/bisect');
         break;
       case 'certs':
         func = await import('./commands/certs');

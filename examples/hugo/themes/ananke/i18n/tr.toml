@@ -1,0 +1,38 @@
+[more]
+other = "Daha fazla"
+
+[allTitle]
+other = "Tüm {{.Title }}"
+
+[recentTitle]
+other = "Güncel {{.Title }}"
+
+[readMore]
+other = "daha fazla oku"
+
+[whatsInThis]
+other = "Bu {{ .Type }} ne içeriyor"
+
+[related]
+other = "İlişkili"
+
+[yourName]
+other = "İsminiz"
+
+[emailAddress]
+other = "E-posta Adresi"
+
+[message]
+other = "Mesaj"
+
+[emailRequiredNote]
+other = "E-posta adresi zorunludur."
+
+[send]
+other = "Gönder"
+
+[taxonomyPageList]
+other = "Aşağıda, “{{ .Title }}” sınıflandırma terimini kullanan sayfaları bulacaksınız."
+
+[pageTitle]
+other = "{{ .Name }} sayfa"

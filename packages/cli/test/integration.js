@@ -7,9 +7,10 @@ import { Readable } from 'stream';
 import { homedir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
+import createFetchRetry from '@vercel/fetch-retry';
 import fs, {
   writeFile,
   readFile,
@@ -23,6 +24,8 @@ import sleep from '../src/util/sleep';
 import pkg from '../package';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
+
+const fetch = createFetchRetry(nodeFetch);
 
 // log command when running `execa`
 function execa(file, args, options) {
@@ -2268,62 +2271,6 @@ test('[vercel dev] fails when development commad calls vercel dev recursively', 
   );
 });
 
-test('[vercel build] fails when build commad calls vercel build recursively', async t => {
-  const dir = fixture('build-fail-on-recursion-command');
-  const projectName = `build-fail-on-recursion-command-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  const build = execa(binaryPath, ['build', ...defaultArgs], {
-    cwd: dir,
-    reject: false,
-  });
-
-  await waitForPrompt(build, chunk =>
-    chunk.includes('No Project Settings found locally')
-  );
-  build.stdin.write('yes\n');
-
-  await setupProject(build, projectName, {
-    buildCommand: `${binaryPath} build`,
-  });
-
-  const { exitCode, stderr } = await build;
-
-  t.is(exitCode, 1);
-  t.true(
-    stderr.includes('must not recursively invoke itself'),
-    `Received instead: "${stderr}"`
-  );
-});
-
-test('[vercel build] fails when build script calls vercel build recursively', async t => {
-  const dir = fixture('build-fail-on-recursion-script');
-  const projectName = `build-fail-on-recursion-script-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  const build = execa(binaryPath, ['build', ...defaultArgs], {
-    cwd: dir,
-    reject: false,
-  });
-
-  await waitForPrompt(build, chunk =>
-    chunk.includes('No Project Settings found locally')
-  );
-  build.stdin.write('yes\n');
-
-  await setupProject(build, projectName);
-
-  const { exitCode, stderr } = await build;
-
-  t.is(exitCode, 1);
-  t.true(
-    stderr.includes('must not recursively invoke itself'),
-    `Received instead: "${stderr}"`
-  );
-});
-
 test('`vercel rm` removes a deployment', async t => {
   const directory = fixture('static-deployment');
 
@@ -2781,7 +2728,7 @@ test('should show prompts to set up project during first deploy', async t => {
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.vercel\n.output\n');
+  t.is(gitignore, '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3350,7 +3297,7 @@ test('[vc link] should show prompts to set up project', async t => {
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.vercel\n.output\n');
+  t.is(gitignore, '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3385,7 +3332,7 @@ test('[vc link --confirm] should not show prompts and autolink', async t => {
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.vercel\n.output\n');
+  t.is(gitignore, '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3420,7 +3367,7 @@ test('[vc link] should not duplicate paths in .gitignore', async t => {
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.output\n.vercel\n');
+  t.is(gitignore, '.vercel\n');
 });
 
 test('[vc dev] should show prompts to set up project', async t => {
@@ -3444,7 +3391,7 @@ test('[vc dev] should show prompts to set up project', async t => {
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.vercel\n.output\n');
+  t.is(gitignore, '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(
@@ -3511,7 +3458,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
 
   // Ensure .gitignore is created
   const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  t.is(gitignore, '.vercel\n.output\n');
+  t.is(gitignore, '.vercel\n');
 
   // Ensure .vercel/project.json and .vercel/README.txt are created
   t.is(

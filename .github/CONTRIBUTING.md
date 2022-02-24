@@ -2,11 +2,11 @@
 
 When contributing to this repository, please first discuss the change you wish to make via [GitHub Discussions](https://github.com/vercel/vercel/discussions/new) with the owners of this repository before submitting a Pull Request.
 
-Please read our [code of conduct](CODE_OF_CONDUCT.md) and follow it in all your interactions with the project.
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) and follow it in all your interactions with the project.
 
 ## Local development
 
-This project is configured in a monorepo pattern where one repo contains multiple npm packages. Dependencies are installed and managed with `yarn`, not `npm` CLI.
+This project is configured in a monorepo, where one repository contains multiple npm packages. Dependencies are installed and managed with `yarn`, not `npm` CLI.
 
 To get started, execute the following:
 
@@ -23,7 +23,7 @@ Make sure all the tests pass before making changes.
 
 ## Verifying your change
 
-Once you are done with your changes (we even suggest doing it along the way ), make sure all the test still run by running
+Once you are done with your changes (we even suggest doing it along the way), make sure all the test still run by running:
 
 ```
 yarn build && yarn test
@@ -50,7 +50,7 @@ Unit tests are run locally with `jest` and execute quickly because they are test
 Integration tests create deployments to your Vercel account using the `test` project name. After each test is deployed, the `probes` key is used to check if the response is the expected value. If the value doesn't match, you'll see a message explaining the difference. If the deployment failed to build, you'll see a more generic message like the following:
 
 ```
-[Error: Fetched page https://test-8ashcdlew.now.sh/root.js does not contain hello Root!. Instead it contains An error occurred with this application.
+[Error: Fetched page https://test-8ashcdlew.vercel.app/root.js does not contain hello Root!. Instead it contains An error occurred with this application.
 
     NO_STATUS_CODE_FRO Response headers:
        cache-control=s-maxage=0
@@ -64,7 +64,7 @@ Integration tests create deployments to your Vercel account using the `test` pro
       x-now-trace=iad1]
 ```
 
-In such cases you can visit the URL of the failed deployment and append `/_logs` so see the build error. In the case above, that would be https://test-8ashcdlew.now.sh/_logs
+In such cases you can visit the URL of the failed deployment and append `/_logs` so see the build error. In the case above, that would be https://test-8ashcdlew.vercel.app/_logs
 
 The logs of this deployment will contain the actual error which may help you to understand what went wrong.
 

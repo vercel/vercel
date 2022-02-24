@@ -1,17 +1,11 @@
 {
-  "name": "nuxtjs",
-  "version": "1.0.0",
-  "description": "My astonishing Nuxt App",
-  "author": "msweeneydev",
   "private": true,
   "scripts": {
-    "dev": "nuxt",
-    "build": "nuxt generate",
-    "start": "nuxt start"
+    "dev": "nuxi dev",
+    "build": "nuxi build",
+    "start": "node .output/server/index.mjs"
   },
-  "dependencies": {
-    "core-js": "^3.15.0",
-    "nuxt": "^2.15.7"
-  },
-  "devDependencies": {}
+  "devDependencies": {
+    "nuxt3": "latest"
+  }
 }
