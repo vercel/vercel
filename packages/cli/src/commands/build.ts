@@ -1,11 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import npa from 'npm-package-arg';
-import {
-  join,
-  //normalize,
-  relative,
-} from 'path';
+import { join, relative } from 'path';
 import {
   detectBuilders,
   Files,
@@ -62,7 +58,7 @@ const help = () => {
 `);
 };
 
-export default async function main(client: Client) {
+export default async function main(client: Client): Promise<number> {
   const { output } = client;
 
   // Ensure that `vc build` is not being invoked recursively
@@ -289,8 +285,15 @@ export default async function main(client: Client) {
 
   // Wait for filesystem operations to complete
   // TODO render progress bar?
+  let hadError = false;
   const errors = await Promise.all(ops);
-  console.log(errors);
+  for (const error of errors) {
+    if (error) {
+      hadError = true;
+      output.prettyError(error);
+    }
+  }
+  if (hadError) return 1;
 
   output.print(
     `${prependEmoji(
@@ -300,6 +303,8 @@ export default async function main(client: Client) {
       emoji('success')
     )}`
   );
+
+  return 0;
 }
 
 /*

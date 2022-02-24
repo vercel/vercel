@@ -9,6 +9,7 @@ import {
   BuilderV3,
   Lambda,
   PackageJson,
+  download,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 
@@ -22,117 +23,67 @@ export async function writeBuildResult(
 ) {
   const { version } = builder;
   if (version === 2) {
-    return writeBuildResultV2(
-      buildResult as BuildResultV2,
-      build,
-      builder,
-      builderPkg
-    );
+    return writeBuildResultV2(buildResult as BuildResultV2);
   } else if (version === 3) {
-    return writeBuildResultV3(
-      buildResult as BuildResultV3,
-      build,
-      builder,
-      builderPkg
-    );
+    return writeBuildResultV3(buildResult as BuildResultV3, build);
   }
   throw new Error(
     `Unsupported Builder version \`${version}\` from "${builderPkg.name}"`
   );
 }
 
-async function writeBuildResultV2(
-  buildResult: BuildResultV2,
-  build: Builder,
-  builder: BuilderV2 | BuilderV3,
-  builderPkg: PackageJson
-) {
-  const output: { [path: string]: any } = {};
-  for (const [path, file] of Object.entries(buildResult.output)) {
-    if (file.type === 'Lambda') {
-      await writeLambda(file as Lambda, path);
-      output[path] = {
-        ...file,
-        zipBuffer: undefined,
-      };
-    } else if (file.type === 'FileFsRef') {
-      const ext = extname(file.fsPath!);
+async function writeBuildResultV2(buildResult: BuildResultV2) {
+  console.log(buildResult);
+  const overrides: { [path: string]: any } = {};
+  for (const [path, output] of Object.entries(buildResult.output)) {
+    if (output.type === 'Lambda') {
+      await writeLambda(output as Lambda, path);
+    } else if (output.type === 'FileFsRef') {
+      // TODO: properly type
+      let override: any = null;
+
       // TODO get ext from `mimeTypes.extension()` if `ext` is empty
+      const ext = extname(output.fsPath!);
       let fsPath = path;
       if (extname(path) !== ext) {
         fsPath += ext;
+        if (!override) override = {};
+        override.path = path;
       }
-      await writeFile(file, fsPath);
-      output[path] = {
-        ...file,
-        fsPath,
-      };
+
+      if (output.contentType) {
+        if (!override) override = {};
+        override.contentType = output.contentType;
+      }
+      if (override) {
+        overrides[fsPath] = override;
+      }
+      await writeStaticFile(output, fsPath);
+    } else {
+      // TODO: handle `FileBlob` / `FileRef`
+      throw new Error(`Unsupported output type: "${output.type}" for ${path}`);
     }
-    // TODO: handle `FileBlob`
   }
-  await writeMeta(
-    {
-      ...buildResult,
-      output,
-    },
-    build.src!,
-    builder,
-    builderPkg
-  );
+  const configPath = join(OUTPUT_DIR, 'config.json');
+  const config = {
+    routes: buildResult.routes,
+    overrides,
+  };
+  await fs.writeJSON(configPath, config, { spaces: 2 });
 }
 
-async function writeBuildResultV3(
-  buildResult: BuildResultV3,
-  build: Builder,
-  builder: BuilderV2 | BuilderV3,
-  builderPkg: PackageJson
-) {
+async function writeBuildResultV3(buildResult: BuildResultV3, build: Builder) {
   const { output } = buildResult;
   if (output.type === 'Lambda') {
-    await Promise.all([
-      writeLambda(output, build.src!),
-      writeMeta(
-        {
-          ...buildResult,
-          output: {
-            ...output,
-            zipBuffer: undefined,
-          },
-          watch: undefined,
-        },
-        build.src!,
-        builder,
-        builderPkg
-      ),
-    ]);
+    await writeLambda(output, build.src!);
   } else {
-    throw new Error(`Unsupported output type: "${output.type}`);
+    throw new Error(
+      `Unsupported output type: "${output.type}" for ${build.src}`
+    );
   }
 }
 
-async function writeMeta(
-  metadata: any,
-  path: string,
-  builder: BuilderV2 | BuilderV3,
-  builderPkg: PackageJson
-) {
-  const dest = join(OUTPUT_DIR, 'meta', `${path}.build-result.json`);
-  await fs.mkdirp(dirname(dest));
-  const json = {
-    ...metadata,
-    builder: {
-      name: builderPkg.name,
-      version: builderPkg.version,
-      apiVersion: builder.version,
-    },
-    watch: undefined,
-  };
-  await fs.writeJSON(dest, json, {
-    spaces: 2,
-  });
-}
-
-async function writeFile(file: File, path: string) {
+async function writeStaticFile(file: File, path: string) {
   // TODO: handle (or skip) symlinks?
   const dest = join(OUTPUT_DIR, 'static', path);
   await fs.mkdirp(dirname(dest));
@@ -141,7 +92,29 @@ async function writeFile(file: File, path: string) {
 }
 
 async function writeLambda(lambda: Lambda, path: string) {
-  const dest = join(OUTPUT_DIR, 'functions', `${path}.zip`);
-  await fs.mkdirp(dirname(dest));
-  await fs.writeFile(dest, lambda.zipBuffer);
+  const dest = join(OUTPUT_DIR, 'serverless', `${path}.func`);
+  await fs.mkdirp(dest);
+
+  const ops: Promise<any>[] = [];
+  if (lambda.files) {
+    // `files` is defined
+    ops.push(download(lambda.files, dest));
+  } else if (lambda.zipBuffer) {
+    // TODO: unzip buffer to `dest`
+    //await fs.writeFile(dest, lambda.zipBuffer);
+  } else {
+    throw new Error('Malformed `Lambda` - no "files" present');
+  }
+
+  const config = {
+    ...lambda,
+    files: undefined,
+    zipBuffer: undefined,
+  };
+  ops.push(
+    fs.writeJSON(join(dest, '.vc-config.json'), config, {
+      spaces: 2,
+    })
+  );
+  await Promise.all(ops);
 }
