@@ -12,6 +12,7 @@ import {
   download,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
+import { unzip } from './unzip';
 
 export const OUTPUT_DIR = '.vercel/output';
 
@@ -33,7 +34,6 @@ export async function writeBuildResult(
 }
 
 async function writeBuildResultV2(buildResult: BuildResultV2) {
-  console.log(buildResult);
   const overrides: { [path: string]: any } = {};
   for (const [path, output] of Object.entries(buildResult.output)) {
     if (output.type === 'Lambda') {
@@ -66,6 +66,8 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
   }
   const configPath = join(OUTPUT_DIR, 'config.json');
   const config = {
+    wildcard: buildResult.wildcard,
+    images: buildResult.images,
     routes: buildResult.routes,
     overrides,
   };
@@ -100,8 +102,8 @@ async function writeLambda(lambda: Lambda, path: string) {
     // `files` is defined
     ops.push(download(lambda.files, dest));
   } else if (lambda.zipBuffer) {
-    // TODO: unzip buffer to `dest`
-    //await fs.writeFile(dest, lambda.zipBuffer);
+    // Builders that use the deprecated `createLambda()` might only have `zipBuffer`
+    ops.push(unzip(lambda.zipBuffer, dest));
   } else {
     throw new Error('Malformed `Lambda` - no "files" present');
   }

@@ -88,6 +88,7 @@
     "@types/update-notifier": "5.1.0",
     "@types/which": "1.3.2",
     "@types/write-json-file": "2.2.1",
+    "@types/yauzl-promise": "2.1.0",
     "@vercel/client": "10.3.1-canary.1",
     "@vercel/fetch-retry": "5.0.3",
     "@vercel/frameworks": "0.6.1-canary.1",
@@ -168,7 +169,8 @@
     "utility-types": "2.1.0",
     "which": "2.0.2",
     "write-json-file": "2.2.0",
-    "xdg-app-paths": "5.1.0"
+    "xdg-app-paths": "5.1.0",
+    "yauzl-promise": "2.1.3"
   },
   "jest": {
     "preset": "ts-jest",
