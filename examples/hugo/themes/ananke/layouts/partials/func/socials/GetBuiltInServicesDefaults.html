@@ -1,0 +1,73 @@
+{{/*
+  GetBuiltInServicesData
+  Returns a map whose keys stores the map of defaults data for any built-in service. 
+  We use a key to easily grab the data with `index $that github`
+
+  @author @regisphilibert
+
+  @context Any (.)
+
+  @access public
+
+  @returns Map
+
+
+  ## Contributors can add a built-in service
+
+  1. Adding it to the following map with the following format:
+  ```yaml
+  # [...]
+  shinyandnew:
+    label: Shiny And New
+    color: '#cccccc'
+  ```
+  2. Edit README file with new service https://github.com/theNewDynamic/gohugo-theme-ananke/tree/422-improve-socials#built-in-services
+
+*/}}
+{{ return (`
+  facebook:
+    share: true
+    label: Facebook
+    color: '#3b5998'
+  twitter:
+    share: true
+    label: Twitter
+    color: '#1da1f2'
+  instagram:
+    label: Instagram
+    color: '#e1306c'
+  youtube:
+    label: YouTube
+    color: '#cd201f'
+  github:
+    label: GitHub
+    color: '#6cc644'
+  gitlab:
+    label: GitLab
+    color: '#FC6D26'
+  keybase:
+    label: Keybase
+    color: '#3d76ff'
+  linkedin:
+    share: true
+    label: LinkedIn
+    color: '#0077b5'
+  medium:
+    label: Medium
+    color: '#0077b5'
+  mastodon:
+    label: Mastodon
+    color: '#3088d4'
+  slack:
+    label: Slack
+    color: '#E01E5A'
+  stackoverflow:
+    label: Stack Overflow
+    color: '#f48024'
+  rss:
+    label: RSS
+    color: '#ff6f1a'
+  tiktok:
+    label: TikTok
+    color: '#fe2c55'
+  ` | transform.Unmarshal) }}

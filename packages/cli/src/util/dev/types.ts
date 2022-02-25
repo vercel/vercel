@@ -66,6 +66,7 @@ export interface BuilderInputs {
 }
 
 export interface BuiltLambda extends Lambda {
+  zipBuffer: Buffer;
   fn?: FunLambda;
 }
 

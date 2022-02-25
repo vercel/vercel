@@ -1,8 +1,0 @@
-{
-  "name": "functions",
-  "version": "1.0.0",
-  "main": "index.js",
-  "devDependencies": {
-    "@types/node": "12.6.1"
-  }
-}
