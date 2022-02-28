@@ -34,6 +34,7 @@ export async function writeBuildResult(
 }
 
 async function writeBuildResultV2(buildResult: BuildResultV2) {
+  let hasOverrides = false;
   const overrides: { [path: string]: any } = {};
   for (const [path, output] of Object.entries(buildResult.output)) {
     if (output.type === 'Lambda') {
@@ -56,6 +57,7 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
         override.contentType = output.contentType;
       }
       if (override) {
+        hasOverrides = true;
         overrides[fsPath] = override;
       }
       await writeStaticFile(output, fsPath);
@@ -69,7 +71,7 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
     wildcard: buildResult.wildcard,
     images: buildResult.images,
     routes: buildResult.routes,
-    overrides,
+    overrides: hasOverrides ? overrides : undefined,
   };
   await fs.writeJSON(configPath, config, { spaces: 2 });
 }
@@ -77,7 +79,14 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
 async function writeBuildResultV3(buildResult: BuildResultV3, build: Builder) {
   const { output } = buildResult;
   if (output.type === 'Lambda') {
-    await writeLambda(output, build.src!);
+    // TODO Is this the right place for zero config rename?
+    // TODO Do we need to consider the "api" directory explicitly?
+    const src = build.src!;
+    const ext = extname(src);
+    const path = build.config?.zeroConfig
+      ? src.substring(0, src.length - ext.length)
+      : src;
+    await writeLambda(output, path);
   } else {
     throw new Error(
       `Unsupported output type: "${output.type}" for ${build.src}`

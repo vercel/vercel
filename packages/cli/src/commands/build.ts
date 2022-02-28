@@ -13,7 +13,12 @@ import {
   BuilderV2,
   BuilderV3,
 } from '@vercel/build-utils';
-import { getTransformedRoutes } from '@vercel/routing-utils';
+import {
+  appendRoutesToPhase,
+  getTransformedRoutes,
+  mergeRoutes,
+  Route,
+} from '@vercel/routing-utils';
 import { VercelConfig } from '@vercel/client';
 
 import pull from './pull';
@@ -30,6 +35,7 @@ import confirm from '../util/input/confirm';
 import { emoji, prependEmoji } from '../util/emoji';
 import stamp from '../util/output/stamp';
 import { getBuildersToAdd } from '../util/build/builders-to-add';
+import * as staticBuilder from '../util/build/static-builder';
 import { OUTPUT_DIR, writeBuildResult } from '../util/build/write-build-result';
 
 const help = () => {
@@ -134,6 +140,7 @@ export default async function main(client: Client): Promise<number> {
   if (routesResult.error) {
     //throw new NowBuildError(routesResult.error);
   }
+  //console.log(routesResult);
 
   if (vercelConfig?.builds && vercelConfig.functions) {
     /*
@@ -143,18 +150,6 @@ export default async function main(client: Client): Promise<number> {
         'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
       link: 'https://vercel.link/functions-and-builds',
     });
-    */
-  }
-
-  if (vercelConfig?.builds && vercelConfig.builds.length > 0) {
-    /*
-    console.log(
-      'Warning: Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings',
-    );
-    return {
-      buildSpecs: vercelConfig.builds.map(normalizeBuilderSpecPayload),
-      routes: routesResult.routes || [],
-    };
     */
   }
 
@@ -172,17 +167,62 @@ export default async function main(client: Client): Promise<number> {
   }
   */
 
-  // Detect the Vercel Builders that will need to be invoked
-  const detectedBuilders = await detectBuilders(files, pkg, {
-    ...vercelConfig,
-    projectSettings: project.settings,
-    featHandleMiss: true,
-  });
-  //console.log(detectedBuilders);
+  let builds = vercelConfig?.builds || [];
+  let zeroConfigRoutes: Route[] = [];
 
-  // TODO: print warnings / errors
+  if (builds.length > 0) {
+    output.warn(
+      'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
+    );
+    /*
+    return {
+      buildSpecs: vercelConfig.builds.map(normalizeBuilderSpecPayload),
+      routes: routesResult.routes || [],
+    };
+    */
+  } else {
+    // Zero config
 
-  const buildersParsed = (detectedBuilders.builders || []).map(b => npa(b.use));
+    // Detect the Vercel Builders that will need to be invoked
+    const detectedBuilders = await detectBuilders(files, pkg, {
+      ...vercelConfig,
+      projectSettings: project.settings,
+      featHandleMiss: true,
+    });
+    //console.log(detectedBuilders);
+
+    if (detectedBuilders.errors && detectedBuilders.errors.length > 0) {
+      output.prettyError(detectedBuilders.errors[0]);
+      return 1;
+    }
+
+    for (const w of detectedBuilders.warnings) {
+      console.log(
+        `Warning: ${w.message} ${w.action || 'Learn More'}: ${w.link}`
+      );
+    }
+
+    if (detectedBuilders.builders) {
+      builds = detectedBuilders.builders;
+    }
+
+    zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
+    zeroConfigRoutes.push(
+      ...appendRoutesToPhase({
+        routes: [],
+        newRoutes: detectedBuilders.rewriteRoutes,
+        phase: 'filesystem',
+      })
+    );
+    zeroConfigRoutes = appendRoutesToPhase({
+      routes: zeroConfigRoutes,
+      newRoutes: detectedBuilders.errorRoutes,
+      phase: 'error',
+    });
+    zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
+  }
+
+  const buildersParsed = builds.map(b => npa(b.use));
 
   // Add any Builders that are not yet present into `package.json`
   const buildersToAdd = getBuildersToAdd(buildersParsed, pkg);
@@ -190,7 +230,12 @@ export default async function main(client: Client): Promise<number> {
   if (buildersToAdd.size > 0) {
     // TODO: ensure `package.json` exists in `cwd`
     // TODO: run `npm` / `pnpm` based on lockfile presence
-    await spawnAsync('yarn', ['add', '--dev', ...buildersToAdd]);
+    await spawnAsync('yarn', [
+      'add',
+      '--dev',
+      '--ignore-workspace-root-check',
+      ...buildersToAdd,
+    ]);
     pkg = await readJSONFile<PackageJson>('package.json');
   }
 
@@ -199,7 +244,21 @@ export default async function main(client: Client): Promise<number> {
   const builderPkgs = new Map<string, PackageJson>();
   for (const parsed of buildersParsed) {
     let { name } = parsed;
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
+
+    if (builders.has(name)) {
+      // Builder has already been loaded
+      continue;
+    }
+
+    if (name === '@vercel/static') {
+      // `@vercel/static` is a special-case built-in builder
+      builders.set(name, staticBuilder);
+      continue;
+    }
+
     const path = require.resolve(name, {
       paths: [cwd, __dirname],
     });
@@ -235,13 +294,18 @@ export default async function main(client: Client): Promise<number> {
 
   // Write the `detectedBuilders` result to output dir
   ops.push(
-    fs.writeJSON(join(OUTPUT_DIR, 'detected-builders.json'), detectedBuilders, {
-      spaces: 2,
-    })
+    fs.writeJSON(
+      join(OUTPUT_DIR, 'builds.json'),
+      { builds },
+      {
+        spaces: 2,
+      }
+    )
   );
 
   // Execute Builders for detected entrypoints
-  for (const build of detectedBuilders.builders || []) {
+  let buildPatches: any[] = [];
+  for (const build of builds) {
     if (typeof build.src !== 'string') continue;
 
     const { name } = npa(build.use);
@@ -253,7 +317,7 @@ export default async function main(client: Client): Promise<number> {
     }
 
     const builderPkg = builderPkgs.get(name);
-    //console.log({ build, name, builder });
+    //console.log({ build, name, builder, builderPkg });
     const buildConfig: Config = {
       ...build.config,
       projectSettings: project.settings,
@@ -272,6 +336,14 @@ export default async function main(client: Client): Promise<number> {
       },
     };
     const buildResult = await builder.build(buildOptions);
+
+    if ('routes' in buildResult && Array.isArray(buildResult.routes)) {
+      buildPatches.push({
+        src: build.src,
+        use: build.use,
+        routes: buildResult.routes,
+      });
+    }
 
     // TODO remove
     delete (buildResult as any).watch;
@@ -294,6 +366,33 @@ export default async function main(client: Client): Promise<number> {
     }
   }
   if (hadError) return 1;
+
+  //console.log({ zeroConfigRoutes });
+  const finalRoutes = mergeRoutes({
+    //userRoutes: routesResult.routes,
+    userRoutes: undefined,
+    builds: zeroConfigRoutes.length
+      ? [
+          {
+            use: '@vercel/zero-config-routes',
+            entrypoint: '/',
+            routes: zeroConfigRoutes,
+          },
+          ...buildPatches,
+        ]
+      : buildPatches,
+  });
+
+  let config: any = {};
+  try {
+    config = await fs.readJSON(join(OUTPUT_DIR, 'config.json'));
+  } catch (e) {
+    if (e.code !== 'ENOENT') {
+      throw e;
+    }
+  }
+  config.routes = finalRoutes;
+  await fs.writeJSON(join(OUTPUT_DIR, 'config.json'), config, { spaces: 2 });
 
   output.print(
     `${prependEmoji(
