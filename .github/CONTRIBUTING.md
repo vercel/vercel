@@ -16,17 +16,17 @@ yarn install
 yarn bootstrap
 yarn build
 yarn lint
-yarn test
+yarn test-unit
 ```
 
 Make sure all the tests pass before making changes.
 
 ## Verifying your change
 
-Once you are done with your changes (we even suggest doing it along the way), make sure all the test still run by running:
+Once you are done with your changes (we even suggest doing it along the way), make sure all the test still pass by running:
 
 ```
-yarn build && yarn test
+yarn test-unit
 ```
 
 from the root of the project.
