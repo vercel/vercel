@@ -125,18 +125,20 @@ export async function getVercelIgnore(
   prebuilt?: boolean,
   rootDirectory?: string
 ): Promise<{ ig: Ignore; ignores: string[] }> {
-  let ignores: string[] = [];
+  let ignores: string[];
 
-  const outputDir = posix.join(rootDirectory || '', '.output');
+  const outputDir = posix.join(rootDirectory || '', '.vercel/output');
 
   if (prebuilt) {
-    ignores.push('*');
+    ignores = ['*'];
     const parts = outputDir.split('/');
     parts.forEach((_, i) => {
       const level = parts.slice(0, i + 1).join('/');
       ignores.push(`!${level}`);
     });
+    ignores.push(`!package.json`);
     ignores.push(`!${outputDir}/**`);
+    //console.log({ ignores })
   } else {
     ignores = [
       '.hg',
@@ -163,7 +165,6 @@ export async function getVercelIgnore(
       '__pycache__',
       'venv',
       'CVS',
-      `.output`,
     ];
   }
   const cwds = Array.isArray(cwd) ? cwd : [cwd];
