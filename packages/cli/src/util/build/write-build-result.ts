@@ -39,6 +39,9 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
   for (const [path, output] of Object.entries(buildResult.output)) {
     if (output.type === 'Lambda') {
       await writeLambda(output as Lambda, path);
+    } else if (output.type === 'Prerender') {
+      console.log(output);
+      //await writeLambda(output as Lambda, path);
     } else if (output.type === 'FileFsRef') {
       // TODO: properly type
       let override: any = null;
@@ -122,8 +125,9 @@ async function writeLambda(lambda: Lambda, path: string) {
     files: undefined,
     zipBuffer: undefined,
   };
+  const configPath = join(OUTPUT_DIR, 'serverless', `${path}.json`);
   ops.push(
-    fs.writeJSON(join(dest, '.vc-config.json'), config, {
+    fs.writeJSON(configPath, config, {
       spaces: 2,
     })
   );
