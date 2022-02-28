@@ -394,7 +394,7 @@ export interface Images {
 
 export interface BuildResultV2 {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
-  routes: any[];
+  routes?: any[];
   images?: Images;
   output: {
     [key: string]: File | Lambda;
