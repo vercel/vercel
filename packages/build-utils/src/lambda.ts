@@ -28,6 +28,9 @@ export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
   files: Files;
 }
 
+/**
+ * @deprecated Use `LambdaOptionsWithFiles` instead.
+ */
 export interface LambdaOptionsWithZipBuffer extends LambdaOptionsBase {
   /**
    * @deprecated Use `files` property instead.
@@ -67,6 +70,9 @@ export class Lambda {
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
+    }
+    if ('zipBuffer' in opts) {
+      assert(Buffer.isBuffer(opts.zipBuffer), '"zipBuffer" must be a Buffer');
     }
     assert(typeof handler === 'string', '"handler" is not a string');
     assert(typeof runtime === 'string', '"runtime" is not a string');
