@@ -1,0 +1,29 @@
+{
+  "name": "@vercelruntimes/redwood",
+  "version": "0.5.2-canary.0",
+  "main": "./dist/index.js",
+  "license": "MIT",
+  "homepage": "https://vercel.com/docs",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/runtimes.git",
+    "directory": "packages/redwood"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "test-integration-once": "jest --env node --verbose --runInBand --bail",
+    "prepublishOnly": "node build.js"
+  },
+  "dependencies": {
+    "@vercel/nft": "0.17.5",
+    "semver": "6.1.1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.19",
+    "@types/node": "*",
+    "@types/semver": "6.0.0"
+  }
+}
