@@ -32,7 +32,7 @@
     "@typescript-eslint/parser": "4.28.0",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
-    "cheerio": "1.0.0-rc.3",
+    "cheerio": "v1.0.0-rc.10",
     "eslint": "7.29.0",
     "eslint-config-prettier": "8.3.0",
     "eslint-plugin-jest": "24.3.6",
