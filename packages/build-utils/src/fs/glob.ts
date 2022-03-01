@@ -46,8 +46,8 @@ export default async function glob(
   const files = await vanillaGlob(pattern, options);
 
   for (const relativePath of files) {
-    const fsPath = normalizePath(path.join(options.cwd!, relativePath));
-    let stat: Stats = options.statCache![fsPath] as Stats;
+    const fsPath = normalizePath(path.join(options.cwd, relativePath));
+    let stat: Stats = options.statCache[fsPath] as Stats;
     assert(
       stat,
       `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`
