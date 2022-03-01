@@ -1,6 +1,7 @@
 import FileRef from './file-ref';
 import FileFsRef from './file-fs-ref';
 import { Lambda } from './lambda';
+import { Prerender } from './prerender';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -397,7 +398,7 @@ export interface BuildResultV2 {
   routes?: any[];
   images?: Images;
   output: {
-    [key: string]: File | Lambda;
+    [key: string]: File | Lambda | Prerender;
   };
   wildcard?: Array<{
     domain: string;
