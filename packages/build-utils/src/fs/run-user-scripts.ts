@@ -352,7 +352,6 @@ export async function runNpmInstall(
       .filter(a => a !== '--prefer-offline')
       .concat(['install', '--no-audit', '--unsafe-perm']);
   } else if (cliType === 'pnpm') {
-    await execCommand('pnpm config set store-dir .pnpm-store');
     // PNPM's install command is similar to NPM's but without the audit nonsense
     // @see options https://pnpm.io/cli/install
     opts.prettyCommand = 'pnpm install';
