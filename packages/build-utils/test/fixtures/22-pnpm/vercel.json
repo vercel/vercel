@@ -1,5 +1,5 @@
 {
   "version": 2,
   "builds": [{ "src": "package.json", "use": "@vercel/static-build" }],
-  "probes": [{ "path": "/", "mustContain": "pnpm version: 6.32.1" }]
+  "probes": [{ "path": "/", "mustContain": "pnpm version: 6" }]
 }
