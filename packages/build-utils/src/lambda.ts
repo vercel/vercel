@@ -12,8 +12,9 @@ interface Environment {
   [key: string]: string;
 }
 
-export interface LambdaOptions {
-  files: Files;
+export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
+
+export interface LambdaOptionsBase {
   handler: string;
   runtime: string;
   memory?: number;
@@ -21,10 +22,20 @@ export interface LambdaOptions {
   environment?: Environment;
   allowQuery?: string[];
   regions?: string[];
+}
+
+export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
+  files: Files;
+}
+
+/**
+ * @deprecated Use `LambdaOptionsWithFiles` instead.
+ */
+export interface LambdaOptionsWithZipBuffer extends LambdaOptionsBase {
   /**
    * @deprecated Use `files` property instead.
    */
-  zipBuffer?: Buffer;
+  zipBuffer: Buffer;
 }
 
 interface GetLambdaOptionsFromFunctionOptions {
@@ -34,7 +45,7 @@ interface GetLambdaOptionsFromFunctionOptions {
 
 export class Lambda {
   type: 'Lambda';
-  files: Files;
+  files?: Files;
   handler: string;
   runtime: string;
   memory?: number;
@@ -47,19 +58,21 @@ export class Lambda {
    */
   zipBuffer?: Buffer;
 
-  constructor({
-    files,
-    handler,
-    runtime,
-    maxDuration,
-    memory,
-    environment = {},
-    allowQuery,
-    regions,
-    zipBuffer,
-  }: LambdaOptions) {
-    if (!zipBuffer) {
-      assert(typeof files === 'object', '"files" must be an object');
+  constructor(opts: LambdaOptions) {
+    const {
+      handler,
+      runtime,
+      maxDuration,
+      memory,
+      environment = {},
+      allowQuery,
+      regions,
+    } = opts;
+    if ('files' in opts) {
+      assert(typeof opts.files === 'object', '"files" must be an object');
+    }
+    if ('zipBuffer' in opts) {
+      assert(Buffer.isBuffer(opts.zipBuffer), '"zipBuffer" must be a Buffer');
     }
     assert(typeof handler === 'string', '"handler" is not a string');
     assert(typeof runtime === 'string', '"runtime" is not a string');
@@ -89,7 +102,7 @@ export class Lambda {
       );
     }
     this.type = 'Lambda';
-    this.files = files;
+    this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
     this.memory = memory;
@@ -97,12 +110,15 @@ export class Lambda {
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
-    this.zipBuffer = zipBuffer;
+    this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
   }
 
   async createZip(): Promise<Buffer> {
     let { zipBuffer } = this;
     if (!zipBuffer) {
+      if (!this.files) {
+        throw new Error('`files` is not defined');
+      }
       await sema.acquire();
       try {
         zipBuffer = await createZip(this.files);
