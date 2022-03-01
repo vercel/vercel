@@ -1,5 +1,7 @@
 {
   "private": true,
+  "name": "sveltekit",
+  "version": "0.0.1",
   "scripts": {
     "dev": "svelte-kit dev",
     "build": "svelte-kit build",
@@ -9,7 +11,7 @@
   "devDependencies": {
     "@sveltejs/adapter-auto": "next",
     "@sveltejs/kit": "next",
-    "svelte": "^3.44.0"
+    "svelte": "^3.46.0"
   },
   "type": "module",
   "dependencies": {
