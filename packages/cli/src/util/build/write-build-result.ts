@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import { dirname, extname, join, relative } from 'path';
+import { basename, dirname, extname, join, relative } from 'path';
 import {
   Builder,
   BuildResultV2,
@@ -76,7 +76,7 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
         );
         fallback = {
           ...output.fallback,
-          fsPath: fallbackName,
+          fsPath: basename(fallbackName),
         };
       }
 
