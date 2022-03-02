@@ -18,12 +18,12 @@
     "prepublishOnly": "node build.js"
   },
   "dependencies": {
-    "@types/glob": "7.2.0",
     "@vercel/nft": "0.17.5",
     "semver": "6.1.1"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
+    "@types/glob": "7.2.0",
     "@types/node": "*",
     "@types/semver": "6.0.0",
     "@vercel/build-utils": "2.14.1-canary.2"
