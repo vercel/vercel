@@ -2104,6 +2104,14 @@
     "@types/minimatch" "*"
     "@types/node" "*"
 
+"@types/glob@7.2.0":
+  version "7.2.0"
+  resolved "https://registry.yarnpkg.com/@types/glob/-/glob-7.2.0.tgz#bc1b5bf3aa92f25bd5dd39f35c57361bdce5b2eb"
+  integrity sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==
+  dependencies:
+    "@types/minimatch" "*"
+    "@types/node" "*"
+
 "@types/glob@^7.1.1":
   version "7.1.2"
   resolved "https://registry.yarnpkg.com/@types/glob/-/glob-7.1.2.tgz#06ca26521353a545d94a0adc74f38a59d232c987"
@@ -2531,6 +2539,11 @@
   dependencies:
     "@typescript-eslint/types" "4.28.0"
     eslint-visitor-keys "^2.0.0"
+
+"@vercel/build-utils@2.14.1-canary.2":
+  version "2.14.1-canary.2"
+  resolved "https://registry.yarnpkg.com/@vercel/build-utils/-/build-utils-2.14.1-canary.2.tgz#df1d15a3bb2df5c01a6fecedec7dcbcf7046e455"
+  integrity sha512-ROTiz7w25HyiDs84bAPtOMHkvLFPT2Pj3A4k1e0rV5D2NBLZYaXIsriNGbZcuxRHV95vdOHaTcGPtSL1s98TWw==
 
 "@vercel/fetch-retry@5.0.3":
   version "5.0.3"
