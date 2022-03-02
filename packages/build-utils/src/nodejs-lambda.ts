@@ -1,6 +1,6 @@
-import { Lambda, LambdaOptions } from './lambda';
+import { Lambda, LambdaOptionsWithFiles } from './lambda';
 
-interface NodejsLambdaOptions extends LambdaOptions {
+interface NodejsLambdaOptions extends LambdaOptionsWithFiles {
   shouldAddHelpers: boolean;
   shouldAddSourcemapSupport: boolean;
   awsLambdaHandler?: string;

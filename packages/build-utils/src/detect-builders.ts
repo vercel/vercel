@@ -67,8 +67,7 @@ function getPublicBuilder(
       typeof builder.src === 'string' &&
       isOfficialRuntime('static', builder.use) &&
       /^.*\/\*\*\/\*$/.test(builder.src) &&
-      builder.config &&
-      builder.config.zeroConfig === true
+      builder.config?.zeroConfig === true
     ) {
       return builder as Builder & { src: string };
     }
