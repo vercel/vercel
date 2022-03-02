@@ -30,7 +30,7 @@ type MiddlewareIndexed =
       /**
        * A middleware key within the `output` key under the build result
        */
-      middlewareKey?: never;
+      middlewareAt?: never;
     }
   | {
       /**
@@ -40,7 +40,7 @@ type MiddlewareIndexed =
       /**
        * A middleware key within the `output` key under the build result
        */
-      middlewareKey: string;
+      middlewareAt: string;
     }
   | {
       /**
@@ -50,7 +50,7 @@ type MiddlewareIndexed =
       /**
        * A middleware key within the `output` key under the build result
        */
-      middlewareKey?: never;
+      middlewareAt?: never;
     };
 
 export type Source = MiddlewareIndexed & {
