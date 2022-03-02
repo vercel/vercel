@@ -192,24 +192,32 @@ class Bridge {
        */
       let headers = {};
       /**
-       * @type {Record<string, string>}
+       * @type {string}
        */
-      let combinedBody = {};
+      let combinedBody = '';
 
       // we execute the payloads one at a time to ensure
       // lambda semantics
       for (let i = 0; i < normalizedEvent.payloads.length; i++) {
         const currentPayload = normalizedEvent.payloads[i];
         const response = await this.handleEvent(currentPayload);
-        combinedBody[currentPayload.path] = response.body;
+        combinedBody += `--payload-separator\n`;
+        if (response.headers['content-type']) {
+          combinedBody += `content-type: ${response.headers['content-type']}\n`;
+        }
+        combinedBody += response.body;
+        combinedBody += `\n--payload-separator--\n`;
         statusCode = response.statusCode;
         headers = response.headers;
       }
 
+      headers['content-type'] =
+        'multipart/mixed; boundary="--payload-separator"';
+
       return {
         headers,
         statusCode,
-        body: JSON.stringify(combinedBody),
+        body: combinedBody,
         encoding: 'base64',
       };
     } else {

@@ -119,18 +119,29 @@ test('multi-payload handling', async () => {
   );
   assert.equal(result.encoding, 'base64');
   assert.equal(result.statusCode, 200);
-  const body = JSON.parse(result.body);
-  const body1 = JSON.parse(Buffer.from(body['/nowproxy'], 'base64').toString());
-  const body2 = JSON.parse(
-    Buffer.from(body['/_next/data/build-id/nowproxy.json'], 'base64').toString()
+  assert.equal(
+    result.headers['content-type'],
+    'multipart/mixed; boundary="--payload-separator"'
   );
+  const bodies = [];
+  const payloadParts = result.body.split('--payload-separator\n');
 
-  assert.equal(body1.method, 'GET');
-  assert.equal(body1.path, '/nowproxy');
-  assert.equal(body1.headers.foo, 'baz');
-  assert.equal(body2.method, 'GET');
-  assert.equal(body2.path, '/_next/data/build-id/nowproxy.json');
-  assert.equal(body2.headers.foo, 'baz');
+  payloadParts.forEach(item => {
+    if (item && !item.startsWith('content-type:')) {
+      bodies.push(
+        JSON.parse(
+          Buffer.from(item.split('--payload-separator')[0], 'base64').toString()
+        )
+      );
+    }
+  });
+
+  assert.equal(bodies[0].method, 'GET');
+  assert.equal(bodies[0].path, '/nowproxy');
+  assert.equal(bodies[0].headers.foo, 'baz');
+  assert.equal(bodies[1].method, 'GET');
+  assert.equal(bodies[1].path, '/_next/data/build-id/nowproxy.json');
+  assert.equal(bodies[1].headers.foo, 'baz');
   assert.equal(context.callbackWaitsForEmptyEventLoop, false);
 
   server.close();
