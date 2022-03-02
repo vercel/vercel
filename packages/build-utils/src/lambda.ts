@@ -97,7 +97,7 @@ export class Lambda {
       );
     }
 
-    if (typeof supportsMultiPayloads !== undefined) {
+    if (supportsMultiPayloads !== undefined) {
       assert(
         typeof supportsMultiPayloads === 'boolean',
         '"supportsMultiPayloads" is not a boolean'
