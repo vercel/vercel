@@ -82,6 +82,11 @@ export {
 };
 
 export {
+  EdgeFunction,
+  EdgeFunctionWasmBinding,
+  createEdgeFunction,
+} from './edge-function';
+export {
   detectBuilders,
   detectOutputDirectory,
   detectApiDirectory,
