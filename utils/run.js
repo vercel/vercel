@@ -13,6 +13,7 @@ const allPackages = [
   'go',
   'python',
   'ruby',
+  'redwood',
   'cli',
 ];
 
