@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node",
-  "version": "1.13.1-canary.2",
+  "version": "1.13.1-canary.3",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/node-js",
@@ -31,7 +31,7 @@
     "@types/cookie": "0.3.3",
     "@types/etag": "1.8.0",
     "@types/test-listen": "1.1.0",
-    "@vercel/build-utils": "2.14.1-canary.2",
+    "@vercel/build-utils": "2.14.1-canary.3",
     "@vercel/ncc": "0.24.0",
     "@vercel/nft": "0.17.5",
     "@vercel/node-bridge": "2.1.2-canary.0",
