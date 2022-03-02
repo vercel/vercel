@@ -201,12 +201,18 @@ class Bridge {
       for (let i = 0; i < normalizedEvent.payloads.length; i++) {
         const currentPayload = normalizedEvent.payloads[i];
         const response = await this.handleEvent(currentPayload);
-        combinedBody += `--payload-separator\n`;
+        // build a combined body using multipart
+        // https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html
+        combinedBody += `\n--payload-separator\n`;
         if (response.headers['content-type']) {
           combinedBody += `content-type: ${response.headers['content-type']}\n`;
         }
         combinedBody += response.body;
-        combinedBody += `\n--payload-separator--\n`;
+        combinedBody += `\n--payload-separator`;
+
+        if (i === normalizedEvent.payloads.length - 1) {
+          combinedBody += '--\n';
+        }
         statusCode = response.statusCode;
         headers = response.headers;
       }

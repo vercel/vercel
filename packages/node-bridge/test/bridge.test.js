@@ -127,7 +127,7 @@ test('multi-payload handling', async () => {
   const payloadParts = result.body.split('--payload-separator\n');
 
   payloadParts.forEach(item => {
-    if (item && !item.startsWith('content-type:')) {
+    if (item.trim() && !item.startsWith('content-type:')) {
       bodies.push(
         JSON.parse(
           Buffer.from(item.split('--payload-separator')[0], 'base64').toString()
