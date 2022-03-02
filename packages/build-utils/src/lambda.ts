@@ -22,6 +22,7 @@ export interface LambdaOptionsBase {
   environment?: Environment;
   allowQuery?: string[];
   regions?: string[];
+  supportsMultiPayloads?: boolean;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -57,6 +58,7 @@ export class Lambda {
    * @deprecated Use `await lambda.createZip()` instead.
    */
   zipBuffer?: Buffer;
+  supportsMultiPayloads?: boolean;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -67,6 +69,7 @@ export class Lambda {
       environment = {},
       allowQuery,
       regions,
+      supportsMultiPayloads,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -94,6 +97,13 @@ export class Lambda {
       );
     }
 
+    if (typeof supportsMultiPayloads !== undefined) {
+      assert(
+        typeof supportsMultiPayloads === 'boolean',
+        '"supportsMultiPayloads" is not a boolean'
+      );
+    }
+
     if (regions !== undefined) {
       assert(Array.isArray(regions), '"regions" is not an Array');
       assert(
@@ -111,6 +121,7 @@ export class Lambda {
     this.allowQuery = allowQuery;
     this.regions = regions;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
+    this.supportsMultiPayloads = supportsMultiPayloads;
   }
 
   async createZip(): Promise<Buffer> {

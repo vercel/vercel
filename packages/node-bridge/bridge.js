@@ -17,7 +17,9 @@ process.on('unhandledRejection', err => {
  */
 function normalizeProxyEvent(event) {
   let bodyBuffer;
-  const { method, path, headers, encoding, body } = JSON.parse(event.body);
+  const { method, path, headers, encoding, body, payloads } = JSON.parse(
+    event.body
+  );
 
   if (body) {
     if (encoding === 'base64') {
@@ -31,7 +33,14 @@ function normalizeProxyEvent(event) {
     bodyBuffer = Buffer.alloc(0);
   }
 
-  return { isApiGateway: false, method, path, headers, body: bodyBuffer };
+  return {
+    isApiGateway: false,
+    method,
+    path,
+    headers,
+    body: bodyBuffer,
+    payloads,
+  };
 }
 
 /**
@@ -152,9 +161,53 @@ class Bridge {
    */
   async launcher(event, context) {
     context.callbackWaitsForEmptyEventLoop = false;
-    const { port } = await this.listening;
-
     const normalizedEvent = normalizeEvent(event);
+
+    if (
+      'payloads' in normalizedEvent &&
+      Array.isArray(normalizedEvent.payloads)
+    ) {
+      // statusCode and headers are required to match when using
+      // multiple payloads in a single invocation so we can use
+      // the first
+      let statusCode = 200;
+      /**
+       * @type {import('http').IncomingHttpHeaders}
+       */
+      let headers = {};
+      /**
+       * @type {Record<string, string>}
+       */
+      let combinedBody = {};
+
+      // we execute the payloads one at a time to ensure
+      // lambda semantics
+      for (let i = 0; i < normalizedEvent.payloads.length; i++) {
+        const currentPayload = normalizedEvent.payloads[i];
+        const response = await this.handleEvent(currentPayload);
+        combinedBody[currentPayload.path] = response.body;
+        statusCode = response.statusCode;
+        headers = response.headers;
+      }
+
+      return {
+        headers,
+        statusCode,
+        body: JSON.stringify(combinedBody),
+        encoding: 'base64',
+      };
+    } else {
+      return this.handleEvent(normalizedEvent);
+    }
+  }
+
+  /**
+   *
+   * @param {ReturnType<typeof normalizeEvent>} normalizedEvent
+   * @return {Promise<{statusCode: number, headers: import('http').IncomingHttpHeaders,  body: string, encoding: 'base64'}>}
+   */
+  async handleEvent(normalizedEvent) {
+    const { port } = await this.listening;
     const { isApiGateway, method, headers, body } = normalizedEvent;
     let { path } = normalizedEvent;
 
