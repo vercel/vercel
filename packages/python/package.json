@@ -1,6 +1,6 @@
 {
   "name": "@vercel/python",
-  "version": "2.2.1-canary.2",
+  "version": "2.2.1-canary.3",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@types/execa": "^0.9.0",
-    "@vercel/build-utils": "2.14.1-canary.2",
+    "@vercel/build-utils": "2.14.1-canary.3",
     "@vercel/ncc": "0.24.0",
     "execa": "^1.0.0",
     "typescript": "4.3.4"
