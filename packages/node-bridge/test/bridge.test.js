@@ -85,15 +85,20 @@ test('`NowProxyEvent` normalizing', async () => {
 });
 
 test('multi-payload handling', async () => {
-  const server = new Server((req, res) =>
+  const server = new Server((req, res) => {
+    res.setHeader(
+      'content-type',
+      req.url.includes('_next/data') ? 'application/json' : 'text/html'
+    );
+
     res.end(
       JSON.stringify({
         method: req.method,
         path: req.url,
         headers: req.headers,
       })
-    )
-  );
+    );
+  });
   const bridge = new Bridge(server);
   bridge.listen();
   const context = { callbackWaitsForEmptyEventLoop: true };
@@ -121,13 +126,17 @@ test('multi-payload handling', async () => {
   assert.equal(result.statusCode, 200);
   assert.equal(
     result.headers['content-type'],
-    'multipart/mixed; boundary="--payload-separator"'
+    'multipart/mixed; boundary="payload-separator"'
   );
   const bodies = [];
-  const payloadParts = result.body.split('--payload-separator\n');
+  const payloadParts = result.body.split('\r\n');
 
   payloadParts.forEach(item => {
-    if (item.trim() && !item.startsWith('content-type:')) {
+    if (
+      item.trim() &&
+      !item.startsWith('content-type:') &&
+      !item.startsWith('--payload')
+    ) {
       bodies.push(
         JSON.parse(
           Buffer.from(item.split('--payload-separator')[0], 'base64').toString()

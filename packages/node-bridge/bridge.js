@@ -195,6 +195,8 @@ class Bridge {
        * @type {string}
        */
       let combinedBody = '';
+      const multipartBoundary = 'payload-separator';
+      const CLRF = '\r\n';
 
       // we execute the payloads one at a time to ensure
       // lambda semantics
@@ -203,22 +205,24 @@ class Bridge {
         const response = await this.handleEvent(currentPayload);
         // build a combined body using multipart
         // https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html
-        combinedBody += `\n--payload-separator\n`;
+        combinedBody += `--${multipartBoundary}${CLRF}`;
         if (response.headers['content-type']) {
-          combinedBody += `content-type: ${response.headers['content-type']}\n`;
+          combinedBody += `content-type: ${response.headers['content-type']}${CLRF}${CLRF}`;
         }
         combinedBody += response.body;
-        combinedBody += `\n--payload-separator`;
+        combinedBody += CLRF;
 
         if (i === normalizedEvent.payloads.length - 1) {
-          combinedBody += '--\n';
+          combinedBody += `--${multipartBoundary}--${CLRF}`;
         }
+
         statusCode = response.statusCode;
         headers = response.headers;
       }
 
-      headers['content-type'] =
-        'multipart/mixed; boundary="--payload-separator"';
+      headers[
+        'content-type'
+      ] = `multipart/mixed; boundary="${multipartBoundary}"`;
 
       return {
         headers,
