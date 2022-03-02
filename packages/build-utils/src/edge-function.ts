@@ -45,7 +45,7 @@ export type EdgeFunction = {
   /**
    * WebAssembly bindings that the user code requires.
    */
-  wasm: EdgeFunctionWasmBinding[];
+  wasmBindings: EdgeFunctionWasmBinding[];
 };
 
 /**
