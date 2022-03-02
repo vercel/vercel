@@ -21,17 +21,33 @@ function normalizeProxyEvent(event) {
     event.body
   );
 
-  if (body) {
-    if (encoding === 'base64') {
-      bodyBuffer = Buffer.from(body, encoding);
-    } else if (encoding === undefined) {
-      bodyBuffer = Buffer.from(body);
+  /**
+   *
+   * @param {string} b
+   * @returns Buffer
+   */
+  const normalizeBody = b => {
+    if (b) {
+      if (encoding === 'base64') {
+        bodyBuffer = Buffer.from(b, encoding);
+      } else if (encoding === undefined) {
+        bodyBuffer = Buffer.from(b);
+      } else {
+        throw new Error(`Unsupported encoding: ${encoding}`);
+      }
     } else {
-      throw new Error(`Unsupported encoding: ${encoding}`);
+      bodyBuffer = Buffer.alloc(0);
     }
-  } else {
-    bodyBuffer = Buffer.alloc(0);
+    return bodyBuffer;
+  };
+
+  if (payloads) {
+    // @ts-ignore
+    payloads.forEach(payload => {
+      payload.body = normalizeBody(payload.body);
+    });
   }
+  bodyBuffer = normalizeBody(body);
 
   return {
     isApiGateway: false,
