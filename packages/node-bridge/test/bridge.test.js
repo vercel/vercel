@@ -84,6 +84,58 @@ test('`NowProxyEvent` normalizing', async () => {
   server.close();
 });
 
+test('multi-payload handling', async () => {
+  const server = new Server((req, res) =>
+    res.end(
+      JSON.stringify({
+        method: req.method,
+        path: req.url,
+        headers: req.headers,
+      })
+    )
+  );
+  const bridge = new Bridge(server);
+  bridge.listen();
+  const context = { callbackWaitsForEmptyEventLoop: true };
+  const result = await bridge.launcher(
+    {
+      Action: 'Invoke',
+      body: JSON.stringify({
+        payloads: [
+          {
+            method: 'GET',
+            headers: { foo: 'baz' },
+            path: '/nowproxy',
+          },
+          {
+            method: 'GET',
+            headers: { foo: 'baz' },
+            path: '/_next/data/build-id/nowproxy.json',
+          },
+        ],
+      }),
+    },
+    context
+  );
+  assert.equal(result.encoding, 'base64');
+  assert.equal(result.statusCode, 200);
+  const body = JSON.parse(result.body);
+  const body1 = JSON.parse(Buffer.from(body['/nowproxy'], 'base64').toString());
+  const body2 = JSON.parse(
+    Buffer.from(body['/_next/data/build-id/nowproxy.json'], 'base64').toString()
+  );
+
+  assert.equal(body1.method, 'GET');
+  assert.equal(body1.path, '/nowproxy');
+  assert.equal(body1.headers.foo, 'baz');
+  assert.equal(body2.method, 'GET');
+  assert.equal(body2.path, '/_next/data/build-id/nowproxy.json');
+  assert.equal(body2.headers.foo, 'baz');
+  assert.equal(context.callbackWaitsForEmptyEventLoop, false);
+
+  server.close();
+});
+
 test('consumeEvent', async () => {
   const mockListener = jest.fn((req, res) => {
     res.end('hello');
