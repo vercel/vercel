@@ -75,7 +75,6 @@ function findUniqPackagesAffected(tagName) {
   return pkgs;
 }
 
-// git log --pretty=format:"- %s [%an]" `git show-ref -s 'now@16.7.3'`...HEAD | grep -v '\- Publish '
 async function main() {
   const tagName = await getLatestStableTag();
   if (!tagName) {
