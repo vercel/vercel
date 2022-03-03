@@ -114,7 +114,7 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
  */
 async function writeBuildResultV3(buildResult: BuildResultV3, build: Builder) {
   const { output } = buildResult;
-  if (output.type === 'Lambda') {
+  if (isLambda(output)) {
     // TODO Is this the right place for zero config rename?
     // TODO Do we need to consider the "api" directory explicitly?
     const src = build.src!;
@@ -125,7 +125,7 @@ async function writeBuildResultV3(buildResult: BuildResultV3, build: Builder) {
     await writeLambda(output, path);
   } else {
     throw new Error(
-      `Unsupported output type: "${output.type}" for ${build.src}`
+      `Unsupported output type: "${(output as any).type}" for ${build.src}`
     );
   }
 }
