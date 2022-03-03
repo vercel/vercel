@@ -42,11 +42,14 @@ export default async function getConfig(
     if (localConfig instanceof CantParseJSONFile) {
       return localConfig;
     }
-    if (localConfig !== null) {
-      config = localConfig;
-      config[fileNameSymbol] = configFile;
-      return config;
+
+    if (localConfig === null) {
+      return new CantFindConfig([humanizePath(localFilePath)]);
     }
+
+    config = localConfig;
+    config[fileNameSymbol] = configFile;
+    return config;
   }
 
   // Then try with `vercel.json` or `now.json` in the same directory
