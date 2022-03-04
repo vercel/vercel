@@ -23,7 +23,7 @@ function normalizeProxyEvent(event) {
 
   /**
    *
-   * @param {string} b
+   * @param {string | Buffer} b
    * @returns Buffer
    */
   const normalizeBody = b => {
@@ -42,10 +42,13 @@ function normalizeProxyEvent(event) {
   };
 
   if (payloads) {
-    // @ts-ignore
-    payloads.forEach(payload => {
+    /**
+     * @param {{ body: string | Buffer }} payload
+     */
+    const normalizePayload = payload => {
       payload.body = normalizeBody(payload.body);
-    });
+    };
+    payloads.forEach(normalizePayload);
   }
   bodyBuffer = normalizeBody(body);
 
