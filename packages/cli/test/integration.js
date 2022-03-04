@@ -436,6 +436,30 @@ test('deploy using --local-config flag v2', async t => {
   t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json');
 });
 
+test('deploy fails using --local-config flag with non-existent path', async t => {
+  const target = fixture('local-config-v2');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      'deploy',
+      target,
+      '--local-config',
+      'does-not-exist.json',
+      ...defaultArgs,
+      '--confirm',
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stderr, stdout }));
+
+  t.regex(stderr, /Error! Couldn't find a project configuration file at/);
+  t.regex(stderr, /does-not-exist\.json/);
+});
+
 test('deploy using --local-config flag above target', async t => {
   const root = fixture('local-config-above-target');
   const target = path.join(root, 'dir');
