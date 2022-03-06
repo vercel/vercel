@@ -84,6 +84,78 @@ test('`NowProxyEvent` normalizing', async () => {
   server.close();
 });
 
+test('multi-payload handling', async () => {
+  const server = new Server((req, res) => {
+    res.setHeader(
+      'content-type',
+      req.url.includes('_next/data') ? 'application/json' : 'text/html'
+    );
+
+    res.end(
+      JSON.stringify({
+        method: req.method,
+        path: req.url,
+        headers: req.headers,
+      })
+    );
+  });
+  const bridge = new Bridge(server);
+  bridge.listen();
+  const context = { callbackWaitsForEmptyEventLoop: true };
+  const result = await bridge.launcher(
+    {
+      Action: 'Invoke',
+      body: JSON.stringify({
+        payloads: [
+          {
+            method: 'GET',
+            headers: { foo: 'baz' },
+            path: '/nowproxy',
+          },
+          {
+            method: 'GET',
+            headers: { foo: 'baz' },
+            path: '/_next/data/build-id/nowproxy.json',
+          },
+        ],
+      }),
+    },
+    context
+  );
+  assert.equal(result.encoding, 'base64');
+  assert.equal(result.statusCode, 200);
+  assert.equal(
+    result.headers['content-type'],
+    'multipart/mixed; boundary="payload-separator"'
+  );
+  const bodies = [];
+  const payloadParts = result.body.split('\r\n');
+
+  payloadParts.forEach(item => {
+    if (
+      item.trim() &&
+      !item.startsWith('content-type:') &&
+      !item.startsWith('--payload')
+    ) {
+      bodies.push(
+        JSON.parse(
+          Buffer.from(item.split('--payload-separator')[0], 'base64').toString()
+        )
+      );
+    }
+  });
+
+  assert.equal(bodies[0].method, 'GET');
+  assert.equal(bodies[0].path, '/nowproxy');
+  assert.equal(bodies[0].headers.foo, 'baz');
+  assert.equal(bodies[1].method, 'GET');
+  assert.equal(bodies[1].path, '/_next/data/build-id/nowproxy.json');
+  assert.equal(bodies[1].headers.foo, 'baz');
+  assert.equal(context.callbackWaitsForEmptyEventLoop, false);
+
+  server.close();
+});
+
 test('consumeEvent', async () => {
   const mockListener = jest.fn((req, res) => {
     res.end('hello');

@@ -17,21 +17,49 @@ process.on('unhandledRejection', err => {
  */
 function normalizeProxyEvent(event) {
   let bodyBuffer;
-  const { method, path, headers, encoding, body } = JSON.parse(event.body);
+  const { method, path, headers, encoding, body, payloads } = JSON.parse(
+    event.body
+  );
 
-  if (body) {
-    if (encoding === 'base64') {
-      bodyBuffer = Buffer.from(body, encoding);
-    } else if (encoding === undefined) {
-      bodyBuffer = Buffer.from(body);
+  /**
+   *
+   * @param {string | Buffer} b
+   * @returns Buffer
+   */
+  const normalizeBody = b => {
+    if (b) {
+      if (encoding === 'base64') {
+        bodyBuffer = Buffer.from(b, encoding);
+      } else if (encoding === undefined) {
+        bodyBuffer = Buffer.from(b);
+      } else {
+        throw new Error(`Unsupported encoding: ${encoding}`);
+      }
     } else {
-      throw new Error(`Unsupported encoding: ${encoding}`);
+      bodyBuffer = Buffer.alloc(0);
     }
-  } else {
-    bodyBuffer = Buffer.alloc(0);
-  }
+    return bodyBuffer;
+  };
 
-  return { isApiGateway: false, method, path, headers, body: bodyBuffer };
+  if (payloads) {
+    /**
+     * @param {{ body: string | Buffer }} payload
+     */
+    const normalizePayload = payload => {
+      payload.body = normalizeBody(payload.body);
+    };
+    payloads.forEach(normalizePayload);
+  }
+  bodyBuffer = normalizeBody(body);
+
+  return {
+    isApiGateway: false,
+    method,
+    path,
+    headers,
+    body: bodyBuffer,
+    payloads,
+  };
 }
 
 /**
@@ -152,9 +180,71 @@ class Bridge {
    */
   async launcher(event, context) {
     context.callbackWaitsForEmptyEventLoop = false;
-    const { port } = await this.listening;
-
     const normalizedEvent = normalizeEvent(event);
+
+    if (
+      'payloads' in normalizedEvent &&
+      Array.isArray(normalizedEvent.payloads)
+    ) {
+      // statusCode and headers are required to match when using
+      // multiple payloads in a single invocation so we can use
+      // the first
+      let statusCode = 200;
+      /**
+       * @type {import('http').IncomingHttpHeaders}
+       */
+      let headers = {};
+      /**
+       * @type {string}
+       */
+      let combinedBody = '';
+      const multipartBoundary = 'payload-separator';
+      const CLRF = '\r\n';
+
+      // we execute the payloads one at a time to ensure
+      // lambda semantics
+      for (let i = 0; i < normalizedEvent.payloads.length; i++) {
+        const currentPayload = normalizedEvent.payloads[i];
+        const response = await this.handleEvent(currentPayload);
+        // build a combined body using multipart
+        // https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html
+        combinedBody += `--${multipartBoundary}${CLRF}`;
+        if (response.headers['content-type']) {
+          combinedBody += `content-type: ${response.headers['content-type']}${CLRF}${CLRF}`;
+        }
+        combinedBody += response.body;
+        combinedBody += CLRF;
+
+        if (i === normalizedEvent.payloads.length - 1) {
+          combinedBody += `--${multipartBoundary}--${CLRF}`;
+        }
+
+        statusCode = response.statusCode;
+        headers = response.headers;
+      }
+
+      headers[
+        'content-type'
+      ] = `multipart/mixed; boundary="${multipartBoundary}"`;
+
+      return {
+        headers,
+        statusCode,
+        body: combinedBody,
+        encoding: 'base64',
+      };
+    } else {
+      return this.handleEvent(normalizedEvent);
+    }
+  }
+
+  /**
+   *
+   * @param {ReturnType<typeof normalizeEvent>} normalizedEvent
+   * @return {Promise<{statusCode: number, headers: import('http').IncomingHttpHeaders,  body: string, encoding: 'base64'}>}
+   */
+  async handleEvent(normalizedEvent) {
+    const { port } = await this.listening;
     const { isApiGateway, method, headers, body } = normalizedEvent;
     let { path } = normalizedEvent;
 
