@@ -38,7 +38,7 @@ export type EdgeFunction = {
 
   /**
    * The environment variables in use for the user code, to be
-   * bound into the edge function
+   * assigned to the edge function.
    */
   envVarsInUse: string[];
 
