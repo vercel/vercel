@@ -2,8 +2,11 @@ import type { MiddlewareIndexed } from '../src/types';
 
 type Assignable<A, B extends A> = B extends A ? 'okay' : 'not okay';
 
-type middleware_tests = [
-  // @ts-expect-error - not assignable, example
+/**
+ * Test the `MiddlewareIndexed` type
+ */
+type test_MiddlewareIndexed = [
+  // @ts-expect-error - an example for not assignable input
   Assignable<'hello', string>,
 
   Assignable<MiddlewareIndexed, { middleware: 1 }>,
