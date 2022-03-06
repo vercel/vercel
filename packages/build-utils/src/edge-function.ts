@@ -16,7 +16,7 @@ export type EdgeFunctionWasmBinding = {
 export type EdgeFunction = {
   type: 'EdgeFunction';
   /**
-   * A display name for the edge function
+   * A display name for the edge function.
    */
   name: string;
 
