@@ -81,11 +81,7 @@ export {
   getIgnoreFilter,
 };
 
-export {
-  EdgeFunction,
-  EdgeFunctionWasmBinding,
-  createEdgeFunction,
-} from './edge-function';
+export { EdgeFunction, EdgeFunctionWasmBinding } from './edge-function';
 export {
   detectBuilders,
   detectOutputDirectory,

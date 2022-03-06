@@ -1,5 +1,8 @@
-import type { File } from './types';
+import type { Files } from './types';
 
+/**
+ * A WASM binding
+ */
 export type EdgeFunctionWasmBinding = {
   /**
    * A binding name within the user code.
@@ -8,13 +11,18 @@ export type EdgeFunctionWasmBinding = {
   name: `wasm_${string}`;
 
   /**
-   * The actual WASM binary to bind.
+   * A reference to the `files` object for a WASM binary
+   * file
    */
-  file: File;
+  pathInFiles: string;
 };
 
+/**
+ * An Edge Functions output
+ */
 export type EdgeFunction = {
   type: 'EdgeFunction';
+
   /**
    * A display name for the edge function.
    */
@@ -27,14 +35,14 @@ export type EdgeFunction = {
   deploymentTarget: 'v8-worker';
 
   /**
-   * The source file. The user code.
+   * The entrypoint for the edge function.
    */
-  script: File;
+  entrypoint: string;
 
   /**
-   * The source map for the user code.
+   * The list of files to be included in the edge function bundle.
    */
-  scriptSourceMap?: File;
+  files: Files;
 
   /**
    * The environment variables in use for the user code, to be
@@ -47,15 +55,3 @@ export type EdgeFunction = {
    */
   wasmBindings: EdgeFunctionWasmBinding[];
 };
-
-/**
- * A helper to generate an EdgeFunction
- */
-export function createEdgeFunction(
-  params: Omit<EdgeFunction, 'type'>
-): EdgeFunction {
-  return {
-    type: 'EdgeFunction',
-    ...params,
-  };
-}

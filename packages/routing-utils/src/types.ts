@@ -21,7 +21,7 @@ export type HasField = Array<
     }
 >;
 
-type MiddlewareIndexed =
+export type MiddlewareIndexed =
   | {
       /**
        * A middleware index in the `middleware` key under the build result
@@ -30,7 +30,7 @@ type MiddlewareIndexed =
       /**
        * A middleware key within the `output` key under the build result
        */
-      middlewareAt?: never;
+      middlewarePath?: never;
     }
   | {
       /**
@@ -40,7 +40,7 @@ type MiddlewareIndexed =
       /**
        * A middleware key within the `output` key under the build result
        */
-      middlewareAt: string;
+      middlewarePath: string;
     }
   | {
       /**
@@ -50,7 +50,7 @@ type MiddlewareIndexed =
       /**
        * A middleware key within the `output` key under the build result
        */
-      middlewareAt?: never;
+      middlewarePath?: never;
     };
 
 export type Source = MiddlewareIndexed & {
