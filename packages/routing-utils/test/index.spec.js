@@ -52,6 +52,8 @@ describe('normalizeRoutes', () => {
         },
       },
       { src: '^/about$' },
+      { src: '^/about$', middleware: 0 },
+      { src: '^/about$', middlewarePath: 'pages/_middleware' },
       {
         src: '^/blog$',
         methods: ['GET'],

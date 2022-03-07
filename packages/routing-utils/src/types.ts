@@ -21,39 +21,7 @@ export type HasField = Array<
     }
 >;
 
-export type MiddlewareIndexed =
-  | {
-      /**
-       * A middleware index in the `middleware` key under the build result
-       */
-      middleware: number;
-      /**
-       * A middleware key within the `output` key under the build result
-       */
-      middlewarePath?: never;
-    }
-  | {
-      /**
-       * A middleware index in the `middleware` key under the build result
-       */
-      middleware?: never;
-      /**
-       * A middleware key within the `output` key under the build result
-       */
-      middlewarePath: string;
-    }
-  | {
-      /**
-       * A middleware index in the `middleware` key under the build result
-       */
-      middleware?: never;
-      /**
-       * A middleware key within the `output` key under the build result
-       */
-      middlewarePath?: never;
-    };
-
-export type Source = MiddlewareIndexed & {
+export type Source = {
   src: string;
   dest?: string;
   headers?: { [name: string]: string };
@@ -70,6 +38,15 @@ export type Source = MiddlewareIndexed & {
     redirect?: Record<string, string>;
     cookie?: string;
   };
+  /**
+   * A middleware key within the `output` key under the build result.
+   * Overrides a `middleware` definition.
+   */
+  middlewarePath?: string;
+  /**
+   * A middleware index in the `middleware` key under the build result
+   */
+  middleware?: number;
 };
 
 export type Handler = {
