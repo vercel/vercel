@@ -1,4 +1,5 @@
 import path from 'path';
+// import fs from 'fs-extra';
 import debug from '../debug';
 import FileFsRef from '../file-fs-ref';
 import { File, Files, Meta } from '../types';
@@ -15,19 +16,54 @@ export function isSymbolicLink(mode: number): boolean {
   return (mode & S_IFMT) === S_IFLNK;
 }
 
+// async function prepareSymlinkTarget(
+//   file: File,
+//   fsPath: string
+// ): Promise<string | null> {
+//   const mkdirPromise = fs.mkdirp(path.dirname(fsPath));
+//   if (file.type === 'FileFsRef') {
+//     const [target] = await Promise.all([
+//       fs.readlink(file.fsPath),
+//       mkdirPromise,
+//     ]);
+//     return target;
+//   }
+
+//   if (file.type === 'FileRef') {
+//     const targetPathBufferPromise = await streamToBuffer(
+//       await file.toStreamAsync()
+//     );
+//     const [targetPathBuffer] = await Promise.all([
+//       targetPathBufferPromise,
+//       mkdirPromise,
+//     ]);
+//     return targetPathBuffer.toString('utf8');
+//   }
+
+//   return null;
+// }
+
 async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
   const { mode } = file;
-  if (mode && isSymbolicLink(mode) && file.type === 'FileFsRef') {
-    const [target] = await Promise.all([
-      readlink((file as FileFsRef).fsPath),
-      mkdirp(path.dirname(fsPath)),
-    ]);
-    await symlink(target, fsPath);
-    return FileFsRef.fromFsPath({ mode, fsPath });
-  } else {
-    const stream = file.toStream();
-    return FileFsRef.fromStream({ mode, stream, fsPath });
+
+  if (isSymbolicLink(mode)) {
+    if (file.type === 'FileFsRef') {
+      const [target] = await Promise.all([
+        readlink(file.fsPath),
+        mkdirp(path.dirname(fsPath)),
+      ]);
+      await symlink(target, fsPath);
+      return FileFsRef.fromFsPath({ mode, fsPath });
+    }
+
+    ///
   }
+
+  const stream = file.toStream();
+  return FileFsRef.fromStream({ mode, stream, fsPath });
+
+  // TODO: handle FileRef as well
+  // https://github.com/vercel/api/blob/7e96e38ba3dcabaaf12cd02740e44af178fe2627/scripts/build-container/src/utils/copy-files.ts
 }
 
 async function removeFile(basePath: string, fileMatched: string) {

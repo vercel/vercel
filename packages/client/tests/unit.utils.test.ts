@@ -38,6 +38,21 @@ describe('buildFileTree()', () => {
     );
   });
 
+  it('should include symlinked files and directories', async () => {
+    const cwd = fixture('symlinks');
+    const { fileList } = await buildFileTree(cwd, { isDirectory: true }, noop);
+
+    const expectedFileList = toAbsolutePaths(cwd, [
+      'folder-link',
+      'folder/text.txt',
+      'index.txt',
+      'index-link.txt',
+    ]);
+    expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
+      normalizeWindowsPaths(fileList).sort()
+    );
+  });
+
   it('should include the node_modules using `.vercelignore` allowlist', async () => {
     const cwd = fixture('vercelignore-allow-nodemodules');
     const { fileList, ignoreList } = await buildFileTree(

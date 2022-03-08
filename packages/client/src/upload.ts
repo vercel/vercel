@@ -1,7 +1,8 @@
-import { createReadStream } from 'fs';
 import { Agent } from 'https';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
+import fs from 'fs-extra';
+
 import { DeploymentFile } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
@@ -86,7 +87,16 @@ export async function* upload(
         await semaphore.acquire();
 
         const fPath = file.names[0];
-        const stream = createReadStream(fPath);
+
+        let body: fs.ReadStream | string | null = null;
+
+        const stat = await fs.lstat(fPath);
+        if (stat.isSymbolicLink()) {
+          body = await fs.readlink(fPath);
+        } else {
+          body = fs.createReadStream(fPath);
+        }
+
         const { data } = file;
 
         let err;
@@ -105,7 +115,7 @@ export async function* upload(
                 'x-now-digest': sha,
                 'x-now-size': data.length,
               },
-              body: stream,
+              body,
               teamId,
               apiUrl,
               userAgent,
@@ -139,12 +149,14 @@ export async function* upload(
 
             throw new DeploymentError(error);
           }
-        } catch (e) {
+        } catch (e: any) {
           debug(`An unexpected error occurred in upload promise:\n${e}`);
           err = new Error(e);
         } finally {
-          stream.close();
-          stream.destroy();
+          if (body && typeof body !== 'string') {
+            body.close();
+            body.destroy();
+          }
         }
 
         semaphore.release();
