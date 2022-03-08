@@ -12,6 +12,7 @@ import {
   Config,
   BuilderV2,
   BuilderV3,
+  Meta,
 } from '@vercel/build-utils';
 import {
   appendRoutesToPhase,
@@ -303,6 +304,13 @@ export default async function main(client: Client): Promise<number> {
     )
   );
 
+  // The `meta` config property is re-used for each Builder
+  // invocation so that Builders can share state between
+  // subsequent entrypoint builds.
+  const meta: Meta = {
+    skipDownload: true,
+  };
+
   // Execute Builders for detected entrypoints
   let buildPatches: any[] = [];
   for (const build of builds) {
@@ -331,9 +339,7 @@ export default async function main(client: Client): Promise<number> {
       workPath: cwd,
       repoRootPath: cwd,
       config: buildConfig,
-      meta: {
-        skipDownload: true,
-      },
+      meta,
     };
     const buildResult = await builder.build(buildOptions);
 
