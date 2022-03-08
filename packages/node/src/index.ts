@@ -238,7 +238,7 @@ async function compile(
         entry = new FileBlob({ data: source, mode });
       }
     }
-    if (isSymbolicLink(entry.mode) && entry.fsPath) {
+    if (isSymbolicLink(entry.mode) && entry.type === 'FileFsRef') {
       // ensure the symlink target is added to the file list
       const symlinkTarget = relative(
         baseDir,

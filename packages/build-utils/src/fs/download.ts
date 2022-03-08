@@ -19,7 +19,7 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
   const { mode } = file;
   if (mode && isSymbolicLink(mode) && file.type === 'FileFsRef') {
     const [target] = await Promise.all([
-      readlink((file as FileFsRef).fsPath),
+      readlink(file.fsPath),
       mkdirp(path.dirname(fsPath)),
     ]);
     await symlink(target, fsPath);
