@@ -465,6 +465,8 @@ export async function runPackageJsonScript(
 
   if (cliType === 'npm') {
     opts.prettyCommand = `npm run ${scriptName}`;
+  } else if (cliType === 'pnpm') {
+    opts.prettyCommand = `pnpm run ${scriptName}`;
   } else {
     opts.prettyCommand = `yarn run ${scriptName}`;
   }
