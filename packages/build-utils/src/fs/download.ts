@@ -56,14 +56,12 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
       return FileFsRef.fromFsPath({ mode, fsPath });
     }
 
-    ///
+    // TODO: `FileRef`
+    // https://github.com/vercel/api/blob/7e96e38ba3dcabaaf12cd02740e44af178fe2627/scripts/build-container/src/utils/copy-files.ts
   }
 
   const stream = file.toStream();
   return FileFsRef.fromStream({ mode, stream, fsPath });
-
-  // TODO: handle FileRef as well
-  // https://github.com/vercel/api/blob/7e96e38ba3dcabaaf12cd02740e44af178fe2627/scripts/build-container/src/utils/copy-files.ts
 }
 
 async function removeFile(basePath: string, fileMatched: string) {
