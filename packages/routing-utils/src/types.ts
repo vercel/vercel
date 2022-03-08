@@ -38,6 +38,14 @@ export type Source = {
     redirect?: Record<string, string>;
     cookie?: string;
   };
+  /**
+   * A middleware key within the `output` key under the build result.
+   * Overrides a `middleware` definition.
+   */
+  middlewarePath?: string;
+  /**
+   * A middleware index in the `middleware` key under the build result
+   */
   middleware?: number;
 };
 
