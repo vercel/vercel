@@ -81,6 +81,7 @@ export {
   getIgnoreFilter,
 };
 
+export { EdgeFunction } from './edge-function';
 export {
   detectBuilders,
   detectOutputDirectory,
