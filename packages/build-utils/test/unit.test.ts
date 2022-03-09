@@ -70,6 +70,14 @@ it('should re-create FileFsRef symlinks properly', async () => {
   assert(linkStat.isSymbolicLink());
   assert(linkDirStat.isSymbolicLink());
   assert(aStat.isFile());
+
+  const [linkDirContents, linkTextContents] = await Promise.all([
+    readlink(path.join(outDir, 'link-dir')),
+    readlink(path.join(outDir, 'link.txt')),
+  ]);
+
+  strictEqual(linkDirContents, 'dir');
+  strictEqual(linkTextContents, './a.txt');
 });
 
 it('should re-create FileBlob symlinks properly', async () => {
