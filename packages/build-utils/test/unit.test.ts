@@ -1,7 +1,7 @@
 import ms from 'ms';
 import path from 'path';
-import fs from 'fs-extra';
-import { strict as assert } from 'assert';
+import fs, { readlink } from 'fs-extra';
+import { strict as assert, strictEqual } from 'assert';
 import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import download from '../src/fs/download';
@@ -82,7 +82,7 @@ it('should re-create FileBlob symlinks properly', async () => {
     'a.txt': new FileBlob({
       mode: 33188,
       contentType: undefined,
-      data: 'some text',
+      data: 'a text',
     }),
     'dir/b.txt': new FileBlob({
       mode: 33188,
@@ -101,22 +101,33 @@ it('should re-create FileBlob symlinks properly', async () => {
     }),
   };
 
-  assert.equal(Object.keys(files).length, 4);
+  strictEqual(Object.keys(files).length, 4);
 
   const outDir = path.join(__dirname, 'symlinks-out');
   await fs.remove(outDir);
 
   const files2 = await download(files, outDir);
-  assert.equal(Object.keys(files2).length, 4);
+  strictEqual(Object.keys(files2).length, 4);
 
-  const [linkStat, linkDirStat, aStat] = await Promise.all([
+  const [linkStat, linkDirStat, aStat, dirStat] = await Promise.all([
     fs.lstat(path.join(outDir, 'link.txt')),
     fs.lstat(path.join(outDir, 'link-dir')),
     fs.lstat(path.join(outDir, 'a.txt')),
+    fs.lstat(path.join(outDir, 'dir')),
   ]);
+
   assert(linkStat.isSymbolicLink());
   assert(linkDirStat.isSymbolicLink());
   assert(aStat.isFile());
+  assert(dirStat.isDirectory());
+
+  const [linkDirContents, linkTextContents] = await Promise.all([
+    readlink(path.join(outDir, 'link-dir')),
+    readlink(path.join(outDir, 'link.txt')),
+  ]);
+
+  strictEqual(linkDirContents, 'dir');
+  strictEqual(linkTextContents, 'a.txt');
 });
 
 it('should create zip files with symlinks properly', async () => {
