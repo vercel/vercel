@@ -72,7 +72,7 @@ it('should re-create FileFsRef symlinks properly', async () => {
   assert(aStat.isFile());
 });
 
-it('should re-create FileRef symlinks properly', async () => {
+it('should re-create FileBlob symlinks properly', async () => {
   if (process.platform === 'win32') {
     console.log('Skipping test on windows');
     return;
