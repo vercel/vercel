@@ -3,6 +3,7 @@ import debug from '../debug';
 import FileFsRef from '../file-fs-ref';
 import { File, Files, Meta } from '../types';
 import { remove, mkdirp, readlink, symlink } from 'fs-extra';
+import streamToBuffer from './stream-to-buffer';
 
 export interface DownloadedFiles {
   [filePath: string]: FileFsRef;
@@ -15,19 +16,42 @@ export function isSymbolicLink(mode: number): boolean {
   return (mode & S_IFMT) === S_IFLNK;
 }
 
+async function prepareSymlinkTarget(
+  file: File,
+  fsPath: string
+): Promise<string> {
+  const mkdirPromise = mkdirp(path.dirname(fsPath));
+  if (file.type === 'FileFsRef') {
+    const [target] = await Promise.all([readlink(file.fsPath), mkdirPromise]);
+    return target;
+  }
+
+  if (file.type === 'FileRef') {
+    const targetPathBufferPromise = await streamToBuffer(
+      await file.toStreamAsync()
+    );
+    const [targetPathBuffer] = await Promise.all([
+      targetPathBufferPromise,
+      mkdirPromise,
+    ]);
+    return targetPathBuffer.toString('utf8');
+  }
+
+  throw new Error('some error'); // TODO
+}
+
 async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
   const { mode } = file;
-  if (mode && isSymbolicLink(mode) && file.type === 'FileFsRef') {
-    const [target] = await Promise.all([
-      readlink(file.fsPath),
-      mkdirp(path.dirname(fsPath)),
-    ]);
+
+  if (isSymbolicLink(mode)) {
+    const target = await prepareSymlinkTarget(file, fsPath);
+
     await symlink(target, fsPath);
     return FileFsRef.fromFsPath({ mode, fsPath });
-  } else {
-    const stream = file.toStream();
-    return FileFsRef.fromStream({ mode, stream, fsPath });
   }
+
+  const stream = file.toStream();
+  return FileFsRef.fromStream({ mode, stream, fsPath });
 }
 
 async function removeFile(basePath: string, fileMatched: string) {

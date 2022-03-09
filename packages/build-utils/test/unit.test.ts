@@ -47,7 +47,31 @@ afterEach(() => {
   console.warn = originalConsoleWarn;
 });
 
-it('should re-create symlinks properly', async () => {
+it('should re-create FileFsRef symlinks properly', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
+  const files = await glob('**', path.join(__dirname, 'symlinks'));
+  assert.equal(Object.keys(files).length, 4);
+
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+
+  const files2 = await download(files, outDir);
+  assert.equal(Object.keys(files2).length, 4);
+
+  const [linkStat, linkDirStat, aStat] = await Promise.all([
+    fs.lstat(path.join(outDir, 'link.txt')),
+    fs.lstat(path.join(outDir, 'link-dir')),
+    fs.lstat(path.join(outDir, 'a.txt')),
+  ]);
+  assert(linkStat.isSymbolicLink());
+  assert(linkDirStat.isSymbolicLink());
+  assert(aStat.isFile());
+});
+
+it('should re-create FileRef symlinks properly', async () => {
   if (process.platform === 'win32') {
     console.log('Skipping test on windows');
     return;
