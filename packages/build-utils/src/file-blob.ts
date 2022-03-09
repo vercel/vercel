@@ -48,6 +48,10 @@ export default class FileBlob implements FileBase {
     return new FileBlob({ mode, contentType, data });
   }
 
+  async toStreamAsync(): Promise<NodeJS.ReadableStream> {
+    return this.toStream();
+  }
+
   toStream(): NodeJS.ReadableStream {
     return intoStream(this.data);
   }
