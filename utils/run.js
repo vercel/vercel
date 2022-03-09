@@ -14,6 +14,7 @@ const allPackages = [
   'python',
   'ruby',
   'redwood',
+  'static-build',
   'cli',
 ];
 
