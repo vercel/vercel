@@ -14,6 +14,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
+  FileBlob,
 } from '../src';
 
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
@@ -76,7 +77,30 @@ it('should re-create FileRef symlinks properly', async () => {
     console.log('Skipping test on windows');
     return;
   }
-  const files = await glob('**', path.join(__dirname, 'symlinks'));
+
+  const files = {
+    'a.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'some text',
+    }),
+    'dir/b.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'b text',
+    }),
+    'link-dir': new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'dir',
+    }),
+    'link.txt': new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'a.txt',
+    }),
+  };
+
   assert.equal(Object.keys(files).length, 4);
 
   const outDir = path.join(__dirname, 'symlinks-out');

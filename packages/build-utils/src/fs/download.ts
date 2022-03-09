@@ -26,7 +26,7 @@ async function prepareSymlinkTarget(
     return target;
   }
 
-  if (file.type === 'FileRef') {
+  if (file.type === 'FileRef' || file.type === 'FileBlob') {
     const targetPathBufferPromise = await streamToBuffer(
       await file.toStreamAsync()
     );
@@ -37,7 +37,9 @@ async function prepareSymlinkTarget(
     return targetPathBuffer.toString('utf8');
   }
 
-  throw new Error('some error'); // TODO
+  throw new Error(
+    `file.type "${(file as any).type}" not supported for symlink`
+  );
 }
 
 async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
