@@ -10,7 +10,8 @@ import { NowBuildError } from '@vercel/build-utils';
 import { VercelClientOptions, DeploymentOptions, NowConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
-import readdir from 'recursive-readdir';
+import readdir from './readdir-recursive';
+
 const semaphore = new Sema(10);
 
 export const API_FILES = '/v2/now/files';
