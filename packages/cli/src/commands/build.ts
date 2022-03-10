@@ -1,17 +1,13 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
-import npa from 'npm-package-arg';
 import { join, relative } from 'path';
 import {
   detectBuilders,
   Files,
   FileFsRef,
   PackageJson,
-  spawnAsync,
   BuildOptions,
   Config,
-  BuilderV2,
-  BuilderV3,
   Meta,
 } from '@vercel/build-utils';
 import {
@@ -35,9 +31,8 @@ import { VERCEL_DIR } from '../util/projects/link';
 import confirm from '../util/input/confirm';
 import { emoji, prependEmoji } from '../util/emoji';
 import stamp from '../util/output/stamp';
-import { getBuildersToAdd } from '../util/build/builders-to-add';
-import * as staticBuilder from '../util/build/static-builder';
 import { OUTPUT_DIR, writeBuildResult } from '../util/build/write-build-result';
+import { importBuilders } from '../util/build/import-builders';
 
 const help = () => {
   return console.log(`
@@ -53,6 +48,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
       --cwd [path]                   The current working directory
+      --prod                         Build a production deployment
       -d, --debug                    Debug mode [off]
       -y, --yes                      Skip the confirmation prompt
   
@@ -88,6 +84,7 @@ export default async function main(client: Client): Promise<number> {
   // Parse CLI args
   const argv = getArgs(client.argv.slice(2), {
     '--cwd': String,
+    '--prod': Boolean,
   });
 
   if (argv['--help']) {
@@ -95,11 +92,15 @@ export default async function main(client: Client): Promise<number> {
     return 2;
   }
 
+  // Build `target` influences which environment variables will be used
+  //const target = argv['--prod'] ? 'production' : 'preview';
+
   // Set the working directory if necessary
+  // TODO: Consider `projectSettings.rootDirectory`?
   if (argv['--cwd']) {
     process.chdir(argv['--cwd']);
   }
-  let cwd = process.cwd();
+  const cwd = process.cwd();
 
   // Read project settings, and pull them from Vercel if necessary
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
@@ -123,7 +124,6 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // TODO: load env vars
-  process.env.VERCEL = '1';
 
   // Load `package.json` and `vercel.json` files
   let [pkg, vercelConfig] = await Promise.all([
@@ -223,58 +223,9 @@ export default async function main(client: Client): Promise<number> {
     zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
   }
 
-  const buildersParsed = builds.map(b => npa(b.use));
-
-  // Add any Builders that are not yet present into `package.json`
-  const buildersToAdd = getBuildersToAdd(buildersParsed, pkg);
-  //console.log(buildersToAdd);
-  if (buildersToAdd.size > 0) {
-    // TODO: ensure `package.json` exists in `cwd`
-    // TODO: run `npm` / `pnpm` based on lockfile presence
-    await spawnAsync('yarn', [
-      'add',
-      '--dev',
-      '--ignore-workspace-root-check',
-      ...buildersToAdd,
-    ]);
-    pkg = await readJSONFile<PackageJson>('package.json');
-  }
-
-  // Import Builders
-  const builders = new Map<string, BuilderV2 | BuilderV3>();
-  const builderPkgs = new Map<string, PackageJson>();
-  for (const parsed of buildersParsed) {
-    let { name } = parsed;
-    if (!name) {
-      continue;
-    }
-
-    if (builders.has(name)) {
-      // Builder has already been loaded
-      continue;
-    }
-
-    if (name === '@vercel/static') {
-      // `@vercel/static` is a special-case built-in builder
-      builders.set(name, staticBuilder);
-      continue;
-    }
-
-    const path = require.resolve(name, {
-      paths: [cwd, __dirname],
-    });
-    const pkgPath = require.resolve(`${name}/package.json`, {
-      paths: [cwd, __dirname],
-    });
-    //console.log({ name, path, pkgPath });
-    const [builder, builderPkg] = await Promise.all([
-      import(path),
-      import(pkgPath),
-    ]);
-    builders.set(name, builder);
-    builderPkgs.set(name, builderPkg);
-  }
-  //console.log(builders);
+  const builderSpecs = new Set(builds.map(b => b.use));
+  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
+  console.log(buildersWithPkgs);
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -316,16 +267,12 @@ export default async function main(client: Client): Promise<number> {
   for (const build of builds) {
     if (typeof build.src !== 'string') continue;
 
-    const { name } = npa(build.use);
-    if (typeof name !== 'string') continue;
-
-    const builder = builders.get(name);
-    if (!builder) {
-      throw new Error(`Failed to load Builder "${name}"`);
+    const builderWithPkg = buildersWithPkgs.get(build.use);
+    if (!builderWithPkg) {
+      throw new Error(`Failed to load Builder "${build.use}"`);
     }
+    const { builder, pkg: builderPkg } = builderWithPkg;
 
-    const builderPkg = builderPkgs.get(name);
-    //console.log({ build, name, builder, builderPkg });
     const buildConfig: Config = {
       ...build.config,
       projectSettings: project.settings,
