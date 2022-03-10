@@ -35,13 +35,13 @@ const skipFixtures: string[] = [
 ];
 
 // eslint-disable-next-line no-restricted-syntax
-for (const fixture of fs.readdirSync(fixturesPath)) {
+for (const fixture of /*fs.readdirSync(fixturesPath)*/['24-pnpm-pnp-symlink']) {
   if (skipFixtures.includes(fixture)) {
     continue; // eslint-disable-line no-continue
   }
 
   // eslint-disable-next-line no-loop-func
-  it(`Should build "${fixture}"`, async () => {
+  it.only(`Should build "${fixture}"`, async () => {
     await expect(
       testDeployment(
         { builderUrl, buildUtilsUrl },
@@ -220,3 +220,19 @@ it('Test `detectBuilders` with `index` files', async () => {
   );
   expect(deployment).toBeDefined();
 });
+
+// describe.only('should fail for pnpm symlink=false cases', () => {
+//   for (const fixture of ['24-pnpm-pnp', '25-pnpm-symlink']) {
+//     // eslint-disable-next-line no-loop-func
+//     it(`Should fail to build "${fixture}"`, async () => {
+//       await expect(
+//         testDeployment(
+//           { builderUrl, buildUtilsUrl },
+//           path.join(fixturesPath, fixture)
+//         )
+//       ).rejects.toEqual({
+//         error: ''
+//       });
+//     });
+//   }
+// })
