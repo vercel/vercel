@@ -92,6 +92,8 @@
     "@vercel/client": "10.3.1-canary.4",
     "@vercel/fetch-retry": "5.0.3",
     "@vercel/frameworks": "0.6.1-canary.3",
+    "@vercel/redwood": "0.5.2-canary.2",
+    "@vercel/static-build": "0.22.2-canary.1",
     "@vercel/ncc": "0.24.0",
     "@vercel/nft": "0.17.5",
     "@zeit/fun": "0.11.2",
