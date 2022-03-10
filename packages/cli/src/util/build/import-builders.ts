@@ -1,5 +1,5 @@
-import { dirname, join } from 'path';
 import npa from 'npm-package-arg';
+import { dirname, join } from 'path';
 import { mkdirp, writeFile } from 'fs-extra';
 import {
   BuilderV2,
@@ -14,18 +14,15 @@ import readJSONFile from '../read-json-file';
 import { CantParseJSONFile } from '../errors-ts';
 
 interface BuilderWithPkg {
+  path: string;
+  pkgPath: string;
   builder: BuilderV2 | BuilderV3;
   pkg: PackageJson;
-  builderPath: string;
-  builderPkgPath: string;
 }
 
 /**
  * Imports the specified Vercel Builders, installing any missing ones
  * into `.vercel/builders` if necessary.
- *
- * @param builderSpecs
- * @param cwd
  */
 export async function importBuilders(
   builderSpecs: Set<string>,
@@ -37,7 +34,7 @@ export async function importBuilders(
   const resolvedSpecs = new Map<string, string>();
 
   const buildersDir = join(cwd, VERCEL_DIR, 'builders');
-  const buildersDirPkgPath = join(buildersDir, 'package.json');
+  const buildersPkgPath = join(buildersDir, 'package.json');
 
   const requirePaths = [
     // Prefer to load from `.vercel/builders` first, to allow for projects
@@ -64,10 +61,11 @@ export async function importBuilders(
 
       if (name === '@vercel/static') {
         // `@vercel/static` is a special-case built-in builder
-        // @ts-ignore
         results.set(name, {
           builder: staticBuilder,
-          pkg: {},
+          pkg: { name },
+          path: '',
+          pkgPath: '',
         });
         continue;
       }
@@ -79,16 +77,19 @@ export async function importBuilders(
         const pkgPath = require.resolve(`${name}/package.json`, {
           paths: requirePaths,
         });
-        //console.log({ name, path, pkgPath });
         const [builder, builderPkg] = await Promise.all([
           import(path),
           import(pkgPath),
         ]);
+
+        // TODO: check that Builder package version is compatible
+        // with requested version / range in the spec
+
         results.set(spec, {
           builder,
           pkg: builderPkg,
-          builderPath: path,
-          builderPkgPath: pkgPath,
+          path: path,
+          pkgPath: pkgPath,
         });
         output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
       } catch (err: any) {
@@ -104,7 +105,7 @@ export async function importBuilders(
     if (buildersToAdd.size > 0) {
       await mkdirp(buildersDir);
       try {
-        await writeFile(buildersDirPkgPath, '{}', {
+        await writeFile(buildersPkgPath, '{}', {
           flag: 'wx',
         });
       } catch (err: any) {
@@ -122,16 +123,14 @@ export async function importBuilders(
 
       // Cross-reference any builderSpecs from the saved `package.json` file,
       // in case they were installed from a URL
-      const buildersDirPkg = await readJSONFile<PackageJson>(
-        buildersDirPkgPath
-      );
-      if (buildersDirPkg instanceof CantParseJSONFile) throw buildersDirPkg;
-      if (!buildersDirPkg) {
-        throw new Error(`Failed to load "${buildersDirPkgPath}"`);
+      const buildersPkg = await readJSONFile<PackageJson>(buildersPkgPath);
+      if (buildersPkg instanceof CantParseJSONFile) throw buildersPkg;
+      if (!buildersPkg) {
+        throw new Error(`Failed to load "${buildersPkgPath}"`);
       }
       for (const spec of buildersToAdd) {
         for (const [name, version] of Object.entries(
-          buildersDirPkg.dependencies || {}
+          buildersPkg.dependencies || {}
         )) {
           if (version === spec) {
             output.debug(`Resolved Builder spec "${spec}" to name "${name}"`);

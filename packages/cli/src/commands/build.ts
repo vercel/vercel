@@ -92,9 +92,6 @@ export default async function main(client: Client): Promise<number> {
     return 2;
   }
 
-  // Build `target` influences which environment variables will be used
-  //const target = argv['--prod'] ? 'production' : 'preview';
-
   // Set the working directory if necessary
   // TODO: Consider `projectSettings.rootDirectory`?
   if (argv['--cwd']) {
@@ -123,10 +120,12 @@ export default async function main(client: Client): Promise<number> {
     project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
 
+  // Build `target` influences which environment variables will be used
+  //const target = argv['--prod'] ? 'production' : 'preview';
   // TODO: load env vars
 
   // Load `package.json` and `vercel.json` files
-  let [pkg, vercelConfig] = await Promise.all([
+  const [pkg, vercelConfig] = await Promise.all([
     readJSONFile<PackageJson>('package.json'),
     readJSONFile<VercelConfig>('vercel.json'),
   ]);
@@ -263,6 +262,7 @@ export default async function main(client: Client): Promise<number> {
   };
 
   // Execute Builders for detected entrypoints
+  // TODO: parallelize builds
   let buildPatches: any[] = [];
   for (const build of builds) {
     if (typeof build.src !== 'string') continue;
@@ -288,6 +288,9 @@ export default async function main(client: Client): Promise<number> {
       config: buildConfig,
       meta,
     };
+    output.debug(
+      `Building entrypoint "${build.src}" with "${builderPkg.name}"`
+    );
     const buildResult = await builder.build(buildOptions);
 
     if ('routes' in buildResult && Array.isArray(buildResult.routes)) {
