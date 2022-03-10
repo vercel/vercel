@@ -1,5 +1,5 @@
-const once = require('once')
+const once = require('once');
 
 module.exports = () => {
-    once(() => {});
-}
+  once(() => {});
+};

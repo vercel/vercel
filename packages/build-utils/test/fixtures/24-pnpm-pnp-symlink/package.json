@@ -1,14 +1,9 @@
 {
-  "name": "22-pnpm",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": "true",
+  "name": "24-pnpm-pnp-symlink",
   "scripts": {
     "build": "node index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "exeggcute": "^1.0.0",
     "once": "^1.4.0"

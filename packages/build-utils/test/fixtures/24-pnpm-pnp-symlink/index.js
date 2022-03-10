@@ -1,4 +1,4 @@
-const { exec } = require('exeggcute')
+const { exec } = require('exeggcute');
 
 const a = require('./a');
 const b = require('./b');

@@ -35,7 +35,9 @@ const skipFixtures: string[] = [
 ];
 
 // eslint-disable-next-line no-restricted-syntax
-for (const fixture of /*fs.readdirSync(fixturesPath)*/['24-pnpm-pnp-symlink']) {
+for (const fixture of /*fs.readdirSync(fixturesPath)*/ [
+  '24-pnpm-pnp-symlink',
+]) {
   if (skipFixtures.includes(fixture)) {
     continue; // eslint-disable-line no-continue
   }
