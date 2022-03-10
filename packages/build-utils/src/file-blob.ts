@@ -1,6 +1,6 @@
 import assert from 'assert';
 import intoStream from 'into-stream';
-import { File } from './types';
+import { FileBase } from './types';
 
 interface FileBlobOptions {
   mode?: number;
@@ -14,7 +14,7 @@ interface FromStreamOptions {
   stream: NodeJS.ReadableStream;
 }
 
-export default class FileBlob implements File {
+export default class FileBlob implements FileBase {
   public type: 'FileBlob';
   public mode: number;
   public data: string | Buffer;
@@ -46,6 +46,10 @@ export default class FileBlob implements File {
 
     const data = Buffer.concat(chunks);
     return new FileBlob({ mode, contentType, data });
+  }
+
+  async toStreamAsync(): Promise<NodeJS.ReadableStream> {
+    return this.toStream();
   }
 
   toStream(): NodeJS.ReadableStream {

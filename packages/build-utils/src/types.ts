@@ -1,22 +1,21 @@
-import FileRef from './file-ref';
-import FileFsRef from './file-fs-ref';
-import { Lambda } from './lambda';
-import { Prerender } from './prerender';
+import type FileRef from './file-ref';
+import type FileFsRef from './file-fs-ref';
+import type FileBlob from './file-blob';
+import type { Lambda } from './lambda';
+import type { Prerender } from './prerender';
+import type { EdgeFunction } from './edge-function';
 
 export interface Env {
   [name: string]: string | undefined;
 }
 
-export interface File {
+export type File = FileRef | FileFsRef | FileBlob;
+export interface FileBase {
   type: string;
   mode: number;
   contentType?: string;
   toStream: () => NodeJS.ReadableStream;
   toStreamAsync?: () => Promise<NodeJS.ReadableStream>;
-  /**
-   * The absolute path to the file in the filesystem
-   */
-  fsPath?: string;
 }
 
 export interface Files {
@@ -398,7 +397,7 @@ export interface BuildResultV2 {
   routes?: any[];
   images?: Images;
   output: {
-    [key: string]: File | Lambda | Prerender;
+    [key: string]: FileBase | Lambda | Prerender | EdgeFunction;
   };
   wildcard?: Array<{
     domain: string;

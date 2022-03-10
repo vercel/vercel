@@ -50,8 +50,17 @@ export async function hashes(
   await Promise.all(
     files.map(async (name: string): Promise<void> => {
       await semaphore.acquire();
-      const data = await fs.readFile(name);
-      const { mode } = await fs.stat(name);
+
+      const stat = await fs.lstat(name);
+      const mode = stat.mode;
+
+      let data: Buffer | null = null;
+      if (stat.isSymbolicLink()) {
+        const link = await fs.readlink(name);
+        data = Buffer.from(link, 'utf8');
+      } else {
+        data = await fs.readFile(name);
+      }
 
       const h = hash(data);
       const entry = map.get(h);

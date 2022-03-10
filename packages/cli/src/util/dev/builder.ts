@@ -288,7 +288,7 @@ export async function executeBuild(
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
   for (const name of Object.keys(output)) {
-    const obj = output[name] as File;
+    const obj = output[name] as File | Lambda;
     let lambda: BuiltLambda;
     let fileRef: FileFsRef;
     let fileBlob: FileBlob;
