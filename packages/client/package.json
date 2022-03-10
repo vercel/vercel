@@ -25,6 +25,7 @@
     "@types/async-retry": "1.4.1",
     "@types/fs-extra": "7.0.0",
     "@types/jest": "27.0.1",
+    "@types/minimatch": "3.0.5",
     "@types/ms": "0.7.30",
     "@types/node": "12.0.4",
     "@types/node-fetch": "2.5.4",
@@ -46,10 +47,10 @@
     "async-sema": "3.0.0",
     "fs-extra": "8.0.1",
     "ignore": "4.0.6",
+    "minimatch": "5.0.1",
     "ms": "2.1.2",
     "node-fetch": "2.6.1",
     "querystring": "^0.2.0",
-    "recursive-readdir": "2.2.2",
     "sleep-promise": "8.0.1"
   }
 }

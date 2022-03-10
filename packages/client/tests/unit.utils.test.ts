@@ -1,4 +1,5 @@
 import { join, resolve } from 'path';
+import fs from 'fs-extra';
 import { buildFileTree } from '../src/utils';
 
 const fixture = (name: string) => resolve(__dirname, 'fixtures', name);
@@ -36,6 +37,29 @@ describe('buildFileTree()', () => {
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );
+  });
+
+  it('should include symlinked files and directories', async () => {
+    const cwd = fixture('symlinks');
+    const { fileList } = await buildFileTree(cwd, { isDirectory: true }, noop);
+
+    const expectedFileList = toAbsolutePaths(cwd, [
+      'folder-link',
+      'folder/text.txt',
+      'index.txt',
+      'index-link.txt',
+    ]);
+    expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
+      normalizeWindowsPaths(fileList).sort()
+    );
+
+    const [folderLinkPath, indexLinkPath] = await Promise.all([
+      fs.lstat(join(cwd, 'folder-link')),
+      fs.lstat(join(cwd, 'index-link.txt')),
+    ]);
+    expect(folderLinkPath.isSymbolicLink());
+    expect(folderLinkPath.isDirectory());
+    expect(indexLinkPath.isSymbolicLink());
   });
 
   it('should include the node_modules using `.vercelignore` allowlist', async () => {
