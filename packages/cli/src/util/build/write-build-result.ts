@@ -147,7 +147,7 @@ async function writeStaticFile(
   let override: PathOverride | null = null;
 
   let fsPath = path;
-  if (file.fsPath) {
+  if (file.type === 'FileFsRef') {
     // TODO: get ext from `mimeTypes.extension()` if `ext` is empty
     const ext = extname(file.fsPath!);
     if (extname(path) !== ext) {
