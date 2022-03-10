@@ -14,8 +14,9 @@ import {
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { unzip } from './unzip';
+import { VERCEL_DIR } from '../projects/link';
 
-export const OUTPUT_DIR = '.vercel/output';
+export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
 
 export async function writeBuildResult(
   buildResult: BuildResultV2 | BuildResultV3,
@@ -64,7 +65,7 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
       let fallback: any = null; // TODO: properly type
       if (output.fallback) {
         let ext = '';
-        if ('fsPath' in output.fallback) {
+        if (output.fallback.type === 'FileFsRef') {
           ext = extname(output.fallback.fsPath);
         }
         const fallbackName = `${path}.prerender-fallback${ext}`;
@@ -94,7 +95,7 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
     } else if (output.type === 'FileFsRef') {
       await writeStaticFile(output, path, overrides);
     } else {
-      // TODO: handle `FileBlob` / `FileRef`
+      // TODO: handle `FileBlob` / `FileRef` / `EdgeFunction`
       throw new Error(`Unsupported output type: "${output.type}" for ${path}`);
     }
   }
@@ -149,7 +150,7 @@ async function writeStaticFile(
   let fsPath = path;
   if (file.type === 'FileFsRef') {
     // TODO: get ext from `mimeTypes.extension()` if `ext` is empty
-    const ext = extname(file.fsPath!);
+    const ext = extname(file.fsPath);
     if (extname(path) !== ext) {
       fsPath += ext;
       override = { path };
@@ -198,7 +199,6 @@ async function writeLambda(
       `${existingLambdaPath}.func`
     );
     const target = relative(destDir, targetDest);
-    console.log({ existingLambdaPath, target });
     await fs.mkdirp(destDir);
     await fs.symlink(target, dest);
     return;
