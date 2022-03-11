@@ -222,7 +222,7 @@ it('Test `detectBuilders` with `index` files', async () => {
   expect(deployment).toBeDefined();
 });
 
-it("Test pnpm Plug'N'Play with symlink=false", async () => {
+it("Should cache pnpm Plug'N'Play with symlink=false", async () => {
   const fixture = path.join(__dirname, 'fixtures', '24-pnpm-pnp-symlink');
 
   const config1 = {
