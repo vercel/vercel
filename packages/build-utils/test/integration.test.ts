@@ -32,18 +32,17 @@ const skipFixtures: string[] = [
   '08-zero-config-middleman',
   '21-npm-workspaces',
   '23-pnpm-workspaces',
+  '24-pnpm-pnp-symlink',
 ];
 
 // eslint-disable-next-line no-restricted-syntax
-for (const fixture of /*fs.readdirSync(fixturesPath)*/ [
-  '24-pnpm-pnp-symlink',
-]) {
+for (const fixture of fs.readdirSync(fixturesPath)) {
   if (skipFixtures.includes(fixture)) {
     continue; // eslint-disable-line no-continue
   }
 
   // eslint-disable-next-line no-loop-func
-  it.only(`Should build "${fixture}"`, async () => {
+  it(`Should build "${fixture}"`, async () => {
     await expect(
       testDeployment(
         { builderUrl, buildUtilsUrl },
@@ -223,18 +222,50 @@ it('Test `detectBuilders` with `index` files', async () => {
   expect(deployment).toBeDefined();
 });
 
-// describe.only('should fail for pnpm symlink=false cases', () => {
-//   for (const fixture of ['24-pnpm-pnp', '25-pnpm-symlink']) {
-//     // eslint-disable-next-line no-loop-func
-//     it(`Should fail to build "${fixture}"`, async () => {
-//       await expect(
-//         testDeployment(
-//           { builderUrl, buildUtilsUrl },
-//           path.join(fixturesPath, fixture)
-//         )
-//       ).rejects.toEqual({
-//         error: ''
-//       });
-//     });
-//   }
-// })
+it("Test pnpm Plug'N'Play with symlink=false", async () => {
+  const fixture = path.join(__dirname, 'fixtures', '24-pnpm-pnp-symlink');
+
+  const config1 = {
+    probes: [
+      {
+        path: '/',
+        mustContain: 'Hello, World',
+        logsMustContain: 'Build Cache not found',
+      },
+    ],
+  };
+
+  await fs.writeFile(
+    path.join(fixture, 'vercel.json'),
+    JSON.stringify(config1, null, 2)
+  );
+
+  const deployment1 = await testDeployment(
+    { builderUrl, buildUtilsUrl },
+    fixture
+  );
+
+  expect(deployment1).toBeDefined();
+
+  const config2 = {
+    probes: [
+      {
+        path: '/',
+        mustContain: 'Hello, World',
+        logsMustContain: 'Build cache downloaded',
+      },
+    ],
+  };
+
+  await fs.writeFile(
+    path.join(fixture, 'vercel.json'),
+    JSON.stringify(config2, null, 2)
+  );
+
+  const deployment2 = await testDeployment(
+    { builderUrl, buildUtilsUrl },
+    fixture
+  );
+
+  expect(deployment2).toBeDefined();
+});

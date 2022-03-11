@@ -1,10 +1,9 @@
 {
-  "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/static-build" }],
   "probes": [
     {
       "path": "/",
-      "logMustContain": "foobar"
+      "mustContain": "Hello, World",
+      "logsMustContain": "Build cache downloaded"
     }
   ]
 }
