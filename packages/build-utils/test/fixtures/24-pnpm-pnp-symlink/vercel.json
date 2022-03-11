@@ -1,0 +1,9 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Hello, World",
+      "logsMustContain": "Build cache downloaded"
+    }
+  ]
+}
