@@ -3,7 +3,7 @@
     {
       "path": "/",
       "mustContain": "Hello, World",
-      "logsMustContain": "Build cache downloaded"
+      "logMustContain": "Build Cache not found"
     }
   ]
 }

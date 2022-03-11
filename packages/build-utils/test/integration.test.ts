@@ -230,7 +230,7 @@ it("Should cache pnpm Plug'N'Play with symlink=false", async () => {
       {
         path: '/',
         mustContain: 'Hello, World',
-        logsMustContain: 'Build Cache not found',
+        logMustContain: 'No Build Cache available',
       },
     ],
   };
@@ -252,7 +252,7 @@ it("Should cache pnpm Plug'N'Play with symlink=false", async () => {
       {
         path: '/',
         mustContain: 'Hello, World',
-        logsMustContain: 'Build cache downloaded',
+        logMustContain: 'Build cache downloaded',
       },
     ],
   };
