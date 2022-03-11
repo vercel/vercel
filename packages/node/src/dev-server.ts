@@ -10,6 +10,7 @@ if (!entrypoint) {
 
 import { join } from 'path';
 import { register } from 'ts-node';
+import { fixConfig } from './typescript';
 
 type TypescriptModule = typeof import('typescript');
 
@@ -33,20 +34,10 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
 
   let ts: TypescriptModule | null = null;
 
-  // Assume Node.js 12 as the lowest common denominator
-  let target = 'ES2019';
-  const nodeMajor = Number(process.versions.node.split('.')[0]);
-  if (nodeMajor >= 14) {
-    target = 'ES2020';
-  }
-
   // Use the project's version of Typescript if available and supports `target`
   let compiler = resolveTypescript(process.cwd());
   if (compiler) {
     ts = requireTypescript(compiler);
-    if (!(target in ts.ScriptTarget)) {
-      ts = null;
-    }
   }
 
   // Otherwise fall back to using the copy that `@vercel/node` uses
@@ -55,12 +46,10 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
     ts = requireTypescript(compiler);
   }
 
+  let config: any = {};
   if (tsconfig) {
     try {
-      const { config } = ts.readConfigFile(tsconfig, ts.sys.readFile);
-      if (config?.compilerOptions?.target) {
-        target = config.compilerOptions.target;
-      }
+      config = ts.readConfigFile(tsconfig, ts.sys.readFile).config;
     } catch (err) {
       if (err.code !== 'ENOENT') {
         console.error(`Error while parsing "${tsconfig}"`);
@@ -69,16 +58,12 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
     }
   }
 
+  const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
+  const configResult = fixConfig(config, nodeVersionMajor);
+
   register({
     compiler,
-    compilerOptions: {
-      allowJs: true,
-      esModuleInterop: true,
-      jsx: 'react',
-      module: 'commonjs',
-      target,
-    },
-    project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
+    compilerOptions: configResult.compilerOptions,
     transpileOnly: true,
   });
 
