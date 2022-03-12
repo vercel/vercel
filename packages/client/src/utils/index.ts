@@ -126,18 +126,22 @@ export async function getVercelIgnore(
   prebuilt?: boolean,
   rootDirectory?: string
 ): Promise<{ ig: Ignore; ignores: string[] }> {
-  let ignores: string[] = [];
-
-  const outputDir = posix.join(rootDirectory || '', '.output');
+  const ig = ignore();
+  let ignores: string[];
 
   if (prebuilt) {
-    ignores.push('*');
+    const outputDir = posix.join(rootDirectory || '', '.vercel/output');
+    ignores = ['*'];
     const parts = outputDir.split('/');
     parts.forEach((_, i) => {
       const level = parts.slice(0, i + 1).join('/');
       ignores.push(`!${level}`);
     });
     ignores.push(`!${outputDir}/**`);
+
+    // TODO: remove - `package.json` should not be required
+    ignores.push(`!package.json`);
+    ig.add(ignores.join('\n'));
   } else {
     ignores = [
       '.hg',
@@ -164,34 +168,32 @@ export async function getVercelIgnore(
       '__pycache__',
       'venv',
       'CVS',
-      `.output`,
     ];
+
+    const cwds = Array.isArray(cwd) ? cwd : [cwd];
+
+    const files = await Promise.all(
+      cwds.map(async cwd => {
+        const [vercelignore, nowignore] = await Promise.all([
+          maybeRead(join(cwd, '.vercelignore'), ''),
+          maybeRead(join(cwd, '.nowignore'), ''),
+        ]);
+        if (vercelignore && nowignore) {
+          throw new NowBuildError({
+            code: 'CONFLICTING_IGNORE_FILES',
+            message:
+              'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.',
+            link: 'https://vercel.link/combining-old-and-new-config',
+          });
+        }
+        return vercelignore || nowignore;
+      })
+    );
+
+    const ignoreFile = files.join('\n');
+
+    ig.add(`${ignores.join('\n')}\n${clearRelative(ignoreFile)}`);
   }
-  const cwds = Array.isArray(cwd) ? cwd : [cwd];
-
-  const files = await Promise.all(
-    cwds.map(async cwd => {
-      const [vercelignore, nowignore] = await Promise.all([
-        maybeRead(join(cwd, '.vercelignore'), ''),
-        maybeRead(join(cwd, '.nowignore'), ''),
-      ]);
-      if (vercelignore && nowignore) {
-        throw new NowBuildError({
-          code: 'CONFLICTING_IGNORE_FILES',
-          message:
-            'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.',
-          link: 'https://vercel.link/combining-old-and-new-config',
-        });
-      }
-      return vercelignore || nowignore;
-    })
-  );
-
-  const ignoreFile = files.join('\n');
-
-  const ig = ignore().add(
-    `${ignores.join('\n')}\n${clearRelative(ignoreFile)}`
-  );
 
   return { ig, ignores };
 }
