@@ -472,11 +472,7 @@ export function fixConfig(
   }
 
   // Target CommonJS, always!
-  console.log('module before', config.compilerOptions.module);
   config.compilerOptions.module = 'CommonJS';
-  console.log('module after', config.compilerOptions.module);
-
-  console.log('FixConfig is ', config.compilerOptions);
 
   return config;
 }
