@@ -23,16 +23,6 @@ export interface Files {
 }
 
 export interface Config {
-  [key: string]:
-    | string
-    | string[]
-    | boolean
-    | number
-    | { [key: string]: string }
-    | BuilderFunctions
-    | ProjectSettings
-    | undefined
-    | null;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
@@ -51,6 +41,7 @@ export interface Config {
   devCommand?: string;
   framework?: string | null;
   nodeVersion?: string;
+  [key: string]: unknown;
 }
 
 export interface Meta {
