@@ -10,10 +10,10 @@ import {
 } from 'fs-extra';
 import {
   BuildOptions,
-  Lambda,
   download,
   getWriteableDirectory,
   glob,
+  createLambda,
   debug,
   walkParentDirs,
 } from '@vercel/build-utils';
@@ -215,7 +215,7 @@ export async function build({
     }
   }
 
-  const lambda = new Lambda({
+  const lambda = await createLambda({
     files: outputFiles,
     handler: `${handlerRbFilename}.vc__handler`,
     runtime,
