@@ -15,6 +15,7 @@ import {
 } from 'fs-extra';
 import {
   BuildOptions,
+  Lambda,
   Meta,
   Files,
   PrepareCacheOptions,
@@ -22,7 +23,6 @@ import {
   StartDevServerResult,
   glob,
   download,
-  createLambda,
   getWriteableDirectory,
   shouldServe,
   debug,
@@ -449,7 +449,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
     }
   }
 
-  const lambda = await createLambda({
+  const lambda = new Lambda({
     files: { ...(await glob('**', outDir)), ...includedFiles },
     handler: handlerFileName,
     runtime: 'go1.x',
