@@ -435,8 +435,11 @@ interface Build {
  */
 export function fixConfig(
   config: { compilerOptions: any },
-  nodeVersionMajor?: number
+  nodeVersionMajor = 12
 ) {
+  if (!config.compilerOptions) {
+    config.compilerOptions = {};
+  }
   // Delete options that *should not* be passed through.
   delete config.compilerOptions.out;
   delete config.compilerOptions.outFile;
@@ -451,14 +454,13 @@ export function fixConfig(
   // This will prevent TS from polyfill/downlevel emit.
   if (config.compilerOptions.target === undefined) {
     // See https://github.com/tsconfig/bases/tree/main/bases
-    let target = 'ES2019';
-    if (!nodeVersionMajor) {
-      // Assume Node.js 12 as the lowest common denominator
-      target = 'ES2019';
+    let target: string;
+    if (nodeVersionMajor >= 16) {
+      target = 'ES2021';
     } else if (nodeVersionMajor >= 14) {
       target = 'ES2020';
-    } else if (nodeVersionMajor >= 16) {
-      target = 'ES2021';
+    } else {
+      target = 'ES2019';
     }
     config.compilerOptions.target = target;
   }
