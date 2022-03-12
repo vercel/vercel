@@ -10,10 +10,10 @@ import {
   getWriteableDirectory,
   download,
   glob,
+  createLambda,
   shouldServe,
   debug,
   NowBuildError,
-  Lambda,
 } from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 
@@ -216,10 +216,11 @@ export const build = async ({
         : 'node_modules/**',
   };
 
-  const lambda = new Lambda({
+  const lambda = await createLambda({
     files: await glob('**', globOptions),
     handler: `${handlerPyFilename}.vc_handler`,
     runtime,
+    environment: {},
   });
 
   return { output: lambda };
