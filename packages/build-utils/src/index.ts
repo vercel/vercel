@@ -1,8 +1,6 @@
 import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
-import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
-import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
 import download, { DownloadedFiles, isSymbolicLink } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
@@ -42,9 +40,6 @@ export {
   FileBlob,
   FileFsRef,
   FileRef,
-  Lambda,
-  NodejsLambda,
-  createLambda,
   Prerender,
   download,
   DownloadedFiles,
@@ -76,7 +71,6 @@ export {
   shouldServe,
   debug,
   isSymbolicLink,
-  getLambdaOptionsFromFunction,
   scanParentDirs,
   getIgnoreFilter,
 };
@@ -94,6 +88,8 @@ export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
 
+export * from './lambda';
+export * from './nodejs-lambda';
 export * from './schemas';
 export * from './types';
 export * from './errors';
