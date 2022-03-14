@@ -1,6 +1,6 @@
 {
   "private": "true",
-  "name": "24-pnpm-pnp-symlink",
+  "name": "pnpm-pnp-symlink",
   "scripts": {
     "build": "node index.js"
   },

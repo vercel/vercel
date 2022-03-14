@@ -1,6 +1,6 @@
 {
   "private": "true",
-  "name": "25-pnpm-hoisted",
+  "name": "24-pnpm-hoisted",
   "scripts": {
     "build": "ls -Al node_modules && node index.js"
   },
