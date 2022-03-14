@@ -1766,7 +1766,7 @@ export const frameworks = [
 
       return (config && config.publishDir) || 'public';
     },
-    defaultVersion: '0.92.2',
+    defaultVersion: '0.64.0',
   },
   {
     name: 'Jekyll',
