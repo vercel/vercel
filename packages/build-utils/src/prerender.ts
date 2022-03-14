@@ -1,12 +1,10 @@
-import FileBlob from './file-blob';
-import FileFsRef from './file-fs-ref';
-import FileRef from './file-ref';
+import { File } from './types';
 import { Lambda } from './lambda';
 
 interface PrerenderOptions {
   expiration: number | false;
   lambda: Lambda;
-  fallback: FileBlob | FileFsRef | FileRef | null;
+  fallback: File | null;
   group?: number;
   bypassToken?: string | null /* optional to be non-breaking change */;
   allowQuery?: string[];
@@ -16,7 +14,7 @@ export class Prerender {
   public type: 'Prerender';
   public expiration: number | false;
   public lambda: Lambda;
-  public fallback: FileBlob | FileFsRef | FileRef | null;
+  public fallback: File | null;
   public group?: number;
   public bypassToken: string | null;
   public allowQuery?: string[];
