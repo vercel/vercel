@@ -3279,31 +3279,29 @@ test('deploy gatsby twice and print cached directories', async t => {
 
 test('deploy pnpm twice using pnp and symlink=false', async t => {
   const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
-  console.log(directory);
+
   function deploy() {
-    return execa(binaryPath, [...defaultArgs, '--public', '--confirm'], {
+    return execa(binaryPath, [
       directory,
-      stdio: 'inherit',
-      reject: true,
-    });
+      ...defaultArgs,
+      '--public',
+      '--confirm',
+    ]);
   }
 
   function logs(deploymentUrl) {
-    return execa(binaryPath, ['logs', deploymentUrl], {
-      stdio: 'inherit',
-      reject: true,
-    });
+    return execa(binaryPath, ['logs', deploymentUrl, ...defaultArgs]);
   }
 
   let { stdout: deploymentUrl } = await deploy();
   let { stdout: logsOutput } = await logs(deploymentUrl);
 
-  t.ok(logsOutput.includes('No Build Cache available'));
+  t.truthy(logsOutput.includes('No Build Cache available'));
 
   ({ stdout: deploymentUrl } = await deploy());
   ({ stdout: logsOutput } = await logs(deploymentUrl));
 
-  t.ok(logsOutput.includes('Build cache downloaded'));
+  t.truthy(logsOutput.includes('Build cache downloaded'));
 });
 
 test('reject deploying with wrong team .vercel config', async t => {
