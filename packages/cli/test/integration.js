@@ -3301,7 +3301,7 @@ test('deploy pnpm twice using pnp and symlink=false', async t => {
   ({ stdout: deploymentUrl } = await deploy());
   ({ stdout: logsOutput } = await logs(deploymentUrl));
 
-  t.truthy(logsOutput.includes('Build cache downloaded'));
+  t.regex(logsOutput, /Build cache downloaded/m);
 });
 
 test('reject deploying with wrong team .vercel config', async t => {
