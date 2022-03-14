@@ -3,10 +3,9 @@ import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
-import { Files, Config } from './types';
-import FileFsRef from './file-fs-ref';
 import { isSymbolicLink } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
+import type { Files, Config } from './types';
 
 interface Environment {
   [key: string]: string;
@@ -163,7 +162,7 @@ export async function createZip(files: Files): Promise<Buffer> {
   for (const name of names) {
     const file = files[name];
     if (file.mode && isSymbolicLink(file.mode) && file.type === 'FileFsRef') {
-      const symlinkTarget = await readlink((file as FileFsRef).fsPath);
+      const symlinkTarget = await readlink(file.fsPath);
       symlinkTargets.set(name, symlinkTarget);
     }
   }
@@ -177,7 +176,7 @@ export async function createZip(files: Files): Promise<Buffer> {
       if (typeof symlinkTarget === 'string') {
         zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), name, opts);
       } else {
-        const stream = file.toStream() as import('stream').Readable;
+        const stream = file.toStream();
         stream.on('error', reject);
         zipFile.addReadStream(stream, name, opts);
       }
