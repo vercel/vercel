@@ -58,13 +58,7 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
     }
   }
 
-  const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
-  fixConfig(config, nodeVersionMajor);
-  // In prod, `.ts` inputs use TypeScript and
-  // `.js` inputs use Babel to convert ESM to CJS.
-  // In dev, both `.ts` and `.js` inputs use ts-node
-  // without Babel so we must enable `allowJs`.
-  config.compilerOptions.allowJs = true;
+  fixConfigDev(config);
 
   register({
     compiler,
@@ -169,6 +163,21 @@ export async function onDevRequest(
     }
   }
   res.end(Buffer.from(result.body, result.encoding));
+}
+
+export function fixConfigDev(config: { compilerOptions: any }): void {
+  const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
+  fixConfig(config, nodeVersionMajor);
+
+  // In prod, `.ts` inputs use TypeScript and
+  // `.js` inputs use Babel to convert ESM to CJS.
+  // In dev, both `.ts` and `.js` inputs use ts-node
+  // without Babel so we must enable `allowJs`.
+  config.compilerOptions.allowJs = true;
+
+  // In prod, we emit outputs to the filesystem.
+  // In dev, we don't emit because we use ts-node.
+  config.compilerOptions.noEmit = true;
 }
 
 main().catch(err => {
