@@ -3296,7 +3296,7 @@ test('deploy pnpm twice using pnp and symlink=false', async t => {
   let { stdout: deploymentUrl } = await deploy();
   let { stdout: logsOutput } = await logs(deploymentUrl);
 
-  t.truthy(logsOutput.includes('No Build Cache available'));
+  t.regex(logsOutput, /No Build Cache available/m);
 
   ({ stdout: deploymentUrl } = await deploy());
   ({ stdout: logsOutput } = await logs(deploymentUrl));
