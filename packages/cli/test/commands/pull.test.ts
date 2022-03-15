@@ -20,6 +20,9 @@ describe('pull', () => {
     client.setArgv('pull', '--yes', cwd);
     const exitCode = await pull(client);
     expect(exitCode).toEqual(0);
+
+    const devEnvFileExists = fs.pathExistsSync(path.join(cwd, '.env'));
+    expect(devEnvFileExists).toBeTruthy();
   });
 
   it('should handle custom --env flag', async () => {

@@ -14,7 +14,7 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../util/projects/link';
 import { writeProjectSettings } from '../util/projects/project-settings';
-import pull from './env/pull';
+import envPull from './env/pull';
 
 const help = () => {
   return console.log(`
@@ -43,30 +43,31 @@ const help = () => {
     ${chalk.cyan(`$ ${getPkgName()} pull ./path-to-project --env .env.local`)}
 `);
 };
-export default async function main(client: Client) {
-  let argv;
+
+function parseArgs(client: Client) {
   try {
-    argv = getArgs(client.argv.slice(2), {
+    let argResultCode = 0;
+    const argv = getArgs(client.argv.slice(2), {
       '--yes': Boolean,
       '--env': String,
       '--debug': Boolean,
       '-d': '--debug',
       '-y': '--yes',
     });
+
+    if (argv['--help']) {
+      help();
+      argResultCode = 2;
+    }
+
+    return { argv, argResultCode };
   } catch (err) {
     handleError(err);
-    return 1;
+    return { argResultCode: 1 };
   }
+}
 
-  if (argv['--help']) {
-    help();
-    return 2;
-  }
-
-  const cwd = argv._[1] || process.cwd();
-  const yes = argv['--yes'];
-  const env = argv['--env'] ?? '.env';
-  const settingsStamp = stamp();
+async function ensureLink(client: Client, cwd: string, yes: boolean) {
   let link = await getLinkedProject(client, cwd);
   if (link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, {
@@ -77,32 +78,56 @@ export default async function main(client: Client) {
 
     if (link.status === 'not_linked') {
       // User aborted project linking questions
-      return 0;
+      return { linkResultCode: 0 };
     }
   }
 
   if (link.status === 'error') {
-    return link.exitCode;
+    return { linkResultCode: link.exitCode };
+  }
+
+  return { link, linkResultCode: 0 };
+}
+
+export default async function main(client: Client) {
+  const { argv, argResultCode } = parseArgs(client);
+  if (argResultCode !== 0) {
+    return argResultCode;
+  }
+  if (!argv) {
+    throw new Error('argResultCode was 0, but `argv` did not exist');
+  }
+
+  const cwd = argv._[1] || process.cwd();
+  const yes = Boolean(argv['--yes']);
+  const env = argv['--env'] ?? '.env';
+
+  const { link, linkResultCode } = await ensureLink(client, cwd, yes);
+  if (linkResultCode !== 0) {
+    return linkResultCode;
+  }
+  if (!link) {
+    throw new Error('linkResultCode was 0, but `link` did not exist');
   }
 
   const { project, org } = link;
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  const result = await pull(
+  const pullResultCode = await envPull(
     client,
     project,
     argv,
     [join(cwd, env)],
     client.output
   );
-  if (result !== 0) {
-    // an error happened
-    return result;
+  if (pullResultCode !== 0) {
+    return pullResultCode;
   }
 
   await writeProjectSettings(cwd, project, org);
 
+  const settingsStamp = stamp();
   client.output.print(
     `${prependEmoji(
       `Downloaded project settings to ${chalk.bold(
