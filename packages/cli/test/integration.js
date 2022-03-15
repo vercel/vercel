@@ -3280,9 +3280,21 @@ test('deploy gatsby twice and print cached directories', async t => {
 test('deploy pnpm twice using pnp and symlink=false', async t => {
   const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
 
+  await fs.rm(path.join(directory, '.vercel'), {
+    force: true,
+    recursive: true,
+  });
+  const packageJsonPath = path.join(directory, 'package.json');
+  const packageJsonRaw = await fs.readFile(packageJsonPath, 'utf-8');
+  const packageJson = JSON.parse(packageJsonRaw);
+  packageJson.name = `${packageJson.name}-${session}`;
+  await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2));
+
   function deploy() {
     return execa(binaryPath, [
       directory,
+      '--name',
+      session,
       ...defaultArgs,
       '--public',
       '--confirm',
@@ -3296,12 +3308,14 @@ test('deploy pnpm twice using pnp and symlink=false', async t => {
   let { stdout: deploymentUrl } = await deploy();
   let { stdout: logsOutput } = await logs(deploymentUrl);
 
-  t.regex(logsOutput, /No Build Cache available/m);
+  t.regex(logsOutput, /Build Cache not found/m);
 
   ({ stdout: deploymentUrl } = await deploy());
   ({ stdout: logsOutput } = await logs(deploymentUrl));
 
   t.regex(logsOutput, /Build cache downloaded/m);
+
+  await fs.writeFile(packageJsonPath, packageJsonRaw);
 });
 
 test('reject deploying with wrong team .vercel config', async t => {
