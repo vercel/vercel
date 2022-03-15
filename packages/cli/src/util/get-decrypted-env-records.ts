@@ -11,10 +11,11 @@ import getEnvRecords from './env/get-env-records';
 export default async function getDecryptedEnvRecords(
   output: Output,
   client: Client,
-  projectId: string
+  projectId: string,
+  target?: ProjectEnvTarget
 ): Promise<{ envs: ProjectEnvVariable[] }> {
   const { envs } = await getEnvRecords(output, client, projectId, {
-    target: ProjectEnvTarget.Development,
+    target: target || ProjectEnvTarget.Development,
     decrypt: true,
   });
 

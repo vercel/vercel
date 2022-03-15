@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { closeSync, openSync, promises, readSync } from 'fs';
 import { resolve } from 'path';
-import { Project } from '../../types';
+import { Project, ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
 import exposeSystemEnvs from '../../util/dev/expose-system-envs';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -45,6 +45,7 @@ function tryReadHeadSync(path: string, length: number) {
 export default async function pull(
   client: Client,
   project: Project,
+  target: ProjectEnvTarget,
   opts: Partial<Options>,
   args: string[],
   output: Output
@@ -88,7 +89,7 @@ export default async function pull(
   output.spinner('Downloading');
 
   const [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-    getDecryptedEnvRecords(output, client, project.id),
+    getDecryptedEnvRecords(output, client, project.id, target),
     project.autoExposeSystemEnvs
       ? getSystemEnvValues(output, client, project.id)
       : { systemEnvValues: [] },

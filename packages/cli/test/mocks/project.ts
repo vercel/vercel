@@ -23,6 +23,17 @@ const envs = [
     updatedAt: 1557241361445,
     createdAt: 1557241361445,
   },
+  {
+    type: 'encrypted',
+    id: 'a235l6frtu25df32',
+    key: 'SPECIAL_FLAG',
+    value: '1',
+    target: ['development'],
+    gitBranch: null,
+    configurationId: null,
+    updatedAt: 1557241361445,
+    createdAt: 1557241361445,
+  },
 ];
 
 export const defaultProject = {
@@ -84,6 +95,12 @@ export function useProject(project = defaultProject) {
     res.json(project);
   });
   client.scenario.get(`/v7/projects/${project.id}/env`, (_req, res) => {
+    const target = _req.query.target;
+    if (typeof target === 'string') {
+      const targetEnvs = envs.filter(env => env.target.includes(target));
+      res.json({ envs: targetEnvs });
+    }
+
     res.json({ envs });
   });
 

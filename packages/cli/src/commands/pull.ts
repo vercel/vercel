@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../util/client';
+import { ProjectEnvTarget } from '../types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
@@ -15,6 +16,8 @@ import {
 } from '../util/projects/link';
 import { writeProjectSettings } from '../util/projects/project-settings';
 import envPull from './env/pull';
+
+import type { Project } from '../types';
 
 const help = () => {
   return console.log(`
@@ -89,6 +92,49 @@ async function ensureLink(client: Client, cwd: string, yes: boolean) {
   return { link, linkResultCode: 0 };
 }
 
+async function pullAllEnvFiles(
+  envFileRoot: string,
+  client: Client,
+  project: Project,
+  argv: any,
+  cwd: string
+) {
+  const devEnvFile = `${envFileRoot}.development.local`;
+  const pullDevPromise = envPull(
+    client,
+    project,
+    ProjectEnvTarget.Development,
+    argv,
+    [join(cwd, devEnvFile)],
+    client.output
+  );
+
+  const previewEnvFile = `${envFileRoot}.preview.local`;
+  const pullPreviewPromise = envPull(
+    client,
+    project,
+    ProjectEnvTarget.Preview,
+    argv,
+    [join(cwd, previewEnvFile)],
+    client.output
+  );
+
+  const prodEnvFile = `${envFileRoot}.production.local`;
+  const pullProdPromise = envPull(
+    client,
+    project,
+    ProjectEnvTarget.Production,
+    argv,
+    [join(cwd, prodEnvFile)],
+    client.output
+  );
+
+  const [pullDevResultCode, pullPreviewResultCode, pullProdResultCode] =
+    await Promise.all([pullDevPromise, pullPreviewPromise, pullProdPromise]);
+
+  return pullDevResultCode || pullPreviewResultCode || pullProdResultCode || 0;
+}
+
 export default async function main(client: Client) {
   const { argv, argResultCode } = parseArgs(client);
   if (argResultCode !== 0) {
@@ -114,13 +160,7 @@ export default async function main(client: Client) {
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  const pullResultCode = await envPull(
-    client,
-    project,
-    argv,
-    [join(cwd, env)],
-    client.output
-  );
+  const pullResultCode = await pullAllEnvFiles(env, client, project, argv, cwd);
   if (pullResultCode !== 0) {
     return pullResultCode;
   }

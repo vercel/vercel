@@ -21,8 +21,46 @@ describe('pull', () => {
     const exitCode = await pull(client);
     expect(exitCode).toEqual(0);
 
-    const devEnvFileExists = fs.pathExistsSync(path.join(cwd, '.env'));
+    const devEnvFileExists = fs.pathExistsSync(
+      path.join(cwd, '.env.development.local')
+    );
     expect(devEnvFileExists).toBeTruthy();
+
+    const rawDevEnv = await fs.readFile(
+      path.join(cwd, '.env.development.local')
+    );
+    const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
+    expect(devFileHasDevEnv).toBeTruthy();
+
+    const previewEnvFileExists = fs.pathExistsSync(
+      path.join(cwd, '.env.preview.local')
+    );
+    expect(previewEnvFileExists).toBeTruthy();
+
+    const rawPreviewEnv = await fs.readFile(
+      path.join(cwd, '.env.preview.local')
+    );
+    const previewFileHasPreviewEnv = rawPreviewEnv
+      .toString()
+      .includes('REDIS_CONNECTION_STRING');
+    expect(previewFileHasPreviewEnv).toBeTruthy();
+
+    const prodEnvFileExists = fs.pathExistsSync(
+      path.join(cwd, '.env.production.local')
+    );
+    expect(prodEnvFileExists).toBeTruthy();
+
+    const rawProdEnv = await fs.readFile(
+      path.join(cwd, '.env.production.local')
+    );
+    const previewFileHasPreviewEnv1 = rawProdEnv
+      .toString()
+      .includes('REDIS_CONNECTION_STRING');
+    expect(previewFileHasPreviewEnv1).toBeTruthy();
+    const previewFileHasPreviewEnv2 = rawProdEnv
+      .toString()
+      .includes('SQL_CONNECTION_STRING');
+    expect(previewFileHasPreviewEnv2).toBeTruthy();
   });
 
   it('should handle custom --env flag', async () => {
@@ -34,8 +72,8 @@ describe('pull', () => {
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
     });
-    const expectedEnvFilename = '.env.vercel';
-    client.setArgv('pull', '--yes', `--env=${expectedEnvFilename}`, cwd);
+    const expectedEnvFilename = '.env.vercel.development.local';
+    client.setArgv('pull', '--yes', '--env=.env.vercel', cwd);
 
     const exitCode = await pull(client);
     const actualEnv = await fs.pathExists(path.join(cwd, expectedEnvFilename));
