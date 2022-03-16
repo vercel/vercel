@@ -105,7 +105,7 @@ async function pullAllEnvFiles(
   project: Project,
   argv: any,
   cwd: string
-) {
+): Promise<number> {
   const devEnvFile = `${envFileRoot}.development.local`;
   const pullDevPromise = envPull(
     client,
