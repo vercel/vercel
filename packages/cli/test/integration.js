@@ -451,10 +451,8 @@ test('default command should work with --cwd option', async t => {
   const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
   const target = 'list'; // command that conflicts with a sub directory
 
-  console.log('### linking: ', projectDir);
   await vcLink(t, projectDir);
 
-  console.log('### exec cwd: ', projectDir);
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
     [

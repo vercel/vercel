@@ -113,7 +113,6 @@ export default async (client: Client) => {
   let paths;
   if (argv['--cwd']) {
     const resolvedPath = resolve(process.cwd(), argv['--cwd']);
-    console.log('### resolvedPath: ', resolvedPath);
     paths = [resolvedPath];
   } else if (argv._.length > 0) {
     // If path is relative: resolve
