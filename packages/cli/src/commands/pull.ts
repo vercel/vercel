@@ -110,6 +110,15 @@ async function pullAllEnvFiles(
   argv: ReturnType<typeof processArgs>,
   cwd: string
 ): Promise<number> {
+  const pullDeprecatedDevPromise = envPull(
+    client,
+    project,
+    ProjectEnvTarget.Development,
+    argv,
+    [join(cwd, envFileRoot)], // deprecated location
+    client.output
+  );
+
   const devEnvFile = `${envFileRoot}.development.local`;
   const pullDevPromise = envPull(
     client,
@@ -140,10 +149,25 @@ async function pullAllEnvFiles(
     client.output
   );
 
-  const [pullDevResultCode, pullPreviewResultCode, pullProdResultCode] =
-    await Promise.all([pullDevPromise, pullPreviewPromise, pullProdPromise]);
+  const [
+    pullDeprecatedDevResultCode,
+    pullDevResultCode,
+    pullPreviewResultCode,
+    pullProdResultCode,
+  ] = await Promise.all([
+    pullDeprecatedDevPromise,
+    pullDevPromise,
+    pullPreviewPromise,
+    pullProdPromise,
+  ]);
 
-  return pullDevResultCode || pullPreviewResultCode || pullProdResultCode || 0;
+  return (
+    pullDeprecatedDevResultCode ||
+    pullDevResultCode ||
+    pullPreviewResultCode ||
+    pullProdResultCode ||
+    0
+  );
 }
 
 export default async function main(client: Client) {
