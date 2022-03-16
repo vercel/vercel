@@ -442,8 +442,7 @@ test('default command should warn when deploying with conflicting subdirectory',
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
-  const listHeader =
-    /project {26}latest deployment {53}state {4}age {4}username/;
+  const listHeader = /project +latest deployment +state +age +username/;
   t.regex(stdout || '', listHeader); // ensure `list` command still ran
 });
 
