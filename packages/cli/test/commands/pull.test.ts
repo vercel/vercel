@@ -112,20 +112,20 @@ describe('pull', () => {
         id: 'vercel-pull-next',
         name: 'vercel-pull-next',
       });
-      const expectedEnvFilename = '.env.vercel.development.local';
+
       client.setArgv('pull', '--yes', '--env=.env.vercel', cwd);
-
       const exitCode = await pull(client);
-      const actualEnv = await fs.pathExists(
-        path.join(cwd, '.vercel', expectedEnvFilename)
-      );
-      const raw = await fs.readFile(
-        path.join(cwd, '.vercel', expectedEnvFilename)
-      );
-
       expect(exitCode).toEqual(0);
-      expect(actualEnv).toBeTruthy();
-      expect(raw.includes('# Created by Vercel CLI')).toBeTruthy();
+
+      const rootEnvFileExists = await fs.pathExists(
+        path.join(cwd, '.env.vercel')
+      );
+      expect(rootEnvFileExists).toBeTruthy();
+
+      const nestedEnvFileExists = await fs.pathExists(
+        path.join(cwd, '.vercel', '.env.development.local')
+      );
+      expect(nestedEnvFileExists).toBeTruthy();
     });
   });
 });

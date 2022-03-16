@@ -104,7 +104,7 @@ async function ensureLink(
 }
 
 async function pullAllEnvFiles(
-  envFileRoot: string,
+  envFileName: string,
   client: Client,
   project: Project,
   argv: ReturnType<typeof processArgs>,
@@ -115,11 +115,11 @@ async function pullAllEnvFiles(
     project,
     ProjectEnvTarget.Development,
     argv,
-    [join(cwd, envFileRoot)], // deprecated location
+    [join(cwd, envFileName)], // deprecated location
     client.output
   );
 
-  const devEnvFile = `${envFileRoot}.development.local`;
+  const devEnvFile = `.env.development.local`;
   const pullDevPromise = envPull(
     client,
     project,
@@ -129,7 +129,7 @@ async function pullAllEnvFiles(
     client.output
   );
 
-  const previewEnvFile = `${envFileRoot}.preview.local`;
+  const previewEnvFile = `.env.preview.local`;
   const pullPreviewPromise = envPull(
     client,
     project,
@@ -139,7 +139,7 @@ async function pullAllEnvFiles(
     client.output
   );
 
-  const prodEnvFile = `${envFileRoot}.production.local`;
+  const prodEnvFile = `.env.production.local`;
   const pullProdPromise = envPull(
     client,
     project,
