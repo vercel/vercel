@@ -105,7 +105,7 @@ async function pullAllEnvFiles(
     project,
     ProjectEnvTarget.Development,
     argv,
-    [join(cwd, devEnvFile)],
+    [join(cwd, '.vercel', devEnvFile)],
     client.output
   );
 
@@ -115,7 +115,7 @@ async function pullAllEnvFiles(
     project,
     ProjectEnvTarget.Preview,
     argv,
-    [join(cwd, previewEnvFile)],
+    [join(cwd, '.vercel', previewEnvFile)],
     client.output
   );
 
@@ -125,7 +125,7 @@ async function pullAllEnvFiles(
     project,
     ProjectEnvTarget.Production,
     argv,
-    [join(cwd, prodEnvFile)],
+    [join(cwd, '.vercel', prodEnvFile)],
     client.output
   );
 

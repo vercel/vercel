@@ -22,23 +22,23 @@ describe('pull', () => {
     expect(exitCode).toEqual(0);
 
     const devEnvFileExists = fs.pathExistsSync(
-      path.join(cwd, '.env.development.local')
+      path.join(cwd, '.vercel', '.env.development.local')
     );
     expect(devEnvFileExists).toBeTruthy();
 
     const rawDevEnv = await fs.readFile(
-      path.join(cwd, '.env.development.local')
+      path.join(cwd, '.vercel', '.env.development.local')
     );
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
 
     const previewEnvFileExists = fs.pathExistsSync(
-      path.join(cwd, '.env.preview.local')
+      path.join(cwd, '.vercel', '.env.preview.local')
     );
     expect(previewEnvFileExists).toBeTruthy();
 
     const rawPreviewEnv = await fs.readFile(
-      path.join(cwd, '.env.preview.local')
+      path.join(cwd, '.vercel', '.env.preview.local')
     );
     const previewFileHasPreviewEnv = rawPreviewEnv
       .toString()
@@ -46,12 +46,12 @@ describe('pull', () => {
     expect(previewFileHasPreviewEnv).toBeTruthy();
 
     const prodEnvFileExists = fs.pathExistsSync(
-      path.join(cwd, '.env.production.local')
+      path.join(cwd, '.vercel', '.env.production.local')
     );
     expect(prodEnvFileExists).toBeTruthy();
 
     const rawProdEnv = await fs.readFile(
-      path.join(cwd, '.env.production.local')
+      path.join(cwd, '.vercel', '.env.production.local')
     );
     const previewFileHasPreviewEnv1 = rawProdEnv
       .toString()
@@ -76,8 +76,12 @@ describe('pull', () => {
     client.setArgv('pull', '--yes', '--env=.env.vercel', cwd);
 
     const exitCode = await pull(client);
-    const actualEnv = await fs.pathExists(path.join(cwd, expectedEnvFilename));
-    const raw = await fs.readFile(path.join(cwd, expectedEnvFilename));
+    const actualEnv = await fs.pathExists(
+      path.join(cwd, '.vercel', expectedEnvFilename)
+    );
+    const raw = await fs.readFile(
+      path.join(cwd, '.vercel', expectedEnvFilename)
+    );
 
     expect(exitCode).toEqual(0);
     expect(actualEnv).toBeTruthy();
