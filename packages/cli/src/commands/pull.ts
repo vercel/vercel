@@ -17,7 +17,7 @@ import {
 import { writeProjectSettings } from '../util/projects/project-settings';
 import envPull from './env/pull';
 
-import type { Project } from '../types';
+import type { Project, Org } from '../types';
 
 const help = () => {
   return console.log(`
@@ -49,7 +49,6 @@ const help = () => {
 
 function parseArgs(client: Client) {
   try {
-    let argResultCode = 0;
     const argv = getArgs(client.argv.slice(2), {
       '--yes': Boolean,
       '--env': String,
@@ -60,17 +59,25 @@ function parseArgs(client: Client) {
 
     if (argv['--help']) {
       help();
-      argResultCode = 2;
+      return 2;
     }
 
-    return { argv, argResultCode };
+    return argv;
   } catch (err) {
     handleError(err);
-    return { argResultCode: 1 };
+    return 1;
   }
 }
 
-async function ensureLink(client: Client, cwd: string, yes: boolean) {
+type LinkResult = {
+  org: Org;
+  project: Project;
+};
+async function ensureLink(
+  client: Client,
+  cwd: string,
+  yes: boolean
+): Promise<LinkResult | number> {
   let link = await getLinkedProject(client, cwd);
   if (link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, {
@@ -81,15 +88,15 @@ async function ensureLink(client: Client, cwd: string, yes: boolean) {
 
     if (link.status === 'not_linked') {
       // User aborted project linking questions
-      return { linkResultCode: 0 };
+      return 0;
     }
   }
 
   if (link.status === 'error') {
-    return { linkResultCode: link.exitCode };
+    return link.exitCode;
   }
 
-  return { link, linkResultCode: 0 };
+  return { org: link.org, project: link.project };
 }
 
 async function pullAllEnvFiles(
@@ -136,24 +143,18 @@ async function pullAllEnvFiles(
 }
 
 export default async function main(client: Client) {
-  const { argv, argResultCode } = parseArgs(client);
-  if (argResultCode !== 0) {
-    return argResultCode;
-  }
-  if (!argv) {
-    throw new Error('argResultCode was 0, but `argv` did not exist');
+  const argv = parseArgs(client);
+  if (typeof argv === 'number') {
+    return argv;
   }
 
   const cwd = argv._[1] || process.cwd();
   const yes = Boolean(argv['--yes']);
   const env = argv['--env'] ?? '.env';
 
-  const { link, linkResultCode } = await ensureLink(client, cwd, yes);
-  if (linkResultCode !== 0) {
-    return linkResultCode;
-  }
-  if (!link) {
-    throw new Error('linkResultCode was 0, but `link` did not exist');
+  const link = await ensureLink(client, cwd, yes);
+  if (typeof link === 'number') {
+    return link;
   }
 
   const { project, org } = link;
