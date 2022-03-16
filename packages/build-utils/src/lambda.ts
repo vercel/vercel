@@ -3,10 +3,9 @@ import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
-import { Files, Config } from './types';
-import FileFsRef from './file-fs-ref';
 import { isSymbolicLink } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
+import type { Files, Config } from './types';
 
 interface Environment {
   [key: string]: string;
@@ -22,6 +21,7 @@ export interface LambdaOptionsBase {
   environment?: Environment;
   allowQuery?: string[];
   regions?: string[];
+  supportsMultiPayloads?: boolean;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -57,6 +57,7 @@ export class Lambda {
    * @deprecated Use `await lambda.createZip()` instead.
    */
   zipBuffer?: Buffer;
+  supportsMultiPayloads?: boolean;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -67,6 +68,7 @@ export class Lambda {
       environment = {},
       allowQuery,
       regions,
+      supportsMultiPayloads,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -94,6 +96,13 @@ export class Lambda {
       );
     }
 
+    if (supportsMultiPayloads !== undefined) {
+      assert(
+        typeof supportsMultiPayloads === 'boolean',
+        '"supportsMultiPayloads" is not a boolean'
+      );
+    }
+
     if (regions !== undefined) {
       assert(Array.isArray(regions), '"regions" is not an Array');
       assert(
@@ -111,6 +120,7 @@ export class Lambda {
     this.allowQuery = allowQuery;
     this.regions = regions;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
+    this.supportsMultiPayloads = supportsMultiPayloads;
   }
 
   async createZip(): Promise<Buffer> {
@@ -152,7 +162,7 @@ export async function createZip(files: Files): Promise<Buffer> {
   for (const name of names) {
     const file = files[name];
     if (file.mode && isSymbolicLink(file.mode) && file.type === 'FileFsRef') {
-      const symlinkTarget = await readlink((file as FileFsRef).fsPath);
+      const symlinkTarget = await readlink(file.fsPath);
       symlinkTargets.set(name, symlinkTarget);
     }
   }
@@ -166,7 +176,7 @@ export async function createZip(files: Files): Promise<Buffer> {
       if (typeof symlinkTarget === 'string') {
         zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), name, opts);
       } else {
-        const stream = file.toStream() as import('stream').Readable;
+        const stream = file.toStream();
         stream.on('error', reject);
         zipFile.addReadStream(stream, name, opts);
       }

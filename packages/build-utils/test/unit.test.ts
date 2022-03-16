@@ -1,7 +1,7 @@
 import ms from 'ms';
 import path from 'path';
-import fs from 'fs-extra';
-import { strict as assert } from 'assert';
+import fs, { readlink } from 'fs-extra';
+import { strict as assert, strictEqual } from 'assert';
 import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import download from '../src/fs/download';
@@ -14,6 +14,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
+  FileBlob,
 } from '../src';
 
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
@@ -47,7 +48,7 @@ afterEach(() => {
   console.warn = originalConsoleWarn;
 });
 
-it('should re-create symlinks properly', async () => {
+it('should re-create FileFsRef symlinks properly', async () => {
   if (process.platform === 'win32') {
     console.log('Skipping test on windows');
     return;
@@ -69,6 +70,72 @@ it('should re-create symlinks properly', async () => {
   assert(linkStat.isSymbolicLink());
   assert(linkDirStat.isSymbolicLink());
   assert(aStat.isFile());
+
+  const [linkDirContents, linkTextContents] = await Promise.all([
+    readlink(path.join(outDir, 'link-dir')),
+    readlink(path.join(outDir, 'link.txt')),
+  ]);
+
+  strictEqual(linkDirContents, 'dir');
+  strictEqual(linkTextContents, './a.txt');
+});
+
+it('should re-create FileBlob symlinks properly', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
+
+  const files = {
+    'a.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'a text',
+    }),
+    'dir/b.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'b text',
+    }),
+    'link-dir': new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'dir',
+    }),
+    'link.txt': new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'a.txt',
+    }),
+  };
+
+  strictEqual(Object.keys(files).length, 4);
+
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+
+  const files2 = await download(files, outDir);
+  strictEqual(Object.keys(files2).length, 4);
+
+  const [linkStat, linkDirStat, aStat, dirStat] = await Promise.all([
+    fs.lstat(path.join(outDir, 'link.txt')),
+    fs.lstat(path.join(outDir, 'link-dir')),
+    fs.lstat(path.join(outDir, 'a.txt')),
+    fs.lstat(path.join(outDir, 'dir')),
+  ]);
+
+  assert(linkStat.isSymbolicLink());
+  assert(linkDirStat.isSymbolicLink());
+  assert(aStat.isFile());
+  assert(dirStat.isDirectory());
+
+  const [linkDirContents, linkTextContents] = await Promise.all([
+    readlink(path.join(outDir, 'link-dir')),
+    readlink(path.join(outDir, 'link.txt')),
+  ]);
+
+  strictEqual(linkDirContents, 'dir');
+  strictEqual(linkTextContents, 'a.txt');
 });
 
 it('should create zip files with symlinks properly', async () => {
@@ -331,4 +398,18 @@ it('should detect npm Workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+});
+
+it('should detect pnpm', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '22-pnpm');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('pnpm');
+  expect(result.lockfileVersion).toEqual(5.3);
+});
+
+it('should detect pnpm Workspaces', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/a');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('pnpm');
+  expect(result.lockfileVersion).toEqual(5.3);
 });

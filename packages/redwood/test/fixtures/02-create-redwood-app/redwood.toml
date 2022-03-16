@@ -1,0 +1,7 @@
+[web]
+  port = 8910
+  apiProxyPath = "/api"
+[api]
+  port = 8911
+[browser]
+  open = false

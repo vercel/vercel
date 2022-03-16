@@ -16,6 +16,7 @@ export interface VercelProxyRequest {
   path: string;
   headers: IncomingHttpHeaders;
   body: Buffer;
+  payloads?: Array<VercelProxyRequest>;
 }
 export interface VercelProxyResponse {
   statusCode: number;
