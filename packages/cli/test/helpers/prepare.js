@@ -168,6 +168,16 @@ module.exports = async function prepare(session, binaryPath) {
       'vercel.json': JSON.stringify({ version: 2 }),
       'README.md': 'readme contents',
     },
+    'deploy-default-with-sub-directory': {
+      'vercel.json': JSON.stringify({ version: 2 }),
+      'output/README.md':
+        'readme contents for deploy-default-with-sub-directory',
+    },
+    'deploy-default-with-conflicting-sub-directory': {
+      'vercel.json': JSON.stringify({ version: 2 }),
+      'list/README.md':
+        'readme contents for deploy-default-with-conflicting-sub-directory',
+    },
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
       [`test-${session}.html`]: '<h1>hello test</h1>',

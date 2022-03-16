@@ -390,30 +390,11 @@ const main = async () => {
       const fileType = lstatSync(targetPath).isDirectory()
         ? 'subdirectory'
         : 'file';
-      const plural = targetOrSubcommand + 's';
-      const singular = targetOrSubcommand.endsWith('s')
-        ? targetOrSubcommand.slice(0, -1)
-        : '';
-      let alternative = '';
-      if (commands.has(plural)) {
-        alternative = plural;
-      } else if (commands.has(singular)) {
-        alternative = singular;
-      }
-      console.error(
-        error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
-            `\nIf you wish to deploy the ${fileType} ${param(
-              targetOrSubcommand
-            )}, first run "cd ${targetOrSubcommand}". ` +
-            (alternative
-              ? `\nIf you wish to use the subcommand ${param(
-                  targetOrSubcommand
-                )}, use ${param(alternative)} instead.`
-              : '')
-        )
+
+      output.warn(
+        `Did you mean to deploy the ${fileType} "${targetOrSubcommand}"? ` +
+          `Use \`vc --cwd ${targetOrSubcommand}\` instead.`
       );
-      return 1;
     }
 
     if (subcommandExists) {
@@ -421,10 +402,20 @@ const main = async () => {
       subcommand = targetOrSubcommand;
     } else {
       debug('user supplied a possible target for deployment');
+
+      if (targetOrSubcommand !== '--cwd') {
+        output.warn(
+          'calling `vc` without a command or the `--cwd` option is deprecated, use `vc --cwd directory` or `vc deploy` instead'
+        );
+      }
+
       subcommand = 'deploy';
     }
   } else {
     debug('user supplied no target, defaulting to deploy');
+    output.warn(
+      'calling `vc` without a command or the `--cwd` option is deprecated, use `vc --cwd directory` or `vc deploy` instead'
+    );
     subcommand = 'deploy';
   }
 

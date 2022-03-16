@@ -125,6 +125,19 @@ ${stdout}
   `;
 }
 
+async function vcLink(t, projectPath) {
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['link', '--confirm', ...defaultArgs],
+    {
+      reject: false,
+      cwd: projectPath,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+}
+
 // AVA's `t.context` can only be set before the tests,
 // but we want to set it within as well
 const context = {};
@@ -355,6 +368,7 @@ test('default command should prompt login with empty auth.json', async t => {
   }
 });
 
+// NOTE: Test order is important here. This test MUST run before the tests below for them to work.
 test('login', async t => {
   t.timeout(ms('1m'));
 
@@ -376,6 +390,94 @@ test('login', async t => {
 
   const auth = await fs.readJSON(getConfigAuthPath());
   t.is(auth.token, token);
+});
+
+test('default command should deploy directory', async t => {
+  const projectDir = fixture('deploy-default-with-sub-directory');
+  const target = 'output';
+
+  await vcLink(t, path.join(projectDir, target));
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      target,
+      ...defaultArgs,
+    ],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+  t.regex(stdout, /https:\/\/output-.+\.vercel\.app/);
+  t.regex(
+    stderr || '',
+    /calling `vc` without a command or the `--cwd` option is deprecated, use `vc --cwd directory` or `vc deploy` instead/
+  );
+});
+
+test('default command should warn when deploying with conflicting subdirectory', async t => {
+  const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
+  const target = 'list'; // command that conflicts with a sub directory
+
+  await vcLink(t, projectDir);
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      target,
+      ...defaultArgs,
+    ],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+  t.regex(
+    stderr || '',
+    /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
+  );
+
+  const listHeader =
+    /project {26}latest deployment {53}state {4}age {4}username/;
+  t.regex(stdout || '', listHeader); // ensure `list` command still ran
+});
+
+test('default command should work with --cwd option', async t => {
+  const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
+  const target = 'list'; // command that conflicts with a sub directory
+
+  console.log('### linking: ', projectDir);
+  await vcLink(t, projectDir);
+
+  console.log('### exec cwd: ', projectDir);
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      '--cwd',
+      target,
+      ...defaultArgs,
+    ],
+    {
+      cwd: projectDir,
+      stdio: 'inherit',
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const url = stdout;
+  const deploymentResult = await fetch(`${url}/`);
+  const body = await deploymentResult.text();
+  t.deepEqual(
+    body,
+    'readme contents for deploy-default-with-conflicting-sub-directory'
+  );
 });
 
 test('deploy using only now.json with `redirects` defined', async t => {
