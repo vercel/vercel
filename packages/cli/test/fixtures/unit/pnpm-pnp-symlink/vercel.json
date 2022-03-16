@@ -1,0 +1,7 @@
+{
+  "build": {
+    "env": {
+      "FORCE_RUNTIME_TAG": "canary"
+    }
+  }
+}

@@ -42,6 +42,7 @@ import {
   BuildV3,
   PrepareCache,
   StartDevServer,
+  NodeVersion,
 } from '@vercel/build-utils';
 
 import { Register, register } from './typescript';
@@ -122,7 +123,8 @@ async function compile(
   workPath: string,
   baseDir: string,
   entrypointPath: string,
-  config: Config
+  config: Config,
+  nodeVersion: NodeVersion
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -168,6 +170,7 @@ async function compile(
         basePath: workPath, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
+        nodeVersionMajor: nodeVersion.major,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -366,7 +369,8 @@ export const build: BuildV3 = async ({
     workPath,
     baseDir,
     entrypointPath,
-    config
+    config,
+    nodeVersion
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
@@ -497,8 +501,6 @@ async function doTypeCheck(
       '--noEmit',
       '--allowJs',
       '--esModuleInterop',
-      '--jsx',
-      'react',
     ],
     {
       cwd: workPath,

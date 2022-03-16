@@ -1750,6 +1750,14 @@ test(
 );
 
 test(
+  '[vercel dev] 41-tsconfig-jsx',
+  testFixtureStdio('41-tsconfig-jsx', async testPath => {
+    await testPath(200, '/', /Solid App/m);
+    await testPath(200, '/api/test', 'working');
+  })
+);
+
+test(
   '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
   testFixtureStdio('python-flask', async testPath => {
     const name = 'Alice';
