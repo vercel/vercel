@@ -47,15 +47,19 @@ const help = () => {
 `);
 };
 
+function processArgs(client: Client) {
+  return getArgs(client.argv.slice(2), {
+    '--yes': Boolean,
+    '--env': String,
+    '--debug': Boolean,
+    '-d': '--debug',
+    '-y': '--yes',
+  });
+}
+
 function parseArgs(client: Client) {
   try {
-    const argv = getArgs(client.argv.slice(2), {
-      '--yes': Boolean,
-      '--env': String,
-      '--debug': Boolean,
-      '-d': '--debug',
-      '-y': '--yes',
-    });
+    const argv = processArgs(client);
 
     if (argv['--help']) {
       help();
@@ -103,7 +107,7 @@ async function pullAllEnvFiles(
   envFileRoot: string,
   client: Client,
   project: Project,
-  argv: any,
+  argv: ReturnType<typeof processArgs>,
   cwd: string
 ): Promise<number> {
   const devEnvFile = `${envFileRoot}.development.local`;
