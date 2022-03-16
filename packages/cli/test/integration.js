@@ -3280,7 +3280,7 @@ test('deploy gatsby twice and print cached directories', async t => {
 test('deploy pnpm twice using pnp and symlink=false', async t => {
   const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
 
-  await fs.rm(path.join(directory, '.vercel'), {
+  remove(path.join(directory, '.vercel'), {
     force: true,
     recursive: true,
   });
