@@ -26,28 +26,6 @@ const debugFn = shouldDebug
   : <T, U>(_: string, fn: (arg: T) => U) => fn;
 
 /**
- * Common TypeScript interfaces between versions.
- */
-interface TSCommon {
-  version: typeof _ts.version;
-  sys: typeof _ts.sys;
-  ScriptSnapshot: typeof _ts.ScriptSnapshot;
-  displayPartsToString: typeof _ts.displayPartsToString;
-  createLanguageService: typeof _ts.createLanguageService;
-  getDefaultLibFilePath: typeof _ts.getDefaultLibFilePath;
-  getPreEmitDiagnostics: typeof _ts.getPreEmitDiagnostics;
-  flattenDiagnosticMessageText: typeof _ts.flattenDiagnosticMessageText;
-  transpileModule: typeof _ts.transpileModule;
-  ModuleKind: typeof _ts.ModuleKind;
-  ScriptTarget: typeof _ts.ScriptTarget;
-  findConfigFile: typeof _ts.findConfigFile;
-  readConfigFile: typeof _ts.readConfigFile;
-  parseJsonConfigFileContent: typeof _ts.parseJsonConfigFileContent;
-  formatDiagnostics: typeof _ts.formatDiagnostics;
-  formatDiagnosticsWithColorAndContext: typeof _ts.formatDiagnosticsWithColorAndContext;
-}
-
-/**
  * Registration options.
  */
 interface Options {
@@ -58,11 +36,12 @@ interface Options {
   compiler?: string;
   ignore?: string[];
   project?: string;
-  compilerOptions?: any;
+  compilerOptions?: _ts.CompilerOptions;
   ignoreDiagnostics?: Array<number | string>;
   readFile?: (path: string) => string | undefined;
   fileExists?: (path: string) => boolean;
   transformers?: _ts.CustomTransformers;
+  nodeVersionMajor?: number;
 }
 
 /**
@@ -399,15 +378,14 @@ export function register(opts: Options = {}): Register {
       TS_NODE_COMPILER_OPTIONS
     );
 
-    const configResult = fixConfig(
-      ts,
-      ts.parseJsonConfigFileContent(
-        config,
-        ts.sys,
-        basePath,
-        undefined,
-        configFileName
-      )
+    fixConfig(config, options.nodeVersionMajor);
+
+    const configResult = ts.parseJsonConfigFileContent(
+      config,
+      ts.sys,
+      basePath,
+      undefined,
+      configFileName
     );
 
     if (configFileName) {
@@ -455,31 +433,46 @@ interface Build {
 /**
  * Do post-processing on config options to support `ts-node`.
  */
-function fixConfig(ts: TSCommon, config: _ts.ParsedCommandLine) {
+export function fixConfig(
+  config: { compilerOptions: any },
+  nodeVersionMajor = 12
+) {
+  if (!config.compilerOptions) {
+    config.compilerOptions = {};
+  }
   // Delete options that *should not* be passed through.
-  delete config.options.out;
-  delete config.options.outFile;
-  delete config.options.composite;
-  delete config.options.declarationDir;
-  delete config.options.declarationMap;
-  delete config.options.emitDeclarationOnly;
-  delete config.options.tsBuildInfoFile;
-  delete config.options.incremental;
+  delete config.compilerOptions.out;
+  delete config.compilerOptions.outFile;
+  delete config.compilerOptions.composite;
+  delete config.compilerOptions.declarationDir;
+  delete config.compilerOptions.declarationMap;
+  delete config.compilerOptions.emitDeclarationOnly;
+  delete config.compilerOptions.tsBuildInfoFile;
+  delete config.compilerOptions.incremental;
 
   // Target esnext output by default (instead of ES3).
   // This will prevent TS from polyfill/downlevel emit.
-  if (config.options.target === undefined) {
-    config.options.target = ts.ScriptTarget.ESNext;
+  if (config.compilerOptions.target === undefined) {
+    // See https://github.com/tsconfig/bases/tree/main/bases
+    let target: string;
+    if (nodeVersionMajor >= 16) {
+      target = 'ES2021';
+    } else if (nodeVersionMajor >= 14) {
+      target = 'ES2020';
+    } else {
+      target = 'ES2019';
+    }
+    config.compilerOptions.target = target;
   }
 
   // When mixing TS with JS, its best to enable this flag.
   // This is useful when no `tsconfig.json` is supplied.
-  if (config.options.esModuleInterop === undefined) {
-    config.options.esModuleInterop = true;
+  if (config.compilerOptions.esModuleInterop === undefined) {
+    config.compilerOptions.esModuleInterop = true;
   }
 
   // Target CommonJS, always!
-  config.options.module = ts.ModuleKind.CommonJS;
+  config.compilerOptions.module = 'CommonJS';
 
   return config;
 }

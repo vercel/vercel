@@ -1,0 +1,11 @@
+{
+  "private": "true",
+  "name": "pnpm-pnp-symlink",
+  "scripts": {
+    "build": "node index.js"
+  },
+  "dependencies": {
+    "exeggcute": "^1.0.0",
+    "once": "^1.4.0"
+  }
+}
