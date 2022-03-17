@@ -24,6 +24,7 @@ import Client from '../util/client';
 import getArgs from '../util/get-args';
 import cmd from '../util/output/cmd';
 import * as cli from '../util/pkg-name';
+import cliPkg from '../util/pkg';
 import readJSONFile from '../util/read-json-file';
 import { CantParseJSONFile } from '../util/errors-ts';
 import { readProjectSettings } from '../util/projects/project-settings';
@@ -259,6 +260,8 @@ export default async function main(client: Client): Promise<number> {
   // subsequent entrypoint builds.
   const meta: Meta = {
     skipDownload: true,
+    // @ts-ignore
+    cliVersion: cliPkg.version,
   };
 
   // Execute Builders for detected entrypoints
