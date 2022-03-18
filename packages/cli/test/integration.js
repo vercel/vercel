@@ -3297,13 +3297,17 @@ test('deploy pnpm twice using pnp and symlink=false', async t => {
     return execa(binaryPath, ['logs', deploymentUrl, ...defaultArgs]);
   }
 
-  let { stdout: deploymentUrl } = await deploy();
-  let { stdout: logsOutput } = await logs(deploymentUrl);
+  let { exitCode, stderr, stdout } = await deploy();
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  let { stdout: logsOutput } = await logs(stdout);
 
   t.regex(logsOutput, /Build Cache not found/m);
 
-  ({ stdout: deploymentUrl } = await deploy());
-  ({ stdout: logsOutput } = await logs(deploymentUrl));
+  ({ exitCode, stderr, stdout } = await deploy());
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  ({ stdout: logsOutput } = await logs(stdout));
 
   t.regex(logsOutput, /Build cache downloaded/m);
 });
