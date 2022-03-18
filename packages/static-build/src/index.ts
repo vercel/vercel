@@ -389,12 +389,9 @@ export const build: BuildV2 = async ({
     */
     if (framework && framework.slug === 'create-react-app') {
       if (!spawnOpts.env) {
-        spawnOpts.env = {
-          CI: 'false',
-        };
-      } else {
-        spawnOpts.env.CI = 'false';
+        spawnOpts.env = {};
       }
+      spawnOpts.env.CI = 'false';
     }
 
     if (meta.isDev) {
