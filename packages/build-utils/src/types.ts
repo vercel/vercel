@@ -54,6 +54,7 @@ export interface Meta {
   env?: Env;
   buildEnv?: Env;
   avoidTopLevelInstall?: boolean;
+  [key: string]: unknown;
 }
 
 export interface BuildOptions {
