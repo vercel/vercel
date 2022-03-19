@@ -42,7 +42,7 @@ const emailAutoComplete = (value: string, teamSlug: string) => {
     domains.unshift(teamSlug);
     for (const domain of domains) {
       if (domain.startsWith(host)) {
-        suggestion = domain.substr(host.length);
+        suggestion = domain.slice(host.length);
         break;
       }
     }
