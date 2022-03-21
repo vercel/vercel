@@ -8,6 +8,14 @@
     {
       "source": "/api/v1/frameworks",
       "destination": "/api/frameworks"
+    },
+    {
+      "source": "/api/examples/list",
+      "destination": "/list.json"
+    },
+    {
+      "source": "/api/examples/list-all",
+      "destination": "/list-all.json"
     }
   ],
   "github": {
