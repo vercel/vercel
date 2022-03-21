@@ -1,6 +1,7 @@
 import npa from 'npm-package-arg';
+import { satisfies } from 'semver';
 import { dirname, join } from 'path';
-import { mkdirp, writeFile } from 'fs-extra';
+import { mkdirp, readJSON, writeFile } from 'fs-extra';
 import {
   BuilderV2,
   BuilderV3,
@@ -29,7 +30,6 @@ export async function importBuilders(
   cwd: string,
   output: Output
 ): Promise<Map<string, BuilderWithPkg>> {
-  console.log({ builderSpecs, cwd });
   const results = new Map<string, BuilderWithPkg>();
   const resolvedSpecs = new Map<string, string>();
 
@@ -71,19 +71,37 @@ export async function importBuilders(
       }
 
       try {
-        const path = require.resolve(name, {
-          paths: requirePaths,
-        });
         const pkgPath = require.resolve(`${name}/package.json`, {
           paths: requirePaths,
         });
-        const [builder, builderPkg] = await Promise.all([
-          import(path),
-          import(pkgPath),
-        ]);
+        const builderPkg = await readJSON(pkgPath);
 
-        // TODO: check that Builder package version is compatible
-        // with requested version / range in the spec
+        if (
+          parsed.type === 'version' &&
+          parsed.rawSpec !== builderPkg.version
+        ) {
+          // An explicit Builder version was specified but it does
+          // not match the version that is currently installed
+          buildersToAdd.add(spec);
+          continue;
+        }
+
+        if (
+          parsed.type === 'range' &&
+          !satisfies(builderPkg.version, parsed.rawSpec)
+        ) {
+          // An explicit Builder range was specified but it is not
+          // compatible with the version that is currently installed
+          buildersToAdd.add(spec);
+          continue;
+        }
+
+        // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
+
+        const path = require.resolve(name, {
+          paths: requirePaths,
+        });
+        const builder = await import(path);
 
         results.set(spec, {
           builder,
