@@ -28,6 +28,8 @@
     }
   },
   "devDependencies": {
+    "@types/fs-extra": "9.0.13",
+    "@types/tar-fs": "2.0.1",
     "@typescript-eslint/eslint-plugin": "4.28.0",
     "@typescript-eslint/parser": "4.28.0",
     "async-retry": "1.2.3",
@@ -35,6 +37,7 @@
     "eslint": "7.29.0",
     "eslint-config-prettier": "8.3.0",
     "eslint-plugin-jest": "24.3.6",
+    "fs-extra": "10.0.1",
     "husky": "6.0.0",
     "jest": "27.3.1",
     "json5": "2.1.1",
@@ -42,6 +45,7 @@
     "node-fetch": "2.6.1",
     "npm-package-arg": "6.1.0",
     "prettier": "2.3.1",
+    "tar-fs": "2.1.1",
     "ts-jest": "27.0.4",
     "turbo": "1.0.18"
   },
@@ -53,7 +57,7 @@
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "turbo run build",
-    "vercel-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
+    "vercel-build": "cd utils/vercel-build && node --require ts-eager/register build.ts",
     "pre-commit": "lint-staged",
     "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
     "test-unit": "yarn test && node utils/run.js test-unit",

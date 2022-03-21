@@ -1,17 +1,19 @@
 *
 
 # general
-!utils/
+!utils
 !utils/run.js
+!utils/vercel-build
+!utils/vercel-build/**
 !.yarnrc
 !yarn.lock
 !package.json
 
 # api
-!api/
+!api
 !api/**
 
 # packages
-!packages/
+!packages
 !packages/frameworks
 !packages/frameworks/**
