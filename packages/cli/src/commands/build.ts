@@ -9,7 +9,9 @@ import {
   BuildOptions,
   Config,
   Meta,
+  Builder,
 } from '@vercel/build-utils';
+import minimatch from 'minimatch';
 import {
   appendRoutesToPhase,
   getTransformedRoutes,
@@ -175,12 +177,7 @@ export default async function main(client: Client): Promise<number> {
     output.warn(
       'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
     );
-    /*
-    return {
-      buildSpecs: vercelConfig.builds.map(normalizeBuilderSpecPayload),
-      routes: routesResult.routes || [],
-    };
-    */
+    builds = builds.map(b => expandBuild(files, b)).flat();
   } else {
     // Zero config
 
@@ -225,7 +222,7 @@ export default async function main(client: Client): Promise<number> {
 
   const builderSpecs = new Set(builds.map(b => b.use));
   const buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
-  console.log(buildersWithPkgs);
+  //console.log(buildersWithPkgs);
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -260,7 +257,6 @@ export default async function main(client: Client): Promise<number> {
   // subsequent entrypoint builds.
   const meta: Meta = {
     skipDownload: true,
-    // @ts-ignore
     cliVersion: cliPkg.version,
   };
 
@@ -365,34 +361,43 @@ export default async function main(client: Client): Promise<number> {
   return 0;
 }
 
-/*
-function normalizeBuilderSpecPayload(buildSpecPayload: any) {
-  if (!buildSpecPayload.use) {
-    throw new NowBuildError({
-      code: `invalid_build_specification`,
-      message: 'Field `use` is missing in build specification',
-      link: 'https://vercel.com/docs/configuration#project/builds',
-      action: 'View Documentation',
-    });
+function expandBuild(files: string[], build: Builder): Builder[] {
+  if (!build.src) return [];
+
+  //if (!buildSpecPayload.use) {
+  //  throw new NowBuildError({
+  //    code: `invalid_build_specification`,
+  //    message: 'Field `use` is missing in build specification',
+  //    link: 'https://vercel.com/docs/configuration#project/builds',
+  //    action: 'View Documentation',
+  //  });
+  //}
+
+  //let src = normalize(buildSpecPayload.src || '**');
+  //if (src === '.' || src === './') {
+  //  throw new NowBuildError({
+  //    code: `invalid_build_specification`,
+  //    message: 'A build `src` path resolves to an empty string',
+  //    link: 'https://vercel.com/docs/configuration#project/builds',
+  //    action: 'View Documentation',
+  //  });
+  //}
+
+  let pattern = build.src;
+  if (pattern[0] === '/') {
+    // Remove a leading slash so that the globbing is relative
+    // to `cwd` instead of the root of the filesystem.
+    pattern = pattern.substring(1);
   }
 
-  let src = normalize(buildSpecPayload.src || '**');
-  if (src === '.' || src === './') {
-    throw new NowBuildError({
-      code: `invalid_build_specification`,
-      message: 'A build `src` path resolves to an empty string',
-      link: 'https://vercel.com/docs/configuration#project/builds',
-      action: 'View Documentation',
-    });
-  }
+  const matches = files.filter(
+    name => name === pattern || minimatch(name, pattern, { dot: true })
+  );
 
-  if (src.startsWith('/')) {
-    src = src.substring(1);
-  }
-
-  return {
-    ...buildSpecPayload,
-    src,
-  };
+  return matches.map(m => {
+    return {
+      ...build,
+      src: m,
+    };
+  });
 }
-*/
