@@ -13,6 +13,10 @@
 !api
 !api/**
 
+# examples
+!examples
+!examples/**
+
 # packages
 !packages
 !packages/frameworks
