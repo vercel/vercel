@@ -174,7 +174,7 @@ module.exports = async function prepare(session, binaryPath) {
         'readme contents for deploy-default-with-sub-directory',
     },
     'deploy-default-with-conflicting-sub-directory': {
-      'vercel.json': JSON.stringify({ version: 2 }),
+      'list/vercel.json': JSON.stringify({ version: 2 }),
       'list/README.md':
         'readme contents for deploy-default-with-conflicting-sub-directory',
     },

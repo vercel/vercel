@@ -450,7 +450,7 @@ test('default command should work with --cwd option', async t => {
   const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
   const target = 'list'; // command that conflicts with a sub directory
 
-  await vcLink(t, projectDir);
+  await vcLink(t, path.join(projectDir, 'list'));
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
@@ -462,14 +462,13 @@ test('default command should work with --cwd option', async t => {
     ],
     {
       cwd: projectDir,
-      stdio: 'inherit',
     }
   );
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
   const url = stdout;
-  const deploymentResult = await fetch(`${url}/`);
+  const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   t.deepEqual(
     body,

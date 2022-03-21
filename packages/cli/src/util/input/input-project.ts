@@ -19,19 +19,24 @@ export default async function inputProject(
   // attempt to auto-detect a project to link
   let detectedProject = null;
   output.spinner('Searching for existing projects…', 1000);
-  try {
-    const [project, slugifiedProject] = await Promise.all([
-      getProjectByIdOrName(client, detectedProjectName, org.id),
-      slugifiedName !== detectedProjectName
-        ? getProjectByIdOrName(client, slugifiedName, org.id)
-        : null,
-    ]);
-    detectedProject = !(project instanceof ProjectNotFound)
-      ? project
-      : !(slugifiedProject instanceof ProjectNotFound)
-      ? slugifiedProject
-      : null;
-  } catch (error) {}
+
+  const [project, slugifiedProject] = await Promise.all([
+    getProjectByIdOrName(client, detectedProjectName, org.id),
+    slugifiedName !== detectedProjectName
+      ? getProjectByIdOrName(client, slugifiedName, org.id)
+      : null,
+  ]);
+
+  detectedProject = !(project instanceof ProjectNotFound)
+    ? project
+    : !(slugifiedProject instanceof ProjectNotFound)
+    ? slugifiedProject
+    : null;
+
+  if (!(detectedProject && detectedProject.id)) {
+    throw new Error(`Detected linked project does not have "id".`);
+  }
+
   output.stopSpinner();
 
   if (autoConfirm) {
