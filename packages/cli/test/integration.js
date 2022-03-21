@@ -3376,6 +3376,41 @@ test('deploy gatsby twice and print cached directories', async t => {
   }
 });
 
+test('deploy pnpm twice using pnp and symlink=false', async t => {
+  const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
+
+  await remove(path.join(directory, '.vercel'));
+
+  function deploy() {
+    return execa(binaryPath, [
+      directory,
+      '--name',
+      session,
+      ...defaultArgs,
+      '--public',
+      '--confirm',
+    ]);
+  }
+
+  function logs(deploymentUrl) {
+    return execa(binaryPath, ['logs', deploymentUrl, ...defaultArgs]);
+  }
+
+  let { exitCode, stderr, stdout } = await deploy();
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  let { stdout: logsOutput } = await logs(stdout);
+
+  t.regex(logsOutput, /Build Cache not found/m);
+
+  ({ exitCode, stderr, stdout } = await deploy());
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  ({ stdout: logsOutput } = await logs(stdout));
+
+  t.regex(logsOutput, /Build cache downloaded/m);
+});
+
 test('reject deploying with wrong team .vercel config', async t => {
   const directory = fixture('unauthorized-vercel-config');
 
