@@ -16,15 +16,23 @@ async function main() {
   });
 
   // Copy type file for ts test
-  await fs.copyFile(
-    join(outDir, 'types.d.ts'),
-    join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
-  );
+  try {
+    await fs.copyFile(
+      join(outDir, 'types.d.ts'),
+      join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
+    );
+  } catch (err) {
+    // ignore - `test` directory is not uploaded for Vercel deployments
+  }
 
   // Setup symlink for symlink test
-  const symlinkTarget = join(__dirname, 'test/fixtures/11-symlinks/symlink');
-  await fs.remove(symlinkTarget);
-  await fs.symlink('symlinked-asset', symlinkTarget);
+  try {
+    const symlinkTarget = join(__dirname, 'test/fixtures/11-symlinks/symlink');
+    await fs.remove(symlinkTarget);
+    await fs.symlink('symlinked-asset', symlinkTarget);
+  } catch (err) {
+    // ignore - `test` directory is not uploaded for Vercel deployments
+  }
 
   const mainDir = join(outDir, 'main');
   await execa(
