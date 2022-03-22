@@ -28,7 +28,7 @@
 !packages/node
 !packages/node/**
 !packages/node-bridge
-!packages/node-brige/**
+!packages/node-bridge/**
 
 # always ignore
 **/test
