@@ -378,6 +378,22 @@ export const build: BuildV2 = async ({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
+    /* Don't fail the build on warnings from Create React App.
+    Node.js will load 'false' as a string, not a boolean, so it's truthy still.
+    This is to ensure we don't accidentally break other packages that check
+    if process.env.CI is true somewhere.
+    
+    https://github.com/facebook/create-react-app/issues/2453
+    https://github.com/facebook/create-react-app/pull/2501
+    https://github.com/vercel/community/discussions/30
+    */
+    if (framework && framework.slug === 'create-react-app') {
+      if (!spawnOpts.env) {
+        spawnOpts.env = {};
+      }
+      spawnOpts.env.CI = 'false';
+    }
+
     if (meta.isDev) {
       debug('Skipping dependency installation because dev mode is enabled');
     } else {
