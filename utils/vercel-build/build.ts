@@ -60,7 +60,7 @@ async function main() {
     suggestions: mapOldToNew[key],
   }));
   const list = [...existingExamples, ...oldExamples];
-  await fs.writeJSON(join(PUBLIC_DIR, 'list-all.json'), list, {
+  await fs.writeJSON(join(PUBLIC_DIR, 'list.json'), list, {
     spaces: 2,
   });
   console.log(`Wrote "list.json"`);
