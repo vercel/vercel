@@ -52,7 +52,7 @@
     "tar-fs": "2.1.1",
     "ts-eager": "2.0.2",
     "ts-jest": "27.0.4",
-    "turbo": "1.0.18"
+    "turbo": "1.1.9"
   },
   "scripts": {
     "lerna": "lerna",
