@@ -368,7 +368,8 @@ test('default command should prompt login with empty auth.json', async t => {
   }
 });
 
-// NOTE: Test order is important here. This test MUST run before the tests below for them to work.
+// NOTE: Test order is important here.
+// This test MUST run before the tests below for them to work.
 test('login', async t => {
   t.timeout(ms('1m'));
 
@@ -1184,30 +1185,6 @@ test('output the version', async t => {
   t.is(exitCode, 0);
   t.truthy(semVer.valid(version));
   t.is(version, pkg.version);
-});
-
-test('should error with suggestion for secrets subcommand', async t => {
-  const target = fixture('subdirectory-secret');
-
-  const { exitCode, stderr, stdout } = await execa(
-    binaryPath,
-    ['secret', 'add', 'key', 'value', ...defaultArgs],
-    {
-      cwd: target,
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 1);
-  t.regex(
-    stderr,
-    /secrets/gm,
-    `Expected "secrets" suggestion but received "${stderr}"`
-  );
 });
 
 test('should add secret with hyphen prefix', async t => {
