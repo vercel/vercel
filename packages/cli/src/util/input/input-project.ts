@@ -33,8 +33,7 @@ export default async function inputProject(
     ? slugifiedProject
     : null;
 
-  if (!(detectedProject && detectedProject.id)) {
-    console.log('detectedProject: ', detectedProject);
+  if (detectedProject && !detectedProject.id) {
     throw new Error(`Detected linked project does not have "id".`);
   }
 
