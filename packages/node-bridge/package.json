@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node-bridge",
-  "version": "2.1.2-canary.1",
+  "version": "2.2.0",
   "license": "MIT",
   "main": "./index.js",
   "repository": {
