@@ -19,7 +19,7 @@
     },
     {
       "source": "/api/examples/download/:slug",
-      "destination": "/examples/:slug.tar.gz"
+      "destination": "/examples/:slug"
     }
   ],
   "github": {
