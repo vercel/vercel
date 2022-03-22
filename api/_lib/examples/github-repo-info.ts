@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import { Repo } from '../types';
-import { getExampleList } from './example-list';
+import { getExampleList } from '../../../utils/vercel-build/example-list';
 
 /**
  * Fetch the meta info of a public github repo
@@ -51,11 +51,14 @@ export async function getGitHubRepoInfo(repo: Repo) {
     data.subdir = repo.path.slice(subdirPath.length).split('/');
   }
 
-  if (data.id === 'vercel/vercel' && data.subdir && data.subdir[0] === 'examples') {
-
+  if (
+    data.id === 'vercel/vercel' &&
+    data.subdir &&
+    data.subdir[0] === 'examples'
+  ) {
     // from our examples, add `homepage` and `description` fields
     const example = data.subdir[1];
-    const exampleList = await getExampleList();
+    const exampleList = getExampleList();
 
     for (const item of exampleList) {
       if (item.path === `/${example}`) {
