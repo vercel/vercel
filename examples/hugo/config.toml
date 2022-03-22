@@ -1,5 +1,5 @@
-baseURL = "https://example.com"
-title = "Website Name"
+baseURL = "https://hugo-template.vercel.app"
+title = "Hugo Template"
 theme = "etch"
 languageCode = "en-US"
 enableInlineShortcodes = true
@@ -8,7 +8,7 @@ pygmentsUseClasses = true
 ignoreErrors = ["error-missing-instagram-accesstoken"]
 
 [params]
-  description = "Your site description"
+  description = "A Hugo template, hosted with Vercel."
   copyright = "Copyright © 2021 Your Name"
   dark = "auto"
   highlight = true
