@@ -21,3 +21,16 @@
 !packages
 !packages/frameworks
 !packages/frameworks/**
+!packages/build-utils
+!packages/build-utils/**
+!packages/routing-utils
+!packages/routing-utils/**
+!packages/node
+!packages/node/**
+!packages/node-bridge
+!packages/node-brige/**
+
+# always ignore
+**/test
+**/dist
+**/node_modules
