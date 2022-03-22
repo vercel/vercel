@@ -39,7 +39,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `blitz build`',
@@ -80,7 +80,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `next build`',
@@ -126,7 +126,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `gatsby build`',
@@ -211,7 +211,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         value: 'remix build',
@@ -281,7 +281,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `hexo generate`',
@@ -318,7 +318,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `npx @11ty/eleventy`',
@@ -357,7 +357,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `docusaurus build`',
@@ -496,7 +496,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `docusaurus-build`',
@@ -547,7 +547,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `preact build`',
@@ -605,7 +605,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `solid-start build`',
@@ -643,7 +643,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `dojo build`',
@@ -709,7 +709,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `ember build`',
@@ -763,7 +763,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `vue-cli-service build`',
@@ -839,7 +839,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `ng build && scully`',
@@ -876,7 +876,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `ng build`',
@@ -928,7 +928,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `ng build`',
@@ -995,7 +995,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `polymer build`',
@@ -1065,7 +1065,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `rollup -c`',
@@ -1120,7 +1120,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `svelte-kit build`',
@@ -1156,7 +1156,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `react-scripts build`',
@@ -1262,7 +1262,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `react-scripts build`',
@@ -1362,7 +1362,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `gridsome build`',
@@ -1399,7 +1399,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `umi build`',
@@ -1452,7 +1452,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `sapper export`',
@@ -1489,7 +1489,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `saber build`',
@@ -1557,7 +1557,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `stencil build`',
@@ -1648,7 +1648,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `nuxt generate`',
@@ -1706,7 +1706,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         value: 'yarn rw deploy vercel',
@@ -1833,7 +1833,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `brunch build --production`',
@@ -1939,7 +1939,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `vite build`',
@@ -1976,7 +1976,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `parcel build`',
@@ -2030,7 +2030,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `sanity build`',
@@ -2062,7 +2062,7 @@ export const frameworks = [
     description: 'No framework or an unoptimized framework.',
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run vercel-build` or `npm run build`',
