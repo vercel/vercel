@@ -694,6 +694,7 @@ export const build: BuildV2 = async ({
             'node_modules/**',
             'yarn.lock',
             'package-lock.json',
+            'pnpm-lock.yaml',
             'package.json',
             '.vercel_build_output',
           ];
