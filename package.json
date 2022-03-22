@@ -43,7 +43,7 @@
     "npm-package-arg": "6.1.0",
     "prettier": "2.3.1",
     "ts-jest": "27.0.4",
-    "turbo": "1.0.18"
+    "turbo": "1.1.9"
   },
   "scripts": {
     "lerna": "lerna",
