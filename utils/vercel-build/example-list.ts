@@ -1,4 +1,4 @@
-import Frameworks, { Framework } from '../../../packages/frameworks';
+import frameworks, { Framework } from '@vercel/frameworks';
 
 interface Example {
   example: string;
@@ -9,10 +9,15 @@ interface Example {
   framework: string;
 }
 
-export async function getExampleList(): Promise<Example[]> {
-  return (Frameworks as Framework[])
+export function getExampleList(): Example[] {
+  return (frameworks as Framework[])
     .filter(f => f.demo)
     .map(framework => {
+      if (!framework.tagline || !framework.demo || !framework.slug) {
+        throw new Error(
+          `Malformed framework: ${framework.name || framework.slug}`
+        );
+      }
       return {
         example: framework.name,
         path: `/${framework.slug}`,
