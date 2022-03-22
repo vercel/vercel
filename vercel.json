@@ -18,6 +18,11 @@
       "destination": "/list-all.json"
     }
   ],
+  "build": {
+    "env": {
+      "ENABLE_FILE_SYSTEM_API": "1"
+    }
+  },
   "github": {
     "silent": true,
     "autoJobCancelation": true
