@@ -34,6 +34,7 @@ export default async function inputProject(
     : null;
 
   if (!(detectedProject && detectedProject.id)) {
+    console.log('detectedProject: ', detectedProject);
     throw new Error(`Detected linked project does not have "id".`);
   }
 
