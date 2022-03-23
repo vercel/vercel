@@ -22,8 +22,8 @@
       "destination": "/list-all.json"
     },
     {
-      "source": "/api/examples/download/:slug",
-      "destination": "/examples/:slug"
+      "source": "/api/examples/download/:slug.tar.gz",
+      "destination": "/examples/:slug.tar"
     }
   ],
   "github": {
