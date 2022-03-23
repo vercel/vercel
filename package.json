@@ -32,7 +32,6 @@
     "@typescript-eslint/parser": "4.28.0",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
-    "cheerio": "1.0.0-rc.3",
     "eslint": "7.29.0",
     "eslint-config-prettier": "8.3.0",
     "eslint-plugin-jest": "24.3.6",
@@ -43,8 +42,9 @@
     "node-fetch": "2.6.1",
     "npm-package-arg": "6.1.0",
     "prettier": "2.3.1",
+    "ts-eager": "2.0.2",
     "ts-jest": "27.0.4",
-    "turbo": "1.0.18"
+    "turbo": "1.1.9"
   },
   "scripts": {
     "lerna": "lerna",
@@ -54,7 +54,7 @@
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "turbo run build",
-    "vercel-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
+    "vercel-build": "yarn build && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
     "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
     "test-unit": "yarn test && node utils/run.js test-unit",

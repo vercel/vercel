@@ -23,16 +23,6 @@ export interface Files {
 }
 
 export interface Config {
-  [key: string]:
-    | string
-    | string[]
-    | boolean
-    | number
-    | { [key: string]: string }
-    | BuilderFunctions
-    | ProjectSettings
-    | undefined
-    | null;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
@@ -51,6 +41,7 @@ export interface Config {
   devCommand?: string;
   framework?: string | null;
   nodeVersion?: string;
+  [key: string]: unknown;
 }
 
 export interface Meta {
@@ -63,35 +54,7 @@ export interface Meta {
   env?: Env;
   buildEnv?: Env;
   avoidTopLevelInstall?: boolean;
-}
-
-export interface AnalyzeOptions {
-  /**
-   * All source files of the project
-   */
-  files: {
-    [filePath: string]: FileRef;
-  };
-
-  /**
-   * Name of entrypoint file for this particular build job. Value
-   * `files[entrypoint]` is guaranteed to exist and be a valid File reference.
-   * `entrypoint` is always a discrete file and never a glob, since globs are
-   * expanded into separate builds at deployment time.
-   */
-  entrypoint: string;
-
-  /**
-   * A writable temporary directory where you are encouraged to perform your
-   * build process. This directory will be populated with the restored cache.
-   */
-  workPath: string;
-
-  /**
-   * An arbitrary object passed by the user in the build definition defined
-   * in `vercel.json`.
-   */
-  config: Config;
+  [key: string]: unknown;
 }
 
 export interface BuildOptions {
