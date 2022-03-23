@@ -78,9 +78,16 @@ async function main() {
   for (const name of exampleDirs) {
     const dirName = join(EXAMPLES_DIR, name);
     const stream = tar.pack(dirName);
-    const tarPath = join(examplesOutputDir, `${name}.tar.gz`);
-    await pipe(stream, createGzip(), fs.createWriteStream(tarPath));
-    console.log(`Wrote "examples/${name}.tar.gz"`);
+    const tarPath = join(examplesOutputDir, `${name}.tar`);
+    const tarGzPath = join(examplesOutputDir, `${name}.tar.gz`);
+    await Promise.all([
+      pipe(stream, fs.createWriteStream(tarPath)).then(() =>
+        console.log(`Wrote "examples/${name}.tar"`)
+      ),
+      pipe(stream, createGzip(), fs.createWriteStream(tarGzPath)).then(() =>
+        console.log(`Wrote "examples/${name}.tar.gz"`)
+      ),
+    ]);
   }
 }
 
