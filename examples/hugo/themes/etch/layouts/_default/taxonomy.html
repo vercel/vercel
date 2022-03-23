@@ -1,0 +1,8 @@
+{{ define "main" }}
+<h3>{{ .Title }}</h3>
+<ul id="posts">
+{{- range .Pages }}
+    {{ .Render "li" }}
+{{- end }}
+</ul>
+{{ end }}

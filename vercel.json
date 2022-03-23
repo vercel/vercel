@@ -6,6 +6,10 @@
       "destination": "/frameworks.json"
     },
     {
+      "source": "/api/frameworks",
+      "destination": "/frameworks.json"
+    },
+    {
       "source": "/api/v1/frameworks",
       "destination": "/frameworks.json"
     },
