@@ -138,9 +138,6 @@ export async function getVercelIgnore(
       ignores.push(`!${level}`);
     });
     ignores.push(`!${outputDir}/**`);
-
-    // TODO: remove - `package.json` should not be required
-    ignores.push(`!package.json`);
     ig.add(ignores.join('\n'));
   } else {
     ignores = [

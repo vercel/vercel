@@ -87,7 +87,7 @@ describe('buildFileTree()', () => {
     );
   });
 
-  it('should find root files but ignore .output files when prebuilt=false', async () => {
+  it('should find root files but ignore `.vercel/output` files when prebuilt=false', async () => {
     const cwd = fixture('file-system-api');
     const { fileList, ignoreList } = await buildFileTree(
       cwd,
@@ -100,13 +100,13 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(fileList).sort()
     );
 
-    const expectedIgnoreList = ['.output'];
+    const expectedIgnoreList = ['.vercel'];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );
   });
 
-  it('should find .output files but ignore other files when prebuilt=true', async () => {
+  it('should find `.vercel/output` files but ignore other files when prebuilt=true', async () => {
     const cwd = fixture('file-system-api');
     const { fileList, ignoreList } = await buildFileTree(
       cwd,
@@ -115,8 +115,8 @@ describe('buildFileTree()', () => {
     );
 
     const expectedFileList = toAbsolutePaths(cwd, [
-      '.output/baz.txt',
-      '.output/sub/qux.txt',
+      '.vercel/output/static/baz.txt',
+      '.vercel/output/static/sub/qux.txt',
     ]);
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
@@ -145,7 +145,7 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(fileList).sort()
     );
 
-    const expectedIgnoreList = ['root/.output', 'someother/.output'];
+    const expectedIgnoreList = ['root/.vercel', 'someother/.vercel'];
     expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
       normalizeWindowsPaths(ignoreList).sort()
     );
@@ -160,8 +160,8 @@ describe('buildFileTree()', () => {
     );
 
     const expectedFileList = toAbsolutePaths(cwd, [
-      'root/.output/baz.txt',
-      'root/.output/sub/qux.txt',
+      'root/.vercel/output/static/baz.txt',
+      'root/.vercel/output/static/sub/qux.txt',
     ]);
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
