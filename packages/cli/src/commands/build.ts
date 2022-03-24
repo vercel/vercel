@@ -130,7 +130,9 @@ export default async function main(client: Client): Promise<number> {
   // Load `package.json` and `vercel.json` files
   const [pkg, vercelConfig] = await Promise.all([
     readJSONFile<PackageJson>('package.json'),
-    readJSONFile<VercelConfig>('vercel.json'),
+    readJSONFile<VercelConfig>('vercel.json').then(
+      config => config || readJSONFile<VercelConfig>('now.json')
+    ),
   ]);
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
