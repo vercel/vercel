@@ -96,7 +96,6 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Set the working directory if necessary
-  // TODO: Consider `projectSettings.rootDirectory`?
   if (argv['--cwd']) {
     process.chdir(argv['--cwd']);
   }
@@ -281,10 +280,11 @@ export default async function main(client: Client): Promise<number> {
       buildCommand: project.settings.buildCommand || undefined,
       framework: project.settings.framework,
     };
+    const workPath = join(cwd, project.settings.rootDirectory || '');
     const buildOptions: BuildOptions = {
       files: filesMap,
       entrypoint: build.src,
-      workPath: cwd,
+      workPath,
       repoRootPath: cwd,
       config: buildConfig,
       meta,
