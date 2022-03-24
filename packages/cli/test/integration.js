@@ -3580,3 +3580,27 @@ test('[vc link] should support the `--project` flag', async t => {
     formatOutput(output)
   );
 });
+
+test('vercel.json projectSettings should be applied to deployment', async t => {
+  const directory = path.join(__dirname, 'fixtures/unit/vercel-json-overrides');
+
+  const deployment = await execa(binaryPath, [
+    directory,
+    ...defaultArgs,
+    '--public',
+    '--confirm',
+  ]);
+
+  t.is(
+    deployment.exitCode,
+    0,
+    formatOutput({
+      stderr: deployment.stderr,
+      stdout: deployment.stdout,
+    })
+  );
+
+  const page = await fetch(deployment.stdout);
+  const text = await page.text();
+  t.is(text, `Hello, World\n`);
+});
