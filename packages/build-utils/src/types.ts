@@ -331,7 +331,36 @@ export interface ProjectSettings {
   sourceFilesOutsideRootDirectory?: boolean;
   directoryListing?: boolean;
   gitForkProtection?: boolean;
+  projectName?: string | null;
+  nodeVersion?: 12 | 14;
+  git?: {
+    connectedRepository: string;
+    productionBranch?: string;
+    deployHooks?: string;
+    ignoredBuildStep?: string;
+  };
+  environmentVariables?: EnvironmentVariable[];
+  passwordProtection?: {
+    visitorPassword: string;
+    protectProductionDeployment?: boolean;
+  };
+  ssoProtection?:
+    | boolean
+    | {
+        protectProductionDeployment: boolean;
+      };
 }
+
+export interface EnvironmentVariable {
+  name: string;
+  value: string;
+  environments: EnvironmentVariableEnvironments;
+}
+
+export type EnvironmentVariableEnvironments =
+  | 'production'
+  | 'preview'
+  | 'development';
 
 export interface BuilderV2 {
   version: 2;

@@ -175,7 +175,7 @@ export default async (client: Client) => {
       `${prependEmoji(
         `The ${param(
           '--name'
-        )} option is deprecated (https://vercel.link/name-flag)`,
+        )} option is deprecated (https://vercel.link/name-flag). Use the settings UI or projectSettings.projectName instead.`,
         emoji('warning')
       )}\n`
     );
@@ -321,7 +321,7 @@ export default async (client: Client) => {
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
           localConfig[fileNameSymbol]!
-        )} is deprecated (https://vercel.link/name-prop)`,
+        )} is deprecated (https://vercel.link/name-prop). Use the settings UI or projectSettings.projectName instead.`,
         emoji('warning')
       )}\n`
     );
@@ -460,7 +460,10 @@ export default async (client: Client) => {
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
       // Only add projectSettings for zero config deployments
-      createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
+      createArgs.projectSettings = {
+        ...localConfig.projectSettings,
+        sourceFilesOutsideRootDirectory,
+      };
     }
 
     deployment = await createDeploy(

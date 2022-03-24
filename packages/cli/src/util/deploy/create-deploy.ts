@@ -19,7 +19,7 @@ export default async function createDeploy(
   cwd?: string
 ): Promise<any | DeploymentError> {
   try {
-    return await now.create(paths, createArgs, org, isSettingUpProject, cwd);
+    return now.create(paths, createArgs, org, isSettingUpProject, cwd);
   } catch (error) {
     if (error.code === 'rate_limited') {
       throw new ERRORS_TS.DeploymentsRateLimited(error.message);
