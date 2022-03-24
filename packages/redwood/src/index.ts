@@ -1,5 +1,12 @@
-import { join, dirname, relative, parse as parsePath, sep } from 'path';
-import { readFileSync, lstatSync } from 'fs';
+import {
+  join,
+  dirname,
+  relative,
+  parse as parsePath,
+  sep,
+  basename as pathBasename,
+} from 'path';
+import { readFileSync, lstatSync, existsSync, renameSync } from 'fs';
 import { intersects, validRange } from 'semver';
 import {
   Lambda,
@@ -25,6 +32,7 @@ import {
   PrepareCache,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
+import { getTransformedRoutes, Route } from '@vercel/routing-utils';
 
 interface RedwoodToml {
   web: { port?: number; apiProxyPath?: string };
@@ -32,6 +40,8 @@ interface RedwoodToml {
   browser: { open?: boolean };
 }
 
+// Do not change this version for RW specific config,
+// it refers to Vercels builder version
 export const version = 2;
 
 export const build: BuildV2 = async ({
@@ -150,10 +160,47 @@ export const build: BuildV2 = async ({
   const apiDistPath = join(workPath, 'api', 'dist', 'functions');
   const webDistPath = join(workPath, 'web', 'dist');
   const lambdaOutputs: { [filePath: string]: Lambda } = {};
-  const staticOutputs = await glob('**', webDistPath);
+
+  // Strip out the .html extensions
+  // And populate staticOutputs map with updated paths and contentType
+  const webDistFiles = await glob('**', webDistPath);
+  const staticOutputs: Record<string, FileFsRef> = {};
+
+  for (const [fileName, fileFsRef] of Object.entries(webDistFiles)) {
+    const parsedPath = parsePath(fileFsRef.fsPath);
+
+    if (parsedPath.ext !== '.html') {
+      // No need to transform non-html files
+      staticOutputs[fileName] = fileFsRef;
+    } else {
+      const fileNameWithoutExtension = pathBasename(fileName, '.html');
+
+      const pathWithoutHtmlExtension = join(
+        parsedPath.dir,
+        fileNameWithoutExtension
+      );
+
+      renameSync(fileFsRef.fsPath, pathWithoutHtmlExtension);
+      fileFsRef.contentType = 'text/html; charset=utf-8';
+      fileFsRef.fsPath = pathWithoutHtmlExtension;
+
+      // @NOTE: Filename is relative to webDistPath
+      staticOutputs[relative(webDistPath, pathWithoutHtmlExtension)] =
+        fileFsRef;
+    }
+  }
 
   // Each file in the `functions` dir will become a lambda
-  const functionFiles = await glob('*.js', apiDistPath);
+  // Also supports nested functions like:
+  // ├── functions
+  // │   ├── bazinga
+  // │   │   ├── bazinga.js
+  // │   ├── graphql.js
+
+  const functionFiles = {
+    ...(await glob('*.js', apiDistPath)), // top-level
+    ...(await glob('*/*.js', apiDistPath)), // one-level deep
+  };
 
   const sourceCache = new Map<string, string | Buffer | null>();
   const fsCache = new Map<string, File>();
@@ -237,9 +284,30 @@ export const build: BuildV2 = async ({
     lambdaOutputs[outputName] = lambda;
   }
 
+  // Older versions of redwood did not create 200.html automatically
+  // From v0.50.0+ 200.html is always generated as part of web build
+  // Note that in builder post-processing, we remove the .html extension
+  const fallbackHtmlPage = existsSync(join(webDistPath, '200'))
+    ? '/200'
+    : '/index';
+
+  const defaultRoutesConfig = getTransformedRoutes({
+    nowConfig: {
+      // this makes sure we send back 200.html for unprerendered pages
+      rewrites: [{ source: '/(.*)', destination: fallbackHtmlPage }],
+      // @NOTE leave clean urls so vercel redirects are generated
+      cleanUrls: true,
+      trailingSlash: false,
+    },
+  });
+
+  if (defaultRoutesConfig.error) {
+    throw new Error(defaultRoutesConfig.error.message);
+  }
+
   return {
     output: { ...staticOutputs, ...lambdaOutputs },
-    routes: [{ handle: 'filesystem' }, { src: '/.*', dest: '/index.html' }],
+    routes: defaultRoutesConfig.routes as Route[],
   };
 };
 

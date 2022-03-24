@@ -2547,6 +2547,11 @@
     "@typescript-eslint/types" "4.28.0"
     eslint-visitor-keys "^2.0.0"
 
+"@vercel/build-utils@2.14.1-canary.6":
+  version "2.14.1-canary.6"
+  resolved "https://registry.yarnpkg.com/@vercel/build-utils/-/build-utils-2.14.1-canary.6.tgz#86613f0318665d26a2cf9fc08ea766340971bb78"
+  integrity sha512-Mz0/A2+bWZ3t2uISwvYpmn3RWdKXOhM+L+JAGYSoYtAM1lSDLVZWRFH3s7EUGk3ItTB0XIEcb1n0ABl18yFMRA==
+
 "@vercel/fetch-retry@5.0.3":
   version "5.0.3"
   resolved "https://registry.yarnpkg.com/@vercel/fetch-retry/-/fetch-retry-5.0.3.tgz#cce5d23f6e64f6f525c24e2ac7c78f65d6c5b1f4"
@@ -2576,6 +2581,15 @@
     node-pre-gyp "^0.13.0"
     resolve-from "^5.0.0"
     rollup-pluginutils "^2.8.2"
+
+"@vercel/routing-utils@1.12.1-canary.0":
+  version "1.12.1-canary.0"
+  resolved "https://registry.yarnpkg.com/@vercel/routing-utils/-/routing-utils-1.12.1-canary.0.tgz#16cf91746a705df81e832c605271553458ff1a30"
+  integrity sha512-Sct+cpVppChT9Lht0JlowUVPz3tfuKf0LSo0PrW75BC6lXh7qykkmCjVrpKPqsGAVS6+kZDrJHD+Lkq0E0WycA==
+  dependencies:
+    path-to-regexp "6.1.0"
+  optionalDependencies:
+    ajv "^6.0.0"
 
 "@zeit/dns-cached-resolve@2.1.0":
   version "2.1.0"
