@@ -11,7 +11,7 @@ export class AppProfile {
 
   normalize(name: string): string {
     if (name) {
-      return name.substr(0, 1).toUpperCase() + name.substr(1).toLowerCase();
+      return name.slice(0, 1).toUpperCase() + name.slice(1).toLowerCase();
     }
     return '';
   }
