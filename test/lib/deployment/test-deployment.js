@@ -199,7 +199,7 @@ async function testDeployment(
       probe.path =
         probe.path.substring(0, nextScriptIndex) +
         scriptRelativePath +
-        probe.path.substr(scriptNameEnd + 1);
+        probe.path.slice(scriptNameEnd + 1);
     }
 
     const probeUrl = `https://${deploymentUrl}${probe.path}`;
