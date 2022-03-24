@@ -1,7 +1,6 @@
 import { lstatSync } from 'fs-extra';
-
 import { isAbsolute } from 'path';
-import { hashes, mapToObject, resolveNftJsonFiles } from './utils/hashes';
+import { hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
 import { DeploymentError } from './errors';
@@ -71,7 +70,7 @@ export default function buildCreateDeployment() {
       debug(`Provided 'path' is a single file`);
     }
 
-    let { fileList } = await buildFileTree(path, clientOptions, debug);
+    const { fileList } = await buildFileTree(path, clientOptions, debug);
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
@@ -83,11 +82,7 @@ export default function buildCreateDeployment() {
       };
     }
 
-    const hashedFileMap = await hashes(fileList);
-    const nftFileList = clientOptions.prebuilt
-      ? await resolveNftJsonFiles(hashedFileMap)
-      : [];
-    const files = await hashes(nftFileList, hashedFileMap);
+    const files = await hashes(fileList);
 
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);
     yield { type: 'hashes-calculated', payload: mapToObject(files) };

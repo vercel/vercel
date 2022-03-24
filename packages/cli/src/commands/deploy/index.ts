@@ -895,8 +895,8 @@ const parseEnv = (env?: string[] | Dictionary<string>) => {
       if (equalsSign === -1) {
         key = e;
       } else {
-        key = e.substr(0, equalsSign);
-        value = e.substr(equalsSign + 1);
+        key = e.slice(0, equalsSign);
+        value = e.slice(equalsSign + 1);
       }
 
       o[key] = value;
