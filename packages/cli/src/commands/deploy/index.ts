@@ -153,6 +153,27 @@ export default async (client: Client) => {
         return 1;
       }
     }
+
+    // Validate localConfig.projectSettings
+    if (localConfig.projectSettings) {
+      const allowedProperties = [
+        'buildCommand',
+        'devCommand',
+        'installCommand',
+        'framework',
+        'name',
+        'nodeVersion',
+        'commandForIgnoringBuildStep',
+        'rootDirectory',
+        'sourceFilesOutsideRootDirectory',
+      ];
+      for (const key of Object.keys(localConfig.projectSettings)) {
+        if (!allowedProperties.includes(key)) {
+          output.error(`Disallowed property ${key} found in "projectSettings"`);
+          return 1;
+        }
+      }
+    }
   }
 
   const { log, debug, error, warn, isTTY } = output;
@@ -175,7 +196,7 @@ export default async (client: Client) => {
       `${prependEmoji(
         `The ${param(
           '--name'
-        )} option is deprecated (https://vercel.link/name-flag). Use the settings UI or projectSettings.projectName instead.`,
+        )} option is deprecated (https://vercel.link/name-flag).`,
         emoji('warning')
       )}\n`
     );
@@ -321,7 +342,7 @@ export default async (client: Client) => {
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
           localConfig[fileNameSymbol]!
-        )} is deprecated (https://vercel.link/name-prop). Use the settings UI or projectSettings.projectName instead.`,
+        )} is deprecated (https://vercel.link/name-prop).`,
         emoji('warning')
       )}\n`
     );
