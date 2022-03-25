@@ -127,49 +127,4 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(ignoreList).sort()
     );
   });
-
-  it('should find root files but ignore all .output files when prebuilt=false and rootDirectory=root', async () => {
-    const cwd = fixture('file-system-api-root-directory');
-    const { fileList, ignoreList } = await buildFileTree(
-      cwd,
-      { isDirectory: true, prebuilt: false, rootDirectory: 'root' },
-      noop
-    );
-
-    const expectedFileList = toAbsolutePaths(cwd, [
-      'foo.txt',
-      'root/bar.txt',
-      'someother/bar.txt',
-    ]);
-    expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
-      normalizeWindowsPaths(fileList).sort()
-    );
-
-    const expectedIgnoreList = ['root/.vercel', 'someother/.vercel'];
-    expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
-      normalizeWindowsPaths(ignoreList).sort()
-    );
-  });
-
-  it('should find root/.output files but ignore other files when prebuilt=true and rootDirectory=root', async () => {
-    const cwd = fixture('file-system-api-root-directory');
-    const { fileList, ignoreList } = await buildFileTree(
-      cwd,
-      { isDirectory: true, prebuilt: true, rootDirectory: 'root' },
-      noop
-    );
-
-    const expectedFileList = toAbsolutePaths(cwd, [
-      'root/.vercel/output/static/baz.txt',
-      'root/.vercel/output/static/sub/qux.txt',
-    ]);
-    expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
-      normalizeWindowsPaths(fileList).sort()
-    );
-
-    const expectedIgnoreList = ['foo.txt', 'root/bar.txt', 'someother'];
-    expect(normalizeWindowsPaths(expectedIgnoreList).sort()).toEqual(
-      normalizeWindowsPaths(ignoreList).sort()
-    );
-  });
 });
