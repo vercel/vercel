@@ -153,27 +153,6 @@ export default async (client: Client) => {
         return 1;
       }
     }
-
-    // Validate localConfig.projectSettings
-    if (localConfig.projectSettings) {
-      const allowedProperties = [
-        'buildCommand',
-        'devCommand',
-        'installCommand',
-        'framework',
-        'name',
-        'nodeVersion',
-        'commandForIgnoringBuildStep',
-        'rootDirectory',
-        'sourceFilesOutsideRootDirectory',
-      ];
-      for (const key of Object.keys(localConfig.projectSettings)) {
-        if (!allowedProperties.includes(key)) {
-          output.error(`Unknown property ${key} found in "projectSettings"`);
-          return 1;
-        }
-      }
-    }
   }
 
   const { log, debug, error, warn, isTTY } = output;
