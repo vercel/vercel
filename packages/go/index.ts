@@ -4,7 +4,7 @@ import { homedir, tmpdir } from 'os';
 import { spawn } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
-import { join, dirname, basename, normalize, sep } from 'path';
+import { join, dirname, basename, normalize, sep, relative } from 'path';
 import {
   readFile,
   writeFile,
@@ -12,6 +12,8 @@ import {
   mkdirp,
   move,
   remove,
+  outputFile,
+  existsSync,
 } from 'fs-extra';
 import {
   BuildOptions,
@@ -26,6 +28,7 @@ import {
   getWriteableDirectory,
   shouldServe,
   debug,
+  FileFsRef,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -479,13 +482,24 @@ function isReadable(v: any): v is Readable {
   return v && v.readable === true;
 }
 
-async function copyEntrypoint(entrypoint: string, dest: string): Promise<void> {
-  const data = await readFile(entrypoint, 'utf8');
+async function copyEntrypoint(files: string[], dest: string): Promise<void> {
+  for (const file of files) {
+    if (!existsSync(file)) {
+      continue;
+    }
 
-  // Modify package to `package main`
-  const patched = data.replace(/\bpackage\W+\S+\b/, 'package main');
+    try {
+      const data = await readFile(file, 'utf8');
 
-  await writeFile(join(dest, 'entrypoint.go'), patched);
+      // Modify package to `package main`
+      const patched = data.replace(/\bpackage\W+\S+\b/, 'package main');
+
+      await outputFile(join(dest, file), patched);
+    } catch (err) {
+      debug(`copy entrypoint ${file} error`, err);
+      throw err;
+    }
+  }
 }
 
 async function copyDevServer(
@@ -503,7 +517,7 @@ async function copyDevServer(
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { entrypoint, workPath, meta = {} } = opts;
+  const { entrypoint, workPath, meta = {}, files } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointDir = dirname(entrypoint);
 
@@ -524,7 +538,7 @@ export async function startDevServer(
   }
   const analyzedRaw = await getAnalyzedEntrypoint(
     workPath,
-    entrypointWithExt,
+    (files[entrypointWithExt] as FileFsRef).fsPath,
     goModAbsPathDir
   );
   if (!analyzedRaw) {
@@ -536,7 +550,16 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   const analyzed: Analyzed = JSON.parse(analyzedRaw);
 
   await Promise.all([
-    copyEntrypoint(entrypointWithExt, tmpPackage),
+    copyEntrypoint(
+      [
+        relative(
+          goModAbsPathDir,
+          (files[entrypointWithExt] as FileFsRef).fsPath
+        ),
+        ...analyzed.watch,
+      ],
+      tmp
+    ),
     copyDevServer(analyzed.functionName, tmpPackage),
   ]);
 
