@@ -41,7 +41,7 @@
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "turbo run build",
-    "vercel-build": "yarn build && cd api && node -r ts-eager/register ./_lib/script/build.ts",
+    "vercel-build": "ls -la && yarn build && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
     "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
     "test-unit": "yarn test && node utils/run.js test-unit",
