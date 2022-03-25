@@ -371,7 +371,7 @@ export default async function main(client: Client): Promise<number> {
   const config = {
     version: 3,
     target,
-    routing: { routes: mergedRoutes },
+    routes: mergedRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
