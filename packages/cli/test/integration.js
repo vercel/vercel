@@ -467,6 +467,10 @@ test('default command should work with --cwd option', async t => {
   );
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+  t.notRegex(
+    stderr || '',
+    /calling `vc` without a command or the `--cwd` option is deprecated, use `vc --cwd directory` or `vc deploy` instead/
+  );
 
   const url = stdout;
   const deploymentResult = await fetch(`${url}/README.md`);

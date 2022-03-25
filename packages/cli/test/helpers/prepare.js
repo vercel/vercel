@@ -202,10 +202,6 @@ module.exports = async function prepare(session, binaryPath) {
         name: 'nested-level',
       }),
     },
-    'subdirectory-secret': {
-      'index.html': 'Home page',
-      'secret/file.txt': 'my secret',
-    },
     'build-secret': {
       'package.json': JSON.stringify({
         private: true,

@@ -83,7 +83,7 @@ export function useProject(project = defaultProject) {
   client.scenario.get(`/v8/projects/${project.id}`, (_req, res) => {
     res.json(project);
   });
-  client.scenario.get(`/v7/projects/${project.id}/env`, (_req, res) => {
+  client.scenario.get(`/v8/projects/${project.id}/env`, (_req, res) => {
     res.json({ envs });
   });
 

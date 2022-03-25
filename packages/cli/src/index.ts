@@ -12,7 +12,7 @@ try {
 }
 
 import { join } from 'path';
-import { existsSync, lstatSync } from 'fs';
+import { existsSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
@@ -387,12 +387,8 @@ const main = async () => {
       commands.has(targetOrSubcommand);
 
     if (targetPathExists && subcommandExists) {
-      const fileType = lstatSync(targetPath).isDirectory()
-        ? 'subdirectory'
-        : 'file';
-
       output.warn(
-        `Did you mean to deploy the ${fileType} "${targetOrSubcommand}"? ` +
+        `Did you mean to deploy the subdirectory "${targetOrSubcommand}"? ` +
           `Use \`vc --cwd ${targetOrSubcommand}\` instead.`
       );
     }
