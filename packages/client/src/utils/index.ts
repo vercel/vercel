@@ -1,7 +1,7 @@
 import { DeploymentFile } from './hashes';
 import { FetchOptions } from '@zeit/fetch';
 import { nodeFetch, zeitFetch } from './fetch';
-import { join, sep, relative, posix } from 'path';
+import { join, sep, relative } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
 type Ignore = ReturnType<typeof ignore>;
@@ -85,13 +85,12 @@ export async function buildFileTree(
   {
     isDirectory,
     prebuilt,
-    rootDirectory,
-  }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt' | 'rootDirectory'>,
+  }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt'>,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
   const ignoreList: string[] = [];
   let fileList: string[];
-  let { ig, ignores } = await getVercelIgnore(path, prebuilt, rootDirectory);
+  let { ig, ignores } = await getVercelIgnore(path, prebuilt);
 
   debug(`Found ${ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
@@ -123,14 +122,13 @@ export async function buildFileTree(
 
 export async function getVercelIgnore(
   cwd: string | string[],
-  prebuilt?: boolean,
-  rootDirectory?: string
+  prebuilt?: boolean
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ig = ignore();
   let ignores: string[];
 
   if (prebuilt) {
-    const outputDir = posix.join(rootDirectory || '', '.vercel/output');
+    const outputDir = '.vercel/output';
     ignores = ['*'];
     const parts = outputDir.split('/');
     parts.forEach((_, i) => {
