@@ -390,7 +390,7 @@ export default async function main(client: Client): Promise<number> {
         buildStamp()
       )}`,
       emoji('success')
-    )}`
+    )}\n`
   );
 
   return 0;
