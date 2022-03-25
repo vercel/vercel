@@ -18,6 +18,10 @@ import { writeProjectSettings } from '../util/projects/project-settings';
 import envPull from './env/pull';
 
 import type { Project, Org } from '../types';
+import {
+  isValidEnvTarget,
+  getEnvTargetPlaceholder,
+} from '../util/env/env-target';
 
 const help = () => {
   return console.log(`
@@ -34,6 +38,7 @@ const help = () => {
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --env [filename]               The file to write Development Environment Variables to [.env]
+    --target ${getEnvTargetPlaceholder()}
     -y, --yes                      Skip the confirmation prompt
 
   ${chalk.dim('Examples:')}
@@ -51,6 +56,7 @@ function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {
     '--yes': Boolean,
     '--env': String,
+    '--target': String,
     '--debug': Boolean,
     '-d': '--debug',
     '-y': '--yes',
@@ -105,69 +111,48 @@ async function ensureLink(
 
 async function pullAllEnvFiles(
   envFileName: string,
+  target: ProjectEnvTarget,
   client: Client,
   project: Project,
   argv: ReturnType<typeof processArgs>,
   cwd: string
 ): Promise<number> {
-  const pullDeprecatedDevPromise = envPull(
+  // save env file in project root
+  const pullDeprecatedTargetPromise = envPull(
     client,
     project,
-    ProjectEnvTarget.Development,
+    target,
     argv,
     [join(cwd, envFileName)], // deprecated location
     client.output
   );
 
-  const devEnvFile = `.env.development.local`;
-  const pullDevPromise = envPull(
+  // save env file in `.vercel`
+  const targetEnvFile = `.env.${target}.local`;
+  const pullTargetPromise = envPull(
     client,
     project,
-    ProjectEnvTarget.Development,
+    target,
     argv,
-    [join(cwd, '.vercel', devEnvFile)],
+    [join(cwd, '.vercel', targetEnvFile)],
     client.output
   );
 
-  const previewEnvFile = `.env.preview.local`;
-  const pullPreviewPromise = envPull(
-    client,
-    project,
-    ProjectEnvTarget.Preview,
-    argv,
-    [join(cwd, '.vercel', previewEnvFile)],
-    client.output
-  );
-
-  const prodEnvFile = `.env.production.local`;
-  const pullProdPromise = envPull(
-    client,
-    project,
-    ProjectEnvTarget.Production,
-    argv,
-    [join(cwd, '.vercel', prodEnvFile)],
-    client.output
-  );
-
-  const [
-    pullDeprecatedDevResultCode,
-    pullDevResultCode,
-    pullPreviewResultCode,
-    pullProdResultCode,
-  ] = await Promise.all([
-    pullDeprecatedDevPromise,
-    pullDevPromise,
-    pullPreviewPromise,
-    pullProdPromise,
+  const [pullDeprecatedDevResultCode, pullDevResultCode] = await Promise.all([
+    pullDeprecatedTargetPromise,
+    pullTargetPromise,
   ]);
 
-  return (
-    pullDeprecatedDevResultCode ||
-    pullDevResultCode ||
-    pullPreviewResultCode ||
-    pullProdResultCode ||
-    0
-  );
+  return pullDeprecatedDevResultCode || pullDevResultCode || 0;
+}
+
+function parseTarget(target = 'development'): ProjectEnvTarget {
+  if (!isValidEnvTarget(target)) {
+    throw new Error(
+      `target "${target}" not supported; must be one of ${getEnvTargetPlaceholder()}`
+    );
+  }
+  return target;
 }
 
 export default async function main(client: Client) {
@@ -178,7 +163,8 @@ export default async function main(client: Client) {
 
   const cwd = argv._[1] || process.cwd();
   const yes = Boolean(argv['--yes']);
-  const env = argv['--env'] ?? '.env';
+  const envFileName = argv['--env'] ?? '.env';
+  const target = parseTarget(argv['--target'] || undefined);
 
   const link = await ensureLink(client, cwd, yes);
   if (typeof link === 'number') {
@@ -189,7 +175,14 @@ export default async function main(client: Client) {
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  const pullResultCode = await pullAllEnvFiles(env, client, project, argv, cwd);
+  const pullResultCode = await pullAllEnvFiles(
+    envFileName,
+    target,
+    client,
+    project,
+    argv,
+    cwd
+  );
   if (pullResultCode !== 0) {
     return pullResultCode;
   }

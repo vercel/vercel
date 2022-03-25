@@ -8,124 +8,106 @@ import { useTeams } from '../mocks/team';
 import { useUser } from '../mocks/user';
 
 describe('pull', () => {
-  describe('deprecated .env location: "${root}/.env"', function () {
-    it('should handle pulling', async () => {
-      const cwd = setupFixture('vercel-pull-next');
-      useUser();
-      useTeams();
-      useProject({
-        ...defaultProject,
-        id: 'vercel-pull-next',
-        name: 'vercel-pull-next',
-      });
-      client.setArgv('pull', '--yes', cwd);
-      const exitCode = await pull(client);
-      expect(exitCode).toEqual(0);
+  it('should handle pulling', async () => {
+    const cwd = setupFixture('vercel-pull-next');
+    useUser();
+    useTeams();
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
     });
+    client.setArgv('pull', '--yes', cwd);
+    const exitCode = await pull(client);
+    expect(exitCode).toEqual(0);
 
-    it('should handle custom --env flag', async () => {
-      const cwd = setupFixture('vercel-pull-next');
-      useUser();
-      useTeams();
-      useProject({
-        ...defaultProject,
-        id: 'vercel-pull-next',
-        name: 'vercel-pull-next',
-      });
-      const expectedEnvFilename = '.env.vercel';
-      client.setArgv('pull', '--yes', `--env=${expectedEnvFilename}`, cwd);
+    // deprecated location
+    const rawDeprecatedDevEnv = await fs.readFile(path.join(cwd, '.env'));
+    const devDeprecatedFileHasDevEnv = rawDeprecatedDevEnv
+      .toString()
+      .includes('SPECIAL_FLAG');
+    expect(devDeprecatedFileHasDevEnv).toBeTruthy();
 
-      const exitCode = await pull(client);
-      const actualEnv = await fs.pathExists(
-        path.join(cwd, expectedEnvFilename)
-      );
-      const raw = await fs.readFile(path.join(cwd, expectedEnvFilename));
-
-      expect(exitCode).toEqual(0);
-      expect(actualEnv).toBeTruthy();
-      expect(raw.includes('# Created by Vercel CLI')).toBeTruthy();
-    });
+    // new location
+    const rawDevEnv = await fs.readFile(
+      path.join(cwd, '.vercel', '.env.development.local')
+    );
+    const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
+    expect(devFileHasDevEnv).toBeTruthy();
   });
 
-  describe('new .env location: "${root}/.vercel/.env.${target}.local', function () {
-    it('should handle pulling', async () => {
-      const cwd = setupFixture('vercel-pull-next');
-      useUser();
-      useTeams();
-      useProject({
-        ...defaultProject,
-        id: 'vercel-pull-next',
-        name: 'vercel-pull-next',
-      });
-      client.setArgv('pull', '--yes', cwd);
-      const exitCode = await pull(client);
-      expect(exitCode).toEqual(0);
-
-      const devEnvFileExists = fs.pathExistsSync(
-        path.join(cwd, '.vercel', '.env.development.local')
-      );
-      expect(devEnvFileExists).toBeTruthy();
-
-      const rawDevEnv = await fs.readFile(
-        path.join(cwd, '.vercel', '.env.development.local')
-      );
-      const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
-      expect(devFileHasDevEnv).toBeTruthy();
-
-      const previewEnvFileExists = fs.pathExistsSync(
-        path.join(cwd, '.vercel', '.env.preview.local')
-      );
-      expect(previewEnvFileExists).toBeTruthy();
-
-      const rawPreviewEnv = await fs.readFile(
-        path.join(cwd, '.vercel', '.env.preview.local')
-      );
-      const previewFileHasPreviewEnv = rawPreviewEnv
-        .toString()
-        .includes('REDIS_CONNECTION_STRING');
-      expect(previewFileHasPreviewEnv).toBeTruthy();
-
-      const prodEnvFileExists = fs.pathExistsSync(
-        path.join(cwd, '.vercel', '.env.production.local')
-      );
-      expect(prodEnvFileExists).toBeTruthy();
-
-      const rawProdEnv = await fs.readFile(
-        path.join(cwd, '.vercel', '.env.production.local')
-      );
-      const previewFileHasPreviewEnv1 = rawProdEnv
-        .toString()
-        .includes('REDIS_CONNECTION_STRING');
-      expect(previewFileHasPreviewEnv1).toBeTruthy();
-      const previewFileHasPreviewEnv2 = rawProdEnv
-        .toString()
-        .includes('SQL_CONNECTION_STRING');
-      expect(previewFileHasPreviewEnv2).toBeTruthy();
+  it('should handle custom --env flag', async () => {
+    const cwd = setupFixture('vercel-pull-next');
+    useUser();
+    useTeams();
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
     });
+    const expectedEnvFilename = '.env.vercel';
+    client.setArgv('pull', '--yes', `--env=${expectedEnvFilename}`, cwd);
 
-    it('should handle custom --env flag', async () => {
-      const cwd = setupFixture('vercel-pull-next');
-      useUser();
-      useTeams();
-      useProject({
-        ...defaultProject,
-        id: 'vercel-pull-next',
-        name: 'vercel-pull-next',
-      });
+    const exitCode = await pull(client);
+    const actualEnv = await fs.pathExists(path.join(cwd, expectedEnvFilename));
+    const raw = await fs.readFile(path.join(cwd, expectedEnvFilename));
 
-      client.setArgv('pull', '--yes', '--env=.env.vercel', cwd);
-      const exitCode = await pull(client);
-      expect(exitCode).toEqual(0);
+    expect(exitCode).toEqual(0);
+    expect(actualEnv).toBeTruthy();
+    expect(raw.includes('# Created by Vercel CLI')).toBeTruthy();
 
-      const rootEnvFileExists = await fs.pathExists(
-        path.join(cwd, '.env.vercel')
-      );
-      expect(rootEnvFileExists).toBeTruthy();
+    // --env flag does not affect nested (under .vercel) files
+    const nestedEnvFileExists = await fs.pathExists(
+      path.join(cwd, '.vercel', '.env.development.local')
+    );
+    expect(nestedEnvFileExists).toBeTruthy();
+  });
 
-      const nestedEnvFileExists = await fs.pathExists(
-        path.join(cwd, '.vercel', '.env.development.local')
-      );
-      expect(nestedEnvFileExists).toBeTruthy();
+  it('should handle --target=preview flag', async () => {
+    const cwd = setupFixture('vercel-pull-next');
+    useUser();
+    useTeams();
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
     });
+    client.setArgv('pull', '--yes', '--target=preview', cwd);
+    const exitCode = await pull(client);
+    expect(exitCode).toEqual(0);
+
+    const rawPreviewEnv = await fs.readFile(
+      path.join(cwd, '.vercel', '.env.preview.local')
+    );
+    const previewFileHasPreviewEnv = rawPreviewEnv
+      .toString()
+      .includes('REDIS_CONNECTION_STRING');
+    expect(previewFileHasPreviewEnv).toBeTruthy();
+  });
+
+  it('should handle --target=production flag', async () => {
+    const cwd = setupFixture('vercel-pull-next');
+    useUser();
+    useTeams();
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '--target=production', cwd);
+    const exitCode = await pull(client);
+    expect(exitCode).toEqual(0);
+
+    const rawProdEnv = await fs.readFile(
+      path.join(cwd, '.vercel', '.env.production.local')
+    );
+    const previewFileHasPreviewEnv1 = rawProdEnv
+      .toString()
+      .includes('REDIS_CONNECTION_STRING');
+    expect(previewFileHasPreviewEnv1).toBeTruthy();
+    const previewFileHasPreviewEnv2 = rawProdEnv
+      .toString()
+      .includes('SQL_CONNECTION_STRING');
+    expect(previewFileHasPreviewEnv2).toBeTruthy();
   });
 });
