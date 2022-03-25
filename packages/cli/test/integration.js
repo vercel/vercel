@@ -413,10 +413,6 @@ test('default command should deploy directory', async t => {
 
   t.is(exitCode, 0, formatOutput({ stdout, stderr }));
   t.regex(stdout, /https:\/\/output-.+\.vercel\.app/);
-  t.regex(
-    stderr || '',
-    /calling `vc` without a command or the `--cwd` option is deprecated, use `vc --cwd directory` or `vc deploy` instead/
-  );
 });
 
 test('default command should warn when deploying with conflicting subdirectory', async t => {
@@ -467,10 +463,6 @@ test('default command should work with --cwd option', async t => {
   );
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-  t.notRegex(
-    stderr || '',
-    /calling `vc` without a command or the `--cwd` option is deprecated, use `vc --cwd directory` or `vc deploy` instead/
-  );
 
   const url = stdout;
   const deploymentResult = await fetch(`${url}/README.md`);

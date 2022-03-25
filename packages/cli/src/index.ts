@@ -398,20 +398,10 @@ const main = async () => {
       subcommand = targetOrSubcommand;
     } else {
       debug('user supplied a possible target for deployment');
-
-      if (targetOrSubcommand !== '--cwd') {
-        output.warn(
-          'calling `vc` without a command or the `--cwd` option is deprecated, use `vc --cwd directory` or `vc deploy` instead'
-        );
-      }
-
       subcommand = 'deploy';
     }
   } else {
     debug('user supplied no target, defaulting to deploy');
-    output.warn(
-      'calling `vc` without a command or the `--cwd` option is deprecated, use `vc --cwd directory` or `vc deploy` instead'
-    );
     subcommand = 'deploy';
   }
 
