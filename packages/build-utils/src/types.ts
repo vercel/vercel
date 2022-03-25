@@ -320,47 +320,30 @@ export interface BuilderFunctions {
 }
 
 export interface ProjectSettings {
-  framework?: string | null;
-  devCommand?: string | null;
-  installCommand?: string | null;
-  buildCommand?: string | null;
-  outputDirectory?: string | null;
-  rootDirectory?: string | null;
-  createdAt?: number;
   autoExposeSystemEnvs?: boolean;
-  sourceFilesOutsideRootDirectory?: boolean;
+  buildCommand?: string | null;
+  commandForIgnoringBuildStep?: string | null;
+  createdAt?: number;
+  devCommand?: string | null;
   directoryListing?: boolean;
+  framework?: string | null;
   gitForkProtection?: boolean;
-  projectName?: string | null;
-  nodeVersion?: 12 | 14;
-  git?: {
-    connectedRepository: string;
-    productionBranch?: string;
-    deployHooks?: string;
-    ignoredBuildStep?: string;
-  };
-  environmentVariables?: EnvironmentVariable[];
+  installCommand?: string | null;
+  name?: string;
+  nodeVersion?: '10.x' | '12.x' | '14.x';
+  outputDirectory?: string | null;
   passwordProtection?: {
-    visitorPassword: string;
-    protectProductionDeployment?: boolean;
+    deploymentType: 'all' | 'preview';
+    password?: string | null;
   };
-  ssoProtection?:
-    | boolean
-    | {
-        protectProductionDeployment: boolean;
-      };
+  publicSource?: boolean | null;
+  rootDirectory?: string | null;
+  serverlessFunctionRegion?: string | null;
+  sourceFilesOutsideRootDirectory?: boolean;
+  ssoProtection?: {
+    deploymentType: 'all' | 'preview';
+  };
 }
-
-export interface EnvironmentVariable {
-  name: string;
-  value: string;
-  environments: EnvironmentVariableEnvironments;
-}
-
-export type EnvironmentVariableEnvironments =
-  | 'production'
-  | 'preview'
-  | 'development';
 
 export interface BuilderV2 {
   version: 2;
