@@ -43,7 +43,7 @@ function isPrerender(v: any): v is Prerender {
   return v?.type === 'Prerender';
 }
 
-interface PathOverride {
+export interface PathOverride {
   contentType?: string;
   path?: string;
 }
@@ -54,7 +54,7 @@ interface PathOverride {
  */
 async function writeBuildResultV2(buildResult: BuildResultV2) {
   const lambdas = new Map<Lambda, string>();
-  const overrides: { [path: string]: PathOverride } = {};
+  const overrides: Record<string, PathOverride> = {};
   for (const [path, output] of Object.entries(buildResult.output)) {
     if (isLambda(output)) {
       await writeLambda(output, path, lambdas);
@@ -99,14 +99,7 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
       throw new Error(`Unsupported output type: "${output.type}" for ${path}`);
     }
   }
-  const configPath = join(OUTPUT_DIR, 'config.json');
-  const config = {
-    wildcard: buildResult.wildcard,
-    images: buildResult.images,
-    routes: buildResult.routes,
-    overrides: Object.keys(overrides).length > 0 ? overrides : undefined,
-  };
-  await fs.writeJSON(configPath, config, { spaces: 2 });
+  return overrides;
 }
 
 /**
@@ -138,12 +131,12 @@ async function writeBuildResultV3(buildResult: BuildResultV3, build: Builder) {
  *
  * @param file The `File` instance to write
  * @param path The URL path where the `File` can be accessed from
- * @param overrides Map of override configuration when a File is renamed or has other metadata
+ * @param overrides Record of override configuration when a File is renamed or has other metadata
  */
 async function writeStaticFile(
   file: File,
   path: string,
-  overrides: { [path: string]: PathOverride }
+  overrides: Record<string, PathOverride>
 ) {
   let override: PathOverride | null = null;
 

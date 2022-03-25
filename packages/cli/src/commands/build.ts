@@ -10,12 +10,15 @@ import {
   Config,
   Meta,
   Builder,
+  BuildResultV2,
+  BuildResultV3,
 } from '@vercel/build-utils';
 import minimatch from 'minimatch';
 import {
   appendRoutesToPhase,
   getTransformedRoutes,
   mergeRoutes,
+  MergeRoutesProps,
   Route,
 } from '@vercel/routing-utils';
 import { VercelConfig } from '@vercel/client';
@@ -34,8 +37,14 @@ import { VERCEL_DIR } from '../util/projects/link';
 import confirm from '../util/input/confirm';
 import { emoji, prependEmoji } from '../util/emoji';
 import stamp from '../util/output/stamp';
-import { OUTPUT_DIR, writeBuildResult } from '../util/build/write-build-result';
+import {
+  OUTPUT_DIR,
+  PathOverride,
+  writeBuildResult,
+} from '../util/build/write-build-result';
 import { importBuilders } from '../util/build/import-builders';
+
+type BuildResult = BuildResultV2 | BuildResultV3;
 
 const help = () => {
   return console.log(`
@@ -123,7 +132,8 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Build `target` influences which environment variables will be used
-  //const target = argv['--prod'] ? 'production' : 'preview';
+  const target = argv['--prod'] ? 'production' : 'preview';
+
   // TODO: load env vars
 
   // Load `package.json` and `vercel.json` files
@@ -265,7 +275,8 @@ export default async function main(client: Client): Promise<number> {
 
   // Execute Builders for detected entrypoints
   // TODO: parallelize builds
-  let buildPatches: any[] = [];
+  const buildResults: Map<Builder, BuildResult> = new Map();
+  const overrides: PathOverride[] = [];
   for (const build of builds) {
     if (typeof build.src !== 'string') continue;
 
@@ -296,19 +307,16 @@ export default async function main(client: Client): Promise<number> {
     );
     const buildResult = await builder.build(buildOptions);
 
-    if ('routes' in buildResult && Array.isArray(buildResult.routes)) {
-      buildPatches.push({
-        src: build.src,
-        use: build.use,
-        routes: buildResult.routes,
-      });
-    }
+    // Store the build result to generate the final `config.json` after
+    // all builds have completed
+    buildResults.set(build, buildResult);
 
-    // TODO remove
-    delete (buildResult as any).watch;
-
+    // Start flushing the file outputs to the filesystem asynchronously
     ops.push(
-      writeBuildResult(buildResult, build, builder, builderPkg!).catch(
+      writeBuildResult(buildResult, build, builder, builderPkg!).then(
+        override => {
+          if (override) overrides.push(override);
+        },
         err => err
       )
     );
@@ -326,10 +334,20 @@ export default async function main(client: Client): Promise<number> {
   }
   if (hadError) return 1;
 
-  //console.log({ zeroConfigRoutes });
-  const finalRoutes = mergeRoutes({
-    //userRoutes: routesResult.routes,
-    userRoutes: undefined,
+  //console.log(buildResults);
+  const builderRoutes: MergeRoutesProps['builds'] = Array.from(
+    buildResults.entries()
+  )
+    .filter(b => 'routes' in b[1] && Array.isArray(b[1].routes))
+    .map(b => {
+      return {
+        use: b[0].use,
+        entrypoint: b[0].src!,
+        routes: (b[1] as BuildResultV2).routes,
+      };
+    });
+  const mergedRoutes = mergeRoutes({
+    userRoutes: routesResult.routes,
     builds: zeroConfigRoutes.length
       ? [
           {
@@ -337,20 +355,27 @@ export default async function main(client: Client): Promise<number> {
             entrypoint: '/',
             routes: zeroConfigRoutes,
           },
-          ...buildPatches,
+          ...builderRoutes,
         ]
-      : buildPatches,
+      : builderRoutes,
   });
 
-  let config: any = {};
-  try {
-    config = await fs.readJSON(join(OUTPUT_DIR, 'config.json'));
-  } catch (e) {
-    if (e.code !== 'ENOENT') {
-      throw e;
-    }
-  }
-  config.routes = finalRoutes;
+  const mergedImages = mergeImages(buildResults.values());
+  const mergedWildcard = mergeWildcard(buildResults.values());
+  const mergedOverrides =
+    overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
+
+  // Write out the final `config.json` file based on the
+  // user configuration and Builder build results
+  // TODO: properly type
+  const config = {
+    version: 3,
+    target,
+    routing: { routes: mergedRoutes },
+    images: mergedImages,
+    wildcard: mergedWildcard,
+    overrides: mergedOverrides,
+  };
   await fs.writeJSON(join(OUTPUT_DIR, 'config.json'), config, { spaces: 2 });
 
   output.print(
@@ -404,4 +429,28 @@ function expandBuild(files: string[], build: Builder): Builder[] {
       src: m,
     };
   });
+}
+
+// TODO: property type return
+function mergeImages(buildResults: Iterable<BuildResult>): any {
+  let images = undefined;
+  for (const result of buildResults) {
+    if ('images' in result && result.images) {
+      if (!images) images = {};
+      Object.assign(images, result.images);
+    }
+  }
+  return images;
+}
+
+// TODO: property type return
+function mergeWildcard(buildResults: Iterable<BuildResult>): any {
+  let wildcard = undefined;
+  for (const result of buildResults) {
+    if ('wildcard' in result && result.wildcard) {
+      if (!wildcard) wildcard = {};
+      Object.assign(wildcard, result.wildcard);
+    }
+  }
+  return wildcard;
 }
