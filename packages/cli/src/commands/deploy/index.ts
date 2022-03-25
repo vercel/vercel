@@ -169,7 +169,7 @@ export default async (client: Client) => {
       ];
       for (const key of Object.keys(localConfig.projectSettings)) {
         if (!allowedProperties.includes(key)) {
-          output.error(`Disallowed property ${key} found in "projectSettings"`);
+          output.error(`Unknown property ${key} found in "projectSettings"`);
           return 1;
         }
       }
