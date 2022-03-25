@@ -313,7 +313,13 @@ export default async function main(client: Client): Promise<number> {
 
     // Start flushing the file outputs to the filesystem asynchronously
     ops.push(
-      writeBuildResult(buildResult, build, builder, builderPkg!).then(
+      writeBuildResult(
+        buildResult,
+        build,
+        builder,
+        builderPkg,
+        vercelConfig?.cleanUrls
+      ).then(
         override => {
           if (override) overrides.push(override);
         },

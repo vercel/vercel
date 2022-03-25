@@ -22,11 +22,12 @@ export async function writeBuildResult(
   buildResult: BuildResultV2 | BuildResultV3,
   build: Builder,
   builder: BuilderV2 | BuilderV3,
-  builderPkg: PackageJson
+  builderPkg: PackageJson,
+  cleanUrls?: boolean
 ) {
   const { version } = builder;
   if (version === 2) {
-    return writeBuildResultV2(buildResult as BuildResultV2);
+    return writeBuildResultV2(buildResult as BuildResultV2, cleanUrls);
   } else if (version === 3) {
     return writeBuildResultV3(buildResult as BuildResultV3, build);
   }
@@ -52,7 +53,10 @@ export interface PathOverride {
  * Writes the output from the `build()` return value of a v2 Builder to
  * the filesystem.
  */
-async function writeBuildResultV2(buildResult: BuildResultV2) {
+async function writeBuildResultV2(
+  buildResult: BuildResultV2,
+  cleanUrls?: boolean
+) {
   const lambdas = new Map<Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
   for (const [path, output] of Object.entries(buildResult.output)) {
@@ -93,7 +97,7 @@ async function writeBuildResultV2(buildResult: BuildResultV2) {
       };
       await fs.writeJSON(prerenderConfigPath, prerenderConfig, { spaces: 2 });
     } else if (output.type === 'FileFsRef') {
-      await writeStaticFile(output, path, overrides);
+      await writeStaticFile(output, path, overrides, cleanUrls);
     } else {
       // TODO: handle `FileBlob` / `FileRef` / `EdgeFunction`
       throw new Error(`Unsupported output type: "${output.type}" for ${path}`);
@@ -136,7 +140,8 @@ async function writeBuildResultV3(buildResult: BuildResultV3, build: Builder) {
 async function writeStaticFile(
   file: File,
   path: string,
-  overrides: Record<string, PathOverride>
+  overrides: Record<string, PathOverride>,
+  cleanUrls = false
 ) {
   let override: PathOverride | null = null;
 
@@ -146,8 +151,15 @@ async function writeStaticFile(
     const ext = extname(file.fsPath);
     if (extname(path) !== ext) {
       fsPath += ext;
-      override = { path };
+      if (!override) override = {};
+      override.path = path;
     }
+  }
+
+  if (cleanUrls && path.endsWith('.html')) {
+    if (!override) override = {};
+    override.path = path.slice(0, -5);
+    override.contentType = 'text/html; charset=utf-8';
   }
 
   if (file.contentType) {
