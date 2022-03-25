@@ -203,6 +203,8 @@ export default async function main(client: Client): Promise<number> {
 
     if (detectedBuilders.builders) {
       builds = detectedBuilders.builders;
+    } else {
+      builds = [{ src: '**', use: '@vercel/static' }];
     }
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
