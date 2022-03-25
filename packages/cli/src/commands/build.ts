@@ -362,7 +362,7 @@ export default async function main(client: Client): Promise<number> {
 
   const mergedImages = mergeImages(buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
-  const mergedOverrides =
+  const mergedOverrides: PathOverride | undefined =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
   // Write out the final `config.json` file based on the
@@ -431,25 +431,26 @@ function expandBuild(files: string[], build: Builder): Builder[] {
   });
 }
 
-// TODO: property type return
-function mergeImages(buildResults: Iterable<BuildResult>): any {
-  let images = undefined;
+function mergeImages(
+  buildResults: Iterable<BuildResult>
+): BuildResultV2['images'] {
+  let images: BuildResultV2['images'] = undefined;
   for (const result of buildResults) {
     if ('images' in result && result.images) {
-      if (!images) images = {};
-      Object.assign(images, result.images);
+      images = Object.assign({} || images, result.images);
     }
   }
   return images;
 }
 
-// TODO: property type return
-function mergeWildcard(buildResults: Iterable<BuildResult>): any {
-  let wildcard = undefined;
+function mergeWildcard(
+  buildResults: Iterable<BuildResult>
+): BuildResultV2['wildcard'] {
+  let wildcard: BuildResultV2['wildcard'] = undefined;
   for (const result of buildResults) {
     if ('wildcard' in result && result.wildcard) {
-      if (!wildcard) wildcard = {};
-      Object.assign(wildcard, result.wildcard);
+      if (!wildcard) wildcard = [];
+      wildcard.push(...result.wildcard);
     }
   }
   return wildcard;
