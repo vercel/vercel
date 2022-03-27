@@ -326,6 +326,7 @@ export interface ProjectSettings {
   buildCommand?: string | null;
   outputDirectory?: string | null;
   rootDirectory?: string | null;
+  nodeVersion?: string;
   createdAt?: number;
   autoExposeSystemEnvs?: boolean;
   sourceFilesOutsideRootDirectory?: boolean;
