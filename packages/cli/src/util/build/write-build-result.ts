@@ -1,10 +1,12 @@
 import fs from 'fs-extra';
+import mimeTypes from 'mime-types';
 import { basename, dirname, extname, join, relative } from 'path';
 import {
   Builder,
   BuildResultV2,
   BuildResultV3,
   File,
+  FileFsRef,
   BuilderV2,
   BuilderV3,
   Lambda,
@@ -44,6 +46,11 @@ function isPrerender(v: any): v is Prerender {
   return v?.type === 'Prerender';
 }
 
+function isFile(v: any): v is File {
+  const type = v?.type;
+  return type === 'FileRef' || type === 'FileFsRef' || type === 'FileBlob';
+}
+
 export interface PathOverride {
   contentType?: string;
   path?: string;
@@ -66,23 +73,20 @@ async function writeBuildResultV2(
       await writeLambda(output.lambda, path, lambdas);
 
       // Write the fallback file alongside the Lambda directory
-      let fallback: any = null; // TODO: properly type
-      if (output.fallback) {
-        let ext = '';
-        if (output.fallback.type === 'FileFsRef') {
-          ext = extname(output.fallback.fsPath);
-        }
+      let fallback = output.fallback;
+      if (fallback) {
+        const ext = getFileExtension(fallback);
         const fallbackName = `${path}.prerender-fallback${ext}`;
         const fallbackPath = join(OUTPUT_DIR, 'functions', fallbackName);
-        const stream = output.fallback.toStream();
+        const stream = fallback.toStream();
         await pipe(
           stream,
-          fs.createWriteStream(fallbackPath, { mode: output.fallback.mode })
+          fs.createWriteStream(fallbackPath, { mode: fallback.mode })
         );
-        fallback = {
+        fallback = new FileFsRef({
           ...output.fallback,
           fsPath: basename(fallbackName),
-        };
+        });
       }
 
       const prerenderConfigPath = join(
@@ -96,10 +100,10 @@ async function writeBuildResultV2(
         fallback,
       };
       await fs.writeJSON(prerenderConfigPath, prerenderConfig, { spaces: 2 });
-    } else if (output.type === 'FileFsRef') {
+    } else if (isFile(output)) {
       await writeStaticFile(output, path, overrides, cleanUrls);
     } else {
-      // TODO: handle `FileBlob` / `FileRef` / `EdgeFunction`
+      // TODO: handle `EdgeFunction`
       throw new Error(`Unsupported output type: "${output.type}" for ${path}`);
     }
   }
@@ -143,25 +147,31 @@ async function writeStaticFile(
   overrides: Record<string, PathOverride>,
   cleanUrls = false
 ) {
+  let fsPath = path;
   let override: PathOverride | null = null;
 
-  let fsPath = path;
-  if (file.type === 'FileFsRef') {
-    // TODO: get ext from `mimeTypes.extension()` if `ext` is empty
-    const ext = extname(file.fsPath);
-    if (extname(path) !== ext) {
-      fsPath += ext;
-      if (!override) override = {};
-      override.path = path;
-    }
+  // If the output path doesn't match the determined file extension of
+  // the File then add the extension. This is to help avoid conflicts
+  // where an output path matches a directory name of another output path
+  // (i.e. `blog` -> `blog.html` and `blog/hello` -> `blog/hello.html`)
+  const ext = getFileExtension(file);
+  if (ext && extname(path) !== ext) {
+    fsPath += ext;
+    if (!override) override = {};
+    override.path = path;
   }
 
+  // If `cleanUrls` is true then remove the `.html` file extension
+  // for HTML files. An `override` entry is created so that the proper
+  // "content-type" is still returned in the final output asset.
   if (cleanUrls && path.endsWith('.html')) {
     if (!override) override = {};
     override.path = path.slice(0, -5);
     override.contentType = 'text/html; charset=utf-8';
   }
 
+  // Ensure an explicit "content-type" on the `File` is returned in
+  // the final output asset.
   if (file.contentType) {
     if (!override) override = {};
     override.contentType = file.contentType;
@@ -208,6 +218,7 @@ async function writeLambda(
     await fs.symlink(target, dest);
     return;
   }
+  lambdas?.set(lambda, path);
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
@@ -232,6 +243,24 @@ async function writeLambda(
       spaces: 2,
     })
   );
-  lambdas?.set(lambda, path);
   await Promise.all(ops);
+}
+
+/**
+ * Attempts to return the file extension (i.e. `.html`) from the given
+ * `File` instance, based on its actual filesystem path and/or the
+ * "content-type" of the File.
+ */
+function getFileExtension(file: File): string {
+  let ext = '';
+  if (file.type === 'FileFsRef') {
+    ext = extname(file.fsPath);
+  }
+  if (!ext && file.contentType) {
+    const e = mimeTypes.extension(file.contentType);
+    if (e) {
+      ext = `.${e}`;
+    }
+  }
+  return ext;
 }
