@@ -37,7 +37,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
-    --env [filename]               The file to write Development Environment Variables to [.env]
+    --env-file [filename]               The file to write Development Environment Variables to [.env]
     --target ${getEnvTargetPlaceholder()}
     -y, --yes                      Skip the confirmation prompt
 
@@ -55,7 +55,8 @@ const help = () => {
 function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {
     '--yes': Boolean,
-    '--env': String,
+    '--env': String, // deprecated
+    '--env-file': String,
     '--target': String,
     '--debug': Boolean,
     '-d': '--debug',
@@ -163,8 +164,12 @@ export default async function main(client: Client) {
 
   const cwd = argv._[1] || process.cwd();
   const yes = Boolean(argv['--yes']);
-  const envFileName = argv['--env'] ?? '.env';
+  const envFileName = argv['--env-file'] ?? argv['--env'] ?? '.env';
   const target = parseTarget(argv['--target'] || undefined);
+
+  if (argv['--env']) {
+    client.output.warn(`--env deprecated: please use --env-file instead`);
+  }
 
   const link = await ensureLink(client, cwd, yes);
   if (typeof link === 'number') {

@@ -36,7 +36,7 @@ describe('pull', () => {
     expect(devFileHasDevEnv).toBeTruthy();
   });
 
-  it('should handle custom --env flag', async () => {
+  it('should handle custom --env-file flag', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
     useTeams();
@@ -46,7 +46,7 @@ describe('pull', () => {
       name: 'vercel-pull-next',
     });
     const expectedEnvFilename = '.env.vercel';
-    client.setArgv('pull', '--yes', `--env=${expectedEnvFilename}`, cwd);
+    client.setArgv('pull', '--yes', `--env-file=${expectedEnvFilename}`, cwd);
 
     const exitCode = await pull(client);
     const actualEnv = await fs.pathExists(path.join(cwd, expectedEnvFilename));
@@ -61,6 +61,25 @@ describe('pull', () => {
       path.join(cwd, '.vercel', '.env.development.local')
     );
     expect(nestedEnvFileExists).toBeTruthy();
+  });
+
+  it('should warn when using deprecated --env flag', async () => {
+    const cwd = setupFixture('vercel-pull-next');
+    useUser();
+    useTeams();
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    const expectedEnvFilename = '.env.vercel';
+    client.setArgv('pull', '--yes', `--env=${expectedEnvFilename}`, cwd);
+
+    const exitCode = await pull(client);
+    expect(exitCode).toBe(0);
+    expect(client.outputBuffer).toMatch(
+      /WARN! --env deprecated: please use --env-file instead/
+    );
   });
 
   it('should handle --target=preview flag', async () => {
