@@ -50,7 +50,6 @@
     "minimatch": "5.0.1",
     "ms": "2.1.2",
     "node-fetch": "2.6.1",
-    "recursive-readdir": "2.2.2",
     "querystring": "^0.2.0",
     "sleep-promise": "8.0.1"
   }
