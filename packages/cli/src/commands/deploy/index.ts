@@ -175,7 +175,7 @@ export default async (client: Client) => {
       `${prependEmoji(
         `The ${param(
           '--name'
-        )} option is deprecated (https://vercel.link/name-flag).`,
+        )} option is deprecated (https://vercel.link/name-flag)`,
         emoji('warning')
       )}\n`
     );
@@ -321,7 +321,7 @@ export default async (client: Client) => {
       `${prependEmoji(
         `The ${code('name')} property in ${highlight(
           localConfig[fileNameSymbol]!
-        )} is deprecated (https://vercel.link/name-prop).`,
+        )} is deprecated (https://vercel.link/name-prop)`,
         emoji('warning')
       )}\n`
     );

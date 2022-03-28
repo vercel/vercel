@@ -3604,3 +3604,52 @@ test('vercel.json projectSettings should be applied to deployment', async t => {
   const text = await page.text();
   t.is(text, `Hello, World\n`);
 });
+
+test('invalid vercel.json projectSettings should result in a deployment error', async t => {
+  const directory = path.join(
+    __dirname,
+    'fixtures/unit/vercel-json-overrides-error'
+  );
+
+  async function testDeployment() {
+    const deployment = await execa(binaryPath, [
+      directory,
+      ...defaultArgs,
+      '--public',
+      '--confirm',
+    ]);
+
+    t.is(
+      deployment.exitCode,
+      1,
+      formatOutput({
+        stderr: deployment.stderr,
+        stdout: deployment.stdout,
+      })
+    );
+  }
+
+  const vercelJsonPath = path.join(directory, 'vercel.json');
+  const vercelJsonOriginal = await readFile(vercelJsonPath, 'utf8');
+  const vercelConfig = JSON.parse(vercelJsonOriginal);
+
+  // Pass a command that does not exist
+  vercelConfig['projectSettings'] = {
+    command_does_not_exist: 'echo "foo bar"',
+  };
+
+  await writeFile(vercelJsonPath, JSON.stringify(vercelConfig));
+
+  await testDeployment();
+
+  // Pass a disallowed command
+  vercelConfig['projectSettings'] = {
+    autoExposeSystemEnvs: true,
+  };
+
+  await writeFile(vercelJsonPath, JSON.stringify(vercelConfig));
+
+  await testDeployment();
+
+  await writeFile(vercelJsonPath, vercelJsonOriginal);
+});
