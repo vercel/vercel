@@ -136,6 +136,11 @@ const main = async () => {
     return 1;
   }
 
+  const cwd = argv['--cwd'];
+  if (cwd) {
+    process.chdir(cwd);
+  }
+
   // Print update information, if available
   if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
     const { latest } = notifier.update;
