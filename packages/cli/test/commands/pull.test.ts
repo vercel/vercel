@@ -82,7 +82,7 @@ describe('pull', () => {
     );
   });
 
-  it('should handle --target=preview flag', async () => {
+  it('should handle --environment=preview flag', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
     useTeams();
@@ -91,7 +91,7 @@ describe('pull', () => {
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
     });
-    client.setArgv('pull', '--yes', '--target=preview', cwd);
+    client.setArgv('pull', '--yes', '--environment=preview', cwd);
     const exitCode = await pull(client);
     expect(exitCode).toEqual(0);
 
@@ -104,7 +104,7 @@ describe('pull', () => {
     expect(previewFileHasPreviewEnv).toBeTruthy();
   });
 
-  it('should handle --target=production flag', async () => {
+  it('should handle --environment=production flag', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
     useTeams();
@@ -113,7 +113,7 @@ describe('pull', () => {
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
     });
-    client.setArgv('pull', '--yes', '--target=production', cwd);
+    client.setArgv('pull', '--yes', '--environment=production', cwd);
     const exitCode = await pull(client);
     expect(exitCode).toEqual(0);
 

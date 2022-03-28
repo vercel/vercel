@@ -38,7 +38,7 @@ const help = () => {
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --env-file [filename]               The file to write Development Environment Variables to [.env]
-    --target ${getEnvTargetPlaceholder()}
+    --environment ${getEnvTargetPlaceholder()}
     -y, --yes                      Skip the confirmation prompt
 
   ${chalk.dim('Examples:')}
@@ -57,7 +57,7 @@ function processArgs(client: Client) {
     '--yes': Boolean,
     '--env': String, // deprecated
     '--env-file': String,
-    '--target': String,
+    '--environment': String,
     '--debug': Boolean,
     '-d': '--debug',
     '-y': '--yes',
@@ -112,48 +112,48 @@ async function ensureLink(
 
 async function pullAllEnvFiles(
   envFileName: string,
-  target: ProjectEnvTarget,
+  environment: ProjectEnvTarget,
   client: Client,
   project: Project,
   argv: ReturnType<typeof processArgs>,
   cwd: string
 ): Promise<number> {
   // save env file in project root
-  const pullDeprecatedTargetPromise = envPull(
+  const pullDeprecatedEnvironmentPromise = envPull(
     client,
     project,
-    target,
+    environment,
     argv,
     [join(cwd, envFileName)], // deprecated location
     client.output
   );
 
   // save env file in `.vercel`
-  const targetEnvFile = `.env.${target}.local`;
-  const pullTargetPromise = envPull(
+  const environmentFile = `.env.${environment}.local`;
+  const pullEnvironmentPromise = envPull(
     client,
     project,
-    target,
+    environment,
     argv,
-    [join(cwd, '.vercel', targetEnvFile)],
+    [join(cwd, '.vercel', environmentFile)],
     client.output
   );
 
   const [pullDeprecatedDevResultCode, pullDevResultCode] = await Promise.all([
-    pullDeprecatedTargetPromise,
-    pullTargetPromise,
+    pullDeprecatedEnvironmentPromise,
+    pullEnvironmentPromise,
   ]);
 
   return pullDeprecatedDevResultCode || pullDevResultCode || 0;
 }
 
-function parseTarget(target = 'development'): ProjectEnvTarget {
-  if (!isValidEnvTarget(target)) {
+function parseEnvironment(environment = 'development'): ProjectEnvTarget {
+  if (!isValidEnvTarget(environment)) {
     throw new Error(
-      `target "${target}" not supported; must be one of ${getEnvTargetPlaceholder()}`
+      `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`
     );
   }
-  return target;
+  return environment;
 }
 
 export default async function main(client: Client) {
@@ -165,7 +165,7 @@ export default async function main(client: Client) {
   const cwd = argv._[1] || process.cwd();
   const yes = Boolean(argv['--yes']);
   const envFileName = argv['--env-file'] ?? argv['--env'] ?? '.env';
-  const target = parseTarget(argv['--target'] || undefined);
+  const environment = parseEnvironment(argv['--environment'] || undefined);
 
   if (argv['--env']) {
     client.output.warn(`--env deprecated: please use --env-file instead`);
@@ -182,7 +182,7 @@ export default async function main(client: Client) {
 
   const pullResultCode = await pullAllEnvFiles(
     envFileName,
-    target,
+    environment,
     client,
     project,
     argv,
