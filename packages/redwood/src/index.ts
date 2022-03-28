@@ -285,7 +285,7 @@ export const build: BuildV2 = async ({
   // Older versions of redwood did not create 200.html automatically
   // From v0.50.0+ 200.html is always generated as part of web build
   // Note that in builder post-processing, we remove the .html extension
-  const fallbackHtmlPage = existsSync(join(webDistPath, '200'))
+  const fallbackHtmlPage = existsSync(join(webDistPath, '200.html'))
     ? '/200'
     : '/index';
 
