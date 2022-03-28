@@ -180,9 +180,7 @@ export const build: BuildV2 = async ({
         fileNameWithoutExtension
       );
 
-      renameSync(fileFsRef.fsPath, pathWithoutHtmlExtension);
       fileFsRef.contentType = 'text/html; charset=utf-8';
-      fileFsRef.fsPath = pathWithoutHtmlExtension;
 
       // @NOTE: Filename is relative to webDistPath
       staticOutputs[relative(webDistPath, pathWithoutHtmlExtension)] =
