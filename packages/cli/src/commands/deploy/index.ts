@@ -82,7 +82,6 @@ export default async (client: Client) => {
       '--prebuilt': Boolean,
       '--prod': Boolean,
       '--confirm': Boolean,
-      '--cwd': String,
       '-f': '--force',
       '-p': '--public',
       '-e': '--env',
