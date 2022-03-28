@@ -45,7 +45,7 @@ function tryReadHeadSync(path: string, length: number) {
 export default async function pull(
   client: Client,
   project: Project,
-  target: ProjectEnvTarget,
+  environment: ProjectEnvTarget,
   opts: Partial<Options>,
   args: string[],
   output: Output
@@ -89,7 +89,7 @@ export default async function pull(
   output.spinner('Downloading');
 
   const [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-    getDecryptedEnvRecords(output, client, project.id, target),
+    getDecryptedEnvRecords(output, client, project.id, environment),
     project.autoExposeSystemEnvs
       ? getSystemEnvValues(output, client, project.id)
       : { systemEnvValues: [] },
