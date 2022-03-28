@@ -6,7 +6,7 @@ import {
   sep,
   basename as pathBasename,
 } from 'path';
-import { readFileSync, lstatSync, existsSync, renameSync } from 'fs';
+import { readFileSync, lstatSync, existsSync } from 'fs';
 import { intersects, validRange } from 'semver';
 import {
   Lambda,
@@ -183,6 +183,7 @@ export const build: BuildV2 = async ({
       fileFsRef.contentType = 'text/html; charset=utf-8';
 
       // @NOTE: Filename is relative to webDistPath
+      // e.g. {'./200': fsRef}
       staticOutputs[relative(webDistPath, pathWithoutHtmlExtension)] =
         fileFsRef;
     }
