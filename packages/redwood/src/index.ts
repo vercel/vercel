@@ -293,7 +293,6 @@ export const build: BuildV2 = async ({
     nowConfig: {
       // this makes sure we send back 200.html for unprerendered pages
       rewrites: [{ source: '/(.*)', destination: fallbackHtmlPage }],
-      // @NOTE leave clean urls so vercel redirects are generated
       cleanUrls: true,
       trailingSlash: false,
     },
