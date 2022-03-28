@@ -86,7 +86,7 @@ export async function staticFiles(
   // but we don't ignore if the user is explicitly listing files
   // under the now namespace, or using files in combination with gitignore
   const accepts = (file: string) => {
-    const relativePath = file.substr(prefixLength);
+    const relativePath = file.slice(prefixLength);
 
     if (relativePath === '') {
       return true;

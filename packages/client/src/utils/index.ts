@@ -1,20 +1,21 @@
 import { DeploymentFile } from './hashes';
 import { FetchOptions } from '@zeit/fetch';
 import { nodeFetch, zeitFetch } from './fetch';
-import { join, sep, relative, posix } from 'path';
+import { join, sep, relative } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
-type Ignore = ReturnType<typeof ignore>;
 import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
-import { VercelClientOptions, DeploymentOptions, NowConfig } from '../types';
+import { VercelClientOptions, DeploymentOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 import readdir from './readdir-recursive';
 
+type Ignore = ReturnType<typeof ignore>;
+
 const semaphore = new Sema(10);
 
-export const API_FILES = '/v2/now/files';
+export const API_FILES = '/v2/files';
 
 const EVENTS_ARRAY = [
   // File events
@@ -49,13 +50,15 @@ export function getApiDeploymentsUrl(
   metadata?: Pick<DeploymentOptions, 'builds' | 'functions'>
 ) {
   if (metadata && metadata.builds && !metadata.functions) {
-    return '/v10/now/deployments';
+    return '/v10/deployments';
   }
 
-  return '/v13/now/deployments';
+  return '/v13/deployments';
 }
 
-export async function parseVercelConfig(filePath?: string): Promise<NowConfig> {
+export async function parseVercelConfig(
+  filePath?: string
+): Promise<VercelConfig> {
   if (!filePath) {
     return {};
   }
@@ -85,13 +88,12 @@ export async function buildFileTree(
   {
     isDirectory,
     prebuilt,
-    rootDirectory,
-  }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt' | 'rootDirectory'>,
+  }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt'>,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
   const ignoreList: string[] = [];
   let fileList: string[];
-  let { ig, ignores } = await getVercelIgnore(path, prebuilt, rootDirectory);
+  let { ig, ignores } = await getVercelIgnore(path, prebuilt);
 
   debug(`Found ${ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
@@ -123,14 +125,13 @@ export async function buildFileTree(
 
 export async function getVercelIgnore(
   cwd: string | string[],
-  prebuilt?: boolean,
-  rootDirectory?: string
+  prebuilt?: boolean
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ig = ignore();
   let ignores: string[];
 
   if (prebuilt) {
-    const outputDir = posix.join(rootDirectory || '', '.vercel/output');
+    const outputDir = '.vercel/output';
     ignores = ['*'];
     const parts = outputDir.split('/');
     parts.forEach((_, i) => {

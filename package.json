@@ -103,6 +103,14 @@
       "es6": true
     },
     "rules": {
+      "no-restricted-syntax": [
+        "warn",
+        "WithStatement",
+        {
+          "message": "substr() is deprecated, use slice() or substring() instead",
+          "selector": "MemberExpression > Identifier[name='substr']"
+        }
+      ],
       "require-atomic-updates": 0,
       "@typescript-eslint/ban-ts-comment": 0,
       "@typescript-eslint/camelcase": 0,

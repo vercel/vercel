@@ -1772,7 +1772,7 @@ export const frameworks = [
 
       return (config && config.publishDir) || 'public';
     },
-    defaultVersion: '0.58.2',
+    defaultVersion: '0.58.2', // Must match the build image
   },
   {
     name: 'Jekyll',
@@ -1916,7 +1916,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultVersion: '0.15.3',
+    defaultVersion: '0.13.0', // Must match the build image
   },
   {
     name: 'Vite',
