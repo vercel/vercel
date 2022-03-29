@@ -37,8 +37,8 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
-    --env-file [filename]               The file to write Development Environment Variables to [.env]
-    --environment ${getEnvTargetPlaceholder()}
+    --env-file [filename]          The file to write Development Environment Variables to [.env]
+    --environment ${getEnvTargetPlaceholder()} Deployment environment [development]
     -y, --yes                      Skip the confirmation prompt
 
   ${chalk.dim('Examples:')}

@@ -50,17 +50,26 @@ describe('pull', () => {
 
     const exitCode = await pull(client);
     const actualEnv = await fs.pathExists(path.join(cwd, expectedEnvFilename));
-    const raw = await fs.readFile(path.join(cwd, expectedEnvFilename));
+    const rawFileContents = await fs.readFile(
+      path.join(cwd, expectedEnvFilename)
+    );
 
     expect(exitCode).toEqual(0);
     expect(actualEnv).toBeTruthy();
-    expect(raw.includes('# Created by Vercel CLI')).toBeTruthy();
+    expect(rawFileContents.includes('# Created by Vercel CLI')).toBeTruthy();
 
-    // --env flag does not affect nested (under .vercel) files
+    // --env-file flag does not change the file name nested under `.vercel` files
     const nestedEnvFileExists = await fs.pathExists(
       path.join(cwd, '.vercel', '.env.development.local')
     );
     expect(nestedEnvFileExists).toBeTruthy();
+    const rawNestedFileContents = await fs.readFile(
+      path.join(cwd, expectedEnvFilename)
+    );
+    expect(
+      rawNestedFileContents.includes('# Created by Vercel CLI')
+    ).toBeTruthy();
+    console.log(rawNestedFileContents.toString());
   });
 
   it('should warn when using deprecated --env flag', async () => {
