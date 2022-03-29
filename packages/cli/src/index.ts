@@ -391,7 +391,7 @@ const main = async () => {
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
       commands.has(targetOrSubcommand);
 
-    if (targetPathExists && subcommandExists) {
+    if (targetPathExists && subcommandExists && !argv['--cwd']) {
       output.warn(
         `Did you mean to deploy the subdirectory "${targetOrSubcommand}"? ` +
           `Use \`vc --cwd ${targetOrSubcommand}\` instead.`

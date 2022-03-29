@@ -443,6 +443,30 @@ test('default command should warn when deploying with conflicting subdirectory',
   t.regex(stdout || '', listHeader); // ensure `list` command still ran
 });
 
+test('deploy command should not warn when deploying with conflicting subdirectory and using --cwd', async t => {
+  const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
+  const target = 'list'; // command that conflicts with a sub directory
+
+  await vcLink(t, path.join(projectDir, target));
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['list', '--cwd', target, ...defaultArgs],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+  t.notRegex(
+    stderr || '',
+    /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
+  );
+
+  const listHeader = /project +latest deployment +state +age +username/;
+  t.regex(stdout || '', listHeader); // ensure `list` command still ran
+});
+
 test('default command should work with --cwd option', async t => {
   const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
   const target = 'list'; // command that conflicts with a sub directory
