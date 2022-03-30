@@ -360,7 +360,7 @@ export interface BuildResultV2 {
   routes?: any[];
   images?: Images;
   output: {
-    [key: string]: FileBase | Lambda | Prerender | EdgeFunction;
+    [key: string]: File | Lambda | Prerender | EdgeFunction;
   };
   wildcard?: Array<{
     domain: string;
