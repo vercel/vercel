@@ -88,13 +88,13 @@ export const defaultProject = {
 };
 
 export function useProject(project = defaultProject) {
-  client.scenario.get(`/projects/${project.name}`, (_req, res) => {
+  client.scenario.get(`/v8/projects/${project.name}`, (_req, res) => {
     res.json(project);
   });
-  client.scenario.get(`/projects/${project.id}`, (_req, res) => {
+  client.scenario.get(`/v8/projects/${project.id}`, (_req, res) => {
     res.json(project);
   });
-  client.scenario.get(`/v7/projects/${project.id}/env`, (_req, res) => {
+  client.scenario.get(`/v8/projects/${project.id}/env`, (_req, res) => {
     const target = _req.query.target;
     if (typeof target === 'string') {
       const targetEnvs = envs.filter(env => env.target.includes(target));
