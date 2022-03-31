@@ -38,7 +38,7 @@ const help = () => {
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --env-file [filename]          The file to write Development Environment Variables to [.env]
-    --environment ${getEnvTargetPlaceholder()} Deployment environment [development]
+    --environment [environment]    Deployment environment [development]
     -y, --yes                      Skip the confirmation prompt
 
   ${chalk.dim('Examples:')}
@@ -49,8 +49,16 @@ const help = () => {
     ${chalk.cyan(`$ ${getPkgName()} pull ./path-to-project`)}
     ${chalk.cyan(`$ ${getPkgName()} pull --env .env.local`)}
     ${chalk.cyan(`$ ${getPkgName()} pull ./path-to-project --env .env.local`)}
+
+  ${chalk.gray('–')} Pull specific environment's Project Settings from the cloud
+
+    ${chalk.cyan(
+      `$ ${getPkgName()} pull --environment=${getEnvTargetPlaceholder()}`
+    )}
 `);
 };
+
+// ${}
 
 function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {
