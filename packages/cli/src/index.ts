@@ -12,7 +12,7 @@ try {
 }
 
 import { join } from 'path';
-import { existsSync, lstatSync } from 'fs';
+import { existsSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
@@ -134,6 +134,11 @@ const main = async () => {
   if (localConfig instanceof Error) {
     output.prettyError(localConfig);
     return 1;
+  }
+
+  const cwd = argv['--cwd'];
+  if (cwd) {
+    process.chdir(cwd);
   }
 
   // Print update information, if available
@@ -386,34 +391,11 @@ const main = async () => {
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
       commands.has(targetOrSubcommand);
 
-    if (targetPathExists && subcommandExists) {
-      const fileType = lstatSync(targetPath).isDirectory()
-        ? 'subdirectory'
-        : 'file';
-      const plural = targetOrSubcommand + 's';
-      const singular = targetOrSubcommand.endsWith('s')
-        ? targetOrSubcommand.slice(0, -1)
-        : '';
-      let alternative = '';
-      if (commands.has(plural)) {
-        alternative = plural;
-      } else if (commands.has(singular)) {
-        alternative = singular;
-      }
-      console.error(
-        error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
-            `\nIf you wish to deploy the ${fileType} ${param(
-              targetOrSubcommand
-            )}, first run "cd ${targetOrSubcommand}". ` +
-            (alternative
-              ? `\nIf you wish to use the subcommand ${param(
-                  targetOrSubcommand
-                )}, use ${param(alternative)} instead.`
-              : '')
-        )
+    if (targetPathExists && subcommandExists && !argv['--cwd']) {
+      output.warn(
+        `Did you mean to deploy the subdirectory "${targetOrSubcommand}"? ` +
+          `Use \`vc --cwd ${targetOrSubcommand}\` instead.`
       );
-      return 1;
     }
 
     if (subcommandExists) {

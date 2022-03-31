@@ -61,13 +61,13 @@ export interface Framework {
    */
   logo: string;
   /**
-   * A URL to the logo of a screenshot of the framework
-   * @example "https://assets.vercel.com/image/upload/v1647366075/front/import/nuxtjs.png"
+   * A URL to a screenshot of the demo
+   * @example "https://assets.vercel.com/image/upload/v1647366075/front/import/nextjs.png"
    */
   screenshot?: string;
   /**
    * A URL to a deployed example of the framework
-   * @example "https://nextjs.now-examples.vercel.app"
+   * @example "https://nextjs-template.vercel.app"
    */
   demo?: string;
   /**

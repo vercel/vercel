@@ -168,6 +168,17 @@ module.exports = async function prepare(session, binaryPath) {
       'vercel.json': JSON.stringify({ version: 2 }),
       'README.md': 'readme contents',
     },
+    'deploy-default-with-sub-directory': {
+      'vercel.json': JSON.stringify({ version: 2 }),
+      'output/README.md':
+        'readme contents for deploy-default-with-sub-directory',
+    },
+    'deploy-default-with-conflicting-sub-directory': {
+      'list/vercel.json': JSON.stringify({ version: 2 }),
+      'list/list/README.md': 'nested nested readme contents',
+      'list/README.md':
+        'readme contents for deploy-default-with-conflicting-sub-directory',
+    },
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
       [`test-${session}.html`]: '<h1>hello test</h1>',
@@ -191,10 +202,6 @@ module.exports = async function prepare(session, binaryPath) {
       'dir/now.json': JSON.stringify({
         name: 'nested-level',
       }),
-    },
-    'subdirectory-secret': {
-      'index.html': 'Home page',
-      'secret/file.txt': 'my secret',
     },
     'build-secret': {
       'package.json': JSON.stringify({
