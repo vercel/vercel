@@ -9,7 +9,7 @@ export default async function getProjectByNameOrId(
 ) {
   try {
     const project = await client.fetch<Project>(
-      `/projects/${encodeURIComponent(projectNameOrId)}`,
+      `/v8/projects/${encodeURIComponent(projectNameOrId)}`,
       { accountId }
     );
     return project;
