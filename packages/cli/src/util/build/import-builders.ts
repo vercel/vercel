@@ -82,6 +82,9 @@ export async function importBuilders(
         ) {
           // An explicit Builder version was specified but it does
           // not match the version that is currently installed
+          output.debug(
+            `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`
+          );
           buildersToAdd.add(spec);
           continue;
         }
@@ -92,26 +95,28 @@ export async function importBuilders(
         ) {
           // An explicit Builder range was specified but it is not
           // compatible with the version that is currently installed
+          output.debug(
+            `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`
+          );
           buildersToAdd.add(spec);
           continue;
         }
 
         // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
 
-        const path = require.resolve(name, {
-          paths: requirePaths,
-        });
-        const builder = await import(path);
+        const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
+        const builder = require(path);
 
         results.set(spec, {
           builder,
           pkg: builderPkg,
-          path: path,
-          pkgPath: pkgPath,
+          path,
+          pkgPath,
         });
         output.debug(`Imported Builder "${name}" from "${dirname(pkgPath)}"`);
       } catch (err: any) {
         if (err.code === 'MODULE_NOT_FOUND') {
+          output.debug(`Failed to import "${name}": ${err}`);
           buildersToAdd.add(spec);
         } else {
           throw err;
