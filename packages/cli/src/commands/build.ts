@@ -148,13 +148,11 @@ export default async function main(client: Client): Promise<number> {
 
   // Get a list of source files
   const files = (await getFiles(cwd, client)).map(f => relative(cwd, f));
-  //console.log({ pkg, vercelConfig, files });
 
   const routesResult = getTransformedRoutes({ nowConfig: vercelConfig || {} });
   if (routesResult.error) {
     //throw new NowBuildError(routesResult.error);
   }
-  //console.log(routesResult);
 
   if (vercelConfig?.builds && vercelConfig.functions) {
     /*
@@ -198,7 +196,6 @@ export default async function main(client: Client): Promise<number> {
       projectSettings: project.settings,
       featHandleMiss: true,
     });
-    //console.log(detectedBuilders);
 
     if (detectedBuilders.errors && detectedBuilders.errors.length > 0) {
       output.prettyError(detectedBuilders.errors[0]);
@@ -235,7 +232,6 @@ export default async function main(client: Client): Promise<number> {
 
   const builderSpecs = new Set(builds.map(b => b.use));
   const buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
-  //console.log(buildersWithPkgs);
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -258,7 +254,20 @@ export default async function main(client: Client): Promise<number> {
   ops.push(
     fs.writeJSON(
       join(OUTPUT_DIR, 'builds.json'),
-      { builds },
+      {
+        builds: builds.map(build => {
+          const builderWithPkg = buildersWithPkgs.get(build.use);
+          if (!builderWithPkg) {
+            throw new Error(`Failed to load Builder "${build.use}"`);
+          }
+          const { builder, pkg: builderPkg } = builderWithPkg;
+          return {
+            require: builderPkg.name,
+            apiVersion: builder.version,
+            ...build,
+          };
+        }),
+      },
       {
         spaces: 2,
       }
@@ -340,7 +349,6 @@ export default async function main(client: Client): Promise<number> {
   }
   if (hadError) return 1;
 
-  //console.log(buildResults);
   const builderRoutes: MergeRoutesProps['builds'] = Array.from(
     buildResults.entries()
   )
@@ -352,18 +360,16 @@ export default async function main(client: Client): Promise<number> {
         routes: (b[1] as BuildResultV2).routes,
       };
     });
+  if (zeroConfigRoutes.length) {
+    builderRoutes.unshift({
+      use: '@vercel/zero-config-routes',
+      entrypoint: '/',
+      routes: zeroConfigRoutes,
+    });
+  }
   const mergedRoutes = mergeRoutes({
     userRoutes: routesResult.routes,
-    builds: zeroConfigRoutes.length
-      ? [
-          {
-            use: '@vercel/zero-config-routes',
-            entrypoint: '/',
-            routes: zeroConfigRoutes,
-          },
-          ...builderRoutes,
-        ]
-      : builderRoutes,
+    builds: builderRoutes,
   });
 
   const mergedImages = mergeImages(buildResults.values());
