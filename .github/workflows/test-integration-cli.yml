@@ -11,7 +11,7 @@ on:
 jobs:
   test:
     name: CLI
-    timeout-minutes: 30
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
