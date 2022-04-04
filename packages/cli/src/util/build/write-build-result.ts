@@ -13,6 +13,7 @@ import {
   PackageJson,
   Prerender,
   download,
+  EdgeFunction,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { unzip } from './unzip';
@@ -36,6 +37,10 @@ export async function writeBuildResult(
   throw new Error(
     `Unsupported Builder version \`${version}\` from "${builderPkg.name}"`
   );
+}
+
+function isEdgeFunction(v: any): v is EdgeFunction {
+  return v?.type === 'EdgeFunction';
 }
 
 function isLambda(v: any): v is Lambda {
@@ -102,9 +107,12 @@ async function writeBuildResultV2(
       await fs.writeJSON(prerenderConfigPath, prerenderConfig, { spaces: 2 });
     } else if (isFile(output)) {
       await writeStaticFile(output, path, overrides, cleanUrls);
+    } else if (isEdgeFunction(output)) {
+      await writeEdgeFunction(output, path);
     } else {
-      // TODO: handle `EdgeFunction`
-      throw new Error(`Unsupported output type: "${output.type}" for ${path}`);
+      throw new Error(
+        `Unsupported output type: "${(output as any).type}" for ${path}`
+      );
     }
   }
   return overrides;
@@ -117,8 +125,8 @@ async function writeBuildResultV2(
 async function writeBuildResultV3(buildResult: BuildResultV3, build: Builder) {
   const { output } = buildResult;
   if (isLambda(output)) {
-    // TODO Is this the right place for zero config rename?
-    // TODO Do we need to consider the "api" directory explicitly?
+    // TODO: Is this the right place for zero config rename?
+    // TODO: Do we need to consider the "api" directory explicitly?
     const src = build.src!;
     const ext = extname(src);
     const path = build.config?.zeroConfig
@@ -181,11 +189,38 @@ async function writeStaticFile(
     overrides[fsPath] = override;
   }
 
-  // TODO: handle (or skip) symlinks?
   const dest = join(OUTPUT_DIR, 'static', fsPath);
   await fs.mkdirp(dirname(dest));
+
+  // TODO: handle (or skip) symlinks?
   const stream = file.toStream();
   await pipe(stream, fs.createWriteStream(dest, { mode: file.mode }));
+}
+
+/**
+ * Serializes the `EdgeFunction` instance to the file system.
+ *
+ * @param edgeFunction The `EdgeFunction` instance
+ * @param path The URL path where the `EdgeFunction` can be accessed from
+ */
+async function writeEdgeFunction(edgeFunction: EdgeFunction, path: string) {
+  const dest = join(OUTPUT_DIR, 'functions', `${path}.func`);
+
+  await fs.mkdirp(dest);
+  const ops: Promise<any>[] = [];
+  ops.push(download(edgeFunction.files, dest));
+
+  const config = {
+    ...edgeFunction,
+    files: undefined,
+  };
+  const configPath = join(dest, '.vc-config.json');
+  ops.push(
+    fs.writeJSON(configPath, config, {
+      spaces: 2,
+    })
+  );
+  await Promise.all(ops);
 }
 
 /**
