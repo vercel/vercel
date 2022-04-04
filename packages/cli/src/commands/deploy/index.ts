@@ -469,9 +469,12 @@ export default async (client: Client) => {
         'rootDirectory',
       ];
 
-      const localSettings = Object.entries(localConfig.projectSettings)
+      const localSettings = Object.entries(localConfig?.projectSettings || {})
         .filter(([key]) => overridableProjectSettings.includes(key))
-        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+        .reduce<{ [key: string]: unknown }>(
+          (acc, [key, value]) => ({ ...acc, [key]: value }),
+          {}
+        );
 
       // Only add projectSettings for zero config deployments
       createArgs.projectSettings = {
