@@ -298,9 +298,12 @@ export default async function main(client: Client): Promise<number> {
     const buildConfig: Config = {
       ...build.config,
       projectSettings: project.settings,
-      outputDirectory: project.settings.outputDirectory || undefined,
-      buildCommand: project.settings.buildCommand || undefined,
+      outputDirectory: project.settings.outputDirectory ?? undefined,
+      installCommand: project.settings.installCommand ?? undefined,
+      devCommand: project.settings.devCommand ?? undefined,
+      buildCommand: project.settings.buildCommand ?? undefined,
       framework: project.settings.framework,
+      nodeVersion: project.settings.nodeVersion,
     };
     const workPath = join(cwd, project.settings.rootDirectory || '');
     const buildOptions: BuildOptions = {
