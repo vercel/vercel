@@ -320,29 +320,18 @@ export interface BuilderFunctions {
 }
 
 export interface ProjectSettings {
-  autoExposeSystemEnvs?: boolean;
-  buildCommand?: string | null;
-  commandForIgnoringBuildStep?: string | null;
-  createdAt?: number;
-  devCommand?: string | null;
-  directoryListing?: boolean;
   framework?: string | null;
-  gitForkProtection?: boolean;
+  devCommand?: string | null;
   installCommand?: string | null;
-  name?: string;
-  nodeVersion?: '10.x' | '12.x' | '14.x';
+  buildCommand?: string | null;
   outputDirectory?: string | null;
-  passwordProtection?: {
-    deploymentType: 'all' | 'preview';
-    password?: string | null;
-  };
-  publicSource?: boolean | null;
   rootDirectory?: string | null;
-  serverlessFunctionRegion?: string | null;
+  createdAt?: number;
+  autoExposeSystemEnvs?: boolean;
   sourceFilesOutsideRootDirectory?: boolean;
-  ssoProtection?: {
-    deploymentType: 'all' | 'preview';
-  };
+  directoryListing?: boolean;
+  gitForkProtection?: boolean;
+  commandForIgnoringBuildStep?: string | null;
 }
 
 export interface BuilderV2 {

@@ -3707,21 +3707,23 @@ test('invalid vercel.json projectSettings should result in a deployment error', 
   );
 
   async function testDeployment() {
-    const deployment = await execa(binaryPath, [
-      directory,
-      ...defaultArgs,
-      '--public',
-      '--confirm',
-    ]);
-
-    t.is(
-      deployment.exitCode,
-      1,
-      formatOutput({
-        stderr: deployment.stderr,
-        stdout: deployment.stdout,
-      })
-    );
+    try {
+      await execa(binaryPath, [
+        directory,
+        ...defaultArgs,
+        '--public',
+        '--confirm',
+      ]);
+    } catch (error) {
+      t.is(
+        error.exitCode,
+        1,
+        formatOutput({
+          stderr: error.stderr,
+          stdout: error.stdout,
+        })
+      );
+    }
   }
 
   const vercelJsonPath = path.join(directory, 'vercel.json');
