@@ -58,8 +58,6 @@ const help = () => {
 `);
 };
 
-// ${}
-
 function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {
     '--yes': Boolean,
