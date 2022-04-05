@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
+import dotenv from 'dotenv';
 import { join, relative } from 'path';
 import {
   detectBuilders,
@@ -110,6 +111,8 @@ export default async function main(client: Client): Promise<number> {
   }
   const cwd = process.cwd();
 
+  // TODO: read project settings from the API, fall back to local `project.json` if that fails
+
   // Read project settings, and pull them from Vercel if necessary
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
   while (!project?.settings) {
@@ -134,7 +137,16 @@ export default async function main(client: Client): Promise<number> {
   // Build `target` influences which environment variables will be used
   const target = argv['--prod'] ? 'production' : 'preview';
 
-  // TODO: load env vars
+  // TODO: load env vars from the API, fall back to local files if that fails
+
+  const envPath = await checkExists([
+    join(cwd, VERCEL_DIR, `.env.${target}.local`),
+    join(cwd, `.env`),
+  ]);
+  if (envPath) {
+    dotenv.config({ path: envPath, debug: client.output.isDebugEnabled() });
+    output.log(`Loaded env from "${relative(cwd, envPath)}"`);
+  }
 
   // Load `package.json` and `vercel.json` files
   const [pkg, vercelConfig] = await Promise.all([
@@ -469,4 +481,15 @@ function mergeWildcard(
     }
   }
   return wildcard;
+}
+
+async function checkExists(paths: Iterable<string>) {
+  for (const path of paths) {
+    try {
+      await fs.stat(path);
+      return path;
+    } catch (err: any) {
+      if (err.code !== 'ENOENT') throw err;
+    }
+  }
 }
