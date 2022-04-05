@@ -459,26 +459,9 @@ export default async (client: Client) => {
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
-      const overridableProjectSettings = [
-        'buildCommand',
-        'commandForIgnoringBuildStep',
-        'devCommand',
-        'framework',
-        'installCommand',
-        'outputDirectory',
-        'rootDirectory',
-      ];
-
-      const localSettings = Object.entries(localConfig?.projectSettings || {})
-        .filter(([key]) => overridableProjectSettings.includes(key))
-        .reduce<{ [key: string]: unknown }>(
-          (acc, [key, value]) => ({ ...acc, [key]: value }),
-          {}
-        );
-
       // Only add projectSettings for zero config deployments
       createArgs.projectSettings = {
-        ...localSettings,
+        ...localConfig.projectSettings,
         sourceFilesOutsideRootDirectory,
       };
     }

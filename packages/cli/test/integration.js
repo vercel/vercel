@@ -3714,13 +3714,14 @@ test('invalid vercel.json projectSettings should result in a deployment error', 
         '--public',
         '--confirm',
       ]);
-    } catch (error) {
+      t.fail('Deployment should fail');
+    } catch ({ exitCode, stderr, stdout }) {
       t.is(
-        error.exitCode,
+        exitCode,
         1,
         formatOutput({
-          stderr: error.stderr,
-          stdout: error.stdout,
+          stderr: stderr,
+          stdout: stdout,
         })
       );
     }
