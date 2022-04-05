@@ -117,26 +117,14 @@ async function ensureLink(
 }
 
 async function pullAllEnvFiles(
-  envFileName: string,
   environment: ProjectEnvTarget,
   client: Client,
   project: Project,
   argv: ReturnType<typeof processArgs>,
   cwd: string
 ): Promise<number> {
-  // save env file in project root
-  const pullDeprecatedEnvironmentPromise = envPull(
-    client,
-    project,
-    environment,
-    argv,
-    [join(cwd, envFileName)], // deprecated location
-    client.output
-  );
-
-  // save env file in `.vercel`
   const environmentFile = `.env.${environment}.local`;
-  const pullEnvironmentPromise = envPull(
+  return envPull(
     client,
     project,
     environment,
@@ -144,13 +132,6 @@ async function pullAllEnvFiles(
     [join(cwd, '.vercel', environmentFile)],
     client.output
   );
-
-  const [pullDeprecatedDevResultCode, pullDevResultCode] = await Promise.all([
-    pullDeprecatedEnvironmentPromise,
-    pullEnvironmentPromise,
-  ]);
-
-  return pullDeprecatedDevResultCode || pullDevResultCode || 0;
 }
 
 function parseEnvironment(environment = 'development'): ProjectEnvTarget {
@@ -170,12 +151,7 @@ export default async function main(client: Client) {
 
   const cwd = argv._[1] || process.cwd();
   const yes = Boolean(argv['--yes']);
-  const envFileName = argv['--env-file'] ?? argv['--env'] ?? '.env';
   const environment = parseEnvironment(argv['--environment'] || undefined);
-
-  if (argv['--env']) {
-    client.output.warn(`--env deprecated: please use --env-file instead`);
-  }
 
   const link = await ensureLink(client, cwd, yes);
   if (typeof link === 'number') {
@@ -187,7 +163,6 @@ export default async function main(client: Client) {
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   const pullResultCode = await pullAllEnvFiles(
-    envFileName,
     environment,
     client,
     project,
