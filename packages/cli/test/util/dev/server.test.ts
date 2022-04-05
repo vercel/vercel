@@ -11,7 +11,10 @@ import DevServer from '../../../src/util/dev/server';
 
 async function runNpmInstall(fixturePath: string) {
   if (await fs.pathExists(path.join(fixturePath, 'package.json'))) {
-    return execa('yarn', ['install'], { cwd: fixturePath, shell: true });
+    return execa('yarn', ['install', '--network-timeout', '1000000'], {
+      cwd: fixturePath,
+      shell: true,
+    });
   }
 }
 
