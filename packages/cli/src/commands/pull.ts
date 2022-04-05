@@ -37,7 +37,6 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
-    --env-file [filename]          The file to write Development Environment Variables to [.env]
     --environment [environment]    Deployment environment [development]
     -y, --yes                      Skip the confirmation prompt
 
@@ -62,7 +61,6 @@ function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {
     '--yes': Boolean,
     '--env': String, // deprecated
-    '--env-file': String,
     '--environment': String,
     '--debug': Boolean,
     '-d': '--debug',
