@@ -3700,6 +3700,68 @@ test('vercel.json projectSettings should be applied to deployment', async t => {
   t.is(text, `Hello, World\n`);
 });
 
+test('vercel.json projectSettings should apply to prompts', async t => {
+  const directory = path.join(__dirname, 'fixtures/unit/vercel-json-overrides');
+
+  const deployment = await execa(binaryPath, [
+    directory,
+    ...defaultArgs,
+    '--public',
+  ]);
+
+  t.is(
+    deployment.exitCode,
+    0,
+    formatOutput({
+      stderr: deployment.stderr,
+      stdout: deployment.stdout,
+    })
+  );
+
+  const page = await fetch(deployment.stdout);
+  const text = await page.text();
+  t.is(text, `Hello, World\n`);
+});
+
+test('vercel.json projectSettings should be applied to second deployment', async t => {
+  const directory = path.join(__dirname, 'fixtures/unit/vercel-json-overrides');
+
+  async function deploy() {
+    const deployment = await execa(binaryPath, [
+      directory,
+      ...defaultArgs,
+      '--public',
+      '--confirm',
+    ]);
+
+    t.is(
+      deployment.exitCode,
+      0,
+      formatOutput({
+        stderr: deployment.stderr,
+        stdout: deployment.stdout,
+      })
+    );
+
+    return deployment;
+  }
+
+  const vercelJsonPath = path.join(directory, 'vercel.json');
+  const vercelJsonOriginal = await readFile(vercelJsonPath, 'utf8');
+
+  await writeFile(vercelJsonPath, JSON.stringify({}));
+
+  await deploy();
+
+  await writeFile(vercelJsonPath, vercelJsonOriginal);
+
+  const deployment = await deploy();
+
+  const page = await fetch(deployment.stdout);
+  const text = await page.text();
+  t.is(text, `Hello, World\n`);
+});
+
 test('invalid vercel.json projectSettings should result in a deployment error', async t => {
   const directory = path.join(
     __dirname,
@@ -3707,24 +3769,20 @@ test('invalid vercel.json projectSettings should result in a deployment error', 
   );
 
   async function testDeployment() {
-    try {
-      await execa(binaryPath, [
-        directory,
-        ...defaultArgs,
-        '--public',
-        '--confirm',
-      ]);
-      t.fail('Deployment should fail');
-    } catch ({ exitCode, stderr, stdout }) {
-      t.is(
-        exitCode,
-        1,
-        formatOutput({
-          stderr: stderr,
-          stdout: stdout,
-        })
-      );
-    }
+    const { exitCode, stderr, stdout } = await execa(
+      binaryPath,
+      [directory, ...defaultArgs, '--public', '--confirm'],
+      { reject: false }
+    );
+
+    t.is(
+      exitCode,
+      1,
+      formatOutput({
+        stderr: stderr,
+        stdout: stdout,
+      })
+    );
   }
 
   const vercelJsonPath = path.join(directory, 'vercel.json');
@@ -3732,7 +3790,7 @@ test('invalid vercel.json projectSettings should result in a deployment error', 
   const vercelConfig = JSON.parse(vercelJsonOriginal);
 
   // Pass a command that does not exist
-  vercelConfig['projectSettings'] = {
+  vercelConfig.projectSettings = {
     command_does_not_exist: 'echo "foo bar"',
   };
 
@@ -3741,7 +3799,7 @@ test('invalid vercel.json projectSettings should result in a deployment error', 
   await testDeployment();
 
   // Pass a disallowed command
-  vercelConfig['projectSettings'] = {
+  vercelConfig.projectSettings = {
     autoExposeSystemEnvs: true,
   };
 

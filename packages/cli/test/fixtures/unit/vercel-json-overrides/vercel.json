@@ -1,6 +1,11 @@
 {
   "projectSettings": {
     "buildCommand": "mkdir output && echo \"Hello, World\" >> output/index.html",
-    "outputDirectory": "output"
+    "commandForIgnoringBuildStep": "echo \"Command for Ignoring Build Step\"",
+    "devCommand": "echo \"Dev Command\"",
+    "framework": "nextjs",
+    "installCommand": "yarn install",
+    "outputDirectory": "output",
+    "rootDirectory": "/"
   }
 }

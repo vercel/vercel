@@ -495,7 +495,10 @@ export default async (client: Client) => {
       );
 
       // deploy again, but send projectSettings this time
-      createArgs.projectSettings = settings;
+      createArgs.projectSettings = {
+        ...settings,
+        ...localConfig.projectSettings,
+      };
 
       deployStamp = stamp();
       createArgs.deployStamp = deployStamp;
