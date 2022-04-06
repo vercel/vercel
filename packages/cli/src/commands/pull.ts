@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../util/client';
+import { ProjectEnvTarget } from '../types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
@@ -14,7 +15,13 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../util/projects/link';
 import { writeProjectSettings } from '../util/projects/project-settings';
-import pull from './env/pull';
+import envPull from './env/pull';
+
+import type { Project, Org } from '../types';
+import {
+  isValidEnvTarget,
+  getEnvTargetPlaceholder,
+} from '../util/env/env-target';
 
 const help = () => {
   return console.log(`
@@ -30,7 +37,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
-    --env [filename]               The file to write Development Environment Variables to [.env]
+    --environment [environment]    Deployment environment [development]
     -y, --yes                      Skip the confirmation prompt
 
   ${chalk.dim('Examples:')}
@@ -41,32 +48,51 @@ const help = () => {
     ${chalk.cyan(`$ ${getPkgName()} pull ./path-to-project`)}
     ${chalk.cyan(`$ ${getPkgName()} pull --env .env.local`)}
     ${chalk.cyan(`$ ${getPkgName()} pull ./path-to-project --env .env.local`)}
+
+  ${chalk.gray('–')} Pull specific environment's Project Settings from the cloud
+
+    ${chalk.cyan(
+      `$ ${getPkgName()} pull --environment=${getEnvTargetPlaceholder()}`
+    )}
 `);
 };
-export default async function main(client: Client) {
-  let argv;
+
+function processArgs(client: Client) {
+  return getArgs(client.argv.slice(2), {
+    '--yes': Boolean,
+    '--env': String, // deprecated
+    '--environment': String,
+    '--debug': Boolean,
+    '-d': '--debug',
+    '-y': '--yes',
+  });
+}
+
+function parseArgs(client: Client) {
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--yes': Boolean,
-      '--env': String,
-      '--debug': Boolean,
-      '-d': '--debug',
-      '-y': '--yes',
-    });
+    const argv = processArgs(client);
+
+    if (argv['--help']) {
+      help();
+      return 2;
+    }
+
+    return argv;
   } catch (err) {
     handleError(err);
     return 1;
   }
+}
 
-  if (argv['--help']) {
-    help();
-    return 2;
-  }
-
-  const cwd = argv._[1] || process.cwd();
-  const yes = argv['--yes'];
-  const env = argv['--env'] ?? '.env';
-  const settingsStamp = stamp();
+type LinkResult = {
+  org: Org;
+  project: Project;
+};
+async function ensureLink(
+  client: Client,
+  cwd: string,
+  yes: boolean
+): Promise<LinkResult | number> {
   let link = await getLinkedProject(client, cwd);
   if (link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, {
@@ -85,24 +111,69 @@ export default async function main(client: Client) {
     return link.exitCode;
   }
 
+  return { org: link.org, project: link.project };
+}
+
+async function pullAllEnvFiles(
+  environment: ProjectEnvTarget,
+  client: Client,
+  project: Project,
+  argv: ReturnType<typeof processArgs>,
+  cwd: string
+): Promise<number> {
+  const environmentFile = `.env.${environment}.local`;
+  return envPull(
+    client,
+    project,
+    environment,
+    argv,
+    [join(cwd, '.vercel', environmentFile)],
+    client.output
+  );
+}
+
+function parseEnvironment(environment = 'development'): ProjectEnvTarget {
+  if (!isValidEnvTarget(environment)) {
+    throw new Error(
+      `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`
+    );
+  }
+  return environment;
+}
+
+export default async function main(client: Client) {
+  const argv = parseArgs(client);
+  if (typeof argv === 'number') {
+    return argv;
+  }
+
+  const cwd = argv._[1] || process.cwd();
+  const yes = Boolean(argv['--yes']);
+  const environment = parseEnvironment(argv['--environment'] || undefined);
+
+  const link = await ensureLink(client, cwd, yes);
+  if (typeof link === 'number') {
+    return link;
+  }
+
   const { project, org } = link;
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  const result = await pull(
+  const pullResultCode = await pullAllEnvFiles(
+    environment,
     client,
     project,
     argv,
-    [join(cwd, env)],
-    client.output
+    cwd
   );
-  if (result !== 0) {
-    // an error happened
-    return result;
+  if (pullResultCode !== 0) {
+    return pullResultCode;
   }
 
   await writeProjectSettings(cwd, project, org);
 
+  const settingsStamp = stamp();
   client.output.print(
     `${prependEmoji(
       `Downloaded project settings to ${chalk.bold(

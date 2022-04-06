@@ -83,6 +83,7 @@ async function fetchExampleList(client: Client) {
   const url = `${EXAMPLE_API}/v2/list.json`;
 
   const body = await client.fetch<Example[]>(url);
+  client.output.stopSpinner();
   return body;
 }
 

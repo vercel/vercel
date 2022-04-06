@@ -381,7 +381,7 @@ function safelyCompile(
 
   // the value needs to start with a forward-slash to be compiled
   // correctly
-  return compile(`/${value}`, { validate: false })(indexes).substr(1);
+  return compile(`/${value}`, { validate: false })(indexes).slice(1);
 }
 
 function toSegmentDest(index: number): string {

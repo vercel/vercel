@@ -4122,7 +4122,7 @@ class ZipOpenFS extends BasePortableFakeFS {
     let filePath = ``;
 
     while (true) {
-      const parts = FILE_PARTS_REGEX.exec(p.substr(filePath.length));
+      const parts = FILE_PARTS_REGEX.exec(p.slice(filePath.length));
       if (!parts) return null;
       filePath = this.pathUtils.join(filePath, parts[0]);
 
@@ -4143,7 +4143,7 @@ class ZipOpenFS extends BasePortableFakeFS {
 
       return {
         archivePath: filePath,
-        subPath: this.pathUtils.join(PortablePath.root, p.substr(filePath.length))
+        subPath: this.pathUtils.join(PortablePath.root, p.slice(filePath.length))
       };
     }
   }
@@ -5540,7 +5540,7 @@ function makeApi(runtimeState, opts) {
     while (from < packageLocationLengths.length && packageLocationLengths[from] > relativeLocation.length) from += 1;
 
     for (let t = from; t < packageLocationLengths.length; ++t) {
-      const locator = packageLocatorsByLocations.get(relativeLocation.substr(0, packageLocationLengths[t]));
+      const locator = packageLocatorsByLocations.get(relativeLocation.slice(0, packageLocationLengths[t]));
       if (typeof locator === `undefined`) continue; // Ensures that the returned locator isn't a blacklisted one.
       //
       // Blacklisted packages are packages that cannot be used because their dependencies cannot be deduced. This only
@@ -6806,7 +6806,7 @@ var PATH = {
   },
   normalize: function(path) {
     var isAbsolute = path.charAt(0) === "/",
-      trailingSlash = path.substr(-1) === "/";
+      trailingSlash = path.slice(-1) === "/";
     path = PATH.normalizeArray(
       path.split("/").filter(function(p) {
         return !!p;
@@ -6829,7 +6829,7 @@ var PATH = {
       return ".";
     }
     if (dir) {
-      dir = dir.substr(0, dir.length - 1);
+      dir = dir.slice(0, -1);
     }
     return root + dir;
   },
@@ -6839,7 +6839,7 @@ var PATH = {
     path = path.replace(/\/$/, "");
     var lastSlash = path.lastIndexOf("/");
     if (lastSlash === -1) return path;
-    return path.substr(lastSlash + 1);
+    return path.slice(lastSlash + 1);
   },
   extname: function(path) {
     return PATH.splitPath(path)[3];
@@ -6879,8 +6879,8 @@ var PATH_FS = {
     return (resolvedAbsolute ? "/" : "") + resolvedPath || ".";
   },
   relative: function(from, to) {
-    from = PATH_FS.resolve(from).substr(1);
-    to = PATH_FS.resolve(to).substr(1);
+    from = PATH_FS.resolve(from).slice(1);
+    to = PATH_FS.resolve(to).slice(1);
     function trim(arr) {
       var start = 0;
       for (; start < arr.length; start++) {
@@ -9280,7 +9280,7 @@ var FS = {
   },
   joinPath: function(parts, forceRelative) {
     var path = PATH.join.apply(null, parts);
-    if (forceRelative && path[0] == "/") path = path.substr(1);
+    if (forceRelative && path[0] == "/") path = path.slice(1);
     return path;
   },
   absolutePath: function(relative, base) {
@@ -9871,7 +9871,7 @@ var SYSCALLS = {
   },
   doMkdir: function(path, mode) {
     path = PATH.normalize(path);
-    if (path[path.length - 1] === "/") path = path.substr(0, path.length - 1);
+    if (path[path.length - 1] === "/") path = path.slice(0, -1);
     FS.mkdir(path, mode, 0);
     return 0;
   },
@@ -10620,7 +10620,7 @@ module.exports = require("path");;
 /************************************************************************/
 /******/ 	// The module cache
 /******/ 	var __webpack_module_cache__ = {};
-/******/ 	
+/******/
 /******/ 	// The require function
 /******/ 	function __webpack_require__(moduleId) {
 /******/ 		// Check if module is in cache
@@ -10633,14 +10633,14 @@ module.exports = require("path");;
 /******/ 			// no module.loaded needed
 /******/ 			exports: {}
 /******/ 		};
-/******/ 	
+/******/
 /******/ 		// Execute the module function
 /******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
-/******/ 	
+/******/
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
 /******/ 	}
-/******/ 	
+/******/
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat get default export */
 /******/ 	(() => {
@@ -10653,7 +10653,7 @@ module.exports = require("path");;
 /******/ 			return getter;
 /******/ 		};
 /******/ 	})();
-/******/ 	
+/******/
 /******/ 	/* webpack/runtime/define property getters */
 /******/ 	(() => {
 /******/ 		// define getter functions for harmony exports
@@ -10665,12 +10665,12 @@ module.exports = require("path");;
 /******/ 			}
 /******/ 		};
 /******/ 	})();
-/******/ 	
+/******/
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */
 /******/ 	(() => {
 /******/ 		__webpack_require__.o = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
 /******/ 	})();
-/******/ 	
+/******/
 /************************************************************************/
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup

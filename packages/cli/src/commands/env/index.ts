@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import getArgs from '../../util/get-args';
@@ -144,7 +145,14 @@ export default async function main(client: Client) {
             'pull'
           )} instead.`
         );
-        return pull(client, project, argv, args, output);
+        return pull(
+          client,
+          project,
+          ProjectEnvTarget.Development,
+          argv,
+          args,
+          output
+        );
       default:
         output.error(getInvalidSubcommand(COMMAND_CONFIG));
         help();
