@@ -48,7 +48,8 @@ export default async function pull(
   environment: ProjectEnvTarget,
   opts: Partial<Options>,
   args: string[],
-  output: Output
+  output: Output,
+  cwd: string = process.cwd()
 ) {
   if (args.length > 1) {
     output.error(
@@ -59,7 +60,7 @@ export default async function pull(
 
   // handle relative or absolute filename
   const [filename = '.env'] = args;
-  const fullPath = resolve(filename);
+  const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
 
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
