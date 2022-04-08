@@ -1,9 +1,6 @@
 {
   "projectSettings": {
-    "buildCommand": "mkdir output && echo \"Hello, World\" >> output/index.html",
-    "commandForIgnoringBuildStep": "echo \"Command for Ignoring Build Step\"",
-    "devCommand": "echo \"Dev Command\"",
-    "installCommand": "yarn install",
+    "buildCommand": "mkdir output && echo \"Hello, World\" >> output/index.txt",
     "outputDirectory": "output"
   }
 }

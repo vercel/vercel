@@ -195,6 +195,16 @@ export default async (client: Client) => {
   let sourceFilesOutsideRootDirectory: boolean | undefined = true;
 
   if (status === 'not_linked') {
+    if (
+      localConfig &&
+      Object.prototype.hasOwnProperty.call(localConfig, 'projectSettings')
+    ) {
+      output.error(
+        'New projects cannot contain `projectSettings` in vercel.json'
+      );
+      return 1;
+    }
+
     const shouldStartSetup =
       autoConfirm ||
       (await confirm(
