@@ -1,6 +1,0 @@
-{
-  "projectSettings": {
-    "buildCommand": "mkdir output && echo \"Hello, World\" >> output/index.txt",
-    "outputDirectory": "output"
-  }
-}

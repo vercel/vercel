@@ -3679,11 +3679,11 @@ test('[vc link] should support the `--project` flag', async t => {
 
 test('vercel.json projectSettings overrides', async t => {
   // create project directory and get path to vercel.json
-  const projectName = 'project-settings-overrides-1';
+  const projectName = 'project-settings-overrides';
   const directory = fixture(projectName);
   const vercelJsonPath = path.join(directory, 'vercel.json');
 
-  async function deploy() {
+  async function deploy(expectedStatusCode = 0) {
     // deploy and assert deployment is successful
     const deployment = await execa(binaryPath, [
       directory,
@@ -3693,7 +3693,7 @@ test('vercel.json projectSettings overrides', async t => {
     ]);
     t.is(
       deployment.exitCode,
-      0,
+      expectedStatusCode,
       formatOutput({
         stderr: deployment.stderr,
         stdout: deployment.stdout,
@@ -3748,6 +3748,19 @@ test('vercel.json projectSettings overrides', async t => {
   let text = await page.text();
   t.is(text, `Hello, World 1\n`);
 
+  // Failure Case
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      projectSettings: {
+        invalidProjectSetting: 'invalid project setting',
+      },
+    })
+  );
+
+  // Deployment should fail
+  await deploy(1);
+
   // Next.js Framework
   await mkdir(`${directory}/pages`);
   await writeFile(
@@ -3787,140 +3800,3 @@ test('vercel.json projectSettings overrides', async t => {
   text = await page.text();
   t.is(text, `Hello, World 2\n`);
 });
-
-// test('vercel.json projectSettings should apply to prompts', async t => {
-//   const directory = path.join(__dirname, 'fixtures/unit/vercel-json-overrides');
-//   const vercelJsonPath = path.join(directory, 'vercel.json');
-//   const vercelJsonOriginal = await readFile(vercelJsonPath, 'utf8');
-
-//   function assertDeployment(deployment, statusCode) {
-//     t.is(
-//       deployment.exitCode,
-//       statusCode,
-//       formatOutput({
-//         stderr: deployment.stderr,
-//         stdout: deployment.stdout,
-//       })
-//     );
-//   }
-
-//   async function deploy() {
-//     const deployment = await execa(binaryPath, [
-//       directory,
-//       ...defaultArgs,
-//       '--public',
-//     ]);
-
-//     return deployment;
-//   }
-
-//   // Deploy without projectSettings
-//   await writeFile(vercelJsonPath, JSON.stringify({}));
-//   assertDeployment(await deploy(), 0);
-
-//   // Deploy with projectSettings
-//   await writeFile(vercelJsonPath, vercelJsonOriginal);
-//   const deployment = await deploy();
-
-//   assertDeployment(deployment, 0);
-
-//   const page = await apiFetch(deployment.stdout);
-//   const text = await page.text();
-//   t.is(text, `Hello, World\n`);
-// });
-
-// test('vercel.json projectSettings should be applied to existing deployment only', async t => {
-//   const directory = path.join(__dirname, 'fixtures/unit/vercel-json-overrides');
-//   const vercelJsonPath = path.join(directory, 'vercel.json');
-//   const vercelJsonOriginal = await readFile(vercelJsonPath, 'utf8');
-
-//   function assertDeployment(deployment, statusCode) {
-//     t.is(
-//       deployment.exitCode,
-//       statusCode,
-//       formatOutput({
-//         stderr: deployment.stderr,
-//         stdout: deployment.stdout,
-//       })
-//     );
-//   }
-
-//   async function deploy() {
-//     const deployment = await execa(
-//       binaryPath,
-//       [directory, ...defaultArgs, '--public', '--confirm'],
-//       { reject: false }
-//     );
-
-//     return deployment;
-//   }
-
-//   // New project with vercel.json projectSettings should fail
-//   assertDeployment(await deploy(), 1);
-
-//   // Clear projectSettings and deployment should succeed
-//   await writeFile(vercelJsonPath, JSON.stringify({}));
-//   assertDeployment(await deploy(), 0);
-
-//   // Now deploy with the overrides
-//   await writeFile(vercelJsonPath, vercelJsonOriginal);
-//   const deployment = await deploy();
-
-//   assertDeployment(deployment, 0);
-
-//   const page = await fetch(deployment.stdout);
-//   const text = await page.text();
-//   t.is(text, `Hello, World\n`);
-// });
-
-// test('invalid vercel.json projectSettings should result in a deployment error', async t => {
-//   const directory = path.join(
-//     __dirname,
-//     'fixtures/unit/vercel-json-overrides-error'
-//   );
-
-//   async function testDeployment(statusCode) {
-//     const { exitCode, stderr, stdout } = await execa(
-//       binaryPath,
-//       [directory, ...defaultArgs, '--public', '--confirm'],
-//       { reject: false }
-//     );
-
-//     t.is(
-//       exitCode,
-//       statusCode,
-//       formatOutput({
-//         stderr: stderr,
-//         stdout: stdout,
-//       })
-//     );
-//   }
-
-//   const vercelJsonPath = path.join(directory, 'vercel.json');
-//   const vercelJsonOriginal = await readFile(vercelJsonPath, 'utf8');
-//   const vercelConfig = JSON.parse(vercelJsonOriginal);
-
-//   // First deployment without projectSettings should succeed
-//   await testDeployment(0);
-
-//   // Pass a command that does not exist - deployment should fail
-//   vercelConfig.projectSettings = {
-//     command_does_not_exist: 'echo "foo bar"',
-//   };
-
-//   await writeFile(vercelJsonPath, JSON.stringify(vercelConfig));
-
-//   await testDeployment(1);
-
-//   // Pass a disallowed command - deployment should fail
-//   vercelConfig.projectSettings = {
-//     autoExposeSystemEnvs: true,
-//   };
-
-//   await writeFile(vercelJsonPath, JSON.stringify(vercelConfig));
-
-//   await testDeployment(1);
-
-//   // Reset vercel.json
-//   await writeFile(vercelJsonPath, vercelJsonOriginal);
-// });

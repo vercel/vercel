@@ -413,16 +413,9 @@ module.exports = async function prepare(session, binaryPath) {
         projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
       }),
     },
-    'project-settings-overrides-1': {
+    'project-settings-overrides': {
       'vercel.json': '{}',
       'package.json': '{}',
-    },
-    'invalid-projectSettings': {
-      'vercel.json': JSON.stringify({
-        projectSettings: {
-          invalidCommand: 'echo "invalid command"',
-        },
-      }),
     },
   };
 
