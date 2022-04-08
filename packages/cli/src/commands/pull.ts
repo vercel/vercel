@@ -121,7 +121,7 @@ async function pullAllEnvFiles(
     project,
     environment,
     argv,
-    [join(cwd, '.vercel', environmentFile)],
+    [join('.vercel', environmentFile)],
     client.output,
     cwd
   );
