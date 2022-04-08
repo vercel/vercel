@@ -49,7 +49,7 @@ export default async function pull(
   opts: Partial<Options>,
   args: string[],
   output: Output,
-  cwd
+  cwd: string
 ) {
   if (args.length > 1) {
     output.error(
