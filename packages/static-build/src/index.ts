@@ -10,7 +10,6 @@ import { cpus } from 'os';
 import {
   BuildV2,
   Files,
-  FileFsRef,
   Config,
   PackageJson,
   PrepareCache,
@@ -211,9 +210,15 @@ function getPkg(entrypoint: string, workPath: string) {
     return null;
   }
 
-  const pkgPath = path.join(workPath, entrypoint);
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
-  return pkg;
+  try {
+    const pkgPath = path.join(workPath, entrypoint);
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
+    return pkg;
+  } catch (err: any) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+
+  return null;
 }
 
 function getFramework(
@@ -742,31 +747,32 @@ export const prepareCache: PrepareCache = async ({
   workPath,
   config,
 }) => {
+  const cacheFiles: Files = {};
+
+  // File System API v1 cache files
   const buildConfig = await readBuildOutputConfig<BuildConfig>({
     workPath,
     configFileName: 'build.json',
   });
-
   if (buildConfig?.cache && Array.isArray(buildConfig.cache)) {
-    const cacheFiles = {};
     for (const cacheGlob of buildConfig.cache) {
       Object.assign(cacheFiles, await glob(cacheGlob, workPath));
     }
     return cacheFiles;
   }
 
-  const defaultCacheFiles = await glob(
-    '{.shadow-cljs,node_modules}/**',
-    workPath
+  // Default cache files
+  Object.assign(
+    cacheFiles,
+    await glob('{.shadow-cljs,node_modules}/**', workPath)
   );
 
-  let frameworkCacheFiles: { [path: string]: FileFsRef } = {};
+  // Framework cache files
   const pkg = getPkg(entrypoint, workPath);
   const framework = getFramework(config, pkg);
-
   if (framework?.cachePattern) {
-    frameworkCacheFiles = await glob(framework.cachePattern, workPath);
+    Object.assign(cacheFiles, await glob(framework.cachePattern, workPath));
   }
 
-  return { ...defaultCacheFiles, ...frameworkCacheFiles };
+  return cacheFiles;
 };
