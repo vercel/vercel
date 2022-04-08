@@ -66,13 +66,13 @@ describe('pull', () => {
     const rawProdEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.production.local')
     );
-    const previewFileHasPreviewEnv1 = rawProdEnv
+    const productionFileHasProductionEnv1 = rawProdEnv
       .toString()
       .includes('REDIS_CONNECTION_STRING');
-    expect(previewFileHasPreviewEnv1).toBeTruthy();
-    const previewFileHasPreviewEnv2 = rawProdEnv
+    expect(productionFileHasProductionEnv1).toBeTruthy();
+    const productionFileHasProductionEnv2 = rawProdEnv
       .toString()
       .includes('SQL_CONNECTION_STRING');
-    expect(previewFileHasPreviewEnv2).toBeTruthy();
+    expect(productionFileHasProductionEnv2).toBeTruthy();
   });
 });

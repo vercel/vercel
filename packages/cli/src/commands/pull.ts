@@ -4,7 +4,6 @@ import Client from '../util/client';
 import { ProjectEnvTarget } from '../types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
-import handleError from '../util/handle-error';
 import setupAndLink from '../util/link/setup-and-link';
 import logo from '../util/output/logo';
 import stamp from '../util/output/stamp';
@@ -69,19 +68,14 @@ function processArgs(client: Client) {
 }
 
 function parseArgs(client: Client) {
-  try {
-    const argv = processArgs(client);
+  const argv = processArgs(client);
 
-    if (argv['--help']) {
-      help();
-      return 2;
-    }
-
-    return argv;
-  } catch (err) {
-    handleError(err);
-    return 1;
+  if (argv['--help']) {
+    help();
+    return 2;
   }
+
+  return argv;
 }
 
 type LinkResult = {
