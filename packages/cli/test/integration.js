@@ -3685,12 +3685,11 @@ test('vercel.json projectSettings overrides', async t => {
 
   async function deploy(expectedStatusCode = 0) {
     // deploy and assert deployment is successful
-    const deployment = await execa(binaryPath, [
-      directory,
-      ...defaultArgs,
-      '--public',
-      '--confirm',
-    ]);
+    const deployment = await execa(
+      binaryPath,
+      [directory, ...defaultArgs, '--public', '--confirm'],
+      { reject: false }
+    );
     t.is(
       deployment.exitCode,
       expectedStatusCode,
@@ -3702,23 +3701,10 @@ test('vercel.json projectSettings overrides', async t => {
     return deployment;
   }
 
-  async function getProject() {
-    // get project details from API for setting assertions
-    const response = await apiFetch(`/v8/projects/${projectName}`);
-    return await response.json();
-  }
-
   // Make sure vercel.json is empty for first deployment
   await writeFile(vercelJsonPath, JSON.stringify({}));
 
-  // get deployment and project details
   let deployment = await deploy();
-  let project = await getProject();
-
-  // deployment is asserted within `deploy()`
-  // assert various project settings are `null`
-  t.is(project.buildCommand, null);
-  t.is(project.outputDirectory, null);
 
   // create and write override project settings
   const BUILD_COMMAND =
@@ -3735,13 +3721,7 @@ test('vercel.json projectSettings overrides', async t => {
     })
   );
 
-  // get deployment and project
   deployment = await deploy();
-  project = await getProject();
-
-  // assert new commands were assigned to the project
-  t.is(project.buildCommand, BUILD_COMMAND);
-  t.is(project.outputDirectory, OUTPUT_DIRECTORY);
 
   // assert the command were executed
   let page = await fetch(deployment.stdout);
@@ -3792,11 +3772,8 @@ test('vercel.json projectSettings overrides', async t => {
   );
 
   deployment = await deploy();
-  project = await getProject();
-
-  t.is(project.framework, 'nextjs');
 
   page = await fetch(deployment.stdout);
   text = await page.text();
-  t.is(text, `Hello, World 2\n`);
+  t.ok(text.includes(`Hello, World 2`));
 });
