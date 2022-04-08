@@ -119,10 +119,11 @@ export interface PrepareCacheOptions {
   workPath: string;
 
   /**
-   * A writable temporary directory where you can build a cache to use for
-   * the next run.
+   * The "Root Directory" is assigned to the `workPath` so the `repoRootPath`
+   * is the Git Repository Root. This is only relevant for Monorepos.
+   * See https://vercel.com/blog/monorepos
    */
-  cachePath: string;
+  repoRootPath?: string;
 
   /**
    * An arbitrary object passed by the user in the build definition defined
