@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
-import { ChildProcess, SpawnOptions } from 'child_process';
+import type { ChildProcess, SpawnOptions } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { cpus } from 'os';
 import {
@@ -30,14 +30,12 @@ import {
   NowBuildError,
   scanParentDirs,
 } from '@vercel/build-utils';
-import { Route, Source } from '@vercel/routing-utils';
-import {
-  readBuildOutputDirectory,
-  readBuildOutputConfig,
-} from './utils/read-build-output';
+import type { Route, Source } from '@vercel/routing-utils';
+import * as BuildOutputV1 from './utils/build-output-v1';
+import * as BuildOutputV3 from './utils/build-output-v3';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
-import { ImagesConfig, BuildConfig } from './utils/_shared';
+import type { ImagesConfig, BuildConfig } from './utils/_shared';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -284,11 +282,8 @@ export const build: BuildV2 = async ({
   );
 
   const pkg = getPkg(entrypoint, workPath);
-
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
-
   const framework = getFramework(config, pkg);
-
   const devCommand = getCommand('dev', pkg, config, framework);
   const buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
@@ -637,6 +632,16 @@ export const build: BuildV2 = async ({
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
 
+      console.log({ outputDirPrefix });
+      const v3OutputDir = await BuildOutputV3.getBuildOutputDirectory(
+        outputDirPrefix
+      );
+      console.log({ outputDirPrefix, v3OutputDir });
+
+      if (v3OutputDir) {
+        return { output: {} };
+      }
+
       if (framework) {
         const outputDirName = config.outputDirectory
           ? config.outputDirectory
@@ -656,7 +661,7 @@ export const build: BuildV2 = async ({
         }
       }
 
-      const extraOutputs = await readBuildOutputDirectory({
+      const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({
         workPath,
         nodeVersion,
       });
@@ -750,7 +755,7 @@ export const prepareCache: PrepareCache = async ({
   const cacheFiles: Files = {};
 
   // File System API v1 cache files
-  const buildConfig = await readBuildOutputConfig<BuildConfig>({
+  const buildConfig = await BuildOutputV1.readBuildOutputConfig<BuildConfig>({
     workPath,
     configFileName: 'build.json',
   });
