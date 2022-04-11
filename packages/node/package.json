@@ -34,7 +34,7 @@
     "@types/test-listen": "1.1.0",
     "@vercel/build-utils": "2.15.1",
     "@vercel/ncc": "0.24.0",
-    "@vercel/nft": "0.17.5",
+    "@vercel/nft": "0.18.1",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",
