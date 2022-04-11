@@ -640,13 +640,12 @@ export const build: BuildV2 = async ({
       );
 
       if (buildOutputPath) {
-        delete meta.cliVersion;
         // Ensure that `vercel build` is being used for this Deployment
         if (!meta.cliVersion) {
           let buildCommandName: string;
           if (buildCommand) buildCommandName = `"${buildCommand}"`;
           else if (framework) buildCommandName = framework.name;
-          else buildCommandName = 'the build script';
+          else buildCommandName = 'the "build" script';
           throw new Error(
             `Detected Build Output v3 from ${buildCommandName}, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable. More info: ____________`
           );
