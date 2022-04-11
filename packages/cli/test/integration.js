@@ -3701,10 +3701,28 @@ test('vercel.json projectSettings overrides', async t => {
     return deployment;
   }
 
+  // Test that deployment fails with override settings on new deployments
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      projectSettings: {
+        outputDirectory: 'output',
+      },
+    })
+  );
+
+  let deployment = await deploy(1);
+
+  t.true(
+    deployment.stderr.includes(
+      'Error! New projects cannot contain `projectSettings` in vercel.json'
+    )
+  );
+
   // Make sure vercel.json is empty for first deployment
   await writeFile(vercelJsonPath, JSON.stringify({}));
 
-  let deployment = await deploy();
+  deployment = await deploy();
 
   // create and write override project settings
   const BUILD_COMMAND =
@@ -3739,9 +3757,15 @@ test('vercel.json projectSettings overrides', async t => {
   );
 
   // Deployment should fail
-  await deploy(1);
+  deployment = await deploy(1);
+  console.log(deployment.stderr);
+  t.ok(
+    deployment.stderr.includes(
+      'Error! Invalid request: `projectSettings` should NOT have additional property `invalidProjectSetting`.'
+    )
+  );
 
-  // Next.js Framework
+  // Test Next.js Framework deployment
   await mkdir(`${directory}/pages`);
   await writeFile(
     `${directory}/pages/index.js`,
@@ -3775,5 +3799,5 @@ test('vercel.json projectSettings overrides', async t => {
 
   page = await fetch(deployment.stdout);
   text = await page.text();
-  t.ok(text.includes(`Hello, World 2`));
+  t.true(text.includes(`Hello, World 2`));
 });
