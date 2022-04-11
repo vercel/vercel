@@ -632,14 +632,29 @@ export const build: BuildV2 = async ({
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
 
-      console.log({ outputDirPrefix });
-      const v3OutputDir = await BuildOutputV3.getBuildOutputDirectory(
+      // If the Build Command or Framework output files according to the
+      // Build Output v3 API, then stop processing here in `static-build`
+      // since the output is already in its final form.
+      const buildOutputPath = await BuildOutputV3.getBuildOutputDirectory(
         outputDirPrefix
       );
-      console.log({ outputDirPrefix, v3OutputDir });
 
-      if (v3OutputDir) {
-        return { output: {} };
+      if (buildOutputPath) {
+        delete meta.cliVersion;
+        // Ensure that `vercel build` is being used for this Deployment
+        if (!meta.cliVersion) {
+          let buildCommandName: string;
+          if (buildCommand) buildCommandName = `"${buildCommand}"`;
+          else if (framework) buildCommandName = framework.name;
+          else buildCommandName = 'the build script';
+          throw new Error(
+            `Detected Build Output v3 from ${buildCommandName}, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable. More info: ____________`
+          );
+        }
+        return {
+          buildOutputVersion: 3,
+          buildOutputPath,
+        };
       }
 
       if (framework) {
