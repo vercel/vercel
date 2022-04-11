@@ -81,7 +81,7 @@ export default async function pull(
   }
 
   output.print(
-    `Downloading ${environment} Environment Variables for Project ${chalk.bold(
+    `Downloading "${environment}" Environment Variables for Project ${chalk.bold(
       project.name
     )}\n`
   );
