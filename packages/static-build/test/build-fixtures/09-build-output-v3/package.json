@@ -2,6 +2,6 @@
   "name": "09-build-output-v3",
   "private": true,
   "scripts": {
-    "build": "./build.sh"
+    "build": "node build.js"
   }
 }
