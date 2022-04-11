@@ -16,4 +16,4 @@ If you would not like to verify your domain, you can remove it from your account
 
 #### Resources
 
-- [Vercel Custom Domains Documentation](https://vercel.com/docs/v2/custom-domains)
+- [Vercel Custom Domains Documentation](https://vercel.com/docs/concepts/projects/custom-domains)
