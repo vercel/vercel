@@ -139,6 +139,7 @@ export async function getLinkedProject(
       : await getLink(path);
 
   if (!link) {
+    console.log('NOT LINKED A');
     return { status: 'not_linked', org: null, project: null };
   }
 
@@ -186,6 +187,7 @@ export async function getLinkedProject(
       );
     }
 
+    console.log('NOT LINKED B');
     return { status: 'not_linked', org: null, project: null };
   }
 
