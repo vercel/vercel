@@ -381,7 +381,7 @@ export default async function main(client: Client): Promise<number> {
     // Find the `Build` entry for this config file and update the build result
     for (const [build, buildResult] of buildResults.entries()) {
       if ('buildOutputPath' in buildResult) {
-        output.log(`Using "config.json" for "${build.use}`);
+        output.debug(`Using "config.json" for "${build.use}`);
         buildResults.set(build, existingConfig);
         break;
       }
