@@ -184,7 +184,7 @@
     "verbose": false,
     "testEnvironment": "node",
     "testMatch": [
-      "<rootDir>/test/**/*.test.ts"
+      "<rootDir>/test/commands/pull.test.ts"
     ]
   }
 }

@@ -8,7 +8,7 @@ import { useTeams } from '../mocks/team';
 import { useUser } from '../mocks/user';
 
 describe('pull', () => {
-  it('should handle pulling', async () => {
+  it.only('should handle pulling', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
     useTeams();
