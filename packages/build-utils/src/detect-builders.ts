@@ -538,7 +538,7 @@ function getMissingBuildScriptError() {
     code: 'missing_build_script',
     message:
       'Your `package.json` file is missing a `build` property inside the `scripts` property.' +
-      '\nLearn More: https://vercel.com/docs/v2/platform/frequently-asked-questions#missing-build-script',
+      '\nLearn More: https://vercel.link/missing-build-script',
   };
 }
 
