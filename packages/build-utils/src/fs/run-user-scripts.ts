@@ -368,6 +368,8 @@ export async function runNpmInstall(
       }
     }
 
+    const installTime = Date.now();
+    console.log('Installing dependencies...');
     debug(`Installing to ${destPath}`);
 
     const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
@@ -403,6 +405,7 @@ export async function runNpmInstall(
     }
 
     await spawnAsync(cliType, commandArgs, opts);
+    debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
   } finally {
     runNpmInstallSema.release();

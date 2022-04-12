@@ -105,10 +105,7 @@ export const build: BuildV2 = async ({
       console.log(`Skipping "install" command...`);
     }
   } else {
-    console.log('Installing dependencies...');
-    const installTime = Date.now();
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
-    debug(`Install complete [${Date.now() - installTime}ms]`);
   }
 
   if (meta.isDev) {
