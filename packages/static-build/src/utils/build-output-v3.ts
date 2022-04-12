@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { promises as fs } from 'fs';
 
-export const BUILD_OUTPUT_DIR = '.vercel/output';
+const BUILD_OUTPUT_DIR = '.vercel/output';
 
 /**
  * Returns the path to the Build Output v3 directory when the
