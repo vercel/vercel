@@ -20,7 +20,7 @@ describe('env', () => {
       });
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const exitCode = await env(client);
-      expect(exitCode).toEqual(0);
+      expect(exitCode, client.outputBuffer).toEqual(0);
 
       const rawDevEnv = await fs.readFile(path.join(cwd, '.env'));
 
@@ -40,7 +40,7 @@ describe('env', () => {
       });
       client.setArgv('env', 'pull', 'other.env', '--yes', '--cwd', cwd);
       const exitCode = await env(client);
-      expect(exitCode).toEqual(0);
+      expect(exitCode, client.outputBuffer).toEqual(0);
 
       const rawDevEnv = await fs.readFile(path.join(cwd, 'other.env'));
 
@@ -62,7 +62,7 @@ describe('env', () => {
 
       client.setArgv('env', 'pull', 'other.env', '--yes', '--cwd', cwd);
       const exitCode = await env(client);
-      expect(exitCode).toEqual(0);
+      expect(exitCode, client.outputBuffer).toEqual(0);
 
       const rawDevEnv = await fs.readFile(path.join(cwd, 'other.env'));
 

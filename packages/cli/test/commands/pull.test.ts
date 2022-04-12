@@ -19,7 +19,7 @@ describe('pull', () => {
     });
     client.setArgv('pull', '--yes', cwd);
     const exitCode = await pull(client);
-    expect(exitCode).toEqual(0);
+    expect(exitCode, client.outputBuffer).toEqual(0);
 
     const rawDevEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.development.local')
@@ -39,7 +39,7 @@ describe('pull', () => {
     });
     client.setArgv('pull', '--yes', '--environment=preview', cwd);
     const exitCode = await pull(client);
-    expect(exitCode).toEqual(0);
+    expect(exitCode, client.outputBuffer).toEqual(0);
 
     const rawPreviewEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.preview.local')
@@ -61,7 +61,7 @@ describe('pull', () => {
     });
     client.setArgv('pull', '--yes', '--environment=production', cwd);
     const exitCode = await pull(client);
-    expect(exitCode).toEqual(0);
+    expect(exitCode, client.outputBuffer).toEqual(0);
 
     const rawProdEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.production.local')
