@@ -86,6 +86,7 @@ export async function getLinkFromDir<T = ProjectLink>(
   } catch (error) {
     // link file does not exists, project is not linked
     if (['ENOENT', 'ENOTDIR'].includes(error.code)) {
+      console.log(`Project link not found in "${dir}"`);
       return null;
     }
 
