@@ -407,10 +407,7 @@ export const build: BuildV2 = async ({
 
       if (!config.zeroConfig) {
         debug('Detected "builds" - not zero config');
-        printInstall();
-        const installTime = Date.now();
         await runNpmInstall(entrypointDir, [], spawnOpts, meta, nodeVersion);
-        debug(`Install complete [${Date.now() - installTime}ms]`);
         isNpmInstall = true;
       } else if (typeof installCommand === 'string') {
         if (installCommand.trim()) {
@@ -482,11 +479,7 @@ export const build: BuildV2 = async ({
           isPipInstall = true;
         }
         if (pkg) {
-          console.log('Detected package.json');
-          printInstall();
-          const installTime = Date.now();
           await runNpmInstall(entrypointDir, [], spawnOpts, meta, nodeVersion);
-          debug(`Install complete [${Date.now() - installTime}ms]`);
           isNpmInstall = true;
         }
       }
