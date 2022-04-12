@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "0.7.0",
+  "version": "0.7.1-canary.0",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs",
@@ -26,6 +26,6 @@
     "@types/aws-lambda": "8.10.19",
     "@types/node": "*",
     "@types/semver": "6.0.0",
-    "@vercel/build-utils": "2.15.1"
+    "@vercel/build-utils": "2.15.2-canary.0"
   }
 }
