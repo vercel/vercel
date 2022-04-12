@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
-import { ChildProcess, SpawnOptions } from 'child_process';
+import type { ChildProcess, SpawnOptions } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { cpus } from 'os';
 import {
@@ -30,14 +30,12 @@ import {
   NowBuildError,
   scanParentDirs,
 } from '@vercel/build-utils';
-import { Route, Source } from '@vercel/routing-utils';
-import {
-  readBuildOutputDirectory,
-  readBuildOutputConfig,
-} from './utils/read-build-output';
+import type { Route, Source } from '@vercel/routing-utils';
+import * as BuildOutputV1 from './utils/build-output-v1';
+import * as BuildOutputV3 from './utils/build-output-v3';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
-import { ImagesConfig, BuildConfig } from './utils/_shared';
+import type { ImagesConfig, BuildConfig } from './utils/_shared';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -255,7 +253,7 @@ async function fetchBinary(url: string, framework: string, version: string) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_BINARY_NOT_FOUND',
       message: `Version ${version} of ${framework} does not exist. Please specify a different one.`,
-      link: 'https://vercel.com/docs/v2/build-step#framework-versioning',
+      link: 'https://vercel.link/framework-versioning',
     });
   }
   await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
@@ -284,11 +282,8 @@ export const build: BuildV2 = async ({
   );
 
   const pkg = getPkg(entrypoint, workPath);
-
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
-
   const framework = getFramework(config, pkg);
-
   const devCommand = getCommand('dev', pkg, config, framework);
   const buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
@@ -387,7 +382,7 @@ export const build: BuildV2 = async ({
     Node.js will load 'false' as a string, not a boolean, so it's truthy still.
     This is to ensure we don't accidentally break other packages that check
     if process.env.CI is true somewhere.
-    
+
     https://github.com/facebook/create-react-app/issues/2453
     https://github.com/facebook/create-react-app/pull/2501
     https://github.com/vercel/community/discussions/30
@@ -637,6 +632,30 @@ export const build: BuildV2 = async ({
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
 
+      // If the Build Command or Framework output files according to the
+      // Build Output v3 API, then stop processing here in `static-build`
+      // since the output is already in its final form.
+      const buildOutputPath = await BuildOutputV3.getBuildOutputDirectory(
+        outputDirPrefix
+      );
+
+      if (buildOutputPath) {
+        // Ensure that `vercel build` is being used for this Deployment
+        if (!meta.cliVersion) {
+          let buildCommandName: string;
+          if (buildCommand) buildCommandName = `"${buildCommand}"`;
+          else if (framework) buildCommandName = framework.name;
+          else buildCommandName = 'the "build" script';
+          throw new Error(
+            `Detected Build Output v3 from ${buildCommandName}, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable.`
+          );
+        }
+        return {
+          buildOutputVersion: 3,
+          buildOutputPath,
+        };
+      }
+
       if (framework) {
         const outputDirName = config.outputDirectory
           ? config.outputDirectory
@@ -656,7 +675,7 @@ export const build: BuildV2 = async ({
         }
       }
 
-      const extraOutputs = await readBuildOutputDirectory({
+      const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({
         workPath,
         nodeVersion,
       });
@@ -750,7 +769,7 @@ export const prepareCache: PrepareCache = async ({
   const cacheFiles: Files = {};
 
   // File System API v1 cache files
-  const buildConfig = await readBuildOutputConfig<BuildConfig>({
+  const buildConfig = await BuildOutputV1.readBuildOutputConfig<BuildConfig>({
     workPath,
     configFileName: 'build.json',
   });
