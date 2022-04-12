@@ -73,7 +73,7 @@ export default async function set(
   if (args.length === 0) {
     output.error(
       `To ship to production, optionally configure your domains (${link(
-        'https://vercel.com/docs/v2/custom-domains'
+        'https://vercel.link/domain-configuration'
       )}) and run ${getCommandName(`--prod`)}.`
     );
     return 1;
