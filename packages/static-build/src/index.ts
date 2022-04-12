@@ -253,7 +253,7 @@ async function fetchBinary(url: string, framework: string, version: string) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_BINARY_NOT_FOUND',
       message: `Version ${version} of ${framework} does not exist. Please specify a different one.`,
-      link: 'https://vercel.com/docs/v2/build-step#framework-versioning',
+      link: 'https://vercel.link/framework-versioning',
     });
   }
   await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
@@ -382,7 +382,7 @@ export const build: BuildV2 = async ({
     Node.js will load 'false' as a string, not a boolean, so it's truthy still.
     This is to ensure we don't accidentally break other packages that check
     if process.env.CI is true somewhere.
-    
+
     https://github.com/facebook/create-react-app/issues/2453
     https://github.com/facebook/create-react-app/pull/2501
     https://github.com/vercel/community/discussions/30
