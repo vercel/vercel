@@ -12,6 +12,7 @@ import {
   Meta,
   Builder,
   BuildResultV2,
+  BuildResultV2Typical,
   BuildResultV3,
 } from '@vercel/build-utils';
 import minimatch from 'minimatch';
@@ -374,7 +375,7 @@ export default async function main(client: Client): Promise<number> {
       return {
         use: b[0].use,
         entrypoint: b[0].src!,
-        routes: (b[1] as BuildResultV2).routes,
+        routes: (b[1] as BuildResultV2Typical).routes,
       };
     });
   if (zeroConfigRoutes.length) {
@@ -461,8 +462,8 @@ function expandBuild(files: string[], build: Builder): Builder[] {
 
 function mergeImages(
   buildResults: Iterable<BuildResult>
-): BuildResultV2['images'] {
-  let images: BuildResultV2['images'] = undefined;
+): BuildResultV2Typical['images'] {
+  let images: BuildResultV2Typical['images'] = undefined;
   for (const result of buildResults) {
     if ('images' in result && result.images) {
       images = Object.assign({} || images, result.images);
@@ -473,8 +474,8 @@ function mergeImages(
 
 function mergeWildcard(
   buildResults: Iterable<BuildResult>
-): BuildResultV2['wildcard'] {
-  let wildcard: BuildResultV2['wildcard'] = undefined;
+): BuildResultV2Typical['wildcard'] {
+  let wildcard: BuildResultV2Typical['wildcard'] = undefined;
   for (const result of buildResults) {
     if ('wildcard' in result && result.wildcard) {
       if (!wildcard) wildcard = [];

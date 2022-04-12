@@ -69,6 +69,12 @@ async function writeBuildResultV2(
   buildResult: BuildResultV2,
   cleanUrls?: boolean
 ) {
+  if ('buildOutputPath' in buildResult) {
+    // TODO: merge with existing when Root Directory is set
+    console.log(buildResult);
+    return;
+  }
+
   const lambdas = new Map<Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
   for (const [path, output] of Object.entries(buildResult.output)) {
