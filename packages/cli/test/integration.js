@@ -45,6 +45,12 @@ function fixture(name) {
   return directory;
 }
 
+const URL_REGEX = /(https?:\/\/[^ ]*)/;
+function extractUrl(input) {
+  let match = input.match(URL_REGEX);
+  return match?.[1];
+}
+
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = name =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
@@ -488,7 +494,7 @@ test('default command should work with --cwd option', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const url = stdout;
+  const url = extractUrl(stdout);
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   t.deepEqual(
@@ -510,7 +516,7 @@ test('deploy using only now.json with `redirects` defined', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const url = stdout;
+  const url = extractUrl(stdout);
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   t.is(location, 'https://example.com/foo/bar');
