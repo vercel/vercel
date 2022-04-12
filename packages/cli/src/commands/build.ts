@@ -367,6 +367,27 @@ export default async function main(client: Client): Promise<number> {
   }
   if (hadError) return 1;
 
+  // Merge existing `config.json` file into the one that will be produced
+  const configPath = join(OUTPUT_DIR, 'config.json');
+  // TODO: properly type
+  const existingConfig = await readJSONFile<any>(configPath);
+  if (existingConfig instanceof CantParseJSONFile) {
+    throw existingConfig;
+  }
+  if (existingConfig) {
+    if (existingConfig.overrides) {
+      overrides.push(existingConfig.overrides);
+    }
+    // Find the `Build` entry for this config file and update the build result
+    for (const [build, buildResult] of buildResults.entries()) {
+      if ('buildOutputPath' in buildResult) {
+        output.log(`Using "config.json" for "${build.use}`);
+        buildResults.set(build, existingConfig);
+        break;
+      }
+    }
+  }
+
   const builderRoutes: MergeRoutesProps['builds'] = Array.from(
     buildResults.entries()
   )

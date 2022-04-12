@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import mimeTypes from 'mime-types';
-import { basename, dirname, extname, join, relative } from 'path';
+import { basename, dirname, extname, join, relative, resolve } from 'path';
 import {
   Builder,
   BuildResultV2,
@@ -14,6 +14,7 @@ import {
   Prerender,
   download,
   EdgeFunction,
+  BuildResultBuildOutput,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { unzip } from './unzip';
@@ -71,7 +72,7 @@ async function writeBuildResultV2(
 ) {
   if ('buildOutputPath' in buildResult) {
     // TODO: merge with existing when Root Directory is set
-    console.log(buildResult);
+    await mergeBuilderOutput(buildResult);
     return;
   }
 
@@ -285,6 +286,23 @@ async function writeLambda(
     })
   );
   await Promise.all(ops);
+}
+
+/**
+ * When the Root Directory setting is utilized, merge the contents of the
+ * `.vercel/output` directory that was specified by the Builder into the
+ * `vc build` output directory.
+ */
+async function mergeBuilderOutput(buildResult: BuildResultBuildOutput) {
+  const absOutputDir = resolve(OUTPUT_DIR);
+  if (absOutputDir === buildResult.buildOutputPath) {
+    // `.vercel/output` dir is already in the correct location,
+    // so no need to do anything
+    return;
+  }
+  throw new Error(
+    'TODO: merge `.vercel/output` dir when Root Directory is used'
+  );
 }
 
 /**
