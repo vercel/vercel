@@ -378,7 +378,7 @@ export interface BuildResultBuildOutput {
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.
  */
-export interface BuildResultV2 {
+export interface BuildResultV2Typical {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   images?: Images;
@@ -391,17 +391,13 @@ export interface BuildResultV2 {
   }>;
 }
 
-/**
- * When a Builder implements `version: 3`, the `build()` function is expected
- * to return this type.
- */
+export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
+
 export interface BuildResultV3 {
   output: Lambda;
 }
 
-export type BuildV2 = (
-  options: BuildOptions
-) => Promise<BuildResultV2 | BuildResultBuildOutput>;
+export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
 export type StartDevServer = (
