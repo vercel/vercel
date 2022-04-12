@@ -796,13 +796,16 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(stderr, /Created .env file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
-    t.true(contents.startsWith('# Created by Vercel CLI\n'));
+    t.regex(contents, /^# Created by Vercel CLI\n/);
 
     const lines = new Set(contents.split('\n'));
-    t.true(lines.has('MY_NEW_ENV_VAR="my plaintext value"'));
-    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
-    t.true(lines.has('MY_DECRYPTABLE_SECRET_ENV="decryptable value"'));
-    t.false(lines.has('MY_PREVIEW'));
+    t.true(lines.has('MY_NEW_ENV_VAR="my plaintext value"'), 'MY_NEW_ENV_VAR');
+    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'), 'MY_STDIN_VAR');
+    t.true(
+      lines.has('MY_DECRYPTABLE_SECRET_ENV="decryptable value"'),
+      'MY_DECRYPTABLE_SECRET_ENV'
+    );
+    t.false(lines.has('MY_PREVIEW'), 'MY_PREVIEW');
   }
 
   async function vcEnvPullOverwrite() {
@@ -974,11 +977,12 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
 
     const lines = new Set(contents.split('\n'));
-    t.true(lines.has('VERCEL="1"'));
-    t.true(lines.has('VERCEL_URL=""'));
-    t.true(lines.has('VERCEL_ENV="development"'));
-    t.true(lines.has('VERCEL_GIT_PROVIDER=""'));
-    t.true(lines.has('VERCEL_GIT_REPO_SLUG=""'));
+
+    t.true(lines.has('VERCEL="1"'), 'VERCEL');
+    t.true(lines.has('VERCEL_URL=""'), 'VERCEL_URL');
+    t.true(lines.has('VERCEL_ENV="development"'), 'VERCEL_ENV');
+    t.true(lines.has('VERCEL_GIT_PROVIDER=""'), 'VERCEL_GIT_PROVIDER');
+    t.true(lines.has('VERCEL_GIT_REPO_SLUG=""'), 'VERCEL_GIT_REPO_SLUG');
   }
 
   async function vcDevAndFetchSystemVars() {

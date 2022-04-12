@@ -100,6 +100,7 @@ export default async function pull(
     projectEnvs,
     systemEnvValues,
     project.autoExposeSystemEnvs,
+    undefined,
     environment
   );
 
