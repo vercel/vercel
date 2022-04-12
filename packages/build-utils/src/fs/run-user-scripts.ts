@@ -330,7 +330,7 @@ export async function walkParentDirs({
 }
 
 function isSet<T>(v: any): v is Set<T> {
-  return v?.constructor.name === 'Set';
+  return v?.constructor?.name === 'Set';
 }
 
 export async function runNpmInstall(
@@ -356,7 +356,7 @@ export async function runNpmInstall(
     // Only allow `runNpmInstall()` to run once per `package.json`
     // when doing a default install (no additional args)
     if (meta && packageJsonPath && args.length === 0) {
-      if (typeof meta.runNpmInstallSet === 'undefined') {
+      if (!isSet<string>(meta.runNpmInstallSet)) {
         meta.runNpmInstallSet = new Set<string>();
       }
       if (isSet<string>(meta.runNpmInstallSet)) {
