@@ -48,7 +48,7 @@ describe('build()', () => {
       err = _err;
     }
     expect(err.message).toEqual(
-      `Detected Build Output v3 from the "build" script, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable. More info: ____________`
+      `Detected Build Output v3 from the "build" script, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable.`
     );
   });
 });

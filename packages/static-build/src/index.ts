@@ -647,7 +647,7 @@ export const build: BuildV2 = async ({
           else if (framework) buildCommandName = framework.name;
           else buildCommandName = 'the "build" script';
           throw new Error(
-            `Detected Build Output v3 from ${buildCommandName}, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable. More info: ____________`
+            `Detected Build Output v3 from ${buildCommandName}, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable.`
           );
         }
         return {

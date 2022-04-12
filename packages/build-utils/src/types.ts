@@ -363,9 +363,10 @@ export interface Images {
 export interface BuildResultBuildOutput {
   /**
    * Version number of the Build Output API that was created.
+   * Currently only `3` is a valid value.
    * @example 3
    */
-  buildOutputVersion: number;
+  buildOutputVersion: 3;
   /**
    * Filesystem path to the Build Output directory.
    * @example "/path/to/.vercel/output"
@@ -377,26 +378,30 @@ export interface BuildResultBuildOutput {
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.
  */
-export type BuildResultV2 =
-  | BuildResultBuildOutput
-  | {
-      // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
-      routes?: any[];
-      images?: Images;
-      output: {
-        [key: string]: File | Lambda | Prerender | EdgeFunction;
-      };
-      wildcard?: Array<{
-        domain: string;
-        value: string;
-      }>;
-    };
+export interface BuildResultV2 {
+  // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
+  routes?: any[];
+  images?: Images;
+  output: {
+    [key: string]: File | Lambda | Prerender | EdgeFunction;
+  };
+  wildcard?: Array<{
+    domain: string;
+    value: string;
+  }>;
+}
 
+/**
+ * When a Builder implements `version: 3`, the `build()` function is expected
+ * to return this type.
+ */
 export interface BuildResultV3 {
   output: Lambda;
 }
 
-export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
+export type BuildV2 = (
+  options: BuildOptions
+) => Promise<BuildResultV2 | BuildResultBuildOutput>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
 export type StartDevServer = (
