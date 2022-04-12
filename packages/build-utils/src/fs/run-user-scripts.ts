@@ -1,14 +1,18 @@
 import assert from 'assert';
 import fs from 'fs-extra';
 import path from 'path';
-import debug from '../debug';
+import Sema from 'async-sema';
 import spawn from 'cross-spawn';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
+import debug from '../debug';
 import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 import { readConfigFile } from './read-config-file';
+
+// Only allow one `runNpmInstall()` invocation to run concurrently
+const runNpmInstallSema = new Sema(1);
 
 export type CliType = 'yarn' | 'npm' | 'pnpm';
 
@@ -17,6 +21,11 @@ export interface ScanParentDirsResult {
    * "yarn", "npm", or "pnpm" depending on the presence of lockfiles.
    */
   cliType: CliType;
+  /**
+   * The file path of found `package.json` file, or `undefined` if none was
+   * found.
+   */
+  packageJsonPath?: string;
   /**
    * The contents of found `package.json` file, when the `readPackageJson`
    * option is enabled.
@@ -237,12 +246,13 @@ export async function scanParentDirs(
 
   let cliType: CliType = 'yarn';
   let packageJson: PackageJson | undefined;
+  let packageJsonPath: string | undefined;
   let currentDestPath = destPath;
   let lockfileVersion: number | undefined;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const packageJsonPath = path.join(currentDestPath, 'package.json');
+    packageJsonPath = path.join(currentDestPath, 'package.json');
     // eslint-disable-next-line no-await-in-loop
     if (await fs.pathExists(packageJsonPath)) {
       // Only read the contents of the *first* `package.json` file found,
@@ -293,7 +303,7 @@ export async function scanParentDirs(
     currentDestPath = newDestPath;
   }
 
-  return { cliType, packageJson, lockfileVersion };
+  return { cliType, packageJson, lockfileVersion, packageJsonPath };
 }
 
 export async function walkParentDirs({
@@ -319,55 +329,84 @@ export async function walkParentDirs({
   return null;
 }
 
+function isSet<T>(v: any): v is Set<T> {
+  return v?.constructor?.name === 'Set';
+}
+
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta,
   nodeVersion?: NodeVersion
-) {
+): Promise<boolean> {
   if (meta?.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
-    return;
+    return false;
   }
 
   assert(path.isAbsolute(destPath));
-  debug(`Installing to ${destPath}`);
 
-  const { cliType, lockfileVersion } = await scanParentDirs(destPath);
-  const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
-  const env = opts.env ? { ...opts.env } : { ...process.env };
-  delete env.NODE_ENV;
-  opts.env = getEnvForPackageManager({
-    cliType,
-    lockfileVersion,
-    nodeVersion,
-    env,
-  });
-  let commandArgs: string[];
+  try {
+    await runNpmInstallSema.acquire();
+    const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
+      destPath
+    );
 
-  if (cliType === 'npm') {
-    opts.prettyCommand = 'npm install';
-    commandArgs = args
-      .filter(a => a !== '--prefer-offline')
-      .concat(['install', '--no-audit', '--unsafe-perm']);
-  } else if (cliType === 'pnpm') {
-    // PNPM's install command is similar to NPM's but without the audit nonsense
-    // @see options https://pnpm.io/cli/install
-    opts.prettyCommand = 'pnpm install';
-    commandArgs = args
-      .filter(a => a !== '--prefer-offline')
-      .concat(['install', '--unsafe-perm']);
-  } else {
-    opts.prettyCommand = 'yarn install';
-    commandArgs = ['install', ...args];
+    // Only allow `runNpmInstall()` to run once per `package.json`
+    // when doing a default install (no additional args)
+    if (meta && packageJsonPath && args.length === 0) {
+      if (!isSet<string>(meta.runNpmInstallSet)) {
+        meta.runNpmInstallSet = new Set<string>();
+      }
+      if (isSet<string>(meta.runNpmInstallSet)) {
+        if (meta.runNpmInstallSet.has(packageJsonPath)) {
+          return false;
+        } else {
+          meta.runNpmInstallSet.add(packageJsonPath);
+        }
+      }
+    }
+
+    debug(`Installing to ${destPath}`);
+
+    const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
+    const env = opts.env ? { ...opts.env } : { ...process.env };
+    delete env.NODE_ENV;
+    opts.env = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      nodeVersion,
+      env,
+    });
+    let commandArgs: string[];
+
+    if (cliType === 'npm') {
+      opts.prettyCommand = 'npm install';
+      commandArgs = args
+        .filter(a => a !== '--prefer-offline')
+        .concat(['install', '--no-audit', '--unsafe-perm']);
+    } else if (cliType === 'pnpm') {
+      // PNPM's install command is similar to NPM's but without the audit nonsense
+      // @see options https://pnpm.io/cli/install
+      opts.prettyCommand = 'pnpm install';
+      commandArgs = args
+        .filter(a => a !== '--prefer-offline')
+        .concat(['install', '--unsafe-perm']);
+    } else {
+      opts.prettyCommand = 'yarn install';
+      commandArgs = ['install', ...args];
+    }
+
+    if (process.env.NPM_ONLY_PRODUCTION) {
+      commandArgs.push('--production');
+    }
+
+    await spawnAsync(cliType, commandArgs, opts);
+    return true;
+  } finally {
+    runNpmInstallSema.release();
   }
-
-  if (process.env.NPM_ONLY_PRODUCTION) {
-    commandArgs.push('--production');
-  }
-
-  return spawnAsync(cliType, commandArgs, opts);
 }
 
 export function getEnvForPackageManager({
