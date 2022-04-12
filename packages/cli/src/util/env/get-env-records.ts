@@ -32,7 +32,7 @@ export default async function getEnvRecords(
     query.set('decrypt', decrypt.toString());
   }
 
-  const url = `/v7/projects/${projectId}/env?${query}`;
+  const url = `/v8/projects/${projectId}/env?${query}`;
 
   return client.fetch<{ envs: ProjectEnvVariable[] }>(url);
 }

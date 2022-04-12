@@ -30,9 +30,7 @@ export async function injectVercelAnalyticsPlugin(dir: string) {
     `Injecting Gatsby.js analytics plugin "${gatsbyPluginPackageName}" to \`${gatsbyConfigPath}\``
   );
 
-  const pkgJson: DeepWriteable<PackageJson> = (await readPackageJson(
-    dir
-  )) as DeepWriteable<PackageJson>;
+  const pkgJson = (await readPackageJson(dir)) as DeepWriteable<PackageJson>;
   if (!pkgJson.dependencies) {
     pkgJson.dependencies = {};
   }

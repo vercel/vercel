@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import getArgs from '../../util/get-args';
@@ -137,14 +138,14 @@ export default async function main(client: Client) {
       case 'rm':
         return rm(client, project, argv, args, output);
       case 'pull':
-        output.warn(
-          `${getCommandName(
-            'env pull'
-          )} is deprecated and will be removed in future releases. Run ${getCommandName(
-            'pull'
-          )} instead.`
+        return pull(
+          client,
+          project,
+          ProjectEnvTarget.Development,
+          argv,
+          args,
+          output
         );
-        return pull(client, project, argv, args, output);
       default:
         output.error(getInvalidSubcommand(COMMAND_CONFIG));
         help();
