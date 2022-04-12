@@ -15,6 +15,7 @@ import {
   runPackageJsonScript,
   scanParentDirs,
   FileBlob,
+  Meta,
 } from '../src';
 
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
@@ -412,4 +413,23 @@ it('should detect pnpm Workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+});
+
+it('should only invoke `runNpmInstall()` once per `package.json` file', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+  const apiDir = path.join(fixture, 'api');
+  const [run1, run2, run3] = await Promise.all([
+    runNpmInstall(apiDir, [], undefined, meta),
+    runNpmInstall(apiDir, [], undefined, meta),
+    runNpmInstall(fixture, [], undefined, meta),
+  ]);
+  expect(run1).toEqual(true);
+  expect(run2).toEqual(false);
+  expect(run3).toEqual(false);
+  expect(
+    (meta.runNpmInstallSet as Set<string>).has(
+      path.join(fixture, 'package.json')
+    )
+  ).toEqual(true);
 });
