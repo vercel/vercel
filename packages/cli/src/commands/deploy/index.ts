@@ -268,18 +268,6 @@ export default async (client: Client) => {
       );
       status = 'linked';
     }
-  } else {
-    if (localConfig?.projectSettings) {
-      output.print(
-        `${prependEmoji(
-          `Warning: \`projectSettings\` detected in vercel.json. The following properties will be overriden for this deployment:`,
-          emoji('warning')
-        )}\n`
-      );
-      Object.entries(localConfig.projectSettings).forEach(([key, value]) =>
-        output.print(`             - ${key}: \`${value}\`\n`)
-      );
-    }
   }
 
   // At this point `org` should be populated
