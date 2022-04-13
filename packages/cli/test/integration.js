@@ -3741,6 +3741,15 @@ test('vercel.json projectSettings overrides', async t => {
 
   deployment = await deploy();
 
+  // assert the warning is displayed to user
+  t.true(
+    [
+      'Warning: `projectSettings` detected in vercel.json. The following properties will be overriden for this deployment:',
+      `buildCommand: \`${BUILD_COMMAND}\``,
+      `outputDirectory: \`${OUTPUT_DIRECTORY}\``,
+    ].every(message => deployment.stderr.includes(message))
+  );
+
   // assert the command were executed
   let page = await fetch(deployment.stdout);
   let text = await page.text();
@@ -3758,8 +3767,7 @@ test('vercel.json projectSettings overrides', async t => {
 
   // Deployment should fail
   deployment = await deploy(1);
-  console.log(deployment.stderr);
-  t.ok(
+  t.true(
     deployment.stderr.includes(
       'Error! Invalid request: `projectSettings` should NOT have additional property `invalidProjectSetting`.'
     )
