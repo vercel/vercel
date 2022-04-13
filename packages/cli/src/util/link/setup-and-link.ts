@@ -46,8 +46,6 @@ export default async function setupAndLink(
   const { localConfig, output, config } = client;
   const debug = output.isDebugEnabled();
 
-  console.log('BREAK 1');
-
   const isFile = !isDirectory(path);
   if (isFile) {
     output.error(`Expected directory but found file: ${path}`);
@@ -61,20 +59,14 @@ export default async function setupAndLink(
   let newProjectName: string;
   let org;
 
-  console.log('BREAK 2');
-
   if (!forceDelete && link.status === 'linked') {
     return link;
   }
-
-  console.log('BREAK 3');
 
   if (forceDelete) {
     const vercelDir = getVercelDirectory(path);
     remove(vercelDir);
   }
-
-  console.log('BREAK 4');
 
   const shouldStartSetup =
     autoConfirm ||
@@ -87,8 +79,6 @@ export default async function setupAndLink(
     output.print(`Aborted. Project not set up.\n`);
     return { status: 'not_linked', org: null, project: null };
   }
-
-  console.log('BREAK 5');
 
   try {
     org = await selectOrg(
@@ -105,8 +95,6 @@ export default async function setupAndLink(
     throw err;
   }
 
-  console.log('BREAK 6');
-
   const detectedProjectName = projectName || basename(path);
 
   const projectOrNewProjectName = await inputProject(
@@ -115,8 +103,6 @@ export default async function setupAndLink(
     detectedProjectName,
     autoConfirm
   );
-
-  console.log('BREAK 7');
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
@@ -138,8 +124,6 @@ export default async function setupAndLink(
     return { status: 'linked', org, project };
   }
 
-  console.log('BREAK 8');
-
   // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
   // and upload the entire directory.
   const sourcePath =
@@ -157,8 +141,6 @@ export default async function setupAndLink(
   config.currentTeam = org.type === 'team' ? org.id : undefined;
   const isZeroConfig =
     !localConfig || !localConfig.builds || localConfig.builds.length === 0;
-
-  console.log('BREAK 9');
 
   try {
     let settings: ProjectSettings = {};
@@ -200,8 +182,6 @@ export default async function setupAndLink(
         path
       );
 
-      console.log('BREAK 10');
-
       if (
         !deployment ||
         !('code' in deployment) ||
@@ -213,8 +193,6 @@ export default async function setupAndLink(
         }
         return { status: 'error', exitCode: 1 };
       }
-
-      console.log('BREAK 11');
 
       const { projectSettings, framework } = deployment;
 
@@ -246,13 +224,9 @@ export default async function setupAndLink(
       successEmoji
     );
 
-    console.log('BREAK 12');
-
     return { status: 'linked', org, project };
   } catch (err) {
     handleError(err);
-
-    console.log('BREAK 13');
 
     return { status: 'error', exitCode: 1 };
   }

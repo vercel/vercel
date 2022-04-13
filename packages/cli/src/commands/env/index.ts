@@ -121,7 +121,6 @@ export default async function main(client: Client) {
   const { output, config } = client;
   const link = await getLinkedProject(client, cwd);
   if (link.status === 'error') {
-    console.log(`EXITING (${link.exitCode}) because of "error"`);
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
@@ -129,7 +128,6 @@ export default async function main(client: Client) {
         'link'
       )} to begin.`
     );
-    console.log('EXITING (1) because of "not_linked"');
     return 1;
   } else {
     const { project, org } = link;

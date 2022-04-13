@@ -86,7 +86,6 @@ export async function getLinkFromDir<T = ProjectLink>(
   } catch (error) {
     // link file does not exists, project is not linked
     if (['ENOENT', 'ENOTDIR'].includes(error.code)) {
-      console.log(`Project link not found in "${dir}"`);
       return null;
     }
 
@@ -139,7 +138,6 @@ export async function getLinkedProject(
       : await getLink(path);
 
   if (!link) {
-    console.log('NOT LINKED A');
     return { status: 'not_linked', org: null, project: null };
   }
 
@@ -187,7 +185,6 @@ export async function getLinkedProject(
       );
     }
 
-    console.log('NOT LINKED B');
     return { status: 'not_linked', org: null, project: null };
   }
 
