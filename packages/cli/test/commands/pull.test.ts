@@ -27,4 +27,52 @@ describe('pull', () => {
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
   });
+
+  it('should handle --environment=preview flag', async () => {
+    const cwd = setupFixture('vercel-pull-next');
+    useUser();
+    useTeams();
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '--environment=preview', cwd);
+    const exitCode = await pull(client);
+    expect(exitCode).toEqual(0);
+
+    const rawPreviewEnv = await fs.readFile(
+      path.join(cwd, '.vercel', '.env.preview.local')
+    );
+    const previewFileHasPreviewEnv = rawPreviewEnv
+      .toString()
+      .includes('REDIS_CONNECTION_STRING');
+    expect(previewFileHasPreviewEnv).toBeTruthy();
+  });
+
+  it('should handle --environment=production flag', async () => {
+    const cwd = setupFixture('vercel-pull-next');
+    useUser();
+    useTeams();
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '--environment=production', cwd);
+    const exitCode = await pull(client);
+    expect(exitCode).toEqual(0);
+
+    const rawProdEnv = await fs.readFile(
+      path.join(cwd, '.vercel', '.env.production.local')
+    );
+    const previewFileHasPreviewEnv1 = rawProdEnv
+      .toString()
+      .includes('REDIS_CONNECTION_STRING');
+    expect(previewFileHasPreviewEnv1).toBeTruthy();
+    const previewFileHasPreviewEnv2 = rawProdEnv
+      .toString()
+      .includes('SQL_CONNECTION_STRING');
+    expect(previewFileHasPreviewEnv2).toBeTruthy();
+  });
 });
