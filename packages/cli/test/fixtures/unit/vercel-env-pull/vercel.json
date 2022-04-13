@@ -1,7 +1,6 @@
 {
   "version": 2,
   "name": "vercel-env-next",
-  "builds": [{ "src": "package.json", "use": "@vercel/next@canary" }],
   "routes": [
     {
       "src": "/(.*)",
