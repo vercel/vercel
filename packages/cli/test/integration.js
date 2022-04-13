@@ -1247,7 +1247,7 @@ test('should add secret with hyphen prefix', async t => {
     0,
     formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
   );
-  const { host } = new URL(targetCall.stdout);
+  const { host } = new URL(extractUrl(targetCall.stdout));
   const response = await fetch(`https://${host}`);
   t.is(
     response.status,
@@ -1302,7 +1302,7 @@ test('ignore files specified in .nowignore', async t => {
   console.log(targetCall.stdout);
   console.log(targetCall.exitCode);
 
-  const { host } = new URL(targetCall.stdout);
+  const { host } = new URL(extractUrl(targetCall.stdout));
   const ignoredFile = await fetch(`https://${host}/ignored.txt`);
   t.is(ignoredFile.status, 404);
 
@@ -1330,7 +1330,7 @@ test('ignore files specified in .nowignore via allowlist', async t => {
   console.log(targetCall.stdout);
   console.log(targetCall.exitCode);
 
-  const { host } = new URL(targetCall.stdout);
+  const { host } = new URL(extractUrl(targetCall.stdout));
   const ignoredFile = await fetch(`https://${host}/ignored.txt`);
   t.is(ignoredFile.status, 404);
 
@@ -1666,7 +1666,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.regex(stderr, /There are no files inside your deployment/);
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
+  const { href, host } = new URL(extractUrl(stdout));
   t.is(host.split('-')[0], session);
 
   if (host) {
@@ -1796,7 +1796,7 @@ test('ensure the `scope` property works with email', async t => {
   t.is(exitCode, 0);
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
+  const { href, host } = new URL(extractUrl(stdout));
   t.is(host.split('-')[0], session);
 
   // Send a test request to the deployment
@@ -1836,7 +1836,7 @@ test('ensure the `scope` property works with username', async t => {
   t.is(exitCode, 0);
 
   // Test if the output is really a URL
-  const { href, host } = new URL(stdout);
+  const { href, host } = new URL(extractUrl(stdout));
   t.is(host.split('-')[0], session);
 
   // Send a test request to the deployment
@@ -1974,7 +1974,7 @@ test('create a staging deployment', async t => {
   t.regex(targetCall.stdout, /https:\/\//gm);
   t.is(targetCall.exitCode, 0, formatOutput(targetCall));
 
-  const { host } = new URL(targetCall.stdout);
+  const { host } = new URL(extractUrl(targetCall.stdout));
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
   ).then(resp => resp.json());
@@ -2014,7 +2014,7 @@ test('create a production deployment', async t => {
   );
   t.regex(targetCall.stdout, /https:\/\//gm);
 
-  const { host: targetHost } = new URL(targetCall.stdout);
+  const { host: targetHost } = new URL(extractUrl(targetCall.stdout));
   const targetDeployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${targetHost}`
   ).then(resp => resp.json());
@@ -2038,7 +2038,7 @@ test('create a production deployment', async t => {
   );
   t.regex(call.stdout, /https:\/\//gm);
 
-  const { host } = new URL(call.stdout);
+  const { host } = new URL(extractUrl(call.stdout));
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
   ).then(resp => resp.json());
@@ -2061,7 +2061,7 @@ test('use build-env', async t => {
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
-  const { href } = new URL(deploymentUrl);
+  const { href } = new URL(extractUrl(deploymentUrl));
 
   await waitForDeployment(href);
 
@@ -2099,7 +2099,7 @@ test('use `--debug` CLI flag', async t => {
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
+  const { href, host } = new URL(extractUrl(deploymentUrl));
   t.is(host.split('-')[0], session);
 
   await waitForDeployment(href);
@@ -2558,7 +2558,7 @@ test('create zero-config deployment', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host } = new URL(output.stdout);
+  const { host } = new URL(extractUrl(output.stdout));
   const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
 
   const text = await response.text();
@@ -2677,7 +2677,7 @@ test('deploy a Lambda with 128MB of memory', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host: url } = new URL(output.stdout);
+  const { host: url } = new URL(extractUrl(output.stdout));
   const response = await fetch('https://' + url + '/api/memory');
 
   t.is(response.status, 200, url);
@@ -2703,7 +2703,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const url = new URL(output.stdout);
+  const url = new URL(extractUrl(output.stdout));
 
   // Should time out
   url.pathname = '/api/wait-for/5';
@@ -2753,7 +2753,7 @@ test('deploy a Lambda with a specific runtime', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host: url } = new URL(output.stdout);
+  const { host: url } = new URL(extractUrl(output.stdout));
 
   const builds = await getDeploymentBuildsByUrl(url);
   const build = builds.find(b => b.use && b.use.includes('php')) || builds[0];
@@ -2872,7 +2872,7 @@ test('should show prompts to set up project during first deploy', async t => {
   );
 
   // Send a test request to the deployment
-  const response = await fetch(new URL(output.stdout).href);
+  const response = await fetch(new URL(extractUrl(output.stdout)));
   const text = await response.text();
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
 
@@ -3187,7 +3187,7 @@ test('use `rootDirectory` from project when deploying', async t => {
   const firstResult = await execute([directory, '--confirm', '--public']);
   t.is(firstResult.exitCode, 0, formatOutput(firstResult));
 
-  const { host: firstHost } = new URL(firstResult.stdout);
+  const { host: firstHost } = new URL(extractUrl(firstResult.stdout));
   const response = await apiFetch(`/v12/now/deployments/get?url=${firstHost}`);
   t.is(response.status, 200);
   const { projectId } = await response.json();
