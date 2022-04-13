@@ -394,7 +394,7 @@ export interface BuildResultV2Typical {
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
 export interface BuildResultV3 {
-  output: Lambda;
+  output: Lambda | EdgeFunction;
 }
 
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;

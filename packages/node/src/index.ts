@@ -43,6 +43,7 @@ import {
   PrepareCache,
   StartDevServer,
   NodeVersion,
+  EdgeFunction,
 } from '@vercel/build-utils';
 
 import { Register, register } from './typescript';
@@ -378,16 +379,29 @@ export const build: BuildV3 = async ({
     config.helpers === false || process.env.NODEJS_HELPERS === '0'
   );
 
-  const lambda = new NodejsLambda({
-    files: preparedFiles,
-    handler: renameTStoJS(relative(baseDir, entrypointPath)),
-    runtime: nodeVersion.runtime,
-    shouldAddHelpers,
-    shouldAddSourcemapSupport,
-    awsLambdaHandler,
-  });
+  let output: NodejsLambda | EdgeFunction;
+  // TODO: Parse the exported config from the entrypoint
+  const parsedConfig: { runtime: 'nodejs' | 'edge' } = { runtime: 'edge' };
+  if (parsedConfig.runtime === 'edge') {
+    // TODO: Ignore babel CJS and TS transpilation (probably)
+    output = new EdgeFunction({
+      entrypoint,
+      name: entrypoint, // TODO: Remove `name`?
+      deploymentTarget: 'v8-worker', // TODO: Remove `deploymentTarget`?
+      files: preparedFiles,
+    });
+  } else {
+    output = new NodejsLambda({
+      files: preparedFiles,
+      handler: renameTStoJS(relative(baseDir, entrypointPath)),
+      runtime: nodeVersion.runtime,
+      shouldAddHelpers,
+      shouldAddSourcemapSupport,
+      awsLambdaHandler,
+    });
+  }
 
-  return { output: lambda };
+  return { output };
 };
 
 export const prepareCache: PrepareCache = async ({ workPath }) => {
