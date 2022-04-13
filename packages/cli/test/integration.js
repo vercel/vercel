@@ -45,12 +45,6 @@ function fixture(name) {
   return directory;
 }
 
-const URL_REGEX = /(https?:\/\/[^ ]*)/;
-function extractUrl(input) {
-  let match = input.match(URL_REGEX);
-  return match?.[1];
-}
-
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = name =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
@@ -494,7 +488,7 @@ test('default command should work with --cwd option', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const url = extractUrl(stdout);
+  const url = stdout;
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   t.deepEqual(
@@ -516,7 +510,7 @@ test('deploy using only now.json with `redirects` defined', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const url = extractUrl(stdout);
+  const url = stdout;
   const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   t.is(location, 'https://example.com/foo/bar');
@@ -543,7 +537,7 @@ test('deploy using --local-config flag v2', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const { host } = new URL(extractUrl(stdout));
+  const { host } = new URL(stdout);
   t.regex(host, /secondary/gm, `Expected "secondary" but received "${host}"`);
 
   const testRes = await fetch(`https://${host}/test-${contextName}.html`);
@@ -607,7 +601,7 @@ test('deploy using --local-config flag above target', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const { host } = new URL(extractUrl(stdout));
+  const { host } = new URL(stdout);
 
   const testRes = await fetch(`https://${host}/index.html`);
   const testText = await testRes.text();
@@ -856,7 +850,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
       }
     );
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-    const { host } = new URL(extractUrl(stdout));
+    const { host } = new URL(stdout);
 
     const apiUrl = `https://${host}/api/get-env`;
     console.log({ apiUrl });
@@ -1167,7 +1161,7 @@ test('deploy with metadata containing "=" in the value', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const { host } = new URL(extractUrl(stdout));
+  const { host } = new URL(stdout);
   const res = await fetch(
     `https://api.vercel.com/v12/now/deployments/get?url=${host}`,
     { headers: { authorization: `Bearer ${token}` } }
@@ -1247,7 +1241,7 @@ test('should add secret with hyphen prefix', async t => {
     0,
     formatOutput({ stderr: targetCall.stderr, stdout: targetCall.stdout })
   );
-  const { host } = new URL(extractUrl(targetCall.stdout));
+  const { host } = new URL(targetCall.stdout);
   const response = await fetch(`https://${host}`);
   t.is(
     response.status,
@@ -1302,7 +1296,7 @@ test('ignore files specified in .nowignore', async t => {
   console.log(targetCall.stdout);
   console.log(targetCall.exitCode);
 
-  const { host } = new URL(extractUrl(targetCall.stdout));
+  const { host } = new URL(targetCall.stdout);
   const ignoredFile = await fetch(`https://${host}/ignored.txt`);
   t.is(ignoredFile.status, 404);
 
@@ -1330,7 +1324,7 @@ test('ignore files specified in .nowignore via allowlist', async t => {
   console.log(targetCall.stdout);
   console.log(targetCall.exitCode);
 
-  const { host } = new URL(extractUrl(targetCall.stdout));
+  const { host } = new URL(targetCall.stdout);
   const ignoredFile = await fetch(`https://${host}/ignored.txt`);
   t.is(ignoredFile.status, 404);
 
@@ -1666,7 +1660,7 @@ test('ensure we render a warning for deployments with no files', async t => {
   t.regex(stderr, /There are no files inside your deployment/);
 
   // Test if the output is really a URL
-  const { href, host } = new URL(extractUrl(stdout));
+  const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
 
   if (host) {
@@ -1796,7 +1790,7 @@ test('ensure the `scope` property works with email', async t => {
   t.is(exitCode, 0);
 
   // Test if the output is really a URL
-  const { href, host } = new URL(extractUrl(stdout));
+  const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
 
   // Send a test request to the deployment
@@ -1836,7 +1830,7 @@ test('ensure the `scope` property works with username', async t => {
   t.is(exitCode, 0);
 
   // Test if the output is really a URL
-  const { href, host } = new URL(extractUrl(stdout));
+  const { href, host } = new URL(stdout);
   t.is(host.split('-')[0], session);
 
   // Send a test request to the deployment
@@ -1947,7 +1941,7 @@ test('create a builds deployments with no actual builds', async t => {
   t.is(exitCode, 0);
 
   // Test if the output is really a URL
-  const { host } = new URL(extractUrl(stdout));
+  const { host } = new URL(stdout);
   t.is(host.split('-')[0], session);
 });
 
@@ -1974,7 +1968,7 @@ test('create a staging deployment', async t => {
   t.regex(targetCall.stdout, /https:\/\//gm);
   t.is(targetCall.exitCode, 0, formatOutput(targetCall));
 
-  const { host } = new URL(extractUrl(targetCall.stdout));
+  const { host } = new URL(targetCall.stdout);
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
   ).then(resp => resp.json());
@@ -2014,7 +2008,7 @@ test('create a production deployment', async t => {
   );
   t.regex(targetCall.stdout, /https:\/\//gm);
 
-  const { host: targetHost } = new URL(extractUrl(targetCall.stdout));
+  const { host: targetHost } = new URL(targetCall.stdout);
   const targetDeployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${targetHost}`
   ).then(resp => resp.json());
@@ -2038,7 +2032,7 @@ test('create a production deployment', async t => {
   );
   t.regex(call.stdout, /https:\/\//gm);
 
-  const { host } = new URL(extractUrl(call.stdout));
+  const { host } = new URL(call.stdout);
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
   ).then(resp => resp.json());
@@ -2061,7 +2055,7 @@ test('use build-env', async t => {
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
-  const { href } = new URL(extractUrl(deploymentUrl));
+  const { href } = new URL(deploymentUrl);
 
   await waitForDeployment(href);
 
@@ -2099,7 +2093,7 @@ test('use `--debug` CLI flag', async t => {
 
   // Test if the output is really a URL
   const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(extractUrl(deploymentUrl));
+  const { href, host } = new URL(deploymentUrl);
   t.is(host.split('-')[0], session);
 
   await waitForDeployment(href);
@@ -2423,7 +2417,7 @@ test('`vercel rm` removes a deployment', async t => {
     }
   );
 
-  const { host } = new URL(extractUrl(stdout));
+  const { host } = new URL(stdout);
   const { exitCode, stdout: stdoutRemove } = await execute([
     'rm',
     host,
@@ -2560,7 +2554,7 @@ test('create zero-config deployment', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host } = new URL(extractUrl(output.stdout));
+  const { host } = new URL(output.stdout);
   const response = await apiFetch(`/v10/now/deployments/unkown?url=${host}`);
 
   const text = await response.text();
@@ -2679,7 +2673,7 @@ test('deploy a Lambda with 128MB of memory', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host: url } = new URL(extractUrl(output.stdout));
+  const { host: url } = new URL(output.stdout);
   const response = await fetch('https://' + url + '/api/memory');
 
   t.is(response.status, 200, url);
@@ -2705,7 +2699,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const url = new URL(extractUrl(output.stdout));
+  const url = new URL(output.stdout);
 
   // Should time out
   url.pathname = '/api/wait-for/5';
@@ -2755,7 +2749,7 @@ test('deploy a Lambda with a specific runtime', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host: url } = new URL(extractUrl(output.stdout));
+  const { host: url } = new URL(output.stdout);
 
   const builds = await getDeploymentBuildsByUrl(url);
   const build = builds.find(b => b.use && b.use.includes('php')) || builds[0];
@@ -2874,7 +2868,7 @@ test('should show prompts to set up project during first deploy', async t => {
   );
 
   // Send a test request to the deployment
-  const response = await fetch(new URL(extractUrl(output.stdout)));
+  const response = await fetch(new URL(output.stdout));
   const text = await response.text();
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
 
@@ -3189,7 +3183,7 @@ test('use `rootDirectory` from project when deploying', async t => {
   const firstResult = await execute([directory, '--confirm', '--public']);
   t.is(firstResult.exitCode, 0, formatOutput(firstResult));
 
-  const { host: firstHost } = new URL(extractUrl(firstResult.stdout));
+  const { host: firstHost } = new URL(firstResult.stdout);
   const response = await apiFetch(`/v12/now/deployments/get?url=${firstHost}`);
   t.is(response.status, 200);
   const { projectId } = await response.json();
@@ -3289,7 +3283,7 @@ test('deploys with only now.json and README.md', async t => {
   );
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-  const { host } = new URL(extractUrl(stdout));
+  const { host } = new URL(stdout);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   t.regex(text, /readme contents/);
@@ -3308,7 +3302,7 @@ test('deploys with only vercel.json and README.md', async t => {
   );
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-  const { host } = new URL(extractUrl(stdout));
+  const { host } = new URL(stdout);
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   t.regex(text, /readme contents/);
