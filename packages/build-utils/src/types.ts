@@ -357,7 +357,29 @@ export interface Images {
   formats?: ImageFormat[];
 }
 
-export interface BuildResultV2 {
+/**
+ * If a Builder ends up creating filesystem outputs conforming to
+ * the Build Output API, then the Builder should return this type.
+ */
+export interface BuildResultBuildOutput {
+  /**
+   * Version number of the Build Output API that was created.
+   * Currently only `3` is a valid value.
+   * @example 3
+   */
+  buildOutputVersion: 3;
+  /**
+   * Filesystem path to the Build Output directory.
+   * @example "/path/to/.vercel/output"
+   */
+  buildOutputPath: string;
+}
+
+/**
+ * When a Builder implements `version: 2`, the `build()` function is expected
+ * to return this type.
+ */
+export interface BuildResultV2Typical {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   images?: Images;
@@ -369,6 +391,8 @@ export interface BuildResultV2 {
     value: string;
   }>;
 }
+
+export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
 export interface BuildResultV3 {
   output: Lambda;
