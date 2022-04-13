@@ -543,7 +543,7 @@ test('deploy using --local-config flag v2', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const { host } = new URL(stdout);
+  const { host } = new URL(extractUrl(stdout));
   t.regex(host, /secondary/gm, `Expected "secondary" but received "${host}"`);
 
   const testRes = await fetch(`https://${host}/test-${contextName}.html`);
@@ -607,7 +607,7 @@ test('deploy using --local-config flag above target', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const { host } = new URL(stdout);
+  const { host } = new URL(extractUrl(stdout));
 
   const testRes = await fetch(`https://${host}/index.html`);
   const testText = await testRes.text();
@@ -856,7 +856,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
       }
     );
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-    const { host } = new URL(stdout);
+    const { host } = new URL(extractUrl(stdout));
 
     const apiUrl = `https://${host}/api/get-env`;
     console.log({ apiUrl });
@@ -1167,7 +1167,7 @@ test('deploy with metadata containing "=" in the value', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const { host } = new URL(stdout);
+  const { host } = new URL(extractUrl(stdout));
   const res = await fetch(
     `https://api.vercel.com/v12/now/deployments/get?url=${host}`,
     { headers: { authorization: `Bearer ${token}` } }
@@ -1947,7 +1947,7 @@ test('create a builds deployments with no actual builds', async t => {
   t.is(exitCode, 0);
 
   // Test if the output is really a URL
-  const { host } = new URL(stdout);
+  const { host } = new URL(extractUrl(stdout));
   t.is(host.split('-')[0], session);
 });
 
@@ -2421,7 +2421,7 @@ test('`vercel rm` removes a deployment', async t => {
     }
   );
 
-  const { host } = new URL(stdout);
+  const { host } = new URL(extractUrl(stdout));
   const { exitCode, stdout: stdoutRemove } = await execute([
     'rm',
     host,
@@ -3287,7 +3287,7 @@ test('deploys with only now.json and README.md', async t => {
   );
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-  const { host } = new URL(stdout);
+  const { host } = new URL(extractUrl(stdout));
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   t.regex(text, /readme contents/);
@@ -3306,7 +3306,7 @@ test('deploys with only vercel.json and README.md', async t => {
   );
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
-  const { host } = new URL(stdout);
+  const { host } = new URL(extractUrl(stdout));
   const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   t.regex(text, /readme contents/);
