@@ -11,7 +11,7 @@ describe('pull', () => {
   it('should handle pulling', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
-    useTeams();
+    useTeams('team_dummy');
     useProject({
       ...defaultProject,
       id: 'vercel-pull-next',
@@ -31,7 +31,7 @@ describe('pull', () => {
   it('should handle --environment=preview flag', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
-    useTeams();
+    useTeams('team_dummy');
     useProject({
       ...defaultProject,
       id: 'vercel-pull-next',
@@ -53,7 +53,7 @@ describe('pull', () => {
   it('should handle --environment=production flag', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
-    useTeams();
+    useTeams('team_dummy');
     useProject({
       ...defaultProject,
       id: 'vercel-pull-next',
