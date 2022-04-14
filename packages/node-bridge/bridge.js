@@ -186,9 +186,6 @@ class Bridge {
       'payloads' in normalizedEvent &&
       Array.isArray(normalizedEvent.payloads)
     ) {
-      // statusCode and headers are required to match when using
-      // multiple payloads in a single invocation so we can use
-      // the first
       let statusCode = 200;
       /**
        * @type {import('http').IncomingHttpHeaders}
@@ -200,6 +197,14 @@ class Bridge {
       let combinedBody = '';
       const multipartBoundary = 'payload-separator';
       const CLRF = '\r\n';
+      /**
+       * @type {Record<string, any>[]}
+       */
+      const separateHeaders = [];
+      /**
+       * @type {Set<string>}
+       */
+      const allHeaderKeys = new Set();
 
       // we execute the payloads one at a time to ensure
       // lambda semantics
@@ -209,19 +214,48 @@ class Bridge {
         // build a combined body using multipart
         // https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html
         combinedBody += `--${multipartBoundary}${CLRF}`;
-        if (response.headers['content-type']) {
-          combinedBody += `content-type: ${response.headers['content-type']}${CLRF}${CLRF}`;
-        }
-        combinedBody += response.body;
+        combinedBody += `content-type: ${
+          response.headers['content-type'] || 'text/plain'
+        }${CLRF}${CLRF}`;
+        combinedBody += response.body || '';
         combinedBody += CLRF;
 
         if (i === normalizedEvent.payloads.length - 1) {
           combinedBody += `--${multipartBoundary}--${CLRF}`;
         }
-
-        statusCode = response.statusCode;
-        headers = response.headers;
+        // pass non-200 status code in header so it can be handled
+        // separately from other payloads e.g. HTML payload redirects
+        // (307) but data payload does not (200)
+        if (response.statusCode !== 200) {
+          headers[`x-vercel-payload-${i + 1}-status`] =
+            response.statusCode + '';
+        }
+        separateHeaders.push(response.headers);
+        Object.keys(response.headers).forEach(key => allHeaderKeys.add(key));
       }
+
+      allHeaderKeys.forEach(curKey => {
+        /**
+         * @type string | string[] | undefined
+         */
+        const curValue = separateHeaders[0] && separateHeaders[0][curKey];
+        const canDedupe = separateHeaders.every(
+          headers => headers[curKey] === curValue
+        );
+
+        if (canDedupe) {
+          headers[curKey] = curValue;
+        } else {
+          // if a header is unique per payload ensure it is prefixed
+          // so it can be parsed and provided separately
+          separateHeaders.forEach((curHeaders, idx) => {
+            if (curHeaders[curKey]) {
+              headers[`x-vercel-payload-${idx + 1}-${curKey}`] =
+                curHeaders[curKey];
+            }
+          });
+        }
+      });
 
       headers[
         'content-type'
