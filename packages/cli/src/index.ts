@@ -585,73 +585,73 @@ const main = async () => {
     let func: any;
     switch (targetCommand) {
       case 'alias':
-        func = await import('./commands/alias');
+        func = require('./commands/alias').default;
         break;
       case 'billing':
-        func = await import('./commands/billing');
+        func = require('./commands/billing').default;
         break;
       case 'bisect':
-        func = await import('./commands/bisect');
+        func = require('./commands/bisect').default;
         break;
       case 'certs':
-        func = await import('./commands/certs');
+        func = require('./commands/certs').default;
         break;
       case 'deploy':
-        func = await import('./commands/deploy');
+        func = require('./commands/deploy').default;
         break;
       case 'dev':
-        func = await import('./commands/dev');
+        func = require('./commands/dev').default;
         break;
       case 'dns':
-        func = await import('./commands/dns');
+        func = require('./commands/dns').default;
         break;
       case 'domains':
-        func = await import('./commands/domains');
+        func = require('./commands/domains').default;
         break;
       case 'env':
-        func = await import('./commands/env');
+        func = require('./commands/env').default;
         break;
       case 'init':
-        func = await import('./commands/init');
+        func = require('./commands/init').default;
         break;
       case 'inspect':
-        func = await import('./commands/inspect');
+        func = require('./commands/inspect').default;
         break;
       case 'link':
-        func = await import('./commands/link');
+        func = require('./commands/link').default;
         break;
       case 'list':
-        func = await import('./commands/list');
+        func = require('./commands/list').default;
         break;
       case 'logs':
-        func = await import('./commands/logs');
+        func = require('./commands/logs').default;
         break;
       case 'login':
-        func = await import('./commands/login');
+        func = require('./commands/login').default;
         break;
       case 'logout':
-        func = await import('./commands/logout');
+        func = require('./commands/logout').default;
         break;
       case 'projects':
-        func = await import('./commands/projects');
+        func = require('./commands/projects').default;
         break;
       case 'pull':
-        func = await import('./commands/pull');
+        func = require('./commands/pull').default;
         break;
       case 'remove':
-        func = await import('./commands/remove');
+        func = require('./commands/remove').default;
         break;
       case 'secrets':
-        func = await import('./commands/secrets');
+        func = require('./commands/secrets').default;
         break;
       case 'teams':
-        func = await import('./commands/teams');
+        func = require('./commands/teams').default;
         break;
       case 'update':
-        func = await import('./commands/update');
+        func = require('./commands/update').default;
         break;
       case 'whoami':
-        func = await import('./commands/whoami');
+        func = require('./commands/whoami').default;
         break;
       default:
         func = null;
