@@ -170,6 +170,14 @@ test('multi-payload handling', async () => {
   assert.equal(result.headers['x-vercel-payload-3-status'], '307');
   assert.equal(result.headers['x-vercel-payload-2-status'], undefined);
   assert.equal(result.headers['x-vercel-payload-1-status'], undefined);
+  assert.equal(result.headers['x-vercel-payload-1-content-type'], 'text/html');
+  assert.equal(
+    result.headers['x-vercel-payload-2-content-type'],
+    'application/json'
+  );
+  assert.equal(result.headers['x-vercel-payload-3-content-type'], undefined);
+  assert.equal(result.headers['x-vercel-payload-3-location'], '/somewhere');
+  assert.equal(result.headers['x-vercel-payload-2-location'], undefined);
   assert.equal(context.callbackWaitsForEmptyEventLoop, false);
 
   server.close();

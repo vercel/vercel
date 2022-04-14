@@ -197,6 +197,14 @@ class Bridge {
       let combinedBody = '';
       const multipartBoundary = 'payload-separator';
       const CLRF = '\r\n';
+      /**
+       * @type {Record<string, any>[]}
+       */
+      const separateHeaders = [];
+      /**
+       * @type {Set<string>}
+       */
+      const allHeaderKeys = new Set();
 
       // we execute the payloads one at a time to ensure
       // lambda semantics
@@ -215,8 +223,6 @@ class Bridge {
         if (i === normalizedEvent.payloads.length - 1) {
           combinedBody += `--${multipartBoundary}--${CLRF}`;
         }
-        headers = response.headers;
-
         // pass non-200 status code in header so it can be handled
         // separately from other payloads e.g. HTML payload redirects
         // (307) but data payload does not (200)
@@ -224,7 +230,32 @@ class Bridge {
           headers[`x-vercel-payload-${i + 1}-status`] =
             response.statusCode + '';
         }
+        separateHeaders.push(response.headers);
+        Object.keys(response.headers).forEach(key => allHeaderKeys.add(key));
       }
+
+      allHeaderKeys.forEach(curKey => {
+        /**
+         * @type string | string[] | undefined
+         */
+        const curValue = separateHeaders[0] && separateHeaders[0][curKey];
+        const canDedupe = separateHeaders.every(
+          headers => headers[curKey] === curValue
+        );
+
+        if (canDedupe) {
+          headers[curKey] = curValue;
+        } else {
+          // if a header is unique per payload ensure it is prefixed
+          // so it can be parsed and provided separately
+          separateHeaders.forEach((curHeaders, idx) => {
+            if (curHeaders[curKey]) {
+              headers[`x-vercel-payload-${idx + 1}-${curKey}`] =
+                curHeaders[curKey];
+            }
+          });
+        }
+      });
 
       headers[
         'content-type'
