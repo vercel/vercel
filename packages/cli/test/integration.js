@@ -3715,7 +3715,7 @@ test('vercel.json projectSettings overrides', async t => {
 
   t.true(
     deployment.stderr.includes(
-      'Error! New projects cannot contain `projectSettings` in vercel.json'
+      'Error! New projects cannot contain `projectSettings` in vercel.json. For more information go to: https://vercel.com/docs/project-configuration#project-configuration/project-settings'
     )
   );
 
