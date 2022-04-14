@@ -6,6 +6,7 @@
 !.yarnrc
 !yarn.lock
 !package.json
+!turbo.json
 
 # api
 !api/

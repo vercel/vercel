@@ -1,12 +1,13 @@
-const { prepareCache } = require('../dist');
-const path = require('path');
+import path from 'path';
+import { prepareCache } from '../src';
 
-describe('prepareCache', () => {
+describe('prepareCache()', () => {
   test('should cache node_modules and .shadow-cljs', async () => {
     const files = await prepareCache({
       config: { zeroConfig: true },
       workPath: path.resolve(__dirname, './cache-fixtures/default'),
       entrypoint: 'index.js',
+      files: {},
     });
 
     expect(files['node_modules/file']).toBeDefined();
@@ -19,6 +20,7 @@ describe('prepareCache', () => {
       config: { zeroConfig: true },
       workPath: path.resolve(__dirname, './cache-fixtures/withCacheConfig'),
       entrypoint: 'index.js',
+      files: {},
     });
 
     expect(files['node_modules/file']).toBeUndefined();
@@ -32,6 +34,7 @@ describe('prepareCache', () => {
       config: { zeroConfig: true },
       workPath: path.resolve(__dirname, './cache-fixtures/gatsby'),
       entrypoint: 'package.json',
+      files: {},
     });
 
     expect(files['node_modules/file2']).toBeDefined();
@@ -45,6 +48,7 @@ describe('prepareCache', () => {
       config: { zeroConfig: true, framework: 'jekyll' },
       workPath: path.resolve(__dirname, './cache-fixtures/jekyll'),
       entrypoint: 'Gemfile',
+      files: {},
     });
 
     expect(files['vendor/bundle/b1']).toBeDefined();
