@@ -418,7 +418,7 @@ export default async function main(client: Client): Promise<number> {
 
   const mergedImages = mergeImages(buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
-  const mergedOverrides: PathOverride | undefined =
+  const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
   // Write out the final `config.json` file based on the

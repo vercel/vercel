@@ -122,7 +122,7 @@ async function writeBuildResultV2(
       );
     }
   }
-  return overrides;
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
 
 /**
