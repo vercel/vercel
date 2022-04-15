@@ -1,10 +1,11 @@
 import chance from 'chance';
 import { client } from './client';
 
-export function useTeams() {
+export function useTeams(teamId?: string) {
+  const id = teamId || chance().guid();
   const teams = [
     {
-      id: chance().guid(),
+      id,
       slug: chance().string({ length: 5, casing: 'lower' }),
       name: chance().company(),
       creatorId: chance().guid(),
@@ -14,7 +15,7 @@ export function useTeams() {
   ];
 
   for (let team of teams) {
-    client.scenario.get(`/v1/team/${team.id}`, (_req, res) => {
+    client.scenario.get(`/teams/${team.id}`, (_req, res) => {
       res.json(team);
     });
   }

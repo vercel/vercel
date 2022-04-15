@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "vercel-pull-next",
+  "name": "vercel-env-pull",
   "routes": [
     {
       "src": "/(.*)",
