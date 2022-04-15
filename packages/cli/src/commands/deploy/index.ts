@@ -195,6 +195,14 @@ export default async (client: Client) => {
   let sourceFilesOutsideRootDirectory: boolean | undefined = true;
 
   if (status === 'not_linked') {
+    // In the future this will need to be implemented in both the CLI and vercel.com/new at the same time
+    if (localConfig?.projectSettings) {
+      output.error(
+        'Unexpected property detected in vercel.json: "projectSettings"'
+      );
+      return 1;
+    }
+
     const shouldStartSetup =
       autoConfirm ||
       (await confirm(
@@ -460,7 +468,10 @@ export default async (client: Client) => {
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
       // Only add projectSettings for zero config deployments
-      createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
+      createArgs.projectSettings = {
+        ...localConfig.projectSettings,
+        sourceFilesOutsideRootDirectory,
+      };
     }
 
     deployment = await createDeploy(
@@ -492,7 +503,10 @@ export default async (client: Client) => {
       );
 
       // deploy again, but send projectSettings this time
-      createArgs.projectSettings = settings;
+      createArgs.projectSettings = {
+        ...settings,
+        ...localConfig.projectSettings,
+      };
 
       deployStamp = stamp();
       createArgs.deployStamp = deployStamp;

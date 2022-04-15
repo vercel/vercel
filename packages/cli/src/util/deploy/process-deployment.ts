@@ -9,7 +9,6 @@ import {
 import { Output } from '../output';
 // @ts-ignore
 import Now from '../../util';
-import { VercelConfig } from '../dev/types';
 import { Org } from '../../types';
 import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';
@@ -43,7 +42,6 @@ export default async function processDeployment({
   uploadStamp: () => string;
   deployStamp: () => string;
   quiet: boolean;
-  nowConfig?: VercelConfig;
   force?: boolean;
   withCache?: boolean;
   org: Org;
@@ -62,7 +60,6 @@ export default async function processDeployment({
     deployStamp,
     force,
     withCache,
-    nowConfig,
     quiet,
     prebuilt,
     rootDirectory,
@@ -104,11 +101,7 @@ export default async function processDeployment({
   const indications = [];
 
   try {
-    for await (const event of createDeployment(
-      clientOptions,
-      requestBody,
-      nowConfig
-    )) {
+    for await (const event of createDeployment(clientOptions, requestBody)) {
       if (['tip', 'notice', 'warning'].includes(event.type)) {
         indications.push(event);
       }
