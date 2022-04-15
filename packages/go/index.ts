@@ -28,7 +28,6 @@ import {
   getWriteableDirectory,
   shouldServe,
   debug,
-  FileFsRef,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -517,7 +516,7 @@ async function copyDevServer(
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { entrypoint, workPath, meta = {}, files } = opts;
+  const { entrypoint, workPath, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointDir = dirname(entrypoint);
 
@@ -538,7 +537,7 @@ export async function startDevServer(
   }
   const analyzedRaw = await getAnalyzedEntrypoint(
     workPath,
-    (files[entrypointWithExt] as FileFsRef).fsPath,
+    join(workPath, entrypointWithExt),
     goModAbsPathDir
   );
   if (!analyzedRaw) {
@@ -552,10 +551,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   await Promise.all([
     copyEntrypoint(
       [
-        relative(
-          goModAbsPathDir,
-          (files[entrypointWithExt] as FileFsRef).fsPath
-        ),
+        relative(goModAbsPathDir, join(workPath, entrypointWithExt)),
         ...analyzed.watch,
       ],
       tmp
