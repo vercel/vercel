@@ -197,7 +197,7 @@ export default async (client: Client) => {
   if (status === 'not_linked') {
     if (localConfig?.projectSettings) {
       output.error(
-        'New projects cannot contain `projectSettings` in vercel.json. For more information go to: https://vercel.com/docs/project-configuration#project-configuration/project-settings'
+        'Unexpected property detected in vercel.json: "projectSettings"'
       );
       return 1;
     }
