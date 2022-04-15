@@ -71,7 +71,6 @@ async function writeBuildResultV2(
   cleanUrls?: boolean
 ) {
   if ('buildOutputPath' in buildResult) {
-    // TODO: merge with existing when Root Directory is set
     await mergeBuilderOutput(buildResult);
     return;
   }
@@ -132,8 +131,6 @@ async function writeBuildResultV2(
 async function writeBuildResultV3(buildResult: BuildResultV3, build: Builder) {
   const { output } = buildResult;
   if (isLambda(output)) {
-    // TODO: Is this the right place for zero config rename?
-    // TODO: Do we need to consider the "api" directory explicitly?
     const src = build.src!;
     const ext = extname(src);
     const path = build.config?.zeroConfig
