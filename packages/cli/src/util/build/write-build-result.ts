@@ -174,12 +174,10 @@ async function writeStaticFile(
   }
 
   // If `cleanUrls` is true then remove the `.html` file extension
-  // for HTML files. An `override` entry is created so that the proper
-  // "content-type" is still returned in the final output asset.
+  // for HTML files.
   if (cleanUrls && path.endsWith('.html')) {
     if (!override) override = {};
     override.path = path.slice(0, -5);
-    override.contentType = 'text/html; charset=utf-8';
   }
 
   // Ensure an explicit "content-type" on the `File` is returned in
