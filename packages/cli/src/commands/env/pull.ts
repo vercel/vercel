@@ -49,7 +49,7 @@ export default async function pull(
   opts: Partial<Options>,
   args: string[],
   output: Output,
-  cwd: string = process.cwd()
+  cwd: string
 ) {
   if (args.length > 1) {
     output.error(
@@ -81,7 +81,7 @@ export default async function pull(
   }
 
   output.print(
-    `Downloading Development Environment Variables for Project ${chalk.bold(
+    `Downloading "${environment}" Environment Variables for Project ${chalk.bold(
       project.name
     )}\n`
   );
@@ -99,7 +99,9 @@ export default async function pull(
   const records = exposeSystemEnvs(
     projectEnvs,
     systemEnvValues,
-    project.autoExposeSystemEnvs
+    project.autoExposeSystemEnvs,
+    undefined,
+    environment
   );
 
   const contents =

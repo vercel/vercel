@@ -51,6 +51,7 @@
     "update-notifier": "4.1.0"
   },
   "devDependencies": {
+    "@alex_neo/jest-expect-message": "1.0.5",
     "@next/env": "11.1.2",
     "@sentry/node": "5.5.0",
     "@sindresorhus/slugify": "0.11.0",
@@ -69,6 +70,7 @@
     "@types/http-proxy": "1.16.2",
     "@types/inquirer": "7.3.1",
     "@types/jest": "27.0.1",
+    "@types/jest-expect-message": "1.0.3",
     "@types/load-json-file": "2.0.7",
     "@types/mime-types": "2.1.0",
     "@types/minimatch": "3.0.3",
@@ -176,6 +178,9 @@
         "isolatedModules": true
       }
     },
+    "setupFilesAfterEnv": [
+      "@alex_neo/jest-expect-message"
+    ],
     "verbose": false,
     "testEnvironment": "node",
     "testMatch": [
