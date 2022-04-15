@@ -11,7 +11,7 @@ describe('pull', () => {
   it('should handle pulling', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
-    useTeams();
+    useTeams('team_dummy');
     useProject({
       ...defaultProject,
       id: 'vercel-pull-next',
@@ -19,7 +19,7 @@ describe('pull', () => {
     });
     client.setArgv('pull', '--yes', cwd);
     const exitCode = await pull(client);
-    expect(exitCode).toEqual(0);
+    expect(exitCode, client.outputBuffer).toEqual(0);
 
     const rawDevEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.development.local')
@@ -31,7 +31,7 @@ describe('pull', () => {
   it('should handle --environment=preview flag', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
-    useTeams();
+    useTeams('team_dummy');
     useProject({
       ...defaultProject,
       id: 'vercel-pull-next',
@@ -53,7 +53,7 @@ describe('pull', () => {
   it('should handle --environment=production flag', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
-    useTeams();
+    useTeams('team_dummy');
     useProject({
       ...defaultProject,
       id: 'vercel-pull-next',

@@ -87,7 +87,20 @@ export class MockClient extends Client {
   }
 
   stopMockServer() {
-    this.mockServer?.close();
+    return new Promise<void>((resolve, reject) => {
+      if (!this.mockServer?.close) {
+        reject(new Error(`mockServer did not exist when closing`));
+        return;
+      }
+
+      this.mockServer.close(error => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
   }
 
   setArgv(...argv: string[]) {
@@ -109,6 +122,6 @@ beforeEach(() => {
   client.reset();
 });
 
-afterAll(() => {
-  client.stopMockServer();
+afterAll(async () => {
+  await client.stopMockServer();
 });

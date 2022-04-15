@@ -18,6 +18,7 @@ import fs, {
   copy,
   ensureDir,
   exists,
+  mkdir,
 } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
@@ -796,13 +797,16 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(stderr, /Created .env file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
-    t.true(contents.startsWith('# Created by Vercel CLI\n'));
+    t.regex(contents, /^# Created by Vercel CLI\n/);
 
     const lines = new Set(contents.split('\n'));
-    t.true(lines.has('MY_NEW_ENV_VAR="my plaintext value"'));
-    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
-    t.true(lines.has('MY_DECRYPTABLE_SECRET_ENV="decryptable value"'));
-    t.false(lines.has('MY_PREVIEW'));
+    t.true(lines.has('MY_NEW_ENV_VAR="my plaintext value"'), 'MY_NEW_ENV_VAR');
+    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'), 'MY_STDIN_VAR');
+    t.true(
+      lines.has('MY_DECRYPTABLE_SECRET_ENV="decryptable value"'),
+      'MY_DECRYPTABLE_SECRET_ENV'
+    );
+    t.false(lines.has('MY_PREVIEW'), 'MY_PREVIEW');
   }
 
   async function vcEnvPullOverwrite() {
@@ -974,11 +978,12 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
 
     const lines = new Set(contents.split('\n'));
-    t.true(lines.has('VERCEL="1"'));
-    t.true(lines.has('VERCEL_URL=""'));
-    t.true(lines.has('VERCEL_ENV="development"'));
-    t.true(lines.has('VERCEL_GIT_PROVIDER=""'));
-    t.true(lines.has('VERCEL_GIT_REPO_SLUG=""'));
+
+    t.true(lines.has('VERCEL="1"'), 'VERCEL');
+    t.true(lines.has('VERCEL_URL=""'), 'VERCEL_URL');
+    t.true(lines.has('VERCEL_ENV="development"'), 'VERCEL_ENV');
+    t.true(lines.has('VERCEL_GIT_PROVIDER=""'), 'VERCEL_GIT_PROVIDER');
+    t.true(lines.has('VERCEL_GIT_REPO_SLUG=""'), 'VERCEL_GIT_REPO_SLUG');
   }
 
   async function vcDevAndFetchSystemVars() {
@@ -2274,6 +2279,8 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const { name } = JSON.parse(
     fs.readFileSync(path.join(firstDeployment, 'now.json'))
   );
+  t.true(!!name, 'name has a value');
+
   const url = `https://${name}.user.vercel.app`;
 
   {
@@ -2862,7 +2869,7 @@ test('should show prompts to set up project during first deploy', async t => {
   );
 
   // Send a test request to the deployment
-  const response = await fetch(new URL(output.stdout).href);
+  const response = await fetch(new URL(output.stdout));
   const text = await response.text();
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
 
@@ -3674,4 +3681,128 @@ test('[vc link] should support the `--project` flag', async t => {
     output.stderr.includes(`Linked to ${user.username}/${projectName}`),
     formatOutput(output)
   );
+});
+
+test('vercel.json projectSettings overrides', async t => {
+  // create project directory and get path to vercel.json
+  const projectName = 'project-settings-overrides';
+  const directory = fixture(projectName);
+  const vercelJsonPath = path.join(directory, 'vercel.json');
+
+  async function deploy(expectedStatusCode = 0) {
+    // deploy and assert deployment is successful
+    const deployment = await execa(
+      binaryPath,
+      [directory, ...defaultArgs, '--public', '--confirm'],
+      { reject: false }
+    );
+    t.is(
+      deployment.exitCode,
+      expectedStatusCode,
+      formatOutput({
+        stderr: deployment.stderr,
+        stdout: deployment.stdout,
+      })
+    );
+    return deployment;
+  }
+
+  // Test that deployment fails with override settings on new deployments
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      projectSettings: {
+        outputDirectory: 'output',
+      },
+    })
+  );
+
+  let deployment = await deploy(1);
+
+  t.true(
+    deployment.stderr.includes(
+      'Error! Unexpected property detected in vercel.json: "projectSettings"'
+    )
+  );
+
+  // Make sure vercel.json is empty for first deployment
+  await writeFile(vercelJsonPath, JSON.stringify({}));
+
+  deployment = await deploy();
+
+  // create and write override project settings
+  const BUILD_COMMAND =
+    'mkdir output && echo "Hello, World 1" >> output/index.txt';
+  const OUTPUT_DIRECTORY = 'output';
+
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      projectSettings: {
+        buildCommand: BUILD_COMMAND,
+        outputDirectory: OUTPUT_DIRECTORY,
+      },
+    })
+  );
+
+  deployment = await deploy();
+
+  // assert the command were executed
+  let page = await fetch(deployment.stdout);
+  let text = await page.text();
+  t.is(text, `Hello, World 1\n`);
+
+  // Failure Case
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      projectSettings: {
+        invalidProjectSetting: 'invalid project setting',
+      },
+    })
+  );
+
+  // Deployment should fail
+  deployment = await deploy(1);
+  t.true(
+    deployment.stderr.includes(
+      'Error! Invalid request: `projectSettings` should NOT have additional property `invalidProjectSetting`.'
+    )
+  );
+
+  // Test Next.js Framework deployment
+  await mkdir(`${directory}/pages`);
+  await writeFile(
+    `${directory}/pages/index.js`,
+    `export default () => 'Hello, World 2'`
+  );
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      projectSettings: {
+        framework: 'nextjs',
+      },
+    })
+  );
+  await writeFile(
+    `${directory}/package.json`,
+    JSON.stringify({
+      scripts: {
+        dev: 'next',
+        start: 'next start',
+        build: 'next build',
+      },
+      dependencies: {
+        next: 'latest',
+        react: 'latest',
+        'react-dom': 'latest',
+      },
+    })
+  );
+
+  deployment = await deploy();
+
+  page = await fetch(deployment.stdout);
+  text = await page.text();
+  t.true(text.includes(`Hello, World 2`));
 });

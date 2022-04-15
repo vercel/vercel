@@ -227,6 +227,7 @@ export default async function setupAndLink(
     return { status: 'linked', org, project };
   } catch (err) {
     handleError(err);
+
     return { status: 'error', exitCode: 1 };
   }
 }
