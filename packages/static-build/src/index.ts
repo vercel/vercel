@@ -210,7 +210,7 @@ function getPkg(entrypoint: string, workPath: string) {
 
   try {
     const pkgPath = path.join(workPath, entrypoint);
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
+    const pkg: PackageJson = JSON.parse(readFileSync(pkgPath, 'utf8'));
     return pkg;
   } catch (err: any) {
     if (err.code !== 'ENOENT') throw err;
@@ -276,9 +276,7 @@ export const build: BuildV2 = async ({
   let distPath = path.join(
     workPath,
     path.dirname(entrypoint),
-    (config && (config.distDir as string)) ||
-      (config.outputDirectory as string) ||
-      'dist'
+    (config.distDir as string) || config.outputDirectory || 'dist'
   );
 
   const pkg = getPkg(entrypoint, workPath);
@@ -326,7 +324,7 @@ export const build: BuildV2 = async ({
       distPath = path.join(
         workPath,
         path.dirname(entrypoint),
-        (config.outputDirectory as string) || 'public'
+        config.outputDirectory || 'public'
       );
     }
 
@@ -387,7 +385,7 @@ export const build: BuildV2 = async ({
     https://github.com/facebook/create-react-app/pull/2501
     https://github.com/vercel/community/discussions/30
     */
-    if (framework && framework.slug === 'create-react-app') {
+    if (framework?.slug === 'create-react-app') {
       if (!spawnOpts.env) {
         spawnOpts.env = {};
       }
