@@ -109,13 +109,6 @@ func main() {
 	var files []string
 	var relatedFiles []string
 
-	// Add entrypoint to watchlist
-	relFileName, err := filepath.Rel(filepath.Dir(fileName), fileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	relatedFiles = append(relatedFiles, relFileName)
-
 	// looking for all go files that have export func
 	// using in entrypoint
 	err = filepath.Walk(filepath.Dir(fileName), visit(&files))
@@ -133,6 +126,20 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+
+	var basePath string
+	if modPath == "" {
+		basePath = filepath.Dir(fileName)
+	} else {
+		basePath = modPath
+	}
+
+	// Add relative entrypoint to watchlist
+	relFileName, err := filepath.Rel(basePath, fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	relatedFiles = append(relatedFiles, relFileName)
 
 	for _, file := range files {
 		absFileName, _ := filepath.Abs(fileName)
@@ -166,13 +173,6 @@ func main() {
 			for _, ed := range exportedDecl {
 				if strings.Contains(se, ed) {
 					// find relative path of related file
-					var basePath string
-					if modPath == "" {
-						basePath = filepath.Dir(fileName)
-					} else {
-						basePath = modPath
-					}
-
 					rel, err := filepath.Rel(basePath, file)
 					if err != nil {
 						log.Fatal(err)

@@ -13,7 +13,6 @@ import {
   move,
   remove,
   outputFile,
-  existsSync,
 } from 'fs-extra';
 import {
   BuildOptions,
@@ -146,7 +145,7 @@ Learn more: https://github.com/golang/go/wiki/Modules
     }
     analyzed = await getAnalyzedEntrypoint(
       workPath,
-      downloadedFiles[entrypoint].fsPath,
+      relative(workPath, downloadedFiles[entrypoint].fsPath),
       goModAbsPathDir
     );
   } catch (err) {
@@ -483,10 +482,6 @@ function isReadable(v: any): v is Readable {
 
 async function copyEntrypoint(files: string[], dest: string): Promise<void> {
   for (const file of files) {
-    if (!existsSync(file)) {
-      continue;
-    }
-
     try {
       const data = await readFile(file, 'utf8');
 
@@ -537,7 +532,7 @@ export async function startDevServer(
   }
   const analyzedRaw = await getAnalyzedEntrypoint(
     workPath,
-    join(workPath, entrypointWithExt),
+    entrypointWithExt,
     goModAbsPathDir
   );
   if (!analyzedRaw) {
@@ -549,13 +544,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   const analyzed: Analyzed = JSON.parse(analyzedRaw);
 
   await Promise.all([
-    copyEntrypoint(
-      [
-        relative(goModAbsPathDir, join(workPath, entrypointWithExt)),
-        ...analyzed.watch,
-      ],
-      tmp
-    ),
+    copyEntrypoint(analyzed.watch, tmp),
     copyDevServer(analyzed.functionName, tmpPackage),
   ]);
 
