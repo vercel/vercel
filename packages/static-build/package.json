@@ -31,6 +31,7 @@
   "devDependencies": {
     "@types/aws-lambda": "8.10.64",
     "@types/cross-spawn": "6.0.0",
+    "@types/fs-extra": "9.0.13",
     "@types/jest": "27.4.1",
     "@types/ms": "0.7.31",
     "@types/node-fetch": "2.5.4",
@@ -39,6 +40,7 @@
     "@vercel/frameworks": "0.7.1",
     "@vercel/ncc": "0.24.0",
     "@vercel/routing-utils": "1.13.1",
+    "fs-extra": "10.0.0",
     "get-port": "5.0.0",
     "is-port-reachable": "2.0.1",
     "ms": "2.1.2",

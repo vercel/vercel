@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 const BUILD_OUTPUT_DIR = '.vercel/output';
 
 /**
- * Returns the path to the Build Output v3 directory when the
+ * Returns the path to the Build Output API v3 directory when the
  * `config.json` file was created by the framework / build script,
  * or `undefined` if the framework did not create the v3 output.
  */

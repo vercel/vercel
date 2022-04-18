@@ -32,6 +32,7 @@ import {
 } from '@vercel/build-utils';
 import type { Route, Source } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
+import * as BuildOutputV2 from './utils/build-output-v2';
 import * as BuildOutputV3 from './utils/build-output-v3';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
@@ -647,23 +648,27 @@ export const build: BuildV2 = async ({
         };
       }
 
-      if (framework) {
-        const outputDirName = config.outputDirectory
-          ? config.outputDirectory
-          : await framework.getOutputDirName(outputDirPrefix);
+      const buildOutputPathV2 = await BuildOutputV2.getBuildOutputDirectory(
+        outputDirPrefix
+      );
+      if (buildOutputPathV2) {
+        const extraOutputs = await BuildOutputV2.readBuildOutputDirectory({
+          workPath,
+        });
 
-        distPath = path.join(outputDirPrefix, outputDirName);
-      } else if (!config || !config.distDir) {
-        // Select either `dist` or `public` as directory
-        const publicPath = path.join(entrypointDir, 'public');
-
-        if (
-          !existsSync(distPath) &&
-          existsSync(publicPath) &&
-          statSync(publicPath).isDirectory()
-        ) {
-          distPath = publicPath;
+        if (extraOutputs.routes) {
+          routes.push(...extraOutputs.routes);
         }
+
+        if (extraOutputs.staticFiles) {
+          output = Object.assign(
+            {},
+            extraOutputs.staticFiles,
+            extraOutputs.functions
+          );
+        }
+
+        return { routes, output };
       }
 
       const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({
