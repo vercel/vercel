@@ -98,7 +98,7 @@ async function getMiddleware(
   }
 
   const route = {
-    src: '/api/(.*)',
+    src: '/(.*)',
     middlewarePath: 'middleware',
     continue: true,
   };
