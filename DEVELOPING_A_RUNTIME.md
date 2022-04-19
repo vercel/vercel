@@ -307,15 +307,15 @@ This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 
 This is an abstract enumeration type that is implemented by one of the following possible `String` values:
 
+- `nodejs14.x`
 - `nodejs12.x`
-- `nodejs10.x`
 - `go1.x`
 - `java11`
 - `python3.9`
-- `python3.6`
-- `dotnetcore2.1`
-- `ruby2.5`
-- `provided`
+- `dotnet6`
+- `dotnetcore3.1`
+- `ruby2.7`
+- `provided.al2`
 
 ## `@vercel/build-utils` Helper Functions
 
