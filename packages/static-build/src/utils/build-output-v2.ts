@@ -91,8 +91,10 @@ async function getMiddleware(
   );
   const middlewareAbsolutePath = path.join(workPath, middlewareRelativePath);
 
-  const fileExists = await stat(middlewareAbsolutePath);
-  if (!fileExists) {
+  try {
+    await stat(middlewareAbsolutePath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
     return;
   }
 
