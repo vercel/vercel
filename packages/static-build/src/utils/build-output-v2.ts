@@ -1,6 +1,5 @@
 import path from 'path';
-import { pathExists } from 'fs-extra';
-import { promises as fs } from 'fs';
+import { stat, pathExists } from 'fs-extra';
 import { Route } from '@vercel/routing-utils';
 import {
   Files,
@@ -92,7 +91,7 @@ async function getMiddleware(
   );
   const middlewareAbsolutePath = path.join(workPath, middlewareRelativePath);
 
-  const fileExists = await fs.stat(middlewareAbsolutePath);
+  const fileExists = await stat(middlewareAbsolutePath);
   if (!fileExists) {
     return;
   }
