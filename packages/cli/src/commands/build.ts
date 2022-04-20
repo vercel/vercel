@@ -121,7 +121,7 @@ export default async function main(client: Client): Promise<number> {
     if (!isTTY) {
       client.output.print(
         `No Project Settings found locally. Run ${cli.getCommandName(
-          'pull'
+          'pull --yes'
         )} to retreive them.`
       );
       return 1;
