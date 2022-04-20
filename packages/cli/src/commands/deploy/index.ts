@@ -186,7 +186,11 @@ export default async (client: Client) => {
     const prebuiltExists = await fs.pathExists(join(path, '.vercel/output'));
     if (!prebuiltExists) {
       error(
-        'Option `--prebuilt` was used, but no prebuilt deploy found in ".vercel/output"'
+        `The ${param(
+          '--prebuilt'
+        )} option was used, but no prebuilt deploy found in ".vercel/output". Run ${getCommandName(
+          'build'
+        )} to generate a local build.`
       );
       return 1;
     }
