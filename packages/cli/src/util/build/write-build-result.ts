@@ -213,8 +213,10 @@ async function writeEdgeFunction(edgeFunction: EdgeFunction, path: string) {
   ops.push(download(edgeFunction.files, dest));
 
   const config = {
+    runtime: 'edge',
     ...edgeFunction,
     files: undefined,
+    type: undefined,
   };
   const configPath = join(dest, '.vc-config.json');
   ops.push(
@@ -271,6 +273,7 @@ async function writeLambda(
 
   const config = {
     ...lambda,
+    type: undefined,
     files: undefined,
     zipBuffer: undefined,
   };
