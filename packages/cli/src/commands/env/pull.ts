@@ -1,5 +1,6 @@
 import chalk from 'chalk';
-import { closeSync, openSync, promises, readSync } from 'fs';
+import { outputFile } from 'fs-extra';
+import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
 import { Project, ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
@@ -12,7 +13,6 @@ import { Output } from '../../util/output';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-const { writeFile } = promises;
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -111,7 +111,7 @@ export default async function pull(
       .join('\n') +
     '\n';
 
-  await writeFile(fullPath, contents, 'utf8');
+  await outputFile(fullPath, contents, 'utf8');
 
   output.print(
     `${prependEmoji(
