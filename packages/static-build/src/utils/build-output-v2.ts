@@ -20,12 +20,10 @@ const BUILD_OUTPUT_DIR = '.output';
 export async function getBuildOutputDirectory(
   workingDir: string
 ): Promise<string | undefined> {
-  try {
-    const outputDir = path.join(workingDir, BUILD_OUTPUT_DIR);
-    await pathExists(outputDir);
+  const outputDir = path.join(workingDir, BUILD_OUTPUT_DIR);
+  const outputPathExists = await pathExists(outputDir);
+  if (outputPathExists) {
     return outputDir;
-  } catch (err: any) {
-    if (err.code !== 'ENOENT') throw err;
   }
   return undefined;
 }
