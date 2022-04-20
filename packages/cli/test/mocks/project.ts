@@ -152,6 +152,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
     if (typeof target === 'string') {
       const targetEnvs = envs.filter(env => env.target.includes(target));
       res.json({ envs: targetEnvs });
+      return;
     }
 
     res.json({ envs });

@@ -28,6 +28,42 @@ describe('pull', () => {
     expect(devFileHasDevEnv).toBeTruthy();
   });
 
+  it('should handle pulling with env vars (headless mode)', async () => {
+    try {
+      process.env.VERCEL_PROJECT_ID = 'vercel-pull-next';
+      process.env.VERCEL_ORG_ID = 'team_dummy';
+
+      const cwd = setupFixture('vercel-pull-next');
+
+      // Remove the `.vercel` dir to ensure that the `pull`
+      // command creates a new one based on env vars
+      await fs.remove(path.join(cwd, '.vercel'));
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-pull-next',
+        name: 'vercel-pull-next',
+      });
+      client.setArgv('pull', cwd);
+      const exitCode = await pull(client);
+      expect(exitCode, client.outputBuffer).toEqual(0);
+
+      const config = await fs.readJSON(path.join(cwd, '.vercel/project.json'));
+      expect(config).toMatchInlineSnapshot(`
+        Object {
+          "orgId": "team_dummy",
+          "projectId": "vercel-pull-next",
+          "settings": Object {},
+        }
+      `);
+    } finally {
+      delete process.env.VERCEL_PROJECT_ID;
+      delete process.env.VERCEL_ORG_ID;
+    }
+  });
+
   it('should handle --environment=preview flag', async () => {
     const cwd = setupFixture('vercel-pull-next');
     useUser();
