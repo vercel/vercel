@@ -1,4 +1,4 @@
-import { writeFile } from 'fs-extra';
+import { outputJSON } from 'fs-extra';
 import { Org, Project, ProjectLink } from '../../types';
 import { getLinkFromDir, VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 import { join } from 'path';
@@ -22,21 +22,22 @@ export async function writeProjectSettings(
   project: Project,
   org: Org
 ) {
-  return await writeFile(
-    join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT),
-    JSON.stringify({
-      projectId: project.id,
-      orgId: org.id,
-      settings: {
-        buildCommand: project.buildCommand,
-        devCommand: project.devCommand,
-        outputDirectory: project.outputDirectory,
-        directoryListing: project.directoryListing,
-        rootDirectory: project.rootDirectory,
-        framework: project.framework,
-      },
-    })
-  );
+  const data = {
+    projectId: project.id,
+    orgId: org.id,
+    settings: {
+      buildCommand: project.buildCommand,
+      devCommand: project.devCommand,
+      outputDirectory: project.outputDirectory,
+      directoryListing: project.directoryListing,
+      rootDirectory: project.rootDirectory,
+      framework: project.framework,
+    },
+  };
+  const path = join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT);
+  return await outputJSON(path, data, {
+    spaces: 2,
+  });
 }
 
 export async function readProjectSettings(cwd: string) {
