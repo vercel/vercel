@@ -181,6 +181,17 @@ export default async (client: Client) => {
     );
   }
 
+  // build `--prebuilt`
+  if (argv['--prebuilt']) {
+    const prebuiltExists = await fs.pathExists(join(path, '.vercel/output'));
+    if (!prebuiltExists) {
+      error(
+        'Option `--prebuilt` was used, but no prebuilt deploy found in ".vercel/output"'
+      );
+      return 1;
+    }
+  }
+
   // retrieve `project` and `org` from .vercel
   const link = await getLinkedProject(client, path);
 
