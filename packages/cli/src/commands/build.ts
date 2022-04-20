@@ -124,7 +124,7 @@ export default async function main(client: Client): Promise<number> {
           'pull'
         )} to retreive them.`
       );
-      return 0;
+      return 1;
     }
 
     const confirmed = await confirm(
