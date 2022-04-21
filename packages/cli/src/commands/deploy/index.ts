@@ -188,7 +188,7 @@ export default async (client: Client) => {
       error(
         `The ${param(
           '--prebuilt'
-        )} option was used, but no prebuilt deploy found in ".vercel/output". Run ${getCommandName(
+        )} option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
           'build'
         )} to generate a local build.`
       );
