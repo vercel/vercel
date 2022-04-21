@@ -46,7 +46,7 @@ describe('pull', () => {
         id: 'vercel-pull-next',
         name: 'vercel-pull-next',
       });
-      client.setArgv('pull', cwd);
+      client.setArgv('pull', cwd, '--yes');
       const exitCode = await pull(client);
       expect(exitCode, client.outputBuffer).toEqual(0);
 
