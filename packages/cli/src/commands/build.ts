@@ -51,9 +51,9 @@ type BuildResult = BuildResultV2 | BuildResultV3;
 const help = () => {
   return console.log(`
    ${chalk.bold(`${cli.logo} ${cli.name} build`)}
-  
+
    ${chalk.dim('Options:')}
-  
+
       -h, --help                     Output usage information
       -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
@@ -65,11 +65,11 @@ const help = () => {
       --prod                         Build a production deployment
       -d, --debug                    Debug mode [off]
       -y, --yes                      Skip the confirmation prompt
-  
+
     ${chalk.dim('Examples:')}
-  
+
     ${chalk.gray('–')} Build the project
-  
+
       ${chalk.cyan(`$ ${cli.name} build`)}
       ${chalk.cyan(`$ ${cli.name} build --cwd ./path-to-project`)}
 `);
@@ -116,7 +116,17 @@ export default async function main(client: Client): Promise<number> {
 
   // Read project settings, and pull them from Vercel if necessary
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
+  const isTTY = process.stdin.isTTY;
   while (!project?.settings) {
+    if (!isTTY) {
+      client.output.print(
+        `No Project Settings found locally. Run ${cli.getCommandName(
+          'pull --yes'
+        )} to retreive them.`
+      );
+      return 1;
+    }
+
     const confirmed = await confirm(
       `No Project Settings found locally. Run ${cli.getCommandName(
         'pull'
