@@ -21,3 +21,16 @@ export async function getBuildOutputDirectory(
   }
   return undefined;
 }
+
+export async function readConfig(
+  path: string
+): Promise<{ cache?: string[] } | undefined> {
+  try {
+    const outputDir = join(path, BUILD_OUTPUT_DIR);
+    const configPath = join(outputDir, 'config.json');
+    return JSON.parse(await fs.readFile(configPath, 'utf8'));
+  } catch (err: any) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  return undefined;
+}
