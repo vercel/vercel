@@ -59,4 +59,18 @@ describe('prepareCache()', () => {
     expect(files['_config.yml']).toBeUndefined();
     expect(files['_posts/hello.markdown']).toBeUndefined();
   });
+
+  test('should cache Build Output API v3 "cache" assets from `config.json` file', async () => {
+    const files = await prepareCache({
+      config: {},
+      workPath: path.resolve(__dirname, './cache-fixtures/build-output-api-v3'),
+      entrypoint: 'package.json',
+      files: {},
+    });
+    expect(Object.keys(files).sort()).toStrictEqual([
+      'another.txt',
+      'some-dir/one.txt',
+      'some-dir/two.txt',
+    ]);
+  });
 });
