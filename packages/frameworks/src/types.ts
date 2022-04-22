@@ -61,6 +61,11 @@ export interface Framework {
    */
   logo: string;
   /**
+   * An additional URL to the logo of the framework optimized for dark mode
+   * @example "https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next-dark.svg"
+   */
+  darkModeLogo?: string;
+  /**
    * A URL to a screenshot of the demo
    * @example "https://assets.vercel.com/image/upload/v1647366075/front/import/nextjs.png"
    */
