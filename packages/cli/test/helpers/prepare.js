@@ -413,10 +413,6 @@ module.exports = async function prepare(session, binaryPath) {
         projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
       }),
     },
-    'project-settings-overrides': {
-      'vercel.json': '{}',
-      'package.json': '{}',
-    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {

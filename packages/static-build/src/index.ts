@@ -764,13 +764,22 @@ export const prepareCache: PrepareCache = async ({
 }) => {
   const cacheFiles: Files = {};
 
+  // Build Output API v3 cache files
+  const configV3 = await BuildOutputV3.readConfig(workPath);
+  if (configV3?.cache && Array.isArray(configV3.cache)) {
+    for (const cacheGlob of configV3.cache) {
+      Object.assign(cacheFiles, await glob(cacheGlob, workPath));
+    }
+    return cacheFiles;
+  }
+
   // File System API v1 cache files
-  const buildConfig = await BuildOutputV1.readBuildOutputConfig<BuildConfig>({
+  const buildConfigV1 = await BuildOutputV1.readBuildOutputConfig<BuildConfig>({
     workPath,
     configFileName: 'build.json',
   });
-  if (buildConfig?.cache && Array.isArray(buildConfig.cache)) {
-    for (const cacheGlob of buildConfig.cache) {
+  if (buildConfigV1?.cache && Array.isArray(buildConfigV1.cache)) {
+    for (const cacheGlob of buildConfigV1.cache) {
       Object.assign(cacheFiles, await glob(cacheGlob, workPath));
     }
     return cacheFiles;
