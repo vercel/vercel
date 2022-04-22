@@ -150,7 +150,7 @@ export default async function main(client: Client) {
 
   const isTTY = process.stdin.isTTY;
   if (!isTTY && !yes) {
-    client.output.print(
+    client.output.error(
       `Command ${getCommandName(
         'pull'
       )} requires confirmation. Use option ${param('--yes')} to confirm.`
