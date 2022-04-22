@@ -381,7 +381,10 @@ export const build: BuildV3 = async ({
 };
 
 export const prepareCache: PrepareCache = async ({ workPath }) => {
-  const cache = await glob('node_modules/**', workPath);
+  const cache = {
+    ...(await glob('node_modules/**', workPath)),
+    ...(await glob('**/node_modules/**', workPath)),
+  };
   return cache;
 };
 
