@@ -1,3 +1,4 @@
+import { FileFsRef } from '@vercel/build-utils';
 import path from 'path';
 import { prepareCache } from '../src';
 
@@ -37,8 +38,12 @@ describe('prepareCache()', () => {
       files: {},
     });
 
-    expect(files['foo/node_modules/file']).toBeDefined();
-    expect(files['node_modules/file']).toBeUndefined();
+    expect(files['node_modules/file']).toBeDefined();
+    expect(
+      (files['node_modules/file'] as FileFsRef).fsPath.includes(
+        'cache-fixtures/root-path/foo/node_modules/file'
+      )
+    ).toBeTruthy();
     expect(files['index.js']).toBeUndefined();
   });
 
