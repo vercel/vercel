@@ -52,6 +52,90 @@ export async function downloadFilesInWorkPath({
   return workPath;
 }
 
+interface PythonVersion {
+  version: '3' | '3.6' | '3.9';
+  pipPath: 'pip3' | 'pip3.6' | 'pip3.9';
+  pythonPath: 'python3' | 'python3.6' | 'python3.9';
+  pythonRuntime: 'python3' | 'python3.6' | 'python3.9';
+  discontinueDate?: Date;
+}
+
+const allOptions: PythonVersion[] = [
+  {
+    version: '3.9',
+    pipPath: 'pip3.9',
+    pythonPath: 'python3.9',
+    pythonRuntime: 'python3.9',
+  },
+  {
+    version: '3.6',
+    pipPath: 'pip3.6',
+    pythonPath: 'python3.6',
+    pythonRuntime: 'python3.6',
+    discontinueDate: new Date('2022-07-18'),
+  },
+];
+
+const upstreamProvider =
+  'This change is the result of a decision made by an upstream infrastructure provider (AWS).';
+
+function getLatestPythonVersion(): PythonVersion {
+  return allOptions[0];
+}
+
+function getDevPythonVersion(): PythonVersion {
+  // Use the system-installed version of `python3` when running `vercel dev`
+  return {
+    version: '3',
+    pipPath: 'pip3',
+    pythonPath: 'python3',
+    pythonRuntime: 'python3',
+  };
+}
+
+function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
+  const today = Date.now();
+  return discontinueDate !== undefined && discontinueDate.getTime() <= today;
+}
+
+export function getSupportedPythonVersion(
+  pipLockPythonVersion: string | undefined
+): PythonVersion {
+  let selection = getLatestPythonVersion();
+
+  if (pipLockPythonVersion) {
+    const found = allOptions.some(o => {
+      // the array is already in order so return the first
+      // match which will be the newest version of node
+      selection = o;
+      return o.version === pipLockPythonVersion;
+    });
+    if (!found) {
+      console.warn(
+        `Warning: Invalid Python version "${version}" detected in Pipfile.lock will be ignored. http://vercel.link/python-version`
+      );
+    }
+  }
+
+  if (isDiscontinued(selection)) {
+    const intro = `Python Version "${selection.version}" detected in Pipfile.lock is discontinued and must be upgraded.`;
+    throw new NowBuildError({
+      code: 'BUILD_UTILS_PYTHON_VERSION_DISCONTINUED',
+      link: 'http://vercel.link/python-version',
+      message: `${intro} ${upstreamProvider}`,
+    });
+  }
+
+  if (selection.discontinueDate) {
+    const d = selection.discontinueDate.toISOString().split('T')[0];
+    console.warn(
+      `Error: Python version ${selection.version} detected in Pipfile.lock is deprecated. Deployments created on or after ${d} will fail to build. ${upstreamProvider}`
+    );
+  }
+
+  return selection;
+}
+
 export const build = async ({
   workPath,
   files: originalFiles,
@@ -59,9 +143,9 @@ export const build = async ({
   meta = {},
   config,
 }: BuildOptions) => {
-  let pipPath = meta.isDev ? 'pip3' : 'pip3.9';
-  let pythonPath = meta.isDev ? 'python3' : 'python3.9';
-  let pythonRuntime = meta.isDev ? 'python3' : 'python3.9';
+  let pythonVersion = meta.isDev
+    ? getDevPythonVersion()
+    : getLatestPythonVersion();
 
   workPath = await downloadFilesInWorkPath({
     workPath,
@@ -91,8 +175,8 @@ export const build = async ({
   console.log('Installing required dependencies...');
 
   await installRequirement({
-    pythonPath,
-    pipPath,
+    pythonPath: pythonVersion.pythonPath,
+    pipPath: pythonVersion.pipPath,
     dependency: 'werkzeug',
     version: '1.0.1',
     workPath,
@@ -116,22 +200,7 @@ export const build = async ({
       const obj = JSON.parse(json);
       const version = obj?._meta?.requires?.python_version;
       if (!meta.isDev) {
-        if (version === '3.6') {
-          pipPath = 'pip3.6';
-          pythonPath = 'python3.6';
-          pythonRuntime = 'python3.6';
-          console.warn(
-            `Warning: Python version "${version}" detected in Pipfile.lock will reach End-Of-Life December 2021. Please upgrade. http://vercel.link/python-version`
-          );
-        } else if (version === '3.9') {
-          pipPath = 'pip3.9';
-          pythonPath = 'python3.9';
-          pythonRuntime = 'python3.9';
-        } else {
-          console.warn(
-            `Warning: Invalid Python version "${version}" detected in Pipfile.lock will be ignored. http://vercel.link/python-version`
-          );
-        }
+        pythonVersion = getSupportedPythonVersion(version);
       }
     } catch (err) {
       throw new NowBuildError({
@@ -146,8 +215,8 @@ export const build = async ({
     // it into a separate folder.
     const tempDir = await getWriteableDirectory();
     await installRequirement({
-      pythonPath,
-      pipPath,
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
       dependency: 'pipfile-requirements',
       version: '0.3.0',
       workPath: tempDir,
@@ -169,8 +238,8 @@ export const build = async ({
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
     await installRequirementsFile({
-      pythonPath,
-      pipPath,
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
       workPath,
       meta,
@@ -179,8 +248,8 @@ export const build = async ({
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
     await installRequirementsFile({
-      pythonPath,
-      pipPath,
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
       workPath,
       meta,
@@ -205,9 +274,6 @@ export const build = async ({
 
   await writeFile(join(workPath, `${handlerPyFilename}.py`), handlerPyContents);
 
-  // Use the system-installed version of `python3` when running via `vercel dev`
-  const runtime = meta.isDev ? 'python3' : pythonRuntime;
-
   const globOptions: GlobOptions = {
     cwd: workPath,
     ignore:
@@ -219,7 +285,7 @@ export const build = async ({
   const lambda = await createLambda({
     files: await glob('**', globOptions),
     handler: `${handlerPyFilename}.vc_handler`,
-    runtime,
+    runtime: pythonVersion.pythonRuntime,
     environment: {},
   });
 
