@@ -380,8 +380,8 @@ export const build: BuildV3 = async ({
   return { output: lambda };
 };
 
-export const prepareCache: PrepareCache = ({ workPath }) => {
-  return glob('**/node_modules/**', workPath);
+export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
+  return glob('**/node_modules/**', repoRootPath || workPath);
 };
 
 export const startDevServer: StartDevServer = async opts => {

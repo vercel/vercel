@@ -316,7 +316,6 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
   return typeof scripts[scriptName] === 'string';
 }
 
-export const prepareCache: PrepareCache = async ({ workPath }) => {
-  const cache = await glob('**/node_modules/**', workPath);
-  return cache;
+export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
+  return glob('**/node_modules/**', repoRootPath || workPath);
 };

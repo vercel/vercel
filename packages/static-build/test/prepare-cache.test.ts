@@ -28,6 +28,20 @@ describe('prepareCache()', () => {
     expect(files['index.js']).toBeUndefined();
   });
 
+  test('should preference repoRootPath over workPath', async () => {
+    const files = await prepareCache({
+      config: { zeroConfig: true },
+      repoRootPath: path.resolve(__dirname, './cache-fixtures/root-path/foo'),
+      workPath: path.resolve(__dirname, './cache-fixtures/root-path'),
+      entrypoint: 'index.js',
+      files: {},
+    });
+
+    expect(files['foo/node_modules/file']).toBeDefined();
+    expect(files['node_modules/file']).toBeUndefined();
+    expect(files['index.js']).toBeUndefined();
+  });
+
   test('should cache index.js and other/file2.js as defined in .vercel_build_output/config/build.json', async () => {
     const files = await prepareCache({
       config: { zeroConfig: true },
