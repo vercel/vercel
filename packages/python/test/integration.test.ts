@@ -12,7 +12,7 @@ const {
 
 jest.setTimeout(4 * 60 * 1000);
 const buildUtilsUrl = '@canary';
-let builderUrl;
+let builderUrl: string;
 
 beforeAll(async () => {
   const builderPath = path.resolve(__dirname, '..');
