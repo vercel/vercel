@@ -124,27 +124,6 @@ describe('DevServer', () => {
   );
 
   it(
-    'should maintain query when builder defines routes',
-    testFixture('now-dev-next', async server => {
-      const res = await fetch(`${server.address}/something?url-param=a`);
-      validateResponseHeaders(res);
-
-      const text = await res.text();
-
-      // Hacky way of getting the page payload from the response
-      // HTML since we don't have a HTML parser handy.
-      const json = text
-        .match(/<div>(.*)<\/div>/)![1]
-        .replace('</div>', '')
-        .replace(/&quot;/g, '"');
-      const parsed = JSON.parse(json);
-
-      expect(parsed.query['url-param']).toEqual('a');
-      expect(parsed.query['route-param']).toEqual('b');
-    })
-  );
-
-  it(
     'should allow `cache-control` to be overwritten',
     testFixture('now-dev-headers', async server => {
       const res = await fetch(
