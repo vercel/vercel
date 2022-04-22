@@ -783,10 +783,8 @@ export const prepareCache: PrepareCache = async ({
   // Default cache files
   Object.assign(
     cacheFiles,
-    await glob('{.shadow-cljs,node_modules}/**', workPath)
+    await glob('**/{.shadow-cljs,node_modules}/**', workPath)
   );
-
-  Object.assign(cacheFiles, await glob('**/node_modules/**', workPath));
 
   // Framework cache files
   const pkg = getPkg(entrypoint, workPath);

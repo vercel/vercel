@@ -12,6 +12,7 @@
   "scripts": {
     "build": "node build",
     "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
+    "test-unit": "jest --env node --verbose --bail test/prepare-cache.test.js",
     "prepublishOnly": "node build"
   },
   "files": [
