@@ -31,6 +31,15 @@ describe('deploy', () => {
     );
   });
 
+  it('should reject deploying a directory that does not contain ".vercel/output" when `--prebuilt` is used', async () => {
+    client.setArgv('deploy', __dirname, '--prebuilt');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(1);
+    expect(client.outputBuffer).toEqual(
+      'Error! The "--prebuilt" option was used, but no prebuilt deploy found in ".vercel/output". Run `vercel build` to generate a local build.\n'
+    );
+  });
+
   it('should reject deploying "version: 1"', async () => {
     client.setArgv('deploy');
     client.localConfig = {
