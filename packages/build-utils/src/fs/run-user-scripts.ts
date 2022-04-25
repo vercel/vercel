@@ -222,6 +222,12 @@ export async function getNodeVersion(
     const latest = getLatestNodeVersion();
     return { ...latest, runtime: 'nodejs' };
   }
+  if (process.env.ENABLE_EXPERIMENTAL_NODE16 === '1') {
+    console.warn(
+      'Warning: Using experimental Node.js 16.x due to ENABLE_EXPERIMENTAL_NODE16=1'
+    );
+    return { major: 16, range: '16.x', runtime: 'nodejs16.x' };
+  }
   const { packageJson } = await scanParentDirs(destPath, true);
   let { nodeVersion } = config;
   let isAuto = true;
