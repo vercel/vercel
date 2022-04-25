@@ -19,7 +19,8 @@ describe('prepareCache()', () => {
   test('should cache **/node_modules/**', async () => {
     const files = await prepareCache({
       config: { zeroConfig: true },
-      workPath: path.resolve(__dirname, './cache-fixtures/root-path'),
+      repoRootPath: path.resolve(__dirname, './cache-fixtures/root-path'),
+      workPath: path.resolve(__dirname, './cache-fixtures/root-path/foo'),
       entrypoint: 'index.js',
       files: {},
     });
@@ -29,11 +30,10 @@ describe('prepareCache()', () => {
     expect(files['index.js']).toBeUndefined();
   });
 
-  test('should preference repoRootPath over workPath', async () => {
+  test('should ignore root modules', async () => {
     const files = await prepareCache({
       config: { zeroConfig: true },
-      repoRootPath: path.resolve(__dirname, './cache-fixtures/root-path/foo'),
-      workPath: path.resolve(__dirname, './cache-fixtures/root-path'),
+      workPath: path.resolve(__dirname, './cache-fixtures/root-path/foo'),
       entrypoint: 'index.js',
       files: {},
     });
