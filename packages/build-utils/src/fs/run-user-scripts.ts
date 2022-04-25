@@ -387,30 +387,33 @@ export async function runNpmInstall(
       nodeVersion,
       env,
     });
-    let commandArgs: string[];
 
-    if (cliType === 'npm') {
-      opts.prettyCommand = 'npm install';
-      commandArgs = args
-        .filter(a => a !== '--prefer-offline')
-        .concat(['install', '--no-audit', '--unsafe-perm']);
-    } else if (cliType === 'pnpm') {
-      // PNPM's install command is similar to NPM's but without the audit nonsense
-      // @see options https://pnpm.io/cli/install
-      opts.prettyCommand = 'pnpm install';
-      commandArgs = args
-        .filter(a => a !== '--prefer-offline')
-        .concat(['install', '--unsafe-perm']);
-    } else {
-      opts.prettyCommand = 'yarn install';
-      commandArgs = ['install', ...args];
+    if (!(await runPackageJsonScript(destPath, 'vercel-install', opts))) {
+      let commandArgs: string[];
+
+      if (cliType === 'npm') {
+        opts.prettyCommand = 'npm install';
+        commandArgs = args
+          .filter(a => a !== '--prefer-offline')
+          .concat(['install', '--no-audit', '--unsafe-perm']);
+      } else if (cliType === 'pnpm') {
+        // PNPM's install command is similar to NPM's but without the audit nonsense
+        // @see options https://pnpm.io/cli/install
+        opts.prettyCommand = 'pnpm install';
+        commandArgs = args
+          .filter(a => a !== '--prefer-offline')
+          .concat(['install', '--unsafe-perm']);
+      } else {
+        opts.prettyCommand = 'yarn install';
+        commandArgs = ['install', ...args];
+      }
+
+      if (process.env.NPM_ONLY_PRODUCTION) {
+        commandArgs.push('--production');
+      }
+
+      await spawnAsync(cliType, commandArgs, opts);
     }
-
-    if (process.env.NPM_ONLY_PRODUCTION) {
-      commandArgs.push('--production');
-    }
-
-    await spawnAsync(cliType, commandArgs, opts);
     debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
   } finally {

@@ -7,6 +7,7 @@ describe('Test `getScriptName()`', () => {
       scripts: {
         'vercel-dev': '',
         'vercel-build': '',
+        'vercel-install': '',
         dev: '',
         build: '',
       },
@@ -19,6 +20,7 @@ describe('Test `getScriptName()`', () => {
       getScriptName(pkg, ['vercel-build', 'now-build', 'build']),
       'vercel-build'
     );
+    assert.equal(getScriptName(pkg, ['vercel-install']), 'vercel-install');
     assert.equal(getScriptName(pkg, ['dev']), 'dev');
     assert.equal(getScriptName(pkg, ['build']), 'build');
   });
