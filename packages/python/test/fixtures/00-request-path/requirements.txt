@@ -1,5 +1,5 @@
-flask==2.1.1
 sanic==20.12.6
+flask==2.1.1
 # below is meant to lock the version of transitive deps
 aiofiles==0.8.0; python_version >= "3.6" and python_version < "4.0"
 certifi==2021.10.8
