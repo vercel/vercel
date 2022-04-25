@@ -23,6 +23,8 @@ import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
+import { getCommandName } from '../pkg-name';
+import param from '../output/param';
 
 export interface SetupAndLinkOptions {
   forceDelete?: boolean;
@@ -66,6 +68,15 @@ export default async function setupAndLink(
   if (forceDelete) {
     const vercelDir = getVercelDirectory(path);
     remove(vercelDir);
+  }
+
+  if (!isTTY && !autoConfirm) {
+    output.error(
+      `Command ${getCommandName(
+        'pull'
+      )} requires confirmation. Use option ${param('--yes')} to confirm.`
+    );
+    return { status: 'error', exitCode: 1 };
   }
 
   const shouldStartSetup =

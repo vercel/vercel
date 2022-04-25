@@ -1,8 +1,6 @@
 import chalk from 'chalk';
 import { join } from 'path';
-import { getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
-import param from '../util/output/param';
 import { ProjectEnvTarget } from '../types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
@@ -147,16 +145,6 @@ export default async function main(client: Client) {
   const cwd = argv._[1] || process.cwd();
   const yes = Boolean(argv['--yes']);
   const environment = parseEnvironment(argv['--environment'] || undefined);
-
-  const isTTY = process.stdin.isTTY;
-  if (!isTTY && !yes) {
-    client.output.error(
-      `Command ${getCommandName(
-        'pull'
-      )} requires confirmation. Use option ${param('--yes')} to confirm.`
-    );
-    return 1;
-  }
 
   const link = await ensureLink(client, cwd, yes);
   if (typeof link === 'number') {
