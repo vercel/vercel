@@ -16,7 +16,7 @@ __vc_variables = dir(__vc_module)
 def format_headers(headers, decode=False):
     keyToList = {}
     for key, value in headers.items():
-        if decode:
+        if decode and 'decode' in dir(key) and 'decode' in dir(value):
             key = key.decode()
             value = value.decode()
         if key not in keyToList:
@@ -102,7 +102,7 @@ elif 'app' in __vc_variables:
             if isinstance(s, str):
                 s = s.encode(charset)
             return s.decode("latin1", errors)
-        
+
         def vc_handler(event, context):
             payload = json.loads(event['body'])
 
