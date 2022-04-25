@@ -277,6 +277,16 @@ it('should not warn when package.json engines matches project setting from confi
   expect(warningMessages).toStrictEqual([]);
 });
 
+it('should select nodejs16.x with ENABLE_EXPERIMENTAL_NODE16', async () => {
+  process.env.ENABLE_EXPERIMENTAL_NODE16 = '1';
+  const result = await getNodeVersion('/tmp', undefined, {}, {});
+  delete process.env.ENABLE_EXPERIMENTAL_NODE16;
+  expect(result).toEqual({ major: 16, range: '16.x', runtime: 'nodejs16.x' });
+  expect(warningMessages).toStrictEqual([
+    'Warning: Using experimental Node.js 16.x due to ENABLE_EXPERIMENTAL_NODE16=1',
+  ]);
+});
+
 it('should get latest node version', async () => {
   expect(getLatestNodeVersion()).toHaveProperty('major', 14);
 });
