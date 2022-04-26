@@ -298,9 +298,7 @@ async function mergeBuilderOutput(buildResult: BuildResultBuildOutput) {
     // so no need to do anything
     return;
   }
-  throw new Error(
-    'TODO: merge `.vercel/output` dir when Root Directory is used'
-  );
+  await fs.copy(buildResult.buildOutputPath, OUTPUT_DIR);
 }
 
 /**
