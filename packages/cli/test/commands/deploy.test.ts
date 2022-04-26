@@ -36,7 +36,7 @@ describe('deploy', () => {
     const exitCode = await deploy(client);
     expect(exitCode).toEqual(1);
     expect(client.outputBuffer).toEqual(
-      'Error! The "--prebuilt" option was used, but no prebuilt deploy found in ".vercel/output". Run `vercel build` to generate a local build.\n'
+      'Error! The "--prebuilt" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
     );
   });
 
