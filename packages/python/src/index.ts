@@ -16,6 +16,7 @@ import {
   NowBuildError,
 } from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
+import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
@@ -59,9 +60,7 @@ export const build = async ({
   meta = {},
   config,
 }: BuildOptions) => {
-  let pipPath = meta.isDev ? 'pip3' : 'pip3.9';
-  let pythonPath = meta.isDev ? 'python3' : 'python3.9';
-  let pythonRuntime = meta.isDev ? 'python3' : 'python3.9';
+  let pythonVersion = getLatestPythonVersion(meta);
 
   workPath = await downloadFilesInWorkPath({
     workPath,
@@ -91,8 +90,8 @@ export const build = async ({
   console.log('Installing required dependencies...');
 
   await installRequirement({
-    pythonPath,
-    pipPath,
+    pythonPath: pythonVersion.pythonPath,
+    pipPath: pythonVersion.pipPath,
     dependency: 'werkzeug',
     version: '1.0.1',
     workPath,
@@ -114,25 +113,10 @@ export const build = async ({
     try {
       const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
       const obj = JSON.parse(json);
-      const version = obj?._meta?.requires?.python_version;
-      if (!meta.isDev) {
-        if (version === '3.6') {
-          pipPath = 'pip3.6';
-          pythonPath = 'python3.6';
-          pythonRuntime = 'python3.6';
-          console.warn(
-            `Warning: Python version "${version}" detected in Pipfile.lock will reach End-Of-Life December 2021. Please upgrade. http://vercel.link/python-version`
-          );
-        } else if (version === '3.9') {
-          pipPath = 'pip3.9';
-          pythonPath = 'python3.9';
-          pythonRuntime = 'python3.9';
-        } else {
-          console.warn(
-            `Warning: Invalid Python version "${version}" detected in Pipfile.lock will be ignored. http://vercel.link/python-version`
-          );
-        }
-      }
+      pythonVersion = getSupportedPythonVersion({
+        isDev: meta.isDev,
+        pipLockPythonVersion: obj?._meta?.requires?.python_version,
+      });
     } catch (err) {
       throw new NowBuildError({
         code: 'INVALID_PIPFILE_LOCK',
@@ -146,8 +130,8 @@ export const build = async ({
     // it into a separate folder.
     const tempDir = await getWriteableDirectory();
     await installRequirement({
-      pythonPath,
-      pipPath,
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
       dependency: 'pipfile-requirements',
       version: '0.3.0',
       workPath: tempDir,
@@ -169,8 +153,8 @@ export const build = async ({
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
     await installRequirementsFile({
-      pythonPath,
-      pipPath,
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
       workPath,
       meta,
@@ -179,8 +163,8 @@ export const build = async ({
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
     await installRequirementsFile({
-      pythonPath,
-      pipPath,
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
       workPath,
       meta,
@@ -205,9 +189,6 @@ export const build = async ({
 
   await writeFile(join(workPath, `${handlerPyFilename}.py`), handlerPyContents);
 
-  // Use the system-installed version of `python3` when running via `vercel dev`
-  const runtime = meta.isDev ? 'python3' : pythonRuntime;
-
   const globOptions: GlobOptions = {
     cwd: workPath,
     ignore:
@@ -219,7 +200,7 @@ export const build = async ({
   const lambda = await createLambda({
     files: await glob('**', globOptions),
     handler: `${handlerPyFilename}.vc_handler`,
-    runtime,
+    runtime: pythonVersion.runtime,
     environment: {},
   });
 
