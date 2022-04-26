@@ -8,6 +8,7 @@ interface PythonVersion {
   discontinueDate?: Date;
 }
 
+// The order must be most recent first
 const allOptions: PythonVersion[] = [
   {
     version: '3.9',

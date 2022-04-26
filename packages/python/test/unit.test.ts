@@ -2,6 +2,7 @@ import { getSupportedPythonVersion } from '../src/version';
 
 let warningMessages: string[];
 const originalConsoleWarn = console.warn;
+const realDateNow = Date.now.bind(global.Date);
 beforeEach(() => {
   warningMessages = [];
   console.warn = m => {
@@ -11,6 +12,7 @@ beforeEach(() => {
 
 afterEach(() => {
   console.warn = originalConsoleWarn;
+  global.Date.now = realDateNow;
 });
 
 it('should only match supported versions, otherwise throw an error', async () => {
@@ -52,7 +54,6 @@ it('should select latest version and warn when invalid Piplock detected', async 
 });
 
 it('should throw for discontinued versions', async () => {
-  const realDateNow = Date.now.bind(global.Date);
   global.Date.now = () => new Date('2022-07-31').getTime();
   expect(() =>
     getSupportedPythonVersion({ pipLockPythonVersion: '3.6' })
@@ -60,11 +61,9 @@ it('should throw for discontinued versions', async () => {
     'Python version "3.6" detected in Pipfile.lock is discontinued and must be upgraded. This change is the result of a decision made by an upstream infrastructure provider (AWS).'
   );
   expect(warningMessages).toStrictEqual([]);
-  global.Date.now = realDateNow;
 });
 
 it('should warn for deprecated versions, soon to be discontinued', async () => {
-  const realDateNow = Date.now.bind(global.Date);
   global.Date.now = () => new Date('2021-07-01').getTime();
 
   expect(
@@ -73,6 +72,4 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
   expect(warningMessages).toStrictEqual([
     'Error: Python version "3.6" detected in Pipfile.lock is deprecated. Deployments created on or after 2022-07-18 will fail to build. This change is the result of a decision made by an upstream infrastructure provider (AWS). http://vercel.link/python-version',
   ]);
-
-  global.Date.now = realDateNow;
 });
