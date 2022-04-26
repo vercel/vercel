@@ -5,7 +5,7 @@
     {
       "path": "/",
       "mustContain": "pip:RANDOMNESS_PLACEHOLDER",
-      "logMustContain": "Warning: Invalid Python version \"3.7\" detected in Pipfile.lock will be ignored."
+      "logMustContain": "Python version \"3.7\" detected in Pipfile.lock is invalid and will be ignored."
     }
   ]
 }
