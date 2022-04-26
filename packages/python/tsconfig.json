@@ -11,8 +11,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "outDir": "dist",
-    "types": ["node"],
+    "types": ["node", "jest"],
     "strict": true,
     "target": "es2018"
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }
