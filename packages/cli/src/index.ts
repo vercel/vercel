@@ -84,9 +84,6 @@ let apiUrl = 'https://api.vercel.com';
 const main = async () => {
   let { isTTY } = process.stdout;
   if (process.env.FORCE_TTY === '1') {
-    console.log(
-      'OPT-IN(FORCE_TTY): setting process stdin/stdout isTTY to true'
-    );
     process.stdout.isTTY = true;
     process.stdin.isTTY = true;
   }
