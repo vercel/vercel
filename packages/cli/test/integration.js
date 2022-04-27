@@ -29,6 +29,9 @@ const fetch = createFetchRetry(nodeFetch);
 
 // log command when running `execa`
 function execa(file, args, options) {
+  // allow tests to interact as if they are a TTY
+  options.FORCE_TTY = '1';
+
   console.log(`$ vercel ${args.join(' ')}`);
   return _execa(file, args, options);
 }
