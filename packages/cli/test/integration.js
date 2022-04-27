@@ -29,11 +29,6 @@ const fetch = createFetchRetry(nodeFetch);
 
 // log command when running `execa`
 function execa(file, args, options) {
-  // allow tests to interact as if they are a TTY
-  options = options || {};
-  options.env = options.env || {};
-  options.env.FORCE_TTY = '1';
-
   console.log(`$ vercel ${args.join(' ')}`);
   return _execa(file, args, options);
 }
@@ -2366,6 +2361,9 @@ test('[vercel dev] fails when development commad calls vercel dev recursively', 
   const dev = execa(binaryPath, ['dev', ...defaultArgs], {
     cwd: dir,
     reject: false,
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await setupProject(dev, projectName, {
@@ -3527,6 +3525,9 @@ test('[vc dev] should show prompts to set up project', async t => {
 
   const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
     cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await setupProject(dev, projectName, {
@@ -3630,6 +3631,9 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
 
   const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
     cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await setupProject(dev, projectName, {
