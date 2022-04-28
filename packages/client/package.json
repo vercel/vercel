@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "10.4.2-canary.4",
+  "version": "10.4.2-canary.6",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -24,7 +24,7 @@
   "devDependencies": {
     "@types/async-retry": "1.4.1",
     "@types/fs-extra": "7.0.0",
-    "@types/jest": "27.0.1",
+    "@types/jest": "27.4.1",
     "@types/minimatch": "3.0.5",
     "@types/ms": "0.7.30",
     "@types/node": "12.0.4",
@@ -41,7 +41,7 @@
     ]
   },
   "dependencies": {
-    "@vercel/build-utils": "2.15.2-canary.3",
+    "@vercel/build-utils": "2.15.2-canary.5",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",

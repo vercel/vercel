@@ -44,10 +44,6 @@ export async function getSupportedNodeVersion(
 ): Promise<NodeVersion> {
   let selection: NodeVersion = getLatestNodeVersion();
 
-  if (process.env.ENABLE_EXPERIMENTAL_NODE16 === '1') {
-    return { major: 16, range: '16.x', runtime: 'nodejs16.x' };
-  }
-
   if (engineRange) {
     const found =
       validRange(engineRange) &&

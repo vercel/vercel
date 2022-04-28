@@ -15,23 +15,23 @@
     "lerna": "3.16.4"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "4.28.0",
-    "@typescript-eslint/parser": "4.28.0",
+    "@typescript-eslint/eslint-plugin": "5.21.0",
+    "@typescript-eslint/parser": "5.21.0",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
-    "eslint": "7.29.0",
-    "eslint-config-prettier": "8.3.0",
-    "eslint-plugin-jest": "24.3.6",
-    "husky": "6.0.0",
-    "jest": "27.3.1",
+    "eslint": "8.14.0",
+    "eslint-config-prettier": "8.5.0",
+    "eslint-plugin-jest": "26.1.5",
+    "husky": "7.0.4",
+    "jest": "28.0.2",
     "json5": "2.1.1",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.1",
     "npm-package-arg": "6.1.0",
-    "prettier": "2.3.1",
+    "prettier": "2.6.2",
     "ts-eager": "2.0.2",
-    "ts-jest": "27.0.4",
-    "turbo": "1.2.2"
+    "ts-jest": "28.0.0-next.1",
+    "turbo": "1.2.5"
   },
   "scripts": {
     "lerna": "lerna",

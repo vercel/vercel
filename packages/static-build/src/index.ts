@@ -452,7 +452,7 @@ export const build: BuildV2 = async ({
           const opts = {
             env: {
               ...process.env,
-              // See more: https://git.io/JtDwx
+              // See more: https://github.com/rubygems/rubygems/blob/a82d04856deba58be6b90f681a5e42a7c0f2baa7/bundler/lib/bundler/man/bundle-config.1.ronn
               BUNDLE_BIN: 'vendor/bin',
               BUNDLE_CACHE_PATH: 'vendor/cache',
               BUNDLE_PATH: 'vendor/bundle',
@@ -759,6 +759,7 @@ export const build: BuildV2 = async ({
 
 export const prepareCache: PrepareCache = async ({
   entrypoint,
+  repoRootPath,
   workPath,
   config,
 }) => {
@@ -788,7 +789,7 @@ export const prepareCache: PrepareCache = async ({
   // Default cache files
   Object.assign(
     cacheFiles,
-    await glob('{.shadow-cljs,node_modules}/**', workPath)
+    await glob('**/{.shadow-cljs,node_modules}/**', repoRootPath || workPath)
   );
 
   // Framework cache files
