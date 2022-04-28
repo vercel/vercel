@@ -3426,7 +3426,12 @@ test('[vc link] should show prompts to set up project', async t => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
+  const vc = execa(binaryPath, ['link', ...defaultArgs], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await setupProject(vc, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
@@ -3499,7 +3504,13 @@ test('[vc link] should not duplicate paths in .gitignore', async t => {
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
     ['link', '--confirm', ...defaultArgs],
-    { cwd: dir, reject: false }
+    {
+      cwd: dir,
+      reject: false,
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
   );
 
   // Ensure the exit code is right
