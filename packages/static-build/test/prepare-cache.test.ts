@@ -1,3 +1,4 @@
+import { FileFsRef } from '@vercel/build-utils';
 import path from 'path';
 import { prepareCache } from '../src';
 
@@ -12,6 +13,37 @@ describe('prepareCache()', () => {
 
     expect(files['node_modules/file']).toBeDefined();
     expect(files['.shadow-cljs/file5']).toBeDefined();
+    expect(files['index.js']).toBeUndefined();
+  });
+
+  test('should cache **/node_modules/**', async () => {
+    const files = await prepareCache({
+      config: { zeroConfig: true },
+      repoRootPath: path.resolve(__dirname, './cache-fixtures/root-path'),
+      workPath: path.resolve(__dirname, './cache-fixtures/root-path/foo'),
+      entrypoint: 'index.js',
+      files: {},
+    });
+
+    expect(files['foo/node_modules/file']).toBeDefined();
+    expect(files['node_modules/file']).toBeDefined();
+    expect(files['index.js']).toBeUndefined();
+  });
+
+  test('should ignore root modules', async () => {
+    const files = await prepareCache({
+      config: { zeroConfig: true },
+      workPath: path.resolve(__dirname, './cache-fixtures/root-path/foo'),
+      entrypoint: 'index.js',
+      files: {},
+    });
+
+    expect(files['node_modules/file']).toBeDefined();
+    expect(
+      (files['node_modules/file'] as FileFsRef).fsPath.includes(
+        'cache-fixtures/root-path/foo/node_modules/file'
+      )
+    ).toBeTruthy();
     expect(files['index.js']).toBeUndefined();
   });
 
