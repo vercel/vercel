@@ -2769,6 +2769,9 @@ test('change user', async t => {
 
   await execute(['login', email, '--api', loginApiUrl, '--debug'], {
     stdio: 'inherit',
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   const auth = await fs.readJSON(getConfigAuthPath());
