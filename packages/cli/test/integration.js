@@ -3586,7 +3586,12 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
+  const vc = execa(binaryPath, ['link', ...defaultArgs], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await waitForPrompt(vc, chunk => /Set up [^?]+\?/.test(chunk));
   vc.stdin.write('yes\n');
