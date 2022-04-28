@@ -754,6 +754,7 @@ export const build: BuildV2 = async ({
 
 export const prepareCache: PrepareCache = async ({
   entrypoint,
+  repoRootPath,
   workPath,
   config,
 }) => {
@@ -783,7 +784,7 @@ export const prepareCache: PrepareCache = async ({
   // Default cache files
   Object.assign(
     cacheFiles,
-    await glob('{.shadow-cljs,node_modules}/**', workPath)
+    await glob('**/{.shadow-cljs,node_modules}/**', repoRootPath || workPath)
   );
 
   // Framework cache files
