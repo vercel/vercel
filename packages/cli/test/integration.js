@@ -2901,7 +2901,11 @@ test('should prefill "project name" prompt with folder name', async t => {
   const directory = path.join(src, '../', projectName);
   await copy(src, directory);
 
-  const now = execa(binaryPath, [directory, ...defaultArgs]);
+  const now = execa(binaryPath, [directory, ...defaultArgs], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
   now.stdin.write('yes\n');
@@ -2944,12 +2948,15 @@ test('should prefill "project name" prompt with --name', async t => {
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
 
-  const now = execa(binaryPath, [
-    directory,
-    '--name',
-    projectName,
-    ...defaultArgs,
-  ]);
+  const now = execa(
+    binaryPath,
+    [directory, '--name', projectName, ...defaultArgs],
+    {
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
+  );
 
   let isDeprecated = false;
 
@@ -3008,7 +3015,11 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
     })
   );
 
-  const now = execa(binaryPath, [directory, ...defaultArgs]);
+  const now = execa(binaryPath, [directory, ...defaultArgs], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   let isDeprecated = false;
 
