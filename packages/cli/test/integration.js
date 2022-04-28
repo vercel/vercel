@@ -1450,6 +1450,9 @@ test('try to purchase a domain', async t => {
     {
       reject: false,
       input: stream,
+      env: {
+        FORCE_TTY: '1',
+      },
     }
   );
 
