@@ -550,7 +550,7 @@ export async function runPipInstall(
   meta?: Meta
 ) {
   if (meta && meta.isDev) {
-    debug('Skipping dependency installation because dev mode is enabled');
+    debug('Skipping dependency installation because dev mode is enabled');
     return;
   }
 
