@@ -36,14 +36,6 @@ export async function importBuilders(
   const buildersDir = join(cwd, VERCEL_DIR, 'builders');
   const buildersPkgPath = join(buildersDir, 'package.json');
 
-  const requirePaths = [
-    // Prefer to load from `.vercel/builders` first, to allow for projects
-    // to override a version of a Builder that CLI provides by default
-    buildersDir,
-    // If CLI provides the Builder, then load from there as well
-    __dirname,
-  ];
-
   do {
     const buildersToAdd = new Set<string>();
 
@@ -71,10 +63,34 @@ export async function importBuilders(
       }
 
       try {
-        const pkgPath = require.resolve(`${name}/package.json`, {
-          paths: requirePaths,
-        });
-        const builderPkg = await readJSON(pkgPath);
+        let pkgPath: string | undefined;
+        let builderPkg: PackageJson | undefined;
+
+        // First try `.vercel/builders`. The package name should always be available
+        // at the top-level of `node_modules` since CLI is installing those directly.
+        try {
+          pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
+          builderPkg = await readJSON(pkgPath);
+        } catch (err: any) {
+          if (err?.code !== 'ENOENT') throw err;
+          // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
+          // dependency. `require.resolve()` will throw if the Builder is not a CLI
+          // dep, in which case we'll try to install it into `.vercel/builders`.
+          pkgPath = require.resolve(`${name}/package.json`, {
+            paths: [__dirname],
+          });
+          builderPkg = await readJSON(pkgPath);
+        }
+
+        if (!builderPkg || !pkgPath) {
+          throw new Error(`Failed to load \`package.json\` for "${name}"`);
+        }
+
+        if (typeof builderPkg.version !== 'string') {
+          throw new Error(
+            `\`package.json\` for "${name}" does not contain a "version" field`
+          );
+        }
 
         if (
           parsed.type === 'version' &&
