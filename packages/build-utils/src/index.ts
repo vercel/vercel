@@ -116,3 +116,5 @@ export const isOfficialRuntime = (desired: string, name?: string): boolean => {
 export const isStaticRuntime = (name?: string): boolean => {
   return isOfficialRuntime('static', name);
 };
+
+export * from './workspaces';
