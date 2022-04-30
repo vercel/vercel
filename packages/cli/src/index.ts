@@ -601,7 +601,7 @@ const main = async () => {
         func = require('./commands/bisect').default;
         break;
       case 'build':
-        func = await import('./commands/build');
+        func = require('./commands/build').default;
         break;
       case 'certs':
         func = require('./commands/certs').default;
