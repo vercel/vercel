@@ -284,6 +284,27 @@ async function writeLambda(
     })
   );
   await Promise.all(ops);
+
+  // XXX: remove any `.vercel/builders` directories that were
+  // extracted into the `dest` dir. This is a temporary band-aid
+  // to make `vercel-php` work since it is inadvertently including
+  // `.vercel/builders` into the Lambda files due to glob syntax.
+  // See: https://github.com/juicyfx/vercel-php/pull/232
+  for await (const dir of findDirs('.vercel', dest)) {
+    const absDir = join(dest, dir);
+    const entries = await fs.readdir(absDir);
+    if (entries.includes('cache')) {
+      // Delete everything except for "cache"
+      await Promise.all(
+        entries
+          .filter(e => e !== 'cache')
+          .map(entry => fs.remove(join(absDir, entry)))
+      );
+    } else {
+      // Delete the entire `.vercel` directory
+      await fs.remove(absDir);
+    }
+  }
 }
 
 /**
@@ -318,4 +339,35 @@ function getFileExtension(file: File): string {
     }
   }
   return ext;
+}
+
+/**
+ * Creates an async iterator that scans a directory
+ * for sub-directories with the matching `name`.
+ */
+export async function* findDirs(
+  name: string,
+  dir: string,
+  root = dir
+): AsyncIterable<string> {
+  let paths: string[];
+  try {
+    paths = await fs.readdir(dir);
+  } catch (err: any) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+    paths = [];
+  }
+  for (const path of paths) {
+    const abs = join(dir, path);
+    const s = await fs.stat(abs);
+    if (s.isDirectory()) {
+      if (path === name) {
+        yield relative(root, abs);
+      } else {
+        yield* findDirs(name, abs, root);
+      }
+    }
+  }
 }
