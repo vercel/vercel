@@ -66,16 +66,16 @@ export async function importBuilders(
         let pkgPath: string | undefined;
         let builderPkg: PackageJson | undefined;
 
-        // First try `.vercel/builders`. The package name should always be available
-        // at the top-level of `node_modules` since CLI is installing those directly.
         try {
+          // First try `.vercel/builders`. The package name should always be available
+          // at the top-level of `node_modules` since CLI is installing those directly.
           pkgPath = join(buildersDir, 'node_modules', name, 'package.json');
           builderPkg = await readJSON(pkgPath);
         } catch (err: any) {
           if (err?.code !== 'ENOENT') throw err;
           // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
           // dependency. `require.resolve()` will throw if the Builder is not a CLI
-          // dep, in which case we'll try to install it into `.vercel/builders`.
+          // dep, in which case we'll install it into `.vercel/builders`.
           pkgPath = require.resolve(`${name}/package.json`, {
             paths: [__dirname],
           });
