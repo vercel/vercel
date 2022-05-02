@@ -466,7 +466,7 @@ export const build: BuildV2 = async ({
           isBundleInstall = true;
         }
         if (existsSync(requirementsPath)) {
-          debug('Detected requirements.txt');
+          debug('Detected requirements.txt');
           printInstall();
           await runPipInstall(
             workPath,
