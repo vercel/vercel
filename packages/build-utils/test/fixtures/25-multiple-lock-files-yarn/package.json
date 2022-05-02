@@ -1,0 +1,10 @@
+{
+  "private": "true",
+  "name": "25-multiple-lock-files-yarn",
+  "scripts": {
+    "build": "mkdir -p public && (printf \"yarn version: \" && yarn -v) > public/index.txt"
+  },
+  "dependencies": {
+    "once": "^1.4.0"
+  }
+}
