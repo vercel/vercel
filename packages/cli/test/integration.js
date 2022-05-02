@@ -797,15 +797,10 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
     t.regex(contents, /^# Created by Vercel CLI\n/);
-
-    const lines = new Set(contents.split('\n'));
-    t.true(lines.has('MY_NEW_ENV_VAR="my plaintext value"'), 'MY_NEW_ENV_VAR');
-    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'), 'MY_STDIN_VAR');
-    t.true(
-      lines.has('MY_DECRYPTABLE_SECRET_ENV="decryptable value"'),
-      'MY_DECRYPTABLE_SECRET_ENV'
-    );
-    t.false(lines.has('MY_PREVIEW'), 'MY_PREVIEW');
+    t.regex(contents, /MY_NEW_ENV_VAR="my plaintext value"/);
+    t.regex(contents, /MY_STDIN_VAR="{"expect":"quotes"}"/);
+    t.regex(contents, /MY_DECRYPTABLE_SECRET_ENV="decryptable value"/);
+    t.not.regex(contents, /MY_PREVIEW/);
   }
 
   async function vcEnvPullOverwrite() {
@@ -1090,29 +1085,48 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
-  await vcLink();
-  await vcEnvLsIsEmpty();
-  await vcEnvAddWithPrompts();
-  await vcEnvAddFromStdin();
-  await vcEnvAddFromStdinPreview();
-  await vcEnvAddFromStdinPreviewWithBranch();
-  await vcEnvLsIncludesVar();
-  await createEnvWithDecryptableSecret();
-  await vcEnvPull();
-  await vcEnvPullOverwrite();
-  await vcEnvPullConfirm();
-  await vcDeployWithVar();
-  await vcDevWithEnv();
-  fs.unlinkSync(path.join(target, '.env'));
-  await vcDevAndFetchCloudVars();
-  await enableAutoExposeSystemEnvs();
-  await vcEnvPullFetchSystemVars();
-  fs.unlinkSync(path.join(target, '.env'));
-  await vcDevAndFetchSystemVars();
-  await vcEnvRemove();
-  await vcEnvRemoveWithArgs();
-  await vcEnvRemoveWithNameOnly();
-  await vcEnvLsIsEmpty();
+  function vcEnvRemoveByName(name) {
+    return execa(binaryPath, ['env', 'rm', name, '-y', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+  }
+
+  async function vcEnvRemoveAll() {
+    await vcEnvRemoveByName('MY_PREVIEW');
+    await vcEnvRemoveByName('MY_STDIN_VAR');
+    await vcEnvRemoveByName('MY_DECRYPTABLE_SECRET_ENV');
+    await vcEnvRemoveByName('MY_NEW_ENV_VAR');
+  }
+
+  try {
+    await vcEnvRemoveAll();
+    await vcLink();
+    await vcEnvLsIsEmpty();
+    await vcEnvAddWithPrompts();
+    await vcEnvAddFromStdin();
+    await vcEnvAddFromStdinPreview();
+    await vcEnvAddFromStdinPreviewWithBranch();
+    await vcEnvLsIncludesVar();
+    await createEnvWithDecryptableSecret();
+    await vcEnvPull();
+    await vcEnvPullOverwrite();
+    await vcEnvPullConfirm();
+    await vcDeployWithVar();
+    await vcDevWithEnv();
+    fs.unlinkSync(path.join(target, '.env'));
+    await vcDevAndFetchCloudVars();
+    await enableAutoExposeSystemEnvs();
+    await vcEnvPullFetchSystemVars();
+    fs.unlinkSync(path.join(target, '.env'));
+    await vcDevAndFetchSystemVars();
+    await vcEnvRemove();
+    await vcEnvRemoveWithArgs();
+    await vcEnvRemoveWithNameOnly();
+    await vcEnvLsIsEmpty();
+  } finally {
+    await vcEnvRemoveAll();
+  }
 });
 
 test('[vc projects] should create a project successfully', async t => {
