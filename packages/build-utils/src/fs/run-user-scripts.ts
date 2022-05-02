@@ -285,15 +285,17 @@ export async function scanParentDirs(
         ),
       ]);
 
-      if (packageLockJson && !hasYarnLock && !pnpmLockYaml) {
-        cliType = 'npm';
-        lockfileVersion = packageLockJson.lockfileVersion;
-      }
-
-      if (!packageLockJson && !hasYarnLock && pnpmLockYaml) {
+      // Priority order is Yarn > pnpm > npm
+      // - find highest priority lock file and use that
+      if (hasYarnLock) {
+        cliType = 'yarn';
+      } else if (pnpmLockYaml) {
         cliType = 'pnpm';
         // just ensure that it is read as a number and not a string
         lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
+      } else if (packageLockJson) {
+        cliType = 'npm';
+        lockfileVersion = packageLockJson.lockfileVersion;
       }
 
       // Only stop iterating if a lockfile was found, because it's possible
