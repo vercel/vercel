@@ -1,7 +1,7 @@
 import npa from 'npm-package-arg';
 import { satisfies } from 'semver';
 import { dirname, join } from 'path';
-import { mkdirp, readJSON, writeFile } from 'fs-extra';
+import { outputJSON, readJSON } from 'fs-extra';
 import {
   BuilderV2,
   BuilderV3,
@@ -142,9 +142,12 @@ export async function importBuilders(
 
     // Add any Builders that are not yet present into `.vercel/builders`
     if (buildersToAdd.size > 0) {
-      await mkdirp(buildersDir);
       try {
-        await writeFile(buildersPkgPath, '{}', {
+        const emptyPkgJson = {
+          private: true,
+          license: 'UNLICENSED',
+        };
+        await outputJSON(buildersPkgPath, emptyPkgJson, {
           flag: 'wx',
         });
       } catch (err: any) {
