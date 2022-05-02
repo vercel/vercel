@@ -1,6 +1,6 @@
 {
   "name": "@vercel/frameworks",
-  "version": "0.7.2-canary.0",
+  "version": "0.8.0",
   "main": "./dist/frameworks.js",
   "types": "./dist/frameworks.d.ts",
   "files": [
@@ -16,11 +16,11 @@
     "js-yaml": "3.13.1"
   },
   "devDependencies": {
-    "@types/jest": "27.0.1",
+    "@types/jest": "27.4.1",
     "@types/js-yaml": "3.12.1",
     "@types/node": "12.0.4",
     "@types/node-fetch": "2.5.8",
-    "@vercel/routing-utils": "1.13.1",
+    "@vercel/routing-utils": "1.13.2",
     "ajv": "6.12.2",
     "typescript": "4.3.4"
   }
