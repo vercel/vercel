@@ -62,6 +62,37 @@ import { Output } from '../../util/output';
 import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 
+function parseTarget(output: Output, targetArg?: string, prodArg?: boolean) {
+  if (targetArg) {
+    const deprecatedTarget = targetArg;
+
+    if (!['staging', 'production'].includes(deprecatedTarget)) {
+      output.error(
+        `The specified ${param('--target')} ${code(
+          deprecatedTarget
+        )} is not valid`
+      );
+      return 1;
+    }
+
+    if (deprecatedTarget === 'production') {
+      output.warn(
+        'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
+      );
+    }
+
+    output.debug(`Setting target to ${deprecatedTarget}`);
+    return deprecatedTarget;
+  }
+
+  if (prodArg) {
+    output.debug('Setting target to production');
+    return 'production';
+  }
+
+  return 'preview';
+}
+
 export default async (client: Client) => {
   const { output } = client;
 
@@ -155,7 +186,7 @@ export default async (client: Client) => {
     }
   }
 
-  const { log, debug, error, warn, isTTY } = output;
+  const { log, debug, error, isTTY } = output;
 
   const quiet = !isTTY;
 
@@ -181,6 +212,9 @@ export default async (client: Client) => {
     );
   }
 
+  // build `target`
+  const target = parseTarget(output, argv['--target'], argv['--prod']);
+
   // build `--prebuilt`
   if (argv['--prebuilt']) {
     const prebuiltExists = await fs.pathExists(join(path, '.vercel/output'));
@@ -191,6 +225,21 @@ export default async (client: Client) => {
         )} option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
           'build'
         )} to generate a local build.`
+      );
+      return 1;
+    }
+
+    const prebuiltBuild = fs.readJsonSync(
+      join(path, '.vercel/output/builds.json'),
+      { throws: false }
+    );
+    if (prebuiltBuild && prebuiltBuild.target !== target) {
+      error(
+        `The ${param(
+          '--prebuilt'
+        )} option was used with the target environment "${target}", but the prebuilt output found in ".vercel/output" was built with target environment "${
+          prebuiltBuild.target
+        }".`
       );
       return 1;
     }
@@ -417,33 +466,6 @@ export default async (client: Client) => {
     .map((s: string) => s.trim())
     .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
-
-  // build `target`
-  let target;
-  if (argv['--target']) {
-    const deprecatedTarget = argv['--target'];
-
-    if (!['staging', 'production'].includes(deprecatedTarget)) {
-      error(
-        `The specified ${param('--target')} ${code(
-          deprecatedTarget
-        )} is not valid`
-      );
-      return 1;
-    }
-
-    if (deprecatedTarget === 'production') {
-      warn(
-        'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
-      );
-    }
-
-    output.debug(`Setting target to ${deprecatedTarget}`);
-    target = deprecatedTarget;
-  } else if (argv['--prod']) {
-    output.debug('Setting target to production');
-    target = 'production';
-  }
 
   const currentTeam = org?.type === 'team' ? org.id : undefined;
   const now = new Now({
