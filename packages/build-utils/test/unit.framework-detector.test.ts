@@ -1,5 +1,6 @@
 import frameworkList from '@vercel/frameworks';
 import { detectFramework, DetectorFilesystem } from '../src';
+import { Stat } from '../src/detectors/filesystem';
 
 class VirtualFilesystem extends DetectorFilesystem {
   private files: Map<string, Buffer>;
@@ -39,6 +40,20 @@ class VirtualFilesystem extends DetectorFilesystem {
     }
 
     return file;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async _readdir(_name: string): Promise<Stat[]> {
+    return [...this.files.keys()].map(filename => ({
+      name: filename,
+      path: filename,
+      type: 'file',
+    }));
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _chdir(_name: string): DetectorFilesystem {
+    return this;
   }
 }
 
