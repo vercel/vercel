@@ -62,7 +62,11 @@ import { Output } from '../../util/output';
 import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 
-function parseTarget(output: Output, targetArg?: string, prodArg?: boolean) {
+function parseTarget(
+  output: Output,
+  targetArg?: string,
+  prodArg?: boolean
+): string | number | undefined {
   if (targetArg) {
     const deprecatedTarget = targetArg;
 
@@ -90,7 +94,7 @@ function parseTarget(output: Output, targetArg?: string, prodArg?: boolean) {
     return 'production';
   }
 
-  return 'preview';
+  return undefined;
 }
 
 export default async (client: Client) => {
@@ -214,6 +218,9 @@ export default async (client: Client) => {
 
   // build `target`
   const target = parseTarget(output, argv['--target'], argv['--prod']);
+  if (typeof target === 'number') {
+    return target;
+  }
 
   // build `--prebuilt`
   if (argv['--prebuilt']) {
