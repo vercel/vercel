@@ -800,7 +800,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(contents, /MY_NEW_ENV_VAR="my plaintext value"/);
     t.regex(contents, /MY_STDIN_VAR="{"expect":"quotes"}"/);
     t.regex(contents, /MY_DECRYPTABLE_SECRET_ENV="decryptable value"/);
-    t.not.regex(contents, /MY_PREVIEW/);
+    t.notRegex(contents, /MY_PREVIEW/);
   }
 
   async function vcEnvPullOverwrite() {
