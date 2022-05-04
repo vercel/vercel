@@ -55,7 +55,9 @@ class VirtualFilesystem extends DetectorFilesystem {
     return (
       [...this.files.keys()]
         .map(filepath => {
-          const basePath = path.join(this.cwd, name === '/' ? '' : name);
+          const basePath = path
+            .join(this.cwd, name === '/' ? '' : name)
+            .replaceAll(path.sep, '/');
           const fileDirectoryName = path.dirname(filepath);
 
           if (fileDirectoryName === basePath) {
@@ -109,7 +111,7 @@ class VirtualFilesystem extends DetectorFilesystem {
    * An example of how to implement chdir for a virtual filesystem.
    */
   _chdir(name: string): DetectorFilesystem {
-    const basePath = path.join(this.cwd, name);
+    const basePath = path.join(this.cwd, name).replaceAll(path.sep, '/');
     const files = Object.fromEntries(
       [...this.files.keys()].map(key => [key, this.files.get(key) ?? ''])
     );
