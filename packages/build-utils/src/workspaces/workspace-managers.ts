@@ -58,8 +58,6 @@ export const workspaceManagers = [
       ],
     },
   },
-];
+] as Array<Framework>;
 
-const def = workspaceManagers as Framework[];
-
-export default def;
+export default workspaceManagers;
