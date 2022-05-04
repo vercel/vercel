@@ -11,8 +11,8 @@ describe('workspace-managers', () => {
     [null, '22-pnpm'],
   ])('with detectFramework', (frameworkSlug, fixturePath) => {
     const testName = frameworkSlug
-      ? `should detect a ${frameworkSlug} workspace`
-      : 'should not detect anything';
+      ? `should detect a ${frameworkSlug} workspace for ${fixturePath}`
+      : `should not detect framework for ${fixturePath}`;
 
     it(testName, async () => {
       const fixture = path.join(__dirname, 'fixtures', fixturePath);

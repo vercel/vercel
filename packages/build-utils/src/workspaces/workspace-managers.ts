@@ -32,6 +32,17 @@ export const workspaceManagers = [
     },
   },
   {
+    name: 'pnpm',
+    slug: 'pnpm',
+    detectors: {
+      every: [
+        {
+          path: 'pnpm-workspace.yaml',
+        },
+      ],
+    },
+  },
+  {
     name: 'npm',
     slug: 'npm',
     detectors: {
@@ -43,17 +54,6 @@ export const workspaceManagers = [
         },
         {
           path: 'package-lock.json',
-        },
-      ],
-    },
-  },
-  {
-    name: 'pnpm',
-    slug: 'pnpm',
-    detectors: {
-      every: [
-        {
-          path: 'pnpm-workspace.yaml',
         },
       ],
     },
