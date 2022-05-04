@@ -84,7 +84,10 @@ class VirtualFilesystem extends DetectorFilesystem {
 
             return {
               name: subDirectoryName,
-              path: path.join(name === '/' ? '' : name, subDirectoryName),
+              path:
+                name === '/'
+                  ? subDirectoryName
+                  : [name, subDirectoryName].join('/'),
               type: 'dir',
             };
           }
