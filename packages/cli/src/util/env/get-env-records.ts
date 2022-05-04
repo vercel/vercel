@@ -7,6 +7,8 @@ export default async function getEnvRecords(
   output: Output,
   client: Client,
   projectId: string,
+  /** The CLI command that was used that needs the environment variables. */
+  source: string,
   {
     target,
     gitBranch,

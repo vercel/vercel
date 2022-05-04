@@ -12,9 +12,11 @@ export default async function getDecryptedEnvRecords(
   output: Output,
   client: Client,
   projectId: string,
+  /** The CLI command that was used that needs the environment variables. */
+  source: string,
   target?: ProjectEnvTarget
 ): Promise<{ envs: ProjectEnvVariable[] }> {
-  const { envs } = await getEnvRecords(output, client, projectId, {
+  const { envs } = await getEnvRecords(output, client, projectId, source, {
     target: target || ProjectEnvTarget.Development,
     decrypt: true,
   });

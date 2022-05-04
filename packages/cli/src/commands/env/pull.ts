@@ -90,7 +90,13 @@ export default async function pull(
   output.spinner('Downloading');
 
   const [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-    getDecryptedEnvRecords(output, client, project.id, environment),
+    getDecryptedEnvRecords(
+      output,
+      client,
+      project.id,
+      'vercel-cli:pull',
+      environment
+    ),
     project.autoExposeSystemEnvs
       ? getSystemEnvValues(output, client, project.id)
       : { systemEnvValues: [] },

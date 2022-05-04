@@ -82,7 +82,7 @@ export default async function dev(
     }
 
     [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-      getDecryptedEnvRecords(output, client, project.id),
+      getDecryptedEnvRecords(output, client, project.id, 'vercel-cli:dev'),
       project.autoExposeSystemEnvs
         ? getSystemEnvValues(output, client, project.id)
         : { systemEnvValues: [] },
