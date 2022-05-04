@@ -76,19 +76,6 @@ export abstract class DetectorFilesystem {
 
   /**
    * Returns a list of Stat objects from the current working directory.
-   *
-   * @example
-   *
-   * const url = "https://github.com/vercel/front"
-   * const fs = new GitDetectorFilesystem(...) // based on url
-   *
-   * // calls "https://api.github.com/repos/vercel/front/contents" behind the scenes
-   * await fs.readdir() => [
-   *    { name: "docs", path: "docs", type: "dir" },
-   *    { name: "front", path: "front", type: "dir" },
-   *    ...,
-   *    { name: "package.json", path: "package.json", type: "file" },
-   * ]
    */
   public readdir = async (name: string): Promise<Stat[]> => {
     let p = this.readdirCache.get(name);
@@ -101,28 +88,6 @@ export abstract class DetectorFilesystem {
 
   /**
    * Changes the current directory to the specified path and returns a new instance of DetectorFilesystem.
-   *
-   * @example
-   *
-   * my-repo
-   * |-- backend
-   * |    |-- api-1
-   * |    |-- api-2
-   * |    |-- package.json // workspaces: ["api-1", "api-2"]
-   * |    |-- yarn.lock
-   * |-- frontend
-   * |    |-- nextjs-app
-   * |    |-- gatsby-app
-   * |    |-- package.json
-   * |    |-- pnpm-workspaces.yaml // packages: ["nextjs-app", "gatsby-app"]
-   *
-   * const url = "https://github.com/vercel/my-repo"
-   * const fs = new GitDetectorFilesystem(...) // based on "url"
-   * const backendFs = fs.chdir("backend")
-   * const frontendFs = fs.chdir("frontend")
-   *
-   * const backendWorkspaceManager = detectFramework({ fs: backendFs, frameworkList: workspaceManagers }) // "yarn"
-   * const frontendWorkspaceManager = detectFramework({ fs: frontendFs, frameworkList: workspaceManagers }) // "pnpm"
    */
   public chdir = (name: string): DetectorFilesystem => {
     return this._chdir(name);
