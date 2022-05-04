@@ -206,7 +206,7 @@ export default async (client: Client) => {
       join(path, '.vercel/output/builds.json'),
       { throws: false }
     );
-    if (prebuiltBuild && prebuiltBuild.target !== target) {
+    if (prebuiltBuild?.target && prebuiltBuild.target !== target) {
       error(
         `The ${param(
           '--prebuilt'
