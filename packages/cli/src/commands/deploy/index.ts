@@ -61,41 +61,7 @@ import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-
 import { Output } from '../../util/output';
 import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
-
-function parseTarget(
-  output: Output,
-  targetArg?: string,
-  prodArg?: boolean
-): string | number | undefined {
-  if (targetArg) {
-    const deprecatedTarget = targetArg;
-
-    if (!['staging', 'production'].includes(deprecatedTarget)) {
-      output.error(
-        `The specified ${param('--target')} ${code(
-          deprecatedTarget
-        )} is not valid`
-      );
-      return 1;
-    }
-
-    if (deprecatedTarget === 'production') {
-      output.warn(
-        'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
-      );
-    }
-
-    output.debug(`Setting target to ${deprecatedTarget}`);
-    return deprecatedTarget;
-  }
-
-  if (prodArg) {
-    output.debug('Setting target to production');
-    return 'production';
-  }
-
-  return undefined;
-}
+import parseTarget from '../../util/deploy/parse-target';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -246,7 +212,9 @@ export default async (client: Client) => {
           '--prebuilt'
         )} option was used with the target environment "${target}", but the prebuilt output found in ".vercel/output" was built with target environment "${
           prebuiltBuild.target
-        }".`
+        }". Please run ${getCommandName(
+          `--prebuilt --target=${target}`
+        )}. See https://vercel.com/docs/cli#introduction/extended-usage for more details.`
       );
       return 1;
     }
