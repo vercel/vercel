@@ -1,19 +1,19 @@
-import { Framework } from '@vercel/frameworks';
+import { Monorepo } from '@vercel/monorepos';
 import { DetectorFilesystem } from './detectors/filesystem';
 import { matches } from './matches';
 
 export interface DetectFrameworkOptions {
   fs: DetectorFilesystem;
-  frameworkList: readonly Framework[];
+  monorepoList: readonly Monorepo[];
 }
 
-export async function detectFramework({
+export async function detectMonorepo({
   fs,
-  frameworkList,
+  monorepoList,
 }: DetectFrameworkOptions): Promise<string | null> {
-  for (const framework of frameworkList) {
-    if (await matches(fs, framework)) {
-      return framework.slug;
+  for (const monorepo of monorepoList) {
+    if (await matches(fs, monorepo)) {
+      return monorepo.slug;
     }
   }
 

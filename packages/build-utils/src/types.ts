@@ -4,6 +4,8 @@ import type FileBlob from './file-blob';
 import type { Lambda } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
+import { Framework } from '@vercel/frameworks';
+import { Monorepo } from "@vercel/monorepos";
 
 export interface Env {
   [name: string]: string | undefined;
@@ -404,3 +406,17 @@ export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
 export type StartDevServer = (
   options: StartDevServerOptions
 ) => Promise<StartDevServerResult>;
+
+export type MatchObject = Framework | Monorepo;
+export interface DetectionItem {
+  /**
+   * A file path
+   * @example "package.json"
+   */
+  path: string;
+  /**
+   * A matcher
+   * @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
+   */
+  matchContent?: string;
+}
