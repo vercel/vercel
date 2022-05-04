@@ -33,6 +33,9 @@ export default async function getEnvRecords(
   if (decrypt) {
     query.set('decrypt', decrypt.toString());
   }
+  if (source) {
+    query.set('source', source);
+  }
 
   const url = `/v8/projects/${projectId}/env?${query}`;
 
