@@ -3,6 +3,8 @@ import frameworkList from '@vercel/frameworks';
 import { detectFramework, DetectorFilesystem } from '../src';
 import { Stat } from '../src/detectors/filesystem';
 
+const posixPath = path.posix;
+
 class VirtualFilesystem extends DetectorFilesystem {
   private files: Map<string, Buffer>;
   private cwd: string;
@@ -18,11 +20,11 @@ class VirtualFilesystem extends DetectorFilesystem {
   }
 
   private _normalizePath(rawPath: string): string {
-    return path.posix.normalize(rawPath);
+    return posixPath.normalize(rawPath);
   }
 
   async _hasPath(name: string): Promise<boolean> {
-    const basePath = path.join(this.cwd, name);
+    const basePath = this._normalizePath(posixPath.join(this.cwd, name));
     for (const file of this.files.keys()) {
       if (file.startsWith(basePath)) {
         return true;
@@ -33,12 +35,12 @@ class VirtualFilesystem extends DetectorFilesystem {
   }
 
   async _isFile(name: string): Promise<boolean> {
-    const basePath = path.join(this.cwd, name);
+    const basePath = this._normalizePath(posixPath.join(this.cwd, name));
     return this.files.has(basePath);
   }
 
   async _readFile(name: string): Promise<Buffer> {
-    const basePath = path.join(this.cwd, name);
+    const basePath = this._normalizePath(posixPath.join(this.cwd, name));
     const file = this.files.get(basePath);
 
     if (file === undefined) {
@@ -60,13 +62,13 @@ class VirtualFilesystem extends DetectorFilesystem {
       [...this.files.keys()]
         .map(filepath => {
           const basePath = this._normalizePath(
-            path.join(this.cwd, name === '/' ? '' : name)
+            posixPath.join(this.cwd, name === '/' ? '' : name)
           );
-          const fileDirectoryName = path.dirname(filepath);
+          const fileDirectoryName = posixPath.dirname(filepath);
 
           if (fileDirectoryName === basePath) {
             return {
-              name: path.basename(filepath),
+              name: posixPath.basename(filepath),
               path: filepath.replace(
                 this.cwd === '' ? this.cwd : `${this.cwd}/`,
                 ''
@@ -93,7 +95,7 @@ class VirtualFilesystem extends DetectorFilesystem {
               path:
                 name === '/'
                   ? subDirectoryName
-                  : this._normalizePath(path.join(name, subDirectoryName)),
+                  : this._normalizePath(posixPath.join(name, subDirectoryName)),
               type: 'dir',
             };
           }
@@ -115,7 +117,7 @@ class VirtualFilesystem extends DetectorFilesystem {
    * An example of how to implement chdir for a virtual filesystem.
    */
   _chdir(name: string): DetectorFilesystem {
-    const basePath = this._normalizePath(path.join(this.cwd, name));
+    const basePath = this._normalizePath(posixPath.join(this.cwd, name));
     const files = Object.fromEntries(
       [...this.files.keys()].map(key => [key, this.files.get(key) ?? ''])
     );
