@@ -1,16 +1,17 @@
 import assert from 'assert';
-import { getEnvForPackageManager, NodeVersion } from '../src';
-import { CliType } from '../src/fs/run-user-scripts';
+import { getEnvForPackageManager } from '../src';
 
 describe('Test `getEnvForPackageManager()`', () => {
-  const cases = [
+  const cases: Array<{
+    name: string;
+    args: Parameters<typeof getEnvForPackageManager>[0];
+    want: unknown;
+  }> = [
     {
       name: 'should do nothing to env for npm < 6 and node < 16',
       args: {
-        cliType: 'npm' as CliType,
-        nodeVersion: {
-          major: 14,
-        } as NodeVersion,
+        cliType: 'npm',
+        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
         lockfileVersion: 1,
         env: {
           FOO: 'bar',
@@ -23,10 +24,8 @@ describe('Test `getEnvForPackageManager()`', () => {
     {
       name: 'should set path if npm 7+ is detected and node < 16',
       args: {
-        cliType: 'npm' as CliType,
-        nodeVersion: {
-          major: 14,
-        } as NodeVersion,
+        cliType: 'npm',
+        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -41,10 +40,8 @@ describe('Test `getEnvForPackageManager()`', () => {
     {
       name: 'should not set path if node is 16 and npm 7+ is detected',
       args: {
-        cliType: 'npm' as CliType,
-        nodeVersion: {
-          major: 16,
-        } as NodeVersion,
+        cliType: 'npm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -59,10 +56,8 @@ describe('Test `getEnvForPackageManager()`', () => {
     {
       name: 'should set YARN_NODE_LINKER w/yarn if it is not already defined',
       args: {
-        cliType: 'yarn' as CliType,
-        nodeVersion: {
-          major: 16,
-        } as NodeVersion,
+        cliType: 'yarn',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -76,10 +71,8 @@ describe('Test `getEnvForPackageManager()`', () => {
     {
       name: 'should not set YARN_NODE_LINKER if it already exists',
       args: {
-        cliType: 'yarn' as CliType,
-        nodeVersion: {
-          major: 16,
-        } as NodeVersion,
+        cliType: 'yarn',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -89,6 +82,50 @@ describe('Test `getEnvForPackageManager()`', () => {
       want: {
         FOO: 'bar',
         YARN_NODE_LINKER: 'exists',
+      },
+    },
+    {
+      name: 'should set path if pnpm 7+ is detected and Node version is greater than 12',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        lockfileVersion: 5.4,
+        env: {
+          FOO: 'bar',
+          PATH: 'foo',
+        },
+      },
+      want: {
+        FOO: 'bar',
+        PATH: '/node16/bin-pnpm7/pnpm:foo',
+      },
+    },
+    {
+      name: 'should not set path if pnpm 7+ is detected and Node version is less than or equal to 12',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 12, range: '12.x', runtime: 'nodejs12.x' },
+        lockfileVersion: 5.4,
+        env: {
+          FOO: 'bar',
+        },
+      },
+      want: {
+        FOO: 'bar',
+      },
+    },
+    {
+      name: 'should not set path if pnpm 6 is detected',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
+        lockfileVersion: 5.3,
+        env: {
+          FOO: 'bar',
+        },
+      },
+      want: {
+        FOO: 'bar',
       },
     },
   ];
