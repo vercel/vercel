@@ -81,7 +81,7 @@ describe('deploy', () => {
     const exitCode = await deploy(client);
     expect(exitCode).toEqual(1);
     expect(client.outputBuffer).toEqual(
-      'Error! The "--prebuilt" option was used with the target environment "undefined",' +
+      'Error! The "--prebuilt" option was used with the target environment "preview",' +
         ' but the prebuilt output found in ".vercel/output" was built with target environment "production".' +
         ' Please run `vercel --prebuilt --prod`.\n' +
         'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'

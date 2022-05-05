@@ -216,7 +216,7 @@ export default async (client: Client) => {
       prettyError({
         message: `The ${param(
           '--prebuilt'
-        )} option was used with the target environment "${target}", but the prebuilt output found in ".vercel/output" was built with target environment "${
+        )} option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
           prebuiltBuild.target
         }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
         link: 'https://vercel.link/prebuilt-environment-mismatch',
