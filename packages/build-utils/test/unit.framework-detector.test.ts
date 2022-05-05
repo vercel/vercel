@@ -18,7 +18,7 @@ class VirtualFilesystem extends DetectorFilesystem {
   }
 
   private _normalizePath(rawPath: string): string {
-    return path.normalize(rawPath.replaceAll(path.sep, '/'));
+    return path.posix.normalize(rawPath);
   }
 
   async _hasPath(name: string): Promise<boolean> {
