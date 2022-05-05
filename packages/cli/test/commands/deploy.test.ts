@@ -61,7 +61,8 @@ describe('deploy', () => {
     expect(client.outputBuffer).toEqual(
       'Error! The "--prebuilt" option was used with the target environment "production",' +
         ' but the prebuilt output found in ".vercel/output" was built with target environment "preview".' +
-        ' Please run `vercel --prebuilt --target=production`. See https://vercel.com/docs/cli#introduction/extended-usage for more details.\n'
+        ' Please run `vercel --prebuilt --target=production`.\n' +
+        'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
     );
   });
 
