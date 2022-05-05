@@ -97,7 +97,7 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
       want: {
         FOO: 'bar',
-        PATH: '/node16/bin-pnpm7/pnpm:foo',
+        PATH: '/pnpm7/pnpm:foo',
       },
     },
     {
