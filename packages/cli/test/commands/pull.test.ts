@@ -29,17 +29,23 @@ describe('pull', () => {
   });
 
   it('should fail with message to pull without a link and without --env', async () => {
-    const cwd = setupFixture('vercel-pull-next');
-    useUser();
-    useTeams('team_dummy');
+    try {
+      process.stdout.isTTY = undefined;
 
-    client.setArgv('pull', cwd);
-    const exitCode = await pull(client);
-    expect(exitCode, client.outputBuffer).toEqual(1);
+      const cwd = setupFixture('vercel-pull-unlinked');
+      useUser();
+      useTeams('team_dummy');
 
-    expect(client.outputBuffer).toMatch(
-      /Command `vercel pull` requires confirmation. Use option "--yes" to confirm./gm
-    );
+      client.setArgv('pull', cwd);
+      const exitCode = await pull(client);
+      expect(exitCode, client.outputBuffer).toEqual(1);
+
+      expect(client.outputBuffer).toMatch(
+        /Command `vercel pull` requires confirmation. Use option "--yes" to confirm./gm
+      );
+    } finally {
+      process.stdout.isTTY = true;
+    }
   });
 
   it('should fail without message to pull without a link and with --env', async () => {
