@@ -494,6 +494,31 @@ test('default command should work with --cwd option', async t => {
   );
 });
 
+test('should allow deploying a directory that was built with a target environment of "preview" and `--prebuilt` is used without specifying a target', async t => {
+  const projectDir = fixture('deploy-default-with-prebuilt-preview');
+
+  await vcLink(t, projectDir);
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      '--prebuilt',
+      ...defaultArgs,
+    ],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const url = stdout;
+  const deploymentResult = await fetch(`${url}/README.md`);
+  const body = await deploymentResult.text();
+  t.deepEqual(body, 'readme contents for deploy-default-with-prebuilt-preview');
+});
+
 test('deploy using only now.json with `redirects` defined', async t => {
   const target = fixture('redirects-v2');
 

@@ -179,6 +179,13 @@ module.exports = async function prepare(session, binaryPath) {
       'list/README.md':
         'readme contents for deploy-default-with-conflicting-sub-directory',
     },
+    'deploy-default-with-prebuilt-preview': {
+      'vercel.json': JSON.stringify({ version: 2 }),
+      '.vercel/output/builds.json': JSON.stringify({ target: 'preview' }),
+      '.vercel/output/config.json': JSON.stringify({ version: 3 }),
+      '.vercel/output/static/README.md':
+        'readme contents for deploy-default-with-prebuilt-preview',
+    },
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
       [`test-${session}.html`]: '<h1>hello test</h1>',

@@ -206,13 +206,19 @@ export default async (client: Client) => {
       join(path, '.vercel/output/builds.json'),
       { throws: false }
     );
-    if (prebuiltBuild?.target && prebuiltBuild.target !== target) {
+    const assumedTarget = target || 'preview';
+    if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
+      let specifyTarget = '';
+      if (prebuiltBuild.target === 'production') {
+        specifyTarget = ` --prod`;
+      }
+
       prettyError({
         message: `The ${param(
           '--prebuilt'
         )} option was used with the target environment "${target}", but the prebuilt output found in ".vercel/output" was built with target environment "${
           prebuiltBuild.target
-        }". Please run ${getCommandName(`--prebuilt --target=${target}`)}.`,
+        }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
         link: 'https://vercel.link/prebuilt-environment-mismatch',
       });
       return 1;

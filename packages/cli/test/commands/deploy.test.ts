@@ -44,7 +44,7 @@ describe('deploy', () => {
     );
   });
 
-  it('should reject deploying a directory that was built with a different target environment when `--prebuilt` is used', async () => {
+  it('should reject deploying a directory that was built with a different target environment when `--prebuilt --prod` is used on "preview" output', async () => {
     const cwd = setupFixture('build-output-api-preview');
 
     useUser();
@@ -61,7 +61,29 @@ describe('deploy', () => {
     expect(client.outputBuffer).toEqual(
       'Error! The "--prebuilt" option was used with the target environment "production",' +
         ' but the prebuilt output found in ".vercel/output" was built with target environment "preview".' +
-        ' Please run `vercel --prebuilt --target=production`.\n' +
+        ' Please run `vercel --prebuilt`.\n' +
+        'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
+    );
+  });
+
+  it('should reject deploying a directory that was built with a different target environment when `--prebuilt` is used on "production" output', async () => {
+    const cwd = setupFixture('build-output-api-production');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'build-output-api-preview',
+      name: 'build-output-api-preview',
+    });
+
+    client.setArgv('deploy', cwd, '--prebuilt');
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(1);
+    expect(client.outputBuffer).toEqual(
+      'Error! The "--prebuilt" option was used with the target environment "undefined",' +
+        ' but the prebuilt output found in ".vercel/output" was built with target environment "production".' +
+        ' Please run `vercel --prebuilt --prod`.\n' +
         'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
     );
   });

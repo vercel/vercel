@@ -6,6 +6,8 @@ import {
   getLinkedProject,
   linkFolderToProject,
   getVercelDirectory,
+  VERCEL_DIR_README,
+  VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import createProject from '../projects/create-project';
 import updateProject from '../projects/update-project';
@@ -65,7 +67,8 @@ export default async function setupAndLink(
 
   if (forceDelete) {
     const vercelDir = getVercelDirectory(path);
-    remove(vercelDir);
+    remove(join(vercelDir, VERCEL_DIR_README));
+    remove(join(vercelDir, VERCEL_DIR_PROJECT));
   }
 
   const shouldStartSetup =
