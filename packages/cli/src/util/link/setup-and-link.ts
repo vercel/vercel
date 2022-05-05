@@ -49,7 +49,7 @@ export default async function setupAndLink(
   const isFile = !isDirectory(path);
   if (isFile) {
     output.error(`Expected directory but found file: ${path}`);
-    return { status: 'error', exitCode: 1 };
+    return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
   const link = await getLinkedProject(client, path);
   const isTTY = process.stdout.isTTY;
@@ -66,6 +66,10 @@ export default async function setupAndLink(
   if (forceDelete) {
     const vercelDir = getVercelDirectory(path);
     remove(vercelDir);
+  }
+
+  if (!isTTY && !autoConfirm) {
+    return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
   const shouldStartSetup =
@@ -87,9 +91,14 @@ export default async function setupAndLink(
       autoConfirm
     );
   } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+    if (err.code === 'NOT_AUTHORIZED') {
       output.prettyError(err);
-      return { status: 'error', exitCode: 1 };
+      return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+    }
+
+    if (err.code === 'TEAM_DELETED') {
+      output.prettyError(err);
+      return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
     }
 
     throw err;
@@ -135,7 +144,7 @@ export default async function setupAndLink(
     rootDirectory &&
     !(await validateRootDirectory(output, path, sourcePath, ''))
   ) {
-    return { status: 'error', exitCode: 1 };
+    return { status: 'error', exitCode: 1, reason: 'INVALID_ROOT_DIRECTORY' };
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -191,7 +200,11 @@ export default async function setupAndLink(
         if (debug) {
           console.log(deployment);
         }
-        return { status: 'error', exitCode: 1 };
+        return {
+          status: 'error',
+          exitCode: 1,
+          reason: 'MISSING_PROJECT_SETTINGS',
+        };
       }
 
       const { projectSettings, framework } = deployment;

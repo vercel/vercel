@@ -794,15 +794,10 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
     t.regex(contents, /^# Created by Vercel CLI\n/);
-
-    const lines = new Set(contents.split('\n'));
-    t.true(lines.has('MY_NEW_ENV_VAR="my plaintext value"'), 'MY_NEW_ENV_VAR');
-    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'), 'MY_STDIN_VAR');
-    t.true(
-      lines.has('MY_DECRYPTABLE_SECRET_ENV="decryptable value"'),
-      'MY_DECRYPTABLE_SECRET_ENV'
-    );
-    t.false(lines.has('MY_PREVIEW'), 'MY_PREVIEW');
+    t.regex(contents, /MY_NEW_ENV_VAR="my plaintext value"/);
+    t.regex(contents, /MY_STDIN_VAR="{"expect":"quotes"}"/);
+    t.regex(contents, /MY_DECRYPTABLE_SECRET_ENV="decryptable value"/);
+    t.notRegex(contents, /MY_PREVIEW/);
   }
 
   async function vcEnvPullOverwrite() {
@@ -1087,29 +1082,48 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
-  await vcLink();
-  await vcEnvLsIsEmpty();
-  await vcEnvAddWithPrompts();
-  await vcEnvAddFromStdin();
-  await vcEnvAddFromStdinPreview();
-  await vcEnvAddFromStdinPreviewWithBranch();
-  await vcEnvLsIncludesVar();
-  await createEnvWithDecryptableSecret();
-  await vcEnvPull();
-  await vcEnvPullOverwrite();
-  await vcEnvPullConfirm();
-  await vcDeployWithVar();
-  await vcDevWithEnv();
-  fs.unlinkSync(path.join(target, '.env'));
-  await vcDevAndFetchCloudVars();
-  await enableAutoExposeSystemEnvs();
-  await vcEnvPullFetchSystemVars();
-  fs.unlinkSync(path.join(target, '.env'));
-  await vcDevAndFetchSystemVars();
-  await vcEnvRemove();
-  await vcEnvRemoveWithArgs();
-  await vcEnvRemoveWithNameOnly();
-  await vcEnvLsIsEmpty();
+  function vcEnvRemoveByName(name) {
+    return execa(binaryPath, ['env', 'rm', name, '-y', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+  }
+
+  async function vcEnvRemoveAll() {
+    await vcEnvRemoveByName('MY_PREVIEW');
+    await vcEnvRemoveByName('MY_STDIN_VAR');
+    await vcEnvRemoveByName('MY_DECRYPTABLE_SECRET_ENV');
+    await vcEnvRemoveByName('MY_NEW_ENV_VAR');
+  }
+
+  try {
+    await vcEnvRemoveAll();
+    await vcLink();
+    await vcEnvLsIsEmpty();
+    await vcEnvAddWithPrompts();
+    await vcEnvAddFromStdin();
+    await vcEnvAddFromStdinPreview();
+    await vcEnvAddFromStdinPreviewWithBranch();
+    await vcEnvLsIncludesVar();
+    await createEnvWithDecryptableSecret();
+    await vcEnvPull();
+    await vcEnvPullOverwrite();
+    await vcEnvPullConfirm();
+    await vcDeployWithVar();
+    await vcDevWithEnv();
+    fs.unlinkSync(path.join(target, '.env'));
+    await vcDevAndFetchCloudVars();
+    await enableAutoExposeSystemEnvs();
+    await vcEnvPullFetchSystemVars();
+    fs.unlinkSync(path.join(target, '.env'));
+    await vcDevAndFetchSystemVars();
+    await vcEnvRemove();
+    await vcEnvRemoveWithArgs();
+    await vcEnvRemoveWithNameOnly();
+    await vcEnvLsIsEmpty();
+  } finally {
+    await vcEnvRemoveAll();
+  }
 });
 
 test('[vc projects] should create a project successfully', async t => {
@@ -1447,6 +1461,9 @@ test('try to purchase a domain', async t => {
     {
       reject: false,
       input: stream,
+      env: {
+        FORCE_TTY: '1',
+      },
     }
   );
 
@@ -2358,6 +2375,9 @@ test('[vercel dev] fails when development commad calls vercel dev recursively', 
   const dev = execa(binaryPath, ['dev', ...defaultArgs], {
     cwd: dir,
     reject: false,
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await setupProject(dev, projectName, {
@@ -2763,6 +2783,9 @@ test('change user', async t => {
 
   await execute(['login', email, '--api', loginApiUrl, '--debug'], {
     stdio: 'inherit',
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   const auth = await fs.readJSON(getConfigAuthPath());
@@ -2892,7 +2915,11 @@ test('should prefill "project name" prompt with folder name', async t => {
   const directory = path.join(src, '../', projectName);
   await copy(src, directory);
 
-  const now = execa(binaryPath, [directory, ...defaultArgs]);
+  const now = execa(binaryPath, [directory, ...defaultArgs], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
   now.stdin.write('yes\n');
@@ -2935,12 +2962,15 @@ test('should prefill "project name" prompt with --name', async t => {
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
 
-  const now = execa(binaryPath, [
-    directory,
-    '--name',
-    projectName,
-    ...defaultArgs,
-  ]);
+  const now = execa(
+    binaryPath,
+    [directory, '--name', projectName, ...defaultArgs],
+    {
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
+  );
 
   let isDeprecated = false;
 
@@ -2999,7 +3029,11 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
     })
   );
 
-  const now = execa(binaryPath, [directory, ...defaultArgs]);
+  const now = execa(binaryPath, [directory, ...defaultArgs], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   let isDeprecated = false;
 
@@ -3420,7 +3454,12 @@ test('[vc link] should show prompts to set up project', async t => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
+  const vc = execa(binaryPath, ['link', ...defaultArgs], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await setupProject(vc, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
@@ -3493,7 +3532,13 @@ test('[vc link] should not duplicate paths in .gitignore', async t => {
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
     ['link', '--confirm', ...defaultArgs],
-    { cwd: dir, reject: false }
+    {
+      cwd: dir,
+      reject: false,
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
   );
 
   // Ensure the exit code is right
@@ -3519,6 +3564,9 @@ test('[vc dev] should show prompts to set up project', async t => {
 
   const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
     cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await setupProject(dev, projectName, {
@@ -3563,7 +3611,12 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
+  const vc = execa(binaryPath, ['link', ...defaultArgs], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await waitForPrompt(vc, chunk => /Set up [^?]+\?/.test(chunk));
   vc.stdin.write('yes\n');
@@ -3622,6 +3675,9 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
 
   const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
     cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await setupProject(dev, projectName, {
