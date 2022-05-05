@@ -8,6 +8,8 @@ describe('workspace-managers', () => {
     ['npm', '21-npm-workspaces'],
     ['pnpm', '23-pnpm-workspaces'],
     ['yarn', '27-yarn-workspaces'],
+    ['yarn', '25-multiple-lock-files-yarn'],
+    ['pnpm', '26-multiple-lock-files-pnpm'],
     [null, '22-pnpm'],
   ])('with detectFramework', (frameworkSlug, fixturePath) => {
     const testName = frameworkSlug
