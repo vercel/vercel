@@ -117,4 +117,4 @@ export const isStaticRuntime = (name?: string): boolean => {
   return isOfficialRuntime('static', name);
 };
 
-export * from './workspaces';
+export { workspaceManagers } from './workspaces/workspace-managers';
