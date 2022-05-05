@@ -345,6 +345,7 @@ export interface BuilderV3 {
   version: 3;
   build: BuildV3;
   prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
 }
 
@@ -401,6 +402,9 @@ export interface BuildResultV3 {
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
+export type ShouldServe = (
+  options: ShouldServeOptions
+) => boolean | Promise<boolean>;
 export type StartDevServer = (
   options: StartDevServerOptions
 ) => Promise<StartDevServerResult>;
