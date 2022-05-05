@@ -17,6 +17,10 @@ class VirtualFilesystem extends DetectorFilesystem {
     });
   }
 
+  private _normalizePath(rawPath: string): string {
+    return path.normalize(rawPath.replaceAll(path.sep, '/'));
+  }
+
   async _hasPath(name: string): Promise<boolean> {
     const basePath = path.join(this.cwd, name);
     for (const file of this.files.keys()) {
@@ -55,9 +59,9 @@ class VirtualFilesystem extends DetectorFilesystem {
     return (
       [...this.files.keys()]
         .map(filepath => {
-          const basePath = path
-            .join(this.cwd, name === '/' ? '' : name)
-            .replaceAll(path.sep, '/');
+          const basePath = this._normalizePath(
+            path.join(this.cwd, name === '/' ? '' : name)
+          );
           const fileDirectoryName = path.dirname(filepath);
 
           if (fileDirectoryName === basePath) {
@@ -89,7 +93,7 @@ class VirtualFilesystem extends DetectorFilesystem {
               path:
                 name === '/'
                   ? subDirectoryName
-                  : [name, subDirectoryName].join('/'),
+                  : this._normalizePath(path.join(name, subDirectoryName)),
               type: 'dir',
             };
           }
@@ -111,7 +115,7 @@ class VirtualFilesystem extends DetectorFilesystem {
    * An example of how to implement chdir for a virtual filesystem.
    */
   _chdir(name: string): DetectorFilesystem {
-    const basePath = path.join(this.cwd, name).replaceAll(path.sep, '/');
+    const basePath = this._normalizePath(path.join(this.cwd, name));
     const files = Object.fromEntries(
       [...this.files.keys()].map(key => [key, this.files.get(key) ?? ''])
     );
@@ -121,7 +125,7 @@ class VirtualFilesystem extends DetectorFilesystem {
 }
 
 describe('DetectorFilesystem', () => {
-  it('should return the directoy contents relative to the cwd', async () => {
+  it('should return the directory contents relative to the cwd', async () => {
     const files = {
       'package.json': '{}',
       'packages/app1/package.json': '{}',
@@ -136,6 +140,11 @@ describe('DetectorFilesystem', () => {
     ]);
 
     expect(await fs.readdir('packages')).toEqual([
+      { name: 'app1', path: 'packages/app1', type: 'dir' },
+      { name: 'app2', path: 'packages/app2', type: 'dir' },
+    ]);
+
+    expect(await fs.readdir('./packages')).toEqual([
       { name: 'app1', path: 'packages/app1', type: 'dir' },
       { name: 'app2', path: 'packages/app2', type: 'dir' },
     ]);
@@ -175,12 +184,12 @@ describe('DetectorFilesystem', () => {
       { name: 'app2', path: 'app2', type: 'dir' },
     ]);
 
-    expect(await packagesFs.hasPath('app1')).toBeTruthy();
-    expect(await packagesFs.hasPath('app3')).toBeFalsy();
-    expect(await packagesFs.isFile('app1')).toBeFalsy();
-    expect(await packagesFs.isFile('app1')).toBeFalsy();
-    expect(await packagesFs.isFile('app1/package.json')).toBeTruthy();
-    expect(await packagesFs.isFile('app2/package.json')).toBeTruthy();
+    expect(await packagesFs.hasPath('app1')).toBe(true);
+    expect(await packagesFs.hasPath('app3')).toBe(false);
+    expect(await packagesFs.isFile('app1')).toBe(false);
+    expect(await packagesFs.isFile('app2')).toBe(false);
+    expect(await packagesFs.isFile('app1/package.json')).toBe(true);
+    expect(await packagesFs.isFile('app2/package.json')).toBe(true);
     expect(
       await (await packagesFs.readFile('app1/package.json')).toString()
     ).toEqual(nextPackageJson);
@@ -204,7 +213,7 @@ describe('DetectorFilesystem', () => {
       'nextjs'
     );
 
-    const gatsbyAppFs = packagesFs.chdir('app2');
+    const gatsbyAppFs = packagesFs.chdir('./app2');
 
     expect(await gatsbyAppFs.readdir('/')).toEqual([
       { name: 'package.json', path: 'package.json', type: 'file' },
