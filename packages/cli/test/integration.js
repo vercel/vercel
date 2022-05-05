@@ -7,10 +7,9 @@ import { Readable } from 'stream';
 import { homedir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
-import nodeFetch from 'node-fetch';
+import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
-import createFetchRetry from '@vercel/fetch-retry';
 import fs, {
   writeFile,
   readFile,
@@ -24,8 +23,6 @@ import sleep from '../src/util/sleep';
 import pkg from '../package';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
-
-const fetch = createFetchRetry(nodeFetch);
 
 // log command when running `execa`
 function execa(file, args, options) {
