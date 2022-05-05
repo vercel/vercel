@@ -6,7 +6,7 @@ import type { Framework } from '@vercel/frameworks';
  * This list is designed to work with the @see {@link detectFramework} function.
  *
  * @example
- *   import { workspaceManagers as frameworkList } from '@vercel/build-utils/workspaces'
+ *   import { workspaceManagers as frameworkList } from '@vercel/build-utils'
  *   import { detectFramework } from '@vercel/build-utils'
  *
  *   const fs = new GitDetectorFilesystem(...)
