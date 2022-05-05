@@ -156,7 +156,7 @@ export default async (client: Client) => {
     }
   }
 
-  const { log, debug, error, isTTY } = output;
+  const { log, debug, error, prettyError, isTTY } = output;
 
   const quiet = !isTTY;
 
@@ -207,15 +207,14 @@ export default async (client: Client) => {
       { throws: false }
     );
     if (prebuiltBuild?.target && prebuiltBuild.target !== target) {
-      error(
-        `The ${param(
+      prettyError({
+        message: `The ${param(
           '--prebuilt'
         )} option was used with the target environment "${target}", but the prebuilt output found in ".vercel/output" was built with target environment "${
           prebuiltBuild.target
-        }". Please run ${getCommandName(
-          `--prebuilt --target=${target}`
-        )}. See https://vercel.com/docs/cli#introduction/extended-usage for more details.`
-      );
+        }". Please run ${getCommandName(`--prebuilt --target=${target}`)}.`,
+        link: 'https://vercel.link/prebuilt-environment-mismatch',
+      });
       return 1;
     }
   }
