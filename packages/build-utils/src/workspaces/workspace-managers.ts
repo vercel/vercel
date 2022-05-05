@@ -14,9 +14,9 @@ import type { Framework } from '@vercel/frameworks';
  *
  * @todo Will be used by the detect-eligible-projects API endpoint for a given git url.
  */
-export const workspaceManagers = [
+export const workspaceManagers: Array<Framework> = [
   {
-    name: 'yarn',
+    name: 'Yarn',
     slug: 'yarn',
     detectors: {
       every: [
@@ -30,6 +30,28 @@ export const workspaceManagers = [
         },
       ],
     },
+    // unused props - needed for typescript
+    description: '',
+    logo: '',
+    settings: {
+      buildCommand: {
+        value: '',
+        placeholder: '',
+      },
+      devCommand: {
+        value: '',
+        placeholder: '',
+      },
+      installCommand: {
+        value: '',
+        placeholder: '',
+      },
+      outputDirectory: {
+        value: '',
+        placeholder: '',
+      },
+    },
+    getOutputDirName: () => Promise.resolve(''),
   },
   {
     name: 'pnpm',
@@ -41,6 +63,28 @@ export const workspaceManagers = [
         },
       ],
     },
+    // unused props - needed for typescript
+    description: '',
+    logo: '',
+    settings: {
+      buildCommand: {
+        value: '',
+        placeholder: '',
+      },
+      devCommand: {
+        value: '',
+        placeholder: '',
+      },
+      installCommand: {
+        value: '',
+        placeholder: '',
+      },
+      outputDirectory: {
+        value: '',
+        placeholder: '',
+      },
+    },
+    getOutputDirName: () => Promise.resolve(''),
   },
   {
     name: 'npm',
@@ -57,7 +101,29 @@ export const workspaceManagers = [
         },
       ],
     },
+    // unused props - needed for typescript
+    description: '',
+    logo: '',
+    settings: {
+      buildCommand: {
+        value: '',
+        placeholder: '',
+      },
+      devCommand: {
+        value: '',
+        placeholder: '',
+      },
+      installCommand: {
+        value: '',
+        placeholder: '',
+      },
+      outputDirectory: {
+        value: '',
+        placeholder: '',
+      },
+    },
+    getOutputDirName: () => Promise.resolve(''),
   },
-] as Array<Framework>;
+];
 
 export default workspaceManagers;
