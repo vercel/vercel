@@ -33,6 +33,7 @@ const skipFixtures: string[] = [
   '21-npm-workspaces',
   '23-pnpm-workspaces',
   '27-yarn-workspaces',
+  '28-turborepo-with-yarn-workspaces',
 ];
 
 // eslint-disable-next-line no-restricted-syntax
