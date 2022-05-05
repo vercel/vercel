@@ -10,6 +10,8 @@ import { ProjectSettings } from '../../types';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import setupAndLink from '../../util/link/setup-and-link';
 import getSystemEnvValues from '../../util/env/get-system-env-values';
+import { getCommandName } from '../../util/pkg-name';
+import param from '../../util/output/param';
 
 type Options = {
   '--listen': string;
@@ -46,6 +48,13 @@ export default async function dev(
   }
 
   if (link.status === 'error') {
+    if (link.reason === 'HEADLESS') {
+      client.output.error(
+        `Command ${getCommandName(
+          'dev'
+        )} requires confirmation. Use option ${param('--confirm')} to confirm.`
+      );
+    }
     return link.exitCode;
   }
 
