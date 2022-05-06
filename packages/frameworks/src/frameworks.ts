@@ -268,6 +268,8 @@ export const frameworks = [
     slug: 'Astro',
     demo: 'https://astro-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/astro.svg',
+    darkModeLogo:
+      'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/astro-dark.svg',
     tagline:
       'Astro is a new kind of static site builder for the modern web. Powerful developer experience meets lightweight output.',
     description: 'An Astro site, using the basics starter kit.',
