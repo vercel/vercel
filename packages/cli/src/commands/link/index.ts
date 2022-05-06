@@ -4,6 +4,8 @@ import getArgs from '../../util/get-args';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
 import setupAndLink from '../../util/link/setup-and-link';
+import { getCommandName } from '../../util/pkg-name';
+import param from '../../util/output/param';
 
 const help = () => {
   console.log(`
@@ -67,6 +69,13 @@ export default async function main(client: Client) {
   });
 
   if (link.status === 'error') {
+    if (link.reason === 'HEADLESS') {
+      client.output.error(
+        `Command ${getCommandName(
+          'link'
+        )} requires confirmation. Use option ${param('--confirm')} to confirm.`
+      );
+    }
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     // User aborted project linking questions

@@ -204,9 +204,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"remix":\\s*".+?"[^}]*}',
+          path: 'remix.config.js',
         },
       ],
     },
