@@ -1097,6 +1097,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   }
 
   try {
+    await vcEnvRemoveAll();
     await vcLink();
     await vcEnvLsIsEmpty();
     await vcEnvAddWithPrompts();
