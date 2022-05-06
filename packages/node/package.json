@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node",
-  "version": "1.15.1-canary.0",
+  "version": "1.15.1-canary.1",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/node-js",
@@ -12,13 +12,24 @@
   "scripts": {
     "build": "node build",
     "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
-    "test-unit": "jest --env node --verbose --bail test/prepare-cache.test.js",
+    "test-unit": "jest --env node --verbose --bail test/prepare-cache.test.ts",
     "prepublishOnly": "node build"
   },
   "files": [
     "dist"
   ],
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "globals": {
+      "ts-jest": {
+        "diagnostics": true,
+        "isolatedModules": true
+      }
+    }
+  },
   "dependencies": {
+    "@types/jest": "27.4.1",
     "@types/node": "*",
     "@vercel/node-bridge": "2.2.1",
     "ts-node": "8.9.1",
@@ -33,7 +44,7 @@
     "@types/cookie": "0.3.3",
     "@types/etag": "1.8.0",
     "@types/test-listen": "1.1.0",
-    "@vercel/build-utils": "2.16.1-canary.0",
+    "@vercel/build-utils": "2.16.1-canary.1",
     "@vercel/ncc": "0.24.0",
     "@vercel/nft": "0.18.1",
     "content-type": "1.0.4",

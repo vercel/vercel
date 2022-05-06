@@ -1,9 +1,14 @@
-const path = require('path');
-const { prepareCache } = require('../dist');
+import path from 'path';
+import assert from 'assert';
+import { prepareCache } from '../src';
 
 describe('prepareCache()', () => {
-  test('should cache **/node_modules/**', async () => {
+  test('should cache `**/node_modules/**`', async () => {
     const files = await prepareCache({
+      files: {},
+      entrypoint: '.',
+      config: {},
+      workPath: path.resolve(__dirname, './cache-fixtures/'),
       repoRootPath: path.resolve(__dirname, './cache-fixtures/'),
     });
 
@@ -14,14 +19,17 @@ describe('prepareCache()', () => {
 
   test('should ignore root modules', async () => {
     const files = await prepareCache({
+      files: {},
+      entrypoint: '.',
+      config: {},
       workPath: path.resolve(__dirname, './cache-fixtures/foo/'),
     });
 
-    expect(files['node_modules/file']).toBeDefined();
+    const file = files['node_modules/file'];
+    expect(file).toBeDefined();
+    assert(file.type === 'FileFsRef');
     expect(
-      files['node_modules/file'].fsPath.includes(
-        'cache-fixtures/foo/node_modules/file'
-      )
+      file.fsPath.includes('cache-fixtures/foo/node_modules/file')
     ).toBeTruthy();
     expect(files['index.js']).toBeUndefined();
   });

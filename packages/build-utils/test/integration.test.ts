@@ -32,6 +32,7 @@ const skipFixtures: string[] = [
   '08-zero-config-middleman',
   '21-npm-workspaces',
   '23-pnpm-workspaces',
+  '27-yarn-workspaces',
 ];
 
 // eslint-disable-next-line no-restricted-syntax
