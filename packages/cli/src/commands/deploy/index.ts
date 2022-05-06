@@ -62,6 +62,7 @@ import { Output } from '../../util/output';
 import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
+import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -202,10 +203,7 @@ export default async (client: Client) => {
       return 1;
     }
 
-    const prebuiltBuild = fs.readJSONSync(
-      join(path, '.vercel/output/builds.json'),
-      { throws: false }
-    );
+    const prebuiltBuild = await getPrebuiltJson(path);
     const assumedTarget = target || 'preview';
     if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
       let specifyTarget = '';
