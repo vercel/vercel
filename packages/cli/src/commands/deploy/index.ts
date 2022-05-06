@@ -202,7 +202,7 @@ export default async (client: Client) => {
       return 1;
     }
 
-    const prebuiltBuild = await fs.readJSON(
+    const prebuiltBuild = fs.readJSONSync(
       join(path, '.vercel/output/builds.json'),
       { throws: false }
     );

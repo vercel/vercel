@@ -519,6 +519,31 @@ test('should allow deploying a directory that was built with a target environmen
   t.deepEqual(body, 'readme contents for deploy-default-with-prebuilt-preview');
 });
 
+test('should allow deploying a directory that was prebuilt, but has no builds.json', async t => {
+  const projectDir = fixture('build-output-api-raw');
+
+  await vcLink(t, projectDir);
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      '--prebuilt',
+      ...defaultArgs,
+    ],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const url = stdout;
+  const deploymentResult = await fetch(`${url}/README.md`);
+  const body = await deploymentResult.text();
+  t.deepEqual(body, 'readme contents for build-output-api-raw');
+});
+
 test('deploy using only now.json with `redirects` defined', async t => {
   const target = fixture('redirects-v2');
 

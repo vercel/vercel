@@ -186,6 +186,12 @@ module.exports = async function prepare(session, binaryPath) {
       '.vercel/output/static/README.md':
         'readme contents for deploy-default-with-prebuilt-preview',
     },
+    'build-output-api-raw': {
+      'vercel.json': JSON.stringify({ version: 2 }),
+      '.vercel/output/config.json': JSON.stringify({ version: 3 }),
+      '.vercel/output/static/README.md':
+        'readme contents for build-output-api-raw',
+    },
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
       [`test-${session}.html`]: '<h1>hello test</h1>',
