@@ -82,7 +82,12 @@ let debug: (s: string) => void = () => {};
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
-  const { isTTY } = process.stdout;
+  let { isTTY } = process.stdout;
+  if (process.env.FORCE_TTY === '1') {
+    isTTY = true;
+    process.stdout.isTTY = true;
+    process.stdin.isTTY = true;
+  }
 
   let argv;
 
