@@ -263,7 +263,7 @@ export const frameworks = [
   },
   {
     name: 'Astro',
-    slug: 'Astro',
+    slug: 'astro',
     demo: 'https://astro-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/astro.svg',
     darkModeLogo:
