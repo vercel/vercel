@@ -15,7 +15,8 @@ import {
 } from '../util/projects/link';
 import { writeProjectSettings } from '../util/projects/project-settings';
 import envPull from './env/pull';
-
+import { getCommandName } from '../util/pkg-name';
+import param from '../util/output/param';
 import type { Project, Org } from '../types';
 import {
   isValidEnvTarget,
@@ -102,6 +103,13 @@ async function ensureLink(
   }
 
   if (link.status === 'error') {
+    if (link.reason === 'HEADLESS') {
+      client.output.error(
+        `Command ${getCommandName(
+          'pull'
+        )} requires confirmation. Use option ${param('--yes')} to confirm.`
+      );
+    }
     return link.exitCode;
   }
 

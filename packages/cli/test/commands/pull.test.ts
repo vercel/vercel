@@ -17,7 +17,7 @@ describe('pull', () => {
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
     });
-    client.setArgv('pull', '--yes', cwd);
+    client.setArgv('pull', cwd);
     const exitCode = await pull(client);
     expect(exitCode, client.outputBuffer).toEqual(0);
 
@@ -26,6 +26,40 @@ describe('pull', () => {
     );
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
+  });
+
+  it('should fail with message to pull without a link and without --env', async () => {
+    try {
+      process.stdout.isTTY = undefined;
+
+      const cwd = setupFixture('vercel-pull-unlinked');
+      useUser();
+      useTeams('team_dummy');
+
+      client.setArgv('pull', cwd);
+      const exitCode = await pull(client);
+      expect(exitCode, client.outputBuffer).toEqual(1);
+
+      expect(client.outputBuffer).toMatch(
+        /Command `vercel pull` requires confirmation. Use option "--yes" to confirm./gm
+      );
+    } finally {
+      process.stdout.isTTY = true;
+    }
+  });
+
+  it('should fail without message to pull without a link and with --env', async () => {
+    const cwd = setupFixture('vercel-pull-next');
+    useUser();
+    useTeams('team_dummy');
+
+    client.setArgv('pull', cwd, '--yes');
+    const exitCode = await pull(client);
+    expect(exitCode, client.outputBuffer).toEqual(1);
+
+    expect(client.outputBuffer).not.toMatch(
+      /Command `vercel pull` requires confirmation. Use option "--yes" to confirm./gm
+    );
   });
 
   it('should handle pulling with env vars (headless mode)', async () => {
@@ -73,7 +107,7 @@ describe('pull', () => {
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
     });
-    client.setArgv('pull', '--yes', '--environment=preview', cwd);
+    client.setArgv('pull', '--environment=preview', cwd);
     const exitCode = await pull(client);
     expect(exitCode).toEqual(0);
 
@@ -95,7 +129,7 @@ describe('pull', () => {
       id: 'vercel-pull-next',
       name: 'vercel-pull-next',
     });
-    client.setArgv('pull', '--yes', '--environment=production', cwd);
+    client.setArgv('pull', '--environment=production', cwd);
     const exitCode = await pull(client);
     expect(exitCode).toEqual(0);
 
