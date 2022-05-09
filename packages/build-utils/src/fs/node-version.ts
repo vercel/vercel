@@ -4,6 +4,7 @@ import { NowBuildError } from '../errors';
 import debug from '../debug';
 
 const allOptions = [
+  { major: 16, range: '16.x', runtime: 'nodejs16.x' },
   { major: 14, range: '14.x', runtime: 'nodejs14.x' },
   { major: 12, range: '12.x', runtime: 'nodejs12.x' },
   {
