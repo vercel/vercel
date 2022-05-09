@@ -6,15 +6,16 @@ import {
   ProjectEnvVariable,
   Secret,
 } from '../types';
-import getEnvRecords from './env/get-env-records';
+import getEnvRecords, { EnvRecordsSource } from './env/get-env-records';
 
 export default async function getDecryptedEnvRecords(
   output: Output,
   client: Client,
   projectId: string,
+  source: EnvRecordsSource,
   target?: ProjectEnvTarget
 ): Promise<{ envs: ProjectEnvVariable[] }> {
-  const { envs } = await getEnvRecords(output, client, projectId, {
+  const { envs } = await getEnvRecords(output, client, projectId, source, {
     target: target || ProjectEnvTarget.Development,
     decrypt: true,
   });
