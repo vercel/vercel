@@ -7,6 +7,7 @@ import {
   debug,
   glob,
   EdgeFunction,
+  BuildResultV2,
 } from '@vercel/build-utils';
 import { isObjectEmpty } from './_shared';
 
@@ -143,7 +144,9 @@ async function readStaticFiles({
   return staticFiles;
 }
 
-export async function createBuildOutput(workPath: string) {
+export async function createBuildOutput(
+  workPath: string
+): Promise<BuildResultV2> {
   let output: Files = {};
   const routes: Route[] = [];
 

@@ -1,6 +1,6 @@
 import { join } from 'path';
 import { promises as fs } from 'fs';
-import { Meta } from '../../../build-utils/dist';
+import { BuildResultV2, Meta } from '../../../build-utils/dist';
 import { Framework } from '../../../frameworks/dist/types';
 
 const BUILD_OUTPUT_DIR = '.vercel/output';
@@ -42,10 +42,7 @@ export function createBuildOutput(
   buildCommand: string | null,
   buildOutputPath: string,
   framework?: Framework
-): {
-  buildOutputVersion: 3;
-  buildOutputPath: string;
-} {
+): BuildResultV2 {
   if (!meta.cliVersion) {
     let buildCommandName: string;
 
