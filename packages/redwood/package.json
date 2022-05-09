@@ -27,6 +27,6 @@
     "@types/aws-lambda": "8.10.19",
     "@types/node": "*",
     "@types/semver": "6.0.0",
-    "@vercel/build-utils": "2.17.0"
+    "@vercel/build-utils": "3.0.1-canary.0"
   }
 }
