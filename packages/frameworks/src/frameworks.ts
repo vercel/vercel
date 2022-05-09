@@ -1992,7 +1992,7 @@ export const frameworks = [
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vite.svg',
     tagline:
       'Vite is a new breed of frontend build tool that significantly improves the frontend development experience.',
-    description: 'A Vue.js app, created with Vite.',
+    description: 'A Vue.js or React app, created with Vite.',
     website: 'https://vitejs.dev',
     envPrefix: 'VITE_',
     detectors: {
@@ -2022,6 +2022,61 @@ export const frameworks = [
     },
     dependency: 'vite',
     getOutputDirName: async () => 'dist',
+    defaultRoutes: [
+      {
+        src: '/public/(.*)',
+        headers: { 'cache-control': 's-maxage=31536000, immutable' },
+        continue: true,
+      },
+      {
+        src: '/service-worker.js',
+        headers: { 'cache-control': 's-maxage=0' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+      { src: '/public/(.*)', status: 404, dest: '/404.html' },
+      {
+        src: '/(.*)',
+        headers: { 'cache-control': 's-maxage=0' },
+        dest: '/index.html',
+      },
+    ],
+    defaultHeaders: [
+      {
+        source: '/public/(.*)',
+        regex: '/public/(.*)',
+        headers: [
+          { key: 'cache-control', value: 's-maxage=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/service-worker.js',
+        regex: '/service-worker.js',
+        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
+      },
+      {
+        source: '/(.*)',
+        regex: '/(.*)',
+        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
+      },
+    ],
+    defaultRedirects: [
+      {
+        source: '/public/(.*)',
+        destination: '/404.html',
+        statusCode: 404,
+        regex: '/public/(.*)',
+      },
+    ],
+    defaultRewrites: [
+      {
+        source: '/(.*)',
+        destination: '/index.html',
+        regex: '/(.*)',
+      },
+    ],
   },
   {
     name: 'Parcel',
