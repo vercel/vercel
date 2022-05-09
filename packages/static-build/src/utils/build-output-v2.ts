@@ -1,5 +1,5 @@
 import path from 'path';
-import { pathExists, readJson } from 'fs-extra';
+import { pathExists, readJson, appendFile } from 'fs-extra';
 import { Route } from '@vercel/routing-utils';
 import {
   Files,
@@ -11,6 +11,15 @@ import {
 import { isObjectEmpty } from './_shared';
 
 const BUILD_OUTPUT_DIR = '.output';
+const BRIDGE_MIDDLEWARE_V2_TO_V3 = `
+
+
+// appended to convert v2 middleware to v3 middleware
+export default async (request) => {
+  const { response } = await _ENTRIES['middleware_pages/_middleware'].default({ request });
+  return response;
+}
+`;
 
 /**
  * Returns the path to the Build Output API v2 directory when the
@@ -103,6 +112,9 @@ async function getMiddleware(
     BUILD_OUTPUT_DIR,
     'server/pages/_middleware.js'
   );
+
+  const middlewareAbsoluatePath = path.join(workPath, middlewareRelativePath);
+  await appendFile(middlewareAbsoluatePath, BRIDGE_MIDDLEWARE_V2_TO_V3);
 
   const route = {
     src: '/(.*)',
