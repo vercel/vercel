@@ -237,6 +237,10 @@ it('should match all semver ranges', async () => {
     'major',
     12
   );
+  expect(await getSupportedNodeVersion('>=14.x <15')).toHaveProperty(
+    'major',
+    14
+  );
   expect(await getSupportedNodeVersion('~12.5.0')).toHaveProperty('major', 12);
   expect(await getSupportedNodeVersion('^12.5.0')).toHaveProperty('major', 12);
   expect(await getSupportedNodeVersion('12.5.0 - 14.5.0')).toHaveProperty(
@@ -254,6 +258,12 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
       { isDev: true }
     )
   ).toHaveProperty('runtime', 'nodejs');
+});
+
+it('should work with semver range in getNodeVersion()', async () => {
+  expect(
+    await getNodeVersion(path.join(__dirname, 'pkg-engine-node-range'))
+  ).toHaveProperty('runtime', 'nodejs14.x');
 });
 
 it('should select project setting from config when no package.json is found', async () => {
