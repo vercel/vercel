@@ -122,3 +122,26 @@ async function readStaticFiles({
 
   return staticFiles;
 }
+
+export async function createBuildOutput(workPath: string) {
+  let output: Files = {};
+  const routes: Route[] = [];
+
+  const extraOutputs = await readBuildOutputDirectory({
+    workPath,
+  });
+
+  if (extraOutputs.routes) {
+    routes.push(...extraOutputs.routes);
+  }
+
+  if (extraOutputs.staticFiles) {
+    output = Object.assign(
+      {},
+      extraOutputs.staticFiles,
+      extraOutputs.functions
+    );
+  }
+
+  return { routes, output };
+}
