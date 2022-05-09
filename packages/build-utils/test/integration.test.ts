@@ -33,6 +33,7 @@ const skipFixtures: string[] = [
   '21-npm-workspaces',
   '23-pnpm-workspaces',
   '27-yarn-workspaces',
+  '29-nested-workspaces',
 ];
 
 // eslint-disable-next-line no-restricted-syntax

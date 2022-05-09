@@ -1,0 +1,9 @@
+{
+  "name": "29-nested-workspaces-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "a",
+    "b"
+  ]
+}
