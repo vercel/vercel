@@ -37,5 +37,5 @@ export const build: BuildV2 = async ({ entrypoint, files, config }) => {
     output[filename] = fileFsRef;
   }
 
-  return { routes: [], output };
+  return { output };
 };

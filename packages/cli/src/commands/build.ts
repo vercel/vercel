@@ -326,9 +326,9 @@ export default async function main(client: Client): Promise<number> {
     const { builder, pkg: builderPkg } = builderWithPkg;
 
     const buildConfig: Config = {
+      outputDirectory: project.settings.outputDirectory ?? undefined,
       ...build.config,
       projectSettings: project.settings,
-      outputDirectory: project.settings.outputDirectory ?? undefined,
       installCommand: project.settings.installCommand ?? undefined,
       devCommand: project.settings.devCommand ?? undefined,
       buildCommand: project.settings.buildCommand ?? undefined,
