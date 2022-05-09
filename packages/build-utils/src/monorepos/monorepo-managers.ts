@@ -19,9 +19,13 @@ export const monorepoManagers: Array<Framework> = [
     name: 'Turborepo',
     slug: 'turbo',
     detectors: {
-      every: [
+      some: [
         {
           path: 'turbo.json',
+        },
+        {
+          path: 'package.json',
+          matchContent: '"turbo":\\s*{[^}]*.+[^}]*}',
         },
       ],
     },
