@@ -147,7 +147,8 @@ export default async function main(client: Client) {
           argv,
           args,
           output,
-          cwd
+          cwd,
+          'vercel-cli:env:pull'
         );
       default:
         output.error(getInvalidSubcommand(COMMAND_CONFIG));
