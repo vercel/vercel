@@ -43,7 +43,7 @@
     "node": ">= 12"
   },
   "dependencies": {
-    "@vercel/build-utils": "2.17.0",
+    "@vercel/build-utils": "3.0.1-canary.0",
     "@vercel/go": "1.4.1",
     "@vercel/node": "1.15.1",
     "@vercel/python": "2.3.1",
