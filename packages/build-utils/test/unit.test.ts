@@ -258,12 +258,14 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
       { isDev: true }
     )
   ).toHaveProperty('runtime', 'nodejs');
+  expect(warningMessages).toStrictEqual([]);
 });
 
-it('should work with semver range in getNodeVersion()', async () => {
+it('should work with semver range in package.json', async () => {
   expect(
     await getNodeVersion(path.join(__dirname, 'pkg-engine-node-range'))
   ).toHaveProperty('runtime', 'nodejs14.x');
+  expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select project setting from config when no package.json is found', async () => {
