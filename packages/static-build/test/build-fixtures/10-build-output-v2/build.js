@@ -5,20 +5,24 @@ fs.mkdirSync('.output/server/pages/api', { recursive: true });
 
 fs.writeFileSync(
   '.output/functions-manifest.json',
-  {
-    version: 1,
-    pages: {
-      '_middleware.js': {
-        runtime: 'web',
-        env: [],
-        files: ['server/pages/_middleware.js'],
-        name: 'pages/_middleware',
-        page: '/',
-        regexp: '^/.*$',
-        sortingIndex: 1,
+  JSON.stringify(
+    {
+      version: 1,
+      pages: {
+        '_middleware.js': {
+          runtime: 'web',
+          env: [],
+          files: ['server/pages/_middleware.js'],
+          name: 'pages/_middleware',
+          page: '/',
+          regexp: '^/.*$',
+          sortingIndex: 1,
+        },
       },
     },
-  }.toString()
+    null,
+    2
+  )
 );
 
 fs.writeFileSync('.output/static/index.html', '<h1>Build Output API v2</h1>');

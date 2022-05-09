@@ -1,5 +1,5 @@
 import path from 'path';
-import { stat, pathExists } from 'fs-extra';
+import { pathExists, readJson } from 'fs-extra';
 import { Route } from '@vercel/routing-utils';
 import {
   Files,
@@ -83,18 +83,26 @@ export async function readBuildOutputDirectory({
 async function getMiddleware(
   workPath: string
 ): Promise<{ route: Route; file: FileFsRef } | undefined> {
-  const middlewareRelativePath = path.join(
+  const manifestPath = path.join(
+    workPath,
     BUILD_OUTPUT_DIR,
-    'server/pages/_middleware.js'
+    'functions-manifest.json'
   );
-  const middlewareAbsolutePath = path.join(workPath, middlewareRelativePath);
 
   try {
-    await stat(middlewareAbsolutePath);
+    const manifest = await readJson(manifestPath);
+    if (manifest.pages['_middleware.js'].runtime !== 'web') {
+      return;
+    }
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
     return;
   }
+
+  const middlewareRelativePath = path.join(
+    BUILD_OUTPUT_DIR,
+    'server/pages/_middleware.js'
+  );
 
   const route = {
     src: '/(.*)',
