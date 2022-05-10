@@ -13,6 +13,7 @@ import { Output } from '../../util/output';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import { EnvRecordsSource } from '../../util/env/get-env-records';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -49,7 +50,8 @@ export default async function pull(
   opts: Partial<Options>,
   args: string[],
   output: Output,
-  cwd: string
+  cwd: string,
+  source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
 ) {
   if (args.length > 1) {
     output.error(
@@ -90,7 +92,7 @@ export default async function pull(
   output.spinner('Downloading');
 
   const [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-    getDecryptedEnvRecords(output, client, project.id, environment),
+    getDecryptedEnvRecords(output, client, project.id, source, environment),
     project.autoExposeSystemEnvs
       ? getSystemEnvValues(output, client, project.id)
       : { systemEnvValues: [] },
