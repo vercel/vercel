@@ -9,9 +9,8 @@ This function takes a `content`, a `sourceName` and an optional `sourcePath` and
 ```ts
 import { sourcemapped, fileToSource } from 'sourcemapped';
 import fs from 'fs/promises';
-import path from 'path';
 
-const fullSourcePath = path.resolve('my-code-file.js');
+const fullSourcePath = 'my-code-file.js';
 const fileContents = await fs.readFile(fullSourcePath, 'utf8');
 
 // Create a `Source` object for the file
@@ -39,9 +38,8 @@ Each dynamic input of the template literal must be a valid `Source` object, so i
 ```ts
 import { sourcemapped, fileToSource } from 'sourcemapped';
 import fs from 'fs/promises';
-import path from 'path';
 
-const fullSourcePath = path.resolve('my-code-file.js');
+const fullSourcePath = 'my-code-file.js';
 const fileContents = await fs.readFile(fullSourcePath, 'utf8');
 
 // Create a `Source` object for the file
