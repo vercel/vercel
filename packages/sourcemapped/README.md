@@ -4,7 +4,7 @@ Helpers and utilities to work with source maps.
 
 ### `fileToSource(contents: string, sourceName: string, sourcePath?: string): Promise<Source>`
 
-This function takes a `source`, a `sourceName` and an optional `sourcePath` and returns a source map-aware `Source` object. It will first try to load `${sourcePath}.map`, and if it is missing, it will try to load a source map from the given `content`.
+This function takes a `content`, a `sourceName` and an optional `sourcePath` and returns a source map-aware `Source` object. It will first try to load `${sourcePath}.map`, and if it is missing, it will try to load a source map from the given `content`.
 
 ```ts
 import { sourcemapped, fileToSource } from 'sourcemapped';
