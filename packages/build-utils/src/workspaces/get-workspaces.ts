@@ -1,6 +1,6 @@
 import { DetectorFilesystem } from '../detectors/filesystem';
-import { workspaceManagers as frameworkList } from './workspace-managers';
-import { detectFramework } from '../detect-framework';
+import { workspaceManagers } from './workspace-managers';
+import { detectFramework as detectWorkspaceManagers } from '../detect-framework';
 
 const MAX_DEPTH_TRAVERSE = 2;
 
@@ -18,9 +18,9 @@ export type Workspace = {
 export async function getWorkspaces({
   fs,
 }: GetWorkspaceOptions): Promise<Workspace[]> {
-  const rootWorkspaceImplementation = await detectFramework({
+  const rootWorkspaceImplementation = await detectWorkspaceManagers({
     fs,
-    frameworkList,
+    frameworkList: workspaceManagers,
   });
 
   if (rootWorkspaceImplementation === null) {
@@ -35,15 +35,21 @@ export async function getWorkspaces({
       workspaces.push(
         ...(
           await Promise.all(
-            childDirectories.map(async childDirectory => ({
-              implementation: await detectFramework({
+            childDirectories.map(async childDirectory => {
+              const implementation = await detectWorkspaceManagers({
                 fs: fs.chdir(childDirectory.name),
-                frameworkList,
-              }),
-              rootPath: `/${childDirectory.name}`,
-            }))
+                frameworkList: workspaceManagers,
+              });
+
+              if (!implementation) return null;
+
+              return {
+                implementation,
+                rootPath: `/${childDirectory.name}`,
+              };
+            })
           )
-        ).filter((i): i is Workspace => i.implementation !== null)
+        ).filter((workspace): workspace is Workspace => workspace !== null)
       );
     }
 
