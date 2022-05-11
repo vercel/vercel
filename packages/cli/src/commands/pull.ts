@@ -131,7 +131,8 @@ async function pullAllEnvFiles(
     argv,
     [join('.vercel', environmentFile)],
     client.output,
-    cwd
+    cwd,
+    'vercel-cli:pull'
   );
 }
 

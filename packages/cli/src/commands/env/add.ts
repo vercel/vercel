@@ -79,7 +79,12 @@ export default async function add(
     }
   }
 
-  const { envs } = await getEnvRecords(output, client, project.id);
+  const { envs } = await getEnvRecords(
+    output,
+    client,
+    project.id,
+    'vercel-cli:env:add'
+  );
   const existing = new Set(
     envs.filter(r => r.key === envName).map(r => r.target)
   );
