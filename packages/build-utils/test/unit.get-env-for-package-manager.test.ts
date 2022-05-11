@@ -85,7 +85,7 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
     },
     {
-      name: 'should set path if pnpm 7+ is detected and Node version is greater than 12',
+      name: 'should set path if pnpm 7+ is detected',
       args: {
         cliType: 'pnpm',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
@@ -98,20 +98,6 @@ describe('Test `getEnvForPackageManager()`', () => {
       want: {
         FOO: 'bar',
         PATH: '/pnpm7/pnpm:foo',
-      },
-    },
-    {
-      name: 'should not set path if pnpm 7+ is detected and Node version is less than or equal to 12',
-      args: {
-        cliType: 'pnpm',
-        nodeVersion: { major: 12, range: '12.x', runtime: 'nodejs12.x' },
-        lockfileVersion: 5.4,
-        env: {
-          FOO: 'bar',
-        },
-      },
-      want: {
-        FOO: 'bar',
       },
     },
     {
