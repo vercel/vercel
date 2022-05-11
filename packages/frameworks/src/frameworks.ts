@@ -60,7 +60,8 @@ export const frameworks = [
     slug: 'nextjs',
     demo: 'https://nextjs-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next.svg',
-    darkModeLogo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next-dark.svg',
+    darkModeLogo:
+      'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next-dark.svg',
     screenshot:
       'https://assets.vercel.com/image/upload/v1647366075/front/import/nextjs.png',
     tagline:
@@ -251,6 +252,73 @@ export const frameworks = [
       {
         source: '/build/(.*)',
         regex: '/build/(.*)',
+        headers: [
+          {
+            key: 'cache-control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'Astro',
+    slug: 'astro',
+    demo: 'https://astro-template.vercel.app',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/astro.svg',
+    darkModeLogo:
+      'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/astro-dark.svg',
+    tagline:
+      'Astro is a new kind of static site builder for the modern web. Powerful developer experience meets lightweight output.',
+    description: 'An Astro site, using the basics starter kit.',
+    website: 'https://astro.build',
+    envPrefix: 'PUBLIC_',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"astro":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        value: 'astro build',
+        placeholder: '`npm run build` or `astro build`',
+      },
+      devCommand: {
+        value: 'astro dev --port $PORT',
+        placeholder: 'astro dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'astro',
+    getFsOutputDir: async () => 'dist',
+    getOutputDirName: async () => 'dist',
+    defaultRoutes: [
+      {
+        src: '^/dist/(.*)$',
+        headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+        continue: true,
+      },
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/index.html',
+      },
+    ],
+    defaultHeaders: [
+      {
+        source: '^/dist/(.*)$',
+        regex: '^/dist/(.*)$',
         headers: [
           {
             key: 'cache-control',

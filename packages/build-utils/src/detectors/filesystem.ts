@@ -1,3 +1,8 @@
+export interface Stat {
+  name: string;
+  path: string;
+  type: 'file' | 'dir';
+}
 /**
  * `DetectorFilesystem` is an abstract class that represents a virtual filesystem
  * to perform read-only operations on in order to detect which framework is being
@@ -27,15 +32,19 @@ export abstract class DetectorFilesystem {
   protected abstract _hasPath(name: string): Promise<boolean>;
   protected abstract _readFile(name: string): Promise<Buffer>;
   protected abstract _isFile(name: string): Promise<boolean>;
+  protected abstract _readdir(name: string): Promise<Stat[]>;
+  protected abstract _chdir(name: string): DetectorFilesystem;
 
   private pathCache: Map<string, Promise<boolean>>;
   private fileCache: Map<string, Promise<boolean>>;
   private readFileCache: Map<string, Promise<Buffer>>;
+  private readdirCache: Map<string, Promise<Stat[]>>;
 
   constructor() {
     this.pathCache = new Map();
     this.fileCache = new Map();
     this.readFileCache = new Map();
+    this.readdirCache = new Map();
   }
 
   public hasPath = async (path: string): Promise<boolean> => {
@@ -63,5 +72,24 @@ export abstract class DetectorFilesystem {
       this.readFileCache.set(name, p);
     }
     return p;
+  };
+
+  /**
+   * Returns a list of Stat objects from the current working directory.
+   */
+  public readdir = async (name: string): Promise<Stat[]> => {
+    let p = this.readdirCache.get(name);
+    if (!p) {
+      p = this._readdir(name);
+      this.readdirCache.set(name, p);
+    }
+    return p;
+  };
+
+  /**
+   * Changes the current directory to the specified path and returns a new instance of DetectorFilesystem.
+   */
+  public chdir = (name: string): DetectorFilesystem => {
+    return this._chdir(name);
   };
 }
