@@ -1,7 +1,8 @@
 const child_process = require('child_process');
 const path = require('path');
 
-const NUMBER_OF_CHUNKS = 6;
+const NUMBER_OF_CHUNKS = 3;
+const MINIMUM_PER_CHUNK = 10;
 const testCrossPlatform = new Set(['test-unit']);
 
 async function getChunkedTests() {
@@ -53,7 +54,12 @@ async function getChunkedTests() {
               packagePath,
               packageName,
               scriptName,
-              testPaths: chunk,
+              testPaths: chunk.map(testFile =>
+                path.relative(
+                  path.join(__dirname, '../', packagePath),
+                  testFile
+                )
+              ),
               runner: 'ubuntu-latest',
               chunkNumber: chunkNumber + 1,
               allChunksLength: allChunks.length,
@@ -119,7 +125,10 @@ async function turbo(args) {
  * @returns {T[][]}
  */
 function intoChunks(totalChunks, arr) {
-  const chunkSize = Math.ceil(arr.length / totalChunks);
+  const chunkSize = Math.max(
+    MINIMUM_PER_CHUNK,
+    Math.ceil(arr.length / totalChunks)
+  );
   const chunks = [];
   for (let i = 0; i < totalChunks; i++) {
     chunks.push(arr.slice(i * chunkSize, (i + 1) * chunkSize));
