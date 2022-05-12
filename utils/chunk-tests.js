@@ -2,6 +2,7 @@ const child_process = require('child_process');
 const path = require('path');
 
 const NUMBER_OF_CHUNKS = 6;
+const testCrossPlatform = new Set(['test-unit']);
 
 async function getChunkedTests() {
   const scripts = ['test-unit'];
@@ -48,14 +49,27 @@ async function getChunkedTests() {
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
         return intoChunks(NUMBER_OF_CHUNKS, testPaths).flatMap(
           (chunk, chunkNumber, allChunks) => {
-            return {
+            const item = {
               packagePath,
               packageName,
               scriptName,
               testPaths: chunk,
+              runner: 'ubuntu-latest',
               chunkNumber: chunkNumber + 1,
               allChunksLength: allChunks.length,
             };
+            const output = [item];
+
+            if (testCrossPlatform.has(scriptName)) {
+              for (const runner of ['macos-latest', 'windows-latest']) {
+                const curItem = {
+                  ...item,
+                  runner,
+                };
+                output.push(curItem);
+              }
+            }
+            return output;
           }
         );
       });
