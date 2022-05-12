@@ -4,7 +4,6 @@ import * as swc from '@swc/core';
 import {
   extractExportedConstValue,
   getConfig,
-  NoSuchDeclarationError,
   UnsupportedValueError,
 } from '../src/swc';
 import {
