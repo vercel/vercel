@@ -134,11 +134,6 @@ export async function importBuilders(
         if (err.code === 'MODULE_NOT_FOUND') {
           output.debug(`Failed to import "${name}": ${err}`);
           buildersToAdd.add(spec);
-
-          // Legacy support for `@now` scoped Builders
-          if (parsed.scope === '@now') {
-            buildersToAdd.add('@now/build-utils');
-          }
         } else {
           throw err;
         }

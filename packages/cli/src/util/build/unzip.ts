@@ -26,7 +26,7 @@ export async function unzip(buffer: Buffer, dir: string): Promise<void> {
       const destDir = path.dirname(path.join(dir, entry.fileName));
       await fs.mkdirp(destDir);
 
-      const canonicalDestDir = fs.realpathSync(destDir);
+      const canonicalDestDir = await fs.realpath(destDir);
       const relativeDestDir = path.relative(dir, canonicalDestDir);
 
       if (relativeDestDir.split(path.sep).includes('..')) {

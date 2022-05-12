@@ -34,9 +34,6 @@ export async function writeBuildResult(
     return writeBuildResultV2(buildResult as BuildResultV2, cleanUrls);
   } else if (version === 3) {
     return writeBuildResultV3(buildResult as BuildResultV3, build);
-  } else if (version === 1 || typeof version === 'undefined') {
-    // Very old `@now` scoped Builders don't define a `version` property
-    return writeBuildResultV2({ output: buildResult as any }, cleanUrls);
   }
   throw new Error(
     `Unsupported Builder version \`${version}\` from "${builderPkg.name}"`
