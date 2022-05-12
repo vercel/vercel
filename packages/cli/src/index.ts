@@ -531,6 +531,7 @@ const main = async () => {
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'dev' &&
+    targetCommand !== 'build' &&
     !(targetCommand === 'teams' && argv._[3] !== 'invite')
   ) {
     let user = null;
