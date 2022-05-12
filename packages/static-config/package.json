@@ -17,6 +17,7 @@
     "dist"
   ],
   "dependencies": {
+    "@swc/core": "1.2.182",
     "ajv": "8.6.3",
     "json-schema-to-ts": "1.6.4",
     "ts-morph": "12.0.0"
