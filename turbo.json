@@ -6,6 +6,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "@vercel/node-bridge#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "helpers.js", "source-map-support.js", "*.d.ts"]
+    },
     "vercel#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "src/util/constants.ts"]
