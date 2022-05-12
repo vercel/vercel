@@ -72,6 +72,12 @@ async function getChunkedTests() {
                   ...item,
                   runner,
                 };
+
+                if (runner === 'windows-latest') {
+                  curItem.testPaths = curItem.testPaths.map(item =>
+                    item.replace(/\//g, '\\')
+                  );
+                }
                 output.push(curItem);
               }
             }
