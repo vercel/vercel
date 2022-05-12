@@ -54,8 +54,6 @@ async function main() {
     join(__dirname, 'source-map-support.js')
   );
   await fs.remove(sourceMapSupportDir);
-
-  console.log(await fs.readdir(__dirname));
 }
 
 main().catch(err => {
