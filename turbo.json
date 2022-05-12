@@ -8,7 +8,7 @@
     },
     "@vercel/node-bridge#build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "helpers.js", "source-map-support.js", "*.d.ts"]
+      "outputs": ["helpers.js", "source-map-support.js"]
     },
     "vercel#build": {
       "dependsOn": ["^build"],
