@@ -8,6 +8,9 @@ on:
     - '!*'
   pull_request:
 
+env:
+  NODE_VERSION: '14'
+
 jobs:
   setup:
     name: Find Changes
@@ -20,7 +23,7 @@ jobs:
       - run: git fetch origin main
       - uses: actions/setup-node@v2
         with:
-          node-version: 14
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
       - run: yarn install --prefer-offline
 
@@ -41,17 +44,15 @@ jobs:
 
   test:
     timeout-minutes: 120
-    name: ${{matrix.scriptName}} (${{matrix.packageName}} on ${{matrix.os}}, ${{matrix.chunkNumber}})
+    runs-on: ubuntu-latest
+    name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}})
     if: ${{ needs.setup.outputs['tests'] != '[]' }}
     needs:
       - setup
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        node: [14]
         include: ${{ fromJson(needs.setup.outputs['tests']) }}
-    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -61,7 +62,7 @@ jobs:
           go-version: '1.13.15'
       - uses: actions/setup-node@v2
         with:
-          node-version: ${{ matrix.node }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
       - run: yarn install --prefer-offline
 
