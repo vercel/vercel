@@ -134,6 +134,16 @@ export async function importBuilders(
         if (err.code === 'MODULE_NOT_FOUND') {
           output.debug(`Failed to import "${name}": ${err}`);
           buildersToAdd.add(spec);
+
+          if (err.message.includes('@now/build-utils')) {
+            const upgradeMessage =
+              parsed.scope === '@now'
+                ? ` Please update from "@now" to "@vercel".`
+                : '';
+            throw new Error(
+              `The legacy "${name}" Builder is not supported.${upgradeMessage}`
+            );
+          }
         } else {
           throw err;
         }
