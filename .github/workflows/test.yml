@@ -1,0 +1,98 @@
+name: test
+
+on:
+  push:
+    branches:
+    - main
+    tags:
+    - '!*'
+  pull_request:
+
+env:
+  NODE_VERSION: '14'
+
+jobs:
+  setup:
+    name: find changes
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps['set-tests'].outputs['tests'] }}
+    steps:
+      - uses: actions/checkout@v2
+      - run: git --version
+      - run: git fetch origin main
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+      - run: yarn install --prefer-offline
+
+      - name: Use Turborepo cache
+        uses: actions/cache@v2
+        with:
+          path: .turbo
+          key: turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            turbo-test-${{ runner.os }}-
+
+      - id: set-tests
+        run: |
+          TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
+          echo "Files to test:"
+          echo "$TESTS_ARRAY"
+          echo "::set-output name=tests::$TESTS_ARRAY"
+
+  test:
+    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}})
+    if: ${{ needs.setup.outputs['tests'] != '[]' }}
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs['tests']) }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.13.15'
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+      - run: yarn install --prefer-offline
+
+      - name: Use Turborepo cache
+        uses: actions/cache@v2
+        with:
+          path: .turbo
+          key: turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-${{matrix.packageName}}-${{matrix.scriptName}}-${{matrix.chunkNumber}}
+          restore-keys: |
+            turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-${{matrix.packageName}}-${{matrix.scriptName}}-
+            turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-${{matrix.packageName}}-
+            turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-
+            turbo-test-${{ runner.os }}-
+
+      - name: Build ${{matrix.packageName}} and all its dependencies
+        run: yarn turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
+        env:
+          FORCE_COLOR: '1'
+      - name: Test ${{matrix.packageName}}
+        run: yarn turbo run ${{matrix.scriptName}} --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps
+        env:
+          FORCE_COLOR: '1'
+          TEST_FILES: ${{ join(matrix.testPaths, ' ') }}
+
+  conclusion:
+    needs:
+      - test
+    runs-on: ubuntu-latest
+    name: E2E
+    steps:
+      - name: Done
+        run: echo "Done."
+

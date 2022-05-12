@@ -44,7 +44,7 @@
     "vercel-build": "yarn build && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
     "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
-    "test-unit": "yarn test && node utils/run.js test-unit",
+    "test-unit": "yarn test && turbo run test-unit",
     "test-integration-cli": "node utils/run.js test-integration-cli",
     "test-integration-once": "node utils/run.js test-integration-once",
     "test-integration-dev": "node utils/run.js test-integration-dev",
