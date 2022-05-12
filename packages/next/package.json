@@ -7,10 +7,10 @@
   "scripts": {
     "build": "node build.js",
     "build-dev": "node build.js --dev",
-    "test-unit": "jest --env node --verbose --runInBand --bail ${TEST_FILES:-test/unit/}",
-    "test-next-local": "jest --env node --verbose --bail --forceExit --testTimeout=360000 ${TEST_FILES:-test/integration/*.test.js test/integration/*.test.ts}",
-    "test-next-local:middleware": "jest --env node --verbose --bail --useStderr --testTimeout=360000 ${TEST_FILES:-test/integration/middleware.test.ts}",
-    "test-integration-once": "rm test/builder-info.json; jest --env node --verbose --runInBand --bail ${TEST_FILES:-test/fixtures/**/*.test.js}",
+    "test-unit": "jest --env node --verbose --runInBand --bail test/unit/",
+    "test-next-local": "jest --env node --verbose --bail --forceExit --testTimeout=360000 test/integration/*.test.js test/integration/*.test.ts",
+    "test-next-local:middleware": "jest --env node --verbose --bail --useStderr --testTimeout=360000 test/integration/middleware.test.ts",
+    "test-integration-once": "rm test/builder-info.json; jest --env node --verbose --runInBand --bail test/fixtures/**/*.test.js",
     "prepublishOnly": "yarn build"
   },
   "repository": {
