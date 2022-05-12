@@ -44,7 +44,7 @@
     "@types/semver": "6.0.0",
     "@types/text-table": "0.2.1",
     "@types/webpack-sources": "3.2.0",
-    "@vercel/build-utils": "3.0.1-canary.1",
+    "@vercel/build-utils": "3.0.1",
     "@vercel/nft": "0.18.1",
     "async-sema": "3.0.1",
     "buffer-crc32": "0.2.13",
