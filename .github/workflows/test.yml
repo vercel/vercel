@@ -76,7 +76,7 @@ jobs:
             turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-${{matrix.packageName}}-${{matrix.scriptName}}-
             turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-${{matrix.packageName}}-
             turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-
-            turbo-test-${{ runner.os }}-
+            turbo-test-${{ runner.os }}-1
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: yarn turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
