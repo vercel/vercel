@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
-      - run: yarn install --prefer-offline
+      - run: yarn install --network-timeout 1000000
 
       - name: Use Turborepo cache
         uses: actions/cache@v2
@@ -64,7 +64,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
-      - run: yarn install --prefer-offline
+      - run: yarn install --network-timeout 1000000
 
       - name: Use Turborepo cache
         uses: actions/cache@v2
