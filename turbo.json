@@ -6,6 +6,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "vercel#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "src/util/constants.ts"]
+    },
     "test-unit": {
       "dependsOn": ["$TEST_FILES", "build"],
       "outputs": []
