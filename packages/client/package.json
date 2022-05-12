@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsc",
     "test-integration-once": "jest --verbose --runInBand --bail tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
-    "test-unit": "jest --env node --verbose --runInBand --bail ${TEST_FILES:-test/unit.*test.*}"
+    "test-unit-ci": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "yarn test-unit-ci test/unit.*test.*"
   },
   "engines": {
     "node": ">= 12"

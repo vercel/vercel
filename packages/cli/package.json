@@ -13,7 +13,8 @@
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
     "test": "jest",
-    "test-unit": "jest --env node --verbose --runInBand --bail ${TEST_FILES:-}",
+    "test-unit-ci": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "yarn test-unit-ci",
     "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
     "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
     "prepublishOnly": "yarn build",

@@ -83,11 +83,10 @@ jobs:
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
-        run: yarn turbo run ${{matrix.scriptName}} --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps
+        run: yarn turbo run ${{matrix.scriptName}}-ci --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           FORCE_COLOR: '1'
-          TEST_FILES: ${{ join(matrix.testPaths, ' ') }}
 
   conclusion:
     needs:

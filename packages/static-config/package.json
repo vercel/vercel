@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-unit": "jest ${TEST_FILES:-}",
+    "test-unit": "jest",
+    "test-unit-ci": "jest",
     "prepublishOnly": "tsc"
   },
   "files": [

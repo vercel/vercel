@@ -12,7 +12,8 @@
   "scripts": {
     "build": "node build",
     "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
-    "test-unit": "jest --env node --verbose --bail ${TEST_FILES:-test/prepare-cache.test.ts}",
+    "test-unit-ci": "jest --env node --verbose --bail",
+    "test-unit": "yarn test-unit-ci test/prepare-cache.test.ts",
     "prepublishOnly": "node build"
   },
   "files": [
