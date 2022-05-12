@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc",
     "test-unit": "jest",
-    "test-unit-ci": "jest",
+    "test": "jest",
     "prepublishOnly": "tsc"
   },
   "files": [

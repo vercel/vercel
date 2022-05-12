@@ -9,8 +9,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "tsc",
-    "test-unit-ci": "jest --env node --verbose --runInBand --bail",
-    "test-unit": "yarn test-unit"
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "yarn test"
   },
   "dependencies": {
     "@iarna/toml": "2.2.3",
