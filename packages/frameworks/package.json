@@ -9,7 +9,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "tsc",
-    "test-unit": "jest --env node --verbose --runInBand --bail"
+    "test-unit": "jest --env node --verbose --runInBand --bail ${TEST_FILES:-}"
   },
   "dependencies": {
     "@iarna/toml": "2.2.3",

@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "node build",
-    "test-unit": "jest --env node --verbose --runInBand --bail test/unit.test.ts ",
+    "test-unit": "jest --env node --verbose --runInBand --bail ${TEST_FILES:-test/unit.test.ts}",
     "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.ts",
     "prepublishOnly": "node build"
   },

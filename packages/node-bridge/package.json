@@ -17,7 +17,7 @@
   ],
   "scripts": {
     "build": "node build.js",
-    "test-unit": "jest --env node --verbose --runInBand --bail"
+    "test-unit": "jest --env node --verbose --runInBand --bail ${TEST_FILES:-}"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
