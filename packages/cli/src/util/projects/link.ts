@@ -8,7 +8,7 @@ import { promisify } from 'util';
 
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import Client from '../client';
-import { ProjectNotFound } from '../errors-ts';
+import { APIError, InvalidToken, ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../teams/get-team-by-id';
 import { Output } from '../output';
@@ -150,15 +150,20 @@ export async function getLinkedProject(
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
   } catch (err) {
-    if (err?.status === 403) {
+    if (err instanceof APIError && err.status === 403) {
       output.stopSpinner();
-      throw new NowBuildError({
-        message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
-          VERCEL_DIR
-        )} directory and deploy again.`,
-        code: 'PROJECT_UNAUTHORIZED',
-        link: 'https://vercel.link/cannot-load-project-settings',
-      });
+
+      if (err.missingToken) {
+        throw new InvalidToken();
+      } else {
+        throw new NowBuildError({
+          message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
+            VERCEL_DIR
+          )} directory and deploy again.`,
+          code: 'PROJECT_UNAUTHORIZED',
+          link: 'https://vercel.link/cannot-load-project-settings',
+        });
+      }
     }
 
     // Not a special case 403, we should still throw it

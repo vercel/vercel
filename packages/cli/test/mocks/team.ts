@@ -1,7 +1,16 @@
 import chance from 'chance';
 import { client } from './client';
 
-export function useTeams(teamId?: string) {
+export function useTeams(
+  teamId?: string,
+  options: {
+    failMissingToken?: boolean;
+    failNotFound?: boolean;
+  } = {
+    failMissingToken: false,
+    failNotFound: false,
+  }
+) {
   const id = teamId || chance().guid();
   const teams = [
     {
@@ -16,6 +25,22 @@ export function useTeams(teamId?: string) {
 
   for (let team of teams) {
     client.scenario.get(`/teams/${team.id}`, (_req, res) => {
+      if (options.failMissingToken) {
+        res.statusCode = 403;
+        res.json({
+          message: 'The request is missing an authentication token',
+          code: 'forbidden',
+          missingToken: true,
+        });
+        return;
+      }
+
+      if (options.failNotFound) {
+        res.statusCode = 404;
+        res.send();
+        return;
+      }
+
       res.json(team);
     });
   }
