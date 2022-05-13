@@ -19,7 +19,11 @@
       ]
     },
     "test-unit": {
-      "dependsOn": ["$TEST_FILES", "build"],
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build"],
       "outputs": []
     }
   }
