@@ -37,7 +37,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: .turbo
-          key: turbo-test-unit-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+          key: turbo-test-integration-cli-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             turbo-test-integration-cli-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
             turbo-test-integration-cli-${{ runner.os }}-
