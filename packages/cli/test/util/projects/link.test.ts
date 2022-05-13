@@ -44,7 +44,7 @@ describe('getLinkedProject', () => {
     const cwd = fixture('vercel-pull-next');
 
     useUser();
-    useTeams('team_dummy', { failNotFound: true });
+    useTeams('team_dummy', { failNoAccess: true });
     useProject({
       ...defaultProject,
       id: 'vercel-pull-next',
@@ -64,6 +64,8 @@ describe('getLinkedProject', () => {
     if (!error) {
       throw new Error(`Expected an error to be thrown.`);
     }
-    expect(error.message).toBe('Response Error (404)');
+    expect(error.message).toBe(
+      'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
+    );
   });
 });

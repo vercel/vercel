@@ -5,10 +5,10 @@ export function useTeams(
   teamId?: string,
   options: {
     failMissingToken?: boolean;
-    failNotFound?: boolean;
+    failNoAccess?: boolean;
   } = {
     failMissingToken: false,
-    failNotFound: false,
+    failNoAccess: false,
   }
 ) {
   const id = teamId || chance().guid();
@@ -35,9 +35,12 @@ export function useTeams(
         return;
       }
 
-      if (options.failNotFound) {
-        res.statusCode = 404;
-        res.send();
+      if (options.failNoAccess) {
+        res.statusCode = 403;
+        res.send({
+          code: 'team_unauthorized',
+          message: 'You are not authorized',
+        });
         return;
       }
 
