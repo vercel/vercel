@@ -45,9 +45,9 @@
     "pre-commit": "lint-staged",
     "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
     "test-unit": "yarn test && turbo run test-unit",
-    "test-integration-cli": "node utils/run.js test-integration-cli",
-    "test-integration-once": "node utils/run.js test-integration-once",
-    "test-integration-dev": "node utils/run.js test-integration-dev",
+    "test-integration-cli": "turbo run test-integration-cli",
+    "test-integration-once": "turbo run test-integration-once",
+    "test-integration-dev": "turbo run test-integration-dev",
     "lint": "eslint . --ext .ts,.js",
     "prepare": "husky install"
   },

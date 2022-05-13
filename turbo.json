@@ -26,6 +26,10 @@
       "dependsOn": ["build"],
       "outputs": []
     },
+    "test-integration-cli": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
     "test-integration-once": {
       "dependsOn": ["build"],
       "outputs": []

@@ -33,6 +33,15 @@ jobs:
       - run: git fetch origin ${{ github.ref }} --depth=100
       - run: git diff origin/main...HEAD --name-only
       - run: yarn install --network-timeout 1000000
+      - name: Use Turborepo cache
+        uses: actions/cache@v2
+        with:
+          path: .turbo
+          key: turbo-test-unit-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            turbo-test-integration-cli-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+            turbo-test-integration-cli-${{ runner.os }}-
+            turbo-test-integration-cli-
       - run: yarn run build
       - run: yarn test-integration-cli
         env:
