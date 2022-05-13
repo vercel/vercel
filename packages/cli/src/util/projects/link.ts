@@ -8,7 +8,7 @@ import { promisify } from 'util';
 
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import Client from '../client';
-import { APIError, InvalidToken, ProjectNotFound } from '../errors-ts';
+import { InvalidToken, ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../teams/get-team-by-id';
 import { Output } from '../output';
@@ -150,7 +150,7 @@ export async function getLinkedProject(
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
   } catch (err) {
-    if (err instanceof APIError && err.status === 403) {
+    if (err && err.status === 403) {
       output.stopSpinner();
 
       if (err.missingToken) {
