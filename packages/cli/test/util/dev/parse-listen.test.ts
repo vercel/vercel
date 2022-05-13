@@ -49,7 +49,7 @@ describe('parseListen', () => {
 
   it('should parse "pipe:\\\\.\\pipe\\PipeName" as UNIX pipe', () => {
     if (IS_WINDOWS) {
-      console.log('Skipping this test for this platform.');
+      console.log('Skipping this test on Windows.');
       return;
     }
 
