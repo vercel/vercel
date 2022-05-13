@@ -31,7 +31,6 @@
   "devDependencies": {
     "@types/aws-lambda": "8.10.64",
     "@types/cross-spawn": "6.0.0",
-    "@types/fs-extra": "9.0.13",
     "@types/jest": "27.4.1",
     "@types/ms": "0.7.31",
     "@types/node-fetch": "2.5.4",
