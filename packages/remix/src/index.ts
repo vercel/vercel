@@ -96,6 +96,9 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
+  // Make `remix build` output production mode
+  spawnOpts.env.NODE_ENV = 'production';
+
   // Run "Build Command"
   if (buildCommand) {
     debug(`Executing build command "${buildCommand}"`);
