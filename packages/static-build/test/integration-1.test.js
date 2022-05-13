@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const ms = require('ms');
 const { version } = require('../package.json');
+const { intoChunks, NUMBER_OF_CHUNKS } = require('../../../utils/chunk-tests');
 
 const {
   packAndDeploy,
@@ -45,8 +46,20 @@ const testsThatFailToBuild = new Map([
   ],
 ]);
 
+const fixtureGroups = intoChunks(
+  NUMBER_OF_CHUNKS,
+  fs.readdirSync(fixturesPath)
+);
+const fixturesIndex =
+  parseInt(
+    (module.parent?.filename || __filename).match(/integration-(\d)\./)[1],
+    10
+  ) - 1;
+
+console.log('testing group', fixturesIndex + 1, fixtureGroups[fixturesIndex]);
+
 // eslint-disable-next-line no-restricted-syntax
-for (const fixture of fs.readdirSync(fixturesPath)) {
+for (const fixture of fixtureGroups[fixturesIndex]) {
   const errMsg = testsThatFailToBuild.get(fixture);
   if (errMsg) {
     // eslint-disable-next-line no-loop-func
