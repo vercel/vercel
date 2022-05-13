@@ -1,17 +1,30 @@
+import { promises as fs } from 'fs';
 import { dirname, join } from 'path';
 import {
   debug,
   download,
   execCommand,
+  FileFsRef,
   getNodeVersion,
   getSpawnOptions,
   glob,
+  NodejsLambda,
   readConfigFile,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
 } from '@vercel/build-utils';
-import type { BuildV2, PackageJson, PrepareCache } from '@vercel/build-utils';
+import type {
+  BuildV2,
+  Files,
+  NodeVersion,
+  PackageJson,
+  PrepareCache,
+} from '@vercel/build-utils';
+import { nodeFileTrace } from '@vercel/nft';
+
+// TODO: expose this properly in NFT
+//const defaultResolve = require('@vercel/nft/out/node-file-trace').Job.prototype.resolve;
 
 export const version = 2;
 
@@ -112,7 +125,10 @@ export const build: BuildV2 = async ({
     }
   }
 
-  const staticFiles = await glob('**', join(entrypointFsDirname, 'public'));
+  const [staticFiles, renderFunction] = await Promise.all([
+    glob('**', join(entrypointFsDirname, 'public')),
+    createRenderFunction(entrypointFsDirname, nodeVersion),
+  ]);
 
   return {
     routes: [
@@ -130,6 +146,7 @@ export const build: BuildV2 = async ({
       },
     ],
     output: {
+      render: renderFunction,
       ...staticFiles,
     },
   };
@@ -142,4 +159,59 @@ export const prepareCache: PrepareCache = async () => {
 function hasScript(scriptName: string, pkg: PackageJson | null) {
   const scripts = (pkg && pkg.scripts) || {};
   return typeof scripts[scriptName] === 'string';
+}
+
+async function createRenderFunction(
+  rootDir: string,
+  nodeVersion: NodeVersion
+): Promise<NodejsLambda> {
+  const files: Files = {};
+  const handler = 'build/handler.js';
+
+  // Copy the `default-server.js` file into the "build" directory
+  // and trace it with node-file-trace.
+  const handlerPath = join(rootDir, handler);
+  const sourceHandlerPath = join(__dirname, '../default-server.js');
+  await fs.copyFile(sourceHandlerPath, handlerPath);
+  const trace = await nodeFileTrace([handlerPath], {
+    base: rootDir,
+  });
+  for (const warning of trace.warnings) {
+    //console.log({ warning })
+    if (warning?.stack) {
+      debug(warning.stack.replace('Error: ', 'Warning: '));
+    }
+  }
+  for (const file of trace.fileList) {
+    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
+  }
+
+  // Package in the Builder's version of `@remix-run/vercel` Runtime adapter
+  const remixVercelDir = dirname(
+    require.resolve('@remix-run/vercel/package.json', {
+      paths: [__dirname],
+    })
+  );
+  const remixVercelEntrypoint = require.resolve('@remix-run/vercel', {
+    paths: [__dirname],
+  });
+  const adapterBase = join(remixVercelDir, '../../..');
+  const adapterTrace = await nodeFileTrace([remixVercelEntrypoint], {
+    base: adapterBase,
+  });
+  for (const file of adapterTrace.fileList) {
+    files[file] = await FileFsRef.fromFsPath({
+      fsPath: join(adapterBase, file),
+    });
+  }
+
+  const lambda = new NodejsLambda({
+    files,
+    handler,
+    runtime: nodeVersion.runtime,
+    shouldAddHelpers: false,
+    shouldAddSourcemapSupport: false,
+  });
+
+  return lambda;
 }

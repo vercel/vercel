@@ -19,6 +19,7 @@
     "dist"
   ],
   "dependencies": {
+    "@remix-run/vercel": "1.4.3",
     "@vercel/nft": "0.18.1"
   },
   "devDependencies": {
