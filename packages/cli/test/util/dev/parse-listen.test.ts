@@ -38,7 +38,7 @@ describe('parseListen', () => {
 
   it('should parse "unix:/home/user/server.sock" as UNIX socket file', () => {
     if (IS_WINDOWS) {
-      console.log('Skipping this test for this platform.');
+      console.log('Skipping this test on Windows.');
       return;
     }
 
