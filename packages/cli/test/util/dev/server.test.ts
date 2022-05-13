@@ -9,6 +9,9 @@ import { createServer } from 'http';
 import { client } from '../../mocks/client';
 import DevServer from '../../../src/util/dev/server';
 
+const IS_MAC_OS = process.platform === 'darwin';
+const IS_WINDOWS = process.platform === 'win32';
+
 async function runNpmInstall(fixturePath: string) {
   if (await fs.pathExists(path.join(fixturePath, 'package.json'))) {
     return execa('yarn', ['install', '--network-timeout', '1000000'], {
@@ -19,7 +22,17 @@ async function runNpmInstall(fixturePath: string) {
 }
 
 const testFixture =
-  (name: string, fn: (server: DevServer) => Promise<void>) => async () => {
+  (
+    name: string,
+    fn: (server: DevServer) => Promise<void>,
+    options: { skip: boolean } = { skip: false }
+  ) =>
+  async () => {
+    if (options.skip) {
+      console.log('Skipping this test for this platform.');
+      return;
+    }
+
     let server: DevServer | null = null;
     const fixturePath = path.join(__dirname, '../../fixtures/unit', name);
     await runNpmInstall(fixturePath);
@@ -125,29 +138,29 @@ describe('DevServer', () => {
 
   it(
     'should maintain query when builder defines routes',
-    testFixture('now-dev-next', async server => {
-      if (process.platform === 'darwin') {
-        // this test very often fails on Mac OS only due to timeouts
-        console.log('Skipping test on macOS');
-        return;
+    testFixture(
+      'now-dev-next',
+      async server => {
+        const res = await fetch(`${server.address}/something?url-param=a`);
+        validateResponseHeaders(res);
+
+        const text = await res.text();
+
+        // Hacky way of getting the page payload from the response
+        // HTML since we don't have a HTML parser handy.
+        const json = text
+          .match(/<div>(.*)<\/div>/)![1]
+          .replace('</div>', '')
+          .replace(/&quot;/g, '"');
+        const parsed = JSON.parse(json);
+
+        expect(parsed.query['url-param']).toEqual('a');
+        expect(parsed.query['route-param']).toEqual('b');
+      },
+      {
+        skip: IS_MAC_OS,
       }
-
-      const res = await fetch(`${server.address}/something?url-param=a`);
-      validateResponseHeaders(res);
-
-      const text = await res.text();
-
-      // Hacky way of getting the page payload from the response
-      // HTML since we don't have a HTML parser handy.
-      const json = text
-        .match(/<div>(.*)<\/div>/)![1]
-        .replace('</div>', '')
-        .replace(/&quot;/g, '"');
-      const parsed = JSON.parse(json);
-
-      expect(parsed.query['url-param']).toEqual('a');
-      expect(parsed.query['route-param']).toEqual('b');
-    })
+    )
   );
 
   it(
@@ -164,10 +177,9 @@ describe('DevServer', () => {
     'should send `etag` header for static files',
     testFixture('now-dev-headers', async server => {
       const res = await fetch(`${server.address}/foo.txt`);
-      const expected =
-        process.platform === 'win32'
-          ? '9dc423ab77c2e0446cd355256efff2ea1be27cbf'
-          : 'd263af8ab880c0b97eb6c5c125b5d44f9e5addd9';
+      const expected = IS_WINDOWS
+        ? '9dc423ab77c2e0446cd355256efff2ea1be27cbf'
+        : 'd263af8ab880c0b97eb6c5c125b5d44f9e5addd9';
       expect(res.headers.get('etag')).toEqual(`"${expected}"`);
       const body = await res.text();
       expect(body.trim()).toEqual('hi');
@@ -176,36 +188,37 @@ describe('DevServer', () => {
 
   it(
     'should support default builds and routes',
-    testFixture('now-dev-default-builds-and-routes', async server => {
-      if (process.platform === 'darwin') {
-        // this test very often fails on Mac OS only due to timeouts
-        console.log('Skipping test on macOS');
-        return;
+    testFixture(
+      'now-dev-default-builds-and-routes',
+      async server => {
+        let podId: string;
+
+        let res = await fetch(`${server.address}/`);
+        validateResponseHeaders(res);
+        podId = res.headers.get('x-vercel-id')!.match(/:(\w+)-/)![1];
+        let body = await res.text();
+        expect(body.includes('hello, this is the frontend')).toBeTruthy();
+
+        res = await fetch(`${server.address}/api/users`);
+        validateResponseHeaders(res, podId);
+        body = await res.text();
+        expect(body).toEqual('users');
+
+        res = await fetch(`${server.address}/api/users/1`);
+        validateResponseHeaders(res, podId);
+        body = await res.text();
+        expect(body).toEqual('users/1');
+
+        res = await fetch(`${server.address}/api/welcome`);
+        validateResponseHeaders(res, podId);
+        body = await res.text();
+        expect(body).toEqual('hello and welcome');
+      },
+      {
+        // this test very often times out in the testFixture startup logic on Mac
+        skip: IS_MAC_OS,
       }
-
-      let podId: string;
-
-      let res = await fetch(`${server.address}/`);
-      validateResponseHeaders(res);
-      podId = res.headers.get('x-vercel-id')!.match(/:(\w+)-/)![1];
-      let body = await res.text();
-      expect(body.includes('hello, this is the frontend')).toBeTruthy();
-
-      res = await fetch(`${server.address}/api/users`);
-      validateResponseHeaders(res, podId);
-      body = await res.text();
-      expect(body).toEqual('users');
-
-      res = await fetch(`${server.address}/api/users/1`);
-      validateResponseHeaders(res, podId);
-      body = await res.text();
-      expect(body).toEqual('users/1');
-
-      res = await fetch(`${server.address}/api/welcome`);
-      validateResponseHeaders(res, podId);
-      body = await res.text();
-      expect(body).toEqual('hello and welcome');
-    })
+    )
   );
 
   it(
@@ -218,22 +231,26 @@ describe('DevServer', () => {
     })
   );
 
-  if (process.platform !== 'win32') {
-    // This test is currently failing on Windows, so skip for now:
-    //   > Creating initial build
-    //   $ serve -l $PORT src
-    //   'serve' is not recognized as an internal or external command,
-    // https://github.com/vercel/vercel/pull/6638/checks?check_run_id=3449662836
-    it(
-      'should support `@vercel/static-build` routing',
-      testFixture('now-dev-static-build-routing', async server => {
+  it(
+    'should support `@vercel/static-build` routing',
+    testFixture(
+      'now-dev-static-build-routing',
+      async server => {
         const res = await fetch(`${server.address}/api/date`);
         expect(res.status).toEqual(200);
         const body = await res.text();
         expect(body.startsWith('The current date:')).toBeTruthy();
-      })
-    );
-  }
+      },
+      {
+        // This test is currently failing on Windows, so skip for now:
+        //   > Creating initial build
+        //   $ serve -l $PORT src
+        //   'serve' is not recognized as an internal or external command,
+        // https://github.com/vercel/vercel/pull/6638/checks?check_run_id=3449662836
+        skip: IS_WINDOWS,
+      }
+    )
+  );
 
   it(
     'should support directory listing',
