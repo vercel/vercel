@@ -1992,7 +1992,7 @@ export const frameworks = [
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vite.svg',
     tagline:
       'Vite is a new breed of frontend build tool that significantly improves the frontend development experience.',
-    description: 'A Vue.js or React app, created with Vite.',
+    description: 'A Vue.js app, created with Vite.',
     website: 'https://vitejs.dev',
     envPrefix: 'VITE_',
     detectors: {
@@ -2024,7 +2024,7 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
-        src: '/public/(.*)',
+        src: '/dist/(.*)',
         headers: { 'cache-control': 's-maxage=31536000, immutable' },
         continue: true,
       },
@@ -2036,7 +2036,7 @@ export const frameworks = [
       {
         handle: 'filesystem',
       },
-      { src: '/public/(.*)', status: 404, dest: '/404.html' },
+      { src: '/dist/(.*)', status: 404, dest: '/404.html' },
       {
         src: '/(.*)',
         headers: { 'cache-control': 's-maxage=0' },
@@ -2045,8 +2045,8 @@ export const frameworks = [
     ],
     defaultHeaders: [
       {
-        source: '/public/(.*)',
-        regex: '/public/(.*)',
+        source: '/dist/(.*)',
+        regex: '/dist/(.*)',
         headers: [
           { key: 'cache-control', value: 's-maxage=31536000, immutable' },
         ],
@@ -2064,10 +2064,10 @@ export const frameworks = [
     ],
     defaultRedirects: [
       {
-        source: '/public/(.*)',
+        source: '/dist/(.*)',
         destination: '/404.html',
         statusCode: 404,
-        regex: '/public/(.*)',
+        regex: '/dist/(.*)',
       },
     ],
     defaultRewrites: [
