@@ -16,7 +16,8 @@
     "prepublishOnly": "node build.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "default-server.js"
   ],
   "dependencies": {
     "@remix-run/vercel": "1.4.3",
