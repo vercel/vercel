@@ -22,6 +22,14 @@
       "dependsOn": ["build"],
       "outputs": []
     },
+    "test-integration-dev": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test-integration-once": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
     "test": {
       "dependsOn": ["build"],
       "outputs": []

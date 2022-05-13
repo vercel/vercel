@@ -3,10 +3,13 @@ const path = require('path');
 
 const NUMBER_OF_CHUNKS = 3;
 const MINIMUM_PER_CHUNK = 10;
-const testCrossPlatform = new Set(['test-unit']);
+const runnersMap = new Map([
+  // ['test-integration-dev', ['macos-latest', 'ubuntu-latest']],
+  ['test-integration-once', ['ubuntu-latest']],
+]);
 
 async function getChunkedTests() {
-  const scripts = ['test-unit'];
+  const scripts = ['test-integration-once'];
   const rootPath = path.resolve(__dirname, '..');
 
   const dryRunText = (
@@ -50,32 +53,24 @@ async function getChunkedTests() {
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
         return intoChunks(NUMBER_OF_CHUNKS, testPaths).flatMap(
           (chunk, chunkNumber, allChunks) => {
-            const item = {
-              packagePath,
-              packageName,
-              scriptName,
-              testPaths: chunk.map(testFile =>
-                path.relative(
-                  path.join(__dirname, '../', packagePath),
-                  testFile
-                )
-              ),
-              runner: 'ubuntu-latest',
-              chunkNumber: chunkNumber + 1,
-              allChunksLength: allChunks.length,
-            };
-            const output = [item];
+            const runners = runnersMap.get(scriptName) || ['ubuntu-latest'];
 
-            if (testCrossPlatform.has(scriptName)) {
-              for (const runner of ['macos-latest', 'windows-latest']) {
-                const curItem = {
-                  ...item,
-                  runner,
-                };
-                output.push(curItem);
-              }
-            }
-            return output;
+            return runners.map(runner => {
+              return {
+                runner,
+                packagePath,
+                packageName,
+                scriptName,
+                testPaths: chunk.map(testFile =>
+                  path.relative(
+                    path.join(__dirname, '../', packagePath),
+                    testFile
+                  )
+                ),
+                chunkNumber: chunkNumber + 1,
+                allChunksLength: allChunks.length,
+              };
+            });
           }
         );
       });
