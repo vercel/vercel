@@ -155,8 +155,28 @@ export const build: BuildV2 = async ({
   };
 };
 
-export const prepareCache: PrepareCache = async () => {
-  return {};
+export const prepareCache: PrepareCache = async ({
+  entrypoint,
+  repoRootPath,
+  workPath,
+}) => {
+  const mountpoint = dirname(entrypoint);
+  const entrypointFsDirname = join(workPath, mountpoint);
+  const remixConfig = require(join(entrypointFsDirname, 'remix.config'));
+  const cacheDirectory = join(
+    entrypointFsDirname,
+    remixConfig.cacheDirectory || '.cache'
+  );
+
+  const [nodeModulesFiles, cacheDirFiles] = await Promise.all([
+    // Cache `node_modules`
+    glob('**/node_modules/**', repoRootPath || workPath),
+
+    // Cache the Remix "cacheDirectory" (typically `.cache`)
+    glob('**', cacheDirectory),
+  ]);
+
+  return { ...nodeModulesFiles, ...cacheDirFiles };
 };
 
 function hasScript(scriptName: string, pkg: PackageJson | null) {
