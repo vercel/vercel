@@ -85,6 +85,8 @@ jobs:
         run: node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
+          VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
+          VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}
           FORCE_COLOR: '1'
 
   conclusion:
