@@ -489,6 +489,24 @@ export default async (client: Client) => {
       path
     );
 
+    // const overrideSettings = [
+    //   'buildCommand',
+    //   'installCommand',
+    //   'devCommand',
+    //   'ignoreCommand',
+    //   'outputDirectory',
+    //   'framework',
+    // ] as const;
+
+    const localConfigurationOverrides = {
+      buildCommand: localConfig?.buildCommand,
+      installCommand: localConfig?.installCommand,
+      devCommand: localConfig?.devCommand,
+      ignoreCommand: localConfig?.ignoreCommand,
+      framework: localConfig?.framework,
+      outputDirectory: localConfig?.outputDirectory,
+    };
+
     if (deployment.code === 'missing_project_settings') {
       let { projectSettings, framework } = deployment;
       if (rootDirectory) {
@@ -503,7 +521,9 @@ export default async (client: Client) => {
       const settings = await editProjectSettings(
         output,
         projectSettings,
-        framework
+        framework,
+        false,
+        localConfigurationOverrides
       );
 
       // deploy again, but send projectSettings this time

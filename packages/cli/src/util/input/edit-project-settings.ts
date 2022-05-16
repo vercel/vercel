@@ -2,40 +2,98 @@ import inquirer from 'inquirer';
 import confirm from './confirm';
 import chalk from 'chalk';
 import { Output } from '../output';
-import { Framework } from '@vercel/frameworks';
+import { Framework, frameworks } from '@vercel/frameworks';
 import { isSettingValue } from '../is-setting-value';
 import { ProjectSettings } from '../../types';
+import { VercelConfig } from '../dev/types';
 
-export interface PartialProjectSettings {
-  buildCommand: string | null;
-  outputDirectory: string | null;
-  devCommand: string | null;
-}
-
-const fields: { name: string; value: keyof PartialProjectSettings }[] = [
-  { name: 'Build Command', value: 'buildCommand' },
-  { name: 'Output Directory', value: 'outputDirectory' },
-  { name: 'Development Command', value: 'devCommand' },
-];
+export type PartialProjectSettings = Pick<
+  VercelConfig,
+  | 'buildCommand'
+  | 'installCommand'
+  | 'devCommand'
+  | 'ignoreCommand'
+  | 'outputDirectory'
+  | 'framework'
+>;
+type PartialProjectSettingsKeys = keyof Required<PartialProjectSettings>;
+type PartialProjectSettingsFrameworkOmitted = Omit<
+  PartialProjectSettings,
+  'framework'
+>;
+type PartialProjectSettingsFrameworkOmittedKeys =
+  keyof Required<PartialProjectSettingsFrameworkOmitted>;
+const fields: {
+  [k in PartialProjectSettingsFrameworkOmittedKeys]: string;
+} = {
+  buildCommand: 'Build Command',
+  devCommand: 'Development Command',
+  ignoreCommand: 'Ignore Command',
+  installCommand: 'Install Command',
+  outputDirectory: 'Output Directory',
+} as const;
 
 export default async function editProjectSettings(
   output: Output,
-  projectSettings: PartialProjectSettings | null,
+  projectSettings: PartialProjectSettingsFrameworkOmitted | null,
   framework: Framework | null,
-  autoConfirm?: boolean
+  autoConfirm: boolean,
+  localConfigurationOverrides: PartialProjectSettings | null
 ): Promise<ProjectSettings> {
-  // create new settings object, missing values will be filled with `null`
+  // Create initial settings object defaulting everything to `null` and assigning what may exist in `projectSettings`
   const settings: ProjectSettings = Object.assign(
-    { framework: null },
+    {
+      buildCommand: null,
+      devCommand: null,
+      framework: null,
+      ignoreCommand: null,
+      installCommand: null,
+      outputDirectory: null,
+    },
     projectSettings
   );
 
-  for (let field of fields) {
-    settings[field.value] =
-      (projectSettings && projectSettings[field.value]) || null;
+  // Start UX by displaying overrides. They will be referenced throughout remainder of CLI.
+  if (localConfigurationOverrides) {
+    // Apply local overrides (from `vercel.json`)
+    Object.assign(settings, localConfigurationOverrides);
+
+    output.print(
+      `Local configuration override detected. Overwritten project settings:\n`
+    );
+
+    // Print provided overrides including framework
+    for (const [settingValue, settingDisplayName] of Object.entries(
+      fields
+    ).concat(['framework', 'Framework'])) {
+      const override =
+        localConfigurationOverrides?.[
+          settingValue as PartialProjectSettingsKeys
+        ];
+      if (override) {
+        output.print(
+          `${chalk.dim(
+            `- ${chalk.bold(`${settingDisplayName}:`)} ${override}`
+          )}\n`
+        );
+      }
+    }
   }
 
-  // skip editing project settings if no framework is detected
+  // Apply local framework override
+  if (localConfigurationOverrides?.framework) {
+    // Unfortunately the frameworks map is a readonly constant and does not actually return `Framework` type objects
+    framework =
+      (frameworks.find(
+        _framework => _framework.slug === localConfigurationOverrides.framework
+      ) as Framework) ?? null;
+
+    output.print(
+      `Merging default project settings for framework ${framework.name}. Previously listed overrides are prioritized.\n`
+    );
+  }
+
+  // skip editing project settings if no framework is detected and no override is provided
   if (!framework) {
     settings.framework = null;
     return settings;
@@ -49,19 +107,27 @@ export default async function editProjectSettings(
 
   settings.framework = framework.slug;
 
-  for (let field of fields) {
-    const defaults = framework.settings[field.value];
+  // Now print defaults for the provided framework whether it was auto-detected or overwritten
+  for (const [value, name] of Object.entries(fields)) {
+    const defaults =
+      framework.settings[value as PartialProjectSettingsFrameworkOmittedKeys];
 
-    output.print(
-      chalk.dim(
-        `- ${chalk.bold(`${field.name}:`)} ${`${
-          isSettingValue(defaults)
-            ? defaults.value
-            : chalk.italic(`${defaults.placeholder}`)
-        }`}`
-      ) + '\n'
-    );
+    // TODO (@ethan-arrowood) - If user provided a command override we should indicate to the user in this line that
+    // even tho a default exists for the framework, the override is being used instead.
+    if (defaults) {
+      output.print(
+        chalk.dim(
+          `- ${chalk.bold(`${name}:`)} ${`${
+            isSettingValue(defaults)
+              ? defaults.value
+              : chalk.italic(`${defaults.placeholder}`)
+          }`}`
+        ) + '\n'
+      );
+    }
   }
+
+  // @ethan continue from here
 
   if (
     autoConfirm ||
