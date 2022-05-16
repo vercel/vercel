@@ -22,17 +22,31 @@ export default async (request) => {
 }
 `;
 
+const CONFIG_FILES = [
+  'build-manifest.json',
+  'functions-manifest.json',
+  'images-manifest.json',
+  'prerender-manifest.json',
+  'routes-manifest.json',
+];
+
 /**
- * Returns the path to the Build Output API v2 directory when the
- * `config.json` file was created by the framework / build script,
- * or `undefined` if the framework did not create the v3 output.
+ * Returns the path to the Build Output API v2 directory when any
+ * relevant config file was created by the framework / build script,
+ * or `undefined` if the framework did not create the v2 output.
  */
 export async function getBuildOutputDirectory(
   workingDir: string
 ): Promise<string | undefined> {
   const outputDir = path.join(workingDir, BUILD_OUTPUT_DIR);
-  const outputPathExists = await pathExists(outputDir);
-  if (outputPathExists) {
+
+  // check for one of several config files
+  const finderPromises = CONFIG_FILES.map(configFile => {
+    return pathExists(path.join(outputDir, configFile));
+  });
+
+  const finders = await Promise.all(finderPromises);
+  if (finders.some(found => found)) {
     return outputDir;
   }
   return undefined;

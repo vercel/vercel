@@ -3,6 +3,64 @@ import { remove } from 'fs-extra';
 import { build } from '../src';
 
 describe('build()', () => {
+  describe('Build Output API v1', () => {
+    it('should detect the output format', async () => {
+      const workPath = path.join(
+        __dirname,
+        'build-fixtures',
+        '11-build-output-v1'
+      );
+
+      try {
+        const buildResult = await build({
+          files: {},
+          entrypoint: 'package.json',
+          workPath,
+          config: {},
+          meta: {
+            skipDownload: true,
+            cliVersion: '0.0.0',
+          },
+        });
+        if ('buildOutputVersion' in buildResult) {
+          throw new Error('Unexpected `buildOutputVersion` in build result');
+        }
+
+        expect(buildResult.output['index.html']).toBeTruthy();
+      } finally {
+        remove(path.join(workPath, '.vercel_build_output'));
+      }
+    });
+
+    it('should detect the v1 output format when .output exists', async () => {
+      const workPath = path.join(
+        __dirname,
+        'build-fixtures',
+        '12-build-output-v1-conflict'
+      );
+
+      try {
+        const buildResult = await build({
+          files: {},
+          entrypoint: 'package.json',
+          workPath,
+          config: {},
+          meta: {
+            skipDownload: true,
+            cliVersion: '0.0.0',
+          },
+        });
+        if ('buildOutputVersion' in buildResult) {
+          throw new Error('Unexpected `buildOutputVersion` in build result');
+        }
+
+        expect(buildResult.output['index.html']).toBeTruthy();
+      } finally {
+        remove(path.join(workPath, '.vercel_build_output'));
+      }
+    });
+  });
+
   describe('Build Output API v2', () => {
     it('should detect the output format', async () => {
       const workPath = path.join(
