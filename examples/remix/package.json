@@ -23,7 +23,7 @@
     "typescript": "^4.1.2"
   },
   "engines": {
-    "node": ">=14"
+    "node": "14.x"
   },
   "sideEffects": false
 }
