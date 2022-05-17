@@ -216,7 +216,8 @@ export default async function setupAndLink(
         output,
         projectSettings,
         framework,
-        autoConfirm
+        autoConfirm,
+        null
       );
     }
 

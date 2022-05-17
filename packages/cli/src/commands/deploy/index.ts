@@ -453,6 +453,15 @@ export default async (client: Client) => {
   let deployStamp = stamp();
   let deployment = null;
 
+  const localConfigurationOverrides = {
+    buildCommand: localConfig?.buildCommand,
+    devCommand: localConfig?.devCommand,
+    framework: localConfig?.framework,
+    ignoreCommand: localConfig?.ignoreCommand,
+    installCommand: localConfig?.installCommand,
+    outputDirectory: localConfig?.outputDirectory,
+  };
+
   try {
     const createArgs: any = {
       name: project ? project.name : newProjectName,
@@ -471,6 +480,7 @@ export default async (client: Client) => {
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
+      projectSettings: localConfigurationOverrides,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -488,24 +498,6 @@ export default async (client: Client) => {
       !project,
       path
     );
-
-    // const overrideSettings = [
-    //   'buildCommand',
-    //   'installCommand',
-    //   'devCommand',
-    //   'ignoreCommand',
-    //   'outputDirectory',
-    //   'framework',
-    // ] as const;
-
-    const localConfigurationOverrides = {
-      buildCommand: localConfig?.buildCommand,
-      installCommand: localConfig?.installCommand,
-      devCommand: localConfig?.devCommand,
-      ignoreCommand: localConfig?.ignoreCommand,
-      framework: localConfig?.framework,
-      outputDirectory: localConfig?.outputDirectory,
-    };
 
     if (deployment.code === 'missing_project_settings') {
       let { projectSettings, framework } = deployment;

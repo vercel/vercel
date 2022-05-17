@@ -3782,3 +3782,23 @@ test('[vc link] should support the `--project` flag', async t => {
     formatOutput(output)
   );
 });
+
+test('vercel.json configuration overrides with framework', async t => {
+  const directory = path.join(
+    __dirname,
+    'fixtures/unit/vercel-json-overrides-with-framework'
+  );
+
+  const output = await execa(
+    binaryPath,
+    [...defaultArgs, '--public', '--confirm'],
+    {
+      cwd: directory,
+      stdio: 'inherit',
+      reject: true,
+    }
+  );
+
+  console.log(output);
+  t.is(output.exitCode, 0, formatOutput(output));
+});

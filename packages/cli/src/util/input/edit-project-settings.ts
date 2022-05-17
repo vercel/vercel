@@ -24,14 +24,14 @@ type PartialProjectSettingsFrameworkOmitted = Omit<
 type PartialProjectSettingsFrameworkOmittedKeys =
   keyof Required<PartialProjectSettingsFrameworkOmitted>;
 const fields: {
-  [k in PartialProjectSettingsFrameworkOmittedKeys]: string;
+  readonly [k in PartialProjectSettingsFrameworkOmittedKeys]: string;
 } = {
   buildCommand: 'Build Command',
   devCommand: 'Development Command',
   ignoreCommand: 'Ignore Command',
   installCommand: 'Install Command',
   outputDirectory: 'Output Directory',
-} as const;
+};
 
 export default async function editProjectSettings(
   output: Output,
@@ -59,7 +59,7 @@ export default async function editProjectSettings(
     Object.assign(settings, localConfigurationOverrides);
 
     output.print(
-      `Local configuration override detected. Overwritten project settings:\n`
+      `Local configuration overrides detected. Overwritten project settings:\n`
     );
 
     // Print provided overrides including framework
@@ -83,14 +83,19 @@ export default async function editProjectSettings(
   // Apply local framework override
   if (localConfigurationOverrides?.framework) {
     // Unfortunately the frameworks map is a readonly constant and does not actually return `Framework` type objects
-    framework =
-      (frameworks.find(
-        _framework => _framework.slug === localConfigurationOverrides.framework
-      ) as Framework) ?? null;
+    framework = (frameworks.find(
+      _framework => _framework.slug === localConfigurationOverrides.framework
+    ) ?? null) as Framework | null;
 
-    output.print(
-      `Merging default project settings for framework ${framework.name}. Previously listed overrides are prioritized.\n`
-    );
+    if (framework) {
+      output.print(
+        `Merging default project settings for framework ${framework.name}. Previously listed overrides are prioritized.\n`
+      );
+    } else {
+      output.print(
+        `Framework slug matching ${localConfigurationOverrides.framework} not found.`
+      );
+    }
   }
 
   // skip editing project settings if no framework is detected and no override is provided
@@ -99,6 +104,7 @@ export default async function editProjectSettings(
     return settings;
   }
 
+  // A missing framework slug implies the "Other" framework was selected
   output.print(
     !framework.slug
       ? `No framework detected. Default Project Settings:\n`
@@ -108,50 +114,66 @@ export default async function editProjectSettings(
   settings.framework = framework.slug;
 
   // Now print defaults for the provided framework whether it was auto-detected or overwritten
-  for (const [value, name] of Object.entries(fields)) {
+  for (const [settingValue, settingDisplayName] of Object.entries(fields)) {
     const defaults =
-      framework.settings[value as PartialProjectSettingsFrameworkOmittedKeys];
+      framework.settings[
+        settingValue as PartialProjectSettingsFrameworkOmittedKeys
+      ];
+    const override =
+      localConfigurationOverrides?.[
+        settingValue as PartialProjectSettingsFrameworkOmittedKeys
+      ];
 
-    // TODO (@ethan-arrowood) - If user provided a command override we should indicate to the user in this line that
-    // even tho a default exists for the framework, the override is being used instead.
     if (defaults) {
       output.print(
-        chalk.dim(
-          `- ${chalk.bold(`${name}:`)} ${`${
+        `${chalk.dim(
+          `- ${chalk.bold(`${settingDisplayName}:`)} ${
             isSettingValue(defaults)
               ? defaults.value
               : chalk.italic(`${defaults.placeholder}`)
-          }`}`
-        ) + '\n'
+          }${
+            override
+              ? ` Notice: This setting is overwritten by the local configuration`
+              : ''
+          }`
+        )}\n`
       );
     }
   }
 
-  // @ethan continue from here
+  if (!localConfigurationOverrides) {
+    if (
+      autoConfirm ||
+      !(await confirm(`Want to override the settings?`, false))
+    ) {
+      return settings;
+    }
 
-  if (
-    autoConfirm ||
-    !(await confirm(`Want to override the settings?`, false))
-  ) {
-    return settings;
-  }
+    const choices = Object.entries(fields).map(([k, v]) => ({
+      name: v,
+      value: k as PartialProjectSettingsFrameworkOmittedKeys,
+    }));
 
-  const { settingFields } = await inquirer.prompt({
-    name: 'settingFields',
-    type: 'checkbox',
-    message: 'Which settings would you like to overwrite (select multiple)?',
-    choices: fields,
-  });
-
-  for (let setting of settingFields as (keyof PartialProjectSettings)[]) {
-    const field = fields.find(f => f.value === setting);
-    const name = `${Date.now()}`;
-    const answers = await inquirer.prompt({
-      type: 'input',
-      name: name,
-      message: `What's your ${chalk.bold(field ? field.name : setting)}?`,
+    const { settingFields } = await inquirer.prompt<{
+      settingFields: Array<PartialProjectSettingsFrameworkOmittedKeys>;
+    }>({
+      name: 'settingFields',
+      type: 'checkbox',
+      message: 'Which settings would you like to overwrite (select multiple)?',
+      choices,
     });
-    settings[setting] = answers[name] as string;
+
+    for (let setting of settingFields) {
+      const field = fields[setting];
+      const answers = await inquirer.prompt<{
+        [k in PartialProjectSettingsFrameworkOmittedKeys]: string;
+      }>({
+        type: 'input',
+        name: setting,
+        message: `What's your ${chalk.bold(field)}?`,
+      });
+      settings[setting] = answers[setting];
+    }
   }
 
   return settings;

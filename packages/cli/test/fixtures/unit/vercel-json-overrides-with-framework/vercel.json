@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "buildCommand": "build-command",
+  "devCommand": "dev-command",
+  "framework": "framework",
+  "ignoreCommand": "ignore-command",
+  "installCommand": "install-command",
+  "outputDirectory": "output-directory"
+}
