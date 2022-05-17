@@ -1,3 +1,7 @@
 {
-  "builds": [{ "src": "package.json", "use": "@vercel/remix" }]
+  "build": {
+    "env": {
+      "ENABLE_FILE_SYSTEM_API": "1"
+    }
+  }
 }
