@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "declaration": false,
+    "declaration": true,
     "esModuleInterop": true,
     "lib": ["esnext"],
     "module": "commonjs",
@@ -13,6 +13,7 @@
     "outDir": "dist",
     "types": ["node"],
     "strict": true,
-    "target": "es2019"
+    "target": "es2019",
+    "sourceMap": true
   }
 }
