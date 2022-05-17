@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, join, relative } from 'path';
 import {
   debug,
   download,
@@ -23,8 +23,11 @@ import type {
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 
-// TODO: expose this properly in NFT
-//const defaultResolve = require('@vercel/nft/out/node-file-trace').Job.prototype.resolve;
+// Stripped down version of `@remix-run/dev` AppConfig
+interface AppConfig {
+  cacheDirectory?: string;
+  serverBuildDirectory?: string;
+}
 
 export const version = 2;
 
@@ -128,9 +131,27 @@ export const build: BuildV2 = async ({
     }
   }
 
+  let serverBuildDirectory = 'build';
+  try {
+    const remixConfig: AppConfig = require(join(
+      entrypointFsDirname,
+      'remix.config'
+    ));
+    if (remixConfig.serverBuildDirectory) {
+      serverBuildDirectory = remixConfig.serverBuildDirectory;
+    }
+  } catch (err: any) {
+    // Ignore error if `remix.config.js` does not exist
+    if (err.code !== 'MODULE_NOT_FOUND') throw err;
+  }
+
   const [staticFiles, renderFunction] = await Promise.all([
     glob('**', join(entrypointFsDirname, 'public')),
-    createRenderFunction(entrypointFsDirname, nodeVersion),
+    createRenderFunction(
+      entrypointFsDirname,
+      serverBuildDirectory,
+      nodeVersion
+    ),
   ]);
 
   return {
@@ -160,20 +181,30 @@ export const prepareCache: PrepareCache = async ({
   repoRootPath,
   workPath,
 }) => {
+  let cacheDirectory = '.cache';
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
-  const remixConfig = require(join(entrypointFsDirname, 'remix.config'));
-  const cacheDirectory = join(
-    entrypointFsDirname,
-    remixConfig.cacheDirectory || '.cache'
-  );
+  try {
+    const remixConfig: AppConfig = require(join(
+      entrypointFsDirname,
+      'remix.config'
+    ));
+    if (remixConfig.cacheDirectory) {
+      cacheDirectory = remixConfig.cacheDirectory;
+    }
+  } catch (err: any) {
+    // Ignore error if `remix.config.js` does not exist
+    if (err.code !== 'MODULE_NOT_FOUND') throw err;
+  }
+
+  const root = repoRootPath || workPath;
 
   const [nodeModulesFiles, cacheDirFiles] = await Promise.all([
     // Cache `node_modules`
-    glob('**/node_modules/**', repoRootPath || workPath),
+    glob('**/node_modules/**', root),
 
     // Cache the Remix "cacheDirectory" (typically `.cache`)
-    glob('**', cacheDirectory),
+    glob(relative(root, join(entrypointFsDirname, cacheDirectory, '**')), root),
   ]);
 
   return { ...nodeModulesFiles, ...cacheDirFiles };
@@ -186,10 +217,11 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
 
 async function createRenderFunction(
   rootDir: string,
+  serverBuildDirectory: string,
   nodeVersion: NodeVersion
 ): Promise<NodejsLambda> {
   const files: Files = {};
-  const handler = 'build/handler.js';
+  const handler = join(serverBuildDirectory, 'handler.js');
 
   // Copy the `default-server.js` file into the "build" directory
   // and trace it with node-file-trace.
@@ -199,9 +231,13 @@ async function createRenderFunction(
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
   });
+
+  let needsVercelAdapter = false;
   for (const warning of trace.warnings) {
-    //console.log({ warning })
-    if (warning?.stack) {
+    console.log({ m: warning.message });
+    if (warning.message?.includes("'@remix-run/vercel'")) {
+      needsVercelAdapter = true;
+    } else if (warning.stack) {
       debug(warning.stack.replace('Error: ', 'Warning: '));
     }
   }
@@ -209,23 +245,31 @@ async function createRenderFunction(
     files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
   }
 
-  // Package in the Builder's version of `@remix-run/vercel` Runtime adapter
-  const remixVercelDir = dirname(
-    require.resolve('@remix-run/vercel/package.json', {
-      paths: [__dirname],
-    })
-  );
-  const remixVercelEntrypoint = require.resolve('@remix-run/vercel', {
-    paths: [__dirname],
-  });
-  const adapterBase = join(remixVercelDir, '../../..');
-  const adapterTrace = await nodeFileTrace([remixVercelEntrypoint], {
-    base: adapterBase,
-  });
-  for (const file of adapterTrace.fileList) {
-    files[file] = await FileFsRef.fromFsPath({
-      fsPath: join(adapterBase, file),
+  if (needsVercelAdapter) {
+    // Package in the Builder's version of `@remix-run/vercel` Runtime adapter
+    const remixVercelPackageJsonPath = require.resolve(
+      '@remix-run/vercel/package.json',
+      {
+        paths: [__dirname],
+      }
+    );
+    const remixVercelPackageJson: PackageJson = require(remixVercelPackageJsonPath);
+    const remixVercelDir = dirname(remixVercelPackageJsonPath);
+    const remixVercelEntrypoint = join(remixVercelDir, 'index.js');
+
+    console.log(
+      `WARN: Implicitly adding \`${remixVercelPackageJson.name}\` v${remixVercelPackageJson.version} to your project. You should add this dependency to your \`package.json\` file.`
+    );
+
+    const adapterBase = join(remixVercelDir, '../../..');
+    const adapterTrace = await nodeFileTrace([remixVercelEntrypoint], {
+      base: adapterBase,
     });
+    for (const file of adapterTrace.fileList) {
+      files[file] = await FileFsRef.fromFsPath({
+        fsPath: join(adapterBase, file),
+      });
+    }
   }
 
   const lambda = new NodejsLambda({
