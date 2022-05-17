@@ -1,5 +1,7 @@
 import parseListen from '../../../src/util/dev/parse-listen';
 
+const IS_WINDOWS = process.platform === 'win32';
+
 describe('parseListen', () => {
   it('should parse "0" as port 0', () => {
     const result = parseListen('0');
@@ -34,19 +36,27 @@ describe('parseListen', () => {
     expect(result[1]).toEqual('127.0.0.1');
   });
 
-  if (process.platform !== 'win32') {
-    it('should parse "unix:/home/user/server.sock" as UNIX socket file', () => {
-      const result = parseListen('unix:/home/user/server.sock');
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual('/home/user/server.sock');
-    });
+  it('should parse "unix:/home/user/server.sock" as UNIX socket file', () => {
+    if (IS_WINDOWS) {
+      console.log('Skipping this test on Windows.');
+      return;
+    }
 
-    it('should parse "pipe:\\\\.\\pipe\\PipeName" as UNIX pipe', () => {
-      const result = parseListen('pipe:\\\\.\\pipe\\PipeName');
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual('\\\\.\\pipe\\PipeName');
-    });
-  }
+    const result = parseListen('unix:/home/user/server.sock');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual('/home/user/server.sock');
+  });
+
+  it('should parse "pipe:\\\\.\\pipe\\PipeName" as UNIX pipe', () => {
+    if (IS_WINDOWS) {
+      console.log('Skipping this test on Windows.');
+      return;
+    }
+
+    const result = parseListen('pipe:\\\\.\\pipe\\PipeName');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual('\\\\.\\pipe\\PipeName');
+  });
 
   it('should fail to parse "bad://url"', () => {
     let err: Error;
