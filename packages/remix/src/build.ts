@@ -123,14 +123,32 @@ export const build: BuildV2 = async ({
     }
   }
 
-  let serverBuildDirectory = 'build';
+  let serverBuildPath = 'build/index.js';
+  let needsHandler = true;
   try {
     const remixConfig: AppConfig = require(join(
       entrypointFsDirname,
       'remix.config'
     ));
-    if (remixConfig.serverBuildDirectory) {
-      serverBuildDirectory = remixConfig.serverBuildDirectory;
+
+    // If `serverBuildTarget === 'vercel'` then Remix will output a handler
+    // that is already in Vercel (req, res) format, so don't inject the handler
+    if (remixConfig.serverBuildTarget) {
+      if (remixConfig.serverBuildTarget !== 'vercel') {
+        throw new Error(
+          `\`serverBuildTarget\` in Remix config must be "vercel" (got "${remixConfig.serverBuildTarget}")`
+        );
+      }
+      serverBuildPath = 'api/index.js';
+      needsHandler = false;
+    }
+
+    if (remixConfig.serverBuildPath) {
+      // Explicit file path where the server output file will be
+      serverBuildPath = remixConfig.serverBuildPath;
+    } else if (remixConfig.serverBuildDirectory) {
+      // Explicit directory path the server output will be
+      serverBuildPath = join(remixConfig.serverBuildDirectory, 'index.js');
     }
   } catch (err: any) {
     // Ignore error if `remix.config.js` does not exist
@@ -141,7 +159,8 @@ export const build: BuildV2 = async ({
     glob('**', join(entrypointFsDirname, 'public')),
     createRenderFunction(
       entrypointFsDirname,
-      serverBuildDirectory,
+      serverBuildPath,
+      needsHandler,
       nodeVersion
     ),
   ]);
@@ -175,25 +194,30 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
 
 async function createRenderFunction(
   rootDir: string,
-  serverBuildDirectory: string,
+  serverBuildPath: string,
+  needsHandler: boolean,
   nodeVersion: NodeVersion
 ): Promise<NodejsLambda> {
   const files: Files = {};
-  const handler = join(serverBuildDirectory, 'handler.js');
-
-  // Copy the `default-server.js` file into the "build" directory
-  // and trace it with node-file-trace.
+  const handler = needsHandler
+    ? join(dirname(serverBuildPath), '__vc_handler.js')
+    : serverBuildPath;
   const handlerPath = join(rootDir, handler);
-  const sourceHandlerPath = join(__dirname, '../default-server.js');
-  await fs.copyFile(sourceHandlerPath, handlerPath);
+
+  if (needsHandler) {
+    // Copy the `default-server.js` file into the "build" directory
+    const sourceHandlerPath = join(__dirname, '../default-server.js');
+    await fs.copyFile(sourceHandlerPath, handlerPath);
+  }
+
+  // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
   });
 
   let needsVercelAdapter = false;
   for (const warning of trace.warnings) {
-    console.log({ m: warning.message });
-    if (warning.message?.includes("'@remix-run/vercel'")) {
+    if (warning.message.includes("'@remix-run/vercel'")) {
       needsVercelAdapter = true;
     } else if (warning.stack) {
       debug(warning.stack.replace('Error: ', 'Warning: '));
