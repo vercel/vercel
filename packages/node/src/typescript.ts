@@ -450,17 +450,14 @@ export function fixConfig(
   delete config.compilerOptions.tsBuildInfoFile;
   delete config.compilerOptions.incremental;
 
-  // Target esnext output by default (instead of ES3).
   // This will prevent TS from polyfill/downlevel emit.
   if (config.compilerOptions.target === undefined) {
     // See https://github.com/tsconfig/bases/tree/main/bases
     let target: string;
     if (nodeVersionMajor >= 16) {
       target = 'ES2021';
-    } else if (nodeVersionMajor >= 14) {
-      target = 'ES2020';
     } else {
-      target = 'ES2019';
+      target = 'ES2020';
     }
     config.compilerOptions.target = target;
   }
