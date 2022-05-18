@@ -240,7 +240,7 @@ async function createRenderFunction(
     const remixVercelEntrypoint = join(remixVercelDir, 'index.js');
 
     console.log(
-      `WARN: Implicitly adding \`${remixVercelPackageJson.name}\` v${remixVercelPackageJson.version} to your project. You should add this dependency to your \`package.json\` file.`
+      `Warning: Implicitly adding \`${remixVercelPackageJson.name}\` v${remixVercelPackageJson.version} to your project. You should add this dependency to your \`package.json\` file.`
     );
 
     const adapterBase = join(remixVercelDir, '../../..');
