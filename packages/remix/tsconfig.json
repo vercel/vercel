@@ -10,10 +10,12 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "outDir": "dist",
-    "types": ["node"],
+    "outDir": "./dist",
+    "types": ["node", "jest"],
     "strict": true,
     "target": "es2019",
     "sourceMap": true
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }
