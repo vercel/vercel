@@ -1,0 +1,45 @@
+{
+  "name": "serve-placeholder",
+  "version": "2.0.1",
+  "description": "Smart placeholder for missing assets",
+  "repository": "unjs/serve-placeholder",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "defu": "^6.0.0"
+  },
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "c8": "^7.11.0",
+    "eslint": "latest",
+    "h3": "^0.5.5",
+    "listhen": "^0.2.6",
+    "ohmyfetch": "^0.4.15",
+    "standard-version": "latest",
+    "typescript": "latest",
+    "unbuild": "latest",
+    "vitest": "^0.8.4"
+  },
+  "packageManager": "pnpm@6.32.2",
+  "scripts": {
+    "build": "unbuild",
+    "dev": "vitest dev",
+    "lint": "eslint --ext .ts,.js,.mjs,.cjs .",
+    "release": "pnpm test && standard-version && git push --follow-tags && pnpm publish",
+    "test": "pnpm lint && vitest run"
+  },
+  "readme": "# ♡ serve-placeholder\n\n> Smart placeholder for missing assets\n\n[![npm version][npm-version-src]][npm-version-href]\n[![npm downloads][npm-downloads-src]][npm-downloads-href]\n[![Github Actions][github-actions-src]][github-actions-href]\n[![Codecov][codecov-src]][codecov-href]\n\n## Why?\n\n**💵 Rendering Errors is costly**\n\nServing each 404 page for assets adds extra load to the server and increases crashing chances. This is crucial for setups with server-side-rendering and removes additional SSR loads when assets like `robots.txt` or `favicon.ico` don't exist.\n\n**👌 Meaningful Responses**\n\nWe can always send a better 404 response than an HTML page by knowing file extensions. For example, we send a fallback transparent 1x1 image for image extensions.\n\n**🔍 SEO Friendly**\n\nInstead of indexing invalid URLs with HTML pages, we properly send 404 and the right content type.\n\n## Usage\n\nInstall package:\n\n```sh\n# npm\nnpm install serve-placeholder\n\n# yarn\nyarn install serve-placeholder\n\n# pnpm\npnpm install serve-placeholder\n```\n\nImport:\n\n```js\n// ESM\nimport { servePlaceholder } from 'serve-placeholder'\n\n// CommonJS\nconst { servePlaceholder } = require('serve-placeholder')\n```\n\nCreate and add server middleware between serve-static and router middleware:\n\n```diff\napp.use('/assets', serveStatic(..))\n++ app.use('/assets', servePlaceholder())\napp.use('/', router)\n```\n\nAdditionally, we can have a default placeholder for arbitrary routes which handles known extensions **assuming other routes have no extension**:\n\n```diff\napp.use('/assets', serveStatic(..))\napp.use('/assets', servePlaceholder())\n++ app.use('/', placeholder({ skipUnkown: true }))\napp.use('/', router)\n```\n\n## Options\n\n### `handlers`\n\nA mapping from file extensions to the handler. Extensions should start with *dot* like `.js`.\n\nYou can disable any of the handlers by setting the value to `null`\n\nIf the value of a handler is set to `false`, the middleware will be ignored for that extension.\n\n### `statusCode`\n\n- Default: `404`\n\nSets `statusCode` for all handled responses. Set to `false` to disable overriding statusCode.\n\n### `skipUnknown`\n\n- Default: `false`\n\nSkip middleware when no handler is defined for the current request.\n\nPlease note that if this option is set to `true`, then `default` handler will be disabled!\n\n### `placeholders`\n\n- Type: `Object`\n\nA mapping from handler to placeholder. Values can be `String` or `Buffer`. You can disable any of the placeholders by setting the value to `false`.\n\n### `mimes`\n\n- Type: `Object`\n\nA mapping from handler to the mime type. Mime type will be set as `Content-Type` header. You can disable sending any of the mimes by setting the value to `false`.\n\n### `cacheHeaders`\n\n- Default: `true`\n\nSet headers to prevent accidentally caching 404 resources.\n\nWhen enabled, these headers will be sent:\n\n```js\n{\n  'cache-control': 'no-cache, no-store, must-revalidate',\n  'expires': '0',\n  'pragma': 'no-cache'\n}\n```\n\n### `placeholderHeader`\n\n- Default: `true`\n\nSets an `X-Placeholder` header with value of handler name.\n\n## Defaults\n\nThese are [default handlers](./src/defaults.js). You can override every of them using provided options.\n\nHandler    | Extensions             | Mime type                |  Placeholder\n-----------|------------------------|--------------------------|-------------------\n`default`  | any unknown extension  | -                        | -\n`css`      | `.css`                 | `text/css`               | `/* style not found */`\n`html`     | `.html`, `.htm`        | `text/html`              | `<!-- page not found -->`\n`js`       | `.js`                  | `application/javascript` | `/* script not found */`\n`json`     | `.json`                | `application/json`       | `{}`\n`map`      | `.map`                 | `application/json`       | [empty sourcemap v3 json]\n`plain`    | `.txt`, `.text`, `.md` | `text/plain`             | [empty]\n`image`    | `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`, `.bmp`, `.ico` | `image/gif` | [transparent 1x1 image]\n\n## 💻 Development\n\n- Clone this repository\n- Enable [Corepack](https://github.com/nodejs/corepack) using `corepack enable` (use `npm i -g corepack` for Node.js < 16.10)\n- Install dependencies using `pnpm install`\n- Run interactive tests using `pnpm dev`\n\n## License\n\nMade with 💛\n\nPublished under [MIT License](./LICENSE).\n\n<!-- Badges -->\n[npm-version-src]: https://img.shields.io/npm/v/serve-placeholder?style=flat-square\n[npm-version-href]: https://npmjs.com/package/serve-placeholder\n\n[npm-downloads-src]: https://img.shields.io/npm/dm/serve-placeholder?style=flat-square\n[npm-downloads-href]: https://npmjs.com/package/serve-placeholder\n\n[github-actions-src]: https://img.shields.io/github/workflow/status/unjs/serve-placeholder/ci/main?style=flat-square\n[github-actions-href]: https://github.com/unjs/serve-placeholder/actions?query=workflow%3Aci\n\n[codecov-src]: https://img.shields.io/codecov/c/gh/unjs/serve-placeholder/main?style=flat-square\n[codecov-href]: https://codecov.io/gh/unjs/serve-placeholder\n"
+}

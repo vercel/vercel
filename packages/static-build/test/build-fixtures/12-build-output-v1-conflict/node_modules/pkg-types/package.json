@@ -1,0 +1,39 @@
+{
+  "name": "pkg-types",
+  "version": "0.3.2",
+  "description": "Node.js utilities and TypeScript definitions for `package.json` and `tsconfig.json`",
+  "license": "MIT",
+  "main": "./dist/index.cjs",
+  "exports": {
+    "import": "./dist/index.mjs",
+    "require": "./dist/index.cjs"
+  },
+  "types": "./dist/index.d.ts",
+  "repository": "unjs/pkg-types",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prepack": "unbuild",
+    "release": "standard-version && npm publish && git push --follow-tags",
+    "test": "mocha -r jiti/register ./test/**/*.test.*",
+    "test:types": "tsc --noEmit --module esnext --skipLibCheck --moduleResolution node ./test/*.test.ts"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.0.0",
+    "mlly": "^0.3.6",
+    "pathe": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.22",
+    "@types/mocha": "^9.0.0",
+    "chai": "^4.3.4",
+    "expect-type": "^0.12.0",
+    "jiti": "^1.12.7",
+    "mocha": "^9.1.2",
+    "nyc": "^15.1.0",
+    "standard-version": "^9.3.1",
+    "typescript": "^4.4.4",
+    "unbuild": "^0.5.7"
+  }
+}

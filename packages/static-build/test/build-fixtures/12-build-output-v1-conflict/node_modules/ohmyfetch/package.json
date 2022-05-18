@@ -1,0 +1,67 @@
+{
+  "name": "ohmyfetch",
+  "version": "0.4.17",
+  "description": "oh-my-fetch",
+  "repository": "unjs/ohmyfetch",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "node": {
+        "import": "./dist/node.mjs",
+        "require": "./cjs/node.cjs"
+      },
+      "default": {
+        "import": "./dist/index.mjs",
+        "require": "./cjs/index.cjs"
+      }
+    },
+    "./node": {
+      "import": "./dist/node.mjs",
+      "require": "./cjs/node.cjs"
+    },
+    "./undici": {
+      "import": "./dist/undici.mjs",
+      "require": "./cjs/undici.cjs"
+    }
+  },
+  "main": "./cjs/node.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "cjs"
+  ],
+  "dependencies": {
+    "destr": "^1.1.1",
+    "node-fetch-native": "^0.1.3",
+    "ufo": "^0.8.3",
+    "undici": "^5.0.0"
+  },
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "@types/flat": "latest",
+    "@types/node": "latest",
+    "c8": "^7.11.2",
+    "eslint": "latest",
+    "fetch-blob": "^3.1.5",
+    "formdata-polyfill": "^4.0.10",
+    "h3": "latest",
+    "jiti": "latest",
+    "listhen": "latest",
+    "standard-version": "latest",
+    "typescript": "latest",
+    "unbuild": "latest",
+    "vitest": "^0.10.0"
+  },
+  "packageManager": "pnpm@7.0.1",
+  "scripts": {
+    "build": "unbuild",
+    "dev": "vitest",
+    "lint": "eslint --ext .ts .",
+    "play": "jiti playground/index.ts",
+    "release": "pnpm test && standard-version && git push --follow-tags && pnpm publish",
+    "test": "pnpm lint && vitest run"
+  }
+}

@@ -1,0 +1,53 @@
+<script setup>
+import { useHead } from '#imports'
+const props = defineProps({
+  appName: {
+    type: String,
+    default: "Nuxt"
+  },
+  version: {
+    type: String,
+    default: ""
+  },
+  loading: {
+    type: String,
+    default: "Loading"
+  }
+})
+useHead({
+  title: `${ props.loading } | ${ props.appName }`,
+  script: [
+    {
+      children: `if (typeof window.fetch === 'undefined') {
+        setTimeout(() => window.location.reload(), 1000)
+      } else {
+        const check = async () => {
+          try {
+            const body = await window
+              .fetch(window.location.href)
+              .then(r => r.text())
+            if (!body.includes('__NUXT_LOADING__')) {
+              return window
+                .location
+                .reload()
+            }
+          } catch  {}
+          setTimeout(check, 1000)
+        }
+        check()
+      }`
+    }
+  ],
+  style: [
+    {
+      children: `*,:before,:after{-webkit-box-sizing:border-box;box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}*{--tw-ring-inset:var(--tw-empty, );--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(14, 165, 233, .5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000}:root{-moz-tab-size:4;-o-tab-size:4;tab-size:4}a{color:inherit;text-decoration:inherit}body{margin:0;font-family:inherit;line-height:inherit}html{-webkit-text-size-adjust:100%;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,"Apple Color Emoji","Segoe UI Emoji",Segoe UI Symbol,"Noto Color Emoji";line-height:1.5}svg{display:block;vertical-align:middle}`
+    }
+  ]
+})
+</script>
+<template>
+<div class="min-h-screen bg-white dark:bg-black flex flex-col justify-center items-center text-center"><a href="https://v3.nuxtjs.org" target="_blank" rel="noopener" class="nuxt-logo z-20"><svg viewBox="0 0 221 65" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-40 h-16 mb-4 text-black dark:text-white"><g clip-path="url(#a)"><path fill="currentColor" d="M82.5623 18.5705h7.3017l15.474 24.7415V18.5705h6.741v35.0576h-7.252L89.3025 28.938v24.6901h-6.7402V18.5705ZM142.207 53.628h-6.282v-3.916c-1.429 2.7559-4.339 4.3076-8.015 4.3076-5.822 0-9.603-4.1069-9.603-10.0175V28.3847h6.282v14.3251c0 3.4558 2.146 5.8592 5.362 5.8592 3.524 0 5.974-2.7044 5.974-6.4099V28.3847h6.282V53.628ZM164.064 53.2289l-6.026-8.4144-6.027 8.4144h-6.69l9.296-13.1723-8.58-12.0709h6.843l5.158 7.2641 5.106-7.2641h6.895l-8.632 12.0709 9.295 13.1723h-6.638ZM183.469 20.7726v7.6116h7.149v5.1593h-7.149v12.5311c0 .4208.17.8245.473 1.1223.303.2978.715.4654 1.144.4661h5.532v5.9547h-4.137c-5.617 0-9.293-3.2062-9.293-8.8109V33.5484h-5.056v-5.1642h3.172c1.479 0 2.34-.8639 2.34-2.2932v-5.3184h5.825Z"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M30.1185 11.5456c-1.8853-3.24168-6.5987-3.24169-8.484 0L1.08737 46.8747c-1.885324 3.2417.47133 7.2938 4.24199 7.2938H21.3695c-1.6112-1.4081-2.2079-3.8441-.9886-5.9341l15.5615-26.675-5.8239-10.0138Z" fill="#80EEC0"></path><path d="M43.1374 19.2952c1.5603-2.6523 5.461-2.6523 7.0212 0l17.0045 28.9057c1.5603 2.6522-.39 5.9676-3.5106 5.9676h-34.009c-3.1206 0-5.0709-3.3154-3.5106-5.9676l17.0045-28.9057ZM209.174 53.8005H198.483c0-1.8514.067-3.4526 0-6.0213h10.641c1.868 0 3.353.1001 4.354-.934 1-1.0341 1.501-2.3351 1.501-3.9029 0-1.8347-.667-3.2191-2.002-4.1532-1.301-.9674-2.985-1.4511-5.054-1.4511h-2.601v-5.2539h2.652c1.701 0 3.119-.4003 4.253-1.2009 1.134-.8006 1.701-1.9849 1.701-3.5527 0-1.301-.434-2.3351-1.301-3.1023-.834-.8007-2.001-1.201-3.503-1.201-1.634 0-2.918.4837-3.853 1.4511-.9.9674-1.401 2.1517-1.501 3.5527h-6.254c.133-3.2358 1.251-5.7877 3.352-7.6558 2.135-1.868 4.887-2.8021 8.256-2.8021 2.402 0 4.42.4337 6.055 1.301 1.668.834 2.919 1.9515 3.753 3.3525.867 1.4011 1.301 2.9523 1.301 4.6536 0 1.9681-.551 3.636-1.651 5.0037-1.068 1.3344-2.402 2.235-4.004 2.7021 1.969.4003 3.57 1.3677 4.804 2.9022 1.234 1.5011 1.852 3.4025 1.852 5.7043 0 1.9347-.468 3.7028-1.402 5.304-.934 1.6012-2.301 2.8855-4.103 3.8529-1.768.9674-3.953 1.4511-6.555 1.4511Z" fill="#00DC82"></path></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h221v65H0z"></path></clipPath></defs></svg></a><div class="spotlight-wrapper"><div class="fixed left-0 right-0 spotlight spotlight-top z-10"></div></div><div class="spotlight-wrapper"><div class="fixed left-0 right-0 spotlight spotlight-bottom z-q0"></div></div><div class="nuxt-loader-bar h-[3px] w-full inline"></div></div>
+</template>
+<style scoped>
+.bg-white{--tw-bg-opacity:1;background-color:rgba(255,255,255,var(--tw-bg-opacity))}.inline{display:inline}.flex{display:-webkit-box;display:-ms-flexbox;display:-webkit-flex;display:flex}.flex-col{-webkit-box-orient:vertical;-webkit-box-direction:normal;-ms-flex-direction:column;-webkit-flex-direction:column;flex-direction:column}.items-center{-webkit-box-align:center;-ms-flex-align:center;-webkit-align-items:center;align-items:center}.justify-center{-webkit-box-pack:center;-ms-flex-pack:center;-webkit-justify-content:center;justify-content:center}.h-16{height:4rem}.h-\[3px\]{height:3px}.mb-4{margin-bottom:1rem}.min-h-screen{min-height:100vh}.fixed{position:fixed}.left-0{left:0px}.right-0{right:0px}.text-center{text-align:center}.text-black{--tw-text-opacity:1;color:rgba(0,0,0,var(--tw-text-opacity))}.w-full{width:100%}.w-40{width:10rem}.z-10{z-index:10}.z-20{z-index:20}@media (prefers-color-scheme: dark){.dark\:bg-black{--tw-bg-opacity:1;background-color:rgba(0,0,0,var(--tw-bg-opacity))}.dark\:text-white{--tw-text-opacity:1;color:rgba(255,255,255,var(--tw-text-opacity))}}.spotlight{filter:blur(20vh);height:50vh}.spotlight-top{background:repeating-linear-gradient(to right,#0047E1 0%,#34CDFE 50%,#00DC82 100%);top:-40vh}.spotlight-bottom{background:repeating-linear-gradient(to right,#00DC82 0%,#34CDFE 50%,#0047E1 100%);bottom:-40vh}.spotlight-wrapper{opacity:.5;transition:opacity .4s ease-in}.nuxt-logo:hover~.spotlight-wrapper{opacity:1}.nuxt-loader-bar{background:repeating-linear-gradient(to right,#0047E1 0%,#34CDFE 25%,#00DC82 50%,#36E4DA 75%,#0047E1 100%);width:100%;background-size:200% auto;background-position:0 0;animation:gradient 2s infinite;animation-fill-mode:forwards;animation-timing-function:linear}@keyframes gradient{0%{background-position:0 0}to{background-position:-200% 0}}
+</style>

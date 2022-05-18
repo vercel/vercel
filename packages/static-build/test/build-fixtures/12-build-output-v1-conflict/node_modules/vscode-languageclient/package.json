@@ -1,0 +1,45 @@
+{
+	"name": "vscode-languageclient",
+	"description": "VSCode Language client implementation",
+	"version": "7.0.0",
+	"author": "Microsoft Corporation",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.52.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Microsoft/vscode-languageserver-node.git",
+		"directory": "client"
+	},
+	"bugs": {
+		"url": "https://github.com/Microsoft/vscode-languageserver-node/issues"
+	},
+	"main": "./lib/node/main.js",
+	"browser": {
+		"./lib/node/main.js": "./lib/browser/main.js"
+	},
+	"typings": "./lib/common/api.d.ts",
+	"devDependencies": {
+		"@types/minimatch": "^3.0.3",
+		"@types/semver": "^7.3.4",
+		"@types/vscode": "1.52.0",
+		"shx": "^0.3.2"
+	},
+	"dependencies": {
+		"minimatch": "^3.0.4",
+		"semver": "^7.3.4",
+		"vscode-languageserver-protocol": "3.16.0"
+	},
+	"scripts": {
+		"install:dev": "cd src/node && npm install",
+		"prepublishOnly": "git clean -xfd . && npm install && npm run clean && node ./bin/updateVSCode.js && npm run compile && npm test",
+		"postpublish": "node ../build/npm/post-publish.js",
+		"compile": "node ../build/bin/tsc -b ./tsconfig.json && shx cp src/node/terminateProcess.sh lib/node/terminateProcess.sh",
+		"compile:clean": "git clean -xfd . && npm install && npm run clean && npm run compile",
+		"watch": "node ../build/bin/tsc -b ./tsconfig-watch.json -w",
+		"test": "cd ../client-node-tests && npm test && cd ../client",
+		"clean": "node ../node_modules/rimraf/bin.js lib",
+		"preversion": "npm test"
+	}
+}

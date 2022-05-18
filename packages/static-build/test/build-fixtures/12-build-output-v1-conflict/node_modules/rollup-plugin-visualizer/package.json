@@ -1,0 +1,92 @@
+{
+  "name": "rollup-plugin-visualizer",
+  "version": "5.6.0",
+  "main": "./dist/plugin/index.js",
+  "author": "Denis Bardadym <bardadymchik@gmail.com>",
+  "license": "MIT",
+  "bin": "./dist/bin/cli.js",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:btd/rollup-plugin-visualizer.git"
+  },
+  "homepage": "https://github.com/btd/rollup-plugin-visualizer",
+  "bugs": {
+    "url": "https://github.com/btd/rollup-plugin-visualizer/issues"
+  },
+  "scripts": {
+    "lint": "eslint 'plugin/**/*.ts' 'src/**/*.{ts,tsx}'",
+    "build": "run-p build:*",
+    "build:plugin": "tsc",
+    "build:frontend": "node build.js",
+    "clean": "del-cli dist",
+    "test": "run-s test:*",
+    "test:e2e": "node build.js --all --e2e",
+    "test:test": "node build.js --all --test",
+    "test:e2e-json": "node build.js --all --e2e --json",
+    "test:test-json": "node build.js --all --test --json",
+    "test:e2e-json-sourcemap": "node build.js --all --e2e --json --sourcemap",
+    "test:test-json-sourcemap": "node build.js --all --test --json --sourcemap",
+    "test:cli": "node build.js --dev --all --gzip --brotli --sourcemap --json && node dist/bin/cli.js ./stats.sunburst.json"
+  },
+  "dependencies": {
+    "nanoid": "^3.1.32",
+    "open": "^8.4.0",
+    "source-map": "^0.7.3",
+    "yargs": "^17.3.1"
+  },
+  "peerDependencies": {
+    "rollup": "^2.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^21.0.1",
+    "@rollup/plugin-node-resolve": "^13.1.3",
+    "@rollup/plugin-typescript": "^8.3.0",
+    "@types/bytes": "^3.1.1",
+    "@types/d3-array": "^3.0.2",
+    "@types/d3-color": "^3.0.2",
+    "@types/d3-hierarchy": "^3.0.2",
+    "@types/d3-scale": "^4.0.2",
+    "@types/d3-shape": "^3.0.2",
+    "@types/yargs": "^17.0.8",
+    "@typescript-eslint/eslint-plugin": "^5.9.1",
+    "@typescript-eslint/parser": "^5.9.1",
+    "bytes": "^3.1.1",
+    "d3-array": "^3.1.1",
+    "d3-color": "^3.0.1",
+    "d3-hierarchy": "^3.1.1",
+    "d3-scale": "^4.0.2",
+    "d3-shape": "^3.1.0",
+    "del-cli": "^4.0.1",
+    "eslint": "^8.6.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-react": "^7.28.0",
+    "eslint-plugin-react-hooks": "^4.3.0",
+    "npm-run-all": "^4.1.5",
+    "postcss": "^8.4.5",
+    "postcss-url": "^10.1.3",
+    "preact": "^10.6.4",
+    "prettier": "^2.5.1",
+    "rollup": "^2.64.0",
+    "rollup-plugin-postcss": "^4.0.2",
+    "rollup-plugin-terser": "^7.0.2",
+    "sass": "^1.48.0",
+    "typescript": "^4.5.4",
+    "webcola": "^3.4.0"
+  },
+  "engines": {
+    "node": ">=12"
+  },
+  "keywords": [
+    "rollup-plugin",
+    "visualizer",
+    "network",
+    "treemap",
+    "sunburst",
+    "diagram"
+  ]
+}

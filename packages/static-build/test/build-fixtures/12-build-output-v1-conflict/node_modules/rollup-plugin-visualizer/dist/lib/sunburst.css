@@ -1,0 +1,167 @@
+:root {
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --background-color: #f7eedf;
+  --text-color: #333;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-color: #2b2d42;
+    --text-color: #edf2f4;
+  }
+}
+html {
+  box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+html {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-family);
+}
+
+body {
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+svg {
+  vertical-align: middle;
+  width: 100%;
+  height: 100%;
+  max-height: 100vh;
+}
+
+main {
+  flex-grow: 1;
+  height: 100vh;
+  padding: 20px;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 1070;
+  border: 2px solid;
+  border-radius: 5px;
+  padding: 5px;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+.tooltip-hidden {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: row;
+  font-size: 0.7rem;
+  align-items: center;
+  margin: 0 50px;
+  height: 20px;
+}
+
+.size-selectors {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.size-selector {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+}
+.size-selector input {
+  margin: 0 0.3rem 0 0;
+}
+
+.filters {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.module-filters {
+  display: flex;
+}
+
+.module-filter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+.module-filter input {
+  flex: 1;
+  height: 1rem;
+  padding: 0.01rem;
+  font-size: 0.7rem;
+  margin-left: 0.3rem;
+}
+.module-filter + .module-filter {
+  margin-left: 0.5rem;
+}
+
+.details {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  top: calc(50% - 85px);
+  left: calc(50% - 85px);
+  width: 170px;
+  height: 170px;
+  font-size: 14px;
+  text-align: center;
+  color: var(--font-color);
+  z-index: 100;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.details-size {
+  font-size: 0.8em;
+}
+
+.details-name {
+  font-weight: bold;
+}
+
+.details-percentage {
+  margin: 0.4em 0em;
+  font-size: 2.4em;
+  line-height: 1em;
+}

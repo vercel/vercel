@@ -1,0 +1,27 @@
+{
+  "name": "cookie-es",
+  "version": "0.5.0",
+  "repository": "unjs/cookie-es",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    "require": "./dist/index.cjs",
+    "import": "./dist/index.mjs"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "release": "yarn build && standard-version && git push --follow-tags && npm publish",
+    "test": "node test/index.mjs"
+  },
+  "devDependencies": {
+    "standard-version": "latest",
+    "unbuild": "latest"
+  }
+}

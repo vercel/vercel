@@ -1,0 +1,27 @@
+{
+  "name": "xxhash",
+  "version": "0.2.1",
+  "homepage": "https://github.com/pierrec/js-xxhash",
+  "authors": [
+    "Pierre Curto <pierre.curto@gmail.com>"
+  ],
+  "description": "xxHash - fast 32 and 64 bits hashing algorithm",
+  "main": "build/xxhash.js",
+  "moduleType": [
+    "amd"
+  , "globals"
+  , "node"
+  ],
+  "keywords": [
+    "hash"
+  , "xxhash"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*"
+  , "node_modules"
+  , "bower_components"
+  , "test"
+  , "tests"
+  ]
+}

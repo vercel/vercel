@@ -1,0 +1,32 @@
+{
+  "name": "http-shutdown",
+  "version": "1.2.2",
+  "description": "Gracefully shutdown a running HTTP server.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "mocha",
+    "test-travis": "node --harmony node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --report lcovonly -- --reporter dot"
+  },
+  "keywords": [
+    "http",
+    "https",
+    "graceful",
+    "force",
+    "shutdown"
+  ],
+  "author": "Dillon Buchanan",
+  "repository": "thedillonb/http-shutdown",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^12.12.6",
+    "chai": "^3.4.1",
+    "istanbul": "^0.4.1",
+    "mocha": "^2.3.4",
+    "request": "^2.67.0"
+  },
+  "engines": {
+    "iojs": ">= 1.0.0",
+    "node": ">= 0.12.0"
+  }
+}

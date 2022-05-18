@@ -1,0 +1,58 @@
+{
+  "name": "local-pkg",
+  "version": "0.4.1",
+  "description": "Get information on local packages.",
+  "keywords": [
+    "package"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "homepage": "https://github.com/antfu/local-pkg#readme",
+  "bugs": {
+    "url": "https://github.com/antfu/local-pkg/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/antfu/local-pkg.git"
+  },
+  "funding": "https://github.com/sponsors/antfu",
+  "license": "MIT",
+  "author": "Anthony Fu <anthonyfu117@hotmail.com>",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "require": "./index.cjs",
+      "import": "./index.mjs"
+    }
+  },
+  "main": "index.cjs",
+  "module": "index.mjs",
+  "types": "index.d.ts",
+  "files": [
+    "dist",
+    "index.cjs",
+    "index.mjs",
+    "index.d.ts"
+  ],
+  "devDependencies": {
+    "@antfu/eslint-config": "^0.7.0",
+    "@antfu/ni": "^0.7.0",
+    "@antfu/utils": "^0.3.0",
+    "@types/chai": "^4.2.22",
+    "@types/node": "^16.7.1",
+    "bumpp": "^6.0.6",
+    "chai": "^4.3.4",
+    "eslint": "^7.32.0",
+    "esno": "^0.9.1",
+    "find-up": "^6.1.0",
+    "tsup": "^5.2.1",
+    "typescript": "^4.3.5"
+  },
+  "scripts": {
+    "build": "tsup shared.ts --format esm,cjs --dts && esno scripts/postbuild.ts",
+    "release": "bumpp --commit --push --tag && pnpm publish",
+    "test": "node test/cjs.cjs && node test/esm.mjs"
+  },
+  "readme": "# local-pkg\n\n[![NPM version](https://img.shields.io/npm/v/local-pkg?color=a1b858&label=)](https://www.npmjs.com/package/local-pkg)\n\nGet information on local packages. Works on both CJS and ESM.\n\n## Install\n\n```bash\nnpm i local-pkg\n```\n\n## Usage\n\n```ts\nimport { \n  isPackageExists,\n  getPackageInfo,\n  resolveModule,\n  importModule,\n} from 'local-pkg' \n\nisPackageExists('local-pkg') // true\nisPackageExists('foo') // false\n\nawait getPackageInfo('local-pkg') \n/* {\n *   name: \"local-pkg\",\n *   version: \"0.1.0\",\n *   rootPath: \"/path/to/node_modules/local-pkg\",\n *   packageJson: {\n *     ...\n *   }\n * }\n */\n\n// similar to `require.resolve` but works also in ESM\nresolveModule('local-pkg')\n// '/path/to/node_modules/local-pkg/dist/index.cjs'\n\n// similar to `await import()` but works also in CJS\nconst { importModule } = await importModule('local-pkg')\n```\n\n\n## Sponsors\n\n<p align=\"center\">\n  <a href=\"https://cdn.jsdelivr.net/gh/antfu/static/sponsors.svg\">\n    <img src='https://cdn.jsdelivr.net/gh/antfu/static/sponsors.svg'/>\n  </a>\n</p>\n\n## License\n\n[MIT](./LICENSE) License © 2021 [Anthony Fu](https://github.com/antfu)\n"
+}

@@ -1,0 +1,29 @@
+{
+	"name": "vscode-languageserver-textdocument",
+	"description": "A simple text document implementation for Node LSP servers",
+	"version": "1.0.4",
+	"author": "Microsoft Corporation",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Microsoft/vscode-languageserver-node.git",
+		"directory": "textDocument"
+	},
+	"bugs": {
+		"url": "https://github.com/Microsoft/vscode-languageserver-node/issues"
+	},
+	"main": "./lib/umd/main.js",
+	"typings": "./lib/umd/main",
+	"module": "./lib/esm/main.js",
+	"scripts": {
+		"prepublishOnly": "npm run clean && npm run compile:esm && npm run compile && npm run test",
+		"postpublish": "node ../build/npm/post-publish.js",
+		"compile": "node ../build/bin/tsc -b ./tsconfig.json",
+		"compile:esm": "node ../build/bin/tsc -b ./tsconfig.esm.json",
+		"clean": "node ../node_modules/rimraf/bin.js lib",
+		"watch": "node ../build/bin/tsc -b ./tsconfig-watch.json -w",
+		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
+		"test": "node ../node_modules/mocha/bin/_mocha",
+		"preversion": "npm test"
+	}
+}

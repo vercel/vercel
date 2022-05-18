@@ -1,0 +1,44 @@
+{
+  "name": "hookable",
+  "version": "5.1.1",
+  "description": "Awaitable hook system",
+  "keywords": [
+    "hook",
+    "hookable",
+    "plugin",
+    "tapable",
+    "tappable"
+  ],
+  "repository": "unjs/hookable",
+  "license": "MIT",
+  "exports": {
+    "import": "./dist/index.mjs",
+    "require": "./dist/index.cjs"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "lint": "eslint --ext .ts src",
+    "prepublish": "yarn build",
+    "release": "yarn test && yarn build && standard-version && git push --follow-tags && npm publish",
+    "test": "yarn lint && yarn jest"
+  },
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "@types/jest": "latest",
+    "babel-jest": "latest",
+    "codecov": "latest",
+    "eslint": "latest",
+    "expect-type": "^0.12.0",
+    "jest": "latest",
+    "standard-version": "latest",
+    "ts-jest": "latest",
+    "typescript": "latest",
+    "unbuild": "latest"
+  }
+}

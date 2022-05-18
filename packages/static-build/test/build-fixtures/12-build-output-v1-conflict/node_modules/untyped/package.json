@@ -1,0 +1,63 @@
+{
+  "name": "untyped",
+  "version": "0.4.4",
+  "description": "",
+  "repository": "unjs/untyped",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./babel-plugin": {
+      "import": "./dist/babel.mjs",
+      "require": "./dist/babel.cjs"
+    },
+    "./transform": {
+      "import": "./dist/transform.mjs",
+      "require": "./dist/transform.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "dev": "vitest",
+    "lint": "eslint --ext .js,.ts .",
+    "prepack": "yarn build",
+    "release": "yarn test && standard-version && git push --follow-tags && npm publish",
+    "test": "yarn lint && vitest",
+    "web": "nuxi dev web",
+    "web:build": "cd web && nuxi build"
+  },
+  "dependencies": {
+    "@babel/core": "^7.17.7",
+    "@babel/standalone": "^7.17.7",
+    "@babel/types": "^7.17.0",
+    "scule": "^0.2.1"
+  },
+  "devDependencies": {
+    "@babel/template": "latest",
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "@types/babel__standalone": "latest",
+    "@types/babel__traverse": "latest",
+    "@types/node": "latest",
+    "@vue/compiler-sfc": "latest",
+    "c8": "^7.11.0",
+    "eslint": "latest",
+    "hljs": "latest",
+    "json-schema": "latest",
+    "marked": "latest",
+    "monaco-editor": "latest",
+    "nuxt-windicss": "latest",
+    "nuxt3": "latest",
+    "prismjs": "latest",
+    "standard-version": "latest",
+    "unbuild": "latest",
+    "vitest": "latest"
+  }
+}

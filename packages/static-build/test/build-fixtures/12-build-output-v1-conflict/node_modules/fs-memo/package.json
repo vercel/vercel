@@ -1,0 +1,25 @@
+{
+  "name": "fs-memo",
+  "version": "1.2.0",
+  "description": "easy persisted memo object",
+  "repository": "nuxt-contrib/fs-memo",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "siroc build",
+    "lint": "eslint --ext ts .",
+    "release": "yarn build && standard-version && npm publish && git push --follow-tags"
+  },
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "@types/node": "latest",
+    "eslint": "latest",
+    "siroc": "^0.4.0",
+    "standard-version": "latest",
+    "typescript": "latest"
+  }
+}

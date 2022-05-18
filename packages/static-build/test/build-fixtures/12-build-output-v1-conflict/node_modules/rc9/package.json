@@ -1,0 +1,45 @@
+{
+  "name": "rc9",
+  "version": "1.2.2",
+  "description": "Read/Write config couldn't be easier!",
+  "repository": "unjs/rc9",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "defu": "^6.0.0",
+    "destr": "^1.1.1",
+    "flat": "^5.0.0"
+  },
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "@types/flat": "latest",
+    "@types/jest": "latest",
+    "@types/node": "latest",
+    "c8": "^7.11.0",
+    "eslint": "latest",
+    "standard-version": "latest",
+    "typescript": "latest",
+    "unbuild": "^0.7.2",
+    "vitest": "^0.9.0"
+  },
+  "packageManager": "pnpm@6.32.3",
+  "scripts": {
+    "build": "unbuild",
+    "dev": "vitest",
+    "lint": "eslint --ext .ts .",
+    "release": "pnpm test && pnpm build && standard-version && git push --follow-tags && pnpm publish",
+    "test": "pnpm lint && vitest run"
+  },
+  "readme": "# RC9\n\n> Read/Write config couldn't be easier!\n\n[![npm version][npm-version-src]][npm-version-href]\n[![npm downloads][npm-downloads-src]][npm-downloads-href]\n[![Github Actions][github-actions-src]][github-actions-href]\n[![Codecov][codecov-src]][codecov-href]\n\n## Install\n\nInstall using npm or yarn:\n\n```bash\nnpm i rc9\n# or\nyarn add rc9\n```\n\nImport into your Node.js project:\n\n```js\n// CommonJS\nconst { read, write, update } = require('rc9')\n\n// ESM\nimport { read, write, update } from 'rc9'\n```\n\n## Usage\n\n`.conf`:\n\n```ts\ndb.username=db username\ndb.password=db pass\ndb.enabled=true\n```\n\n**Update config:**\n\n```ts\nupdate({ 'db.enabled': true }) // or update(..., { name: '.conf' })\n```\n\nPush to an array:\n\n```ts\nupdate({ 'modules[]': 'test' })\n```\n\n**Read/Write config:**\n\n```ts\nconst config = read() // or read('.conf')\n\n// config = {\n//   db: {\n//     username: 'db username',\n//     password: 'db pass',\n//     enabled: true\n//   }\n// }\n\nconfig.enabled = false\nwrite(config) // or write(config, '.conf')\n```\n\n**User Config:**\n\nIt is common to keep config in user home directory (MacOS: `/Users/{name}`, Linux: `/home/{name}`, Windows: `C:\\users\\{name}`)\n\nyou can use `readUser`/`writeuser`/`updateUser` shortcuts to quickly do this:\n\n```js\nwriteUser({ token: 123 }, '.zoorc') // Will be saved in {home}/.zoorc\n\nconst conf = readUser('.zoorc') // { token: 123 }\n```\n\n## Unflatten\n\nRC uses [flat](https://www.npmjs.com/package/flat) to automatically flat/unflat when writing and reading rcfile.\n\nIt means that you can use `.` for keys to define objects. Some examples:\n\n- `hello.world = true` <=> `{ hello: { world: true }`\n- `test.0 = A` <=> `tags: [ 'A' ]`\n\n**Note:** If you use keys that can override like `x=` and `x.y=`, you can disable this feature by passing `flat: true` option.\n\n**Tip:** You can use keys ending with `[]` to push to an array like `test[]=A`\n\n## Native Values\n\nRC uses [destr](https://www.npmjs.com/package/destr) to convert values into native javascript values.\n\nSo reading `count=123` results `{ count: 123 }` (instead of `{ count: \"123\" }`) if you want to preserve strings as is, can use `count=\"123\"`.\n\n## Exports\n\n```ts\nconst defaults: RCOptions;\nfunction parse(contents: string, options?: RCOptions): RC\nfunction parseFile(path: string, options?: RCOptions): RC\nfunction read(options?: RCOptions | string): RC;\nfunction readUser(options?: RCOptions | string): RC;\nfunction serialize(config: RC): string;\nfunction write(config: RC, options?: RCOptions | string): void;\nfunction writeUser(config: RC, options?: RCOptions | string): void;\nfunction update(config: RC, options?: RCOptions | string): RC;\nfunction updateUser(config: RC, options?: RCOptions | string): RC;\n```\n\n**Types:**\n\n```ts\ntype RC = Record<string, any>;\ninterface RCOptions {\n    name?: string;\n    dir?: string;\n    flat?: boolean;\n}\n```\n\n**Defaults:**\n\n```ts\n{\n  name: '.conf',\n  dir: process.cwd(),\n  flat: false\n}\n```\n\n### Why RC9?\n\nBe the first one to guess 🐇 <!-- Hint: do research about rc files history -->\n\n## License\n\nMIT. Made with 💖\n\n<!-- Badges -->\n[npm-version-src]: https://img.shields.io/npm/v/rc9?style=flat-square\n[npm-version-href]: https://npmjs.com/package/rc9\n\n[npm-downloads-src]: https://img.shields.io/npm/dm/rc9?style=flat-square\n[npm-downloads-href]: https://npmjs.com/package/rc9\n\n[github-actions-src]: https://img.shields.io/github/workflow/status/unjs/rc9/ci/main?style=flat-square\n[github-actions-href]: https://github.com/unjs/rc9/actions?query=workflow%3Aci\n\n[codecov-src]: https://img.shields.io/codecov/c/gh/unjs/rc9/main?style=flat-square\n[codecov-href]: https://codecov.io/gh/unjs/rc9\n"
+}

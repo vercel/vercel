@@ -1,0 +1,15 @@
+language: node_js
+node_js:
+  - '0.12'
+  - '4.0'
+  - 'stable'
+script: "npm run test-travis"
+after_script: "npm install coveralls@2 && cat ./coverage/lcov.info | coveralls"
+deploy:
+  provider: npm
+  email: thedillonb@gmail.com
+  api_key:
+    secure: IwwwZ4AFXheXI1N2XGJwfQXTZMNsVbhpyzcNyWHI9cihoatuwtIC1K7S2jTGXfm/IWJ6Fn7IgcyJ/uVXudUnHK0kqC5j0uss07gs/EXeqmJfi2vPKFWq3ajCrBz4HwIgcjjcNfJpWjwZzPb+yXAd2iC3QixmwtlhMh0T9zneOy0m5p/bZQxvCrCkb2XaBZ4t6tmjCt3b1HdU6wTxVqfa8s7hw2XyDFinFapJM2JVmErL3LCj46i65LzFNI7bEqW/say6U45/jAT2dFBISED4fbT7+o7d2Hyrop9DjMyNJMLEWDbEkBF73Juvn9y59H9ORDT2FJ1t8Owgs+mHHoNTAGhnjCdQqM0ZDlSXnUUsA3F7RB/+SXUNsKhRk/2oUwj6eItq9cCdosHeI//nJanGqxbfILxrHbIyqV5S8H+BxEV7MPQzJ5g4N2yr3sudsz/7CwxGi/eaa7eRjwdVvFA7+K/cSa2cIqCPckk/CyQaT9DLJBcDzLBAyuwyrwajBPAZU4OAlpH2QI0OSZchMYiixA4SvTQSd3LqVZkFbzk6TSkzn10zMhk7Lq+9cXMM/AJyvg3cRyjppWHFMRluQdfe5ANUGiLSeVs7FMl5/pJZ/siB36YTratTCZN27zaPrMgNWYBiopPhhrR1/F5JrjCj6ipnx7vBvvLZohXjaZMSHMo=
+  on:
+    tags: true
+    repo: thedillonb/http-shutdown

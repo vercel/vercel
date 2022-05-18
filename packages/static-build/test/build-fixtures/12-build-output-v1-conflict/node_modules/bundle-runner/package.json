@@ -1,0 +1,40 @@
+{
+  "name": "bundle-runner",
+  "version": "0.0.1",
+  "description": "run webpack bundles in Node.js with optional VM sandboxing",
+  "repository": "nuxt-contrib/bundle-runner",
+  "license": "MIT",
+  "main": "./dist/bundle-runner.cjs.js",
+  "module": "./dist/bundle-runner.esm.js",
+  "types": "./types/index.d.ts",
+  "files": [
+    "dist",
+    "types"
+  ],
+  "scripts": {
+    "build": "yarn clean && rollup -c && yarn types",
+    "clean": "rm -rf ./dist ./types",
+    "lint": "eslint --ext .ts src",
+    "release": "yarn test && yarn build && standard-version && git push --follow-tags && npm publish",
+    "test": "yarn lint && yarn jest",
+    "types": "tsc --declarationDir types --declaration --emitDeclarationOnly"
+  },
+  "dependencies": {
+    "source-map": "^0.7.3"
+  },
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "@rollup/plugin-typescript": "latest",
+    "@types/jest": "latest",
+    "babel-jest": "latest",
+    "eslint": "latest",
+    "jest": "latest",
+    "rollup": "latest",
+    "rollup-plugin-babel": "latest",
+    "rollup-plugin-node-resolve": "latest",
+    "standard-version": "latest",
+    "ts-jest": "latest",
+    "tsdoc": "latest",
+    "typescript": "latest"
+  }
+}

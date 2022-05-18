@@ -1,0 +1,39 @@
+{
+  "name": "defu",
+  "version": "6.0.0",
+  "description": "Recursively assign default properties. Lightweight and Fast!",
+  "repository": "unjs/defu",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "require": "./dist/defu.cjs",
+      "import": "./dist/defu.mjs"
+    }
+  },
+  "main": "./dist/defu.cjs",
+  "module": "./dist/defu.mjs",
+  "types": "./dist/defu.d.ts",
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "@types/node": "latest",
+    "c8": "^7.11.0",
+    "eslint": "latest",
+    "expect-type": "latest",
+    "standard-version": "latest",
+    "typescript": "latest",
+    "unbuild": "latest",
+    "vitest": "^0.7.7"
+  },
+  "packageManager": "pnpm@6.32.3",
+  "scripts": {
+    "build": "unbuild",
+    "dev": "vitest",
+    "lint": "eslint --ext .ts src",
+    "release": "pnpm test && standard-version && git push --follow-tags && pnpm publish",
+    "test": "pnpm lint && pnpm vitest"
+  },
+  "readme": "![defu](.github/banner.svg)\n\n# 🌊 defu\n\n> Assign default properties, recursively. Lightweight and Fast!\n\n[![Standard JS][standard-src]][standard-href]\n[![codecov][codecov-src]][codecov-href]\n[![npm version][npm-v-src]][npm-v-href]\n[![npm downloads][npm-dm-src]][npm-dm-href]\n[![package phobia][packagephobia-src]][packagephobia-href]\n[![bundle phobia][bundlephobia-src]][bundlephobia-href]\n\n## Install\n\nInstall package:\n\n```bash\n# yarn\nyarn add defu\n# npm\nnpm install defu\n# pnpm\npnpm install defu\n```\n\n## Usage\n\n```js\nimport { defu } from 'defu'\n\nconst options = defu(object, ...defaults)\n```\n\nLeftmost arguments have more priority when assigning defaults.\n\n### Arguments\n\n- **object (Object):** The destination object.\n- **source (Object):** The source object.\n\n```js\nimport { defu } from 'defu'\n\nconsole.log(defu({ 'a': { 'b': 2 } }, { 'a': { 'b': 1, 'c': 3 } }))\n// => { a: { b: 2, c: 3 } }\n```\n\n### Using with CommonJS\n\n```js\nconst { defu } = require('defu')\n```\n\n## Custom Merger\n\nSometimes default merging strategy is not desirable. Using `createDefu` we can create a custom instance with different merging strategy.\n\nThis function accepts `obj` (source object), `key` and `value` (current value) and should return `true` if applied custom merging.\n\n**Example:** Sum numbers instead of overriding\n\n```js\nimport { createDefu } from 'defu'\n\nconst ext = createDefu((obj, key, value) => {\n  if (typeof obj[key] === 'number' && typeof value === 'number') {\n    obj[key] += val\n    return true\n  }\n})\n\next({ cost: 15 }, { cost: 10 }) // { cost: 25 }\n```\n\n## Function Merger\n\nUsing `defuFn`, if user provided a function, it will be called with default value instead of merging.\n\nI can be useful for default values manipulation.\n\n**Example:** Filter some items from defaults (array) and add 20 to the count default value.\n\n```js\nimport { defuFn } from 'defu'\n\ndefuFn({\n  ignore: (val) => val.filter(item => item !== 'dist'),\n  count: (count) => count + 20\n }, {\n   ignore: ['node_modules','dist'],\n   count: 10\n })\n /*\n {\n    ignore: ['node_modules'],\n    count: 30\n  }\n  */\n```\n\n**Note:** if the default value is not defined, the function defined won't be called and kept as value.\n\n## Array Function Merger\n\n`defuArrayFn` is similar to `defuFn` but **only applies to array values defined in defaults**.\n\n**Example:** Filter some items from defaults (array) and add 20 to the count default value.\n\n```js\nimport { defuArrayFn } from 'defu'\n\ndefuArrayFn({\n  ignore(val) => val.filter(i => i !== 'dist'),\n  count: () => 20\n }, {\n   ignore: [\n     'node_modules',\n     'dist'\n   ],\n   count: 10\n })\n /*\n  {\n    ignore: ['node_modules'],\n    count: () => 20\n  }\n  */\n```\n\n**Note:** the function is called only if the value defined in defaults is an aray.\n\n### Remarks\n\n- `object` and `defaults` are not modified\n- Nullish values ([`null`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null) and [`undefined`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined)) are skipped. Please use [defaults-deep](https://www.npmjs.com/package/defaults-deep) or [omit-deep](http://npmjs.com/package/omit-deep) or [lodash.defaultsdeep](https://www.npmjs.com/package/lodash.defaultsdeep) if you need to preserve or different behavior.\n- Assignment of `__proto__` and `constructor` keys will be skipped to prevent security issues with object pollution.\n- Will concat `array` values (if default property is defined)\n```js\nconsole.log(defu({ array: ['b', 'c'] }, { array: ['a'] }))\n// => { array: ['a', 'b', 'c']}\n```\n\n## License\n\nMIT. Made with 💖\n\n<!-- Refs -->\n[standard-src]: https://flat.badgen.net/badge/code%20style/standard/green\n[standard-href]: https://standardjs.com\n\n[npm-v-src]: https://flat.badgen.net/npm/v/defu/latest\n[npm-v-href]: https://npmjs.com/package/defu\n\n[npm-dm-src]: https://flat.badgen.net/npm/dm/defu\n[npm-dm-href]: https://npmjs.com/package/defu\n\n[packagephobia-src]: https://flat.badgen.net/packagephobia/install/defu\n[packagephobia-href]: https://packagephobia.now.sh/result?p=defu\n\n[bundlephobia-src]: https://flat.badgen.net/bundlephobia/min/defu\n[bundlephobia-href]: https://bundlephobia.com/result?p=defu\n\n[codecov-src]: https://flat.badgen.net/codecov/c/github/unjs/defu/master\n[codecov-href]: https://codecov.io/gh/unjs/defu\n"
+}

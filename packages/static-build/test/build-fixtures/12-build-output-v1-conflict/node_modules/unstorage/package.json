@@ -1,0 +1,77 @@
+{
+  "name": "unstorage",
+  "version": "0.4.1",
+  "description": "Universal Storage Layer",
+  "repository": "unjs/unstorage",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    "./drivers/*": {
+      "import": "./dist/drivers/*.mjs",
+      "require": "./dist/drivers/*.cjs",
+      "types": "./dist/drivers/*.d.ts"
+    },
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./server": {
+      "import": "./dist/server.mjs",
+      "require": "./dist/server.cjs",
+      "types": "./dist/server.d.ts"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "anymatch": "^3.1.2",
+    "chokidar": "^3.5.3",
+    "destr": "^1.1.1",
+    "h3": "^0.7.6",
+    "ioredis": "^5.0.4",
+    "listhen": "^0.2.11",
+    "mri": "^1.2.0",
+    "ohmyfetch": "^0.4.16",
+    "ufo": "^0.8.3",
+    "ws": "^8.6.0"
+  },
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "@types/ioredis": "latest",
+    "@types/jsdom": "latest",
+    "@types/mri": "latest",
+    "@types/node": "latest",
+    "@types/ws": "latest",
+    "@vitejs/plugin-vue": "latest",
+    "@vue/compiler-sfc": "latest",
+    "c8": "^7.11.2",
+    "doctoc": "latest",
+    "eslint": "latest",
+    "jiti": "latest",
+    "jsdom": "latest",
+    "mkdist": "latest",
+    "monaco-editor": "latest",
+    "standard-version": "latest",
+    "types-cloudflare-worker": "^1.2.0",
+    "typescript": "latest",
+    "unbuild": "latest",
+    "vite": "latest",
+    "vitest": "^0.10.2",
+    "vue": "^3.2.33"
+  },
+  "packageManager": "pnpm@7.0.0",
+  "scripts": {
+    "build": "unbuild",
+    "demo": "vite demo",
+    "dev": "vitest",
+    "doctoc": "doctoc README.md --notitle --maxlevel 3",
+    "lint": "eslint --ext .ts .",
+    "release": "pnpm test && standard-version && git push --follow-tags && pnpm publish",
+    "test": "pnpm lint && vitest run",
+    "unstorage": "pnpm jiti src/cli"
+  }
+}

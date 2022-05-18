@@ -1,0 +1,66 @@
+{
+  "name": "@netlify/functions",
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
+  "version": "1.0.0",
+  "description": "JavaScript utilities for Netlify Functions",
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "husky install node_modules/@netlify/eslint-config-node/.husky/",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm ci && npm test",
+    "test": "run-s format test:dev",
+    "format": "run-s format:check-fix:*",
+    "format:ci": "run-s format:check:*",
+    "format:check-fix:lint": "run-e format:check:lint format:fix:lint",
+    "format:check:lint": "cross-env-shell eslint $npm_package_config_eslint",
+    "format:fix:lint": "cross-env-shell eslint --fix $npm_package_config_eslint",
+    "format:check-fix:prettier": "run-e format:check:prettier format:fix:prettier",
+    "format:check:prettier": "cross-env-shell prettier --check $npm_package_config_prettier",
+    "format:fix:prettier": "cross-env-shell prettier --write $npm_package_config_prettier",
+    "test:dev": "run-s build test:dev:*",
+    "test:ci": "run-s build test:ci:*",
+    "test:dev:ava": "ava",
+    "test:ci:ava": "nyc -r lcovonly -r text -r json ava"
+  },
+  "config": {
+    "eslint": "--ignore-pattern README.md --ignore-path .gitignore --cache --format=codeframe --max-warnings=0 \"{src,scripts,.github}/**/*.{ts,js,md,html}\" \"*.{ts,js,md,html}\" \".*.{ts,js,md,html}\"",
+    "prettier": "--ignore-path .gitignore --loglevel=warn \"{src,scripts,.github}/**/*.{ts,js,md,yml,json,html}\" \"*.{ts,js,yml,json,html}\" \".*.{ts,js,yml,json,html}\" \"!**/package-lock.json\" \"!package-lock.json\""
+  },
+  "ava": {
+    "files": [
+      "test/*.js"
+    ],
+    "verbose": true
+  },
+  "keywords": [],
+  "license": "MIT",
+  "repository": "netlify/functions",
+  "bugs": {
+    "url": "https://github.com/netlify/functions/issues"
+  },
+  "author": "Netlify Inc.",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "is-promise": "^4.0.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^13.0.0",
+    "@commitlint/config-conventional": "^13.0.0",
+    "@netlify/eslint-config-node": "^5.1.4",
+    "ava": "^2.4.0",
+    "husky": "^7.0.4",
+    "npm-run-all": "^4.1.5",
+    "nyc": "^15.0.0",
+    "typescript": "^4.4.4"
+  },
+  "engines": {
+    "node": ">=8.3.0"
+  }
+}

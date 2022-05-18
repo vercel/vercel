@@ -1,0 +1,40 @@
+{
+  "name": "ohash",
+  "version": "0.1.0",
+  "description": "Super fast hashing library based on murmurhash3 written in Vanilla JS",
+  "repository": "unjs/ohash",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "c8": "latest",
+    "eslint": "latest",
+    "standard-version": "latest",
+    "typescript": "latest",
+    "unbuild": "latest",
+    "vitest": "latest"
+  },
+  "packageManager": "pnpm@6.32.2",
+  "scripts": {
+    "build": "unbuild",
+    "dev": "vitest dev",
+    "lint": "eslint --ext .ts,.js,.mjs,.cjs .",
+    "release": "pnpm test && standard-version && git push --follow-tags && pnpm publish",
+    "test": "pnpm lint && vitest run"
+  },
+  "readme": "# ohash\n\n[![npm version][npm-version-src]][npm-version-href]\n[![npm downloads][npm-downloads-src]][npm-downloads-href]\n[![Github Actions][github-actions-src]][github-actions-href]\n[![Codecov][codecov-src]][codecov-href]\n\n> Super fast hashing library based on murmurhash3 written in Vanilla JS\n\n## Usage\n\nInstall package:\n\n```sh\n# npm\nnpm install ohash\n\n# yarn\nyarn install ohash\n\n# pnpm\npnpm install ohash\n```\n\nImport:\n\n```js\n// ESM\nimport { hash, objectHash, murmurHash } from 'ohash'\n\n// CommonJS\nconst { hash, objectHash, murmurHash } = require('ohash')\n```\n\n### `hash(object, options?)`\n\nConverts object value into a string hash using `objectHash` and then applies `murmurHash`.\n\nUsage:\n\n```js\nimport { hash } from 'ohash'\n\n// \"2736179692\"\nconsole.log(hash({ foo: 'bar'}))\n```\n\n### `objectHash(object, options?)`\n\nConverts a nest object value into a stable and safe string for hashing.\n\nUsage:\n\n```js\nimport { objectHash } from 'ohash'\n\n// \"object:1:string:3:foo:string:3:bar,\"\nconsole.log(objectHash({ foo: 'bar'}))\n```\n\n### `murmurHash(str)`\n\nConverts input string (of any length) into a 32-bit positive integer using MurmurHash3.\n\nUsage:\n\n```js\nimport { murmurHash } from 'ohash'\n\n// \"2708020327\"\nconsole.log(murmurHash('Hello World'))\n```\n\n## What is MurmurHash\n\n[MurmurHash](https://en.wikipedia.org/wiki/MurmurHash) is a non-cryptographic hash function created by Austin Appleby.\n\nAccording to [murmurhash website](https://sites.google.com/site/murmurhash):\n\n✅ Extremely simple - compiles down to ~52 instructions on x86.\n\n✅ Excellent distribution - Passes chi-squared tests for practically all keysets & bucket sizes.\n\n✅ Excellent avalanche behavior - Maximum bias is under 0.5%.\n\n✅ Excellent collision resistance - Passes Bob Jenkin's frog.c torture-test. No collisions possible for 4-byte keys, no small (1- to 7-bit) differentials.\n\n✅ Excellent performance\n\n## 💻 Development\n\n- Clone this repository\n- Enable [Corepack](https://github.com/nodejs/corepack) using `corepack enable` (use `npm i -g corepack` for Node.js < 16.10)\n- Install dependencies using `pnpm install`\n- Run interactive tests using `pnpm dev`\n\n## License\n\nMade with 💛\n\nPublished under [MIT License](./LICENSE).\n\nBased on [puleos/object-hash](https://github.com/puleos/object-hash) by [Scott Puleo](https://github.com/puleos/), and implementations from [perezd/node-murmurhash](perezd/node-murmurhash) and\n[garycourt/murmurhash-js](https://github.com/garycourt/murmurhash-js) by [Gary Court](mailto:gary.court@gmail.com) and [Austin Appleby](mailto:aappleby@gmail.com).\n\n<!-- Badges -->\n[npm-version-src]: https://img.shields.io/npm/v/ohash?style=flat-square\n[npm-version-href]: https://npmjs.com/package/ohash\n\n[npm-downloads-src]: https://img.shields.io/npm/dm/ohash?style=flat-square\n[npm-downloads-href]: https://npmjs.com/package/ohash\n\n[github-actions-src]: https://img.shields.io/github/workflow/status/unjs/ohash/ci/main?style=flat-square\n[github-actions-href]: https://github.com/unjs/ohash/actions?query=workflow%3Aci\n\n[codecov-src]: https://img.shields.io/codecov/c/gh/unjs/ohash/main?style=flat-square\n[codecov-href]: https://codecov.io/gh/unjs/ohash\n"
+}

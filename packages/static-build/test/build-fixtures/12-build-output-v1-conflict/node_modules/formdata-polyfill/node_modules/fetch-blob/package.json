@@ -1,0 +1,58 @@
+{
+    "name": "fetch-blob",
+    "version": "3.1.3",
+    "description": "Blob & File implementation in Node.js, originally from node-fetch.",
+    "main": "index.js",
+    "type": "module",
+    "files": [
+        "from.js",
+        "file.js",
+        "file.d.ts",
+        "index.js",
+        "index.d.ts",
+        "from.d.ts",
+        "streams.cjs"
+    ],
+    "scripts": {
+        "test-wpt": "node --experimental-loader ./test/http-loader.js ./test/test-wpt-in-node.js",
+        "test": "ava test.js",
+        "report": "c8 --reporter json --reporter text ava test.js",
+        "coverage": "c8 --reporter json --reporter text ava test.js && codecov -f coverage/coverage-final.json",
+        "prepublishOnly": "tsc --declaration --emitDeclarationOnly --allowJs index.js from.js"
+    },
+    "repository": "https://github.com/node-fetch/fetch-blob.git",
+    "keywords": [
+        "blob",
+        "file",
+        "node-fetch"
+    ],
+    "engines": {
+        "node": "^12.20 || >= 14.13"
+    },
+    "author": "Jimmy Wärting <jimmy@warting.se> (https://jimmy.warting.se)",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/node-fetch/fetch-blob/issues"
+    },
+    "homepage": "https://github.com/node-fetch/fetch-blob#readme",
+    "devDependencies": {
+        "ava": "^3.15.0",
+        "c8": "^7.7.2",
+        "codecov": "^3.8.2",
+        "node-fetch": "^3.0.0-beta.9",
+        "typescript": "^4.3.2"
+    },
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/jimmywarting"
+        },
+        {
+            "type": "paypal",
+            "url": "https://paypal.me/jimmywarting"
+        }
+    ],
+    "dependencies": {
+        "web-streams-polyfill": "^3.0.3"
+    }
+}

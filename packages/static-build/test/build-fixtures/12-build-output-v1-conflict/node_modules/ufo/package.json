@@ -1,0 +1,42 @@
+{
+  "name": "ufo",
+  "version": "0.8.4",
+  "description": "URL utils for humans",
+  "repository": "unjs/ufo",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    },
+    "./*": "./*"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "latest",
+    "@types/flat": "latest",
+    "@types/node": "latest",
+    "c8": "^7.11.2",
+    "eslint": "latest",
+    "standard-version": "latest",
+    "typescript": "latest",
+    "unbuild": "latest",
+    "vitest": "latest"
+  },
+  "packageManager": "pnpm@6.32.11",
+  "scripts": {
+    "build": "unbuild",
+    "dev": "vitest",
+    "lint": "eslint --ext .ts .",
+    "release": "pnpm test && standard-version && git push --follow-tags && pnpm publish",
+    "test": "pnpm lint && vitest run"
+  },
+  "readme": "[![npm version][npm-version-src]][npm-version-href]\n[![npm downloads][npm-downloads-src]][npm-downloads-href]\n[![Github Actions][github-actions-src]][github-actions-href]\n[![Codecov][codecov-src]][codecov-href]\n[![bundle][bundle-src]][bundle-href]\n\n![👽 ufo](.github/banner.svg)\n\n## Install\n\nInstall using npm or yarn:\n\n```bash\nnpm i ufo\n# or\nyarn add ufo\n```\n\nImport:\n\n```js\n// CommonJS\nconst { normalizeURL, joinURL } = require('ufo')\n\n// ESM\nimport { normalizeURL, joinURL } from 'ufo'\n\n// Deno\nimport { parseURL } from 'https://unpkg.com/ufo/dist/index.mjs'\n```\n\n**Notice:** You may need to transpile package and add URL polyfill for legacy environments\n\n## Usage\n\n### `normalizeURL`\n\n- Ensures URL is properly encoded\n- Ensures pathname starts with slash\n- Preserves protocol/host if provided\n\n```ts\n\n// Result: test?query=123%20123#hash,%20test\nnormalizeURL('test?query=123 123#hash, test')\n\n// Result: http://localhost:3000/\nnormalizeURL('http://localhost:3000')\n```\n\n### `joinURL`\n\n```ts\n// Result: a/b/c\njoinURL('a', '/b', '/c')\n```\n\n### `resolveURL`\n\n```ts\n// Result: http://foo.com/foo/bar/baz?test=123#token\nresolveURL('http://foo.com/foo?test=123#token', 'bar', 'baz')\n```\n\n### `parseURL`\n\n```ts\n// Result: { protocol: 'http:', auth: '', host: 'foo.com', pathname: '/foo', search: '?test=123', hash: '#token' }\nparseURL('http://foo.com/foo?test=123#token')\n\n// Result: { pathname: 'foo.com/foo', search: '?test=123', hash: '#token' }\nparseURL('foo.com/foo?test=123#token')\n\n// Result: { protocol: 'https:', auth: '', host: 'foo.com', pathname: '/foo', search: '?test=123', hash: '#token' }\nparseURL('foo.com/foo?test=123#token', 'https://')\n```\n\n### `withQuery`\n\n```ts\n// Result: /foo?page=a&token=secret\nwithQuery('/foo?page=a', { token: 'secret' })\n```\n\n### `getQuery`\n\n```ts\n// Result: { test: '123', unicode: '好' }\ngetQuery('http://foo.com/foo?test=123&unicode=%E5%A5%BD')\n```\n\n### `$URL`\n\nImplementing URL interface with some improvements:\n\n- Supporting schemeless and hostless URLs\n- Supporting relative URLs\n- Preserving trailing-slash status\n- Decoded and mutable classs properties (`protocol`, `host`, `auth`, `pathname`, `query`, `hash`)\n- Consistent URL parser independent of environment\n- Consistent encoding independent of environment\n- Punycode support for host encoding\n\n### `withTrailingSlash`\n\nEnsures url ends with a trailing slash\n\n```ts\n// Result: /foo/\nwithTrailingSlash('/foo')\n```\n\n```ts\n// Result: /path/?query=true\nwithTrailingSlash('/path?query=true', true)\n```\n\n### `withoutTrailingSlash`\n\nEnsures url does not ends with a trailing slash\n\n```ts\n// Result: /foo\nwithoutTrailingSlash('/foo/')\n```\n\n```ts\n// Result: /path?query=true\nwithoutTrailingSlash('/path/?query=true', true)\n```\n\n### `cleanDoubleSlashes`\n\nEnsures url does not have double slash (except for protocol)\n\n```ts\n// Result: /foo/bar/\ncleanDoubleSlashes('//foo//bar//')\n// Result: http://example.com/analyze/http://localhost:3000/\ncleanDoubleSlashes('http://example.com/analyze//http://localhost:3000//')\n```\n\n### `isSamePath`\n\nCheck two paths are equal or not. Trailing slash and encoding are normalized before comparation.\n\n```ts\n// Result: true\nisSamePath('/foo', '/foo/')\n```\n\n### `isRelative`\n\nCheck if a path starts with `./` or `../`.\n\n```ts\n// Result: true\nisRelative('./foo')\n```\n\n### `withHttp`\n\nEnsures url protocol is `http`\n\n```ts\n// Result: http://example.com\nwithHttp('https://example.com')\n```\n\n### `withHttps`\n\nEnsures url protocol is `https`\n\n```ts\n// Result: https://example.com\nwithHttps('http://example.com')\n```\n\n### `withProtocol`\n\nChanges url protocol passed as second argument\n\n```ts\n// Result: ftp://example.com\nwithProtocol('http://example.com', 'ftp://')\n```\n\n### `withoutProtocol`\n\nRemoves url protocol\n\n```ts\n// Result: example.com\nwithoutProtocol('http://example.com')\n```\n\n### `isEqual`\n\nCompare two URLs regardless of their slash condition or encoding:\n\n```ts\n// Result: true\nisEqual('/foo', 'foo')\nisEqual('foo/', 'foo')\nisEqual('/foo bar', '/foo%20bar')\n\n// Strict compare\n// Result: false\nisEqual('/foo', 'foo', { leadingSlash: true })\nisEqual('foo/', 'foo', { trailingSlash: true })\nisEqual('/foo bar', '/foo%20bar', { encoding: true })\n```\n\n## License\n\n[MIT](./LICENSE)\n\nSpecial thanks to Eduardo San Martin Morote ([posva](https://github.com/posva)) for [encoding utlities](https://github.com/vuejs/vue-router-next/blob/v4.0.1/src/encoding.ts)\n\n<!-- Badges -->\n[npm-version-src]: https://img.shields.io/npm/v/ufo?style=flat-square\n[npm-version-href]: https://npmjs.com/package/ufo\n\n[npm-downloads-src]: https://img.shields.io/npm/dm/ufo?style=flat-square\n[npm-downloads-href]: https://npmjs.com/package/ufo\n\n[github-actions-src]: https://img.shields.io/github/workflow/status/unjs/ufo/ci/main?style=flat-square\n[github-actions-href]: https://github.com/unjs/ufo/actions?query=workflow%3Aci\n\n[codecov-src]: https://img.shields.io/codecov/c/gh/unjs/ufo/main?style=flat-square\n[codecov-href]: https://codecov.io/gh/unjs/ufo\n\n[bundle-src]: https://img.shields.io/bundlephobia/minzip/ufo?style=flat-square\n[bundle-href]: https://bundlephobia.com/result?p=ufo\n"
+}

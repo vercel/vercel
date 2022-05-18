@@ -1,0 +1,35 @@
+{
+  "name": "std-env",
+  "version": "3.1.1",
+  "description": "Detect current Javascript environment",
+  "repository": "unjs/std-env",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    "import": "./dist/index.mjs",
+    "require": "./dist/index.cjs"
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "^9.0.0",
+    "c8": "^7.11.0",
+    "eslint": "^8.13.0",
+    "jiti": "^1.13.0",
+    "standard-version": "^9.3.2",
+    "unbuild": "^0.7.4",
+    "vitest": "^0.9.3"
+  },
+  "packageManager": "pnpm@6.32.7",
+  "scripts": {
+    "build": "unbuild",
+    "dev": "vitest",
+    "lint": "eslint --ext .ts .",
+    "release": "pnpm test && standard-version && git push --follow-tags && pnpm publish",
+    "test": "pnpm lint && vitest run"
+  },
+  "readme": "# std-env\n\n[![npm](https://img.shields.io/npm/dm/std-env.svg?style=flat-square)](http://npmjs.com/package/std-env)\n[![npm](https://img.shields.io/npm/v/std-env.svg?style=flat-square)](http://npmjs.com/package/std-env)\n[![bundlephobia](https://img.shields.io/bundlephobia/min/std-env/latest.svg?style=flat-square)](https://bundlephobia.com/result?p=std-env)\n\n> Detect current Javascript environment\n\n## Installation\n\n```sh\n# Using Yarn\nyarn add std-env\n\n# Using npm\nnpm i std-env\n```\n\n## Usage\n\n```js\n// ESM\nimport { isWindows } from 'std-env'\n\n// CommonJS\nconst { isCI } = require('std-env')\n```\n\nAvailable exports:\n\n- `hasTTY`\n- `hasWindow`\n- `isCI`\n- `isDebug`\n- `isDevelopment`\n- `isLinux`\n- `isMacOS`\n- `isMinimal`\n- `isProduction`\n- `isTest`\n- `isWindows`\n- `platform`\n- `provider`\n\nYou can read more about how each flag works from [./src/index.ts](./src/index.ts).\n\nList of well known providers can be found from [./src/providers.ts](./src/providers.ts).\n\n\n## License\n\nMIT\n"
+}

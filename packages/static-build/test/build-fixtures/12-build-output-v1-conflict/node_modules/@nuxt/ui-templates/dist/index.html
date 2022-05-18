@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/petite-vue" defer init></script>
+    
+    <script type="module" crossorigin src="/assets/windi.9231e4d2.js"></script>
+    <link rel="stylesheet" href="/assets/windi.c9fd3034.css">
+  </head>
+  <body v-scope='{"templateNames":["error-404","error-500","error-dev","loading","messages.json","welcome"]}'>
+    <div class="container mx-auto pt-10">
+      <h1 class="text-4xl mb-8">Nuxt Templates</h1>
+      <ul>
+        <li v-for="name in templateNames.filter(name => !name.includes('.json'))">
+          <a :href="`/templates/${name}`" class="block border p-4 mb-2 hover:border-black">{{ name }}</a>
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>

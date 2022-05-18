@@ -1,0 +1,38 @@
+{
+  "name": "@nuxt/devalue",
+  "version": "2.0.0",
+  "description": "Gets the job done when JSON.stringify can't",
+  "repository": "nuxt-contrib/devalue",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "require": "./dist/devalue.js",
+      "import": "./dist/devalue.mjs"
+    }
+  },
+  "main": "./dist/devalue.js",
+  "module": "./dist/devalue.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "siroc build",
+    "prepack": "yarn build",
+    "lint": "eslint --ext .ts,.js .",
+    "test": "yarn lint && jest",
+    "release": "yarn test && standard-version && git push --follow-tags && npm publish"
+  },
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "^6.0.0",
+    "@types/jest": "^26.0.23",
+    "@types/mocha": "^8.2.2",
+    "@types/node": "^15.3.0",
+    "eslint": "^7.26.0",
+    "jest": "^26.6.3",
+    "siroc": "^0.10.0",
+    "standard-version": "^9.3.0",
+    "ts-jest": "^26.5.6",
+    "typescript": "^4.2.4"
+  }
+}
