@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { join } from 'path';
 import { NodejsLambda } from '@vercel/build-utils';
-import { build } from '../src';
+import { build, prepareCache } from '../src';
 
 const fixture = (name: string) => join(__dirname, 'fixtures', name);
 
@@ -16,7 +16,6 @@ describe('build()', () => {
       workPath,
       config: {},
     });
-    console.log(result);
     assert('output' in result);
     const names = Object.keys(result.output);
 
@@ -26,5 +25,23 @@ describe('build()', () => {
     const render = result.output.render;
     expect(render.type).toEqual('Lambda');
     expect((render as NodejsLambda).launcherType).toEqual('Nodejs');
+
+    const cache = await prepareCache({
+      files: {},
+      entrypoint: 'package.json',
+      workPath,
+      config: {},
+    });
+    const cacheNames = Object.keys(cache);
+
+    // Assert `node_modules` was cached
+    const nodeModulesFiles = cacheNames.filter(n =>
+      n.startsWith('node_modules/')
+    );
+    expect(nodeModulesFiles.length).toBeGreaterThanOrEqual(10);
+
+    // Assert `.cache` was cached
+    const dotCacheFiles = cacheNames.filter(n => n.startsWith('.cache/'));
+    expect(dotCacheFiles.length).toBeGreaterThanOrEqual(4);
   });
 });
