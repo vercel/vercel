@@ -27,14 +27,6 @@ jobs:
           cache: 'yarn'
       - run: yarn install --network-timeout 1000000
 
-      - name: Use Turborepo cache
-        uses: actions/cache@v2
-        with:
-          path: .turbo
-          key: turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            turbo-test-${{ runner.os }}-
-
       - id: set-tests
         run: |
           TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
@@ -47,6 +39,10 @@ jobs:
     runs-on: ${{ matrix.runner }}
     name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }})
     if: ${{ needs.setup.outputs['tests'] != '[]' }}
+    env:
+      TURBO_REMOTE_ONLY: true
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
     needs:
       - setup
     strategy:
@@ -65,17 +61,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
       - run: yarn install --network-timeout 1000000
-
-      - name: Use Turborepo cache
-        uses: actions/cache@v2
-        with:
-          path: .turbo
-          key: turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-${{matrix.packageName}}-${{matrix.scriptName}}-${{matrix.chunkNumber}}
-          restore-keys: |
-            turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-${{matrix.packageName}}-${{matrix.scriptName}}-
-            turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-${{matrix.packageName}}-
-            turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-
-            turbo-test-${{ runner.os }}-2
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: yarn turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
