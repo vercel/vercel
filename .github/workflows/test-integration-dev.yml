@@ -40,15 +40,6 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
       - run: yarn install --network-timeout 1000000
-      - name: Use Turborepo cache
-        uses: actions/cache@v2
-        with:
-          path: .turbo
-          key: turbo-test-integration-dev-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            turbo-test-integration-dev-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-            turbo-test-integration-dev-${{ runner.os }}-
-            turbo-test-integration-dev-
       - run: yarn run build
       - run: yarn test-integration-dev
         env:
