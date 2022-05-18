@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "node build.js",
-    "test-unit": "jest --env node --verbose --bail test/*.test.ts",
+    "test-unit": "jest --env node --verbose --bail test/build.test.ts",
     "prepublishOnly": "node build.js"
   },
   "files": [
