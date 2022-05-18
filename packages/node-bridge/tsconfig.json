@@ -8,6 +8,6 @@
     "strict": true,
     "declaration": true
   },
-  "include": ["bridge.js", "launcher.js"],
+  "include": ["helpers.ts", "bridge.js", "launcher.js"],
   "exclude": ["node_modules"]
 }
