@@ -17,6 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
+    env:
+      TURBO_REMOTE_ONLY: true
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
     steps:
       - uses: actions/checkout@v2
       - run: git --version
@@ -26,14 +30,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
       - run: yarn install --network-timeout 1000000
-
-      - name: Use Turborepo cache
-        uses: actions/cache@v2
-        with:
-          path: .turbo
-          key: turbo-test-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            turbo-test-${{ runner.os }}-
 
       - id: set-tests
         run: |
