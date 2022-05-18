@@ -41,7 +41,7 @@ jobs:
     if: ${{ needs.setup.outputs['tests'] != '[]' }}
     env:
       TURBO_REMOTE_ONLY: true
-      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      TURBO_TEAM: vercel
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
     needs:
       - setup
