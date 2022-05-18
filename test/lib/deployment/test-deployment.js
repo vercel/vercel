@@ -65,7 +65,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
 
           if (
             Array.isArray(ctx.deploymentLogs) &&
-            ctx.deploymentLogs.length > 20
+            ctx.deploymentLogs.length > 2
           ) {
             break;
           }
