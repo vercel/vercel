@@ -7,7 +7,10 @@ async function fetchRetry(...args) {
       try {
         return await fetch(...args);
       } catch (error) {
-        if (error.code === 'ENOTFOUND') {
+        if (error.type === 'request-timeout') {
+          // FetchError: network timeout at: ...
+          throw canRetry(error);
+        } else if (error.code === 'ENOTFOUND') {
           // getaddrinfo ENOTFOUND api.vercel.com like some transient dns issue
           throw canRetry(error);
         } else if (error.code === 'ETIMEDOUT') {
@@ -24,7 +27,7 @@ async function fetchRetry(...args) {
         throw error;
       }
     },
-    { factor: 1, retries: 3 }
+    { factor: 2, retries: 3 }
   );
 }
 
