@@ -2026,7 +2026,7 @@ export const frameworks = [
   {
     name: 'VitePress',
     slug: 'vitepress',
-    demo: 'https://vitepress-template.vercel.app',
+    demo: 'https://vitepress-starter-template.vercel.app/',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vite.svg',
     tagline: "VitePress is VuePress' little brother, built on top of Vite.",
     description: 'VuePress on top of Vite',
@@ -2060,7 +2060,7 @@ export const frameworks = [
   {
     name: 'VuePress',
     slug: 'vuepress',
-    demo: 'https://vuepress-template.vercel.app',
+    demo: 'https://vuepress-starter-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vue.svg',
     tagline: 'Vue-powered Static Site Generator',
     description: 'Vue-powered Static Site Generator',
