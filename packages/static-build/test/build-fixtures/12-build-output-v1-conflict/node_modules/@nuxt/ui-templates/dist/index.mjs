@@ -1,5 +1,0 @@
-export { template as error404 } from './templates/error-404.mjs'
-export { template as error500 } from './templates/error-500.mjs'
-export { template as errorDev } from './templates/error-dev.mjs'
-export { template as loading } from './templates/loading.mjs'
-export { template as welcome } from './templates/welcome.mjs'
