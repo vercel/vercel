@@ -14,8 +14,9 @@
   },
   "scripts": {
     "build": "node build",
-    "test-unit": "jest --env node --verbose --bail test/build.test.ts test/prepare-cache.test.ts",
-    "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
+    "test": "jest --env node --verbose --bail --runInBand",
+    "test-unit": "yarn test test/build.test.ts test/prepare-cache.test.ts",
+    "test-integration-once": "yarn test test/integration-*.test.js",
     "prepublishOnly": "node build"
   },
   "jest": {
