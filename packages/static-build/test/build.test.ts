@@ -40,6 +40,7 @@ describe('build()', () => {
       );
 
       try {
+        process.env.NOW_BUILDER = '1';
         const buildResult = await build({
           files: {},
           entrypoint: 'package.json',
@@ -56,7 +57,7 @@ describe('build()', () => {
 
         expect(buildResult.output['index.html']).toBeTruthy();
       } finally {
-        remove(path.join(workPath, '.vercel_build_output'));
+        delete process.env.NOW_BUILDER;
       }
     });
   });
