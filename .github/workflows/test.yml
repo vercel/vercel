@@ -9,7 +9,7 @@ on:
   pull_request:
 
 env:
-  NODE_VERSION: '14'
+  NODE_VERSION: '12'
 
 jobs:
   setup:
