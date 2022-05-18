@@ -19,7 +19,7 @@ jobs:
           go-version: '1.13.15'
       - uses: actions/setup-node@v2
         with:
-          node-version: 12
+          node-version: 14
       - uses: actions/checkout@v2
         with:
           fetch-depth: 100
