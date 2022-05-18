@@ -6,7 +6,5 @@
     "build": "echo 'using already built `nuxi generate` for nuxt3'",
     "start": "node .output/server/index.mjs"
   },
-  "dependencies": {
-    "nuxt": "3.0.0-rc.3"
-  }
+  "dependencies": {}
 }
