@@ -6,43 +6,36 @@ This directory is a brief example of a [VuePress](https://vuepress.vuejs.org/) s
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/vuepress&template=vuepress)
 
-_Live Example: https://vuepress-example.vercel.app_
+_Live Example: https://vuepress-starter-template.vercel.app_
 
-### How We Created This Example
+## Setup
 
-To get started with VitePress on Vercel, you can [follow their Getting Started steps](https://vuepress.vuejs.org/guide/getting-started.html#manual-installation):
+Install the dependencies:
 
-Step. 1: Create and change into a new directory.
-
-```shell
-$ mkdir vuepress-starter && cd vuepress-starter
+```bash
+$ yarn install
 ```
 
-Step. 2: Initialize with your preferred package manager.
+### Development
 
-```shell
-$ yarn init
+Start the development server
+
+```bash
+$ yarn docs:dev
 ```
 
-Step. 3: Install VitePress locally.
+### Build the project
 
-```shell
-$ yarn add --dev vuepress
+Build for production
+
+```bash
+$ yarn docs:build
 ```
 
-Step. 4: Create your first document.
+### Deploy
 
-```shell
-$ mkdir docs && echo '# Hello VuePress' > docs/README.md
-```
+Deploy your VuePress application to Vercel
 
-Step. 5: Add some scripts to `package.json`.
-
-```shell
-{
-  "scripts": {
-    "docs:dev": "vuepress dev docs",
-    "docs:build": "vuepress build docs"
-  }
-}
+```bash
+$ vercel
 ```

@@ -2,48 +2,50 @@
 
 This directory is a brief example of a [VitePress](https://vitepress.vuejs.org/) site that can be deployed to Vercel with zero-configuration.
 
+## Setup
+
+Install the dependencies
+
+```bash
+$ yarn install
+```
+
+## Development
+
 ## Deploy Your Own
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/vitepress&template=vitepress)
 
-_Live Example: https://vitepress-example.vercel.app_
+_Live Example: https://vitepress-starter-template.vercel.app_
 
-### How We Created This Example
+## Setup
 
-To get started with VitePress on Vercel, you can [follow their Getting Started steps](https://vitepress.vuejs.org/guide/getting-started.html):
+Install the dependencies:
 
-Step. 1: Create and change into a new directory.
-
-```shell
-$ mkdir vitepress-starter && cd vitepress-starter
+```bash
+$ yarn install
 ```
 
-Step. 2: Initialize with your preferred package manager.
+### Development
 
-```shell
-$ yarn init
+Start the development server
+
+```bash
+$ yarn docs:dev
 ```
 
-Step. 3: Install VitePress locally.
+### Build the project
 
-```shell
-$ yarn add --dev vitepress
+Build for production
+
+```bash
+$ yarn docs:build
 ```
 
-Step. 4: Create your first document.
+### Deploy
 
-```shell
-$ mkdir docs && echo '# Hello VitePress' > docs/index.md
-```
+Deploy your VitePress application to Vercel
 
-Step. 5: Add some scripts to package.json.
-
-```shell
-{
-  "scripts": {
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:serve": "vitepress serve docs"
-  }
-}
+```bash
+$ vercel
 ```
