@@ -1988,18 +1988,24 @@ export const onPrerenderRoute =
     }
   };
 
+type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
+
 export async function getStaticFiles(
   entryPath: string,
   entryDirectory: string,
   outputDirectory: string
 ) {
+  const collectLabel =
+    'Collected static files (public/, static/, .next/static)';
+  console.time(collectLabel);
+
   const nextStaticFiles = await glob(
     '**',
     path.join(entryPath, outputDirectory, 'static')
   );
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
 
-  let publicFolderFiles: Files = {};
+  let publicFolderFiles: UnwrapPromise<ReturnType<typeof glob>> = {};
   let publicFolderPath: string | undefined;
 
   if (await fs.pathExists(path.join(entryPath, 'public'))) {
@@ -2017,30 +2023,26 @@ export async function getStaticFiles(
   } else {
     debug('No public folder found');
   }
+  const staticFiles: Record<string, FileFsRef> = {};
+  const staticDirectoryFiles: Record<string, FileFsRef> = {};
+  const publicDirectoryFiles: Record<string, FileFsRef> = {};
 
-  const staticFiles = Object.keys(nextStaticFiles).reduce(
-    (mappedFiles, file) => ({
-      ...mappedFiles,
-      [path.join(entryDirectory, `_next/static/${file}`)]:
-        nextStaticFiles[file],
-    }),
-    {}
-  );
-  const staticDirectoryFiles = Object.keys(staticFolderFiles).reduce(
-    (mappedFiles, file) => ({
-      ...mappedFiles,
-      [path.join(entryDirectory, 'static', file)]: staticFolderFiles[file],
-    }),
-    {}
-  );
-  const publicDirectoryFiles = Object.keys(publicFolderFiles).reduce(
-    (mappedFiles, file) => ({
-      ...mappedFiles,
-      [path.join(entryDirectory, file)]: publicFolderFiles[file],
-    }),
-    {}
-  );
+  for (const file of Object.keys(nextStaticFiles)) {
+    staticFiles[path.join(entryDirectory, `_next/static/${file}`)] =
+      nextStaticFiles[file];
+  }
 
+  for (const file of Object.keys(staticFolderFiles)) {
+    staticDirectoryFiles[path.join(entryDirectory, 'static', file)] =
+      staticFolderFiles[file];
+  }
+
+  for (const file of Object.keys(publicFolderFiles)) {
+    publicDirectoryFiles[path.join(entryDirectory, file)] =
+      publicFolderFiles[file];
+  }
+
+  console.timeEnd(collectLabel);
   return {
     staticFiles,
     staticDirectoryFiles,

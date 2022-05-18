@@ -1,8 +1,11 @@
 import type { Context, LoggerServer, Dictionary } from './types';
 import type { IncomingMessage } from 'http';
 
-import { packAndDeploy } from '../../../test/lib/deployment/test-deployment';
-import { testDeployment } from '../../../test/lib/deployment/test-deployment';
+import {
+  packAndDeploy,
+  testDeployment,
+} from '../../../test/lib/deployment/test-deployment';
+import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
 import fs from 'fs-extra';
 import http from 'http';
@@ -84,13 +87,21 @@ export async function deployAndTest(fixtureDir) {
   } catch (_) {
     /**/
   }
+  let tempToken;
 
   if (!builderUrlPromise && builderInfo) {
     builderUrlPromise = Promise.resolve(builderInfo.builderUrl);
     builderUrlLastUpdated = builderInfo.lastUpdated;
+    tempToken = builderInfo.tempToken;
   }
+  const builderUrlIsStale = builderUrlLastUpdated < Date.now() - ms('25min');
 
-  if (builderUrlLastUpdated < Date.now() - ms('25min')) {
+  if (!process.env.VERCEL_TOKEN && (builderUrlIsStale || !tempToken)) {
+    tempToken = await fetchTokenWithRetry();
+  }
+  process.env.TEMP_TOKEN = tempToken;
+
+  if (builderUrlIsStale) {
     const builderPath = path.resolve(__dirname, '..');
     builderUrlPromise = packAndDeploy(builderPath, false);
     builderUrlLastUpdated = Date.now();
@@ -101,6 +112,7 @@ export async function deployAndTest(fixtureDir) {
   await fs.writeFile(
     builderInfoPath,
     JSON.stringify({
+      tempToken,
       builderUrl,
       lastUpdated: builderUrlLastUpdated,
     })

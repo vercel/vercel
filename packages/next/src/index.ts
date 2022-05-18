@@ -201,7 +201,7 @@ export interface BuildResult {
     type: 'v8-worker';
   }[];
   output: {
-    [key: string]: File | Lambda | EdgeFunction;
+    [key: string]: File | Lambda | EdgeFunction | FileFsRef | Prerender;
   };
   wildcard?: Array<{
     domain: string;

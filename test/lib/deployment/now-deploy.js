@@ -200,13 +200,18 @@ async function fetchCachedToken() {
 async function fetchTokenWithRetry(retries = 5) {
   const {
     NOW_TOKEN,
+    TEMP_TOKEN,
     VERCEL_TOKEN,
     VERCEL_TEAM_TOKEN,
     VERCEL_REGISTRATION_URL,
   } = process.env;
-  if (VERCEL_TOKEN || NOW_TOKEN) {
-    logWithinTest('Your personal token will be used to make test deployments.');
-    return VERCEL_TOKEN || NOW_TOKEN;
+  if (VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN) {
+    if (!TEMP_TOKEN) {
+      logWithinTest(
+        'Your personal token will be used to make test deployments.'
+      );
+    }
+    return VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN;
   }
   if (!VERCEL_TEAM_TOKEN || !VERCEL_REGISTRATION_URL) {
     throw new Error(
