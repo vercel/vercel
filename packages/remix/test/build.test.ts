@@ -9,6 +9,12 @@ describe('build()', () => {
   jest.setTimeout(10 * 60 * 1000);
 
   it('should build fixture "01-remix-basics"', async () => {
+    if (process.platform === 'win32') {
+      // Fails on Windows (https://github.com/vercel/vercel/runs/6484955910):
+      // > 'remix' is not recognized as an internal or external command,
+      console.log('Skipping test on Windows.');
+      return;
+    }
     const workPath = fixture('01-remix-basics');
     const result = await build({
       files: {},
