@@ -16,7 +16,8 @@
   },
   "scripts": {
     "build": "node build",
-    "test-integration-once": "jest --env node --verbose --runInBand --bail",
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-integration-once": "yarn test",
     "prepublishOnly": "node build"
   },
   "devDependencies": {
