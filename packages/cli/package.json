@@ -40,7 +40,7 @@
     ]
   },
   "engines": {
-    "node": ">= 12"
+    "node": "14.x"
   },
   "dependencies": {
     "@vercel/build-utils": "3.0.1",
