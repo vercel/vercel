@@ -2,6 +2,8 @@ import path from 'path';
 import { build } from '../src';
 
 describe('build()', () => {
+  jest.setTimeout(60 * 1000);
+
   it('should detect Builder Output v3', async () => {
     const workPath = path.join(
       __dirname,

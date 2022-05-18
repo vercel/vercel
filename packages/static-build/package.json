@@ -14,8 +14,9 @@
   },
   "scripts": {
     "build": "node build",
-    "test-unit": "jest --env node --verbose --bail test/build.test.ts test/prepare-cache.test.ts",
-    "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.js",
+    "test": "jest --env node --verbose --bail --runInBand",
+    "test-unit": "yarn test test/build.test.ts test/prepare-cache.test.ts",
+    "test-integration-once": "yarn test test/integration-*.test.js",
     "prepublishOnly": "node build"
   },
   "jest": {
@@ -44,6 +45,7 @@
     "is-port-reachable": "2.0.1",
     "ms": "2.1.2",
     "node-fetch": "2.6.1",
-    "rc9": "1.2.0"
+    "rc9": "1.2.0",
+    "typescript": "4.3.4"
   }
 }
