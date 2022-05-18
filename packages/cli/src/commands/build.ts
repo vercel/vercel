@@ -159,6 +159,9 @@ export default async function main(client: Client): Promise<number> {
     output.log(`Loaded env from "${relative(cwd, envPath)}"`);
   }
 
+  // Some build processes use this env var to platform detect Vercel
+  process.env.NOW_BUILDER = '1';
+
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   // Load `package.json` and `vercel.json` files
