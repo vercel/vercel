@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "next",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "postinstall": "lerna run build --scope=@jimmy/common"
   },
   "dependencies": {
     "@jimmy/common": "^1.0.64",

@@ -5,9 +5,6 @@
       "packages/*"
     ]
   },
-  "scripts": {
-    "postinstall": "lerna run build --scope=@jimmy/common"
-  },
   "devDependencies": {
     "lerna": "^3.19.0"
   }
