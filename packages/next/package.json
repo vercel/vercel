@@ -47,6 +47,7 @@
     "@types/webpack-sources": "3.2.0",
     "@vercel/build-utils": "3.0.1",
     "@vercel/nft": "0.18.1",
+    "@vercel/routing-utils": "1.13.2",
     "async-sema": "3.0.1",
     "buffer-crc32": "0.2.13",
     "cheerio": "1.0.0-rc.10",
