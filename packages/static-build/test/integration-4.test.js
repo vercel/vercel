@@ -1,1 +1,1 @@
-require('./integration-1.test');
+require('./integration-setup')(4);

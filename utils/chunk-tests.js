@@ -3,10 +3,7 @@ const path = require('path');
 
 const NUMBER_OF_CHUNKS = 5;
 const MINIMUM_PER_CHUNK = 1;
-const runnersMap = new Map([
-  // ['test-integration-dev', ['macos-latest', 'ubuntu-latest']],
-  ['test-integration-once', ['ubuntu-latest']],
-]);
+const runnersMap = new Map([['test-integration-once', ['ubuntu-latest']]]);
 
 async function getChunkedTests() {
   const scripts = ['test-integration-once'];
