@@ -500,7 +500,7 @@ export async function serverBuild({
     const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
       [path.join(
         path.relative(baseDir, requiredServerFilesManifest.appDir || entryPath),
-        '___next_launcher.js'
+        '___next_launcher.cjs'
       )]: new FileBlob({ data: launcher }),
     };
     const pageTraces: {
@@ -688,7 +688,7 @@ export async function serverBuild({
             baseDir,
             requiredServerFilesManifest.appDir || entryPath
           ),
-          '___next_launcher.js'
+          '___next_launcher.cjs'
         ),
         memory: group.memory,
         runtime: nodeVersion.runtime,
