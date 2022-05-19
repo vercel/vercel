@@ -20,7 +20,7 @@
     "prepublishOnly": "node build.js"
   },
   "dependencies": {
-    "@vercel/nft": "0.18.1",
+    "@vercel/nft": "0.19.0",
     "@vercel/routing-utils": "1.13.3-canary.0",
     "semver": "6.1.1"
   },
