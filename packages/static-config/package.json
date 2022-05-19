@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-config",
-  "version": "1.0.0",
+  "version": "1.0.1-canary.0",
   "license": "MIT",
   "main": "./dist/index",
   "repository": {
