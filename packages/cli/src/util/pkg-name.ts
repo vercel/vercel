@@ -3,7 +3,7 @@ import pkg from './pkg';
 import cmd from './output/cmd';
 
 /**
- * The package name defined in the CLI's `package.json file (`vercel`).
+ * The package name defined in the CLI's `package.json` file (`vercel`).
  */
 export const name = pkg.name;
 
