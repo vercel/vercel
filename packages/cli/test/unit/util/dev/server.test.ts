@@ -8,8 +8,8 @@ import listen from 'async-listen';
 import { createServer } from 'http';
 import { client } from '../../../mocks/client';
 import DevServer from '../../../../src/util/dev/server';
+import { DevServerOptions } from '../../../../src/util/dev/types';
 
-const IS_MAC_OS = process.platform === 'darwin';
 const IS_WINDOWS = process.platform === 'win32';
 
 async function runNpmInstall(fixturePath: string) {
@@ -21,29 +21,34 @@ async function runNpmInstall(fixturePath: string) {
   }
 }
 
+interface TestFixtureOptions extends Omit<DevServerOptions, 'output'> {
+  skip?: boolean;
+}
+
 const testFixture =
   (
     name: string,
     fn: (server: DevServer) => Promise<void>,
-    options: { skip: boolean } = { skip: false }
+    options?: TestFixtureOptions
   ) =>
   async () => {
-    if (options.skip) {
+    if (options?.skip) {
       console.log('Skipping this test for this platform.');
       return;
     }
 
-    let server: DevServer | null = null;
+    let server: DevServer | undefined;
     const fixturePath = path.join(__dirname, '../../fixtures/unit', name);
     await runNpmInstall(fixturePath);
     try {
-      server = new DevServer(fixturePath, { output: client.output });
+      server = new DevServer(fixturePath, {
+        ...options,
+        output: client.output,
+      });
       await server.start(0);
       await fn(server);
     } finally {
-      if (server) {
-        await server.stop();
-      }
+      await server?.stop();
     }
   };
 
@@ -141,7 +146,7 @@ describe('DevServer', () => {
     testFixture(
       'now-dev-next',
       async server => {
-        const res = await fetch(`${server.address}/something?url-param=a`);
+        const res = await fetch(`${server.address}/test?url-param=a`);
         validateResponseHeaders(res);
 
         const text = await res.text();
@@ -149,16 +154,19 @@ describe('DevServer', () => {
         // Hacky way of getting the page payload from the response
         // HTML since we don't have a HTML parser handy.
         const json = text
-          .match(/<div>(.*)<\/div>/)![1]
-          .replace('</div>', '')
+          .match(/<pre>(.*)<\/pre>/)![1]
+          .replace('</pre>', '')
+          .replace('<!-- -->', '')
+          .replace(/&amp;/g, '&')
           .replace(/&quot;/g, '"');
         const parsed = JSON.parse(json);
+        const query = url.parse(parsed.url, true).query;
 
-        expect(parsed.query['url-param']).toEqual('a');
-        expect(parsed.query['route-param']).toEqual('b');
+        expect(query['url-param']).toEqual('a');
+        expect(query['route-param']).toEqual('b');
       },
       {
-        skip: IS_MAC_OS,
+        devCommand: 'next dev --port $PORT',
       }
     )
   );
@@ -215,8 +223,7 @@ describe('DevServer', () => {
         expect(body).toEqual('hello and welcome');
       },
       {
-        // this test very often times out in the testFixture startup logic on Mac
-        skip: IS_MAC_OS,
+        devCommand: 'next dev --port $PORT',
       }
     )
   );

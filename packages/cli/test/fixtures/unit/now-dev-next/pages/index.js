@@ -1,11 +1,11 @@
-import { withRouter } from 'next/router';
-
-function Index({ router }) {
-  const data = {
-    pathname: router.pathname,
-    query: router.query
+export async function getServerSideProps({ req }) {
+  return {
+    props: {
+      url: req.url,
+    },
   };
-  return <div>{ JSON.stringify(data) }</div>;
 }
 
-export default withRouter(Index);
+export default function Index(props) {
+  return <pre>{JSON.stringify(props)}</pre>;
+}
