@@ -46,7 +46,7 @@
     "@types/text-table": "0.2.1",
     "@types/webpack-sources": "3.2.0",
     "@vercel/build-utils": "3.0.2-canary.0",
-    "@vercel/nft": "0.18.1",
+    "@vercel/nft": "0.19.0",
     "@vercel/routing-utils": "1.13.3-canary.0",
     "async-sema": "3.0.1",
     "buffer-crc32": "0.2.13",
