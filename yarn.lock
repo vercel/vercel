@@ -2817,6 +2817,22 @@
   dependencies:
     "@types/yargs-parser" "*"
 
+"@types/yauzl-promise@2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@types/yauzl-promise/-/yauzl-promise-2.1.0.tgz#a813ca317cd897f286fdfefb9b202463d315313a"
+  integrity sha512-7PkQ5UtElDsanzjdUQzXnstCqxx6KAOTMURuHwOuqC6YO2WaYQ6ItLnLy3TiEVNQMO/pD+QSOcfnAkeSX4hsTA==
+  dependencies:
+    "@types/events" "*"
+    "@types/node" "*"
+    "@types/yauzl" "*"
+
+"@types/yauzl@*":
+  version "2.9.2"
+  resolved "https://registry.yarnpkg.com/@types/yauzl/-/yauzl-2.9.2.tgz#c48e5d56aff1444409e39fa164b0b4d4552a7b7a"
+  integrity sha512-8uALY5LTvSuHgloDVUvWP3pIauILm+8/0pDMokuDYIoNsOkSwd5AiHBTSEJjKTDcZr5z8UpgOWZkxBF4iJftoA==
+  dependencies:
+    "@types/node" "*"
+
 "@types/yazl@2.4.2":
   version "2.4.2"
   resolved "https://registry.yarnpkg.com/@types/yazl/-/yazl-2.4.2.tgz#d5f8a4752261badbf1a36e8b49e042dc18ec84bc"
@@ -2909,10 +2925,10 @@
   resolved "https://registry.yarnpkg.com/@vercel/ncc/-/ncc-0.24.0.tgz#a2e8783a185caa99b5d8961a57dfc9665de16296"
   integrity sha512-crqItMcIwCkvdXY/V3/TzrHJQx6nbIaRqE1cOopJhgGX6izvNov40SmD//nS5flfEvdK54YGjwVVq+zG6crjOg==
 
-"@vercel/nft@0.18.1":
-  version "0.18.1"
-  resolved "https://registry.yarnpkg.com/@vercel/nft/-/nft-0.18.1.tgz#d1681f7fd538168553d8df19fc3761ca643ebb73"
-  integrity sha512-i2zmXs8ueqCe/dmQ0fzQk9MmXoqdqxR1ZsxPN8poHZfc3NQES1WTEsXkEoaL+RV5BKZi04lNpkoGwtqcxERAOQ==
+"@vercel/nft@0.19.0":
+  version "0.19.0"
+  resolved "https://registry.yarnpkg.com/@vercel/nft/-/nft-0.19.0.tgz#56f2a17e0685b5c052158aafec3a9f31552de5b4"
+  integrity sha512-diHIP3/OHq/4wSkS4JJ7LqY6NAQOpCr83vpNZuKqx2PV7zrhwUH8CZ9QCu0SHkZh3LYaV0zcbGusVxTNw3DMvA==
   dependencies:
     "@mapbox/node-pre-gyp" "^1.0.5"
     acorn "^8.6.0"
