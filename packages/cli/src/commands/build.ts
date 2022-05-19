@@ -460,25 +460,6 @@ export default async function main(client: Client): Promise<number> {
 function expandBuild(files: string[], build: Builder): Builder[] {
   if (!build.src) return [];
 
-  //if (!buildSpecPayload.use) {
-  //  throw new NowBuildError({
-  //    code: `invalid_build_specification`,
-  //    message: 'Field `use` is missing in build specification',
-  //    link: 'https://vercel.com/docs/configuration#project/builds',
-  //    action: 'View Documentation',
-  //  });
-  //}
-
-  //let src = normalize(buildSpecPayload.src || '**');
-  //if (src === '.' || src === './') {
-  //  throw new NowBuildError({
-  //    code: `invalid_build_specification`,
-  //    message: 'A build `src` path resolves to an empty string',
-  //    link: 'https://vercel.com/docs/configuration#project/builds',
-  //    action: 'View Documentation',
-  //  });
-  //}
-
   let pattern = build.src;
   if (pattern[0] === '/') {
     // Remove a leading slash so that the globbing is relative
