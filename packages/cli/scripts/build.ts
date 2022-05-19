@@ -13,7 +13,7 @@ async function createConstants() {
 export const GA_TRACKING_ID: string | undefined = ${envToString(
     'GA_TRACKING_ID'
   )};
-export const SENTRY_DSN: string | undefined =  ${envToString('SENTRY_DSN')};
+export const SENTRY_DSN: string | undefined = ${envToString('SENTRY_DSN')};
 `;
   await writeFile(filename, contents, 'utf8');
 }

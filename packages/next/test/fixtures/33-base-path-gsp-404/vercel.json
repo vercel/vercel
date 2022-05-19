@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/docs",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/docs/api/hello",
+      "status": 200,
+      "mustContain": "John Doe"
+    },
+    {
+      "path": "/docs/non-existent",
+      "status": 404,
+      "mustContain": "404 - Page Not Found Custom"
+    },
+    {
+      "path": "/docs/api/non-existent",
+      "status": 404,
+      "mustContain": "404 - Page Not Found Custom"
+    }
+  ]
+}
