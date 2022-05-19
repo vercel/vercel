@@ -9,7 +9,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "asdf"
+      "mustContain": "{\"data\":\"asdf\\n\",\"isSymlink\":true}"
     }
   ]
 }
