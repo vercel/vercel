@@ -11,7 +11,7 @@ const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
 
-jest.setTimeout(4 * 60 * 1000);
+jest.setTimeout(6 * 60 * 1000);
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const isCanary = () => getDistTag(cliVersion) === 'canary';
