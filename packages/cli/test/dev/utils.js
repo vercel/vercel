@@ -400,6 +400,7 @@ function testFixtureStdio(
       dev.stderr.pipe(process.stderr);
 
       dev.stdout.on('data', data => {
+        console.error('got stdout', data);
         stdout += data;
 
         if (stdout.includes('Ready! Available at')) {
@@ -408,6 +409,7 @@ function testFixtureStdio(
       });
 
       dev.stderr.on('data', data => {
+        console.error('got stderr', data);
         stderr += data;
 
         if (stderr.includes('Ready! Available at')) {
