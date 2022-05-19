@@ -1,11 +1,11 @@
 import { join } from 'path';
 import { fileNameSymbol } from '@vercel/client';
-import { client } from '../mocks/client';
-import deploy from '../../src/commands/deploy';
-import { setupFixture } from '../helpers/setup-fixture';
-import { defaultProject, useProject } from '../mocks/project';
-import { useTeams } from '../mocks/team';
-import { useUser } from '../mocks/user';
+import { client } from '../../mocks/client';
+import deploy from '../../../src/commands/deploy';
+import { setupFixture } from '../../helpers/setup-fixture';
+import { defaultProject, useProject } from '../../mocks/project';
+import { useTeams } from '../../mocks/team';
+import { useUser } from '../../mocks/user';
 
 describe('deploy', () => {
   it('should reject deploying a single file', async () => {

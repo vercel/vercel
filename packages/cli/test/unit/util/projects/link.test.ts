@@ -1,10 +1,10 @@
 import { join } from 'path';
-import { getLinkedProject } from '../../../src/util/projects/link';
-import { client } from '../../mocks/client';
+import { getLinkedProject } from '../../../../src/util/projects/link';
+import { client } from '../../../mocks/client';
 
-import { defaultProject, useProject } from '../../mocks/project';
-import { useTeams } from '../../mocks/team';
-import { useUser } from '../../mocks/user';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
 
 type UnPromisify<T> = T extends Promise<infer U> ? U : T;
 

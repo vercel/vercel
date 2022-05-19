@@ -1,4 +1,4 @@
-import parseListen from '../../../src/util/dev/parse-listen';
+import parseListen from '../../../../src/util/dev/parse-listen';
 
 const IS_WINDOWS = process.platform === 'win32';
 

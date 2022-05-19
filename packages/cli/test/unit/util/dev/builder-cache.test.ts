@@ -3,7 +3,7 @@ import {
   filterPackage,
   getBuildUtils,
   isBundledBuilder,
-} from '../../../src/util/dev/builder-cache';
+} from '../../../../src/util/dev/builder-cache';
 
 describe('filterPackage', () => {
   it('should filter install "latest", cached canary', () => {

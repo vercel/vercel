@@ -1,5 +1,5 @@
-import parseTarget from '../../../src/util/deploy/parse-target';
-import { Output } from '../../../src/util/output';
+import parseTarget from '../../../../src/util/deploy/parse-target';
+import { Output } from '../../../../src/util/output';
 
 describe('parseTarget', () => {
   let output: Output;

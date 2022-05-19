@@ -1,8 +1,8 @@
 import fetch from 'node-fetch';
 import listen from 'async-listen';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
-import { JSONValue } from '../../src/types';
-import { responseError, responseErrorMessage } from '../../src/util/error';
+import { JSONValue } from '../../../src/types';
+import { responseError, responseErrorMessage } from '../../../src/util/error';
 
 const send = (res: ServerResponse, statusCode: number, body: JSONValue) => {
   res.statusCode = statusCode;

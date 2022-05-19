@@ -1,4 +1,4 @@
-import { devRouter } from '../../../src/util/dev/router';
+import { devRouter } from '../../../../src/util/dev/router';
 
 describe('devRouter', () => {
   it('should handle 301 redirection', async () => {

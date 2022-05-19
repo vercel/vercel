@@ -1,7 +1,7 @@
-import { client } from '../mocks/client';
-import { useUser } from '../mocks/user';
-import { useDeployment } from '../mocks/deployment';
-import inspect from '../../src/commands/inspect';
+import { client } from '../../mocks/client';
+import { useUser } from '../../mocks/user';
+import { useDeployment } from '../../mocks/deployment';
+import inspect from '../../../src/commands/inspect';
 
 describe('inspect', () => {
   it('should print out deployment information', async () => {

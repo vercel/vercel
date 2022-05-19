@@ -1,4 +1,4 @@
-import toHost from '../../src/util/to-host';
+import toHost from '../../../src/util/to-host';
 
 describe('toHost', () => {
   it('should parse simple to host', () => {

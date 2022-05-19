@@ -1,11 +1,11 @@
 import { join, sep } from 'path';
 // @ts-ignore - Missing types for "alpha-sort"
 import { asc as alpha } from 'alpha-sort';
-import createOutput from '../../src/util/output';
-import { staticFiles as getStaticFiles_ } from '../../src/util/get-files';
+import createOutput from '../../../src/util/output';
+import { staticFiles as getStaticFiles_ } from '../../../src/util/get-files';
 
 const output = createOutput({ debug: false });
-const prefix = `${join(__dirname, '../fixtures/unit')}${sep}`;
+const prefix = `${join(__dirname, '../../fixtures/unit')}${sep}`;
 const base = (path: string) => path.replace(prefix, '');
 const fixture = (name: string) => join(prefix, name);
 

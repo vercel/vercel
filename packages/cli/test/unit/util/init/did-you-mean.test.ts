@@ -1,4 +1,4 @@
-import didYouMean from '../../../src/util/init/did-you-mean';
+import didYouMean from '../../../../src/util/init/did-you-mean';
 
 describe('didYouMean', () => {
   const examples = [

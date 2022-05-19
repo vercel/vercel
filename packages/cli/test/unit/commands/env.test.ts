@@ -1,11 +1,11 @@
 import fs from 'fs-extra';
 import path from 'path';
-import env from '../../src/commands/env';
-import { setupFixture } from '../helpers/setup-fixture';
-import { client } from '../mocks/client';
-import { defaultProject, useProject } from '../mocks/project';
-import { useTeams } from '../mocks/team';
-import { useUser } from '../mocks/user';
+import env from '../../../src/commands/env';
+import { setupFixture } from '../../helpers/setup-fixture';
+import { client } from '../../mocks/client';
+import { defaultProject, useProject } from '../../mocks/project';
+import { useTeams } from '../../mocks/team';
+import { useUser } from '../../mocks/user';
 
 describe('env', () => {
   describe('pull', () => {

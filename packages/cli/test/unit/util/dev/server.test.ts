@@ -6,8 +6,8 @@ import fs from 'fs-extra';
 import fetch, { Response } from 'node-fetch';
 import listen from 'async-listen';
 import { createServer } from 'http';
-import { client } from '../../mocks/client';
-import DevServer from '../../../src/util/dev/server';
+import { client } from '../../../mocks/client';
+import DevServer from '../../../../src/util/dev/server';
 
 const IS_MAC_OS = process.platform === 'darwin';
 const IS_WINDOWS = process.platform === 'win32';
