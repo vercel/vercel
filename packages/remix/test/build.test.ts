@@ -3,11 +3,11 @@ import { join } from 'path';
 import { NodejsLambda } from '@vercel/build-utils';
 import { build, prepareCache } from '../src';
 
+jest.setTimeout(10 * 60 * 1000);
+
 const fixture = (name: string) => join(__dirname, 'fixtures', name);
 
 describe('build()', () => {
-  jest.setTimeout(10 * 60 * 1000);
-
   it('should build fixture "01-remix-basics"', async () => {
     if (process.platform === 'win32') {
       // Fails on Windows (https://github.com/vercel/vercel/runs/6484955910):
