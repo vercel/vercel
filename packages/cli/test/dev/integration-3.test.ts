@@ -53,7 +53,7 @@ test('[vercel dev] 02-angular-node', async () => {
   }
 });
 
-test.only(
+test(
   '[vercel dev] 03-aurelia',
   testFixtureStdio(
     '03-aurelia',

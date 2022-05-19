@@ -199,7 +199,7 @@ test('[vercel dev] `@vercel/node` TypeScript should be resolved by default', asy
   }
 });
 
-test.only(
+test(
   '[vercel dev] validate routes that use `check: true`',
   testFixtureStdio('routes-check-true', async (testPath: any) => {
     await testPath(200, '/blog/post', 'Blog Home');

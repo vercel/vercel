@@ -440,9 +440,7 @@ function testFixtureStdio(
         exitResolver.resolve();
       });
 
-      console.error('waiting readyResolver');
       await readyResolver;
-      console.error('finished readyResolver');
 
       const helperTestPath = async (...args) => {
         if (!skipDeploy) {
