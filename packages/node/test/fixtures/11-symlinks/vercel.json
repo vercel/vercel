@@ -9,7 +9,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "asdf"
+      "mustContain": "{\"path\":\"/var/task/symlink\",\"target\":\"symlinked-asset\",\"isSymlink\":true,\"data\":\"asdf\\n\"}"
     }
   ]
 }

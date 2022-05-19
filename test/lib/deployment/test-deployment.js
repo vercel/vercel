@@ -257,9 +257,16 @@ async function testDeployment(
     dot: true,
   });
   const bodies = globResult.reduce((b, f) => {
+    let data;
     const r = path.relative(fixturePath, f);
-    b[r] = fs.readFileSync(f);
-    b[r][fileModeSymbol] = fs.statSync(f).mode;
+    const stat = fs.lstatSync(f);
+    if (stat.isSymbolicLink()) {
+      data = Buffer.from(fs.readlinkSync(f), 'utf8');
+    } else {
+      data = fs.readFileSync(f);
+    }
+    data[fileModeSymbol] = stat.mode;
+    b[r] = data;
     return b;
   }, {});
 
