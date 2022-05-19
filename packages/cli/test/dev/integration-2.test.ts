@@ -68,7 +68,7 @@ test('[vercel dev] validate env var names', async () => {
   }
 });
 
-test(
+test.only(
   '[vercel dev] test rewrites with segments serve correct content',
   testFixtureStdio('test-rewrites-with-segments', async (testPath: any) => {
     await testPath(200, '/api/users/first', 'first');

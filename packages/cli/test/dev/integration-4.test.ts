@@ -12,7 +12,7 @@ const {
   validateResponseHeaders,
 } = require('./utils.js');
 
-test(
+test.only(
   '[vercel dev] temporary directory listing',
   testFixtureStdio(
     'temporary-directory-listing',
