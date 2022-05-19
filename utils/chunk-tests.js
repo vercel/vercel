@@ -9,7 +9,7 @@ const runnersMap = new Map([
 ]);
 
 async function getChunkedTests() {
-  const scripts = ['test-integration-once', 'test-integration-dev'];
+  const scripts = [...runnersMap.keys()];
   const rootPath = path.resolve(__dirname, '..');
 
   const dryRunText = (
