@@ -20,7 +20,7 @@
     "test-unit": "yarn test tests/unit.*test.*"
   },
   "engines": {
-    "node": "14.x"
+    "node": ">= 14"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",
