@@ -194,20 +194,6 @@ export default async function main(client: Client): Promise<number> {
     return 1;
   }
 
-  /*
-  if (deployment.projectSettings?.serverlessFunctionRegion) {
-    if (vercelConfig && vercelConfig.regions && vercelConfig.regions.length > 0) {
-      console.log(
-        'Warning: Due to `regions` existing in your configuration file, the Serverless Function Region defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-region-setting',
-      );
-    } else if (deployment.regions?.length > 0) {
-      console.log(
-        'Warning: Due to `regions` assigned to this deployment, the Serverless Function Region defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-region-setting',
-      );
-    }
-  }
-  */
-
   let builds = vercelConfig?.builds || [];
   let zeroConfigRoutes: Route[] = [];
 
