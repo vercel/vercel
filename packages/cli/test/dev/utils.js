@@ -401,6 +401,10 @@ function testFixtureStdio(
 
       dev.stdout.on('data', data => {
         stdout += data;
+
+        if (stdout.includes('Ready! Available at')) {
+          readyResolver.resolve();
+        }
       });
 
       dev.stderr.on('data', data => {
@@ -439,7 +443,9 @@ function testFixtureStdio(
         exitResolver.resolve();
       });
 
+      console.error('waiting readyResolver');
       await readyResolver;
+      console.error('finished readyResolver');
 
       const helperTestPath = async (...args) => {
         if (!skipDeploy) {
