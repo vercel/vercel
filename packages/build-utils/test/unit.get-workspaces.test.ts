@@ -3,23 +3,28 @@ import { getWorkspaces, Workspace } from '../src/workspaces/get-workspaces';
 import { FixtureFilesystem } from './utils/fixture-filesystem';
 
 describe.each<[Workspace[], string]>([
-  [[{ implementation: 'npm', rootPath: '/' }], '21-npm-workspaces'],
-  [[{ implementation: 'pnpm', rootPath: '/' }], '23-pnpm-workspaces'],
-  [[{ implementation: 'yarn', rootPath: '/' }], '27-yarn-workspaces'],
-  [[{ implementation: 'yarn', rootPath: '/' }], '25-multiple-lock-files-yarn'],
-  [[{ implementation: 'pnpm', rootPath: '/' }], '26-multiple-lock-files-pnpm'],
+  [[{ type: 'npm', rootPath: '/' }], '21-npm-workspaces'],
+  [[{ type: 'pnpm', rootPath: '/' }], '23-pnpm-workspaces'],
+  [[{ type: 'yarn', rootPath: '/' }], '27-yarn-workspaces'],
+  [[{ type: 'yarn', rootPath: '/' }], '25-multiple-lock-files-yarn'],
+  [[{ type: 'pnpm', rootPath: '/' }], '26-multiple-lock-files-pnpm'],
   [
     [
-      { implementation: 'pnpm', rootPath: '/backend' },
-      { implementation: 'yarn', rootPath: '/frontend' },
+      { type: 'pnpm', rootPath: '/backend' },
+      { type: 'yarn', rootPath: '/frontend' },
     ],
     '29-nested-workspaces',
   ],
+  [
+    [
+      { type: 'pnpm', rootPath: '/packages/backend' },
+      { type: 'yarn', rootPath: '/packages/frontend' },
+    ],
+    '30-double-nested-workspaces',
+  ],
   [[], '22-pnpm'],
 ])('`getWorkspaces()`', (workspaces, fixturePath) => {
-  const expectedImplementations = workspaces.map(
-    ({ implementation }) => implementation
-  );
+  const expectedImplementations = workspaces.map(({ type }) => type);
   const testName =
     workspaces.length > 0
       ? `should detect ${expectedImplementations.join()} workspace${
