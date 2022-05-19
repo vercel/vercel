@@ -1,5 +1,5 @@
 // eslint-disable-next-line
-import os from 'os';
+import path from 'path';
 
 const { exec, fixture, testFixture, testFixtureStdio } = require('./utils.js');
 

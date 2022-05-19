@@ -104,11 +104,24 @@ function validateResponseHeaders(res) {
 
 async function exec(directory, args = []) {
   const token = await fetchCachedToken();
-  return execa(binaryPath, ['dev', directory, '-t', token, ...args], {
-    reject: false,
-    shell: true,
-    env: { __VERCEL_SKIP_DEV_CMD: 1 },
-  });
+  return execa(
+    binaryPath,
+    [
+      'dev',
+      directory,
+      '-t',
+      token,
+      ...(process.env.VERCEL_TEAM_ID
+        ? ['--scope', process.env.VERCEL_TEAM_ID]
+        : []),
+      ...args,
+    ],
+    {
+      reject: false,
+      shell: true,
+      env: { __VERCEL_SKIP_DEV_CMD: 1 },
+    }
+  );
 }
 
 async function runNpmInstall(fixturePath) {
@@ -172,7 +185,18 @@ async function testFixture(directory, opts = {}, args = []) {
   const token = await fetchCachedToken();
   const dev = execa(
     binaryPath,
-    ['dev', directory, '-t', token, '-l', String(port), ...args],
+    [
+      'dev',
+      directory,
+      '-t',
+      token,
+      ...(process.env.VERCEL_TEAM_ID
+        ? ['--scope', process.env.VERCEL_TEAM_ID]
+        : []),
+      '-l',
+      String(port),
+      ...args,
+    ],
     {
       reject: false,
       detached: true,
@@ -210,6 +234,7 @@ async function testFixture(directory, opts = {}, args = []) {
       printedOutput = true;
     }
     exitResolver.resolve();
+    readyResolver.resolve();
   });
 
   dev.on('error', () => {
@@ -218,6 +243,7 @@ async function testFixture(directory, opts = {}, args = []) {
       printedOutput = true;
     }
     exitResolver.resolve();
+    readyResolver.resolve();
   });
 
   dev._kill = dev.kill;
@@ -261,7 +287,15 @@ function testFixtureStdio(
         // Run `vc link`
         const { exitCode: linkExitCode } = await execa(
           binaryPath,
-          ['-t', token, 'link', '--confirm'],
+          [
+            '-t',
+            token,
+            ...(process.env.VERCEL_TEAM_ID
+              ? ['--scope', process.env.VERCEL_TEAM_ID]
+              : []),
+            'link',
+            '--confirm',
+          ],
           { cwd, stdio: 'inherit', reject: false }
         );
         expect(linkExitCode).toBe(0);
@@ -270,7 +304,11 @@ function testFixtureStdio(
         if (projectSettings) {
           const { projectId } = await fs.readJson(projectJsonPath);
           const res = await fetchWithRetry(
-            `https://api.vercel.com/v2/projects/${projectId}`,
+            `https://api.vercel.com/v2/projects/${projectId}${
+              process.env.VERCEL_TEAM_ID
+                ? `?teamId=${process.env.VERCEL_TEAM_ID}`
+                : ''
+            }`,
             {
               method: 'PATCH',
               headers: {
@@ -287,7 +325,17 @@ function testFixtureStdio(
         // Run `vc deploy`
         let { exitCode, stdout } = await execa(
           binaryPath,
-          ['-t', token, 'deploy', '--public', '--no-clipboard', '--debug'],
+          [
+            '-t',
+            token,
+            ...(process.env.VERCEL_TEAM_ID
+              ? ['--scope', process.env.VERCEL_TEAM_ID]
+              : []),
+            'deploy',
+            '--public',
+            '--no-clipboard',
+            '--debug',
+          ],
           { cwd, stdio: ['ignore', 'pipe', 'inherit'], reject: false }
         );
         console.log({ exitCode, stdout });
@@ -318,10 +366,24 @@ function testFixtureStdio(
       const env = skipDeploy
         ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
         : process.env;
-      dev = execa(binaryPath, ['dev', '-l', port, '-t', token, '--debug'], {
-        cwd,
-        env,
-      });
+      dev = execa(
+        binaryPath,
+        [
+          'dev',
+          '-l',
+          port,
+          '-t',
+          token,
+          ...(process.env.VERCEL_TEAM_ID
+            ? ['--scope', process.env.VERCEL_TEAM_ID]
+            : []),
+          '--debug',
+        ],
+        {
+          cwd,
+          env,
+        }
+      );
 
       dev.stdout.setEncoding('utf8');
       dev.stderr.setEncoding('utf8');
