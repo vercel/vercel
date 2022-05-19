@@ -12,7 +12,6 @@ import type { Framework } from '@vercel/frameworks';
  *   const fs = new GitDetectorFilesystem(...)
  *   detectFramwork({ fs, frameworkList }) // returns the 'slug' field if detected, otherwise null
  *
- * @todo Will be used by the detect-eligible-projects API endpoint for a given git url.
  */
 export const monorepoManagers: Array<
   Omit<Framework, 'description' | 'logo' | 'settings' | 'getOutputDirName'>
