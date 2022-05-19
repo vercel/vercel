@@ -26,7 +26,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
       - run: yarn install --network-timeout 1000000
-
       - id: set-tests
         run: |
           TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
@@ -60,6 +59,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
+          
+      - name: Install Hugo
+        if: matrix.runner == 'macos-latest'
+        run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
+      
       - run: yarn install --network-timeout 1000000
 
       - name: Build ${{matrix.packageName}} and all its dependencies
