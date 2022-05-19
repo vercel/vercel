@@ -29,9 +29,7 @@ export async function getWorkspaces({
     const childDirectories = directoryContents.filter(
       stat => stat.type === 'dir'
     );
-    let currentDepth = 1;
-
-    while (currentDepth++ < MAX_DEPTH_TRAVERSE) {
+    for (let currentDepth = 0; currentDepth < MAX_DEPTH_TRAVERSE; currentDepth++) {
       workspaces.push(
         ...(
           await Promise.all(
