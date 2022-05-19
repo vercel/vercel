@@ -199,14 +199,10 @@ test(
 
 test(
   '[vercel dev] 26-nextjs-secrets',
-  testFixtureStdio(
-    '26-nextjs-secrets',
-    async (testPath: any) => {
-      await testPath(200, '/api/user', /runtime/m);
-      await testPath(200, '/', /buildtime/m);
-    },
-    { skipDeploy: true }
-  )
+  testFixtureStdio('26-nextjs-secrets', async (testPath: any) => {
+    await testPath(200, '/api/user', /runtime/m);
+    await testPath(200, '/', /buildtime/m);
+  })
 );
 
 test(

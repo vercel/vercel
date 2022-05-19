@@ -5,7 +5,7 @@ const NUMBER_OF_CHUNKS = 5;
 const MINIMUM_PER_CHUNK = 1;
 const runnersMap = new Map([
   ['test-integration-once', ['ubuntu-latest']],
-  ['test-integration-dev', ['ubuntu-latest']],
+  ['test-integration-dev', ['ubuntu-latest', 'macos-latest']],
 ]);
 
 async function getChunkedTests() {
