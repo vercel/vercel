@@ -10,7 +10,6 @@ import { client } from '../../mocks/client';
 import DevServer from '../../../src/util/dev/server';
 import { DevServerOptions } from '../../../src/util/dev/types';
 
-const IS_MAC_OS = process.platform === 'darwin';
 const IS_WINDOWS = process.platform === 'win32';
 
 async function runNpmInstall(fixturePath: string) {
@@ -226,8 +225,7 @@ describe('DevServer', () => {
         expect(body).toEqual('hello and welcome');
       },
       {
-        // this test very often times out in the testFixture startup logic on Mac
-        skip: IS_MAC_OS,
+        devCommand: 'next dev --port $PORT',
       }
     )
   );
