@@ -8,6 +8,7 @@ const allPackages = [
   'build-utils',
   'static-config',
   'client',
+  'next',
   'node-bridge',
   'node',
   'go',

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/build-utils",
-  "version": "3.0.1",
+  "version": "3.0.2-canary.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
@@ -12,8 +12,9 @@
   },
   "scripts": {
     "build": "node build",
-    "test-unit": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
-    "test-integration-once": "jest --env node --verbose --runInBand --bail test/integration.test.ts",
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "yarn test test/unit.*test.*",
+    "test-integration-once": "yarn test test/integration.test.ts",
     "prepublishOnly": "node build"
   },
   "devDependencies": {
@@ -30,7 +31,7 @@
     "@types/node-fetch": "^2.1.6",
     "@types/semver": "6.0.0",
     "@types/yazl": "2.4.2",
-    "@vercel/frameworks": "0.9.0",
+    "@vercel/frameworks": "0.9.1-canary.0",
     "@vercel/ncc": "0.24.0",
     "aggregate-error": "3.0.1",
     "async-retry": "1.2.3",

@@ -21,11 +21,6 @@ async function main() {
     join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
   );
 
-  // Setup symlink for symlink test
-  const symlinkTarget = join(__dirname, 'test/fixtures/11-symlinks/symlink');
-  await fs.remove(symlinkTarget);
-  await fs.symlink('symlinked-asset', symlinkTarget);
-
   const mainDir = join(outDir, 'main');
   await execa(
     'ncc',
