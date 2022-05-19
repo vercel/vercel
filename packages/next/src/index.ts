@@ -1116,9 +1116,9 @@ export const build: BuildV2 = async ({
           files: {
             ...nextFiles,
             ...pageFiles,
-            '___next_launcher.js': new FileBlob({ data: launcher }),
+            '___next_launcher.cjs': new FileBlob({ data: launcher }),
           },
-          handler: '___next_launcher.js',
+          handler: '___next_launcher.cjs',
           runtime: nodeVersion.runtime,
           ...lambdaOptions,
           shouldAddHelpers: false,
@@ -1786,7 +1786,7 @@ export const build: BuildV2 = async ({
           const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
             [path.join(
               path.relative(baseDir, entryPath),
-              '___next_launcher.js'
+              '___next_launcher.cjs'
             )]: new FileBlob({ data: launcher }),
           };
           let lambdaOptions: { memory?: number; maxDuration?: number } = {};
@@ -1822,7 +1822,7 @@ export const build: BuildV2 = async ({
               ],
               handler: path.join(
                 path.relative(baseDir, entryPath),
-                '___next_launcher.js'
+                '___next_launcher.cjs'
               ),
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
@@ -1841,7 +1841,7 @@ export const build: BuildV2 = async ({
               ],
               handler: path.join(
                 path.relative(baseDir, entryPath),
-                '___next_launcher.js'
+                '___next_launcher.cjs'
               ),
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
@@ -2023,7 +2023,7 @@ export const build: BuildV2 = async ({
             const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
               [path.join(
                 path.relative(baseDir, entryPath),
-                '___next_launcher.js'
+                '___next_launcher.cjs'
               )]: new FileBlob({ data: launcher }),
             };
 
@@ -2040,7 +2040,7 @@ export const build: BuildV2 = async ({
                 layers: [group.pseudoLayer],
                 handler: path.join(
                   path.relative(baseDir, entryPath),
-                  '___next_launcher.js'
+                  '___next_launcher.cjs'
                 ),
                 runtime: nodeVersion.runtime,
               });
