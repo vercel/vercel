@@ -285,7 +285,7 @@ function testFixtureStdio(
 
       try {
         // Run `vc link`
-        const { exitCode: linkExitCode } = await execa(
+        const linkResult = await execa(
           binaryPath,
           [
             '-t',
@@ -296,9 +296,13 @@ function testFixtureStdio(
             'link',
             '--confirm',
           ],
-          { cwd, stdio: 'inherit', reject: false }
+          { cwd, stdio: 'pipe', reject: false }
         );
-        expect(linkExitCode).toBe(0);
+        console.log({
+          stderr: linkResult.stderr,
+          stdout: linkResult.stdout,
+        });
+        expect(linkResult.exitCode).toBe(0);
 
         // Patch the project with any non-default properties
         if (projectSettings) {
@@ -323,7 +327,7 @@ function testFixtureStdio(
         }
 
         // Run `vc deploy`
-        let { exitCode, stdout } = await execa(
+        let deployResult = await execa(
           binaryPath,
           [
             '-t',
@@ -336,12 +340,16 @@ function testFixtureStdio(
             '--no-clipboard',
             '--debug',
           ],
-          { cwd, stdio: ['ignore', 'pipe', 'inherit'], reject: false }
+          { cwd, stdio: 'pipe', reject: false }
         );
-        console.log({ exitCode, stdout });
-        expect(exitCode).toBe(expectedCode);
+        console.log({
+          exitCode: deployResult.exitCode,
+          stdout: deployResult.stdout,
+          stderr: deployResult.stderr,
+        });
+        expect(deployResult.exitCode).toBe(expectedCode);
         if (expectedCode === 0) {
-          deploymentUrl = new URL(stdout).host;
+          deploymentUrl = new URL(deployResult.stdout).host;
         }
       } finally {
         if (!hasGitignore) {

@@ -170,8 +170,9 @@ async function deploymentGet(deploymentId) {
 }
 
 let token;
-let currentCount = 0;
-const MAX_COUNT = 10;
+let tokenCreated = 0;
+// temporary tokens last for 25 minutes
+const MAX_TOKEN_AGE = 25 * 60 * 1000;
 
 async function fetchWithAuth(url, opts = {}) {
   if (!opts.headers) opts.headers = {};
@@ -189,9 +190,8 @@ async function fetchWithAuth(url, opts = {}) {
 }
 
 async function fetchCachedToken() {
-  currentCount += 1;
-  if (!token || currentCount === MAX_COUNT) {
-    currentCount = 0;
+  if (!token || tokenCreated < Date.now() - MAX_TOKEN_AGE) {
+    tokenCreated = Date.now();
     token = await fetchTokenWithRetry();
   }
   return token;
