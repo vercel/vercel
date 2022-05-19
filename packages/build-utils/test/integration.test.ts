@@ -37,6 +37,10 @@ const skipFixtures: string[] = [
   '29-nested-workspaces',
   '30-double-nested-workspaces',
   '31-turborepo-in-package-json',
+  '32-monorepo-highly-nested',
+  '33-hybrid-monorepo',
+  '34-monorepo-no-workspaces',
+  '35-no-monorepo',
 ];
 
 // eslint-disable-next-line no-restricted-syntax
