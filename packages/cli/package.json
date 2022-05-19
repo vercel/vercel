@@ -12,10 +12,10 @@
   },
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
-    "test": "jest --env node --verbose --runInBand --bail",
-    "test-unit": "yarn test",
+    "test": "jest --env node --verbose --runInBand --bail --forceExit",
+    "test-unit": "yarn test test/unit/",
     "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
-    "test-integration-dev": "ava test/dev/integration.js --serial --fail-fast --verbose",
+    "test-integration-dev": "yarn test test/dev/",
     "prepublishOnly": "yarn build",
     "coverage": "codecov",
     "build": "node -r ts-eager/register ./scripts/build.ts",
