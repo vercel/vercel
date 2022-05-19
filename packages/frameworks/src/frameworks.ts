@@ -2055,7 +2055,7 @@ export const frameworks = [
         value: 'docs/.vitepress/dist',
       },
     },
-    getOutputDirName: async () => 'docs/.vitepress/dist',
+    getOutputDirName: async () => '.vitepress/dist',
   },
   {
     name: 'VuePress',
@@ -2086,10 +2086,10 @@ export const frameworks = [
         value: 'vuepress dev src',
       },
       outputDirectory: {
-        value: 'docs/.vuepress/dist',
+        value: '.vuepress/dist',
       },
     },
-    getOutputDirName: async () => 'docs/.vuepress/dist',
+    getOutputDirName: async () => '.vuepress/dist',
   },
   {
     name: 'Parcel',
