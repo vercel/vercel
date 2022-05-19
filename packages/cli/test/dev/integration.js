@@ -1095,19 +1095,6 @@ test(
 );
 
 test(
-  '[vercel dev] support dynamic next.js routes in monorepos',
-  testFixtureStdio('monorepo-dynamic-paths', async testPath => {
-    await testPath(200, '/', /This is our homepage/m);
-    await testPath(200, '/about', /This is the about static page./m);
-    await testPath(
-      200,
-      '/1/dynamic',
-      /This is the (.*)dynamic(.*) page with static props./m
-    );
-  })
-);
-
-test(
   '[vercel dev] 00-list-directory',
   testFixtureStdio(
     '00-list-directory',
