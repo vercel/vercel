@@ -14,7 +14,9 @@ import type { Framework } from '@vercel/frameworks';
  *
  * @todo Will be used by the detect-eligible-projects API endpoint for a given git url.
  */
-export const monorepoManagers: Array<Framework> = [
+export const monorepoManagers: Array<
+  Omit<Framework, 'description' | 'logo' | 'settings' | 'getOutputDirName'>
+> = [
   {
     name: 'Turborepo',
     slug: 'turbo',
@@ -29,28 +31,6 @@ export const monorepoManagers: Array<Framework> = [
         },
       ],
     },
-    // unused props - needed for typescript
-    description: '',
-    logo: '',
-    settings: {
-      buildCommand: {
-        value: '',
-        placeholder: '',
-      },
-      devCommand: {
-        value: '',
-        placeholder: '',
-      },
-      installCommand: {
-        value: '',
-        placeholder: '',
-      },
-      outputDirectory: {
-        value: '',
-        placeholder: '',
-      },
-    },
-    getOutputDirName: () => Promise.resolve(''),
   },
 ];
 

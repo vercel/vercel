@@ -14,7 +14,9 @@ import type { Framework } from '@vercel/frameworks';
  *
  * @todo Will be used by the detect-eligible-projects API endpoint for a given git url.
  */
-export const workspaceManagers: Array<Framework> = [
+export const workspaceManagers: Array<
+  Omit<Framework, 'description' | 'logo' | 'settings' | 'getOutputDirName'>
+> = [
   {
     name: 'Yarn',
     slug: 'yarn',
@@ -30,28 +32,6 @@ export const workspaceManagers: Array<Framework> = [
         },
       ],
     },
-    // unused props - needed for typescript
-    description: '',
-    logo: '',
-    settings: {
-      buildCommand: {
-        value: '',
-        placeholder: '',
-      },
-      devCommand: {
-        value: '',
-        placeholder: '',
-      },
-      installCommand: {
-        value: '',
-        placeholder: '',
-      },
-      outputDirectory: {
-        value: '',
-        placeholder: '',
-      },
-    },
-    getOutputDirName: () => Promise.resolve(''),
   },
   {
     name: 'pnpm',
@@ -63,28 +43,6 @@ export const workspaceManagers: Array<Framework> = [
         },
       ],
     },
-    // unused props - needed for typescript
-    description: '',
-    logo: '',
-    settings: {
-      buildCommand: {
-        value: '',
-        placeholder: '',
-      },
-      devCommand: {
-        value: '',
-        placeholder: '',
-      },
-      installCommand: {
-        value: '',
-        placeholder: '',
-      },
-      outputDirectory: {
-        value: '',
-        placeholder: '',
-      },
-    },
-    getOutputDirName: () => Promise.resolve(''),
   },
   {
     name: 'npm',
@@ -101,28 +59,6 @@ export const workspaceManagers: Array<Framework> = [
         },
       ],
     },
-    // unused props - needed for typescript
-    description: '',
-    logo: '',
-    settings: {
-      buildCommand: {
-        value: '',
-        placeholder: '',
-      },
-      devCommand: {
-        value: '',
-        placeholder: '',
-      },
-      installCommand: {
-        value: '',
-        placeholder: '',
-      },
-      outputDirectory: {
-        value: '',
-        placeholder: '',
-      },
-    },
-    getOutputDirName: () => Promise.resolve(''),
   },
 ];
 
