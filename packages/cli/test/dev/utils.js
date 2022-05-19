@@ -10,6 +10,8 @@ const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
 
+jest.setTimeout(2 * 60 * 1000);
+
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const isCanary = () => getDistTag(cliVersion) === 'canary';
 
@@ -400,9 +402,7 @@ afterEach(async () => {
           process.kill(proc.pid, 'SIGTERM');
         } catch (err) {
           // Was already killed
-          if (err.errno !== 'ESRCH') {
-            throw err;
-          }
+          console.error(`Failed to kill process`, proc.pid, err);
         }
       }
     })

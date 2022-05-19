@@ -12,8 +12,6 @@ const {
   validateResponseHeaders,
 } = require('./utils.js');
 
-jest.setTimeout(4 * 60 * 1000);
-
 // Angular has `engines: { node: "10.x" }` in its `package.json`
 test('[vercel dev] 02-angular-node', async () => {
   if (shouldSkip('02-angular-node', '10.x')) return;

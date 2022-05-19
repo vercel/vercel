@@ -76,7 +76,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
   }
 
   logWithinTest('id', deploymentId);
-  const st = expect.getState();
+  const st = typeof expect !== 'undefined' ? expect.getState() : {};
   const expectstate = {
     currentTestName: st.currentTestName,
     testPath: st.testPath,

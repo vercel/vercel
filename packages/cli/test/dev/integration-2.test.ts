@@ -3,8 +3,6 @@ import os from 'os';
 
 const { exec, fixture, testFixture, testFixtureStdio } = require('./utils.js');
 
-jest.setTimeout(4 * 60 * 1000);
-
 test('[vercel dev] validate redirects', async () => {
   const directory = fixture('invalid-redirects');
   const output = await exec(directory);

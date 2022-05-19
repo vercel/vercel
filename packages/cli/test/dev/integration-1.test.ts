@@ -10,8 +10,6 @@ const {
   testFixtureStdio,
 } = require('./utils.js');
 
-jest.setTimeout(4 * 60 * 1000);
-
 test(
   '[vercel dev] redwoodjs example',
   testFixtureStdio(
