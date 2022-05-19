@@ -181,18 +181,17 @@ export default async function main(client: Client): Promise<number> {
 
   const routesResult = getTransformedRoutes({ nowConfig: vercelConfig || {} });
   if (routesResult.error) {
-    //throw new NowBuildError(routesResult.error);
+    output.prettyError(routesResult.error);
+    return 1;
   }
 
   if (vercelConfig?.builds && vercelConfig.functions) {
-    /*
-    throw new NowBuildError({
-      code: 'bad_request',
+    output.prettyError({
       message:
         'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
       link: 'https://vercel.link/functions-and-builds',
     });
-    */
+    return 1;
   }
 
   /*
