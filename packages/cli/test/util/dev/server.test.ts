@@ -37,7 +37,7 @@ const testFixture =
       return;
     }
 
-    let server: DevServer | null = null;
+    let server: DevServer | undefined;
     const fixturePath = path.join(__dirname, '../../fixtures/unit', name);
     await runNpmInstall(fixturePath);
     try {
@@ -48,9 +48,7 @@ const testFixture =
       await server.start(0);
       await fn(server);
     } finally {
-      if (server) {
-        await server.stop();
-      }
+      await server?.stop();
     }
   };
 
