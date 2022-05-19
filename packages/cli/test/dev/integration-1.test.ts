@@ -10,24 +10,6 @@ const {
   testFixtureStdio,
 } = require('./utils.js');
 
-test(
-  '[vercel dev] redwoodjs example',
-  testFixtureStdio(
-    'redwoodjs',
-    async (testPath: any) => {
-      await testPath(200, '/', /<div id="redwood-app">/m);
-      await testPath(200, '/about', /<div id="redwood-app">/m);
-      const fetchOpts = {
-        method: 'POST',
-        body: '{"query":"{redwood{version}}"}',
-      };
-      const resBody = '{"data":{"redwood":{"version":"0.25.0"}}}';
-      await testPath(200, '/api/graphql', resBody, {}, fetchOpts);
-    },
-    { isExample: true }
-  )
-);
-
 test('[vercel dev] prints `npm install` errors', async () => {
   const dir = fixture('runtime-not-installed');
   const result = await exec(dir);
