@@ -1,0 +1,16 @@
+{
+  "name": "esm-package",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "canary",
+    "react": "17.0.2",
+    "react-dom": "17.0.2"
+  }
+}
