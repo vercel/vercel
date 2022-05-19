@@ -1,4 +1,4 @@
-//const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 
 const {
@@ -31,8 +31,7 @@ const testsThatFailToBuild = new Map([
 ]);
 
 // eslint-disable-next-line no-restricted-syntax
-//for (const fixture of fs.readdirSync(fixturesPath)) {
-for (const fixture of ['11-symlinks']) {
+for (const fixture of fs.readdirSync(fixturesPath)) {
   const errMsg = testsThatFailToBuild.get(fixture);
   if (errMsg) {
     // eslint-disable-next-line no-loop-func

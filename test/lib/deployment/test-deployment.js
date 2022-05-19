@@ -252,16 +252,14 @@ async function testDeployment(
   buildDelegate
 ) {
   logWithinTest('testDeployment', fixturePath);
-  console.log(fs.readdirSync(fixturePath));
   const globResult = await glob(`${fixturePath}/**`, {
     nodir: true,
     dot: true,
   });
-  console.log(globResult);
   const bodies = globResult.reduce((b, f) => {
+    let data;
     const r = path.relative(fixturePath, f);
     const stat = fs.lstatSync(f);
-    let data;
     if (stat.isSymbolicLink()) {
       data = Buffer.from(fs.readlinkSync(f), 'utf8');
     } else {
@@ -271,7 +269,6 @@ async function testDeployment(
     b[r] = data;
     return b;
   }, {});
-  console.log(bodies);
 
   const randomness = Math.floor(Math.random() * 0x7fffffff)
     .toString(16)
