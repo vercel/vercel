@@ -4,6 +4,7 @@ const _execa = require('execa');
 const fetch = require('node-fetch');
 const retry = require('async-retry');
 const { satisfies } = require('semver');
+const stripAnsi = require('strip-ansi');
 const { getDistTag } = require('../../src/util/get-dist-tag');
 const { version: cliVersion } = require('../../package.json');
 const {
@@ -221,7 +222,7 @@ async function testFixture(directory, opts = {}, args = []) {
   dev.stderr.on('data', data => {
     stderr += data;
 
-    if (stderr.includes('Ready! Available at')) {
+    if (stripAnsi(stderr).includes('Ready! Available at')) {
       readyResolver.resolve();
     }
   });
@@ -400,19 +401,13 @@ function testFixtureStdio(
       dev.stderr.pipe(process.stderr);
 
       dev.stdout.on('data', data => {
-        console.error('got stdout', data);
         stdout += data;
-
-        if (stdout.includes('Ready! Available at')) {
-          readyResolver.resolve();
-        }
       });
 
       dev.stderr.on('data', data => {
-        console.error('got stderr', data);
         stderr += data;
 
-        if (stderr.includes('Ready! Available at')) {
+        if (stripAnsi(data).includes('Ready! Available at')) {
           readyResolver.resolve();
         }
 
