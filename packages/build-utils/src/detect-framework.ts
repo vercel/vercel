@@ -1,12 +1,17 @@
 import { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
 import { DetectorFilesystem } from './detectors/filesystem';
 
-export interface DetectFrameworkOptions {
-  fs: DetectorFilesystem;
-  frameworkList: readonly Framework[];
+interface BaseFramework {
+  slug: Framework['slug'];
+  detectors?: Framework['detectors'];
 }
 
-async function matches(fs: DetectorFilesystem, framework: Framework) {
+export interface DetectFrameworkOptions {
+  fs: DetectorFilesystem;
+  frameworkList: readonly BaseFramework[];
+}
+
+async function matches(fs: DetectorFilesystem, framework: BaseFramework) {
   const { detectors } = framework;
 
   if (!detectors) {
