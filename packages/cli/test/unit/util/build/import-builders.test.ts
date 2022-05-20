@@ -18,7 +18,7 @@ describe('importBuilders()', () => {
     expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
   });
 
-  it('should install 3rd party Builders', async () => {
+  it('should import 3rd party Builders', async () => {
     const cwd = await getWriteableDirectory();
     try {
       const spec = 'vercel-deno@2.0.1';
@@ -30,6 +30,19 @@ describe('importBuilders()', () => {
       expect(builders.get(spec)?.pkgPath).toEqual(
         join(cwd, '.vercel/builders/node_modules/vercel-deno/package.json')
       );
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should import legacy `@now/build-utils` Builders', async () => {
+    const cwd = await getWriteableDirectory();
+    try {
+      const spec = '@frontity/now@1.2.0';
+      const specs = new Set([spec]);
+      const builders = await importBuilders(specs, cwd, client.output);
+      expect(builders.size).toEqual(1);
+      console.log(builders);
     } finally {
       await remove(cwd);
     }
