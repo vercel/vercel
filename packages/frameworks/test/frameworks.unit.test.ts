@@ -7,6 +7,9 @@ import fetch from 'node-fetch';
 import { URL, URLSearchParams } from 'url';
 import frameworkList from '../src/frameworks';
 
+// bump timeout for Windows as network can be slower
+jest.setTimeout(15 * 1000);
+
 const SchemaFrameworkDetectionItem = {
   type: 'array',
   items: [
@@ -34,7 +37,7 @@ const SchemaSettings = {
       additionalProperties: false,
       properties: {
         value: {
-          type: 'string',
+          type: ['string', 'null'],
         },
         placeholder: {
           type: 'string',
@@ -58,15 +61,7 @@ const Schema = {
   type: 'array',
   items: {
     type: 'object',
-    required: [
-      'name',
-      'slug',
-      'logo',
-      'description',
-      'settings',
-      'buildCommand',
-      'devCommand',
-    ],
+    required: ['name', 'slug', 'logo', 'description', 'settings'],
     properties: {
       name: { type: 'string' },
       slug: { type: ['string', 'null'] },
@@ -138,8 +133,6 @@ const Schema = {
 
       dependency: { type: 'string' },
       cachePattern: { type: 'string' },
-      buildCommand: { type: ['string', 'null'] },
-      devCommand: { type: ['string', 'null'] },
       defaultVersion: { type: 'string' },
     },
   },

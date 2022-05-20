@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import Client from '../../util/client';
 import { emoji } from '../../util/emoji';
 import getUser from '../../util/get-user';
-import getTeams from '../../util/get-teams';
+import getTeams from '../../util/teams/get-teams';
 import listInput from '../../util/input/list';
 import { Team, GlobalConfig } from '../../types';
 import { writeToConfigFile } from '../../util/config/files';

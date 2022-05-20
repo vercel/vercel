@@ -2,7 +2,6 @@ import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
 import hp from '../util/humanize-path';
 import getArgs from '../util/get-args';
-import handleError from '../util/handle-error';
 import logo from '../util/output/logo';
 import prompt from '../util/login/prompt';
 import doSamlLogin from '../util/login/saml';
@@ -52,20 +51,14 @@ const help = () => {
 };
 
 export default async function login(client: Client): Promise<number> {
-  let argv;
   const { output } = client;
 
-  try {
-    argv = getArgs(client.argv.slice(2), {
-      '--oob': Boolean,
-      '--github': Boolean,
-      '--gitlab': Boolean,
-      '--bitbucket': Boolean,
-    });
-  } catch (err) {
-    handleError(err);
-    return 1;
-  }
+  const argv = getArgs(client.argv.slice(2), {
+    '--oob': Boolean,
+    '--github': Boolean,
+    '--gitlab': Boolean,
+    '--bitbucket': Boolean,
+  });
 
   if (argv['--help']) {
     help();
@@ -115,8 +108,7 @@ export default async function login(client: Client): Promise<number> {
     }
   }
 
-  // When `result` is a string it's the user's authentication token.
-  // It needs to be saved to the configuration file.
+  // Save the user's authentication token to the configuration file.
   client.authConfig.token = result.token;
 
   writeToAuthConfigFile(client.authConfig);
@@ -124,9 +116,9 @@ export default async function login(client: Client): Promise<number> {
 
   output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
-  console.log(
+  output.print(
     `${chalk.cyan('Congratulations!')} ` +
-      `You are now logged in. In order to deploy something, run ${getCommandName()}.`
+      `You are now logged in. In order to deploy something, run ${getCommandName()}.\n`
   );
 
   output.print(

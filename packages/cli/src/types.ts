@@ -1,3 +1,5 @@
+export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
+
 export type Primitive =
   | bigint
   | boolean
@@ -16,13 +18,13 @@ export interface JSONObject {
 }
 
 export interface AuthConfig {
-  _: string;
+  _?: string;
   token?: string;
   skipWrite?: boolean;
 }
 
 export interface GlobalConfig {
-  _: string;
+  _?: string;
   currentTeam?: string;
   includeScheme?: string;
   collectMetrics?: boolean;
@@ -45,25 +47,12 @@ type Billing = {
 };
 
 export type User = {
-  uid: string;
+  id: string;
   avatar: string;
-  bio?: string;
-  date: number;
+  createdAt: number;
   email: string;
   username: string;
-  website?: string;
-  billingChecked: boolean;
   billing: Billing;
-  github?: {
-    email: string;
-    installation: {
-      id: string;
-      login: string;
-      loginType: string;
-    };
-    login: string;
-    updatedAt: number;
-  };
   name?: string;
   limited?: boolean;
 };
@@ -96,10 +85,6 @@ export type Domain = {
   transferredAt?: number | null;
   orderedAt?: number;
   serviceType: 'zeit.world' | 'external' | 'na';
-  verified: boolean;
-  nsVerifiedAt: number | null;
-  txtVerifiedAt: number | null;
-  verificationRecord: string;
   nameservers: string[];
   intendedNameservers: string[];
   creator: {
@@ -144,6 +129,13 @@ export type Deployment = {
   created: number;
   createdAt: number;
   creator: { uid: string; username: string };
+  target: string | null;
+  ownerId: string;
+  projectId: string;
+  inspectorUrl: string;
+  meta: {
+    [key: string]: any;
+  };
 };
 
 export type Alias = {
@@ -252,16 +244,6 @@ export interface ProjectEnvVariable {
   gitBranch?: string;
 }
 
-export interface ProjectSettings {
-  framework?: string | null;
-  devCommand?: string | null;
-  buildCommand?: string | null;
-  outputDirectory?: string | null;
-  rootDirectory?: string | null;
-  autoExposeSystemEnvs?: boolean;
-  directoryListing?: boolean;
-}
-
 export interface Project extends ProjectSettings {
   id: string;
   name: string;
@@ -269,12 +251,7 @@ export interface Project extends ProjectSettings {
   updatedAt: number;
   createdAt: number;
   alias?: ProjectAliasTarget[];
-  devCommand?: string | null;
-  framework?: string | null;
-  rootDirectory?: string | null;
   latestDeployments?: Partial<Deployment>[];
-  autoExposeSystemEnvs?: boolean;
-  sourceFilesOutsideRootDirectory: boolean;
 }
 
 export interface Org {
@@ -297,7 +274,17 @@ export interface PaginationOptions {
 export type ProjectLinkResult =
   | { status: 'linked'; org: Org; project: Project }
   | { status: 'not_linked'; org: null; project: null }
-  | { status: 'error'; exitCode: number };
+  | {
+      status: 'error';
+      exitCode: number;
+      reason?:
+        | 'HEADLESS'
+        | 'NOT_AUTHORIZED'
+        | 'TEAM_DELETED'
+        | 'PATH_IS_FILE'
+        | 'INVALID_ROOT_DIRECTORY'
+        | 'MISSING_PROJECT_SETTINGS';
+    };
 
 export interface Token {
   id: string;

@@ -18,15 +18,17 @@ export const help = () => `
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
       inspect              [id]        Displays information related to a deployment
-      link                             Link local directory to a Vercel Project
+      link                 [path]      Link local directory to a Vercel Project
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
+      pull                 [path]      Pull your Project Settings from the cloud
       switch               [scope]     Switches between teams and your personal account
       help                 [cmd]       Displays complete help for [cmd]
 
     ${chalk.dim('Advanced')}
 
       rm | remove          [id]        Removes a deployment
+      bisect                           Use binary search to find the deployment that introduced a bug
       domains              [name]      Manages your domain names
       projects                         Manages your Projects
       dns                  [name]      Manages your DNS records
@@ -40,6 +42,7 @@ export const help = () => `
 
     -h, --help                     Output usage information
     -v, --version                  Output the version number
+    --cwd                          Current working directory
     -V, --platform-version         Set the platform version to deploy to
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
   'FILE'

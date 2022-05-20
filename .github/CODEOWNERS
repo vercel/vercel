@@ -1,27 +1,26 @@
 # Documentation
 # https://help.github.com/en/articles/about-code-owners
 
-*                                        @TooTallNate
-/.github/workflows                       @AndyBitz @styfle
-/packages/frameworks                     @AndyBitz
-/packages/cli/src/commands/dev       @TooTallNate @styfle @AndyBitz
-/packages/cli/src/util/dev           @TooTallNate @styfle @AndyBitz
-/packages/cli/src/commands/domains   @javivelasco @mglagola @anatrajkovska
-/packages/cli/src/commands/certs     @javivelasco @mglagola @anatrajkovska
-/packages/cli/src/commands/env       @styfle @lucleray
-/packages/client                     @rdev @styfle @TooTallNate
-/packages/build-utils                @styfle @AndyBitz @TooTallNate
-/packages/node                       @styfle @TooTallNate @lucleray
-/packages/node-bridge                @styfle @TooTallNate @lucleray
-/packages/next                       @Timer @ijjk
-/packages/go                         @styfle @TooTallNate
-/packages/python                     @styfle @TooTallNate
-/packages/ruby                       @styfle @coetry @TooTallNate
-/packages/static-build               @styfle @AndyBitz
-/packages/routing-utils              @styfle @dav-is @ijjk
-/examples                                @mcsdevv @timothyis
+*                                        @TooTallNate @EndangeredMassa @styfle
+/.github/workflows                       @TooTallNate @EndangeredMassa @styfle @ijjk
+/packages/frameworks                     @TooTallNate @EndangeredMassa @styfle @AndyBitz
+/packages/cli/src/commands/domains       @javivelasco @mglagola @anatrajkovska
+/packages/cli/src/commands/certs         @javivelasco @mglagola @anatrajkovska
+/packages/cli/src/commands/env           @styfle @lucleray
+/packages/client                         @TooTallNate @EndangeredMassa @styfle
+/packages/build-utils                    @TooTallNate @EndangeredMassa @styfle @AndyBitz
+/packages/middleware                     @gdborton @javivelasco
+/packages/node                           @TooTallNate @EndangeredMassa @styfle
+/packages/node-bridge                    @TooTallNate @EndangeredMassa @styfle @ijjk
+/packages/next                           @TooTallNate @ijjk
+/packages/go                             @TooTallNate @EndangeredMassa @styfle
+/packages/python                         @TooTallNate @EndangeredMassa @styfle
+/packages/ruby                           @TooTallNate @EndangeredMassa @styfle
+/packages/static-build                   @TooTallNate @EndangeredMassa @styfle @AndyBitz
+/packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @ijjk
+/examples                                @leerob
 /examples/create-react-app               @Timer
-/examples/nextjs                         @timneutkens @Timer
-/examples/hugo                           @mcsdevv @timothyis @styfle
-/examples/jekyll                         @mcsdevv @timothyis @styfle
-/examples/zola                           @mcsdevv @timothyis @styfle
+/examples/nextjs                         @timneutkens @ijjk @styfle
+/examples/hugo                           @styfle
+/examples/jekyll                         @styfle
+/examples/zola                           @styfle

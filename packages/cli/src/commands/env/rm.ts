@@ -67,10 +67,16 @@ export default async function rm(
     return 1;
   }
 
-  const result = await getEnvRecords(output, client, project.id, {
-    target: envTarget,
-    gitBranch: envGitBranch,
-  });
+  const result = await getEnvRecords(
+    output,
+    client,
+    project.id,
+    'vercel-cli:env:rm',
+    {
+      target: envTarget,
+      gitBranch: envGitBranch,
+    }
+  );
 
   let envs = result.envs.filter(env => env.key === envName);
 

@@ -1,4 +1,5 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
       "source": "/",
@@ -7,8 +8,21 @@
     {
       "source": "/api/v1/frameworks",
       "destination": "/api/frameworks"
+    },
+    {
+      "source": "/api/examples/list",
+      "destination": "/list.json"
+    },
+    {
+      "source": "/api/examples/list-all",
+      "destination": "/list-all.json"
     }
   ],
+  "build": {
+    "env": {
+      "ENABLE_FILE_SYSTEM_API": "1"
+    }
+  },
   "github": {
     "silent": true,
     "autoJobCancelation": true

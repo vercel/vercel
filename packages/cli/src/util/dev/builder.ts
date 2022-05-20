@@ -35,6 +35,7 @@ import {
   BuildResultV3,
   BuilderOutputs,
   EnvConfigs,
+  BuiltLambda,
 } from './types';
 import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
@@ -109,7 +110,8 @@ export async function executeBuild(
     builderWithPkg: { runInProcess, requirePath, builder, package: pkg },
   } = match;
   const { entrypoint } = match;
-  const { debug, envConfigs, cwd: workPath, devCacheDir } = devServer;
+  const { envConfigs, cwd: workPath, devCacheDir } = devServer;
+  const debug = devServer.output.isDebugEnabled();
 
   const startTime = Date.now();
   const showBuildTimestamp =
@@ -216,13 +218,13 @@ export async function executeBuild(
 
     if (output.maxDuration) {
       throw new Error(
-        'The result of "builder.build()" must not contain `memory`'
+        'The result of "builder.build()" must not contain `maxDuration`'
       );
     }
 
     if (output.memory) {
       throw new Error(
-        'The result of "builder.build()" must not contain `maxDuration`'
+        'The result of "builder.build()" must not contain `memory`'
       );
     }
 
@@ -286,8 +288,8 @@ export async function executeBuild(
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
   for (const name of Object.keys(output)) {
-    const obj = output[name] as File;
-    let lambda: Lambda;
+    const obj = output[name] as File | Lambda;
+    let lambda: BuiltLambda;
     let fileRef: FileFsRef;
     let fileBlob: FileBlob;
     switch (obj.type) {
@@ -301,7 +303,7 @@ export async function executeBuild(
         output[name] = fileBlob;
         break;
       case 'Lambda':
-        lambda = Object.assign(Object.create(Lambda.prototype), obj) as Lambda;
+        lambda = Object.assign(Object.create(Lambda.prototype), obj);
         // Convert the JSON-ified Buffer object back into an actual Buffer
         lambda.zipBuffer = Buffer.from((obj as any).zipBuffer.data);
         output[name] = lambda;

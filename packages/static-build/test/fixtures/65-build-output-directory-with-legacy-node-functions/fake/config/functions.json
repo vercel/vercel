@@ -1,0 +1,6 @@
+{
+  "my-function": {
+    "memory": 128,
+    "maxDuration": 2
+  }
+}

@@ -34,10 +34,10 @@ export interface ClientOptions {
   authConfig: AuthConfig;
   output: Output;
   config: GlobalConfig;
-  localConfig: VercelConfig;
+  localConfig?: VercelConfig;
 }
 
-const isJSONObject = (v: any): v is JSONObject => {
+export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
 
@@ -47,7 +47,7 @@ export default class Client extends EventEmitter {
   authConfig: AuthConfig;
   output: Output;
   config: GlobalConfig;
-  localConfig: VercelConfig;
+  localConfig?: VercelConfig;
   private requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
@@ -69,7 +69,7 @@ export default class Client extends EventEmitter {
     });
   }
 
-  _fetch(_url: string, opts: FetchOptions = {}) {
+  private _fetch(_url: string, opts: FetchOptions = {}) {
     const parsedUrl = parseUrl(_url, true);
     const apiUrl = parsedUrl.host
       ? `${parsedUrl.protocol}//${parsedUrl.host}`
@@ -100,7 +100,7 @@ export default class Client extends EventEmitter {
     let body;
     if (isJSONObject(opts.body)) {
       body = JSON.stringify(opts.body);
-      headers.set('content-type', 'application/json; charset=utf8');
+      headers.set('content-type', 'application/json; charset=utf-8');
     } else {
       body = opts.body;
     }

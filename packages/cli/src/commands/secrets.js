@@ -78,8 +78,6 @@ const help = () => {
 
 // Options
 let argv;
-let debug;
-let apiUrl;
 let subcommand;
 let nextTimestamp;
 
@@ -96,8 +94,6 @@ const main = async client => {
 
   argv._ = argv._.slice(1);
 
-  debug = argv.debug;
-  apiUrl = client.apiUrl;
   subcommand = argv._[0];
   nextTimestamp = argv.next;
 
@@ -107,7 +103,6 @@ const main = async client => {
   }
 
   const {
-    authConfig: { token },
     output,
     config: { currentTeam },
   } = client;
@@ -124,7 +119,7 @@ const main = async client => {
     throw err;
   }
 
-  return run({ output, token, contextName, currentTeam, client });
+  return run({ output, contextName, currentTeam, client });
 };
 
 export default async client => {
@@ -136,8 +131,8 @@ export default async client => {
   }
 };
 
-async function run({ output, token, contextName, currentTeam, client }) {
-  const secrets = new NowSecrets({ apiUrl, token, debug, currentTeam, output });
+async function run({ output, contextName, currentTeam, client }) {
+  const secrets = new NowSecrets({ client, currentTeam });
   const args = argv._.slice(1);
   const start = Date.now();
   const { 'test-warning': testWarningFlag } = argv;

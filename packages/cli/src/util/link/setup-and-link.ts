@@ -2,11 +2,12 @@ import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { ProjectLinkResult, ProjectSettings } from '../../types';
-import { VercelConfig } from '../dev/types';
 import {
   getLinkedProject,
   linkFolderToProject,
   getVercelDirectory,
+  VERCEL_DIR_README,
+  VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import createProject from '../projects/create-project';
 import updateProject from '../projects/update-project';
@@ -23,28 +24,34 @@ import editProjectSettings from '../input/edit-project-settings';
 import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
-import Now from '../index';
+import Now, { CreateOptions } from '../index';
+
+export interface SetupAndLinkOptions {
+  forceDelete?: boolean;
+  autoConfirm?: boolean;
+  successEmoji: EmojiLabel;
+  setupMsg: string;
+  projectName?: string;
+}
 
 export default async function setupAndLink(
   client: Client,
   path: string,
-  forceDelete: boolean,
-  autoConfirm: boolean,
-  successEmoji: EmojiLabel,
-  setupMsg: string
+  {
+    forceDelete = false,
+    autoConfirm = false,
+    successEmoji,
+    setupMsg,
+    projectName,
+  }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
-  const {
-    authConfig: { token },
-    apiUrl,
-    output,
-    config,
-  } = client;
+  const { localConfig, output, config } = client;
   const debug = output.isDebugEnabled();
 
   const isFile = !isDirectory(path);
   if (isFile) {
     output.error(`Expected directory but found file: ${path}`);
-    return { status: 'error', exitCode: 1 };
+    return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
   const link = await getLinkedProject(client, path);
   const isTTY = process.stdout.isTTY;
@@ -60,7 +67,12 @@ export default async function setupAndLink(
 
   if (forceDelete) {
     const vercelDir = getVercelDirectory(path);
-    remove(vercelDir);
+    remove(join(vercelDir, VERCEL_DIR_README));
+    remove(join(vercelDir, VERCEL_DIR_PROJECT));
+  }
+
+  if (!isTTY && !autoConfirm) {
+    return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
   const shouldStartSetup =
@@ -82,18 +94,22 @@ export default async function setupAndLink(
       autoConfirm
     );
   } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+    if (err.code === 'NOT_AUTHORIZED') {
       output.prettyError(err);
-      return { status: 'error', exitCode: 1 };
+      return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+    }
+
+    if (err.code === 'TEAM_DELETED') {
+      output.prettyError(err);
+      return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
     }
 
     throw err;
   }
 
-  const detectedProjectName = basename(path);
+  const detectedProjectName = projectName || basename(path);
 
   const projectOrNewProjectName = await inputProject(
-    output,
     client,
     org,
     detectedProjectName,
@@ -131,38 +147,29 @@ export default async function setupAndLink(
     rootDirectory &&
     !(await validateRootDirectory(output, path, sourcePath, ''))
   ) {
-    return { status: 'error', exitCode: 1 };
-  }
-
-  let localConfig: VercelConfig = {};
-  if (client.localConfig && !(client.localConfig instanceof Error)) {
-    localConfig = client.localConfig;
+    return { status: 'error', exitCode: 1, reason: 'INVALID_ROOT_DIRECTORY' };
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
-  const isZeroConfig = !localConfig.builds || localConfig.builds.length === 0;
+  const isZeroConfig =
+    !localConfig || !localConfig.builds || localConfig.builds.length === 0;
 
   try {
     let settings: ProjectSettings = {};
 
     if (isZeroConfig) {
       const now = new Now({
-        apiUrl,
-        token,
-        debug,
-        output,
+        client,
         currentTeam: config.currentTeam,
       });
-      const createArgs: any = {
+      const createArgs: CreateOptions = {
         name: newProjectName,
         env: {},
         build: { env: {} },
         forceNew: undefined,
         withCache: undefined,
         quiet,
-        wantsPublic: localConfig.public,
-        isFile,
-        type: null,
+        wantsPublic: localConfig?.public || false,
         nowConfig: localConfig,
         regions: undefined,
         meta: {},
@@ -171,7 +178,7 @@ export default async function setupAndLink(
         skipAutoDetectionConfirmation: false,
       };
 
-      if (!localConfig.builds || localConfig.builds.length === 0) {
+      if (isZeroConfig) {
         // Only add projectSettings for zero config deployments
         createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
       }
@@ -183,7 +190,7 @@ export default async function setupAndLink(
         [sourcePath],
         createArgs,
         org,
-        !isFile,
+        true,
         path
       );
 
@@ -196,7 +203,11 @@ export default async function setupAndLink(
         if (debug) {
           console.log(deployment);
         }
-        return { status: 'error', exitCode: 1 };
+        return {
+          status: 'error',
+          exitCode: 1,
+          reason: 'MISSING_PROJECT_SETTINGS',
+        };
       }
 
       const { projectSettings, framework } = deployment;
@@ -232,6 +243,7 @@ export default async function setupAndLink(
     return { status: 'linked', org, project };
   } catch (err) {
     handleError(err);
+
     return { status: 'error', exitCode: 1 };
   }
 }

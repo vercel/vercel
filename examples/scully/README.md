@@ -1,4 +1,4 @@
-![Scully Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/scully.svg)
+![Scully Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/scully.svg)
 
 # Scully Example
 
@@ -10,7 +10,7 @@ Deploy your own Scully project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/scully)
 
-_Live Example: https://scully.now-examples.now.sh_
+_Live Example: https://scully-template.vercel.app_
 
 ### How We Created This Example
 

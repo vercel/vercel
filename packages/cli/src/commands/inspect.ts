@@ -117,9 +117,7 @@ export default async function main(client: Client) {
 
   const { builds } =
     deployment.version === 2
-      ? await client.fetch<{ builds: Build[] }>(
-          `/v1/now/deployments/${id}/builds`
-        )
+      ? await client.fetch<{ builds: Build[] }>(`/v1/deployments/${id}/builds`)
       : { builds: [] };
 
   log(

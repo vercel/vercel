@@ -52,11 +52,17 @@ describe('normalizeRoutes', () => {
         },
       },
       { src: '^/about$' },
+      { src: '^/about$', middleware: 0 },
+      { src: '^/about$', middlewarePath: 'pages/_middleware' },
       {
         src: '^/blog$',
         methods: ['GET'],
         headers: { 'Cache-Control': 'no-cache' },
         dest: '/blog',
+      },
+      {
+        src: '^/.*$',
+        middleware: 0,
       },
       { handle: 'filesystem' },
       { src: '^/(?<slug>[^/]+)$', dest: 'blog?slug=$slug' },
@@ -90,6 +96,9 @@ describe('normalizeRoutes', () => {
           { type: 'cookie', key: 'loggedIn', value: 'yup' },
           { type: 'query', key: 'authorized', value: 'yup' },
           { type: 'host', value: 'vercel.com' },
+        ],
+        missing: [
+          { type: 'header', key: 'x-middleware-subrequest', value: 'secret' },
         ],
       },
     ];

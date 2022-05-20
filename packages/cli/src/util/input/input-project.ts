@@ -4,35 +4,39 @@ import confirm from './confirm';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
 import { ProjectNotFound } from '../../util/errors-ts';
-import { Output } from '../output';
 import { Project, Org } from '../../types';
 import slugify from '@sindresorhus/slugify';
 
 export default async function inputProject(
-  output: Output,
   client: Client,
   org: Org,
   detectedProjectName: string,
-  autoConfirm: boolean
+  autoConfirm = false
 ): Promise<Project | string> {
+  const { output } = client;
   const slugifiedName = slugify(detectedProjectName);
 
   // attempt to auto-detect a project to link
   let detectedProject = null;
   output.spinner('Searching for existing projects…', 1000);
-  try {
-    const [project, slugifiedProject] = await Promise.all([
-      getProjectByIdOrName(client, detectedProjectName, org.id),
-      slugifiedName !== detectedProjectName
-        ? getProjectByIdOrName(client, slugifiedName, org.id)
-        : null,
-    ]);
-    detectedProject = !(project instanceof ProjectNotFound)
-      ? project
-      : !(slugifiedProject instanceof ProjectNotFound)
-      ? slugifiedProject
-      : null;
-  } catch (error) {}
+
+  const [project, slugifiedProject] = await Promise.all([
+    getProjectByIdOrName(client, detectedProjectName, org.id),
+    slugifiedName !== detectedProjectName
+      ? getProjectByIdOrName(client, slugifiedName, org.id)
+      : null,
+  ]);
+
+  detectedProject = !(project instanceof ProjectNotFound)
+    ? project
+    : !(slugifiedProject instanceof ProjectNotFound)
+    ? slugifiedProject
+    : null;
+
+  if (detectedProject && !detectedProject.id) {
+    throw new Error(`Detected linked project does not have "id".`);
+  }
+
   output.stopSpinner();
 
   if (autoConfirm) {

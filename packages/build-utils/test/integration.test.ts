@@ -31,6 +31,10 @@ const skipFixtures: string[] = [
   '07-zero-config-jekyll',
   '08-zero-config-middleman',
   '21-npm-workspaces',
+  '23-pnpm-workspaces',
+  '27-yarn-workspaces',
+  '28-turborepo-with-yarn-workspaces',
+  '29-turborepo-in-package-json',
 ];
 
 // eslint-disable-next-line no-restricted-syntax

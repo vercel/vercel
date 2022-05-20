@@ -10,6 +10,7 @@ if (!entrypoint) {
 
 import { join } from 'path';
 import { register } from 'ts-node';
+import { fixConfig } from './typescript';
 
 type TypescriptModule = typeof import('typescript');
 
@@ -33,20 +34,10 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
 
   let ts: TypescriptModule | null = null;
 
-  // Assume Node.js 12 as the lowest common denominator
-  let target = 'ES2019';
-  const nodeMajor = Number(process.versions.node.split('.')[0]);
-  if (nodeMajor >= 14) {
-    target = 'ES2020';
-  }
-
   // Use the project's version of Typescript if available and supports `target`
   let compiler = resolveTypescript(process.cwd());
   if (compiler) {
     ts = requireTypescript(compiler);
-    if (!(target in ts.ScriptTarget)) {
-      ts = null;
-    }
   }
 
   // Otherwise fall back to using the copy that `@vercel/node` uses
@@ -55,12 +46,10 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
     ts = requireTypescript(compiler);
   }
 
+  let config: any = {};
   if (tsconfig) {
     try {
-      const { config } = ts.readConfigFile(tsconfig, ts.sys.readFile);
-      if (config?.compilerOptions?.target) {
-        target = config.compilerOptions.target;
-      }
+      config = ts.readConfigFile(tsconfig, ts.sys.readFile).config;
     } catch (err) {
       if (err.code !== 'ENOENT') {
         console.error(`Error while parsing "${tsconfig}"`);
@@ -69,16 +58,11 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
     }
   }
 
+  fixConfigDev(config);
+
   register({
     compiler,
-    compilerOptions: {
-      allowJs: true,
-      esModuleInterop: true,
-      jsx: 'react',
-      module: 'commonjs',
-      target,
-    },
-    project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
+    compilerOptions: config.compilerOptions,
     transpileOnly: true,
   });
 
@@ -88,8 +72,7 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { Readable } from 'stream';
 import type { Bridge } from '@vercel/node-bridge/bridge';
-// @ts-ignore - copied to the `dist` output as-is
-import { getVercelLauncher } from './launcher.js';
+import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -120,6 +103,10 @@ async function main() {
     helpersPath: './helpers.js',
     shouldAddHelpers,
     useRequire,
+
+    // not used
+    bridgePath: '',
+    sourcemapSupportPath: '',
   });
   bridge = launcher();
 
@@ -176,6 +163,21 @@ export async function onDevRequest(
     }
   }
   res.end(Buffer.from(result.body, result.encoding));
+}
+
+export function fixConfigDev(config: { compilerOptions: any }): void {
+  const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
+  fixConfig(config, nodeVersionMajor);
+
+  // In prod, `.ts` inputs use TypeScript and
+  // `.js` inputs use Babel to convert ESM to CJS.
+  // In dev, both `.ts` and `.js` inputs use ts-node
+  // without Babel so we must enable `allowJs`.
+  config.compilerOptions.allowJs = true;
+
+  // In prod, we emit outputs to the filesystem.
+  // In dev, we don't emit because we use ts-node.
+  config.compilerOptions.noEmit = true;
 }
 
 main().catch(err => {

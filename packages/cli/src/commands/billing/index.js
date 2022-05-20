@@ -51,8 +51,6 @@ const help = () => {
 };
 
 let argv;
-let debug;
-let apiUrl;
 let subcommand;
 
 export default async client => {
@@ -65,8 +63,6 @@ export default async client => {
 
   argv._ = argv._.slice(1);
 
-  debug = argv['--debug'];
-  apiUrl = client.apiUrl;
   subcommand = argv._[0];
 
   if (argv['--help'] || !subcommand) {
@@ -76,17 +72,13 @@ export default async client => {
 
   const {
     output,
-    authConfig: { token },
     config: { currentTeam },
   } = client;
 
   const start = new Date();
   const creditCards = new NowCreditCards({
-    apiUrl,
-    token,
-    debug,
+    client,
     currentTeam,
-    output,
   });
 
   let contextName = null;

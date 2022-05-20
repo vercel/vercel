@@ -22,6 +22,5 @@ export default async function responseError(
   }
 
   const msg = bodyError?.message || fallbackMessage || 'Response Error';
-
   return new APIError(msg, res, bodyError);
 }

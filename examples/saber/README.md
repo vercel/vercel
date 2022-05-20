@@ -1,4 +1,4 @@
-![Saber Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/saber.svg)
+![Saber Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/saber.svg)
 
 # Saber Example
 
@@ -10,7 +10,7 @@ Deploy your own Saber project with Vercel.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/saber&template=saber)
 
-_Live Example: https://saber.now-examples.now.sh_
+_Live Example: https://saber-template.vercel.app_
 
 ### How We Created This Example
 

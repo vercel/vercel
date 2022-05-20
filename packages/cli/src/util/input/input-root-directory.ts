@@ -7,7 +7,7 @@ import { validateRootDirectory } from '../validate-paths';
 export async function inputRootDirectory(
   cwd: string,
   output: Output,
-  autoConfirm: boolean
+  autoConfirm = false
 ) {
   if (autoConfirm) {
     return null;

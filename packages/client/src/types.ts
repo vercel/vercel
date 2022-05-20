@@ -1,4 +1,8 @@
-import { Builder, BuilderFunctions } from '@vercel/build-utils';
+import {
+  Builder,
+  BuilderFunctions,
+  ProjectSettings,
+} from '@vercel/build-utils';
 import { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
@@ -14,6 +18,8 @@ export interface VercelClientOptions {
   teamId?: string;
   apiUrl?: string;
   force?: boolean;
+  prebuilt?: boolean;
+  rootDirectory?: string;
   withCache?: boolean;
   userAgent?: string;
   defaultName?: string;
@@ -122,12 +128,7 @@ export interface VercelConfig {
   scope?: string;
   alias?: string | string[];
   regions?: string[];
-  projectSettings?: {
-    devCommand?: string | null;
-    buildCommand?: string | null;
-    outputDirectory?: string | null;
-    framework?: string | null;
-  };
+  projectSettings?: ProjectSettings;
 }
 
 /**
@@ -153,9 +154,5 @@ export interface DeploymentOptions {
   name?: string;
   public?: boolean;
   meta?: Dictionary<string>;
-  projectSettings?: {
-    devCommand?: string | null;
-    buildCommand?: string | null;
-    outputDirectory?: string | null;
-  };
+  projectSettings?: ProjectSettings;
 }

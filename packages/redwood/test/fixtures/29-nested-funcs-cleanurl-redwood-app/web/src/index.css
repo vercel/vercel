@@ -1,0 +1,52 @@
+/**
+ * START --- SETUP TAILWINDCSS EDIT
+ *
+ * `yarn rw setup ui tailwindcss` placed these imports here
+ * to inject Tailwind's styles into your CSS.
+ * For more information, see: https://tailwindcss.com/docs/installation#include-tailwind-in-your-css
+ */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+/**
+ * END --- SETUP TAILWINDCSS EDIT
+ */
+
+
+ .gradient {
+  background-image: linear-gradient(-225deg, #cbbacc 0%, #2580b3 100%);
+}
+
+button,
+.gradient2 {
+  background-color: #f39f86;
+  background-image: linear-gradient(315deg, #f39f86 0%, #f9d976 74%);
+}
+
+/* Browser mockup code
+* Contribute: https://gist.github.com/jarthod/8719db9fef8deb937f4f
+* Live example: https://updown.io
+*/
+
+.browser-mockup {
+  border-top: 2em solid rgba(230, 230, 230, 0.7);
+  position: relative;
+  height: 60vh;
+}
+
+.browser-mockup:before {
+  display: block;
+  position: absolute;
+  content: "";
+  top: -1.25em;
+  left: 1em;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background-color: #f44;
+  box-shadow: 0 0 0 2px #f44, 1.5em 0 0 2px #9b3, 3em 0 0 2px #fb5;
+}
+
+.browser-mockup > * {
+  display: block;
+}

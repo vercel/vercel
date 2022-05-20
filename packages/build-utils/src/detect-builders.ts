@@ -3,7 +3,13 @@ import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
 import { Route, Source } from '@vercel/routing-utils';
 import frameworkList, { Framework } from '@vercel/frameworks';
-import { PackageJson, Builder, Config, BuilderFunctions } from './types';
+import {
+  PackageJson,
+  Builder,
+  Config,
+  BuilderFunctions,
+  ProjectSettings,
+} from './types';
 import { isOfficialRuntime } from './';
 const slugToFramework = new Map<string | null, Framework>(
   frameworkList.map(f => [f.slug, f])
@@ -20,14 +26,7 @@ interface Options {
   tag?: 'canary' | 'latest' | string;
   functions?: BuilderFunctions;
   ignoreBuildScript?: boolean;
-  projectSettings?: {
-    framework?: string | null;
-    devCommand?: string | null;
-    installCommand?: string | null;
-    buildCommand?: string | null;
-    outputDirectory?: string | null;
-    createdAt?: number;
-  };
+  projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
   trailingSlash?: boolean;
   featHandleMiss?: boolean;
@@ -68,8 +67,7 @@ function getPublicBuilder(
       typeof builder.src === 'string' &&
       isOfficialRuntime('static', builder.use) &&
       /^.*\/\*\*\/\*$/.test(builder.src) &&
-      builder.config &&
-      builder.config.zeroConfig === true
+      builder.config?.zeroConfig === true
     ) {
       return builder as Builder & { src: string };
     }
@@ -96,6 +94,7 @@ export async function detectBuilders(
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
+  limitedRoutes: LimitedRoutes | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
@@ -114,6 +113,7 @@ export async function detectBuilders(
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
+      limitedRoutes: null,
     };
   }
 
@@ -179,6 +179,7 @@ export async function detectBuilders(
           redirectRoutes: null,
           rewriteRoutes: null,
           errorRoutes: null,
+          limitedRoutes: null,
         };
       }
 
@@ -257,6 +258,7 @@ export async function detectBuilders(
         defaultRoutes: null,
         rewriteRoutes: null,
         errorRoutes: null,
+        limitedRoutes: null,
       };
     }
 
@@ -299,6 +301,7 @@ export async function detectBuilders(
       defaultRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
+      limitedRoutes: null,
     };
   }
 
@@ -326,6 +329,7 @@ export async function detectBuilders(
   }
 
   const routesResult = getRouteResult(
+    pkg,
     apiRoutes,
     dynamicRoutes,
     usedOutputDirectory,
@@ -342,6 +346,7 @@ export async function detectBuilders(
     defaultRoutes: routesResult.defaultRoutes,
     rewriteRoutes: routesResult.rewriteRoutes,
     errorRoutes: routesResult.errorRoutes,
+    limitedRoutes: routesResult.limitedRoutes,
   };
 }
 
@@ -533,7 +538,7 @@ function getMissingBuildScriptError() {
     code: 'missing_build_script',
     message:
       'Your `package.json` file is missing a `build` property inside the `scripts` property.' +
-      '\nLearn More: https://vercel.com/docs/v2/platform/frequently-asked-questions#missing-build-script',
+      '\nLearn More: https://vercel.link/missing-build-script',
   };
 }
 
@@ -932,7 +937,14 @@ function createRouteFromPath(
   return { route, isDynamic };
 }
 
+interface LimitedRoutes {
+  defaultRoutes: Route[];
+  redirectRoutes: Route[];
+  rewriteRoutes: Route[];
+}
+
 function getRouteResult(
+  pkg: PackageJson | undefined | null,
   apiRoutes: Source[],
   dynamicRoutes: Source[],
   outputDirectory: string,
@@ -944,11 +956,18 @@ function getRouteResult(
   redirectRoutes: Route[];
   rewriteRoutes: Route[];
   errorRoutes: Route[];
+  limitedRoutes: LimitedRoutes;
 } {
+  const deps = Object.assign({}, pkg?.dependencies, pkg?.devDependencies);
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
+  const limitedRoutes: LimitedRoutes = {
+    defaultRoutes: [],
+    redirectRoutes: [],
+    rewriteRoutes: [],
+  };
   const framework = frontendBuilder?.config?.framework || '';
   const isNextjs =
     framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
@@ -956,14 +975,43 @@ function getRouteResult(
 
   if (apiRoutes && apiRoutes.length > 0) {
     if (options.featHandleMiss) {
+      // Exclude extension names if the corresponding plugin is not found in package.json
+      // detectBuilders({ignoreRoutesForBuilders: ['@vercel/python']})
+      // return a copy of routes.
+      // We should exclud errorRoutes and
       const extSet = detectApiExtensions(apiBuilders);
+      const withTag = options.tag ? `@${options.tag}` : '';
+      const extSetLimited = detectApiExtensions(
+        apiBuilders.filter(b => {
+          if (
+            b.use === `@vercel/python${withTag}` &&
+            !('vercel-plugin-python' in deps)
+          ) {
+            return false;
+          }
+          if (
+            b.use === `@vercel/go${withTag}` &&
+            !('vercel-plugin-go' in deps)
+          ) {
+            return false;
+          }
+          if (
+            b.use === `@vercel/ruby${withTag}` &&
+            !('vercel-plugin-ruby' in deps)
+          ) {
+            return false;
+          }
+          return true;
+        })
+      );
 
       if (extSet.size > 0) {
-        const exts = Array.from(extSet)
+        const extGroup = `(?:\\.(?:${Array.from(extSet)
           .map(ext => ext.slice(1))
-          .join('|');
-
-        const extGroup = `(?:\\.(?:${exts}))`;
+          .join('|')}))`;
+        const extGroupLimited = `(?:\\.(?:${Array.from(extSetLimited)
+          .map(ext => ext.slice(1))
+          .join('|')}))`;
 
         if (options.cleanUrls) {
           redirectRoutes.push({
@@ -979,6 +1027,20 @@ function getRouteResult(
             },
             status: 308,
           });
+
+          limitedRoutes.redirectRoutes.push({
+            src: `^/(api(?:.+)?)/index${extGroupLimited}?/?$`,
+            headers: { Location: options.trailingSlash ? '/$1/' : '/$1' },
+            status: 308,
+          });
+
+          limitedRoutes.redirectRoutes.push({
+            src: `^/api/(.+)${extGroupLimited}/?$`,
+            headers: {
+              Location: options.trailingSlash ? '/api/$1/' : '/api/$1',
+            },
+            status: 308,
+          });
         } else {
           defaultRoutes.push({ handle: 'miss' });
           defaultRoutes.push({
@@ -986,10 +1048,18 @@ function getRouteResult(
             dest: '/api/$1',
             check: true,
           });
+
+          limitedRoutes.defaultRoutes.push({ handle: 'miss' });
+          limitedRoutes.defaultRoutes.push({
+            src: `^/api/(.+)${extGroupLimited}$`,
+            dest: '/api/$1',
+            check: true,
+          });
         }
       }
 
       rewriteRoutes.push(...dynamicRoutes);
+      limitedRoutes.rewriteRoutes.push(...dynamicRoutes);
 
       if (typeof ignoreRuntimes === 'undefined') {
         // This route is only necessary to hide the directory listing
@@ -1030,7 +1100,7 @@ function getRouteResult(
     // https://nextjs.org/docs/advanced-features/custom-error-page
     errorRoutes.push({
       status: 404,
-      src: '^/(?!.*api).*$',
+      src: '^(?!/api).*$',
       dest: options.cleanUrls ? '/404' : '/404.html',
     });
   }
@@ -1040,6 +1110,7 @@ function getRouteResult(
     redirectRoutes,
     rewriteRoutes,
     errorRoutes,
+    limitedRoutes,
   };
 }
 

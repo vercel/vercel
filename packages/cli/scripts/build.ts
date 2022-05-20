@@ -4,6 +4,7 @@ import { join } from 'path';
 import { remove, writeFile } from 'fs-extra';
 
 const dirRoot = join(__dirname, '..');
+const distRoot = join(dirRoot, 'dist');
 
 async function createConstants() {
   console.log('Creating constants.ts');
@@ -12,7 +13,7 @@ async function createConstants() {
 export const GA_TRACKING_ID: string | undefined = ${envToString(
     'GA_TRACKING_ID'
   )};
-export const SENTRY_DSN: string | undefined =  ${envToString('SENTRY_DSN')};
+export const SENTRY_DSN: string | undefined = ${envToString('SENTRY_DSN')};
 `;
   await writeFile(filename, contents, 'utf8');
 }
@@ -48,13 +49,12 @@ async function main() {
 
   // Do the initial `ncc` build
   console.log();
-  const src = join(dirRoot, 'src');
   const args = ['ncc', 'build', '--external', 'update-notifier'];
   if (isDev) {
     args.push('--source-map');
   }
-  args.push(src);
-  await execa('yarn', args, { stdio: 'inherit' });
+  args.push('src/index.ts');
+  await execa('yarn', args, { stdio: 'inherit', cwd: dirRoot });
 
   // `ncc` has some issues with `@zeit/fun`'s runtime files:
   //   - Executable bits on the `bootstrap` files appear to be lost:
@@ -72,19 +72,13 @@ async function main() {
     dirRoot,
     '../../node_modules/@zeit/fun/dist/src/runtimes'
   );
-  const dest = join(dirRoot, 'dist/runtimes');
-  await cpy('**/*', dest, { parents: true, cwd: runtimes });
+  await cpy('**/*', join(distRoot, 'runtimes'), {
+    parents: true,
+    cwd: runtimes,
+  });
 
-  // Band-aid to delete stuff that `ncc` bundles, but it shouldn't:
-
-  // TypeScript definition files from `@vercel/build-utils`
-  await remove(join(dirRoot, 'dist', 'dist'));
-
-  // The Readme and `package.json` from "config-chain" module
-  await remove(join(dirRoot, 'dist', 'config-chain'));
-
-  // A bunch of source `.ts` files from CLI's `util` directory
-  await remove(join(dirRoot, 'dist', 'util'));
+  // Band-aid to bundle stuff that `ncc` neglects to bundle
+  await cpy(join(dirRoot, 'src/util/projects/VERCEL_DIR_README.txt'), distRoot);
 
   console.log('Finished building Vercel CLI');
 }

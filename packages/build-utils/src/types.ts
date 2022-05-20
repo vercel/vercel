@@ -1,19 +1,21 @@
-import FileRef from './file-ref';
-import FileFsRef from './file-fs-ref';
+import type FileRef from './file-ref';
+import type FileFsRef from './file-fs-ref';
+import type FileBlob from './file-blob';
+import type { Lambda } from './lambda';
+import type { Prerender } from './prerender';
+import type { EdgeFunction } from './edge-function';
 
 export interface Env {
   [name: string]: string | undefined;
 }
 
-export interface File {
+export type File = FileRef | FileFsRef | FileBlob;
+export interface FileBase {
   type: string;
   mode: number;
   contentType?: string;
   toStream: () => NodeJS.ReadableStream;
-  /**
-   * The absolute path to the file in the filesystem
-   */
-  fsPath?: string;
+  toStreamAsync?: () => Promise<NodeJS.ReadableStream>;
 }
 
 export interface Files {
@@ -21,14 +23,6 @@ export interface Files {
 }
 
 export interface Config {
-  [key: string]:
-    | string
-    | string[]
-    | boolean
-    | number
-    | { [key: string]: string }
-    | BuilderFunctions
-    | undefined;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
@@ -40,12 +34,14 @@ export interface Config {
   zeroConfig?: boolean;
   import?: { [key: string]: string };
   functions?: BuilderFunctions;
+  projectSettings?: ProjectSettings;
   outputDirectory?: string;
   installCommand?: string;
   buildCommand?: string;
   devCommand?: string;
-  framework?: string;
+  framework?: string | null;
   nodeVersion?: string;
+  [key: string]: unknown;
 }
 
 export interface Meta {
@@ -57,35 +53,8 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
-}
-
-export interface AnalyzeOptions {
-  /**
-   * All source files of the project
-   */
-  files: {
-    [filePath: string]: FileRef;
-  };
-
-  /**
-   * Name of entrypoint file for this particular build job. Value
-   * `files[entrypoint]` is guaranteed to exist and be a valid File reference.
-   * `entrypoint` is always a discrete file and never a glob, since globs are
-   * expanded into separate builds at deployment time.
-   */
-  entrypoint: string;
-
-  /**
-   * A writable temporary directory where you are encouraged to perform your
-   * build process. This directory will be populated with the restored cache.
-   */
-  workPath: string;
-
-  /**
-   * An arbitrary object passed by the user in the build definition defined
-   * in `vercel.json`.
-   */
-  config: Config;
+  avoidTopLevelInstall?: boolean;
+  [key: string]: unknown;
 }
 
 export interface BuildOptions {
@@ -150,10 +119,11 @@ export interface PrepareCacheOptions {
   workPath: string;
 
   /**
-   * A writable temporary directory where you can build a cache to use for
-   * the next run.
+   * The "Root Directory" is assigned to the `workPath` so the `repoRootPath`
+   * is the Git Repository Root. This is only relevant for Monorepos.
+   * See https://vercel.com/blog/monorepos
    */
-  cachePath: string;
+  repoRootPath?: string;
 
   /**
    * An arbitrary object passed by the user in the build definition defined
@@ -349,3 +319,93 @@ export interface BuilderFunctions {
     excludeFiles?: string;
   };
 }
+
+export interface ProjectSettings {
+  framework?: string | null;
+  devCommand?: string | null;
+  installCommand?: string | null;
+  buildCommand?: string | null;
+  outputDirectory?: string | null;
+  rootDirectory?: string | null;
+  nodeVersion?: string;
+  createdAt?: number;
+  autoExposeSystemEnvs?: boolean;
+  sourceFilesOutsideRootDirectory?: boolean;
+  directoryListing?: boolean;
+  gitForkProtection?: boolean;
+  commandForIgnoringBuildStep?: string | null;
+}
+
+export interface BuilderV2 {
+  version: 2;
+  build: BuildV2;
+  prepareCache?: PrepareCache;
+}
+
+export interface BuilderV3 {
+  version: 3;
+  build: BuildV3;
+  prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
+  startDevServer?: StartDevServer;
+}
+
+type ImageFormat = 'image/avif' | 'image/webp';
+
+export interface Images {
+  domains: string[];
+  sizes: number[];
+  minimumCacheTTL?: number;
+  formats?: ImageFormat[];
+}
+
+/**
+ * If a Builder ends up creating filesystem outputs conforming to
+ * the Build Output API, then the Builder should return this type.
+ */
+export interface BuildResultBuildOutput {
+  /**
+   * Version number of the Build Output API that was created.
+   * Currently only `3` is a valid value.
+   * @example 3
+   */
+  buildOutputVersion: 3;
+  /**
+   * Filesystem path to the Build Output directory.
+   * @example "/path/to/.vercel/output"
+   */
+  buildOutputPath: string;
+}
+
+/**
+ * When a Builder implements `version: 2`, the `build()` function is expected
+ * to return this type.
+ */
+export interface BuildResultV2Typical {
+  // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
+  routes?: any[];
+  images?: Images;
+  output: {
+    [key: string]: File | Lambda | Prerender | EdgeFunction;
+  };
+  wildcard?: Array<{
+    domain: string;
+    value: string;
+  }>;
+}
+
+export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
+
+export interface BuildResultV3 {
+  output: Lambda;
+}
+
+export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
+export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
+export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
+export type ShouldServe = (
+  options: ShouldServeOptions
+) => boolean | Promise<boolean>;
+export type StartDevServer = (
+  options: StartDevServerOptions
+) => Promise<StartDevServerResult>;

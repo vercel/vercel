@@ -60,13 +60,12 @@ import { getCommandName } from '../../util/pkg-name';
 import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url';
 import { Output } from '../../util/output';
 import { help } from './args';
+import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
+import parseTarget from '../../util/deploy/parse-target';
+import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 
 export default async (client: Client) => {
-  const {
-    apiUrl,
-    output,
-    authConfig: { token },
-  } = client;
+  const { output } = client;
 
   let argv = null;
 
@@ -82,6 +81,7 @@ export default async (client: Client) => {
       // This is not an array in favor of matching
       // the config property name.
       '--regions': String,
+      '--prebuilt': Boolean,
       '--prod': Boolean,
       '--confirm': Boolean,
       '-f': '--force',
@@ -120,10 +120,7 @@ export default async (client: Client) => {
     paths = [process.cwd()];
   }
 
-  let localConfig: VercelConfig | null = client.localConfig;
-  if (!localConfig || localConfig instanceof Error) {
-    localConfig = readLocalConfig(paths[0]);
-  }
+  let localConfig = client.localConfig || readLocalConfig(paths[0]);
 
   for (const path of paths) {
     try {
@@ -160,10 +157,8 @@ export default async (client: Client) => {
     }
   }
 
-  const { log, debug, error, warn } = output;
-  const debugEnabled = argv['--debug'];
+  const { log, debug, error, prettyError, isTTY } = output;
 
-  const { isTTY } = process.stdout;
   const quiet = !isTTY;
 
   // check paths
@@ -173,8 +168,8 @@ export default async (client: Client) => {
     return pathValidation.exitCode;
   }
 
-  const { isFile, path } = pathValidation;
-  const autoConfirm = argv['--confirm'] || isFile;
+  const { path } = pathValidation;
+  const autoConfirm = argv['--confirm'];
 
   // deprecate --name
   if (argv['--name']) {
@@ -188,6 +183,46 @@ export default async (client: Client) => {
     );
   }
 
+  // build `target`
+  const target = parseTarget(output, argv['--target'], argv['--prod']);
+  if (typeof target === 'number') {
+    return target;
+  }
+
+  // build `--prebuilt`
+  if (argv['--prebuilt']) {
+    const prebuiltExists = await fs.pathExists(join(path, '.vercel/output'));
+    if (!prebuiltExists) {
+      error(
+        `The ${param(
+          '--prebuilt'
+        )} option was used, but no prebuilt output found in ".vercel/output". Run ${getCommandName(
+          'build'
+        )} to generate a local build.`
+      );
+      return 1;
+    }
+
+    const prebuiltBuild = await getPrebuiltJson(path);
+    const assumedTarget = target || 'preview';
+    if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
+      let specifyTarget = '';
+      if (prebuiltBuild.target === 'production') {
+        specifyTarget = ` --prod`;
+      }
+
+      prettyError({
+        message: `The ${param(
+          '--prebuilt'
+        )} option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
+          prebuiltBuild.target
+        }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
+        link: 'https://vercel.link/prebuilt-environment-mismatch',
+      });
+      return 1;
+    }
+  }
+
   // retrieve `project` and `org` from .vercel
   const link = await getLinkedProject(client, path);
 
@@ -199,7 +234,7 @@ export default async (client: Client) => {
 
   let newProjectName = null;
   let rootDirectory = project ? project.rootDirectory : null;
-  let sourceFilesOutsideRootDirectory = true;
+  let sourceFilesOutsideRootDirectory: boolean | undefined = true;
 
   if (status === 'not_linked') {
     const shouldStartSetup =
@@ -236,13 +271,11 @@ export default async (client: Client) => {
     // user input.
     const detectedProjectName = getProjectName({
       argv,
-      nowConfig: localConfig || {},
-      isFile,
+      nowConfig: localConfig,
       paths,
     });
 
     const projectOrNewProjectName = await inputProject(
-      output,
       client,
       org,
       detectedProjectName,
@@ -412,35 +445,11 @@ export default async (client: Client) => {
     .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
 
-  // build `target`
-  let target;
-  if (argv['--target']) {
-    const deprecatedTarget = argv['--target'];
-
-    if (!['staging', 'production'].includes(deprecatedTarget)) {
-      error(
-        `The specified ${param('--target')} ${code(
-          deprecatedTarget
-        )} is not valid`
-      );
-      return 1;
-    }
-
-    if (deprecatedTarget === 'production') {
-      warn(
-        'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
-      );
-    }
-
-    output.debug(`Setting target to ${deprecatedTarget}`);
-    target = deprecatedTarget;
-  } else if (argv['--prod']) {
-    output.debug('Setting target to production');
-    target = 'production';
-  }
-
   const currentTeam = org?.type === 'team' ? org.id : undefined;
-  const now = new Now({ apiUrl, token, debug: debugEnabled, currentTeam });
+  const now = new Now({
+    client,
+    currentTeam,
+  });
   let deployStamp = stamp();
   let deployment = null;
 
@@ -451,9 +460,10 @@ export default async (client: Client) => {
       build: { env: deploymentBuildEnv },
       forceNew: argv['--force'],
       withCache: argv['--with-cache'],
+      prebuilt: argv['--prebuilt'],
+      rootDirectory,
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
-      isFile,
       type: null,
       nowConfig: localConfig,
       regions,
@@ -475,7 +485,7 @@ export default async (client: Client) => {
       [sourcePath],
       createArgs,
       org,
-      !project && !isFile,
+      !project,
       path
     );
 
@@ -531,6 +541,20 @@ export default async (client: Client) => {
 
     if (deployment.readyState === 'CANCELED') {
       output.print('The deployment has been canceled.\n');
+      return 1;
+    }
+
+    if (deployment.checksConclusion === 'failed') {
+      const { checks } = await getDeploymentChecks(client, deployment.id);
+      const counters = new Map<string, number>();
+      checks.forEach(c => {
+        counters.set(c.conclusion, (counters.get(c.conclusion) ?? 0) + 1);
+      });
+
+      const counterList = Array.from(counters)
+        .map(([name, no]) => `${no} ${name}`)
+        .join(', ');
+      output.error(`Running Checks: ${counterList}`);
       return 1;
     }
 
@@ -644,8 +668,7 @@ export default async (client: Client) => {
     client,
     deployment,
     deployStamp,
-    !argv['--no-clipboard'],
-    isFile
+    !argv['--no-clipboard']
   );
 };
 
@@ -780,8 +803,7 @@ const printDeploymentStatus = async (
     };
   },
   deployStamp: () => string,
-  isClipboardEnabled: boolean,
-  isFile: boolean
+  isClipboardEnabled: boolean
 ) => {
   indications = indications || [];
   const isProdDeployment = target === 'production';
@@ -803,7 +825,7 @@ const printDeploymentStatus = async (
     // print preview/production url
     let previewUrl: string;
     let isWildcard: boolean;
-    if (!isFile && Array.isArray(aliasList) && aliasList.length > 0) {
+    if (Array.isArray(aliasList) && aliasList.length > 0) {
       const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
       if (previewUrlInfo) {
         isWildcard = previewUrlInfo.isWildcard;
@@ -885,8 +907,8 @@ const parseEnv = (env?: string[] | Dictionary<string>) => {
       if (equalsSign === -1) {
         key = e;
       } else {
-        key = e.substr(0, equalsSign);
-        value = e.substr(equalsSign + 1);
+        key = e.slice(0, equalsSign);
+        value = e.slice(equalsSign + 1);
       }
 
       o[key] = value;

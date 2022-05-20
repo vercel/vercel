@@ -1,7 +1,7 @@
-import Client from '../client';
 import inquirer from 'inquirer';
+import Client from '../client';
 import getUser from '../get-user';
-import getTeams from '../get-teams';
+import getTeams from '../teams/get-teams';
 import { User, Team, Org } from '../../types';
 
 type Choice = { name: string; value: Org };
@@ -29,7 +29,7 @@ export default async function selectOrg(
   const choices: Choice[] = [
     {
       name: user.name || user.username,
-      value: { type: 'user', id: user.uid, slug: user.username },
+      value: { type: 'user', id: user.id, slug: user.username },
     },
     ...teams.map<Choice>(team => ({
       name: team.name || team.slug,
