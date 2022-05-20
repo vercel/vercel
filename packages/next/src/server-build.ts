@@ -855,7 +855,7 @@ export async function serverBuild({
           currentRouteSrc = starterRouteSrc;
         }
         // add to existing route src if src length limit isn't reached
-        currentRouteSrc = `${currentRouteSrc.substr(
+        currentRouteSrc = `${currentRouteSrc.substring(
           0,
           currentRouteSrc.length - 1
         )}${
