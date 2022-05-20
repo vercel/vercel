@@ -202,6 +202,8 @@ export const frameworks = [
     description: 'A new Remix app — the result of running `npx create-remix`.',
     website: 'https://remix.run',
     sort: 6,
+    useRuntime: { src: 'package.json', use: '@vercel/remix' },
+    ignoreRuntimes: ['@vercel/node'],
     detectors: {
       every: [
         {
@@ -227,39 +229,6 @@ export const frameworks = [
     },
     dependency: 'remix',
     getOutputDirName: async () => 'public',
-    defaultRoutes: [
-      {
-        src: '^/build/(.*)$',
-        headers: { 'cache-control': 'public, max-age=31536000, immutable' },
-        continue: true,
-      },
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/api',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/api',
-      },
-    ],
-    defaultHeaders: [
-      {
-        source: '/build/(.*)',
-        regex: '/build/(.*)',
-        headers: [
-          {
-            key: 'cache-control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-    ],
   },
   {
     name: 'Astro',
