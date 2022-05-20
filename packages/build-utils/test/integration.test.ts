@@ -33,7 +33,9 @@ const skipFixtures: string[] = [
   '21-npm-workspaces',
   '23-pnpm-workspaces',
   '27-yarn-workspaces',
+  '28-turborepo-with-yarn-workspaces',
   '29-nested-workspaces',
+  '29-turborepo-in-package-json',
   '30-double-nested-workspaces',
 ];
 
