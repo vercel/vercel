@@ -445,7 +445,7 @@ export function localizeDynamicRoutes(
       const isApiRoute =
         pathnameNoPrefix === '/api' || pathnameNoPrefix?.startsWith('/api/');
       const isAutoExport =
-        staticPages[addLocaleOrDefault(pathname!, routesManifest).substr(1)];
+        staticPages[addLocaleOrDefault(pathname!, routesManifest).substring(1)];
 
       const isLocalePrefixed =
         isFallback || isBlocking || isAutoExport || isServerMode;
