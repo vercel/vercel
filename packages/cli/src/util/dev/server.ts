@@ -1040,7 +1040,12 @@ export default class DevServer {
     const { debug } = this.output;
     debug(`Killing builder dev server with PID ${pid}`);
     this.devServerPids.delete(pid);
-    await treeKill(pid);
+    try {
+      process.kill(pid, 'SIGTERM');
+      debug(`Killed builder dev server with PID ${pid}`);
+    } catch (err) {
+      debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
+    }
   }
 
   async send404(

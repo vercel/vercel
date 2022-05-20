@@ -251,9 +251,6 @@ export interface Project extends ProjectSettings {
   updatedAt: number;
   createdAt: number;
   alias?: ProjectAliasTarget[];
-  devCommand?: string | null;
-  framework?: string | null;
-  rootDirectory?: string | null;
   latestDeployments?: Partial<Deployment>[];
 }
 
