@@ -456,8 +456,10 @@ export function fixConfig(
     let target: string;
     if (nodeVersionMajor >= 16) {
       target = 'ES2021';
-    } else {
+    } else if (nodeVersionMajor >= 14) {
       target = 'ES2020';
+    } else {
+      target = 'ES2019';
     }
     config.compilerOptions.target = target;
   }
