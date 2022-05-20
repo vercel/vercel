@@ -16,6 +16,12 @@ describe('importBuilders()', () => {
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
     expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
+    expect(typeof builders.get('@vercel/node')?.builder.build).toEqual(
+      'function'
+    );
+    expect(typeof builders.get('@vercel/next')?.builder.build).toEqual(
+      'function'
+    );
   });
 
   it('should import 3rd party Builders', async () => {
@@ -30,6 +36,7 @@ describe('importBuilders()', () => {
       expect(builders.get(spec)?.pkgPath).toEqual(
         join(cwd, '.vercel/builders/node_modules/vercel-deno/package.json')
       );
+      expect(typeof builders.get(spec)?.builder.build).toEqual('function');
     } finally {
       await remove(cwd);
     }
@@ -42,7 +49,12 @@ describe('importBuilders()', () => {
       const specs = new Set([spec]);
       const builders = await importBuilders(specs, cwd, client.output);
       expect(builders.size).toEqual(1);
-      console.log(builders);
+      expect(builders.get(spec)?.pkg.name).toEqual('@frontity/now');
+      expect(builders.get(spec)?.pkg.version).toEqual('1.2.0');
+      expect(builders.get(spec)?.pkgPath).toEqual(
+        join(cwd, '.vercel/builders/node_modules/@frontity/now/package.json')
+      );
+      expect(typeof builders.get(spec)?.builder.build).toEqual('function');
     } finally {
       await remove(cwd);
     }
