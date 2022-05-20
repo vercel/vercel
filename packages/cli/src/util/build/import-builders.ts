@@ -60,7 +60,7 @@ export async function importBuilders(
   return importResult.builders;
 }
 
-async function resolveBuilders(
+export async function resolveBuilders(
   buildersDir: string,
   builderSpecs: Set<string>,
   output: Output,
