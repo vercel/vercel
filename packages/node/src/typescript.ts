@@ -450,7 +450,6 @@ export function fixConfig(
   delete config.compilerOptions.tsBuildInfoFile;
   delete config.compilerOptions.incremental;
 
-  // Target esnext output by default (instead of ES3).
   // This will prevent TS from polyfill/downlevel emit.
   if (config.compilerOptions.target === undefined) {
     // See https://github.com/tsconfig/bases/tree/main/bases
