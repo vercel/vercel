@@ -10,7 +10,12 @@ import runBuildLambda from '../../../../test/lib/run-build-lambda';
 import { EdgeFunction, Files, streamToBuffer } from '@vercel/build-utils';
 import { createHash } from 'crypto';
 
-const SIMPLE_PROJECT = path.resolve(__dirname, 'middleware');
+const SIMPLE_PROJECT = path.resolve(
+  __dirname,
+  '..',
+  'fixtures',
+  '00-middleware'
+);
 
 describe('Middleware simple project', () => {
   const ctx: Context = {};
@@ -18,6 +23,28 @@ describe('Middleware simple project', () => {
   beforeAll(async () => {
     const result = await runBuildLambda(SIMPLE_PROJECT);
     ctx.buildResult = result.buildResult;
+  });
+
+  it('orders middleware route correctly', async () => {
+    const middlewareIndex = ctx.buildResult.routes.findIndex(item => {
+      return !!item.middlewarePath;
+    });
+    const redirectIndex = ctx.buildResult.routes.findIndex(item => {
+      return item.src && item.src.includes('redirect-me');
+    });
+    const beforeFilesIndex = ctx.buildResult.routes.findIndex(item => {
+      return item.src && item.src.includes('rewrite-before-files');
+    });
+    const handleFileSystemIndex = ctx.buildResult.routes.findIndex(item => {
+      return item.handle === 'filesystem';
+    });
+    expect(typeof middlewareIndex).toBe('number');
+    expect(typeof redirectIndex).toBe('number');
+    expect(typeof beforeFilesIndex).toBe('number');
+    expect(redirectIndex).toBeLessThan(middlewareIndex);
+    expect(redirectIndex).toBeLessThan(beforeFilesIndex);
+    expect(beforeFilesIndex).toBeLessThan(middlewareIndex);
+    expect(middlewareIndex).toBeLessThan(handleFileSystemIndex);
   });
 
   it('generates deterministic code', async () => {
