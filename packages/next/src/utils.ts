@@ -2140,6 +2140,7 @@ interface MiddlewareInfo {
   page: string;
   regexp: string;
   wasm?: { filePath: string; name: string }[];
+  generalPurpose?: boolean;
 }
 
 export async function getMiddlewareBundle({
@@ -2159,12 +2160,12 @@ export async function getMiddlewareBundle({
   if (middlewareManifest && middlewareManifest?.sortedMiddleware.length > 0) {
     const workerConfigs = await Promise.all(
       middlewareManifest.sortedMiddleware.map(async key => {
-        const middleware = middlewareManifest.middleware[key];
+        const edgeFunction = middlewareManifest.middleware[key];
         try {
           const wrappedModuleSource = await getNextjsEdgeFunctionSource(
-            middleware.files,
+            edgeFunction.files,
             {
-              name: middleware.name,
+              name: edgeFunction.name,
               staticRoutes: routesManifest.staticRoutes,
               dynamicRoutes: routesManifest.dynamicRoutes.filter(
                 r => !('isMiddleware' in r)
@@ -2175,18 +2176,19 @@ export async function getMiddlewareBundle({
               },
             },
             path.resolve(entryPath, outputDirectory),
-            middleware.wasm
+            edgeFunction.wasm
           );
 
           return {
-            page: middlewareManifest.middleware[key].page,
+            page: edgeFunction.page,
+            isMiddleware: !edgeFunction.generalPurpose,
             edgeFunction: (() => {
               const { source, map } = wrappedModuleSource.sourceAndMap();
               const transformedMap = stringifySourceMap(
                 transformSourceMap(map)
               );
 
-              const wasmFiles = (middleware.wasm ?? []).reduce(
+              const wasmFiles = (edgeFunction.wasm ?? []).reduce(
                 (acc: Files, { filePath, name }) => {
                   const fullFilePath = path.join(
                     entryPath,
@@ -2205,7 +2207,7 @@ export async function getMiddlewareBundle({
 
               return new EdgeFunction({
                 deploymentTarget: 'v8-worker',
-                name: middleware.name,
+                name: edgeFunction.name,
                 files: {
                   'index.js': new FileBlob({
                     data: source,
@@ -2222,13 +2224,10 @@ export async function getMiddlewareBundle({
                   ...wasmFiles,
                 },
                 entrypoint: 'index.js',
-                envVarsInUse: middleware.env,
+                envVarsInUse: edgeFunction.env,
               });
             })(),
-            routeSrc: getRouteSrc(
-              middlewareManifest.middleware[key],
-              routesManifest
-            ),
+            routeSrc: getRouteSrc(edgeFunction, routesManifest),
           };
         } catch (e: any) {
           e.message = `Can't build edge function ${key}: ${e.message}`;
@@ -2263,10 +2262,17 @@ export async function getMiddlewareBundle({
       const edgeFile = worker.edgeFunction.name;
       worker.edgeFunction.name = edgeFile.replace(/^pages\//, '');
       source.edgeFunctions[edgeFile] = worker.edgeFunction;
-      const route = {
+
+      const route: Route = {
         continue: true,
-        middlewarePath: edgeFile,
         src: worker.routeSrc,
+        ...(worker.isMiddleware
+          ? {
+              middlewarePath: edgeFile,
+            }
+          : {
+              dest: worker.edgeFunction.name,
+            }),
       };
 
       if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
