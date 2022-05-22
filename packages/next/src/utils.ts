@@ -2273,18 +2273,19 @@ export async function getMiddlewareBundle({
 
   for (const worker of workerConfigs.values()) {
     const edgeFile = worker.edgeFunction.name;
-    worker.edgeFunction.name = edgeFile.replace(/^pages\//, '');
-    source.edgeFunctions[edgeFile] = worker.edgeFunction;
+    const shortName = edgeFile.replace(/^pages\//, '');
+    worker.edgeFunction.name = shortName;
+    source.edgeFunctions[shortName] = worker.edgeFunction;
 
     const route: Route = {
       continue: true,
       src: worker.routeSrc,
       ...(worker.isMiddleware
         ? {
-            middlewarePath: edgeFile,
+            middlewarePath: shortName,
           }
         : {
-            dest: worker.edgeFunction.name,
+            dest: shortName,
           }),
     };
 
