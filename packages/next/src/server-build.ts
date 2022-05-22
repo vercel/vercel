@@ -881,8 +881,6 @@ export async function serverBuild({
     }
   }
 
-  console.log(middleware, middlewareManifest);
-
   return {
     middleware: middleware.middleware,
     wildcard: wildcardConfig,
