@@ -40,7 +40,6 @@ import {
   getNextServerPath,
   getMiddlewareBundle,
   getFilesMapFromReasons,
-  getMiddlewareManifest,
 } from './utils';
 import {
   nodeFileTrace,
@@ -122,16 +121,6 @@ export async function serverBuild({
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
 }): Promise<BuildResult> {
-  const middlewareManifest = await getMiddlewareManifest(
-    entryPath,
-    outputDirectory
-  );
-  for (const edgeFunctionFile of Object.keys(
-    middlewareManifest?.middleware ?? {}
-  )) {
-    delete lambdaPages[edgeFunctionFile.slice(1) + '.js'];
-  }
-
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
   const lambdaPageKeys = Object.keys(lambdaPages);
@@ -798,7 +787,6 @@ export async function serverBuild({
     entryPath,
     outputDirectory,
     routesManifest,
-    middlewareManifest,
   });
 
   const dynamicRoutes = await getDynamicRoutes(

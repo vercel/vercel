@@ -2147,13 +2147,15 @@ export async function getMiddlewareBundle({
   entryPath,
   outputDirectory,
   routesManifest,
-  middlewareManifest,
 }: {
   entryPath: string;
   outputDirectory: string;
   routesManifest: RoutesManifest;
-  middlewareManifest: MiddlewareManifest | undefined;
 }) {
+  const middlewareManifest = await getMiddlewareManifest(
+    entryPath,
+    outputDirectory
+  );
   const sortedMiddleware = middlewareManifest?.sortedMiddleware || [];
   for (const middlewareKey of Object.keys(
     middlewareManifest?.middleware ?? {}

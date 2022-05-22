@@ -58,6 +58,7 @@ import {
   getExportStatus,
   getFilesMapFromReasons,
   getImagesManifest,
+  getMiddlewareManifest,
   getNextConfig,
   getPageLambdaGroups,
   getPrerenderManifest,
@@ -1064,7 +1065,11 @@ export const build: BuildV2 = async ({
       buildId,
       'pages'
     );
-    const pages = await glob('**/!(_middleware).js', pagesDir);
+    const pages = await getServerlessPages({
+      pagesDir,
+      entryPath,
+      outputDirectory,
+    });
     const launcherPath = path.join(__dirname, 'legacy-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
 
@@ -1137,7 +1142,11 @@ export const build: BuildV2 = async ({
       'pages'
     );
 
-    const pages = await glob('**/!(_middleware).js', pagesDir);
+    const pages = await getServerlessPages({
+      pagesDir,
+      entryPath,
+      outputDirectory,
+    });
     const isApiPage = (page: string) =>
       page
         .replace(/\\/g, '/')
@@ -2640,3 +2649,23 @@ export const prepareCache: PrepareCache = async ({
   debug('Cache file manifest produced');
   return cache;
 };
+
+async function getServerlessPages(params: {
+  pagesDir: string;
+  entryPath: string;
+  outputDirectory: string;
+}) {
+  const [pages, middlewareManifest] = await Promise.all([
+    glob('**/!(_middleware).js', params.pagesDir),
+    getMiddlewareManifest(params.entryPath, params.outputDirectory),
+  ]);
+
+  // Edge Functions do not consider as Serverless Functions
+  for (const edgeFunctionFile of Object.keys(
+    middlewareManifest?.middleware ?? {}
+  )) {
+    delete pages[edgeFunctionFile.slice(1) + '.js'];
+  }
+
+  return pages;
+}
