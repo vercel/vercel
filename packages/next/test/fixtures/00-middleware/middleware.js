@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
 
+const ALLOWED = ['allowed'];
+
 export function middleware(request) {
   const url = request.nextUrl;
+  const pathname = url.pathname;
 
   if (process.env.FOO) {
     console.log(`Includes env variable ${process.env.FOO}`);
+  }
+
+  if (url.pathname === '/redirect-me') {
+    url.pathname = '/from-middleware';
+    return NextResponse.redirect(url);
   }
 
   if (url.pathname === '/next') {
@@ -26,14 +34,12 @@ export function middleware(request) {
       return acc;
     }, []);
 
-    return new NextResponse(
-      JSON.stringify({ globals: globalKeys, globalThis: globalThisKeys }),
-      {
-        headers: {
-          'content-type': 'application/json; charset=utf-8',
-        },
-      }
+    const res = NextResponse.next();
+    res.headers.set(
+      'data',
+      JSON.stringify({ globals: globalKeys, globalThis: globalThisKeys })
     );
+    return res;
   }
 
   if (url.pathname === '/log') {
@@ -54,12 +60,10 @@ export function middleware(request) {
 
   if (url.pathname === '/greetings') {
     const data = { message: 'hello world!' };
-    return new NextResponse(JSON.stringify(data), {
-      headers: {
-        'x-example': 'edge',
-        'content-type': 'application/json; charset=utf-8',
-      },
-    });
+    const res = NextResponse.next();
+    res.headers.set('x-example', 'edge');
+    res.headers.set('data', JSON.stringify(data));
+    return res;
   }
 
   if (url.pathname === '/rewrite-me-to-about') {
@@ -90,11 +94,13 @@ export function middleware(request) {
 
   if (url.pathname === '/redirect-301') {
     url.pathname = '/greetings';
-    return Response.redirect(url, 301);
+    return NextResponse.redirect(url, 301);
   }
 
   if (url.pathname === '/reflect') {
-    return new Response(
+    const res = NextResponse.next();
+    res.headers.set(
+      'data',
       JSON.stringify({
         geo: request.geo,
         headers: Object.fromEntries(request.headers),
@@ -109,13 +115,9 @@ export function middleware(request) {
           search: request.nextUrl.search,
         },
         url: request.url,
-      }),
-      {
-        headers: {
-          'content-type': 'application/json; charset=utf-8',
-        },
-      }
+      })
     );
+    return res;
   }
 
   if (url.pathname === '/stream-response') {
@@ -130,7 +132,7 @@ export function middleware(request) {
 
     return {
       waitUntil,
-      response: new NextResponse(readable),
+      response: NextResponse.next(),
     };
   }
 
@@ -161,6 +163,64 @@ export function middleware(request) {
 
   if (url.pathname === '/unhandledrejection') {
     Promise.reject(new TypeError('captured unhandledrejection error.'));
-    return new NextResponse('OK');
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith('/query-params')) {
+    if (pathname.endsWith('/clear')) {
+      const strategy =
+        url.searchParams.get('strategy') === 'rewrite' ? 'rewrite' : 'redirect';
+
+      for (const key of [...url.searchParams.keys()]) {
+        if (!ALLOWED.includes(key)) {
+          url.searchParams.delete(key);
+        }
+      }
+
+      const newPath = url.pathname.replace(/\/clear$/, '');
+      url.pathname = newPath;
+
+      if (strategy === 'redirect') {
+        return NextResponse.redirect(url);
+      } else {
+        return NextResponse.rewrite(url);
+      }
+    }
+
+    const obj = Object.fromEntries([...url.searchParams.entries()]);
+
+    const res = NextResponse.next();
+    res.headers.set('data', JSON.stringify(obj));
+    return res;
+  }
+
+  if (pathname.startsWith('/home')) {
+    if (!request.cookies.bucket) {
+      const bucket = Math.random() >= 0.5 ? 'a' : 'b';
+      url.pathname = `/home/${bucket}`;
+      const response = NextResponse.rewrite(url);
+      response.cookie('bucket', bucket);
+      return response;
+    }
+
+    url.pathname = `/home/${request.cookies.bucket}`;
+    return NextResponse.rewrite(url);
+  }
+
+  if (pathname.startsWith('/fetch-subrequest')) {
+    const destinationUrl =
+      url.searchParams.get('url') || 'https://example.vercel.sh';
+    return fetch(destinationUrl, { headers: request.headers });
+  }
+
+  if (url.pathname === '/dynamic/greet') {
+    const res = NextResponse.next();
+    res.headers.set(
+      'data',
+      JSON.stringify({
+        message: url.searchParams.get('greeting') || 'Hi friend',
+      })
+    );
+    return res;
   }
 }

@@ -2265,6 +2265,7 @@ export async function getMiddlewareBundle({
       source.edgeFunctions[edgeFile] = worker.edgeFunction;
       const route = {
         continue: true,
+        override: true,
         middlewarePath: edgeFile,
         src: worker.routeSrc,
       };
