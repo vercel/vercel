@@ -2,7 +2,7 @@
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
-    "lib": ["ES2020"],
+    "lib": ["esnext"],
     "module": "commonjs",
     "moduleResolution": "node",
     "noEmitOnError": true,
@@ -13,7 +13,7 @@
     "outDir": "./dist",
     "types": ["node", "jest"],
     "strict": true,
-    "target": "ES2020",
+    "target": "es2019",
     "sourceMap": true
   },
   "include": ["src/**/*"],
