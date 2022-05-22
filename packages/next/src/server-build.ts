@@ -12,9 +12,10 @@ import {
   debug,
   glob,
   Files,
+  BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
 import { Handler, Route, Source } from '@vercel/routing-utils';
-import { BuildResult, MAX_AGE_ONE_YEAR } from '.';
+import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -1281,7 +1282,5 @@ export async function serverBuild({
             },
           ]),
     ],
-    watch: [],
-    childProcesses: [],
   };
 }
