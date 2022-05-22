@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "lib": ["ES2020"],
+    "lib": ["esnext"],
     "noEmit": true,
     "noImplicitReturns": true,
     "strict": true,

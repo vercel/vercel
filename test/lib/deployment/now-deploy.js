@@ -72,15 +72,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     if (json.error && json.error.code === 'missing_files')
       throw new Error('Missing files');
     deploymentId = json.id;
-    deploymentUrl = json.url || '';
-
-    if (!deploymentUrl.startsWith('https')) {
-      // if it doesn't look like an absolute URL, fetch will not work
-      console.log(
-        `Warning: deployment (${deploymentId}) returned deployment url of "${deploymentUrl}", which is not absolute. Prepending "https://".`
-      );
-      deploymentUrl = 'https://' + deploymentUrl;
-    }
+    deploymentUrl = json.url;
   }
 
   logWithinTest('id', deploymentId);
@@ -96,9 +88,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     const { readyState } = deployment;
     if (readyState === 'ERROR') {
       logWithinTest('state is ERROR, throwing');
-      const error = new Error(
-        `State of https://${deploymentUrl} is ERROR: ${deployment.errorMessage}`
-      );
+      const error = new Error(`State of https://${deploymentUrl} is ERROR`);
       error.deployment = deployment;
       throw error;
     }

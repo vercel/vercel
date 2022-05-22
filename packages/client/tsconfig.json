@@ -2,7 +2,7 @@
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
-    "lib": ["ES2020"],
+    "lib": ["esnext"],
     "module": "commonjs",
     "moduleResolution": "node",
     "outDir": "dist",
@@ -12,7 +12,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true,
-    "target": "ES2020"
+    "target": "es2019"
   },
   "include": ["./src"]
 }
