@@ -870,7 +870,6 @@ export async function serverBuild({
   }
 
   return {
-    middleware: middleware.middleware,
     wildcard: wildcardConfig,
     images:
       imagesManifest?.images?.loader === 'default'
