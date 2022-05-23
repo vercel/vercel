@@ -480,6 +480,24 @@ afterEach(async () => {
   );
 });
 
+/*
+function validateResponseHeaders(res: Response, podId?: string) {
+  expect(res.headers.get('server')).toEqual('Vercel');
+  expect(res.headers.get('cache-control')!.length > 0).toBeTruthy();
+  expect(
+    /^dev1::(dev1::)?[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
+      res.headers.get('x-vercel-id')!
+    )
+  ).toBeTruthy();
+  if (podId) {
+    expect(
+      res.headers.get('x-vercel-id')!.startsWith(`dev1::${podId}`) ||
+        res.headers.get('x-vercel-id')!.startsWith(`dev1::dev1::${podId}`)
+    ).toBeTruthy();
+  }
+}
+*/
+
 module.exports = {
   sleep,
   isCanary,

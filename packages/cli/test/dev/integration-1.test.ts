@@ -1,6 +1,9 @@
 import os from 'os';
+import url from 'url';
 import fs from 'fs-extra';
 import { join } from 'path';
+import listen from 'async-listen';
+import { createServer } from 'http';
 
 const {
   exec,
@@ -9,6 +12,371 @@ const {
   testFixture,
   testFixtureStdio,
 } = require('./utils.js');
+
+test('[vercel dev] should support request body', async () => {
+  const dir = fixture('node-request-body');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const body = { hello: 'world' };
+
+    // Test that `req.body` works in dev
+    let res = await fetch(`http://localhost:${port}/api/req-body`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    //validateResponseHeaders(res);
+    expect(await res.json()).toMatchObject(body);
+
+    // Test that `req` "data" events work in dev
+    res = await fetch(`http://localhost:${port}/api/data-events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should maintain query when invoking serverless function', async () => {
+  const dir = fixture('node-query-invoke');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/something?url-param=a`);
+    //validateResponseHeaders(res);
+
+    const text = await res.text();
+    const parsed = url.parse(text, true);
+    expect(parsed.pathname).toEqual('/something');
+    expect(parsed.query['url-param']).toEqual('a');
+    expect(parsed.query['route-param']).toEqual('b');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should maintain query when proxy passing', async () => {
+  const dir = fixture('query-proxy');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const dest = createServer((req, res) => {
+      res.end(req.url);
+    });
+    await listen(dest, 0);
+    const destAddr = dest.address();
+    if (!destAddr || typeof destAddr === 'string') {
+      throw new Error('Unexpected HTTP address');
+    }
+
+    const res = await fetch(
+      `http://localhost:${port}/${destAddr.port}?url-param=a`
+    );
+    //validateResponseHeaders(res);
+
+    const text = await res.text();
+    const parsed = url.parse(text, true);
+    expect(parsed.pathname).toEqual('/something');
+    expect(parsed.query['url-param']).toEqual('a');
+    expect(parsed.query['route-param']).toEqual('b');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should maintain query when dev server defines routes', async () => {
+  const dir = fixture('dev-server-query');
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      VERCEL_DEV_COMMAND: 'next dev --port $PORT',
+    },
+  });
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/test?url-param=a`);
+    //validateResponseHeaders(res);
+
+    const text = await res.text();
+
+    // Hacky way of getting the page payload from the response
+    // HTML since we don't have a HTML parser handy.
+    const json = text
+      .match(/<pre>(.*)<\/pre>/)![1]
+      .replace('</pre>', '')
+      .replace('<!-- -->', '')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"');
+    const parsed = JSON.parse(json);
+    const query = url.parse(parsed.url, true).query;
+
+    expect(query['url-param']).toEqual('a');
+    expect(query['route-param']).toEqual('b');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should allow `cache-control` to be overwritten', async () => {
+  const dir = fixture('headers');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(
+      `http://localhost:${port}/?name=cache-control&value=immutable`
+    );
+    expect(res.headers.get('cache-control')).toEqual('immutable');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should send `etag` header for static files', async () => {
+  const dir = fixture('headers');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/foo.txt`);
+    const expected = 'd263af8ab880c0b97eb6c5c125b5d44f9e5addd9';
+    expect(res.headers.get('etag')).toEqual(`"${expected}"`);
+    const body = await res.text();
+    expect(body.trim()).toEqual('hi');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should frontend dev server and routes', async () => {
+  const dir = fixture('dev-server-and-routes');
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      VERCEL_DEV_COMMAND: 'next dev --port $PORT',
+    },
+  });
+
+  try {
+    await readyResolver;
+
+    //let podId: string;
+
+    let res = await fetch(`http://localhost:${port}/`);
+    //validateResponseHeaders(res);
+    //podId = res.headers.get('x-vercel-id')!.match(/:(\w+)-/)![1];
+    let body = await res.text();
+    expect(body.includes('hello, this is the frontend')).toBeTruthy();
+
+    res = await fetch(`http://localhost:${port}/api/users`);
+    //validateResponseHeaders(res, podId);
+    body = await res.text();
+    expect(body).toEqual('users');
+
+    res = await fetch(`http://localhost:${port}/api/users/1`);
+    //validateResponseHeaders(res, podId);
+    body = await res.text();
+    expect(body).toEqual('users/1');
+
+    res = await fetch(`http://localhost:${port}/api/welcome`);
+    //validateResponseHeaders(res, podId);
+    body = await res.text();
+    expect(body).toEqual('hello and welcome');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support `@vercel/static` routing', async () => {
+  const dir = fixture('static-routes');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/`);
+    expect(res.status).toEqual(200);
+    const body = await res.text();
+    expect(body.trim()).toEqual('<body>Hello!</body>');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support `@vercel/static-build` routing', async () => {
+  const dir = fixture('static-build-routing');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/api/date`);
+    expect(res.status).toEqual(200);
+    const body = await res.text();
+    expect(body.startsWith('The current date:')).toBeTruthy();
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support directory listing', async () => {
+  const dir = fixture('directory-listing');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    // Get directory listing
+    let res = await fetch(`http://localhost:${port}/`);
+    let body = await res.text();
+    expect(res.status).toEqual(200);
+    expect(body.includes('Index of')).toBeTruthy();
+
+    // Get a file
+    res = await fetch(`http://localhost:${port}/file.txt`);
+    body = await res.text();
+    expect(res.status).toEqual(200);
+    expect(body.trim()).toEqual('Hello from file!');
+
+    // Invoke a lambda
+    res = await fetch(`http://localhost:${port}/lambda.js`);
+    body = await res.text();
+    expect(res.status).toEqual(200);
+    expect(body).toEqual('Hello from Lambda!');
+
+    // Trigger a 404
+    res = await fetch(`http://localhost:${port}/does-not-exist`);
+    expect(res.status).toEqual(404);
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should respond with 404 listing with Accept header support', async () => {
+  const dir = fixture('directory-listing');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    // HTML response
+    let res = await fetch(`http://localhost:${port}/does-not-exist`, {
+      headers: {
+        Accept: 'text/html',
+      },
+    });
+    expect(res.status).toEqual(404);
+    expect(res.headers.get('content-type')).toEqual('text/html; charset=utf-8');
+    let body = await res.text();
+    expect(body.startsWith('<!DOCTYPE html>')).toBeTruthy();
+
+    // JSON response
+    res = await fetch(`http://localhost:${port}/does-not-exist`, {
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+    expect(res.status).toEqual(404);
+    expect(res.headers.get('content-type')).toEqual('application/json');
+    body = await res.text();
+    expect(body).toEqual(
+      '{"error":{"code":404,"message":"The page could not be found."}}\n'
+    );
+
+    // Plain text response
+    res = await fetch(`http://localhost:${port}/does-not-exist`);
+    expect(res.status).toEqual(404);
+    body = await res.text();
+    expect(res.headers.get('content-type')).toEqual(
+      'text/plain; charset=utf-8'
+    );
+    expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support `public` directory with zero config', async () => {
+  const dir = fixture('api-with-public');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/user`);
+    let body = await res.text();
+    expect(body).toEqual('hello:user');
+
+    res = await fetch(`http://localhost:${port}/`);
+    body = await res.text();
+    expect(body.startsWith('<h1>hello world</h1>')).toBeTruthy();
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support static files with zero config', async () => {
+  const dir = fixture('api-with-static');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/user`);
+    let body = await res.text();
+    expect(body).toEqual('bye:user');
+
+    res = await fetch(`http://localhost:${port}/`);
+    body = await res.text();
+    expect(body.startsWith('<h1>goodbye world</h1>')).toBeTruthy();
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support custom 404 routes', async () => {
+  const dir = fixture('custom-404');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    // Test custom 404 with static dest
+    let res = await fetch(`http://localhost:${port}/error.html`);
+    expect(res.status).toEqual(404);
+    let body = await res.text();
+    expect(body.trim()).toEqual('<div>Custom 404 page</div>');
+
+    // Test custom 404 with lambda dest
+    res = await fetch(`http://localhost:${port}/error.js`);
+    expect(res.status).toEqual(404);
+    body = await res.text();
+    expect(body).toEqual('Custom 404 Lambda\n');
+
+    // Test regular 404 still works
+    res = await fetch(`http://localhost:${port}/does-not-exist`);
+    expect(res.status).toEqual(404);
+    body = await res.text();
+    expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
 
 test('[vercel dev] prints `npm install` errors', async () => {
   const dir = fixture('runtime-not-installed');
