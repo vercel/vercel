@@ -96,10 +96,21 @@ function shouldSkip(name, versions) {
   return false;
 }
 
-function validateResponseHeaders(res) {
+function validateResponseHeaders(res, podId) {
   if (res.status < 500) {
-    expect(res.headers.get('x-vercel-id')).toBeTruthy();
-    expect(res.headers.get('cache-control').length > 0).toBeTruthy;
+    expect(res.headers.get('server')).toEqual('Vercel');
+    expect(res.headers.get('cache-control').length > 0).toBeTruthy();
+    expect(
+      /^dev1::(dev1::)?[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
+        res.headers.get('x-vercel-id')
+      )
+    ).toBeTruthy();
+    if (podId) {
+      expect(
+        res.headers.get('x-vercel-id').startsWith(`dev1::${podId}`) ||
+          res.headers.get('x-vercel-id').startsWith(`dev1::dev1::${podId}`)
+      ).toBeTruthy();
+    }
   }
 }
 
@@ -479,24 +490,6 @@ afterEach(async () => {
     })
   );
 });
-
-/*
-function validateResponseHeaders(res: Response, podId?: string) {
-  expect(res.headers.get('server')).toEqual('Vercel');
-  expect(res.headers.get('cache-control')!.length > 0).toBeTruthy();
-  expect(
-    /^dev1::(dev1::)?[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
-      res.headers.get('x-vercel-id')!
-    )
-  ).toBeTruthy();
-  if (podId) {
-    expect(
-      res.headers.get('x-vercel-id')!.startsWith(`dev1::${podId}`) ||
-        res.headers.get('x-vercel-id')!.startsWith(`dev1::dev1::${podId}`)
-    ).toBeTruthy();
-  }
-}
-*/
 
 module.exports = {
   sleep,

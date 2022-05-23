@@ -11,6 +11,7 @@ const {
   fixture,
   testFixture,
   testFixtureStdio,
+  validateResponseHeaders,
 } = require('./utils.js');
 
 test('[vercel dev] should support request body', async () => {
@@ -30,7 +31,7 @@ test('[vercel dev] should support request body', async () => {
       },
       body: JSON.stringify(body),
     });
-    //validateResponseHeaders(res);
+    validateResponseHeaders(res);
     expect(await res.json()).toMatchObject(body);
 
     // Test that `req` "data" events work in dev
@@ -54,7 +55,7 @@ test('[vercel dev] should maintain query when invoking serverless function', asy
     await readyResolver;
 
     const res = await fetch(`http://localhost:${port}/something?url-param=a`);
-    //validateResponseHeaders(res);
+    validateResponseHeaders(res);
 
     const text = await res.text();
     const parsed = url.parse(text, true);
@@ -85,7 +86,7 @@ test('[vercel dev] should maintain query when proxy passing', async () => {
     const res = await fetch(
       `http://localhost:${port}/${destAddr.port}?url-param=a`
     );
-    //validateResponseHeaders(res);
+    validateResponseHeaders(res);
 
     const text = await res.text();
     const parsed = url.parse(text, true);
@@ -109,7 +110,7 @@ test('[vercel dev] should maintain query when dev server defines routes', async 
     await readyResolver;
 
     const res = await fetch(`http://localhost:${port}/test?url-param=a`);
-    //validateResponseHeaders(res);
+    validateResponseHeaders(res);
 
     const text = await res.text();
 
@@ -175,26 +176,26 @@ test('[vercel dev] should frontend dev server and routes', async () => {
   try {
     await readyResolver;
 
-    //let podId: string;
+    let podId: string;
 
     let res = await fetch(`http://localhost:${port}/`);
-    //validateResponseHeaders(res);
-    //podId = res.headers.get('x-vercel-id')!.match(/:(\w+)-/)![1];
+    validateResponseHeaders(res);
+    podId = res.headers.get('x-vercel-id')!.match(/:(\w+)-/)![1];
     let body = await res.text();
     expect(body.includes('hello, this is the frontend')).toBeTruthy();
 
     res = await fetch(`http://localhost:${port}/api/users`);
-    //validateResponseHeaders(res, podId);
+    validateResponseHeaders(res, podId);
     body = await res.text();
     expect(body).toEqual('users');
 
     res = await fetch(`http://localhost:${port}/api/users/1`);
-    //validateResponseHeaders(res, podId);
+    validateResponseHeaders(res, podId);
     body = await res.text();
     expect(body).toEqual('users/1');
 
     res = await fetch(`http://localhost:${port}/api/welcome`);
-    //validateResponseHeaders(res, podId);
+    validateResponseHeaders(res, podId);
     body = await res.text();
     expect(body).toEqual('hello and welcome');
   } finally {
