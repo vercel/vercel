@@ -8,7 +8,6 @@ export function getGlobFs(_fs: DetectorFilesystem): GlobFs {
     path: fs.PathLike,
     callback: (err: NodeJS.ErrnoException | null, files: string[]) => void
   ): void => {
-    console.log('readdir');
     _fs
       .readdir(String(path))
       .then(stats =>
@@ -24,7 +23,6 @@ export function getGlobFs(_fs: DetectorFilesystem): GlobFs {
     path: fs.PathLike,
     callback: (err: NodeJS.ErrnoException | null, stats: fs.Stats) => void
   ): void => {
-    console.log('stat');
     const pathAsString = String(path);
     _fs
       .isFile(pathAsString)
