@@ -6,7 +6,7 @@ import { FixtureFilesystem } from './utils/fixture-filesystem';
 describe('monorepo-managers', () => {
   describe.each([
     ['turbo', '28-turborepo-with-yarn-workspaces'],
-    ['turbo', '29-turborepo-in-package-json'],
+    ['turbo', '31-turborepo-in-package-json'],
     [null, '22-pnpm'],
   ])('with detectFramework', (frameworkSlug, fixturePath) => {
     const testName = frameworkSlug
