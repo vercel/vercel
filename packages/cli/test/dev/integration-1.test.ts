@@ -70,14 +70,13 @@ test('[vercel dev] should maintain query when invoking serverless function', asy
 test('[vercel dev] should maintain query when proxy passing', async () => {
   const dir = fixture('query-proxy');
   const { dev, port, readyResolver } = await testFixture(dir);
+  const dest = createServer((req, res) => {
+    res.end(req.url);
+  });
 
   try {
-    await readyResolver;
+    await Promise.all([readyResolver, listen(dest, 0)]);
 
-    const dest = createServer((req, res) => {
-      res.end(req.url);
-    });
-    await listen(dest, 0);
     const destAddr = dest.address();
     if (!destAddr || typeof destAddr === 'string') {
       throw new Error('Unexpected HTTP address');
@@ -94,6 +93,7 @@ test('[vercel dev] should maintain query when proxy passing', async () => {
     expect(parsed.query['url-param']).toEqual('a');
     expect(parsed.query['route-param']).toEqual('b');
   } finally {
+    dest.close();
     dev.kill('SIGTERM');
   }
 });
