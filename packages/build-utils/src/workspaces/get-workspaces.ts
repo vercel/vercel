@@ -1,11 +1,15 @@
+import path from 'path';
 import { DetectorFilesystem } from '../detectors/filesystem';
 import { workspaceManagers } from './workspace-managers';
 import { detectFramework as detectWorkspaceManagers } from '../detect-framework';
 
-const MAX_DEPTH_TRAVERSE = 2;
+const MAX_DEPTH_TRAVERSE = 3;
+const posixPath = path.posix;
 
 export interface GetWorkspaceOptions {
   fs: DetectorFilesystem;
+  depth?: number;
+  cwd?: string;
 }
 
 export type WorkspaceType = 'yarn' | 'pnpm' | 'npm';
@@ -22,60 +26,36 @@ async function getChildDirectories(fs: DetectorFilesystem, dirPath = './') {
 
 export async function getWorkspaces({
   fs,
+  depth = MAX_DEPTH_TRAVERSE,
+  cwd = '/',
 }: GetWorkspaceOptions): Promise<Workspace[]> {
-  const rootWorkspaceImplementation = await detectWorkspaceManagers({
+  if (depth === 0) return [];
+
+  const workspaceImplementation = await detectWorkspaceManagers({
     fs,
     frameworkList: workspaceManagers,
   });
 
-  if (rootWorkspaceImplementation === null) {
-    const workspaces: Array<Workspace> = [];
-    let childDirectories = await getChildDirectories(fs);
-    for (
-      let currentDepth = 0;
-      currentDepth < MAX_DEPTH_TRAVERSE;
-      currentDepth++
-    ) {
-      workspaces.push(
-        ...(
-          await Promise.all(
-            childDirectories.map(async childDirectory => {
-              const workspaceType = await detectWorkspaceManagers({
-                fs: fs.chdir(childDirectory.path),
-                frameworkList: workspaceManagers,
-              });
-              console.log('getWorkspaces', childDirectory, workspaceType);
-
-              if (!workspaceType) return null;
-
-              return {
-                type: workspaceType,
-                rootPath: `/${childDirectory.path}`,
-              };
-            })
-          )
-        ).filter((workspace): workspace is Workspace => workspace !== null)
-      );
-
-      // exit out of the loop early if we detected a workspace at this level in the folder tree
-      if (workspaces.length > 0) break;
-
-      childDirectories = (
-        await Promise.all(
-          childDirectories.map(childDirectory =>
-            getChildDirectories(fs, childDirectory.path)
-          )
+  if (workspaceImplementation === null) {
+    const childDirectories = await getChildDirectories(fs);
+    console.log('getWorkspaces', childDirectories, depth, cwd);
+    return (
+      await Promise.all(
+        childDirectories.map(childDirectory =>
+          getWorkspaces({
+            fs: fs.chdir(childDirectory.path),
+            depth: depth - 1,
+            cwd: posixPath.join(cwd, childDirectory.path),
+          })
         )
-      ).flat();
-    }
-
-    return workspaces;
+      )
+    ).flat();
   }
 
   return [
     {
-      type: rootWorkspaceImplementation as WorkspaceType,
-      rootPath: '/',
+      type: workspaceImplementation as WorkspaceType,
+      rootPath: `${cwd}`,
     },
   ];
 }
