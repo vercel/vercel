@@ -1,3 +1,4 @@
+import ms from 'ms';
 import { join } from 'path';
 import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -8,6 +9,8 @@ import {
 } from '../../../../src/util/build/import-builders';
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
+
+jest.setTimeout(ms('20 seconds'));
 
 describe('importBuilders()', () => {
   it('should import built-in Builders', async () => {

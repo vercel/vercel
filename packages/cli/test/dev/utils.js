@@ -96,10 +96,16 @@ function shouldSkip(name, versions) {
   return false;
 }
 
-function validateResponseHeaders(res) {
+function validateResponseHeaders(res, podId) {
   if (res.status < 500) {
+    expect(res.headers.get('server')).toEqual('Vercel');
+    expect(res.headers.get('cache-control').length > 0).toBeTruthy();
     expect(res.headers.get('x-vercel-id')).toBeTruthy();
-    expect(res.headers.get('cache-control').length > 0).toBeTruthy;
+    if (podId) {
+      expect(
+        res.headers.get('x-vercel-id').includes(`::${podId}-`)
+      ).toBeTruthy();
+    }
   }
 }
 
