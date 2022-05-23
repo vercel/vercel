@@ -88,7 +88,9 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     const { readyState } = deployment;
     if (readyState === 'ERROR') {
       logWithinTest('state is ERROR, throwing');
-      const error = new Error(`State of https://${deploymentUrl} is ERROR`);
+      const error = new Error(
+        `State of https://${deploymentUrl} is ERROR: ${deployment.errorMessage}`
+      );
       error.deployment = deployment;
       throw error;
     }
