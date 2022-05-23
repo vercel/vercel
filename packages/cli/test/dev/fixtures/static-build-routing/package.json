@@ -1,5 +1,5 @@
 {
-  "name": "now-dev-static-build-routing",
+  "name": "vc-dev-static-build-routing",
   "private": true,
   "scripts": {
     "now-dev": "serve -l $PORT src",
