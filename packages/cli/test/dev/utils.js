@@ -100,15 +100,19 @@ function validateResponseHeaders(res, podId) {
   if (res.status < 500) {
     expect(res.headers.get('server')).toEqual('Vercel');
     expect(res.headers.get('cache-control').length > 0).toBeTruthy();
+    const id = res.headers.get('x-vercel-id');
+    const region = id.split(':')[0];
     expect(
-      /^dev1::(dev1::)?[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
-        res.headers.get('x-vercel-id')
+      /^[a-z]{3}[1-9]:?:([a-z]{3}[1-9]::)?[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
+        id
       )
     ).toBeTruthy();
     if (podId) {
       expect(
-        res.headers.get('x-vercel-id').startsWith(`dev1::${podId}`) ||
-          res.headers.get('x-vercel-id').startsWith(`dev1::dev1::${podId}`)
+        res.headers.get('x-vercel-id').startsWith(`${region}::${podId}`) ||
+          res.headers
+            .get('x-vercel-id')
+            .startsWith(`${region}::${region}::${podId}`)
       ).toBeTruthy();
     }
   }
