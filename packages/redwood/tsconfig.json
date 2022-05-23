@@ -13,6 +13,6 @@
     "outDir": "dist",
     "types": ["node"],
     "strict": true,
-    "target": "es2019"
+    "target": "ES2020"
   }
 }

@@ -13,7 +13,7 @@
     "outDir": "dist",
     "types": ["node", "jest"],
     "strict": true,
-    "target": "es2018"
+    "target": "ES2020"
   },
   "include": ["src/**/*"],
   "exclude": ["test/fixtures"]

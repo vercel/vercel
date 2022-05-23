@@ -12,6 +12,6 @@
     "noUnusedParameters": true,
     "outDir": "dist",
     "strict": true,
-    "target": "esnext"
+    "target": "ES2020"
   }
 }
