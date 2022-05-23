@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "0.8.4-canary.0",
+  "version": "0.8.4-canary.1",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs",
@@ -20,7 +20,7 @@
     "prepublishOnly": "node build.js"
   },
   "dependencies": {
-    "@vercel/nft": "0.19.0",
+    "@vercel/nft": "0.19.1",
     "@vercel/routing-utils": "1.13.3",
     "semver": "6.1.1"
   },
@@ -28,6 +28,6 @@
     "@types/aws-lambda": "8.10.19",
     "@types/node": "*",
     "@types/semver": "6.0.0",
-    "@vercel/build-utils": "3.1.1-canary.0"
+    "@vercel/build-utils": "3.1.1-canary.1"
   }
 }

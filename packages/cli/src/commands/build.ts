@@ -44,7 +44,7 @@ import {
   PathOverride,
   writeBuildResult,
 } from '../util/build/write-build-result';
-import { importBuilders } from '../util/build/import-builders';
+import { importBuilders, BuilderWithPkg } from '../util/build/import-builders';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -247,7 +247,14 @@ export default async function main(client: Client): Promise<number> {
   }
 
   const builderSpecs = new Set(builds.map(b => b.use));
-  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
+
+  let buildersWithPkgs: Map<string, BuilderWithPkg>;
+  try {
+    buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
+  } catch (err: any) {
+    output.prettyError(err);
+    return 1;
+  }
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};

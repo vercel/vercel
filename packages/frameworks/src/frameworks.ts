@@ -52,7 +52,6 @@ export const frameworks = [
         placeholder: 'Next.js default',
       },
     },
-    getFsOutputDir: async () => '.next',
     getOutputDirName: async () => 'public',
   },
   {
@@ -102,7 +101,6 @@ export const frameworks = [
         dependencies: ['next-plugin-sentry', 'next-sentry-source-maps'],
       },
     ],
-    getFsOutputDir: async () => '.next',
     getOutputDirName: async () => 'public',
     cachePattern: '.next/cache/**',
   },
@@ -268,7 +266,6 @@ export const frameworks = [
       },
     },
     dependency: 'astro',
-    getFsOutputDir: async () => 'dist',
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
@@ -282,18 +279,6 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
-      },
-    ],
-    defaultHeaders: [
-      {
-        source: '^/dist/(.*)$',
-        regex: '^/dist/(.*)$',
-        headers: [
-          {
-            key: 'cache-control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
       },
     ],
   },
@@ -424,57 +409,6 @@ export const frameworks = [
 
       return base;
     },
-    defaultHeaders: [
-      {
-        source: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
-        regex: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source:
-          '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
-        regex:
-          '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source:
-          '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
-        regex:
-          '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source:
-          '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
-        regex:
-          '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$',
-        regex: '^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-    ],
-    defaultRedirects: [
-      {
-        source: '.*',
-        regex: '.*',
-        statusCode: 404,
-        destination: '404.html',
-      },
-    ],
     defaultRoutes: [
       {
         src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
@@ -608,13 +542,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'SolidStart',
@@ -717,13 +644,6 @@ export const frameworks = [
         continue: true,
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'Ember.js',
@@ -768,13 +688,6 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
       },
     ],
   },
@@ -832,27 +745,6 @@ export const frameworks = [
       {
         src: '^.*',
         dest: '/index.html',
-      },
-    ],
-    defaultHeaders: [
-      {
-        source: '^/[^/]*\\.(js|txt|ico|json)',
-        regex: '^/[^/]*\\.(js|txt|ico|json)',
-        headers: [{ key: 'cache-control', value: 'max-age=300' }],
-      },
-      {
-        source: '^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*',
-        regex: '^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '^.*',
-        regex: '^.*',
-        destination: '/index.html',
       },
     ],
   },
@@ -936,13 +828,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'Angular',
@@ -1003,13 +888,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'Polymer',
@@ -1067,13 +945,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'Svelte',
@@ -1123,13 +994,6 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
       },
     ],
   },
@@ -1232,45 +1096,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultHeaders: [
-      {
-        source: '/static/(.*)',
-        regex: '/static/(.*)',
-        headers: [
-          { key: 'cache-control', value: 's-maxage=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/service-worker.js',
-        regex: '/service-worker.js',
-        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
-      },
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
-      },
-    ],
-    defaultRedirects: [
-      {
-        source: '/static/(.*)',
-        destination: '/404.html',
-        statusCode: 404,
-        regex: '/static/(.*)',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/sockjs-node/(.*)',
-        destination: '/sockjs-node/$1',
-        regex: '/sockjs-node/(.*)',
-      },
-      {
-        source: '/(.*)',
-        destination: '/index.html',
-        regex: '/(.*)',
-      },
-    ],
   },
   {
     name: 'Create React App',
@@ -1336,45 +1161,6 @@ export const frameworks = [
         src: '/(.*)',
         headers: { 'cache-control': 's-maxage=0' },
         dest: '/index.html',
-      },
-    ],
-    defaultHeaders: [
-      {
-        source: '/static/(.*)',
-        regex: '/static/(.*)',
-        headers: [
-          { key: 'cache-control', value: 's-maxage=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/service-worker.js',
-        regex: '/service-worker.js',
-        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
-      },
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
-      },
-    ],
-    defaultRedirects: [
-      {
-        source: '/static/(.*)',
-        destination: '/404.html',
-        statusCode: 404,
-        regex: '/static/(.*)',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/sockjs-node/(.*)',
-        destination: '/sockjs-node/$1',
-        regex: '/sockjs-node/(.*)',
-      },
-      {
-        source: '/(.*)',
-        destination: '/index.html',
-        regex: '/(.*)',
       },
     ],
   },
@@ -1458,13 +1244,6 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        destination: '/index.html',
-        regex: '/(.*)',
       },
     ],
   },
@@ -1555,23 +1334,6 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
-    defaultHeaders: [
-      {
-        source: '/_saber/.*',
-        regex: '/_saber/.*',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-    ],
-    defaultRedirects: [
-      {
-        source: '.*',
-        statusCode: 404,
-        destination: '404.html',
-        regex: '.*',
-      },
-    ],
   },
   {
     name: 'Stencil',
@@ -1631,32 +1393,6 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
-      },
-    ],
-    defaultHeaders: [
-      {
-        source: '/assets/(.*)',
-        regex: '/assets/(.*)',
-        headers: [{ key: 'cache-control', value: 'max-age=2592000' }],
-      },
-      {
-        source: '/build/p-.*',
-        regex: '/build/p-.*',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/sw.js',
-        regex: '/sw.js',
-        headers: [{ key: 'cache-control', value: 'no-cache' }],
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        destination: '/index.html',
-        regex: '/(.*)',
       },
     ],
   },
@@ -2038,15 +1774,6 @@ export const frameworks = [
         handle: 'filesystem',
       },
     ],
-    defaultHeaders: [
-      {
-        source: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$',
-        regex: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$',
-        headers: [
-          { key: 'cache-control', value: 's-maxage=31536000, immutable' },
-        ],
-      },
-    ],
   },
   {
     name: 'Sanity',
@@ -2111,22 +1838,6 @@ export const frameworks = [
       outputDirectory: {
         placeholder: '`public` if it exists, or `.`',
       },
-    },
-    getFsOutputDir: async (dirPrefix: string): Promise<string> => {
-      // Public if it exists or `.`
-      let base = 'public';
-      try {
-        const location = join(dirPrefix, base);
-        const content = await readdir(location, { withFileTypes: true });
-
-        // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && content[0].isDirectory()) {
-          return join(base, content[0].name);
-        }
-      } catch (_error) {
-        base = '.';
-      }
-      return base;
     },
     getOutputDirName: async () => 'public',
   },
