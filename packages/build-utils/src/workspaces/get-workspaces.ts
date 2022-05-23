@@ -38,7 +38,7 @@ export async function getWorkspaces({
 
   if (workspaceImplementation === null) {
     const childDirectories = await getChildDirectories(fs);
-    console.log('getWorkspaces', childDirectories, depth, cwd);
+
     return (
       await Promise.all(
         childDirectories.map(childDirectory =>
