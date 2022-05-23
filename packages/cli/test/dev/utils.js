@@ -103,9 +103,7 @@ function validateResponseHeaders(res, podId) {
     const id = res.headers.get('x-vercel-id');
     const region = id.split(':')[0];
     expect(
-      /^[a-z]{3}[1-9]:?:([a-z]{3}[1-9]::)?[0-9a-z]{5}-[1-9][0-9]+-[a-f0-9]{12}$/.test(
-        id
-      )
+      /^([a-z]{3}[1-9]:)+:([a-z0-9]+)-([0-9]+)-([a-z0-9]+)$/.test(id)
     ).toBeTruthy();
     if (podId) {
       expect(
