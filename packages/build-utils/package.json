@@ -23,7 +23,7 @@
     "@types/cross-spawn": "6.0.0",
     "@types/end-of-stream": "^1.4.0",
     "@types/fs-extra": "9.0.13",
-    "@types/glob": "^7.1.1",
+    "@types/glob": "7.2.0",
     "@types/jest": "27.4.1",
     "@types/js-yaml": "3.12.1",
     "@types/ms": "0.7.31",
@@ -49,5 +49,9 @@
     "semver": "6.1.1",
     "typescript": "4.3.4",
     "yazl": "2.5.1"
+  },
+  "dependencies": {
+    "glob": "8.0.3",
+    "yaml": "2.1.0"
   }
 }
