@@ -53,7 +53,7 @@ export async function getWorkspaces({
   return [
     {
       type: workspaceType as WorkspaceType,
-      rootPath: `${cwd}`,
+      rootPath: cwd,
     },
   ];
 }
