@@ -2286,7 +2286,7 @@ export async function getMiddlewareBundle({
  * location. If the manifest can't be found it will resolve to
  * undefined.
  */
-async function getMiddlewareManifest(
+export async function getMiddlewareManifest(
   entryPath: string,
   outputDirectory: string
 ): Promise<MiddlewareManifest | undefined> {
