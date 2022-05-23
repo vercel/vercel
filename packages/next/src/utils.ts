@@ -2156,10 +2156,17 @@ export async function getMiddlewareBundle({
     entryPath,
     outputDirectory
   );
+  const sortedMiddleware = middlewareManifest?.sortedMiddleware || [];
+  for (const middlewareKey of Object.keys(
+    middlewareManifest?.middleware ?? {}
+  )) {
+    if (sortedMiddleware.includes(middlewareKey)) continue;
+    sortedMiddleware.push(middlewareKey);
+  }
 
-  if (middlewareManifest && middlewareManifest?.sortedMiddleware.length > 0) {
+  if (middlewareManifest && sortedMiddleware.length > 0) {
     const workerConfigs = await Promise.all(
-      middlewareManifest.sortedMiddleware.map(async key => {
+      sortedMiddleware.map(async key => {
         const edgeFunction = middlewareManifest.middleware[key];
         try {
           const wrappedModuleSource = await getNextjsEdgeFunctionSource(
