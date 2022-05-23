@@ -98,6 +98,12 @@ export default async function dev(
     ]);
   }
 
+  // This is just for tests - can be removed once project settings
+  // are respected locally in `.vercel/project.json`
+  if (process.env.VERCEL_DEV_COMMAND) {
+    devCommand = process.env.VERCEL_DEV_COMMAND;
+  }
+
   const devServer = new DevServer(cwd, {
     output,
     devCommand,
