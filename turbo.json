@@ -34,6 +34,10 @@
       "dependsOn": ["build"],
       "outputs": []
     },
+    "test-next-local": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
     "test": {
       "dependsOn": ["build"],
       "outputs": []
