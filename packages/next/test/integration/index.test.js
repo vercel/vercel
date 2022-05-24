@@ -5,6 +5,8 @@ const fs = require('fs-extra');
 
 const runBuildLambda = require('../../../../test/lib/run-build-lambda');
 
+jest.setTimeout(360000);
+
 it('should show error from basePath with legacy monorepo build', async () => {
   let error;
 
