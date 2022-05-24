@@ -696,7 +696,6 @@ it('Should not exceed function limit for large dependencies (shared lambda)', as
 });
 
 it('Should provide lambda info when limit is hit (server build)', async () => {
-  let error;
   let logs = '';
 
   const origLog = console.log;
@@ -711,14 +710,13 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
       path.join(__dirname, 'test-limit-exceeded-server-build')
     );
   } catch (err) {
-    error = err;
+    console.error(err);
   }
   console.log = origLog;
 
   expect(logs).toContain(
     'Max serverless function size was exceeded for 1 function'
   );
-  expect(error).toBeDefined();
   expect(logs).toContain(
     'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
   );
@@ -735,7 +733,6 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
 });
 
 it('Should provide lambda info when limit is hit (shared lambdas)', async () => {
-  let error;
   let logs = '';
 
   const origLog = console.log;
@@ -750,14 +747,13 @@ it('Should provide lambda info when limit is hit (shared lambdas)', async () => 
       path.join(__dirname, 'test-limit-exceeded-shared-lambdas')
     );
   } catch (err) {
-    error = err;
+    console.error(err);
   }
   console.log = origLog;
 
   expect(logs).toContain(
     'Max serverless function size was exceeded for 1 function'
   );
-  expect(error).toBeDefined();
   expect(logs).toContain(
     'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
   );
@@ -772,7 +768,6 @@ it('Should provide lambda info when limit is hit (shared lambdas)', async () => 
 });
 
 it('Should provide lambda info when limit is hit for internal pages (server build)', async () => {
-  let error;
   let logs = '';
 
   const origLog = console.log;
@@ -787,11 +782,10 @@ it('Should provide lambda info when limit is hit for internal pages (server buil
       path.join(__dirname, 'test-limit-exceeded-internal-files-server-build')
     );
   } catch (err) {
-    error = err;
+    console.error(err);
   }
   console.log = origLog;
 
-  expect(error).toBeDefined();
   expect(logs).toContain(
     'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
   );
