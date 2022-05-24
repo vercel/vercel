@@ -9,9 +9,10 @@ if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = region === 'dev1' ? 'development' : 'production';
 }
 
+// NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
 // @ts-ignore
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const page = require(__LAUNCHER_PAGE_PATH__);
+const page = eval('require')(__LAUNCHER_PAGE_PATH__);
 
 // page.render is for React rendering
 // page.default is for /api rendering

@@ -244,8 +244,9 @@ export async function getRoutesManifest(
     });
   }
 
+  // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const routesManifest: RoutesManifest = require(pathRoutesManifest);
+  const routesManifest: RoutesManifest = eval('require')(pathRoutesManifest);
 
   // remove temporary array based routeKeys from v1/v2 of routes
   // manifest since it can result in invalid routes
@@ -368,10 +369,10 @@ export async function getDynamicRoutes(
   let getSortedRoutes: ((normalizedPages: string[]) => string[]) | undefined;
 
   try {
-    ({ getRouteRegex, getSortedRoutes } = require(resolveFrom(
-      entryPath,
-      'next-server/dist/lib/router/utils'
-    )));
+    // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
+    ({ getRouteRegex, getSortedRoutes } = eval('require')(
+      resolveFrom(entryPath, 'next-server/dist/lib/router/utils')
+    ));
     if (typeof getRouteRegex !== 'function') {
       getRouteRegex = undefined;
     }
@@ -379,10 +380,10 @@ export async function getDynamicRoutes(
 
   if (!getRouteRegex || !getSortedRoutes) {
     try {
-      ({ getRouteRegex, getSortedRoutes } = require(resolveFrom(
-        entryPath,
-        'next/dist/next-server/lib/router/utils'
-      )));
+      // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
+      ({ getRouteRegex, getSortedRoutes } = eval('require')(
+        resolveFrom(entryPath, 'next/dist/next-server/lib/router/utils')
+      ));
       if (typeof getRouteRegex !== 'function') {
         getRouteRegex = undefined;
       }
@@ -536,8 +537,10 @@ export async function getImagesManifest(
     return undefined;
   }
 
+  // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const imagesManifest: NextImagesManifest = require(pathImagesManifest);
+  const imagesManifest: NextImagesManifest =
+    eval('require')(pathImagesManifest);
   return imagesManifest;
 }
 
@@ -2300,7 +2303,7 @@ async function getMiddlewareManifest(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require(middlewareManifestPath);
+  return eval('require')(middlewareManifestPath);
 }
 
 /**
