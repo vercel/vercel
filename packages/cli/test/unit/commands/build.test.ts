@@ -17,7 +17,7 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
-      await build(client);
+      expect(await build(client)).toEqual(0);
 
       // `builds.json` says that "@vercel/static" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
@@ -46,7 +46,7 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
-      await build(client);
+      expect(await build(client)).toEqual(0);
 
       // `builds.json` says that "@vercel/static" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
