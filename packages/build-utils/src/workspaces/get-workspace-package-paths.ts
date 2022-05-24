@@ -1,5 +1,5 @@
 import path from 'path';
-import { parse } from 'yaml';
+import yaml from 'js-yaml';
 import { DetectorFilesystem } from '../detectors/filesystem';
 import { Workspace } from './get-workspaces';
 import glob, { FsFiles } from '../fs/glob';
@@ -92,9 +92,9 @@ async function getPnpmWorkspacePackagePaths({
   fs,
 }: GetPackagePathOptions): Promise<FsFiles[]> {
   const pnpmWorkspaceAsBuffer = await fs.readFile('pnpm-workspace.yaml');
-  const { packages } = (await parse(
+  const { packages } = yaml.load(
     pnpmWorkspaceAsBuffer.toString()
-  )) as PnpmWorkspaces;
+  ) as PnpmWorkspaces;
 
   console.log('getPnpmWorkspacePackagePaths', packages);
 
