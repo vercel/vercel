@@ -2128,11 +2128,11 @@ export {
 interface MiddlewareManifest {
   version: 1;
   sortedMiddleware: string[];
-  middleware: { [page: string]: MiddlewareInfo };
-  functions?: { [page: string]: MiddlewareInfo };
+  middleware: { [page: string]: EdgeFunctionInfo };
+  functions?: { [page: string]: EdgeFunctionInfo };
 }
 
-interface MiddlewareInfo {
+interface EdgeFunctionInfo {
   env: string[];
   files: string[];
   name: string;
@@ -2335,7 +2335,7 @@ export async function getMiddlewareManifest(
  * @returns A regexp string for the middleware route.
  */
 function getRouteSrc(
-  { regexp, page }: MiddlewareInfo,
+  { regexp, page }: EdgeFunctionInfo,
   { basePath = '', i18n }: RoutesManifest
 ): string {
   if (page === '/') {
