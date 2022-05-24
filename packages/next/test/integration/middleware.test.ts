@@ -17,6 +17,8 @@ const SIMPLE_PROJECT = path.resolve(
   '00-middleware'
 );
 
+jest.setTimeout(360000);
+
 describe('Middleware simple project', () => {
   const ctx: Context = {};
 
