@@ -19,11 +19,6 @@ export type Workspace = {
   rootPath: string;
 };
 
-async function getChildDirectories(fs: DetectorFilesystem, dirPath = './') {
-  const directoryContents = await fs.readdir(dirPath);
-  return directoryContents.filter(stat => stat.type === 'dir');
-}
-
 export async function getWorkspaces({
   fs,
   depth = MAX_DEPTH_TRAVERSE,
@@ -31,14 +26,17 @@ export async function getWorkspaces({
 }: GetWorkspaceOptions): Promise<Workspace[]> {
   if (depth === 0) return [];
 
-  const workspaceImplementation = await detectWorkspaceManagers({
+  const workspaceType = await detectWorkspaceManagers({
     fs,
     frameworkList: workspaceManagers,
   });
 
-  if (workspaceImplementation === null) {
-    const childDirectories = await getChildDirectories(fs);
-    console.log('getWorkspaces', childDirectories, depth, cwd);
+  if (workspaceType === null) {
+    const directoryContents = await fs.readdir('./');
+    const childDirectories = directoryContents.filter(
+      stat => stat.type === 'dir'
+    );
+    
     return (
       await Promise.all(
         childDirectories.map(childDirectory =>
@@ -54,8 +52,8 @@ export async function getWorkspaces({
 
   return [
     {
-      type: workspaceImplementation as WorkspaceType,
-      rootPath: `${cwd}`,
+      type: workspaceType as WorkspaceType,
+      rootPath: cwd,
     },
   ];
 }
