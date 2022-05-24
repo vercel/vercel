@@ -5,13 +5,13 @@ import { FixtureFilesystem } from './utils/fixture-filesystem';
 
 describe('workspace-managers', () => {
   describe.each([
-    ['npm', '21-npm-workspaces'],
-    ['pnpm', '23-pnpm-workspaces'],
-    ['yarn', '27-yarn-workspaces'],
-    ['yarn', '25-multiple-lock-files-yarn'],
-    ['pnpm', '26-multiple-lock-files-pnpm'],
-    [null, '22-pnpm'],
-  ])('with detectFramework', (frameworkSlug, fixturePath) => {
+    ['21-npm-workspaces', 'npm'],
+    ['23-pnpm-workspaces', 'pnpm'],
+    ['27-yarn-workspaces', 'yarn'],
+    ['25-multiple-lock-files-yarn', 'yarn'],
+    ['26-multiple-lock-files-pnpm', 'pnpm'],
+    ['22-pnpm', null],
+  ])('with detectFramework', (fixturePath, frameworkSlug) => {
     const testName = frameworkSlug
       ? `should detect a ${frameworkSlug} workspace for ${fixturePath}`
       : `should not detect framework for ${fixturePath}`;

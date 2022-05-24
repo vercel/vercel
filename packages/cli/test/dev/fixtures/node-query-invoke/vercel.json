@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "now-dev-query-test",
   "builds": [{ "src": "index.js", "use": "@vercel/node" }],
   "routes": [
     {

@@ -1,7 +1,7 @@
 import npa from 'npm-package-arg';
 import { satisfies } from 'semver';
 import { dirname, join } from 'path';
-import { outputJSON, readJSON } from 'fs-extra';
+import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
 import {
   BuilderV2,
   BuilderV3,
@@ -202,6 +202,11 @@ async function installBuilders(
   await spawnAsync('yarn', ['add', '@vercel/build-utils', ...buildersToAdd], {
     cwd: buildersDir,
   });
+
+  // Symlink `@now/build-utils` -> `@vercel/build-utils` to support legacy Builders
+  const nowScopePath = join(buildersDir, 'node_modules/@now');
+  await mkdirp(nowScopePath);
+  await symlink('../@vercel/build-utils', join(nowScopePath, 'build-utils'));
 
   // Cross-reference any builderSpecs from the saved `package.json` file,
   // in case they were installed from a URL

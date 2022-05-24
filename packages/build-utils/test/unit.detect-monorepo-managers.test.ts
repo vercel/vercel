@@ -5,10 +5,10 @@ import { FixtureFilesystem } from './utils/fixture-filesystem';
 
 describe('monorepo-managers', () => {
   describe.each([
-    ['turbo', '28-turborepo-with-yarn-workspaces'],
-    ['turbo', '29-turborepo-in-package-json'],
-    [null, '22-pnpm'],
-  ])('with detectFramework', (frameworkSlug, fixturePath) => {
+    ['28-turborepo-with-yarn-workspaces', 'turbo'],
+    ['31-turborepo-in-package-json', 'turbo'],
+    ['22-pnpm', null],
+  ])('with detectFramework', (fixturePath, frameworkSlug) => {
     const testName = frameworkSlug
       ? `should detect a ${frameworkSlug} workspace for ${fixturePath}`
       : `should not detect a monorepo manager for ${fixturePath}`;
