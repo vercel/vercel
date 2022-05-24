@@ -19,6 +19,8 @@ import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
 import { Dictionary } from '@vercel/client';
 
+const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
+
 export interface NowOptions {
   client: Client;
   url?: string | null;
@@ -521,6 +523,10 @@ export default class Now extends EventEmitter {
       opts.headers.set('content-type', 'application/json; charset=utf8');
     } else {
       body = opts.body;
+    }
+
+    if (!ABSOLUTE_URL_PATTERN.test(_url)) {
+      throw new Error(`fetch url must be absolute: "${_url}"`);
     }
 
     const res = await this._output.time(
