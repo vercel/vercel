@@ -327,6 +327,7 @@ export interface ProjectSettings {
   buildCommand?: string | null;
   outputDirectory?: string | null;
   rootDirectory?: string | null;
+  nodeVersion?: string;
   createdAt?: number;
   autoExposeSystemEnvs?: boolean;
   sourceFilesOutsideRootDirectory?: boolean;
@@ -351,11 +352,41 @@ export interface BuilderV3 {
 
 type ImageFormat = 'image/avif' | 'image/webp';
 
+export type RemotePattern = {
+  /**
+   * Must be `http` or `https`.
+   */
+  protocol?: 'http' | 'https';
+
+  /**
+   * Can be literal or wildcard.
+   * Single `*` matches a single subdomain.
+   * Double `**` matches any number of subdomains.
+   */
+  hostname: string;
+
+  /**
+   * Can be literal port such as `8080` or empty string
+   * meaning no port.
+   */
+  port?: string;
+
+  /**
+   * Can be literal or wildcard.
+   * Single `*` matches a single path segment.
+   * Double `**` matches any number of path segments.
+   */
+  pathname?: string;
+};
+
 export interface Images {
   domains: string[];
+  remotePatterns?: RemotePattern[];
   sizes: number[];
   minimumCacheTTL?: number;
   formats?: ImageFormat[];
+  dangerouslyAllowSVG?: boolean;
+  contentSecurityPolicy?: string;
 }
 
 /**

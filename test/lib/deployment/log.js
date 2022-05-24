@@ -12,14 +12,19 @@ const dateFormat = new Intl.DateTimeFormat('en-us', {
 });
 
 function logWithinTest(...inputs) {
-  const { testPath, currentTestName } = expect.getState();
+  const { testPath, currentTestName } =
+    typeof expect === 'undefined' ? expect.getState() : {};
 
-  const messages = [dateFormat.format(new Date()), currentTestName, ...inputs];
+  const messages = [
+    dateFormat.format(new Date()),
+    currentTestName,
+    ...inputs,
+  ].filter(Boolean);
   const message = messages
     .map(x => (typeof x === 'string' ? x : util.inspect(x)))
     .join('\t');
 
-  if (shouldWriteToFile) {
+  if (shouldWriteToFile && testPath) {
     const filePath = `${testPath}.artifact.log`;
     fs.appendFileSync(filePath, `${message.trim()}\n`);
   }

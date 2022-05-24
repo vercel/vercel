@@ -1,5 +1,4 @@
 import {
-  File,
   FileBlob,
   FileFsRef,
   Files,
@@ -22,7 +21,7 @@ import {
   BuildV2,
   PrepareCache,
   NodejsLambda,
-  EdgeFunction,
+  BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
 import { Handler, Route, Source } from '@vercel/routing-utils';
 import {
@@ -32,7 +31,6 @@ import {
 } from '@vercel/routing-utils/dist/superstatic';
 import { nodeFileTrace } from '@vercel/nft';
 import { Sema } from 'async-sema';
-import { ChildProcess } from 'child_process';
 // escape-string-regexp version must match Next.js version
 import escapeStringRegexp from 'escape-string-regexp';
 import findUp from 'find-up';
@@ -179,66 +177,6 @@ function isLegacyNext(nextVersion: string) {
 
   return true;
 }
-
-export interface BuildResult {
-  routes: Route[];
-  images?: {
-    domains: string[];
-    remotePatterns?: RemotePattern[];
-    sizes: number[];
-    minimumCacheTTL?: number;
-    formats?: ImageFormat[];
-    dangerouslyAllowSVG?: boolean;
-    contentSecurityPolicy?: string;
-  };
-  middleware?: {
-    buffer: Buffer;
-    env: string[];
-    format: 'module' | 'service-worker';
-    name: string;
-    sourcemap?: string;
-    wasmBindings?: { name: string; filePath: string }[];
-    type: 'v8-worker';
-  }[];
-  output: {
-    [key: string]: File | Lambda | EdgeFunction | FileFsRef | Prerender;
-  };
-  wildcard?: Array<{
-    domain: string;
-    value: string;
-  }>;
-  watch?: string[];
-  childProcesses: ChildProcess[];
-}
-
-export type RemotePattern = {
-  /**
-   * Must be `http` or `https`.
-   */
-  protocol?: 'http' | 'https';
-
-  /**
-   * Can be literal or wildcard.
-   * Single `*` matches a single subdomain.
-   * Double `**` matches any number of subdomains.
-   */
-  hostname: string;
-
-  /**
-   * Can be literal port such as `8080` or empty string
-   * meaning no port.
-   */
-  port?: string;
-
-  /**
-   * Can be literal or wildcard.
-   * Single `*` matches a single path segment.
-   * Double `**` matches any number of path segments.
-   */
-  pathname?: string;
-};
-
-type ImageFormat = 'image/avif' | 'image/webp';
 
 export const build: BuildV2 = async ({
   files,
@@ -978,8 +916,6 @@ export const build: BuildV2 = async ({
             ]
           : []),
       ],
-      watch: [],
-      childProcesses: [],
     };
   }
 
@@ -1116,9 +1052,9 @@ export const build: BuildV2 = async ({
           files: {
             ...nextFiles,
             ...pageFiles,
-            '___next_launcher.js': new FileBlob({ data: launcher }),
+            '___next_launcher.cjs': new FileBlob({ data: launcher }),
           },
-          handler: '___next_launcher.js',
+          handler: '___next_launcher.cjs',
           runtime: nodeVersion.runtime,
           ...lambdaOptions,
           shouldAddHelpers: false,
@@ -1786,7 +1722,7 @@ export const build: BuildV2 = async ({
           const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
             [path.join(
               path.relative(baseDir, entryPath),
-              '___next_launcher.js'
+              '___next_launcher.cjs'
             )]: new FileBlob({ data: launcher }),
           };
           let lambdaOptions: { memory?: number; maxDuration?: number } = {};
@@ -1822,7 +1758,7 @@ export const build: BuildV2 = async ({
               ],
               handler: path.join(
                 path.relative(baseDir, entryPath),
-                '___next_launcher.js'
+                '___next_launcher.cjs'
               ),
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
@@ -1841,7 +1777,7 @@ export const build: BuildV2 = async ({
               ],
               handler: path.join(
                 path.relative(baseDir, entryPath),
-                '___next_launcher.js'
+                '___next_launcher.cjs'
               ),
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
@@ -2023,7 +1959,7 @@ export const build: BuildV2 = async ({
             const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
               [path.join(
                 path.relative(baseDir, entryPath),
-                '___next_launcher.js'
+                '___next_launcher.cjs'
               )]: new FileBlob({ data: launcher }),
             };
 
@@ -2040,7 +1976,7 @@ export const build: BuildV2 = async ({
                 layers: [group.pseudoLayer],
                 handler: path.join(
                   path.relative(baseDir, entryPath),
-                  '___next_launcher.js'
+                  '___next_launcher.cjs'
                 ),
                 runtime: nodeVersion.runtime,
               });
@@ -2594,8 +2530,6 @@ export const build: BuildV2 = async ({
                 ]),
           ]),
     ],
-    watch: [],
-    childProcesses: [],
   };
 };
 

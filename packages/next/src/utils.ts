@@ -445,7 +445,7 @@ export function localizeDynamicRoutes(
       const isApiRoute =
         pathnameNoPrefix === '/api' || pathnameNoPrefix?.startsWith('/api/');
       const isAutoExport =
-        staticPages[addLocaleOrDefault(pathname!, routesManifest).substr(1)];
+        staticPages[addLocaleOrDefault(pathname!, routesManifest).substring(1)];
 
       const isLocalePrefixed =
         isFallback || isBlocking || isAutoExport || isServerMode;
@@ -2241,22 +2241,10 @@ export async function getMiddlewareBundle({
       staticRoutes: Route[];
       dynamicRouteMap: Map<string, Source>;
       edgeFunctions: Record<string, EdgeFunction>;
-      middleware: {
-        runtimeVersion: string;
-        id: string;
-        name: string;
-        buffer: Buffer;
-        env: string[];
-        format: 'module' | 'service-worker';
-        type: 'v8-worker';
-        sourcemap?: string;
-        wasmBindings: { name: string; filePath: string }[];
-      }[];
     } = {
       staticRoutes: [],
       dynamicRouteMap: new Map(),
       edgeFunctions: {},
-      middleware: [],
     };
 
     for (const worker of workerConfigs.values()) {
@@ -2265,6 +2253,7 @@ export async function getMiddlewareBundle({
       source.edgeFunctions[edgeFile] = worker.edgeFunction;
       const route = {
         continue: true,
+        override: true,
         middlewarePath: edgeFile,
         src: worker.routeSrc,
       };
@@ -2283,7 +2272,6 @@ export async function getMiddlewareBundle({
     staticRoutes: [],
     dynamicRouteMap: new Map(),
     edgeFunctions: {},
-    middleware: [],
   };
 }
 

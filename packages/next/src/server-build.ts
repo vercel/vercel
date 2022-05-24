@@ -12,9 +12,10 @@ import {
   debug,
   glob,
   Files,
+  BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
 import { Handler, Route, Source } from '@vercel/routing-utils';
-import { BuildResult, MAX_AGE_ONE_YEAR } from '.';
+import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -500,7 +501,7 @@ export async function serverBuild({
     const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
       [path.join(
         path.relative(baseDir, requiredServerFilesManifest.appDir || entryPath),
-        '___next_launcher.js'
+        '___next_launcher.cjs'
       )]: new FileBlob({ data: launcher }),
     };
     const pageTraces: {
@@ -688,7 +689,7 @@ export async function serverBuild({
             baseDir,
             requiredServerFilesManifest.appDir || entryPath
           ),
-          '___next_launcher.js'
+          '___next_launcher.cjs'
         ),
         memory: group.memory,
         runtime: nodeVersion.runtime,
@@ -855,7 +856,7 @@ export async function serverBuild({
           currentRouteSrc = starterRouteSrc;
         }
         // add to existing route src if src length limit isn't reached
-        currentRouteSrc = `${currentRouteSrc.substr(
+        currentRouteSrc = `${currentRouteSrc.substring(
           0,
           currentRouteSrc.length - 1
         )}${
@@ -870,7 +871,6 @@ export async function serverBuild({
   }
 
   return {
-    middleware: middleware.middleware,
     wildcard: wildcardConfig,
     images:
       imagesManifest?.images?.loader === 'default'
@@ -1282,7 +1282,5 @@ export async function serverBuild({
             },
           ]),
     ],
-    watch: [],
-    childProcesses: [],
   };
 }

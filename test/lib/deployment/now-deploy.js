@@ -76,7 +76,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
   }
 
   logWithinTest('id', deploymentId);
-  const st = expect.getState();
+  const st = typeof expect !== 'undefined' ? expect.getState() : {};
   const expectstate = {
     currentTestName: st.currentTestName,
     testPath: st.testPath,
@@ -88,7 +88,9 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     const { readyState } = deployment;
     if (readyState === 'ERROR') {
       logWithinTest('state is ERROR, throwing');
-      const error = new Error(`State of https://${deploymentUrl} is ERROR`);
+      const error = new Error(
+        `State of https://${deploymentUrl} is ERROR: ${deployment.errorMessage}`
+      );
       error.deployment = deployment;
       throw error;
     }
@@ -170,8 +172,9 @@ async function deploymentGet(deploymentId) {
 }
 
 let token;
-let currentCount = 0;
-const MAX_COUNT = 10;
+let tokenCreated = 0;
+// temporary tokens last for 25 minutes
+const MAX_TOKEN_AGE = 25 * 60 * 1000;
 
 async function fetchWithAuth(url, opts = {}) {
   if (!opts.headers) opts.headers = {};
@@ -189,9 +192,8 @@ async function fetchWithAuth(url, opts = {}) {
 }
 
 async function fetchCachedToken() {
-  currentCount += 1;
-  if (!token || currentCount === MAX_COUNT) {
-    currentCount = 0;
+  if (!token || tokenCreated < Date.now() - MAX_TOKEN_AGE) {
+    tokenCreated = Date.now();
     token = await fetchTokenWithRetry();
   }
   return token;
