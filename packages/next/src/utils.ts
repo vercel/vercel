@@ -245,7 +245,6 @@ export async function getRoutesManifest(
   }
 
   // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const routesManifest: RoutesManifest = eval('require')(pathRoutesManifest);
 
   // remove temporary array based routeKeys from v1/v2 of routes
@@ -538,7 +537,6 @@ export async function getImagesManifest(
   }
 
   // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const imagesManifest: NextImagesManifest =
     eval('require')(pathImagesManifest);
   return imagesManifest;
@@ -2302,7 +2300,7 @@ async function getMiddlewareManifest(
     return;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
   return eval('require')(middlewareManifestPath);
 }
 
