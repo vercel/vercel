@@ -2128,9 +2128,8 @@ export {
 interface MiddlewareManifest {
   version: 1;
   sortedMiddleware: string[];
-  middleware: {
-    [page: string]: MiddlewareInfo;
-  };
+  middleware: { [page: string]: MiddlewareInfo };
+  functions?: { [page: string]: MiddlewareInfo };
 }
 
 interface MiddlewareInfo {
@@ -2139,7 +2138,6 @@ interface MiddlewareInfo {
   name: string;
   page: string;
   regexp: string;
-  generalPurpose?: boolean;
   wasm?: { filePath: string; name: string }[];
 }
 
@@ -2156,18 +2154,29 @@ export async function getMiddlewareBundle({
     entryPath,
     outputDirectory
   );
-  const sortedMiddleware = middlewareManifest?.sortedMiddleware || [];
-  for (const middlewareKey of Object.keys(
-    middlewareManifest?.middleware ?? {}
-  )) {
-    if (sortedMiddleware.includes(middlewareKey)) continue;
-    sortedMiddleware.push(middlewareKey);
-  }
+  const sortedFunctions = [
+    ...(!middlewareManifest
+      ? []
+      : middlewareManifest.sortedMiddleware.map(key => ({
+          key,
+          edgeFunction: middlewareManifest?.middleware[key],
+          type: 'middleware' as const,
+        }))),
 
-  if (middlewareManifest && sortedMiddleware.length > 0) {
+    ...Object.entries(middlewareManifest?.functions ?? {}).map(
+      ([key, edgeFunction]) => {
+        return {
+          key,
+          edgeFunction,
+          type: 'function' as const,
+        };
+      }
+    ),
+  ];
+
+  if (middlewareManifest && sortedFunctions.length > 0) {
     const workerConfigs = await Promise.all(
-      sortedMiddleware.map(async key => {
-        const edgeFunction = middlewareManifest.middleware[key];
+      sortedFunctions.map(async ({ key, edgeFunction, type }) => {
         try {
           const wrappedModuleSource = await getNextjsEdgeFunctionSource(
             edgeFunction.files,
@@ -2187,7 +2196,7 @@ export async function getMiddlewareBundle({
           );
 
           return {
-            isMiddleware: !edgeFunction.generalPurpose,
+            type,
             page: edgeFunction.page,
             edgeFunction: (() => {
               const { source, map } = wrappedModuleSource.sourceAndMap();
@@ -2261,7 +2270,7 @@ export async function getMiddlewareBundle({
       const route: Route = {
         continue: true,
         src: worker.routeSrc,
-        ...(worker.isMiddleware
+        ...(worker.type === 'middleware'
           ? {
               middlewarePath: shortPath,
               override: true,
