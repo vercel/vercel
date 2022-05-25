@@ -38,6 +38,7 @@ describe('build', () => {
       expect(files.sort()).toEqual(['index.html']);
     } finally {
       process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
 
@@ -50,7 +51,6 @@ describe('build', () => {
 
       // `builds.json` says that "@vercel/static" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
-      console.log(builds.builds);
       expect(builds).toMatchObject({
         target: 'preview',
         builds: [
@@ -90,6 +90,7 @@ describe('build', () => {
       //expect(files.sort()).toEqual(['index.html']);
     } finally {
       process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
 });
