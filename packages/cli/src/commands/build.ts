@@ -14,6 +14,7 @@ import {
   BuildResultV2,
   BuildResultV2Typical,
   BuildResultV3,
+  spawnAsync,
 } from '@vercel/build-utils';
 import minimatch from 'minimatch';
 import {
@@ -312,6 +313,43 @@ export default async function main(client: Client): Promise<number> {
   // TODO: parallelize builds
   const buildResults: Map<Builder, BuildResult> = new Map();
   const overrides: PathOverride[] = [];
+  const repoRootPath = cwd === workPath ? undefined : cwd;
+  const rootPackageJsonPath = repoRootPath || workPath;
+
+  if (process.env.ENABLE_EXPERIMENTAL_COREPACK === '1') {
+    const pkg = await readJSONFile<PackageJson>(
+      join(rootPackageJsonPath, 'package.json')
+    );
+    if (pkg instanceof CantParseJSONFile) {
+      console.warn(
+        'Warning: Could not enable corepack because package.json is invalid JSON'
+      );
+    } else if (!pkg?.packageManager) {
+      console.warn(
+        'Warning: Could not enable corepack because package.json is missing "packageManager" property'
+      );
+    } else {
+      console.log(
+        `Detected ENABLE_EXPERIMENTAL_COREPACK=1 and "${pkg.packageManager}" in package.json`
+      );
+      const cacheDir = join(
+        rootPackageJsonPath,
+        '.vercel',
+        'cache',
+        'corepack'
+      );
+      await fs.mkdirp(cacheDir);
+      process.env.COREPACK_HOME = join(cacheDir);
+      process.env.DEBUG = 'corepack';
+      await spawnAsync('corepack', ['enable']);
+      if (pkg.packageManager.startsWith('npm')) {
+        // We must explicitly enable npm since its not enabled by default
+        // See https://github.com/nodejs/corepack/pull/24
+        await spawnAsync('corepack', ['enable', 'npm']);
+      }
+    }
+  }
+
   for (const build of builds) {
     if (typeof build.src !== 'string') continue;
 
@@ -331,7 +369,6 @@ export default async function main(client: Client): Promise<number> {
       framework: project.settings.framework,
       nodeVersion: project.settings.nodeVersion,
     };
-    const repoRootPath = cwd === workPath ? undefined : cwd;
     const buildOptions: BuildOptions = {
       files: filesMap,
       entrypoint: build.src,
