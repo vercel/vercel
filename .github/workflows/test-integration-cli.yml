@@ -19,6 +19,7 @@ jobs:
         node: [14]
     runs-on: ${{ matrix.os }}
     env:
+      if: github.event.pull_request.head.repo.full_name == github.repository
       TURBO_REMOTE_ONLY: true
       TURBO_TEAM: vercel
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
