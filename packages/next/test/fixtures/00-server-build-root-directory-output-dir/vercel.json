@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "rootDirectory": "packages/nextjs",
+        "outputDirectory": "../../.next-custom"
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/another",
+      "status": 200,
+      "mustContain": "another page"
+    },
+    {
+      "path": "/api/hello",
+      "status": 200,
+      "mustContain": "hello api"
+    }
+  ]
+}

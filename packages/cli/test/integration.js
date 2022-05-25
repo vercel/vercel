@@ -3495,6 +3495,24 @@ test('reject deploying with wrong team .vercel config', async t => {
   );
 });
 
+test('reject deploying with invalid token', async t => {
+  const directory = fixture('unauthorized-vercel-config');
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stderr, stdout }));
+  t.regex(
+    stderr,
+    /Error! Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\./g
+  );
+});
+
 test('[vc link] should show prompts to set up project', async t => {
   const dir = fixture('project-link-zeroconf');
   const projectName = `project-link-zeroconf-${

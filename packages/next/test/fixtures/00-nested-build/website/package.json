@@ -1,0 +1,12 @@
+{
+  "name": "website",
+  "private": true,
+  "dependencies": {
+    "next": "canary",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "scripts": {
+    "build": "next build website-preview"
+  }
+}
