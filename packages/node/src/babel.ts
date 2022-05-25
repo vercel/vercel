@@ -1,6 +1,7 @@
-const babel = require('@babel/core'); // eslint-disable-line @typescript-eslint/no-var-requires 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pluginTransformModulesCommonJs = require('@babel/plugin-transform-modules-commonjs');
+const babel = eval('require')('@babel/core');
+const pluginTransformModulesCommonJs = eval('require')(
+  '@babel/plugin-transform-modules-commonjs'
+);
 
 export function compile(
   filename: string,

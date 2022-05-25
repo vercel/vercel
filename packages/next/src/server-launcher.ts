@@ -18,8 +18,7 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
   process.env.NODE_ENV = 'production';
 }
 
-// eslint-disable-next-line
-const NextServer = require('__NEXT_SERVER_PATH__').default;
+const NextServer = eval('require')('__NEXT_SERVER_PATH__').default;
 const nextServer = new NextServer({
   // @ts-ignore __NEXT_CONFIG__ value is injected
   conf: __NEXT_CONFIG__,

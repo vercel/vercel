@@ -28,8 +28,7 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
   };
 
   const requireTypescript = (p: string): TypescriptModule => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return require(p) as TypescriptModule;
+    return eval('require')(p) as TypescriptModule;
   };
 
   let ts: TypescriptModule | null = null;

@@ -131,10 +131,9 @@ function getRealNextVersion(entryPath: string): string | false {
     // First try to resolve the `next` dependency and get the real version from its
     // package.json. This allows the builder to be used with frameworks like Blitz that
     // bundle Next but where Next isn't in the project root's package.json
-    const nextVersion: string = require(resolveFrom(
-      entryPath,
-      'next/package.json'
-    )).version;
+    const nextVersion: string = eval('require')(
+      resolveFrom(entryPath, 'next/package.json')
+    ).version;
     console.log(`Detected Next.js version: ${nextVersion}`);
     return nextVersion;
   } catch (_ignored) {

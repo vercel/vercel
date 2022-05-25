@@ -244,8 +244,7 @@ export async function getRoutesManifest(
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const routesManifest: RoutesManifest = require(pathRoutesManifest);
+  const routesManifest: RoutesManifest = eval('require')(pathRoutesManifest);
 
   // remove temporary array based routeKeys from v1/v2 of routes
   // manifest since it can result in invalid routes
@@ -536,8 +535,8 @@ export async function getImagesManifest(
     return undefined;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const imagesManifest: NextImagesManifest = require(pathImagesManifest);
+  const imagesManifest: NextImagesManifest =
+    eval('require')(pathImagesManifest);
   return imagesManifest;
 }
 
@@ -2321,8 +2320,7 @@ export async function getMiddlewareManifest(
     return;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require(middlewareManifestPath);
+  return eval('require')(middlewareManifestPath);
 }
 
 /**

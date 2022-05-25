@@ -10,8 +10,7 @@ if (!process.env.NODE_ENV) {
 }
 
 // @ts-ignore
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const page = require(__LAUNCHER_PAGE_PATH__);
+const page = eval('require')(__LAUNCHER_PAGE_PATH__);
 
 // page.render is for React rendering
 // page.default is for /api rendering

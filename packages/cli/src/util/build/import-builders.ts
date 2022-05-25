@@ -148,7 +148,7 @@ export async function resolveBuilders(
       // TODO: handle `parsed.type === 'tag'` ("latest" vs. anything else?)
 
       const path = join(dirname(pkgPath), builderPkg.main || 'index.js');
-      const builder = require(path);
+      const builder = eval('require')(path);
 
       builders.set(spec, {
         builder,
