@@ -46,7 +46,7 @@
     "@types/jest": "27.4.1",
     "@types/test-listen": "1.1.0",
     "@vercel/build-utils": "3.1.1-canary.2",
-    "@vercel/ncc": "0.24.0",
+    "@vercel/ncc": "https://files-33g6wesm3-uncurated-tests.vercel.app/vercel-ncc-0.33.4.tgz",
     "@vercel/nft": "0.19.1",
     "content-type": "1.0.4",
     "cookie": "0.4.0",

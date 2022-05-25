@@ -24,7 +24,7 @@
     "@types/execa": "^0.9.0",
     "@types/jest": "27.4.1",
     "@vercel/build-utils": "3.1.1-canary.2",
-    "@vercel/ncc": "0.24.0",
+    "@vercel/ncc": "https://files-33g6wesm3-uncurated-tests.vercel.app/vercel-ncc-0.33.4.tgz",
     "execa": "^1.0.0",
     "typescript": "4.3.4"
   }

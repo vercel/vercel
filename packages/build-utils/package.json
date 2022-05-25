@@ -32,7 +32,7 @@
     "@types/semver": "6.0.0",
     "@types/yazl": "2.4.2",
     "@vercel/frameworks": "0.9.2-canary.0",
-    "@vercel/ncc": "0.24.0",
+    "@vercel/ncc": "https://files-33g6wesm3-uncurated-tests.vercel.app/vercel-ncc-0.33.4.tgz",
     "aggregate-error": "3.0.1",
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",
