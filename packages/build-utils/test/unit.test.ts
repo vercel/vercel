@@ -15,6 +15,7 @@ import {
   runPackageJsonScript,
   scanParentDirs,
   FileBlob,
+  Meta,
 } from '../src';
 
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
@@ -175,9 +176,13 @@ it('should only match supported node versions, otherwise throw an error', async 
     'major',
     14
   );
+  expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
+    'major',
+    16
+  );
 
   const autoMessage =
-    'Please set Node.js Version to 14.x in your Project Settings to use Node.js 14.';
+    'Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', true),
     autoMessage
@@ -195,9 +200,13 @@ it('should only match supported node versions, otherwise throw an error', async 
     'major',
     14
   );
+  expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
+    'major',
+    16
+  );
 
   const foundMessage =
-    'Please set "engines": { "node": "14.x" } in your `package.json` file to use Node.js 14.';
+    'Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', false),
     foundMessage
@@ -218,8 +227,8 @@ it('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(await getSupportedNodeVersion('12.0.0')).toHaveProperty('major', 12);
   expect(await getSupportedNodeVersion('12.x')).toHaveProperty('major', 12);
-  expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 14);
-  expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 14);
+  expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 16);
+  expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 16);
   expect(await getSupportedNodeVersion('11.5.0 - 12.5.0')).toHaveProperty(
     'major',
     12
@@ -230,6 +239,10 @@ it('should match all semver ranges', async () => {
   );
   expect(await getSupportedNodeVersion('~12.5.0')).toHaveProperty('major', 12);
   expect(await getSupportedNodeVersion('^12.5.0')).toHaveProperty('major', 12);
+  expect(await getSupportedNodeVersion('12.5.0 - 14.5.0')).toHaveProperty(
+    'major',
+    14
+  );
 });
 
 it('should ignore node version in vercel dev getNodeVersion()', async () => {
@@ -245,8 +258,8 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
 
 it('should select project setting from config when no package.json is found', async () => {
   expect(
-    await getNodeVersion('/tmp', undefined, { nodeVersion: '14.x' }, {})
-  ).toHaveProperty('range', '14.x');
+    await getNodeVersion('/tmp', undefined, { nodeVersion: '16.x' }, {})
+  ).toHaveProperty('range', '16.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
@@ -277,23 +290,26 @@ it('should not warn when package.json engines matches project setting from confi
 });
 
 it('should get latest node version', async () => {
-  expect(getLatestNodeVersion()).toHaveProperty('major', 14);
+  expect(getLatestNodeVersion()).toHaveProperty('major', 16);
 });
 
 it('should throw for discontinued versions', async () => {
   // Mock a future date so that Node 8 and 10 become discontinued
   const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2021-05-01').getTime();
+  global.Date.now = () => new Date('2022-09-01').getTime();
 
   expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
   expect(getSupportedNodeVersion('10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('10.x', true)).rejects.toThrow();
+  expect(getSupportedNodeVersion('12.x', false)).rejects.toThrow();
+  expect(getSupportedNodeVersion('12.x', true)).rejects.toThrow();
 
   const discontinued = getDiscontinuedNodeVersions();
-  expect(discontinued.length).toBe(2);
-  expect(discontinued[0]).toHaveProperty('range', '10.x');
-  expect(discontinued[1]).toHaveProperty('range', '8.10.x');
+  expect(discontinued.length).toBe(3);
+  expect(discontinued[0]).toHaveProperty('range', '12.x');
+  expect(discontinued[1]).toHaveProperty('range', '10.x');
+  expect(discontinued[2]).toHaveProperty('range', '8.10.x');
 
   global.Date.now = realDateNow;
 });
@@ -311,9 +327,19 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
     'major',
     10
   );
+  expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
+    'major',
+    12
+  );
+  expect(await getSupportedNodeVersion('12.x', true)).toHaveProperty(
+    'major',
+    12
+  );
   expect(warningMessages).toStrictEqual([
-    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "14.x" } in your `package.json` file to use Node.js 14. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
-    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 14.x in your Project Settings to use Node.js 14. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 12.x is deprecated. Deployments created on or after 2022-08-09 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 12.x is deprecated. Deployments created on or after 2022-08-09 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
   ]);
 
   global.Date.now = realDateNow;
@@ -412,4 +438,40 @@ it('should detect pnpm Workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+});
+
+it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+  const apiDir = path.join(fixture, 'api');
+  const run1 = await runNpmInstall(apiDir, [], undefined, meta);
+  expect(run1).toEqual(true);
+  expect(
+    (meta.runNpmInstallSet as Set<string>).has(
+      path.join(fixture, 'package.json')
+    )
+  ).toEqual(true);
+  const run2 = await runNpmInstall(apiDir, [], undefined, meta);
+  expect(run2).toEqual(false);
+  const run3 = await runNpmInstall(fixture, [], undefined, meta);
+  expect(run3).toEqual(false);
+});
+
+it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+  const apiDir = path.join(fixture, 'api');
+  const [run1, run2, run3] = await Promise.all([
+    runNpmInstall(apiDir, [], undefined, meta),
+    runNpmInstall(apiDir, [], undefined, meta),
+    runNpmInstall(fixture, [], undefined, meta),
+  ]);
+  expect(run1).toEqual(true);
+  expect(run2).toEqual(false);
+  expect(run3).toEqual(false);
+  expect(
+    (meta.runNpmInstallSet as Set<string>).has(
+      path.join(fixture, 'package.json')
+    )
+  ).toEqual(true);
 });

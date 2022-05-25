@@ -10,6 +10,8 @@ import { ProjectSettings } from '../../types';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import setupAndLink from '../../util/link/setup-and-link';
 import getSystemEnvValues from '../../util/env/get-system-env-values';
+import { getCommandName } from '../../util/pkg-name';
+import param from '../../util/output/param';
 
 type Options = {
   '--listen': string;
@@ -46,6 +48,13 @@ export default async function dev(
   }
 
   if (link.status === 'error') {
+    if (link.reason === 'HEADLESS') {
+      client.output.error(
+        `Command ${getCommandName(
+          'dev'
+        )} requires confirmation. Use option ${param('--confirm')} to confirm.`
+      );
+    }
     return link.exitCode;
   }
 
@@ -82,11 +91,17 @@ export default async function dev(
     }
 
     [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-      getDecryptedEnvRecords(output, client, project.id),
+      getDecryptedEnvRecords(output, client, project.id, 'vercel-cli:dev'),
       project.autoExposeSystemEnvs
         ? getSystemEnvValues(output, client, project.id)
         : { systemEnvValues: [] },
     ]);
+  }
+
+  // This is just for tests - can be removed once project settings
+  // are respected locally in `.vercel/project.json`
+  if (process.env.VERCEL_DEV_COMMAND) {
+    devCommand = process.env.VERCEL_DEV_COMMAND;
   }
 
   const devServer = new DevServer(cwd, {

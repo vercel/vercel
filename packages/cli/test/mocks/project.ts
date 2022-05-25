@@ -1,4 +1,5 @@
 import { client } from './client';
+import { Project } from '../../src/types';
 
 const envs = [
   {
@@ -17,6 +18,53 @@ const envs = [
     id: 'r124t6frtu25df16',
     key: 'SQL_CONNECTION_STRING',
     value: 'Server=sql.example.com;Database=app;Uid=root;Pwd=P455W0RD;',
+    target: ['production'],
+    gitBranch: null,
+    configurationId: null,
+    updatedAt: 1557241361445,
+    createdAt: 1557241361445,
+  },
+  {
+    type: 'encrypted',
+    id: 'a235l6frtu25df32',
+    key: 'SPECIAL_FLAG',
+    value: '1',
+    target: ['development'],
+    gitBranch: null,
+    configurationId: null,
+    updatedAt: 1557241361445,
+    createdAt: 1557241361445,
+  },
+];
+
+const systemEnvs = [
+  {
+    type: 'encrypted',
+    id: 'a235l6frtu25df32',
+    key: 'SYSTEM_ENV_FOR_DEV',
+    value: 'development',
+    target: ['development'],
+    gitBranch: null,
+    configurationId: null,
+    updatedAt: 1557241361445,
+    createdAt: 1557241361445,
+  },
+  {
+    type: 'encrypted',
+    id: 'a235l6frtu25df32',
+    key: 'SYSTEM_ENV_FOR_PREV',
+    value: 'preview',
+    target: ['preview'],
+    gitBranch: null,
+    configurationId: null,
+    updatedAt: 1557241361445,
+    createdAt: 1557241361445,
+  },
+  {
+    type: 'encrypted',
+    id: 'a235l6frtu25df32',
+    key: 'SYSTEM_ENV_FOR_PROD',
+    value: 'production',
     target: ['production'],
     gitBranch: null,
     configurationId: null,
@@ -69,21 +117,44 @@ export const defaultProject = {
       requestedAt: 1571239348998,
       target: 'production',
       teamId: null,
-      type: 'LAMBDAS',
+      type: undefined,
       url: 'a-project-name-rjtr4pz3f.vercel.app',
       userId: 'K4amb7K9dAt5R2vBJWF32bmY',
     },
   ],
 };
 
-export function useProject(project = defaultProject) {
-  client.scenario.get(`/projects/${project.name}`, (_req, res) => {
+export function useProject(project: Partial<Project> = defaultProject) {
+  client.scenario.get(`/v8/projects/${project.name}`, (_req, res) => {
     res.json(project);
   });
-  client.scenario.get(`/projects/${project.id}`, (_req, res) => {
+  client.scenario.get(`/v8/projects/${project.id}`, (_req, res) => {
     res.json(project);
   });
-  client.scenario.get(`/v7/projects/${project.id}/env`, (_req, res) => {
+  client.scenario.get(
+    `/v6/projects/${project.id}/system-env-values`,
+    (_req, res) => {
+      const target = _req.query.target || 'development';
+      if (typeof target !== 'string') {
+        throw new Error(
+          `/v6/projects/${project.id}/system-env-values was given a query param of "target=${target}", which is not a valid environment.`
+        );
+      }
+      const targetEnvs = systemEnvs.filter(env => env.target.includes(target));
+
+      res.json({
+        systemEnvValues: targetEnvs,
+      });
+    }
+  );
+  client.scenario.get(`/v8/projects/${project.id}/env`, (_req, res) => {
+    const target = _req.query.target;
+    if (typeof target === 'string') {
+      const targetEnvs = envs.filter(env => env.target.includes(target));
+      res.json({ envs: targetEnvs });
+      return;
+    }
+
     res.json({ envs });
   });
 

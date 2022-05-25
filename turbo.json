@@ -1,0 +1,46 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "baseBranch": "origin/main",
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "@vercel/node-bridge#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["helpers.js", "source-map-support.js"]
+    },
+    "vercel#build": {
+      "dependsOn": ["^build"],
+      "outputs": [
+        "dist/**",
+        "src/util/constants.ts",
+        "src/util/dev/templates/*.ts"
+      ]
+    },
+    "test-unit": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test-integration-dev": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test-integration-cli": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test-integration-once": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test-next-local": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": []
+    }
+  }
+}

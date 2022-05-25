@@ -11,13 +11,17 @@ on:
 jobs:
   test:
     name: CLI
-    timeout-minutes: 30
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        node: [12]
+        node: [14]
     runs-on: ${{ matrix.os }}
+    env:
+      TURBO_REMOTE_ONLY: true
+      TURBO_TEAM: vercel
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
     steps:
       - uses: actions/setup-go@v2
         with:

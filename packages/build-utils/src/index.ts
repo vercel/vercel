@@ -33,7 +33,6 @@ import {
   getDiscontinuedNodeVersions,
 } from './fs/node-version';
 import streamToBuffer from './fs/stream-to-buffer';
-import shouldServe from './should-serve';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
@@ -73,7 +72,6 @@ export {
   getSpawnOptions,
   getPlatformEnv,
   streamToBuffer,
-  shouldServe,
   debug,
   isSymbolicLink,
   getLambdaOptionsFromFunction,
@@ -94,6 +92,7 @@ export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
 
+export * from './should-serve';
 export * from './schemas';
 export * from './types';
 export * from './errors';
@@ -116,3 +115,7 @@ export const isOfficialRuntime = (desired: string, name?: string): boolean => {
 export const isStaticRuntime = (name?: string): boolean => {
   return isOfficialRuntime('static', name);
 };
+
+export { workspaceManagers } from './workspaces/workspace-managers';
+export { getWorkspaces } from './workspaces/get-workspaces';
+export { monorepoManagers } from './monorepos/monorepo-managers';

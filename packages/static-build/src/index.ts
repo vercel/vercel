@@ -4,13 +4,12 @@ import fetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
-import { ChildProcess, SpawnOptions } from 'child_process';
+import type { ChildProcess, SpawnOptions } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
 import { cpus } from 'os';
 import {
   BuildV2,
   Files,
-  FileFsRef,
   Config,
   PackageJson,
   PrepareCache,
@@ -31,14 +30,13 @@ import {
   NowBuildError,
   scanParentDirs,
 } from '@vercel/build-utils';
-import { Route, Source } from '@vercel/routing-utils';
-import {
-  readBuildOutputDirectory,
-  readBuildOutputConfig,
-} from './utils/read-build-output';
+import type { Route, Source } from '@vercel/routing-utils';
+import * as BuildOutputV1 from './utils/build-output-v1';
+import * as BuildOutputV2 from './utils/build-output-v2';
+import * as BuildOutputV3 from './utils/build-output-v3';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
-import { ImagesConfig, BuildConfig } from './utils/_shared';
+import type { ImagesConfig, BuildConfig } from './utils/_shared';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -211,9 +209,15 @@ function getPkg(entrypoint: string, workPath: string) {
     return null;
   }
 
-  const pkgPath = path.join(workPath, entrypoint);
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
-  return pkg;
+  try {
+    const pkgPath = path.join(workPath, entrypoint);
+    const pkg: PackageJson = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    return pkg;
+  } catch (err: any) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+
+  return null;
 }
 
 function getFramework(
@@ -250,12 +254,43 @@ async function fetchBinary(url: string, framework: string, version: string) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_BINARY_NOT_FOUND',
       message: `Version ${version} of ${framework} does not exist. Please specify a different one.`,
-      link: 'https://vercel.com/docs/v2/build-step#framework-versioning',
+      link: 'https://vercel.link/framework-versioning',
     });
   }
   await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
     shell: true,
   });
+}
+
+async function getUpdatedDistPath(
+  framework: Framework | undefined,
+  outputDirPrefix: string,
+  entrypointDir: string,
+  distPath: string,
+  config: Config
+): Promise<string | undefined> {
+  if (framework) {
+    const outputDirName = config.outputDirectory
+      ? config.outputDirectory
+      : await framework.getOutputDirName(outputDirPrefix);
+
+    return path.join(outputDirPrefix, outputDirName);
+  }
+
+  if (!config || !config.distDir) {
+    // Select either `dist` or `public` as directory
+    const publicPath = path.join(entrypointDir, 'public');
+
+    if (
+      !existsSync(distPath) &&
+      existsSync(publicPath) &&
+      statSync(publicPath).isDirectory()
+    ) {
+      return publicPath;
+    }
+  }
+
+  return undefined;
 }
 
 export const build: BuildV2 = async ({
@@ -273,17 +308,12 @@ export const build: BuildV2 = async ({
   let distPath = path.join(
     workPath,
     path.dirname(entrypoint),
-    (config && (config.distDir as string)) ||
-      (config.outputDirectory as string) ||
-      'dist'
+    (config.distDir as string) || config.outputDirectory || 'dist'
   );
 
   const pkg = getPkg(entrypoint, workPath);
-
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
-
   const framework = getFramework(config, pkg);
-
   const devCommand = getCommand('dev', pkg, config, framework);
   const buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
@@ -326,7 +356,7 @@ export const build: BuildV2 = async ({
       distPath = path.join(
         workPath,
         path.dirname(entrypoint),
-        (config.outputDirectory as string) || 'public'
+        config.outputDirectory || 'public'
       );
     }
 
@@ -378,6 +408,43 @@ export const build: BuildV2 = async ({
     );
     const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
+    if (!spawnOpts.env) {
+      spawnOpts.env = {};
+    }
+
+    /* Don't fail the build on warnings from Create React App.
+    Node.js will load 'false' as a string, not a boolean, so it's truthy still.
+    This is to ensure we don't accidentally break other packages that check
+    if process.env.CI is true somewhere.
+
+    https://github.com/facebook/create-react-app/issues/2453
+    https://github.com/facebook/create-react-app/pull/2501
+    https://github.com/vercel/community/discussions/30
+    */
+    if (framework?.slug === 'create-react-app') {
+      spawnOpts.env.CI = 'false';
+    }
+
+    const { cliType, lockfileVersion } = await scanParentDirs(entrypointDir);
+
+    if (cliType === 'npm') {
+      if (
+        typeof lockfileVersion === 'number' &&
+        lockfileVersion >= 2 &&
+        (nodeVersion?.major || 0) < 16
+      ) {
+        // Ensure that npm 7 is at the beginning of the `$PATH`
+        spawnOpts.env.PATH = `/node16/bin-npm7:${spawnOpts.env.PATH}`;
+        console.log('Detected `package-lock.json` generated by npm 7...');
+      }
+    } else if (cliType === 'pnpm') {
+      if (typeof lockfileVersion === 'number' && lockfileVersion === 5.4) {
+        // Ensure that pnpm 7 is at the beginning of the `$PATH`
+        spawnOpts.env.PATH = `/pnpm7/node_modules/.bin:${spawnOpts.env.PATH}`;
+        console.log('Detected `pnpm-lock.yaml` generated by pnpm 7...');
+      }
+    }
+
     if (meta.isDev) {
       debug('Skipping dependency installation because dev mode is enabled');
     } else {
@@ -391,33 +458,16 @@ export const build: BuildV2 = async ({
 
       if (!config.zeroConfig) {
         debug('Detected "builds" - not zero config');
-        printInstall();
-        const installTime = Date.now();
         await runNpmInstall(entrypointDir, [], spawnOpts, meta, nodeVersion);
-        debug(`Install complete [${Date.now() - installTime}ms]`);
         isNpmInstall = true;
       } else if (typeof installCommand === 'string') {
         if (installCommand.trim()) {
           console.log(`Running "install" command: \`${installCommand}\`...`);
-          const { cliType, lockfileVersion } = await scanParentDirs(
-            entrypointDir
-          );
           const env: Record<string, string> = {
             YARN_NODE_LINKER: 'node-modules',
             ...spawnOpts.env,
           };
 
-          if (cliType === 'npm') {
-            if (
-              typeof lockfileVersion === 'number' &&
-              lockfileVersion >= 2 &&
-              (nodeVersion?.major || 0) < 16
-            ) {
-              // Ensure that npm 7 is at the beginning of the `$PATH`
-              env.PATH = `/node16/bin-npm7:${env.PATH}`;
-              console.log('Detected `package-lock.json` generated by npm 7...');
-            }
-          }
           await execCommand(installCommand, {
             ...spawnOpts,
 
@@ -440,7 +490,7 @@ export const build: BuildV2 = async ({
           const opts = {
             env: {
               ...process.env,
-              // See more: https://git.io/JtDwx
+              // See more: https://github.com/rubygems/rubygems/blob/a82d04856deba58be6b90f681a5e42a7c0f2baa7/bundler/lib/bundler/man/bundle-config.1.ronn
               BUNDLE_BIN: 'vendor/bin',
               BUNDLE_CACHE_PATH: 'vendor/cache',
               BUNDLE_PATH: 'vendor/bundle',
@@ -455,7 +505,7 @@ export const build: BuildV2 = async ({
           isBundleInstall = true;
         }
         if (existsSync(requirementsPath)) {
-          debug('Detected requirements.txt');
+          debug('Detected requirements.txt');
           printInstall();
           await runPipInstall(
             workPath,
@@ -466,11 +516,7 @@ export const build: BuildV2 = async ({
           isPipInstall = true;
         }
         if (pkg) {
-          console.log('Detected package.json');
-          printInstall();
-          const installTime = Date.now();
           await runNpmInstall(entrypointDir, [], spawnOpts, meta, nodeVersion);
-          debug(`Install complete [${Date.now() - installTime}ms]`);
           isNpmInstall = true;
         }
       }
@@ -615,27 +661,39 @@ export const build: BuildV2 = async ({
       }
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
+      distPath =
+        (await getUpdatedDistPath(
+          framework,
+          outputDirPrefix,
+          entrypointDir,
+          distPath,
+          config
+        )) || distPath;
 
-      if (framework) {
-        const outputDirName = config.outputDirectory
-          ? config.outputDirectory
-          : await framework.getOutputDirName(outputDirPrefix);
-
-        distPath = path.join(outputDirPrefix, outputDirName);
-      } else if (!config || !config.distDir) {
-        // Select either `dist` or `public` as directory
-        const publicPath = path.join(entrypointDir, 'public');
-
-        if (
-          !existsSync(distPath) &&
-          existsSync(publicPath) &&
-          statSync(publicPath).isDirectory()
-        ) {
-          distPath = publicPath;
-        }
+      // If the Build Command or Framework output files according to the
+      // Build Output v3 API, then stop processing here in `static-build`
+      // since the output is already in its final form.
+      const buildOutputPathV3 = await BuildOutputV3.getBuildOutputDirectory(
+        outputDirPrefix
+      );
+      if (buildOutputPathV3) {
+        // Ensure that `vercel build` is being used for this Deployment
+        return BuildOutputV3.createBuildOutput(
+          meta,
+          buildCommand,
+          buildOutputPathV3,
+          framework
+        );
       }
 
-      const extraOutputs = await readBuildOutputDirectory({
+      const buildOutputPathV2 = await BuildOutputV2.getBuildOutputDirectory(
+        outputDirPrefix
+      );
+      if (buildOutputPathV2) {
+        return await BuildOutputV2.createBuildOutput(workPath);
+      }
+
+      const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({
         workPath,
         nodeVersion,
       });
@@ -678,6 +736,7 @@ export const build: BuildV2 = async ({
             'node_modules/**',
             'yarn.lock',
             'package-lock.json',
+            'pnpm-lock.yaml',
             'package.json',
             '.vercel_build_output',
           ];
@@ -722,34 +781,45 @@ export const build: BuildV2 = async ({
 
 export const prepareCache: PrepareCache = async ({
   entrypoint,
+  repoRootPath,
   workPath,
   config,
 }) => {
-  const buildConfig = await readBuildOutputConfig<BuildConfig>({
-    workPath,
-    configFileName: 'build.json',
-  });
+  const cacheFiles: Files = {};
 
-  if (buildConfig?.cache && Array.isArray(buildConfig.cache)) {
-    const cacheFiles = {};
-    for (const cacheGlob of buildConfig.cache) {
+  // Build Output API v3 cache files
+  const configV3 = await BuildOutputV3.readConfig(workPath);
+  if (configV3?.cache && Array.isArray(configV3.cache)) {
+    for (const cacheGlob of configV3.cache) {
       Object.assign(cacheFiles, await glob(cacheGlob, workPath));
     }
     return cacheFiles;
   }
 
-  const defaultCacheFiles = await glob(
-    '{.shadow-cljs,node_modules}/**',
-    workPath
-  );
-
-  let frameworkCacheFiles: { [path: string]: FileFsRef } = {};
-  const pkg = getPkg(entrypoint, workPath);
-  const framework = getFramework(config, pkg);
-
-  if (framework?.cachePattern) {
-    frameworkCacheFiles = await glob(framework.cachePattern, workPath);
+  // File System API v1 cache files
+  const buildConfigV1 = await BuildOutputV1.readBuildOutputConfig<BuildConfig>({
+    workPath,
+    configFileName: 'build.json',
+  });
+  if (buildConfigV1?.cache && Array.isArray(buildConfigV1.cache)) {
+    for (const cacheGlob of buildConfigV1.cache) {
+      Object.assign(cacheFiles, await glob(cacheGlob, workPath));
+    }
+    return cacheFiles;
   }
 
-  return { ...defaultCacheFiles, ...frameworkCacheFiles };
+  // Default cache files
+  Object.assign(
+    cacheFiles,
+    await glob('**/{.shadow-cljs,node_modules}/**', repoRootPath || workPath)
+  );
+
+  // Framework cache files
+  const pkg = getPkg(entrypoint, workPath);
+  const framework = getFramework(config, pkg);
+  if (framework?.cachePattern) {
+    Object.assign(cacheFiles, await glob(framework.cachePattern, workPath));
+  }
+
+  return cacheFiles;
 };

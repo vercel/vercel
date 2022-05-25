@@ -160,7 +160,6 @@ export default class Now extends EventEmitter {
       uploadStamp,
       deployStamp,
       quiet,
-      nowConfig,
       force: forceNew,
       withCache,
       org,

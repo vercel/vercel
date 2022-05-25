@@ -1,4 +1,4 @@
-import { Header, Rewrite, Route } from '@vercel/routing-utils';
+import { Rewrite, Route } from '@vercel/routing-utils';
 
 export interface FrameworkDetectionItem {
   /**
@@ -37,10 +37,6 @@ export type Redirect = Rewrite & {
   permanent?: boolean;
 };
 
-type RoutesManifestRegex = {
-  regex: string;
-};
-
 /**
  * Framework detection information.
  */
@@ -61,13 +57,18 @@ export interface Framework {
    */
   logo: string;
   /**
-   * A URL to the logo of a screenshot of the framework
-   * @example "https://assets.vercel.com/image/upload/v1647366075/front/import/nuxtjs.png"
+   * An additional URL to the logo of the framework optimized for dark mode
+   * @example "https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next-dark.svg"
+   */
+  darkModeLogo?: string;
+  /**
+   * A URL to a screenshot of the demo
+   * @example "https://assets.vercel.com/image/upload/v1647366075/front/import/nextjs.png"
    */
   screenshot?: string;
   /**
    * A URL to a deployed example of the framework
-   * @example "https://nextjs.now-examples.vercel.app"
+   * @example "https://nextjs-template.vercel.app"
    */
   demo?: string;
   /**
@@ -167,11 +168,6 @@ export interface Framework {
   dependency?: string;
   /**
    * Function that returns the name of the directory that the framework outputs
-   * its File System API build results to, usually called `.output`.
-   */
-  getFsOutputDir?: (dirPrefix: string) => Promise<string>;
-  /**
-   * Function that returns the name of the directory that the framework outputs
    * its STATIC build results to. In some cases this is read from a configuration file.
    */
   getOutputDirName: (dirPrefix: string) => Promise<string>;
@@ -181,27 +177,6 @@ export interface Framework {
    * @example [{ handle: 'filesystem' }, { src: '.*', status: 404, dest: '404.html' }]
    */
   defaultRoutes?: Route[] | ((dirPrefix: string) => Promise<Route[]>);
-  /**
-   * An array (or a function that returns an array) of default `Header` rules that
-   * the framework uses.
-   */
-  defaultHeaders?:
-    | (Header & RoutesManifestRegex)[]
-    | ((dirPrefix: string) => Promise<(Header & RoutesManifestRegex)[]>);
-  /**
-   * An array (or a function that returns an array) of default `Redirect` rules that
-   * the framework uses.
-   */
-  defaultRedirects?:
-    | (Redirect & RoutesManifestRegex)[]
-    | ((dirPrefix: string) => Promise<(Redirect & RoutesManifestRegex)[]>);
-  /**
-   * An array (or a function that returns an array) of default `Rewrite` rules that
-   * the framework uses.
-   */
-  defaultRewrites?:
-    | (Rewrite & RoutesManifestRegex)[]
-    | ((dirPrefix: string) => Promise<(Rewrite & RoutesManifestRegex)[]>);
   /**
    * A glob string of files to cache for future deployments.
    * @example ".cache/**"

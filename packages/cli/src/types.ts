@@ -251,9 +251,6 @@ export interface Project extends ProjectSettings {
   updatedAt: number;
   createdAt: number;
   alias?: ProjectAliasTarget[];
-  devCommand?: string | null;
-  framework?: string | null;
-  rootDirectory?: string | null;
   latestDeployments?: Partial<Deployment>[];
 }
 
@@ -277,7 +274,17 @@ export interface PaginationOptions {
 export type ProjectLinkResult =
   | { status: 'linked'; org: Org; project: Project }
   | { status: 'not_linked'; org: null; project: null }
-  | { status: 'error'; exitCode: number };
+  | {
+      status: 'error';
+      exitCode: number;
+      reason?:
+        | 'HEADLESS'
+        | 'NOT_AUTHORIZED'
+        | 'TEAM_DELETED'
+        | 'PATH_IS_FILE'
+        | 'INVALID_ROOT_DIRECTORY'
+        | 'MISSING_PROJECT_SETTINGS';
+    };
 
 export interface Token {
   id: string;

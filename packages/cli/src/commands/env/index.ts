@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import getArgs from '../../util/get-args';
@@ -114,9 +115,11 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
+  const cwd = argv['--cwd'] || process.cwd();
+  const subArgs = argv._.slice(1);
+  const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
   const { output, config } = client;
-  const link = await getLinkedProject(client);
+  const link = await getLinkedProject(client, cwd);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -137,14 +140,16 @@ export default async function main(client: Client) {
       case 'rm':
         return rm(client, project, argv, args, output);
       case 'pull':
-        output.warn(
-          `${getCommandName(
-            'env pull'
-          )} is deprecated and will be removed in future releases. Run ${getCommandName(
-            'pull'
-          )} instead.`
+        return pull(
+          client,
+          project,
+          ProjectEnvTarget.Development,
+          argv,
+          args,
+          output,
+          cwd,
+          'vercel-cli:env:pull'
         );
-        return pull(client, project, argv, args, output);
       default:
         output.error(getInvalidSubcommand(COMMAND_CONFIG));
         help();

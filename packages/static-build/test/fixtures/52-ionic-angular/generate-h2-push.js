@@ -56,7 +56,7 @@ async function main() {
     // if it's an empty string, just ignore it
     if (!formatted) return false;
 
-    let type = url.substr(-3) == 'css' ? 'style' : 'script';
+    let type = url.slice(-3) == 'css' ? 'style' : 'script';
     results += `</${formatted}>;rel=preload;as=${type},`;
   });
   await browser.close();

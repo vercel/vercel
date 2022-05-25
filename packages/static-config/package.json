@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-config",
-  "version": "1.0.0-canary.0",
+  "version": "1.0.1",
   "license": "MIT",
   "main": "./dist/index",
   "repository": {
@@ -11,6 +11,7 @@
   "scripts": {
     "build": "tsc",
     "test-unit": "jest",
+    "test": "jest",
     "prepublishOnly": "tsc"
   },
   "files": [
@@ -22,7 +23,7 @@
     "ts-morph": "12.0.0"
   },
   "devDependencies": {
-    "@types/jest": "27.0.2",
+    "@types/jest": "27.4.1",
     "@types/node": "*"
   },
   "jest": {

@@ -18,7 +18,6 @@ nbproject/
 .bin/node_modules/
 /node_modules/
 src/node_modules/
-exampleSite/node_modules/
 src/npm-debug.log.*
 npm-debug.log
 /npm-debug.log*
@@ -30,5 +29,4 @@ npm-debug.log
 /junit.xml
 partials/structure/stylesheet.html
 
-# Hugo
-.hugo_build.lock
+!dist

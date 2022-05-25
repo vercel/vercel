@@ -23,16 +23,6 @@ export interface Files {
 }
 
 export interface Config {
-  [key: string]:
-    | string
-    | string[]
-    | boolean
-    | number
-    | { [key: string]: string }
-    | BuilderFunctions
-    | ProjectSettings
-    | undefined
-    | null;
   maxLambdaSize?: string;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
@@ -51,6 +41,7 @@ export interface Config {
   devCommand?: string;
   framework?: string | null;
   nodeVersion?: string;
+  [key: string]: unknown;
 }
 
 export interface Meta {
@@ -63,35 +54,7 @@ export interface Meta {
   env?: Env;
   buildEnv?: Env;
   avoidTopLevelInstall?: boolean;
-}
-
-export interface AnalyzeOptions {
-  /**
-   * All source files of the project
-   */
-  files: {
-    [filePath: string]: FileRef;
-  };
-
-  /**
-   * Name of entrypoint file for this particular build job. Value
-   * `files[entrypoint]` is guaranteed to exist and be a valid File reference.
-   * `entrypoint` is always a discrete file and never a glob, since globs are
-   * expanded into separate builds at deployment time.
-   */
-  entrypoint: string;
-
-  /**
-   * A writable temporary directory where you are encouraged to perform your
-   * build process. This directory will be populated with the restored cache.
-   */
-  workPath: string;
-
-  /**
-   * An arbitrary object passed by the user in the build definition defined
-   * in `vercel.json`.
-   */
-  config: Config;
+  [key: string]: unknown;
 }
 
 export interface BuildOptions {
@@ -156,10 +119,11 @@ export interface PrepareCacheOptions {
   workPath: string;
 
   /**
-   * A writable temporary directory where you can build a cache to use for
-   * the next run.
+   * The "Root Directory" is assigned to the `workPath` so the `repoRootPath`
+   * is the Git Repository Root. This is only relevant for Monorepos.
+   * See https://vercel.com/blog/monorepos
    */
-  cachePath: string;
+  repoRootPath?: string;
 
   /**
    * An arbitrary object passed by the user in the build definition defined
@@ -363,11 +327,13 @@ export interface ProjectSettings {
   buildCommand?: string | null;
   outputDirectory?: string | null;
   rootDirectory?: string | null;
+  nodeVersion?: string;
   createdAt?: number;
   autoExposeSystemEnvs?: boolean;
   sourceFilesOutsideRootDirectory?: boolean;
   directoryListing?: boolean;
   gitForkProtection?: boolean;
+  commandForIgnoringBuildStep?: string | null;
 }
 
 export interface BuilderV2 {
@@ -380,30 +346,85 @@ export interface BuilderV3 {
   version: 3;
   build: BuildV3;
   prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
 }
 
 type ImageFormat = 'image/avif' | 'image/webp';
 
+export type RemotePattern = {
+  /**
+   * Must be `http` or `https`.
+   */
+  protocol?: 'http' | 'https';
+
+  /**
+   * Can be literal or wildcard.
+   * Single `*` matches a single subdomain.
+   * Double `**` matches any number of subdomains.
+   */
+  hostname: string;
+
+  /**
+   * Can be literal port such as `8080` or empty string
+   * meaning no port.
+   */
+  port?: string;
+
+  /**
+   * Can be literal or wildcard.
+   * Single `*` matches a single path segment.
+   * Double `**` matches any number of path segments.
+   */
+  pathname?: string;
+};
+
 export interface Images {
   domains: string[];
+  remotePatterns?: RemotePattern[];
   sizes: number[];
   minimumCacheTTL?: number;
   formats?: ImageFormat[];
+  dangerouslyAllowSVG?: boolean;
+  contentSecurityPolicy?: string;
 }
 
-export interface BuildResultV2 {
+/**
+ * If a Builder ends up creating filesystem outputs conforming to
+ * the Build Output API, then the Builder should return this type.
+ */
+export interface BuildResultBuildOutput {
+  /**
+   * Version number of the Build Output API that was created.
+   * Currently only `3` is a valid value.
+   * @example 3
+   */
+  buildOutputVersion: 3;
+  /**
+   * Filesystem path to the Build Output directory.
+   * @example "/path/to/.vercel/output"
+   */
+  buildOutputPath: string;
+}
+
+/**
+ * When a Builder implements `version: 2`, the `build()` function is expected
+ * to return this type.
+ */
+export interface BuildResultV2Typical {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   images?: Images;
   output: {
-    [key: string]: FileBase | Lambda | Prerender | EdgeFunction;
+    [key: string]: File | Lambda | Prerender | EdgeFunction;
   };
   wildcard?: Array<{
     domain: string;
     value: string;
   }>;
 }
+
+export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
 export interface BuildResultV3 {
   output: Lambda;
@@ -412,6 +433,9 @@ export interface BuildResultV3 {
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
+export type ShouldServe = (
+  options: ShouldServeOptions
+) => boolean | Promise<boolean>;
 export type StartDevServer = (
   options: StartDevServerOptions
 ) => Promise<StartDevServerResult>;

@@ -39,7 +39,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `blitz build`',
@@ -52,7 +52,6 @@ export const frameworks = [
         placeholder: 'Next.js default',
       },
     },
-    getFsOutputDir: async () => '.next',
     getOutputDirName: async () => 'public',
   },
   {
@@ -60,6 +59,8 @@ export const frameworks = [
     slug: 'nextjs',
     demo: 'https://nextjs-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next.svg',
+    darkModeLogo:
+      'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next-dark.svg',
     screenshot:
       'https://assets.vercel.com/image/upload/v1647366075/front/import/nextjs.png',
     tagline:
@@ -80,7 +81,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `next build`',
@@ -100,7 +101,6 @@ export const frameworks = [
         dependencies: ['next-plugin-sentry', 'next-sentry-source-maps'],
       },
     ],
-    getFsOutputDir: async () => '.next',
     getOutputDirName: async () => 'public',
     cachePattern: '.next/cache/**',
   },
@@ -126,7 +126,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `gatsby build`',
@@ -200,18 +200,18 @@ export const frameworks = [
     description: 'A new Remix app — the result of running `npx create-remix`.',
     website: 'https://remix.run',
     sort: 6,
+    useRuntime: { src: 'package.json', use: '@vercel/remix' },
+    ignoreRuntimes: ['@vercel/node'],
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"remix":\\s*".+?"[^}]*}',
+          path: 'remix.config.js',
         },
       ],
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         value: 'remix build',
@@ -227,9 +227,49 @@ export const frameworks = [
     },
     dependency: 'remix',
     getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Astro',
+    slug: 'astro',
+    demo: 'https://astro-template.vercel.app',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/astro.svg',
+    darkModeLogo:
+      'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/astro-dark.svg',
+    tagline:
+      'Astro is a new kind of static site builder for the modern web. Powerful developer experience meets lightweight output.',
+    description: 'An Astro site, using the basics starter kit.',
+    website: 'https://astro.build',
+    envPrefix: 'PUBLIC_',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"astro":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install` or `npm install`',
+      },
+      buildCommand: {
+        value: 'astro build',
+        placeholder: '`npm run build` or `astro build`',
+      },
+      devCommand: {
+        value: 'astro dev --port $PORT',
+        placeholder: 'astro dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'astro',
+    getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
-        src: '^/build/(.*)$',
+        src: '^/dist/(.*)$',
         headers: { 'cache-control': 'public, max-age=31536000, immutable' },
         continue: true,
       },
@@ -238,26 +278,7 @@ export const frameworks = [
       },
       {
         src: '/(.*)',
-        dest: '/api',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/api',
-      },
-    ],
-    defaultHeaders: [
-      {
-        source: '/build/(.*)',
-        regex: '/build/(.*)',
-        headers: [
-          {
-            key: 'cache-control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
+        dest: '/index.html',
       },
     ],
   },
@@ -281,7 +302,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `hexo generate`',
@@ -318,7 +339,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `npx @11ty/eleventy`',
@@ -357,7 +378,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `docusaurus build`',
@@ -388,57 +409,6 @@ export const frameworks = [
 
       return base;
     },
-    defaultHeaders: [
-      {
-        source: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
-        regex: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source:
-          '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
-        regex:
-          '^/assets/images/[^/]+-[0-9a-f]{32}\\.(ico|svg|jpg|jpeg|png|gif|webp)$',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source:
-          '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
-        regex:
-          '^/assets/medias/[^/]+-[0-9a-f]{32}\\.(ogv|wav|mp3|m4a|aac|oga|flac)$',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source:
-          '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
-        regex:
-          '^/assets/files/[^/]+-[0-9a-f]{32}\\.(pdf|doc|docx|xls|xlsx|zip|rar)$',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$',
-        regex: '^/ideal-img/[^/]+\\.[0-9a-f]{7}\\.\\d+\\.(png|jpe?g|gif)$',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-    ],
-    defaultRedirects: [
-      {
-        source: '.*',
-        regex: '.*',
-        statusCode: 404,
-        destination: '404.html',
-      },
-    ],
     defaultRoutes: [
       {
         src: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js)$',
@@ -496,7 +466,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `docusaurus-build`',
@@ -547,7 +517,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `preact build`',
@@ -570,13 +540,6 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
       },
     ],
   },
@@ -605,7 +568,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `solid-start build`',
@@ -643,7 +606,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `dojo build`',
@@ -681,13 +644,6 @@ export const frameworks = [
         continue: true,
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'Ember.js',
@@ -709,7 +665,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `ember build`',
@@ -734,13 +690,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'Vue.js',
@@ -763,7 +712,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `vue-cli-service build`',
@@ -798,27 +747,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultHeaders: [
-      {
-        source: '^/[^/]*\\.(js|txt|ico|json)',
-        regex: '^/[^/]*\\.(js|txt|ico|json)',
-        headers: [{ key: 'cache-control', value: 'max-age=300' }],
-      },
-      {
-        source: '^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*',
-        regex: '^/(img|js|css|fonts|media)/[^/]+\\.[0-9a-f]{8}\\.*',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '^.*',
-        regex: '^.*',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'Scully',
@@ -839,7 +767,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `ng build && scully`',
@@ -876,7 +804,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `ng build`',
@@ -900,13 +828,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'Angular',
@@ -928,7 +849,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `ng build`',
@@ -967,13 +888,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'Polymer',
@@ -995,7 +909,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `polymer build`',
@@ -1031,13 +945,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
-      },
-    ],
   },
   {
     name: 'Svelte',
@@ -1065,7 +972,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `rollup -c`',
@@ -1087,13 +994,6 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/index.html',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        destination: '/index.html',
       },
     ],
   },
@@ -1120,7 +1020,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `svelte-kit build`',
@@ -1156,7 +1056,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `react-scripts build`',
@@ -1196,45 +1096,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultHeaders: [
-      {
-        source: '/static/(.*)',
-        regex: '/static/(.*)',
-        headers: [
-          { key: 'cache-control', value: 's-maxage=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/service-worker.js',
-        regex: '/service-worker.js',
-        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
-      },
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
-      },
-    ],
-    defaultRedirects: [
-      {
-        source: '/static/(.*)',
-        destination: '/404.html',
-        statusCode: 404,
-        regex: '/static/(.*)',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/sockjs-node/(.*)',
-        destination: '/sockjs-node/$1',
-        regex: '/sockjs-node/(.*)',
-      },
-      {
-        source: '/(.*)',
-        destination: '/index.html',
-        regex: '/(.*)',
-      },
-    ],
   },
   {
     name: 'Create React App',
@@ -1262,7 +1123,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `react-scripts build`',
@@ -1302,45 +1163,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultHeaders: [
-      {
-        source: '/static/(.*)',
-        regex: '/static/(.*)',
-        headers: [
-          { key: 'cache-control', value: 's-maxage=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/service-worker.js',
-        regex: '/service-worker.js',
-        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
-      },
-      {
-        source: '/(.*)',
-        regex: '/(.*)',
-        headers: [{ key: 'cache-control', value: 's-maxage=0' }],
-      },
-    ],
-    defaultRedirects: [
-      {
-        source: '/static/(.*)',
-        destination: '/404.html',
-        statusCode: 404,
-        regex: '/static/(.*)',
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/sockjs-node/(.*)',
-        destination: '/sockjs-node/$1',
-        regex: '/sockjs-node/(.*)',
-      },
-      {
-        source: '/(.*)',
-        destination: '/index.html',
-        regex: '/(.*)',
-      },
-    ],
   },
   {
     name: 'Gridsome',
@@ -1362,7 +1184,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `gridsome build`',
@@ -1399,7 +1221,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `umi build`',
@@ -1424,13 +1246,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        destination: '/index.html',
-        regex: '/(.*)',
-      },
-    ],
   },
   {
     name: 'Sapper',
@@ -1452,7 +1267,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `sapper export`',
@@ -1489,7 +1304,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `saber build`',
@@ -1519,23 +1334,6 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
-    defaultHeaders: [
-      {
-        source: '/_saber/.*',
-        regex: '/_saber/.*',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-    ],
-    defaultRedirects: [
-      {
-        source: '.*',
-        statusCode: 404,
-        destination: '404.html',
-        regex: '.*',
-      },
-    ],
   },
   {
     name: 'Stencil',
@@ -1557,7 +1355,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `stencil build`',
@@ -1597,32 +1395,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    defaultHeaders: [
-      {
-        source: '/assets/(.*)',
-        regex: '/assets/(.*)',
-        headers: [{ key: 'cache-control', value: 'max-age=2592000' }],
-      },
-      {
-        source: '/build/p-.*',
-        regex: '/build/p-.*',
-        headers: [
-          { key: 'cache-control', value: 'max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/sw.js',
-        regex: '/sw.js',
-        headers: [{ key: 'cache-control', value: 'no-cache' }],
-      },
-    ],
-    defaultRewrites: [
-      {
-        source: '/(.*)',
-        destination: '/index.html',
-        regex: '/(.*)',
-      },
-    ],
   },
   {
     name: 'Nuxt.js',
@@ -1648,7 +1420,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `nuxt generate`',
@@ -1706,7 +1478,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         value: 'yarn rw deploy vercel',
@@ -1772,7 +1544,7 @@ export const frameworks = [
 
       return (config && config.publishDir) || 'public';
     },
-    defaultVersion: '0.92.2',
+    defaultVersion: '0.58.2', // Must match the build image
   },
   {
     name: 'Jekyll',
@@ -1833,7 +1605,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `brunch build --production`',
@@ -1916,7 +1688,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultVersion: '0.15.3',
+    defaultVersion: '0.13.0', // Must match the build image
   },
   {
     name: 'Vite',
@@ -1939,7 +1711,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `vite build`',
@@ -1976,7 +1748,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `parcel build`',
@@ -2002,15 +1774,6 @@ export const frameworks = [
         handle: 'filesystem',
       },
     ],
-    defaultHeaders: [
-      {
-        source: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$',
-        regex: '^/[^./]+\\.[0-9a-f]{8}\\.(css|js|png|jpg|webp|avif|svg)$',
-        headers: [
-          { key: 'cache-control', value: 's-maxage=31536000, immutable' },
-        ],
-      },
-    ],
   },
   {
     name: 'Sanity',
@@ -2030,7 +1793,7 @@ export const frameworks = [
     },
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run build` or `sanity build`',
@@ -2062,7 +1825,7 @@ export const frameworks = [
     description: 'No framework or an unoptimized framework.',
     settings: {
       installCommand: {
-        placeholder: '`yarn install` or `npm install`',
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
         placeholder: '`npm run vercel-build` or `npm run build`',
@@ -2075,22 +1838,6 @@ export const frameworks = [
       outputDirectory: {
         placeholder: '`public` if it exists, or `.`',
       },
-    },
-    getFsOutputDir: async (dirPrefix: string): Promise<string> => {
-      // Public if it exists or `.`
-      let base = 'public';
-      try {
-        const location = join(dirPrefix, base);
-        const content = await readdir(location, { withFileTypes: true });
-
-        // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && content[0].isDirectory()) {
-          return join(base, content[0].name);
-        }
-      } catch (_error) {
-        base = '.';
-      }
-      return base;
     },
     getOutputDirName: async () => 'public',
   },

@@ -86,6 +86,12 @@ test('`NowProxyEvent` normalizing', async () => {
 
 test('multi-payload handling', async () => {
   const server = new Server((req, res) => {
+    if (req.url === '/redirect') {
+      res.setHeader('Location', '/somewhere');
+      res.statusCode = 307;
+      res.end('/somewhere');
+      return;
+    }
     res.setHeader(
       'content-type',
       req.url.includes('_next/data') ? 'application/json' : 'text/html'
@@ -117,6 +123,11 @@ test('multi-payload handling', async () => {
             headers: { foo: 'baz' },
             path: '/_next/data/build-id/nowproxy.json',
           },
+          {
+            method: 'GET',
+            headers: { foo: 'baz' },
+            path: '/redirect',
+          },
         ],
       }),
     },
@@ -137,13 +148,17 @@ test('multi-payload handling', async () => {
       !item.startsWith('content-type:') &&
       !item.startsWith('--payload')
     ) {
-      bodies.push(
-        JSON.parse(
-          Buffer.from(item.split('--payload-separator')[0], 'base64').toString()
-        )
-      );
+      const content = Buffer.from(
+        item.split('--payload-separator')[0],
+        'base64'
+      ).toString();
+      bodies.push(content.startsWith('{') ? JSON.parse(content) : content);
     }
   });
+
+  // ensure content-type is always specified as is required for
+  // proper parsing of the multipart body
+  assert(payloadParts.some(part => part.includes('content-type: text/plain')));
 
   assert.equal(bodies[0].method, 'GET');
   assert.equal(bodies[0].path, '/nowproxy');
@@ -151,6 +166,18 @@ test('multi-payload handling', async () => {
   assert.equal(bodies[1].method, 'GET');
   assert.equal(bodies[1].path, '/_next/data/build-id/nowproxy.json');
   assert.equal(bodies[1].headers.foo, 'baz');
+  assert.equal(bodies[2], '/somewhere');
+  assert.equal(result.headers['x-vercel-payload-3-status'], '307');
+  assert.equal(result.headers['x-vercel-payload-2-status'], undefined);
+  assert.equal(result.headers['x-vercel-payload-1-status'], undefined);
+  assert.equal(result.headers['x-vercel-payload-1-content-type'], 'text/html');
+  assert.equal(
+    result.headers['x-vercel-payload-2-content-type'],
+    'application/json'
+  );
+  assert.equal(result.headers['x-vercel-payload-3-content-type'], undefined);
+  assert.equal(result.headers['x-vercel-payload-3-location'], '/somewhere');
+  assert.equal(result.headers['x-vercel-payload-2-location'], undefined);
   assert.equal(context.callbackWaitsForEmptyEventLoop, false);
 
   server.close();
