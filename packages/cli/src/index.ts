@@ -171,7 +171,7 @@ const main = async () => {
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  const betaCommands: string[] = [];
+  const betaCommands: string[] = ['build'];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
@@ -303,7 +303,14 @@ const main = async () => {
 
   let authConfig = null;
 
-  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'update'];
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'update',
+    'build',
+  ];
 
   if (authConfigExists) {
     try {
@@ -524,6 +531,7 @@ const main = async () => {
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'dev' &&
+    targetCommand !== 'build' &&
     !(targetCommand === 'teams' && argv._[3] !== 'invite')
   ) {
     let user = null;
@@ -597,6 +605,9 @@ const main = async () => {
         break;
       case 'bisect':
         func = require('./commands/bisect').default;
+        break;
+      case 'build':
+        func = require('./commands/build').default;
         break;
       case 'certs':
         func = require('./commands/certs').default;

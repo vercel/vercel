@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "0.8.2",
+  "version": "0.8.4-canary.2",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs",
@@ -14,19 +14,20 @@
   },
   "scripts": {
     "build": "node build.js",
-    "test-integration-once": "jest --env node --verbose --runInBand --bail test/test.js",
-    "test-unit": "jest --env node --verbose --bail test/prepare-cache.test.js",
+    "test-integration-once": "yarn test test/test.js",
+    "test": "jest --env node --verbose --bail --runInBand",
+    "test-unit": "yarn test test/prepare-cache.test.js",
     "prepublishOnly": "node build.js"
   },
   "dependencies": {
-    "@vercel/nft": "0.18.1",
-    "@vercel/routing-utils": "1.13.2",
+    "@vercel/nft": "0.19.1",
+    "@vercel/routing-utils": "1.13.3",
     "semver": "6.1.1"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
     "@types/node": "*",
     "@types/semver": "6.0.0",
-    "@vercel/build-utils": "3.0.1"
+    "@vercel/build-utils": "3.1.1-canary.2"
   }
 }

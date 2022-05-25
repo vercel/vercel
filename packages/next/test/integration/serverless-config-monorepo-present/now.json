@@ -1,0 +1,4 @@
+{
+  "version": 2,
+  "builds": [{ "src": "nested/package.json", "use": "@vercel/next" }]
+}

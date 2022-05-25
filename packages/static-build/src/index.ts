@@ -32,6 +32,7 @@ import {
 } from '@vercel/build-utils';
 import type { Route, Source } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
+import * as BuildOutputV2 from './utils/build-output-v2';
 import * as BuildOutputV3 from './utils/build-output-v3';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
@@ -259,6 +260,37 @@ async function fetchBinary(url: string, framework: string, version: string) {
   await spawnAsync(`curl -sSL ${url} | tar -zx -C /usr/local/bin`, [], {
     shell: true,
   });
+}
+
+async function getUpdatedDistPath(
+  framework: Framework | undefined,
+  outputDirPrefix: string,
+  entrypointDir: string,
+  distPath: string,
+  config: Config
+): Promise<string | undefined> {
+  if (framework) {
+    const outputDirName = config.outputDirectory
+      ? config.outputDirectory
+      : await framework.getOutputDirName(outputDirPrefix);
+
+    return path.join(outputDirPrefix, outputDirName);
+  }
+
+  if (!config || !config.distDir) {
+    // Select either `dist` or `public` as directory
+    const publicPath = path.join(entrypointDir, 'public');
+
+    if (
+      !existsSync(distPath) &&
+      existsSync(publicPath) &&
+      statSync(publicPath).isDirectory()
+    ) {
+      return publicPath;
+    }
+  }
+
+  return undefined;
 }
 
 export const build: BuildV2 = async ({
@@ -629,48 +661,36 @@ export const build: BuildV2 = async ({
       }
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
+      distPath =
+        (await getUpdatedDistPath(
+          framework,
+          outputDirPrefix,
+          entrypointDir,
+          distPath,
+          config
+        )) || distPath;
 
       // If the Build Command or Framework output files according to the
       // Build Output v3 API, then stop processing here in `static-build`
       // since the output is already in its final form.
-      const buildOutputPath = await BuildOutputV3.getBuildOutputDirectory(
+      const buildOutputPathV3 = await BuildOutputV3.getBuildOutputDirectory(
         outputDirPrefix
       );
-
-      if (buildOutputPath) {
+      if (buildOutputPathV3) {
         // Ensure that `vercel build` is being used for this Deployment
-        if (!meta.cliVersion) {
-          let buildCommandName: string;
-          if (buildCommand) buildCommandName = `"${buildCommand}"`;
-          else if (framework) buildCommandName = framework.name;
-          else buildCommandName = 'the "build" script';
-          throw new Error(
-            `Detected Build Output v3 from ${buildCommandName}, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable.`
-          );
-        }
-        return {
-          buildOutputVersion: 3,
-          buildOutputPath,
-        };
+        return BuildOutputV3.createBuildOutput(
+          meta,
+          buildCommand,
+          buildOutputPathV3,
+          framework
+        );
       }
 
-      if (framework) {
-        const outputDirName = config.outputDirectory
-          ? config.outputDirectory
-          : await framework.getOutputDirName(outputDirPrefix);
-
-        distPath = path.join(outputDirPrefix, outputDirName);
-      } else if (!config || !config.distDir) {
-        // Select either `dist` or `public` as directory
-        const publicPath = path.join(entrypointDir, 'public');
-
-        if (
-          !existsSync(distPath) &&
-          existsSync(publicPath) &&
-          statSync(publicPath).isDirectory()
-        ) {
-          distPath = publicPath;
-        }
+      const buildOutputPathV2 = await BuildOutputV2.getBuildOutputDirectory(
+        outputDirPrefix
+      );
+      if (buildOutputPathV2) {
+        return await BuildOutputV2.createBuildOutput(workPath);
       }
 
       const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({
