@@ -244,9 +244,7 @@ export async function getRoutesManifest(
     });
   }
 
-  // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-  const routesManifest: RoutesManifest = eval('require')(pathRoutesManifest);
-
+  const routesManifest: RoutesManifest = await fs.readJSON(pathRoutesManifest);
   // remove temporary array based routeKeys from v1/v2 of routes
   // manifest since it can result in invalid routes
   for (const route of routesManifest.dataRoutes || []) {
