@@ -121,7 +121,7 @@ export async function createGo(
 ) {
   const binPath = join(getGoDir(workPath), 'bin');
   debug(`Adding ${binPath} to PATH`);
-  const path = `${binPath}${delimiter}}${process.env.PATH}`;
+  const path = `${binPath}${delimiter}${process.env.PATH}`;
   const env: { [key: string]: string } = {
     ...process.env,
     PATH: path,
