@@ -31,7 +31,7 @@ async function checkForChange(url, initialValue, hardError) {
 const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  beforeAll(async () => {
+  it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
 
