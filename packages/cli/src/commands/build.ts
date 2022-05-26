@@ -339,7 +339,7 @@ export default async function main(client: Client): Promise<number> {
         'corepack'
       );
       await fs.mkdirp(cacheDir);
-      process.env.COREPACK_HOME = join(cacheDir);
+      process.env.COREPACK_HOME = cacheDir;
       process.env.DEBUG = 'corepack';
       await spawnAsync('corepack', ['enable']);
       if (pkg.packageManager.startsWith('npm')) {
