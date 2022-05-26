@@ -55,9 +55,10 @@ function isKeyValueProperty(node: Node): node is KeyValueProperty {
   return node.type === 'KeyValueProperty';
 }
 
+export type Value = undefined | null | boolean | string | number | any[] | Record<string, any>;
 export class UnsupportedValueError extends Error {}
 
-function extractValue(node: Node): any {
+function extractValue(node: Node): Value {
   if (isNullLiteral(node)) {
     return null;
   } else if (isBooleanLiteral(node)) {
@@ -136,11 +137,10 @@ function extractValue(node: Node): any {
 // - array containing values listed in this list
 // - object containing values listed in this list
 //
-// Returns null if the declaration is not found.
 export function extractExportedConstValue(
   module: Module,
   exportedName: string
-): any {
+): Value | null {
   for (const moduleItem of module.body) {
     if (!isExportDeclaration(moduleItem)) {
       continue;
