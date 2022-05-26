@@ -375,11 +375,16 @@ export const build: BuildV3 = async ({
   const handler = renameTStoJS(relative(baseDir, entrypointPath));
 
   if (staticConfig?.runtime === 'edge') {
+    const name = config.zeroConfig
+      ? handler.substring(0, handler.length - 3)
+      : handler;
     output = new EdgeFunction({
-      name: handler,
-      deploymentTarget: 'v8-worker',
       entrypoint: handler,
       files: preparedFiles,
+
+      // TODO: remove - these two properties should not be required
+      name,
+      deploymentTarget: 'v8-worker',
     });
   } else {
     const shouldAddHelpers = !(
