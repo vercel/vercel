@@ -16,6 +16,7 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
+import { Project } from 'ts-morph';
 // @ts-ignore - `@types/mkdirp-promise` is broken
 import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
@@ -43,7 +44,10 @@ import {
   PrepareCache,
   StartDevServer,
   NodeVersion,
+  BuildResultV3,
+  EdgeFunction,
 } from '@vercel/build-utils';
+import { getConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
 
@@ -364,20 +368,35 @@ export const build: BuildV3 = async ({
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
-  const shouldAddHelpers = !(
-    config.helpers === false || process.env.NODEJS_HELPERS === '0'
-  );
+  const project = new Project();
+  const staticConfig = getConfig(project, entrypointPath);
 
-  const lambda = new NodejsLambda({
-    files: preparedFiles,
-    handler: renameTStoJS(relative(baseDir, entrypointPath)),
-    runtime: nodeVersion.runtime,
-    shouldAddHelpers,
-    shouldAddSourcemapSupport,
-    awsLambdaHandler,
-  });
+  let output: BuildResultV3['output'];
+  const handler = renameTStoJS(relative(baseDir, entrypointPath));
 
-  return { output: lambda };
+  if (staticConfig?.runtime === 'edge') {
+    output = new EdgeFunction({
+      name: handler,
+      deploymentTarget: 'v8-worker',
+      entrypoint: handler,
+      files: preparedFiles,
+    });
+  } else {
+    const shouldAddHelpers = !(
+      config.helpers === false || process.env.NODEJS_HELPERS === '0'
+    );
+
+    output = new NodejsLambda({
+      files: preparedFiles,
+      handler,
+      runtime: nodeVersion.runtime,
+      shouldAddHelpers,
+      shouldAddSourcemapSupport,
+      awsLambdaHandler,
+    });
+  }
+
+  return { output };
 };
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {

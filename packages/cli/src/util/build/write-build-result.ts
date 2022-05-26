@@ -130,13 +130,15 @@ async function writeBuildResultV2(
  */
 async function writeBuildResultV3(buildResult: BuildResultV3, build: Builder) {
   const { output } = buildResult;
+  const src = build.src!;
+  const ext = extname(src);
+  const path = build.config?.zeroConfig
+    ? src.substring(0, src.length - ext.length)
+    : src;
   if (isLambda(output)) {
-    const src = build.src!;
-    const ext = extname(src);
-    const path = build.config?.zeroConfig
-      ? src.substring(0, src.length - ext.length)
-      : src;
     await writeLambda(output, path);
+  } else if (isEdgeFunction(output)) {
+    await writeEdgeFunction(output, path);
   } else {
     throw new Error(
       `Unsupported output type: "${(output as any).type}" for ${build.src}`
