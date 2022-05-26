@@ -106,9 +106,10 @@ export async function resolveBuilders(
         // If `pkgPath` wasn't found in `.vercel/builders` then try as a CLI local
         // dependency. `require.resolve()` will throw if the Builder is not a CLI
         // dep, in which case we'll install it into `.vercel/builders`.
-        pkgPath = require.resolve(`${name}/package.json`, {
+        // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
+        pkgPath = eval('require').resolve(`${name}/package.json`, {
           paths: [__dirname],
-        });
+        }) as string;
         builderPkg = await readJSON(pkgPath);
       }
 
