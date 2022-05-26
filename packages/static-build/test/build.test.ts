@@ -34,7 +34,8 @@ describe('build()', () => {
       }
     });
 
-    it('should detect the v1 output format when .output exists', async () => {
+    // eslint-disable-next-line jest/no-focused-tests
+    it.only('should detect the v1 output format when .output exists', async () => {
       const workPath = path.join(
         __dirname,
         'build-fixtures',

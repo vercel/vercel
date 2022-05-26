@@ -10,6 +10,7 @@ import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 import { readConfigFile } from './read-config-file';
+import { error } from 'console';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
@@ -70,31 +71,32 @@ export function spawnAsync(
   return new Promise<void>((resolve, reject) => {
     const stderrLogs: Buffer[] = [];
     opts = { stdio: 'inherit', ...opts };
-    const child = spawn(command, args, opts);
+    const child = spawn.sync(command, args, opts);
 
-    if (opts.stdio === 'pipe' && child.stderr) {
-      child.stderr.on('data', data => stderrLogs.push(data));
+    error(command, args, opts);
+    error(child.output);
+    error(child.pid);
+    error(child.stderr?.toString());
+    error(child.stdout?.toString());
+    error(child.error ?? '');
+
+    const code = child.status;
+    if (code === 0) {
+      return resolve();
     }
 
-    child.on('error', reject);
-    child.on('close', (code, signal) => {
-      if (code === 0) {
-        return resolve();
-      }
-
-      const cmd = opts.prettyCommand
-        ? `Command "${opts.prettyCommand}"`
-        : 'Command';
-      reject(
-        new NowBuildError({
-          code: `BUILD_UTILS_SPAWN_${code || signal}`,
-          message:
-            opts.stdio === 'inherit'
-              ? `${cmd} exited with ${code || signal}`
-              : stderrLogs.map(line => line.toString()).join(''),
-        })
-      );
-    });
+    const cmd = opts.prettyCommand
+      ? `Command "${opts.prettyCommand}"`
+      : 'Command';
+    reject(
+      new NowBuildError({
+        code: `BUILD_UTILS_SPAWN_${code || child.signal}`,
+        message:
+          opts.stdio === 'inherit'
+            ? `${cmd} exited with ${code || child.signal}`
+            : stderrLogs.map(line => line.toString()).join(''),
+      })
+    );
   });
 }
 
