@@ -1,4 +1,4 @@
-import {
+import type {
   ArrayExpression,
   BooleanLiteral,
   ExportDeclaration,
@@ -96,14 +96,14 @@ function extractValue(node: Node): any {
     return arr;
   } else if (isObjectExpression(node)) {
     // e.g. { a: 1, b: 2 }
-    const obj: any = {};
+    const obj: Record<string, any> = {};
     for (const prop of node.properties) {
       if (!isKeyValueProperty(prop)) {
         // e.g. { ...a }
         throw new UnsupportedValueError();
       }
 
-      let key;
+      let key: string;
       if (isIdentifier(prop.key)) {
         // e.g. { a: 1, b: 2 }
         key = prop.key.value;
