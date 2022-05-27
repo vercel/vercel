@@ -38,6 +38,8 @@ jobs:
       - run: git fetch origin main --depth=100
       - run: git fetch origin ${{ github.ref }} --depth=100
       - run: git diff origin/main...HEAD --name-only
+      - run: |
+          echo "Is remote only: $TURBO_REMOTE_ONLY"
       - run: yarn install --network-timeout 1000000
       - run: yarn run build
       - run: yarn test-integration-cli
