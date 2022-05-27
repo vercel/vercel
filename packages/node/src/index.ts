@@ -368,13 +368,23 @@ export const build: BuildV3 = async ({
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
-  const project = new Project();
-  const staticConfig = getConfig(project, entrypointPath);
-
-  let output: BuildResultV3['output'];
   const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  let output: BuildResultV3['output'];
 
-  if (staticConfig?.runtime === 'edge') {
+  // Will output an `EdgeFunction` for root-level "middleware" file
+  // or if `export const config = { runtime: 'edge' }` in API file
+  let isEdgeFunction = handler === 'middleware.js';
+
+  // TODO: output catch-all `route` for middleware
+  //const isMiddleware = isEdgeFunction;
+
+  if (!isEdgeFunction) {
+    const project = new Project();
+    const staticConfig = getConfig(project, entrypointPath);
+    isEdgeFunction = staticConfig?.runtime === 'edge';
+  }
+
+  if (isEdgeFunction) {
     const name = config.zeroConfig
       ? handler.substring(0, handler.length - 3)
       : handler;

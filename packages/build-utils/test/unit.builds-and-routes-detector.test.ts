@@ -83,6 +83,19 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBe(null);
   });
 
+  it('no package.json + no build + root-level "middleware.js"', async () => {
+    const files = ['middleware.js', 'index.html'];
+    const result = await detectBuilders(files);
+    console.log(result);
+    //console.log({ builders, errors })
+    //expect(builders![0].use).toBe('@vercel/node');
+    //expect(builders![0].src).toBe('middleware.js');
+    //expect(builders![1].use).toBe('@vercel/static');
+    //expect(builders![1].src).toBe('!{api/**,package.json}');
+    //expect(builders!.length).toBe(2);
+    //expect(errors).toBe(null);
+  });
+
   it('package.json + no build + root + api', async () => {
     const files = ['index.html', 'api/[endpoint].js', 'static/image.png'];
     const { builders, errors } = await detectBuilders(files);
