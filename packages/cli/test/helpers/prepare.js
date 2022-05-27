@@ -440,6 +440,21 @@ module.exports = async function prepare(session, binaryPath) {
         },
       }),
     },
+    'vc-build-corepack-pnpm': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        packageManager: 'pnpm@7.1.0',
+        scripts: {
+          build: 'pnpm --version > public/index.txt',
+        },
+      }),
+    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {
