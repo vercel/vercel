@@ -1,4 +1,4 @@
-import { join, sep } from 'path';
+import { join, sep, relative } from 'path';
 // @ts-ignore - Missing types for "alpha-sort"
 import { asc as alpha } from 'alpha-sort';
 import createOutput from '../../../src/util/output';
@@ -18,8 +18,15 @@ const getStaticFiles = async (dir: string) => {
 
 const normalizeWindowsPaths = (files: string[]) => {
   if (process.platform === 'win32') {
-    const prefix = 'D:/a/vercel/vercel/packages/cli/test/fixtures/unit/';
-    return files.map(f => f.replace(/\\/g, '/').slice(prefix.length));
+    // GitHub Actions absolute path "f" that looks like:
+    // "D:/a/vercel/vercel/packages/cli/test/fixtures/unit/"
+    // but other OS's are relative path so we normalize here.
+    const prefix = 'packages/cli/test/fixtures/unit/';
+    return files.map(f => {
+      const normal = f.replace(/\\/g, '/');
+      const i = normal.indexOf(prefix);
+      return relative(prefix, normal.slice(i));
+    });
   }
   return files;
 };
