@@ -205,7 +205,9 @@ export function getSpawnOptions(
 
   if (!meta.isDev) {
     // Ensure that the selected Node version is at the beginning of the `$PATH`
-    opts.env.PATH = `/node${nodeVersion.major}/bin${path.delimiter}${opts.env.PATH}`;
+    opts.env.PATH = `/node${nodeVersion.major}/bin${path.delimiter}${
+      opts.env.PATH || process.env.PATH
+    }`;
   }
 
   return opts;
