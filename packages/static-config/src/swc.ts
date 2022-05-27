@@ -1,83 +1,37 @@
-import type {
-  ArrayExpression,
-  BooleanLiteral,
-  ExportDeclaration,
-  Identifier,
-  KeyValueProperty,
-  Module,
-  Node,
-  NullLiteral,
-  NumericLiteral,
-  ObjectExpression,
-  StringLiteral,
-  VariableDeclaration,
-} from '@swc/core';
+import type { Expression, Module } from '@swc/core';
 import { FromSchema, JSONSchema } from 'json-schema-to-ts';
 import { validate } from './validation';
 
-function isExportDeclaration(node: Node): node is ExportDeclaration {
-  return node.type === 'ExportDeclaration';
-}
-
-function isVariableDeclaration(node: Node): node is VariableDeclaration {
-  return node.type === 'VariableDeclaration';
-}
-
-function isIdentifier(node: Node): node is Identifier {
-  return node.type === 'Identifier';
-}
-
-function isBooleanLiteral(node: Node): node is BooleanLiteral {
-  return node.type === 'BooleanLiteral';
-}
-
-function isNullLiteral(node: Node): node is NullLiteral {
-  return node.type === 'NullLiteral';
-}
-
-function isStringLiteral(node: Node): node is StringLiteral {
-  return node.type === 'StringLiteral';
-}
-
-function isNumericLiteral(node: Node): node is NumericLiteral {
-  return node.type === 'NumericLiteral';
-}
-
-function isArrayExpression(node: Node): node is ArrayExpression {
-  return node.type === 'ArrayExpression';
-}
-
-function isObjectExpression(node: Node): node is ObjectExpression {
-  return node.type === 'ObjectExpression';
-}
-
-function isKeyValueProperty(node: Node): node is KeyValueProperty {
-  return node.type === 'KeyValueProperty';
-}
-
-export type Value = undefined | null | boolean | string | number | any[] | Record<string, any>;
+export type Value =
+  | undefined
+  | null
+  | boolean
+  | string
+  | number
+  | any[]
+  | Record<string, any>;
 export class UnsupportedValueError extends Error {}
 
-function extractValue(node: Node): Value {
-  if (isNullLiteral(node)) {
+function extractValue(node: Expression): Value {
+  if (node.type === 'NullLiteral') {
     return null;
-  } else if (isBooleanLiteral(node)) {
+  } else if (node.type === 'BooleanLiteral') {
     // e.g. true / false
     return node.value;
-  } else if (isStringLiteral(node)) {
+  } else if (node.type === 'StringLiteral') {
     // e.g. "abc"
     return node.value;
-  } else if (isNumericLiteral(node)) {
+  } else if (node.type === 'NumericLiteral') {
     // e.g. 123
     return node.value;
-  } else if (isIdentifier(node)) {
+  } else if (node.type === 'Identifier') {
     switch (node.value) {
       case 'undefined':
         return undefined;
       default:
         throw new UnsupportedValueError();
     }
-  } else if (isArrayExpression(node)) {
+  } else if (node.type === 'ArrayExpression') {
     // e.g. [1, 2, 3]
     const arr = [];
     for (const elem of node.elements) {
@@ -95,20 +49,20 @@ function extractValue(node: Node): Value {
       }
     }
     return arr;
-  } else if (isObjectExpression(node)) {
+  } else if (node.type === 'ObjectExpression') {
     // e.g. { a: 1, b: 2 }
     const obj: Record<string, any> = {};
     for (const prop of node.properties) {
-      if (!isKeyValueProperty(prop)) {
+      if (prop.type !== 'KeyValueProperty') {
         // e.g. { ...a }
         throw new UnsupportedValueError();
       }
 
       let key: string;
-      if (isIdentifier(prop.key)) {
+      if (prop.key.type === 'Identifier') {
         // e.g. { a: 1, b: 2 }
         key = prop.key.value;
-      } else if (isStringLiteral(prop.key)) {
+      } else if (prop.key.type === 'StringLiteral') {
         // e.g. { "a": 1, "b": 2 }
         key = prop.key.value;
       } else {
@@ -142,22 +96,22 @@ export function extractExportedConstValue(
   exportedName: string
 ): Value | null {
   for (const moduleItem of module.body) {
-    if (!isExportDeclaration(moduleItem)) {
+    if (moduleItem.type !== 'ExportDeclaration') {
       continue;
     }
 
-    const declration = moduleItem.declaration;
-    if (!isVariableDeclaration(declration)) {
+    const { declaration } = moduleItem;
+    if (declaration.type !== 'VariableDeclaration') {
       continue;
     }
 
-    if (declration.kind !== 'const') {
+    if (declaration.kind !== 'const') {
       continue;
     }
 
-    for (const decl of declration.declarations) {
+    for (const decl of declaration.declarations) {
       if (
-        isIdentifier(decl.id) &&
+        decl.id.type === 'Identifier' &&
         decl.id.value === exportedName &&
         decl.init
       ) {
@@ -175,7 +129,10 @@ export function extractExportedConstValue(
 //
 // Throws exceptions if it contains a syntax node which're not literal or
 // the validation fails.
-export function getConfig<T extends JSONSchema>(module: Module, schema?: T): FromSchema<T> | null {
+export function getConfig<T extends JSONSchema>(
+  module: Module,
+  schema?: T
+): FromSchema<T> | null {
   const data = extractExportedConstValue(module, 'config');
   if (!data) {
     return null;
