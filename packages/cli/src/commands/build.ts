@@ -315,6 +315,7 @@ export default async function main(client: Client): Promise<number> {
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd === workPath ? undefined : cwd;
   const rootPackageJsonPath = repoRootPath || workPath;
+  let pkgManagerName: string | undefined;
 
   if (process.env.ENABLE_EXPERIMENTAL_COREPACK === '1') {
     const pkg = await readJSONFile<PackageJson>(
@@ -341,12 +342,12 @@ export default async function main(client: Client): Promise<number> {
       await fs.mkdirp(cacheDir);
       process.env.COREPACK_HOME = cacheDir;
       process.env.DEBUG = 'corepack';
-      await spawnAsync('corepack', ['enable']);
-      if (pkg.packageManager.startsWith('npm')) {
-        // We must explicitly enable npm since its not enabled by default
-        // See https://github.com/nodejs/corepack/pull/24
-        await spawnAsync('corepack', ['enable', 'npm']);
-      }
+      const pkgManagerName = pkg.packageManager.split('@')[0];
+      // We must explicitly enable npm since its not enabled by default
+      // See https://github.com/nodejs/corepack/pull/24
+      await spawnAsync('corepack', ['enable', pkgManagerName], {
+        prettyCommand: `corepack enable ${pkgManagerName}`,
+      });
     }
   }
 
@@ -401,6 +402,13 @@ export default async function main(client: Client): Promise<number> {
         err => err
       )
     );
+  }
+
+  if (pkgManagerName) {
+    // Disable corepack after builds have completed since this affects the global PATH
+    await spawnAsync('corepack', ['disable', pkgManagerName], {
+      prettyCommand: `corepack disable ${pkgManagerName}`,
+    });
   }
 
   // Wait for filesystem operations to complete

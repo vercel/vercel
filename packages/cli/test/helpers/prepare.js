@@ -449,9 +449,10 @@ module.exports = async function prepare(session, binaryPath) {
         },
       }),
       'package.json': JSON.stringify({
+        private: true,
         packageManager: 'pnpm@7.1.0',
         scripts: {
-          build: 'pnpm --version > public/index.txt',
+          build: 'mkdir -p public && pnpm --version > public/index.txt',
         },
       }),
     },

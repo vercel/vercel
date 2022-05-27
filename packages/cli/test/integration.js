@@ -390,6 +390,43 @@ test('login', async t => {
   t.is(auth.token, token);
 });
 
+test('[vc build] should build project with corepack and select pnpm', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+  const directory = fixture('vc-build-corepack-pnpm');
+  const before = await _execa('pnpm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /Build Completed/gm);
+  const after = await _execa('pnpm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  t.is(before.stdout, after.stdout);
+
+  t.is(
+    await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    ),
+    '7.1.0\n'
+  );
+
+  const config = await fs.readJSON(
+    path.join(directory, '.vercel/output/config.json')
+  );
+  t.is(config.version, 3);
+
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  t.is(builds.target, 'preview');
+  t.is(builds.builds[0].src, 'package.json');
+  t.is(builds.builds[0].use, '@vercel/static-build');
+});
+
 test('default command should deploy directory', async t => {
   const projectDir = fixture('deploy-default-with-sub-directory');
   const target = 'output';
@@ -3795,33 +3832,6 @@ test('[vc build] should build project with `@vercel/static-build`', async t => {
       'utf8'
     ),
     'hi\n'
-  );
-
-  const config = await fs.readJSON(
-    path.join(directory, '.vercel/output/config.json')
-  );
-  t.is(config.version, 3);
-
-  const builds = await fs.readJSON(
-    path.join(directory, '.vercel/output/builds.json')
-  );
-  t.is(builds.target, 'preview');
-  t.is(builds.builds[0].src, 'package.json');
-  t.is(builds.builds[0].use, '@vercel/static-build');
-});
-
-test('[vc build] should build project with corepack and select pnpm', async t => {
-  const directory = fixture('vc-build-corepack-pnpm');
-  const output = await execute(['build'], { cwd: directory });
-  t.is(output.exitCode, 0);
-  t.true(output.stderr.includes('Build Completed in .vercel/output'));
-
-  t.is(
-    await fs.readFile(
-      path.join(directory, '.vercel/output/static/index.txt'),
-      'utf8'
-    ),
-    '7.1.0\n'
   );
 
   const config = await fs.readJSON(
