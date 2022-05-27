@@ -38,6 +38,11 @@ jobs:
     runs-on: ${{ matrix.runner }}
     name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }})
     if: ${{ needs.setup.outputs['tests'] != '[]' }}
+    env:
+      if: github.event.pull_request.head.repo.full_name == github.repository
+      TURBO_REMOTE_ONLY: true
+      TURBO_TEAM: vercel
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
     needs:
       - setup
     strategy:
@@ -45,12 +50,6 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.setup.outputs['tests']) }}
     steps:
-      - name: Conditionally set remote env
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-            echo "TURBO_REMOTE_ONLY=true" >> $GITHUB_ENV
-            echo "TURBO_TEAM=vercel" >> $GITHUB_ENV
-            echo "TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}" >> $GITHUB_ENV
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2

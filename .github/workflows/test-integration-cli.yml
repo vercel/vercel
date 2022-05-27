@@ -18,13 +18,12 @@ jobs:
         os: [ubuntu-latest]
         node: [14]
     runs-on: ${{ matrix.os }}
+    env:
+      if: github.event.pull_request.head.repo.full_name == github.repository
+      TURBO_REMOTE_ONLY: true
+      TURBO_TEAM: vercel
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
     steps:
-      - name: Conditionally set remote env
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-            echo "TURBO_REMOTE_ONLY=true" >> $GITHUB_ENV
-            echo "TURBO_TEAM=vercel" >> $GITHUB_ENV
-            echo "TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}" >> $GITHUB_ENV
       - uses: actions/setup-go@v2
         with:
           go-version: '1.13.15'
