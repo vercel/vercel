@@ -3,13 +3,21 @@ import { DetectorFilesystem } from '../detectors/filesystem';
 
 type GlobFs = typeof fs;
 
+function normalizePath(path: string) {
+  // on windows, this will return a path like
+  // D:/c/package.json
+  // since we abstract the filesystem, we need to remove windows specific info from the path
+  // and let the FS decide how to process the path
+  return path.replace(/^[a-zA-Z]:/, '');
+}
+
 export function getGlobFs(_fs: DetectorFilesystem): GlobFs {
   const readdir = (
     path: fs.PathLike,
     callback: (err: NodeJS.ErrnoException | null, files: string[]) => void
   ): void => {
     _fs
-      .readdir(String(path))
+      .readdir(normalizePath(String(path)))
       .then(stats =>
         callback(
           null,
@@ -23,9 +31,8 @@ export function getGlobFs(_fs: DetectorFilesystem): GlobFs {
     path: fs.PathLike,
     callback: (err: NodeJS.ErrnoException | null, stats: fs.Stats) => void
   ): void => {
-    const pathAsString = String(path);
     _fs
-      .isFile(pathAsString)
+      .isFile(normalizePath(String(path)))
       .then(isPathAFile => {
         callback(null, {
           ino: 0,
