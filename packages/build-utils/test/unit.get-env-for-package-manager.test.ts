@@ -35,7 +35,7 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
       want: {
         FOO: 'bar',
-        PATH: `/node16/bin-npm7:foo`,
+        PATH: `/node16/bin-npm7${delimiter}foo`,
       },
     },
     {
