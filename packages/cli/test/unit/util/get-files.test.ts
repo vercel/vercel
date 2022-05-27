@@ -1,4 +1,4 @@
-import { join, sep, relative } from 'path';
+import { join, sep } from 'path';
 // @ts-ignore - Missing types for "alpha-sort"
 import { asc as alpha } from 'alpha-sort';
 import createOutput from '../../../src/util/output';
@@ -25,7 +25,7 @@ const normalizeWindowsPaths = (files: string[]) => {
     return files.map(f => {
       const normal = f.replace(/\\/g, '/');
       const i = normal.indexOf(prefix);
-      return relative(prefix, normal.slice(i));
+      return normal.slice(i + prefix.length);
     });
   }
   return files;
