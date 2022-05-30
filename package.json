@@ -31,7 +31,7 @@
     "prettier": "2.6.2",
     "ts-eager": "2.0.2",
     "ts-jest": "28.0.0-next.1",
-    "turbo": "1.2.9"
+    "turbo": "1.2.14"
   },
   "scripts": {
     "lerna": "lerna",
