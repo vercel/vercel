@@ -415,8 +415,8 @@ test('[vc build] should build project with corepack and select npm', async t => 
     '8.1.0\n'
   );
   // Ensure corepack will be cached
-  t.true(fs.existsSync('.vercel/cache/corepack/home'));
-  t.true(fs.existsSync('.vercel/cache/corepack/shim'));
+  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/home')));
+  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/shim')));
 });
 
 test('[vc build] should build project with corepack and select pnpm', async t => {
@@ -444,8 +444,8 @@ test('[vc build] should build project with corepack and select pnpm', async t =>
     '7.1.0\n'
   );
   // Ensure corepack will be cached
-  t.true(fs.existsSync('.vercel/cache/corepack/home'));
-  t.true(fs.existsSync('.vercel/cache/corepack/shim'));
+  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/home')));
+  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/shim')));
 });
 
 test('default command should deploy directory', async t => {
