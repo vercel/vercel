@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { join, relative } from 'path';
+import { delimiter, join, relative } from 'path';
 import {
   detectBuilders,
   Files,
@@ -316,6 +316,14 @@ export default async function main(client: Client): Promise<number> {
   const repoRootPath = cwd === workPath ? undefined : cwd;
   const rootPackageJsonPath = repoRootPath || workPath;
   let pkgManagerName: string | undefined;
+  const corepackRootDir = join(
+    rootPackageJsonPath,
+    '.vercel',
+    'cache',
+    'corepack'
+  );
+  const corepackHomeDir = join(corepackRootDir, 'home');
+  const corepackShimDir = join(corepackRootDir, 'shim');
 
   if (process.env.ENABLE_EXPERIMENTAL_COREPACK === '1') {
     const pkg = await readJSONFile<PackageJson>(
@@ -333,21 +341,22 @@ export default async function main(client: Client): Promise<number> {
       console.log(
         `Detected ENABLE_EXPERIMENTAL_COREPACK=1 and "${pkg.packageManager}" in package.json`
       );
-      const cacheDir = join(
-        rootPackageJsonPath,
-        '.vercel',
-        'cache',
-        'corepack'
-      );
-      await fs.mkdirp(cacheDir);
-      process.env.COREPACK_HOME = cacheDir;
+
+      await fs.mkdirp(corepackHomeDir);
+      await fs.mkdirp(corepackShimDir);
+      process.env.COREPACK_HOME = corepackHomeDir;
+      process.env.PATH = `${corepackShimDir}${delimiter}${process.env.PATH}`;
       process.env.DEBUG = 'corepack';
       const pkgManagerName = pkg.packageManager.split('@')[0];
       // We must explicitly enable npm since its not enabled by default
       // See https://github.com/nodejs/corepack/pull/24
-      await spawnAsync('corepack', ['enable', pkgManagerName], {
-        prettyCommand: `corepack enable ${pkgManagerName}`,
-      });
+      await spawnAsync(
+        'corepack',
+        ['enable', pkgManagerName, `--install-directory="${corepackShimDir}"`],
+        {
+          prettyCommand: `corepack enable ${pkgManagerName}`,
+        }
+      );
     }
   }
 
@@ -406,9 +415,13 @@ export default async function main(client: Client): Promise<number> {
 
   if (pkgManagerName) {
     // Disable corepack after builds have completed since this affects the global PATH
-    await spawnAsync('corepack', ['disable', pkgManagerName], {
-      prettyCommand: `corepack disable ${pkgManagerName}`,
-    });
+    await spawnAsync(
+      'corepack',
+      ['disable', pkgManagerName, `--install-directory="${corepackShimDir}"`],
+      {
+        prettyCommand: `corepack disable ${pkgManagerName}`,
+      }
+    );
   }
 
   // Wait for filesystem operations to complete
