@@ -440,6 +440,22 @@ module.exports = async function prepare(session, binaryPath) {
         },
       }),
     },
+    'vc-build-corepack-npm': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        packageManager: 'npm@8.1.0',
+        scripts: {
+          build: 'mkdir -p public && npm --version > public/index.txt',
+        },
+      }),
+    },
     'vc-build-corepack-pnpm': {
       '.vercel/project.json': JSON.stringify({
         orgId: '.',

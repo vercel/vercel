@@ -390,6 +390,35 @@ test('login', async t => {
   t.is(auth.token, token);
 });
 
+test('[vc build] should build project with corepack and select npm', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+  const directory = fixture('vc-build-corepack-npm');
+  const before = await _execa('npm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /Build Completed/gm);
+  const after = await _execa('npm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  // Ensure global npm didn't change
+  t.is(before.stdout, after.stdout);
+  // Ensure version is correct
+  t.is(
+    await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    ),
+    '8.1.0\n'
+  );
+  // Ensure corepack will be cached
+  t.true(fs.existsSync('.vercel/cache/corepack/home'));
+  t.true(fs.existsSync('.vercel/cache/corepack/shim'));
+});
+
 test('[vc build] should build project with corepack and select pnpm', async t => {
   process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
   const directory = fixture('vc-build-corepack-pnpm');
@@ -404,8 +433,9 @@ test('[vc build] should build project with corepack and select pnpm', async t =>
     cwd: directory,
     reject: false,
   });
+  // Ensure global pnpm didn't change
   t.is(before.stdout, after.stdout);
-
+  // Ensure version is correct
   t.is(
     await fs.readFile(
       path.join(directory, '.vercel/output/static/index.txt'),
@@ -413,18 +443,9 @@ test('[vc build] should build project with corepack and select pnpm', async t =>
     ),
     '7.1.0\n'
   );
-
-  const config = await fs.readJSON(
-    path.join(directory, '.vercel/output/config.json')
-  );
-  t.is(config.version, 3);
-
-  const builds = await fs.readJSON(
-    path.join(directory, '.vercel/output/builds.json')
-  );
-  t.is(builds.target, 'preview');
-  t.is(builds.builds[0].src, 'package.json');
-  t.is(builds.builds[0].use, '@vercel/static-build');
+  // Ensure corepack will be cached
+  t.true(fs.existsSync('.vercel/cache/corepack/home'));
+  t.true(fs.existsSync('.vercel/cache/corepack/shim'));
 });
 
 test('default command should deploy directory', async t => {
