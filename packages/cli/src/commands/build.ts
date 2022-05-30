@@ -345,7 +345,7 @@ export default async function main(client: Client): Promise<number> {
       // See https://github.com/nodejs/corepack/pull/24
       await spawnAsync(
         'corepack',
-        ['enable', pkgManagerName, `--install-directory="${corepackShimDir}"`],
+        ['enable', pkgManagerName, '--install-directory', corepackShimDir],
         {
           prettyCommand: `corepack enable ${pkgManagerName}`,
         }
