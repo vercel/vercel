@@ -315,13 +315,7 @@ export default async function main(client: Client): Promise<number> {
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd === workPath ? undefined : cwd;
   const rootPackageJsonPath = repoRootPath || workPath;
-  let pkgManagerName: string | undefined;
-  const corepackRootDir = join(
-    rootPackageJsonPath,
-    '.vercel',
-    'cache',
-    'corepack'
-  );
+  const corepackRootDir = join(cwd, VERCEL_DIR, 'cache', 'corepack');
   const corepackHomeDir = join(corepackRootDir, 'home');
   const corepackShimDir = join(corepackRootDir, 'shim');
 
@@ -341,7 +335,6 @@ export default async function main(client: Client): Promise<number> {
       console.log(
         `Detected ENABLE_EXPERIMENTAL_COREPACK=1 and "${pkg.packageManager}" in package.json`
       );
-
       await fs.mkdirp(corepackHomeDir);
       await fs.mkdirp(corepackShimDir);
       process.env.COREPACK_HOME = corepackHomeDir;
@@ -413,15 +406,12 @@ export default async function main(client: Client): Promise<number> {
     );
   }
 
-  if (pkgManagerName) {
-    // Disable corepack after builds have completed since this affects the global PATH
-    await spawnAsync(
-      'corepack',
-      ['disable', pkgManagerName, `--install-directory="${corepackShimDir}"`],
-      {
-        prettyCommand: `corepack disable ${pkgManagerName}`,
-      }
-    );
+  // Cleanup any globals remaining from corepack
+  if (process.env.COREPACK_HOME) {
+    delete process.env.COREPACK_HOME;
+  }
+  if (process.env.PATH) {
+    process.env.PATH.replace(`${corepackShimDir}${delimiter}`, '');
   }
 
   // Wait for filesystem operations to complete
