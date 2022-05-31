@@ -58,6 +58,7 @@ const isCanary = pkg.version.includes('canary');
 const notifier = updateNotifier({
   pkg,
   distTag: isCanary ? 'canary' : 'latest',
+  updateCheckInterval: 1000 * 60 * 60 * 24 * 7, // 1 week
 });
 
 const VERCEL_DIR = getGlobalPathConfig();
