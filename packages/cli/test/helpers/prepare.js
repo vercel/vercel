@@ -440,6 +440,10 @@ module.exports = async function prepare(session, binaryPath) {
         },
       }),
     },
+    'vercel-json-configuration-overrides': {
+      'vercel.json': '{}',
+      'package.json': '{}',
+    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {

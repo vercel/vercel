@@ -7,38 +7,47 @@ import { isSettingValue } from '../is-setting-value';
 import { ProjectSettings } from '../../types';
 import { VercelConfig } from '../dev/types';
 
-export type PartialProjectSettings = Pick<
-  VercelConfig,
-  | 'buildCommand'
-  | 'installCommand'
-  | 'devCommand'
-  | 'ignoreCommand'
-  | 'outputDirectory'
-  | 'framework'
->;
-type PartialProjectSettingsKeys = keyof Required<PartialProjectSettings>;
-type PartialProjectSettingsFrameworkOmitted = Omit<
-  PartialProjectSettings,
-  'framework'
->;
-type PartialProjectSettingsFrameworkOmittedKeys =
-  keyof Required<PartialProjectSettingsFrameworkOmitted>;
-const fields: {
-  readonly [k in PartialProjectSettingsFrameworkOmittedKeys]: string;
-} = {
+const settingKeys = [
+  'buildCommand',
+  'installCommand',
+  'devCommand',
+  'ignoreCommand',
+  'outputDirectory',
+  'framework',
+] as const;
+const settingMap = {
   buildCommand: 'Build Command',
   devCommand: 'Development Command',
   ignoreCommand: 'Ignore Command',
   installCommand: 'Install Command',
   outputDirectory: 'Output Directory',
-};
+  framework: 'Framework',
+} as const;
+
+type ConfigKeys = typeof settingKeys[number];
+type ProjectSettingKeys =
+  | Exclude<ConfigKeys, 'ignoreCommand'>
+  | 'commandForIgnoringBuildStep';
+type PartialProjectSettings = Pick<ProjectSettings, ProjectSettingKeys>;
+
+type LocalConfiguration = Pick<
+  VercelConfig,
+  | keyof Omit<PartialProjectSettings, 'commandForIgnoringBuildStep'>
+  | 'ignoreCommand'
+>;
+
+/** A quick transform for 'ignoreCommand' to 'commandForIgnoringBuildStep' as they are the only key
+ * that differs between the top level vercel.json configuration settings and the api `projectSettings` object.
+ */
+const normalizeSettingName = (setting: typeof settingKeys[number]) =>
+  setting === 'ignoreCommand' ? 'commandForIgnoringBuildStep' : setting;
 
 export default async function editProjectSettings(
   output: Output,
-  projectSettings: PartialProjectSettingsFrameworkOmitted | null,
+  projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
   autoConfirm: boolean,
-  localConfigurationOverrides: PartialProjectSettings | null
+  localConfigurationOverrides: LocalConfiguration | null
 ): Promise<ProjectSettings> {
   // Create initial settings object defaulting everything to `null` and assigning what may exist in `projectSettings`
   const settings: ProjectSettings = Object.assign(
@@ -46,7 +55,7 @@ export default async function editProjectSettings(
       buildCommand: null,
       devCommand: null,
       framework: null,
-      ignoreCommand: null,
+      commandForIgnoringBuildStep: null,
       installCommand: null,
       outputDirectory: null,
     },
@@ -56,45 +65,40 @@ export default async function editProjectSettings(
   // Start UX by displaying overrides. They will be referenced throughout remainder of CLI.
   if (localConfigurationOverrides) {
     // Apply local overrides (from `vercel.json`)
-    Object.assign(settings, localConfigurationOverrides);
+    for (const setting of settingKeys) {
+      const localConfigValue = localConfigurationOverrides[setting];
+      if (localConfigValue)
+        settings[normalizeSettingName(setting)] = localConfigValue;
+    }
 
     output.print(
-      `Local configuration overrides detected. Overwritten project settings:\n`
+      `Local configuration overrides detected. Overridden project settings:\n`
     );
 
     // Print provided overrides including framework
-    for (const [settingValue, settingDisplayName] of Object.entries(
-      fields
-    ).concat(['framework', 'Framework'])) {
-      const override =
-        localConfigurationOverrides?.[
-          settingValue as PartialProjectSettingsKeys
-        ];
+    for (const setting of settingKeys) {
+      const override = localConfigurationOverrides[setting];
       if (override) {
         output.print(
           `${chalk.dim(
-            `- ${chalk.bold(`${settingDisplayName}:`)} ${override}`
+            `- ${chalk.bold(`${settingMap[setting]}:`)} ${override}`
           )}\n`
         );
       }
     }
-  }
 
-  // Apply local framework override
-  if (localConfigurationOverrides?.framework) {
-    // Unfortunately the frameworks map is a readonly constant and does not actually return `Framework` type objects
-    framework = (frameworks.find(
-      _framework => _framework.slug === localConfigurationOverrides.framework
-    ) ?? null) as Framework | null;
+    // Apply local framework override
+    if (localConfigurationOverrides.framework) {
+      // Unfortunately the frameworks map is a readonly constant and does not actually return `Framework` type objects
+      framework = (frameworks.find(
+        _framework => _framework.slug === localConfigurationOverrides.framework
+      ) ?? null) as Framework | null;
 
-    if (framework) {
-      output.print(
-        `Merging default project settings for framework ${framework.name}. Previously listed overrides are prioritized.\n`
-      );
-    } else {
-      output.print(
-        `Framework slug matching ${localConfigurationOverrides.framework} not found.`
-      );
+      if (framework) {
+        output.print(
+          `Merging default project settings for framework ${framework.name}. Previously listed overrides are prioritized.\n`
+        );
+      }
     }
   }
 
@@ -114,26 +118,22 @@ export default async function editProjectSettings(
   settings.framework = framework.slug;
 
   // Now print defaults for the provided framework whether it was auto-detected or overwritten
-  for (const [settingValue, settingDisplayName] of Object.entries(fields)) {
-    const defaults =
-      framework.settings[
-        settingValue as PartialProjectSettingsFrameworkOmittedKeys
-      ];
-    const override =
-      localConfigurationOverrides?.[
-        settingValue as PartialProjectSettingsFrameworkOmittedKeys
-      ];
+  for (const setting of settingKeys) {
+    if (setting === 'framework') continue;
+
+    const defaults = framework.settings[setting];
+    const override = localConfigurationOverrides?.[setting];
 
     if (defaults) {
       output.print(
         `${chalk.dim(
-          `- ${chalk.bold(`${settingDisplayName}:`)} ${
+          `- ${chalk.bold(`${settingMap[setting]}:`)} ${
             isSettingValue(defaults)
               ? defaults.value
               : chalk.italic(`${defaults.placeholder}`)
           }${
             override
-              ? ` Notice: This setting is overwritten by the local configuration`
+              ? ' | Notice: This setting is overwritten by the local configuration'
               : ''
           }`
         )}\n`
@@ -149,13 +149,17 @@ export default async function editProjectSettings(
       return settings;
     }
 
-    const choices = Object.entries(fields).map(([k, v]) => ({
-      name: v,
-      value: k as PartialProjectSettingsFrameworkOmittedKeys,
-    }));
+    const choices = settingKeys.reduce<Array<{ name: string; value: string }>>(
+      (acc, key) => {
+        if (key === 'framework') return acc; // skip overriding framework
+        acc.push({ name: settingMap[key], value: key });
+        return acc;
+      },
+      []
+    );
 
     const { settingFields } = await inquirer.prompt<{
-      settingFields: Array<PartialProjectSettingsFrameworkOmittedKeys>;
+      settingFields: Array<Exclude<ConfigKeys, 'framework'>>;
     }>({
       name: 'settingFields',
       type: 'checkbox',
@@ -164,15 +168,16 @@ export default async function editProjectSettings(
     });
 
     for (let setting of settingFields) {
-      const field = fields[setting];
+      const normalized = normalizeSettingName(setting);
+      const field = settingMap[setting];
       const answers = await inquirer.prompt<{
-        [k in PartialProjectSettingsFrameworkOmittedKeys]: string;
+        [k in Exclude<ConfigKeys, 'framework'>]: string;
       }>({
         type: 'input',
         name: setting,
         message: `What's your ${chalk.bold(field)}?`,
       });
-      settings[setting] = answers[setting];
+      settings[normalized] = answers[setting];
     }
   }
 

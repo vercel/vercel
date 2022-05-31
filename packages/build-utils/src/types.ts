@@ -333,7 +333,7 @@ export interface ProjectSettings {
   sourceFilesOutsideRootDirectory?: boolean;
   directoryListing?: boolean;
   gitForkProtection?: boolean;
-  ignoreCommand?: string | null;
+  commandForIgnoringBuildStep?: string | null;
 }
 
 export interface BuilderV2 {

@@ -17,6 +17,7 @@ import fs, {
   copy,
   ensureDir,
   exists,
+  mkdir,
 } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
@@ -3783,26 +3784,6 @@ test('[vc link] should support the `--project` flag', async t => {
   );
 });
 
-test('vercel.json configuration overrides with framework', async t => {
-  const directory = path.join(
-    __dirname,
-    'fixtures/unit/vercel-json-overrides-with-framework'
-  );
-
-  const output = await execa(
-    binaryPath,
-    [...defaultArgs, '--public', '--confirm'],
-    {
-      cwd: directory,
-      stdio: 'inherit',
-      reject: true,
-    }
-  );
-
-  console.log(output);
-  t.is(output.exitCode, 0, formatOutput(output));
-});
-
 test('[vc build] should build project with `@vercel/static-build`', async t => {
   const directory = fixture('vc-build-static-build');
   const output = await execute(['build'], { cwd: directory });
@@ -3828,4 +3809,93 @@ test('[vc build] should build project with `@vercel/static-build`', async t => {
   t.is(builds.target, 'preview');
   t.is(builds.builds[0].src, 'package.json');
   t.is(builds.builds[0].use, '@vercel/static-build');
+});
+
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('vercel.json projectSettings overrides', async t => {
+  // create project directory and get path to vercel.json
+  const directory = fixture('vercel-json-configuration-overrides');
+  const vercelJsonPath = path.join(directory, 'vercel.json');
+
+  async function deploy() {
+    // deploy and assert deployment is successful
+    const deployment = await execa(
+      binaryPath,
+      [directory, ...defaultArgs, '--public', '--confirm'],
+      { reject: false }
+    );
+    t.is(
+      deployment.exitCode,
+      0,
+      formatOutput({
+        stderr: deployment.stderr,
+        stdout: deployment.stdout,
+      })
+    );
+    return deployment;
+  }
+
+  await mkdir(path.join(directory, 'public'));
+  await writeFile(path.join(directory, 'public/index.txt'), 'Hello, World 0');
+
+  let deployment = await deploy();
+
+  // assert the command were executed
+  let page = await fetch(deployment.stdout);
+  let text = await page.text();
+  t.regex(text, /Hello, World 0/gm);
+
+  // create and write override project settings
+  const BUILD_COMMAND =
+    'mkdir output && echo "Hello, World 1" >> output/index.txt';
+  const OUTPUT_DIRECTORY = 'output';
+
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      buildCommand: BUILD_COMMAND,
+      outputDirectory: OUTPUT_DIRECTORY,
+    })
+  );
+
+  deployment = await deploy();
+
+  // assert the command were executed
+  page = await fetch(deployment.stdout);
+  text = await page.text();
+  t.regex(text, /Hello, World 1/gm);
+
+  // Test Next.js Framework deployment
+  await mkdir(`${directory}/pages`);
+  await writeFile(
+    `${directory}/pages/index.js`,
+    `export default () => 'Hello, World 2'`
+  );
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      framework: 'nextjs',
+    })
+  );
+  await writeFile(
+    `${directory}/package.json`,
+    JSON.stringify({
+      scripts: {
+        dev: 'next',
+        start: 'next start',
+        build: 'next build',
+      },
+      dependencies: {
+        next: 'latest',
+        react: 'latest',
+        'react-dom': 'latest',
+      },
+    })
+  );
+
+  deployment = await deploy();
+
+  page = await fetch(deployment.stdout);
+  text = await page.text();
+  t.regex(text, /Hello, World 2/gm);
 });
