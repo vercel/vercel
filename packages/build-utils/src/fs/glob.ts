@@ -45,8 +45,6 @@ export default async function glob(
 
   const files = await vanillaGlob(pattern, options);
 
-  console.log('glob', files, pattern, options);
-
   for (const relativePath of files) {
     const fsPath = normalizePath(path.join(options.cwd, relativePath));
     let stat: Stats = options.statCache[fsPath] as Stats;
@@ -68,8 +66,6 @@ export default async function glob(
       results[finalPath] = new FileFsRef({ mode: stat.mode, fsPath });
     }
   }
-
-  console.log('glob results', results);
 
   return results;
 }
