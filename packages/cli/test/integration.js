@@ -1602,7 +1602,7 @@ test('try to purchase a domain', async t => {
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
+    ['domains', 'buy', `${session}-test.com`, ...defaultArgs],
     {
       reject: false,
       input: stream,
@@ -1617,10 +1617,9 @@ test('try to purchase a domain', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(
-    stderr.includes(
-      `Error! Could not purchase domain. Please add a payment method using \`vercel billing add\`.`
-    )
+  t.regex(
+    stderr,
+    /Error! Could not purchase domain\. Please add a payment method using/
   );
 });
 
@@ -1632,7 +1631,7 @@ test('try to transfer-in a domain with "--code" option', async t => {
       'transfer-in',
       '--code',
       'xyz',
-      `${session}-test.org`,
+      `${session}-test.com`,
       ...defaultArgs,
     ],
     {
@@ -1646,7 +1645,7 @@ test('try to transfer-in a domain with "--code" option', async t => {
 
   t.true(
     stderr.includes(
-      `Error! The domain "${session}-test.org" is not transferable.`
+      `Error! The domain "${session}-test.com" is not transferable.`
     )
   );
   t.is(exitCode, 1);
