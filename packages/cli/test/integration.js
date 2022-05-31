@@ -327,7 +327,7 @@ async function setupProject(process, projectName, overrides) {
 test.before(async () => {
   try {
     await createUser();
-    await prepareFixtures(contextName, binaryPath);
+    await prepareFixtures(contextName, binaryPath, tmpDir.name);
   } catch (err) {
     console.log('Failed `test.before`');
     console.log(err);
