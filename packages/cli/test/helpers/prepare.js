@@ -455,13 +455,6 @@ module.exports = async function prepare(session, binaryPath) {
           build: 'mkdir -p public && npm --version > public/index.txt',
         },
       }),
-      'vercel.json': JSON.stringify({
-        build: {
-          env: {
-            ENABLE_EXPERIMENTAL_COREPACK: '1',
-          },
-        },
-      }),
     },
     'vc-build-corepack-pnpm': {
       '.vercel/project.json': JSON.stringify({
@@ -478,13 +471,6 @@ module.exports = async function prepare(session, binaryPath) {
           build: 'mkdir -p public && pnpm --version > public/index.txt',
         },
       }),
-      'vercel.json': JSON.stringify({
-        build: {
-          env: {
-            ENABLE_EXPERIMENTAL_COREPACK: '1',
-          },
-        },
-      }),
     },
     'vc-build-corepack-yarn': {
       '.vercel/project.json': JSON.stringify({
@@ -499,13 +485,6 @@ module.exports = async function prepare(session, binaryPath) {
         packageManager: 'yarn@2.4.3',
         scripts: {
           build: 'mkdir -p public && yarn --version > public/index.txt',
-        },
-      }),
-      'vercel.json': JSON.stringify({
-        build: {
-          env: {
-            ENABLE_EXPERIMENTAL_COREPACK: '1',
-          },
         },
       }),
     },

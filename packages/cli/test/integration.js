@@ -335,6 +335,8 @@ test.before(async () => {
 });
 
 test.after.always(async () => {
+  delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
+
   if (loginApiServer) {
     // Stop mock server
     loginApiServer.close();
@@ -391,6 +393,7 @@ test('login', async t => {
 });
 
 test('[vc build] should build project with corepack and select npm@8.1.0', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
   const directory = fixture('vc-build-corepack-npm');
   const before = await _execa('npm', ['--version'], {
     cwd: directory,
@@ -419,6 +422,7 @@ test('[vc build] should build project with corepack and select npm@8.1.0', async
 });
 
 test('[vc build] should build project with corepack and select pnpm@7.1.0', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
   const directory = fixture('vc-build-corepack-pnpm');
   const before = await _execa('pnpm', ['--version'], {
     cwd: directory,
@@ -444,6 +448,7 @@ test('[vc build] should build project with corepack and select pnpm@7.1.0', asyn
   // Ensure corepack will be cached
   t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/home')));
   t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/shim')));
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
 });
 
 test('[vc build] should build project with corepack and select yarn@2.4.3', async t => {
