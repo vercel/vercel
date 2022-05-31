@@ -390,8 +390,7 @@ test('login', async t => {
   t.is(auth.token, token);
 });
 
-test('[vc build] should build project with corepack and select npm', async t => {
-  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+test('[vc build] should build project with corepack and select npm@8.1.0', async t => {
   const directory = fixture('vc-build-corepack-npm');
   const before = await _execa('npm', ['--version'], {
     cwd: directory,
@@ -419,8 +418,7 @@ test('[vc build] should build project with corepack and select npm', async t => 
   t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/shim')));
 });
 
-test('[vc build] should build project with corepack and select pnpm', async t => {
-  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+test('[vc build] should build project with corepack and select pnpm@7.1.0', async t => {
   const directory = fixture('vc-build-corepack-pnpm');
   const before = await _execa('pnpm', ['--version'], {
     cwd: directory,
@@ -442,6 +440,34 @@ test('[vc build] should build project with corepack and select pnpm', async t =>
       'utf8'
     ),
     '7.1.0\n'
+  );
+  // Ensure corepack will be cached
+  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/home')));
+  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/shim')));
+});
+
+test('[vc build] should build project with corepack and select yarn@2.4.3', async t => {
+  const directory = fixture('vc-build-corepack-yarn');
+  const before = await _execa('yarn', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /Build Completed/gm);
+  const after = await _execa('yarn', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  // Ensure global yarn didn't change
+  t.is(before.stdout, after.stdout);
+  // Ensure version is correct
+  t.is(
+    await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    ),
+    '2.4.3\n'
   );
   // Ensure corepack will be cached
   t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/home')));
