@@ -423,8 +423,10 @@ test('[vc build] should build project with corepack and select npm@8.1.0', async
     '8.1.0\n'
   );
   // Ensure corepack will be cached
-  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/home')));
-  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/shim')));
+  const contents = fs.readdirSync(
+    path.join(directory, '.vercel/cache/corepack')
+  );
+  t.deepEqual(contents, ['home', 'shim']);
 });
 
 test('[vc build] should build project with corepack and select pnpm@7.1.0', async t => {
@@ -452,12 +454,14 @@ test('[vc build] should build project with corepack and select pnpm@7.1.0', asyn
     '7.1.0\n'
   );
   // Ensure corepack will be cached
-  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/home')));
-  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/shim')));
-  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+  const contents = fs.readdirSync(
+    path.join(directory, '.vercel/cache/corepack')
+  );
+  t.deepEqual(contents, ['home', 'shim']);
 });
 
 test('[vc build] should build project with corepack and select yarn@2.4.3', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
   const directory = fixture('vc-build-corepack-yarn');
   const before = await _execa('yarn', ['--version'], {
     cwd: directory,
@@ -481,8 +485,10 @@ test('[vc build] should build project with corepack and select yarn@2.4.3', asyn
     '2.4.3\n'
   );
   // Ensure corepack will be cached
-  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/home')));
-  t.true(fs.existsSync(path.join(directory, '.vercel/cache/corepack/shim')));
+  const contents = fs.readdirSync(
+    path.join(directory, '.vercel/cache/corepack')
+  );
+  t.deepEqual(contents, ['home', 'shim']);
 });
 
 test('default command should deploy directory', async t => {
