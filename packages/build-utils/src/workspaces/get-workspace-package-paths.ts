@@ -1,8 +1,8 @@
 import _path from 'path';
 import yaml from 'js-yaml';
+import glob from 'glob';
 import { DetectorFilesystem } from '../detectors/filesystem';
 import { Workspace } from './get-workspaces';
-import glob, { FsFiles } from '../fs/glob';
 import { getGlobFs } from '../fs/get-glob-fs';
 
 const path = _path.posix;
@@ -23,7 +23,7 @@ export async function getWorkspacePackagePaths({
   const { type, rootPath: workspaceRootPath } = workspace;
   const workspaceFs = fs.chdir(workspaceRootPath);
 
-  let results: FsFiles[] = [];
+  let results: string[] = [];
 
   switch (type) {
     case 'yarn':
@@ -37,11 +37,9 @@ export async function getWorkspacePackagePaths({
       throw new Error(`Unknown workspace implementation: ${type}`);
   }
 
-  return results
-    .flatMap(packagePaths => Object.keys(packagePaths))
-    .map(packagePath =>
-      path.join(workspaceRootPath, path.dirname(packagePath))
-    );
+  return results.map(packagePath => {
+    return path.join(workspaceRootPath, path.dirname(packagePath));
+  });
 }
 
 type PackageJsonWithWorkspace = {
@@ -60,20 +58,32 @@ type PnpmWorkspaces = {
 async function getPackagePaths(
   packages: string[],
   fs: DetectorFilesystem
-): Promise<FsFiles[]> {
-  return Promise.all(
-    packages.map(packageGlob =>
-      glob(path.join(packageGlob, 'package.json').replace(/\\/g, '/'), {
-        cwd: '/',
-        fs: getGlobFs(fs),
-      })
+): Promise<string[]> {
+  return (
+    await Promise.all(
+      packages.map(
+        packageGlob =>
+          new Promise<string[]>((resolve, reject) => {
+            glob(
+              path.join(packageGlob, 'package.json').replace(/\\/g, '/'),
+              {
+                cwd: '/',
+                fs: getGlobFs(fs),
+              },
+              (err, matches) => {
+                if (err) reject(err);
+                else resolve(matches);
+              }
+            );
+          })
+      )
     )
-  );
+  ).flat();
 }
 
 async function getPackageJsonWorkspacePackagePaths({
   fs,
-}: GetPackagePathOptions): Promise<FsFiles[]> {
+}: GetPackagePathOptions): Promise<string[]> {
   const packageJsonAsBuffer = await fs.readFile('package.json');
   const { workspaces } = JSON.parse(
     packageJsonAsBuffer.toString()
@@ -92,13 +102,11 @@ async function getPackageJsonWorkspacePackagePaths({
 
 async function getPnpmWorkspacePackagePaths({
   fs,
-}: GetPackagePathOptions): Promise<FsFiles[]> {
+}: GetPackagePathOptions): Promise<string[]> {
   const pnpmWorkspaceAsBuffer = await fs.readFile('pnpm-workspace.yaml');
   const { packages } = yaml.load(
     pnpmWorkspaceAsBuffer.toString()
   ) as PnpmWorkspaces;
-
-  console.log('getPnpmWorkspacePackagePaths', packages);
 
   return getPackagePaths(packages, fs);
 }
