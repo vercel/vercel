@@ -291,6 +291,20 @@ it('should warn when package.json engines is exact version', async () => {
   ]);
 });
 
+it('should warn when package.json engines is greater than', async () => {
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node-greaterthan'),
+      undefined,
+      {},
+      {}
+    )
+  ).toHaveProperty('range', '16.x');
+  expect(warningMessages).toStrictEqual([
+    'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version',
+  ]);
+});
+
 it('should not warn when package.json engines matches project setting from config', async () => {
   expect(
     await getNodeVersion(

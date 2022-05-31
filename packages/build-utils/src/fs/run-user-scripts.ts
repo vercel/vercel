@@ -220,9 +220,9 @@ export async function getNodeVersion(
   config: Config = {},
   meta: Meta = {}
 ): Promise<NodeVersion> {
+  const latest = getLatestNodeVersion();
   if (meta && meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
-    const latest = getLatestNodeVersion();
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
@@ -242,6 +242,14 @@ export async function getNodeVersion(
     } else if (coerce(node)?.raw === node && !meta.isDev) {
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
+      );
+    } else if (
+      validRange(node) &&
+      intersects(`${latest.major + 1}.x`, node) &&
+      !meta.isDev
+    ) {
+      console.warn(
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
       );
     }
     nodeVersion = node;
