@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { delimiter, join, relative } from 'path';
+import { join, relative } from 'path';
 import {
   detectBuilders,
   Files,
@@ -14,7 +14,6 @@ import {
   BuildResultV2,
   BuildResultV2Typical,
   BuildResultV3,
-  spawnAsync,
 } from '@vercel/build-utils';
 import minimatch from 'minimatch';
 import {
@@ -46,6 +45,7 @@ import {
   writeBuildResult,
 } from '../util/build/write-build-result';
 import { importBuilders, BuilderWithPkg } from '../util/build/import-builders';
+import { initCorepack, cleanupCorepack } from '../util/build/corepack';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -315,50 +315,7 @@ export default async function main(client: Client): Promise<number> {
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd === workPath ? undefined : cwd;
   const rootPackageJsonPath = repoRootPath || workPath;
-  const corepackRootDir = join(cwd, VERCEL_DIR, 'cache', 'corepack');
-  const corepackHomeDir = join(corepackRootDir, 'home');
-  const corepackShimDir = join(corepackRootDir, 'shim');
-
-  if (process.env.ENABLE_EXPERIMENTAL_COREPACK === '1') {
-    const pkg = await readJSONFile<PackageJson>(
-      join(rootPackageJsonPath, 'package.json')
-    );
-    if (pkg instanceof CantParseJSONFile) {
-      console.warn(
-        'Warning: Could not enable corepack because package.json is invalid JSON'
-      );
-    } else if (!pkg?.packageManager) {
-      console.warn(
-        'Warning: Could not enable corepack because package.json is missing "packageManager" property'
-      );
-    } else {
-      console.log(
-        `Detected ENABLE_EXPERIMENTAL_COREPACK=1 and "${pkg.packageManager}" in package.json`
-      );
-      await fs.mkdirp(corepackHomeDir);
-      await fs.mkdirp(corepackShimDir);
-      process.env.COREPACK_HOME = corepackHomeDir;
-      process.env.PATH = `${corepackShimDir}${delimiter}${process.env.PATH}`;
-      process.env.DEBUG = process.env.DEBUG
-        ? `corepack,${process.env.DEBUG}`
-        : 'corepack';
-      const pkgManagerName = pkg.packageManager.split('@')[0];
-      // We must explicitly call `corepack enable npm` since `corepack enable`
-      // doesn't work with npm. See https://github.com/nodejs/corepack/pull/24
-      // Also, `corepack enable` is too broad and will change the verison of
-      // yarn & pnpm even though those versions are not specified by the user.
-      // See https://github.com/nodejs/corepack#known-good-releases
-      // Finally, we use `--install-directory` so we can cache the result to
-      // reuse for subsequent builds. See `@vercel/vc-build` for `prepareCache`.
-      await spawnAsync(
-        'corepack',
-        ['enable', pkgManagerName, '--install-directory', corepackShimDir],
-        {
-          prettyCommand: `corepack enable ${pkgManagerName}`,
-        }
-      );
-    }
-  }
+  const corepackShimDir = await initCorepack({ cwd, rootPackageJsonPath });
 
   for (const build of builds) {
     if (typeof build.src !== 'string') continue;
@@ -413,15 +370,8 @@ export default async function main(client: Client): Promise<number> {
     );
   }
 
-  // Cleanup any globals remaining from corepack
-  if (process.env.COREPACK_HOME) {
-    delete process.env.COREPACK_HOME;
-  }
-  if (process.env.PATH) {
-    process.env.PATH.replace(`${corepackShimDir}${delimiter}`, '');
-  }
-  if (process.env.DEBUG) {
-    process.env.DEBUG.replace('corepack,', '');
+  if (corepackShimDir) {
+    cleanupCorepack(corepackShimDir);
   }
 
   // Wait for filesystem operations to complete
