@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
+import { coerce, intersects, validRange } from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
@@ -229,9 +230,18 @@ export async function getNodeVersion(
   let isAuto = true;
   if (packageJson && packageJson.engines && packageJson.engines.node) {
     const { node } = packageJson.engines;
-    if (nodeVersion && nodeVersion !== node && !meta.isDev) {
+    if (
+      nodeVersion &&
+      validRange(node) &&
+      !intersects(nodeVersion, node) &&
+      !meta.isDev
+    ) {
       console.warn(
         `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${nodeVersion}") will not apply. Learn More: http://vercel.link/node-version`
+      );
+    } else if (coerce(node)?.raw === node && !meta.isDev) {
+      console.warn(
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
       );
     }
     nodeVersion = node;
