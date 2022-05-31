@@ -343,8 +343,13 @@ export default async function main(client: Client): Promise<number> {
         ? `corepack,${process.env.DEBUG}`
         : 'corepack';
       const pkgManagerName = pkg.packageManager.split('@')[0];
-      // We must explicitly enable npm since its not enabled by default
-      // See https://github.com/nodejs/corepack/pull/24
+      // We must explicitly call `corepack enable npm` since `corepack enable`
+      // doesn't work with npm. See https://github.com/nodejs/corepack/pull/24
+      // Also, `corepack enable` is too broad and will change the verison of
+      // yarn & pnpm even though those versions are not specified by the user.
+      // See https://github.com/nodejs/corepack#known-good-releases
+      // Finally, we use `--install-directory` so we can cache the result to
+      // reuse for subsequent builds. See `@vercel/vc-build` for `prepareCache`.
       await spawnAsync(
         'corepack',
         ['enable', pkgManagerName, '--install-directory', corepackShimDir],
