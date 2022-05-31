@@ -426,6 +426,20 @@ module.exports = async function prepare(session, binaryPath) {
         projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
       }),
     },
+    'vc-build-static-build': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+      }),
+    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {
