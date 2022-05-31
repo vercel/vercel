@@ -4,7 +4,7 @@ import { URL, parse as parseUrl } from 'url';
 import test from 'ava';
 import semVer from 'semver';
 import { Readable } from 'stream';
-import { homedir } from 'os';
+import { homedir, tmpdir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
 import fetch from 'node-fetch';
@@ -146,6 +146,7 @@ let email;
 let contextName;
 
 let tmpDir;
+let tmpFixturesDir = tmpdir();
 
 let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
 
@@ -327,7 +328,7 @@ async function setupProject(process, projectName, overrides) {
 test.before(async () => {
   try {
     await createUser();
-    await prepareFixtures(contextName, binaryPath, tmpDir.name);
+    await prepareFixtures(contextName, binaryPath, tmpFixturesDir);
   } catch (err) {
     console.log('Failed `test.before`');
     console.log(err);
@@ -350,6 +351,10 @@ test.after.always(async () => {
   if (tmpDir) {
     // Remove config directory entirely
     tmpDir.removeCallback();
+  }
+
+  if (tmpFixturesDir) {
+    fs.removeSync(tmpFixturesDir);
   }
 });
 
