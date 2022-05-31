@@ -31,7 +31,7 @@ function execa(file, args, options) {
 }
 
 function fixture(name) {
-  const directory = path.join(__dirname, 'fixtures', 'integration', name);
+  const directory = path.join(tmpFixturesDir, name);
   const config = path.join(directory, 'project.json');
 
   // We need to remove it, otherwise we can't re-use fixtures
@@ -146,7 +146,7 @@ let email;
 let contextName;
 
 let tmpDir;
-let tmpFixturesDir = tmpdir();
+let tmpFixturesDir = path.join(tmpdir(), 'tmp-fixtures');
 
 let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
 
@@ -354,6 +354,7 @@ test.after.always(async () => {
   }
 
   if (tmpFixturesDir) {
+    console.log('removing tmpFixturesDir', tmpFixturesDir);
     fs.removeSync(tmpFixturesDir);
   }
 });

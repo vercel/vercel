@@ -19,7 +19,7 @@ const getRevertAliasConfigFile = () => {
     ],
   });
 };
-module.exports = async function prepare(session, binaryPath, tmpDir) {
+module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
   const spec = {
     'static-single-file': {
       'first.png': getImageFile(session, { size: 30 }),
@@ -491,7 +491,7 @@ module.exports = async function prepare(session, binaryPath, tmpDir) {
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {
-    const directory = join(tmpDir, 'fixtures', 'integration', typeName);
+    const directory = join(tmpFixturesDir, typeName);
 
     await mkdirp(directory);
 
