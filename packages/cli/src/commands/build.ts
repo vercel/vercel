@@ -339,7 +339,9 @@ export default async function main(client: Client): Promise<number> {
       await fs.mkdirp(corepackShimDir);
       process.env.COREPACK_HOME = corepackHomeDir;
       process.env.PATH = `${corepackShimDir}${delimiter}${process.env.PATH}`;
-      process.env.DEBUG = 'corepack';
+      process.env.DEBUG = process.env.DEBUG
+        ? `corepack,${process.env.DEBUG}`
+        : 'corepack';
       const pkgManagerName = pkg.packageManager.split('@')[0];
       // We must explicitly enable npm since its not enabled by default
       // See https://github.com/nodejs/corepack/pull/24
@@ -412,6 +414,9 @@ export default async function main(client: Client): Promise<number> {
   }
   if (process.env.PATH) {
     process.env.PATH.replace(`${corepackShimDir}${delimiter}`, '');
+  }
+  if (process.env.DEBUG) {
+    process.env.DEBUG.replace('corepack,', '');
   }
 
   // Wait for filesystem operations to complete
