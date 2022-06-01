@@ -67,13 +67,16 @@ export function cleanupCorepack(corepackShimDir: string) {
     delete process.env.COREPACK_HOME;
   }
   if (process.env.PATH) {
-    process.env.PATH = process.env.PATH.replace(`${corepackShimDir}${delimiter}`, '');
+    process.env.PATH = process.env.PATH.replace(
+      `${corepackShimDir}${delimiter}`,
+      ''
+    );
   }
   if (process.env.DEBUG) {
-    const DEBUG = process.env.DEBUG;
-    if (DEBUG === 'corepack') {
+    if (process.env.DEBUG === 'corepack') {
       delete process.env.DEBUG;
     } else {
-      process.env.DEBUG = DEBUG.replace('corepack,', '');
+      process.env.DEBUG = process.env.DEBUG.replace('corepack,', '');
+    }
   }
 }
