@@ -17,32 +17,27 @@ export const getProjectPaths = async ({
   fs,
   path,
   skipPaths,
-  depth = 0,
+  depth = 1,
 }: GetProjectPathsOptions): Promise<ProjectPath[]> => {
   const allPaths: Array<ProjectPath> = [];
   if (path && skipPaths?.includes(path)) {
     return allPaths;
   }
-  const directoryContents = await fs.readdir(path ?? './');
 
   if (depth < MAX_DEPTH_TRAVERSE) {
-    const hasPackageJson = directoryContents.some(
-      dir => dir.type === 'file' && dir.name === 'package.json'
-    );
+    const directoryContents = await fs.readdir(path ?? './');
 
-    if (hasPackageJson && path) {
-      const framework = await detectFramework({
-        fs: fs.chdir(path),
-        frameworkList: frameworks,
-      });
-      if (framework) {
-        allPaths.push(path);
-      }
-    }
+    const topDir = !path
+      ? [{ path: path ?? './', type: 'dir', name: path ?? './' }]
+      : [];
+    const childDirs = [
+      ...directoryContents.filter(
+        stat => stat.type === 'dir' && !skipPaths?.includes(stat.path)
+      ),
+      ...topDir,
+    ];
 
-    const childDirs = directoryContents.filter(stat => stat.type === 'dir');
-
-    if (!childDirs.length && !hasPackageJson) {
+    if (!childDirs.length) {
       return allPaths;
     }
 
@@ -59,14 +54,16 @@ export const getProjectPaths = async ({
             });
             if (framework) {
               return current.path;
-            } else {
-              const paths = await getProjectPaths({
-                fs,
-                path: current.path,
-                depth: depth + 1,
-              });
-              return paths;
             }
+          }
+          if (current.path !== './') {
+            const paths = await getProjectPaths({
+              fs,
+              path: current.path,
+              depth: depth + 1,
+              skipPaths,
+            });
+            return paths;
           }
           return [];
         })
