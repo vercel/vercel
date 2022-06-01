@@ -30,7 +30,6 @@
     "scripts/preinstall.js"
   ],
   "ava": {
-    "compileEnhancements": false,
     "extensions": [
       "ts"
     ],
