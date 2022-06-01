@@ -489,16 +489,16 @@ export default async (client: Client) => {
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
-      projectSettings:
-        status === 'not_linked' ? undefined : localConfigurationOverrides,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
       // Only add projectSettings for zero config deployments
-      createArgs.projectSettings = {
-        ...createArgs.projectSettings,
-        sourceFilesOutsideRootDirectory,
-      };
+      createArgs.projectSettings =
+        status === 'not_linked'
+          ? {
+              sourceFilesOutsideRootDirectory,
+            }
+          : { ...localConfigurationOverrides, sourceFilesOutsideRootDirectory };
     }
 
     deployment = await createDeploy(
