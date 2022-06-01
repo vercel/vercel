@@ -1156,13 +1156,23 @@ export async function serverBuild({
       // ensure we 404 for non-existent _next/data routes before
       // trying page dynamic routes
       {
-        src: path.join('/', entryDirectory, '_next/data/(.*)'),
+        src: path.join(
+          '/',
+          entryDirectory,
+          `_next/data/${escapedBuildId}/(.*)`
+        ),
         dest: path.join(
           '/',
           entryDirectory,
           '_next/static/__next_empty_data__.json'
         ),
         status: 200,
+      },
+
+      {
+        src: path.join('/', entryDirectory, '_next/data/(.*)'),
+        dest: path.join('/', entryDirectory, '404'),
+        status: 404,
       },
 
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
