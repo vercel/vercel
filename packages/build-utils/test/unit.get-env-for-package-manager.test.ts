@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { delimiter } from 'path';
 import { getEnvForPackageManager } from '../src';
 
 describe('Test `getEnvForPackageManager()`', () => {
@@ -34,7 +35,7 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
       want: {
         FOO: 'bar',
-        PATH: `/node16/bin-npm7:foo`,
+        PATH: `/node16/bin-npm7${delimiter}foo`,
       },
     },
     {
@@ -97,7 +98,7 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
       want: {
         FOO: 'bar',
-        PATH: '/pnpm7/node_modules/.bin:foo',
+        PATH: `/pnpm7/node_modules/.bin${delimiter}foo`,
       },
     },
     {

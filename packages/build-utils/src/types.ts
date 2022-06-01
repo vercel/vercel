@@ -295,6 +295,7 @@ export interface PackageJson {
   readonly preferGlobal?: boolean;
   readonly private?: boolean;
   readonly publishConfig?: PackageJson.PublishConfig;
+  readonly packageManager?: string;
 }
 
 export interface NodeVersion {
