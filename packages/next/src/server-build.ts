@@ -885,6 +885,11 @@ export async function serverBuild({
           }
         : undefined,
     output: {
+      ['_next/static/__next_empty_data__.json']: new FileBlob({
+        data: Buffer.from(JSON.stringify(`{"_empty_":true}`), 'utf8'),
+        contentType: 'application/json; charset=utf-8',
+        mode: 0o644,
+      }),
       ...publicDirectoryFiles,
       ...lambdas,
       // Prerenders may override Lambdas -- this is an intentional behavior.
@@ -1157,8 +1162,12 @@ export async function serverBuild({
       // trying page dynamic routes
       {
         src: path.join('/', entryDirectory, '_next/data/(.*)'),
-        dest: path.join('/', entryDirectory, '404'),
-        status: 404,
+        dest: path.join(
+          '/',
+          entryDirectory,
+          '_next/static/__next_empty_data__.json'
+        ),
+        status: 200,
       },
 
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
