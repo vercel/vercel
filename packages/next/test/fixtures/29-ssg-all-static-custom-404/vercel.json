@@ -87,7 +87,7 @@
     },
     {
       "path": "/_next/data/testing-build-id/nofallback/nope.json",
-      "status": 404
+      "status": 200
     },
     {
       "path": "/404",
