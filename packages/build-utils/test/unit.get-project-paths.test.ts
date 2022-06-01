@@ -2,14 +2,13 @@ import path from 'path';
 import { getProjectPaths, ProjectPath } from '../src/get-project-paths';
 import { FixtureFilesystem } from './utils/fixture-filesystem';
 
-describe.each<[ProjectPath[], string, ProjectPath[]]>([
+describe.each<[ProjectPath[], string, ProjectPath[]?]>([
   [
     ['backend/app-three', 'frontend/app-one', 'frontend/app-two'],
     '34-monorepo-no-workspaces',
-    [],
   ],
-  [[], '35-no-monorepo', []],
-  [[], '32-monorepo-highly-nested', []],
+  [[], '35-no-monorepo'],
+  [[], '32-monorepo-highly-nested'],
   [['backend/app-three'], '33-hybrid-monorepo', ['frontend']],
 ])('`getProjectPaths()`', (paths, fixturePath, skipPaths) => {
   const testName =
