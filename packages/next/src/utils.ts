@@ -1999,6 +1999,11 @@ export async function getStaticFiles(
     'Collected static files (public/, static/, .next/static)';
   console.time(collectLabel);
 
+  await fs.writeFile(
+    path.join(entryPath, outputDirectory, 'static/__next_empty_data__.json'),
+    JSON.stringify({ _empty_: true }) + '\r\n'
+  );
+
   const nextStaticFiles = await glob(
     '**',
     path.join(entryPath, outputDirectory, 'static')

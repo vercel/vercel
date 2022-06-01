@@ -885,11 +885,6 @@ export async function serverBuild({
           }
         : undefined,
     output: {
-      ['_next/static/__next_empty_data__.json']: new FileBlob({
-        data: Buffer.from(JSON.stringify(`{"_empty_":true}`), 'utf8'),
-        contentType: 'application/json; charset=utf-8',
-        mode: 0o644,
-      }),
       ...publicDirectoryFiles,
       ...lambdas,
       // Prerenders may override Lambdas -- this is an intentional behavior.
