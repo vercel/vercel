@@ -116,7 +116,7 @@ export default async function editProjectSettings(
 
   // Now print defaults for the provided framework whether it was auto-detected or overwritten
   for (const setting of settingKeys) {
-    if (setting === 'framework') continue;
+    if (setting === 'framework' || setting === 'ignoreCommand') continue;
 
     const defaultSetting = framework.settings[setting];
     const override = localConfigurationOverrides?.[setting];
