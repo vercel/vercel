@@ -1754,7 +1754,7 @@ export const frameworks = [
         value: 'vitepress build docs',
       },
       devCommand: {
-        value: 'vitepress dev docs',
+        value: 'vitepress dev docs --port $PORT',
       },
       outputDirectory: {
         value: 'docs/.vitepress/dist',
@@ -1766,7 +1766,7 @@ export const frameworks = [
     name: 'VuePress',
     slug: 'vuepress',
     demo: 'https://vuepress-starter-template.vercel.app',
-    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vue.svg',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/vuepress.png',
     tagline: 'Vue-powered Static Site Generator',
     description: 'Vue-powered Static Site Generator',
     website: 'https://vuepress.vuejs.org/',
@@ -1788,7 +1788,7 @@ export const frameworks = [
         value: 'vuepress build src',
       },
       devCommand: {
-        value: 'vuepress dev src',
+        value: 'vuepress dev src --port $PORT',
       },
       outputDirectory: {
         value: '.vuepress/dist',
