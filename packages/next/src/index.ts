@@ -2596,7 +2596,7 @@ async function getServerlessPages(params: {
 
   // Edge Functions do not consider as Serverless Functions
   for (const edgeFunctionFile of Object.keys(
-    middlewareManifest?.middleware ?? {}
+    middlewareManifest?.functions ?? {}
   )) {
     delete pages[edgeFunctionFile.slice(1) + '.js'];
   }
