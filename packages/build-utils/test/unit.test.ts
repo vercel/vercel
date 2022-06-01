@@ -277,12 +277,60 @@ it('should prefer package.json engines over project setting from config and warn
   ]);
 });
 
+it('should warn when package.json engines is exact version', async () => {
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node-exact'),
+      undefined,
+      {},
+      {}
+    )
+  ).toHaveProperty('range', '16.x');
+  expect(warningMessages).toStrictEqual([
+    'Warning: Detected "engines": { "node": "16.14.0" } in your `package.json` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version',
+  ]);
+});
+
+it('should warn when package.json engines is greater than', async () => {
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node-greaterthan'),
+      undefined,
+      {},
+      {}
+    )
+  ).toHaveProperty('range', '16.x');
+  expect(warningMessages).toStrictEqual([
+    'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version',
+  ]);
+});
+
 it('should not warn when package.json engines matches project setting from config', async () => {
   expect(
     await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
+      { nodeVersion: '14' },
+      {}
+    )
+  ).toHaveProperty('range', '14.x');
+  expect(warningMessages).toStrictEqual([]);
+
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node'),
+      undefined,
       { nodeVersion: '14.x' },
+      {}
+    )
+  ).toHaveProperty('range', '14.x');
+  expect(warningMessages).toStrictEqual([]);
+
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node'),
+      undefined,
+      { nodeVersion: '<15' },
       {}
     )
   ).toHaveProperty('range', '14.x');
