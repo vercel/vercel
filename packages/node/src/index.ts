@@ -73,6 +73,8 @@ function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
 
+const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge'];
+
 const require_ = eval('require');
 
 const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
@@ -369,22 +371,34 @@ export const build: BuildV3 = async ({
   const project = new Project();
   const staticConfig = getConfig(project, entrypointPath);
 
-  let output: BuildResultV3['output'];
+  let output: BuildResultV3['output'] | undefined;
   const handler = renameTStoJS(relative(baseDir, entrypointPath));
 
-  if (staticConfig?.runtime === 'edge') {
-    const name = config.zeroConfig
-      ? handler.substring(0, handler.length - 3)
-      : handler;
-    output = new EdgeFunction({
-      entrypoint: handler,
-      files: preparedFiles,
+  if (staticConfig?.runtime) {
+    if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
+      throw new Error(
+        `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
+          staticConfig.runtime
+        )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
+      );
+    }
+    if (staticConfig.runtime === 'experimental-edge') {
+      const name = config.zeroConfig
+        ? handler.substring(0, handler.length - 3)
+        : handler;
+      output = new EdgeFunction({
+        entrypoint: handler,
+        files: preparedFiles,
 
-      // TODO: remove - these two properties should not be required
-      name,
-      deploymentTarget: 'v8-worker',
-    });
-  } else {
+        // TODO: remove - these two properties should not be required
+        name,
+        deploymentTarget: 'v8-worker',
+      });
+    }
+  }
+
+  if (!output) {
+    // "nodejs" runtime is the default
     const shouldAddHelpers = !(
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
