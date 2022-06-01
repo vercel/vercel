@@ -4,7 +4,7 @@ import { URL, parse as parseUrl } from 'url';
 import test from 'ava';
 import semVer from 'semver';
 import { Readable } from 'stream';
-import { homedir } from 'os';
+import { homedir, tmpdir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
 import fetch from 'node-fetch';
@@ -31,7 +31,7 @@ function execa(file, args, options) {
 }
 
 function fixture(name) {
-  const directory = path.join(__dirname, 'fixtures', 'integration', name);
+  const directory = path.join(tmpFixturesDir, name);
   const config = path.join(directory, 'project.json');
 
   // We need to remove it, otherwise we can't re-use fixtures
@@ -146,6 +146,7 @@ let email;
 let contextName;
 
 let tmpDir;
+let tmpFixturesDir = path.join(tmpdir(), 'tmp-fixtures');
 
 let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
 
@@ -327,7 +328,7 @@ async function setupProject(process, projectName, overrides) {
 test.before(async () => {
   try {
     await createUser();
-    await prepareFixtures(contextName, binaryPath);
+    await prepareFixtures(contextName, binaryPath, tmpFixturesDir);
   } catch (err) {
     console.log('Failed `test.before`');
     console.log(err);
@@ -335,6 +336,8 @@ test.before(async () => {
 });
 
 test.after.always(async () => {
+  delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
+
   if (loginApiServer) {
     // Stop mock server
     loginApiServer.close();
@@ -348,6 +351,11 @@ test.after.always(async () => {
   if (tmpDir) {
     // Remove config directory entirely
     tmpDir.removeCallback();
+  }
+
+  if (tmpFixturesDir) {
+    console.log('removing tmpFixturesDir', tmpFixturesDir);
+    fs.removeSync(tmpFixturesDir);
   }
 });
 
@@ -388,6 +396,99 @@ test('login', async t => {
 
   const auth = await fs.readJSON(getConfigAuthPath());
   t.is(auth.token, token);
+});
+
+test('[vc build] should build project with corepack and select npm@8.1.0', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+  const directory = fixture('vc-build-corepack-npm');
+  const before = await _execa('npm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /Build Completed/gm);
+  const after = await _execa('npm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  // Ensure global npm didn't change
+  t.is(before.stdout, after.stdout);
+  // Ensure version is correct
+  t.is(
+    await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    ),
+    '8.1.0\n'
+  );
+  // Ensure corepack will be cached
+  const contents = fs.readdirSync(
+    path.join(directory, '.vercel/cache/corepack')
+  );
+  t.deepEqual(contents, ['home', 'shim']);
+});
+
+test('[vc build] should build project with corepack and select pnpm@7.1.0', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+  const directory = fixture('vc-build-corepack-pnpm');
+  const before = await _execa('pnpm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /Build Completed/gm);
+  const after = await _execa('pnpm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  // Ensure global pnpm didn't change
+  t.is(before.stdout, after.stdout);
+  // Ensure version is correct
+  t.is(
+    await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    ),
+    '7.1.0\n'
+  );
+  // Ensure corepack will be cached
+  const contents = fs.readdirSync(
+    path.join(directory, '.vercel/cache/corepack')
+  );
+  t.deepEqual(contents, ['home', 'shim']);
+});
+
+test('[vc build] should build project with corepack and select yarn@2.4.3', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+  const directory = fixture('vc-build-corepack-yarn');
+  const before = await _execa('yarn', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /Build Completed/gm);
+  const after = await _execa('yarn', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  // Ensure global yarn didn't change
+  t.is(before.stdout, after.stdout);
+  // Ensure version is correct
+  t.is(
+    await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    ),
+    '2.4.3\n'
+  );
+  // Ensure corepack will be cached
+  const contents = fs.readdirSync(
+    path.join(directory, '.vercel/cache/corepack')
+  );
+  t.deepEqual(contents, ['home', 'shim']);
 });
 
 test('default command should deploy directory', async t => {
