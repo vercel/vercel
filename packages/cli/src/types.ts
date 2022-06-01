@@ -296,6 +296,21 @@ export interface Token {
   teamId?: string;
 }
 
+export interface GitMeta {
+  githubCommitAuthorName?: string;
+  githubCommitMessage?: string;
+  githubCommitOrg?: string | null;
+  githubCommitRef?: string;
+  githubCommitRepo?: string | null;
+  githubCommitRepoId?: number;
+  githubCommitSha?: string;
+  githubDeployment?: number;
+  githubOrg?: string;
+  githubRepo?: string;
+  githubRepoId?: number;
+  githubCommitAuthorLogin?: string;
+}
+
 /**
  * An object representing a Build on Vercel
  */
