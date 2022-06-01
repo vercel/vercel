@@ -62,7 +62,7 @@ export default async function editProjectSettings(
     projectSettings
   );
 
-  // Start UX by displaying overrides. They will be referenced throughout remainder of CLI.
+  // Start UX by displaying (and applying) overrides. They will be referenced throughout remainder of CLI.
   if (localConfigurationOverrides) {
     // Apply local overrides (from `vercel.json`)
     for (const setting of settingKeys) {
@@ -71,9 +71,7 @@ export default async function editProjectSettings(
         settings[normalizeSettingName(setting)] = localConfigValue;
     }
 
-    output.print(
-      `Local configuration overrides detected. Overridden project settings:\n`
-    );
+    output.print('Local settings detected in vercel.json:\n');
 
     // Print provided overrides including framework
     for (const setting of settingKeys) {
@@ -87,12 +85,11 @@ export default async function editProjectSettings(
       }
     }
 
-    // Apply local framework override
+    // If framework is overridden, set it to the `framework` parameter and let the normal framework-flow occur
     if (localConfigurationOverrides.framework) {
-      // Unfortunately the frameworks map is a readonly constant and does not actually return `Framework` type objects
       framework = (frameworks.find(
         _framework => _framework.slug === localConfigurationOverrides.framework
-      ) ?? null) as Framework | null;
+      ) ?? null) as Framework | null; // if the entered framework is not found and set to `null` we will return early
 
       if (framework) {
         output.print(
@@ -102,7 +99,7 @@ export default async function editProjectSettings(
     }
   }
 
-  // skip editing project settings if no framework is detected and no override is provided
+  // return early if the framework is null.
   if (!framework) {
     settings.framework = null;
     return settings;
@@ -121,65 +118,63 @@ export default async function editProjectSettings(
   for (const setting of settingKeys) {
     if (setting === 'framework') continue;
 
-    const defaults = framework.settings[setting];
+    const defaultSetting = framework.settings[setting];
     const override = localConfigurationOverrides?.[setting];
 
-    if (defaults) {
+    if (!override && defaultSetting) {
       output.print(
         `${chalk.dim(
           `- ${chalk.bold(`${settingMap[setting]}:`)} ${
-            isSettingValue(defaults)
-              ? defaults.value
-              : chalk.italic(`${defaults.placeholder}`)
-          }${
-            override
-              ? ' | Notice: This setting is overwritten by the local configuration'
-              : ''
+            isSettingValue(defaultSetting)
+              ? defaultSetting.value
+              : chalk.italic(`${defaultSetting.placeholder}`)
           }`
         )}\n`
       );
     }
   }
 
-  if (!localConfigurationOverrides) {
-    if (
-      autoConfirm ||
-      !(await confirm(`Want to override the settings?`, false))
-    ) {
-      return settings;
-    }
-
-    const choices = settingKeys.reduce<Array<{ name: string; value: string }>>(
-      (acc, key) => {
-        if (key === 'framework') return acc; // skip overriding framework
-        acc.push({ name: settingMap[key], value: key });
-        return acc;
-      },
-      []
-    );
-
-    const { settingFields } = await inquirer.prompt<{
-      settingFields: Array<Exclude<ConfigKeys, 'framework'>>;
-    }>({
-      name: 'settingFields',
-      type: 'checkbox',
-      message: 'Which settings would you like to overwrite (select multiple)?',
-      choices,
-    });
-
-    for (let setting of settingFields) {
-      const normalized = normalizeSettingName(setting);
-      const field = settingMap[setting];
-      const answers = await inquirer.prompt<{
-        [k in Exclude<ConfigKeys, 'framework'>]: string;
-      }>({
-        type: 'input',
-        name: setting,
-        message: `What's your ${chalk.bold(field)}?`,
-      });
-      settings[normalized] = answers[setting];
-    }
+  // Now prompt the user if they want to modify any settings not defined by local configuration.
+  if (
+    autoConfirm ||
+    !(await confirm(
+      'Want to modify the auto-detected project settings?',
+      false
+    ))
+  ) {
+    return settings;
   }
 
+  const choices = settingKeys.reduce<Array<{ name: string; value: string }>>(
+    (acc, setting) => {
+      if (setting === 'framework' || localConfigurationOverrides?.[setting])
+        return acc; // skip framework and any setting defined in the local override
+      acc.push({ name: settingMap[setting], value: setting });
+      return acc;
+    },
+    []
+  );
+
+  const { settingFields } = await inquirer.prompt<{
+    settingFields: Array<Exclude<ConfigKeys, 'framework'>>;
+  }>({
+    name: 'settingFields',
+    type: 'checkbox',
+    message: 'Which settings would you like to overwrite (select multiple)?',
+    choices,
+  });
+
+  for (let setting of settingFields) {
+    const normalized = normalizeSettingName(setting);
+    const field = settingMap[setting];
+    const answers = await inquirer.prompt<{
+      [k in Exclude<ConfigKeys, 'framework'>]: string;
+    }>({
+      type: 'input',
+      name: setting,
+      message: `What's your ${chalk.bold(field)}?`,
+    });
+    settings[normalized] = answers[setting];
+  }
   return settings;
 }

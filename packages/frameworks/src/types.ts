@@ -144,10 +144,6 @@ export interface Framework {
      * Default Output Directory
      */
     outputDirectory: Setting;
-    /**
-     * Default Ignore Command or a placeholder
-     */
-    ignoreCommand?: Setting;
   };
   /**
    * A list of recommended integrations for the framework

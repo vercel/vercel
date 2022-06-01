@@ -453,9 +453,15 @@ export default async (client: Client) => {
   let deployStamp = stamp();
   let deployment = null;
 
-  const vercelJSONConfigurationOverridesEnabled =
-    process.env.ENABLE_VERCEL_JSON_CONFIGURATION_OVERRIDES === '1';
-
+  // const localConfigurationOverrides = {}
+  // let overrideDetected = false;
+  // ['buildCommand', 'devCommand'].forEach(setting => {
+  //   const value = localConfig?.[setting]
+  //   if (value) {
+  //     overrideDetected = true;
+  //     localConfigurationOverrides[setting === 'ignoreCommand' ? 'commandForIgnoringBuildStep' : value]
+  //   }
+  // })
   const localConfigurationOverrides = {
     buildCommand: localConfig?.buildCommand,
     devCommand: localConfig?.devCommand,
@@ -483,14 +489,16 @@ export default async (client: Client) => {
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
-      projectSettings: vercelJSONConfigurationOverridesEnabled
-        ? localConfigurationOverrides
-        : undefined,
+      projectSettings:
+        status === 'not_linked' ? undefined : localConfigurationOverrides,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
       // Only add projectSettings for zero config deployments
-      createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
+      createArgs.projectSettings = {
+        ...createArgs.projectSettings,
+        sourceFilesOutsideRootDirectory,
+      };
     }
 
     deployment = await createDeploy(
@@ -520,9 +528,7 @@ export default async (client: Client) => {
         projectSettings,
         framework,
         false,
-        vercelJSONConfigurationOverridesEnabled
-          ? localConfigurationOverrides
-          : null
+        localConfigurationOverrides
       );
 
       // deploy again, but send projectSettings this time

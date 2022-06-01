@@ -444,6 +444,12 @@ module.exports = async function prepare(session, binaryPath) {
       'vercel.json': '{}',
       'package.json': '{}',
     },
+    'vercel-json-configuration-overrides-merging-prompts': {
+      'vercel.json': JSON.stringify({
+        buildCommand: 'mkdir -p output && echo "1" > output/index.txt',
+      }),
+      'package.json': '{}',
+    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {
