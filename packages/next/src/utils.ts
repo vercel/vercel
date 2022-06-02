@@ -534,10 +534,7 @@ export async function getImagesManifest(
     return undefined;
   }
 
-  // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-  const imagesManifest: NextImagesManifest =
-    eval('require')(pathImagesManifest);
-  return imagesManifest;
+  return fs.readJson(pathImagesManifest);
 }
 
 type FileMap = { [page: string]: FileFsRef };
@@ -2298,8 +2295,7 @@ async function getMiddlewareManifest(
     return;
   }
 
-  // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-  return eval('require')(middlewareManifestPath);
+  return fs.readJSON(middlewareManifestPath);
 }
 
 /**
