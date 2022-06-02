@@ -453,15 +453,6 @@ export default async (client: Client) => {
   let deployStamp = stamp();
   let deployment = null;
 
-  // const localConfigurationOverrides = {}
-  // let overrideDetected = false;
-  // ['buildCommand', 'devCommand'].forEach(setting => {
-  //   const value = localConfig?.[setting]
-  //   if (value) {
-  //     overrideDetected = true;
-  //     localConfigurationOverrides[setting === 'ignoreCommand' ? 'commandForIgnoringBuildStep' : value]
-  //   }
-  // })
   const localConfigurationOverrides = {
     buildCommand: localConfig?.buildCommand,
     devCommand: localConfig?.devCommand,
