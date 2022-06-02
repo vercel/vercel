@@ -296,7 +296,13 @@ export interface Token {
   teamId?: string;
 }
 
-export interface GitMeta {
+export interface RepoData {
+  provider: string;
+  org: string;
+  repo: string;
+}
+
+export interface GitHubMeta {
   githubCommitAuthorName?: string;
   githubCommitMessage?: string;
   githubCommitOrg?: string | null;
@@ -304,12 +310,44 @@ export interface GitMeta {
   githubCommitRepo?: string | null;
   githubCommitRepoId?: number;
   githubCommitSha?: string;
-  githubDeployment?: number;
+  githubDeployment?: string;
   githubOrg?: string;
   githubRepo?: string;
   githubRepoId?: number;
   githubCommitAuthorLogin?: string;
 }
+
+export interface GitLabMeta {
+  gitlabCommitAuthorName?: string;
+  gitlabCommitMessage?: string;
+  gitlabCommitOrg?: string | null;
+  gitlabCommitRef?: string;
+  gitlabCommitRepo?: string | null;
+  gitlabCommitRepoId?: number;
+  gitlabCommitSha?: string;
+  gitlabDeployment?: string;
+  gitlabOrg?: string;
+  gitlabRepo?: string;
+  gitlabRepoId?: number;
+  gitlabCommitAuthorLogin?: string;
+}
+
+export interface BitbucketMeta {
+  bitbucketCommitAuthorName?: string;
+  bitbucketCommitMessage?: string;
+  bitbucketCommitOrg?: string | null;
+  bitbucketCommitRef?: string;
+  bitbucketCommitRepo?: string | null;
+  bitbucketCommitRepoId?: number;
+  bitbucketCommitSha?: string;
+  bitbucketDeployment?: string;
+  bitbucketOrg?: string;
+  bitbucketRepo?: string;
+  bitbucketRepoId?: number;
+  bitbucketCommitAuthorLogin?: string;
+}
+
+export type GitMeta = GitHubMeta | GitLabMeta | BitbucketMeta;
 
 /**
  * An object representing a Build on Vercel

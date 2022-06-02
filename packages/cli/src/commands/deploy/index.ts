@@ -63,6 +63,7 @@ import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
+import { createGitMeta } from '../../util/deploy/create-git-meta';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -411,9 +412,11 @@ export default async (client: Client) => {
   // build `meta`
   const meta = Object.assign(
     {},
+    await createGitMeta(path),
     parseMeta(localConfig.meta),
     parseMeta(argv['--meta'])
   );
+  console.log(meta);
 
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(

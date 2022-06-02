@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import {
   createGitMeta,
   getRepoData,
+  parseRepoUrl,
 } from '../../../../src/util/deploy/create-git-meta';
 
 const fixture = (name: string) =>
@@ -23,12 +24,66 @@ describe('getRepoData', () => {
   });
 });
 
+describe('parseRepoUrl', () => {
+  it('should parse github https url', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel.git');
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+  it('should parse github git url', () => {
+    const parsedUrl = parseRepoUrl('git://github.com/vercel/vercel.git');
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+  it('should parse github ssh url', () => {
+    const parsedUrl = parseRepoUrl('git@github.com:vercel/vercel.git');
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+
+  it('should parse gitlab https url', () => {
+    const parsedUrl = parseRepoUrl('https://gitlab.com/beck3k/savage.git');
+    expect(parsedUrl?.provider).toEqual('gitlab');
+    expect(parsedUrl?.org).toEqual('beck3k');
+    expect(parsedUrl?.repo).toEqual('savage');
+  });
+  it('should parse gitlab ssh url', () => {
+    const parsedUrl = parseRepoUrl('git@gitlab.com:beck3k/savage.git');
+    expect(parsedUrl?.provider).toEqual('gitlab');
+    expect(parsedUrl?.org).toEqual('beck3k');
+    expect(parsedUrl?.repo).toEqual('savage');
+  });
+
+  it('should parse bitbucket https url', () => {
+    const parsedUrl = parseRepoUrl(
+      'https://bitbucket.org/atlassianlabs/maven-project-example.git'
+    );
+    expect(parsedUrl?.provider).toEqual('bitbucket');
+    expect(parsedUrl?.org).toEqual('atlassianlabs');
+    expect(parsedUrl?.repo).toEqual('maven-project-example');
+  });
+  it('should parse bitbucket ssh url', () => {
+    const parsedUrl = parseRepoUrl(
+      'git@bitbucket.org:atlassianlabs/maven-project-example.git'
+    );
+    expect(parsedUrl?.provider).toEqual('bitbucket');
+    expect(parsedUrl?.org).toEqual('atlassianlabs');
+    expect(parsedUrl?.repo).toEqual('maven-project-example');
+  });
+});
+
 describe('createGitMeta', () => {
-  it('gets git metata from test-1', async () => {
-    const directory = fixture('test-1');
+  it('gets git metata from test-github', async () => {
+    const directory = fixture('test-github');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
       const data = await createGitMeta(directory);
+      expect(data.githubDeployment).toEqual('1');
+      expect(data.gitlabDeployment).toBeUndefined();
+      expect(data.bitbucketDeployment).toBeUndefined();
       expect(data.githubOrg).toEqual('user');
       expect(data.githubRepo).toEqual('repo');
       expect(data.githubCommitAuthorName).toEqual('Matthew Stanciu');
@@ -38,6 +93,50 @@ describe('createGitMeta', () => {
       expect(data.githubCommitRepo).toEqual('repo');
       expect(data.githubCommitSha).toEqual(
         '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97'
+      );
+    } finally {
+      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+    }
+  });
+  it('gets git metadata from test-gitlab', async () => {
+    const directory = fixture('test-gitlab');
+    try {
+      await fs.rename(join(directory, 'git'), join(directory, '.git'));
+      const data = await createGitMeta(directory);
+      expect(data.gitlabDeployment).toEqual('1');
+      expect(data.githubDeployment).toBeUndefined();
+      expect(data.bitbucketDeployment).toBeUndefined();
+      expect(data.gitlabOrg).toEqual('user');
+      expect(data.gitlabRepo).toEqual('repo');
+      expect(data.gitlabCommitAuthorName).toEqual('Matthew Stanciu');
+      expect(data.gitlabCommitMessage).toEqual('hi');
+      expect(data.gitlabCommitOrg).toEqual('user');
+      expect(data.gitlabCommitRef).toEqual('master');
+      expect(data.gitlabCommitRepo).toEqual('repo');
+      expect(data.gitlabCommitSha).toEqual(
+        '328fa04e4363b462ad96a7180d67d2785bace650'
+      );
+    } finally {
+      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+    }
+  });
+  it('gets git metadata from test-bitbucket', async () => {
+    const directory = fixture('test-bitbucket');
+    try {
+      await fs.rename(join(directory, 'git'), join(directory, '.git'));
+      const data = await createGitMeta(directory);
+      expect(data.githubDeployment).toBeUndefined();
+      expect(data.githubDeployment).toBeUndefined();
+      expect(data.bitbucketDeployment).toEqual('1');
+      expect(data.bitbucketOrg).toEqual('user');
+      expect(data.bitbucketRepo).toEqual('repo');
+      expect(data.bitbucketCommitAuthorName).toEqual('Matthew Stanciu');
+      expect(data.bitbucketCommitMessage).toEqual('hi');
+      expect(data.bitbucketCommitOrg).toEqual('user');
+      expect(data.bitbucketCommitRef).toEqual('master');
+      expect(data.bitbucketCommitRepo).toEqual('repo');
+      expect(data.bitbucketCommitSha).toEqual(
+        '3d883ccee5de4222ef5f40bde283a57b533b1256'
       );
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
