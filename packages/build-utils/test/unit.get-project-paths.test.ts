@@ -25,9 +25,7 @@ describe.each<[ProjectPath[], number, number, string, ProjectPath[]?]>([
         : `should not detect any path for ${fixturePath}`;
 
     it(testName, async () => {
-      const fixture = normalizePath(
-        path.join(__dirname, 'fixtures', fixturePath)
-      );
+      const fixture = path.join(__dirname, 'fixtures', fixturePath);
       const fs = new FixtureFilesystem(fixture);
       const mockReaddir = jest.fn().mockImplementation(fs.readdir);
       const mockHasPath = jest.fn().mockImplementation(fs.hasPath);
@@ -35,8 +33,8 @@ describe.each<[ProjectPath[], number, number, string, ProjectPath[]?]>([
       fs.hasPath = mockHasPath;
 
       const actualPaths = await getProjectPaths({ fs, skipPaths });
-      const normalizedPaths = paths.map(path => normalizePath(path));
-      expect(actualPaths).toEqual(normalizedPaths);
+      const normalizedPaths = actualPaths.map(path => normalizePath(path));
+      expect(normalizedPaths).toEqual(paths);
       expect(fs.readdir).toHaveBeenCalledTimes(readdirCalls);
       expect(fs.hasPath).toHaveBeenCalledTimes(hasPathCalls);
     });
