@@ -10,7 +10,7 @@ import {
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
 
-jest.setTimeout(ms('20 seconds'));
+jest.setTimeout(ms('30 seconds'));
 
 describe('importBuilders()', () => {
   it('should import built-in Builders', async () => {
