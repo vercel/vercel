@@ -290,13 +290,19 @@ async function setupProject(process, projectName, overrides) {
   process.stdin.write('\n');
 
   await waitForPrompt(process, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify the auto-detected project settings?')
   );
 
   if (overrides) {
     process.stdin.write('yes\n');
 
-    const { buildCommand, outputDirectory, devCommand } = overrides;
+    const {
+      buildCommand,
+      outputDirectory,
+      devCommand,
+      installCommand,
+      ignoreCommand,
+    } = overrides;
 
     await waitForPrompt(process, chunk =>
       chunk.includes(
@@ -311,14 +317,24 @@ async function setupProject(process, projectName, overrides) {
     process.stdin.write(`${buildCommand ?? ''}\n`);
 
     await waitForPrompt(process, chunk =>
-      chunk.includes(`What's your Output Directory?`)
+      chunk.includes(`What's your Install Command?`)
     );
-    process.stdin.write(`${outputDirectory ?? ''}\n`);
+    process.stdin.write(`${installCommand ?? ''}\n`);
 
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Development Command?`)
     );
     process.stdin.write(`${devCommand ?? ''}\n`);
+
+    await waitForPrompt(process, chunk =>
+      chunk.includes(`What's your Ignore Command?`)
+    );
+    process.stdin.write(`${ignoreCommand ?? ''}\n`);
+
+    await waitForPrompt(process, chunk =>
+      chunk.includes(`What's your Output Directory?`)
+    );
+    process.stdin.write(`${outputDirectory ?? ''}\n`);
   } else {
     process.stdin.write('no\n');
   }
