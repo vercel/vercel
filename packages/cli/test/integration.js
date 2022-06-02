@@ -3112,7 +3112,7 @@ test('should prefill "project name" prompt with folder name', async t => {
   now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify the auto-detected project settings?')
   );
   now.stdin.write('no\n');
 
@@ -3173,7 +3173,7 @@ test('should prefill "project name" prompt with --name', async t => {
   now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify the auto-detected project settings?')
   );
   now.stdin.write('no\n');
 
@@ -3240,7 +3240,7 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify the auto-detected project settings?')
   );
   now.stdin.write('no\n');
 
