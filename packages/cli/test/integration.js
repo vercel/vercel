@@ -314,27 +314,27 @@ async function setupProject(process, projectName, overrides) {
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Build Command?`)
     );
-    process.stdin.write(`${buildCommand ?? ''}\n`);
+    process.stdin.write(`${buildCommand || ''}\n`);
 
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Install Command?`)
     );
-    process.stdin.write(`${installCommand ?? ''}\n`);
+    process.stdin.write(`${installCommand || ''}\n`);
 
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Development Command?`)
     );
-    process.stdin.write(`${devCommand ?? ''}\n`);
+    process.stdin.write(`${devCommand || ''}\n`);
 
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Ignore Command?`)
     );
-    process.stdin.write(`${ignoreCommand ?? ''}\n`);
+    process.stdin.write(`${ignoreCommand || ''}\n`);
 
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Output Directory?`)
     );
-    process.stdin.write(`${outputDirectory ?? ''}\n`);
+    process.stdin.write(`${outputDirectory || ''}\n`);
   } else {
     process.stdin.write('no\n');
   }
