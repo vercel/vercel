@@ -3,18 +3,18 @@ import { getWorkspaces } from '../src/workspaces/get-workspaces';
 import { getWorkspacePackagePaths } from '../src/workspaces/get-workspace-package-paths';
 import { FixtureFilesystem } from './utils/fixture-filesystem';
 
-describe.each<[string[], string]>([
-  [['/a', '/b'], '21-npm-workspaces'],
-  [['/c', '/d'], '23-pnpm-workspaces'],
-  [['/a', '/b'], '27-yarn-workspaces'],
-  [['/a', '/b'], '25-multiple-lock-files-yarn'],
-  [['/a', '/b'], '26-multiple-lock-files-pnpm'],
+describe.each<[string, string[]]>([
+  ['21-npm-workspaces', ['/a', '/b']],
+  ['23-pnpm-workspaces', ['/c', '/d']],
+  ['27-yarn-workspaces', ['/a', '/b']],
+  ['25-multiple-lock-files-yarn', ['/a', '/b']],
+  ['26-multiple-lock-files-pnpm', ['/a', '/b']],
   [
-    ['/backend/c', '/backend/d', '/frontend/a', '/frontend/b'],
     '29-nested-workspaces',
+    ['/backend/c', '/backend/d', '/frontend/a', '/frontend/b'],
   ],
-  [[], '22-pnpm'],
-])('`getWorkspacesPackagePaths()`', (packagePaths, fixturePath) => {
+  ['22-pnpm', []],
+])('`getWorkspacesPackagePaths()`', (fixturePath, packagePaths) => {
   const testName =
     packagePaths.length > 0
       ? `should detect ${packagePaths.join()} package${

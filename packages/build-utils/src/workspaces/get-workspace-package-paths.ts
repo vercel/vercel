@@ -5,7 +5,7 @@ import { DetectorFilesystem } from '../detectors/filesystem';
 import { Workspace } from './get-workspaces';
 import { getGlobFs } from '../fs/get-glob-fs';
 
-const path = _path.posix;
+const posixPath = _path.posix;
 
 interface GetPackagePathOptions {
   fs: DetectorFilesystem;
@@ -20,8 +20,8 @@ export async function getWorkspacePackagePaths({
   fs,
   workspace,
 }: GetWorkspacePackagePathsOptions): Promise<string[]> {
-  const { type, rootPath: workspaceRootPath } = workspace;
-  const workspaceFs = fs.chdir(workspaceRootPath);
+  const { type, rootPath } = workspace;
+  const workspaceFs = fs.chdir(rootPath);
 
   let results: string[] = [];
 
@@ -38,7 +38,7 @@ export async function getWorkspacePackagePaths({
   }
 
   return results.map(packagePath => {
-    return path.join(workspaceRootPath, path.dirname(packagePath));
+    return posixPath.join(rootPath, posixPath.dirname(packagePath));
   });
 }
 
@@ -65,7 +65,7 @@ async function getPackagePaths(
         packageGlob =>
           new Promise<string[]>((resolve, reject) => {
             glob(
-              path.join(packageGlob, 'package.json').replace(/\\/g, '/'),
+              posixPath.join(packageGlob, 'package.json').replace(/\\/g, '/'),
               {
                 cwd: '/',
                 fs: getGlobFs(fs),
