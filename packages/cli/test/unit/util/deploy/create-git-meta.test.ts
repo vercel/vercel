@@ -5,6 +5,7 @@ import {
   getRepoData,
   parseRepoUrl,
 } from '../../../../src/util/deploy/create-git-meta';
+import { BitbucketMeta, GitHubMeta, GitLabMeta } from '../../../../src/types';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
@@ -45,16 +46,20 @@ describe('parseRepoUrl', () => {
   });
 
   it('should parse gitlab https url', () => {
-    const parsedUrl = parseRepoUrl('https://gitlab.com/beck3k/savage.git');
+    const parsedUrl = parseRepoUrl(
+      'https://gitlab.com/gitlab-examples/knative-kotlin-app.git'
+    );
     expect(parsedUrl?.provider).toEqual('gitlab');
-    expect(parsedUrl?.org).toEqual('beck3k');
-    expect(parsedUrl?.repo).toEqual('savage');
+    expect(parsedUrl?.org).toEqual('gitlab-examples');
+    expect(parsedUrl?.repo).toEqual('knative-kotlin-app');
   });
   it('should parse gitlab ssh url', () => {
-    const parsedUrl = parseRepoUrl('git@gitlab.com:beck3k/savage.git');
+    const parsedUrl = parseRepoUrl(
+      'git@gitlab.com:gitlab-examples/knative-kotlin-app.git'
+    );
     expect(parsedUrl?.provider).toEqual('gitlab');
-    expect(parsedUrl?.org).toEqual('beck3k');
-    expect(parsedUrl?.repo).toEqual('savage');
+    expect(parsedUrl?.org).toEqual('gitlab-examples');
+    expect(parsedUrl?.repo).toEqual('knative-kotlin-app');
   });
 
   it('should parse bitbucket https url', () => {
@@ -80,10 +85,8 @@ describe('createGitMeta', () => {
     const directory = fixture('test-github');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = await createGitMeta(directory);
+      const data = (await createGitMeta(directory)) as GitHubMeta;
       expect(data.githubDeployment).toEqual('1');
-      expect(data.gitlabDeployment).toBeUndefined();
-      expect(data.bitbucketDeployment).toBeUndefined();
       expect(data.githubOrg).toEqual('user');
       expect(data.githubRepo).toEqual('repo');
       expect(data.githubCommitAuthorName).toEqual('Matthew Stanciu');
@@ -102,10 +105,8 @@ describe('createGitMeta', () => {
     const directory = fixture('test-gitlab');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = await createGitMeta(directory);
+      const data = (await createGitMeta(directory)) as GitLabMeta;
       expect(data.gitlabDeployment).toEqual('1');
-      expect(data.githubDeployment).toBeUndefined();
-      expect(data.bitbucketDeployment).toBeUndefined();
       expect(data.gitlabOrg).toEqual('user');
       expect(data.gitlabRepo).toEqual('repo');
       expect(data.gitlabCommitAuthorName).toEqual('Matthew Stanciu');
@@ -124,9 +125,7 @@ describe('createGitMeta', () => {
     const directory = fixture('test-bitbucket');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = await createGitMeta(directory);
-      expect(data.githubDeployment).toBeUndefined();
-      expect(data.githubDeployment).toBeUndefined();
+      const data = (await createGitMeta(directory)) as BitbucketMeta;
       expect(data.bitbucketDeployment).toEqual('1');
       expect(data.bitbucketOrg).toEqual('user');
       expect(data.bitbucketRepo).toEqual('repo');
@@ -142,52 +141,6 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  // it("throws an error when the git config is empty or doesn't exist", () => {
-  //   const result = createGitMeta('');
-  //   expect(result).toBeUndefined();
-  // });
-  // it('does not contain user login name when git config does not contain email', () => {
-  //   getLastCommit().then(commit => {
-  //     const result = createGitMeta(fixture('no-email'));
-  //     expect(result).toBe({});
-  //   });
-  //   const result = createGitMeta(fixture('no-email'));
-  //   expect(result).toBe({
-  //     githubOrg: 'MatthewStanciu',
-  //     githubRepo: 'git-test',
-  //     githubCommitAuthorName: 'Matthew Stanciu',
-  //     githubCommitMessage: 'Initial commit',
-  //     githubCommitOrg: 'MatthewStanciu',
-  //     githubCommitRef: 'main',
-  //     githubCommitRepo: 'git-test',
-  //     githubCommitSha: '70724f51208984d6fa9a5cb81926f718d96623ea',
-  //   });
-  // });
-  // it('org and repo are undefined when origin url is undefined', () => {
-  //   const result = createGitMeta(fixture('no-origin'));
-  //   expect(result).toBe({
-  //     githubCommitAuthorName: 'Matthew Stanciu',
-  //     githubCommitMessage: 'Initial commit',
-  //     githubCommitRef: 'main',
-  //     githubCommitSha: '70724f51208984d6fa9a5cb81926f718d96623ea',
-  //   });
-  // });
-  // it('should return a full meta object', () => {
-  //   const result = createGitMeta(
-  //     join(__dirname, '../../../../../../../.git/config')
-  //   );
-  //   expect(result).toBe({
-  //     githubCommitAuthorName: 'JJ Kasper',
-  //     githubCommitMessage:
-  //       'Revert "[next] Allow edge api endpoints in Next.js" (#7898)',
-  //     githubCommitOrg: 'vercel',
-  //     githubCommitRef: 'main',
-  //     githubCommitRepo: 'vercel',
-  //     githubCommitSha: 'd4cef69cc92b4f5878fa88a7b63b6c7e25d2505b',
-  //     githubOrg: 'vercel',
-  //     githubRepo: 'vercel',
-  //   });
-  // });
 
   /*
    * 1. Git config is empty or doesn't exist
