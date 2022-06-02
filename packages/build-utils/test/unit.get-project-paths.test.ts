@@ -1,4 +1,5 @@
 import path from 'path';
+import { normalizePath } from '../src';
 import { getProjectPaths, ProjectPath } from '../src/get-project-paths';
 import { FixtureFilesystem } from './utils/fixture-filesystem';
 
@@ -24,7 +25,10 @@ describe.each<[ProjectPath[], number, number, string, ProjectPath[]?]>([
         : `should not detect any path for ${fixturePath}`;
 
     it(testName, async () => {
-      const fixture = path.join(__dirname, 'fixtures', fixturePath);
+      const fixture = normalizePath(
+        path.join(__dirname, 'fixtures', fixturePath)
+      );
+      console.log('chloe', fixture);
       const fs = new FixtureFilesystem(fixture);
       const mockReaddir = jest.fn().mockImplementation(fs.readdir);
       const mockHasPath = jest.fn().mockImplementation(fs.hasPath);
