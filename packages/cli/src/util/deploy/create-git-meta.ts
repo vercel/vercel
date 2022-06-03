@@ -77,11 +77,11 @@ export async function createGitMeta(directory: string): Promise<GitMeta> {
   const commit = await getLastCommit(directory);
 
   if (repoData.provider === 'github') {
-    populateGitHubData(githubData, repoData, commit);
+    githubData = populateGitHubData(githubData, repoData, commit);
   } else if (repoData.provider === 'gitlab') {
-    populateGitLabData(gitlabData, repoData, commit);
+    gitlabData = populateGitLabData(gitlabData, repoData, commit);
   } else if (repoData.provider === 'bitbucket') {
-    populateBitbucketData(bitbucketData, repoData, commit);
+    bitbucketData = populateBitbucketData(bitbucketData, repoData, commit);
   }
 
   if (Object.keys(githubData).length !== 0) {
@@ -95,7 +95,7 @@ export async function createGitMeta(directory: string): Promise<GitMeta> {
   }
 }
 
-// Functions to populate data for every provider
+// Populate data for every provider
 
 function populateGitHubData(
   data: GitHubMeta,
