@@ -45,6 +45,7 @@ import {
   writeBuildResult,
 } from '../util/build/write-build-result';
 import { importBuilders, BuilderWithPkg } from '../util/build/import-builders';
+import { initCorepack, cleanupCorepack } from '../util/build/corepack';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -312,6 +313,10 @@ export default async function main(client: Client): Promise<number> {
   // TODO: parallelize builds
   const buildResults: Map<Builder, BuildResult> = new Map();
   const overrides: PathOverride[] = [];
+  const repoRootPath = cwd;
+  const rootPackageJsonPath = repoRootPath || workPath;
+  const corepackShimDir = await initCorepack({ cwd, rootPackageJsonPath });
+
   for (const build of builds) {
     if (typeof build.src !== 'string') continue;
 
@@ -331,7 +336,6 @@ export default async function main(client: Client): Promise<number> {
       framework: project.settings.framework,
       nodeVersion: project.settings.nodeVersion,
     };
-    const repoRootPath = cwd === workPath ? undefined : cwd;
     const buildOptions: BuildOptions = {
       files: filesMap,
       entrypoint: build.src,
@@ -364,6 +368,10 @@ export default async function main(client: Client): Promise<number> {
         err => err
       )
     );
+  }
+
+  if (corepackShimDir) {
+    cleanupCorepack(corepackShimDir);
   }
 
   // Wait for filesystem operations to complete

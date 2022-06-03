@@ -244,9 +244,7 @@ export async function getRoutesManifest(
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const routesManifest: RoutesManifest = require(pathRoutesManifest);
-
+  const routesManifest: RoutesManifest = await fs.readJSON(pathRoutesManifest);
   // remove temporary array based routeKeys from v1/v2 of routes
   // manifest since it can result in invalid routes
   for (const route of routesManifest.dataRoutes || []) {
@@ -368,10 +366,10 @@ export async function getDynamicRoutes(
   let getSortedRoutes: ((normalizedPages: string[]) => string[]) | undefined;
 
   try {
-    ({ getRouteRegex, getSortedRoutes } = require(resolveFrom(
-      entryPath,
-      'next-server/dist/lib/router/utils'
-    )));
+    // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
+    ({ getRouteRegex, getSortedRoutes } = eval('require')(
+      resolveFrom(entryPath, 'next-server/dist/lib/router/utils')
+    ));
     if (typeof getRouteRegex !== 'function') {
       getRouteRegex = undefined;
     }
@@ -379,10 +377,10 @@ export async function getDynamicRoutes(
 
   if (!getRouteRegex || !getSortedRoutes) {
     try {
-      ({ getRouteRegex, getSortedRoutes } = require(resolveFrom(
-        entryPath,
-        'next/dist/next-server/lib/router/utils'
-      )));
+      // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
+      ({ getRouteRegex, getSortedRoutes } = eval('require')(
+        resolveFrom(entryPath, 'next/dist/next-server/lib/router/utils')
+      ));
       if (typeof getRouteRegex !== 'function') {
         getRouteRegex = undefined;
       }
@@ -536,9 +534,7 @@ export async function getImagesManifest(
     return undefined;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const imagesManifest: NextImagesManifest = require(pathImagesManifest);
-  return imagesManifest;
+  return fs.readJson(pathImagesManifest);
 }
 
 type FileMap = { [page: string]: FileFsRef };
@@ -2299,8 +2295,7 @@ async function getMiddlewareManifest(
     return;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require(middlewareManifestPath);
+  return fs.readJSON(middlewareManifestPath);
 }
 
 /**
