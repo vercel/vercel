@@ -416,7 +416,6 @@ export default async (client: Client) => {
     parseMeta(localConfig.meta),
     parseMeta(argv['--meta'])
   );
-  console.log(meta);
 
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
