@@ -11,6 +11,13 @@
       "fetchOptions": {
         "redirect": "manual"
       }
+    },
+    {
+      "path": "/rewrite-before-files",
+      "status": 404,
+      "fetchOptions": {
+        "redirect": "manual"
+      }
     }
   ]
 }

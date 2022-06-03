@@ -47,6 +47,11 @@ export function middleware(request) {
     return;
   }
 
+  if (url.pathname === '/somewhere') {
+    url.pathname = '/from-middleware';
+    return NextResponse.redirect(url);
+  }
+
   if (url.pathname === '/logs') {
     console.clear();
     for (let i = 0; i < 3; i++) console.count();

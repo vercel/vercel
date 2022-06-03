@@ -1025,6 +1025,8 @@ export async function serverBuild({
 
       ...redirects,
 
+      ...middleware.staticRoutes,
+
       ...beforeFilesRewrites,
 
       // Make sure to 404 for the /404 path itself
@@ -1066,8 +1068,6 @@ export async function serverBuild({
               continue: true,
             },
           ]),
-
-      ...middleware.staticRoutes,
 
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
