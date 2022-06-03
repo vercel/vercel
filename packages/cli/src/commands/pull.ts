@@ -25,7 +25,7 @@ import {
 
 const help = () => {
   return console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} pull`)} [path]
+  ${chalk.bold(`${logo} ${getPkgName()} pull`)} [project-path]
 
  ${chalk.dim('Options:')}
 
@@ -57,21 +57,14 @@ const help = () => {
     )}
 
   ${chalk.gray(
-    '–'
-  )} Pull the latest Environment Variables to a specific file. (Deprecated)
-    ${chalk.gray(
-      'If you want to download environment variables to a specific file, use `vercel env pull` instead.'
-    )}
-
-    ${chalk.cyan(`$ ${getPkgName()} pull --env .env.local`)}
-    ${chalk.cyan(`$ ${getPkgName()} pull ./path-to-project --env .env.local`)}
+    'If you want to download environment variables to a specific file, use `vercel env pull` instead.'
+  )}
 `);
 };
 
 function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {
     '--yes': Boolean,
-    '--env': String, // deprecated
     '--environment': String,
     '--debug': Boolean,
     '-d': '--debug',
