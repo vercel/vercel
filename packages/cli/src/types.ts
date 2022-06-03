@@ -305,46 +305,32 @@ export interface RepoData {
 export interface GitHubMeta {
   githubCommitAuthorName?: string;
   githubCommitMessage?: string;
-  githubCommitOrg?: string | null;
+  githubCommitOrg?: string;
   githubCommitRef?: string;
-  githubCommitRepo?: string | null;
-  githubCommitRepoId?: number;
+  githubCommitRepo?: string;
   githubCommitSha?: string;
   githubDeployment?: string;
   githubOrg?: string;
   githubRepo?: string;
-  githubRepoId?: number;
-  githubCommitAuthorLogin?: string;
 }
 
 export interface GitLabMeta {
   gitlabCommitAuthorName?: string;
   gitlabCommitMessage?: string;
-  gitlabCommitOrg?: string | null;
   gitlabCommitRef?: string;
-  gitlabCommitRepo?: string | null;
-  gitlabCommitRepoId?: number;
   gitlabCommitSha?: string;
   gitlabDeployment?: string;
-  gitlabOrg?: string;
-  gitlabRepo?: string;
-  gitlabRepoId?: number;
-  gitlabCommitAuthorLogin?: string;
+  gitlabProjectPath?: string;
 }
 
 export interface BitbucketMeta {
   bitbucketCommitAuthorName?: string;
   bitbucketCommitMessage?: string;
-  bitbucketCommitOrg?: string | null;
   bitbucketCommitRef?: string;
-  bitbucketCommitRepo?: string | null;
-  bitbucketCommitRepoId?: number;
   bitbucketCommitSha?: string;
   bitbucketDeployment?: string;
-  bitbucketOrg?: string;
-  bitbucketRepo?: string;
-  bitbucketRepoId?: number;
-  bitbucketCommitAuthorLogin?: string;
+  bitbucketRepoOwner?: string;
+  bitbucketRepoSlug?: string;
 }
 
 export type GitMeta = GitHubMeta | GitLabMeta | BitbucketMeta;

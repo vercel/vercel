@@ -107,13 +107,10 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
       const data = (await createGitMeta(directory)) as GitLabMeta;
       expect(data.gitlabDeployment).toEqual('1');
-      expect(data.gitlabOrg).toEqual('user');
-      expect(data.gitlabRepo).toEqual('repo');
+      expect(data.gitlabProjectPath).toEqual('user/repo');
       expect(data.gitlabCommitAuthorName).toEqual('Matthew Stanciu');
       expect(data.gitlabCommitMessage).toEqual('hi');
-      expect(data.gitlabCommitOrg).toEqual('user');
       expect(data.gitlabCommitRef).toEqual('master');
-      expect(data.gitlabCommitRepo).toEqual('repo');
       expect(data.gitlabCommitSha).toEqual(
         '328fa04e4363b462ad96a7180d67d2785bace650'
       );
@@ -127,13 +124,11 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
       const data = (await createGitMeta(directory)) as BitbucketMeta;
       expect(data.bitbucketDeployment).toEqual('1');
-      expect(data.bitbucketOrg).toEqual('user');
-      expect(data.bitbucketRepo).toEqual('repo');
+      expect(data.bitbucketRepoOwner).toEqual('user');
+      expect(data.bitbucketRepoSlug).toEqual('repo');
       expect(data.bitbucketCommitAuthorName).toEqual('Matthew Stanciu');
       expect(data.bitbucketCommitMessage).toEqual('hi');
-      expect(data.bitbucketCommitOrg).toEqual('user');
       expect(data.bitbucketCommitRef).toEqual('master');
-      expect(data.bitbucketCommitRepo).toEqual('repo');
       expect(data.bitbucketCommitSha).toEqual(
         '3d883ccee5de4222ef5f40bde283a57b533b1256'
       );

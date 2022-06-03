@@ -65,10 +65,6 @@ export function parseRepoUrl(originUrl: string): RepoData | null {
 }
 
 export async function createGitMeta(directory: string): Promise<GitMeta> {
-  let githubData: GitHubMeta = {};
-  let gitlabData: GitLabMeta = {};
-  let bitbucketData: BitbucketMeta = {};
-
   const repoData = await getRepoData(join(directory, '.git/config'));
   // If we can't get the repo URL, then don't return any metadata
   if (!repoData) {
@@ -77,31 +73,24 @@ export async function createGitMeta(directory: string): Promise<GitMeta> {
   const commit = await getLastCommit(directory);
 
   if (repoData.provider === 'github') {
-    githubData = populateGitHubData(githubData, repoData, commit);
+    return populateGitHubData(repoData, commit);
   } else if (repoData.provider === 'gitlab') {
-    gitlabData = populateGitLabData(gitlabData, repoData, commit);
+    return populateGitLabData(repoData, commit);
   } else if (repoData.provider === 'bitbucket') {
-    bitbucketData = populateBitbucketData(bitbucketData, repoData, commit);
+    return populateBitbucketData(repoData, commit);
   }
 
-  if (Object.keys(githubData).length !== 0) {
-    return githubData;
-  } else if (Object.keys(gitlabData).length !== 0) {
-    return gitlabData;
-  } else if (Object.keys(bitbucketData).length !== 0) {
-    return bitbucketData;
-  } else {
-    return {};
-  }
+  return {};
 }
 
 // Populate data for every provider
 
 function populateGitHubData(
-  data: GitHubMeta,
   repoData: RepoData,
   commit: git.Commit
 ): GitHubMeta {
+  const data: GitHubMeta = {};
+
   data.githubOrg = repoData.org;
   data.githubCommitOrg = repoData.org;
   data.githubRepo = repoData.repo;
@@ -124,24 +113,18 @@ function populateGitHubData(
 }
 
 function populateGitLabData(
-  data: GitLabMeta,
   repoData: RepoData,
   commit: git.Commit
 ): GitLabMeta {
-  data.gitlabOrg = repoData.org;
-  data.gitlabCommitOrg = repoData.org;
-  data.gitlabRepo = repoData.repo;
-  data.gitlabCommitRepo = repoData.repo;
+  const data: GitLabMeta = {};
+
+  if (repoData.org && repoData.repo) {
+    data.gitlabProjectPath = `${repoData.org}/${repoData.repo}`;
+  }
 
   data.gitlabCommitAuthorName = commit.author.name;
   data.gitlabCommitMessage = commit.subject;
-  if (data.gitlabOrg) {
-    data.gitlabCommitOrg = data.gitlabOrg;
-  }
   data.gitlabCommitRef = commit.branch;
-  if (data.gitlabRepo) {
-    data.gitlabCommitRepo = data.gitlabRepo;
-  }
   data.gitlabCommitSha = commit.hash;
   data.gitlabDeployment = '1';
 
@@ -149,24 +132,16 @@ function populateGitLabData(
 }
 
 function populateBitbucketData(
-  data: BitbucketMeta,
   repoData: RepoData,
   commit: git.Commit
 ): BitbucketMeta {
-  data.bitbucketOrg = repoData.org;
-  data.bitbucketCommitOrg = repoData.org;
-  data.bitbucketRepo = repoData.repo;
-  data.bitbucketCommitRepo = repoData.repo;
+  const data: BitbucketMeta = {};
 
+  data.bitbucketRepoOwner = repoData.org;
+  data.bitbucketRepoSlug = repoData.repo;
   data.bitbucketCommitAuthorName = commit.author.name;
   data.bitbucketCommitMessage = commit.subject;
-  if (data.bitbucketOrg) {
-    data.bitbucketCommitOrg = data.bitbucketOrg;
-  }
   data.bitbucketCommitRef = commit.branch;
-  if (data.bitbucketRepo) {
-    data.bitbucketCommitRepo = data.bitbucketRepo;
-  }
   data.bitbucketCommitSha = commit.hash;
   data.bitbucketDeployment = '1';
 
