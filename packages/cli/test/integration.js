@@ -3964,10 +3964,6 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   );
   vc.stdin.write('a\n');
   await waitForPrompt(vc, chunk =>
-    chunk.includes("What's your Install Command?")
-  );
-  vc.stdin.write('echo "INSTALL COMMAND"\n');
-  await waitForPrompt(vc, chunk =>
     chunk.includes("What's your Development Command?")
   );
   vc.stdin.write('echo "DEV COMMAND"\n');
@@ -3975,6 +3971,10 @@ test('vercel.json configuration overrides in a new project prompt user and merge
     chunk.includes("What's your Ignore Command?")
   );
   vc.stdin.write('echo "0"\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes("What's your Install Command?")
+  );
+  vc.stdin.write('echo "INSTALL COMMAND"\n');
   // the crux of this test is to make sure that the outputDirectory is properly set by the prompts.
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
   await waitForPrompt(vc, chunk =>
