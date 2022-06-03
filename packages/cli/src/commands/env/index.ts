@@ -46,8 +46,8 @@ const help = () => {
     '–'
   )} Pull all Development Environment Variables down from the cloud
 
-      ${chalk.cyan(`$ ${getPkgName()} env env pull`)}
-      ${chalk.cyan(`$ ${getPkgName()} env env pull .env.development.local`)}
+      ${chalk.cyan(`$ ${getPkgName()} env pull`)}
+      ${chalk.cyan(`$ ${getPkgName()} env pull .env.development.local`)}
 
   ${chalk.gray('–')} Add a new variable to multiple Environments
 
