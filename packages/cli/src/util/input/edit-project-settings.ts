@@ -7,14 +7,6 @@ import { isSettingValue } from '../is-setting-value';
 import { ProjectSettings } from '../../types';
 import { VercelConfig } from '../dev/types';
 
-const settingKeys = [
-  'buildCommand',
-  'installCommand',
-  'devCommand',
-  'ignoreCommand',
-  'outputDirectory',
-  'framework',
-] as const;
 const settingMap = {
   buildCommand: 'Build Command',
   devCommand: 'Development Command',
@@ -23,8 +15,9 @@ const settingMap = {
   outputDirectory: 'Output Directory',
   framework: 'Framework',
 } as const;
+type ConfigKeys = keyof typeof settingMap;
+const settingKeys = Object.keys(settingMap) as unknown as readonly [ConfigKeys];
 
-type ConfigKeys = typeof settingKeys[number];
 type ProjectSettingKeys =
   | Exclude<ConfigKeys, 'ignoreCommand'>
   | 'commandForIgnoringBuildStep';
@@ -39,7 +32,7 @@ type LocalConfiguration = Pick<
 /** A quick transform for 'ignoreCommand' to 'commandForIgnoringBuildStep' as they are the only key
  * that differs between the top level vercel.json configuration settings and the api `projectSettings` object.
  */
-const normalizeSettingName = (setting: typeof settingKeys[number]) =>
+const normalizeSettingName = (setting: ConfigKeys) =>
   setting === 'ignoreCommand' ? 'commandForIgnoringBuildStep' : setting;
 
 export default async function editProjectSettings(
