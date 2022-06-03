@@ -412,7 +412,7 @@ export default async (client: Client) => {
   // build `meta`
   const meta = Object.assign(
     {},
-    await createGitMeta(path),
+    await createGitMeta(path, output),
     parseMeta(localConfig.meta),
     parseMeta(argv['--meta'])
   );

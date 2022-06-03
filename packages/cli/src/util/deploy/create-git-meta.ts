@@ -9,12 +9,13 @@ import {
   GitMeta,
   RepoData,
 } from '../../types';
+import { Output } from '../output';
 
 function getLastCommit(directory: string): Promise<git.Commit> {
   return new Promise((resolve, reject) => {
     git.getLastCommit(
       (err, commit) => {
-        if (err) reject(err);
+        if (err) return reject(err);
         resolve(commit);
       },
       { dst: directory }
@@ -22,11 +23,13 @@ function getLastCommit(directory: string): Promise<git.Commit> {
   });
 }
 
-export async function getRepoData(configPath: string) {
+export async function getRepoData(configPath: string, output: Output) {
   let gitConfig;
   try {
     gitConfig = ini.parse(await fs.readFile(configPath, 'utf-8'));
-  } catch (error) {}
+  } catch (error) {
+    output.debug(`Error while parsing repo data: ${error.message}`);
+  }
   if (!gitConfig) {
     return;
   }
@@ -64,8 +67,11 @@ export function parseRepoUrl(originUrl: string): RepoData | null {
   };
 }
 
-export async function createGitMeta(directory: string): Promise<GitMeta> {
-  const repoData = await getRepoData(join(directory, '.git/config'));
+export async function createGitMeta(
+  directory: string,
+  output: Output
+): Promise<GitMeta> {
+  const repoData = await getRepoData(join(directory, '.git/config'), output);
   // If we can't get the repo URL, then don't return any metadata
   if (!repoData) {
     return {};

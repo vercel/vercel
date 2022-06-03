@@ -1,45 +1,59 @@
 import { join } from 'path';
 import fs from 'fs-extra';
+import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
   getRepoData,
   parseRepoUrl,
 } from '../../../../src/util/deploy/create-git-meta';
-import { BitbucketMeta, GitHubMeta, GitLabMeta } from '../../../../src/types';
+import { client } from '../../../mocks/client';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
 
 describe('getRepoData', () => {
   it('gets repo data for no-email', async () => {
-    const configPath = join(fixture('no-email'), 'config');
-    const data = await getRepoData(configPath);
+    const configPath = join(fixture('no-email'), 'git/config');
+    const data = await getRepoData(configPath, client.output);
     expect(data?.provider).toEqual('github');
     expect(data?.org).toEqual('MatthewStanciu');
     expect(data?.repo).toEqual('git-test');
   });
   it('gets repo data for no-origin', async () => {
-    const configPath = join(fixture('no-origin'), 'config');
-    const data = await getRepoData(configPath);
+    const configPath = join(fixture('no-origin'), 'git/config');
+    const data = await getRepoData(configPath, client.output);
     expect(data).toBeUndefined();
+  });
+  it('displays debug message when repo data cannot be parsed', async () => {
+    const dir = await getWriteableDirectory();
+    client.output.debugEnabled = true;
+    const data = await getRepoData(join(dir, 'git/config'), client.output);
+    expect(data).toBeUndefined();
+    expect(
+      client.outputBuffer.includes('Error while parsing repo data'),
+      'Debug message was not found'
+    ).toBeTruthy();
   });
 });
 
 describe('parseRepoUrl', () => {
   it('should parse github https url', () => {
     const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel.git');
+    expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
     expect(parsedUrl?.provider).toEqual('github');
     expect(parsedUrl?.org).toEqual('vercel');
     expect(parsedUrl?.repo).toEqual('vercel');
   });
   it('should parse github git url', () => {
     const parsedUrl = parseRepoUrl('git://github.com/vercel/vercel.git');
+    expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
     expect(parsedUrl?.provider).toEqual('github');
     expect(parsedUrl?.org).toEqual('vercel');
     expect(parsedUrl?.repo).toEqual('vercel');
   });
   it('should parse github ssh url', () => {
     const parsedUrl = parseRepoUrl('git@github.com:vercel/vercel.git');
+    expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
     expect(parsedUrl?.provider).toEqual('github');
     expect(parsedUrl?.org).toEqual('vercel');
     expect(parsedUrl?.repo).toEqual('vercel');
@@ -49,6 +63,7 @@ describe('parseRepoUrl', () => {
     const parsedUrl = parseRepoUrl(
       'https://gitlab.com/gitlab-examples/knative-kotlin-app.git'
     );
+    expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
     expect(parsedUrl?.provider).toEqual('gitlab');
     expect(parsedUrl?.org).toEqual('gitlab-examples');
     expect(parsedUrl?.repo).toEqual('knative-kotlin-app');
@@ -57,6 +72,7 @@ describe('parseRepoUrl', () => {
     const parsedUrl = parseRepoUrl(
       'git@gitlab.com:gitlab-examples/knative-kotlin-app.git'
     );
+    expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
     expect(parsedUrl?.provider).toEqual('gitlab');
     expect(parsedUrl?.org).toEqual('gitlab-examples');
     expect(parsedUrl?.repo).toEqual('knative-kotlin-app');
@@ -66,6 +82,7 @@ describe('parseRepoUrl', () => {
     const parsedUrl = parseRepoUrl(
       'https://bitbucket.org/atlassianlabs/maven-project-example.git'
     );
+    expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
     expect(parsedUrl?.provider).toEqual('bitbucket');
     expect(parsedUrl?.org).toEqual('atlassianlabs');
     expect(parsedUrl?.repo).toEqual('maven-project-example');
@@ -74,6 +91,7 @@ describe('parseRepoUrl', () => {
     const parsedUrl = parseRepoUrl(
       'git@bitbucket.org:atlassianlabs/maven-project-example.git'
     );
+    expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
     expect(parsedUrl?.provider).toEqual('bitbucket');
     expect(parsedUrl?.org).toEqual('atlassianlabs');
     expect(parsedUrl?.repo).toEqual('maven-project-example');
@@ -85,7 +103,10 @@ describe('createGitMeta', () => {
     const directory = fixture('test-github');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = (await createGitMeta(directory)) as GitHubMeta;
+      const data = await createGitMeta(directory, client.output);
+      if (!('githubCommitMessage' in data)) {
+        throw new Error('Not GitHub meta');
+      }
       expect(data.githubDeployment).toEqual('1');
       expect(data.githubOrg).toEqual('user');
       expect(data.githubRepo).toEqual('repo');
@@ -105,7 +126,10 @@ describe('createGitMeta', () => {
     const directory = fixture('test-gitlab');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = (await createGitMeta(directory)) as GitLabMeta;
+      const data = await createGitMeta(directory, client.output);
+      if (!('gitlabCommitMessage' in data)) {
+        throw new Error('Not Gitlab meta');
+      }
       expect(data.gitlabDeployment).toEqual('1');
       expect(data.gitlabProjectPath).toEqual('user/repo');
       expect(data.gitlabCommitAuthorName).toEqual('Matthew Stanciu');
@@ -122,7 +146,10 @@ describe('createGitMeta', () => {
     const directory = fixture('test-bitbucket');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = (await createGitMeta(directory)) as BitbucketMeta;
+      const data = await createGitMeta(directory, client.output);
+      if (!('bitbucketCommitMessage' in data)) {
+        throw new Error('Not Bitbucket meta');
+      }
       expect(data.bitbucketDeployment).toEqual('1');
       expect(data.bitbucketRepoOwner).toEqual('user');
       expect(data.bitbucketRepoSlug).toEqual('repo');
@@ -136,12 +163,4 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-
-  /*
-   * 1. Git config is empty or doesn't exist
-   * 2. Git config doesn't contain email
-   * 3. Git config doesn't contain origin url
-   * 4. Last commit doesn't exist; getLastCommit() throws an error
-   * 5. Last commit fetches correctly and git config contains email and origin url
-   */
 });
