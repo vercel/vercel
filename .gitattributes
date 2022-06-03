@@ -11,4 +11,4 @@ go.mod text eol=lf
 
 # Mark certain files as "binary" -- not diffable
 **/test/fixtures/**/git/**/* binary
-
+**/test/fixtures/**/git/**/* linguist-generated
