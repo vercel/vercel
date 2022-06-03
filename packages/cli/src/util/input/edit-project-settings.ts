@@ -16,7 +16,9 @@ const settingMap = {
   framework: 'Framework',
 } as const;
 type ConfigKeys = keyof typeof settingMap;
-const settingKeys = Object.keys(settingMap) as unknown as readonly [ConfigKeys];
+const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
+  ConfigKeys
+];
 
 type ProjectSettingKeys =
   | Exclude<ConfigKeys, 'ignoreCommand'>

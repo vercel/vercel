@@ -42,10 +42,10 @@ describe('editProjectSettings', () => {
         /Build Command/
       );
       expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Install Command/
+        /Development Command/
       );
       expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Development Command/
+        /Install Command/
       );
       expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
         /Output Directory/
@@ -78,10 +78,10 @@ describe('editProjectSettings', () => {
         /Build Command/
       );
       expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Install Command/
+        /Development Command/
       );
       expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Development Command/
+        /Install Command/
       );
       expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
         /Output Directory/
@@ -113,10 +113,10 @@ describe('editProjectSettings', () => {
         /Build Command/
       );
       expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Install Command/
+        /Development Command/
       );
       expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Development Command/
+        /Install Command/
       );
       expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
         /Output Directory/
@@ -160,19 +160,19 @@ describe('editProjectSettings', () => {
         /Build Command:/
       );
       expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Install Command:/
+        /Development Command:/
       );
       expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Development Command:/
+        /Framework:/
       );
       expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
         /Ignore Command:/
       );
       expect((output.print as jest.Mock).mock.calls[5][0]).toMatch(
-        /Output Directory:/
+        /Install Command:/
       );
       expect((output.print as jest.Mock).mock.calls[6][0]).toMatch(
-        /Framework:/
+        /Output Directory:/
       );
       expect((output.print as jest.Mock).mock.calls[7][0]).toMatch(
         /Merging default project settings for framework Svelte. Previously listed overrides are prioritized./
@@ -213,19 +213,19 @@ describe('editProjectSettings', () => {
         /Build Command:/
       );
       expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Install Command:/
+        /Development Command:/
       );
       expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Development Command:/
+        /Framework:/
       );
       expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
         /Ignore Command:/
       );
       expect((output.print as jest.Mock).mock.calls[5][0]).toMatch(
-        /Output Directory:/
+        /Install Command:/
       );
       expect((output.print as jest.Mock).mock.calls[6][0]).toMatch(
-        /Framework:/
+        /Output Directory:/
       );
       expect((output.print as jest.Mock).mock.calls[7][0]).toMatch(
         /Merging default project settings for framework Svelte. Previously listed overrides are prioritized./
@@ -265,19 +265,19 @@ describe('editProjectSettings', () => {
         /Build Command:/
       );
       expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Install Command:/
+        /Development Command:/
       );
       expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Development Command:/
+        /Framework:/
       );
       expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
         /Ignore Command:/
       );
       expect((output.print as jest.Mock).mock.calls[5][0]).toMatch(
-        /Output Directory:/
+        /Install Command:/
       );
       expect((output.print as jest.Mock).mock.calls[6][0]).toMatch(
-        /Framework:/
+        /Output Directory:/
       );
       expect((output.print as jest.Mock).mock.calls[7][0]).toMatch(
         /Merging default project settings for framework Svelte. Previously listed overrides are prioritized./

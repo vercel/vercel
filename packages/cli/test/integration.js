@@ -4018,14 +4018,14 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // Deployment should succeed and page should display "0"
 
   await mkdir(path.join(directory, 'public'));
-  await writeFile(path.join(directory, 'public/index.txt'), '0\n');
+  await writeFile(path.join(directory, 'public/index.txt'), '0');
 
   // auto-confirm this deployment
   let deployment = await deploy(true);
 
   let page = await fetch(deployment.stdout);
   let text = await page.text();
-  t.is(text, '0\n');
+  t.is(text, '0');
 
   // Step 2. Now that the project exists, override the buildCommand and outputDirectory.
   // The CLI should not prompt the user about the overrides.
@@ -4050,35 +4050,35 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // // Step 3. Do a more complex deployment using a framework this time
 
   // // Test Next.js Framework deployment
-  // await mkdir(`${directory}/pages`);
-  // await writeFile(
-  //   `${directory}/pages/index.js`,
-  //   `export default () => '2\n'`
-  // );
-  // await writeFile(
-  //   vercelJsonPath,
-  //   JSON.stringify({
-  //     framework: 'nextjs',
-  //   })
-  // );
-  // await writeFile(
-  //   `${directory}/package.json`,
-  //   JSON.stringify({
-  //     scripts: {
-  //       dev: 'next',
-  //       start: 'next start',
-  //       build: 'next build',
-  //     },
-  //     dependencies: {
-  //       next: 'latest',
-  //       react: 'latest',
-  //       'react-dom': 'latest',
-  //     },
-  //   })
-  // );
+  await mkdir(`${directory}/pages`);
+  await writeFile(
+    `${directory}/pages/index.js`,
+    `export default () => 'Next.js Test'`
+  );
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      framework: 'nextjs',
+    })
+  );
+  await writeFile(
+    `${directory}/package.json`,
+    JSON.stringify({
+      scripts: {
+        dev: 'next',
+        start: 'next start',
+        build: 'next build',
+      },
+      dependencies: {
+        next: 'latest',
+        react: 'latest',
+        'react-dom': 'latest',
+      },
+    })
+  );
 
-  // deployment = await deploy();
-  // page = await fetch(deployment.stdout);
-  // text = await page.text();
-  // t.is(text, '2\n');
+  deployment = await deploy();
+  page = await fetch(deployment.stdout);
+  text = await page.text();
+  t.regex(text, /Next\.js Test/);
 });
