@@ -4046,10 +4046,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   text = await page.text();
   t.is(text, '1\n');
 
-  // This isn't working for some reason.
   // // Step 3. Do a more complex deployment using a framework this time
-
-  // // Test Next.js Framework deployment
   await mkdir(`${directory}/pages`);
   await writeFile(
     `${directory}/pages/index.js`,
