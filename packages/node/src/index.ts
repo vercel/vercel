@@ -187,7 +187,10 @@ async function compile(
         if (cached === null) return null;
         try {
           let source: string | Buffer = readFileSync(fsPath);
-          if (fsPath.endsWith('.ts') || fsPath.endsWith('.tsx')) {
+          if (
+            (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
+            fsPath.endsWith('.tsx')
+          ) {
             source = compileTypeScript(fsPath, source.toString());
           }
           const { mode } = lstatSync(fsPath);

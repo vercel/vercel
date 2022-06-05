@@ -32,6 +32,9 @@ const testsThatFailToBuild = new Map([
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
+  if (fixture != '05-ts-declaration-asset') {
+    continue;
+  }
   const errMsg = testsThatFailToBuild.get(fixture);
   if (errMsg) {
     // eslint-disable-next-line no-loop-func
