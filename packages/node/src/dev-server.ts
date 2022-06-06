@@ -74,6 +74,7 @@ import { Readable } from 'stream';
 import type { Bridge } from '@vercel/node-bridge/bridge';
 import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
+import { streamToBuffer } from '@vercel/build-utils';
 
 import exitHook from 'exit-hook';
 
@@ -126,43 +127,56 @@ async function createServerlessEventHandler(
   };
 }
 
-function serializeRequest(message: IncomingMessage) {
+async function serializeRequest(message: IncomingMessage) {
+  const bodyBuffer = await streamToBuffer(message);
+  const body = bodyBuffer.toString('base64');
   return JSON.stringify({
     url: message.url,
     method: message.method,
     headers: message.headers,
+    body,
   });
 }
 
 async function createEdgeEventHandler(
   entrypoint: string
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const buildResult = await ncc(entrypoint, {
-    watch: false,
-  });
+  const buildResult = await ncc(entrypoint);
   const edgeFunctionDefinition = buildResult.code;
-
-  // console.log('edgeFunctionDefinition: ', edgeFunctionDefinition);
 
   const initialCode = `
     ${edgeFunctionDefinition};
 
     addEventListener('fetch', async (event) => {
-      let request = JSON.parse(await event.request.text());
+      let serializedRequest = await event.request.text();
+      let requestDetails = JSON.parse(serializedRequest);
+
+      let body;
+
+      if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
+        body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
+      }
+
+      let requestUrl = requestDetails.headers['x-forwarded-proto'] + '://' + requestDetails.headers['x-forwarded-host'] + requestDetails.url;
+
+      let request = new Request(requestUrl, {
+        headers: requestDetails.headers,
+        method: requestDetails.method,
+        body: body
+      });
+
       event.request = request;
 
       let edgeHandler = module.exports.default;
       let response = edgeHandler(event.request, event);
       return event.respondWith(response);
-
-      // return event.respondWith(new Response(await event.request.text()));
     })`;
 
   const edgeRuntime = new EdgeRuntime({
     initialCode,
     extend: (context: Primitives) => {
       Object.assign(context, {
-        __dirname: '', // TODO: should this be set to something else?
+        __dirname: '',
         module: {
           exports: {},
         },
@@ -174,11 +188,9 @@ async function createEdgeEventHandler(
   exitHook(server.close);
 
   return async function (request: IncomingMessage) {
-    console.log(serializeRequest(request));
-
     const response = await fetch(`${server.url}`, {
       method: 'post',
-      body: serializeRequest(request),
+      body: await serializeRequest(request),
     });
 
     return {
@@ -190,11 +202,12 @@ async function createEdgeEventHandler(
   };
 }
 
+const validRuntimes = ['experimental-edge'];
 function parseRuntime(entrypoint: string): string | undefined {
   const project = new Project();
   const staticConfig = getConfig(project, entrypoint);
-  const runtime = staticConfig?.runtime as string; // TODO: remove `as` after https://github.com/vercel/vercel/pull/7922
-  if (runtime && runtime !== 'experimental-edge') {
+  const runtime = staticConfig?.runtime;
+  if (runtime && !validRuntimes.includes(runtime)) {
     throw new Error(`Invalid function runtime for "${entrypoint}": ${runtime}`);
   }
 
@@ -206,7 +219,7 @@ async function createEventHandler(
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const runtime = parseRuntime(entrypoint);
-  if (runtime) {
+  if (runtime === 'experimental-edge') {
     return createEdgeEventHandler(entrypoint);
   }
 

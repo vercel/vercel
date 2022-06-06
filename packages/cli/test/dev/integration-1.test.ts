@@ -14,6 +14,38 @@ const {
   validateResponseHeaders,
 } = require('./utils.js');
 
+test('[vercel dev] should support edge functions', async () => {
+  const dir = fixture('edge-function');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const body = { hello: 'world' };
+
+    let res = await fetch(`http://localhost:${port}/api/edge-function`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    validateResponseHeaders(res);
+
+    // support for edge functions has to manually ensure that these properties
+    // are set up; so, we test that they are all passed through properly
+    expect(await res.json()).toMatchObject({
+      headerContentType: 'application/json',
+      url: `http://localhost:${port}/api/edge-function`,
+      method: 'POST',
+      body: '{"hello":"world"}',
+      decamelized: 'some_camel_case_thing',
+    });
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
 test('[vercel dev] should support request body', async () => {
   const dir = fixture('node-request-body');
   const { dev, port, readyResolver } = await testFixture(dir);
