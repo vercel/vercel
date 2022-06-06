@@ -44,6 +44,13 @@ describe('parseRepoUrl', () => {
     expect(parsedUrl?.org).toEqual('vercel');
     expect(parsedUrl?.repo).toEqual('vercel');
   });
+  it('should parse github https url without the .git suffix', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel');
+    expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
   it('should parse github git url', () => {
     const parsedUrl = parseRepoUrl('git://github.com/vercel/vercel.git');
     expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
