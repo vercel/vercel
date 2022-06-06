@@ -41,6 +41,13 @@ describe('parseRepoUrl', () => {
     const parsedUrl = parseRepoUrl('https://examplecom/foo');
     expect(parsedUrl, 'parsedRepoUrl()').toBeNull();
   });
+  it('should parse url with a period in the repo name', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/next.js');
+    expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('next.js');
+  });
   it('should parse github https url', () => {
     const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel.git');
     expect(parsedUrl, 'parseRepoUrl()').toBeDefined();
