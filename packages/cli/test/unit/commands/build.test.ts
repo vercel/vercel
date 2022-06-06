@@ -17,7 +17,8 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
-      expect(await build(client)).toEqual(0);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
 
       // `builds.json` says that "@vercel/static" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
@@ -47,7 +48,8 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
-      expect(await build(client)).toEqual(0);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
 
       // `builds.json` says that "@vercel/node" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
@@ -100,6 +102,70 @@ describe('build', () => {
         'mjs.func',
         'typescript.func',
       ]);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should build with 3rd party Builder', async () => {
+    const cwd = fixture('third-party-builder');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/node" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: 'txt-builder',
+            apiVersion: 3,
+            use: 'txt-builder@0.0.0',
+            src: 'api/foo.txt',
+            config: {
+              zeroConfig: true,
+              functions: {
+                'api/*.txt': {
+                  runtime: 'txt-builder@0.0.0',
+                },
+              },
+            },
+          },
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            use: '@vercel/static',
+            src: '!{api/**,package.json}',
+            config: {
+              zeroConfig: true,
+            },
+          },
+        ],
+      });
+
+      // "static" directory is empty
+      const hasStaticFiles = await fs.pathExists(join(output, 'static'));
+      expect(
+        hasStaticFiles,
+        'Expected ".vercel/output/static" to not exist'
+      ).toEqual(false);
+
+      // "functions/api" directory has output Functions
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      expect(functions.sort()).toEqual(['foo.func']);
+
+      const vcConfig = await fs.readJSON(
+        join(output, 'functions/api/foo.func/.vc-config.json')
+      );
+      expect(vcConfig).toMatchObject({
+        handler: 'api/foo.txt',
+        runtime: 'provided',
+        environment: {},
+      });
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
