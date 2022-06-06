@@ -13,7 +13,7 @@ import { validate } from './validation';
 export const BaseFunctionConfigSchema = {
   type: 'object',
   properties: {
-    use: { type: 'string' },
+    runtime: { type: 'string' },
     memory: { type: 'number' },
     maxDuration: { type: 'number' },
     regions: {
