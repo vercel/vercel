@@ -313,7 +313,7 @@ export default async function main(client: Client): Promise<number> {
   // TODO: parallelize builds
   const buildResults: Map<Builder, BuildResult> = new Map();
   const overrides: PathOverride[] = [];
-  const repoRootPath = cwd === workPath ? undefined : cwd;
+  const repoRootPath = cwd;
   const rootPackageJsonPath = repoRootPath || workPath;
   const corepackShimDir = await initCorepack({ cwd, rootPackageJsonPath });
 

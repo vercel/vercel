@@ -142,6 +142,7 @@ export async function executeBuild(
     files,
     entrypoint,
     workPath,
+    repoRootPath: workPath,
     config,
     meta: {
       isDev: true,
