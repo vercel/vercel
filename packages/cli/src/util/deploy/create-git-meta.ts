@@ -23,7 +23,10 @@ function getLastCommit(directory: string): Promise<git.Commit> {
   });
 }
 
-export async function getRepoData(configPath: string, output: Output) {
+export async function getRepoData(
+  configPath: string,
+  output: Output
+): Promise<RepoData | null> {
   let gitConfig;
   try {
     gitConfig = ini.parse(await fs.readFile(configPath, 'utf-8'));
@@ -31,13 +34,14 @@ export async function getRepoData(configPath: string, output: Output) {
     output.debug(`Error while parsing repo data: ${error.message}`);
   }
   if (!gitConfig) {
-    return;
+    return null;
   }
 
   const originUrl = gitConfig['remote "origin"']?.url;
   if (originUrl) {
     return parseRepoUrl(originUrl);
   }
+  return null;
 }
 
 export function parseRepoUrl(originUrl: string): RepoData | null {

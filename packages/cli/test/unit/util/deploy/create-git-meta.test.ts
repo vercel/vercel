@@ -22,13 +22,13 @@ describe('getRepoData', () => {
   it('gets repo data for no-origin', async () => {
     const configPath = join(fixture('no-origin'), 'git/config');
     const data = await getRepoData(configPath, client.output);
-    expect(data).toBeUndefined();
+    expect(data).toBeNull();
   });
   it('displays debug message when repo data cannot be parsed', async () => {
     const dir = await getWriteableDirectory();
     client.output.debugEnabled = true;
     const data = await getRepoData(join(dir, 'git/config'), client.output);
-    expect(data).toBeUndefined();
+    expect(data).toBeNull();
     expect(
       client.outputBuffer.includes('Error while parsing repo data'),
       'Debug message was not found'
