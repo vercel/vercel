@@ -2142,10 +2142,12 @@ export async function getMiddlewareBundle({
   entryPath,
   outputDirectory,
   routesManifest,
+  isCorrectMiddlewareOrder,
 }: {
   entryPath: string;
   outputDirectory: string;
   routesManifest: RoutesManifest;
+  isCorrectMiddlewareOrder: boolean;
 }) {
   const middlewareManifest = await getMiddlewareManifest(
     entryPath,
@@ -2247,12 +2249,15 @@ export async function getMiddlewareBundle({
       const edgeFile = worker.edgeFunction.name;
       worker.edgeFunction.name = edgeFile.replace(/^pages\//, '');
       source.edgeFunctions[edgeFile] = worker.edgeFunction;
-      const route = {
+      const route: Source = {
         continue: true,
-        override: true,
         middlewarePath: edgeFile,
         src: worker.routeSrc,
       };
+
+      if (isCorrectMiddlewareOrder) {
+        route.override = true;
+      }
 
       if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
         source.dynamicRouteMap.set(worker.page, route);
