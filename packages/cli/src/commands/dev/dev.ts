@@ -106,10 +106,11 @@ export default async function dev(
     devCommand = process.env.VERCEL_DEV_COMMAND;
   }
 
+  // If there is no Development Command, we must delete the
+  // v3 Build Output because it will incorrectly be detected by
+  // @vercel/static-build in BuildOutputV3.getBuildOutputDirectory()
   if (!devCommand) {
-    // If there is no Development Command, we must delete the
-    // v3 Build Output because it will incorrectly be detected by
-    // `@vercel/static-build` when it executes BuildOutputV3.getBuildOutputDirectory()
+    output.log(`Removing ${OUTPUT_DIR}`);
     await fs.remove(OUTPUT_DIR);
   }
 
