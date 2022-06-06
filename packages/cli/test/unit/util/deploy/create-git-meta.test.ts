@@ -39,7 +39,7 @@ describe('getRepoData', () => {
 describe('parseRepoUrl', () => {
   it('should be null when a url does not match the regex', () => {
     const parsedUrl = parseRepoUrl('https://examplecom/foo');
-    expect(parsedUrl, 'parsedRepoUrl()').toBeNull();
+    expect(parsedUrl, 'parseRepoUrl()').toBeNull();
   });
   it('should be null when a url does not contain org and repo data', () => {
     const parsedUrl = parseRepoUrl('https://github.com/borked');
