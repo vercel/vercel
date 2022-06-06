@@ -37,6 +37,10 @@ describe('getRepoData', () => {
 });
 
 describe('parseRepoUrl', () => {
+  it('should not parse a url that does not match the regex', () => {
+    const parsedUrl = parseRepoUrl('https://examplecom/foo');
+    expect(parsedUrl, 'parsedRepoUrl()').toBeNull();
+  });
   it('should parse github https url', () => {
     const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel.git');
     expect(parsedUrl, 'parseRepoUrl()').toBeDefined();

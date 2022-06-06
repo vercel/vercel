@@ -47,7 +47,7 @@ export async function getRepoData(
 export function parseRepoUrl(originUrl: string): RepoData | null {
   const isSSH = originUrl.startsWith('git@');
   // Matches all characters between (// or @) and (.com or .org)
-  const provider = originUrl.match(/(?<=(\/\/|@)).*(?=(.com|.org))/);
+  const provider = originUrl.match(/(?<=(\/\/|@)).*(?=(\.com|\.org))/);
   if (!provider) {
     return null;
   }
