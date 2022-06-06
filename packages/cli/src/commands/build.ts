@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { join, relative } from 'path';
 import {
   detectBuilders,
+  normalizePath,
   Files,
   FileFsRef,
   PackageJson,
@@ -176,17 +177,10 @@ export default async function main(client: Client): Promise<number> {
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
 
-  const isWin = process.platform === 'win32';
-
   // Get a list of source files
-  const files = (await getFiles(workPath, client)).map(f => {
-    let rel = relative(workPath, f);
-    if (isWin) {
-      // On Windows, normalize forward slashes to backslashes
-      rel = rel.replace(/\\/g, '/');
-    }
-    return rel;
-  });
+  const files = (await getFiles(workPath, client)).map(f =>
+    normalizePath(relative(workPath, f))
+  );
 
   const routesResult = getTransformedRoutes({ nowConfig: vercelConfig || {} });
   if (routesResult.error) {
