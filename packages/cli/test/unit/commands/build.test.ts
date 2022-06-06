@@ -49,7 +49,7 @@ describe('build', () => {
       process.chdir(cwd);
       expect(await build(client)).toEqual(0);
 
-      // `builds.json` says that "@vercel/static" was run
+      // `builds.json` says that "@vercel/node" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds).toMatchObject({
         target: 'preview',
@@ -85,9 +85,21 @@ describe('build', () => {
         ],
       });
 
-      // "static" directory contains static files
-      //const files = await fs.readdir(join(output, 'static'));
-      //expect(files.sort()).toEqual(['index.html']);
+      // "static" directory is empty
+      const hasStaticFiles = await fs.pathExists(join(output, 'static'));
+      expect(
+        hasStaticFiles,
+        'Expected ".vercel/output/static" to not exist'
+      ).toEqual(false);
+
+      // "functions/api" directory has output Functions
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      expect(functions.sort()).toEqual([
+        'es6.func',
+        'index.func',
+        'mjs.func',
+        'typescript.func',
+      ]);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
