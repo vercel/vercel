@@ -73,6 +73,7 @@ import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { Readable } from 'stream';
 import type { Bridge } from '@vercel/node-bridge/bridge';
 import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
+import { VercelProxyResponse } from '@vercel/node-bridge/types';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -82,7 +83,42 @@ function listen(server: Server, port: number, host: string): Promise<void> {
   });
 }
 
-let bridge: Bridge | undefined = undefined;
+async function getLauncher(
+  entrypoint: string,
+  options: { shouldAddHelpers: boolean }
+): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+  const launcher = getVercelLauncher({
+    entrypointPath: entrypoint,
+    helpersPath: './helpers.js',
+    shouldAddHelpers: options.shouldAddHelpers,
+    useRequire,
+
+    // not used
+    bridgePath: '',
+    sourcemapSupportPath: '',
+  });
+  const bridge: Bridge = launcher();
+
+  return async function (request: IncomingMessage) {
+    const body = await rawBody(request);
+    const event = {
+      Action: 'Invoke',
+      body: JSON.stringify({
+        method: request.method,
+        path: request.url,
+        headers: request.headers,
+        encoding: 'base64',
+        body: body.toString('base64'),
+      }),
+    };
+
+    return bridge.launcher(event, {
+      callbackWaitsForEmptyEventLoop: false,
+    });
+  };
+}
+
+let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;
 
 async function main() {
   const config = JSON.parse(process.env.VERCEL_DEV_CONFIG || '{}');
@@ -98,17 +134,8 @@ async function main() {
   const proxyServer = createServer(onDevRequest);
   await listen(proxyServer, 0, '127.0.0.1');
 
-  const launcher = getVercelLauncher({
-    entrypointPath: join(process.cwd(), entrypoint!),
-    helpersPath: './helpers.js',
-    shouldAddHelpers,
-    useRequire,
-
-    // not used
-    bridgePath: '',
-    sourcemapSupportPath: '',
-  });
-  bridge = launcher();
+  const entryPointPath = join(process.cwd(), entrypoint!);
+  handleEvent = await getLauncher(entryPointPath, { shouldAddHelpers });
 
   const address = proxyServer.address();
   if (typeof process.send === 'function') {
@@ -137,25 +164,13 @@ export async function onDevRequest(
   req: IncomingMessage,
   res: ServerResponse
 ): Promise<void> {
-  const body = await rawBody(req);
-  const event = {
-    Action: 'Invoke',
-    body: JSON.stringify({
-      method: req.method,
-      path: req.url,
-      headers: req.headers,
-      encoding: 'base64',
-      body: body.toString('base64'),
-    }),
-  };
-  if (!bridge) {
+  if (!handleEvent) {
     res.statusCode = 500;
     res.end('Bridge is not ready, please try again');
     return;
   }
-  const result = await bridge.launcher(event, {
-    callbackWaitsForEmptyEventLoop: false,
-  });
+
+  const result = await handleEvent(req);
   res.statusCode = result.statusCode;
   for (const [key, value] of Object.entries(result.headers)) {
     if (typeof value !== 'undefined') {
