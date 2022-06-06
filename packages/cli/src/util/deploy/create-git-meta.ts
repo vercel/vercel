@@ -57,11 +57,11 @@ export function parseRepoUrl(originUrl: string): RepoData | null {
 
   if (isSSH) {
     org = originUrl.split(':')[1].split('/')[0];
-    repo = originUrl.split('/')[1].replace('.git', '');
+    repo = originUrl.split('/')[1]?.replace('.git', '');
   } else {
     // Assume https:// or git://
     org = originUrl.split('/')[3];
-    repo = originUrl.split('/')[4].replace('.git', '');
+    repo = originUrl.split('/')[4]?.replace('.git', '');
   }
 
   if (!org || !repo) {

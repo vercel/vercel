@@ -37,9 +37,13 @@ describe('getRepoData', () => {
 });
 
 describe('parseRepoUrl', () => {
-  it('should not parse a url that does not match the regex', () => {
+  it('should be null when a url does not match the regex', () => {
     const parsedUrl = parseRepoUrl('https://examplecom/foo');
     expect(parsedUrl, 'parsedRepoUrl()').toBeNull();
+  });
+  it('should be null when a url does not contain org and repo data', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/borked');
+    expect(parsedUrl, 'parseRepoUrl()').toBeNull();
   });
   it('should parse url with a period in the repo name', () => {
     const parsedUrl = parseRepoUrl('https://github.com/vercel/next.js');
