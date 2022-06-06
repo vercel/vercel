@@ -54,6 +54,7 @@ import prettyBytes from 'pretty-bytes';
 
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
+const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 
 export async function serverBuild({
   dynamicPages,
@@ -130,6 +131,10 @@ export async function serverBuild({
   const isCorrectNotFoundRoutes = semver.gte(
     nextVersion,
     CORRECT_NOT_FOUND_ROUTES_VERSION
+  );
+  const isCorrectMiddlewareOrder = semver.gte(
+    nextVersion,
+    CORRECT_MIDDLEWARE_ORDER_VERSION
   );
   let hasStatic500 = !!staticPages[path.join(entryDirectory, '500')];
 
@@ -788,6 +793,7 @@ export async function serverBuild({
     entryPath,
     outputDirectory,
     routesManifest,
+    isCorrectMiddlewareOrder,
   });
 
   const dynamicRoutes = await getDynamicRoutes(
@@ -1025,7 +1031,9 @@ export async function serverBuild({
 
       ...redirects,
 
-      ...middleware.staticRoutes,
+      // middleware comes directly after redirects but before
+      // beforeFiles rewrites as middleware is not a "file" route
+      ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
 
       ...beforeFilesRewrites,
 
@@ -1068,6 +1076,11 @@ export async function serverBuild({
               continue: true,
             },
           ]),
+
+      // while middleware was in beta the order came right before
+      // handle: 'filesystem' we maintain this for older versions
+      // to prevent a local/deploy mismatch
+      ...(!isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
 
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
