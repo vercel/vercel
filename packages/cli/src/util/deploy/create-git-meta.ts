@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import { join } from 'path';
 import ini from 'ini';
 import git from 'git-last-commit';
+import process from 'child_process';
 import {
   BitbucketMeta,
   GitHubMeta,
@@ -10,6 +11,23 @@ import {
   RepoData,
 } from '../../types';
 import { Output } from '../output';
+
+export function isDirty(directory: string): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    process.exec(
+      'git status -s',
+      { cwd: directory },
+      function (err, stdout, stderr) {
+        if (err) return reject(err);
+        if (stderr) return reject(stderr);
+        if (stdout.length > 0) {
+          resolve(true);
+        }
+        resolve(false);
+      }
+    );
+  });
+}
 
 function getLastCommit(directory: string): Promise<git.Commit> {
   return new Promise((resolve, reject) => {
@@ -80,6 +98,7 @@ export async function createGitMeta(
   output: Output
 ): Promise<GitMeta> {
   const repoData = await getRepoData(join(directory, '.git/config'), output);
+  const dirty = await isDirty(directory);
   // If we can't get the repo URL, then don't return any metadata
   if (!repoData) {
     return {};
@@ -87,11 +106,11 @@ export async function createGitMeta(
   const commit = await getLastCommit(directory);
 
   if (repoData.provider === 'github') {
-    return populateGitHubData(repoData, commit);
+    return populateGitHubData(repoData, commit, dirty);
   } else if (repoData.provider === 'gitlab') {
-    return populateGitLabData(repoData, commit);
+    return populateGitLabData(repoData, commit, dirty);
   } else if (repoData.provider === 'bitbucket') {
-    return populateBitbucketData(repoData, commit);
+    return populateBitbucketData(repoData, commit, dirty);
   }
 
   return {};
@@ -101,9 +120,14 @@ export async function createGitMeta(
 
 function populateGitHubData(
   repoData: RepoData,
-  commit: git.Commit
+  commit: git.Commit,
+  dirty: boolean
 ): GitHubMeta {
   const data: GitHubMeta = {};
+
+  if (dirty) {
+    data.gitDirty = '1';
+  }
 
   data.githubOrg = repoData.org;
   data.githubCommitOrg = repoData.org;
@@ -128,9 +152,14 @@ function populateGitHubData(
 
 function populateGitLabData(
   repoData: RepoData,
-  commit: git.Commit
+  commit: git.Commit,
+  dirty: boolean
 ): GitLabMeta {
   const data: GitLabMeta = {};
+
+  if (dirty) {
+    data.gitDirty = '1';
+  }
 
   if (repoData.org && repoData.repo) {
     data.gitlabProjectPath = `${repoData.org}/${repoData.repo}`;
@@ -147,9 +176,14 @@ function populateGitLabData(
 
 function populateBitbucketData(
   repoData: RepoData,
-  commit: git.Commit
+  commit: git.Commit,
+  dirty: boolean
 ): BitbucketMeta {
   const data: BitbucketMeta = {};
+
+  if (dirty) {
+    data.gitDirty = '1';
+  }
 
   data.bitbucketRepoOwner = repoData.org;
   data.bitbucketRepoSlug = repoData.repo;

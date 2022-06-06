@@ -303,6 +303,7 @@ export interface RepoData {
 }
 
 export interface GitHubMeta {
+  gitDirty?: string;
   githubCommitAuthorName?: string;
   githubCommitMessage?: string;
   githubCommitOrg?: string;
@@ -315,6 +316,7 @@ export interface GitHubMeta {
 }
 
 export interface GitLabMeta {
+  gitDirty?: string;
   gitlabCommitAuthorName?: string;
   gitlabCommitMessage?: string;
   gitlabCommitRef?: string;
@@ -324,6 +326,7 @@ export interface GitLabMeta {
 }
 
 export interface BitbucketMeta {
+  gitDirty?: string;
   bitbucketCommitAuthorName?: string;
   bitbucketCommitMessage?: string;
   bitbucketCommitRef?: string;

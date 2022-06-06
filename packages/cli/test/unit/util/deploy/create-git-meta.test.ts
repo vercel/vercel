@@ -4,6 +4,7 @@ import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
   getRepoData,
+  isDirty,
   parseRepoUrl,
 } from '../../../../src/util/deploy/create-git-meta';
 import { client } from '../../../mocks/client';
@@ -121,6 +122,26 @@ describe('parseRepoUrl', () => {
 });
 
 describe('createGitMeta', () => {
+  it('latest commit is dirty', async () => {
+    const directory = fixture('dirty');
+    try {
+      await fs.rename(join(directory, 'git'), join(directory, '.git'));
+      const dirty = await isDirty(directory);
+      expect(dirty).toBeTruthy();
+    } finally {
+      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+    }
+  });
+  it('latest commit is not dirty', async () => {
+    const directory = fixture('not-dirty');
+    try {
+      await fs.rename(join(directory, 'git'), join(directory, '.git'));
+      const dirty = await isDirty(directory);
+      expect(dirty).toBeFalsy();
+    } finally {
+      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+    }
+  });
   it('gets git metata from test-github', async () => {
     const directory = fixture('test-github');
     try {
@@ -129,6 +150,7 @@ describe('createGitMeta', () => {
       if (!('githubCommitMessage' in data)) {
         throw new Error('Not GitHub meta');
       }
+      expect(data.gitDirty).toBeUndefined();
       expect(data.githubDeployment).toEqual('1');
       expect(data.githubOrg).toEqual('user');
       expect(data.githubRepo).toEqual('repo');
@@ -144,6 +166,30 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
+  it('gets git metadata from test-github when there are uncommitted changes', async () => {
+    const directory = fixture('test-github-dirty');
+    try {
+      await fs.rename(join(directory, 'git'), join(directory, '.git'));
+      const data = await createGitMeta(directory, client.output);
+      if (!('githubCommitMessage' in data)) {
+        throw new Error('Not GitHub meta');
+      }
+      expect(data.gitDirty).toEqual('1');
+      expect(data.githubDeployment).toEqual('1');
+      expect(data.githubOrg).toEqual('user');
+      expect(data.githubRepo).toEqual('repo');
+      expect(data.githubCommitAuthorName).toEqual('Matthew Stanciu');
+      expect(data.githubCommitMessage).toEqual('hi');
+      expect(data.githubCommitOrg).toEqual('user');
+      expect(data.githubCommitRef).toEqual('master');
+      expect(data.githubCommitRepo).toEqual('repo');
+      expect(data.githubCommitSha).toEqual(
+        'dfe1724998d3651f713380bc134f8ef28abecef9'
+      );
+    } finally {
+      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+    }
+  });
   it('gets git metadata from test-gitlab', async () => {
     const directory = fixture('test-gitlab');
     try {
@@ -152,6 +198,7 @@ describe('createGitMeta', () => {
       if (!('gitlabCommitMessage' in data)) {
         throw new Error('Not Gitlab meta');
       }
+      expect(data.gitDirty).toBeUndefined();
       expect(data.gitlabDeployment).toEqual('1');
       expect(data.gitlabProjectPath).toEqual('user/repo');
       expect(data.gitlabCommitAuthorName).toEqual('Matthew Stanciu');
@@ -172,6 +219,7 @@ describe('createGitMeta', () => {
       if (!('bitbucketCommitMessage' in data)) {
         throw new Error('Not Bitbucket meta');
       }
+      expect(data.gitDirty).toBeUndefined();
       expect(data.bitbucketDeployment).toEqual('1');
       expect(data.bitbucketRepoOwner).toEqual('user');
       expect(data.bitbucketRepoSlug).toEqual('repo');
