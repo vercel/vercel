@@ -17,6 +17,7 @@ describe('build()', () => {
         const buildResult = await build({
           files: {},
           entrypoint: 'package.json',
+          repoRootPath: workPath,
           workPath,
           config: {},
           meta: {
@@ -46,6 +47,7 @@ describe('build()', () => {
         const buildResult = await build({
           files: {},
           entrypoint: 'package.json',
+          repoRootPath: workPath,
           workPath,
           config: {},
           meta: {
@@ -76,6 +78,7 @@ describe('build()', () => {
         const buildResult = await build({
           files: {},
           entrypoint: 'package.json',
+          repoRootPath: workPath,
           workPath,
           config: {},
           meta: {
@@ -105,6 +108,7 @@ describe('build()', () => {
       const buildResult = await build({
         files: {},
         entrypoint: 'package.json',
+        repoRootPath: workPath,
         workPath,
         config: {},
         meta: {
@@ -132,6 +136,7 @@ describe('build()', () => {
         await build({
           files: {},
           entrypoint: 'package.json',
+          repoRootPath: workPath,
           workPath,
           config: {},
           meta: {
@@ -143,6 +148,33 @@ describe('build()', () => {
       }
       expect(err.message).toEqual(
         `Detected Build Output v3 from the "build" script, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable.`
+      );
+    });
+
+    it('should throw an Error without `vercel dev` is used with `@vercel/static-build`', async () => {
+      let err;
+      const workPath = path.join(
+        __dirname,
+        'build-fixtures',
+        '09-build-output-v3'
+      );
+      try {
+        await build({
+          files: {},
+          entrypoint: 'package.json',
+          repoRootPath: workPath,
+          workPath,
+          config: {},
+          meta: {
+            skipDownload: true,
+            isDev: true,
+          },
+        });
+      } catch (_err: any) {
+        err = _err;
+      }
+      expect(err.message).toEqual(
+        `Detected Build Output v3 from the "build" script, but it is not supported for \`vercel dev\`. Please set the Development Command in your Project Settings.`
       );
     });
   });
