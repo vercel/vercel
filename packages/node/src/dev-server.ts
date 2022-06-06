@@ -75,6 +75,14 @@ import type { Bridge } from '@vercel/node-bridge/bridge';
 import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
 
+import exitHook from 'exit-hook';
+
+import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
+import { getConfig } from '@vercel/static-config';
+import { Project } from 'ts-morph';
+import fetch from 'node-fetch';
+import ncc from '@vercel/ncc';
+
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
     server.listen(port, host, () => {
@@ -83,7 +91,7 @@ function listen(server: Server, port: number, host: string): Promise<void> {
   });
 }
 
-async function getLauncher(
+async function createServerlessEventHandler(
   entrypoint: string,
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
@@ -118,6 +126,93 @@ async function getLauncher(
   };
 }
 
+function serializeRequest(message: IncomingMessage) {
+  return JSON.stringify({
+    url: message.url,
+    method: message.method,
+    headers: message.headers,
+  });
+}
+
+async function createEdgeEventHandler(
+  entrypoint: string
+): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+  const buildResult = await ncc(entrypoint, {
+    watch: false,
+  });
+  const edgeFunctionDefinition = buildResult.code;
+
+  // console.log('edgeFunctionDefinition: ', edgeFunctionDefinition);
+
+  const initialCode = `
+    ${edgeFunctionDefinition};
+
+    addEventListener('fetch', async (event) => {
+      let request = JSON.parse(await event.request.text());
+      event.request = request;
+
+      let edgeHandler = module.exports.default;
+      let response = edgeHandler(event.request, event);
+      return event.respondWith(response);
+
+      // return event.respondWith(new Response(await event.request.text()));
+    })`;
+
+  const edgeRuntime = new EdgeRuntime({
+    initialCode,
+    extend: (context: Primitives) => {
+      Object.assign(context, {
+        __dirname: '', // TODO: should this be set to something else?
+        module: {
+          exports: {},
+        },
+      });
+      return context;
+    },
+  });
+  const server = await runServer({ runtime: edgeRuntime });
+  exitHook(server.close);
+
+  return async function (request: IncomingMessage) {
+    console.log(serializeRequest(request));
+
+    const response = await fetch(`${server.url}`, {
+      method: 'post',
+      body: serializeRequest(request),
+    });
+
+    return {
+      statusCode: response.status,
+      headers: {},
+      body: await response.text(),
+      encoding: 'utf8',
+    };
+  };
+}
+
+function parseRuntime(entrypoint: string): string | undefined {
+  const project = new Project();
+  const staticConfig = getConfig(project, entrypoint);
+  const runtime = staticConfig?.runtime as string; // TODO: remove `as` after https://github.com/vercel/vercel/pull/7922
+  if (runtime && runtime !== 'experimental-edge') {
+    throw new Error(`Invalid function runtime for "${entrypoint}": ${runtime}`);
+  }
+
+  return runtime;
+}
+
+async function createEventHandler(
+  entrypoint: string,
+  options: { shouldAddHelpers: boolean }
+): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+  const runtime = parseRuntime(entrypoint);
+  if (runtime) {
+    return createEdgeEventHandler(entrypoint);
+  }
+
+  return createServerlessEventHandler(entrypoint, options);
+}
+
 let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;
 
 async function main() {
@@ -135,7 +230,7 @@ async function main() {
   await listen(proxyServer, 0, '127.0.0.1');
 
   const entryPointPath = join(process.cwd(), entrypoint!);
-  handleEvent = await getLauncher(entryPointPath, { shouldAddHelpers });
+  handleEvent = await createEventHandler(entryPointPath, { shouldAddHelpers });
 
   const address = proxyServer.address();
   if (typeof process.send === 'function') {
@@ -170,14 +265,19 @@ export async function onDevRequest(
     return;
   }
 
-  const result = await handleEvent(req);
-  res.statusCode = result.statusCode;
-  for (const [key, value] of Object.entries(result.headers)) {
-    if (typeof value !== 'undefined') {
-      res.setHeader(key, value);
+  try {
+    const result = await handleEvent(req);
+    res.statusCode = result.statusCode;
+    for (const [key, value] of Object.entries(result.headers)) {
+      if (typeof value !== 'undefined') {
+        res.setHeader(key, value);
+      }
     }
+    res.end(Buffer.from(result.body, result.encoding));
+  } catch (error) {
+    res.statusCode = 500;
+    res.end(error.stack);
   }
-  res.end(Buffer.from(result.body, result.encoding));
 }
 
 export function fixConfigDev(config: { compilerOptions: any }): void {
