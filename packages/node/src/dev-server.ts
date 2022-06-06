@@ -75,13 +75,10 @@ import type { Bridge } from '@vercel/node-bridge/bridge';
 import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
 import { streamToBuffer } from '@vercel/build-utils';
-
 import exitHook from 'exit-hook';
-
 import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import fetch from 'node-fetch';
 import ncc from '@vercel/ncc';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
@@ -195,7 +192,7 @@ async function createEdgeEventHandler(
 
     return {
       statusCode: response.status,
-      headers: {},
+      headers: response.headers.raw(),
       body: await response.text(),
       encoding: 'utf8',
     };
