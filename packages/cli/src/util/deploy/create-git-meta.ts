@@ -19,7 +19,12 @@ export function isDirty(directory: string): Promise<boolean> {
       { cwd: directory },
       function (err, stdout, stderr) {
         if (err) return reject(err);
-        if (stderr) return reject(new Error(stderr));
+        if (stderr)
+          return reject(
+            new Error(
+              `Failed to determine if git repo has been modified: ${stderr.trim()}`
+            )
+          );
         resolve(stdout.trim().length > 0);
       }
     );
