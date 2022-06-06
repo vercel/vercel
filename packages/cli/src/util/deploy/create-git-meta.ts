@@ -64,6 +64,10 @@ export function parseRepoUrl(originUrl: string): RepoData | null {
     repo = originUrl.split('/')[4].replace('.git', '');
   }
 
+  if (!org || !repo) {
+    return null;
+  }
+
   return {
     provider: provider[0],
     org,
