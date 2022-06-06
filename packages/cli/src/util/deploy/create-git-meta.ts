@@ -19,11 +19,8 @@ export function isDirty(directory: string): Promise<boolean> {
       { cwd: directory },
       function (err, stdout, stderr) {
         if (err) return reject(err);
-        if (stderr) return reject(stderr);
-        if (stdout.length > 0) {
-          resolve(true);
-        }
-        resolve(false);
+        if (stderr) return reject(new Error(stderr));
+        resolve(stdout.trim().length > 0);
       }
     );
   });
@@ -98,12 +95,14 @@ export async function createGitMeta(
   output: Output
 ): Promise<GitMeta> {
   const repoData = await getRepoData(join(directory, '.git/config'), output);
-  const dirty = await isDirty(directory);
   // If we can't get the repo URL, then don't return any metadata
   if (!repoData) {
     return {};
   }
-  const commit = await getLastCommit(directory);
+  const [commit, dirty] = await Promise.all([
+    getLastCommit(directory),
+    isDirty(directory),
+  ]);
 
   if (repoData.provider === 'github') {
     return populateGitHubData(repoData, commit, dirty);
