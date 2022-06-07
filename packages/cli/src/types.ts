@@ -323,6 +323,8 @@ export interface GitLabMeta {
   gitlabCommitSha?: string;
   gitlabDeployment?: string;
   gitlabProjectPath?: string;
+  gitlabProjectName?: string;
+  gitlabProjectNamespace?: string;
 }
 
 export interface BitbucketMeta {

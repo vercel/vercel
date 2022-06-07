@@ -165,6 +165,8 @@ function populateGitLabData(
     data.gitlabProjectPath = `${repoData.org}/${repoData.repo}`;
   }
 
+  data.gitlabProjectNamespace = repoData.org;
+  data.gitlabProjectName = repoData.repo;
   data.gitlabCommitAuthorName = commit.author.name;
   data.gitlabCommitMessage = commit.subject;
   data.gitlabCommitRef = commit.branch;

@@ -201,6 +201,8 @@ describe('createGitMeta', () => {
       expect(data.gitDirty).toBeUndefined();
       expect(data.gitlabDeployment).toEqual('1');
       expect(data.gitlabProjectPath).toEqual('user/repo');
+      expect(data.gitlabProjectNamespace).toEqual('user');
+      expect(data.gitlabProjectName).toEqual('repo');
       expect(data.gitlabCommitAuthorName).toEqual('Matthew Stanciu');
       expect(data.gitlabCommitMessage).toEqual('hi');
       expect(data.gitlabCommitRef).toEqual('master');
