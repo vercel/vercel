@@ -33,6 +33,6 @@ describe.each<[string, string[]]>([
       )
     ).flat();
 
-    expect(actualPackagePaths).toEqual(expect.arrayContaining(packagePaths));
+    expect(actualPackagePaths).toEqual(packagePaths);
   });
 });
