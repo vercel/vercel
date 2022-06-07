@@ -139,7 +139,7 @@ describe('build', () => {
             require: '@vercel/static',
             apiVersion: 2,
             use: '@vercel/static',
-            src: '!{api/**,package.json}',
+            src: '!{api/**,package.json,middleware.[jt]s}',
             config: {
               zeroConfig: true,
             },
@@ -204,7 +204,7 @@ describe('build', () => {
             require: '@vercel/static',
             apiVersion: 2,
             use: '@vercel/static',
-            src: '!{api/**,package.json}',
+            src: '!{api/**,package.json,middleware.[jt]s}',
             config: {
               zeroConfig: true,
             },
