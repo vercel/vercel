@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import { join } from 'path';
 import ini from 'ini';
 import git from 'git-last-commit';
-import process from 'child_process';
+import { exec } from 'child_process';
 import {
   BitbucketMeta,
   GitHubMeta,
@@ -14,20 +14,16 @@ import { Output } from '../output';
 
 export function isDirty(directory: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    process.exec(
-      'git status -s',
-      { cwd: directory },
-      function (err, stdout, stderr) {
-        if (err) return reject(err);
-        if (stderr)
-          return reject(
-            new Error(
-              `Failed to determine if git repo has been modified: ${stderr.trim()}`
-            )
-          );
-        resolve(stdout.trim().length > 0);
-      }
-    );
+    exec('git status -s', { cwd: directory }, function (err, stdout, stderr) {
+      if (err) return reject(err);
+      if (stderr)
+        return reject(
+          new Error(
+            `Failed to determine if git repo has been modified: ${stderr.trim()}`
+          )
+        );
+      resolve(stdout.trim().length > 0);
+    });
   });
 }
 
