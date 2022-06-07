@@ -140,7 +140,10 @@ async function writeBuildResultV3(
   build: Builder
 ) {
   const { output } = buildResult;
-  const src = build.src!;
+  const src = build.src;
+  if (typeof src !== 'string') {
+    throw new Error(`Expected "build.src" to be a string`);
+  }
   const ext = extname(src);
   const path = build.config?.zeroConfig
     ? src.substring(0, src.length - ext.length)
