@@ -1735,6 +1735,7 @@ export default class DevServer {
           entrypoint: match.entrypoint,
           workPath,
           config: match.config || {},
+          repoRootPath: this.cwd,
           meta: {
             isDev: true,
             requestPath,

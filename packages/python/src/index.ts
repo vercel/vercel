@@ -39,7 +39,7 @@ export async function downloadFilesInWorkPath({
   workPath,
   files,
   meta = {},
-}: BuildOptions) {
+}: Pick<BuildOptions, 'entrypoint' | 'workPath' | 'files' | 'meta'>) {
   debug('Downloading user files...');
   let downloadedFiles = await download(files, workPath, meta);
   if (meta.isDev) {
@@ -67,7 +67,6 @@ export const build = async ({
     files: originalFiles,
     entrypoint,
     meta,
-    config,
   });
 
   try {

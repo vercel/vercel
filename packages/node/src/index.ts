@@ -16,20 +16,15 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
-// @ts-ignore - `@types/mkdirp-promise` is broken
-import mkdirp from 'mkdirp-promise';
+import { Project } from 'ts-morph';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
-  File,
-  Files,
-  Meta,
-  Config,
-  StartDevServerOptions,
   glob,
   download,
   FileBlob,
   FileFsRef,
+  EdgeFunction,
   NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
@@ -39,11 +34,20 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+} from '@vercel/build-utils';
+import type {
+  File,
+  Files,
+  Meta,
+  Config,
+  StartDevServerOptions,
   BuildV3,
   PrepareCache,
   StartDevServer,
   NodeVersion,
+  BuildResultV3,
 } from '@vercel/build-utils';
+import { getConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
 
@@ -70,6 +74,8 @@ interface PortInfo {
 function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
+
+const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge'];
 
 const require_ = eval('require');
 
@@ -189,7 +195,10 @@ async function compile(
         if (cached === null) return null;
         try {
           let source: string | Buffer = readFileSync(fsPath);
-          if (fsPath.endsWith('.ts') || fsPath.endsWith('.tsx')) {
+          if (
+            (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
+            fsPath.endsWith('.tsx')
+          ) {
             source = compileTypeScript(fsPath, source.toString());
           }
           const { mode } = lstatSync(fsPath);
@@ -364,20 +373,52 @@ export const build: BuildV3 = async ({
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
-  const shouldAddHelpers = !(
-    config.helpers === false || process.env.NODEJS_HELPERS === '0'
-  );
+  const project = new Project();
+  const staticConfig = getConfig(project, entrypointPath);
 
-  const lambda = new NodejsLambda({
-    files: preparedFiles,
-    handler: renameTStoJS(relative(baseDir, entrypointPath)),
-    runtime: nodeVersion.runtime,
-    shouldAddHelpers,
-    shouldAddSourcemapSupport,
-    awsLambdaHandler,
-  });
+  let output: BuildResultV3['output'] | undefined;
+  const handler = renameTStoJS(relative(baseDir, entrypointPath));
 
-  return { output: lambda };
+  if (staticConfig?.runtime) {
+    if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
+      throw new Error(
+        `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
+          staticConfig.runtime
+        )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
+      );
+    }
+    if (staticConfig.runtime === 'experimental-edge') {
+      const name = config.zeroConfig
+        ? handler.substring(0, handler.length - 3)
+        : handler;
+      output = new EdgeFunction({
+        entrypoint: handler,
+        files: preparedFiles,
+
+        // TODO: remove - these two properties should not be required
+        name,
+        deploymentTarget: 'v8-worker',
+      });
+    }
+  }
+
+  if (!output) {
+    // "nodejs" runtime is the default
+    const shouldAddHelpers = !(
+      config.helpers === false || process.env.NODEJS_HELPERS === '0'
+    );
+
+    output = new NodejsLambda({
+      files: preparedFiles,
+      handler,
+      runtime: nodeVersion.runtime,
+      shouldAddHelpers,
+      shouldAddSourcemapSupport,
+      awsLambdaHandler,
+    });
+  }
+
+  return { output };
 };
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
@@ -472,7 +513,7 @@ async function doTypeCheck(
 
   try {
     const json = JSON.stringify(tsconfig, null, '\t');
-    await mkdirp(entrypointCacheDir);
+    await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
   } catch (err) {
     // Don't throw if the file already exists
