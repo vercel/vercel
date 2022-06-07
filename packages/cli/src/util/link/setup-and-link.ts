@@ -20,7 +20,9 @@ import selectOrg from '../input/select-org';
 import inputProject from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
-import editProjectSettings from '../input/edit-project-settings';
+import editProjectSettings, {
+  PartialProjectSettings,
+} from '../input/edit-project-settings';
 import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
@@ -162,6 +164,16 @@ export default async function setupAndLink(
         client,
         currentTeam: config.currentTeam,
       });
+
+      const localConfigurationOverrides: PartialProjectSettings = {
+        buildCommand: localConfig?.buildCommand,
+        devCommand: localConfig?.devCommand,
+        framework: localConfig?.framework,
+        commandForIgnoringBuildStep: localConfig?.ignoreCommand,
+        installCommand: localConfig?.installCommand,
+        outputDirectory: localConfig?.outputDirectory,
+      };
+
       const createArgs: CreateOptions = {
         name: newProjectName,
         env: {},
@@ -176,12 +188,11 @@ export default async function setupAndLink(
         deployStamp: stamp(),
         target: undefined,
         skipAutoDetectionConfirmation: false,
+        projectSettings: {
+          ...localConfigurationOverrides,
+          sourceFilesOutsideRootDirectory,
+        },
       };
-
-      if (isZeroConfig) {
-        // Only add projectSettings for zero config deployments
-        createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
-      }
 
       const deployment = await createDeploy(
         client,
@@ -217,7 +228,7 @@ export default async function setupAndLink(
         projectSettings,
         framework,
         autoConfirm,
-        null
+        localConfigurationOverrides
       );
     }
 
