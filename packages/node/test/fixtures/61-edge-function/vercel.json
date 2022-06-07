@@ -1,0 +1,9 @@
+{
+  "builds": [{ "src": "api/**/*.js", "use": "@vercel/node" }],
+  "probes": [
+    {
+      "path": "/api/edge.js",
+      "mustContain": "RANDOMNESS_PLACEHOLDER:edge"
+    }
+  ]
+}

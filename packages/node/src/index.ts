@@ -17,20 +17,14 @@ import {
   parse as parsePath,
 } from 'path';
 import { Project } from 'ts-morph';
-// @ts-ignore - `@types/mkdirp-promise` is broken
-import mkdirp from 'mkdirp-promise';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
-  File,
-  Files,
-  Meta,
-  Config,
-  StartDevServerOptions,
   glob,
   download,
   FileBlob,
   FileFsRef,
+  EdgeFunction,
   NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
@@ -40,12 +34,18 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+} from '@vercel/build-utils';
+import type {
+  File,
+  Files,
+  Meta,
+  Config,
+  StartDevServerOptions,
   BuildV3,
   PrepareCache,
   StartDevServer,
   NodeVersion,
   BuildResultV3,
-  EdgeFunction,
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 
@@ -74,6 +74,8 @@ interface PortInfo {
 function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
+
+const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge'];
 
 const require_ = eval('require');
 
@@ -193,7 +195,10 @@ async function compile(
         if (cached === null) return null;
         try {
           let source: string | Buffer = readFileSync(fsPath);
-          if (fsPath.endsWith('.ts') || fsPath.endsWith('.tsx')) {
+          if (
+            (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
+            fsPath.endsWith('.tsx')
+          ) {
             source = compileTypeScript(fsPath, source.toString());
           }
           const { mode } = lstatSync(fsPath);
@@ -369,7 +374,7 @@ export const build: BuildV3 = async ({
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
   const handler = renameTStoJS(relative(baseDir, entrypointPath));
-  let output: BuildResultV3['output'];
+  let output: BuildResultV3['output'] | undefined;
 
   // Will output an `EdgeFunction` for root-level "middleware" file
   // or if `export const config = { runtime: 'edge' }` in API file
@@ -381,7 +386,16 @@ export const build: BuildV3 = async ({
   if (!isEdgeFunction) {
     const project = new Project();
     const staticConfig = getConfig(project, entrypointPath);
-    isEdgeFunction = staticConfig?.runtime === 'edge';
+    if (staticConfig?.runtime) {
+      if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
+        throw new Error(
+          `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
+            staticConfig.runtime
+          )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
+        );
+      }
+      isEdgeFunction = staticConfig?.runtime === 'edge';
+    }
   }
 
   if (isEdgeFunction) {
@@ -396,7 +410,10 @@ export const build: BuildV3 = async ({
       name,
       deploymentTarget: 'v8-worker',
     });
-  } else {
+  }
+
+  if (!output) {
+    // "nodejs" runtime is the default
     const shouldAddHelpers = !(
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
@@ -506,7 +523,7 @@ async function doTypeCheck(
 
   try {
     const json = JSON.stringify(tsconfig, null, '\t');
-    await mkdirp(entrypointCacheDir);
+    await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
   } catch (err) {
     // Don't throw if the file already exists

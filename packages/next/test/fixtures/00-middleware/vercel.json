@@ -11,6 +11,23 @@
       "fetchOptions": {
         "redirect": "manual"
       }
+    },
+    {
+      "path": "/rewrite-before-files",
+      "status": 404,
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/somewhere",
+      "status": 307,
+      "responseHeaders": {
+        "Location": "/from-middleware/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
     }
   ]
 }
