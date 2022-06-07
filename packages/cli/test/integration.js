@@ -317,14 +317,14 @@ async function setupProject(process, projectName, overrides) {
     process.stdin.write(`${buildCommand || ''}\n`);
 
     await waitForPrompt(process, chunk =>
-      chunk.includes(`What's your Development Command?`)
-    );
-    process.stdin.write(`${devCommand || ''}\n`);
-
-    await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Ignore Command?`)
     );
     process.stdin.write(`${ignoreCommand || ''}\n`);
+
+    await waitForPrompt(process, chunk =>
+      chunk.includes(`What's your Development Command?`)
+    );
+    process.stdin.write(`${devCommand || ''}\n`);
 
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Install Command?`)
@@ -3964,13 +3964,13 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   );
   vc.stdin.write('a\n');
   await waitForPrompt(vc, chunk =>
-    chunk.includes("What's your Development Command?")
-  );
-  vc.stdin.write('echo "DEV COMMAND"\n');
-  await waitForPrompt(vc, chunk =>
     chunk.includes("What's your Ignore Command?")
   );
   vc.stdin.write('echo "0"\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes("What's your Development Command?")
+  );
+  vc.stdin.write('echo "DEV COMMAND"\n');
   await waitForPrompt(vc, chunk =>
     chunk.includes("What's your Install Command?")
   );
