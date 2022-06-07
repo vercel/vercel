@@ -4,6 +4,7 @@ import glob from 'glob';
 import { DetectorFilesystem } from '../detectors/filesystem';
 import { Workspace } from './get-workspaces';
 import { getGlobFs } from '../fs/get-glob-fs';
+import { normalizePath } from '../fs/normalize-path';
 
 const posixPath = _path.posix;
 
@@ -43,7 +44,7 @@ export async function getWorkspacePackagePaths({
 }
 
 type PackageJsonWithWorkspace = {
-  workspaces:
+  workspaces?:
     | {
         packages: string[];
         noHoist?: string[];
@@ -52,7 +53,7 @@ type PackageJsonWithWorkspace = {
 };
 
 type PnpmWorkspaces = {
-  packages: string[];
+  packages?: string[];
 };
 
 async function getPackagePaths(
@@ -65,7 +66,7 @@ async function getPackagePaths(
         packageGlob =>
           new Promise<string[]>((resolve, reject) => {
             glob(
-              posixPath.join(packageGlob, 'package.json').replace(/\\/g, '/'),
+              normalizePath(posixPath.join(packageGlob, 'package.json')),
               {
                 cwd: '/',
                 fs: getGlobFs(fs),
@@ -94,7 +95,7 @@ async function getPackageJsonWorkspacePackagePaths({
   if (Array.isArray(workspaces)) {
     packages = workspaces;
   } else {
-    packages = workspaces.packages;
+    packages = workspaces?.packages ?? [];
   }
 
   return getPackagePaths(packages, fs);
@@ -104,7 +105,7 @@ async function getPnpmWorkspacePackagePaths({
   fs,
 }: GetPackagePathOptions): Promise<string[]> {
   const pnpmWorkspaceAsBuffer = await fs.readFile('pnpm-workspace.yaml');
-  const { packages } = yaml.load(
+  const { packages = [] } = yaml.load(
     pnpmWorkspaceAsBuffer.toString()
   ) as PnpmWorkspaces;
 

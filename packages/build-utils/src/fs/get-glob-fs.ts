@@ -8,6 +8,7 @@ function normalizePath(path: string) {
   // D:/c/package.json
   // since we abstract the filesystem, we need to remove windows specific info from the path
   // and let the FS decide how to process the path
+  // D:/c/package.json => /c/package.json
   return path.replace(/^[a-zA-Z]:/, '');
 }
 

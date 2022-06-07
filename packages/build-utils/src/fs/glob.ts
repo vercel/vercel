@@ -8,7 +8,7 @@ import FileFsRef from '../file-fs-ref';
 
 export type GlobOptions = vanillaGlob_.IOptions;
 
-export interface FsFiles {
+interface FsFiles {
   [filePath: string]: FileFsRef;
 }
 
