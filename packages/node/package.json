@@ -50,6 +50,7 @@
     "@vercel/build-utils": "4.0.0",
     "@vercel/ncc": "0.24.0",
     "@vercel/nft": "0.19.1",
+    "@vercel/static-config": "2.0.0",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "edge-runtime": "1.0.1",
