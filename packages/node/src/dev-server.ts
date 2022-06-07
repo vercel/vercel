@@ -80,6 +80,7 @@ import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import ncc from '@vercel/ncc';
+import fetch from 'node-fetch';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
