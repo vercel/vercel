@@ -56,6 +56,7 @@ import {
   getExportStatus,
   getFilesMapFromReasons,
   getImagesManifest,
+  getMiddlewareManifest,
   getNextConfig,
   getPageLambdaGroups,
   getPrerenderManifest,
@@ -77,6 +78,7 @@ import {
   updateRouteSrc,
   validateEntrypoint,
 } from './utils';
+import assert from 'assert';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -1001,7 +1003,11 @@ export const build: BuildV2 = async ({
       buildId,
       'pages'
     );
-    const pages = await glob('**/!(_middleware).js', pagesDir);
+    const pages = await getServerlessPages({
+      pagesDir,
+      entryPath,
+      outputDirectory,
+    });
     const launcherPath = path.join(__dirname, 'legacy-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
 
@@ -1074,7 +1080,11 @@ export const build: BuildV2 = async ({
       'pages'
     );
 
-    const pages = await glob('**/!(_middleware).js', pagesDir);
+    const pages = await getServerlessPages({
+      pagesDir,
+      entryPath,
+      outputDirectory,
+    });
     const isApiPage = (page: string) =>
       page
         .replace(/\\/g, '/')
@@ -2575,3 +2585,32 @@ export const prepareCache: PrepareCache = async ({
   debug('Cache file manifest produced');
   return cache;
 };
+
+async function getServerlessPages(params: {
+  pagesDir: string;
+  entryPath: string;
+  outputDirectory: string;
+}) {
+  const [pages, middlewareManifest] = await Promise.all([
+    glob('**/!(_middleware).js', params.pagesDir),
+    getMiddlewareManifest(params.entryPath, params.outputDirectory),
+  ]);
+
+  // Edge Functions do not consider as Serverless Functions
+  for (const edgeFunctionFile of Object.keys(
+    middlewareManifest?.functions ?? {}
+  )) {
+    // `getStaticProps` are expecting `Prerender` output which is a Serverless function
+    // and not an Edge Function. Therefore we only remove API endpoints for now, as they
+    // don't have `getStaticProps`.
+    //
+    // Context: https://github.com/vercel/vercel/pull/7905#discussion_r890213165
+    assert(
+      edgeFunctionFile.startsWith('/api/'),
+      `Only API endpoints are currently supported for Edge endpoints.`
+    );
+    delete pages[edgeFunctionFile.slice(1) + '.js'];
+  }
+
+  return pages;
+}
