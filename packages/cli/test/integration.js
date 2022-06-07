@@ -133,6 +133,10 @@ async function vcLink(t, projectPath) {
     }
   );
 
+  console.log(stderr);
+
+  console.log(stdout);
+
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 }
 
@@ -660,6 +664,26 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   t.deepEqual(body, 'readme contents for build-output-api-raw');
+});
+
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('[vc link] with vercel.json configuration overrides should create a valid deployment', async t => {
+  const directory = fixture('vercel-json-configuration-overrides-link');
+
+  await vcLink(t, directory);
+
+  const { exitCode, stderr, stdout } = await execa(binaryPath, [
+    directory,
+    // omit the default "deploy" command
+    '--prebuilt',
+    ...defaultArgs,
+  ]);
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const page = await fetch(stdout);
+  const text = await page.text();
+  t.is(text, '1\n');
 });
 
 test('deploy using only now.json with `redirects` defined', async t => {
