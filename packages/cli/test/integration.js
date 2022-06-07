@@ -133,10 +133,6 @@ async function vcLink(t, projectPath) {
     }
   );
 
-  console.log(stderr);
-
-  console.log(stdout);
-
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 }
 
