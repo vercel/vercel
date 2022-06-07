@@ -140,7 +140,7 @@ describe('editProjectSettings', () => {
       const overrides = {
         buildCommand: 'BUILD_COMMAND',
         devCommand: 'DEV_COMMAND',
-        ignoreCommand: 'IGNORE_COMMAND',
+        commandForIgnoringBuildStep: 'IGNORE_COMMAND',
         installCommand: 'INSTALL_COMMAND',
         framework: 'svelte',
         outputDirectory: 'OUTPUT_DIRECTORY',
@@ -160,13 +160,13 @@ describe('editProjectSettings', () => {
         /Build Command:/
       );
       expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Development Command:/
+        /Ignore Command:/
       );
       expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Framework:/
+        /Development Command:/
       );
       expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
-        /Ignore Command:/
+        /Framework:/
       );
       expect((output.print as jest.Mock).mock.calls[5][0]).toMatch(
         /Install Command:/
@@ -181,10 +181,7 @@ describe('editProjectSettings', () => {
         /Auto-detected Project Settings/
       );
 
-      const expectedResult: any = { ...overrides };
-      delete expectedResult.ignoreCommand;
-      expectedResult.commandForIgnoringBuildStep = overrides.ignoreCommand;
-      expect(settings).toStrictEqual(expectedResult);
+      expect(settings).toStrictEqual(overrides);
     });
   });
 
@@ -193,7 +190,7 @@ describe('editProjectSettings', () => {
       const overrides = {
         buildCommand: 'BUILD_COMMAND',
         devCommand: 'DEV_COMMAND',
-        ignoreCommand: 'IGNORE_COMMAND',
+        commandForIgnoringBuildStep: 'IGNORE_COMMAND',
         installCommand: 'INSTALL_COMMAND',
         framework: 'svelte',
         outputDirectory: 'OUTPUT_DIRECTORY',
@@ -213,13 +210,13 @@ describe('editProjectSettings', () => {
         /Build Command:/
       );
       expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Development Command:/
+        /Ignore Command:/
       );
       expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Framework:/
+        /Development Command:/
       );
       expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
-        /Ignore Command:/
+        /Framework:/
       );
       expect((output.print as jest.Mock).mock.calls[5][0]).toMatch(
         /Install Command:/
@@ -233,10 +230,7 @@ describe('editProjectSettings', () => {
       expect((output.print as jest.Mock).mock.calls[8][0]).toMatch(
         /Auto-detected Project Settings/
       );
-      const expectedResult: any = { ...overrides };
-      delete expectedResult.ignoreCommand;
-      expectedResult.commandForIgnoringBuildStep = overrides.ignoreCommand;
-      expect(settings).toStrictEqual(expectedResult);
+      expect(settings).toStrictEqual(overrides);
     });
   });
 
@@ -245,7 +239,7 @@ describe('editProjectSettings', () => {
       const overrides = {
         buildCommand: 'BUILD_COMMAND',
         devCommand: 'DEV_COMMAND',
-        ignoreCommand: 'IGNORE_COMMAND',
+        commandForIgnoringBuildStep: 'IGNORE_COMMAND',
         installCommand: 'INSTALL_COMMAND',
         framework: 'svelte',
         outputDirectory: 'OUTPUT_DIRECTORY',
@@ -265,13 +259,13 @@ describe('editProjectSettings', () => {
         /Build Command:/
       );
       expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Development Command:/
+        /Ignore Command:/
       );
       expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Framework:/
+        /Development Command:/
       );
       expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
-        /Ignore Command:/
+        /Framework:/
       );
       expect((output.print as jest.Mock).mock.calls[5][0]).toMatch(
         /Install Command:/
@@ -285,10 +279,8 @@ describe('editProjectSettings', () => {
       expect((output.print as jest.Mock).mock.calls[8][0]).toMatch(
         /Auto-detected Project Settings/
       );
-      const expectedResult: any = { ...overrides };
-      delete expectedResult.ignoreCommand;
-      expectedResult.commandForIgnoringBuildStep = overrides.ignoreCommand;
-      expect(settings).toStrictEqual(expectedResult);
+
+      expect(settings).toStrictEqual(overrides);
     });
   });
 });

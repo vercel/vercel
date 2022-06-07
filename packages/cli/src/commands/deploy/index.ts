@@ -43,7 +43,9 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import confirm from '../../util/input/confirm';
-import editProjectSettings from '../../util/input/edit-project-settings';
+import editProjectSettings, {
+  PartialProjectSettings,
+} from '../../util/input/edit-project-settings';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -453,7 +455,7 @@ export default async (client: Client) => {
   let deployStamp = stamp();
   let deployment = null;
 
-  const localConfigurationOverrides = {
+  const localConfigurationOverrides: PartialProjectSettings = {
     buildCommand: localConfig?.buildCommand,
     devCommand: localConfig?.devCommand,
     framework: localConfig?.framework,

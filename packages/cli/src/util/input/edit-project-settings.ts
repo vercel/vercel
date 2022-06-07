@@ -5,12 +5,11 @@ import { Output } from '../output';
 import { Framework, frameworks } from '@vercel/frameworks';
 import { isSettingValue } from '../is-setting-value';
 import { ProjectSettings } from '../../types';
-import { VercelConfig } from '../dev/types';
 
 const settingMap = {
   buildCommand: 'Build Command',
   devCommand: 'Development Command',
-  ignoreCommand: 'Ignore Command',
+  commandForIgnoringBuildStep: 'Ignore Command',
   installCommand: 'Install Command',
   outputDirectory: 'Output Directory',
   framework: 'Framework',
@@ -20,29 +19,14 @@ const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
   ConfigKeys
 ];
 
-type ProjectSettingKeys =
-  | Exclude<ConfigKeys, 'ignoreCommand'>
-  | 'commandForIgnoringBuildStep';
-type PartialProjectSettings = Pick<ProjectSettings, ProjectSettingKeys>;
-
-type LocalConfiguration = Pick<
-  VercelConfig,
-  | keyof Omit<PartialProjectSettings, 'commandForIgnoringBuildStep'>
-  | 'ignoreCommand'
->;
-
-/** A quick transform for 'ignoreCommand' to 'commandForIgnoringBuildStep' as they are the only key
- * that differs between the top level vercel.json configuration settings and the api `projectSettings` object.
- */
-const normalizeSettingName = (setting: ConfigKeys) =>
-  setting === 'ignoreCommand' ? 'commandForIgnoringBuildStep' : setting;
+export type PartialProjectSettings = Pick<ProjectSettings, ConfigKeys>;
 
 export default async function editProjectSettings(
   output: Output,
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
   autoConfirm: boolean,
-  localConfigurationOverrides: LocalConfiguration | null
+  localConfigurationOverrides: PartialProjectSettings | null
 ): Promise<ProjectSettings> {
   // Create initial settings object defaulting everything to `null` and assigning what may exist in `projectSettings`
   const settings: ProjectSettings = Object.assign(
@@ -62,8 +46,7 @@ export default async function editProjectSettings(
     // Apply local overrides (from `vercel.json`)
     for (const setting of settingKeys) {
       const localConfigValue = localConfigurationOverrides[setting];
-      if (localConfigValue)
-        settings[normalizeSettingName(setting)] = localConfigValue;
+      if (localConfigValue) settings[setting] = localConfigValue;
     }
 
     output.print('Local settings detected in vercel.json:\n');
@@ -111,7 +94,8 @@ export default async function editProjectSettings(
 
   // Now print defaults for the provided framework whether it was auto-detected or overwritten
   for (const setting of settingKeys) {
-    if (setting === 'framework' || setting === 'ignoreCommand') continue;
+    if (setting === 'framework' || setting === 'commandForIgnoringBuildStep')
+      continue;
 
     const defaultSetting = framework.settings[setting];
     const override = localConfigurationOverrides?.[setting];
@@ -160,7 +144,6 @@ export default async function editProjectSettings(
   });
 
   for (let setting of settingFields) {
-    const normalized = normalizeSettingName(setting);
     const field = settingMap[setting];
     const answers = await inquirer.prompt<{
       [k in Exclude<ConfigKeys, 'framework'>]: string;
@@ -169,7 +152,7 @@ export default async function editProjectSettings(
       name: setting,
       message: `What's your ${chalk.bold(field)}?`,
     });
-    settings[normalized] = answers[setting];
+    settings[setting] = answers[setting];
   }
   return settings;
 }
