@@ -114,6 +114,9 @@ export default async function main(client: Client): Promise<number> {
   }
   const cwd = process.cwd();
 
+  // Build `target` influences which environment variables will be used
+  const target = argv['--prod'] ? 'production' : 'preview';
+
   // TODO: read project settings from the API, fall back to local `project.json` if that fails
 
   // Read project settings, and pull them from Vercel if necessary
@@ -139,16 +142,13 @@ export default async function main(client: Client): Promise<number> {
       client.output.print(`Aborted. No Project Settings retrieved.\n`);
       return 0;
     }
-    client.argv = [];
+    client.argv = [`--environment`, `${target}`];
     const result = await pull(client);
     if (result !== 0) {
       return result;
     }
     project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
-
-  // Build `target` influences which environment variables will be used
-  const target = argv['--prod'] ? 'production' : 'preview';
 
   // TODO: load env vars from the API, fall back to local files if that fails
 
