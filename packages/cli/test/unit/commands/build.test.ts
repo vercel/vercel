@@ -226,7 +226,6 @@ describe('build', () => {
       const vcConfig = await fs.readJSON(
         join(output, 'functions/api/edge.func/.vc-config.json')
       );
-      console.log(vcConfig);
       expect(vcConfig).toMatchObject({
         runtime: 'edge',
         name: 'api/edge.js',
