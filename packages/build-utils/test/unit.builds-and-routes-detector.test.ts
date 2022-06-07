@@ -89,6 +89,7 @@ describe('Test `detectBuilders`', () => {
     console.log(builders);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('middleware.js');
+    expect(builders![0].config?.middleware).toEqual(true);
     expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
     expect(builders!.length).toBe(2);
@@ -101,6 +102,7 @@ describe('Test `detectBuilders`', () => {
     console.log(builders);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('middleware.ts');
+    expect(builders![0].config?.middleware).toEqual(true);
     expect(builders![1].use).toBe('@vercel/static');
     expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
     expect(builders!.length).toBe(2);

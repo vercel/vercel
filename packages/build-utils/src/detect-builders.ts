@@ -355,13 +355,10 @@ function maybeGetApiBuilder(
   apiMatches: Builder[],
   options: Options
 ) {
-  if (
-    !(
-      fileName.startsWith('api/') ||
-      fileName === 'middleware.js' ||
-      fileName === 'middleware.ts'
-    )
-  ) {
+  const middleware =
+    fileName === 'middleware.js' || fileName === 'middleware.ts';
+
+  if (!(fileName.startsWith('api/') || middleware)) {
     return null;
   }
 
@@ -394,6 +391,10 @@ function maybeGetApiBuilder(
   }
 
   const config: Config = { zeroConfig: true };
+
+  if (middleware) {
+    config.middleware = true;
+  }
 
   if (fnPattern && func) {
     config.functions = { [fnPattern]: func };
