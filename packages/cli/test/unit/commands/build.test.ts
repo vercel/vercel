@@ -171,4 +171,70 @@ describe('build', () => {
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
+
+  it('should serialize `EdgeFunction` output in version 3 Builder', async () => {
+    const cwd = fixture('edge-function');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      client.setArgv('build', '--prod');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/node" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'production',
+        builds: [
+          {
+            require: 'edge-function',
+            apiVersion: 3,
+            use: 'edge-function@0.0.0',
+            src: 'api/edge.js',
+            config: {
+              zeroConfig: true,
+              functions: {
+                'api/*.js': {
+                  runtime: 'edge-function@0.0.0',
+                },
+              },
+            },
+          },
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            use: '@vercel/static',
+            src: '!{api/**,package.json}',
+            config: {
+              zeroConfig: true,
+            },
+          },
+        ],
+      });
+
+      // "static" directory is empty
+      const hasStaticFiles = await fs.pathExists(join(output, 'static'));
+      expect(
+        hasStaticFiles,
+        'Expected ".vercel/output/static" to not exist'
+      ).toEqual(false);
+
+      // "functions/api" directory has output Functions
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      expect(functions.sort()).toEqual(['edge.func']);
+
+      const vcConfig = await fs.readJSON(
+        join(output, 'functions/api/edge.func/.vc-config.json')
+      );
+      expect(vcConfig).toMatchObject({
+        runtime: 'edge',
+        name: 'api/edge.js',
+        deploymentTarget: 'v8-worker',
+        entrypoint: 'api/edge.js',
+      });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
 });
