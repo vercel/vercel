@@ -20,15 +20,11 @@ import { Project } from 'ts-morph';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
-  File,
-  Files,
-  Meta,
-  Config,
-  StartDevServerOptions,
   glob,
   download,
   FileBlob,
   FileFsRef,
+  EdgeFunction,
   NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
@@ -38,12 +34,18 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+} from '@vercel/build-utils';
+import type {
+  File,
+  Files,
+  Meta,
+  Config,
+  StartDevServerOptions,
   BuildV3,
   PrepareCache,
   StartDevServer,
   NodeVersion,
   BuildResultV3,
-  EdgeFunction,
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 
