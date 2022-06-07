@@ -135,7 +135,7 @@ function populateGitHubData(
   data.githubCommitRepo = repoData.repo;
 
   data.githubCommitAuthorName = commit.author.name;
-  data.githubCommitMessage = commit.subject;
+  data.githubCommitMessage = commit.subject.substring(0, 1024);
   if (data.githubOrg) {
     data.githubCommitOrg = data.githubOrg;
   }
