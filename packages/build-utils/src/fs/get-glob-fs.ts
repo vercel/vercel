@@ -66,9 +66,17 @@ export function getGlobFs(_fs: DetectorFilesystem): GlobFs {
       .catch(err => callback(err, { isSymbolicLink: () => false } as fs.Stats));
   };
 
-  return {
-    readdir: readdir as typeof fs.readdir,
-    lstat: stat as typeof fs.lstat,
-    stat: stat as typeof fs.stat,
-  } as typeof fs;
+  return new Proxy(fs, {
+    get(_target, prop) {
+      switch (prop) {
+        case 'readdir':
+          return readdir;
+        case 'lstat':
+        case 'stat':
+          return stat;
+        default:
+          throw new Error('Not Implemented');
+      }
+    },
+  });
 }
