@@ -46,7 +46,7 @@ export async function getWorkspacePackagePaths({
 type PackageJsonWithWorkspace = {
   workspaces?:
     | {
-        packages: string[];
+        packages?: string[];
         noHoist?: string[];
       }
     | string[];
