@@ -30,7 +30,10 @@ export function getGlobFs(_fs: DetectorFilesystem): GlobFs {
 
   const stat = (
     path: fs.PathLike,
-    callback: (err: NodeJS.ErrnoException | null, stats: fs.Stats) => void
+    callback: (
+      err: NodeJS.ErrnoException | null,
+      stats: fs.Stats | null
+    ) => void
   ): void => {
     _fs
       .isFile(normalizePath(String(path)))
@@ -63,7 +66,7 @@ export function getGlobFs(_fs: DetectorFilesystem): GlobFs {
           isSymbolicLink: () => false,
         });
       })
-      .catch(err => callback(err, { isSymbolicLink: () => false } as fs.Stats));
+      .catch(err => callback(err, null));
   };
 
   return new Proxy(fs, {
