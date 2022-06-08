@@ -14,7 +14,7 @@ import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { Org } from '../types';
+import { GitMetadata, Org } from '../types';
 import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
 import { Dictionary } from '@vercel/client';
@@ -38,7 +38,7 @@ export interface CreateOptions {
   prebuilt?: boolean;
   rootDirectory?: string;
   meta: Dictionary<string>;
-  gitMetadata?: Dictionary<string>;
+  gitMetadata?: GitMetadata;
   regions?: string[];
   quiet?: boolean;
   env: Dictionary<string>;
