@@ -391,7 +391,9 @@ export const build: BuildV3 = async ({
     routes = [
       {
         src: '/.*',
-        middlewarePath: outputName,
+        middlewarePath: config.zeroConfig
+          ? outputName
+          : relative(baseDir, entrypointPath),
         continue: true,
       },
     ];
