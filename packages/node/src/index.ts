@@ -373,16 +373,31 @@ export const build: BuildV3 = async ({
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
+  let routes: BuildResultV3['routes'];
   let output: BuildResultV3['output'] | undefined;
+
   const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  const outputName = config.zeroConfig
+    ? handler.substring(0, handler.length - 3)
+    : handler;
+
+  const isMiddleware = config.middleware === true;
 
   // Will output an `EdgeFunction` for when `config.middleware = true`
   // (i.e. for root-level "middleware" file) or if source code contains:
   // `export const config = { runtime: 'experimental-edge' }`
-  let isEdgeFunction = config.middleware === true;
+  let isEdgeFunction = isMiddleware;
 
-  // TODO: output catch-all `route` for middleware
-  //const isMiddleware = isEdgeFunction;
+  // Add a catch-all `route` for Middleware
+  if (isMiddleware) {
+    routes = [
+      {
+        src: '/.*',
+        middlewarePath: outputName,
+        continue: true,
+      },
+    ];
+  }
 
   if (!isEdgeFunction) {
     const project = new Project();
@@ -400,15 +415,12 @@ export const build: BuildV3 = async ({
   }
 
   if (isEdgeFunction) {
-    const name = config.zeroConfig
-      ? handler.substring(0, handler.length - 3)
-      : handler;
     output = new EdgeFunction({
       entrypoint: handler,
       files: preparedFiles,
 
       // TODO: remove - these two properties should not be required
-      name,
+      name: outputName,
       deploymentTarget: 'v8-worker',
     });
   } else {
@@ -427,7 +439,7 @@ export const build: BuildV3 = async ({
     });
   }
 
-  return { output };
+  return { routes, output };
 };
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
