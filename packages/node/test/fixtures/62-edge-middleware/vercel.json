@@ -1,0 +1,29 @@
+{
+  "builds": [
+    { "src": "*.html", "use": "@vercel/static" },
+    { "src": "api/**/*.js", "use": "@vercel/node" },
+    {
+      "src": "middleware.ts",
+      "use": "@vercel/node",
+      "config": { "zeroConfig": true, "middleware": true }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "index page"
+    },
+    {
+      "path": "/another.html",
+      "mustContain": "RANDOMNESS_PLACEHOLDER:middleware"
+    },
+    {
+      "path": "/api/edge.js",
+      "mustContain": "RANDOMNESS_PLACEHOLDER:edge"
+    },
+    {
+      "path": "/non-exist",
+      "mustContain": "RANDOMNESS_PLACEHOLDER:middleware"
+    }
+  ]
+}
