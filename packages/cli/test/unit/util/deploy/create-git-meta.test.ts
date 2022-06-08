@@ -30,6 +30,16 @@ describe('getRemoteUrl', () => {
 });
 
 describe('createGitMeta', () => {
+  it('returns null when it does not receive a remote url', async () => {
+    const directory = fixture('no-origin');
+    try {
+      await fs.rename(join(directory, 'git'), join(directory, '.git'));
+      const data = await createGitMeta(directory, client.output);
+      expect(data).toBeNull();
+    } finally {
+      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+    }
+  });
   it('latest commit is dirty', async () => {
     const directory = fixture('dirty');
     try {
@@ -55,7 +65,6 @@ describe('createGitMeta', () => {
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
       const data = await createGitMeta(directory, client.output);
-      console.log(data);
       expect(data).toMatchObject({
         remoteUrl: 'https://github.com/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',

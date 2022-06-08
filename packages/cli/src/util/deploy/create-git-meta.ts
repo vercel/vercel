@@ -57,13 +57,11 @@ export async function getRemoteUrl(
 export async function createGitMeta(
   directory: string,
   output: Output
-): Promise<GitMetadata> {
+): Promise<GitMetadata | null> {
   const remoteUrl = await getRemoteUrl(join(directory, '.git/config'), output);
   // If we can't get the repo URL, then don't return any metadata
   if (!remoteUrl) {
-    return {
-      remoteUrl: '',
-    };
+    return null;
   }
   const [commit, dirty] = await Promise.all([
     getLastCommit(directory),
