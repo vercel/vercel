@@ -5,7 +5,7 @@
     {
       "src": "middleware.ts",
       "use": "@vercel/node",
-      "config": { "zeroConfig": true, "middleware": true }
+      "config": { "middleware": true }
     }
   ],
   "probes": [
