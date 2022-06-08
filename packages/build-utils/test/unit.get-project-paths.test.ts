@@ -47,6 +47,12 @@ describe.each<{
     readdirCalls: 2,
     hasPathCalls: 4,
   },
+  {
+    fixturePath: '37-project-depth-one-level',
+    resultPaths: ['./'],
+    readdirCalls: 1,
+    hasPathCalls: 1,
+  },
 ])(
   '`getProjectPaths()`',
   ({ resultPaths, readdirCalls, hasPathCalls, fixturePath, skipPaths }) => {
