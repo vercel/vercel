@@ -296,49 +296,14 @@ export interface Token {
   teamId?: string;
 }
 
-export interface RepoData {
-  provider: string;
-  org: string;
-  repo: string;
+export interface GitMetadata {
+  commitAuthorName?: string | undefined;
+  commitMessage?: string | undefined;
+  commitRef?: string | undefined;
+  commitSha?: string | undefined;
+  dirty?: boolean | undefined;
+  remoteUrl: string;
 }
-
-export interface GitHubMeta {
-  gitDirty?: string;
-  githubCommitAuthorName?: string;
-  githubCommitMessage?: string;
-  githubCommitOrg?: string;
-  githubCommitRef?: string;
-  githubCommitRepo?: string;
-  githubCommitSha?: string;
-  githubDeployment?: string;
-  githubOrg?: string;
-  githubRepo?: string;
-}
-
-export interface GitLabMeta {
-  gitDirty?: string;
-  gitlabCommitAuthorName?: string;
-  gitlabCommitMessage?: string;
-  gitlabCommitRef?: string;
-  gitlabCommitSha?: string;
-  gitlabDeployment?: string;
-  gitlabProjectPath?: string;
-  gitlabProjectName?: string;
-  gitlabProjectNamespace?: string;
-}
-
-export interface BitbucketMeta {
-  gitDirty?: string;
-  bitbucketCommitAuthorName?: string;
-  bitbucketCommitMessage?: string;
-  bitbucketCommitRef?: string;
-  bitbucketCommitSha?: string;
-  bitbucketDeployment?: string;
-  bitbucketRepoOwner?: string;
-  bitbucketRepoSlug?: string;
-}
-
-export type GitMeta = GitHubMeta | GitLabMeta | BitbucketMeta;
 
 /**
  * An object representing a Build on Vercel
