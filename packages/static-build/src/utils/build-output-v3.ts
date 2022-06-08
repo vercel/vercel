@@ -50,6 +50,11 @@ export function createBuildOutput(
     else if (framework) buildCommandName = framework.name;
     else buildCommandName = 'the "build" script';
 
+    if (meta.isDev) {
+      throw new Error(
+        `Detected Build Output v3 from ${buildCommandName}, but it is not supported for \`vercel dev\`. Please set the Development Command in your Project Settings.`
+      );
+    }
     throw new Error(
       `Detected Build Output v3 from ${buildCommandName}, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable.`
     );

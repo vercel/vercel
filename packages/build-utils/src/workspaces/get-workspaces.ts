@@ -36,7 +36,7 @@ export async function getWorkspaces({
     const childDirectories = directoryContents.filter(
       stat => stat.type === 'dir'
     );
-
+    
     return (
       await Promise.all(
         childDirectories.map(childDirectory =>
