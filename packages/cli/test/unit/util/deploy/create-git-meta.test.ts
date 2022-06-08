@@ -40,7 +40,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('latest commit is dirty', async () => {
+  it('detects dirty commit', async () => {
     const directory = fixture('dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
@@ -50,7 +50,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('latest commit is not dirty', async () => {
+  it('detects not dirty commit', async () => {
     const directory = fixture('not-dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
