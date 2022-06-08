@@ -395,7 +395,7 @@ export const build: BuildV3 = async ({
           )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
         );
       }
-      isEdgeFunction = staticConfig?.runtime === 'edge';
+      isEdgeFunction = staticConfig?.runtime === 'experimental-edge';
     }
   }
 
@@ -411,9 +411,7 @@ export const build: BuildV3 = async ({
       name,
       deploymentTarget: 'v8-worker',
     });
-  }
-
-  if (!output) {
+  } else {
     // "nodejs" runtime is the default
     const shouldAddHelpers = !(
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
