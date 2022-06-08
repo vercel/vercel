@@ -381,15 +381,13 @@ export const build: BuildV3 = async ({
     ? handler.substring(0, handler.length - 3)
     : handler;
 
-  const isMiddleware = config.middleware === true;
-
   // Will output an `EdgeFunction` for when `config.middleware = true`
   // (i.e. for root-level "middleware" file) or if source code contains:
   // `export const config = { runtime: 'experimental-edge' }`
-  let isEdgeFunction = isMiddleware;
+  let isEdgeFunction = false;
 
   // Add a catch-all `route` for Middleware
-  if (isMiddleware) {
+  if (config.middleware === true) {
     routes = [
       {
         src: '/.*',
@@ -397,6 +395,9 @@ export const build: BuildV3 = async ({
         continue: true,
       },
     ];
+
+    // Middleware is implicitly an Edge Function
+    isEdgeFunction = true;
   }
 
   if (!isEdgeFunction) {
@@ -410,7 +411,7 @@ export const build: BuildV3 = async ({
           )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
         );
       }
-      isEdgeFunction = staticConfig?.runtime === 'experimental-edge';
+      isEdgeFunction = staticConfig.runtime === 'experimental-edge';
     }
   }
 
