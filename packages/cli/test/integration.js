@@ -662,24 +662,29 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
   t.deepEqual(body, 'readme contents for build-output-api-raw');
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip('[vc link] with vercel.json configuration overrides should create a valid deployment', async t => {
+test('[vc link] with vercel.json configuration overrides should create a valid deployment', async t => {
   const directory = fixture('vercel-json-configuration-overrides-link');
 
-  await vcLink(t, directory);
-
-  const { exitCode, stderr, stdout } = await execa(binaryPath, [
-    directory,
-    // omit the default "deploy" command
-    '--prebuilt',
-    ...defaultArgs,
-  ]);
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['link', '--confirm', ...defaultArgs],
+    {
+      reject: false,
+      cwd: directory,
+    }
+  );
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  const page = await fetch(stdout);
-  const text = await page.text();
-  t.is(text, '1\n');
+  const link = require(path.join(directory, '.vercel/project.json'));
+
+  const resEnv = await apiFetch(`/v4/projects/${link.projectId}`);
+
+  t.is(resEnv.status, 200);
+
+  const json = await resEnv.json();
+
+  t.is(json.buildCommand, 'mkdir public && echo "1" > public/index.txt');
 });
 
 test('deploy using only now.json with `redirects` defined', async t => {
