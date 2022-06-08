@@ -51,7 +51,11 @@ describe.each<{
         : `should not detect any path for ${fixturePath}`;
 
     it(testName, async () => {
-      const fixture = path.join(__dirname, 'fixtures', fixturePath);
+      const fixture = path.join(
+        __dirname,
+        'non-deployed-fixtures',
+        fixturePath
+      );
       const fs = new FixtureFilesystem(fixture);
       const mockReaddir = jest.fn().mockImplementation(fs.readdir);
       const mockHasPath = jest.fn().mockImplementation(fs.hasPath);
