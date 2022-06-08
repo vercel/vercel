@@ -38,6 +38,7 @@ export interface CreateOptions {
   prebuilt?: boolean;
   rootDirectory?: string;
   meta: Dictionary<string>;
+  gitMetadata?: Dictionary<string>;
   regions?: string[];
   quiet?: boolean;
   env: Dictionary<string>;
@@ -116,6 +117,7 @@ export default class Now extends EventEmitter {
       rootDirectory,
       wantsPublic,
       meta,
+      gitMetadata,
       regions,
       quiet = false,
       env,
@@ -142,6 +144,7 @@ export default class Now extends EventEmitter {
       name,
       project,
       meta,
+      gitMetadata,
       regions,
       target: target || undefined,
       projectSettings,

@@ -412,10 +412,11 @@ export default async (client: Client) => {
   // build `meta`
   const meta = Object.assign(
     {},
-    await createGitMeta(path, output),
     parseMeta(localConfig.meta),
     parseMeta(argv['--meta'])
   );
+
+  const gitMetadata = await createGitMeta(path, output);
 
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
@@ -470,6 +471,7 @@ export default async (client: Client) => {
       nowConfig: localConfig,
       regions,
       meta,
+      gitMetadata,
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
