@@ -10,11 +10,17 @@
   "probes": [
     {
       "path": "/api/edge.js",
-      "mustContain": "RANDOMNESS_PLACEHOLDER:edge"
+      "mustContain": "RANDOMNESS_PLACEHOLDER:edge",
+      "responseHeaders": {
+        "x-got-middleware": "true"
+      }
     },
     {
       "path": "/non-exist",
-      "mustContain": "RANDOMNESS_PLACEHOLDER:middleware"
+      "mustContain": "RANDOMNESS_PLACEHOLDER:middleware",
+      "responseHeaders": {
+        "x-got-middleware": "true"
+      }
     }
   ]
 }
