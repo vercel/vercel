@@ -30,12 +30,12 @@ describe('getRemoteUrl', () => {
 });
 
 describe('createGitMeta', () => {
-  it('returns null when it does not receive a remote url', async () => {
+  it('is undefined when it does not receive a remote url', async () => {
     const directory = fixture('no-origin');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
       const data = await createGitMeta(directory, client.output);
-      expect(data).toBeNull();
+      expect(data).toBeUndefined();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
