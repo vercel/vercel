@@ -2,7 +2,7 @@ import inquirer from 'inquirer';
 import confirm from './confirm';
 import chalk from 'chalk';
 import { Output } from '../output';
-import { Framework, frameworks } from '@vercel/frameworks';
+import frameworkList, { Framework } from '@vercel/frameworks';
 import { isSettingValue } from '../is-setting-value';
 import { ProjectSettings } from '../../types';
 
@@ -65,19 +65,20 @@ export default async function editProjectSettings(
 
     // If framework is overridden, set it to the `framework` parameter and let the normal framework-flow occur
     if (localConfigurationOverrides.framework) {
-      framework = (frameworks.find(
-        _framework => _framework.slug === localConfigurationOverrides.framework
-      ) ?? null) as Framework | null; // if the entered framework is not found and set to `null` we will return early
+      const overrideFramework = frameworkList.find(
+        f => f.slug === localConfigurationOverrides.framework
+      );
 
-      if (framework) {
+      if (overrideFramework) {
+        framework = overrideFramework;
         output.print(
-          `Merging default project settings for framework ${framework.name}. Previously listed overrides are prioritized.\n`
+          `Merging default Project Settings for ${framework.name}. Previously listed overrides are prioritized.\n`
         );
       }
     }
   }
 
-  // return early if the framework is null.
+  // skip editing project settings if no framework is detected
   if (!framework) {
     settings.framework = null;
     return settings;
@@ -94,8 +95,9 @@ export default async function editProjectSettings(
 
   // Now print defaults for the provided framework whether it was auto-detected or overwritten
   for (const setting of settingKeys) {
-    if (setting === 'framework' || setting === 'commandForIgnoringBuildStep')
+    if (setting === 'framework' || setting === 'commandForIgnoringBuildStep') {
       continue;
+    }
 
     const defaultSetting = framework.settings[setting];
     const override = localConfigurationOverrides?.[setting];
@@ -113,22 +115,21 @@ export default async function editProjectSettings(
     }
   }
 
-  // Now prompt the user if they want to modify any settings not defined by local configuration.
+  // Prompt the user if they want to modify any settings not defined by local configuration.
   if (
     autoConfirm ||
-    !(await confirm(
-      'Want to modify the auto-detected project settings?',
-      false
-    ))
+    !(await confirm('Want to modify these settings?', false))
   ) {
     return settings;
   }
 
   const choices = settingKeys.reduce<Array<{ name: string; value: string }>>(
     (acc, setting) => {
-      if (setting === 'framework' || localConfigurationOverrides?.[setting])
-        return acc; // skip framework and any setting defined in the local override
-      acc.push({ name: settingMap[setting], value: setting });
+      const skip =
+        setting === 'framework' || localConfigurationOverrides?.[setting];
+      if (!skip) {
+        acc.push({ name: settingMap[setting], value: setting });
+      }
       return acc;
     },
     []
