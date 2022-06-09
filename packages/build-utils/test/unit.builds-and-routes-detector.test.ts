@@ -109,6 +109,26 @@ describe('Test `detectBuilders`', () => {
     expect(errors).toBe(null);
   });
 
+  it('should not add middleware builder when "nextjs" framework is selected', async () => {
+    const files = ['package.json', 'pages/index.ts', 'middleware.ts'];
+    const projectSettings = {
+      framework: 'nextjs',
+    };
+    const { builders } = await detectBuilders(files, null, {
+      projectSettings,
+    });
+    expect(builders).toEqual([
+      {
+        use: '@vercel/next',
+        src: 'package.json',
+        config: {
+          zeroConfig: true,
+          framework: projectSettings.framework,
+        },
+      },
+    ]);
+  });
+
   it('package.json + no build + root + api', async () => {
     const files = ['index.html', 'api/[endpoint].js', 'static/image.png'];
     const { builders, errors } = await detectBuilders(files);

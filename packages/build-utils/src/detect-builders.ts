@@ -358,6 +358,12 @@ function maybeGetApiBuilder(
   const middleware =
     fileName === 'middleware.js' || fileName === 'middleware.ts';
 
+  // Root-level Middleware file is handled by `@vercel/next`, so don't
+  // schedule a separate Builder when "nextjs" framwork is selected
+  if (middleware && options.projectSettings?.framework === 'nextjs') {
+    return null;
+  }
+
   if (!(fileName.startsWith('api/') || middleware)) {
     return null;
   }
