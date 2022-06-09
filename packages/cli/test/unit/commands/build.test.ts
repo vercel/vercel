@@ -1,8 +1,11 @@
 import ms from 'ms';
 import fs from 'fs-extra';
 import { join } from 'path';
-import { client } from '../../mocks/client';
 import build from '../../../src/commands/build';
+import { client } from '../../mocks/client';
+import { defaultProject, useProject } from '../../mocks/project';
+import { useTeams } from '../../mocks/team';
+import { useUser } from '../../mocks/user';
 
 jest.setTimeout(ms('1 minute'));
 
@@ -233,6 +236,76 @@ describe('build', () => {
         entrypoint: 'api/edge.js',
       });
     } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should pull "preview" env vars by default', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    const envFilePath = join(cwd, '.vercel', '.env.preview.local');
+    const projectJsonPath = join(cwd, '.vercel', 'project.json');
+    const originalProjectJson = await fs.readJSON(
+      join(cwd, '.vercel/project.json')
+    );
+    try {
+      process.chdir(cwd);
+      client.setArgv('build', '--yes');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const previewEnv = await fs.readFile(envFilePath, 'utf8');
+      const envFileHasPreviewEnv = previewEnv.includes(
+        'REDIS_CONNECTION_STRING'
+      );
+      expect(envFileHasPreviewEnv).toBeTruthy();
+    } finally {
+      await fs.remove(envFilePath);
+      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should pull "production" env vars with `--prod`', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    const envFilePath = join(cwd, '.vercel', '.env.production.local');
+    const projectJsonPath = join(cwd, '.vercel', 'project.json');
+    const originalProjectJson = await fs.readJSON(
+      join(cwd, '.vercel/project.json')
+    );
+    try {
+      process.chdir(cwd);
+      client.setArgv('build', '--yes', '--prod');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const prodEnv = await fs.readFile(envFilePath, 'utf8');
+      const envFileHasProductionEnv1 = prodEnv.includes(
+        'REDIS_CONNECTION_STRING'
+      );
+      expect(envFileHasProductionEnv1).toBeTruthy();
+      const envFileHasProductionEnv2 = prodEnv.includes(
+        'SQL_CONNECTION_STRING'
+      );
+      expect(envFileHasProductionEnv2).toBeTruthy();
+    } finally {
+      await fs.remove(envFilePath);
+      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
     }

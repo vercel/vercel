@@ -3,7 +3,7 @@ import { readFile } from 'fs-extra';
 import { ConcatSource, Source } from 'webpack-sources';
 import { fileToSource, raw, sourcemapped } from '../sourcemapped';
 import { join } from 'path';
-import { EDGE_FUNCTION_USER_SCRIPT_SIZE_LIMIT } from './constants';
+import { EDGE_FUNCTION_SIZE_LIMIT } from './constants';
 import zlib from 'zlib';
 import { promisify } from 'util';
 import bytes from 'pretty-bytes';
@@ -74,11 +74,11 @@ function getWasmImportStatements(wasm: { name: string }[] = []) {
 
 async function validateScript(content: string) {
   const gzipped = await gzip(content);
-  if (gzipped.length > EDGE_FUNCTION_USER_SCRIPT_SIZE_LIMIT) {
+  if (gzipped.length > EDGE_FUNCTION_SIZE_LIMIT) {
     throw new Error(
       `Exceeds maximum edge function script size: ${bytes(
         gzipped.length
-      )} / ${bytes(EDGE_FUNCTION_USER_SCRIPT_SIZE_LIMIT)}`
+      )} / ${bytes(EDGE_FUNCTION_SIZE_LIMIT)}`
     );
   }
 }

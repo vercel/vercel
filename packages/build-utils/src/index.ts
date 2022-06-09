@@ -118,5 +118,14 @@ export const isStaticRuntime = (name?: string): boolean => {
 };
 
 export { workspaceManagers } from './workspaces/workspace-managers';
-export { getWorkspaces } from './workspaces/get-workspaces';
+export {
+  getWorkspaces,
+  GetWorkspaceOptions,
+  Workspace,
+  WorkspaceType,
+} from './workspaces/get-workspaces';
+export {
+  getWorkspacePackagePaths,
+  GetWorkspacePackagePathsOptions,
+} from './workspaces/get-workspace-package-paths';
 export { monorepoManagers } from './monorepos/monorepo-managers';
