@@ -175,7 +175,7 @@ describe('editProjectSettings', () => {
         /Output Directory:/
       );
       expect((output.print as jest.Mock).mock.calls[7][0]).toMatch(
-        /Merging default project settings for framework Svelte. Previously listed overrides are prioritized./
+        /Merging default Project Settings for Svelte. Previously listed overrides are prioritized./
       );
       expect((output.print as jest.Mock).mock.calls[8][0]).toMatch(
         /Auto-detected Project Settings/
@@ -225,7 +225,7 @@ describe('editProjectSettings', () => {
         /Output Directory:/
       );
       expect((output.print as jest.Mock).mock.calls[7][0]).toMatch(
-        /Merging default project settings for framework Svelte. Previously listed overrides are prioritized./
+        /Merging default Project Settings for Svelte. Previously listed overrides are prioritized./
       );
       expect((output.print as jest.Mock).mock.calls[8][0]).toMatch(
         /Auto-detected Project Settings/
@@ -274,7 +274,7 @@ describe('editProjectSettings', () => {
         /Output Directory:/
       );
       expect((output.print as jest.Mock).mock.calls[7][0]).toMatch(
-        /Merging default project settings for framework Svelte. Previously listed overrides are prioritized./
+        /Merging default Project Settings for Svelte. Previously listed overrides are prioritized./
       );
       expect((output.print as jest.Mock).mock.calls[8][0]).toMatch(
         /Auto-detected Project Settings/
