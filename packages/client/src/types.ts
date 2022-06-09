@@ -39,6 +39,7 @@ export interface Deployment {
   url: string;
   name: string;
   meta: Dictionary<string | number | boolean>;
+  gitMetadata: GitMetadata;
   version: 2;
   regions: string[];
   routes: Route[];
