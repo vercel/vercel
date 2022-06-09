@@ -373,36 +373,60 @@ export const build: BuildV3 = async ({
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
-  const project = new Project();
-  const staticConfig = getConfig(project, entrypointPath);
-
+  let routes: BuildResultV3['routes'];
   let output: BuildResultV3['output'] | undefined;
+
   const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  const outputName = config.zeroConfig
+    ? handler.substring(0, handler.length - 3)
+    : handler;
 
-  if (staticConfig?.runtime) {
-    if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
-      throw new Error(
-        `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
-          staticConfig.runtime
-        )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
-      );
-    }
-    if (staticConfig.runtime === 'experimental-edge') {
-      const name = config.zeroConfig
-        ? handler.substring(0, handler.length - 3)
-        : handler;
-      output = new EdgeFunction({
-        entrypoint: handler,
-        files: preparedFiles,
+  // Will output an `EdgeFunction` for when `config.middleware = true`
+  // (i.e. for root-level "middleware" file) or if source code contains:
+  // `export const config = { runtime: 'experimental-edge' }`
+  let isEdgeFunction = false;
 
-        // TODO: remove - these two properties should not be required
-        name,
-        deploymentTarget: 'v8-worker',
-      });
+  // Add a catch-all `route` for Middleware
+  if (config.middleware === true) {
+    routes = [
+      {
+        src: '/.*',
+        middlewarePath: config.zeroConfig
+          ? outputName
+          : relative(baseDir, entrypointPath),
+        continue: true,
+      },
+    ];
+
+    // Middleware is implicitly an Edge Function
+    isEdgeFunction = true;
+  }
+
+  if (!isEdgeFunction) {
+    const project = new Project();
+    const staticConfig = getConfig(project, entrypointPath);
+    if (staticConfig?.runtime) {
+      if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
+        throw new Error(
+          `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
+            staticConfig.runtime
+          )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
+        );
+      }
+      isEdgeFunction = staticConfig.runtime === 'experimental-edge';
     }
   }
 
-  if (!output) {
+  if (isEdgeFunction) {
+    output = new EdgeFunction({
+      entrypoint: handler,
+      files: preparedFiles,
+
+      // TODO: remove - these two properties should not be required
+      name: outputName,
+      deploymentTarget: 'v8-worker',
+    });
+  } else {
     // "nodejs" runtime is the default
     const shouldAddHelpers = !(
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
@@ -418,7 +442,7 @@ export const build: BuildV3 = async ({
     });
   }
 
-  return { output };
+  return { routes, output };
 };
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
