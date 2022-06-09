@@ -883,6 +883,47 @@ export async function serverBuild({
     }
   }
 
+  const normalizeNextDataRoute = isNextDataServerResolving
+    ? [
+        // strip _next/data prefix for resolving
+        {
+          src: `^${path.join(
+            '/',
+            entryDirectory,
+            '/_next/data/',
+            escapedBuildId,
+            '/(.*).json'
+          )}`,
+          dest: `${path.join('/', entryDirectory, '/$1?_nextDataReq=true')}`,
+          continue: true,
+          override: true,
+        },
+      ]
+    : [];
+
+  const denormalizeNextDataRoute = isNextDataServerResolving
+    ? [
+        {
+          src: '/(.*)',
+          has: [
+            {
+              type: 'query',
+              key: '_nextDataReq',
+            },
+          ],
+          dest: `${path.join(
+            '/',
+            entryDirectory,
+            '/_next/data/',
+            buildId,
+            '/$1.json'
+          )}`,
+          continue: true,
+          override: true,
+        },
+      ]
+    : [];
+
   return {
     wildcard: wildcardConfig,
     images:
@@ -935,27 +976,8 @@ export async function serverBuild({
 
       ...privateOutputs.routes,
 
-      ...(isNextDataServerResolving
-        ? [
-            // strip _next/data prefix for resolving
-            {
-              src: `^${path.join(
-                '/',
-                entryDirectory,
-                '/_next/data/',
-                escapedBuildId,
-                '/(.*).json'
-              )}`,
-              dest: `${path.join(
-                '/',
-                entryDirectory,
-                '/$1?_nextDataReq=true'
-              )}`,
-              continue: true,
-              override: true,
-            },
-          ]
-        : []),
+      // normalize _next/data URL before processing redirects
+      ...normalizeNextDataRoute,
 
       ...(i18n
         ? [
@@ -1069,9 +1091,15 @@ export async function serverBuild({
 
       ...redirects,
 
+      // re-build /_next/data URL after resolving redirects
+      ...denormalizeNextDataRoute,
+
       // middleware comes directly after redirects but before
       // beforeFiles rewrites as middleware is not a "file" route
       ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
+
+      // normalize next data URL before processing rewrites/filesystem
+      ...normalizeNextDataRoute,
 
       ...beforeFilesRewrites,
 
@@ -1206,32 +1234,8 @@ export async function serverBuild({
       // if there no rewrites
       { handle: 'rewrite' },
 
-      // Dynamic routes (must come after dataRoutes as dataRoutes are more
-      // specific)
-      ...dynamicRoutes,
-
       // re-build /_next/data URL after resolving
-      ...(isNextDataServerResolving
-        ? [
-            {
-              src: '/(.*)',
-              has: [
-                {
-                  type: 'query',
-                  key: '_nextDataReq',
-                },
-              ],
-              dest: `${path.join(
-                '/',
-                entryDirectory,
-                '/_next/data/',
-                buildId,
-                '/$1.json'
-              )}`,
-              continue: true,
-            },
-          ]
-        : []),
+      ...denormalizeNextDataRoute,
 
       // /_next/data routes for getServerProps/getStaticProps pages
       ...dataRoutes,
@@ -1247,6 +1251,10 @@ export async function serverBuild({
             },
           ]
         : []),
+
+      // Dynamic routes (must come after dataRoutes as dataRoutes are more
+      // specific)
+      ...dynamicRoutes,
 
       ...(isNextDataServerResolving
         ? [
