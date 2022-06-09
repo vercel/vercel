@@ -45,7 +45,7 @@ describe('Middleware simple project', () => {
     expect(typeof beforeFilesIndex).toBe('number');
     expect(redirectIndex).toBeLessThan(middlewareIndex);
     expect(redirectIndex).toBeLessThan(beforeFilesIndex);
-    expect(beforeFilesIndex).toBeLessThan(middlewareIndex);
+    expect(middlewareIndex).toBeLessThan(beforeFilesIndex);
     expect(middlewareIndex).toBeLessThan(handleFileSystemIndex);
   });
 
