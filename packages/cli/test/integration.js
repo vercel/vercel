@@ -296,13 +296,7 @@ async function setupProject(process, projectName, overrides) {
   if (overrides) {
     process.stdin.write('yes\n');
 
-    const {
-      buildCommand,
-      outputDirectory,
-      devCommand,
-      installCommand,
-      ignoreCommand,
-    } = overrides;
+    const { buildCommand, outputDirectory, devCommand } = overrides;
 
     await waitForPrompt(process, chunk =>
       chunk.includes(
@@ -317,19 +311,9 @@ async function setupProject(process, projectName, overrides) {
     process.stdin.write(`${buildCommand || ''}\n`);
 
     await waitForPrompt(process, chunk =>
-      chunk.includes(`What's your Ignore Command?`)
-    );
-    process.stdin.write(`${ignoreCommand || ''}\n`);
-
-    await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Development Command?`)
     );
     process.stdin.write(`${devCommand || ''}\n`);
-
-    await waitForPrompt(process, chunk =>
-      chunk.includes(`What's your Install Command?`)
-    );
-    process.stdin.write(`${installCommand || ''}\n`);
 
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Output Directory?`)
@@ -3989,17 +3973,9 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   );
   vc.stdin.write('a\n');
   await waitForPrompt(vc, chunk =>
-    chunk.includes("What's your Ignore Command?")
-  );
-  vc.stdin.write('echo "0"\n');
-  await waitForPrompt(vc, chunk =>
     chunk.includes("What's your Development Command?")
   );
   vc.stdin.write('echo "DEV COMMAND"\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes("What's your Install Command?")
-  );
-  vc.stdin.write('echo "INSTALL COMMAND"\n');
   // the crux of this test is to make sure that the outputDirectory is properly set by the prompts.
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
   await waitForPrompt(vc, chunk =>

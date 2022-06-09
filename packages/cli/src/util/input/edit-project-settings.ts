@@ -126,7 +126,10 @@ export default async function editProjectSettings(
   const choices = settingKeys.reduce<Array<{ name: string; value: string }>>(
     (acc, setting) => {
       const skip =
-        setting === 'framework' || localConfigurationOverrides?.[setting];
+        setting === 'framework' ||
+        setting === 'commandForIgnoringBuildStep' ||
+        setting === 'installCommand' ||
+        localConfigurationOverrides?.[setting];
       if (!skip) {
         acc.push({ name: settingMap[setting], value: setting });
       }
@@ -136,7 +139,12 @@ export default async function editProjectSettings(
   );
 
   const { settingFields } = await inquirer.prompt<{
-    settingFields: Array<Exclude<ConfigKeys, 'framework'>>;
+    settingFields: Array<
+      Exclude<
+        ConfigKeys,
+        'framework' | 'commandForIgnoringBuildStep' | 'installCommand'
+      >
+    >;
   }>({
     name: 'settingFields',
     type: 'checkbox',
@@ -147,7 +155,10 @@ export default async function editProjectSettings(
   for (let setting of settingFields) {
     const field = settingMap[setting];
     const answers = await inquirer.prompt<{
-      [k in Exclude<ConfigKeys, 'framework'>]: string;
+      [k in Exclude<
+        ConfigKeys,
+        'framework' | 'commandForIgnoringBuildStep' | 'installCommand'
+      >]: string;
     }>({
       type: 'input',
       name: setting,
