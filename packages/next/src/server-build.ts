@@ -55,6 +55,7 @@ import prettyBytes from 'pretty-bytes';
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
+const NEXT_DATA_SERVER_RESOLVING_VERSION = 'v12.1.7-canary.33';
 
 export async function serverBuild({
   dynamicPages,
@@ -65,6 +66,7 @@ export async function serverBuild({
   workPath,
   entryPath,
   nodeVersion,
+  buildId,
   escapedBuildId,
   dynamicPrefix,
   entryDirectory,
@@ -101,6 +103,7 @@ export async function serverBuild({
   privateOutputs: { files: Files; routes: Route[] };
   entryPath: string;
   dynamicPrefix: string;
+  buildId: string;
   escapedBuildId: string;
   wildcardConfig: BuildResult['wildcard'];
   nodeVersion: NodeVersion;
@@ -135,6 +138,10 @@ export async function serverBuild({
   const isCorrectMiddlewareOrder = semver.gte(
     nextVersion,
     CORRECT_MIDDLEWARE_ORDER_VERSION
+  );
+  const isNextDataServerResolving = semver.gte(
+    nextVersion,
+    NEXT_DATA_SERVER_RESOLVING_VERSION
   );
   let hasStatic500 = !!staticPages[path.join(entryDirectory, '500')];
 
@@ -900,6 +907,14 @@ export async function serverBuild({
       ...staticDirectoryFiles,
       ...privateOutputs.files,
       ...middleware.edgeFunctions,
+      ...(isNextDataServerResolving
+        ? {
+            __next_data_catchall: new FileBlob({
+              contentType: 'application/json',
+              data: '{}',
+            }),
+          }
+        : {}),
     },
     routes: [
       /*
@@ -918,6 +933,28 @@ export async function serverBuild({
       ...trailingSlashRedirects,
 
       ...privateOutputs.routes,
+
+      ...(isNextDataServerResolving
+        ? [
+            // strip _next/data prefix for resolving
+            {
+              src: `^${path.join(
+                '/',
+                entryDirectory,
+                '/_next/data/',
+                escapedBuildId,
+                '/(.*).json'
+              )}`,
+              dest: `${path.join(
+                '/',
+                entryDirectory,
+                '/$1?_nextDataReq=true'
+              )}`,
+              continue: true,
+              override: true,
+            },
+          ]
+        : []),
 
       ...(i18n
         ? [
@@ -1098,13 +1135,18 @@ export async function serverBuild({
           ]
         : []),
 
-      // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
-      // if no match to prevent rewriting _next/data unexpectedly
-      {
-        src: path.join('/', entryDirectory, '_next/data/(.*)'),
-        dest: path.join('/', entryDirectory, '_next/data/$1'),
-        check: true,
-      },
+      //
+      ...(!isNextDataServerResolving
+        ? [
+            // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
+            // if no match to prevent rewriting _next/data unexpectedly
+            {
+              src: path.join('/', entryDirectory, '_next/data/(.*)'),
+              dest: path.join('/', entryDirectory, '_next/data/$1'),
+              check: true,
+            },
+          ]
+        : []),
 
       // These need to come before handle: miss or else they are grouped
       // with that routing section
@@ -1163,20 +1205,64 @@ export async function serverBuild({
       // if there no rewrites
       { handle: 'rewrite' },
 
-      // /_next/data routes for getServerProps/getStaticProps pages
-      ...dataRoutes,
-
-      // ensure we 404 for non-existent _next/data routes before
-      // trying page dynamic routes
-      {
-        src: path.join('/', entryDirectory, '_next/data/(.*)'),
-        dest: path.join('/', entryDirectory, '404'),
-        status: 404,
-      },
-
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
       ...dynamicRoutes,
+
+      // re-build /_next/data URL after resolving
+      ...(isNextDataServerResolving
+        ? [
+            {
+              src: '/(.*)',
+              has: [
+                {
+                  type: 'query',
+                  key: '_nextDataReq',
+                },
+              ],
+              dest: `${path.join(
+                '/',
+                entryDirectory,
+                '/_next/data/',
+                buildId,
+                '/$1.json'
+              )}`,
+              continue: true,
+            },
+          ]
+        : []),
+
+      // /_next/data routes for getServerProps/getStaticProps pages
+      ...dataRoutes,
+
+      ...(!isNextDataServerResolving
+        ? [
+            // ensure we 404 for non-existent _next/data routes before
+            // trying page dynamic routes
+            {
+              src: path.join('/', entryDirectory, '_next/data/(.*)'),
+              dest: path.join('/', entryDirectory, '404'),
+              status: 404,
+            },
+          ]
+        : []),
+
+      ...(isNextDataServerResolving
+        ? [
+            // add a catch-all data route so we don't 404 when getting
+            // middleware effects
+            {
+              src: `^${path.join(
+                '/',
+                entryDirectory,
+                '/_next/data/',
+                escapedBuildId,
+                '/(.*).json'
+              )}`,
+              dest: '__next_data_catchall',
+            },
+          ]
+        : []),
 
       // routes to call after a file has been matched
       { handle: 'hit' },
