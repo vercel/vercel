@@ -55,7 +55,7 @@ import prettyBytes from 'pretty-bytes';
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
-const NEXT_DATA_SERVER_RESOLVING_VERSION = 'v12.1.7-canary.33';
+const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 
 export async function serverBuild({
   dynamicPages,
@@ -138,10 +138,6 @@ export async function serverBuild({
   const isCorrectMiddlewareOrder = semver.gte(
     nextVersion,
     CORRECT_MIDDLEWARE_ORDER_VERSION
-  );
-  const isNextDataServerResolving = semver.gte(
-    nextVersion,
-    NEXT_DATA_SERVER_RESOLVING_VERSION
   );
   let hasStatic500 = !!staticPages[path.join(entryDirectory, '500')];
 
@@ -803,6 +799,10 @@ export async function serverBuild({
     isCorrectMiddlewareOrder,
   });
 
+  const isNextDataServerResolving =
+    middleware.staticRoutes.length > 0 &&
+    semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
+
   const dynamicRoutes = await getDynamicRoutes(
     entryPath,
     entryDirectory,
@@ -911,6 +911,7 @@ export async function serverBuild({
         ? {
             __next_data_catchall: new FileBlob({
               contentType: 'application/json',
+              mode: 0o644,
               data: '{}',
             }),
           }
