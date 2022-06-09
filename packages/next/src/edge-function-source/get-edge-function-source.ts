@@ -44,7 +44,8 @@ export async function getNextjsEdgeFunctionSource(
    * We validate at this point because we want to verify against user code.
    * It should not count the Worker wrapper nor the Next.js wrapper.
    */
-  await validateScript(text);
+  const wasmFiles = (wasm ?? []).map(({ filePath }) => join(outputDir, filePath));
+  await validateSize(text, wasmFiles);
 
   // Wrap to fake module.exports
   const getPageMatchCode = `(function () {
@@ -72,11 +73,17 @@ function getWasmImportStatements(wasm: { name: string }[] = []) {
     .join('\n');
 }
 
-async function validateScript(content: string) {
+async function validateSize(script: string, wasmFiles: string[]) {
+  const buffers = [Buffer.from(script, 'utf8')];
+  for (const filePath of wasmFiles) {
+    buffers.push(await readFile(filePath));
+  }
+  const content = Buffer.concat(buffers);
+
   const gzipped = await gzip(content);
   if (gzipped.length > EDGE_FUNCTION_SIZE_LIMIT) {
     throw new Error(
-      `Exceeds maximum edge function script size: ${bytes(
+      `Exceeds maximum edge function size: ${bytes(
         gzipped.length
       )} / ${bytes(EDGE_FUNCTION_SIZE_LIMIT)}`
     );
