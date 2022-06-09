@@ -1091,15 +1091,9 @@ export async function serverBuild({
 
       ...redirects,
 
-      // re-build /_next/data URL after resolving redirects
-      ...denormalizeNextDataRoute,
-
       // middleware comes directly after redirects but before
       // beforeFiles rewrites as middleware is not a "file" route
       ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
-
-      // normalize next data URL before processing rewrites/filesystem
-      ...normalizeNextDataRoute,
 
       ...beforeFilesRewrites,
 
