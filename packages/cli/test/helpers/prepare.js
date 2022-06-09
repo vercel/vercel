@@ -454,8 +454,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'vercel.json': JSON.stringify({
         buildCommand: 'mkdir public && echo "1" > public/index.txt',
       }),
-      '.vercel/output/config.json': JSON.stringify({ version: 3 }),
-      '.vercel/output/public/index.txt': '2',
     },
     'vc-build-corepack-npm': {
       '.vercel/project.json': JSON.stringify({
