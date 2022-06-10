@@ -111,6 +111,56 @@ describe('build', () => {
     }
   });
 
+  it('should normalize "src" path in `vercel.json`', async () => {
+    const cwd = fixture('normalize-src');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/node" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/node',
+            apiVersion: 3,
+            use: '@vercel/node',
+            src: 'server.js',
+          },
+        ],
+      });
+
+      // `config.json` includes "route" from `vercel.json`
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toMatchObject({
+        version: 3,
+        routes: [
+          {
+            src: '^/(.*)$',
+            dest: '/server.js',
+          },
+        ],
+      });
+
+      // "static" directory is empty
+      const hasStaticFiles = await fs.pathExists(join(output, 'static'));
+      expect(
+        hasStaticFiles,
+        'Expected ".vercel/output/static" to not exist'
+      ).toEqual(false);
+
+      // "functions" directory has output Function
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toEqual(['server.js.func']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should build with 3rd party Builder', async () => {
     const cwd = fixture('third-party-builder');
     const output = join(cwd, '.vercel/output');
