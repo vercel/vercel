@@ -296,6 +296,15 @@ export interface Token {
   teamId?: string;
 }
 
+export interface GitMetadata {
+  commitAuthorName?: string | undefined;
+  commitMessage?: string | undefined;
+  commitRef?: string | undefined;
+  commitSha?: string | undefined;
+  dirty?: boolean | undefined;
+  remoteUrl: string;
+}
+
 /**
  * An object representing a Build on Vercel
  */
