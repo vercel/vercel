@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { join, relative } from 'path';
+import { join, normalize, relative } from 'path';
 import {
   detectBuilders,
   normalizePath,
@@ -15,6 +15,7 @@ import {
   BuildResultV2,
   BuildResultV2Typical,
   BuildResultV3,
+  NowBuildError,
 } from '@vercel/build-utils';
 import minimatch from 'minimatch';
 import {
@@ -101,6 +102,7 @@ export default async function main(client: Client): Promise<number> {
   const argv = getArgs(client.argv.slice(2), {
     '--cwd': String,
     '--prod': Boolean,
+    '--yes': Boolean,
   });
 
   if (argv['--help']) {
@@ -114,41 +116,52 @@ export default async function main(client: Client): Promise<number> {
   }
   const cwd = process.cwd();
 
+  // Build `target` influences which environment variables will be used
+  const target = argv['--prod'] ? 'production' : 'preview';
+  const yes = Boolean(argv['--yes']);
+
   // TODO: read project settings from the API, fall back to local `project.json` if that fails
 
   // Read project settings, and pull them from Vercel if necessary
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
   const isTTY = process.stdin.isTTY;
   while (!project?.settings) {
-    if (!isTTY) {
-      client.output.print(
-        `No Project Settings found locally. Run ${cli.getCommandName(
-          'pull --yes'
-        )} to retreive them.`
-      );
-      return 1;
-    }
+    let confirmed = yes;
+    if (!confirmed) {
+      if (!isTTY) {
+        client.output.print(
+          `No Project Settings found locally. Run ${cli.getCommandName(
+            'pull --yes'
+          )} to retreive them.`
+        );
+        return 1;
+      }
 
-    const confirmed = await confirm(
-      `No Project Settings found locally. Run ${cli.getCommandName(
-        'pull'
-      )} for retrieving them?`,
-      true
-    );
+      confirmed = await confirm(
+        `No Project Settings found locally. Run ${cli.getCommandName(
+          'pull'
+        )} for retrieving them?`,
+        true
+      );
+    }
     if (!confirmed) {
       client.output.print(`Aborted. No Project Settings retrieved.\n`);
       return 0;
     }
-    client.argv = [];
+    const { argv: originalArgv } = client;
+    client.argv = [
+      ...originalArgv.slice(0, 2),
+      'pull',
+      `--environment`,
+      target,
+    ];
     const result = await pull(client);
     if (result !== 0) {
       return result;
     }
+    client.argv = originalArgv;
     project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
-
-  // Build `target` influences which environment variables will be used
-  const target = argv['--prod'] ? 'production' : 'preview';
 
   // TODO: load env vars from the API, fall back to local files if that fails
 
@@ -463,17 +476,33 @@ export default async function main(client: Client): Promise<number> {
 }
 
 function expandBuild(files: string[], build: Builder): Builder[] {
-  if (!build.src) return [];
+  if (!build.use) {
+    throw new NowBuildError({
+      code: `invalid_build_specification`,
+      message: 'Field `use` is missing in build specification',
+      link: 'https://vercel.com/docs/configuration#project/builds',
+      action: 'View Documentation',
+    });
+  }
 
-  let pattern = build.src;
-  if (pattern[0] === '/') {
+  let src = normalize(build.src || '**');
+  if (src === '.' || src === './') {
+    throw new NowBuildError({
+      code: `invalid_build_specification`,
+      message: 'A build `src` path resolves to an empty string',
+      link: 'https://vercel.com/docs/configuration#project/builds',
+      action: 'View Documentation',
+    });
+  }
+
+  if (src[0] === '/') {
     // Remove a leading slash so that the globbing is relative
     // to `cwd` instead of the root of the filesystem.
-    pattern = pattern.substring(1);
+    src = src.substring(1);
   }
 
   const matches = files.filter(
-    name => name === pattern || minimatch(name, pattern, { dot: true })
+    name => name === src || minimatch(name, src, { dot: true })
   );
 
   return matches.map(m => {
