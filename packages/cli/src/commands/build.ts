@@ -476,8 +476,6 @@ export default async function main(client: Client): Promise<number> {
 }
 
 function expandBuild(files: string[], build: Builder): Builder[] {
-  if (!build.src) return [];
-
   if (!build.use) {
     throw new NowBuildError({
       code: `invalid_build_specification`,
