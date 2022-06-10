@@ -129,6 +129,12 @@ export interface VercelConfig {
   alias?: string | string[];
   regions?: string[];
   projectSettings?: ProjectSettings;
+  buildCommand?: string | null;
+  ignoreCommand?: string | null;
+  devCommand?: string | null;
+  installCommand?: string | null;
+  framework?: string | null;
+  outputDirectory?: string | null;
 }
 
 /**

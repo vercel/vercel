@@ -17,6 +17,7 @@ import fs, {
   copy,
   ensureDir,
   exists,
+  mkdir,
 } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
@@ -289,7 +290,7 @@ async function setupProject(process, projectName, overrides) {
   process.stdin.write('\n');
 
   await waitForPrompt(process, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify these settings?')
   );
 
   if (overrides) {
@@ -307,17 +308,17 @@ async function setupProject(process, projectName, overrides) {
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Build Command?`)
     );
-    process.stdin.write(`${buildCommand ?? ''}\n`);
-
-    await waitForPrompt(process, chunk =>
-      chunk.includes(`What's your Output Directory?`)
-    );
-    process.stdin.write(`${outputDirectory ?? ''}\n`);
+    process.stdin.write(`${buildCommand || ''}\n`);
 
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Development Command?`)
     );
-    process.stdin.write(`${devCommand ?? ''}\n`);
+    process.stdin.write(`${devCommand || ''}\n`);
+
+    await waitForPrompt(process, chunk =>
+      chunk.includes(`What's your Output Directory?`)
+    );
+    process.stdin.write(`${outputDirectory || ''}\n`);
   } else {
     process.stdin.write('no\n');
   }
@@ -643,6 +644,31 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
   const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   t.deepEqual(body, 'readme contents for build-output-api-raw');
+});
+
+test('[vc link] with vercel.json configuration overrides should create a valid deployment', async t => {
+  const directory = fixture('vercel-json-configuration-overrides-link');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['link', '--confirm', ...defaultArgs],
+    {
+      reject: false,
+      cwd: directory,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const link = require(path.join(directory, '.vercel/project.json'));
+
+  const resEnv = await apiFetch(`/v4/projects/${link.projectId}`);
+
+  t.is(resEnv.status, 200);
+
+  const json = await resEnv.json();
+
+  t.is(json.buildCommand, 'mkdir public && echo "1" > public/index.txt');
 });
 
 test('deploy using only now.json with `redirects` defined', async t => {
@@ -3095,7 +3121,7 @@ test('should prefill "project name" prompt with folder name', async t => {
   now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify these settings?')
   );
   now.stdin.write('no\n');
 
@@ -3156,7 +3182,7 @@ test('should prefill "project name" prompt with --name', async t => {
   now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify these settings?')
   );
   now.stdin.write('no\n');
 
@@ -3223,7 +3249,7 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify these settings?')
   );
   now.stdin.write('no\n');
 
@@ -3908,4 +3934,149 @@ test('[vc build] should build project with `@vercel/static-build`', async t => {
   t.is(builds.target, 'preview');
   t.is(builds.builds[0].src, 'package.json');
   t.is(builds.builds[0].use, '@vercel/static-build');
+});
+
+test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async t => {
+  const directory = fixture(
+    'vercel-json-configuration-overrides-merging-prompts'
+  );
+
+  // remove previously linked project if it exists
+  await remove(path.join(directory, '.vercel'));
+
+  const vc = execa(binaryPath, [directory, ...defaultArgs], { reject: false });
+
+  await waitForPrompt(vc, chunk => chunk.includes('Set up and deploy'));
+  vc.stdin.write('y\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  vc.stdin.write('\n');
+  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
+  vc.stdin.write('n\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  vc.stdin.write('\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  vc.stdin.write('\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Want to modify these settings?')
+  );
+  vc.stdin.write('y\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  vc.stdin.write('a\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes("What's your Development Command?")
+  );
+  vc.stdin.write('echo "DEV COMMAND"\n');
+  // the crux of this test is to make sure that the outputDirectory is properly set by the prompts.
+  // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
+  await waitForPrompt(vc, chunk =>
+    chunk.includes("What's your Output Directory?")
+  );
+  vc.stdin.write('output\n');
+  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
+  const deployment = await vc;
+  t.is(deployment.exitCode, 0, formatOutput(deployment));
+  // assert the command were executed
+  let page = await fetch(deployment.stdout);
+  let text = await page.text();
+  t.is(text, '1\n');
+});
+
+test('vercel.json configuration overrides in an existing project do not prompt user and correctly apply overrides', async t => {
+  // create project directory and get path to vercel.json
+  const directory = fixture('vercel-json-configuration-overrides');
+  const vercelJsonPath = path.join(directory, 'vercel.json');
+
+  async function deploy(autoConfirm = false) {
+    const deployment = await execa(
+      binaryPath,
+      [directory, ...defaultArgs, '--public'].concat(
+        autoConfirm ? ['--confirm'] : []
+      ),
+      { reject: false }
+    );
+    t.is(
+      deployment.exitCode,
+      0,
+      formatOutput({
+        stderr: deployment.stderr,
+        stdout: deployment.stdout,
+      })
+    );
+    return deployment;
+  }
+
+  // Step 1. Create a simple static deployment with no configuration.
+  // Deployment should succeed and page should display "0"
+
+  await mkdir(path.join(directory, 'public'));
+  await writeFile(path.join(directory, 'public/index.txt'), '0');
+
+  // auto-confirm this deployment
+  let deployment = await deploy(true);
+
+  let page = await fetch(deployment.stdout);
+  let text = await page.text();
+  t.is(text, '0');
+
+  // Step 2. Now that the project exists, override the buildCommand and outputDirectory.
+  // The CLI should not prompt the user about the overrides.
+
+  const BUILD_COMMAND = 'mkdir output && echo "1" >> output/index.txt';
+  const OUTPUT_DIRECTORY = 'output';
+
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      buildCommand: BUILD_COMMAND,
+      outputDirectory: OUTPUT_DIRECTORY,
+    })
+  );
+
+  deployment = await deploy();
+  page = await fetch(deployment.stdout);
+  text = await page.text();
+  t.is(text, '1\n');
+
+  // // Step 3. Do a more complex deployment using a framework this time
+  await mkdir(`${directory}/pages`);
+  await writeFile(
+    `${directory}/pages/index.js`,
+    `export default () => 'Next.js Test'`
+  );
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      framework: 'nextjs',
+    })
+  );
+  await writeFile(
+    `${directory}/package.json`,
+    JSON.stringify({
+      scripts: {
+        dev: 'next',
+        start: 'next start',
+        build: 'next build',
+      },
+      dependencies: {
+        next: 'latest',
+        react: 'latest',
+        'react-dom': 'latest',
+      },
+    })
+  );
+
+  deployment = await deploy();
+  page = await fetch(deployment.stdout);
+  text = await page.text();
+  t.regex(text, /Next\.js Test/);
 });
