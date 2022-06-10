@@ -16,7 +16,7 @@ export interface LogOptions extends PrintOptions {
 }
 
 export class Output {
-  private debugEnabled: boolean;
+  debugEnabled: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
   isTTY: boolean;
