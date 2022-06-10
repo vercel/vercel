@@ -1,8 +1,11 @@
 import ms from 'ms';
 import fs from 'fs-extra';
 import { join } from 'path';
-import { client } from '../../mocks/client';
 import build from '../../../src/commands/build';
+import { client } from '../../mocks/client';
+import { defaultProject, useProject } from '../../mocks/project';
+import { useTeams } from '../../mocks/team';
+import { useUser } from '../../mocks/user';
 
 jest.setTimeout(ms('1 minute'));
 
@@ -139,7 +142,7 @@ describe('build', () => {
             require: '@vercel/static',
             apiVersion: 2,
             use: '@vercel/static',
-            src: '!{api/**,package.json}',
+            src: '!{api/**,package.json,middleware.[jt]s}',
             config: {
               zeroConfig: true,
             },
@@ -204,7 +207,7 @@ describe('build', () => {
             require: '@vercel/static',
             apiVersion: 2,
             use: '@vercel/static',
-            src: '!{api/**,package.json}',
+            src: '!{api/**,package.json,middleware.[jt]s}',
             config: {
               zeroConfig: true,
             },
@@ -232,6 +235,137 @@ describe('build', () => {
         deploymentTarget: 'v8-worker',
         entrypoint: 'api/edge.js',
       });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should pull "preview" env vars by default', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    const envFilePath = join(cwd, '.vercel', '.env.preview.local');
+    const projectJsonPath = join(cwd, '.vercel', 'project.json');
+    const originalProjectJson = await fs.readJSON(
+      join(cwd, '.vercel/project.json')
+    );
+    try {
+      process.chdir(cwd);
+      client.setArgv('build', '--yes');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const previewEnv = await fs.readFile(envFilePath, 'utf8');
+      const envFileHasPreviewEnv = previewEnv.includes(
+        'REDIS_CONNECTION_STRING'
+      );
+      expect(envFileHasPreviewEnv).toBeTruthy();
+    } finally {
+      await fs.remove(envFilePath);
+      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should pull "production" env vars with `--prod`', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    const envFilePath = join(cwd, '.vercel', '.env.production.local');
+    const projectJsonPath = join(cwd, '.vercel', 'project.json');
+    const originalProjectJson = await fs.readJSON(
+      join(cwd, '.vercel/project.json')
+    );
+    try {
+      process.chdir(cwd);
+      client.setArgv('build', '--yes', '--prod');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const prodEnv = await fs.readFile(envFilePath, 'utf8');
+      const envFileHasProductionEnv1 = prodEnv.includes(
+        'REDIS_CONNECTION_STRING'
+      );
+      expect(envFileHasProductionEnv1).toBeTruthy();
+      const envFileHasProductionEnv2 = prodEnv.includes(
+        'SQL_CONNECTION_STRING'
+      );
+      expect(envFileHasProductionEnv2).toBeTruthy();
+    } finally {
+      await fs.remove(envFilePath);
+      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should build root-level `middleware.js` and exclude from static files', async () => {
+    const cwd = fixture('middleware');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/node',
+            apiVersion: 3,
+            use: '@vercel/node',
+            src: 'middleware.js',
+            config: {
+              zeroConfig: true,
+              middleware: true,
+            },
+          },
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            use: '@vercel/static',
+            src: '!{api/**,package.json,middleware.[jt]s}',
+            config: {
+              zeroConfig: true,
+            },
+          },
+        ],
+      });
+
+      // `config.json` includes the "middlewarePath" route
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toMatchObject({
+        version: 3,
+        routes: [
+          { src: '/.*', middlewarePath: 'middleware', continue: true },
+          { handle: 'filesystem' },
+          { src: '^/api(/.*)?$', status: 404 },
+          { handle: 'error' },
+          { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
+        ],
+      });
+
+      // "static" directory contains `index.html`, but *not* `middleware.js`
+      const staticFiles = await fs.readdir(join(output, 'static'));
+      expect(staticFiles.sort()).toEqual(['index.html']);
+
+      // "functions" directory contains `middleware.func`
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toEqual(['middleware.func']);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;

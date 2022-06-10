@@ -101,6 +101,7 @@ export default async function main(client: Client): Promise<number> {
   const argv = getArgs(client.argv.slice(2), {
     '--cwd': String,
     '--prod': Boolean,
+    '--yes': Boolean,
   });
 
   if (argv['--help']) {
@@ -114,41 +115,52 @@ export default async function main(client: Client): Promise<number> {
   }
   const cwd = process.cwd();
 
+  // Build `target` influences which environment variables will be used
+  const target = argv['--prod'] ? 'production' : 'preview';
+  const yes = Boolean(argv['--yes']);
+
   // TODO: read project settings from the API, fall back to local `project.json` if that fails
 
   // Read project settings, and pull them from Vercel if necessary
   let project = await readProjectSettings(join(cwd, VERCEL_DIR));
   const isTTY = process.stdin.isTTY;
   while (!project?.settings) {
-    if (!isTTY) {
-      client.output.print(
-        `No Project Settings found locally. Run ${cli.getCommandName(
-          'pull --yes'
-        )} to retreive them.`
-      );
-      return 1;
-    }
+    let confirmed = yes;
+    if (!confirmed) {
+      if (!isTTY) {
+        client.output.print(
+          `No Project Settings found locally. Run ${cli.getCommandName(
+            'pull --yes'
+          )} to retreive them.`
+        );
+        return 1;
+      }
 
-    const confirmed = await confirm(
-      `No Project Settings found locally. Run ${cli.getCommandName(
-        'pull'
-      )} for retrieving them?`,
-      true
-    );
+      confirmed = await confirm(
+        `No Project Settings found locally. Run ${cli.getCommandName(
+          'pull'
+        )} for retrieving them?`,
+        true
+      );
+    }
     if (!confirmed) {
       client.output.print(`Aborted. No Project Settings retrieved.\n`);
       return 0;
     }
-    client.argv = [];
+    const { argv: originalArgv } = client;
+    client.argv = [
+      ...originalArgv.slice(0, 2),
+      'pull',
+      `--environment`,
+      target,
+    ];
     const result = await pull(client);
     if (result !== 0) {
       return result;
     }
+    client.argv = originalArgv;
     project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
-
-  // Build `target` influences which environment variables will be used
-  const target = argv['--prod'] ? 'production' : 'preview';
 
   // TODO: load env vars from the API, fall back to local files if that fails
 
