@@ -131,6 +131,15 @@ export interface VercelConfig {
   projectSettings?: ProjectSettings;
 }
 
+export interface GitMetadata {
+  commitAuthorName?: string | undefined;
+  commitMessage?: string | undefined;
+  commitRef?: string | undefined;
+  commitSha?: string | undefined;
+  dirty?: boolean | undefined;
+  remoteUrl: string;
+}
+
 /**
  * Options that will be sent to the API.
  */
@@ -155,4 +164,5 @@ export interface DeploymentOptions {
   public?: boolean;
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
+  gitMetadata?: GitMetadata;
 }
