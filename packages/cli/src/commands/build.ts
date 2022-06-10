@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { join, relative } from 'path';
+import { join, normalize, relative } from 'path';
 import {
   detectBuilders,
   normalizePath,
@@ -15,6 +15,7 @@ import {
   BuildResultV2,
   BuildResultV2Typical,
   BuildResultV3,
+  NowBuildError,
 } from '@vercel/build-utils';
 import minimatch from 'minimatch';
 import {
@@ -475,17 +476,33 @@ export default async function main(client: Client): Promise<number> {
 }
 
 function expandBuild(files: string[], build: Builder): Builder[] {
-  if (!build.src) return [];
+  if (!build.use) {
+    throw new NowBuildError({
+      code: `invalid_build_specification`,
+      message: 'Field `use` is missing in build specification',
+      link: 'https://vercel.com/docs/configuration#project/builds',
+      action: 'View Documentation',
+    });
+  }
 
-  let pattern = build.src;
-  if (pattern[0] === '/') {
+  let src = normalize(build.src || '**');
+  if (src === '.' || src === './') {
+    throw new NowBuildError({
+      code: `invalid_build_specification`,
+      message: 'A build `src` path resolves to an empty string',
+      link: 'https://vercel.com/docs/configuration#project/builds',
+      action: 'View Documentation',
+    });
+  }
+
+  if (src[0] === '/') {
     // Remove a leading slash so that the globbing is relative
     // to `cwd` instead of the root of the filesystem.
-    pattern = pattern.substring(1);
+    src = src.substring(1);
   }
 
   const matches = files.filter(
-    name => name === pattern || minimatch(name, pattern, { dot: true })
+    name => name === src || minimatch(name, src, { dot: true })
   );
 
   return matches.map(m => {

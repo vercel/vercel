@@ -440,6 +440,21 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
+    'vercel-json-configuration-overrides': {
+      'vercel.json': '{}',
+      'package.json': '{}',
+    },
+    'vercel-json-configuration-overrides-merging-prompts': {
+      'vercel.json': JSON.stringify({
+        buildCommand: 'mkdir -p output && echo "1" > output/index.txt',
+      }),
+      'package.json': '{}',
+    },
+    'vercel-json-configuration-overrides-link': {
+      'vercel.json': JSON.stringify({
+        buildCommand: 'mkdir public && echo "1" > public/index.txt',
+      }),
+    },
     'vc-build-corepack-npm': {
       '.vercel/project.json': JSON.stringify({
         orgId: '.',

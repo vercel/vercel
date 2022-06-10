@@ -111,6 +111,56 @@ describe('build', () => {
     }
   });
 
+  it('should normalize "src" path in `vercel.json`', async () => {
+    const cwd = fixture('normalize-src');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/node" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/node',
+            apiVersion: 3,
+            use: '@vercel/node',
+            src: 'server.js',
+          },
+        ],
+      });
+
+      // `config.json` includes "route" from `vercel.json`
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toMatchObject({
+        version: 3,
+        routes: [
+          {
+            src: '^/(.*)$',
+            dest: '/server.js',
+          },
+        ],
+      });
+
+      // "static" directory is empty
+      const hasStaticFiles = await fs.pathExists(join(output, 'static'));
+      expect(
+        hasStaticFiles,
+        'Expected ".vercel/output/static" to not exist'
+      ).toEqual(false);
+
+      // "functions" directory has output Function
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toEqual(['server.js.func']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should build with 3rd party Builder', async () => {
     const cwd = fixture('third-party-builder');
     const output = join(cwd, '.vercel/output');
@@ -142,7 +192,7 @@ describe('build', () => {
             require: '@vercel/static',
             apiVersion: 2,
             use: '@vercel/static',
-            src: '!{api/**,package.json}',
+            src: '!{api/**,package.json,middleware.[jt]s}',
             config: {
               zeroConfig: true,
             },
@@ -207,7 +257,7 @@ describe('build', () => {
             require: '@vercel/static',
             apiVersion: 2,
             use: '@vercel/static',
-            src: '!{api/**,package.json}',
+            src: '!{api/**,package.json,middleware.[jt]s}',
             config: {
               zeroConfig: true,
             },
@@ -306,6 +356,67 @@ describe('build', () => {
     } finally {
       await fs.remove(envFilePath);
       await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should build root-level `middleware.js` and exclude from static files', async () => {
+    const cwd = fixture('middleware');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/node',
+            apiVersion: 3,
+            use: '@vercel/node',
+            src: 'middleware.js',
+            config: {
+              zeroConfig: true,
+              middleware: true,
+            },
+          },
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            use: '@vercel/static',
+            src: '!{api/**,package.json,middleware.[jt]s}',
+            config: {
+              zeroConfig: true,
+            },
+          },
+        ],
+      });
+
+      // `config.json` includes the "middlewarePath" route
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toMatchObject({
+        version: 3,
+        routes: [
+          { src: '/.*', middlewarePath: 'middleware', continue: true },
+          { handle: 'filesystem' },
+          { src: '^/api(/.*)?$', status: 404 },
+          { handle: 'error' },
+          { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
+        ],
+      });
+
+      // "static" directory contains `index.html`, but *not* `middleware.js`
+      const staticFiles = await fs.readdir(join(output, 'static'));
+      expect(staticFiles.sort()).toEqual(['index.html']);
+
+      // "functions" directory contains `middleware.func`
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toEqual(['middleware.func']);
+    } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
