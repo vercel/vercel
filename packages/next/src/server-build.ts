@@ -894,9 +894,15 @@ export async function serverBuild({
             escapedBuildId,
             '/(.*).json'
           )}`,
-          dest: `${path.join('/', entryDirectory, '/$1?_nextDataReq=true')}`,
+          dest: `${path.join('/', entryDirectory, '/$1')}`,
           continue: true,
           override: true,
+          has: [
+            {
+              type: 'header',
+              key: 'x-nextjs-data',
+            },
+          ],
         },
       ]
     : [];
@@ -907,8 +913,8 @@ export async function serverBuild({
           src: '/(.*)',
           has: [
             {
-              type: 'query',
-              key: '_nextDataReq',
+              type: 'header',
+              key: 'x-nextjs-data',
             },
           ],
           dest: `${path.join(
@@ -1137,6 +1143,9 @@ export async function serverBuild({
             },
           ]),
 
+      // we need to undo _next/data normalize before checking filesystem
+      ...denormalizeNextDataRoute,
+
       // while middleware was in beta the order came right before
       // handle: 'filesystem' we maintain this for older versions
       // to prevent a local/deploy mismatch
@@ -1158,7 +1167,9 @@ export async function serverBuild({
           ]
         : []),
 
-      //
+      // normalize _next/data URL before processing rewrites
+      ...normalizeNextDataRoute,
+
       ...(!isNextDataServerResolving
         ? [
             // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
