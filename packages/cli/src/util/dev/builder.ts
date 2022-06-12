@@ -417,10 +417,6 @@ export async function getBuildMatches(
       src = src.substring(1);
     }
 
-    // We need to escape brackets since `glob` will
-    // try to find a group otherwise
-    src = src.replace(/(\[|\])/g, '[$1]');
-
     // lambda function files are trimmed of their file extension
     const mapToEntrypoint = new Map<string, string>();
     const extensionless = devServer.getExtensionlessFile(src);
@@ -428,6 +424,10 @@ export async function getBuildMatches(
       mapToEntrypoint.set(extensionless, src);
       src = extensionless;
     }
+
+    // We need to escape brackets since `glob` will
+    // try to find a group otherwise
+    src = src.replace(/(\[|\])/g, '[$1]');
 
     const files = fileList
       .filter(name => name === src || minimatch(name, src, { dot: true }))
