@@ -2448,14 +2448,13 @@ function needsBlockingBuild(buildMatch: BuildMatch): boolean {
 }
 
 async function checkForPort(port: number, timeout: number): Promise<void> {
-  const step = 1000;
-  const opts = { host: '127.0.0.1', timeout: step };
+  const opts = { host: '127.0.0.1' };
   const start = Date.now();
   while (!(await isPortReachable(port, opts))) {
     if (Date.now() - start > timeout) {
       throw new Error(`Detecting port ${port} timed out after ${timeout}ms`);
     }
-    await sleep(step);
+    await sleep(100);
   }
 }
 
