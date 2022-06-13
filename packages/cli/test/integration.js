@@ -492,6 +492,21 @@ test('[vc build] should build project with corepack and select yarn@2.4.3', asyn
   t.deepEqual(contents, ['home', 'shim']);
 });
 
+test('[vc dev] should print help from `vc develop --help`', async t => {
+  const directory = fixture('static-deployment');
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['develop', '--help', ...defaultArgs],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 2, formatOutput({ stdout, stderr }));
+  t.regex(stdout, /▲ vercel dev/gm);
+});
+
 test('default command should deploy directory', async t => {
   const projectDir = fixture('deploy-default-with-sub-directory');
   const target = 'output';
