@@ -470,8 +470,10 @@ export function fixConfig(
     config.compilerOptions.esModuleInterop = true;
   }
 
-  // Target CommonJS, always!
-  config.compilerOptions.module = 'CommonJS';
+  // If not specified, the default Node.js module is CommonJS.
+  if (config.compilerOptions.module === undefined) {
+    config.compilerOptions.module = 'CommonJS';
+  }
 
   return config;
 }
