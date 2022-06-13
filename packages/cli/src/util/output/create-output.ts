@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import boxen from 'boxen';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import { Writable } from 'stream';
@@ -17,7 +16,7 @@ export interface LogOptions extends PrintOptions {
 }
 
 export class Output {
-  private debugEnabled: boolean;
+  debugEnabled: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
   isTTY: boolean;
@@ -51,28 +50,15 @@ export class Output {
     str: string,
     slug: string | null = null,
     link: string | null = null,
-    action: string | null = 'Learn More',
-    options?: {
-      boxen?: boxen.Options;
-    }
+    action: string | null = 'Learn More'
   ) => {
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
 
     this.print(
-      boxen(
-        chalk.bold.yellow('WARN! ') +
+      chalk.yellow(
+        chalk.bold('WARN! ') +
           str +
-          (details ? `\n${action}: ${renderLink(details)}` : ''),
-        {
-          padding: {
-            top: 0,
-            bottom: 0,
-            left: 1,
-            right: 1,
-          },
-          borderColor: 'yellow',
-          ...options?.boxen,
-        }
+          (details ? `\n${action}: ${renderLink(details)}` : '')
       )
     );
     this.print('\n');

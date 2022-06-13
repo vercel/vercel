@@ -78,6 +78,7 @@ import {
   updateRouteSrc,
   validateEntrypoint,
 } from './utils';
+import assert from 'assert';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -131,10 +132,11 @@ function getRealNextVersion(entryPath: string): string | false {
     // First try to resolve the `next` dependency and get the real version from its
     // package.json. This allows the builder to be used with frameworks like Blitz that
     // bundle Next but where Next isn't in the project root's package.json
-    const nextVersion: string = require(resolveFrom(
-      entryPath,
-      'next/package.json'
-    )).version;
+
+    // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
+    const nextVersion: string = eval('require')(
+      resolveFrom(entryPath, 'next/package.json')
+    ).version;
     console.log(`Detected Next.js version: ${nextVersion}`);
     return nextVersion;
   } catch (_ignored) {
@@ -1292,6 +1294,7 @@ export const build: BuildV2 = async ({
         entryPath,
         baseDir,
         dataRoutes,
+        buildId,
         escapedBuildId,
         outputDirectory,
         trailingSlashRedirects,
@@ -2596,8 +2599,17 @@ async function getServerlessPages(params: {
 
   // Edge Functions do not consider as Serverless Functions
   for (const edgeFunctionFile of Object.keys(
-    middlewareManifest?.middleware ?? {}
+    middlewareManifest?.functions ?? {}
   )) {
+    // `getStaticProps` are expecting `Prerender` output which is a Serverless function
+    // and not an Edge Function. Therefore we only remove API endpoints for now, as they
+    // don't have `getStaticProps`.
+    //
+    // Context: https://github.com/vercel/vercel/pull/7905#discussion_r890213165
+    assert(
+      edgeFunctionFile.startsWith('/api/'),
+      `Only API endpoints are currently supported for Edge endpoints.`
+    );
     delete pages[edgeFunctionFile.slice(1) + '.js'];
   }
 

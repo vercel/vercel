@@ -16,18 +16,15 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
+import { Project } from 'ts-morph';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
-  File,
-  Files,
-  Meta,
-  Config,
-  StartDevServerOptions,
   glob,
   download,
   FileBlob,
   FileFsRef,
+  EdgeFunction,
   NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
@@ -37,11 +34,20 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+} from '@vercel/build-utils';
+import type {
+  File,
+  Files,
+  Meta,
+  Config,
+  StartDevServerOptions,
   BuildV3,
   PrepareCache,
   StartDevServer,
   NodeVersion,
+  BuildResultV3,
 } from '@vercel/build-utils';
+import { getConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
 
@@ -68,6 +74,8 @@ interface PortInfo {
 function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
+
+const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge'];
 
 const require_ = eval('require');
 
@@ -187,7 +195,10 @@ async function compile(
         if (cached === null) return null;
         try {
           let source: string | Buffer = readFileSync(fsPath);
-          if (fsPath.endsWith('.ts') || fsPath.endsWith('.tsx')) {
+          if (
+            (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
+            fsPath.endsWith('.tsx')
+          ) {
             source = compileTypeScript(fsPath, source.toString());
           }
           const { mode } = lstatSync(fsPath);
@@ -362,20 +373,76 @@ export const build: BuildV3 = async ({
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
-  const shouldAddHelpers = !(
-    config.helpers === false || process.env.NODEJS_HELPERS === '0'
-  );
+  let routes: BuildResultV3['routes'];
+  let output: BuildResultV3['output'] | undefined;
 
-  const lambda = new NodejsLambda({
-    files: preparedFiles,
-    handler: renameTStoJS(relative(baseDir, entrypointPath)),
-    runtime: nodeVersion.runtime,
-    shouldAddHelpers,
-    shouldAddSourcemapSupport,
-    awsLambdaHandler,
-  });
+  const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  const outputName = config.zeroConfig
+    ? handler.substring(0, handler.length - 3)
+    : handler;
 
-  return { output: lambda };
+  // Will output an `EdgeFunction` for when `config.middleware = true`
+  // (i.e. for root-level "middleware" file) or if source code contains:
+  // `export const config = { runtime: 'experimental-edge' }`
+  let isEdgeFunction = false;
+
+  // Add a catch-all `route` for Middleware
+  if (config.middleware === true) {
+    routes = [
+      {
+        src: '/.*',
+        middlewarePath: config.zeroConfig
+          ? outputName
+          : relative(baseDir, entrypointPath),
+        continue: true,
+      },
+    ];
+
+    // Middleware is implicitly an Edge Function
+    isEdgeFunction = true;
+  }
+
+  if (!isEdgeFunction) {
+    const project = new Project();
+    const staticConfig = getConfig(project, entrypointPath);
+    if (staticConfig?.runtime) {
+      if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
+        throw new Error(
+          `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
+            staticConfig.runtime
+          )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
+        );
+      }
+      isEdgeFunction = staticConfig.runtime === 'experimental-edge';
+    }
+  }
+
+  if (isEdgeFunction) {
+    output = new EdgeFunction({
+      entrypoint: handler,
+      files: preparedFiles,
+
+      // TODO: remove - these two properties should not be required
+      name: outputName,
+      deploymentTarget: 'v8-worker',
+    });
+  } else {
+    // "nodejs" runtime is the default
+    const shouldAddHelpers = !(
+      config.helpers === false || process.env.NODEJS_HELPERS === '0'
+    );
+
+    output = new NodejsLambda({
+      files: preparedFiles,
+      handler,
+      runtime: nodeVersion.runtime,
+      shouldAddHelpers,
+      shouldAddSourcemapSupport,
+      awsLambdaHandler,
+    });
+  }
+
+  return { routes, output };
 };
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {

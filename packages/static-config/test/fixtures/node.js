@@ -1,7 +1,7 @@
 import fs from 'fs';
 
 export const config = {
-  use: 'node',
+  runtime: 'nodejs',
   memory: 1024,
 };
 
