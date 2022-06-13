@@ -40,6 +40,7 @@ test('[vercel dev] should support edge functions', async () => {
       method: 'POST',
       body: '{"hello":"world"}',
       decamelized: 'some_camel_case_thing',
+      uppercase: 'SOMETHING',
     });
   } finally {
     await dev.kill('SIGTERM');

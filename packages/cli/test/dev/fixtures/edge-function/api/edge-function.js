@@ -1,4 +1,5 @@
 import decamelize from 'decamelize';
+import { upper } from '../lib/upper';
 
 export const config = {
   runtime: 'experimental-edge',
@@ -14,6 +15,7 @@ export default async function edge(request, event) {
       method: request.method,
       body: requestBody,
       decamelized: decamelize('someCamelCaseThing'),
+      uppercase: upper('someThing'),
     })
   );
 }

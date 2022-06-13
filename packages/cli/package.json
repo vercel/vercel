@@ -119,7 +119,6 @@
     "credit-card": "3.0.1",
     "date-fns": "1.29.0",
     "debug": "3.1.0",
-    "decamelize": "^6.0.0",
     "dot": "1.1.3",
     "dotenv": "4.0.0",
     "email-prompt": "0.3.2",
