@@ -2231,20 +2231,21 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
   it('no package.json + no build + root-level "middleware.js"', async () => {
     const files = ['middleware.js', 'index.html', 'web/middleware.js'];
-    const { builders, middlewareRoutes, errors } = await detectBuilders(
-      files,
-      null,
-      {
-        featHandleMiss,
-      }
-    );
+    const result = await detectBuilders(files, null, {
+      featHandleMiss,
+    });
+
+    const { builders, middlewareRoutes, rewriteRoutes, errorRoutes, errors } =
+      result;
     expect(errors).toEqual(null);
+
     expect(builders).toHaveLength(2);
     expect(builders![0].use).toEqual('@vercel/node');
     expect(builders![0].src).toEqual('middleware.js');
     expect(builders![0].config?.middleware).toEqual(true);
     expect(builders![1].use).toEqual('@vercel/static');
     expect(builders![1].src).toEqual('!{api/**,package.json,middleware.[jt]s}');
+
     expect(middlewareRoutes).toHaveLength(1);
     const middlewareRoute = middlewareRoutes![0];
     if ('middlewarePath' in middlewareRoute) {
@@ -2254,6 +2255,15 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     } else {
       throw new Error('Middleware route not `Source`');
     }
+
+    expect(rewriteRoutes).toHaveLength(1);
+    expect(rewriteRoutes![0].src).toEqual('^/api(/.*)?$');
+    expect(rewriteRoutes![0].status).toEqual(404);
+
+    expect(errorRoutes).toHaveLength(1);
+    expect(errorRoutes![0].status).toEqual(404);
+    expect(errorRoutes![0].src).toEqual('^(?!/api).*$');
+    expect(errorRoutes![0].dest).toEqual('/404.html');
   });
 
   it('no package.json + no build + root-level "middleware.ts" + API function', async () => {
@@ -2263,14 +2273,19 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       'index.html',
       'web/middleware.js',
     ];
-    const { builders, middlewareRoutes, errors } = await detectBuilders(
-      files,
-      null,
-      {
-        featHandleMiss,
-      }
-    );
+    const result = await detectBuilders(files, null, {
+      featHandleMiss,
+    });
+    const {
+      builders,
+      middlewareRoutes,
+      defaultRoutes,
+      rewriteRoutes,
+      errorRoutes,
+      errors,
+    } = result;
     expect(errors).toEqual(null);
+
     expect(builders).toHaveLength(3);
     expect(builders![0].use).toEqual('@vercel/go');
     expect(builders![0].src).toEqual('api/index.go');
@@ -2279,6 +2294,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![1].config?.middleware).toEqual(true);
     expect(builders![2].use).toEqual('@vercel/static');
     expect(builders![2].src).toEqual('!{api/**,package.json,middleware.[jt]s}');
+
     expect(middlewareRoutes).toHaveLength(1);
     const middlewareRoute = middlewareRoutes![0];
     if ('middlewarePath' in middlewareRoute) {
@@ -2288,6 +2304,31 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     } else {
       throw new Error('Middleware route not `Source`');
     }
+
+    expect(defaultRoutes).toHaveLength(2);
+    const missRoute = defaultRoutes![0];
+    if ('handle' in missRoute) {
+      expect(missRoute.handle).toEqual('miss');
+    } else {
+      throw new Error('Miss route not `Handle`');
+    }
+    const apiRoute = defaultRoutes![1];
+    if ('check' in apiRoute) {
+      expect(apiRoute.src).toEqual('^/api/(.+)(?:\\.(?:go))$');
+      expect(apiRoute.dest).toEqual('/api/$1');
+      expect(apiRoute.check).toEqual(true);
+    } else {
+      throw new Error('API route not `Source`');
+    }
+
+    expect(rewriteRoutes).toHaveLength(1);
+    expect(rewriteRoutes![0].src).toEqual('^/api(/.*)?$');
+    expect(rewriteRoutes![0].status).toEqual(404);
+
+    expect(errorRoutes).toHaveLength(1);
+    expect(errorRoutes![0].status).toEqual(404);
+    expect(errorRoutes![0].src).toEqual('^(?!/api).*$');
+    expect(errorRoutes![0].dest).toEqual('/404.html');
   });
 
   it('should not add middleware builder when "nextjs" framework is selected', async () => {
