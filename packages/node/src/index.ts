@@ -375,10 +375,8 @@ export const build: BuildV3 = async ({
 
   let output: BuildResultV3['output'] | undefined;
 
-  const handler = renameTStoJS(relative(baseDir, entrypointPath));
-  const outputName = config.zeroConfig
-    ? handler.substring(0, handler.length - 3)
-    : handler;
+  const handler = relative(baseDir, entrypointPath);
+  const handlerWithJsExt = renameTStoJS(handler);
 
   // Will output an `EdgeFunction` for when `config.middleware = true`
   // (i.e. for root-level "middleware" file) or if source code contains:
@@ -402,11 +400,13 @@ export const build: BuildV3 = async ({
 
   if (isEdgeFunction) {
     output = new EdgeFunction({
-      entrypoint: handler,
+      entrypoint: handlerWithJsExt,
       files: preparedFiles,
 
       // TODO: remove - these two properties should not be required
-      name: outputName,
+      name: config.zeroConfig
+        ? handler.substring(0, handler.length - 3)
+        : handler,
       deploymentTarget: 'v8-worker',
     });
   } else {
@@ -417,7 +417,7 @@ export const build: BuildV3 = async ({
 
     output = new NodejsLambda({
       files: preparedFiles,
-      handler,
+      handler: handlerWithJsExt,
       runtime: nodeVersion.runtime,
       shouldAddHelpers,
       shouldAddSourcemapSupport,
