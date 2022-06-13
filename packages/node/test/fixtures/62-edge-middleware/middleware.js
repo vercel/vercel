@@ -1,4 +1,4 @@
-export default (req: Request) => {
+export default req => {
   const url = new URL(req.url);
   const headers = new Headers({
     'x-got-middleware': 'true',
