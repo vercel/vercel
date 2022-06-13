@@ -12236,10 +12236,10 @@ ts-eager@2.0.2:
     esbuild "^0.11.20"
     source-map-support "^0.5.19"
 
-ts-jest@28.0.0-next.1:
-  version "28.0.0-next.1"
-  resolved "https://registry.yarnpkg.com/ts-jest/-/ts-jest-28.0.0-next.1.tgz#b9961b0220d797a09ffc98d93caa73879794b122"
-  integrity sha512-rhxVFSOOcJLCjGvh/RXmvz0fSpnQrB0PjiC3JL25oNeuHH/bC3BVlanLg9AtPm/AnW3l0JCBfgACm2xAT9DPxw==
+ts-jest@28.0.0-next.2:
+  version "28.0.0-next.2"
+  resolved "https://registry.yarnpkg.com/ts-jest/-/ts-jest-28.0.0-next.2.tgz#9fc04466785cb31023832650dfa1c17bcb1f4797"
+  integrity sha512-+2HEBjvDY+ywdthydk3dLV6LXFex8JqIZls+zUYz+p5bpPzPzSpQDc4RcRgoniFsY9ZLyZQsxgZmP8ulyeHoGg==
   dependencies:
     bs-logger "0.x"
     fast-json-stable-stringify "2.x"

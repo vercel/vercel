@@ -1,12 +1,13 @@
-const { deepEqual } = require('assert');
-const { appendRoutesToPhase } = require('../dist/append');
+import { deepEqual } from 'assert';
+import { appendRoutesToPhase } from '../src/append';
+import { Route } from '../src/types';
 
 test('appendRoutesToPhase `routes=null` and `newRoutes=[]`', () => {
   const routes = null;
-  const newRoutes = [];
+  const newRoutes: Route[] = [];
   const phase = 'filesystem';
   const actual = appendRoutesToPhase({ routes, newRoutes, phase });
-  const expected = [];
+  const expected: Route[] = [];
   deepEqual(actual, expected);
 });
 
@@ -20,26 +21,26 @@ test('appendRoutesToPhase `routes=null` and one `newRoutes`', () => {
 });
 
 test('appendRoutesToPhase `routes=[]` and `newRoutes=null`', () => {
-  const routes = [];
+  const routes: Route[] = [];
   const newRoutes = null;
   const phase = 'filesystem';
   const actual = appendRoutesToPhase({ routes, newRoutes, phase });
-  const expected = [];
+  const expected: Route[] = [];
   deepEqual(actual, expected);
 });
 
 test('appendRoutesToPhase `routes=[]` and `newRoutes=[]`', () => {
-  const routes = [];
-  const newRoutes = [];
+  const routes: Route[] = [];
+  const newRoutes: Route[] = [];
   const phase = 'filesystem';
   const actual = appendRoutesToPhase({ routes, newRoutes, phase });
-  const expected = [];
+  const expected: Route[] = [];
   deepEqual(actual, expected);
 });
 
 test('appendRoutesToPhase one routes, zero newRoutes', () => {
   const routes = [{ src: '/foo', dest: '/bar' }];
-  const newRoutes = [];
+  const newRoutes: Route[] = [];
   const phase = 'filesystem';
   const actual = appendRoutesToPhase({ routes, newRoutes, phase });
   const expected = routes;
@@ -47,7 +48,7 @@ test('appendRoutesToPhase one routes, zero newRoutes', () => {
 });
 
 test('appendRoutesToPhase zero routes, one newRoutes', () => {
-  const routes = [];
+  const routes: Route[] = [];
   const newRoutes = [{ src: '/foo', dest: '/bar' }];
   const phase = 'filesystem';
   const actual = appendRoutesToPhase({ routes, newRoutes, phase });
@@ -56,7 +57,10 @@ test('appendRoutesToPhase zero routes, one newRoutes', () => {
 });
 
 test('appendRoutesToPhase two routes in phase', () => {
-  const routes = [{ handle: 'filesystem' }, { src: '/first', dest: '/one' }];
+  const routes: Route[] = [
+    { handle: 'filesystem' },
+    { src: '/first', dest: '/one' },
+  ];
   const newRoutes = [{ src: '/new', dest: '/to' }];
   const phase = 'filesystem';
   const actual = appendRoutesToPhase({ routes, newRoutes, phase });
@@ -69,7 +73,10 @@ test('appendRoutesToPhase two routes in phase', () => {
 });
 
 test('appendRoutesToPhase two routes out of phase', () => {
-  const routes = [{ handle: 'resource' }, { src: '/first', dest: '/one' }];
+  const routes: Route[] = [
+    { handle: 'resource' },
+    { src: '/first', dest: '/one' },
+  ];
   const newRoutes = [{ src: '/new', dest: '/to' }];
   const phase = 'filesystem';
   const actual = appendRoutesToPhase({ routes, newRoutes, phase });
@@ -83,7 +90,7 @@ test('appendRoutesToPhase two routes out of phase', () => {
 });
 
 test('appendRoutesToPhase one routes before, two routes in phase', () => {
-  const routes = [
+  const routes: Route[] = [
     { src: '/first', dest: '/one' },
     { handle: 'filesystem' },
     { src: '/second', dest: '/two' },
@@ -101,7 +108,7 @@ test('appendRoutesToPhase one routes before, two routes in phase', () => {
 });
 
 test('appendRoutesToPhase one routes before, two routes in phase, two routes in different phase', () => {
-  const routes = [
+  const routes: Route[] = [
     { src: '/first', dest: '/one' },
     { handle: 'filesystem' },
     { src: '/second', dest: '/two' },
