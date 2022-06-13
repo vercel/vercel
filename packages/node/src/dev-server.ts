@@ -139,7 +139,7 @@ async function serializeRequest(message: IncomingMessage) {
 async function createEdgeEventHandler(
   entrypoint: string
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const buildResult = await ncc(entrypoint, { target: 'es2020' });
+  const buildResult = await ncc(entrypoint, { target: 'es2022' });
   const edgeFunctionDefinition = buildResult.code;
 
   const initialCode = `
