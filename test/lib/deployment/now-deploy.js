@@ -49,6 +49,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     name: 'test2020',
     files,
     builds: nowJson.builds,
+    routes: nowJson.routes,
     meta: {},
   };
 
