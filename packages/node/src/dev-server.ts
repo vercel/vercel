@@ -9,7 +9,7 @@ if (!entrypoint) {
 }
 
 import { join } from 'path';
-import { register } from 'ts-node';
+import { register, createEsmHooks } from 'ts-node';
 import { fixConfig } from './typescript';
 
 type TypescriptModule = typeof import('typescript');
@@ -58,15 +58,19 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
     }
   }
 
-  fixConfigDev(config);
+  const moduleType = fixConfigDev(config);
 
-  register({
+  const service = register({
     compiler,
     compilerOptions: config.compilerOptions,
     transpileOnly: true,
   });
 
-  useRequire = true;
+  useRequire = moduleType === 'CommonJS';
+
+  if (!useRequire) {
+    createEsmHooks(service);
+  }
 }
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
@@ -165,9 +169,9 @@ export async function onDevRequest(
   res.end(Buffer.from(result.body, result.encoding));
 }
 
-export function fixConfigDev(config: { compilerOptions: any }): void {
+function fixConfigDev(config: { compilerOptions: any }) {
   const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
-  fixConfig(config, nodeVersionMajor);
+  const moduleType = fixConfig(config, nodeVersionMajor);
 
   // In prod, `.ts` inputs use TypeScript and
   // `.js` inputs use Babel to convert ESM to CJS.
@@ -178,6 +182,8 @@ export function fixConfigDev(config: { compilerOptions: any }): void {
   // In prod, we emit outputs to the filesystem.
   // In dev, we don't emit because we use ts-node.
   config.compilerOptions.noEmit = true;
+
+  return moduleType;
 }
 
 main().catch(err => {

@@ -32,7 +32,7 @@
   "dependencies": {
     "@types/node": "*",
     "@vercel/node-bridge": "3.0.0",
-    "ts-node": "8.9.1",
+    "ts-node": "10.8.1",
     "typescript": "4.3.4"
   },
   "devDependencies": {
