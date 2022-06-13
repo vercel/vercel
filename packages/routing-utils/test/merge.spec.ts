@@ -532,29 +532,3 @@ test('mergeRoutes ensure beforeFiles comes after redirects (check)', () => {
   ];
   deepStrictEqual(actual, expected);
 });
-
-/*
-test.only('handle filesystem at end of user routes', () => {
-  const userRoutes: Route[] = [
-    {
-      src: '/foo',
-      dest: '/bar',
-    },
-    {
-      handle: 'filesystem',
-    },
-  ];
-  const builds: Build[] = [];
-  const actual = mergeRoutes({ userRoutes, builds });
-  const expected = [
-    {
-      src: '/foo',
-      dest: '/bar',
-    },
-    {
-      handle: 'filesystem',
-    },
-  ];
-  deepStrictEqual(actual, expected);
-});
-*/
