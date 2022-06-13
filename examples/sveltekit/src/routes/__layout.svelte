@@ -1,6 +1,21 @@
 <script>
   import Header from '$lib/header/Header.svelte';
+  import { webVitals } from '$lib/vitals';
+  import { browser } from '$app/env';
+  import { page } from '$app/stores';
   import '../app.css';
+
+  let analyticsId = import.meta.env.VERCEL_ANALYTICS_ID;
+
+  if (browser && analyticsId) {
+    page.subscribe(({ url, params }) =>
+      webVitals({
+        path: url.pathname,
+        params,
+        analyticsId
+      })
+    );
+  }
 </script>
 
 <Header />
