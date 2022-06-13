@@ -8,6 +8,7 @@ declare namespace ncc {
     watch?: any;
     sourceMap?: boolean;
     sourceMapRegister?: boolean;
+    target: string;
   }
 
   export interface Asset {

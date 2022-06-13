@@ -16,6 +16,7 @@ export default async function edge(request, event) {
       body: requestBody,
       decamelized: decamelize('someCamelCaseThing'),
       uppercase: upper('someThing'),
+      optionalChaining: request?.doesnotexist ?? 'fallback',
     })
   );
 }
