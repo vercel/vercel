@@ -140,10 +140,10 @@ async function createEdgeEventHandler(
   entrypoint: string
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const buildResult = await ncc(entrypoint, { target: 'es2022' });
-  const edgeFunctionDefinition = buildResult.code;
+  const userCode = buildResult.code;
 
   const initialCode = `
-    ${edgeFunctionDefinition};
+    ${userCode};
 
     addEventListener('fetch', async (event) => {
       let serializedRequest = await event.request.text();
@@ -186,7 +186,7 @@ async function createEdgeEventHandler(
   exitHook(server.close);
 
   return async function (request: IncomingMessage) {
-    const response = await fetch(`${server.url}`, {
+    const response = await fetch(server.url, {
       method: 'post',
       body: await serializeRequest(request),
     });
