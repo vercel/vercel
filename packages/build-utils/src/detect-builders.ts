@@ -91,6 +91,7 @@ export async function detectBuilders(
   errors: ErrorResponse[] | null;
   warnings: ErrorResponse[];
   defaultRoutes: Route[] | null;
+  middlewareRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
@@ -110,6 +111,7 @@ export async function detectBuilders(
       errors: [functionError],
       warnings,
       defaultRoutes: null,
+      middlewareRoutes: null,
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
@@ -167,7 +169,8 @@ export async function detectBuilders(
         fileName,
         apiSortedFiles,
         options,
-        absolutePathCache
+        absolutePathCache,
+        apiBuilder
       );
 
       if (routeError) {
@@ -176,6 +179,7 @@ export async function detectBuilders(
           errors: [routeError],
           warnings,
           defaultRoutes: null,
+          middlewareRoutes: null,
           redirectRoutes: null,
           rewriteRoutes: null,
           errorRoutes: null,
@@ -254,6 +258,7 @@ export async function detectBuilders(
         errors,
         warnings,
         builders: null,
+        middlewareRoutes: null,
         redirectRoutes: null,
         defaultRoutes: null,
         rewriteRoutes: null,
@@ -297,6 +302,7 @@ export async function detectBuilders(
       builders: null,
       errors: [unusedFunctionError],
       warnings,
+      middlewareRoutes: null,
       redirectRoutes: null,
       defaultRoutes: null,
       rewriteRoutes: null,
@@ -342,6 +348,7 @@ export async function detectBuilders(
     warnings,
     builders: builders.length ? builders : null,
     errors: errors.length ? errors : null,
+    middlewareRoutes: routesResult.middlewareRoutes,
     redirectRoutes: routesResult.redirectRoutes,
     defaultRoutes: routesResult.defaultRoutes,
     rewriteRoutes: routesResult.rewriteRoutes,
@@ -690,12 +697,25 @@ function getApiRoute(
   fileName: string,
   sortedFiles: string[],
   options: Options,
-  absolutePathCache: Map<string, string>
+  absolutePathCache: Map<string, string>,
+  apiBuiler: Builder
 ): {
   apiRoute: Source | null;
   isDynamic: boolean;
   routeError: ErrorResponse | null;
 } {
+  if (apiBuiler.config?.middleware === true) {
+    return {
+      apiRoute: {
+        src: '/.*',
+        middlewarePath: 'middleware',
+        continue: true,
+      },
+      isDynamic: false,
+      routeError: null,
+    };
+  }
+
   const conflictingSegment = getConflictingSegment(fileName);
 
   if (conflictingSegment) {
@@ -967,6 +987,7 @@ function getRouteResult(
   options: Options
 ): {
   defaultRoutes: Route[];
+  middlewareRoutes: Route[];
   redirectRoutes: Route[];
   rewriteRoutes: Route[];
   errorRoutes: Route[];
@@ -974,6 +995,7 @@ function getRouteResult(
 } {
   const deps = Object.assign({}, pkg?.dependencies, pkg?.devDependencies);
   const defaultRoutes: Route[] = [];
+  const middlewareRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
@@ -987,7 +1009,17 @@ function getRouteResult(
     framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
   const ignoreRuntimes = slugToFramework.get(framework)?.ignoreRuntimes;
 
-  if (apiRoutes && apiRoutes.length > 0) {
+  if (apiRoutes?.length > 0) {
+    // Extract the middleware route
+    const middlewareRouteIndex = apiRoutes.findIndex(
+      route => 'middlewarePath' in route
+    );
+    if (middlewareRouteIndex !== -1) {
+      const middlewareRoute = apiRoutes[middlewareRouteIndex];
+      apiRoutes.splice(middlewareRouteIndex, 1);
+      middlewareRoutes.push(middlewareRoute);
+    }
+
     if (options.featHandleMiss) {
       // Exclude extension names if the corresponding plugin is not found in package.json
       // detectBuilders({ignoreRoutesForBuilders: ['@vercel/python']})
@@ -1121,6 +1153,7 @@ function getRouteResult(
 
   return {
     defaultRoutes,
+    middlewareRoutes,
     redirectRoutes,
     rewriteRoutes,
     errorRoutes,

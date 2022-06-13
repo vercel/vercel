@@ -245,6 +245,7 @@ export default async function main(client: Client): Promise<number> {
       builds = [{ src: '**', use: '@vercel/static' }];
     }
 
+    zeroConfigRoutes.push(...(detectedBuilders.middlewareRoutes || []));
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({

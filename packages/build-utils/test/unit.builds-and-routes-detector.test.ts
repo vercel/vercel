@@ -2231,35 +2231,63 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
   it('no package.json + no build + root-level "middleware.js"', async () => {
     const files = ['middleware.js', 'index.html', 'web/middleware.js'];
-    const { builders, errors } = await detectBuilders(files, null, {
-      featHandleMiss,
-    });
-    expect(builders![0].use).toBe('@vercel/node');
-    expect(builders![0].src).toBe('middleware.js');
-    expect(builders![0].config?.middleware).toEqual(true);
-    expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
-    expect(builders!.length).toBe(2);
-    expect(errors).toBe(null);
-  });
-
-  it('no package.json + no build + root-level "middleware.ts"', async () => {
-    const files = ['middleware.ts', 'index.html', 'web/middleware.js'];
-    const { builders, defaultRoutes, errors } = await detectBuilders(
+    const { builders, middlewareRoutes, errors } = await detectBuilders(
       files,
       null,
       {
         featHandleMiss,
       }
     );
-    expect(builders![0].use).toBe('@vercel/node');
-    expect(builders![0].src).toBe('middleware.ts');
+    expect(errors).toEqual(null);
+    expect(builders).toHaveLength(2);
+    expect(builders![0].use).toEqual('@vercel/node');
+    expect(builders![0].src).toEqual('middleware.js');
     expect(builders![0].config?.middleware).toEqual(true);
-    expect(builders![1].use).toBe('@vercel/static');
-    expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
-    expect(builders!.length).toBe(2);
-    expect(errors).toBe(null);
-    console.log(defaultRoutes);
+    expect(builders![1].use).toEqual('@vercel/static');
+    expect(builders![1].src).toEqual('!{api/**,package.json,middleware.[jt]s}');
+    expect(middlewareRoutes).toHaveLength(1);
+    const middlewareRoute = middlewareRoutes![0];
+    if ('middlewarePath' in middlewareRoute) {
+      expect(middlewareRoute.src).toEqual('/.*');
+      expect(middlewareRoute.middlewarePath).toEqual('middleware');
+      expect(middlewareRoute.continue).toEqual(true);
+    } else {
+      throw new Error('Middleware route not `Source`');
+    }
+  });
+
+  it('no package.json + no build + root-level "middleware.ts" + API function', async () => {
+    const files = [
+      'api/index.go',
+      'middleware.ts',
+      'index.html',
+      'web/middleware.js',
+    ];
+    const { builders, middlewareRoutes, errors } = await detectBuilders(
+      files,
+      null,
+      {
+        featHandleMiss,
+      }
+    );
+    expect(errors).toEqual(null);
+    expect(builders).toHaveLength(3);
+    expect(builders![0].use).toEqual('@vercel/go');
+    expect(builders![0].src).toEqual('api/index.go');
+    expect(builders![1].use).toEqual('@vercel/node');
+    expect(builders![1].src).toEqual('middleware.ts');
+    expect(builders![1].config?.middleware).toEqual(true);
+    expect(builders![2].use).toEqual('@vercel/static');
+    expect(builders![2].src).toEqual('!{api/**,package.json,middleware.[jt]s}');
+    expect(middlewareRoutes).toHaveLength(1);
+    const middlewareRoute = middlewareRoutes![0];
+    if ('middlewarePath' in middlewareRoute) {
+      expect(middlewareRoute.src).toEqual('/.*');
+      expect(middlewareRoute.middlewarePath).toEqual('middleware');
+      expect(middlewareRoute.continue).toEqual(true);
+    } else {
+      throw new Error('Middleware route not `Source`');
+    }
   });
 
   it('should not add middleware builder when "nextjs" framework is selected', async () => {

@@ -1,4 +1,11 @@
 {
+  "routes": [
+    {
+      "src": "/.*",
+      "middlewarePath": "middleware",
+      "continue": true
+    }
+  ],
   "builds": [
     { "src": "api/**/*.js", "use": "@vercel/node" },
     {

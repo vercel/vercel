@@ -428,8 +428,6 @@ export interface BuildResultV2Typical {
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
 export interface BuildResultV3 {
-  // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
-  routes?: any[];
   output: Lambda | EdgeFunction;
 }
 
