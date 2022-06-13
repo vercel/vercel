@@ -4,13 +4,12 @@ import { URL, parse as parseUrl } from 'url';
 import test from 'ava';
 import semVer from 'semver';
 import { Readable } from 'stream';
-import { homedir } from 'os';
+import { homedir, tmpdir } from 'os';
 import _execa from 'execa';
 import XDGAppPaths from 'xdg-app-paths';
-import nodeFetch from 'node-fetch';
+import fetch from 'node-fetch';
 import tmp from 'tmp-promise';
 import retry from 'async-retry';
-import createFetchRetry from '@vercel/fetch-retry';
 import fs, {
   writeFile,
   readFile,
@@ -18,14 +17,13 @@ import fs, {
   copy,
   ensureDir,
   exists,
+  mkdir,
 } from 'fs-extra';
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
-
-const fetch = createFetchRetry(nodeFetch);
 
 // log command when running `execa`
 function execa(file, args, options) {
@@ -34,7 +32,7 @@ function execa(file, args, options) {
 }
 
 function fixture(name) {
-  const directory = path.join(__dirname, 'fixtures', 'integration', name);
+  const directory = path.join(tmpFixturesDir, name);
   const config = path.join(directory, 'project.json');
 
   // We need to remove it, otherwise we can't re-use fixtures
@@ -125,6 +123,19 @@ ${stdout}
   `;
 }
 
+async function vcLink(t, projectPath) {
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['link', '--confirm', ...defaultArgs],
+    {
+      reject: false,
+      cwd: projectPath,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+}
+
 // AVA's `t.context` can only be set before the tests,
 // but we want to set it within as well
 const context = {};
@@ -136,6 +147,7 @@ let email;
 let contextName;
 
 let tmpDir;
+let tmpFixturesDir = path.join(tmpdir(), 'tmp-fixtures');
 
 let globalDir = XDGAppPaths('com.vercel.cli').dataDirs()[0];
 
@@ -278,7 +290,7 @@ async function setupProject(process, projectName, overrides) {
   process.stdin.write('\n');
 
   await waitForPrompt(process, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify these settings?')
   );
 
   if (overrides) {
@@ -296,17 +308,17 @@ async function setupProject(process, projectName, overrides) {
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Build Command?`)
     );
-    process.stdin.write(`${buildCommand ?? ''}\n`);
-
-    await waitForPrompt(process, chunk =>
-      chunk.includes(`What's your Output Directory?`)
-    );
-    process.stdin.write(`${outputDirectory ?? ''}\n`);
+    process.stdin.write(`${buildCommand || ''}\n`);
 
     await waitForPrompt(process, chunk =>
       chunk.includes(`What's your Development Command?`)
     );
-    process.stdin.write(`${devCommand ?? ''}\n`);
+    process.stdin.write(`${devCommand || ''}\n`);
+
+    await waitForPrompt(process, chunk =>
+      chunk.includes(`What's your Output Directory?`)
+    );
+    process.stdin.write(`${outputDirectory || ''}\n`);
   } else {
     process.stdin.write('no\n');
   }
@@ -317,7 +329,7 @@ async function setupProject(process, projectName, overrides) {
 test.before(async () => {
   try {
     await createUser();
-    await prepareFixtures(contextName, binaryPath);
+    await prepareFixtures(contextName, binaryPath, tmpFixturesDir);
   } catch (err) {
     console.log('Failed `test.before`');
     console.log(err);
@@ -325,6 +337,8 @@ test.before(async () => {
 });
 
 test.after.always(async () => {
+  delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
+
   if (loginApiServer) {
     // Stop mock server
     loginApiServer.close();
@@ -338,6 +352,11 @@ test.after.always(async () => {
   if (tmpDir) {
     // Remove config directory entirely
     tmpDir.removeCallback();
+  }
+
+  if (tmpFixturesDir) {
+    console.log('removing tmpFixturesDir', tmpFixturesDir);
+    fs.removeSync(tmpFixturesDir);
   }
 });
 
@@ -355,6 +374,8 @@ test('default command should prompt login with empty auth.json', async t => {
   }
 });
 
+// NOTE: Test order is important here.
+// This test MUST run before the tests below for them to work.
 test('login', async t => {
   t.timeout(ms('1m'));
 
@@ -376,6 +397,293 @@ test('login', async t => {
 
   const auth = await fs.readJSON(getConfigAuthPath());
   t.is(auth.token, token);
+});
+
+test('[vc build] should build project with corepack and select npm@8.1.0', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+  const directory = fixture('vc-build-corepack-npm');
+  const before = await _execa('npm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /Build Completed/gm);
+  const after = await _execa('npm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  // Ensure global npm didn't change
+  t.is(before.stdout, after.stdout);
+  // Ensure version is correct
+  t.is(
+    await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    ),
+    '8.1.0\n'
+  );
+  // Ensure corepack will be cached
+  const contents = fs.readdirSync(
+    path.join(directory, '.vercel/cache/corepack')
+  );
+  t.deepEqual(contents, ['home', 'shim']);
+});
+
+test('[vc build] should build project with corepack and select pnpm@7.1.0', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+  const directory = fixture('vc-build-corepack-pnpm');
+  const before = await _execa('pnpm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /Build Completed/gm);
+  const after = await _execa('pnpm', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  // Ensure global pnpm didn't change
+  t.is(before.stdout, after.stdout);
+  // Ensure version is correct
+  t.is(
+    await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    ),
+    '7.1.0\n'
+  );
+  // Ensure corepack will be cached
+  const contents = fs.readdirSync(
+    path.join(directory, '.vercel/cache/corepack')
+  );
+  t.deepEqual(contents, ['home', 'shim']);
+});
+
+test('[vc build] should build project with corepack and select yarn@2.4.3', async t => {
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+  const directory = fixture('vc-build-corepack-yarn');
+  const before = await _execa('yarn', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0, formatOutput(output));
+  t.regex(output.stderr, /Build Completed/gm);
+  const after = await _execa('yarn', ['--version'], {
+    cwd: directory,
+    reject: false,
+  });
+  // Ensure global yarn didn't change
+  t.is(before.stdout, after.stdout);
+  // Ensure version is correct
+  t.is(
+    await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    ),
+    '2.4.3\n'
+  );
+  // Ensure corepack will be cached
+  const contents = fs.readdirSync(
+    path.join(directory, '.vercel/cache/corepack')
+  );
+  t.deepEqual(contents, ['home', 'shim']);
+});
+
+test('[vc dev] should print help from `vc develop --help`', async t => {
+  const directory = fixture('static-deployment');
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['develop', '--help', ...defaultArgs],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 2, formatOutput({ stdout, stderr }));
+  t.regex(stdout, /▲ vercel dev/gm);
+});
+
+test('default command should deploy directory', async t => {
+  const projectDir = fixture('deploy-default-with-sub-directory');
+  const target = 'output';
+
+  await vcLink(t, path.join(projectDir, target));
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      target,
+      ...defaultArgs,
+    ],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+  t.regex(stdout, /https:\/\/output-.+\.vercel\.app/);
+});
+
+test('default command should warn when deploying with conflicting subdirectory', async t => {
+  const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
+  const target = 'list'; // command that conflicts with a sub directory
+
+  await vcLink(t, projectDir);
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      target,
+      ...defaultArgs,
+    ],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+  t.regex(
+    stderr || '',
+    /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
+  );
+
+  const listHeader = /project +latest deployment +state +age +username/;
+  t.regex(stdout || '', listHeader); // ensure `list` command still ran
+});
+
+test('deploy command should not warn when deploying with conflicting subdirectory and using --cwd', async t => {
+  const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
+  const target = 'list'; // command that conflicts with a sub directory
+
+  await vcLink(t, path.join(projectDir, target));
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['list', '--cwd', target, ...defaultArgs],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
+  t.notRegex(
+    stderr || '',
+    /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
+  );
+
+  const listHeader = /project +latest deployment +state +age +username/;
+  t.regex(stdout || '', listHeader); // ensure `list` command still ran
+});
+
+test('default command should work with --cwd option', async t => {
+  const projectDir = fixture('deploy-default-with-conflicting-sub-directory');
+  const target = 'list'; // command that conflicts with a sub directory
+
+  await vcLink(t, path.join(projectDir, 'list'));
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      '--cwd',
+      target,
+      ...defaultArgs,
+    ],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const url = stdout;
+  const deploymentResult = await fetch(`${url}/README.md`);
+  const body = await deploymentResult.text();
+  t.deepEqual(
+    body,
+    'readme contents for deploy-default-with-conflicting-sub-directory'
+  );
+});
+
+test('should allow deploying a directory that was built with a target environment of "preview" and `--prebuilt` is used without specifying a target', async t => {
+  const projectDir = fixture('deploy-default-with-prebuilt-preview');
+
+  await vcLink(t, projectDir);
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      '--prebuilt',
+      ...defaultArgs,
+    ],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const url = stdout;
+  const deploymentResult = await fetch(`${url}/README.md`);
+  const body = await deploymentResult.text();
+  t.deepEqual(body, 'readme contents for deploy-default-with-prebuilt-preview');
+});
+
+test('should allow deploying a directory that was prebuilt, but has no builds.json', async t => {
+  const projectDir = fixture('build-output-api-raw');
+
+  await vcLink(t, projectDir);
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      // omit the default "deploy" command
+      '--prebuilt',
+      ...defaultArgs,
+    ],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const url = stdout;
+  const deploymentResult = await fetch(`${url}/README.md`);
+  const body = await deploymentResult.text();
+  t.deepEqual(body, 'readme contents for build-output-api-raw');
+});
+
+test('[vc link] with vercel.json configuration overrides should create a valid deployment', async t => {
+  const directory = fixture('vercel-json-configuration-overrides-link');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    ['link', '--confirm', ...defaultArgs],
+    {
+      reject: false,
+      cwd: directory,
+    }
+  );
+
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  const link = require(path.join(directory, '.vercel/project.json'));
+
+  const resEnv = await apiFetch(`/v4/projects/${link.projectId}`);
+
+  t.is(resEnv.status, 200);
+
+  const json = await resEnv.json();
+
+  t.is(json.buildCommand, 'mkdir public && echo "1" > public/index.txt');
 });
 
 test('deploy using only now.json with `redirects` defined', async t => {
@@ -434,6 +742,30 @@ test('deploy using --local-config flag v2', async t => {
 
   const anotherMainRes = await fetch(`https://${host}/another-main`);
   t.is(anotherMainRes.status, 404, 'Should not deploy/build main now.json');
+});
+
+test('deploy fails using --local-config flag with non-existent path', async t => {
+  const target = fixture('local-config-v2');
+
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [
+      'deploy',
+      target,
+      '--local-config',
+      'does-not-exist.json',
+      ...defaultArgs,
+      '--confirm',
+    ],
+    {
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stderr, stdout }));
+
+  t.regex(stderr, /Error! Couldn't find a project configuration file at/);
+  t.regex(stderr, /does-not-exist\.json/);
 });
 
 test('deploy using --local-config flag above target', async t => {
@@ -653,13 +985,11 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.regex(stderr, /Created .env file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
-    t.true(contents.startsWith('# Created by Vercel CLI\n'));
-
-    const lines = new Set(contents.split('\n'));
-    t.true(lines.has('MY_NEW_ENV_VAR="my plaintext value"'));
-    t.true(lines.has('MY_STDIN_VAR="{"expect":"quotes"}"'));
-    t.true(lines.has('MY_DECRYPTABLE_SECRET_ENV="decryptable value"'));
-    t.false(lines.has('MY_PREVIEW'));
+    t.regex(contents, /^# Created by Vercel CLI\n/);
+    t.regex(contents, /MY_NEW_ENV_VAR="my plaintext value"/);
+    t.regex(contents, /MY_STDIN_VAR="{"expect":"quotes"}"/);
+    t.regex(contents, /MY_DECRYPTABLE_SECRET_ENV="decryptable value"/);
+    t.notRegex(contents, /MY_PREVIEW/);
   }
 
   async function vcEnvPullOverwrite() {
@@ -831,11 +1161,12 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     const contents = fs.readFileSync(path.join(target, '.env'), 'utf8');
 
     const lines = new Set(contents.split('\n'));
-    t.true(lines.has('VERCEL="1"'));
-    t.true(lines.has('VERCEL_URL=""'));
-    t.true(lines.has('VERCEL_ENV="development"'));
-    t.true(lines.has('VERCEL_GIT_PROVIDER=""'));
-    t.true(lines.has('VERCEL_GIT_REPO_SLUG=""'));
+
+    t.true(lines.has('VERCEL="1"'), 'VERCEL');
+    t.true(lines.has('VERCEL_URL=""'), 'VERCEL_URL');
+    t.true(lines.has('VERCEL_ENV="development"'), 'VERCEL_ENV');
+    t.true(lines.has('VERCEL_GIT_PROVIDER=""'), 'VERCEL_GIT_PROVIDER');
+    t.true(lines.has('VERCEL_GIT_REPO_SLUG=""'), 'VERCEL_GIT_REPO_SLUG');
   }
 
   async function vcDevAndFetchSystemVars() {
@@ -943,29 +1274,48 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
     t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   }
 
-  await vcLink();
-  await vcEnvLsIsEmpty();
-  await vcEnvAddWithPrompts();
-  await vcEnvAddFromStdin();
-  await vcEnvAddFromStdinPreview();
-  await vcEnvAddFromStdinPreviewWithBranch();
-  await vcEnvLsIncludesVar();
-  await createEnvWithDecryptableSecret();
-  await vcEnvPull();
-  await vcEnvPullOverwrite();
-  await vcEnvPullConfirm();
-  await vcDeployWithVar();
-  await vcDevWithEnv();
-  fs.unlinkSync(path.join(target, '.env'));
-  await vcDevAndFetchCloudVars();
-  await enableAutoExposeSystemEnvs();
-  await vcEnvPullFetchSystemVars();
-  fs.unlinkSync(path.join(target, '.env'));
-  await vcDevAndFetchSystemVars();
-  await vcEnvRemove();
-  await vcEnvRemoveWithArgs();
-  await vcEnvRemoveWithNameOnly();
-  await vcEnvLsIsEmpty();
+  function vcEnvRemoveByName(name) {
+    return execa(binaryPath, ['env', 'rm', name, '-y', ...defaultArgs], {
+      reject: false,
+      cwd: target,
+    });
+  }
+
+  async function vcEnvRemoveAll() {
+    await vcEnvRemoveByName('MY_PREVIEW');
+    await vcEnvRemoveByName('MY_STDIN_VAR');
+    await vcEnvRemoveByName('MY_DECRYPTABLE_SECRET_ENV');
+    await vcEnvRemoveByName('MY_NEW_ENV_VAR');
+  }
+
+  try {
+    await vcEnvRemoveAll();
+    await vcLink();
+    await vcEnvLsIsEmpty();
+    await vcEnvAddWithPrompts();
+    await vcEnvAddFromStdin();
+    await vcEnvAddFromStdinPreview();
+    await vcEnvAddFromStdinPreviewWithBranch();
+    await vcEnvLsIncludesVar();
+    await createEnvWithDecryptableSecret();
+    await vcEnvPull();
+    await vcEnvPullOverwrite();
+    await vcEnvPullConfirm();
+    await vcDeployWithVar();
+    await vcDevWithEnv();
+    fs.unlinkSync(path.join(target, '.env'));
+    await vcDevAndFetchCloudVars();
+    await enableAutoExposeSystemEnvs();
+    await vcEnvPullFetchSystemVars();
+    fs.unlinkSync(path.join(target, '.env'));
+    await vcDevAndFetchSystemVars();
+    await vcEnvRemove();
+    await vcEnvRemoveWithArgs();
+    await vcEnvRemoveWithNameOnly();
+    await vcEnvLsIsEmpty();
+  } finally {
+    await vcEnvRemoveAll();
+  }
 });
 
 test('[vc projects] should create a project successfully', async t => {
@@ -1062,30 +1412,6 @@ test('output the version', async t => {
   t.is(exitCode, 0);
   t.truthy(semVer.valid(version));
   t.is(version, pkg.version);
-});
-
-test('should error with suggestion for secrets subcommand', async t => {
-  const target = fixture('subdirectory-secret');
-
-  const { exitCode, stderr, stdout } = await execa(
-    binaryPath,
-    ['secret', 'add', 'key', 'value', ...defaultArgs],
-    {
-      cwd: target,
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 1);
-  t.regex(
-    stderr,
-    /secrets/gm,
-    `Expected "secrets" suggestion but received "${stderr}"`
-  );
 });
 
 test('should add secret with hyphen prefix', async t => {
@@ -1323,10 +1649,13 @@ test('try to purchase a domain', async t => {
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['domains', 'buy', `${session}-test.org`, ...defaultArgs],
+    ['domains', 'buy', `${session}-test.com`, ...defaultArgs],
     {
       reject: false,
       input: stream,
+      env: {
+        FORCE_TTY: '1',
+      },
     }
   );
 
@@ -1335,10 +1664,9 @@ test('try to purchase a domain', async t => {
   console.log(exitCode);
 
   t.is(exitCode, 1);
-  t.true(
-    stderr.includes(
-      `Error! Could not purchase domain. Please add a payment method using \`vercel billing add\`.`
-    )
+  t.regex(
+    stderr,
+    /Error! Could not purchase domain\. Please add a payment method using/
   );
 });
 
@@ -1350,7 +1678,7 @@ test('try to transfer-in a domain with "--code" option', async t => {
       'transfer-in',
       '--code',
       'xyz',
-      `${session}-test.org`,
+      `${session}-test.com`,
       ...defaultArgs,
     ],
     {
@@ -1364,7 +1692,7 @@ test('try to transfer-in a domain with "--code" option', async t => {
 
   t.true(
     stderr.includes(
-      `Error! The domain "${session}-test.org" is not transferable.`
+      `Error! The domain "${session}-test.com" is not transferable.`
     )
   );
   t.is(exitCode, 1);
@@ -2025,11 +2353,6 @@ const verifyExampleAngular = (cwd, dir) =>
   fs.existsSync(path.join(cwd, dir, 'tsconfig.json')) &&
   fs.existsSync(path.join(cwd, dir, 'angular.json'));
 
-const verifyExampleAmp = (cwd, dir) =>
-  fs.existsSync(path.join(cwd, dir, 'index.html')) &&
-  fs.existsSync(path.join(cwd, dir, 'logo.png')) &&
-  fs.existsSync(path.join(cwd, dir, 'favicon.png'));
-
 test('initialize example "angular"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
@@ -2062,21 +2385,6 @@ test('initialize example ("angular") to specified directory', async t => {
   t.is(exitCode, 0, formatOutput({ stdout, stderr }));
   t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
   t.true(verifyExampleAngular(cwd, 'ang'), formatOutput({ stdout, stderr }));
-});
-
-test('initialize selected example ("amp")', async t => {
-  tmpDir = tmp.dirSync({ unsafeCleanup: true });
-  const cwd = tmpDir.name;
-  const goal = '> Success! Initialized "amp" example in';
-
-  const { stdout, stderr, exitCode } = await execute(['init'], {
-    cwd,
-    input: '\n',
-  });
-
-  t.is(exitCode, 0, formatOutput({ stdout, stderr }));
-  t.true(stderr.includes(goal), formatOutput({ stdout, stderr }));
-  t.true(verifyExampleAmp(cwd, 'amp'), formatOutput({ stdout, stderr }));
 });
 
 test('initialize example to existing directory with "-f"', async t => {
@@ -2155,6 +2463,8 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
   const { name } = JSON.parse(
     fs.readFileSync(path.join(firstDeployment, 'now.json'))
   );
+  t.true(!!name, 'name has a value');
+
   const url = `https://${name}.user.vercel.app`;
 
   {
@@ -2256,6 +2566,9 @@ test('[vercel dev] fails when development commad calls vercel dev recursively', 
   const dev = execa(binaryPath, ['dev', ...defaultArgs], {
     cwd: dir,
     reject: false,
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await setupProject(dev, projectName, {
@@ -2661,6 +2974,9 @@ test('change user', async t => {
 
   await execute(['login', email, '--api', loginApiUrl, '--debug'], {
     stdio: 'inherit',
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   const auth = await fs.readJSON(getConfigAuthPath());
@@ -2743,7 +3059,7 @@ test('should show prompts to set up project during first deploy', async t => {
   );
 
   // Send a test request to the deployment
-  const response = await fetch(new URL(output.stdout).href);
+  const response = await fetch(new URL(output.stdout));
   const text = await response.text();
   t.is(text.includes('<h1>custom hello</h1>'), true, text);
 
@@ -2790,7 +3106,11 @@ test('should prefill "project name" prompt with folder name', async t => {
   const directory = path.join(src, '../', projectName);
   await copy(src, directory);
 
-  const now = execa(binaryPath, [directory, ...defaultArgs]);
+  const now = execa(binaryPath, [directory, ...defaultArgs], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await waitForPrompt(now, chunk => /Set up and deploy [^?]+\?/.test(chunk));
   now.stdin.write('yes\n');
@@ -2816,7 +3136,7 @@ test('should prefill "project name" prompt with folder name', async t => {
   now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify these settings?')
   );
   now.stdin.write('no\n');
 
@@ -2833,12 +3153,15 @@ test('should prefill "project name" prompt with --name', async t => {
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
 
-  const now = execa(binaryPath, [
-    directory,
-    '--name',
-    projectName,
-    ...defaultArgs,
-  ]);
+  const now = execa(
+    binaryPath,
+    [directory, '--name', projectName, ...defaultArgs],
+    {
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
+  );
 
   let isDeprecated = false;
 
@@ -2874,7 +3197,7 @@ test('should prefill "project name" prompt with --name', async t => {
   now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify these settings?')
   );
   now.stdin.write('no\n');
 
@@ -2897,7 +3220,11 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
     })
   );
 
-  const now = execa(binaryPath, [directory, ...defaultArgs]);
+  const now = execa(binaryPath, [directory, ...defaultArgs], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   let isDeprecated = false;
 
@@ -2937,7 +3264,7 @@ test('should prefill "project name" prompt with now.json `name`', async t => {
   now.stdin.write('\n');
 
   await waitForPrompt(now, chunk =>
-    chunk.includes('Want to override the settings?')
+    chunk.includes('Want to modify these settings?')
   );
   now.stdin.write('no\n');
 
@@ -3253,6 +3580,41 @@ test('deploy gatsby twice and print cached directories', async t => {
   }
 });
 
+test('deploy pnpm twice using pnp and symlink=false', async t => {
+  const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
+
+  await remove(path.join(directory, '.vercel'));
+
+  function deploy() {
+    return execa(binaryPath, [
+      directory,
+      '--name',
+      session,
+      ...defaultArgs,
+      '--public',
+      '--confirm',
+    ]);
+  }
+
+  function logs(deploymentUrl) {
+    return execa(binaryPath, ['logs', deploymentUrl, ...defaultArgs]);
+  }
+
+  let { exitCode, stderr, stdout } = await deploy();
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  let { stdout: logsOutput } = await logs(stdout);
+
+  t.regex(logsOutput, /Build Cache not found/m);
+
+  ({ exitCode, stderr, stdout } = await deploy());
+  t.is(exitCode, 0, formatOutput({ stderr, stdout }));
+
+  ({ stdout: logsOutput } = await logs(stdout));
+
+  t.regex(logsOutput, /Build cache downloaded/m);
+});
+
 test('reject deploying with wrong team .vercel config', async t => {
   const directory = fixture('unauthorized-vercel-config');
 
@@ -3274,6 +3636,24 @@ test('reject deploying with wrong team .vercel config', async t => {
   );
 });
 
+test('reject deploying with invalid token', async t => {
+  const directory = fixture('unauthorized-vercel-config');
+  const { exitCode, stderr, stdout } = await execa(
+    binaryPath,
+    [...defaultArgs, '--confirm'],
+    {
+      cwd: directory,
+      reject: false,
+    }
+  );
+
+  t.is(exitCode, 1, formatOutput({ stderr, stdout }));
+  t.regex(
+    stderr,
+    /Error! Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\./g
+  );
+});
+
 test('[vc link] should show prompts to set up project', async t => {
   const dir = fixture('project-link-zeroconf');
   const projectName = `project-link-zeroconf-${
@@ -3283,7 +3663,12 @@ test('[vc link] should show prompts to set up project', async t => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
+  const vc = execa(binaryPath, ['link', ...defaultArgs], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await setupProject(vc, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
@@ -3356,7 +3741,13 @@ test('[vc link] should not duplicate paths in .gitignore', async t => {
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
     ['link', '--confirm', ...defaultArgs],
-    { cwd: dir, reject: false }
+    {
+      cwd: dir,
+      reject: false,
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
   );
 
   // Ensure the exit code is right
@@ -3382,6 +3773,9 @@ test('[vc dev] should show prompts to set up project', async t => {
 
   const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
     cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await setupProject(dev, projectName, {
@@ -3426,7 +3820,12 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const vc = execa(binaryPath, ['link', ...defaultArgs], { cwd: dir });
+  const vc = execa(binaryPath, ['link', ...defaultArgs], {
+    cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await waitForPrompt(vc, chunk => /Set up [^?]+\?/.test(chunk));
   vc.stdin.write('yes\n');
@@ -3485,6 +3884,9 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
 
   const dev = execa(binaryPath, ['dev', '--listen', port, ...defaultArgs], {
     cwd: dir,
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await setupProject(dev, projectName, {
@@ -3520,4 +3922,176 @@ test('[vc link] should support the `--project` flag', async t => {
     output.stderr.includes(`Linked to ${user.username}/${projectName}`),
     formatOutput(output)
   );
+});
+
+test('[vc build] should build project with `@vercel/static-build`', async t => {
+  const directory = fixture('vc-build-static-build');
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  t.true(output.stderr.includes('Build Completed in .vercel/output'));
+
+  t.is(
+    await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    ),
+    'hi\n'
+  );
+
+  const config = await fs.readJSON(
+    path.join(directory, '.vercel/output/config.json')
+  );
+  t.is(config.version, 3);
+
+  const builds = await fs.readJSON(
+    path.join(directory, '.vercel/output/builds.json')
+  );
+  t.is(builds.target, 'preview');
+  t.is(builds.builds[0].src, 'package.json');
+  t.is(builds.builds[0].use, '@vercel/static-build');
+});
+
+test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async t => {
+  const directory = fixture(
+    'vercel-json-configuration-overrides-merging-prompts'
+  );
+
+  // remove previously linked project if it exists
+  await remove(path.join(directory, '.vercel'));
+
+  const vc = execa(binaryPath, [directory, ...defaultArgs], { reject: false });
+
+  await waitForPrompt(vc, chunk => chunk.includes('Set up and deploy'));
+  vc.stdin.write('y\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  vc.stdin.write('\n');
+  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
+  vc.stdin.write('n\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  vc.stdin.write('\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  vc.stdin.write('\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Want to modify these settings?')
+  );
+  vc.stdin.write('y\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(
+      'Which settings would you like to overwrite (select multiple)?'
+    )
+  );
+  vc.stdin.write('a\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes("What's your Development Command?")
+  );
+  vc.stdin.write('echo "DEV COMMAND"\n');
+  // the crux of this test is to make sure that the outputDirectory is properly set by the prompts.
+  // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
+  await waitForPrompt(vc, chunk =>
+    chunk.includes("What's your Output Directory?")
+  );
+  vc.stdin.write('output\n');
+  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
+  const deployment = await vc;
+  t.is(deployment.exitCode, 0, formatOutput(deployment));
+  // assert the command were executed
+  let page = await fetch(deployment.stdout);
+  let text = await page.text();
+  t.is(text, '1\n');
+});
+
+test('vercel.json configuration overrides in an existing project do not prompt user and correctly apply overrides', async t => {
+  // create project directory and get path to vercel.json
+  const directory = fixture('vercel-json-configuration-overrides');
+  const vercelJsonPath = path.join(directory, 'vercel.json');
+
+  async function deploy(autoConfirm = false) {
+    const deployment = await execa(
+      binaryPath,
+      [directory, ...defaultArgs, '--public'].concat(
+        autoConfirm ? ['--confirm'] : []
+      ),
+      { reject: false }
+    );
+    t.is(
+      deployment.exitCode,
+      0,
+      formatOutput({
+        stderr: deployment.stderr,
+        stdout: deployment.stdout,
+      })
+    );
+    return deployment;
+  }
+
+  // Step 1. Create a simple static deployment with no configuration.
+  // Deployment should succeed and page should display "0"
+
+  await mkdir(path.join(directory, 'public'));
+  await writeFile(path.join(directory, 'public/index.txt'), '0');
+
+  // auto-confirm this deployment
+  let deployment = await deploy(true);
+
+  let page = await fetch(deployment.stdout);
+  let text = await page.text();
+  t.is(text, '0');
+
+  // Step 2. Now that the project exists, override the buildCommand and outputDirectory.
+  // The CLI should not prompt the user about the overrides.
+
+  const BUILD_COMMAND = 'mkdir output && echo "1" >> output/index.txt';
+  const OUTPUT_DIRECTORY = 'output';
+
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      buildCommand: BUILD_COMMAND,
+      outputDirectory: OUTPUT_DIRECTORY,
+    })
+  );
+
+  deployment = await deploy();
+  page = await fetch(deployment.stdout);
+  text = await page.text();
+  t.is(text, '1\n');
+
+  // // Step 3. Do a more complex deployment using a framework this time
+  await mkdir(`${directory}/pages`);
+  await writeFile(
+    `${directory}/pages/index.js`,
+    `export default () => 'Next.js Test'`
+  );
+  await writeFile(
+    vercelJsonPath,
+    JSON.stringify({
+      framework: 'nextjs',
+    })
+  );
+  await writeFile(
+    `${directory}/package.json`,
+    JSON.stringify({
+      scripts: {
+        dev: 'next',
+        start: 'next start',
+        build: 'next build',
+      },
+      dependencies: {
+        next: 'latest',
+        react: 'latest',
+        'react-dom': 'latest',
+      },
+    })
+  );
+
+  deployment = await deploy();
+  page = await fetch(deployment.stdout);
+  text = await page.text();
+  t.regex(text, /Next\.js Test/);
 });

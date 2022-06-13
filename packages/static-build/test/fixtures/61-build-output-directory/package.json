@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "build": "cp -r fake .vercel_build_output"
+  }
+}

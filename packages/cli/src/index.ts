@@ -12,7 +12,7 @@ try {
 }
 
 import { join } from 'path';
-import { existsSync, lstatSync } from 'fs';
+import { existsSync } from 'fs';
 import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
@@ -58,6 +58,7 @@ const isCanary = pkg.version.includes('canary');
 const notifier = updateNotifier({
   pkg,
   distTag: isCanary ? 'canary' : 'latest',
+  updateCheckInterval: 1000 * 60 * 60 * 24 * 7, // 1 week
 });
 
 const VERCEL_DIR = getGlobalPathConfig();
@@ -82,7 +83,12 @@ let debug: (s: string) => void = () => {};
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
-  const { isTTY } = process.stdout;
+  let { isTTY } = process.stdout;
+  if (process.env.FORCE_TTY === '1') {
+    isTTY = true;
+    process.stdout.isTTY = true;
+    process.stdin.isTTY = true;
+  }
 
   let argv;
 
@@ -136,6 +142,11 @@ const main = async () => {
     return 1;
   }
 
+  const cwd = argv['--cwd'];
+  if (cwd) {
+    process.chdir(cwd);
+  }
+
   // Print update information, if available
   if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
     const { latest } = notifier.update;
@@ -161,7 +172,7 @@ const main = async () => {
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  const betaCommands: string[] = [];
+  const betaCommands: string[] = ['build'];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
@@ -293,7 +304,14 @@ const main = async () => {
 
   let authConfig = null;
 
-  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'update'];
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'update',
+    'build',
+  ];
 
   if (authConfigExists) {
     try {
@@ -386,34 +404,11 @@ const main = async () => {
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
       commands.has(targetOrSubcommand);
 
-    if (targetPathExists && subcommandExists) {
-      const fileType = lstatSync(targetPath).isDirectory()
-        ? 'subdirectory'
-        : 'file';
-      const plural = targetOrSubcommand + 's';
-      const singular = targetOrSubcommand.endsWith('s')
-        ? targetOrSubcommand.slice(0, -1)
-        : '';
-      let alternative = '';
-      if (commands.has(plural)) {
-        alternative = plural;
-      } else if (commands.has(singular)) {
-        alternative = singular;
-      }
-      console.error(
-        error(
-          `The supplied argument ${param(targetOrSubcommand)} is ambiguous.` +
-            `\nIf you wish to deploy the ${fileType} ${param(
-              targetOrSubcommand
-            )}, first run "cd ${targetOrSubcommand}". ` +
-            (alternative
-              ? `\nIf you wish to use the subcommand ${param(
-                  targetOrSubcommand
-                )}, use ${param(alternative)} instead.`
-              : '')
-        )
+    if (targetPathExists && subcommandExists && !argv['--cwd']) {
+      output.warn(
+        `Did you mean to deploy the subdirectory "${targetOrSubcommand}"? ` +
+          `Use \`vc --cwd ${targetOrSubcommand}\` instead.`
       );
-      return 1;
     }
 
     if (subcommandExists) {
@@ -537,6 +532,7 @@ const main = async () => {
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'dev' &&
+    targetCommand !== 'build' &&
     !(targetCommand === 'teams' && argv._[3] !== 'invite')
   ) {
     let user = null;
@@ -603,73 +599,76 @@ const main = async () => {
     let func: any;
     switch (targetCommand) {
       case 'alias':
-        func = await import('./commands/alias');
+        func = require('./commands/alias').default;
         break;
       case 'billing':
-        func = await import('./commands/billing');
+        func = require('./commands/billing').default;
         break;
       case 'bisect':
-        func = await import('./commands/bisect');
+        func = require('./commands/bisect').default;
+        break;
+      case 'build':
+        func = require('./commands/build').default;
         break;
       case 'certs':
-        func = await import('./commands/certs');
+        func = require('./commands/certs').default;
         break;
       case 'deploy':
-        func = await import('./commands/deploy');
+        func = require('./commands/deploy').default;
         break;
       case 'dev':
-        func = await import('./commands/dev');
+        func = require('./commands/dev').default;
         break;
       case 'dns':
-        func = await import('./commands/dns');
+        func = require('./commands/dns').default;
         break;
       case 'domains':
-        func = await import('./commands/domains');
+        func = require('./commands/domains').default;
         break;
       case 'env':
-        func = await import('./commands/env');
+        func = require('./commands/env').default;
         break;
       case 'init':
-        func = await import('./commands/init');
+        func = require('./commands/init').default;
         break;
       case 'inspect':
-        func = await import('./commands/inspect');
+        func = require('./commands/inspect').default;
         break;
       case 'link':
-        func = await import('./commands/link');
+        func = require('./commands/link').default;
         break;
       case 'list':
-        func = await import('./commands/list');
+        func = require('./commands/list').default;
         break;
       case 'logs':
-        func = await import('./commands/logs');
+        func = require('./commands/logs').default;
         break;
       case 'login':
-        func = await import('./commands/login');
+        func = require('./commands/login').default;
         break;
       case 'logout':
-        func = await import('./commands/logout');
+        func = require('./commands/logout').default;
         break;
       case 'projects':
-        func = await import('./commands/projects');
+        func = require('./commands/projects').default;
         break;
       case 'pull':
-        func = await import('./commands/pull');
+        func = require('./commands/pull').default;
         break;
       case 'remove':
-        func = await import('./commands/remove');
+        func = require('./commands/remove').default;
         break;
       case 'secrets':
-        func = await import('./commands/secrets');
+        func = require('./commands/secrets').default;
         break;
       case 'teams':
-        func = await import('./commands/teams');
+        func = require('./commands/teams').default;
         break;
       case 'update':
-        func = await import('./commands/update');
+        func = require('./commands/update').default;
         break;
       case 'whoami':
-        func = await import('./commands/whoami');
+        func = require('./commands/whoami').default;
         break;
       default:
         func = null;

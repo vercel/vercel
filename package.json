@@ -14,37 +14,24 @@
   "dependencies": {
     "lerna": "3.16.4"
   },
-  "turbo": {
-    "baseBranch": "origin/main",
-    "pipeline": {
-      "build": {
-        "dependsOn": [
-          "^build"
-        ],
-        "outputs": [
-          "dist/**"
-        ]
-      }
-    }
-  },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "4.28.0",
-    "@typescript-eslint/parser": "4.28.0",
+    "@typescript-eslint/eslint-plugin": "5.21.0",
+    "@typescript-eslint/parser": "5.21.0",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
-    "cheerio": "1.0.0-rc.3",
-    "eslint": "7.29.0",
-    "eslint-config-prettier": "8.3.0",
-    "eslint-plugin-jest": "24.3.6",
-    "husky": "6.0.0",
-    "jest": "27.3.1",
+    "eslint": "8.14.0",
+    "eslint-config-prettier": "8.5.0",
+    "eslint-plugin-jest": "26.1.5",
+    "husky": "7.0.4",
+    "jest": "28.0.2",
     "json5": "2.1.1",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.1",
     "npm-package-arg": "6.1.0",
-    "prettier": "2.3.1",
-    "ts-jest": "27.0.4",
-    "turbo": "1.0.18"
+    "prettier": "2.6.2",
+    "ts-eager": "2.0.2",
+    "ts-jest": "28.0.0-next.1",
+    "turbo": "1.2.14"
   },
   "scripts": {
     "lerna": "lerna",
@@ -54,12 +41,13 @@
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
     "build": "turbo run build",
-    "vercel-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
+    "vercel-build": "yarn build && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
-    "test-unit": "node utils/run.js test-unit",
-    "test-integration-cli": "node utils/run.js test-integration-cli",
-    "test-integration-once": "node utils/run.js test-integration-once",
-    "test-integration-dev": "node utils/run.js test-integration-dev",
+    "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
+    "test-unit": "yarn test && turbo run test-unit",
+    "test-integration-cli": "turbo run test-integration-cli",
+    "test-integration-once": "turbo run test-integration-once",
+    "test-integration-dev": "turbo run test-integration-dev",
     "lint": "eslint . --ext .ts,.js",
     "prepare": "husky install"
   },
@@ -102,6 +90,14 @@
       "es6": true
     },
     "rules": {
+      "no-restricted-syntax": [
+        "warn",
+        "WithStatement",
+        {
+          "message": "substr() is deprecated, use slice() or substring() instead",
+          "selector": "MemberExpression > Identifier[name='substr']"
+        }
+      ],
       "require-atomic-updates": 0,
       "@typescript-eslint/ban-ts-comment": 0,
       "@typescript-eslint/camelcase": 0,

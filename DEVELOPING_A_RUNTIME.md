@@ -9,7 +9,6 @@ A Runtime is an npm module that implements the following interface:
 interface Runtime {
   version: number;
   build: (options: BuildOptions) => Promise<BuildResult>;
-  analyze?: (options: AnalyzeOptions) => Promise<string>;
   prepareCache?: (options: PrepareCacheOptions) => Promise<CacheOutputs>;
   shouldServe?: (options: ShouldServeOptions) => Promise<boolean>;
   startDevServer?: (
@@ -69,26 +68,6 @@ export async function build(options: BuildOptions) {
       // If your Runtime needs to define additional routing, define it here…
     ],
   };
-}
-```
-
-### `analyze()`
-
-An **optional** exported function that returns a unique fingerprint used for the
-purpose of [build
-de-duplication](https://vercel.com/docs/v2/platform/deployments#deduplication).
-If the `analyze()` function is not supplied, then a random fingerprint is
-assigned to each build.
-
-**Example:**
-
-```typescript
-import { AnalyzeOptions } from '@vercel/build-utils';
-
-export async function analyze(options: AnalyzeOptions) {
-  // Do calculations to generate a fingerprint based off the source code here…
-
-  return 'fingerprint goes here';
 }
 ```
 
@@ -328,15 +307,15 @@ This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 
 This is an abstract enumeration type that is implemented by one of the following possible `String` values:
 
+- `nodejs14.x`
 - `nodejs12.x`
-- `nodejs10.x`
 - `go1.x`
 - `java11`
 - `python3.9`
-- `python3.6`
-- `dotnetcore2.1`
-- `ruby2.5`
-- `provided`
+- `dotnet6`
+- `dotnetcore3.1`
+- `ruby2.7`
+- `provided.al2`
 
 ## `@vercel/build-utils` Helper Functions
 

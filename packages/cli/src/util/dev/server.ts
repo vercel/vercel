@@ -89,6 +89,7 @@ import {
 } from './types';
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
+import { treeKill } from '../tree-kill';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -998,20 +999,7 @@ export default class DevServer {
     }
 
     if (devProcess) {
-      ops.push(
-        new Promise<void>((resolve, reject) => {
-          devProcess.once('exit', () => resolve());
-          try {
-            process.kill(devProcess.pid);
-          } catch (err) {
-            if (err.code === 'ESRCH') {
-              // Process already exited
-              return resolve();
-            }
-            reject(err);
-          }
-        })
-      );
+      ops.push(treeKill(devProcess.pid));
     }
 
     ops.push(close(this.server));
@@ -1747,6 +1735,7 @@ export default class DevServer {
           entrypoint: match.entrypoint,
           workPath,
           config: match.config || {},
+          repoRootPath: this.cwd,
           meta: {
             isDev: true,
             requestPath,
@@ -2120,7 +2109,7 @@ export default class DevServer {
       .replace(/%PORT%/g, `${port}`);
 
     this.output.debug(
-      `Starting dev command with parameters : ${JSON.stringify({
+      `Starting dev command with parameters: ${JSON.stringify({
         cwd,
         command,
         port,
@@ -2152,6 +2141,7 @@ export default class DevServer {
       cwd,
       env,
     });
+    this.devProcess = p;
 
     if (!p.stdout || !p.stderr) {
       throw new Error('Expected child process to have stdout and stderr');
@@ -2164,17 +2154,14 @@ export default class DevServer {
       process.stdout.write(data.replace(proxyPort, devPort));
     });
 
-    p.on('exit', (code: number) => {
-      if (code > 0) {
-        process.exit(code);
-      }
+    p.on('exit', (code, signal) => {
+      this.output.debug(`Dev command exited with "${signal || code}"`);
       this.devProcessPort = undefined;
     });
 
     await checkForPort(port, 1000 * 60 * 5);
 
     this.devProcessPort = port;
-    this.devProcess = p;
   }
 }
 

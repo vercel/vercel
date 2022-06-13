@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node-bridge",
-  "version": "2.1.2-canary.0",
+  "version": "3.0.0",
   "license": "MIT",
   "main": "./index.js",
   "repository": {
@@ -17,7 +17,8 @@
   ],
   "scripts": {
     "build": "node build.js",
-    "test-unit": "jest --env node --verbose --runInBand --bail"
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "yarn test"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",

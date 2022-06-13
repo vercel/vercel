@@ -7,6 +7,9 @@ import fetch from 'node-fetch';
 import { URL, URLSearchParams } from 'url';
 import frameworkList from '../src/frameworks';
 
+// bump timeout for Windows as network can be slower
+jest.setTimeout(15 * 1000);
+
 const SchemaFrameworkDetectionItem = {
   type: 'array',
   items: [

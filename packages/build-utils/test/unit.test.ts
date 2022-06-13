@@ -1,7 +1,7 @@
 import ms from 'ms';
 import path from 'path';
-import fs from 'fs-extra';
-import { strict as assert } from 'assert';
+import fs, { readlink } from 'fs-extra';
+import { strict as assert, strictEqual } from 'assert';
 import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import download from '../src/fs/download';
@@ -14,6 +14,8 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
+  FileBlob,
+  Meta,
 } from '../src';
 
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
@@ -47,7 +49,7 @@ afterEach(() => {
   console.warn = originalConsoleWarn;
 });
 
-it('should re-create symlinks properly', async () => {
+it('should re-create FileFsRef symlinks properly', async () => {
   if (process.platform === 'win32') {
     console.log('Skipping test on windows');
     return;
@@ -69,6 +71,72 @@ it('should re-create symlinks properly', async () => {
   assert(linkStat.isSymbolicLink());
   assert(linkDirStat.isSymbolicLink());
   assert(aStat.isFile());
+
+  const [linkDirContents, linkTextContents] = await Promise.all([
+    readlink(path.join(outDir, 'link-dir')),
+    readlink(path.join(outDir, 'link.txt')),
+  ]);
+
+  strictEqual(linkDirContents, 'dir');
+  strictEqual(linkTextContents, './a.txt');
+});
+
+it('should re-create FileBlob symlinks properly', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
+
+  const files = {
+    'a.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'a text',
+    }),
+    'dir/b.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'b text',
+    }),
+    'link-dir': new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'dir',
+    }),
+    'link.txt': new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'a.txt',
+    }),
+  };
+
+  strictEqual(Object.keys(files).length, 4);
+
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+
+  const files2 = await download(files, outDir);
+  strictEqual(Object.keys(files2).length, 4);
+
+  const [linkStat, linkDirStat, aStat, dirStat] = await Promise.all([
+    fs.lstat(path.join(outDir, 'link.txt')),
+    fs.lstat(path.join(outDir, 'link-dir')),
+    fs.lstat(path.join(outDir, 'a.txt')),
+    fs.lstat(path.join(outDir, 'dir')),
+  ]);
+
+  assert(linkStat.isSymbolicLink());
+  assert(linkDirStat.isSymbolicLink());
+  assert(aStat.isFile());
+  assert(dirStat.isDirectory());
+
+  const [linkDirContents, linkTextContents] = await Promise.all([
+    readlink(path.join(outDir, 'link-dir')),
+    readlink(path.join(outDir, 'link.txt')),
+  ]);
+
+  strictEqual(linkDirContents, 'dir');
+  strictEqual(linkTextContents, 'a.txt');
 });
 
 it('should create zip files with symlinks properly', async () => {
@@ -108,9 +176,13 @@ it('should only match supported node versions, otherwise throw an error', async 
     'major',
     14
   );
+  expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
+    'major',
+    16
+  );
 
   const autoMessage =
-    'Please set Node.js Version to 14.x in your Project Settings to use Node.js 14.';
+    'Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', true),
     autoMessage
@@ -128,9 +200,13 @@ it('should only match supported node versions, otherwise throw an error', async 
     'major',
     14
   );
+  expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
+    'major',
+    16
+  );
 
   const foundMessage =
-    'Please set "engines": { "node": "14.x" } in your `package.json` file to use Node.js 14.';
+    'Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', false),
     foundMessage
@@ -151,8 +227,8 @@ it('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(await getSupportedNodeVersion('12.0.0')).toHaveProperty('major', 12);
   expect(await getSupportedNodeVersion('12.x')).toHaveProperty('major', 12);
-  expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 14);
-  expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 14);
+  expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 16);
+  expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 16);
   expect(await getSupportedNodeVersion('11.5.0 - 12.5.0')).toHaveProperty(
     'major',
     12
@@ -163,6 +239,10 @@ it('should match all semver ranges', async () => {
   );
   expect(await getSupportedNodeVersion('~12.5.0')).toHaveProperty('major', 12);
   expect(await getSupportedNodeVersion('^12.5.0')).toHaveProperty('major', 12);
+  expect(await getSupportedNodeVersion('12.5.0 - 14.5.0')).toHaveProperty(
+    'major',
+    14
+  );
 });
 
 it('should ignore node version in vercel dev getNodeVersion()', async () => {
@@ -178,8 +258,8 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
 
 it('should select project setting from config when no package.json is found', async () => {
   expect(
-    await getNodeVersion('/tmp', undefined, { nodeVersion: '14.x' }, {})
-  ).toHaveProperty('range', '14.x');
+    await getNodeVersion('/tmp', undefined, { nodeVersion: '16.x' }, {})
+  ).toHaveProperty('range', '16.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
@@ -197,7 +277,45 @@ it('should prefer package.json engines over project setting from config and warn
   ]);
 });
 
+it('should warn when package.json engines is exact version', async () => {
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node-exact'),
+      undefined,
+      {},
+      {}
+    )
+  ).toHaveProperty('range', '16.x');
+  expect(warningMessages).toStrictEqual([
+    'Warning: Detected "engines": { "node": "16.14.0" } in your `package.json` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version',
+  ]);
+});
+
+it('should warn when package.json engines is greater than', async () => {
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node-greaterthan'),
+      undefined,
+      {},
+      {}
+    )
+  ).toHaveProperty('range', '16.x');
+  expect(warningMessages).toStrictEqual([
+    'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version',
+  ]);
+});
+
 it('should not warn when package.json engines matches project setting from config', async () => {
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node'),
+      undefined,
+      { nodeVersion: '14' },
+      {}
+    )
+  ).toHaveProperty('range', '14.x');
+  expect(warningMessages).toStrictEqual([]);
+
   expect(
     await getNodeVersion(
       path.join(__dirname, 'pkg-engine-node'),
@@ -207,26 +325,39 @@ it('should not warn when package.json engines matches project setting from confi
     )
   ).toHaveProperty('range', '14.x');
   expect(warningMessages).toStrictEqual([]);
+
+  expect(
+    await getNodeVersion(
+      path.join(__dirname, 'pkg-engine-node'),
+      undefined,
+      { nodeVersion: '<15' },
+      {}
+    )
+  ).toHaveProperty('range', '14.x');
+  expect(warningMessages).toStrictEqual([]);
 });
 
 it('should get latest node version', async () => {
-  expect(getLatestNodeVersion()).toHaveProperty('major', 14);
+  expect(getLatestNodeVersion()).toHaveProperty('major', 16);
 });
 
 it('should throw for discontinued versions', async () => {
   // Mock a future date so that Node 8 and 10 become discontinued
   const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2021-05-01').getTime();
+  global.Date.now = () => new Date('2022-09-01').getTime();
 
   expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
   expect(getSupportedNodeVersion('10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('10.x', true)).rejects.toThrow();
+  expect(getSupportedNodeVersion('12.x', false)).rejects.toThrow();
+  expect(getSupportedNodeVersion('12.x', true)).rejects.toThrow();
 
   const discontinued = getDiscontinuedNodeVersions();
-  expect(discontinued.length).toBe(2);
-  expect(discontinued[0]).toHaveProperty('range', '10.x');
-  expect(discontinued[1]).toHaveProperty('range', '8.10.x');
+  expect(discontinued.length).toBe(3);
+  expect(discontinued[0]).toHaveProperty('range', '12.x');
+  expect(discontinued[1]).toHaveProperty('range', '10.x');
+  expect(discontinued[2]).toHaveProperty('range', '8.10.x');
 
   global.Date.now = realDateNow;
 });
@@ -244,9 +375,19 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
     'major',
     10
   );
+  expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
+    'major',
+    12
+  );
+  expect(await getSupportedNodeVersion('12.x', true)).toHaveProperty(
+    'major',
+    12
+  );
   expect(warningMessages).toStrictEqual([
-    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "14.x" } in your `package.json` file to use Node.js 14. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
-    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 14.x in your Project Settings to use Node.js 14. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 12.x is deprecated. Deployments created on or after 2022-08-09 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 12.x is deprecated. Deployments created on or after 2022-08-09 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
   ]);
 
   global.Date.now = realDateNow;
@@ -331,4 +472,54 @@ it('should detect npm Workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+});
+
+it('should detect pnpm', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '22-pnpm');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('pnpm');
+  expect(result.lockfileVersion).toEqual(5.3);
+});
+
+it('should detect pnpm Workspaces', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/a');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('pnpm');
+  expect(result.lockfileVersion).toEqual(5.3);
+});
+
+it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+  const apiDir = path.join(fixture, 'api');
+  const run1 = await runNpmInstall(apiDir, [], undefined, meta);
+  expect(run1).toEqual(true);
+  expect(
+    (meta.runNpmInstallSet as Set<string>).has(
+      path.join(fixture, 'package.json')
+    )
+  ).toEqual(true);
+  const run2 = await runNpmInstall(apiDir, [], undefined, meta);
+  expect(run2).toEqual(false);
+  const run3 = await runNpmInstall(fixture, [], undefined, meta);
+  expect(run3).toEqual(false);
+});
+
+it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+  const apiDir = path.join(fixture, 'api');
+  const [run1, run2, run3] = await Promise.all([
+    runNpmInstall(apiDir, [], undefined, meta),
+    runNpmInstall(apiDir, [], undefined, meta),
+    runNpmInstall(fixture, [], undefined, meta),
+  ]);
+  expect(run1).toEqual(true);
+  expect(run2).toEqual(false);
+  expect(run3).toEqual(false);
+  expect(
+    (meta.runNpmInstallSet as Set<string>).has(
+      path.join(fixture, 'package.json')
+    )
+  ).toEqual(true);
 });

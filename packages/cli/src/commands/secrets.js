@@ -15,6 +15,12 @@ import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
+  ${chalk.yellow(
+    `${chalk.bold('NOTE:')} The ${getCommandName(
+      'env'
+    )} command is recommended instead of ${getCommandName('secrets')}`
+  )}
+
   ${chalk.bold(`${logo} ${getPkgName()} secrets`)} [options] <command>
 
   ${chalk.dim('Commands:')}
@@ -64,7 +70,7 @@ const help = () => {
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
     '`1584722256178`'
-  )} is the time in milliseconds since the UNIX epoch.
+  )} is the time in milliseconds since the UNIX epoch
 
     ${chalk.cyan(`$ ${getPkgName()} secrets ls --next 1584722256178`)}
 `);
@@ -130,8 +136,14 @@ async function run({ output, contextName, currentTeam, client }) {
   const args = argv._.slice(1);
   const start = Date.now();
   const { 'test-warning': testWarningFlag } = argv;
+  const commandName = getCommandName('secret ' + subcommand);
 
   if (subcommand === 'ls' || subcommand === 'list') {
+    output.note(
+      `The ${getCommandName(
+        'env ls'
+      )} command is recommended instead of ${commandName}\n`
+    );
     if (args.length > 1) {
       console.error(
         error(
@@ -194,6 +206,11 @@ async function run({ output, contextName, currentTeam, client }) {
   }
 
   if (subcommand === 'rm' || subcommand === 'remove') {
+    output.note(
+      `The ${getCommandName(
+        'env rm'
+      )} command is recommended instead of ${commandName}\n`
+    );
     if (args.length !== 1) {
       console.error(
         error(
@@ -236,6 +253,11 @@ async function run({ output, contextName, currentTeam, client }) {
   }
 
   if (subcommand === 'rename') {
+    output.note(
+      `The ${getCommandName('env rm')} and ${getCommandName(
+        'env add'
+      )} commands are recommended instead of ${commandName}\n`
+    );
     if (args.length !== 2) {
       console.error(
         error(
@@ -259,6 +281,11 @@ async function run({ output, contextName, currentTeam, client }) {
   }
 
   if (subcommand === 'add' || subcommand === 'set') {
+    output.note(
+      `The ${getCommandName(
+        'env add'
+      )} command is recommended instead of ${commandName}\n`
+    );
     if (args.length !== 2) {
       console.error(
         error(

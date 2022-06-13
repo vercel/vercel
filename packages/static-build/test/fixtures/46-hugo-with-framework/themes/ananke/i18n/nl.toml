@@ -1,0 +1,32 @@
+[more]
+other = "Meer"
+
+[allTitle]
+other = "Alle {{.Title }}"
+
+[recentTitle]
+other = "Recente {{.Title }}"
+
+[readMore]
+other = "meer lezen"
+
+[whatsInThis]
+other = "Inhoud van deze {{ .Type }}"
+
+[related]
+other = "Gerelateerd"
+
+[yourName]
+other = "Uw naam"
+
+[emailAddress]
+other = "E-mail adres"
+
+[message]
+other = "Boodschap"
+
+[emailRequiredNote]
+other = "Een e-mailadres is vereist."
+
+[send]
+other = "Stuur"

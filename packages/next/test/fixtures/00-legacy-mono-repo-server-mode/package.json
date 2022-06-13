@@ -1,0 +1,9 @@
+{
+  "name": "aircampus",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
+  }
+}

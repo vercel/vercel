@@ -142,6 +142,7 @@ export async function executeBuild(
     files,
     entrypoint,
     workPath,
+    repoRootPath: workPath,
     config,
     meta: {
       isDev: true,
@@ -288,7 +289,7 @@ export async function executeBuild(
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
   for (const name of Object.keys(output)) {
-    const obj = output[name] as File;
+    const obj = output[name] as File | Lambda;
     let lambda: BuiltLambda;
     let fileRef: FileFsRef;
     let fileBlob: FileBlob;
@@ -416,10 +417,6 @@ export async function getBuildMatches(
       src = src.substring(1);
     }
 
-    // We need to escape brackets since `glob` will
-    // try to find a group otherwise
-    src = src.replace(/(\[|\])/g, '[$1]');
-
     // lambda function files are trimmed of their file extension
     const mapToEntrypoint = new Map<string, string>();
     const extensionless = devServer.getExtensionlessFile(src);
@@ -427,6 +424,10 @@ export async function getBuildMatches(
       mapToEntrypoint.set(extensionless, src);
       src = extensionless;
     }
+
+    // We need to escape brackets since `glob` will
+    // try to find a group otherwise
+    src = src.replace(/(\[|\])/g, '[$1]');
 
     const files = fileList
       .filter(name => name === src || minimatch(name, src, { dot: true }))
