@@ -62,4 +62,7 @@ async function main() {
   console.log('Completed building static frontend.');
 }
 
-main().catch(console.error);
+main().catch(err => {
+  console.log('error running build:', err);
+  process.exit(1);
+});
