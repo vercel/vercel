@@ -56,7 +56,7 @@ async function main() {
       .replace('/', '-')}-v${packageJson.version}.tgz`;
     const destTarballPath = join(tarballsDir, `${packageJson.name}.tgz`);
     await fs.mkdir(dirname(destTarballPath), { recursive: true });
-    await fs.copy(join(fullDir, tarballName), destTarballPath);
+    await fs.copyFile(join(fullDir, tarballName), destTarballPath);
   }
 
   console.log('Completed building static frontend.');
