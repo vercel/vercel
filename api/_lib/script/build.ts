@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import { join, dirname } from 'path';
+import execa from 'execa';
 import { getExampleList } from '../examples/example-list';
 import { mapOldToNew } from '../examples/map-old-to-new';
 
@@ -40,8 +41,11 @@ async function main() {
     JSON.stringify([...existingExamples, ...oldExamples])
   );
 
-  const tarballsDir = join(pubDir, 'tarballs');
+  const { stdout: sha } = await execa('git', ['rev-parse', '--short', 'HEAD'], {
+    cwd: repoRoot,
+  });
 
+  const tarballsDir = join(pubDir, 'tarballs');
   const packagesDir = join(repoRoot, 'packages');
   const packages = await fs.readdir(packagesDir);
   for (const pkg of packages) {
@@ -53,7 +57,7 @@ async function main() {
     const packageJson = JSON.parse(packageJsonRaw);
     const tarballName = `${packageJson.name
       .replace('@', '')
-      .replace('/', '-')}-v${packageJson.version}.tgz`;
+      .replace('/', '-')}-v${packageJson.version}-${sha.trim()}.tgz`;
     const destTarballPath = join(tarballsDir, `${packageJson.name}.tgz`);
     await fs.mkdir(dirname(destTarballPath), { recursive: true });
     await fs.copyFile(join(fullDir, tarballName), destTarballPath);

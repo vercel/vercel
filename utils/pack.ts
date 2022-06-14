@@ -6,6 +6,9 @@ import { TurboDryRun } from './types';
 const rootDir = path.join(__dirname, '..');
 
 async function main() {
+  const { stdout: sha } = await execa('git', ['rev-parse', '--short', 'HEAD'], {
+    cwd: rootDir,
+  });
   const { stdout: turboStdout } = await execa(
     'turbo',
     ['run', 'build', '--dry=json'],
@@ -19,6 +22,8 @@ async function main() {
     const packageJsonPath = path.join(dir, 'package.json');
     const originalPackageObj = await fs.readJson(packageJsonPath);
     const packageObj = await fs.readJson(packageJsonPath);
+    packageObj.version += `-${sha.trim()}`;
+
     if (task.dependencies.length > 0) {
       for (const dependency of task.dependencies) {
         const name = dependency.split('#')[0];
@@ -30,8 +35,9 @@ async function main() {
           packageObj.devDependencies[name] = tarballUrl;
         }
       }
-      await fs.writeJson(packageJsonPath, packageObj, { spaces: 2 });
     }
+    await fs.writeJson(packageJsonPath, packageObj, { spaces: 2 });
+
     await execa('yarn', ['pack'], {
       cwd: dir,
       stdio: 'inherit',
