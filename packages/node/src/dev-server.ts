@@ -73,6 +73,14 @@ import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { Readable } from 'stream';
 import type { Bridge } from '@vercel/node-bridge/bridge';
 import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
+import { VercelProxyResponse } from '@vercel/node-bridge/types';
+import { streamToBuffer } from '@vercel/build-utils';
+import exitHook from 'exit-hook';
+import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
+import { getConfig } from '@vercel/static-config';
+import { Project } from 'ts-morph';
+import ncc from '@vercel/ncc';
+import fetch from 'node-fetch';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -82,7 +90,141 @@ function listen(server: Server, port: number, host: string): Promise<void> {
   });
 }
 
-let bridge: Bridge | undefined = undefined;
+async function createServerlessEventHandler(
+  entrypoint: string,
+  options: { shouldAddHelpers: boolean }
+): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+  const launcher = getVercelLauncher({
+    entrypointPath: entrypoint,
+    helpersPath: './helpers.js',
+    shouldAddHelpers: options.shouldAddHelpers,
+    useRequire,
+
+    // not used
+    bridgePath: '',
+    sourcemapSupportPath: '',
+  });
+  const bridge: Bridge = launcher();
+
+  return async function (request: IncomingMessage) {
+    const body = await rawBody(request);
+    const event = {
+      Action: 'Invoke',
+      body: JSON.stringify({
+        method: request.method,
+        path: request.url,
+        headers: request.headers,
+        encoding: 'base64',
+        body: body.toString('base64'),
+      }),
+    };
+
+    return bridge.launcher(event, {
+      callbackWaitsForEmptyEventLoop: false,
+    });
+  };
+}
+
+async function serializeRequest(message: IncomingMessage) {
+  const bodyBuffer = await streamToBuffer(message);
+  const body = bodyBuffer.toString('base64');
+  return JSON.stringify({
+    url: message.url,
+    method: message.method,
+    headers: message.headers,
+    body,
+  });
+}
+
+async function createEdgeEventHandler(
+  entrypoint: string
+): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+  const buildResult = await ncc(entrypoint, { target: 'es2022' });
+  const userCode = buildResult.code;
+
+  const initialCode = `
+    ${userCode};
+
+    addEventListener('fetch', async (event) => {
+      let serializedRequest = await event.request.text();
+      let requestDetails = JSON.parse(serializedRequest);
+
+      let body;
+
+      if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
+        body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
+      }
+
+      let requestUrl = requestDetails.headers['x-forwarded-proto'] + '://' + requestDetails.headers['x-forwarded-host'] + requestDetails.url;
+
+      let request = new Request(requestUrl, {
+        headers: requestDetails.headers,
+        method: requestDetails.method,
+        body: body
+      });
+
+      event.request = request;
+
+      let edgeHandler = module.exports.default;
+      let response = edgeHandler(event.request, event);
+      return event.respondWith(response);
+    })`;
+
+  const edgeRuntime = new EdgeRuntime({
+    initialCode,
+    extend: (context: Primitives) => {
+      Object.assign(context, {
+        __dirname: '',
+        module: {
+          exports: {},
+        },
+      });
+      return context;
+    },
+  });
+  const server = await runServer({ runtime: edgeRuntime });
+  exitHook(server.close);
+
+  return async function (request: IncomingMessage) {
+    const response = await fetch(server.url, {
+      method: 'post',
+      body: await serializeRequest(request),
+    });
+
+    return {
+      statusCode: response.status,
+      headers: response.headers.raw(),
+      body: await response.text(),
+      encoding: 'utf8',
+    };
+  };
+}
+
+const validRuntimes = ['experimental-edge'];
+function parseRuntime(entrypoint: string): string | undefined {
+  const project = new Project();
+  const staticConfig = getConfig(project, entrypoint);
+  const runtime = staticConfig?.runtime;
+  if (runtime && !validRuntimes.includes(runtime)) {
+    throw new Error(`Invalid function runtime for "${entrypoint}": ${runtime}`);
+  }
+
+  return runtime;
+}
+
+async function createEventHandler(
+  entrypoint: string,
+  options: { shouldAddHelpers: boolean }
+): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+  const runtime = parseRuntime(entrypoint);
+  if (runtime === 'experimental-edge') {
+    return createEdgeEventHandler(entrypoint);
+  }
+
+  return createServerlessEventHandler(entrypoint, options);
+}
+
+let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;
 
 async function main() {
   const config = JSON.parse(process.env.VERCEL_DEV_CONFIG || '{}');
@@ -98,17 +240,8 @@ async function main() {
   const proxyServer = createServer(onDevRequest);
   await listen(proxyServer, 0, '127.0.0.1');
 
-  const launcher = getVercelLauncher({
-    entrypointPath: join(process.cwd(), entrypoint!),
-    helpersPath: './helpers.js',
-    shouldAddHelpers,
-    useRequire,
-
-    // not used
-    bridgePath: '',
-    sourcemapSupportPath: '',
-  });
-  bridge = launcher();
+  const entryPointPath = join(process.cwd(), entrypoint!);
+  handleEvent = await createEventHandler(entryPointPath, { shouldAddHelpers });
 
   const address = proxyServer.address();
   if (typeof process.send === 'function') {
@@ -137,32 +270,25 @@ export async function onDevRequest(
   req: IncomingMessage,
   res: ServerResponse
 ): Promise<void> {
-  const body = await rawBody(req);
-  const event = {
-    Action: 'Invoke',
-    body: JSON.stringify({
-      method: req.method,
-      path: req.url,
-      headers: req.headers,
-      encoding: 'base64',
-      body: body.toString('base64'),
-    }),
-  };
-  if (!bridge) {
+  if (!handleEvent) {
     res.statusCode = 500;
     res.end('Bridge is not ready, please try again');
     return;
   }
-  const result = await bridge.launcher(event, {
-    callbackWaitsForEmptyEventLoop: false,
-  });
-  res.statusCode = result.statusCode;
-  for (const [key, value] of Object.entries(result.headers)) {
-    if (typeof value !== 'undefined') {
-      res.setHeader(key, value);
+
+  try {
+    const result = await handleEvent(req);
+    res.statusCode = result.statusCode;
+    for (const [key, value] of Object.entries(result.headers)) {
+      if (typeof value !== 'undefined') {
+        res.setHeader(key, value);
+      }
     }
+    res.end(Buffer.from(result.body, result.encoding));
+  } catch (error) {
+    res.statusCode = 500;
+    res.end(error.stack);
   }
-  res.end(Buffer.from(result.body, result.encoding));
 }
 
 export function fixConfigDev(config: { compilerOptions: any }): void {
