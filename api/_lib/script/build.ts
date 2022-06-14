@@ -1,5 +1,5 @@
 import fs from 'fs/promises';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { getExampleList } from '../examples/example-list';
 import { mapOldToNew } from '../examples/map-old-to-new';
 
@@ -41,11 +41,19 @@ async function main() {
   );
 
   const tarballsDir = join(pubDir, 'tarballs');
-  await fs.mkdir(tarballsDir);
 
-  // invoke `turbo run build --dry=json`
-  // for each "task", update package.json with tarball URLS, and run `yarn pack`
-  // `https://${process.env.VERCEL_URL}/tarballs/@vercel/build-utils.tgz`
+  const packagesDir = join(repoRoot, 'packages');
+  const packages = await fs.readdir(packagesDir);
+  for (const pkg of packages) {
+    const fullDir = join(packagesDir, pkg);
+    const packageJson = await fs.readJson(join(fullDir, 'package.json'));
+    const tarballName = `${packageJson.name
+      .replace('@', '')
+      .replace('/', '-')}-v${packageJson.version}.tgz`;
+    const destTarballPath = join(tarballsDir, `${packageJson.name}.tgz`);
+    await fs.mkdirp(dirname(destTarballPath));
+    await fs.copy(join(fullDir, tarballName), destTarballPath);
+  }
 
   console.log('Completed building static frontend.');
 }
