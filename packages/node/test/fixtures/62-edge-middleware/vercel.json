@@ -17,16 +17,16 @@
   "probes": [
     {
       "path": "/api/edge.js",
-      "mustContain": "RANDOMNESS_PLACEHOLDER:edge",
+      "status": 200,
       "responseHeaders": {
-        "x-got-middleware": "true"
+        "x-modified-edge": "true"
       }
     },
     {
       "path": "/non-exist",
-      "mustContain": "RANDOMNESS_PLACEHOLDER:middleware",
+      "status": 404,
       "responseHeaders": {
-        "x-got-middleware": "true"
+        "x-modified-edge": "true"
       }
     }
   ]

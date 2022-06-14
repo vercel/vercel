@@ -1,14 +1,11 @@
-export default req => {
-  const url = new URL(req.url);
-  const headers = new Headers({
-    'x-got-middleware': 'true',
-  });
-  if (url.pathname === '/' || url.pathname.startsWith('/api/')) {
-    // For `index.html` and `/api/edge.js`, pass through
-    headers.set('x-middleware-next', '1');
-    return new Response(null, { headers });
-  } else {
-    // For everything else, serve a custom response
-    return new Response(`RANDOMNESS_PLACEHOLDER:middleware`, { headers });
-  }
+export default () => {
+  const response = new Response();
+
+  // Set custom header
+  response.headers.set('x-modified-edge', 'true');
+
+  // "Pass through" the middleware to complete the HTTP request
+  response.headers.set('x-middleware-next', '1');
+
+  return response;
 };
