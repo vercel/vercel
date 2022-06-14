@@ -671,8 +671,8 @@ describe('Test `detectBuilders`', () => {
     expect(builders![0].use).toBe('@vercel/static');
 
     expect(defaultRoutes!.length).toBe(1);
-    expect((defaultRoutes![0] as any).src).toBe('/(.*)');
-    expect((defaultRoutes![0] as any).dest).toBe('/dist/$1');
+    expect(defaultRoutes![0].src).toBe('/(.*)');
+    expect(defaultRoutes![0].dest).toBe('/dist/$1');
   });
 
   it('Custom static output directory with api', async () => {
@@ -691,9 +691,9 @@ describe('Test `detectBuilders`', () => {
     expect(builders![1].use).toBe('@vercel/static');
 
     expect(defaultRoutes!.length).toBe(3);
-    expect((defaultRoutes![1] as any).status).toBe(404);
-    expect((defaultRoutes![2] as any).src).toBe('/(.*)');
-    expect((defaultRoutes![2] as any).dest).toBe('/output/$1');
+    expect(defaultRoutes![1].status).toBe(404);
+    expect(defaultRoutes![2].src).toBe('/(.*)');
+    expect(defaultRoutes![2].dest).toBe('/output/$1');
   });
 
   it('Framework with non-package.json entrypoint', async () => {
@@ -2285,10 +2285,10 @@ it('Test `detectRoutes`', async () => {
 
     const { defaultRoutes } = await detectBuilders(files);
     expect(defaultRoutes!.length).toBe(3);
-    expect((defaultRoutes![0] as any).dest).toBe('/api/team.js');
-    expect((defaultRoutes![1] as any).dest).toBe('/api/user.go');
-    expect((defaultRoutes![2] as any).dest).not.toBeDefined();
-    expect((defaultRoutes![2] as any).status).toBe(404);
+    expect(defaultRoutes![0].dest).toBe('/api/team.js');
+    expect(defaultRoutes![1].dest).toBe('/api/user.go');
+    expect(defaultRoutes![2].dest).not.toBeDefined();
+    expect(defaultRoutes![2].status).toBe(404);
   }
 
   {
@@ -2335,10 +2335,10 @@ it('Test `detectRoutes`', async () => {
     ];
 
     const { defaultRoutes } = await detectBuilders(files);
-    expect((defaultRoutes![2] as any).status).toBe(404);
-    expect((defaultRoutes![2] as any).src).toBe('^/api(/.*)?$');
-    expect((defaultRoutes![3] as any).src).toBe('/(.*)');
-    expect((defaultRoutes![3] as any).dest).toBe('/public/$1');
+    expect(defaultRoutes![2].status).toBe(404);
+    expect(defaultRoutes![2].src).toBe('^/api(/.*)?$');
+    expect(defaultRoutes![3].src).toBe('/(.*)');
+    expect(defaultRoutes![3].dest).toBe('/public/$1');
     expect(defaultRoutes!.length).toBe(4);
   }
 
@@ -2350,8 +2350,8 @@ it('Test `detectRoutes`', async () => {
     const files = ['public/index.html', 'api/[endpoint].js'];
 
     const { defaultRoutes } = await detectBuilders(files, pkg);
-    expect((defaultRoutes![1] as any).status).toBe(404);
-    expect((defaultRoutes![1] as any).src).toBe('^/api(/.*)?$');
+    expect(defaultRoutes![1].status).toBe(404);
+    expect(defaultRoutes![1].src).toBe('^/api(/.*)?$');
     expect(defaultRoutes!.length).toBe(2);
   }
 
@@ -2369,14 +2369,10 @@ it('Test `detectRoutes`', async () => {
     const { defaultRoutes } = await detectBuilders(files);
 
     expect(defaultRoutes!.length).toBe(3);
-    expect((defaultRoutes![0] as any).src).toBe(
-      '^/api/date(/|/index|/index\\.js)?$'
-    );
-    expect((defaultRoutes![0] as any).dest).toBe('/api/date/index.js');
-    expect((defaultRoutes![1] as any).src).toBe(
-      '^/api/(date/|date|date\\.js)$'
-    );
-    expect((defaultRoutes![1] as any).dest).toBe('/api/date.js');
+    expect(defaultRoutes![0].src).toBe('^/api/date(/|/index|/index\\.js)?$');
+    expect(defaultRoutes![0].dest).toBe('/api/date/index.js');
+    expect(defaultRoutes![1].src).toBe('^/api/(date/|date|date\\.js)$');
+    expect(defaultRoutes![1].dest).toBe('/api/date.js');
   }
 
   {
@@ -2385,16 +2381,10 @@ it('Test `detectRoutes`', async () => {
     const { defaultRoutes } = await detectBuilders(files);
 
     expect(defaultRoutes!.length).toBe(3);
-    expect((defaultRoutes![0] as any).src).toBe(
-      '^/api/([^/]+)(/|/index|/index\\.js)?$'
-    );
-    expect((defaultRoutes![0] as any).dest).toBe(
-      '/api/[date]/index.js?date=$1'
-    );
-    expect((defaultRoutes![1] as any).src).toBe(
-      '^/api/(date/|date|date\\.js)$'
-    );
-    expect((defaultRoutes![1] as any).dest).toBe('/api/date.js');
+    expect(defaultRoutes![0].src).toBe('^/api/([^/]+)(/|/index|/index\\.js)?$');
+    expect(defaultRoutes![0].dest).toBe('/api/[date]/index.js?date=$1');
+    expect(defaultRoutes![1].src).toBe('^/api/(date/|date|date\\.js)$');
+    expect(defaultRoutes![1].dest).toBe('/api/date.js');
   }
 
   {
@@ -2424,7 +2414,7 @@ it('Test `detectRoutes`', async () => {
     const { defaultRoutes } = await detectBuilders(files, null, { functions });
 
     expect(defaultRoutes!.length).toBe(2);
-    expect((defaultRoutes![0] as any).dest).toBe('/api/user.php');
+    expect(defaultRoutes![0].dest).toBe('/api/user.php');
   }
 });
 
