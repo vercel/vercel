@@ -46,7 +46,11 @@ async function main() {
   const packages = await fs.readdir(packagesDir);
   for (const pkg of packages) {
     const fullDir = join(packagesDir, pkg);
-    const packageJson = await fs.readJson(join(fullDir, 'package.json'));
+    const packageJsonRaw = await fs.readFile(
+      join(fullDir, 'package.json'),
+      'utf-8'
+    );
+    const packageJson = JSON.parse(packageJsonRaw);
     const tarballName = `${packageJson.name
       .replace('@', '')
       .replace('/', '-')}-v${packageJson.version}.tgz`;
