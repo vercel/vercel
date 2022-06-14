@@ -40,6 +40,13 @@ async function main() {
     JSON.stringify([...existingExamples, ...oldExamples])
   );
 
+  const tarballsDir = join(pubDir, 'tarballs');
+  await fs.mkdir(tarballsDir);
+
+  // invoke `turbo run build --dry=json`
+  // for each "task", update package.json with tarball URLS, and run `yarn pack`
+  // `https://${process.env.VERCEL_URL}/tarballs/@vercel/build-utils.tgz`
+
   console.log('Completed building static frontend.');
 }
 
