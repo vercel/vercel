@@ -1,23 +1,29 @@
-const { deepEqual } = require('assert');
-const { normalizeRoutes } = require('../');
-const {
+import { deepEqual } from 'assert';
+import { Route, Source, normalizeRoutes } from '../src';
+import {
   getCleanUrls,
   convertCleanUrls,
   convertRedirects,
   convertRewrites,
   convertHeaders,
   convertTrailingSlash,
-} = require('../dist/superstatic');
+} from '../src/superstatic';
 
-function routesToRegExps(routeArray) {
+function routesToRegExps(routeArray: Route[]) {
   const { routes, error } = normalizeRoutes(routeArray);
   if (error) {
     throw error;
   }
-  return routes.map(r => new RegExp(r.src));
+  return (routes || [])
+    .filter((r): r is Source => 'src' in r)
+    .map(r => new RegExp(r.src));
 }
 
-function assertMatches(actual, matches, isExpectingMatch) {
+function assertMatches(
+  actual: Route[],
+  matches: string[][],
+  isExpectingMatch: boolean
+) {
   routesToRegExps(actual).forEach((r, i) => {
     matches[i].forEach(text => {
       deepEqual(r.test(text), isExpectingMatch, `${text} ${r.source}`);
@@ -25,7 +31,11 @@ function assertMatches(actual, matches, isExpectingMatch) {
   });
 }
 
-function assertRegexMatches(actual, mustMatch, mustNotMatch) {
+function assertRegexMatches(
+  actual: Route[],
+  mustMatch: string[][],
+  mustNotMatch: string[][]
+) {
   assertMatches(actual, mustMatch, true);
   assertMatches(actual, mustNotMatch, false);
 }
@@ -141,7 +151,7 @@ test('convertCleanUrls true, trailingSlash true', () => {
 
 test('convertCleanUrls false', () => {
   const actual = convertCleanUrls(false);
-  const expected = [];
+  const expected: Route[] = [];
   deepEqual(actual, expected);
 });
 
