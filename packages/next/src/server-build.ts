@@ -933,6 +933,20 @@ export async function serverBuild({
         ]
       : [];
   };
+  let nextDataCatchallOutput: FileFsRef | undefined = undefined;
+
+  if (isNextDataServerResolving) {
+    const catchallFsPath = path.join(
+      entryPath,
+      outputDirectory,
+      '__next_data_catchall.json'
+    );
+    await fs.writeFile(catchallFsPath, '{}');
+    nextDataCatchallOutput = new FileFsRef({
+      contentType: 'application/json',
+      fsPath: catchallFsPath,
+    });
+  }
 
   return {
     wildcard: wildcardConfig,
@@ -960,11 +974,7 @@ export async function serverBuild({
       ...middleware.edgeFunctions,
       ...(isNextDataServerResolving
         ? {
-            __next_data_catchall: new FileBlob({
-              contentType: 'application/json',
-              mode: 0o644,
-              data: '{}',
-            }),
+            __next_data_catchall: nextDataCatchallOutput,
           }
         : {}),
     },
@@ -1267,6 +1277,19 @@ export async function serverBuild({
 
       ...(isNextDataServerResolving
         ? [
+            {
+              src: `^${path.join(
+                '/',
+                entryDirectory,
+                '/_next/data/',
+                escapedBuildId,
+                '/(.*).json'
+              )}`,
+              headers: {
+                'x-nextjs-matched-path': '/$1',
+              },
+              continue: true,
+            },
             // add a catch-all data route so we don't 404 when getting
             // middleware effects
             {

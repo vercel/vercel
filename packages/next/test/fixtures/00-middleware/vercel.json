@@ -41,6 +41,17 @@
         "x-nextjs-data": "1"
       },
       "mustContain": "page\":\"about\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/after-file-rewrite-auto-static-dynamic.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": "1"
+      },
+      "responseHeaders": {
+        "x-nextjs-matched-path": "/dynamic/first"
+      },
+      "mustContain": "{}"
     }
   ]
 }
