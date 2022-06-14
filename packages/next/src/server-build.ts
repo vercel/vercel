@@ -883,52 +883,56 @@ export async function serverBuild({
     }
   }
 
-  const normalizeNextDataRoute = isNextDataServerResolving
-    ? [
-        // strip _next/data prefix for resolving
-        {
-          src: `^${path.join(
-            '/',
-            entryDirectory,
-            '/_next/data/',
-            escapedBuildId,
-            '/(.*).json'
-          )}`,
-          dest: `${path.join('/', entryDirectory, '/$1')}`,
-          continue: true,
-          override: true,
-          has: [
-            {
-              type: 'header',
-              key: 'x-nextjs-data',
-            },
-          ],
-        },
-      ]
-    : [];
+  const normalizeNextDataRoute = (isOverride = false) => {
+    return isNextDataServerResolving
+      ? [
+          // strip _next/data prefix for resolving
+          {
+            src: `^${path.join(
+              '/',
+              entryDirectory,
+              '/_next/data/',
+              escapedBuildId,
+              '/(.*).json'
+            )}`,
+            dest: `${path.join('/', entryDirectory, '/$1')}`,
+            ...(isOverride ? { override: true } : {}),
+            continue: true,
+            has: [
+              {
+                type: 'header',
+                key: 'x-nextjs-data',
+              },
+            ],
+          },
+        ]
+      : [];
+  };
 
-  const denormalizeNextDataRoute = isNextDataServerResolving
-    ? [
-        {
-          src: '/(.*)',
-          has: [
-            {
-              type: 'header',
-              key: 'x-nextjs-data',
-            },
-          ],
-          dest: `${path.join(
-            '/',
-            entryDirectory,
-            '/_next/data/',
-            buildId,
-            '/$1.json'
-          )}`,
-          continue: true,
-          override: true,
-        },
-      ]
-    : [];
+  const denormalizeNextDataRoute = (isOverride = false) => {
+    return isNextDataServerResolving
+      ? [
+          {
+            src: '/(.*)',
+            has: [
+              {
+                type: 'header',
+                key: 'x-nextjs-data',
+              },
+            ],
+            dest: `${path.join(
+              '/',
+              entryDirectory,
+              '/_next/data/',
+              buildId,
+              '/$1.json'
+            )}`,
+            continue: true,
+            ...(isOverride ? { override: true } : {}),
+          },
+        ]
+      : [];
+  };
 
   return {
     wildcard: wildcardConfig,
@@ -983,7 +987,7 @@ export async function serverBuild({
       ...privateOutputs.routes,
 
       // normalize _next/data URL before processing redirects
-      ...normalizeNextDataRoute,
+      ...normalizeNextDataRoute(true),
 
       ...(i18n
         ? [
@@ -1144,7 +1148,7 @@ export async function serverBuild({
           ]),
 
       // we need to undo _next/data normalize before checking filesystem
-      ...denormalizeNextDataRoute,
+      ...denormalizeNextDataRoute(true),
 
       // while middleware was in beta the order came right before
       // handle: 'filesystem' we maintain this for older versions
@@ -1168,7 +1172,7 @@ export async function serverBuild({
         : []),
 
       // normalize _next/data URL before processing rewrites
-      ...normalizeNextDataRoute,
+      ...normalizeNextDataRoute(),
 
       ...(!isNextDataServerResolving
         ? [
@@ -1240,7 +1244,7 @@ export async function serverBuild({
       { handle: 'rewrite' },
 
       // re-build /_next/data URL after resolving
-      ...denormalizeNextDataRoute,
+      ...denormalizeNextDataRoute(),
 
       // /_next/data routes for getServerProps/getStaticProps pages
       ...dataRoutes,

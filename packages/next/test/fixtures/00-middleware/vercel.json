@@ -28,6 +28,19 @@
       "fetchOptions": {
         "redirect": "manual"
       }
+    },
+    {
+      "path": "/after-file-rewrite",
+      "status": 200,
+      "mustContain": "About Page"
+    },
+    {
+      "path": "/_next/data/testing-build-id/after-file-rewrite.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": "1"
+      },
+      "mustContain": "page\":\"about\""
     }
   ]
 }
