@@ -1,6 +1,7 @@
-const assert = require('assert');
-const Ajv = require('ajv');
-const {
+import assert from 'assert';
+import Ajv from 'ajv';
+import {
+  Route,
   normalizeRoutes,
   isHandler,
   routesSchema,
@@ -10,17 +11,23 @@ const {
   cleanUrlsSchema,
   trailingSlashSchema,
   getTransformedRoutes,
-} = require('../');
+} from '../src';
 
 const ajv = new Ajv();
-const assertValid = (data, schema = routesSchema) => {
+
+const assertValid = (data: unknown, schema: object = routesSchema) => {
   const validate = ajv.compile(schema);
   const valid = validate(data);
 
   if (!valid) console.log(validate.errors);
   assert.equal(valid, true);
 };
-const assertError = (data, errors, schema = routesSchema) => {
+
+const assertError = (
+  data: unknown,
+  errors: Ajv.ErrorObject[],
+  schema: object = routesSchema
+) => {
   const validate = ajv.compile(schema);
   const valid = validate(data);
 
@@ -35,10 +42,11 @@ describe('normalizeRoutes', () => {
   });
 
   test('accepts valid routes', () => {
-    const routes = [
+    const routes: Route[] = [
       {
         src: '^(?:/(?<value>en|fr))?(?<path>/.*)$',
         locale: {
+          // @ts-expect-error `value` is not defined… is this a bug or should this prop be added to the type?
           value: '$value',
           path: '$path',
           default: 'en',
@@ -152,7 +160,7 @@ describe('normalizeRoutes', () => {
   });
 
   test('returns if empty', () => {
-    const input = [];
+    const input: Route[] = [];
     const { error, routes } = normalizeRoutes(input);
 
     assert.strictEqual(error, null);
@@ -160,62 +168,64 @@ describe('normalizeRoutes', () => {
   });
 
   test('fails if route has unknown `handle` value', () => {
-    const input = [{ handle: 'doesnotexist' }];
+    // @ts-expect-error - intentionally passing invalid "handle"
+    const input: Route[] = [{ handle: 'doesnotexist' }];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
-      error.message,
+      error?.message,
       'Route at index 0 has unknown handle value `handle: doesnotexist`.'
     );
   });
 
   test('fails if route has additional properties with `handle` property', () => {
-    const input = [{ handle: 'filesystem', illegal: true }];
+    // @ts-expect-error - intentionally passing invalid property
+    const input: Route[] = [{ handle: 'filesystem', illegal: true }];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
-      error.message,
+      error?.message,
       'Route at index 0 has unknown property `illegal`.'
     );
   });
 
   test('fails if route has a duplicate `handle` value', () => {
-    const input = [{ handle: 'filesystem' }, { handle: 'filesystem' }];
+    const input: Route[] = [{ handle: 'filesystem' }, { handle: 'filesystem' }];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
-      error.message,
+      error?.message,
       'Route at index 1 is a duplicate. Please use one `handle: filesystem` at most.'
     );
   });
 
   test('fails if route has a invalid regex', () => {
-    const input = [{ src: '^/(broken]$' }];
+    const input: Route[] = [{ src: '^/(broken]$' }];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
-      error.message,
+      error?.message,
       'Route at index 0 has invalid `src` regular expression "^/(broken]$".'
     );
   });
 
   test('fails if route does not define `handle` or `src` property', () => {
-    const input = [{ fake: 'foo' }];
+    // @ts-expect-error - intentionally passing invalid property
+    const input: Route[] = [{ fake: 'foo' }];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
-      error.message,
+      error?.message,
       'Route at index 0 must define either `handle` or `src` property.'
     );
   });
 
   test('fails if over 1024 routes', () => {
-    // @ts-ignore
     assertError('string', [
       {
         dataPath: '',
@@ -231,7 +241,6 @@ describe('normalizeRoutes', () => {
     const arr = new Array(1026);
     arr.fill(true);
 
-    // @ts-ignore
     assertError(arr, [
       {
         dataPath: '',
@@ -248,7 +257,6 @@ describe('normalizeRoutes', () => {
   test('fails is src is not string', () => {
     assertError(
       [
-        // @ts-ignore
         {
           src: false,
         },
@@ -670,7 +678,7 @@ describe('normalizeRoutes', () => {
   });
 
   test('fails if routes after `handle: hit` use `dest`', () => {
-    const input = [
+    const input: Route[] = [
       {
         handle: 'hit',
       },
@@ -681,15 +689,15 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
-      error.message,
+      error?.message,
       'Route at index 1 cannot define `dest` after `handle: hit`.'
     );
   });
 
   test('fails if routes after `handle: hit` do not use `continue: true`', () => {
-    const input = [
+    const input: Route[] = [
       {
         handle: 'hit',
       },
@@ -700,15 +708,15 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
-      error.message,
+      error?.message,
       'Route at index 1 must define `continue: true` after `handle: hit`.'
     );
   });
 
   test('fails if routes after `handle: hit` use `status', () => {
-    const input = [
+    const input: Route[] = [
       {
         handle: 'hit',
       },
@@ -720,15 +728,15 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
-      error.message,
+      error?.message,
       'Route at index 1 cannot define `status` after `handle: hit`.'
     );
   });
 
   test('fails if routes after `handle: miss` do not use `check: true`', () => {
-    const input = [
+    const input: Route[] = [
       {
         handle: 'miss',
       },
@@ -739,15 +747,15 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
-      error.message,
+      error?.message,
       'Route at index 1 must define `check: true` after `handle: miss`.'
     );
   });
 
   test('fails if routes after `handle: miss` do not use `continue: true`', () => {
-    const input = [
+    const input: Route[] = [
       {
         handle: 'miss',
       },
@@ -758,9 +766,9 @@ describe('normalizeRoutes', () => {
     ];
     const { error } = normalizeRoutes(input);
 
-    assert.deepEqual(error.code, 'invalid_route');
+    assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
-      error.message,
+      error?.message,
       'Route at index 1 must define `continue: true` after `handle: miss`.'
     );
   });
@@ -777,6 +785,7 @@ describe('getTransformedRoutes', () => {
 
   test('should not error when routes is null and cleanUrls is true', () => {
     const nowConfig = { cleanUrls: true, routes: null };
+    // @ts-expect-error intentionally passing invalid `routes: null` here
     const actual = getTransformedRoutes({ nowConfig });
     assert.equal(actual.error, null);
     assertValid(actual.routes);
@@ -799,6 +808,7 @@ describe('getTransformedRoutes', () => {
       ],
     };
 
+    // @ts-expect-error not sure if this one is an error or not…
     const actual = getTransformedRoutes({ nowConfig });
     assert.equal(actual.error, null);
     assertValid(actual.routes);
@@ -809,45 +819,45 @@ describe('getTransformedRoutes', () => {
       cleanUrls: true,
       routes: [{ src: '/page', dest: '/file.html' }],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_mixed_routes');
+    const { error } = getTransformedRoutes({ nowConfig });
+    assert.notEqual(error, null);
+    assert.equal(error?.code, 'invalid_mixed_routes');
     assert.equal(
-      actual.error.message,
+      error?.message,
       'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present.'
     );
-    assert.ok(actual.error.link);
-    assert.ok(actual.error.action);
+    assert.ok(error?.link);
+    assert.ok(error?.action);
   });
 
   test('should error when redirects is invalid regex', () => {
     const nowConfig = {
       redirects: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_redirect');
+    const { error } = getTransformedRoutes({ nowConfig });
+    assert.notEqual(error, null);
+    assert.equal(error?.code, 'invalid_redirect');
     assert.equal(
-      actual.error.message,
+      error?.message,
       'Redirect at index 0 has invalid `source` regular expression "^/(*.)\\.html$".'
     );
-    assert.ok(actual.error.link);
-    assert.ok(actual.error.action);
+    assert.ok(error?.link);
+    assert.ok(error?.action);
   });
 
   test('should error when redirects is invalid pattern', () => {
     const nowConfig = {
       redirects: [{ source: '/:?', destination: '/file.html' }],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_redirect');
+    const { error } = getTransformedRoutes({ nowConfig });
+    assert.notEqual(error, null);
+    assert.equal(error?.code, 'invalid_redirect');
     assert.equal(
-      actual.error.message,
+      error?.message,
       'Redirect at index 0 has invalid `source` pattern "/:?".'
     );
-    assert.ok(actual.error.link);
-    assert.ok(actual.error.action);
+    assert.ok(error?.link);
+    assert.ok(error?.action);
   });
 
   test('should error when redirects defines both permanent and statusCode', () => {
@@ -861,30 +871,40 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_redirect');
+    const { error } = getTransformedRoutes({ nowConfig });
+    assert.notEqual(error, null);
+    assert.equal(error?.code, 'invalid_redirect');
     assert.equal(
-      actual.error.message,
+      error?.message,
       'Redirect at index 0 cannot define both `permanent` and `statusCode` properties.'
     );
-    assert.ok(actual.error.link);
-    assert.ok(actual.error.action);
+    assert.ok(error?.link);
+    assert.ok(error?.action);
   });
 
   test('should error when headers is invalid regex', () => {
     const nowConfig = {
-      headers: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
+      headers: [
+        {
+          source: '^/(*.)\\.html$',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=0, must-revalidate',
+            },
+          ],
+        },
+      ],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_header');
+    const { error } = getTransformedRoutes({ nowConfig });
+    assert.notEqual(error, null);
+    assert.equal(error?.code, 'invalid_header');
     assert.equal(
-      actual.error.message,
+      error?.message,
       'Header at index 0 has invalid `source` regular expression "^/(*.)\\.html$".'
     );
-    assert.ok(actual.error.link);
-    assert.ok(actual.error.action);
+    assert.ok(error?.link);
+    assert.ok(error?.action);
   });
 
   test('should error when headers is invalid pattern', () => {
@@ -893,45 +913,45 @@ describe('getTransformedRoutes', () => {
         { source: '/:?', headers: [{ key: 'x-hello', value: 'world' }] },
       ],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_header');
+    const { error } = getTransformedRoutes({ nowConfig });
+    assert.notEqual(error, null);
+    assert.equal(error?.code, 'invalid_header');
     assert.equal(
-      actual.error.message,
+      error?.message,
       'Header at index 0 has invalid `source` pattern "/:?".'
     );
-    assert.ok(actual.error.link);
-    assert.ok(actual.error.action);
+    assert.ok(error?.link);
+    assert.ok(error?.action);
   });
 
   test('should error when rewrites is invalid regex', () => {
     const nowConfig = {
       rewrites: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_rewrite');
+    const { error } = getTransformedRoutes({ nowConfig });
+    assert.notEqual(error, null);
+    assert.equal(error?.code, 'invalid_rewrite');
     assert.equal(
-      actual.error.message,
+      error?.message,
       'Rewrite at index 0 has invalid `source` regular expression "^/(*.)\\.html$".'
     );
-    assert.ok(actual.error.link);
-    assert.ok(actual.error.action);
+    assert.ok(error?.link);
+    assert.ok(error?.action);
   });
 
   test('should error when rewrites is invalid pattern', () => {
     const nowConfig = {
       rewrites: [{ source: '/:?', destination: '/file.html' }],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.notEqual(actual.error, null);
-    assert.equal(actual.error.code, 'invalid_rewrite');
+    const { error } = getTransformedRoutes({ nowConfig });
+    assert.notEqual(error, null);
+    assert.equal(error?.code, 'invalid_rewrite');
     assert.equal(
-      actual.error.message,
+      error?.message,
       'Rewrite at index 0 has invalid `source` pattern "/:?".'
     );
-    assert.ok(actual.error.link);
-    assert.ok(actual.error.action);
+    assert.ok(error?.link);
+    assert.ok(error?.action);
   });
 
   test('should normalize all redirects before rewrites', () => {
@@ -947,7 +967,7 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const actual = getTransformedRoutes({ nowConfig });
+    const { error, routes } = getTransformedRoutes({ nowConfig });
     const expected = [
       {
         src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
@@ -972,9 +992,9 @@ describe('getTransformedRoutes', () => {
       { handle: 'filesystem' },
       { src: '^/v1$', dest: '/v2/api.py', check: true },
     ];
-    assert.deepEqual(actual.error, null);
-    assert.deepEqual(actual.routes, expected);
-    assertValid(actual.routes, routesSchema);
+    assert.deepEqual(error, null);
+    assert.deepEqual(routes, expected);
+    assertValid(routes, routesSchema);
   });
 
   test('should validate schemas', () => {
@@ -1060,8 +1080,9 @@ describe('getTransformedRoutes', () => {
 
   test('should return null routes if no transformations are performed', () => {
     const nowConfig = { routes: null };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.equal(actual.routes, null);
+    // @ts-expect-error intentionally passing invalid `routes: null`
+    const { routes } = getTransformedRoutes({ nowConfig });
+    assert.equal(routes, null);
   });
 
   test('should error when segment is defined in `destination` but not `source`', () => {
@@ -1073,13 +1094,13 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.deepEqual(actual.routes, null);
+    const { routes, error } = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(routes, null);
     assert.ok(
-      actual.error.message.includes(
+      error?.message.includes(
         'in `destination` property but not in `source` or `has` property'
       ),
-      actual.error.message
+      error?.message
     );
   });
 
@@ -1092,13 +1113,13 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.deepEqual(actual.routes, null);
+    const { routes, error } = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(routes, null);
     assert.ok(
-      actual.error.message.includes(
+      error?.message.includes(
         'in `destination` property but not in `source` or `has` property'
       ),
-      actual.error.message
+      error?.message
     );
   });
 
@@ -1111,13 +1132,13 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.deepEqual(actual.routes, null);
+    const { routes, error } = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(routes, null);
     assert.ok(
-      actual.error.message.includes(
+      error?.message.includes(
         'in `destination` property but not in `source` or `has` property'
       ),
-      actual.error.message
+      error?.message
     );
   });
 
@@ -1130,13 +1151,13 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const actual = getTransformedRoutes({ nowConfig });
-    assert.deepEqual(actual.routes, null);
+    const { routes, error } = getTransformedRoutes({ nowConfig });
+    assert.deepEqual(routes, null);
     assert.ok(
-      actual.error.message.includes(
+      error?.message.includes(
         'in `destination` property but not in `source` or `has` property'
       ),
-      actual.error.message
+      error?.message
     );
   });
 
