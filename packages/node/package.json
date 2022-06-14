@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@types/node": "*",
-    "@vercel/ncc": "0.34.0",
+    "@vercel/ncc": "0.24.0",
     "@vercel/node-bridge": "3.0.0",
     "@vercel/static-config": "2.0.1",
     "edge-runtime": "1.0.1",
