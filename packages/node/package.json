@@ -48,7 +48,6 @@
     "@types/node-fetch": "^2.6.1",
     "@types/test-listen": "1.1.0",
     "@vercel/build-utils": "4.1.1-canary.0",
-    "@vercel/ncc": "0.24.0",
     "@vercel/nft": "0.19.1",
     "@vercel/static-config": "2.0.1",
     "content-type": "1.0.4",
