@@ -177,12 +177,15 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   const { text, resp } = await fetchDeploymentUrl(probeUrl, fetchOpts);
   logWithinTest('finished testing', JSON.stringify(probe));
 
+  let hadTest = false;
+
   if (probe.status) {
     if (probe.status !== resp.status) {
       throw new Error(
         `Fetched page ${probeUrl} does not return the status ${probe.status} Instead it has ${resp.status}`
       );
     }
+    hadTest = true;
   }
 
   if (probe.mustContain || probe.mustNotContain) {
@@ -204,7 +207,10 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
           ` Response headers:\n ${headers}`
       );
     }
-  } else if (probe.responseHeaders) {
+    hadTest = true;
+  }
+
+  if (probe.responseHeaders) {
     // eslint-disable-next-line no-loop-func
     Object.keys(probe.responseHeaders).forEach(header => {
       const actual = resp.headers.get(header);
@@ -226,6 +232,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         );
       }
     });
+    hadTest = true;
   } else if (probe.notResponseHeaders) {
     Object.keys(probe.notResponseHeaders).forEach(header => {
       const headerValue = resp.headers.get(header);
@@ -241,9 +248,10 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         );
       }
     });
-  } else if (!probe.status) {
-    assert(false, 'probe must have a test condition');
+    hadTest = true;
   }
+
+  assert(hadTest, 'probe must have a test condition');
 }
 
 async function testDeployment(
