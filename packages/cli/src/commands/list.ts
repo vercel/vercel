@@ -95,7 +95,7 @@ export default async function main(client: Client) {
   }
 
   const meta = parseMeta(argv['--meta']);
-  const { currentTeam, includeScheme } = config;
+  const { currentTeam } = config;
 
   let contextName = null;
 
@@ -227,7 +227,7 @@ export default async function main(client: Client) {
           .map(dep => [
             [
               getProjectName(dep),
-              chalk.bold((includeScheme ? 'https://' : '') + dep.url),
+              chalk.bold('https://' + dep.url),
               stateString(dep.state),
               chalk.gray(ms(Date.now() - dep.createdAt)),
               dep.creator.username,
