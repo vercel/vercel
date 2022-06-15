@@ -10,9 +10,11 @@ You could also use the vercel cli to create this example with `vercel init creat
 
 using the CLI
 
-`cd create-react-app`
-`npm install`
-`vercel`
+```
+cd create-react-app
+npm install
+vercel
+``` 
 
 or 
 
