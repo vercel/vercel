@@ -200,15 +200,15 @@ export function middleware(request) {
   }
 
   if (pathname.startsWith('/home')) {
-    if (!request.cookies.bucket) {
+    if (!request.cookies.get('bucket')) {
       const bucket = Math.random() >= 0.5 ? 'a' : 'b';
       url.pathname = `/home/${bucket}`;
       const response = NextResponse.rewrite(url);
-      response.cookie('bucket', bucket);
+      response.cookies.set('bucket', bucket);
       return response;
     }
 
-    url.pathname = `/home/${request.cookies.bucket}`;
+    url.pathname = `/home/${request.cookies.get('bucket')}`;
     return NextResponse.rewrite(url);
   }
 

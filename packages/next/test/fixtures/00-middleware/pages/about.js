@@ -12,5 +12,6 @@ export const getServerSideProps = ({ query }) => ({
   props: {
     middleware: query.middleware || '',
     message: query.message || '',
+    page: 'about',
   },
 });
