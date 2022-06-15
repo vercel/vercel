@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { TurboDryRun } from './types';
 
-const rootDir = path.join(__dirname, '..');
+const rootDir = path.join(__dirname, '../../../');
 
 async function main() {
   const { stdout: sha } = await execa('git', ['rev-parse', '--short', 'HEAD'], {
@@ -21,20 +21,11 @@ async function main() {
     const dir = path.join(rootDir, task.directory);
     const packageJsonPath = path.join(dir, 'package.json');
     const originalPackageObj = await fs.readJson(packageJsonPath);
-    const packageObj = await fs.readJson(packageJsonPath);
+    let packageObj = JSON.parse(JSON.stringify(originalPackageObj));
     packageObj.version += `-${sha.trim()}`;
 
     if (task.dependencies.length > 0) {
-      for (const dependency of task.dependencies) {
-        const name = dependency.split('#')[0];
-        const tarballUrl = `https://${process.env.VERCEL_URL}/tarballs/${name}.tgz`;
-        if (packageObj.dependencies && name in packageObj.dependencies) {
-          packageObj.dependencies[name] = tarballUrl;
-        }
-        if (packageObj.devDependencies && name in packageObj.devDependencies) {
-          packageObj.devDependencies[name] = tarballUrl;
-        }
-      }
+      packageObj = modifyPackageJson(task, packageObj);
     }
     await fs.writeJson(packageJsonPath, packageObj, { spaces: 2 });
 
@@ -44,6 +35,20 @@ async function main() {
     });
     await fs.writeJson(packageJsonPath, originalPackageObj, { spaces: 2 });
   }
+}
+
+export function modifyPackageJson(task, packageObj) {
+  for (const dependency of task.dependencies) {
+    const name = dependency.split('#')[0];
+    const tarballUrl = `https://${process.env.VERCEL_URL}/tarballs/${name}.tgz`;
+    if (packageObj.dependencies && name in packageObj.dependencies) {
+      packageObj.dependencies[name] = tarballUrl;
+    }
+    if (packageObj.devDependencies && name in packageObj.devDependencies) {
+      packageObj.devDependencies[name] = tarballUrl;
+    }
+  }
+  return packageObj;
 }
 
 main().catch(err => {

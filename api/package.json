@@ -16,7 +16,7 @@
     "unzip-stream": "0.3.0"
   },
   "devDependencies": {
-    "@types/node": "13.1.4",
+    "@types/node": "17.0.44",
     "@types/node-fetch": "2.5.4",
     "@vercel/node": "1.9.0",
     "typescript": "3.9.6"

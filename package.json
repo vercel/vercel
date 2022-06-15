@@ -50,7 +50,7 @@
     "test-integration-dev": "turbo run test-integration-dev",
     "lint": "eslint . --ext .ts,.js",
     "prepare": "husky install",
-    "pack": "cd utils && node -r ts-eager/register ./pack.ts"
+    "pack": "cd ./api/_lib/script && node -r ts-eager/register ./pack.ts"
   },
   "lint-staged": {
     "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [
