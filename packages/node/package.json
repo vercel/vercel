@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@types/node": "*",
+    "@vercel/build-utils": "4.1.1-canary.1",
     "@vercel/ncc": "0.24.0",
     "@vercel/node-bridge": "3.0.0",
     "@vercel/static-config": "2.0.1",
@@ -51,7 +52,6 @@
     "@types/jest": "27.4.1",
     "@types/node-fetch": "^2.6.1",
     "@types/test-listen": "1.1.0",
-    "@vercel/build-utils": "4.1.1-canary.1",
     "@vercel/nft": "0.19.1",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
