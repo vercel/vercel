@@ -9,6 +9,7 @@ export default new Map([
   ['certs', 'certs'],
   ['deploy', 'deploy'],
   ['dev', 'dev'],
+  ['develop', 'dev'],
   ['dns', 'dns'],
   ['domain', 'domains'],
   ['domains', 'domains'],
