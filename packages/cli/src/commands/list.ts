@@ -95,7 +95,7 @@ export default async function main(client: Client) {
   }
 
   const meta = parseMeta(argv['--meta']);
-  const { currentTeam, includeScheme } = config;
+  const { currentTeam } = config;
 
   let contextName = null;
 
@@ -220,17 +220,20 @@ export default async function main(client: Client) {
     `${table(
       [
         ['project', 'latest deployment', 'state', 'age', 'username'].map(
-          header => chalk.dim(header)
+          header =>
+            header === 'username' || header === 'project'
+              ? chalk.dim(header)
+              : chalk.blue(header)
         ),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
             [
-              getProjectName(dep),
-              chalk.bold((includeScheme ? 'https://' : '') + dep.url),
+              chalk.blue(getProjectName(dep)),
+              chalk.bold('https://' + dep.url),
               stateString(dep.state),
               chalk.gray(ms(Date.now() - dep.createdAt)),
-              dep.creator.username,
+              chalk.dim(dep.creator.username),
             ],
           ])
           // flatten since the previous step returns a nested
