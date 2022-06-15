@@ -316,6 +316,14 @@ test(
 );
 
 test(
+  '[vercel dev] 42-dynamic-esm-ext',
+  testFixtureStdio('42-dynamic-esm-ext', async (testPath: any) => {
+    await testPath(200, '/api/cjs/foo', 'found .js');
+    await testPath(200, '/api/esm/foo', 'found .mjs');
+  })
+);
+
+test(
   '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
   testFixtureStdio('python-flask', async (testPath: any) => {
     const name = 'Alice';

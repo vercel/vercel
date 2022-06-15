@@ -43,7 +43,9 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import confirm from '../../util/input/confirm';
-import editProjectSettings from '../../util/input/edit-project-settings';
+import editProjectSettings, {
+  PartialProjectSettings,
+} from '../../util/input/edit-project-settings';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -63,6 +65,7 @@ import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
+import { createGitMeta } from '../../util/deploy/create-git-meta';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -415,6 +418,8 @@ export default async (client: Client) => {
     parseMeta(argv['--meta'])
   );
 
+  const gitMetadata = await createGitMeta(path, output);
+
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
     {},
@@ -453,6 +458,15 @@ export default async (client: Client) => {
   let deployStamp = stamp();
   let deployment = null;
 
+  const localConfigurationOverrides: PartialProjectSettings = {
+    buildCommand: localConfig?.buildCommand,
+    devCommand: localConfig?.devCommand,
+    framework: localConfig?.framework,
+    commandForIgnoringBuildStep: localConfig?.ignoreCommand,
+    installCommand: localConfig?.installCommand,
+    outputDirectory: localConfig?.outputDirectory,
+  };
+
   try {
     const createArgs: any = {
       name: project ? project.name : newProjectName,
@@ -468,6 +482,7 @@ export default async (client: Client) => {
       nowConfig: localConfig,
       regions,
       meta,
+      gitMetadata,
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
@@ -475,7 +490,12 @@ export default async (client: Client) => {
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
       // Only add projectSettings for zero config deployments
-      createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
+      createArgs.projectSettings =
+        status === 'not_linked'
+          ? {
+              sourceFilesOutsideRootDirectory,
+            }
+          : { ...localConfigurationOverrides, sourceFilesOutsideRootDirectory };
     }
 
     deployment = await createDeploy(
@@ -503,7 +523,9 @@ export default async (client: Client) => {
       const settings = await editProjectSettings(
         output,
         projectSettings,
-        framework
+        framework,
+        false,
+        localConfigurationOverrides
       );
 
       // deploy again, but send projectSettings this time

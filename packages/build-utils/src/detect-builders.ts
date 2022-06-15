@@ -23,7 +23,7 @@ interface ErrorResponse {
 }
 
 interface Options {
-  tag?: 'canary' | 'latest' | string;
+  tag?: string;
   functions?: BuilderFunctions;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
@@ -278,7 +278,7 @@ export async function detectBuilders(
       // and package.json can be served as static files
       frontendBuilder = {
         use: '@vercel/static',
-        src: '!{api/**,package.json}',
+        src: '!{api/**,package.json,middleware.[jt]s}',
         config: {
           zeroConfig: true,
         },
@@ -355,7 +355,16 @@ function maybeGetApiBuilder(
   apiMatches: Builder[],
   options: Options
 ) {
-  if (!fileName.startsWith('api/')) {
+  const middleware =
+    fileName === 'middleware.js' || fileName === 'middleware.ts';
+
+  // Root-level Middleware file is handled by `@vercel/next`, so don't
+  // schedule a separate Builder when "nextjs" framework is selected
+  if (middleware && options.projectSettings?.framework === 'nextjs') {
+    return null;
+  }
+
+  if (!(fileName.startsWith('api/') || middleware)) {
     return null;
   }
 
@@ -381,13 +390,17 @@ function maybeGetApiBuilder(
 
   const { fnPattern, func } = getFunction(fileName, options);
 
-  const use = (func && func.runtime) || (match && match.use);
+  const use = func?.runtime || match?.use;
 
   if (!use) {
     return null;
   }
 
   const config: Config = { zeroConfig: true };
+
+  if (middleware) {
+    config.middleware = true;
+  }
 
   if (fnPattern && func) {
     config.functions = { [fnPattern]: func };
@@ -428,6 +441,7 @@ function getApiMatches() {
   const config = { zeroConfig: true };
 
   return [
+    { src: 'middleware.[jt]s', use: `@vercel/node`, config },
     { src: 'api/**/*.js', use: `@vercel/node`, config },
     { src: 'api/**/*.mjs', use: `@vercel/node`, config },
     { src: 'api/**/*.ts', use: `@vercel/node`, config },

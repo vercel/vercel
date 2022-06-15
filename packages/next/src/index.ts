@@ -1294,6 +1294,7 @@ export const build: BuildV2 = async ({
         entryPath,
         baseDir,
         dataRoutes,
+        buildId,
         escapedBuildId,
         outputDirectory,
         trailingSlashRedirects,
