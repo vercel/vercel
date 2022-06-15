@@ -1,10 +1,25 @@
 # Create React App
 
-This directory is a brief example of a [Create React App](https://github.com/facebook/create-react-app) site that can be deployed to Vercel with zero configuration.
+This directory is a brief example of a [Create React App](https://github.com/facebook/create-react-app) site that can be deployed to Vercel with zero configuration. You can copy this directory 
 
-## Deploy Your Own
+or
 
-Deploy your own Create React App project with Vercel.
+You could also use the vercel cli to create this example with `vercel init create-react-app`
+
+## Deploy Your App with 
+
+using the CLI
+
+`cd create-react-app`
+`npm install`
+`vercel`
+
+or 
+
+using any of the [these](https://vercel.com/docs/concepts/deployments/overview) methods 
+
+or
+
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/create-react-app&template=create-react-app)
 
@@ -13,6 +28,10 @@ _Live Example: https://create-react-template.vercel.app/_
 ## Available Scripts
 
 In the project directory, you can run:
+
+### `npm install`
+
+Installs the dependencies needed to run the app
 
 ### `npm start`
 
