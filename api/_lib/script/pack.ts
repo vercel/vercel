@@ -48,6 +48,7 @@ export function modifyPackageJson(task, packageObj) {
       packageObj.devDependencies[name] = tarballUrl;
     }
   }
+  return packageObj;
 }
 
 main().catch(err => {
