@@ -4,7 +4,6 @@ import table from 'text-table';
 import Now from '../util';
 import getArgs from '../util/get-args';
 import { handleError } from '../util/error';
-import cmd from '../util/output/cmd';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
 import strlen from '../util/strlen';
@@ -208,8 +207,8 @@ export default async function main(client: Client) {
   // information to help the user find other deployments or instances
   if (app == null) {
     log(
-      `To list more deployments for a project run ${cmd(
-        `${getCommandName('ls [project]')}`
+      `To list more deployments for a project run ${getCommandName(
+        'ls [project]'
       )}`
     );
   }
