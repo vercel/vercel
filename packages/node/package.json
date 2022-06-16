@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@types/node": "*",
-    "@vercel/build-utils": "4.1.1-canary.1",
+    "@vercel/build-utils": "4.1.0",
     "@vercel/ncc": "0.24.0",
     "@vercel/node-bridge": "3.0.0",
     "@vercel/static-config": "2.0.1",
