@@ -197,9 +197,11 @@ export default async function main(client: Client) {
   }
 
   log(
-    `Deployments${app ? ` for ${chalk.bold(app)}` : ''} under ${chalk.bold(
-      contextName
-    )} ${elapsed(Date.now() - start)}`
+    `Deployments${
+      app ? ` for ${chalk.bold(chalk.magenta(app))}` : ''
+    } under ${chalk.bold(chalk.magenta(contextName))} ${elapsed(
+      Date.now() - start
+    )}`
   );
 
   // we don't output the table headers if we have no deployments
@@ -224,14 +226,16 @@ export default async function main(client: Client) {
     tablePrint = `${table(
       [
         (isUserScope
-          ? ['latest deployment', 'state', 'age', 'duration']
-          : ['latest deployment', 'state', 'age', 'duration', 'username']
+          ? ['deployment url', 'state', 'age', 'duration']
+          : ['deployment url', 'state', 'age', 'duration', 'username']
         ).map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
-          .map(dep => [
+          .map((dep, i) => [
             [
-              chalk.bold('https://' + dep.url),
+              chalk.bold(
+                (i === 0 ? chalk.gray('> ') : '') + 'https://' + dep.url
+              ),
               stateString(dep.state),
               chalk.gray(ms(Date.now() - dep.createdAt)),
               chalk.gray(getDeploymentDuration(dep)),
