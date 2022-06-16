@@ -195,9 +195,9 @@ export default async function main(client: Client) {
   }
 
   log(
-    `Deployments under ${chalk.bold(contextName)} ${elapsed(
-      Date.now() - start
-    )}`
+    `Deployments${app ? ` for ${chalk.bold(app)}` : ''} under ${chalk.bold(
+      contextName
+    )} ${elapsed(Date.now() - start)}`
   );
 
   // we don't output the table headers if we have no deployments
@@ -216,24 +216,21 @@ export default async function main(client: Client) {
 
   print('\n');
 
-  console.log(
-    `${table(
+  let tablePrint;
+  if (app) {
+    tablePrint = `${table(
       [
-        ['project', 'latest deployment', 'state', 'age', 'username'].map(
-          header =>
-            header === 'username' || header === 'project'
-              ? chalk.dim(header)
-              : chalk.blue(header)
+        ['latest deployment', 'state', 'age', 'duration'].map(header =>
+          chalk.bold(chalk.blue(header))
         ),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
             [
-              chalk.blue(getProjectName(dep)),
               chalk.bold('https://' + dep.url),
               stateString(dep.state),
               chalk.gray(ms(Date.now() - dep.createdAt)),
-              chalk.dim(dep.creator.username),
+              chalk.gray(getDeploymentDuration(dep)),
             ],
           ])
           // flatten since the previous step returns a nested
@@ -246,12 +243,46 @@ export default async function main(client: Client) {
           ),
       ],
       {
-        align: ['l', 'l', 'r', 'l', 'l'],
+        align: ['l', 'l', 'l', 'l'],
         hsep: ' '.repeat(4),
         stringLength: strlen,
       }
-    ).replace(/^/gm, '  ')}\n`
-  );
+    ).replace(/^/gm, '  ')}\n`;
+  } else {
+    tablePrint = `${table(
+      [
+        ['project', 'latest deployment', 'state', 'age'].map(header =>
+          chalk.bold(chalk.blue(header))
+        ),
+        ...deployments
+          .sort(sortRecent())
+          .map(dep => [
+            [
+              getProjectName(dep),
+              chalk.bold('https://' + dep.url),
+              stateString(dep.state),
+              chalk.gray(ms(Date.now() - dep.createdAt)),
+            ],
+          ])
+          // flatten since the previous step returns a nested
+          // array of the deployment and (optionally) its instances
+          .flat()
+          .filter(app =>
+            // if an app wasn't supplied to filter by,
+            // we only want to render one deployment per app
+            app === null ? filterUniqueApps() : () => true
+          ),
+      ],
+      {
+        align: ['l', 'l', 'l', 'l'],
+        hsep: ' '.repeat(4),
+        stringLength: strlen,
+      }
+    ).replace(/^/gm, '  ')}\n`;
+  }
+
+  // print table with deployment information
+  console.log(tablePrint);
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next']);
@@ -287,6 +318,13 @@ function stateString(s: string) {
     default:
       return chalk.gray('UNKNOWN');
   }
+}
+
+function getDeploymentDuration(dep: Deployment): string {
+  if (!dep || !dep.ready || !dep.buildingAt) {
+    return '?';
+  }
+  return ms(dep.ready - dep.buildingAt);
 }
 
 // sorts by most recent deployment
