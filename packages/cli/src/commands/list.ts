@@ -226,7 +226,7 @@ export default async function main(client: Client) {
         (isUserScope
           ? ['latest deployment', 'state', 'age', 'duration']
           : ['latest deployment', 'state', 'age', 'duration', 'username']
-        ).map(header => chalk.bold(chalk.blue(header))),
+        ).map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
@@ -257,7 +257,7 @@ export default async function main(client: Client) {
     tablePrint = `${table(
       [
         ['project', 'latest deployment', 'state', 'age'].map(header =>
-          chalk.bold(chalk.blue(header))
+          chalk.bold(chalk.cyan(header))
         ),
         ...deployments
           .sort(sortRecent())
