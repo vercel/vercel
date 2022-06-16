@@ -15,6 +15,7 @@ import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { Deployment } from '../types';
+import getUser from '../util/get-user';
 
 const help = () => {
   console.log(`
@@ -75,6 +76,8 @@ export default async function main(client: Client) {
     handleError(err);
     return 1;
   }
+
+  const user = await getUser(client);
 
   const { output, config } = client;
 
@@ -217,11 +220,13 @@ export default async function main(client: Client) {
 
   let tablePrint;
   if (app) {
+    const isUserScope = user.username === contextName;
     tablePrint = `${table(
       [
-        ['latest deployment', 'state', 'age', 'duration'].map(header =>
-          chalk.bold(chalk.blue(header))
-        ),
+        (isUserScope
+          ? ['latest deployment', 'state', 'age', 'duration']
+          : ['latest deployment', 'state', 'age', 'duration', 'username']
+        ).map(header => chalk.bold(chalk.blue(header))),
         ...deployments
           .sort(sortRecent())
           .map(dep => [
@@ -230,6 +235,7 @@ export default async function main(client: Client) {
               stateString(dep.state),
               chalk.gray(ms(Date.now() - dep.createdAt)),
               chalk.gray(getDeploymentDuration(dep)),
+              isUserScope ? '' : chalk.dim(dep.creator.username),
             ],
           ])
           // flatten since the previous step returns a nested
@@ -242,8 +248,8 @@ export default async function main(client: Client) {
           ),
       ],
       {
-        align: ['l', 'l', 'l', 'l'],
-        hsep: ' '.repeat(4),
+        align: isUserScope ? ['l', 'l', 'l', 'l'] : ['l', 'l', 'l', 'l', 'l'],
+        hsep: ' '.repeat(isUserScope ? 4 : 5),
         stringLength: strlen,
       }
     ).replace(/^/gm, '  ')}\n`;
