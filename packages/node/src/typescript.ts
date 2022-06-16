@@ -1,4 +1,4 @@
-import _ts from 'typescript';
+import type _ts from 'typescript';
 import { NowBuildError } from '@vercel/build-utils';
 import { relative, basename, resolve, dirname } from 'path';
 
