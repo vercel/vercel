@@ -314,22 +314,24 @@ function getProjectName(d: Deployment) {
 
 // renders the state string
 function stateString(s: string) {
+  const CIRCLE = '● ';
   switch (s) {
     case 'INITIALIZING':
     case 'BUILDING':
-      return chalk.yellow('● ') + s;
+      return chalk.yellow(CIRCLE) + s;
 
     case 'ERROR':
-      return chalk.red('● ') + s;
+      return chalk.red(CIRCLE) + s;
 
     case 'READY':
-      return chalk.green('● ') + s;
+      return chalk.green(CIRCLE) + s;
 
     case 'QUEUED':
-      return chalk.white('● ') + s;
+      return chalk.white(CIRCLE) + s;
 
     case 'CANCELED':
       return chalk.gray(s);
+
     default:
       return chalk.gray('UNKNOWN');
   }
