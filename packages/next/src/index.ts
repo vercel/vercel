@@ -1950,11 +1950,23 @@ export const build: BuildV2 = async ({
 
                   if (!currentPage) {
                     console.error(
-                      "Failed to find matching page for", {toRender, header: req.headers['x-nextjs-page'], url: req.url }, "in lambda"
-                    )
-                    console.error('pages in lambda', Object.keys(pages))
-                    res.statusCode = 500
-                    return res.end('internal server error')
+                      "pages in lambda:",
+                      Object.keys(pages),
+                      "page header received:",
+                      req.headers["x-nextjs-page"]
+                    );
+                    throw new Error(
+                      "Failed to find matching page in lambda for: " +
+                        JSON.stringify(
+                          {
+                            toRender,
+                            url: req.url,
+                            header: req.headers["x-nextjs-page"],
+                          },
+                          null,
+                          2
+                        )
+                    );
                   }
 
                   const mod = currentPage()
