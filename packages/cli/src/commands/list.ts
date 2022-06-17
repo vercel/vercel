@@ -9,7 +9,6 @@ import { handleError } from '../util/error';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
 import strlen from '../util/strlen';
-// import getScope from '../util/get-scope';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
@@ -29,6 +28,9 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
+    -a, --all                      Show all deployments in your scope
+    -i, --inspect                  Display the deployment inspect url instead of the deploy url
+    --prod                         Filter only for production deployments
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
@@ -47,9 +49,21 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} List all deployments
+  ${chalk.gray(
+    '–'
+  )} List all deployments for the app connected to by your current directory
 
     ${chalk.cyan(`$ ${getPkgName()} ls`)}
+
+  ${chalk.gray(
+    '–'
+  )} List all projects in the scope (team) of the project in your current directory
+
+    ${chalk.cyan(`$ ${getPkgName()} ls --all`)}
+
+  ${chalk.gray('–')} List all projects in team ${chalk.dim('`my-team`')}
+
+    ${chalk.cyan(`$ ${getPkgName()} ls --scope my-team --all`)}
 
   ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
 
@@ -58,6 +72,20 @@ const help = () => {
   ${chalk.gray('–')} Filter deployments by metadata
 
     ${chalk.cyan(`$ ${getPkgName()} ls -m key1=value1 -m key2=value2`)}
+
+  ${chalk.gray('–')} Display only production deployments
+
+    ${chalk.cyan(`$ ${getPkgName()} ls --prod`)}
+
+  ${chalk.gray('–')} Display dashboard inspect urls instead of deployment urls
+
+    ${chalk.cyan(`$ ${getPkgName()} ls --inspect`)}
+
+  ${chalk.gray('–')} Get all deployments in team ${chalk.dim(
+    '`my-team`'
+  )}, filtering for production deployments and inspect urls
+
+    ${chalk.cyan(`$ ${getPkgName()} ls --scope my-team --all --prod --inspect`)}
 
   ${chalk.gray('–')} Paginate deployments for a project, where ${chalk.dim(
     '`1584722256178`'
