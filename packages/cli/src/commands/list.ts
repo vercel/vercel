@@ -283,6 +283,13 @@ export default async function main(client: Client) {
       Date.now() - start
     )}`
   );
+  if (app && !all) {
+    log(
+      `To see a list of all of the projects under ${chalk.bold(
+        contextName
+      )}, type ${getCommandName('ls --all')}.`
+    );
+  }
 
   // we don't output the table headers if we have no deployments
   if (!deployments.length) {
