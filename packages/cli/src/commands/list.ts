@@ -429,7 +429,7 @@ export default async function main(client: Client) {
   }
 
   // print table with deployment information
-  console.log(tablePrint);
+  client.output.print(tablePrint);
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next']);
@@ -465,6 +465,8 @@ function stateString(s: string) {
   switch (s.toUpperCase()) {
     case 'INITIALIZING':
     case 'BUILDING':
+    case 'DEPLOYING':
+    case 'ANALYZING':
       return chalk.yellow(CIRCLE) + s;
 
     case 'ERROR':

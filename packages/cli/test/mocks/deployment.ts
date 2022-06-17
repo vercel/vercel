@@ -7,9 +7,33 @@ import { Build, User } from '../../src/types';
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
 
-export function useDeployment({ creator }: { creator: Pick<User, 'id'> }) {
+export function useDeployment({
+  creator,
+}: {
+  creator: Pick<User, 'id' | 'email' | 'name'>;
+}) {
+  type state =
+    | 'INITIALIZING'
+    | 'ANALYZING'
+    | 'BUILDING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'QUEUED'
+    | 'CANCELED'
+    | 'ERROR';
   const createdAt = Date.now();
   const url = new URL(chance().url());
+  const states: Array<state> = [
+    'READY',
+    'BUILDING',
+    'INITIALIZING',
+    'ANALYZING',
+    'DEPLOYING',
+    'ERROR',
+    'CANCELED',
+    'QUEUED',
+  ];
+
   const deployment: Deployment = {
     id: `dpl_${chance().guid()}`,
     url: url.hostname,
@@ -22,8 +46,16 @@ export function useDeployment({ creator }: { creator: Pick<User, 'id'> }) {
     version: 2,
     createdAt,
     createdIn: 'sfo1',
+    buildingAt: Date.now(),
     ownerId: creator.id,
+    creator: {
+      uid: creator.id,
+      email: creator.email,
+      username: creator.name,
+    },
     readyState: 'READY',
+    state: states[Math.floor(Math.random() * states.length)],
+    ready: Date.now() + Math.floor(Math.random() * 300000),
     env: {},
     build: { env: {} },
     target: 'production',
@@ -76,5 +108,10 @@ beforeEach(() => {
     }
     const builds = deploymentBuilds.get(deployment);
     res.json({ builds });
+  });
+
+  client.scenario.get('/:version/now/deployments', (req, res) => {
+    const deploymentsList = Array.from(deployments.values());
+    res.json({ deployments: deploymentsList });
   });
 });

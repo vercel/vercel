@@ -30,21 +30,30 @@ export interface Deployment {
   public: boolean;
   ownerId: string;
   readyState:
-  | 'INITIALIZING'
-  | 'ANALYZING'
-  | 'BUILDING'
-  | 'DEPLOYING'
-  | 'READY'
-  | 'ERROR';
+    | 'INITIALIZING'
+    | 'ANALYZING'
+    | 'BUILDING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'ERROR';
   state?:
-  | 'INITIALIZING'
-  | 'ANALYZING'
-  | 'BUILDING'
-  | 'DEPLOYING'
-  | 'READY'
-  | 'ERROR';
+    | 'INITIALIZING'
+    | 'ANALYZING'
+    | 'BUILDING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'QUEUED'
+    | 'CANCELED'
+    | 'ERROR';
   createdAt: string;
   createdIn: string;
+  buildingAt: number;
+  creator?: {
+    uid?: string;
+    email?: string;
+    username?: string;
+  };
+  ready?: number;
   env: {
     [key: string]: string;
   };

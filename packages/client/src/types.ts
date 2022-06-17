@@ -60,9 +60,18 @@ export interface Deployment {
     | 'BUILDING'
     | 'DEPLOYING'
     | 'READY'
+    | 'QUEUED'
+    | 'CANCELED'
     | 'ERROR';
   createdAt: number;
   createdIn: string;
+  buildingAt: number;
+  creator?: {
+    uid?: string;
+    email?: string;
+    username?: string;
+  };
+  ready?: number;
   env: Dictionary<string>;
   build: {
     env: Dictionary<string>;
