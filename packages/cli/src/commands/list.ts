@@ -74,10 +74,13 @@ export default async function main(client: Client) {
     argv = getArgs(client.argv.slice(2), {
       '--all': Boolean,
       '-a': '--all',
+      '--inspect': Boolean,
+      '-i': '--inspect',
       '--meta': [String],
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
+      '--prod': Boolean,
     });
   } catch (err) {
     handleError(err);
@@ -101,6 +104,8 @@ export default async function main(client: Client) {
   }
 
   const all = argv['--all'];
+  const filterProd = argv['--prod'];
+  const inspect = argv['--inspect'];
 
   if (argv._[0] === 'list' || argv._[0] === 'ls') {
     argv._.shift();
@@ -175,7 +180,7 @@ export default async function main(client: Client) {
     } else {
       if (!all && !appArg) {
         print(
-          `You can only set a custom scope when you add a ${chalk.cyan(
+          `You can only set a custom scope when you add the ${chalk.cyan(
             '`--all`'
           )} flag or specify a project.`
         );
@@ -277,8 +282,14 @@ export default async function main(client: Client) {
     deployments = deployments.filter(deployment => deployment.url === host);
   }
 
+  if (filterProd) {
+    deployments = deployments.filter(
+      deployment => deployment.target === 'production'
+    );
+  }
+
   log(
-    `Deployments${
+    `${filterProd ? `Production deployments` : `Deployments`}${
       app && !all ? ` for ${chalk.bold(chalk.magenta(app))}` : ''
     } under ${chalk.bold(chalk.magenta(contextName))} ${elapsed(
       Date.now() - start
@@ -314,15 +325,28 @@ export default async function main(client: Client) {
     tablePrint = `${table(
       [
         (isUserScope
-          ? ['age', 'deployment url', 'state', 'duration']
-          : ['age', 'deployment url', 'state', 'duration', 'username']
+          ? [
+              'age',
+              inspect ? 'inspect url' : 'deployment url',
+              'state',
+              'duration',
+            ]
+          : [
+              'age',
+              inspect ? 'inspect url' : 'deployment url',
+              'state',
+              'duration',
+              'username',
+            ]
         ).map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
           .map((dep, i) => [
             [
               chalk.gray(ms(Date.now() - dep.createdAt)),
-              i === 0 ? chalk.bold(`https://${dep.url}`) : `https://${dep.url}`,
+              i === 0
+                ? chalk.bold(`${getDeployUrl(dep, inspect)}`)
+                : `${getDeployUrl(dep, inspect)}`,
               stateString(dep.state),
               chalk.gray(getDeploymentDuration(dep)),
               isUserScope ? '' : chalk.gray(dep.creator.username),
@@ -354,7 +378,7 @@ export default async function main(client: Client) {
           .map(dep => [
             [
               getProjectName(dep),
-              chalk.bold('https://' + dep.url),
+              chalk.bold(getDeployUrl(dep, inspect)),
               stateString(dep.state),
               chalk.gray(ms(Date.now() - dep.createdAt)),
             ],
@@ -396,6 +420,13 @@ function getProjectName(d: Deployment) {
   }
 
   return d.name;
+}
+
+function getDeployUrl(
+  deployment: Deployment,
+  inspect: boolean | undefined
+): string {
+  return inspect ? deployment.inspectorUrl : 'https://' + deployment.url;
 }
 
 // renders the state string
