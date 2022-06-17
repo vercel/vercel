@@ -1,13 +1,15 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
+import fs from 'fs-extra';
+import { basename, resolve } from 'path';
 import Now from '../util';
 import getArgs from '../util/get-args';
 import { handleError } from '../util/error';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
 import strlen from '../util/strlen';
-import getScope from '../util/get-scope';
+// import getScope from '../util/get-scope';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
@@ -16,6 +18,8 @@ import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { Deployment } from '../types';
 import getUser from '../util/get-user';
+import validatePaths from '../util/validate-paths';
+import { getLinkedProject } from '../util/projects/link';
 
 const help = () => {
   console.log(`
@@ -67,6 +71,8 @@ export default async function main(client: Client) {
 
   try {
     argv = getArgs(client.argv.slice(2), {
+      '--all': Boolean,
+      '-a': '--all',
       '--meta': [String],
       '-m': '--meta',
       '--next': Number,
@@ -88,29 +94,94 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  let app: string | undefined = argv._[1];
-  let host: string | undefined = undefined;
-
   if (argv['--help']) {
     help();
     return 2;
   }
 
+  const all = argv['--all'];
+
+  if (argv._[0] === 'list' || argv._[0] === 'ls') {
+    argv._.shift();
+  }
+
+  let paths;
+  if (argv._.length > 0) {
+    // If path is relative: resolve
+    // if path is absolute: clear up strange `/` etc
+    paths = argv._.map(item => resolve(process.cwd(), item));
+  } else {
+    paths = [process.cwd()];
+  }
+
+  for (const path of paths) {
+    try {
+      await fs.stat(path);
+    } catch (err) {
+      output.error(
+        `The specified file or directory "${basename(path)}" does not exist.`
+      );
+      return 1;
+    }
+  }
+
+  // check paths
+  const pathValidation = await validatePaths(output, paths);
+
+  if (!pathValidation.valid) {
+    return pathValidation.exitCode;
+  }
+
+  const { path } = pathValidation;
+
+  // retrieve `project` and `org` from .vercel
+  const link = await getLinkedProject(client, path);
+
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  let { org, project, status } = link;
+
+  let app: string | undefined = argv._[1] || project?.name;
+  let host: string | undefined = undefined;
+
+  // let newProjectName = null;
+  // let rootDirectory = project ? project.rootDirectory : null;
+  // let sourceFilesOutsideRootDirectory: boolean | undefined = true;
+
+  if (status === 'not_linked' && !app) {
+    output.print(
+      `Looks like this directory isn't linked to a Vercel deployment. Please run ${getCommandName(
+        'link'
+      )} to link it.`
+    );
+    return 0;
+  }
+
+  // At this point `org` should be populated
+  if (!org) {
+    throw new Error(`"org" is not defined`);
+  }
+
   const meta = parseMeta(argv['--meta']);
-  const { currentTeam } = config;
 
   let contextName = null;
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      error(err.message);
-      return 1;
-    }
+  // try {
+  //   ({ contextName } = await getScope(client));
+  // } catch (err) {
+  //   if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+  //     error(err.message);
+  //     return 1;
+  //   }
 
-    throw err;
-  }
+  //   throw err;
+  // }
+  contextName = org.slug;
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  const { currentTeam } = config;
 
   const nextTimestamp = argv['--next'];
 
@@ -154,7 +225,7 @@ export default async function main(client: Client) {
   }
 
   debug('Fetching deployments');
-  const response = await now.list(app, {
+  const response = await now.list(all ? undefined : app, {
     version: 6,
     meta,
     nextTimestamp,
@@ -168,7 +239,7 @@ export default async function main(client: Client) {
     pagination: { count: number; next: number };
   } = response;
 
-  if (app && !deployments.length) {
+  if (app && !all && !deployments.length) {
     debug(
       'No deployments: attempting to find deployment that matches supplied app name'
     );
@@ -198,7 +269,7 @@ export default async function main(client: Client) {
 
   log(
     `Deployments${
-      app ? ` for ${chalk.bold(chalk.magenta(app))}` : ''
+      app && !all ? ` for ${chalk.bold(chalk.magenta(app))}` : ''
     } under ${chalk.bold(chalk.magenta(contextName))} ${elapsed(
       Date.now() - start
     )}`
@@ -206,6 +277,7 @@ export default async function main(client: Client) {
 
   // we don't output the table headers if we have no deployments
   if (!deployments.length) {
+    log(`No deployments found.`);
     return 0;
   }
 
@@ -221,7 +293,7 @@ export default async function main(client: Client) {
   print('\n');
 
   let tablePrint;
-  if (app) {
+  if (app && !all) {
     const isUserScope = user.username === contextName;
     tablePrint = `${table(
       [
