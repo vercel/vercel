@@ -341,7 +341,11 @@ function getDeploymentDuration(dep: Deployment): string {
   if (!dep || !dep.ready || !dep.buildingAt) {
     return '?';
   }
-  return ms(dep.ready - dep.buildingAt);
+  const duration = ms(dep.ready - dep.buildingAt);
+  if (duration === '0ms') {
+    return '--';
+  }
+  return duration;
 }
 
 // sorts by most recent deployment
