@@ -797,6 +797,7 @@ export async function serverBuild({
     outputDirectory,
     routesManifest,
     isCorrectMiddlewareOrder,
+    prerenderBypassToken: prerenderManifest.bypassToken || '',
   });
 
   const isNextDataServerResolving =

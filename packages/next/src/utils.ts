@@ -2142,9 +2142,11 @@ export async function getMiddlewareBundle({
   outputDirectory,
   routesManifest,
   isCorrectMiddlewareOrder,
+  prerenderBypassToken,
 }: {
   entryPath: string;
   outputDirectory: string;
+  prerenderBypassToken: string;
   routesManifest: RoutesManifest;
   isCorrectMiddlewareOrder: boolean;
 }) {
@@ -2268,6 +2270,13 @@ export async function getMiddlewareBundle({
       const route: Route = {
         continue: true,
         src: worker.routeSrc,
+        missing: [
+          {
+            type: 'header',
+            key: 'x-prerender-revalidate',
+            value: prerenderBypassToken,
+          },
+        ],
       };
 
       if (worker.type === 'function') {
