@@ -44,7 +44,7 @@
   "dependencies": {
     "@vercel/build-utils": "4.1.1-canary.1",
     "@vercel/go": "2.0.2-canary.1",
-    "@vercel/next": "3.0.3-canary.2",
+    "@vercel/next": "3.0.3",
     "@vercel/node": "2.2.1-canary.0",
     "@vercel/python": "3.0.2-canary.1",
     "@vercel/redwood": "1.0.2-canary.1",
