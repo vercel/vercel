@@ -20,6 +20,7 @@ import { Deployment } from '../types';
 import getUser from '../util/get-user';
 import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
+import getTeams from '../util/teams/get-teams';
 
 const help = () => {
   console.log(`
@@ -178,8 +179,32 @@ export default async function main(client: Client) {
 
   //   throw err;
   // }
-  contextName = org.slug;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  contextName = argv['--scope'] && all ? argv['--scope'] : org.slug;
+
+  let teams;
+  try {
+    teams = await getTeams(client);
+  } catch (err) {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      error(err.message);
+      return 1;
+    }
+  }
+  if (teams && argv['--scope']) {
+    const teamSlug: string = argv['--scope'];
+    const team = teams.filter(team => team.slug === teamSlug)[0];
+    if (team) {
+      client.config.currentTeam = team.id;
+    } else {
+      output.print(`Could not find team matching ${teamSlug}.`);
+      client.config.currentTeam = undefined;
+    }
+  } else {
+    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  }
+  // TOOD: get team ID from team name from --scope
+
+  const isUserScope = user.username === contextName;
 
   const { currentTeam } = config;
 
@@ -294,24 +319,21 @@ export default async function main(client: Client) {
 
   let tablePrint;
   if (app && !all) {
-    const isUserScope = user.username === contextName;
     tablePrint = `${table(
       [
         (isUserScope
-          ? ['deployment url', 'state', 'age', 'duration']
-          : ['deployment url', 'state', 'age', 'duration', 'username']
+          ? ['age', 'deployment url', 'state', 'duration']
+          : ['age', 'deployment url', 'state', 'duration', 'username']
         ).map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
           .map((dep, i) => [
             [
-              chalk.bold(
-                (i === 0 ? chalk.gray('> ') : '') + 'https://' + dep.url
-              ),
-              stateString(dep.state),
               chalk.gray(ms(Date.now() - dep.createdAt)),
+              i === 0 ? chalk.bold(`https://${dep.url}`) : `https://${dep.url}`,
+              stateString(dep.state),
               chalk.gray(getDeploymentDuration(dep)),
-              isUserScope ? '' : chalk.dim(dep.creator.username),
+              isUserScope ? '' : chalk.gray(dep.creator.username),
             ],
           ])
           // flatten since the previous step returns a nested
@@ -387,7 +409,8 @@ function getProjectName(d: Deployment) {
 // renders the state string
 function stateString(s: string) {
   const CIRCLE = '● ';
-  switch (s) {
+  s = `${s.substring(0, 1)}${s.toLowerCase().substring(1)}`;
+  switch (s.toUpperCase()) {
     case 'INITIALIZING':
     case 'BUILDING':
       return chalk.yellow(CIRCLE) + s;
