@@ -136,7 +136,8 @@ export default async function main(client: Client) {
   }
 
   let { org, project, status } = link;
-  let app: string | undefined = argv._[0] || project?.name;
+  const appArg: string | undefined = argv._[0];
+  let app: string | undefined = appArg || project?.name;
   let host: string | undefined = undefined;
 
   if (status === 'not_linked' && !app) {
@@ -157,8 +158,6 @@ export default async function main(client: Client) {
 
   let contextName = null;
 
-  contextName = argv['--scope'] && all ? argv['--scope'] : org.slug;
-
   let teams;
   try {
     teams = await getTeams(client);
@@ -174,7 +173,7 @@ export default async function main(client: Client) {
     if (team) {
       client.config.currentTeam = team.id;
     } else {
-      if (!all && !argv._[0]) {
+      if (!all && !appArg) {
         print(
           `You can only set a custom scope when you add a ${chalk.cyan(
             '`--all`'
@@ -187,6 +186,8 @@ export default async function main(client: Client) {
   } else {
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
   }
+
+  contextName = argv['--scope'] ? argv['--scope'] : org.slug;
 
   const isUserScope = user.username === contextName;
 
@@ -400,6 +401,7 @@ function getProjectName(d: Deployment) {
 // renders the state string
 function stateString(s: string) {
   const CIRCLE = '● ';
+  // make `s` title case
   s = `${s.substring(0, 1)}${s.toLowerCase().substring(1)}`;
   switch (s.toUpperCase()) {
     case 'INITIALIZING':
