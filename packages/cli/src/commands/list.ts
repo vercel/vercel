@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import fs from 'fs-extra';
-import { basename, resolve } from 'path';
+import { basename } from 'path';
 import Now from '../util';
 import getArgs from '../util/get-args';
 import { handleError } from '../util/error';
@@ -106,14 +106,7 @@ export default async function main(client: Client) {
     argv._.shift();
   }
 
-  let paths;
-  if (argv._.length > 0) {
-    // If path is relative: resolve
-    // if path is absolute: clear up strange `/` etc
-    paths = argv._.map(item => resolve(process.cwd(), item));
-  } else {
-    paths = [process.cwd()];
-  }
+  let paths = [process.cwd()];
 
   for (const path of paths) {
     try {
@@ -143,13 +136,8 @@ export default async function main(client: Client) {
   }
 
   let { org, project, status } = link;
-
-  let app: string | undefined = argv._[1] || project?.name;
+  let app: string | undefined = argv._[0] || project?.name;
   let host: string | undefined = undefined;
-
-  // let newProjectName = null;
-  // let rootDirectory = project ? project.rootDirectory : null;
-  // let sourceFilesOutsideRootDirectory: boolean | undefined = true;
 
   if (status === 'not_linked' && !app) {
     output.print(
@@ -169,16 +157,6 @@ export default async function main(client: Client) {
 
   let contextName = null;
 
-  // try {
-  //   ({ contextName } = await getScope(client));
-  // } catch (err) {
-  //   if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-  //     error(err.message);
-  //     return 1;
-  //   }
-
-  //   throw err;
-  // }
   contextName = argv['--scope'] && all ? argv['--scope'] : org.slug;
 
   let teams;
@@ -196,13 +174,19 @@ export default async function main(client: Client) {
     if (team) {
       client.config.currentTeam = team.id;
     } else {
-      output.print(`Could not find team matching ${teamSlug}.`);
+      if (!all && !argv._[0]) {
+        print(
+          `You can only set a custom scope when you add a ${chalk.cyan(
+            '`--all`'
+          )} flag or specify a project.`
+        );
+        return 0;
+      }
       client.config.currentTeam = undefined;
     }
   } else {
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
   }
-  // TOOD: get team ID from team name from --scope
 
   const isUserScope = user.username === contextName;
 
