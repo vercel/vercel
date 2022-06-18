@@ -458,7 +458,7 @@ function getDeployUrl(
 }
 
 // renders the state string
-function stateString(s: string) {
+export function stateString(s: string) {
   const CIRCLE = '● ';
   // make `s` title case
   s = `${s.substring(0, 1)}${s.toLowerCase().substring(1)}`;

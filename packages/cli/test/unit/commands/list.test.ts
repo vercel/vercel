@@ -6,7 +6,7 @@ import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useDeployment } from '../../mocks/deployment';
 import ms from 'ms';
-import chalk from 'chalk';
+import { stateString } from '../../../src/commands/list';
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/list', name);
@@ -109,34 +109,6 @@ function formatOutput(output: string): Array<string> {
     .trim()
     .replace(/ {3} +/g, ',')
     .split(',');
-}
-
-function stateString(s: string) {
-  const CIRCLE = '● ';
-  // make `s` title case
-  s = `${s.substring(0, 1)}${s.toLowerCase().substring(1)}`;
-  switch (s.toUpperCase()) {
-    case 'INITIALIZING':
-    case 'BUILDING':
-    case 'DEPLOYING':
-    case 'ANALYZING':
-      return chalk.yellow(CIRCLE) + s;
-
-    case 'ERROR':
-      return chalk.red(CIRCLE) + s;
-
-    case 'READY':
-      return chalk.green(CIRCLE) + s;
-
-    case 'QUEUED':
-      return chalk.white(CIRCLE) + s;
-
-    case 'CANCELED':
-      return chalk.gray(s);
-
-    default:
-      return chalk.gray('UNKNOWN');
-  }
 }
 
 function getDeploymentDuration(dep: any): string {
