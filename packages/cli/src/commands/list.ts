@@ -486,7 +486,7 @@ export function stateString(s: string) {
   }
 }
 
-function getDeploymentDuration(dep: Deployment): string {
+export function getDeploymentDuration(dep: Deployment): string {
   if (!dep || !dep.ready || !dep.buildingAt) {
     return '?';
   }

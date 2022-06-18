@@ -1,11 +1,14 @@
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
-import list, { stateString } from '../../../src/commands/list';
+import list, {
+  stateString,
+  getDeploymentDuration,
+} from '../../../src/commands/list';
 import { join } from 'path';
 import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useDeployment } from '../../mocks/deployment';
-import ms from 'ms';
+import { Deployment } from '../../../src/types';
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/list', name);
@@ -57,7 +60,7 @@ describe('list', () => {
       expect(data).toEqual([
         `https://${deployment.url}`,
         stateString(deployment.state || ''),
-        getDeploymentDuration(deployment),
+        getDeploymentDuration(deployment as unknown as Deployment),
         user.name,
       ]);
     } finally {
@@ -70,8 +73,7 @@ describe('list', () => {
       process.chdir(cwd);
 
       const user = useUser();
-      const team = useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
-      console.log('team:', team);
+      useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
       useProject({
         ...defaultProject,
         id: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
@@ -81,7 +83,6 @@ describe('list', () => {
 
       client.setArgv('--all');
       await list(client);
-      console.log(client.outputBuffer);
 
       const header: Array<string> = formatOutput(
         client.outputBuffer.split('\n')[2]
@@ -101,6 +102,48 @@ describe('list', () => {
       process.chdir(originalCwd);
     }
   });
+  it('should get the deployments for a specified project', async () => {
+    const cwd = fixture('project');
+    try {
+      process.chdir(cwd);
+
+      const user = useUser();
+      useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
+      useProject({
+        ...defaultProject,
+        id: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
+        name: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
+      });
+      const deployment = useDeployment({ creator: user });
+
+      client.setArgv(deployment.name);
+      await list(client);
+
+      const header: Array<string> = formatOutput(
+        client.outputBuffer.split('\n')[3]
+      );
+      const data: Array<string> = formatOutput(
+        client.outputBuffer.split('\n')[4]
+      );
+      data.shift();
+
+      expect(header).toEqual([
+        'age',
+        'deployment url',
+        'state',
+        'duration',
+        'username',
+      ]);
+      expect(data).toEqual([
+        `https://${deployment.url}`,
+        stateString(deployment.state || ''),
+        getDeploymentDuration(deployment as unknown as Deployment),
+        user.name,
+      ]);
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
 });
 
 function formatOutput(output: string): Array<string> {
@@ -108,15 +151,4 @@ function formatOutput(output: string): Array<string> {
     .trim()
     .replace(/ {3} +/g, ',')
     .split(',');
-}
-
-function getDeploymentDuration(dep: any): string {
-  if (!dep || !dep.ready || !dep.buildingAt) {
-    return '?';
-  }
-  const duration = ms(dep.ready - dep.buildingAt);
-  if (duration === '0ms') {
-    return '--';
-  }
-  return duration;
 }
