@@ -1,12 +1,11 @@
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
-import list from '../../../src/commands/list';
+import list, { stateString } from '../../../src/commands/list';
 import { join } from 'path';
 import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useDeployment } from '../../mocks/deployment';
 import ms from 'ms';
-import { stateString } from '../../../src/commands/list';
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/list', name);
