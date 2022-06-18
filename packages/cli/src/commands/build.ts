@@ -306,6 +306,7 @@ export default async function main(client: Client): Promise<number> {
           const { builder, pkg: builderPkg } = builderWithPkg;
           return {
             require: builderPkg.name,
+            requirePath: builderWithPkg.path,
             apiVersion: builder.version,
             ...build,
           };
