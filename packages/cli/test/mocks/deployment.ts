@@ -37,7 +37,7 @@ export function useDeployment({
   const deployment: Deployment = {
     id: `dpl_${chance().guid()}`,
     url: url.hostname,
-    name: '',
+    name: `dpl_${chance().guid()}`,
     meta: {},
     regions: [],
     routes: [],

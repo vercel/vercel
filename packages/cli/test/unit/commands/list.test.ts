@@ -27,6 +27,7 @@ describe('list', () => {
     const cwd = fixture('project');
     try {
       process.chdir(cwd);
+
       const user = useUser();
       useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
       useProject({
@@ -41,8 +42,9 @@ describe('list', () => {
       const header: Array<string> = formatOutput(
         client.outputBuffer.split('\n')[3]
       );
-
-      const data = formatOutput(client.outputBuffer.split('\n')[4]);
+      const data: Array<string> = formatOutput(
+        client.outputBuffer.split('\n')[4]
+      );
       data.shift();
 
       expect(header).toEqual([
@@ -58,6 +60,43 @@ describe('list', () => {
         stateString(deployment.state || ''),
         getDeploymentDuration(deployment),
         user.name,
+      ]);
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
+  it('should get all deployments in the project scope', async () => {
+    const cwd = fixture('project');
+    try {
+      process.chdir(cwd);
+
+      const user = useUser();
+      const team = useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
+      console.log('team:', team);
+      useProject({
+        ...defaultProject,
+        id: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
+        name: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
+      });
+      const deployment = useDeployment({ creator: user });
+
+      client.setArgv('--all');
+      await list(client);
+      console.log(client.outputBuffer);
+
+      const header: Array<string> = formatOutput(
+        client.outputBuffer.split('\n')[2]
+      );
+      const data: Array<string> = formatOutput(
+        client.outputBuffer.split('\n')[3]
+      );
+      data.pop();
+
+      expect(header).toEqual(['project', 'latest deployment', 'state', 'age']);
+      expect(data).toEqual([
+        deployment.name,
+        `https://${deployment.url}`,
+        stateString(deployment.state || ''),
       ]);
     } finally {
       process.chdir(originalCwd);
