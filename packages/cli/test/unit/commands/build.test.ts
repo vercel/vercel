@@ -1,6 +1,7 @@
 import ms from 'ms';
 import fs from 'fs-extra';
 import { join } from 'path';
+import { getWriteableDirectory } from '@vercel/build-utils';
 import build from '../../../src/commands/build';
 import { client } from '../../mocks/client';
 import { defaultProject, useProject } from '../../mocks/project';
@@ -416,6 +417,38 @@ describe('build', () => {
       // "functions" directory contains `middleware.func`
       const functions = await fs.readdir(join(output, 'functions'));
       expect(functions.sort()).toEqual(['middleware.func']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should support `--output` parameter', async () => {
+    const cwd = fixture('static');
+    const output = await getWriteableDirectory();
+    try {
+      process.chdir(cwd);
+      client.setArgv('build', '--output', output);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            src: '**',
+            use: '@vercel/static',
+          },
+        ],
+      });
+
+      // "static" directory contains static files
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['index.html']);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
