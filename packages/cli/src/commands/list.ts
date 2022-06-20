@@ -429,7 +429,7 @@ export default async function main(client: Client) {
   }
 
   // print table with deployment information
-  client.output.print(tablePrint);
+  client.output.print(tablePrint + '\n');
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next']);
