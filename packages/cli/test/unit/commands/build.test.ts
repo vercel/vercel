@@ -423,6 +423,71 @@ describe('build', () => {
     }
   });
 
+  it('should build root-level `middleware.js` with "matcher" config', async () => {
+    const cwd = fixture('middleware-with-matcher');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/node',
+            apiVersion: 3,
+            use: '@vercel/node',
+            src: 'middleware.js',
+            config: {
+              zeroConfig: true,
+              middleware: true,
+            },
+          },
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            use: '@vercel/static',
+            src: '!{api/**,package.json,middleware.[jt]s}',
+            config: {
+              zeroConfig: true,
+            },
+          },
+        ],
+      });
+
+      // `config.json` includes the "middlewarePath" route
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toMatchObject({
+        version: 3,
+        routes: [
+          {
+            src: '^\\/about(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$|^\\/dashboard(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
+            middlewarePath: 'middleware',
+            continue: true,
+          },
+          { handle: 'filesystem' },
+          { src: '^/api(/.*)?$', status: 404 },
+          { handle: 'error' },
+          { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
+        ],
+      });
+
+      // "static" directory contains `index.html`, but *not* `middleware.js`
+      const staticFiles = await fs.readdir(join(output, 'static'));
+      expect(staticFiles.sort()).toEqual(['index.html']);
+
+      // "functions" directory contains `middleware.func`
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toEqual(['middleware.func']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should support `--output` parameter', async () => {
     const cwd = fixture('static');
     const output = await getWriteableDirectory();
