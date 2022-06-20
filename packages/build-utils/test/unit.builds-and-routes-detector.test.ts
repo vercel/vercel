@@ -2245,13 +2245,9 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
   it('no package.json + no build + root-level "middleware.ts"', async () => {
     const files = ['middleware.ts', 'index.html', 'web/middleware.js'];
-    const { builders, defaultRoutes, errors } = await detectBuilders(
-      files,
-      null,
-      {
-        featHandleMiss,
-      }
-    );
+    const { builders, errors } = await detectBuilders(files, null, {
+      featHandleMiss,
+    });
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('middleware.ts');
     expect(builders![0].config?.middleware).toEqual(true);
@@ -2259,7 +2255,6 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders![1].src).toBe('!{api/**,package.json,middleware.[jt]s}');
     expect(builders!.length).toBe(2);
     expect(errors).toBe(null);
-    console.log(defaultRoutes);
   });
 
   it('should not add middleware builder when "nextjs" framework is selected', async () => {

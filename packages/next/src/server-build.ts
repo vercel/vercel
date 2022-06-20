@@ -797,6 +797,7 @@ export async function serverBuild({
     outputDirectory,
     routesManifest,
     isCorrectMiddlewareOrder,
+    prerenderBypassToken: prerenderManifest.bypassToken || '',
   });
 
   const isNextDataServerResolving =
@@ -883,52 +884,70 @@ export async function serverBuild({
     }
   }
 
-  const normalizeNextDataRoute = isNextDataServerResolving
-    ? [
-        // strip _next/data prefix for resolving
-        {
-          src: `^${path.join(
-            '/',
-            entryDirectory,
-            '/_next/data/',
-            escapedBuildId,
-            '/(.*).json'
-          )}`,
-          dest: `${path.join('/', entryDirectory, '/$1')}`,
-          continue: true,
-          override: true,
-          has: [
-            {
-              type: 'header',
-              key: 'x-nextjs-data',
-            },
-          ],
-        },
-      ]
-    : [];
+  const normalizeNextDataRoute = (isOverride = false) => {
+    return isNextDataServerResolving
+      ? [
+          // strip _next/data prefix for resolving
+          {
+            src: `^${path.join(
+              '/',
+              entryDirectory,
+              '/_next/data/',
+              escapedBuildId,
+              '/(.*).json'
+            )}`,
+            dest: `${path.join('/', entryDirectory, '/$1')}`,
+            ...(isOverride ? { override: true } : {}),
+            continue: true,
+            has: [
+              {
+                type: 'header',
+                key: 'x-nextjs-data',
+              },
+            ],
+          },
+        ]
+      : [];
+  };
 
-  const denormalizeNextDataRoute = isNextDataServerResolving
-    ? [
-        {
-          src: '/(.*)',
-          has: [
-            {
-              type: 'header',
-              key: 'x-nextjs-data',
-            },
-          ],
-          dest: `${path.join(
-            '/',
-            entryDirectory,
-            '/_next/data/',
-            buildId,
-            '/$1.json'
-          )}`,
-          continue: true,
-          override: true,
-        },
-      ]
-    : [];
+  const denormalizeNextDataRoute = (isOverride = false) => {
+    return isNextDataServerResolving
+      ? [
+          {
+            src: path.join('^/', entryDirectory, '((?!_next/).*)$'),
+            has: [
+              {
+                type: 'header',
+                key: 'x-nextjs-data',
+              },
+            ],
+            dest: `${path.join(
+              '/',
+              entryDirectory,
+              '/_next/data/',
+              buildId,
+              '/$1.json'
+            )}`,
+            continue: true,
+            ...(isOverride ? { override: true } : {}),
+          },
+        ]
+      : [];
+  };
+  let nextDataCatchallOutput: FileFsRef | undefined = undefined;
+
+  if (isNextDataServerResolving) {
+    const catchallFsPath = path.join(
+      entryPath,
+      outputDirectory,
+      '__next_data_catchall.json'
+    );
+    await fs.writeFile(catchallFsPath, '{}');
+    nextDataCatchallOutput = new FileFsRef({
+      contentType: 'application/json',
+      fsPath: catchallFsPath,
+    });
+  }
 
   return {
     wildcard: wildcardConfig,
@@ -956,11 +975,7 @@ export async function serverBuild({
       ...middleware.edgeFunctions,
       ...(isNextDataServerResolving
         ? {
-            __next_data_catchall: new FileBlob({
-              contentType: 'application/json',
-              mode: 0o644,
-              data: '{}',
-            }),
+            __next_data_catchall: nextDataCatchallOutput,
           }
         : {}),
     },
@@ -983,7 +998,7 @@ export async function serverBuild({
       ...privateOutputs.routes,
 
       // normalize _next/data URL before processing redirects
-      ...normalizeNextDataRoute,
+      ...normalizeNextDataRoute(true),
 
       ...(i18n
         ? [
@@ -1144,7 +1159,7 @@ export async function serverBuild({
           ]),
 
       // we need to undo _next/data normalize before checking filesystem
-      ...denormalizeNextDataRoute,
+      ...denormalizeNextDataRoute(true),
 
       // while middleware was in beta the order came right before
       // handle: 'filesystem' we maintain this for older versions
@@ -1168,7 +1183,7 @@ export async function serverBuild({
         : []),
 
       // normalize _next/data URL before processing rewrites
-      ...normalizeNextDataRoute,
+      ...normalizeNextDataRoute(),
 
       ...(!isNextDataServerResolving
         ? [
@@ -1240,7 +1255,7 @@ export async function serverBuild({
       { handle: 'rewrite' },
 
       // re-build /_next/data URL after resolving
-      ...denormalizeNextDataRoute,
+      ...denormalizeNextDataRoute(),
 
       // /_next/data routes for getServerProps/getStaticProps pages
       ...dataRoutes,
@@ -1263,6 +1278,19 @@ export async function serverBuild({
 
       ...(isNextDataServerResolving
         ? [
+            {
+              src: `^${path.join(
+                '/',
+                entryDirectory,
+                '/_next/data/',
+                escapedBuildId,
+                '/(.*).json'
+              )}`,
+              headers: {
+                'x-nextjs-matched-path': '/$1',
+              },
+              continue: true,
+            },
             // add a catch-all data route so we don't 404 when getting
             // middleware effects
             {

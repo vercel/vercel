@@ -1,12 +1,13 @@
-const { deepStrictEqual } = require('assert');
-const { mergeRoutes } = require('../dist/merge');
+import { deepStrictEqual } from 'assert';
+import { mergeRoutes } from '../src/merge';
+import { Build, Route } from '../src/types';
 
 test('mergeRoutes simple', () => {
-  const userRoutes = [
+  const userRoutes: Route[] = [
     { src: '/user1', dest: '/u1' },
     { src: '/user2', dest: '/u2' },
   ];
-  const builds = [
+  const builds: Build[] = [
     {
       use: '@vercel/node',
       entrypoint: 'api/home.js',
@@ -37,12 +38,12 @@ test('mergeRoutes simple', () => {
 });
 
 test('mergeRoutes handle filesystem user routes', () => {
-  const userRoutes = [
+  const userRoutes: Route[] = [
     { src: '/user1', dest: '/u1' },
     { handle: 'filesystem' },
     { src: '/user2', dest: '/u2' },
   ];
-  const builds = [
+  const builds: Build[] = [
     {
       use: '@vercel/node',
       entrypoint: 'api/home.js',
@@ -74,11 +75,11 @@ test('mergeRoutes handle filesystem user routes', () => {
 });
 
 test('mergeRoutes handle filesystem build routes', () => {
-  const userRoutes = [
+  const userRoutes: Route[] = [
     { src: '/user1', dest: '/u1' },
     { src: '/user2', dest: '/u2' },
   ];
-  const builds = [
+  const builds: Build[] = [
     {
       use: '@vercel/node',
       entrypoint: 'api/home.js',
@@ -112,12 +113,12 @@ test('mergeRoutes handle filesystem build routes', () => {
 });
 
 test('mergeRoutes handle filesystem both user and builds', () => {
-  const userRoutes = [
+  const userRoutes: Route[] = [
     { src: '/user1', dest: '/u1' },
     { handle: 'filesystem' },
     { src: '/user2', dest: '/u2' },
   ];
-  const builds = [
+  const builds: Build[] = [
     {
       use: '@vercel/node',
       entrypoint: 'api/home.js',
@@ -151,12 +152,12 @@ test('mergeRoutes handle filesystem both user and builds', () => {
 });
 
 test('mergeRoutes continue true', () => {
-  const userRoutes = [
+  const userRoutes: Route[] = [
     { src: '/user1', dest: '/u1' },
     { src: '/user2', dest: '/u2', continue: true },
     { src: '/user3', dest: '/u3' },
   ];
-  const builds = [
+  const builds: Build[] = [
     {
       use: '@vercel/node',
       entrypoint: 'api/home.js',
@@ -192,12 +193,12 @@ test('mergeRoutes continue true', () => {
 });
 
 test('mergeRoutes check true', () => {
-  const userRoutes = [
+  const userRoutes: Route[] = [
     { src: '/user1', dest: '/u1' },
     { src: '/user2', dest: '/u2' },
     { src: '/user3', dest: '/u3' },
   ];
-  const builds = [
+  const builds: Build[] = [
     {
       use: '@vercel/node',
       entrypoint: 'api/home.js',
@@ -233,13 +234,13 @@ test('mergeRoutes check true', () => {
 });
 
 test('mergeRoutes check true, continue true, handle filesystem middle', () => {
-  const userRoutes = [
+  const userRoutes: Route[] = [
     { src: '/user1', dest: '/u1', continue: true },
     { src: '/user2', dest: '/u2' },
     { handle: 'filesystem' },
     { src: '/user3', dest: '/u3' },
   ];
-  const builds = [
+  const builds: Build[] = [
     {
       use: '@vercel/node',
       entrypoint: 'api/home.js',
@@ -278,8 +279,11 @@ test('mergeRoutes check true, continue true, handle filesystem middle', () => {
 });
 
 test('mergeRoutes check true, continue true, handle filesystem top', () => {
-  const userRoutes = [{ handle: 'filesystem' }, { src: '/user1', dest: '/u1' }];
-  const builds = [
+  const userRoutes: Route[] = [
+    { handle: 'filesystem' },
+    { src: '/user1', dest: '/u1' },
+  ];
+  const builds: Build[] = [
     {
       use: '@vercel/node',
       entrypoint: 'api/home.js',
@@ -316,7 +320,7 @@ test('mergeRoutes check true, continue true, handle filesystem top', () => {
 });
 
 test('mergeRoutes multiple handle values', () => {
-  const userRoutes = [
+  const userRoutes: Route[] = [
     { handle: 'filesystem' },
     { src: '/user1', dest: '/u1' },
     { handle: 'miss' },
@@ -324,7 +328,7 @@ test('mergeRoutes multiple handle values', () => {
     { handle: 'hit' },
     { src: '/user3', dest: '/u3' },
   ];
-  const builds = [
+  const builds: Build[] = [
     {
       use: '@vercel/node',
       entrypoint: 'api/home.js',
@@ -369,8 +373,8 @@ test('mergeRoutes multiple handle values', () => {
 });
 
 test('mergeRoutes ensure `handle: error` comes last', () => {
-  const userRoutes = [];
-  const builds = [
+  const userRoutes: Route[] = [];
+  const builds: Build[] = [
     {
       use: '@vercel/static-build',
       entrypoint: 'packge.json',
@@ -421,8 +425,8 @@ test('mergeRoutes ensure `handle: error` comes last', () => {
 });
 
 test('mergeRoutes ensure beforeFiles comes after redirects (continue)', () => {
-  const userRoutes = [];
-  const builds = [
+  const userRoutes: Route[] = [];
+  const builds: Build[] = [
     {
       use: '@vercel/next',
       entrypoint: 'package.json',
@@ -468,8 +472,8 @@ test('mergeRoutes ensure beforeFiles comes after redirects (continue)', () => {
 });
 
 test('mergeRoutes ensure beforeFiles comes after redirects (check)', () => {
-  const userRoutes = [];
-  const builds = [
+  const userRoutes: Route[] = [];
+  const builds: Build[] = [
     {
       use: '@vercel/next',
       entrypoint: 'package.json',

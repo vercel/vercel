@@ -105,6 +105,14 @@ function sharedTests(ctx: Context) {
     const routes = ctx.buildResult.routes.filter(
       route => 'middleware' in route || 'middlewarePath' in route
     );
+    expect(
+      routes.every(
+        route =>
+          route.missing[0].type === 'header' &&
+          route.missing[0].key === 'x-prerender-revalidate' &&
+          route.missing[0].value.length > 0
+      )
+    ).toBeTruthy();
     expect(routes.length).toBeGreaterThan(0);
   });
 }
