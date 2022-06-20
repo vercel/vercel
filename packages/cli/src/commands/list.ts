@@ -429,10 +429,11 @@ export default async function main(client: Client) {
   }
 
   // print table with deployment information
-  client.output.print(tablePrint + '\n');
+  client.output.print(tablePrint);
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next']);
+    client.output.print('\n');
     log(
       `To display the next page run ${getCommandName(
         `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
