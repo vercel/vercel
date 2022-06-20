@@ -402,7 +402,7 @@ describe('build', () => {
       expect(config).toMatchObject({
         version: 3,
         routes: [
-          { src: '/.*', middlewarePath: 'middleware', continue: true },
+          { src: '^/.*$', middlewarePath: 'middleware', continue: true },
           { handle: 'filesystem' },
           { src: '^/api(/.*)?$', status: 404 },
           { handle: 'error' },
