@@ -1,1 +1,1 @@
-export default req => new Response('middleware');
+export default () => new Response('middleware');

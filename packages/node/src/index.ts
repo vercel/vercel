@@ -50,6 +50,7 @@ import type {
 import { getConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
+import { getRegExpFromMatchers } from './utils';
 
 export { shouldServe };
 export type {
@@ -381,40 +382,48 @@ export const build: BuildV3 = async ({
     ? handler.substring(0, handler.length - 3)
     : handler;
 
+  const isMiddleware = config.middleware === true;
+
   // Will output an `EdgeFunction` for when `config.middleware = true`
   // (i.e. for root-level "middleware" file) or if source code contains:
   // `export const config = { runtime: 'experimental-edge' }`
-  let isEdgeFunction = false;
+  let isEdgeFunction = isMiddleware;
 
-  // Add a catch-all `route` for Middleware
-  if (config.middleware === true) {
+  const project = new Project();
+  const staticConfig = getConfig(project, entrypointPath);
+  if (staticConfig?.runtime) {
+    if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
+      throw new Error(
+        `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
+          staticConfig.runtime
+        )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
+      );
+    }
+    isEdgeFunction = staticConfig.runtime === 'experimental-edge';
+  }
+
+  // Add a `route` for Middleware
+  if (isMiddleware) {
+    if (!isEdgeFunction) {
+      // Root-level middleware file can not have `export const config = { runtime: 'nodejs' }`
+      throw new Error(
+        `Middleware file can not be a Node.js Serverless Function`
+      );
+    }
+
+    // Middleware is a catch-all for all paths unless a `matcher` property is defined
+    const src = getRegExpFromMatchers(staticConfig?.matcher);
+
     routes = [
       {
-        src: '/.*',
+        src,
         middlewarePath: config.zeroConfig
           ? outputName
           : relative(baseDir, entrypointPath),
         continue: true,
+        override: true,
       },
     ];
-
-    // Middleware is implicitly an Edge Function
-    isEdgeFunction = true;
-  }
-
-  if (!isEdgeFunction) {
-    const project = new Project();
-    const staticConfig = getConfig(project, entrypointPath);
-    if (staticConfig?.runtime) {
-      if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
-        throw new Error(
-          `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
-            staticConfig.runtime
-          )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
-        );
-      }
-      isEdgeFunction = staticConfig.runtime === 'experimental-edge';
-    }
   }
 
   if (isEdgeFunction) {
