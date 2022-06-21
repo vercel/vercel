@@ -21,10 +21,11 @@ describe('list', () => {
     client.setArgv('ls', '-S', user.username);
     const exitCode = await list(client);
     expect(exitCode).toEqual(0);
-    expect(client.mockOutput.mock.calls[0][0]).toEqual(
-      "Looks like this directory isn't linked to a Vercel deployment. Please run `vercel link` to link it."
+    expect(client.outputBuffer).toEqual(
+      "> Looks like this directory isn't linked to a Vercel deployment. Please run `vercel link` to link it.\n"
     );
   });
+
   it('should get deployments from a project linked by a directory', async () => {
     const cwd = fixture('project');
     try {

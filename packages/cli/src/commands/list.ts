@@ -174,7 +174,7 @@ export default async function main(client: Client) {
   let host: string | undefined = undefined;
 
   if (status === 'not_linked' && !app) {
-    output.print(
+    output.log(
       `Looks like this directory isn't linked to a Vercel deployment. Please run ${getCommandName(
         'link'
       )} to link it.`
