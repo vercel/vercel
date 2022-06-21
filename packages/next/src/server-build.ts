@@ -797,6 +797,7 @@ export async function serverBuild({
     outputDirectory,
     routesManifest,
     isCorrectMiddlewareOrder,
+    prerenderBypassToken: prerenderManifest.bypassToken || '',
   });
 
   const isNextDataServerResolving =
@@ -913,7 +914,7 @@ export async function serverBuild({
     return isNextDataServerResolving
       ? [
           {
-            src: '/(.*)',
+            src: path.join('^/', entryDirectory, '((?!_next/).*)$'),
             has: [
               {
                 type: 'header',
