@@ -1816,7 +1816,7 @@ test('remove the wildcard alias', async t => {
 test('ensure username in list is right', async t => {
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    ['ls', ...defaultArgs],
+    ['ls', ...defaultArgs, '--all'],
     {
       reject: false,
     }
