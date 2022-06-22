@@ -1,3 +1,4 @@
+import type { LinksFunction, MetaFunction } from "@remix-run/node";
 import {
   Link,
   Links,
@@ -6,14 +7,13 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useCatch
-} from "remix";
-import type { LinksFunction } from "remix";
+  useCatch,
+} from "@remix-run/react";
 
-import globalStylesUrl from "~/styles/global.css";
 import darkStylesUrl from "~/styles/dark.css";
+import globalStylesUrl from "~/styles/global.css";
 
-// https://remix.run/api/app#links
+// https://remix.run/api/conventions#links
 export let links: LinksFunction = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
@@ -24,6 +24,12 @@ export let links: LinksFunction = () => {
     }
   ];
 };
+
+// https://remix.run/api/conventions#meta
+export let meta: MetaFunction = () => ({
+  charset: "utf-8",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 // https://remix.run/api/conventions#default-export
 // https://remix.run/api/conventions#route-filenames
@@ -37,7 +43,7 @@ export default function App() {
   );
 }
 
-// https://remix.run/docs/en/v1/api/conventions#errorboundary
+// https://remix.run/api/conventions#errorboundary
 export function ErrorBoundary({ error }: { error: Error }) {
   console.error(error);
   return (
@@ -57,7 +63,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
   );
 }
 
-// https://remix.run/docs/en/v1/api/conventions#catchboundary
+// https://remix.run/api/conventions#catchboundary
 export function CatchBoundary() {
   let caught = useCatch();
 
@@ -103,8 +109,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />
@@ -113,7 +117,7 @@ function Document({
         {children}
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        <LiveReload />
       </body>
     </html>
   );

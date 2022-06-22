@@ -914,7 +914,7 @@ export async function serverBuild({
     return isNextDataServerResolving
       ? [
           {
-            src: '^/((?!_next/).*)$',
+            src: path.join('^/', entryDirectory, '((?!_next/).*)$'),
             has: [
               {
                 type: 'header',
