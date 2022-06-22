@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "10.4.2-canary.7",
+  "version": "12.0.2-canary.1",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -15,11 +15,12 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "jest --verbose --runInBand --bail tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
-    "test-unit": "jest --verbose --runInBand --bail tests/unit.*test.*"
+    "test-integration-once": "yarn test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "yarn test tests/unit.*test.*"
   },
   "engines": {
-    "node": ">= 12"
+    "node": ">= 14"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",
@@ -41,7 +42,7 @@
     ]
   },
   "dependencies": {
-    "@vercel/build-utils": "2.15.2-canary.6",
+    "@vercel/build-utils": "4.1.1-canary.1",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",

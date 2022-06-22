@@ -19,7 +19,7 @@ const getRevertAliasConfigFile = () => {
     ],
   });
 };
-module.exports = async function prepare(session, binaryPath) {
+module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
   const spec = {
     'static-single-file': {
       'first.png': getImageFile(session, { size: 30 }),
@@ -178,6 +178,19 @@ module.exports = async function prepare(session, binaryPath) {
       'list/list/README.md': 'nested nested readme contents',
       'list/README.md':
         'readme contents for deploy-default-with-conflicting-sub-directory',
+    },
+    'deploy-default-with-prebuilt-preview': {
+      'vercel.json': JSON.stringify({ version: 2 }),
+      '.vercel/output/builds.json': JSON.stringify({ target: 'preview' }),
+      '.vercel/output/config.json': JSON.stringify({ version: 3 }),
+      '.vercel/output/static/README.md':
+        'readme contents for deploy-default-with-prebuilt-preview',
+    },
+    'build-output-api-raw': {
+      'vercel.json': JSON.stringify({ version: 2 }),
+      '.vercel/output/config.json': JSON.stringify({ version: 3 }),
+      '.vercel/output/static/README.md':
+        'readme contents for build-output-api-raw',
     },
     'local-config-v2': {
       [`main-${session}.html`]: '<h1>hello main</h1>',
@@ -413,16 +426,87 @@ module.exports = async function prepare(session, binaryPath) {
         projectId: 'QmRoBYhejkkmssotLZr8tWgewPdPcjYucYUNERFbhJrRNi',
       }),
     },
+    'vc-build-static-build': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        scripts: {
+          build: 'mkdir -p public && echo hi > public/index.txt',
+        },
+      }),
+    },
+    'vercel-json-configuration-overrides': {
+      'vercel.json': '{}',
+      'package.json': '{}',
+    },
+    'vercel-json-configuration-overrides-merging-prompts': {
+      'vercel.json': JSON.stringify({
+        buildCommand: 'mkdir -p output && echo "1" > output/index.txt',
+      }),
+      'package.json': '{}',
+    },
+    'vercel-json-configuration-overrides-link': {
+      'vercel.json': JSON.stringify({
+        buildCommand: 'mkdir public && echo "1" > public/index.txt',
+      }),
+    },
+    'vc-build-corepack-npm': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        packageManager: 'npm@8.1.0',
+        scripts: {
+          build: 'mkdir -p public && npm --version > public/index.txt',
+        },
+      }),
+    },
+    'vc-build-corepack-pnpm': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        packageManager: 'pnpm@7.1.0',
+        scripts: {
+          build: 'mkdir -p public && pnpm --version > public/index.txt',
+        },
+      }),
+    },
+    'vc-build-corepack-yarn': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        packageManager: 'yarn@2.4.3',
+        scripts: {
+          build: 'mkdir -p public && yarn --version > public/index.txt',
+        },
+      }),
+    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {
-    const directory = join(
-      __dirname,
-      '..',
-      'fixtures',
-      'integration',
-      typeName
-    );
+    const directory = join(tmpFixturesDir, typeName);
 
     await mkdirp(directory);
 

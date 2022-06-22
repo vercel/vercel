@@ -43,7 +43,9 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import confirm from '../../util/input/confirm';
-import editProjectSettings from '../../util/input/edit-project-settings';
+import editProjectSettings, {
+  PartialProjectSettings,
+} from '../../util/input/edit-project-settings';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -61,6 +63,9 @@ import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-
 import { Output } from '../../util/output';
 import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
+import parseTarget from '../../util/deploy/parse-target';
+import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
+import { createGitMeta } from '../../util/deploy/create-git-meta';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -155,7 +160,7 @@ export default async (client: Client) => {
     }
   }
 
-  const { log, debug, error, warn, isTTY } = output;
+  const { log, debug, error, prettyError, isTTY } = output;
 
   const quiet = !isTTY;
 
@@ -181,6 +186,12 @@ export default async (client: Client) => {
     );
   }
 
+  // build `target`
+  const target = parseTarget(output, argv['--target'], argv['--prod']);
+  if (typeof target === 'number') {
+    return target;
+  }
+
   // build `--prebuilt`
   if (argv['--prebuilt']) {
     const prebuiltExists = await fs.pathExists(join(path, '.vercel/output'));
@@ -192,6 +203,25 @@ export default async (client: Client) => {
           'build'
         )} to generate a local build.`
       );
+      return 1;
+    }
+
+    const prebuiltBuild = await getPrebuiltJson(path);
+    const assumedTarget = target || 'preview';
+    if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
+      let specifyTarget = '';
+      if (prebuiltBuild.target === 'production') {
+        specifyTarget = ` --prod`;
+      }
+
+      prettyError({
+        message: `The ${param(
+          '--prebuilt'
+        )} option was used with the target environment "${assumedTarget}", but the prebuilt output found in ".vercel/output" was built with target environment "${
+          prebuiltBuild.target
+        }". Please run ${getCommandName(`--prebuilt${specifyTarget}`)}.`,
+        link: 'https://vercel.link/prebuilt-environment-mismatch',
+      });
       return 1;
     }
   }
@@ -388,6 +418,8 @@ export default async (client: Client) => {
     parseMeta(argv['--meta'])
   );
 
+  const gitMetadata = await createGitMeta(path, output);
+
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
     {},
@@ -418,33 +450,6 @@ export default async (client: Client) => {
     .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
 
-  // build `target`
-  let target;
-  if (argv['--target']) {
-    const deprecatedTarget = argv['--target'];
-
-    if (!['staging', 'production'].includes(deprecatedTarget)) {
-      error(
-        `The specified ${param('--target')} ${code(
-          deprecatedTarget
-        )} is not valid`
-      );
-      return 1;
-    }
-
-    if (deprecatedTarget === 'production') {
-      warn(
-        'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
-      );
-    }
-
-    output.debug(`Setting target to ${deprecatedTarget}`);
-    target = deprecatedTarget;
-  } else if (argv['--prod']) {
-    output.debug('Setting target to production');
-    target = 'production';
-  }
-
   const currentTeam = org?.type === 'team' ? org.id : undefined;
   const now = new Now({
     client,
@@ -452,6 +457,15 @@ export default async (client: Client) => {
   });
   let deployStamp = stamp();
   let deployment = null;
+
+  const localConfigurationOverrides: PartialProjectSettings = {
+    buildCommand: localConfig?.buildCommand,
+    devCommand: localConfig?.devCommand,
+    framework: localConfig?.framework,
+    commandForIgnoringBuildStep: localConfig?.ignoreCommand,
+    installCommand: localConfig?.installCommand,
+    outputDirectory: localConfig?.outputDirectory,
+  };
 
   try {
     const createArgs: any = {
@@ -468,6 +482,7 @@ export default async (client: Client) => {
       nowConfig: localConfig,
       regions,
       meta,
+      gitMetadata,
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
@@ -475,7 +490,12 @@ export default async (client: Client) => {
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
       // Only add projectSettings for zero config deployments
-      createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
+      createArgs.projectSettings =
+        status === 'not_linked'
+          ? {
+              sourceFilesOutsideRootDirectory,
+            }
+          : { ...localConfigurationOverrides, sourceFilesOutsideRootDirectory };
     }
 
     deployment = await createDeploy(
@@ -503,7 +523,9 @@ export default async (client: Client) => {
       const settings = await editProjectSettings(
         output,
         projectSettings,
-        framework
+        framework,
+        false,
+        localConfigurationOverrides
       );
 
       // deploy again, but send projectSettings this time

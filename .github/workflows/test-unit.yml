@@ -16,9 +16,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [12]
+        node: [14]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Conditionally set remote env
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+            echo "TURBO_REMOTE_ONLY=true" >> $GITHUB_ENV
+            echo "TURBO_TEAM=vercel" >> $GITHUB_ENV
+            echo "TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}" >> $GITHUB_ENV
       - uses: actions/setup-go@v2
         with:
           go-version: '1.13.15'
@@ -35,9 +41,9 @@ jobs:
       - run: yarn install --network-timeout 1000000
       - run: yarn run build
       - run: yarn run lint
-        if: matrix.os == 'ubuntu-latest' && matrix.node == 12 # only run lint once
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 14 # only run lint once
       - run: yarn run test-unit
       - run: yarn workspace vercel run coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node == 12 # only run coverage once
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 14 # only run coverage once
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

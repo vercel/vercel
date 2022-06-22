@@ -42,6 +42,13 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
+  ${chalk.gray(
+    '–'
+  )} Pull all Development Environment Variables down from the cloud
+
+      ${chalk.cyan(`$ ${getPkgName()} env pull <file>`)}
+      ${chalk.cyan(`$ ${getPkgName()} env pull .env.development.local`)}
+
   ${chalk.gray('–')} Add a new variable to multiple Environments
 
       ${chalk.cyan(`$ ${getPkgName()} env add <name>`)}
@@ -147,7 +154,8 @@ export default async function main(client: Client) {
           argv,
           args,
           output,
-          cwd
+          cwd,
+          'vercel-cli:env:pull'
         );
       default:
         output.error(getInvalidSubcommand(COMMAND_CONFIG));

@@ -129,6 +129,21 @@ export interface VercelConfig {
   alias?: string | string[];
   regions?: string[];
   projectSettings?: ProjectSettings;
+  buildCommand?: string | null;
+  ignoreCommand?: string | null;
+  devCommand?: string | null;
+  installCommand?: string | null;
+  framework?: string | null;
+  outputDirectory?: string | null;
+}
+
+export interface GitMetadata {
+  commitAuthorName?: string | undefined;
+  commitMessage?: string | undefined;
+  commitRef?: string | undefined;
+  commitSha?: string | undefined;
+  dirty?: boolean | undefined;
+  remoteUrl: string;
 }
 
 /**
@@ -155,4 +170,5 @@ export interface DeploymentOptions {
   public?: boolean;
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
+  gitMetadata?: GitMetadata;
 }

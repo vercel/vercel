@@ -15,7 +15,8 @@ import {
 } from '../util/projects/link';
 import { writeProjectSettings } from '../util/projects/project-settings';
 import envPull from './env/pull';
-
+import { getCommandName } from '../util/pkg-name';
+import param from '../util/output/param';
 import type { Project, Org } from '../types';
 import {
   isValidEnvTarget,
@@ -24,7 +25,7 @@ import {
 
 const help = () => {
   return console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} pull`)} [path]
+  ${chalk.bold(`${logo} ${getPkgName()} pull`)} [project-path]
 
  ${chalk.dim('Options:')}
 
@@ -41,25 +42,29 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Pull the latest Project Settings from the cloud
+  ${chalk.gray(
+    '–'
+  )} Pull the latest Environment Variables and Project Settings from the cloud
+    and stores them in \`.vercel/.env.\${target}.local\` and \`.vercel/project.json\` respectively.
 
     ${chalk.cyan(`$ ${getPkgName()} pull`)}
     ${chalk.cyan(`$ ${getPkgName()} pull ./path-to-project`)}
-    ${chalk.cyan(`$ ${getPkgName()} pull --env .env.local`)}
-    ${chalk.cyan(`$ ${getPkgName()} pull ./path-to-project --env .env.local`)}
 
-  ${chalk.gray('–')} Pull specific environment's Project Settings from the cloud
+  ${chalk.gray('–')} Pull for a specific environment
 
     ${chalk.cyan(
       `$ ${getPkgName()} pull --environment=${getEnvTargetPlaceholder()}`
     )}
+
+  ${chalk.gray(
+    'If you want to download environment variables to a specific file, use `vercel env pull` instead.'
+  )}
 `);
 };
 
 function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {
     '--yes': Boolean,
-    '--env': String, // deprecated
     '--environment': String,
     '--debug': Boolean,
     '-d': '--debug',
@@ -102,6 +107,13 @@ async function ensureLink(
   }
 
   if (link.status === 'error') {
+    if (link.reason === 'HEADLESS') {
+      client.output.error(
+        `Command ${getCommandName(
+          'pull'
+        )} requires confirmation. Use option ${param('--yes')} to confirm.`
+      );
+    }
     return link.exitCode;
   }
 
@@ -123,7 +135,8 @@ async function pullAllEnvFiles(
     argv,
     [join('.vercel', environmentFile)],
     client.output,
-    cwd
+    cwd,
+    'vercel-cli:pull'
   );
 }
 
