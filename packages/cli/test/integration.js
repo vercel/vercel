@@ -1813,31 +1813,6 @@ test('remove the wildcard alias', async t => {
 });
 */
 
-test('ensure username in list is right', async t => {
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    ['ls', ...defaultArgs, '--all'],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  const line = stdout
-    .split('\n')
-    .find(line => line.includes('.now.sh') || line.includes('.vercel.app'));
-  const columns = line.split(/\s+/);
-
-  // Ensure username column have username
-  t.truthy(columns.pop().includes(contextName));
-});
-
 test('ensure we render a warning for deployments with no files', async t => {
   const directory = fixture('empty-directory');
 
