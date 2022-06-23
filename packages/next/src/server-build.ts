@@ -906,6 +906,18 @@ export async function serverBuild({
               },
             ],
           },
+          // normalize "/index" from "/_next/data/index.json" to -> just "/"
+          // as matches a rewrite sources will expect just "/"
+          {
+            src: path.join('^', entryDirectory, '/index'),
+            has: [
+              {
+                type: 'header',
+                key: 'x-nextjs-data',
+              },
+            ],
+            dest: path.join('/', entryDirectory),
+          },
         ]
       : [];
   };
