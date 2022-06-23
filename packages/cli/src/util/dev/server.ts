@@ -1085,8 +1085,6 @@ export default class DevServer {
     } else if (accept.includes('html')) {
       res.setHeader('content-type', 'text/html; charset=utf-8');
 
-      // NOTE: templates
-
       let view: string;
       if (statusCode === 404) {
         view = errorTemplate404({
