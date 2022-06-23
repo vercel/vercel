@@ -1085,6 +1085,8 @@ export default class DevServer {
     } else if (accept.includes('html')) {
       res.setHeader('content-type', 'text/html; charset=utf-8');
 
+      // NOTE: templates
+
       let view: string;
       if (statusCode === 404) {
         view = errorTemplate404({
@@ -1106,6 +1108,7 @@ export default class DevServer {
         view = errorTemplate({
           http_status_code: statusCode,
           http_status_description,
+          error_code,
           request_id: requestId,
         });
       }
@@ -2185,7 +2188,7 @@ function proxyPass(
         `Failed to complete request to ${req.url}: ${error}`
       );
       if (!res.headersSent) {
-        devServer.sendError(req, res, requestId);
+        devServer.sendError(req, res, requestId, 'FUNCTION_INVOCATION_FAILED');
       }
     }
   );
