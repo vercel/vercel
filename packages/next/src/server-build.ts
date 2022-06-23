@@ -917,6 +917,8 @@ export async function serverBuild({
               },
             ],
             dest: path.join('/', entryDirectory),
+            ...(isOverride ? { override: true } : {}),
+            continue: true,
           },
         ]
       : [];
