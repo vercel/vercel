@@ -48,6 +48,38 @@ test('[vercel dev] should support edge functions', async () => {
   }
 });
 
+test('[vercel dev] should handle errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-function`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      '<strong>500</strong>: INTERNAL_SERVER_ERROR'
+    );
+    expect(stdout.toString()).toMatch(
+      'Unhandled rejection: Error: intentional error from inside an edge function'
+    );
+    expect(stderr.toString()).toMatch(
+      'Error! Failed to complete request to /api/edge-function: Error: socket hang up'
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
 test('[vercel dev] should support request body', async () => {
   const dir = fixture('node-request-body');
   const { dev, port, readyResolver } = await testFixture(dir);

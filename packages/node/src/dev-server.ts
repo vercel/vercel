@@ -146,28 +146,35 @@ async function createEdgeEventHandler(
     ${userCode};
 
     addEventListener('fetch', async (event) => {
-      let serializedRequest = await event.request.text();
-      let requestDetails = JSON.parse(serializedRequest);
+      try {
+        let serializedRequest = await event.request.text();
+        let requestDetails = JSON.parse(serializedRequest);
 
-      let body;
+        let body;
 
-      if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
-        body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
+        if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
+          body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
+        }
+
+        let requestUrl = requestDetails.headers['x-forwarded-proto'] + '://' + requestDetails.headers['x-forwarded-host'] + requestDetails.url;
+
+        let request = new Request(requestUrl, {
+          headers: requestDetails.headers,
+          method: requestDetails.method,
+          body: body
+        });
+
+        event.request = request;
+
+        let edgeHandler = module.exports.default;
+        let response = await edgeHandler(event.request, event);
+
+        return event.respondWith(response);
+      } catch (error) {
+        event.respondWith(new Response(error.stack, {
+          status: 500
+        }));
       }
-
-      let requestUrl = requestDetails.headers['x-forwarded-proto'] + '://' + requestDetails.headers['x-forwarded-host'] + requestDetails.url;
-
-      let request = new Request(requestUrl, {
-        headers: requestDetails.headers,
-        method: requestDetails.method,
-        body: body
-      });
-
-      event.request = request;
-
-      let edgeHandler = module.exports.default;
-      let response = edgeHandler(event.request, event);
-      return event.respondWith(response);
     })`;
 
   const edgeRuntime = new EdgeRuntime({
@@ -191,10 +198,21 @@ async function createEdgeEventHandler(
       body: await serializeRequest(request),
     });
 
+    const body = await response.text();
+
+    if (response.status >= 500) {
+      // this error was "unhandled" from the user code's perspective
+      console.log(`Unhandled rejection: ${body}`);
+
+      // this matches the serverless function bridge launcher's behavior when
+      // an error is thrown in the function
+      process.exit(1);
+    }
+
     return {
       statusCode: response.status,
       headers: response.headers.raw(),
-      body: await response.text(),
+      body,
       encoding: 'utf8',
     };
   };

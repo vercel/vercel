@@ -2185,13 +2185,7 @@ function proxyPass(
         `Failed to complete request to ${req.url}: ${error}`
       );
       if (!res.headersSent) {
-        devServer.sendError(
-          req,
-          res,
-          requestId,
-          'NO_RESPONSE_FROM_FUNCTION',
-          502
-        );
+        devServer.sendError(req, res, requestId);
       }
     }
   );
