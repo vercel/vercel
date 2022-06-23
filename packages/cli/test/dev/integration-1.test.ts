@@ -67,13 +67,13 @@ test('[vercel dev] should handle errors thrown in edge functions', async () => {
     const { stdout, stderr } = await dev.kill('SIGTERM');
 
     expect(await res.text()).toMatch(
-      '<strong>500</strong>: INTERNAL_SERVER_ERROR'
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
     expect(stdout.toString()).toMatch(
-      'Unhandled rejection: Error: intentional error from inside an edge function'
+      /Unhandled rejection: Error: intentional error from inside an edge function/g
     );
     expect(stderr.toString()).toMatch(
-      'Error! Failed to complete request to /api/edge-function: Error: socket hang up'
+      /Error! Failed to complete request to \/api\/edge-function: Error: socket hang up/g
     );
   } finally {
     await dev.kill('SIGTERM');
