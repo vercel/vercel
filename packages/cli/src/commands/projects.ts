@@ -21,6 +21,7 @@ import {
 import { join } from 'path';
 import { Team, User } from '../types';
 import confirm from '../util/input/confirm';
+import { Output } from '../util/output';
 
 const e = encodeURIComponent;
 
@@ -206,22 +207,20 @@ async function run({
     } else {
       const connectedProvider = gitProviderLink.type;
       const connectedRepoPath = `${gitProviderLink.org}/${gitProviderLink.repo}`;
-      // ask user if they want to overwrite
-      // if yes, connect git provider repo
-      const shouldReplaceProject =
-        yes ||
-        (await confirm(
-          `Looks like you already have a ${connectedProvider} repository connected: ${chalk.cyan(
-            connectedRepoPath
-          )}. Do you want to replace it?`,
-          true
-        ));
-      if (!shouldReplaceProject) {
-        output.print(`Aborted. Repo not connected.`);
-      } else {
-        await disconnectGitProvider(client, team, project.id);
-        connectGitProvider(client, team, project.id, provider, repoPath);
+
+      const shouldReplaceRepo = await confirmRepoConnect(
+        output,
+        yes,
+        connectedProvider,
+        connectedRepoPath
+      );
+      if (!shouldReplaceRepo) {
+        return;
       }
+
+      await disconnectGitProvider(client, team, project.id);
+      connectGitProvider(client, team, project.id, provider, repoPath);
+      output.log(`Connected ${chalk.cyan(connectedRepoPath)}!`);
     }
 
     return;
@@ -396,6 +395,27 @@ process.on('uncaughtException', err => {
   handleError(err);
   exit(1);
 });
+
+async function confirmRepoConnect(
+  output: Output,
+  yes: boolean,
+  connectedProvider: string,
+  connectedRepoPath: string
+) {
+  let shouldReplaceProject = yes;
+  if (!shouldReplaceProject) {
+    shouldReplaceProject = await confirm(
+      `Looks like you already have a ${connectedProvider} repository connected: ${chalk.cyan(
+        connectedRepoPath
+      )}. Do you want to replace it?`,
+      true
+    );
+    if (!shouldReplaceProject) {
+      output.print(`Aborted. Repo not connected.`);
+    }
+  }
+  return shouldReplaceProject;
+}
 
 function readConfirmation(projectName: string) {
   return new Promise(resolve => {
