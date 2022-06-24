@@ -2,6 +2,22 @@ import Client from '../client';
 import { stringify } from 'qs';
 import { Team } from '../../types';
 
+export async function disconnectGitProvider(
+  client: Client,
+  team: Team | null,
+  projectId: string
+) {
+  const fetchUrl = `/v4/projects/${projectId}/link?${stringify({
+    teamId: team?.id,
+  })}`;
+  return client.fetch(fetchUrl, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+}
+
 export function connectGitProvider(
   client: Client,
   team: Team | null,

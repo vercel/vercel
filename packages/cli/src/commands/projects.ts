@@ -12,14 +12,15 @@ import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import validatePaths from '../util/validate-paths';
 import { ensureLink } from '../util/link-project';
-import pull from './pull';
 import { parseGitConfig, pluckRemoteUrl } from '../util/create-git-meta';
 import {
   connectGitProvider,
+  disconnectGitProvider,
   parseRepoUrl,
 } from '../util/projects/connect-git-provider';
 import { join } from 'path';
 import { Team, User } from '../types';
+import confirm from '../util/input/confirm';
 
 const e = encodeURIComponent;
 
@@ -150,11 +151,6 @@ async function run({
     }
     const { path } = validate;
 
-    // pull project settings to make sure they're up to date
-    output.log('Pulling latest project settings...');
-    client.argv.shift();
-    await pull(client);
-
     const linkedProject = await ensureLink(
       'projects connect',
       client,
@@ -165,8 +161,10 @@ async function run({
       return linkedProject;
     }
 
-    const { project } = linkedProject;
+    const { project, org } = linkedProject;
     const gitProviderLink = project.link;
+
+    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     // get project from .git
     const gitConfigPath = join(path, '.git/config');
@@ -206,8 +204,24 @@ async function run({
     if (!gitProviderLink) {
       connectGitProvider(client, team, project.id, provider, repoPath);
     } else {
+      const connectedProvider = gitProviderLink.type;
+      const connectedRepoPath = `${gitProviderLink.org}/${gitProviderLink.repo}`;
       // ask user if they want to overwrite
       // if yes, connect git provider repo
+      const shouldReplaceProject =
+        yes ||
+        (await confirm(
+          `Looks like you already have a ${connectedProvider} repository connected: ${chalk.cyan(
+            connectedRepoPath
+          )}. Do you want to replace it?`,
+          true
+        ));
+      if (!shouldReplaceProject) {
+        output.print(`Aborted. Repo not connected.`);
+      } else {
+        await disconnectGitProvider(client, team, project.id);
+        connectGitProvider(client, team, project.id, provider, repoPath);
+      }
     }
 
     return;
