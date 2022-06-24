@@ -715,7 +715,7 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
   console.log = origLog;
 
   expect(logs).toContain(
-    'Max serverless function size was exceeded for 1 function'
+    'Max serverless function size was exceeded for 2 functions'
   );
   expect(logs).toContain(
     'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
