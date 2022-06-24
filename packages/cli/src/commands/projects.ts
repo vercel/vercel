@@ -206,7 +206,22 @@ async function run({
       connectGitProvider(client, team, project.id, provider, repoPath);
     } else {
       const connectedProvider = gitProviderLink.type;
-      const connectedRepoPath = `${gitProviderLink.org}/${gitProviderLink.repo}`;
+      const connectedOrg = gitProviderLink.org;
+      const connectedRepo = gitProviderLink.repo;
+      const connectedRepoPath = `${connectedOrg}/${connectedRepo}`;
+
+      const isSameRepo =
+        connectedProvider === provider &&
+        connectedOrg === gitOrg &&
+        connectedRepo === repo;
+      if (isSameRepo) {
+        output.log(
+          `${chalk.cyan(
+            connectedRepoPath
+          )} is already connected to your project.`
+        );
+        return;
+      }
 
       const shouldReplaceRepo = await confirmRepoConnect(
         output,
