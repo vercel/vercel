@@ -18,7 +18,7 @@ export async function disconnectGitProvider(
   });
 }
 
-export function connectGitProvider(
+export async function connectGitProvider(
   client: Client,
   team: Team | null,
   projectId: string,
@@ -39,11 +39,12 @@ export function connectGitProvider(
         repo,
       }),
     })
-    .catch(err =>
-      console.error(
+    .catch(err => {
+      client.output.error(
         `Failed to connect a Git provider repo. Fetch url: ${fetchUrl}; error: ${err}`
-      )
-    );
+      );
+      return 1;
+    });
 }
 
 export function parseRepoUrl(originUrl: string): {

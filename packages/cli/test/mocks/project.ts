@@ -157,6 +157,26 @@ export function useProject(project: Partial<Project> = defaultProject) {
 
     res.json({ envs });
   });
+  client.scenario.post(`/v4/projects/${project.id}/link`, (req, res) => {
+    const body = req.body;
+    project.link = {
+      type: body.type,
+      repo: body.repo,
+      repoId: 1010,
+      org: body.org,
+      gitCredentialId: '',
+      sourceless: true,
+      createdAt: 1656109539791,
+      updatedAt: 1656109539791,
+    };
+    res.json(project);
+  });
+  client.scenario.delete(`/v4/projects/${project.id}/link`, (req, res) => {
+    if (project.link) {
+      project.link = undefined;
+    }
+    res.json(project);
+  });
 
   return { project, envs };
 }

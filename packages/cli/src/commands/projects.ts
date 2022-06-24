@@ -67,6 +67,7 @@ const main = async (client: Client) => {
     argv = getArgs(client.argv.slice(2), {
       '--next': Number,
       '-N': '--next',
+      '--yes': Boolean,
     });
   } catch (error) {
     handleError(error);
@@ -98,7 +99,7 @@ const main = async (client: Client) => {
   }
 
   try {
-    await run({ client, scope });
+    return await run({ client, scope });
   } catch (err) {
     handleError(err);
     exit(1);
@@ -107,7 +108,7 @@ const main = async (client: Client) => {
 
 export default async (client: Client) => {
   try {
-    await main(client);
+    return await main(client);
   } catch (err) {
     handleError(err);
     process.exit(1);
@@ -171,44 +172,45 @@ async function run({
     const gitConfigPath = join(path, '.git/config');
     const gitConfig = await parseGitConfig(gitConfigPath, output);
     if (!gitConfig) {
-      console.error(
-        error(
-          `No local git repo found. Run ${chalk.cyan(
-            '`git clone <url>`'
-          )} to clone a remote Git repository first.`
-        )
+      output.error(
+        `No local git repo found. Run ${chalk.cyan(
+          '`git clone <url>`'
+        )} to clone a remote Git repository first.`
       );
       return 1;
     }
     const remoteUrl = pluckRemoteUrl(gitConfig);
     if (!remoteUrl) {
-      // error for now, though in the future the user should be able to pass in a url
-      console.error(
-        error(
-          `No remote origin url found in your Git config. Make sure you've connected your local Git repo to a Git provider first.`
-        )
+      output.error(
+        `No remote origin url found in your Git config. Make sure you've connected your local Git repo to a Git provider first.`
       );
       return 1;
     }
     const parsedUrl = parseRepoUrl(remoteUrl);
     if (!parsedUrl) {
-      console.error(
-        error(
-          `Can't parse Git repo data from the following remote url in your Git config: ${remoteUrl}`
-        )
+      output.error(
+        `Can't parse Git repo data from the following remote url in your Git config: ${remoteUrl}`
       );
       return 1;
     }
     const { provider, org: gitOrg, repo } = parsedUrl;
     const repoPath = `${gitOrg}/${repo}`;
+    let connectedRepoPath;
 
     if (!gitProviderLink) {
-      connectGitProvider(client, team, project.id, provider, repoPath);
+      const connect = await connectGitProvider(
+        client,
+        team,
+        project.id,
+        provider,
+        repoPath
+      );
+      if (typeof connect === 'number') return connect;
     } else {
       const connectedProvider = gitProviderLink.type;
       const connectedOrg = gitProviderLink.org;
       const connectedRepo = gitProviderLink.repo;
-      const connectedRepoPath = `${connectedOrg}/${connectedRepo}`;
+      connectedRepoPath = `${connectedOrg}/${connectedRepo}`;
 
       const isSameRepo =
         connectedProvider === provider &&
@@ -220,25 +222,27 @@ async function run({
             connectedRepoPath
           )} is already connected to your project.`
         );
-        return;
+        return 1;
       }
 
       const shouldReplaceRepo = await confirmRepoConnect(
         output,
         yes,
-        connectedProvider,
         connectedRepoPath
       );
       if (!shouldReplaceRepo) {
-        return;
+        return 0;
       }
 
       await disconnectGitProvider(client, team, project.id);
       connectGitProvider(client, team, project.id, provider, repoPath);
-      output.log(`Connected ${chalk.cyan(connectedRepoPath)}!`);
     }
 
-    return;
+    output.log(
+      `Connected ${chalk.cyan(gitProviderLink ? connectedRepoPath : repoPath)}!`
+    );
+
+    return 0;
   }
 
   if (subcommand === 'ls' || subcommand === 'list') {
@@ -414,19 +418,18 @@ process.on('uncaughtException', err => {
 async function confirmRepoConnect(
   output: Output,
   yes: boolean,
-  connectedProvider: string,
   connectedRepoPath: string
 ) {
   let shouldReplaceProject = yes;
   if (!shouldReplaceProject) {
     shouldReplaceProject = await confirm(
-      `Looks like you already have a ${connectedProvider} repository connected: ${chalk.cyan(
+      `Looks like you already have a repository connected: ${chalk.cyan(
         connectedRepoPath
       )}. Do you want to replace it?`,
       true
     );
     if (!shouldReplaceProject) {
-      output.print(`Aborted. Repo not connected.`);
+      output.log(`Aborted. Repo not connected.`);
     }
   }
   return shouldReplaceProject;

@@ -149,7 +149,7 @@ function parseEnvironment(environment = 'development'): ProjectEnvTarget {
   return environment;
 }
 
-export default async function pull(client: Client) {
+export default async function main(client: Client) {
   const argv = parseArgs(client);
   if (typeof argv === 'number') {
     return argv;
