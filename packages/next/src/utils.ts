@@ -1817,7 +1817,7 @@ export const onPrerenderRoute =
     if (nonDynamicSsg || isFallback || isOmitted) {
       outputPathData = outputPathData.replace(
         new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
-        `${routeFileNoExt}.json`
+        `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
       );
     }
 
