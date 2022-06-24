@@ -10,6 +10,16 @@ import getScope from '../util/get-scope';
 import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
+import validatePaths from '../util/validate-paths';
+import { ensureLink } from '../util/link-project';
+import pull from './pull';
+import { parseGitConfig, pluckRemoteUrl } from '../util/create-git-meta';
+import {
+  connectGitProvider,
+  parseRepoUrl,
+} from '../util/projects/connect-git-provider';
+import { join } from 'path';
+import { Team, User } from '../types';
 
 const e = encodeURIComponent;
 
@@ -20,6 +30,7 @@ const help = () => {
   ${chalk.dim('Commands:')}
 
     ls                               Show all projects in the selected team/user
+    connect                          Connect a Git provider to your project
     add      [name]                  Add a new project
     rm       [name]                  Remove a project
 
@@ -71,10 +82,10 @@ const main = async (client: Client) => {
 
   const { output } = client;
 
-  let contextName = null;
+  let scope = null;
 
   try {
-    ({ contextName } = await getScope(client));
+    scope = await getScope(client);
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
@@ -85,7 +96,7 @@ const main = async (client: Client) => {
   }
 
   try {
-    await run({ client, contextName });
+    await run({ client, scope });
   } catch (err) {
     handleError(err);
     exit(1);
@@ -103,15 +114,104 @@ export default async (client: Client) => {
 
 async function run({
   client,
-  contextName,
+  scope,
 }: {
   client: Client;
-  contextName: string;
+  scope: {
+    contextName: string;
+    team: Team | null;
+    user: User;
+  };
 }) {
   const { output } = client;
+  const { contextName, team } = scope;
   const args = argv._.slice(1);
 
   const start = Date.now();
+
+  if (subcommand === 'connect') {
+    const yes = Boolean(argv['--yes']);
+    if (args.length !== 0) {
+      console.error(
+        error(
+          `Invalid number of arguments. Usage: ${chalk.cyan(
+            `${getCommandName('projects connect')}`
+          )}`
+        )
+      );
+      return exit(2);
+    }
+
+    let paths = [process.cwd()];
+
+    const validate = await validatePaths(output, paths);
+    if (!validate.valid) {
+      return validate.exitCode;
+    }
+    const { path } = validate;
+
+    // pull project settings to make sure they're up to date
+    output.log('Pulling latest project settings...');
+    client.argv.shift();
+    await pull(client);
+
+    const linkedProject = await ensureLink(
+      'projects connect',
+      client,
+      path,
+      yes
+    );
+    if (typeof linkedProject === 'number') {
+      return linkedProject;
+    }
+
+    const { project } = linkedProject;
+    const gitProviderLink = project.link;
+
+    // get project from .git
+    const gitConfigPath = join(path, '.git/config');
+    const gitConfig = await parseGitConfig(gitConfigPath, output);
+    if (!gitConfig) {
+      console.error(
+        error(
+          `No local git repo found. Run ${chalk.cyan(
+            '`git clone <url>`'
+          )} to clone a remote Git repository first.`
+        )
+      );
+      return 1;
+    }
+    const remoteUrl = pluckRemoteUrl(gitConfig);
+    if (!remoteUrl) {
+      // error for now, though in the future the user should be able to pass in a url
+      console.error(
+        error(
+          `No remote origin url found in your Git config. Make sure you've connected your local Git repo to a Git provider first.`
+        )
+      );
+      return 1;
+    }
+    const parsedUrl = parseRepoUrl(remoteUrl);
+    if (!parsedUrl) {
+      console.error(
+        error(
+          `Can't parse Git repo data from the following remote url in your Git config: ${remoteUrl}`
+        )
+      );
+      return 1;
+    }
+    const { provider, org: gitOrg, repo } = parsedUrl;
+    const repoPath = `${gitOrg}/${repo}`;
+
+    if (!gitProviderLink) {
+      connectGitProvider(client, team, project.id, provider, repoPath);
+    } else {
+      // ask user if they want to overwrite
+      // if yes, connect git provider repo
+    }
+
+    return;
+  }
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length !== 0) {
@@ -271,7 +371,9 @@ async function run({
     return;
   }
 
-  console.error(error('Please specify a valid subcommand: ls | add | rm'));
+  console.error(
+    error('Please specify a valid subcommand: ls | connect | add | rm')
+  );
   help();
   exit(2);
 }
