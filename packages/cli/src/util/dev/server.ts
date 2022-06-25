@@ -1462,7 +1462,6 @@ export default class DevServer {
 
         // Add the Vercel platform proxy request headers
         const proxyHeaders = this.getProxyHeaders(req, requestId, true);
-        console.log(proxyHeaders);
         for (const [name, value] of nodeHeadersToFetchHeaders(proxyHeaders)) {
           middlewareReqHeaders.set(name, value);
         }
