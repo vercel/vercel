@@ -1458,10 +1458,19 @@ export default class DevServer {
       }
 
       if (startMiddlewareResult) {
+        const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
+
+        // Add the Vercel platform proxy request headers
+        const proxyHeaders = this.getProxyHeaders(req, requestId, true);
+        console.log(proxyHeaders);
+        for (const [name, value] of nodeHeadersToFetchHeaders(proxyHeaders)) {
+          middlewareReqHeaders.set(name, value);
+        }
+
         const middlewareRes = await fetch(
-          `http://127.0.0.1:${startMiddlewareResult.port}`,
+          `http://127.0.0.1:${startMiddlewareResult.port}${parsed.path}`,
           {
-            headers: nodeHeadersToFetchHeaders(req.headers),
+            headers: middlewareReqHeaders,
             method: req.method,
           }
         );
