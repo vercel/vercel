@@ -1,12 +1,13 @@
+import ms from 'ms';
 import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
+import fetch from 'node-fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
 import listen from 'async-listen';
 import minimatch from 'minimatch';
-import ms from 'ms';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
@@ -16,11 +17,11 @@ import path, { isAbsolute, basename, dirname, extname, join } from 'path';
 import once from '@tootallnate/once';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
-import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import which from 'which';
 import npa from 'npm-package-arg';
+import type { ChildProcess } from 'child_process';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
@@ -90,6 +91,7 @@ import {
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
 import { treeKill } from '../tree-kill';
+import { nodeHeadersToFetchHeaders } from './headers';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -593,7 +595,7 @@ export default class DevServer {
         await this.exit();
       }
 
-      if (warnings && warnings.length > 0) {
+      if (warnings?.length > 0) {
         warnings.forEach(warning =>
           this.output.warn(warning.message, null, warning.link, warning.action)
         );
@@ -1337,32 +1339,6 @@ export default class DevServer {
     return false;
   };
 
-  /*
-  runDevMiddleware = async (
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ) => {
-    const { devMiddlewarePlugins } = await loadCliPlugins(
-      this.cwd,
-      this.output
-    );
-    try {
-      for (let plugin of devMiddlewarePlugins) {
-        const result = await plugin.plugin.runDevMiddleware(req, res, this.cwd);
-        if (result.finished) {
-          return result;
-        }
-      }
-      return { finished: false };
-    } catch (e) {
-      return {
-        finished: true,
-        error: e,
-      };
-    }
-  };
-  */
-
   /**
    * Serve project directory as a v2 deployment.
    */
@@ -1430,6 +1406,114 @@ export default class DevServer {
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
 
+    // Run the middleware file, if present, and apply any
+    // mutations to the incoming request based on the
+    // result of the middleware invocation.
+    const middleware = [...this.buildMatches.values()].find(
+      m => m.config?.middleware === true
+    );
+    if (middleware) {
+      let startMiddlewareResult: StartDevServerResult | undefined;
+      // TODO: can we add some caching to prevent (re-)starting
+      // the middleware server for every HTTP request?
+      const { envConfigs, files, devCacheDir, cwd: workPath } = this;
+      try {
+        startMiddlewareResult =
+          await middleware.builderWithPkg.builder.startDevServer?.({
+            files,
+            entrypoint: middleware.entrypoint,
+            workPath,
+            repoRootPath: this.cwd,
+            config: middleware.config || {},
+            meta: {
+              isDev: true,
+              //requestPath,
+              devCacheDir,
+              env: { ...envConfigs.runEnv },
+              buildEnv: { ...envConfigs.buildEnv },
+            },
+          });
+      } catch (err) {
+        // `startDevServer()` threw an error. Most likely this means the dev
+        // server process exited before sending the port information message
+        // (missing dependency at runtime, for example).
+        if (err.code === 'ENOENT') {
+          err.message = `Command not found: ${chalk.cyan(
+            err.path,
+            ...err.spawnargs
+          )}\nPlease ensure that ${cmd(err.path)} is properly installed`;
+          err.link = 'https://vercel.link/command-not-found';
+        }
+
+        this.output.prettyError(err);
+
+        await this.sendError(
+          req,
+          res,
+          requestId,
+          'NO_RESPONSE_FROM_FUNCTION',
+          502
+        );
+        return;
+      }
+
+      if (startMiddlewareResult) {
+        const middlewareRes = await fetch(
+          `http://127.0.0.1:${startMiddlewareResult.port}`,
+          {
+            headers: nodeHeadersToFetchHeaders(req.headers),
+            method: req.method,
+          }
+        );
+
+        let rewritePath = '';
+        let contentType = '';
+        let shouldContinue = false;
+        const skipMiddlewareHeaders = new Set([
+          'date',
+          'connection',
+          'content-length',
+        ]);
+        for (const [name, value] of middlewareRes.headers) {
+          if (name === 'x-middleware-next') {
+            shouldContinue = value === '1';
+          } else if (name === 'x-middleware-rewrite') {
+            rewritePath = value;
+            shouldContinue = true;
+          } else if (name === 'content-type') {
+            contentType = value;
+          } else if (!skipMiddlewareHeaders.has(name)) {
+            // Any other kind of response header should be included
+            // on the outgoing HTTP response
+            // TODO: filter out denylisted headers
+            res.setHeader(name, value);
+          }
+        }
+
+        if (!shouldContinue) {
+          const middlewareBody = await middlewareRes.buffer();
+          this.setResponseHeaders(res, requestId);
+          if (middlewareBody.length > 0) {
+            res.setHeader('content-length', middlewareBody.length);
+            if (contentType) {
+              res.setHeader('content-type', contentType);
+            }
+            res.end(middlewareBody);
+          } else {
+            res.end();
+          }
+          return;
+        }
+
+        if (rewritePath) {
+          // TODO: add validation?
+          this.output.debug(
+            `Rewrote incoming URL based on middleware: "${rewritePath}"`
+          );
+          prevUrl = rewritePath;
+        }
+      }
+    }
     /*
     const middlewareResult = await this.runDevMiddleware(req, res);
 
@@ -2269,11 +2353,12 @@ async function findBuildMatch(
       if (!isIndex(match.src)) {
         return match;
       } else {
-        // if isIndex === true and ends in .html, we're done. Otherwise, keep searching
-        bestIndexMatch = match;
+        // If isIndex === true and ends in `.html`, we're done.
+        // Otherwise, keep searching.
         if (extname(match.src) === '.html') {
-          return bestIndexMatch;
+          return match;
         }
+        bestIndexMatch = match;
       }
     }
   }
@@ -2295,6 +2380,13 @@ async function shouldServe(
     config,
     builderWithPkg: { builder },
   } = match;
+
+  // "middleware" file is not served as a regular asset,
+  // instead it gets invoked as part of the routing logic.
+  if (config?.middleware === true) {
+    return false;
+  }
+
   const cleanSrc = src.endsWith('.html') ? src.slice(0, -5) : src;
   const trimmedPath = requestPath.endsWith('/')
     ? requestPath.slice(0, -1)
