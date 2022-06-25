@@ -945,28 +945,13 @@ export async function serverBuild({
             continue: true,
             ...(isOverride ? { override: true } : {}),
           },
-          // handle trailing slash
-          {
-            src: path.join('^/', entryDirectory, '((?!_next/).*)/$'),
-            has: [
-              {
-                type: 'header',
-                key: 'x-nextjs-data',
-              },
-            ],
-            dest: `${path.join(
-              '/',
-              entryDirectory,
-              '/_next/data/',
-              buildId,
-              '/$1.json'
-            )}`,
-            continue: true,
-            ...(isOverride ? { override: true } : {}),
-          },
           // handle non-trailing slash
           {
-            src: path.join('^/', entryDirectory, '((?!_next/).*)$'),
+            src: path.join(
+              '^/',
+              entryDirectory,
+              '((?!_next/)(?:.*[^/]|.*))/?$'
+            ),
             has: [
               {
                 type: 'header',
