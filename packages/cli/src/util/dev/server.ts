@@ -1493,9 +1493,10 @@ export default class DevServer {
             contentType = value;
           } else if (!skipMiddlewareHeaders.has(name)) {
             // Any other kind of response header should be included
-            // on the outgoing HTTP response
-            // TODO: filter out denylisted headers
+            // on both the incoming HTTP request (for when proxying
+            // to another function) and the outgoing HTTP response.
             res.setHeader(name, value);
+            req.headers[name] = value;
           }
         }
 
