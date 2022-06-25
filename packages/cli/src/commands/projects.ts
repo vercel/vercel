@@ -235,12 +235,10 @@ async function run({
       }
 
       await disconnectGitProvider(client, team, project.id);
-      connectGitProvider(client, team, project.id, provider, repoPath);
+      await connectGitProvider(client, team, project.id, provider, repoPath);
     }
 
-    output.log(
-      `Connected ${chalk.cyan(gitProviderLink ? connectedRepoPath : repoPath)}!`
-    );
+    output.log(`Connected ${chalk.cyan(repoPath)}!`);
 
     return 0;
   }

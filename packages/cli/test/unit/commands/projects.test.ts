@@ -142,18 +142,29 @@ describe('projects', () => {
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
         useTeams('team_dummy');
-        useProject({
+        const project = useProject({
           ...defaultProject,
           id: 'new-connection-id',
           name: 'new-connection',
         });
+        project.project.link = {
+          type: 'github',
+          repo: 'repo',
+          org: 'user',
+          repoId: 1010,
+          gitCredentialId: '',
+          sourceless: true,
+          createdAt: 1656109539791,
+          updatedAt: 1656109539791,
+        };
+
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
 
-        const project: Project = await client.fetch(
+        const newProjectData: Project = await client.fetch(
           `/v8/projects/new-connection`
         );
-        expect(project.link).toMatchObject({
+        expect(newProjectData.link).toMatchObject({
           type: 'github',
           repo: 'user2/repo2',
           repoId: 1010,
