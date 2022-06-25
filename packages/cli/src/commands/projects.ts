@@ -205,7 +205,9 @@ async function run({
         provider,
         repoPath
       );
-      if (typeof connect === 'number') return connect;
+      if (typeof connect === 'number') {
+        return connect;
+      }
     } else {
       const connectedProvider = gitProviderLink.type;
       const connectedOrg = gitProviderLink.org;
@@ -235,7 +237,16 @@ async function run({
       }
 
       await disconnectGitProvider(client, team, project.id);
-      await connectGitProvider(client, team, project.id, provider, repoPath);
+      const connect = await connectGitProvider(
+        client,
+        team,
+        project.id,
+        provider,
+        repoPath
+      );
+      if (typeof connect === 'number') {
+        return connect;
+      }
     }
 
     output.log(`Connected ${chalk.cyan(repoPath)}!`);

@@ -1,6 +1,7 @@
 import Client from '../client';
 import { stringify } from 'qs';
 import { Team } from '../../types';
+import chalk from 'chalk';
 
 export async function disconnectGitProvider(
   client: Client,
@@ -40,9 +41,17 @@ export async function connectGitProvider(
       }),
     })
     .catch(err => {
-      client.output.error(
-        `Failed to connect a Git provider repo. Fetch url: ${fetchUrl}; error: ${err}`
-      );
+      if (err.message.includes('install the GitHub integration')) {
+        client.output.error(
+          `Failed to link ${chalk.cyan(
+            repo
+          )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
+        );
+      } else {
+        client.output.error(
+          `Failed to connect a Git provider repo.\nFetch url: ${fetchUrl}\n${err}`
+        );
+      }
       return 1;
     });
 }

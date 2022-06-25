@@ -110,7 +110,7 @@ describe('projects', () => {
         useTeams('team_dummy');
         useProject({
           ...defaultProject,
-          id: 'new-connection-id',
+          id: 'new-connection',
           name: 'new-connection',
         });
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
@@ -144,7 +144,7 @@ describe('projects', () => {
         useTeams('team_dummy');
         const project = useProject({
           ...defaultProject,
-          id: 'new-connection-id',
+          id: 'new-connection',
           name: 'new-connection',
         });
         project.project.link = {
@@ -189,7 +189,7 @@ describe('projects', () => {
         useTeams('team_dummy');
         const project = useProject({
           ...defaultProject,
-          id: 'new-connection-id',
+          id: 'new-connection',
           name: 'new-connection',
         });
         project.project.link = {
@@ -207,6 +207,30 @@ describe('projects', () => {
         expect(exitCode).toEqual(1);
         expect(client.outputBuffer).toContain(
           `> user/repo is already connected to your project.\n`
+        );
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+        process.chdir(originalCwd);
+      }
+    });
+    it('should fail when it cannot find the repository', async () => {
+      const cwd = fixture('invalid-repo');
+      try {
+        process.chdir(cwd);
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        useUser();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'invalid-repo',
+          name: 'invalid-repo',
+        });
+
+        client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
+        const exitCode = await projects(client);
+        expect(exitCode).toEqual(1);
+        expect(client.outputBuffer).toContain(
+          `Failed to link laksfj/asdgklsadkl. Make sure there aren't any typos and that you have access to the repository if it's private.`
         );
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
