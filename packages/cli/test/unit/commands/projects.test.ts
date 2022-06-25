@@ -35,7 +35,7 @@ describe('projects', () => {
     //   }
     // });
     it('should fail when there is no git config', async () => {
-      const cwd = fixture('no-git-config');
+      const cwd = fixture('no-config');
       try {
         process.chdir(cwd);
         useUser();
