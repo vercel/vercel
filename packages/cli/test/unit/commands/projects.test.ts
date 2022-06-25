@@ -45,7 +45,7 @@ describe('projects', () => {
           id: 'no-git-config',
           name: 'no-git-config',
         });
-        client.setArgv('projects', 'connect', '--cwd', cwd);
+        client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
         expect(client.outputBuffer).toEqual(
@@ -67,7 +67,7 @@ describe('projects', () => {
           id: 'no-remote-url',
           name: 'no-remote-url',
         });
-        client.setArgv('projects', 'connect', '--cwd', cwd);
+        client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
         expect(client.outputBuffer).toEqual(
@@ -90,7 +90,7 @@ describe('projects', () => {
           id: 'bad-remote-url',
           name: 'bad-remote-url',
         });
-        client.setArgv('projects', 'connect', '--cwd', cwd);
+        client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
         expect(client.outputBuffer).toEqual(
@@ -113,7 +113,7 @@ describe('projects', () => {
           id: 'new-connection-id',
           name: 'new-connection',
         });
-        client.setArgv('projects', 'connect', '--cwd', cwd);
+        client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
 
         const project: Project = await client.fetch(
@@ -202,7 +202,7 @@ describe('projects', () => {
           createdAt: 1656109539791,
           updatedAt: 1656109539791,
         };
-        client.setArgv('projects', 'connect', '--cwd', cwd);
+        client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
         expect(client.outputBuffer).toEqual(
