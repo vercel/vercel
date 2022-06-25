@@ -48,7 +48,7 @@ describe('projects', () => {
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
-        expect(client.outputBuffer).toEqual(
+        expect(client.outputBuffer).toContain(
           `Error! No local git repo found. Run \`git clone <url>\` to clone a remote Git repository first.\n`
         );
       } finally {
@@ -70,7 +70,7 @@ describe('projects', () => {
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
-        expect(client.outputBuffer).toEqual(
+        expect(client.outputBuffer).toContain(
           `Error! No remote origin url found in your Git config. Make sure you've connected your local Git repo to a Git provider first.\n`
         );
       } finally {
@@ -93,7 +93,7 @@ describe('projects', () => {
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
-        expect(client.outputBuffer).toEqual(
+        expect(client.outputBuffer).toContain(
           `Error! Can't parse Git repo data from the following remote url in your Git config: bababooey\n`
         );
       } finally {
@@ -128,7 +128,7 @@ describe('projects', () => {
           createdAt: 1656109539791,
           updatedAt: 1656109539791,
         });
-        expect(client.outputBuffer).toEqual(`> Connected user/repo!\n`);
+        expect(client.outputBuffer).toContain(`> Connected user/repo!\n`);
         expect(exitCode).toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
@@ -173,7 +173,7 @@ describe('projects', () => {
           createdAt: 1656109539791,
           updatedAt: 1656109539791,
         });
-        expect(client.outputBuffer).toEqual(`> Connected user2/repo2!\n`);
+        expect(client.outputBuffer).toContain(`> Connected user2/repo2!\n`);
         expect(exitCode).toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
@@ -205,7 +205,7 @@ describe('projects', () => {
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
-        expect(client.outputBuffer).toEqual(
+        expect(client.outputBuffer).toContain(
           `> user/repo is already connected to your project.\n`
         );
       } finally {
