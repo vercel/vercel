@@ -1481,6 +1481,7 @@ export default class DevServer {
           'date',
           'connection',
           'content-length',
+          'transfer-encoding',
         ]);
         for (const [name, value] of middlewareRes.headers) {
           if (name === 'x-middleware-next') {

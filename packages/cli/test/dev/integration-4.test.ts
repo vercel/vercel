@@ -433,3 +433,11 @@ test(
     await testPath(404, '/i-do-not-exist');
   })
 );
+
+test(
+  '[vercel dev] Middleware that returns a 200 response',
+  testFixtureStdio('middleware-response', async (testPath: any) => {
+    await testPath(200, '/', 'hi from middleware');
+    await testPath(200, '/another', 'hi from middleware');
+  })
+);
