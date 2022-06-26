@@ -1516,10 +1516,18 @@ export default class DevServer {
 
         if (rewritePath) {
           // TODO: add validation?
-          this.output.debug(
-            `Rewrote incoming URL based on middleware: "${rewritePath}"`
-          );
+          debug(`Detected rewrite path from middleware: "${rewritePath}"`);
           prevUrl = rewritePath;
+
+          // Retain orginal pathname, but override query parameters from the rewrite
+          const beforeRewriteUrl = req.url || '/';
+          const rewriteUrlParsed = url.parse(beforeRewriteUrl, true);
+          delete rewriteUrlParsed.search;
+          rewriteUrlParsed.query = url.parse(rewritePath, true).query;
+          req.url = url.format(rewriteUrlParsed);
+          debug(
+            `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
+          );
         }
       }
     }
