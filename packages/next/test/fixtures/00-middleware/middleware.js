@@ -77,6 +77,13 @@ export function middleware(request) {
     return NextResponse.rewrite(url);
   }
 
+  if (url.pathname === '/rewrite-to-site') {
+    const customUrl = new URL(url);
+    customUrl.pathname = '/_sites/subdomain-1/';
+    console.log('rewriting to', customUrl.pathname, customUrl.href);
+    return NextResponse.rewrite(customUrl);
+  }
+
   if (url.pathname === '/redirect-me-to-about') {
     url.pathname = '/about';
     url.searchParams.set('middleware', 'foo');

@@ -945,8 +945,13 @@ export async function serverBuild({
             continue: true,
             ...(isOverride ? { override: true } : {}),
           },
+          // handle non-trailing slash
           {
-            src: path.join('^/', entryDirectory, '((?!_next/).*)$'),
+            src: path.join(
+              '^/',
+              entryDirectory,
+              '((?!_next/)(?:.*[^/]|.*))/?$'
+            ),
             has: [
               {
                 type: 'header',
