@@ -1531,37 +1531,6 @@ export default class DevServer {
         }
       }
     }
-    /*
-    const middlewareResult = await this.runDevMiddleware(req, res);
-
-    if (middlewareResult) {
-      if (middlewareResult.error) {
-        this.sendError(
-          req,
-          res,
-          requestId,
-          'EDGE_FUNCTION_INVOCATION_FAILED',
-          500
-        );
-        return;
-      }
-      if (middlewareResult.finished) {
-        return;
-      }
-
-      if (middlewareResult.pathname) {
-        const origUrl = url.parse(req.url || '/', true);
-        origUrl.pathname = middlewareResult.pathname;
-        prevUrl = url.format(origUrl);
-      }
-      if (middlewareResult.query && prevUrl) {
-        const origUrl = url.parse(req.url || '/', true);
-        delete origUrl.search;
-        Object.assign(origUrl.query, middlewareResult.query);
-        prevUrl = url.format(origUrl);
-      }
-    }
-    */
 
     for (const phase of phases) {
       statusCode = undefined;
