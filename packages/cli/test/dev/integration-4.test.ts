@@ -441,3 +441,14 @@ test(
     await testPath(200, '/another', 'hi from middleware');
   })
 );
+
+test(
+  '[vercel dev] Middleware that rewrites',
+  testFixtureStdio('middleware-rewrite', async (testPath: any) => {
+    await testPath(200, '/', '<h1>Index</h1>');
+    await testPath(200, '/index', '<h1>Another</h1>');
+    await testPath(200, '/another', '<h1>Another</h1>');
+    await testPath(200, '/another.html', '<h1>Another</h1>');
+    await testPath(200, '/foo', '<h1>Another</h1>');
+  })
+);
