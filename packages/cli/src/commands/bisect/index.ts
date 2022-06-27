@@ -97,9 +97,7 @@ export default async function main(client: Client): Promise<number> {
     run = resolve(run);
   }
 
-  if (!bad.startsWith('https://')) {
-    bad = `https://${bad}`;
-  }
+  bad = validateUrl(bad);
   let parsed = parse(bad);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
@@ -120,9 +118,7 @@ export default async function main(client: Client): Promise<number> {
 
   const badDeploymentPromise = getDeployment(client, bad).catch(err => err);
 
-  if (!good.startsWith('https://')) {
-    good = `https://${good}`;
-  }
+  good = validateUrl(good);
   parsed = parse(good);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
@@ -368,6 +364,16 @@ export default async function main(client: Client): Promise<number> {
   output.print('\n');
 
   return 0;
+}
+
+function hasScheme(url: string): Boolean {
+  return url.startsWith('http://') || url.startsWith('https://');
+}
+
+function validateUrl(url: string): string {
+  if (!hasScheme(url)) {
+    return `https://${url}`;
+  } else return url;
 }
 
 function getDeployment(
