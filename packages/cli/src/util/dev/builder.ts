@@ -425,6 +425,10 @@ export async function getBuildMatches(
       src = extensionless;
     }
 
+    // We need to escape brackets since `glob` will
+    // try to find a group otherwise
+    src = src.replace(/(\[|\])/g, '[$1]');
+
     const files = fileList
       .filter(name => name === src || minimatch(name, src, { dot: true }))
       .map(name => join(cwd, name));
