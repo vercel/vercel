@@ -192,7 +192,7 @@ async function compileUserCode(entrypoint: string) {
           event.respondWith(new Response(error.message, {
             status: 500,
             headers: {
-              'x-handled-from': 'edge-wrapper'
+              'x-vercel-failed': 'edge-wrapper'
             }
           }));
         }
@@ -258,7 +258,7 @@ async function createEdgeEventHandler(
     const body = await response.text();
 
     const isUserError =
-      response.headers.get('x-handled-from') === 'edge-wrapper';
+      response.headers.get('x-vercel-failed') === 'edge-wrapper';
     if (isUserError && response.status >= 500) {
       // this error was "unhandled" from the user code's perspective
       console.log(`Unhandled rejection: ${body}`);
