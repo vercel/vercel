@@ -373,7 +373,8 @@ function hasScheme(url: string): Boolean {
 function validateUrl(url: string): string {
   if (!hasScheme(url)) {
     return `https://${url}`;
-  } else return url;
+  }
+  return url;
 }
 
 function getDeployment(
