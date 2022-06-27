@@ -484,3 +484,10 @@ test(
     });
   })
 );
+
+test(
+  '[vercel dev] Middleware with error in function handler',
+  testFixtureStdio('middleware-error-in-handler', async (testPath: any) => {
+    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+  })
+);

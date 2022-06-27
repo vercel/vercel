@@ -1479,6 +1479,17 @@ export default class DevServer {
             }
           );
 
+          if (middlewareRes.status === 500) {
+            await this.sendError(
+              req,
+              res,
+              requestId,
+              'EDGE_FUNCTION_INVOCATION_FAILED',
+              500
+            );
+            return;
+          }
+
           // Apply status code from middleware invocation,
           // for i.e. redirects or a custom 404 page
           res.statusCode = middlewareRes.status;
