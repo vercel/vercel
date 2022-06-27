@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --dts --format esm,cjs",
-    "test": "jest",
+    "test-unit": "jest",
     "prepublishOnly": "yarn build"
   },
   "devDependencies": {
