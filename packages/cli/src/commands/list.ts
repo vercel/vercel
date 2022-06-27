@@ -173,6 +173,11 @@ export default async function main(client: Client) {
   let app: string | undefined = appArg || project?.name;
   let host: string | undefined = undefined;
 
+  if (app && !isValidName(app)) {
+    error(`The provided argument "${app}" is not a valid project name`);
+    return 1;
+  }
+
   if (status === 'not_linked' && !app) {
     output.log(
       `Looks like this directory isn't linked to a Vercel deployment. Please run ${getCommandName(
@@ -240,11 +245,6 @@ export default async function main(client: Client) {
     currentTeam,
   });
   const start = Date.now();
-
-  if (app && !isValidName(app)) {
-    error(`The provided argument "${app}" is not a valid project name`);
-    return 1;
-  }
 
   // Some people are using entire domains as app names, so
   // we need to account for this here
