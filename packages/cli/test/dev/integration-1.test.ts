@@ -98,7 +98,7 @@ test('[vercel dev] should handle runtime errors thrown in edge functions', async
     );
     expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
     expect(stderr).toMatch(
-      /Failed to complete request to .+ socket hang up/g
+      /Error! Failed to complete request to .+ socket hang up/g
 
       // TESTING CI; WILL REMOVE
       // /Error! Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
@@ -165,7 +165,10 @@ test('[vercel dev] should handle startup errors thrown in edge functions', async
       /Failed to instantiate edge runtime: intentional startup error/g
     );
     expect(stderr).toMatch(
-      /Error! Failed to complete request to \/api\/edge-error-startup: Error: socket hang up/g
+      /Failed to complete request to \/api\/edge-error-startup/g
+
+      // TESTING CI; WILL REMOVE
+      // /Error! Failed to complete request to \/api\/edge-error-startup: Error: socket hang up/g
     );
   } finally {
     await dev.kill('SIGTERM');
