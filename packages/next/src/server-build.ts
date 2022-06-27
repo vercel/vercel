@@ -906,6 +906,20 @@ export async function serverBuild({
               },
             ],
           },
+          // normalize "/index" from "/_next/data/index.json" to -> just "/"
+          // as matches a rewrite sources will expect just "/"
+          {
+            src: path.join('^/', entryDirectory, '/index'),
+            has: [
+              {
+                type: 'header',
+                key: 'x-nextjs-data',
+              },
+            ],
+            dest: path.join('/', entryDirectory),
+            ...(isOverride ? { override: true } : {}),
+            continue: true,
+          },
         ]
       : [];
   };
@@ -914,7 +928,30 @@ export async function serverBuild({
     return isNextDataServerResolving
       ? [
           {
-            src: path.join('^/', entryDirectory, '((?!_next/).*)$'),
+            src: path.join('^/', entryDirectory, '$'),
+            has: [
+              {
+                type: 'header',
+                key: 'x-nextjs-data',
+              },
+            ],
+            dest: `${path.join(
+              '/',
+              entryDirectory,
+              '/_next/data/',
+              buildId,
+              '/index.json'
+            )}`,
+            continue: true,
+            ...(isOverride ? { override: true } : {}),
+          },
+          // handle non-trailing slash
+          {
+            src: path.join(
+              '^/',
+              entryDirectory,
+              '((?!_next/)(?:.*[^/]|.*))/?$'
+            ),
             has: [
               {
                 type: 'header',
