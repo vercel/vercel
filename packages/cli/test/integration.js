@@ -1353,6 +1353,69 @@ test('[vc projects] should create a project successfully', async t => {
   t.is(exitCode2, 0, formatOutput({ stderr2, stdout2 }));
 });
 
+test('connect a git provider', async t => {
+  const projectDir = fixture('link-and-connect-github');
+  const projectName = `connect-git-provider-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  await vcLink(t, projectDir);
+
+  const connect = execa(binaryPath, ['projects', 'connect', ...defaultArgs], {
+    cwd: projectDir,
+  });
+
+  await waitForPrompt(connect, chunk =>
+    /Set up and deploy [^?]+\?/.test(chunk)
+  );
+  connect.stdin.write('yes\n');
+
+  await waitForPrompt(connect, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  connect.stdin.write('\n');
+
+  await waitForPrompt(connect, chunk =>
+    chunk.includes('Link to existing project?')
+  );
+  connect.stdin.write('no\n');
+
+  await waitForPrompt(connect, chunk =>
+    chunk.includes(`What’s your project’s name? (${projectName})`)
+  );
+  connect.stdin.write(`\n`);
+
+  await waitForPrompt(connect, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  connect.stdin.write('\n');
+
+  await waitForPrompt(connect, chunk =>
+    chunk.includes('Want to modify these settings?')
+  );
+  connect.stdin.write('no\n');
+
+  const output = await connect;
+  t.is(output.exitCode, 0, formatOutput(output));
+
+  const include = new RegExp(/> Connected .*[\s\S]/);
+  t.true(
+    include.test(connect.stdout),
+    `Expected: ${include}\n\nReceived instead:\n${connect.stdout}\n${connect.stderr}`
+  );
+
+  const res = await fetch(`https://api.vercel.com/v4/projects/${projectName}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  const project = await res.json();
+  // This repo should be changed, maybe put in the Vercel org.
+  t.is(
+    project.link.repo,
+    'MatthewStanciu/git-connect-test',
+    JSON.stringify(project, null, 2)
+  );
+});
+
 test('deploy with metadata containing "=" in the value', async t => {
   const target = fixture('static-v2-meta');
 
