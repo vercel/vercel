@@ -20,6 +20,8 @@ import getUser from '../util/get-user';
 import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
 import getTeams from '../util/teams/get-teams';
+import { ensureLink } from '../util/link-project';
+import getScope from '../util/get-scope';
 
 const help = () => {
   console.log(`
@@ -38,6 +40,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    -y, --yes                      Skip the confirmation prompt
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -109,6 +112,7 @@ export default async function main(client: Client) {
       '--next': Number,
       '-N': '--next',
       '--prod': Boolean,
+      '--yes': Boolean,
     });
   } catch (err) {
     handleError(err);
@@ -134,6 +138,7 @@ export default async function main(client: Client) {
   const all = argv['--all'];
   const filterProd = argv['--prod'];
   const inspect = argv['--inspect'];
+  const yes = argv['--yes'] || false;
 
   if (argv._[0] === 'list' || argv._[0] === 'ls') {
     argv._.shift();
@@ -162,7 +167,7 @@ export default async function main(client: Client) {
   const { path } = pathValidation;
 
   // retrieve `project` and `org` from .vercel
-  const link = await getLinkedProject(client, path);
+  let link = await getLinkedProject(client, path);
 
   if (link.status === 'error') {
     return link.exitCode;
@@ -178,23 +183,18 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  if (status === 'not_linked' && !app) {
-    output.log(
-      `Looks like this directory isn't linked to a Vercel deployment. Please run ${getCommandName(
-        'link'
-      )} to link it.`
-    );
-    return 0;
-  }
-
-  // At this point `org` should be populated
-  if (!org) {
-    throw new Error(`"org" is not defined`);
+  if (status === 'not_linked' && !app && !all) {
+    const linkedProject = await ensureLink('list', client, path, yes);
+    if (typeof linkedProject === 'number') {
+      return linkedProject;
+    }
+    link.org = linkedProject.org;
+    link.project = linkedProject.project;
   }
 
   const meta = parseMeta(argv['--meta']);
 
-  let contextName = null;
+  let { contextName } = await getScope(client);
 
   let teams;
   try {
@@ -222,10 +222,12 @@ export default async function main(client: Client) {
       client.config.currentTeam = undefined;
     }
   } else {
-    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+    client.config.currentTeam = org?.type === 'team' ? org.id : undefined;
   }
 
-  contextName = argv['--scope'] ? argv['--scope'] : org.slug;
+  if (client.config.currentTeam && org) {
+    contextName = org.slug;
+  }
 
   const isUserScope = user.username === contextName;
 
