@@ -179,6 +179,10 @@ async function compileUserCode(entrypoint: string) {
           event.request = request;
 
           let edgeHandler = module.exports.default;
+          if (!edgeHandler) {
+            throw new Error('No default export was found. Add a default export to handle requests.');
+          }
+
           let response = await edgeHandler(event.request, event);
 
           return event.respondWith(response);
