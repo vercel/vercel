@@ -1471,8 +1471,13 @@ export default class DevServer {
           {
             headers: middlewareReqHeaders,
             method: req.method,
+            redirect: 'manual',
           }
         );
+
+        // Apply status code from middleware invocation,
+        // for i.e. redirects or a custom 404 page
+        res.statusCode = middlewareRes.status;
 
         let rewritePath = '';
         let contentType = '';

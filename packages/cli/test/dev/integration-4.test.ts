@@ -469,3 +469,18 @@ test(
     );
   })
 );
+
+test(
+  '[vercel dev] Middleware that redirects',
+  testFixtureStdio('middleware-redirect', async (testPath: any) => {
+    await testPath(302, '/', null, {
+      location: 'https://vercel.com/',
+    });
+    await testPath(302, '/home', null, {
+      location: 'https://vercel.com/home',
+    });
+    await testPath(302, '/?foo=bar', null, {
+      location: 'https://vercel.com/?foo=bar',
+    });
+  })
+);

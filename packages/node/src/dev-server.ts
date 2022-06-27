@@ -187,6 +187,7 @@ async function createEdgeEventHandler(
 
   return async function (request: IncomingMessage) {
     const response = await fetch(server.url, {
+      redirect: 'manual',
       method: 'post',
       body: await serializeRequest(request),
     });
