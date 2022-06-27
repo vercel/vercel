@@ -23,7 +23,7 @@ test('[vercel dev] should support edge functions', async () => {
 
     const body = { hello: 'world' };
 
-    let res = await fetch(`http://localhost:${port}/api/edge-function`, {
+    let res = await fetch(`http://localhost:${port}/api/edge-success`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -36,7 +36,7 @@ test('[vercel dev] should support edge functions', async () => {
     // are set up; so, we test that they are all passed through properly
     expect(await res.json()).toMatchObject({
       headerContentType: 'application/json',
-      url: `http://localhost:${port}/api/edge-function`,
+      url: `http://localhost:${port}/api/edge-success`,
       method: 'POST',
       body: '{"hello":"world"}',
       decamelized: 'some_camel_case_thing',
@@ -48,14 +48,71 @@ test('[vercel dev] should support edge functions', async () => {
   }
 });
 
-test('[vercel dev] should handle errors thrown in edge functions', async () => {
+test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
+  const dir = fixture('edge-function');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const body = { hello: 'world' };
+
+    let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    validateResponseHeaders(res);
+
+    expect(await res.status).toBe(500);
+    expect(await res.text()).toBe(
+      'responding with intentional 500 from user code'
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle runtime errors thrown in edge functions', async () => {
   const dir = fixture('edge-function-error');
   const { dev, port, readyResolver } = await testFixture(dir);
 
   try {
     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/edge-function`, {
+    let res = await fetch(`http://localhost:${port}/api/edge-error-runtime`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
+    expect(stderr).toMatch(
+      /Error! Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle config errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-error-config`, {
       method: 'GET',
       headers: {
         Accept:
@@ -70,10 +127,109 @@ test('[vercel dev] should handle errors thrown in edge functions', async () => {
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
     expect(stdout).toMatch(
-      /Unhandled rejection: Error: intentional error from inside an edge function/g
+      /Invalid function runtime "invalid-runtime-value" for "api\/edge-error-config.js". Valid runtimes are: \["experimental-edge"\]/g
     );
     expect(stderr).toMatch(
-      /Error! Failed to complete request to \/api\/edge-function: Error: socket hang up/g
+      /Error! Failed to complete request to \/api\/edge-error-config: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle startup errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-error-startup`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stdout).toMatch(
+      /Failed to instantiate edge runtime: intentional startup error/g
+    );
+    expect(stderr).toMatch(
+      /Error! Failed to complete request to \/api\/edge-error-startup: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle syntax errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-error-syntax`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stdout).toMatch(
+      /Failed to instantiate edge runtime: Module parse failed: Unexpected token/g
+    );
+    expect(stderr).toMatch(
+      /Error! Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle import errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(
+      `http://localhost:${port}/api/edge-error-unknown-import`,
+      {
+        method: 'GET',
+        headers: {
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      }
+    );
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stdout).toMatch(
+      /Failed to instantiate edge runtime: Code generation from strings disallowed for this context/g
+    );
+    expect(stderr).toMatch(
+      /Error! Failed to complete request to \/api\/edge-error-unknown-import: Error: socket hang up/g
     );
   } finally {
     await dev.kill('SIGTERM');

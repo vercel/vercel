@@ -74,13 +74,24 @@ import { Readable } from 'stream';
 import type { Bridge } from '@vercel/node-bridge/bridge';
 import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
-import { streamToBuffer } from '@vercel/build-utils';
+import { streamToBuffer, debug } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
 import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import ncc from '@vercel/ncc';
 import fetch from 'node-fetch';
+
+function logError(error: Error) {
+  console.error(error.message);
+  if (error.stack) {
+    // only show the stack trace if debug is enabled
+    // because it points to internals, not user code
+    const errorPrefixLength = 'Error: '.length;
+    const errorMessageLength = errorPrefixLength + error.message.length;
+    debug(error.stack.substring(errorMessageLength + 1));
+  }
+}
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -136,63 +147,105 @@ async function serializeRequest(message: IncomingMessage) {
   });
 }
 
+async function compileUserCode(entrypoint: string) {
+  try {
+    const buildResult = await ncc(entrypoint, {
+      target: 'es2022',
+    });
+    const userCode = buildResult.code;
+
+    return `
+      ${userCode};
+
+      addEventListener('fetch', async (event) => {
+        try {
+          let serializedRequest = await event.request.text();
+          let requestDetails = JSON.parse(serializedRequest);
+
+          let body;
+
+          if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
+            body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
+          }
+
+          let requestUrl = requestDetails.headers['x-forwarded-proto'] + '://' + requestDetails.headers['x-forwarded-host'] + requestDetails.url;
+
+          let request = new Request(requestUrl, {
+            headers: requestDetails.headers,
+            method: requestDetails.method,
+            body: body
+          });
+
+          event.request = request;
+
+          let edgeHandler = module.exports.default;
+          let response = await edgeHandler(event.request, event);
+
+          return event.respondWith(response);
+        } catch (error) {
+          // we can't easily show a meaningful stack trace
+          // so, stick to just the error message for now
+          event.respondWith(new Response(error.message, {
+            status: 500,
+            headers: {
+              'x-handled-from': 'edge-wrapper'
+            }
+          }));
+        }
+      })`;
+  } catch (error) {
+    // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
+    // So, stick with just the message for now.
+    console.log(`Failed to instantiate edge runtime: ${error.message}`);
+    return undefined;
+  }
+}
+
+async function createEdgeRuntime(userCode: string | undefined) {
+  try {
+    if (!userCode) {
+      return undefined;
+    }
+
+    const edgeRuntime = new EdgeRuntime({
+      initialCode: userCode,
+      extend: (context: Primitives) => {
+        Object.assign(context, {
+          __dirname: '',
+          module: {
+            exports: {},
+          },
+        });
+        return context;
+      },
+    });
+
+    const server = await runServer({ runtime: edgeRuntime });
+    exitHook(server.close);
+
+    return server;
+  } catch (error) {
+    // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
+    // So, stick with just the message for now.
+    console.log(`Failed to instantiate edge runtime: ${error.message}`);
+    return undefined;
+  }
+}
+
 async function createEdgeEventHandler(
   entrypoint: string
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const buildResult = await ncc(entrypoint, { target: 'es2022' });
-  const userCode = buildResult.code;
-
-  const initialCode = `
-    ${userCode};
-
-    addEventListener('fetch', async (event) => {
-      try {
-        let serializedRequest = await event.request.text();
-        let requestDetails = JSON.parse(serializedRequest);
-
-        let body;
-
-        if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
-          body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
-        }
-
-        let requestUrl = requestDetails.headers['x-forwarded-proto'] + '://' + requestDetails.headers['x-forwarded-host'] + requestDetails.url;
-
-        let request = new Request(requestUrl, {
-          headers: requestDetails.headers,
-          method: requestDetails.method,
-          body: body
-        });
-
-        event.request = request;
-
-        let edgeHandler = module.exports.default;
-        let response = await edgeHandler(event.request, event);
-
-        return event.respondWith(response);
-      } catch (error) {
-        event.respondWith(new Response(error.stack, {
-          status: 500
-        }));
-      }
-    })`;
-
-  const edgeRuntime = new EdgeRuntime({
-    initialCode,
-    extend: (context: Primitives) => {
-      Object.assign(context, {
-        __dirname: '',
-        module: {
-          exports: {},
-        },
-      });
-      return context;
-    },
-  });
-  const server = await runServer({ runtime: edgeRuntime });
-  exitHook(server.close);
+  const userCode = await compileUserCode(entrypoint);
+  const server = await createEdgeRuntime(userCode);
 
   return async function (request: IncomingMessage) {
+    if (!server) {
+      // this error state is already logged, but we have to wait until here to exit the process
+      // this matches the serverless function bridge launcher's behavior when
+      // an error is thrown in the function
+      process.exit(1);
+    }
+
     const response = await fetch(server.url, {
       method: 'post',
       body: await serializeRequest(request),
@@ -200,7 +253,9 @@ async function createEdgeEventHandler(
 
     const body = await response.text();
 
-    if (response.status >= 500) {
+    const isUserError =
+      response.headers.get('x-handled-from') === 'edge-wrapper';
+    if (isUserError && response.status >= 500) {
       // this error was "unhandled" from the user code's perspective
       console.log(`Unhandled rejection: ${body}`);
 
@@ -219,12 +274,19 @@ async function createEdgeEventHandler(
 }
 
 const validRuntimes = ['experimental-edge'];
-function parseRuntime(entrypoint: string): string | undefined {
+function parseRuntime(
+  entrypoint: string,
+  entryPointPath: string
+): string | undefined {
   const project = new Project();
-  const staticConfig = getConfig(project, entrypoint);
+  const staticConfig = getConfig(project, entryPointPath);
   const runtime = staticConfig?.runtime;
   if (runtime && !validRuntimes.includes(runtime)) {
-    throw new Error(`Invalid function runtime for "${entrypoint}": ${runtime}`);
+    throw new Error(
+      `Invalid function runtime "${runtime}" for "${entrypoint}". Valid runtimes are: ${JSON.stringify(
+        validRuntimes
+      )}`
+    );
   }
 
   return runtime;
@@ -234,15 +296,17 @@ async function createEventHandler(
   entrypoint: string,
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const runtime = parseRuntime(entrypoint);
+  const entryPointPath = join(process.cwd(), entrypoint!);
+  const runtime = parseRuntime(entrypoint, entryPointPath);
   if (runtime === 'experimental-edge') {
-    return createEdgeEventHandler(entrypoint);
+    return createEdgeEventHandler(entryPointPath);
   }
 
-  return createServerlessEventHandler(entrypoint, options);
+  return createServerlessEventHandler(entryPointPath, options);
 }
 
 let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;
+let handlerEventError: Error;
 
 async function main() {
   const config = JSON.parse(process.env.VERCEL_DEV_CONFIG || '{}');
@@ -258,8 +322,12 @@ async function main() {
   const proxyServer = createServer(onDevRequest);
   await listen(proxyServer, 0, '127.0.0.1');
 
-  const entryPointPath = join(process.cwd(), entrypoint!);
-  handleEvent = await createEventHandler(entryPointPath, { shouldAddHelpers });
+  try {
+    handleEvent = await createEventHandler(entrypoint!, { shouldAddHelpers });
+  } catch (error) {
+    logError(error);
+    handlerEventError = error;
+  }
 
   const address = proxyServer.address();
   if (typeof process.send === 'function') {
@@ -288,6 +356,13 @@ export async function onDevRequest(
   req: IncomingMessage,
   res: ServerResponse
 ): Promise<void> {
+  if (handlerEventError) {
+    // this error state is already logged, but we have to wait until here to exit the process
+    // this matches the serverless function bridge launcher's behavior when
+    // an error is thrown in the function
+    process.exit(1);
+  }
+
   if (!handleEvent) {
     res.statusCode = 500;
     res.end('Bridge is not ready, please try again');
@@ -325,6 +400,6 @@ export function fixConfigDev(config: { compilerOptions: any }): void {
 }
 
 main().catch(err => {
-  console.error(err);
+  logError(err);
   process.exit(1);
 });

@@ -3,5 +3,7 @@ export const config = {
 };
 
 export default async function edge(request, event) {
-  throw new Error('intentional error from inside an edge function');
+  return new Response('responding with intentional 500 from user code', {
+    status: 500,
+  });
 }

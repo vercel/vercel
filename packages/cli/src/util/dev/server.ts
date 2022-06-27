@@ -1741,7 +1741,10 @@ export default class DevServer {
             isDev: true,
             requestPath,
             devCacheDir,
-            env: { ...envConfigs.runEnv },
+            env: {
+              ...envConfigs.runEnv,
+              VERCEL_BUILDER_DEBUG: this.output.debugEnabled ? '1' : undefined,
+            },
             buildEnv: { ...envConfigs.buildEnv },
           },
         });
