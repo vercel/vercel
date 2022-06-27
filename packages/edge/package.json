@@ -1,0 +1,16 @@
+{
+  "name": "@vercel/edge",
+  "version": "0.0.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format esm,cjs",
+    "prepublishOnly": "yarn build"
+  },
+  "devDependencies": {
+    "typescript": "4.7.4",
+    "tsup": "6.1.2"
+  }
+}
