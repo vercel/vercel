@@ -74,7 +74,7 @@ import { Readable } from 'stream';
 import type { Bridge } from '@vercel/node-bridge/bridge';
 import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
-import { streamToBuffer, debug } from '@vercel/build-utils';
+import { Config, streamToBuffer, debug } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
 import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
 import { getConfig } from '@vercel/static-config';
@@ -251,6 +251,7 @@ async function createEdgeEventHandler(
     }
 
     const response = await fetch(server.url, {
+      redirect: 'manual',
       method: 'post',
       body: await serializeRequest(request),
     });
@@ -298,11 +299,16 @@ function parseRuntime(
 
 async function createEventHandler(
   entrypoint: string,
+  config: Config,
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const entryPointPath = join(process.cwd(), entrypoint!);
   const runtime = parseRuntime(entrypoint, entryPointPath);
-  if (runtime === 'experimental-edge') {
+  
+  // `middleware.js`/`middleware.ts` file is always run as
+  // an Edge Function, otherwise needs to be opted-in via
+  // `export const config = { runtime: 'experimental-edge' }`
+  if (config.middleware === true || runtime === 'experimental-edge') {
     return createEdgeEventHandler(entryPointPath);
   }
 
@@ -327,7 +333,8 @@ async function main() {
   await listen(proxyServer, 0, '127.0.0.1');
 
   try {
-    handleEvent = await createEventHandler(entrypoint!, { shouldAddHelpers });
+    const entryPointPath = join(process.cwd(), entrypoint!);
+    handleEvent = await createEventHandler(entryPointPath, config, { shouldAddHelpers });
   } catch (error) {
     logError(error);
     handlerEventError = error;
