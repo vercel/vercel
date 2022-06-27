@@ -123,14 +123,19 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
 
     const { stdout, stderr } = await dev.kill('SIGTERM');
 
+    console.log('%%%%%%%%%%%');
+    console.log('stderr: ', stderr);
+    console.log('stdout: ', stdout);
+    console.log('%%%%%%%%%%%');
+
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-config: Error: socket hang up/g
-    );
     expect(stdout).toMatch(
       /Invalid function runtime "invalid-runtime-value" for "api\/edge-error-config.js". Valid runtimes are: \["experimental-edge"\]/g
+    );
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-error-config: Error: socket hang up/g
     );
   } finally {
     await dev.kill('SIGTERM');
