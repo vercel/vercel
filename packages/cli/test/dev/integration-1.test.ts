@@ -93,6 +93,11 @@ test('[vercel dev] should handle runtime errors thrown in edge functions', async
 
     const { stdout, stderr } = await dev.kill('SIGTERM');
 
+    // TESTING CI: WILL REMOVE
+    await new Promise(resolve => {
+      setTimeout(resolve, 500);
+    });
+
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
