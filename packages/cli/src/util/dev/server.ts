@@ -1458,6 +1458,9 @@ export default class DevServer {
       }
 
       if (startMiddlewareResult) {
+        const { port, pid } = startMiddlewareResult;
+        this.devServerPids.add(pid);
+
         const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
 
         // Add the Vercel platform proxy request headers
@@ -1466,74 +1469,78 @@ export default class DevServer {
           middlewareReqHeaders.set(name, value);
         }
 
-        const middlewareRes = await fetch(
-          `http://127.0.0.1:${startMiddlewareResult.port}${parsed.path}`,
-          {
-            headers: middlewareReqHeaders,
-            method: req.method,
-            redirect: 'manual',
-          }
-        );
-
-        // Apply status code from middleware invocation,
-        // for i.e. redirects or a custom 404 page
-        res.statusCode = middlewareRes.status;
-
-        let rewritePath = '';
-        let contentType = '';
-        let shouldContinue = false;
-        const skipMiddlewareHeaders = new Set([
-          'date',
-          'connection',
-          'content-length',
-          'transfer-encoding',
-        ]);
-        for (const [name, value] of middlewareRes.headers) {
-          if (name === 'x-middleware-next') {
-            shouldContinue = value === '1';
-          } else if (name === 'x-middleware-rewrite') {
-            rewritePath = value;
-            shouldContinue = true;
-          } else if (name === 'content-type') {
-            contentType = value;
-          } else if (!skipMiddlewareHeaders.has(name)) {
-            // Any other kind of response header should be included
-            // on both the incoming HTTP request (for when proxying
-            // to another function) and the outgoing HTTP response.
-            res.setHeader(name, value);
-            req.headers[name] = value;
-          }
-        }
-
-        if (!shouldContinue) {
-          const middlewareBody = await middlewareRes.buffer();
-          this.setResponseHeaders(res, requestId);
-          if (middlewareBody.length > 0) {
-            res.setHeader('content-length', middlewareBody.length);
-            if (contentType) {
-              res.setHeader('content-type', contentType);
+        try {
+          const middlewareRes = await fetch(
+            `http://127.0.0.1:${port}${parsed.path}`,
+            {
+              headers: middlewareReqHeaders,
+              method: req.method,
+              redirect: 'manual',
             }
-            res.end(middlewareBody);
-          } else {
-            res.end();
-          }
-          return;
-        }
-
-        if (rewritePath) {
-          // TODO: add validation?
-          debug(`Detected rewrite path from middleware: "${rewritePath}"`);
-          prevUrl = rewritePath;
-
-          // Retain orginal pathname, but override query parameters from the rewrite
-          const beforeRewriteUrl = req.url || '/';
-          const rewriteUrlParsed = url.parse(beforeRewriteUrl, true);
-          delete rewriteUrlParsed.search;
-          rewriteUrlParsed.query = url.parse(rewritePath, true).query;
-          req.url = url.format(rewriteUrlParsed);
-          debug(
-            `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
           );
+
+          // Apply status code from middleware invocation,
+          // for i.e. redirects or a custom 404 page
+          res.statusCode = middlewareRes.status;
+
+          let rewritePath = '';
+          let contentType = '';
+          let shouldContinue = false;
+          const skipMiddlewareHeaders = new Set([
+            'date',
+            'connection',
+            'content-length',
+            'transfer-encoding',
+          ]);
+          for (const [name, value] of middlewareRes.headers) {
+            if (name === 'x-middleware-next') {
+              shouldContinue = value === '1';
+            } else if (name === 'x-middleware-rewrite') {
+              rewritePath = value;
+              shouldContinue = true;
+            } else if (name === 'content-type') {
+              contentType = value;
+            } else if (!skipMiddlewareHeaders.has(name)) {
+              // Any other kind of response header should be included
+              // on both the incoming HTTP request (for when proxying
+              // to another function) and the outgoing HTTP response.
+              res.setHeader(name, value);
+              req.headers[name] = value;
+            }
+          }
+
+          if (!shouldContinue) {
+            const middlewareBody = await middlewareRes.buffer();
+            this.setResponseHeaders(res, requestId);
+            if (middlewareBody.length > 0) {
+              res.setHeader('content-length', middlewareBody.length);
+              if (contentType) {
+                res.setHeader('content-type', contentType);
+              }
+              res.end(middlewareBody);
+            } else {
+              res.end();
+            }
+            return;
+          }
+
+          if (rewritePath) {
+            // TODO: add validation?
+            debug(`Detected rewrite path from middleware: "${rewritePath}"`);
+            prevUrl = rewritePath;
+
+            // Retain orginal pathname, but override query parameters from the rewrite
+            const beforeRewriteUrl = req.url || '/';
+            const rewriteUrlParsed = url.parse(beforeRewriteUrl, true);
+            delete rewriteUrlParsed.search;
+            rewriteUrlParsed.query = url.parse(rewritePath, true).query;
+            req.url = url.format(rewriteUrlParsed);
+            debug(
+              `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
+            );
+          }
+        } finally {
+          this.killBuilderDevServer(pid);
         }
       }
     }
