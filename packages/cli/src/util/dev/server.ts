@@ -1445,14 +1445,12 @@ export default class DevServer {
           err.link = 'https://vercel.link/command-not-found';
         }
 
-        this.output.prettyError(err);
-
         await this.sendError(
           req,
           res,
           requestId,
-          'NO_RESPONSE_FROM_FUNCTION',
-          502
+          'EDGE_FUNCTION_INVOCATION_FAILED',
+          500
         );
         return;
       }
