@@ -98,10 +98,7 @@ test('[vercel dev] should handle runtime errors thrown in edge functions', async
     );
     expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
     expect(stderr).toMatch(
-      /Error! Failed to complete request to .+ socket hang up/g
-
-      // TESTING CI; WILL REMOVE
-      // /Error! Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
+      /Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
     );
   } finally {
     await dev.kill('SIGTERM');
@@ -133,7 +130,7 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
       /Invalid function runtime "invalid-runtime-value" for "api\/edge-error-config.js". Valid runtimes are: \["experimental-edge"\]/g
     );
     expect(stderr).toMatch(
-      /Error! Failed to complete request to \/api\/edge-error-config: Error: socket hang up/g
+      /Failed to complete request to \/api\/edge-error-config: Error: socket hang up/g
     );
   } finally {
     await dev.kill('SIGTERM');
@@ -165,10 +162,7 @@ test('[vercel dev] should handle startup errors thrown in edge functions', async
       /Failed to instantiate edge runtime: intentional startup error/g
     );
     expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-startup/g
-
-      // TESTING CI; WILL REMOVE
-      // /Error! Failed to complete request to \/api\/edge-error-startup: Error: socket hang up/g
+      /Failed to complete request to \/api\/edge-error-startup: Error: socket hang up/g
     );
   } finally {
     await dev.kill('SIGTERM');
@@ -200,7 +194,7 @@ test('[vercel dev] should handle syntax errors thrown in edge functions', async 
       /Failed to instantiate edge runtime: Module parse failed: Unexpected token/g
     );
     expect(stderr).toMatch(
-      /Error! Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
+      /Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
     );
   } finally {
     await dev.kill('SIGTERM');
@@ -235,7 +229,7 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
       /Failed to instantiate edge runtime: Code generation from strings disallowed for this context/g
     );
     expect(stderr).toMatch(
-      /Error! Failed to complete request to \/api\/edge-error-unknown-import: Error: socket hang up/g
+      /Failed to complete request to \/api\/edge-error-unknown-import: Error: socket hang up/g
     );
   } finally {
     await dev.kill('SIGTERM');
@@ -270,7 +264,7 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
       /No default export was found. Add a default export to handle requests./g
     );
     expect(stderr).toMatch(
-      /Error! Failed to complete request to \/api\/edge-error-no-handler: Error: socket hang up/g
+      /Failed to complete request to \/api\/edge-error-no-handler: Error: socket hang up/g
     );
   } finally {
     await dev.kill('SIGTERM');
