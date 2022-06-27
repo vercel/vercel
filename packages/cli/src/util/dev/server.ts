@@ -1427,7 +1427,6 @@ export default class DevServer {
             config: middleware.config || {},
             meta: {
               isDev: true,
-              //requestPath,
               devCacheDir,
               env: { ...envConfigs.runEnv },
               buildEnv: { ...envConfigs.buildEnv },
