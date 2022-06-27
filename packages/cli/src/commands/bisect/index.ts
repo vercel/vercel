@@ -97,7 +97,7 @@ export default async function main(client: Client): Promise<number> {
     run = resolve(run);
   }
 
-  bad = validateUrl(bad);
+  bad = normalizeURL(bad);
   let parsed = parse(bad);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
@@ -118,7 +118,7 @@ export default async function main(client: Client): Promise<number> {
 
   const badDeploymentPromise = getDeployment(client, bad).catch(err => err);
 
-  good = validateUrl(good);
+  good = normalizeURL(good);
   parsed = parse(good);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
@@ -370,11 +370,8 @@ function hasScheme(url: string): Boolean {
   return url.startsWith('http://') || url.startsWith('https://');
 }
 
-function validateUrl(url: string): string {
-  if (!hasScheme(url)) {
-    return `https://${url}`;
-  }
-  return url;
+function normalizeURL(url: string): string {
+  return hasScheme(url) ? url : `https://${url}`;
 }
 
 function getDeployment(
