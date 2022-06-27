@@ -503,17 +503,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
-    'link-and-connect-github': {
-      '.vercel/project.json': JSON.stringify({
-        orgId: '.',
-        projectId: '.',
-        settings: {
-          framework: null,
-        },
-      }),
-      '.git/config':
-        '[remote "origin"]\n    url = https://github.com/MatthewStanciu/git-connect-test\n',
-    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {
