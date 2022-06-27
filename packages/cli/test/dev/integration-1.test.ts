@@ -121,17 +121,12 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
     });
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill('SIGTERM');
-
-    console.log('%%%%%%%%%%%');
-    console.log('stderr: ', stderr);
-    console.log('stdout: ', stdout);
-    console.log('%%%%%%%%%%%');
+    const { stderr } = await dev.kill('SIGTERM');
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(
+    expect(stderr).toMatch(
       /Invalid function runtime "invalid-runtime-value" for "api\/edge-error-config.js". Valid runtimes are: \["experimental-edge"\]/g
     );
     expect(stderr).toMatch(
