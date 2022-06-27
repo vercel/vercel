@@ -22,7 +22,6 @@ import { join } from 'path';
 import { Team, User } from '../types';
 import confirm from '../util/input/confirm';
 import { Output } from '../util/output';
-import { emoji, prependEmoji } from '../util/emoji';
 
 const e = encodeURIComponent;
 
@@ -220,13 +219,10 @@ async function run({
         connectedOrg === gitOrg &&
         connectedRepo === repo;
       if (isSameRepo) {
-        output.print(
-          `${prependEmoji(
-            `${chalk.cyan(
-              connectedRepoPath
-            )} is already connected to your project.`,
-            emoji('warning')
-          )}\n`
+        output.log(
+          `${chalk.cyan(
+            connectedRepoPath
+          )} is already connected to your project.`
         );
         return 1;
       }

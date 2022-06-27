@@ -47,14 +47,6 @@ export async function connectGitProvider(
             repo
           )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
         );
-      } else if (err.message.includes('connect github first')) {
-        client.output.error(
-          `Failed to link ${chalk.cyan(
-            repo
-          )}. You need to add a Login Connection to your Git provider first. Visit ${chalk.cyan(
-            `https://vercel.com/docs/concepts/personal-accounts/login-connections`
-          )} to learn how to do this.`
-        );
       } else {
         client.output.error(
           `Failed to connect a Git provider repo.\nFetch url: ${fetchUrl}\n${err}`
