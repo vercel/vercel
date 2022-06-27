@@ -206,7 +206,7 @@ describe('projects', () => {
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
         expect(client.outputBuffer).toContain(
-          `❗️  user/repo is already connected to your project.\n`
+          `> user/repo is already connected to your project.\n`
         );
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
