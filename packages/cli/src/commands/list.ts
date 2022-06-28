@@ -16,10 +16,8 @@ import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { Deployment } from '../types';
-import getUser from '../util/get-user';
 import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
-import getTeams from '../util/teams/get-teams';
 import { ensureLink } from '../util/link-project';
 import getScope from '../util/get-scope';
 
@@ -119,8 +117,6 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const user = await getUser(client);
-
   const { output, config } = client;
 
   const { print, log, error, note, debug, spinner } = output;
@@ -139,6 +135,8 @@ export default async function main(client: Client) {
   const filterProd = argv['--prod'];
   const inspect = argv['--inspect'];
   const yes = argv['--yes'] || false;
+
+  const meta = parseMeta(argv['--meta']);
 
   if (argv._[0] === 'list' || argv._[0] === 'ls') {
     argv._.shift();
@@ -183,6 +181,8 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  // If there's no linked project and user doesn't pass `app` or `all` args,
+  // prompt to link their current directory.
   if (status === 'not_linked' && !app && !all) {
     const linkedProject = await ensureLink('list', client, path, yes);
     if (typeof linkedProject === 'number') {
@@ -192,44 +192,16 @@ export default async function main(client: Client) {
     link.project = linkedProject.project;
   }
 
-  const meta = parseMeta(argv['--meta']);
+  let { contextName, team } = await getScope(client);
 
-  let { contextName } = await getScope(client);
-
-  let teams;
-  try {
-    teams = await getTeams(client);
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      error(err.message);
-      return 1;
-    }
-  }
-  if (teams && argv['--scope']) {
-    const teamSlug: string = argv['--scope'];
-    const team = teams.filter(team => team.slug === teamSlug)[0];
-    if (team) {
-      client.config.currentTeam = team.id;
-    } else {
-      if (!all && !appArg) {
-        print(
-          `You can only set a custom scope when you add the ${chalk.cyan(
-            '`--all`'
-          )} flag or specify a project.`
-        );
-        return 0;
-      }
-      client.config.currentTeam = undefined;
-    }
+  // If user passed in a custom scope, update the current team & context name
+  if (argv['--scope']) {
+    client.config.currentTeam = team?.id || undefined;
+    if (team?.slug) contextName = team.slug;
   } else {
     client.config.currentTeam = org?.type === 'team' ? org.id : undefined;
+    if (org?.slug) contextName = org.slug;
   }
-
-  if (client.config.currentTeam && org) {
-    contextName = org.slug;
-  }
-
-  const isUserScope = user.username === contextName;
 
   const { currentTeam } = config;
 
@@ -354,7 +326,7 @@ export default async function main(client: Client) {
   if (app && !all) {
     tablePrint = `${table(
       [
-        (isUserScope
+        (team
           ? [
               'age',
               inspect ? 'inspect url' : 'deployment url',
@@ -379,7 +351,7 @@ export default async function main(client: Client) {
                 : `${getDeployUrl(dep, inspect)}`,
               stateString(dep.state),
               chalk.gray(getDeploymentDuration(dep)),
-              isUserScope ? '' : chalk.gray(dep.creator.username),
+              team ? '' : chalk.gray(dep.creator.username),
             ],
           ])
           // flatten since the previous step returns a nested
@@ -392,8 +364,8 @@ export default async function main(client: Client) {
           ),
       ],
       {
-        align: isUserScope ? ['l', 'l', 'l', 'l'] : ['l', 'l', 'l', 'l', 'l'],
-        hsep: ' '.repeat(isUserScope ? 4 : 5),
+        align: team ? ['l', 'l', 'l', 'l'] : ['l', 'l', 'l', 'l', 'l'],
+        hsep: ' '.repeat(team ? 4 : 5),
         stringLength: strlen,
       }
     ).replace(/^/gm, '  ')}\n`;
