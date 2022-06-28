@@ -22,7 +22,7 @@ describe('list', () => {
     try {
       process.chdir(cwd);
 
-      const user = await useUser();
+      const user = useUser();
       const team = useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
       teamSlug = team[0].slug;
       const project = useProject({
@@ -77,7 +77,6 @@ describe('list', () => {
 
       client.setArgv('--all');
       await list(client);
-      console.log(client.outputBuffer);
       const { project, org } = getDataFromIntro(
         client.outputBuffer.split('\n')[0]
       );
