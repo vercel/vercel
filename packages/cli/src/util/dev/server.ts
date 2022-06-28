@@ -1430,6 +1430,7 @@ export default class DevServer {
             meta: {
               isDev: true,
               devCacheDir,
+              requestUrl: req.url,
               env: { ...envConfigs.runEnv },
               buildEnv: { ...envConfigs.buildEnv },
             },
