@@ -245,7 +245,8 @@ async function createEdgeRuntime(userCode: string | undefined) {
   } catch (error) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
-    console.log(`Failed to instantiate edge runtime: ${error.message}`);
+    console.error('Failed to instantiate edge runtime.');
+    logError(error);
     return undefined;
   }
 }
