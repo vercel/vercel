@@ -21,7 +21,6 @@
     "default-server.js"
   ],
   "dependencies": {
-    "@remix-run/vercel": "1.4.3",
     "@vercel/nft": "0.19.1"
   },
   "devDependencies": {
