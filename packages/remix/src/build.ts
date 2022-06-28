@@ -99,7 +99,7 @@ export const build: BuildV2 = async ({
         `Warning: Moving "${REMIX_RUNTIME_ADAPTER_NAME}" from \`devDependencies\` to \`dependencies\`. You should commit this change.`
       );
       modified = true;
-    } else if (!('@remix-run/vercel' in dependencies)) {
+    } else if (!(REMIX_RUNTIME_ADAPTER_NAME in dependencies)) {
       dependencies[REMIX_RUNTIME_ADAPTER_NAME] = REMIX_RUNTIME_ADAPTER_VERSION;
       console.log(
         `Warning: Adding "${REMIX_RUNTIME_ADAPTER_NAME}" v${REMIX_RUNTIME_ADAPTER_VERSION} to \`dependencies\`. You should commit this change.`
