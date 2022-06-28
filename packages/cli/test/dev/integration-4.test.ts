@@ -508,18 +508,10 @@ test(
 
 test(
   '[vercel dev] Middleware with `matchers` config',
-  testFixtureStdio(
-    'middleware-matchers',
-    async (testPath: any) => {
-      // TODO: remove once latest `@vercel/node` is shipped to stable with `matchers` support (fails because `directoryListing`)
-      //await testPath(404, '/');
-      await testPath(404, '/another');
-      await testPath(200, '/about/page', 'middleware response');
-      await testPath(200, '/dashboard/home', 'middleware response');
-    },
-    {
-      // TODO: remove once latest `@vercel/node` is shipped to stable with `matchers` support
-      skipDeploy: true,
-    }
-  )
+  testFixtureStdio('middleware-matchers', async (testPath: any) => {
+    await testPath(404, '/');
+    await testPath(404, '/another');
+    await testPath(200, '/about/page', 'middleware response');
+    await testPath(200, '/dashboard/home', 'middleware response');
+  })
 );
