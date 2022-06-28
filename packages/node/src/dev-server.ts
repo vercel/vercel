@@ -184,8 +184,14 @@ async function compileUserCode(entrypoint: string) {
           }
 
           let response = await edgeHandler(event.request, event);
+          let responseBlob = await response.blob();
 
-          return event.respondWith(response);
+          response.headers.set('content-length', responseBlob.size.toString());
+
+          event.respondWith(new Response(responseBlob, {
+            status: response.status,
+            headers: response.headers
+          }));
         } catch (error) {
           // we can't easily show a meaningful stack trace
           // so, stick to just the error message for now
@@ -256,13 +262,13 @@ async function createEdgeEventHandler(
       body: await serializeRequest(request),
     });
 
-    const body = await response.text();
+    const bodyBuffer = await response.buffer();
 
     const isUserError =
       response.headers.get('x-vercel-failed') === 'edge-wrapper';
     if (isUserError && response.status >= 500) {
       // this error was "unhandled" from the user code's perspective
-      console.log(`Unhandled rejection: ${body}`);
+      console.log(`Unhandled rejection: ${bodyBuffer.toString('utf8')}`);
 
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
@@ -272,8 +278,8 @@ async function createEdgeEventHandler(
     return {
       statusCode: response.status,
       headers: response.headers.raw(),
-      body,
-      encoding: 'utf8',
+      body: bodyBuffer.toString('base64'),
+      encoding: 'base64',
     };
   };
 }
