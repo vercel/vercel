@@ -18,7 +18,7 @@ describe('list', () => {
   let teamSlug: string = '';
 
   it('should get deployments from a project linked by a directory', async () => {
-    const cwd = fixture('link');
+    const cwd = fixture('with-team');
     try {
       process.chdir(cwd);
 
@@ -62,7 +62,7 @@ describe('list', () => {
     }
   });
   it('should get all deployments in the project scope', async () => {
-    const cwd = fixture('all');
+    const cwd = fixture('with-team');
     try {
       process.chdir(cwd);
 
@@ -70,8 +70,8 @@ describe('list', () => {
       useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
       useProject({
         ...defaultProject,
-        id: 'proj-all',
-        name: 'proj-all',
+        id: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
+        name: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
       });
       const deployment = useDeployment({ creator: user });
 
@@ -98,7 +98,7 @@ describe('list', () => {
     }
   });
   it('should get the deployments for a specified project', async () => {
-    const cwd = fixture('specify-project');
+    const cwd = fixture('with-team');
     try {
       process.chdir(cwd);
 
@@ -106,8 +106,8 @@ describe('list', () => {
       useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
       useProject({
         ...defaultProject,
-        id: 'specify-project',
-        name: 'specify-project',
+        id: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
+        name: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
       });
       const deployment = useDeployment({ creator: user });
 
