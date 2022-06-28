@@ -79,8 +79,9 @@ import exitHook from 'exit-hook';
 import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import ncc from '@vercel/ncc';
+import esbuild from 'esbuild';
 import fetch from 'node-fetch';
+import { TextDecoder } from 'util';
 
 function logError(error: Error) {
   console.error(error.message);
@@ -149,10 +150,22 @@ async function serializeRequest(message: IncomingMessage) {
 
 async function compileUserCode(entrypoint: string) {
   try {
-    const buildResult = await ncc(entrypoint, {
-      target: 'es2022',
+    const result = await esbuild.build({
+      platform: 'node',
+      target: 'node14',
+      sourcemap: 'inline',
+      bundle: true,
+      entryPoints: [entrypoint],
+      write: false, // operate in memory
+      format: 'cjs',
     });
-    const userCode = buildResult.code;
+
+    const compiledFile = result.outputFiles?.[0];
+    if (!compiledFile) {
+      throw new Error(`Compilation of ${entrypoint} produced no output files.`);
+    }
+
+    const userCode = new TextDecoder().decode(compiledFile.contents);
 
     return `
       ${userCode};
@@ -200,7 +213,8 @@ async function compileUserCode(entrypoint: string) {
   } catch (error) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
-    console.log(`Failed to instantiate edge runtime: ${error.message}`);
+    console.error(`Failed to instantiate edge runtime.`);
+    logError(error);
     return undefined;
   }
 }
@@ -231,7 +245,8 @@ async function createEdgeRuntime(userCode: string | undefined) {
   } catch (error) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
-    console.log(`Failed to instantiate edge runtime: ${error.message}`);
+    console.error('Failed to instantiate edge runtime.');
+    logError(error);
     return undefined;
   }
 }
