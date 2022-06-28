@@ -304,7 +304,7 @@ async function createEventHandler(
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const entryPointPath = join(process.cwd(), entrypoint!);
   const runtime = parseRuntime(entrypoint, entryPointPath);
-  
+
   // `middleware.js`/`middleware.ts` file is always run as
   // an Edge Function, otherwise needs to be opted-in via
   // `export const config = { runtime: 'experimental-edge' }`
@@ -333,8 +333,9 @@ async function main() {
   await listen(proxyServer, 0, '127.0.0.1');
 
   try {
-    const entryPointPath = join(process.cwd(), entrypoint!);
-    handleEvent = await createEventHandler(entryPointPath, config, { shouldAddHelpers });
+    handleEvent = await createEventHandler(entrypoint!, config, {
+      shouldAddHelpers,
+    });
   } catch (error) {
     logError(error);
     handlerEventError = error;

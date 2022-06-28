@@ -48,6 +48,14 @@ test('[vercel dev] should support edge functions', async () => {
   }
 });
 
+test(
+  '[vercel dev] edge functions respond properly the same as production',
+  testFixtureStdio('edge-function', async (testPath: any) => {
+    await testPath(500, '/api/edge-500-response');
+    await testPath(200, '/api/edge-success');
+  })
+);
+
 test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
   const dir = fixture('edge-function');
   const { dev, port, readyResolver } = await testFixture(dir);

@@ -492,6 +492,12 @@ export const startDevServer: StartDevServer = async opts => {
   });
 
   const { pid } = child;
+  if (!pid) {
+    throw new Error(
+      `Child Process has no "pid" when forking: "${devServerPath}"`
+    );
+  }
+
   const onMessage = once<{ port: number }>(child, 'message');
   const onExit = once.spread<[number, string | null]>(child, 'exit');
   const result = await Promise.race([onMessage, onExit]);
