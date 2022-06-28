@@ -161,14 +161,13 @@ test('[vercel dev] should handle startup errors thrown in edge functions', async
     });
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill('SIGTERM');
+    const { stderr } = await dev.kill('SIGTERM');
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(
-      /Failed to instantiate edge runtime: intentional startup error/g
-    );
+    expect(stderr).toMatch(/Failed to instantiate edge runtime./g);
+    expect(stderr).toMatch(/intentional startup error/g);
     expect(stderr).toMatch(
       /Failed to complete request to \/api\/edge-error-startup: Error: socket hang up/g
     );
@@ -193,14 +192,13 @@ test('[vercel dev] should handle syntax errors thrown in edge functions', async 
     });
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill('SIGTERM');
+    const { stderr } = await dev.kill('SIGTERM');
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(
-      /Failed to instantiate edge runtime: Module parse failed: Unexpected token/g
-    );
+    expect(stderr).toMatch(/Failed to instantiate edge runtime./g);
+    expect(stderr).toMatch(/Unexpected end of file/g);
     expect(stderr).toMatch(
       /Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
     );
@@ -228,13 +226,13 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
     );
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill('SIGTERM');
+    const { stderr } = await dev.kill('SIGTERM');
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(
-      /Failed to instantiate edge runtime: Code generation from strings disallowed for this context/g
+    expect(stderr).toMatch(
+      /Could not resolve "unknown-module-893427589372458934795843"/g
     );
     expect(stderr).toMatch(
       /Failed to complete request to \/api\/edge-error-unknown-import: Error: socket hang up/g
@@ -244,7 +242,7 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
   }
 });
 
-test('[vercel dev] should handle import errors thrown in edge functions', async () => {
+test('[vercel dev] should handle missing handler errors thrown in edge functions', async () => {
   const dir = fixture('edge-function-error');
   const { dev, port, readyResolver } = await testFixture(dir);
 
