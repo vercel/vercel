@@ -9,7 +9,7 @@ describe('normalize-url', () => {
     const normalizedUrl = normalizeURL('https://vercel.com');
     expect(normalizedUrl).toEqual('https://vercel.com');
   });
-  it('should not add anything to a url that starts iwth http', () => {
+  it('should not add anything to a url that starts with http', () => {
     const normalizedUrl = normalizeURL('http://vercel.com');
     expect(normalizedUrl).toEqual('http://vercel.com');
   });
