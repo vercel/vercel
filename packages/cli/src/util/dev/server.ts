@@ -1108,6 +1108,7 @@ export default class DevServer {
         view = errorTemplate({
           http_status_code: statusCode,
           http_status_description,
+          error_code,
           request_id: requestId,
         });
       }
@@ -1405,6 +1406,7 @@ export default class DevServer {
     let statusCode: number | undefined;
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
+    let middlewarePid: number | undefined;
 
     // Run the middleware file, if present, and apply any
     // mutations to the incoming request based on the
@@ -1432,41 +1434,20 @@ export default class DevServer {
               buildEnv: { ...envConfigs.buildEnv },
             },
           });
-      } catch (err) {
-        // `startDevServer()` threw an error. Most likely this means the dev
-        // server process exited before sending the port information message
-        // (missing dependency at runtime, for example).
-        if (err.code === 'ENOENT') {
-          err.message = `Command not found: ${chalk.cyan(
-            err.path,
-            ...err.spawnargs
-          )}\nPlease ensure that ${cmd(err.path)} is properly installed`;
-          err.link = 'https://vercel.link/command-not-found';
-        }
 
-        await this.sendError(
-          req,
-          res,
-          requestId,
-          'EDGE_FUNCTION_INVOCATION_FAILED',
-          500
-        );
-        return;
-      }
+        if (startMiddlewareResult) {
+          const { port, pid } = startMiddlewareResult;
+          middlewarePid = pid;
+          this.devServerPids.add(pid);
 
-      if (startMiddlewareResult) {
-        const { port, pid } = startMiddlewareResult;
-        this.devServerPids.add(pid);
+          const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
 
-        const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
+          // Add the Vercel platform proxy request headers
+          const proxyHeaders = this.getProxyHeaders(req, requestId, true);
+          for (const [name, value] of nodeHeadersToFetchHeaders(proxyHeaders)) {
+            middlewareReqHeaders.set(name, value);
+          }
 
-        // Add the Vercel platform proxy request headers
-        const proxyHeaders = this.getProxyHeaders(req, requestId, true);
-        for (const [name, value] of nodeHeadersToFetchHeaders(proxyHeaders)) {
-          middlewareReqHeaders.set(name, value);
-        }
-
-        try {
           const middlewareRes = await fetch(
             `http://127.0.0.1:${port}${parsed.path}`,
             {
@@ -1547,8 +1528,30 @@ export default class DevServer {
               `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
             );
           }
-        } finally {
-          this.killBuilderDevServer(pid);
+        }
+      } catch (err) {
+        // `startDevServer()` threw an error. Most likely this means the dev
+        // server process exited before sending the port information message
+        // (missing dependency at runtime, for example).
+        if (err.code === 'ENOENT') {
+          err.message = `Command not found: ${chalk.cyan(
+            err.path,
+            ...err.spawnargs
+          )}\nPlease ensure that ${cmd(err.path)} is properly installed`;
+          err.link = 'https://vercel.link/command-not-found';
+        }
+
+        await this.sendError(
+          req,
+          res,
+          requestId,
+          'EDGE_FUNCTION_INVOCATION_FAILED',
+          500
+        );
+        return;
+      } finally {
+        if (middlewarePid) {
+          this.killBuilderDevServer(middlewarePid);
         }
       }
     }
@@ -1831,7 +1834,10 @@ export default class DevServer {
             isDev: true,
             requestPath,
             devCacheDir,
-            env: { ...envConfigs.runEnv },
+            env: {
+              ...envConfigs.runEnv,
+              VERCEL_BUILDER_DEBUG: this.output.debugEnabled ? '1' : undefined,
+            },
             buildEnv: { ...envConfigs.buildEnv },
           },
         });
@@ -2276,13 +2282,7 @@ function proxyPass(
         `Failed to complete request to ${req.url}: ${error}`
       );
       if (!res.headersSent) {
-        devServer.sendError(
-          req,
-          res,
-          requestId,
-          'NO_RESPONSE_FROM_FUNCTION',
-          502
-        );
+        devServer.sendError(req, res, requestId, 'FUNCTION_INVOCATION_FAILED');
       }
     }
   );

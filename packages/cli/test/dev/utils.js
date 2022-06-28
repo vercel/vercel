@@ -257,6 +257,10 @@ async function testFixture(directory, opts = {}, args = []) {
   dev.kill = async (...args) => {
     dev._kill(...args);
     await exitResolver;
+    return {
+      stdout,
+      stderr,
+    };
   };
 
   return {
