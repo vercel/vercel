@@ -16,6 +16,7 @@ import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
 import { Output } from '../../util/output';
 import { Deployment, PaginationOptions } from '../../types';
+import { normalizeURL } from '../../util/commands/bisect';
 
 interface DeploymentV6
   extends Pick<
@@ -364,14 +365,6 @@ export default async function main(client: Client): Promise<number> {
   output.print('\n');
 
   return 0;
-}
-
-function hasScheme(url: string): Boolean {
-  return url.startsWith('http://') || url.startsWith('https://');
-}
-
-function normalizeURL(url: string): string {
-  return hasScheme(url) ? url : `https://${url}`;
 }
 
 function getDeployment(
