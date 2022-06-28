@@ -84,7 +84,6 @@ export const build: BuildV2 = async ({
     start: workPath,
     filename: 'package.json',
   });
-  console.log({ packageJsonPath });
   if (packageJsonPath) {
     const packageJson: PackageJson = JSON.parse(
       await fs.readFile(packageJsonPath, 'utf8')
