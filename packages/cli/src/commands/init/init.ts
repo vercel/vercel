@@ -65,7 +65,7 @@ export default async function init(
     return extractExample(client, name, dir, force, 'v1');
   }
 
-  const found = await guess(exampleList, name);
+  const found = await guess(client, exampleList, name);
 
   if (typeof found === 'string') {
     return extractExample(client, found, dir, force);
@@ -194,7 +194,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
 /**
  * Guess which example user try to init
  */
-async function guess(exampleList: string[], name: string) {
+async function guess(client: Client, exampleList: string[], name: string) {
   const GuessError = new Error(
     `No example found for ${chalk.bold(name)}, run ${getCommandName(
       `init`
@@ -208,7 +208,7 @@ async function guess(exampleList: string[], name: string) {
   const found = didYouMean(name, exampleList, 0.7);
 
   if (typeof found === 'string') {
-    if (await promptBool(`Did you mean ${chalk.bold(found)}?`)) {
+    if (await promptBool(`Did you mean ${chalk.bold(found)}?`, client)) {
       return found;
     }
   } else {

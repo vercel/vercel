@@ -46,7 +46,7 @@ export default async function add(
 
   const addStamp = stamp();
   const { domain, data: argData } = parsedParams;
-  const data = await getDNSData(output, argData);
+  const data = await getDNSData(client, argData);
   if (!data) {
     output.log(`Aborted`);
     return 1;
