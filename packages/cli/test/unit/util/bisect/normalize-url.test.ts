@@ -1,4 +1,4 @@
-import { normalizeURL } from '../../../src/util/commands/bisect';
+import { normalizeURL } from '../../../../src/util/bisect/normalize-url';
 
 describe('normalize-url', () => {
   it('should add https to url without scheme', () => {
