@@ -16,6 +16,7 @@ import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
 import { Output } from '../../util/output';
 import { Deployment, PaginationOptions } from '../../types';
+import { normalizeURL } from '../../util/bisect/normalize-url';
 
 interface DeploymentV6
   extends Pick<
@@ -97,9 +98,7 @@ export default async function main(client: Client): Promise<number> {
     run = resolve(run);
   }
 
-  if (!bad.startsWith('https://')) {
-    bad = `https://${bad}`;
-  }
+  bad = normalizeURL(bad);
   let parsed = parse(bad);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
@@ -120,9 +119,7 @@ export default async function main(client: Client): Promise<number> {
 
   const badDeploymentPromise = getDeployment(client, bad).catch(err => err);
 
-  if (!good.startsWith('https://')) {
-    good = `https://${good}`;
-  }
+  good = normalizeURL(good);
   parsed = parse(good);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
