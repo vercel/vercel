@@ -6,27 +6,27 @@ import {
   CITY_HEADER_NAME,
   COUNTRY_HEADER_NAME,
   Geo,
-  getGeo,
-  getIp,
+  geolocation,
+  ipAddress,
   IP_HEADER_NAME,
   LATITUDE_HEADER_NAME,
   LONGITUDE_HEADER_NAME,
   REGION_HEADER_NAME,
 } from '../src';
 
-test('getIp returns the value from the header', () => {
+test('`ipAddress` returns the value from the header', () => {
   const req = new Request('https://example.vercel.sh', {
     headers: {
       [IP_HEADER_NAME]: '127.0.0.1',
     },
   });
-  expect(getIp(req)).toBe('127.0.0.1');
+  expect(ipAddress(req)).toBe('127.0.0.1');
 });
 
-describe('getGeo', () => {
+describe('`geolocation`', () => {
   test('returns an empty object if headers are not found', () => {
     const req = new Request('https://example.vercel.sh');
-    expect(getGeo(req)).toEqual({});
+    expect(geolocation(req)).toEqual({});
   });
 
   test('reads values from headers', () => {
@@ -39,7 +39,7 @@ describe('getGeo', () => {
         [REGION_HEADER_NAME]: 'fra1',
       },
     });
-    expect(getGeo(req)).toEqual<Geo>({
+    expect(geolocation(req)).toEqual<Geo>({
       city: 'Tel Aviv',
       country: 'Israel',
       latitude: '32.109333',

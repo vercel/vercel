@@ -58,7 +58,7 @@ function getHeader(request: Request, key: string): string | undefined {
  *
  * @see {@link IP_HEADER_NAME}
  */
-export function getIp(request: Request): string | undefined {
+export function ipAddress(request: Request): string | undefined {
   return getHeader(request, IP_HEADER_NAME);
 }
 
@@ -71,7 +71,7 @@ export function getIp(request: Request): string | undefined {
  * @see {@link LATITUDE_HEADER_NAME}
  * @see {@link LONGITUDE_HEADER_NAME}
  */
-export function getGeo(request: Request): Geo {
+export function geolocation(request: Request): Geo {
   return {
     city: getHeader(request, CITY_HEADER_NAME),
     country: getHeader(request, COUNTRY_HEADER_NAME),
