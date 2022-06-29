@@ -715,7 +715,7 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
   console.log = origLog;
 
   expect(logs).toContain(
-    'Max serverless function size was exceeded for 2 functions'
+    'Max serverless function size was exceeded for 1 function'
   );
   expect(logs).toContain(
     'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
@@ -801,37 +801,4 @@ it('Should provide lambda info when limit is hit for internal pages (server buil
   expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
   expect(logs).toMatch(/public\/big-image-1\.jpg/);
   expect(logs).toMatch(/public\/big-image-2\.jpg/);
-});
-
-it('Should provide lambda info when limit is hit (uncompressed)', async () => {
-  let logs = '';
-
-  const origLog = console.log;
-
-  console.log = function (...args) {
-    logs += args.join(' ');
-    origLog(...args);
-  };
-
-  try {
-    await runBuildLambda(
-      path.join(__dirname, 'test-limit-exceeded-404-static-files')
-    );
-  } catch (err) {
-    console.error(err);
-  }
-  console.log = origLog;
-
-  expect(logs).toContain(
-    'Max serverless function size was exceeded for 1 function'
-  );
-  expect(logs).toContain(
-    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
-  );
-  expect(logs).toContain(`Serverless Function's page: api/hello.js`);
-  expect(logs).toMatch(
-    /Large Dependencies.*?Uncompressed size.*?Compressed size/
-  );
-  expect(logs).toMatch(/data\.txt/);
-  expect(logs).toMatch(/\.next\/server\/pages/);
 });

@@ -1289,8 +1289,8 @@ export async function getPageLambdaGroups(
     [page: string]: PseudoFile;
   },
   tracedPseudoLayer: PseudoLayer,
-  initialPseudoLayer: PseudoLayerResult,
-  initialPseudoLayerUncompressed: number,
+  initialPseudoLayerSize: number,
+  initialPseudoLayerUncompressedSize: number,
   lambdaCompressedByteLimit: number,
   internalPages: string[],
   pageExtensions?: string[]
@@ -1341,10 +1341,10 @@ export async function getPageLambdaGroups(
         }
 
         const underUncompressedLimit =
-          newTracedFilesUncompressedSize <
+          newTracedFilesUncompressedSize + initialPseudoLayerUncompressedSize <
           MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
         const underCompressedLimit =
-          newTracedFilesSize <
+          newTracedFilesSize + initialPseudoLayerSize <
           lambdaCompressedByteLimit - LAMBDA_RESERVED_COMPRESSED_SIZE;
 
         return underUncompressedLimit && underCompressedLimit;
@@ -1359,9 +1359,9 @@ export async function getPageLambdaGroups(
         pages: [page],
         ...opts,
         isPrerenders: isPrerenderRoute,
-        pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
-        pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
-        pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
+        pseudoLayerBytes: 0,
+        pseudoLayerUncompressedBytes: 0,
+        pseudoLayer: {},
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
