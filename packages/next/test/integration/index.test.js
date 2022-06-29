@@ -109,9 +109,7 @@ it('should build using server build', async () => {
   const lambdas = new Set();
   let totalLambdas = 0;
 
-  for (const key of Object.keys(output)) {
-    const item = output[key];
-
+  for (const item of Object.values(output)) {
     if (item.type === 'Lambda') {
       totalLambdas += 1;
       lambdas.add(item);
@@ -903,9 +901,7 @@ it('Should de-dupe correctly when limit is close (uncompressed)', async () => {
   const lambdas = new Set();
   let totalLambdas = 0;
 
-  for (const key of Object.keys(output)) {
-    const item = output[key];
-
+  for (const item of Object.values(output)) {
     if (item.type === 'Lambda') {
       totalLambdas += 1;
       lambdas.add(item);
