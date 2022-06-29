@@ -425,11 +425,8 @@ export async function serverBuild({
     const uncompressedInitialSize = Object.keys(
       initialPseudoLayer.pseudoLayer
     ).reduce((prev, cur) => {
-      return (
-        prev +
-          (initialPseudoLayer.pseudoLayer[cur] as PseudoFile)
-            .uncompressedSize || 0
-      );
+      const file = initialPseudoLayer.pseudoLayer[cur] as PseudoFile;
+      return prev + file.uncompressedSize || 0;
     }, 0);
 
     debug(
@@ -611,13 +608,6 @@ export async function serverBuild({
       }, {})
     );
 
-    const initialPseudoLayerSize = Object.keys(
-      initialPseudoLayer.pseudoLayer
-    ).reduce((prev, cur) => {
-      const file = initialPseudoLayer.pseudoLayer[cur] as PseudoFile;
-      return prev + file.uncompressedSize || 0;
-    }, 0);
-
     const pageExtensions = requiredServerFilesManifest.config?.pageExtensions;
 
     const pageLambdaGroups = await getPageLambdaGroups(
@@ -628,9 +618,9 @@ export async function serverBuild({
       pageTraces,
       compressedPages,
       tracedPseudoLayer.pseudoLayer,
-      initialPseudoLayer.pseudoLayerBytes,
-      initialPseudoLayerSize,
+      initialPseudoLayer,
       lambdaCompressedByteLimit,
+      uncompressedInitialSize,
       internalPages,
       pageExtensions
     );
@@ -643,8 +633,8 @@ export async function serverBuild({
       pageTraces,
       compressedPages,
       tracedPseudoLayer.pseudoLayer,
-      initialPseudoLayer.pseudoLayerBytes,
-      initialPseudoLayerSize,
+      initialPseudoLayer,
+      uncompressedInitialSize,
       lambdaCompressedByteLimit,
       internalPages
     );
@@ -682,7 +672,6 @@ export async function serverBuild({
       const lambda = await createLambdaFromPseudoLayers({
         files: launcherFiles,
         layers: [
-          initialPseudoLayer.pseudoLayer,
           group.pseudoLayer,
           [...group.pages, ...internalPages].reduce((prev, page) => {
             const pageFileName = path.normalize(

@@ -1528,7 +1528,7 @@ export const build: BuildV2 = async ({
         pageTraces,
         compressedPages,
         tracedPseudoLayer?.pseudoLayer || {},
-        0,
+        { pseudoLayer: {}, pseudoLayerBytes: 0 },
         0,
         lambdaCompressedByteLimit,
         // internal pages are already referenced in traces for serverless
@@ -1544,7 +1544,7 @@ export const build: BuildV2 = async ({
         pageTraces,
         compressedPages,
         tracedPseudoLayer?.pseudoLayer || {},
-        0,
+        { pseudoLayer: {}, pseudoLayerBytes: 0 },
         0,
         lambdaCompressedByteLimit,
         []
