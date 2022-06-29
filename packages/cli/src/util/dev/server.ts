@@ -329,6 +329,8 @@ export default class DevServer {
   ): Promise<void> {
     const name = relative(this.cwd, fsPath);
     try {
+      await this.getVercelConfig();
+
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
       const extensionless = this.getExtensionlessFile(name);
       if (extensionless) {
