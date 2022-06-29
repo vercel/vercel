@@ -132,7 +132,7 @@ export default async function main(client: Client) {
   }
 
   let { org, project, status } = link;
-  const appArg: string | undefined = argv._[0];
+  const appArg: string | undefined = argv._[1];
   let app: string | undefined = appArg || project?.name;
   let host: string | undefined = undefined;
 
