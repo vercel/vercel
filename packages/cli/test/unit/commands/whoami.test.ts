@@ -1,6 +1,7 @@
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import whoami from '../../../src/commands/whoami';
+import { Readable } from 'stream';
 
 describe('whoami', () => {
   it('should reject invalid arguments', async () => {
@@ -14,14 +15,14 @@ describe('whoami', () => {
     const user = useUser();
     const exitCode = await whoami(client);
     expect(exitCode).toEqual(0);
-    expect(client.outputBuffer).toEqual(`> ${user.username}\n`);
+    await expect(client.stderr).toWaitFor(`> ${user.username}\n`);
   });
 
   it('should print only the Vercel username when output is not a TTY', async () => {
     const user = useUser();
-    client.output.isTTY = false;
+    client.stdout.isTTY = undefined;
     const exitCode = await whoami(client);
     expect(exitCode).toEqual(0);
-    expect(client.outputBuffer).toEqual(`${user.username}\n`);
+    await expect(client.stdout).toWaitFor(`${user.username}\n`);
   });
 });

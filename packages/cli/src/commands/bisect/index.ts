@@ -14,7 +14,6 @@ import logo from '../../util/output/logo';
 import getArgs from '../../util/get-args';
 import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
-import { Output } from '../../util/output';
 import { Deployment, PaginationOptions } from '../../types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
 
@@ -86,10 +85,10 @@ export default async function main(client: Client): Promise<number> {
 
   let bad =
     argv['--bad'] ||
-    (await prompt(output, `Specify a URL where the bug occurs:`));
+    (await prompt(client, `Specify a URL where the bug occurs:`));
   let good =
     argv['--good'] ||
-    (await prompt(output, `Specify a URL where the bug does not occur:`));
+    (await prompt(client, `Specify a URL where the bug does not occur:`));
   let subpath = argv['--path'] || '';
   let run = argv['--run'] || '';
   const openEnabled = argv['--open'] || false;
@@ -143,7 +142,7 @@ export default async function main(client: Client): Promise<number> {
 
   if (!subpath) {
     subpath = await prompt(
-      output,
+      client,
       `Specify the URL subpath where the bug occurs:`
     );
   }
@@ -391,10 +390,10 @@ function getCommit(deployment: DeploymentV6) {
   return { sha, message };
 }
 
-async function prompt(output: Output, message: string): Promise<string> {
+async function prompt(client: Client, message: string): Promise<string> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const { val } = await inquirer.prompt({
+    const { val } = await client.prompt({
       type: 'input',
       name: 'val',
       message,
@@ -402,7 +401,7 @@ async function prompt(output: Output, message: string): Promise<string> {
     if (val) {
       return val;
     } else {
-      output.error('A value must be specified');
+      client.output.error('A value must be specified');
     }
   }
 }

@@ -442,3 +442,9 @@ export interface BuildOutput {
     layers?: string[];
   } | null;
 }
+
+export interface Stdio {
+  stdin: NodeJS.ReadStream;
+  stdout: NodeJS.WriteStream;
+  stderr: NodeJS.WriteStream;
+}

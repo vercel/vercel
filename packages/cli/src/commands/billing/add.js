@@ -127,7 +127,7 @@ export default async function ({ creditCards, clear = false, contextName }) {
     }
 
     console.log(''); // New line
-    const stopSpinner = wait('Saving card');
+    const stopSpinner = wait(process.stderr, 'Saving card');
 
     try {
       const res = await creditCards.add({

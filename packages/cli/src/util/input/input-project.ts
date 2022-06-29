@@ -16,6 +16,11 @@ export default async function inputProject(
   const { output } = client;
   const slugifiedName = slugify(detectedProjectName);
 
+  const prompt = inquirer.createPromptModule({
+    input: client.stdin,
+    output: client.stdout,
+  });
+
   // attempt to auto-detect a project to link
   let detectedProject = null;
   output.spinner('Searching for existing projects…', 1000);
@@ -79,10 +84,6 @@ export default async function inputProject(
     let project: Project | ProjectNotFound | null = null;
 
     while (!project || project instanceof ProjectNotFound) {
-      const prompt = inquirer.createPromptModule({
-        input: client.stdin,
-        output: client.stdout,
-      });
       const answers = await prompt({
         type: 'input',
         name: 'existingProjectName',
@@ -114,7 +115,7 @@ export default async function inputProject(
   let newProjectName: string | null = null;
 
   while (!newProjectName) {
-    const answers = await inquirer.prompt({
+    const answers = await prompt({
       type: 'input',
       name: 'newProjectName',
       message: `What’s your project’s name?`,

@@ -23,7 +23,7 @@ import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
 import commands from './commands';
 import pkg from './util/pkg';
-import createOutput from './util/output';
+import createOutput from './util/output/create-output';
 import cmd from './util/output/cmd';
 import info from './util/output/info';
 import error from './util/output/error';
@@ -109,7 +109,7 @@ const main = async () => {
   }
 
   const isDebugging = argv['--debug'];
-  const output = createOutput({ debug: isDebugging });
+  const output = createOutput({ stream: process.stderr, debug: isDebugging });
 
   debug = output.debug;
 
@@ -389,6 +389,7 @@ const main = async () => {
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
+    stderr: output.stream,
     output,
     config,
     authConfig,
@@ -798,7 +799,5 @@ process.on('uncaughtException', handleUnexpected);
 main()
   .then(exitCode => {
     process.exitCode = exitCode;
-    // @ts-ignore - "nowExit" is a non-standard event name
-    process.emit('nowExit');
   })
   .catch(handleUnexpected);

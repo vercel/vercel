@@ -6,20 +6,25 @@ describe('MockClient', () => {
     // true
     let confirmedPromise = confirm(client, 'Do the thing?', false);
 
-    client.stdin.write('yes\n');
+    //await client.expectStderr('Do the thing? [y/Nn');
+    //expect(await client.expectStderr('Do the thing? [y/Nn')).
+    await expect(client.stderr).toWaitFor('Do the thing? [y/N]');
 
-    client.stdout.setEncoding('utf8');
-    client.stdout.on('data', d => console.log({ d }));
+    client.stdin.write('yes\n');
 
     let confirmed = await confirmedPromise;
     expect(confirmed).toEqual(true);
 
+    //client.output.log('test');
+    console.log(client.stderr.write('test'));
+    await client.expectStderr('test');
     // false
-    confirmedPromise = confirm(client, 'Do the thing?', false);
+    //confirmedPromise = confirm(client, 'Do the thing?', true);
+    //await client.expectStderr('Do the thing? [Y/n]');
 
-    client.stdin.write('no\n');
+    //client.stdin.write('no\n');
 
-    confirmed = await confirmedPromise;
-    expect(confirmed).toEqual(false);
+    //confirmed = await confirmedPromise;
+    //expect(confirmed).toEqual(false);
   });
 });

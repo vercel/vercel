@@ -1,3 +1,6 @@
+// Register Jest matcher extensions for CLI unit tests
+import './matchers';
+
 import chalk from 'chalk';
 import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
@@ -14,24 +17,24 @@ export type Scenario = Router;
 
 export class MockClient extends Client {
   mockServer?: Server;
-  mockOutput: jest.Mock<void, Parameters<Output['print']>>;
   private app: Express;
   scenario: Scenario;
 
   constructor() {
     super({
-      argv: [],
       // Gets populated in `startMockServer()`
       apiUrl: '',
+
+      // Gets re-initialized for every test in `reset()`
+      argv: [],
       authConfig: {},
-      stdin: new PassThrough(),
-      stdout: new PassThrough(),
-      output: new Output(),
       config: {},
       localConfig: {},
+      stdin: new PassThrough(),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+      output: new Output(),
     });
-
-    this.mockOutput = jest.fn();
 
     this.app = express();
     this.app.use(express.json());
@@ -61,29 +64,27 @@ export class MockClient extends Client {
     this.stdin.isTTY = true;
 
     this.stdout = new PassThrough();
+    this.stdout.setEncoding('utf8');
+    this.stdout.end = () => {};
+    this.stdout.pause();
     this.stdout.isTTY = true;
 
-    this.output = new Output();
-    this.mockOutput = jest.fn();
-    this.output.print = s => {
-      return this.mockOutput(s);
-    };
+    this.stderr = new PassThrough();
+    this.stderr.setEncoding('utf8');
+    this.stderr.end = () => {};
+    this.stderr.pause();
+    this.stderr.isTTY = true;
+
+    this._createPromptModule();
+
+    this.output = new Output({ stream: this.stderr });
 
     this.argv = [];
     this.authConfig = {};
     this.config = {};
     this.localConfig = {};
 
-    // Just make this one silent
-    this.output.spinner = () => {};
-
     this.scenario = Router();
-
-    this.output.isTTY = true;
-  }
-
-  get outputBuffer() {
-    return this.mockOutput.mock.calls.map(c => c[0]).join('');
   }
 
   async startMockServer() {
@@ -120,6 +121,50 @@ export class MockClient extends Client {
   useScenario(scenario: Scenario) {
     this.scenario = scenario;
   }
+
+  expectOutput(stream: NodeJS.WriteStream, test: string, timeout = 1000) {
+    return new Promise<void>((resolve, reject) => {
+      let output = '';
+      let timeoutId = setTimeout(onTimeout, timeout);
+
+      function onData(data: string) {
+        //console.log({ data });
+        output += data;
+        if (output.includes(test)) {
+          cleanup();
+          resolve();
+        }
+      }
+
+      function onTimeout() {
+        cleanup();
+        reject(
+          new Error(
+            `Expected output to contain ${JSON.stringify(
+              test
+            )}, got ${JSON.stringify(output)}`
+          )
+        );
+      }
+
+      function cleanup() {
+        clearTimeout(timeoutId);
+        stream.removeListener('data', onData);
+        stream.pause();
+      }
+
+      stream.on('data', onData);
+      stream.resume();
+    });
+  }
+
+  expectStderr(test: string) {
+    return this.expectOutput(this.stderr, test);
+  }
+
+  expectStdout(test: string) {
+    return this.expectOutput(this.stdout, test);
+  }
 }
 
 export const client = new MockClient();
@@ -135,3 +180,10 @@ beforeEach(() => {
 afterAll(async () => {
   await client.stopMockServer();
 });
+
+
+//expect.extend({
+//  async toWaitFor(received: NodeJS.WriteStream, test: string) {
+//
+//  }
+//})
