@@ -32,6 +32,8 @@ export interface ClientOptions {
   argv: string[];
   apiUrl: string;
   authConfig: AuthConfig;
+  stdin: NodeJS.ReadStream;
+  stdout: NodeJS.WriteStream;
   output: Output;
   config: GlobalConfig;
   localConfig?: VercelConfig;
@@ -45,6 +47,8 @@ export default class Client extends EventEmitter {
   argv: string[];
   apiUrl: string;
   authConfig: AuthConfig;
+  stdin: NodeJS.ReadStream;
+  stdout: NodeJS.WriteStream;
   output: Output;
   config: GlobalConfig;
   localConfig?: VercelConfig;
@@ -55,6 +59,8 @@ export default class Client extends EventEmitter {
     this.argv = opts.argv;
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
+    this.stdin = opts.stdin;
+    this.stdout = opts.stdout;
     this.output = opts.output;
     this.config = opts.config;
     this.localConfig = opts.localConfig;
