@@ -174,6 +174,14 @@ elif 'app' in __vc_variables:
         from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
 
+        def get_event_loop():
+            try:
+                return asyncio.get_running_loop()
+            except RuntimeError:
+                if sys.version_info < (3, 10):
+                    return asyncio.get_event_loop()
+                else:
+                    return asyncio.get_event_loop_policy().get_event_loop()
 
         class ASGICycleState(enum.Enum):
             REQUEST = enum.auto()
@@ -194,8 +202,8 @@ elif 'app' in __vc_variables:
                 ASGI instance using the connection scope.
                 Runs until the response is completely read from the application.
                 """
-                loop = asyncio.new_event_loop()
-                self.app_queue = asyncio.Queue(loop=loop)
+                loop = get_event_loop()
+                self.app_queue = asyncio.Queue(**({'loop': loop} if sys.version_info < (3, 10) else {}))
                 self.put_message({'type': 'http.request', 'body': body, 'more_body': False})
 
                 asgi_instance = app(self.scope, self.receive, self.send)
@@ -257,7 +265,51 @@ elif 'app' in __vc_variables:
                     self.response['body'] = base64.b64encode(self.body).decode('utf-8')
                     self.response['encoding'] = 'base64'
 
+        class Lifespan:
+            startup_event = asyncio.Event()
+            shutdown_event = asyncio.Event()
+            app_queue = asyncio.Queue()
+
+            def __init__(self, app):
+                self.app = app
+                
+            async def run(self):
+                try:
+                    await self.app({"type": "lifespan"}, self.receive, self.send)
+                finally:
+                    self.startup_event.set()
+                    self.shutdown_event.set()
+
+            async def send(self, message):
+                assert message["type"] in (
+                    "lifespan.startup.complete",
+                    "lifespan.shutdown.complete",
+                )
+
+                if message["type"] == "lifespan.startup.complete":
+                    self.startup_event.set()
+                elif message["type"] == "lifespan.shutdown.complete":
+                    self.shutdown_event.set()
+                else:  # pragma: no cover
+                    raise RuntimeError(
+                        f"Expected lifespan message type, received: {message['type']}"
+                    )
+
+            async def receive(self):
+                message = await self.app_queue.get()
+                return message
+
+            async def wait_startup(self):
+                await self.app_queue.put({"type": "lifespan.startup"})
+                await self.startup_event.wait()
+
+            async def wait_shutdown(self):
+                await self.app_queue.put({"type": "lifespan.shutdown"})
+                await self.shutdown_event.wait()
+
+        lifespan = None
         def vc_handler(event, context):
+            global lifespan
             payload = json.loads(event['body'])
 
             headers = payload.get('headers', {})
@@ -288,9 +340,17 @@ elif 'app' in __vc_variables:
                 'path': path,
                 'raw_path': path.encode(),
             }
+            if not lifespan:
+                lifespan = Lifespan(__vc_module.app)
+                loop = get_event_loop()
+                loop.create_task(lifespan.run())
+                loop.run_until_complete(lifespan.wait_startup())
 
             asgi_cycle = ASGICycle(scope)
             response = asgi_cycle(__vc_module.app, body)
+            if lifespan:
+                loop = get_event_loop()
+                loop.run_until_complete(lifespan.wait_shutdown())
             return response
 
 else:
