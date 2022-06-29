@@ -553,8 +553,8 @@ test('default command should warn when deploying with conflicting subdirectory',
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
-  const listHeader = /project +latest deployment +state +age +username/;
-  t.regex(stdout || '', listHeader); // ensure `list` command still ran
+  const listHeader = /No deployments found/;
+  t.regex(stderr || '', listHeader); // ensure `list` command still ran
 });
 
 test('deploy command should not warn when deploying with conflicting subdirectory and using --cwd', async t => {
@@ -577,8 +577,8 @@ test('deploy command should not warn when deploying with conflicting subdirector
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
-  const listHeader = /project +latest deployment +state +age +username/;
-  t.regex(stdout || '', listHeader); // ensure `list` command still ran
+  const listHeader = /No deployments found/;
+  t.regex(stderr || '', listHeader); // ensure `list` command still ran
 });
 
 test('default command should work with --cwd option', async t => {
