@@ -117,7 +117,7 @@ export default async function main(client: Client) {
   const { includeScheme } = config;
 
   let paths = [process.cwd()];
-  const pathValidation = await validatePaths(output, paths);
+  const pathValidation = await validatePaths(client, paths);
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
   }
