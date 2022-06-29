@@ -167,8 +167,8 @@ elif 'app' in __vc_variables:
     else:
         print('using Asynchronous Server Gateway Interface (ASGI)')
         # Originally authored by Jordan Eremieff and included under MIT license:
-        # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/mangum/__init__.py
-        # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
+        # https://github.com/erm/mangum/blob/07ce20a0e2f67c5c2593258a92c03fdc66d9edda/mangum/__init__.py
+        # https://github.com/erm/mangum/blob/07ce20a0e2f67c5c2593258a92c03fdc66d9edda/LICENSE
         import asyncio
         import enum
         from urllib.parse import urlparse
