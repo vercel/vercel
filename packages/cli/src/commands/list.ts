@@ -8,7 +8,6 @@ import cmd from '../util/output/cmd';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
 import strlen from '../util/strlen';
-import getScope from '../util/get-scope';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
@@ -16,6 +15,10 @@ import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { Deployment } from '../types';
+import validatePaths from '../util/validate-paths';
+import { getLinkedProject } from '../util/projects/link';
+import { ensureLink } from '../util/link-project';
+import getScope from '../util/get-scope';
 
 const help = () => {
   console.log(`
@@ -31,6 +34,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    -y, --yes                      Skip the confirmation prompt
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -42,11 +46,23 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} List all deployments
+  ${chalk.gray('–')} List all deployments for the currently linked project
 
     ${chalk.cyan(`$ ${getPkgName()} ls`)}
 
-  ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
+  ${chalk.gray(
+    '–'
+  )} List all projects in the scope (team) of the currently linked project
+
+      ${chalk.cyan(`$ ${getPkgName()} ls --all`)}
+
+    ${chalk.gray('–')} List all projects in team ${chalk.dim('`my-team`')}
+
+      ${chalk.cyan(`$ ${getPkgName()} ls --scope my-team --all`)}
+
+  ${chalk.gray('–')} List all deployments for the app ${chalk.dim(
+    '`my-app`'
+  )} in the currently linked project
 
     ${chalk.cyan(`$ ${getPkgName()} ls my-app`)}
 
@@ -67,10 +83,13 @@ export default async function main(client: Client) {
 
   try {
     argv = getArgs(client.argv.slice(2), {
+      '--all': Boolean,
+      '-a': '--all',
       '--meta': [String],
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
+      '--yes': Boolean,
     });
   } catch (err) {
     handleError(err);
@@ -86,21 +105,70 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  let app: string | undefined = argv._[1];
-  let host: string | undefined = undefined;
-
   if (argv['--help']) {
     help();
     return 2;
   }
 
-  const meta = parseMeta(argv['--meta']);
-  const { currentTeam, includeScheme } = config;
+  const all = argv['--all'];
+  const yes = argv['--yes'] || false;
 
-  let contextName = null;
+  const meta = parseMeta(argv['--meta']);
+  const { includeScheme } = config;
+
+  let paths = [process.cwd()];
+  const pathValidation = await validatePaths(output, paths);
+  if (!pathValidation.valid) {
+    return pathValidation.exitCode;
+  }
+
+  const { path } = pathValidation;
+
+  // retrieve `project` and `org` from .vercel
+  let link = await getLinkedProject(client, path);
+
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  let { org, project, status } = link;
+  const appArg: string | undefined = argv._[0];
+  let app: string | undefined = appArg || project?.name;
+  let host: string | undefined = undefined;
+
+  if (app && !isValidName(app)) {
+    error(`The provided argument "${app}" is not a valid project name`);
+    return 1;
+  }
+
+  // If there's no linked project and user doesn't pass `app` or `all` args,
+  // prompt to link their current directory.
+  if (status === 'not_linked' && !app && !all) {
+    const linkedProject = await ensureLink('list', client, path, yes);
+    if (typeof linkedProject === 'number') {
+      return linkedProject;
+    }
+    link.org = linkedProject.org;
+    link.project = linkedProject.project;
+  }
+
+  let { contextName, team } = await getScope(client);
+
+  // If user passed in a custom scope, update the current team & context name
+  if (argv['--scope']) {
+    client.config.currentTeam = team?.id || undefined;
+    if (team?.slug) contextName = team.slug;
+  } else {
+    client.config.currentTeam = org?.type === 'team' ? org.id : undefined;
+    if (org?.slug) contextName = org.slug;
+  }
+
+  const { currentTeam } = config;
 
   try {
     ({ contextName } = await getScope(client));
+
+    console.log('team: ', contextName);
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       error(err.message);
@@ -152,7 +220,10 @@ export default async function main(client: Client) {
   }
 
   debug('Fetching deployments');
-  const response = await now.list(app, {
+
+  console.log({ app });
+
+  const response = await now.list(all ? undefined : app, {
     version: 6,
     meta,
     nextTimestamp,
@@ -166,7 +237,7 @@ export default async function main(client: Client) {
     pagination: { count: number; next: number };
   } = response;
 
-  if (app && !deployments.length) {
+  if (app && !all && !deployments.length) {
     debug(
       'No deployments: attempting to find deployment that matches supplied app name'
     );
@@ -194,16 +265,17 @@ export default async function main(client: Client) {
     deployments = deployments.filter(deployment => deployment.url === host);
   }
 
+  // we don't output the table headers if we have no deployments
+  if (!deployments.length) {
+    log(`No deployments found.`);
+    return 0;
+  }
+
   log(
     `Deployments under ${chalk.bold(contextName)} ${elapsed(
       Date.now() - start
     )}`
   );
-
-  // we don't output the table headers if we have no deployments
-  if (!deployments.length) {
-    return 0;
-  }
 
   // information to help the user find other deployments or instances
   if (app == null) {
