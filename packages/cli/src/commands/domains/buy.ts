@@ -87,7 +87,8 @@ export default async function buy(
     !(await promptBool(
       `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
         period > 1 ? 's' : ''
-      }`})?`
+      }`})?`,
+      client
     ))
   ) {
     return 0;
@@ -99,7 +100,7 @@ export default async function buy(
       : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
           `$${price}`
         )}?`,
-    { defaultValue: true }
+    { ...client, defaultValue: true }
   );
 
   let buyResult;

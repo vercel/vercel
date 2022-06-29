@@ -187,6 +187,7 @@ export default async client => {
       if (cardId) {
         const label = `Are you sure that you to set this card as the default?`;
         const confirmation = await promptBool(label, {
+          ...client,
           trailing: '\n',
         });
 
@@ -262,7 +263,7 @@ export default async client => {
       // typed `vercel billing rm <some-id>`) is valid
       if (cardId) {
         const label = `Are you sure that you want to remove this card?`;
-        const confirmation = await promptBool(label);
+        const confirmation = await promptBool(label, client);
         if (!confirmation) {
           console.log('Aborted');
           break;
