@@ -1275,26 +1275,39 @@ export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * 1000 * 1000; // 250MB
 const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * 1000 * 1000; // 2.5MB
 const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * 1000; // 250KB
 
-export async function getPageLambdaGroups(
-  entryPath: string,
-  config: Config,
-  pages: string[],
-  prerenderRoutes: Set<string>,
+export async function getPageLambdaGroups({
+  entryPath,
+  config,
+  pages,
+  prerenderRoutes,
+  pageTraces,
+  compressedPages,
+  tracedPseudoLayer,
+  initialPseudoLayer,
+  initialPseudoLayerUncompressed,
+  lambdaCompressedByteLimit,
+  internalPages,
+  pageExtensions,
+}: {
+  entryPath: string;
+  config: Config;
+  pages: string[];
+  prerenderRoutes: Set<string>;
   pageTraces: {
     [page: string]: {
       [key: string]: FileFsRef;
     };
-  },
+  };
   compressedPages: {
     [page: string]: PseudoFile;
-  },
-  tracedPseudoLayer: PseudoLayer,
-  initialPseudoLayerSize: number,
-  initialPseudoLayerUncompressedSize: number,
-  lambdaCompressedByteLimit: number,
-  internalPages: string[],
-  pageExtensions?: string[]
-) {
+  };
+  tracedPseudoLayer: PseudoLayer;
+  initialPseudoLayer: PseudoLayerResult;
+  initialPseudoLayerUncompressed: number;
+  lambdaCompressedByteLimit: number;
+  internalPages: string[];
+  pageExtensions?: string[];
+}) {
   const groups: Array<LambdaGroup> = [];
 
   for (const page of pages) {
@@ -1341,10 +1354,10 @@ export async function getPageLambdaGroups(
         }
 
         const underUncompressedLimit =
-          newTracedFilesUncompressedSize + initialPseudoLayerUncompressedSize <
+          newTracedFilesUncompressedSize <
           MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
         const underCompressedLimit =
-          newTracedFilesSize + initialPseudoLayerSize <
+          newTracedFilesSize <
           lambdaCompressedByteLimit - LAMBDA_RESERVED_COMPRESSED_SIZE;
 
         return underUncompressedLimit && underCompressedLimit;
@@ -1359,9 +1372,9 @@ export async function getPageLambdaGroups(
         pages: [page],
         ...opts,
         isPrerenders: isPrerenderRoute,
-        pseudoLayerBytes: 0,
-        pseudoLayerUncompressedBytes: 0,
-        pseudoLayer: {},
+        pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
+        pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
+        pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
