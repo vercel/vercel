@@ -113,10 +113,13 @@ export class Output {
       if (this._spinner) {
         this._spinner.text = message;
       } else {
-        this._spinner = wait({
-          text: message,
-          stream: this.stream
-        }, delay);
+        this._spinner = wait(
+          {
+            text: message,
+            stream: this.stream,
+          },
+          delay
+        );
       }
     } else {
       this.print(`${message}\n`);

@@ -9,7 +9,7 @@ export interface StopSpinner {
 
 export default function wait(
   opts: ora.Options,
-  delay: number = 300,
+  delay: number = 300
 ): StopSpinner {
   let text = opts.text;
   let spinner: ora.Ora | null = null;

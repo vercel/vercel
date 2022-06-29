@@ -181,7 +181,6 @@ afterAll(async () => {
   await client.stopMockServer();
 });
 
-
 //expect.extend({
 //  async toWaitFor(received: NodeJS.WriteStream, test: string) {
 //
