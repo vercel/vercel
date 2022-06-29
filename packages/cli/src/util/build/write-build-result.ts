@@ -385,7 +385,7 @@ export async function* findDirs(
   }
   for (const path of paths) {
     const abs = join(dir, path);
-    const s = await fs.stat(abs);
+    const s = await fs.lstat(abs);
     if (s.isDirectory()) {
       if (path === name) {
         yield relative(root, abs);
