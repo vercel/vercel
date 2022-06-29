@@ -610,34 +610,34 @@ export async function serverBuild({
 
     const pageExtensions = requiredServerFilesManifest.config?.pageExtensions;
 
-    const pageLambdaGroups = await getPageLambdaGroups(
-      requiredServerFilesManifest.appDir || entryPath,
+    const pageLambdaGroups = await getPageLambdaGroups({
+      entryPath: requiredServerFilesManifest.appDir || entryPath,
       config,
-      nonApiPages,
+      pages: nonApiPages,
       prerenderRoutes,
       pageTraces,
       compressedPages,
-      tracedPseudoLayer.pseudoLayer,
+      tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       lambdaCompressedByteLimit,
-      uncompressedInitialSize,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
-      pageExtensions
-    );
+      pageExtensions,
+    });
 
-    const apiLambdaGroups = await getPageLambdaGroups(
-      requiredServerFilesManifest.appDir || entryPath,
+    const apiLambdaGroups = await getPageLambdaGroups({
+      entryPath: requiredServerFilesManifest.appDir || entryPath,
       config,
-      apiPages,
+      pages: apiPages,
       prerenderRoutes,
       pageTraces,
       compressedPages,
-      tracedPseudoLayer.pseudoLayer,
+      tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      uncompressedInitialSize,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
       lambdaCompressedByteLimit,
-      internalPages
-    );
+      internalPages,
+    });
 
     debug(
       JSON.stringify(

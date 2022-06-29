@@ -1520,35 +1520,35 @@ export const build: BuildV2 = async ({
     const pageLambdaGroups: Array<LambdaGroup> = [];
 
     if (isSharedLambdas) {
-      const initialPageLambdaGroups = await getPageLambdaGroups(
+      const initialPageLambdaGroups = await getPageLambdaGroups({
         entryPath,
         config,
-        nonApiPages,
-        new Set(),
+        pages: nonApiPages,
+        prerenderRoutes: new Set(),
         pageTraces,
         compressedPages,
-        tracedPseudoLayer?.pseudoLayer || {},
-        { pseudoLayer: {}, pseudoLayerBytes: 0 },
-        0,
+        tracedPseudoLayer: tracedPseudoLayer?.pseudoLayer || {},
+        initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
+        initialPseudoLayerUncompressed: 0,
         lambdaCompressedByteLimit,
         // internal pages are already referenced in traces for serverless
         // like builds
-        []
-      );
+        internalPages: [],
+      });
 
-      const initialApiLambdaGroups = await getPageLambdaGroups(
+      const initialApiLambdaGroups = await getPageLambdaGroups({
         entryPath,
         config,
-        apiPages,
-        new Set(),
+        pages: apiPages,
+        prerenderRoutes: new Set(),
         pageTraces,
         compressedPages,
-        tracedPseudoLayer?.pseudoLayer || {},
-        { pseudoLayer: {}, pseudoLayerBytes: 0 },
-        0,
+        tracedPseudoLayer: tracedPseudoLayer?.pseudoLayer || {},
+        initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
+        initialPseudoLayerUncompressed: 0,
         lambdaCompressedByteLimit,
-        []
-      );
+        internalPages: [],
+      });
 
       debug(
         JSON.stringify(

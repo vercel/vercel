@@ -105,6 +105,23 @@ it('should build using server build', async () => {
       log.includes('WARNING: Unable to find source file for page')
     )
   ).toBeFalsy();
+
+  const lambdas = new Set();
+  let totalLambdas = 0;
+
+  for (const key of Object.keys(output)) {
+    const item = output[key];
+
+    if (item.type === 'Lambda') {
+      totalLambdas += 1;
+      lambdas.add(item);
+    } else if (item.type === 'Prerender') {
+      lambdas.add(item.lambda);
+      totalLambdas += 1;
+    }
+  }
+  expect(lambdas.size).toBe(5);
+  expect(lambdas.size).toBeLessThan(totalLambdas);
 });
 
 it('should build custom error lambda correctly', async () => {
@@ -834,4 +851,69 @@ it('Should provide lambda info when limit is hit (uncompressed)', async () => {
   );
   expect(logs).toMatch(/data\.txt/);
   expect(logs).toMatch(/\.next\/server\/pages/);
+});
+
+it('Should de-dupe correctly when limit is close (uncompressed)', async () => {
+  const origLog = console.log;
+  const origError = console.error;
+  const caughtLogs = [];
+
+  console.log = function (...args) {
+    caughtLogs.push(args.join(' '));
+    origLog.apply(this, args);
+  };
+  console.error = function (...args) {
+    caughtLogs.push(args.join(' '));
+    origError.apply(this, args);
+  };
+
+  const {
+    buildResult: { output },
+  } = await runBuildLambda(
+    path.join(__dirname, 'test-limit-large-uncompressed-files')
+  );
+
+  console.log = origLog;
+  console.error = origError;
+
+  expect(output['index']).toBeDefined();
+  expect(output['another']).toBeDefined();
+  expect(output['api/hello']).toBeDefined();
+  expect(output['api/hello-1']).toBeDefined();
+  expect(output['api/hello-2']).toBeDefined();
+  expect(output['api/hello-3']).toBeDefined();
+  expect(output['api/hello-4']).toBeDefined();
+  expect(output['_app']).not.toBeDefined();
+  expect(output['_error']).not.toBeDefined();
+  expect(output['_document']).not.toBeDefined();
+
+  expect(output['index'] === output['another']).toBe(true);
+  expect(output['index'] !== output['api/hello']).toBe(true);
+  expect(output['api/hello'] === output['api/hello-1']).toBe(true);
+  expect(output['api/hello'] === output['api/hello-2']).toBe(true);
+  expect(output['api/hello'] === output['api/hello-3']).toBe(true);
+  expect(output['api/hello'] === output['api/hello-4']).toBe(true);
+
+  expect(
+    caughtLogs.some(log =>
+      log.includes('WARNING: Unable to find source file for page')
+    )
+  ).toBeFalsy();
+
+  const lambdas = new Set();
+  let totalLambdas = 0;
+
+  for (const key of Object.keys(output)) {
+    const item = output[key];
+
+    if (item.type === 'Lambda') {
+      totalLambdas += 1;
+      lambdas.add(item);
+    } else if (item.type === 'Prerender') {
+      lambdas.add(item.lambda);
+      totalLambdas += 1;
+    }
+  }
+  expect(lambdas.size).toBe(2);
+  expect(lambdas.size).toBeLessThan(totalLambdas);
 });
