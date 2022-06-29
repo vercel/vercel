@@ -167,8 +167,6 @@ export default async function main(client: Client) {
 
   try {
     ({ contextName } = await getScope(client));
-
-    console.log('team: ', contextName);
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       error(err.message);
@@ -220,8 +218,6 @@ export default async function main(client: Client) {
   }
 
   debug('Fetching deployments');
-
-  console.log({ app });
 
   const response = await now.list(all ? undefined : app, {
     version: 6,
@@ -288,7 +284,7 @@ export default async function main(client: Client) {
 
   print('\n');
 
-  console.log(
+  client.output.print(
     `${table(
       [
         ['project', 'latest deployment', 'state', 'age', 'username'].map(
@@ -342,7 +338,7 @@ function getProjectName(d: Deployment) {
 }
 
 // renders the state string
-function stateString(s: string) {
+export function stateString(s: string) {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);

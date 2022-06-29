@@ -157,6 +157,12 @@ export function useProject(project: Partial<Project> = defaultProject) {
 
     res.json({ envs });
   });
+  client.scenario.get(`/v4/projects`, (req, res) => {
+    res.json({
+      projects: [defaultProject],
+      pagination: null,
+    });
+  });
 
   return { project, envs };
 }
