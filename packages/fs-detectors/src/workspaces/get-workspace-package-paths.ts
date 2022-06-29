@@ -4,7 +4,6 @@ import glob from 'glob';
 import { DetectorFilesystem } from '../detectors/filesystem';
 import { Workspace } from './get-workspaces';
 import { getGlobFs } from './get-glob-fs';
-import { normalizePath } from '@vercel/build-utils';
 
 const posixPath = _path.posix;
 
@@ -55,6 +54,9 @@ type PackageJsonWithWorkspace = {
 type PnpmWorkspaces = {
   packages?: string[];
 };
+
+const isWin = process.platform === 'win32';
+const normalizePath = (p: string) => (isWin ? p.replace(/\\/g, '/') : p);
 
 async function getPackagePaths(
   packages: string[],
