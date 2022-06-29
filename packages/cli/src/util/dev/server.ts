@@ -36,12 +36,14 @@ import {
   StartDevServerResult,
   FileFsRef,
   PackageJson,
+  spawnCommand,
+} from '@vercel/build-utils';
+import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
-  spawnCommand,
   isOfficialRuntime,
-} from '@vercel/build-utils';
+} from '@vercel/fs-detectors';
 import frameworkList from '@vercel/frameworks';
 
 import cmd from '../output/cmd';
