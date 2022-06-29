@@ -312,6 +312,7 @@ function testFixtureStdio(
         console.log({
           stderr: linkResult.stderr,
           stdout: linkResult.stdout,
+          linkResult,
         });
         expect(linkResult.exitCode).toBe(0);
 
@@ -483,7 +484,7 @@ afterEach(async () => {
           process.kill(proc.pid, 'SIGTERM');
         } catch (err) {
           // Was already killed
-          console.error(`Failed to kill process`, proc.pid, err);
+          console.error(`Failed to kill process: `, proc.pid, err);
         }
       }
     })
