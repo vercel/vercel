@@ -264,19 +264,3 @@ describe('projects', () => {
     });
   });
 });
-
-// const waitForPrompt = (client: MockClient, assertion: (chunk: string) => any) =>
-//   new Promise<void>((resolve, reject) => {
-//     console.log('Waiting for prompt...');
-//     client.stdout.setEncoding('utf-8');
-//     setTimeout(() => reject(new Error('timeout in waitForPrompt')), 60000);
-//     const listener = (chunk: string) => {
-//       console.log('> ' + chunk);
-//       if (assertion(chunk)) {
-//         client.stdout.off && client.stdout.off('data', listener);
-//         resolve();
-//       }
-//     };
-
-//     client.stdout.on('data', listener);
-//   });
