@@ -21,5 +21,9 @@ it('should return if the command exits with non-0 code and ignoreNon0Exit=true',
 
   expect(code).toBe(process.platform === 'win32' ? 2 : 1);
   expect(stdout).toBe('');
-  expect(stderr).toContain('No such file or directory');
+  expect(stderr).toContain(
+    process.platform === 'win32'
+      ? 'Parameter format not correct'
+      : 'No such file or directory'
+  );
 });
