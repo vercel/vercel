@@ -1,7 +1,7 @@
 {
   "name": "@vercel/fs-detectors",
   "version": "0.0.0",
-  "description": "Vercel filesytem detectors",
+  "description": "Vercel filesystem detectors",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
