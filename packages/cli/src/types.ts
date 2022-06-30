@@ -1,3 +1,5 @@
+import type { Readable, Writable } from 'stream';
+
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
 export type Primitive =
@@ -443,8 +445,18 @@ export interface BuildOutput {
   } | null;
 }
 
+export interface ReadableTTY extends Readable {
+  isTTY?: boolean;
+  isRaw?: boolean;
+  setRawMode?: (mode: boolean) => void;
+}
+
+export interface WritableTTY extends Writable {
+  isTTY?: boolean;
+}
+
 export interface Stdio {
-  stdin: NodeJS.ReadStream;
-  stdout: NodeJS.WriteStream;
-  stderr: NodeJS.WriteStream;
+  stdin: ReadableTTY;
+  stdout: WritableTTY;
+  stderr: WritableTTY;
 }

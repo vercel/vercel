@@ -1,12 +1,13 @@
 import chalk from 'chalk';
+import type { ReadableTTY, WritableTTY } from '../../types';
 
 type Options = {
   abortSequences?: Set<string>;
   defaultValue?: boolean;
   noChar?: string;
   resolveChars?: Set<string>;
-  stdin: NodeJS.ReadStream;
-  stdout: NodeJS.WriteStream;
+  stdin: ReadableTTY;
+  stdout: WritableTTY;
   trailing?: string;
   yesChar?: string;
 };

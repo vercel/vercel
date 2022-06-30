@@ -23,7 +23,7 @@ import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
 import commands from './commands';
 import pkg from './util/pkg';
-import createOutput from './util/output/create-output';
+import { Output } from './util/output';
 import cmd from './util/output/cmd';
 import info from './util/output/info';
 import error from './util/output/error';
@@ -109,7 +109,7 @@ const main = async () => {
   }
 
   const isDebugging = argv['--debug'];
-  const output = createOutput({ stream: process.stderr, debug: isDebugging });
+  const output = new Output(process.stderr, { debug: isDebugging });
 
   debug = output.debug;
 

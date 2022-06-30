@@ -7,32 +7,25 @@
  *  - https://gist.github.com/hasparus/4ebaa17ec5d3d44607f522bcb1cda9fb
  */
 
-/// <reference types="@types/node" />
 /// <reference types="@types/jest" />
-import { PassThrough } from 'stream';
-import type { MatcherState } from 'expect';
 
-import * as _matchers from './matchers';
+import * as matchers from './matchers';
 
-const matchers = {
-  ..._matchers,
-  toHaveWordsCount(this: MatcherState, sentence: string, wordsCount: number) {
-    // implementation redacted
-  },
-};
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type Tail<T extends unknown[]> = T extends [infer _Head, ...infer Tail]
   ? Tail
   : never;
 
-type AnyFunction = (...args: never[]) => unknown;
+type AnyFunction = (...args: any[]) => any;
+
+type GetMatcherType<TP, TResult> = TP extends AnyFunction
+  ? AnyFunction extends TP
+    ? (...args: Tail<Parameters<TP>>) => TResult
+    : TP
+  : TP;
 
 type GetMatchersType<TMatchers, TResult> = {
-  [P in keyof TMatchers]: TMatchers[P] extends AnyFunction
-    ? AnyFunction extends TMatchers[P]
-      ? (...args: Tail<Parameters<TMatchers[P]>>) => TResult
-      : TMatchers[P]
-    : TMatchers[P];
+  [P in keyof TMatchers]: GetMatcherType<TMatchers[P], TResult>;
 };
 
 type FirstParam<T extends AnyFunction> = Parameters<T>[0];
@@ -67,12 +60,3 @@ if (jestExpect !== undefined) {
 } else {
   console.error("Couldn't find Jest's global expect.");
 }
-
-// ✅
-expect(new PassThrough()).toWaitFor('test');
-expect(process.stdout).toWaitFor('test');
-expect('foo bar').toWaitFor(2);
-
-// 🔥 error as expected
-expect('foo bar').toHaveWordsCount(2);
-expect(20).toHaveWordsCount(2);

@@ -13,7 +13,14 @@ import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
 import { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
-import { AuthConfig, GlobalConfig, JSONObject, Stdio } from '../types';
+import type {
+  AuthConfig,
+  GlobalConfig,
+  JSONObject,
+  Stdio,
+  ReadableTTY,
+  WritableTTY,
+} from '../types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
 
@@ -46,9 +53,9 @@ export default class Client extends EventEmitter implements Stdio {
   argv: string[];
   apiUrl: string;
   authConfig: AuthConfig;
-  stdin: NodeJS.ReadStream;
-  stdout: NodeJS.WriteStream;
-  stderr: NodeJS.WriteStream;
+  stdin: ReadableTTY;
+  stdout: WritableTTY;
+  stderr: WritableTTY;
   output: Output;
   config: GlobalConfig;
   localConfig?: VercelConfig;
@@ -192,8 +199,8 @@ export default class Client extends EventEmitter implements Stdio {
 
   _createPromptModule() {
     this.prompt = inquirer.createPromptModule({
-      input: this.stdin,
-      output: this.stderr,
+      input: this.stdin as NodeJS.ReadStream,
+      output: this.stderr as NodeJS.WriteStream,
     });
   }
 }

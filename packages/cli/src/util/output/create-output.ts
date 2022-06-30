@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
+import type { WritableTTY } from '../../types';
 
 export interface OutputOptions {
-  stream?: NodeJS.WriteStream;
   debug?: boolean;
 }
 
@@ -12,15 +12,15 @@ export interface LogOptions {
 }
 
 export class Output {
-  stream: NodeJS.WriteStream;
+  stream: WritableTTY;
   debugEnabled: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
-  constructor({
-    stream = process.stderr,
-    debug: debugEnabled = false,
-  }: OutputOptions = {}) {
+  constructor(
+    stream: WritableTTY,
+    { debug: debugEnabled = false }: OutputOptions = {}
+  ) {
     this.stream = stream;
     this.debugEnabled = debugEnabled;
     this.spinnerMessage = '';
@@ -160,8 +160,4 @@ export class Output {
 
     return promise;
   };
-}
-
-export default function createOutput(opts?: OutputOptions) {
-  return new Output(opts);
 }
