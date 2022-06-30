@@ -173,8 +173,8 @@ describe('projects', () => {
         useTeams('team_dummy');
         const project = useProject({
           ...defaultProject,
-          id: 'new-connection',
-          name: 'new-connection',
+          id: 'existing-connection',
+          name: 'existing-connection',
         });
         project.project.link = {
           type: 'github',
@@ -191,7 +191,7 @@ describe('projects', () => {
         const exitCode = await projects(client);
 
         const newProjectData: Project = await client.fetch(
-          `/v8/projects/new-connection`
+          `/v8/projects/existing-connection`
         );
         expect(newProjectData.link).toMatchObject({
           type: 'github',
