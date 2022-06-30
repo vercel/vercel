@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@vercel/build-utils": "4.2.0",
+    "@vercel/frameworks": "1.0.2",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",
