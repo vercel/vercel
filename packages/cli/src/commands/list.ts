@@ -34,6 +34,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    -a, --all                      Show all deployments in your team
     -y, --yes                      Skip the confirmation prompt
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -52,19 +53,19 @@ const help = () => {
 
   ${chalk.gray(
     '–'
-  )} List all projects in the scope (team) of the currently linked project
+  )} List all projects in the team of the currently linked project
 
-      ${chalk.cyan(`$ ${getPkgName()} ls --all`)}
-
-    ${chalk.gray('–')} List all projects in team ${chalk.dim('`my-team`')}
-
-      ${chalk.cyan(`$ ${getPkgName()} ls --scope my-team --all`)}
+    ${chalk.cyan(`$ ${getPkgName()} ls --all`)}
 
   ${chalk.gray('–')} List all deployments for the app ${chalk.dim(
     '`my-app`'
-  )} in the currently linked project
-
+  )} in the team of the currently linked project
+  
     ${chalk.cyan(`$ ${getPkgName()} ls my-app`)}
+
+  ${chalk.gray('–')} List all projects in team ${chalk.dim('`my-team`')}
+
+    ${chalk.cyan(`$ ${getPkgName()} ls --scope my-team --all`)}
 
   ${chalk.gray('–')} Filter deployments by metadata
 
