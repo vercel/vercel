@@ -57,7 +57,7 @@ const help = () => {
 
     ${chalk.cyan(`$ ${getPkgName()} ls --all`)}
 
-  ${chalk.gray('–')} List all deployments for the app ${chalk.dim(
+  ${chalk.gray('–')} List all deployments for the project ${chalk.dim(
     '`my-app`'
   )} in the team of the currently linked project
   
