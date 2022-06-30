@@ -147,7 +147,7 @@ async function run({
 
     let paths = [process.cwd()];
 
-    const validate = await validatePaths(output, paths);
+    const validate = await validatePaths(client, paths);
     if (!validate.valid) {
       return validate.exitCode;
     }
@@ -228,6 +228,7 @@ async function run({
       }
 
       const shouldReplaceRepo = await confirmRepoConnect(
+        client,
         output,
         yes,
         connectedRepoPath
@@ -425,6 +426,7 @@ process.on('uncaughtException', err => {
 });
 
 async function confirmRepoConnect(
+  client: Client,
   output: Output,
   yes: boolean,
   connectedRepoPath: string
@@ -432,6 +434,7 @@ async function confirmRepoConnect(
   let shouldReplaceProject = yes;
   if (!shouldReplaceProject) {
     shouldReplaceProject = await confirm(
+      client,
       `Looks like you already have a repository connected: ${chalk.cyan(
         connectedRepoPath
       )}. Do you want to replace it?`,
