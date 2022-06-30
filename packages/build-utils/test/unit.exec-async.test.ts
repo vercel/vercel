@@ -19,7 +19,7 @@ it('should return if the command exits with non-0 code and ignoreNon0Exit=true',
     ignoreNon0Exit: true,
   });
 
-  expect(code).toBe(1);
+  expect(code).toBe(process.platform === 'win32' ? 2 : 1);
   expect(stdout).toBe('');
   expect(stderr).toContain('No such file or directory');
 });
