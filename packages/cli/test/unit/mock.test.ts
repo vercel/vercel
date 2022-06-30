@@ -3,28 +3,32 @@ import { client } from '../mocks/client';
 
 describe('MockClient', () => {
   it('should mock `confirm()`', async () => {
-    // true
+    // true (explicit)
     let confirmedPromise = confirm(client, 'Do the thing?', false);
-
-    //await client.expectStderr('Do the thing? [y/Nn');
-    //expect(await client.expectStderr('Do the thing? [y/Nn')).
-    await expect(client.stderr).toWaitFor('Do the thing? [y/N]');
-
+    await expect(client.stderr).toOutput('Do the thing? [y/N]');
     client.stdin.write('yes\n');
-
     let confirmed = await confirmedPromise;
     expect(confirmed).toEqual(true);
 
-    //client.output.log('test');
-    console.log(client.stderr.write('test'));
-    await client.expectStderr('test');
-    // false
-    //confirmedPromise = confirm(client, 'Do the thing?', true);
-    //await client.expectStderr('Do the thing? [Y/n]');
+    // false (explicit)
+    confirmedPromise = confirm(client, 'Do the thing?', true);
+    await expect(client.stderr).toOutput('Do the thing? [y/N]');
+    client.stdin.write('no\n');
+    confirmed = await confirmedPromise;
+    expect(confirmed).toEqual(false);
 
-    //client.stdin.write('no\n');
+    // true (default)
+    confirmedPromise = confirm(client, 'Do the thing?', true);
+    await expect(client.stderr).toOutput('Do the thing? [y/N]');
+    client.stdin.write('\n');
+    confirmed = await confirmedPromise;
+    expect(confirmed).toEqual(true);
 
-    //confirmed = await confirmedPromise;
-    //expect(confirmed).toEqual(false);
+    // false (default)
+    confirmedPromise = confirm(client, 'Do the thing?', false);
+    await expect(client.stderr).toOutput('Do the thing? [y/N]');
+    client.stdin.write('\n');
+    confirmed = await confirmedPromise;
+    expect(confirmed).toEqual(false);
   });
 });
