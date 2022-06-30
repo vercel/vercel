@@ -172,9 +172,32 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
-export async function getNodeBinPath({ cwd }: { cwd: string }) {
-  const { stdout } = await execAsync('npm', ['bin'], { cwd });
-  return stdout.trim();
+export async function getNodeBinPath({
+  cwd,
+}: {
+  cwd: string;
+}): Promise<string | undefined> {
+  const { code, stdout, stderr } = await execAsync('npm', ['bin'], {
+    cwd,
+    returnInsteadOfThrowing: true,
+  });
+
+  // in some rare cases, we saw `npm bin` exit with code 7, but still
+  // output the right bin path, so we consider both code 0 and 7 as success
+  if (code !== 0 && code !== 7) {
+    let message = `Running \`npm bin\` failed with code ${code}`;
+    if (stderr) {
+      message += `: ${stderr}`;
+    }
+
+    throw new NowBuildError({
+      code: `BUILD_UTILS_GET_NODE_BIN_PATH`,
+      message,
+    });
+  }
+
+  const nodeBinPath = stdout.trim();
+  return nodeBinPath;
 }
 
 async function chmodPlusX(fsPath: string) {
