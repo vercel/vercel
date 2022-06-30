@@ -30,9 +30,12 @@ describe('list', () => {
 
       await list(client);
 
-      const { org } = getDataFromIntro(client.outputBuffer.split('\n')[0]);
-      const header: string[] = formatTable(client.outputBuffer.split('\n')[2]);
-      const data: string[] = formatTable(client.outputBuffer.split('\n')[3]);
+      client.stderr.resume();
+      const output = await readOutputStream(client.stderr);
+
+      const { org } = getDataFromIntro(output.split('\n')[0]);
+      const header: string[] = formatTable(output.split('\n')[2]);
+      const data: string[] = formatTable(output.split('\n')[3]);
       data.splice(2, 1);
 
       expect(org).toEqual(team[0].slug);
@@ -69,11 +72,13 @@ describe('list', () => {
 
       client.setArgv('--all');
       await list(client);
-      const { project, org } = getDataFromIntro(
-        client.outputBuffer.split('\n')[0]
-      );
-      const header: string[] = formatTable(client.outputBuffer.split('\n')[2]);
-      const data: string[] = formatTable(client.outputBuffer.split('\n')[3]);
+
+      client.stderr.resume();
+      const output = await readOutputStream(client.stderr);
+
+      const { project, org } = getDataFromIntro(output.split('\n')[0]);
+      const header: string[] = formatTable(output.split('\n')[2]);
+      const data: string[] = formatTable(output.split('\n')[3]);
       data.splice(2, 1);
 
       expect(project).toBeUndefined();
@@ -111,14 +116,13 @@ describe('list', () => {
       client.setArgv(deployment.name);
       await list(client);
 
-      const { org } = getDataFromIntro(client.outputBuffer.split('\n')[0]);
-      const header: string[] = formatTable(client.outputBuffer.split('\n')[2]);
-      const data: string[] = formatTable(client.outputBuffer.split('\n')[3]);
-      data.splice(2, 1);
+      client.stderr.resume();
+      const output = await readOutputStream(client.stderr);
 
-      console.log(client.outputBuffer);
-      console.log(header);
-      console.log(data);
+      const { org } = getDataFromIntro(output.split('\n')[0]);
+      const header: string[] = formatTable(output.split('\n')[2]);
+      const data: string[] = formatTable(output.split('\n')[3]);
+      data.splice(2, 1);
 
       expect(org).toEqual(teamSlug);
 
@@ -158,4 +162,20 @@ function formatTable(output: string): string[] {
     .trim()
     .replace(/ {3} +/g, ',')
     .split(',');
+}
+
+function readOutputStream(stream: NodeJS.ReadableStream): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    stream.on('data', chunk => {
+      chunks.push(chunk);
+      if (chunks.length === 3) {
+        resolve(chunks.toString().replace(/,/g, ''));
+      }
+    });
+    setTimeout(() => {
+      reject();
+    }, 3000);
+    stream.on('error', reject);
+  });
 }
