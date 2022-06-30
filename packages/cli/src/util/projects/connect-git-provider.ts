@@ -56,9 +56,7 @@ export async function connectGitProvider(
           )} to learn how to do this.`
         );
       } else {
-        client.output.error(
-          `Failed to connect a Git provider repo.\nFetch url: ${fetchUrl}\n${err}`
-        );
+        client.output.error(`Failed to connect a Git provider repo.\n${err}`);
       }
       return 1;
     });
