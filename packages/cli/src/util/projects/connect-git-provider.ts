@@ -64,6 +64,19 @@ export async function connectGitProvider(
     });
 }
 
+export function formatProvider(type: string): string {
+  switch (type) {
+    case 'github':
+      return 'GitHub';
+    case 'gitlab':
+      return 'GitLab';
+    case 'bitbucket':
+      return 'Bitbucket';
+    default:
+      return type;
+  }
+}
+
 export function parseRepoUrl(originUrl: string): {
   provider: string;
   org: string;

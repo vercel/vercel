@@ -16,12 +16,14 @@ import { parseGitConfig, pluckRemoteUrl } from '../util/create-git-meta';
 import {
   connectGitProvider,
   disconnectGitProvider,
+  formatProvider,
   parseRepoUrl,
 } from '../util/projects/connect-git-provider';
 import { join } from 'path';
 import { Team, User } from '../types';
 import confirm from '../util/input/confirm';
 import { Output } from '../util/output';
+import link from '../util/output/link';
 
 const e = encodeURIComponent;
 
@@ -135,12 +137,10 @@ async function run({
   if (subcommand === 'connect') {
     const yes = Boolean(argv['--yes']);
     if (args.length !== 0) {
-      console.error(
-        error(
-          `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getCommandName('projects connect')}`
-          )}`
-        )
+      output.error(
+        `Invalid number of arguments. Usage: ${chalk.cyan(
+          `${getCommandName('project connect')}`
+        )}`
       );
       return exit(2);
     }
@@ -154,7 +154,7 @@ async function run({
     const { path } = validate;
 
     const linkedProject = await ensureLink(
-      'projects connect',
+      'project connect',
       client,
       path,
       yes
@@ -182,14 +182,16 @@ async function run({
     const remoteUrl = pluckRemoteUrl(gitConfig);
     if (!remoteUrl) {
       output.error(
-        `No remote origin url found in your Git config. Make sure you've connected your local Git repo to a Git provider first.`
+        `No remote origin URL found in your Git config. Make sure you've connected your local Git repo to a Git provider first.`
       );
       return 1;
     }
     const parsedUrl = parseRepoUrl(remoteUrl);
     if (!parsedUrl) {
       output.error(
-        `Can't parse Git repo data from the following remote url in your Git config: ${remoteUrl}`
+        `Failed to parse Git repo data from the following remote URL in your Git config: ${link(
+          remoteUrl
+        )}`
       );
       return 1;
     }
@@ -250,7 +252,11 @@ async function run({
       }
     }
 
-    output.log(`Connected ${chalk.cyan(repoPath)}!`);
+    output.log(
+      `Connected ${formatProvider(provider)} repository ${chalk.cyan(
+        repoPath
+      )}!`
+    );
 
     return 0;
   }
@@ -413,9 +419,7 @@ async function run({
     return;
   }
 
-  console.error(
-    error('Please specify a valid subcommand: ls | connect | add | rm')
-  );
+  output.error('Please specify a valid subcommand: ls | connect | add | rm');
   help();
   exit(2);
 }
