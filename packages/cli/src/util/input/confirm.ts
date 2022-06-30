@@ -1,4 +1,3 @@
-import inquirer from 'inquirer';
 import Client from '../client';
 
 export default async function confirm(
@@ -8,12 +7,7 @@ export default async function confirm(
 ): Promise<boolean> {
   require('./patch-inquirer');
 
-  const prompt = inquirer.createPromptModule({
-    input: client.stdin,
-    output: client.stdout,
-  });
-
-  const answers = await prompt({
+  const answers = await client.prompt({
     type: 'confirm',
     name: 'value',
     message,

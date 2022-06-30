@@ -1,5 +1,4 @@
 import Client from '../client';
-import inquirer from 'inquirer';
 import confirm from './confirm';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
@@ -79,11 +78,7 @@ export default async function inputProject(
     let project: Project | ProjectNotFound | null = null;
 
     while (!project || project instanceof ProjectNotFound) {
-      const prompt = inquirer.createPromptModule({
-        input: client.stdin,
-        output: client.stdout,
-      });
-      const answers = await prompt({
+      const answers = await client.prompt({
         type: 'input',
         name: 'existingProjectName',
         message: `What’s the name of your existing project?`,
@@ -114,7 +109,7 @@ export default async function inputProject(
   let newProjectName: string | null = null;
 
   while (!newProjectName) {
-    const answers = await inquirer.prompt({
+    const answers = await client.prompt({
       type: 'input',
       name: 'newProjectName',
       message: `What’s your project’s name?`,
