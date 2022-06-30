@@ -13,27 +13,55 @@ describe('projects', () => {
     const fixture = (name: string) =>
       join(__dirname, '../../fixtures/unit/commands/projects/connect', name);
 
-    // it('connects an unlinked project', async () => {
-    //   const cwd = fixture('unlinked');
-    //   try {
-    //     process.chdir(cwd);
-    //     await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
-    //     useUser();
-    //     useTeams('team_dummy');
-    //     useProject({
-    //       ...defaultProject,
-    //       id: 'unlink',
-    //       name: 'unlink',
-    //     });
-    //     client.setArgv('projects', 'connect', '--cwd', cwd);
-    //     const projectsPromise = projects(client);
-    //     const exitCode = await projectsPromise;
-    //     expect(exitCode, client.outputBuffer).toEqual(0);
-    //   } finally {
-    //     await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-    //     process.chdir(originalCwd);
-    //   }
-    // });
+    it('connects an unlinked project', async () => {
+      const cwd = fixture('unlinked');
+      try {
+        process.chdir(cwd);
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        useUser();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'unlink',
+          name: 'unlink',
+        });
+        client.setArgv('projects', 'connect', '--cwd', cwd, '--yes'); // todo: remove --yes
+        const projectsPromise = projects(client);
+
+        // await waitForPrompt(client, chunk => /Set up [^?]+\?/.test(chunk));
+        // client.stdin.write('y\n');
+
+        // await waitForPrompt(client, chunk => /Which scope [^?]+\?/.test(chunk));
+        // client.stdin.write('\n');
+
+        // await waitForPrompt(client, chunk =>
+        //   chunk.includes('Link to existing project?')
+        // );
+        // client.stdin.write('no\n');
+
+        // await waitForPrompt(client, chunk =>
+        //   chunk.includes('What’s your project’s name?')
+        // );
+        // client.stdin.write('\n');
+
+        // await waitForPrompt(client, chunk =>
+        //   chunk.includes('In which directory is your code located?')
+        // );
+        // client.stdin.write('\n');
+
+        // await waitForPrompt(client, chunk =>
+        //   chunk.includes('Want to modify these settings?')
+        // );
+        // client.stdin.write('n');
+
+        const exitCode = await projectsPromise;
+        expect(client.outputBuffer).toContain('Connected user/repo!');
+        expect(exitCode, client.outputBuffer).toEqual(0);
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+        process.chdir(originalCwd);
+      }
+    });
     it('should fail when there is no git config', async () => {
       const cwd = fixture('no-git-config');
       try {
@@ -239,3 +267,19 @@ describe('projects', () => {
     });
   });
 });
+
+// const waitForPrompt = (client: MockClient, assertion: (chunk: string) => any) =>
+//   new Promise<void>((resolve, reject) => {
+//     console.log('Waiting for prompt...');
+//     client.stdout.setEncoding('utf-8');
+//     setTimeout(() => reject(new Error('timeout in waitForPrompt')), 60000);
+//     const listener = (chunk: string) => {
+//       console.log('> ' + chunk);
+//       if (assertion(chunk)) {
+//         client.stdout.off && client.stdout.off('data', listener);
+//         resolve();
+//       }
+//     };
+
+//     client.stdout.on('data', listener);
+//   });
