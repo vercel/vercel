@@ -97,6 +97,7 @@
     "@types/yauzl-promise": "2.1.0",
     "@vercel/client": "12.0.3",
     "@vercel/frameworks": "1.0.2",
+    "@vercel/fs-detectors": "0.0.0",
     "@vercel/ncc": "0.24.0",
     "@zeit/fun": "0.11.2",
     "@zeit/source-map-support": "0.6.2",

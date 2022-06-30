@@ -1,0 +1,40 @@
+{
+  "name": "@vercel/fs-detectors",
+  "version": "0.0.0",
+  "description": "Vercel filesystem detectors",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/fs-detectors"
+  },
+  "license": "MIT",
+  "scripts": {
+    "prepublishOnly": "tsc",
+    "build": "tsc",
+    "test": "yarn jest --env node --verbose --runInBand --bail test/unit.*test.*",
+    "test-unit": "yarn test"
+  },
+  "dependencies": {
+    "@vercel/frameworks": "1.0.2",
+    "@vercel/routing-utils": "1.13.5",
+    "glob": "8.0.3",
+    "js-yaml": "4.1.0",
+    "minimatch": "3.0.4",
+    "semver": "6.1.1"
+  },
+  "devDependencies": {
+    "@types/glob": "7.2.0",
+    "@types/jest": "27.5.1",
+    "@types/js-yaml": "4.0.5",
+    "@types/minimatch": "3.0.5",
+    "@types/node": "12.12.20",
+    "@types/semver": "7.3.10",
+    "@vercel/build-utils": "4.2.0",
+    "typescript": "4.3.4"
+  }
+}
