@@ -12,7 +12,7 @@ export async function toOutput(
   this: MatcherState,
   stream: Readable,
   test: string,
-  timeout = 1000
+  timeout = 3000
 ) {
   const { isNot } = this;
   const matcherName = 'toOutput';
