@@ -387,6 +387,8 @@ const main = async () => {
   // Shared API `Client` instance for all sub-commands to utilize
   client = new Client({
     apiUrl,
+    stdin: process.stdin,
+    stdout: process.stdout,
     output,
     config,
     authConfig,

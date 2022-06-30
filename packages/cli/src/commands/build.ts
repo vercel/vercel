@@ -140,6 +140,7 @@ export default async function main(client: Client): Promise<number> {
       }
 
       confirmed = await confirm(
+        client,
         `No Project Settings found locally. Run ${cli.getCommandName(
           'pull'
         )} for retrieving them?`,

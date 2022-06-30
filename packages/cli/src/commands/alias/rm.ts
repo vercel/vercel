@@ -10,7 +10,6 @@ import confirm from '../../util/input/confirm';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 
 import { Alias } from '../../types';
-import { Output } from '../../util/output';
 import { isValidName } from '../../util/is-valid-name';
 import { getCommandName } from '../../util/pkg-name';
 
@@ -71,7 +70,7 @@ export default async function rm(
   }
 
   const removeStamp = stamp();
-  if (!opts['--yes'] && !(await confirmAliasRemove(output, alias))) {
+  if (!opts['--yes'] && !(await confirmAliasRemove(client, alias))) {
     output.log('Aborted');
     return 0;
   }
@@ -85,7 +84,7 @@ export default async function rm(
   return 0;
 }
 
-async function confirmAliasRemove(output: Output, alias: Alias) {
+async function confirmAliasRemove(client: Client, alias: Alias) {
   const srcUrl = alias.deployment
     ? chalk.underline(alias.deployment.url)
     : null;
@@ -104,7 +103,7 @@ async function confirmAliasRemove(output: Output, alias: Alias) {
     }
   );
 
-  output.log(`The following alias will be removed permanently`);
-  output.print(`  ${tbl}\n`);
-  return confirm(chalk.red('Are you sure?'), false);
+  client.output.log(`The following alias will be removed permanently`);
+  client.output.print(`  ${tbl}\n`);
+  return confirm(client, chalk.red('Are you sure?'), false);
 }
