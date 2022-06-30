@@ -181,25 +181,22 @@ export async function getNodeBinPath({
   const { code, stdout, stderr } = await execAsync('npm', ['bin'], {
     cwd,
     prettyCommand: 'npm bin',
+
+    // in some rare cases, we saw `npm bin` exit with a non-0 code, but still
+    // output the right bin path, so we ignore the exit code
     ignoreNon0Exit: true,
   });
 
-  // in some rare cases, we saw `npm bin` exit with code 7, but still
-  // output the right bin path, so we consider both code 0 and 7 as success
-  if (code !== 0 && code !== 7) {
-    let message = `Running \`npm bin\` failed with code ${code}`;
-    if (stderr) {
-      message += `: ${stderr}`;
-    }
+  const nodeBinPath = stdout.trim();
 
-    throw new NowBuildError({
-      code: `BUILD_UTILS_GET_NODE_BIN_PATH`,
-      message,
-    });
+  if (path.isAbsolute(nodeBinPath)) {
+    return nodeBinPath;
   }
 
-  const nodeBinPath = stdout.trim();
-  return nodeBinPath;
+  throw new NowBuildError({
+    code: `BUILD_UTILS_GET_NODE_BIN_PATH`,
+    message: `Running \`npm bin\` failed to return a valid bin path (code=${code}, stdout=${stdout}, stderr=${stderr})`,
+  });
 }
 
 async function chmodPlusX(fsPath: string) {
