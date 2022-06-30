@@ -160,9 +160,9 @@ export default async (client: Client) => {
     }
   }
 
-  const { log, debug, error, prettyError, isTTY } = output;
+  const { log, debug, error, prettyError } = output;
 
-  const quiet = !isTTY;
+  const quiet = !client.stdout.isTTY;
 
   // check paths
   const pathValidation = await validatePaths(client, paths);

@@ -1,5 +1,7 @@
+import type { ReadableTTY } from '../../types';
+
 export default async function readStandardInput(
-  stdin: NodeJS.ReadStream
+  stdin: ReadableTTY
 ): Promise<string> {
   return new Promise<string>(resolve => {
     setTimeout(() => resolve(''), 500);

@@ -19,8 +19,12 @@ describe('env', () => {
         name: 'vercel-env-pull',
       });
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
-      const exitCode = await env(client);
-      expect(exitCode, client.outputBuffer).toEqual(0);
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Downloading "development" Environment Variables for Project vercel-env-pull'
+      );
+      await expect(client.stderr).toOutput('Created .env file');
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       const rawDevEnv = await fs.readFile(path.join(cwd, '.env'));
 
@@ -39,8 +43,12 @@ describe('env', () => {
         name: 'vercel-env-pull',
       });
       client.setArgv('env', 'pull', 'other.env', '--yes', '--cwd', cwd);
-      const exitCode = await env(client);
-      expect(exitCode, client.outputBuffer).toEqual(0);
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Downloading "development" Environment Variables for Project vercel-env-pull'
+      );
+      await expect(client.stderr).toOutput('Created other.env file');
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       const rawDevEnv = await fs.readFile(path.join(cwd, 'other.env'));
 
@@ -61,8 +69,12 @@ describe('env', () => {
       });
 
       client.setArgv('env', 'pull', 'other.env', '--yes', '--cwd', cwd);
-      const exitCode = await env(client);
-      expect(exitCode, client.outputBuffer).toEqual(0);
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Downloading "development" Environment Variables for Project vercel-env-pull'
+      );
+      await expect(client.stderr).toOutput('Created other.env file');
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       const rawDevEnv = await fs.readFile(path.join(cwd, 'other.env'));
 
