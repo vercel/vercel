@@ -27,20 +27,17 @@ export async function toOutput(
     const message = () => {
       const labelExpected = 'Expected output';
       const labelReceived = 'Received output';
-
       const printLabel = getLabelPrinter(labelExpected, labelReceived);
-
       const hint =
         matcherHint(matcherName, 'stream', 'test', matcherHintOptions) + '\n\n';
-
       return (
         hint +
         printLabel(labelExpected) +
-        (isNot ? 'not ' : ' ') +
+        (isNot ? 'not ' : '') +
         printExpected(test) +
         '\n' +
         printLabel(labelReceived) +
-        (isNot ? '    ' : ' ') +
+        (isNot ? '    ' : '') +
         printReceived(output)
       );
     };
