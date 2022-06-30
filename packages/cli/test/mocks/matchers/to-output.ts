@@ -1,34 +1,62 @@
+import {
+  getLabelPrinter,
+  matcherHint,
+  printExpected,
+  printReceived,
+} from 'jest-matcher-utils';
 import type { Readable } from 'stream';
 import type { MatcherState } from 'expect';
+import type { MatcherHintOptions } from 'jest-matcher-utils';
 
 export async function toOutput(
   this: MatcherState,
   stream: Readable,
-  test: string
+  test: string,
+  timeout = 1000
 ) {
-  let timeout = 1000;
+  const { isNot } = this;
+  const matcherName = 'toOutput';
+  const matcherHintOptions: MatcherHintOptions = {
+    isNot,
+    promise: this.promise,
+  };
   return new Promise(resolve => {
     let output = '';
     let timeoutId = setTimeout(onTimeout, timeout);
+
+    const message = () => {
+      const labelExpected = 'Expected output';
+      const labelReceived = 'Received output';
+
+      const printLabel = getLabelPrinter(labelExpected, labelReceived);
+
+      const hint =
+        matcherHint(matcherName, 'stream', 'test', matcherHintOptions) + '\n\n';
+
+      return (
+        hint +
+        printLabel(labelExpected) +
+        (isNot ? 'not ' : ' ') +
+        printExpected(test) +
+        '\n' +
+        printLabel(labelReceived) +
+        (isNot ? '    ' : ' ') +
+        printReceived(output)
+      );
+    };
 
     function onData(data: string) {
       //console.log({ data });
       output += data;
       if (output.includes(test)) {
         cleanup();
-        resolve({
-          pass: true,
-          message: () => 'got it',
-        });
+        resolve({ pass: true, message });
       }
     }
 
     function onTimeout() {
       cleanup();
-      resolve({
-        pass: false,
-        message: () => `Timed out after waiting ${timeout}ms`,
-      });
+      resolve({ pass: false, message });
     }
 
     function cleanup() {
