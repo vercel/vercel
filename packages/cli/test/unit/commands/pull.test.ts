@@ -23,10 +23,10 @@ describe('pull', () => {
       'Downloading "development" Environment Variables for Project vercel-pull-next'
     );
     await expect(client.stderr).toOutput(
-      'Created .vercel/.env.development.local file'
+      `Created .vercel${path.sep}.env.development.local file`
     );
     await expect(client.stderr).toOutput(
-      'Downloaded project settings to .vercel/project.json'
+      `Downloaded project settings to .vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
 
@@ -89,10 +89,10 @@ describe('pull', () => {
         'Downloading "development" Environment Variables for Project vercel-pull-next'
       );
       await expect(client.stderr).toOutput(
-        'Created .vercel/.env.development.local file'
+        `Created .vercel${path.sep}.env.development.local file`
       );
       await expect(client.stderr).toOutput(
-        'Downloaded project settings to .vercel/project.json'
+        `Downloaded project settings to .vercel${path.sep}project.json`
       );
       await expect(exitCodePromise).resolves.toEqual(0);
 
@@ -125,10 +125,10 @@ describe('pull', () => {
       'Downloading "preview" Environment Variables for Project vercel-pull-next'
     );
     await expect(client.stderr).toOutput(
-      'Created .vercel/.env.preview.local file'
+      `Created .vercel${path.sep}.env.preview.local file`
     );
     await expect(client.stderr).toOutput(
-      'Downloaded project settings to .vercel/project.json'
+      `Downloaded project settings to .vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
 
@@ -156,10 +156,10 @@ describe('pull', () => {
       'Downloading "production" Environment Variables for Project vercel-pull-next'
     );
     await expect(client.stderr).toOutput(
-      'Created .vercel/.env.production.local file'
+      `Created .vercel${path.sep}.env.production.local file`
     );
     await expect(client.stderr).toOutput(
-      'Downloaded project settings to .vercel/project.json'
+      `Downloaded project settings to .vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
 
