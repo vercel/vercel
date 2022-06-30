@@ -30,7 +30,6 @@ describe('list', () => {
 
       await list(client);
 
-      client.stderr.resume();
       const output = await readOutputStream(client);
 
       const { org } = getDataFromIntro(output.split('\n')[0]);
