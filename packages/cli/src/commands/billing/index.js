@@ -174,7 +174,7 @@ export default async client => {
         )} ${chalk.gray(`[${elapsed}]`)}`;
         const choices = buildInquirerChoices(cards);
 
-        cardId = await listInput({
+        cardId = await listInput(client, {
           message,
           choices,
           separator: true,
@@ -251,7 +251,7 @@ export default async client => {
         )} under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`;
         const choices = buildInquirerChoices(cards);
 
-        cardId = await listInput({
+        cardId = await listInput(client, {
           message,
           choices,
           separator: true,

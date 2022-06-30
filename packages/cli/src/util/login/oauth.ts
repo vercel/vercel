@@ -176,7 +176,7 @@ async function getVerificationTokenOutOfBand(client: Client, url: URL) {
   output.log(
     `After login is complete, enter the verification code printed in your browser.`
   );
-  const verificationToken = await readInput('Verification code:');
+  const verificationToken = await readInput(client, 'Verification code:');
   output.print(eraseLines(6));
 
   // If the pasted token begins with "saml_", then the `ssoUserId` was returned.
