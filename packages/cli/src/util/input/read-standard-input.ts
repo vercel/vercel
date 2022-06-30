@@ -1,12 +1,12 @@
-import type { Readable } from 'stream';
+import type { ReadableTTY } from '../../types';
 
 export default async function readStandardInput(
-  stdin: Readable | NodeJS.ReadStream
+  stdin: ReadableTTY
 ): Promise<string> {
   return new Promise<string>(resolve => {
     setTimeout(() => resolve(''), 500);
 
-    if ('isTTY' in stdin && stdin.isTTY) {
+    if (stdin.isTTY) {
       // found tty so we know there is nothing piped to stdin
       resolve('');
     } else {
