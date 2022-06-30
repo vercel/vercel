@@ -9,13 +9,13 @@ it('should execute a command', async () => {
 });
 
 it('should throw if the command exits with non-0 code', async () => {
-  await expect(execAsync('cd', ['unknown-dir'])).rejects.toBeInstanceOf(
+  await expect(execAsync('find', ['unknown-file'])).rejects.toBeInstanceOf(
     NowBuildError
   );
 });
 
 it('should return if the command exits with non-0 code and ignoreNon0Exit=true', async () => {
-  const { code, stdout, stderr } = await execAsync('cd', ['unknown-dir'], {
+  const { code, stdout, stderr } = await execAsync('find', ['unknown-file'], {
     ignoreNon0Exit: true,
   });
 

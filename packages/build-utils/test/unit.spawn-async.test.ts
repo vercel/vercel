@@ -6,7 +6,7 @@ it('should execute a command', async () => {
 });
 
 it('should throw if the command exits with non-0 code', async () => {
-  await expect(spawnAsync('cd', ['unknown-dir'])).rejects.toBeInstanceOf(
+  await expect(spawnAsync('find', ['unknown-file'])).rejects.toBeInstanceOf(
     NowBuildError
   );
 });
@@ -14,7 +14,7 @@ it('should throw if the command exits with non-0 code', async () => {
 it('should return if the command exits with non-0 code and ignoreNon0Exit=true', async () => {
   // should resolve (it doesn't return anything, so it resolves with "undefined")
   await expect(
-    spawnAsync('cd', ['unknown-dir'], {
+    spawnAsync('find', ['unknown-file'], {
       ignoreNon0Exit: true,
     })
   ).resolves.toBeUndefined();
