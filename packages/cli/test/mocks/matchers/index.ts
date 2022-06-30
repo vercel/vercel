@@ -17,12 +17,15 @@ type Tail<T extends unknown[]> = T extends [infer _Head, ...infer Tail]
   : never;
 
 type AnyFunction = (...args: any[]) => any;
+type PromiseFunction = (...args: any[]) => Promise<any>;
 
-type GetMatcherType<TP, TResult> = TP extends AnyFunction
-  ? AnyFunction extends TP
-    ? (...args: Tail<Parameters<TP>>) => TResult
-    : TP
+type GetMatcherType<TP, TResult> = TP extends PromiseFunction
+  ? (...args: Tail<Parameters<TP>>) => Promise<TResult>
+  : TP extends AnyFunction
+  ? (...args: Tail<Parameters<TP>>) => TResult
   : TP;
+
+//type T = GetMatcherType<typeof matchers['toOutput'], void>;
 
 type GetMatchersType<TMatchers, TResult> = {
   [P in keyof TMatchers]: GetMatcherType<TMatchers[P], TResult>;

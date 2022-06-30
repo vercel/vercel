@@ -12,6 +12,7 @@ export async function toOutput(
     let timeoutId = setTimeout(onTimeout, timeout);
 
     function onData(data: string) {
+      //console.log({ data });
       output += data;
       if (output.includes(test)) {
         cleanup();
@@ -26,7 +27,7 @@ export async function toOutput(
       cleanup();
       resolve({
         pass: false,
-        message: () => 'bad',
+        message: () => `Timed out after waiting ${timeout}ms`,
       });
     }
 
