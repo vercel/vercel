@@ -120,8 +120,17 @@ describe('pull', () => {
       name: 'vercel-pull-next',
     });
     client.setArgv('pull', '--environment=preview', cwd);
-    const exitCode = await pull(client);
-    expect(exitCode).toEqual(0);
+    const exitCodePromise = pull(client);
+    await expect(client.stderr).toOutput(
+      'Downloading "preview" Environment Variables for Project vercel-pull-next'
+    );
+    await expect(client.stderr).toOutput(
+      'Created .vercel/.env.preview.local file'
+    );
+    await expect(client.stderr).toOutput(
+      'Downloaded project settings to .vercel/project.json'
+    );
+    await expect(exitCodePromise).resolves.toEqual(0);
 
     const rawPreviewEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.preview.local')
@@ -142,8 +151,17 @@ describe('pull', () => {
       name: 'vercel-pull-next',
     });
     client.setArgv('pull', '--environment=production', cwd);
-    const exitCode = await pull(client);
-    expect(exitCode).toEqual(0);
+    const exitCodePromise = pull(client);
+    await expect(client.stderr).toOutput(
+      'Downloading "production" Environment Variables for Project vercel-pull-next'
+    );
+    await expect(client.stderr).toOutput(
+      'Created .vercel/.env.production.local file'
+    );
+    await expect(client.stderr).toOutput(
+      'Downloaded project settings to .vercel/project.json'
+    );
+    await expect(exitCodePromise).resolves.toEqual(0);
 
     const rawProdEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.production.local')
