@@ -27,14 +27,13 @@ describe('editProjectSettings', () => {
         installCommand: null,
         outputDirectory: null,
       });
-      expect(client.mockOutput.mock.calls.length).toBe(5);
-      expect(client.mockOutput.mock.calls[0][0]).toMatch(
-        /No framework detected. Default Project Settings:/
+      await expect(client.stderr).toOutput(
+        'No framework detected. Default Project Settings:'
       );
-      expect(client.mockOutput.mock.calls[1][0]).toMatch(/Build Command/);
-      expect(client.mockOutput.mock.calls[2][0]).toMatch(/Development Command/);
-      expect(client.mockOutput.mock.calls[3][0]).toMatch(/Install Command/);
-      expect(client.mockOutput.mock.calls[4][0]).toMatch(/Output Directory/);
+      await expect(client.stderr).toOutput('Build Command');
+      await expect(client.stderr).toOutput('Development Command');
+      await expect(client.stderr).toOutput('Install Command');
+      await expect(client.stderr).toOutput('Output Directory');
     });
   });
 
@@ -55,14 +54,13 @@ describe('editProjectSettings', () => {
         null
       );
       expect(settings).toStrictEqual({ ...projectSettings, framework: null });
-      expect(client.mockOutput.mock.calls.length).toBe(5);
-      expect(client.mockOutput.mock.calls[0][0]).toMatch(
-        /No framework detected. Default Project Settings:/
+      await expect(client.stderr).toOutput(
+        'No framework detected. Default Project Settings:'
       );
-      expect(client.mockOutput.mock.calls[1][0]).toMatch(/Build Command/);
-      expect(client.mockOutput.mock.calls[2][0]).toMatch(/Development Command/);
-      expect(client.mockOutput.mock.calls[3][0]).toMatch(/Install Command/);
-      expect(client.mockOutput.mock.calls[4][0]).toMatch(/Output Directory/);
+      await expect(client.stderr).toOutput('Build Command');
+      await expect(client.stderr).toOutput('Development Command');
+      await expect(client.stderr).toOutput('Install Command');
+      await expect(client.stderr).toOutput('Output Directory');
     });
   });
 
@@ -82,18 +80,15 @@ describe('editProjectSettings', () => {
         true,
         null
       );
-      expect(client.mockOutput.mock.calls.length).toBe(5);
-      expect(client.mockOutput.mock.calls[0][0]).toMatch(
-        /Auto-detected Project Settings/
-      );
-      expect(client.mockOutput.mock.calls[1][0]).toMatch(/Build Command/);
-      expect(client.mockOutput.mock.calls[2][0]).toMatch(/Development Command/);
-      expect(client.mockOutput.mock.calls[3][0]).toMatch(/Install Command/);
-      expect(client.mockOutput.mock.calls[4][0]).toMatch(/Output Directory/);
       expect(settings).toStrictEqual({
         ...projectSettings,
         framework: nextJSFramework.slug,
       });
+      await expect(client.stderr).toOutput('Auto-detected Project Settings');
+      await expect(client.stderr).toOutput('Build Command');
+      await expect(client.stderr).toOutput('Development Command');
+      await expect(client.stderr).toOutput('Install Command');
+      await expect(client.stderr).toOutput('Output Directory');
     });
   });
 
@@ -121,26 +116,20 @@ describe('editProjectSettings', () => {
         true,
         overrides
       );
-      expect(client.mockOutput.mock.calls.length).toBe(9);
-      expect(client.mockOutput.mock.calls[0][0]).toMatch(
-        /Local settings detected in vercel.json:/
-      );
-      expect(client.mockOutput.mock.calls[1][0]).toMatch(/Build Command:/);
-      expect(client.mockOutput.mock.calls[2][0]).toMatch(/Ignore Command:/);
-      expect(client.mockOutput.mock.calls[3][0]).toMatch(
-        /Development Command:/
-      );
-      expect(client.mockOutput.mock.calls[4][0]).toMatch(/Framework:/);
-      expect(client.mockOutput.mock.calls[5][0]).toMatch(/Install Command:/);
-      expect(client.mockOutput.mock.calls[6][0]).toMatch(/Output Directory:/);
-      expect(client.mockOutput.mock.calls[7][0]).toMatch(
-        /Merging default Project Settings for Svelte. Previously listed overrides are prioritized./
-      );
-      expect(client.mockOutput.mock.calls[8][0]).toMatch(
-        /Auto-detected Project Settings/
-      );
-
       expect(settings).toStrictEqual(overrides);
+      await expect(client.stderr).toOutput(
+        'Local settings detected in vercel.json:'
+      );
+      await expect(client.stderr).toOutput('Build Command:');
+      await expect(client.stderr).toOutput('Ignore Command:');
+      await expect(client.stderr).toOutput('Development Command:');
+      await expect(client.stderr).toOutput('Framework:');
+      await expect(client.stderr).toOutput('Install Command:');
+      await expect(client.stderr).toOutput('Output Directory:');
+      await expect(client.stderr).toOutput(
+        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
+      );
+      await expect(client.stderr).toOutput('Auto-detected Project Settings');
     });
   });
 
@@ -161,25 +150,20 @@ describe('editProjectSettings', () => {
         true,
         overrides
       );
-      expect(client.mockOutput.mock.calls.length).toBe(9);
-      expect(client.mockOutput.mock.calls[0][0]).toMatch(
-        /Local settings detected in vercel.json:/
-      );
-      expect(client.mockOutput.mock.calls[1][0]).toMatch(/Build Command:/);
-      expect(client.mockOutput.mock.calls[2][0]).toMatch(/Ignore Command:/);
-      expect(client.mockOutput.mock.calls[3][0]).toMatch(
-        /Development Command:/
-      );
-      expect(client.mockOutput.mock.calls[4][0]).toMatch(/Framework:/);
-      expect(client.mockOutput.mock.calls[5][0]).toMatch(/Install Command:/);
-      expect(client.mockOutput.mock.calls[6][0]).toMatch(/Output Directory:/);
-      expect(client.mockOutput.mock.calls[7][0]).toMatch(
-        /Merging default Project Settings for Svelte. Previously listed overrides are prioritized./
-      );
-      expect(client.mockOutput.mock.calls[8][0]).toMatch(
-        /Auto-detected Project Settings/
-      );
       expect(settings).toStrictEqual(overrides);
+      await expect(client.stderr).toOutput(
+        'Local settings detected in vercel.json:'
+      );
+      await expect(client.stderr).toOutput('Build Command:');
+      await expect(client.stderr).toOutput('Ignore Command:');
+      await expect(client.stderr).toOutput('Development Command:');
+      await expect(client.stderr).toOutput('Framework:');
+      await expect(client.stderr).toOutput('Install Command:');
+      await expect(client.stderr).toOutput('Output Directory:');
+      await expect(client.stderr).toOutput(
+        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
+      );
+      await expect(client.stderr).toOutput('Auto-detected Project Settings');
     });
   });
 
@@ -200,26 +184,20 @@ describe('editProjectSettings', () => {
         true,
         overrides
       );
-      expect(client.mockOutput.mock.calls.length).toBe(9);
-      expect(client.mockOutput.mock.calls[0][0]).toMatch(
-        /Local settings detected in vercel.json:/
-      );
-      expect(client.mockOutput.mock.calls[1][0]).toMatch(/Build Command:/);
-      expect(client.mockOutput.mock.calls[2][0]).toMatch(/Ignore Command:/);
-      expect(client.mockOutput.mock.calls[3][0]).toMatch(
-        /Development Command:/
-      );
-      expect(client.mockOutput.mock.calls[4][0]).toMatch(/Framework:/);
-      expect(client.mockOutput.mock.calls[5][0]).toMatch(/Install Command:/);
-      expect(client.mockOutput.mock.calls[6][0]).toMatch(/Output Directory:/);
-      expect(client.mockOutput.mock.calls[7][0]).toMatch(
-        /Merging default Project Settings for Svelte. Previously listed overrides are prioritized./
-      );
-      expect(client.mockOutput.mock.calls[8][0]).toMatch(
-        /Auto-detected Project Settings/
-      );
-
       expect(settings).toStrictEqual(overrides);
+      await expect(client.stderr).toOutput(
+        'Local settings detected in vercel.json:'
+      );
+      await expect(client.stderr).toOutput('Build Command:');
+      await expect(client.stderr).toOutput('Ignore Command:');
+      await expect(client.stderr).toOutput('Development Command:');
+      await expect(client.stderr).toOutput('Framework:');
+      await expect(client.stderr).toOutput('Install Command:');
+      await expect(client.stderr).toOutput('Output Directory:');
+      await expect(client.stderr).toOutput(
+        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
+      );
+      await expect(client.stderr).toOutput('Auto-detected Project Settings');
     });
   });
 });
