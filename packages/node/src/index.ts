@@ -53,12 +53,6 @@ import { Register, register } from './typescript';
 import { getRegExpFromMatchers } from './utils';
 
 export { shouldServe };
-export type {
-  NowRequest,
-  NowResponse,
-  VercelRequest,
-  VercelResponse,
-} from './types';
 
 interface DownloadOptions {
   files: Files;
@@ -460,26 +454,7 @@ export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
 
 export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, config, meta = {} } = opts;
-  const entrypointPath = join(workPath, entrypoint);
-
-  if (config.middleware === true && typeof meta.requestUrl === 'string') {
-    // TODO: static config is also parsed in `dev-server.ts`.
-    // we should pass in this version as an env var instead.
-    const project = new Project();
-    const staticConfig = getConfig(project, entrypointPath);
-
-    // Middleware is a catch-all for all paths unless a `matcher` property is defined
-    const matchers = new RegExp(getRegExpFromMatchers(staticConfig?.matcher));
-
-    if (!matchers.test(meta.requestUrl)) {
-      // If the "matchers" doesn't say to handle this
-      // path then skip middleware invocation
-      return null;
-    }
-  }
-
-  const entryDir = dirname(entrypointPath);
-
+  const entryDir = join(workPath, dirname(entrypoint));
   const projectTsConfig = await walkParentDirs({
     base: workPath,
     start: entryDir,
@@ -511,12 +486,6 @@ export const startDevServer: StartDevServer = async opts => {
   });
 
   const { pid } = child;
-  if (!pid) {
-    throw new Error(
-      `Child Process has no "pid" when forking: "${devServerPath}"`
-    );
-  }
-
   const onMessage = once<{ port: number }>(child, 'message');
   const onExit = once.spread<[number, string | null]>(child, 'exit');
   const result = await Promise.race([onMessage, onExit]);
@@ -539,7 +508,7 @@ export const startDevServer: StartDevServer = async opts => {
     // Got "exit" event from child process
     const [exitCode, signal] = result;
     const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
-    throw new Error(`Function \`${entrypoint}\` failed with ${reason}`);
+    throw new Error(`\`node ${entrypoint}\` failed with ${reason}`);
   }
 };
 
@@ -547,7 +516,7 @@ async function doTypeCheck(
   { entrypoint, workPath, meta = {} }: StartDevServerOptions,
   projectTsConfig: string | null
 ): Promise<void> {
-  const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
+  const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
   const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
 
   // In order to type-check a single file, a standalone tsconfig
