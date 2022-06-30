@@ -61,6 +61,13 @@ export interface SpawnOptionsExtended extends SpawnOptions {
    * Pretty formatted command that is being spawned for logging purposes.
    */
   prettyCommand?: string;
+
+  /**
+   * Returns instead of throwing an error when the process exits with a
+   * non-0 exit code. When relevant, the returned object will include
+   * the error code, stdout and stderr.
+   */
+  ignoreNon0Exit?: boolean;
 }
 
 export function spawnAsync(
@@ -79,7 +86,7 @@ export function spawnAsync(
 
     child.on('error', reject);
     child.on('close', (code, signal) => {
-      if (code === 0) {
+      if (code === 0 || opts.ignoreNon0Exit) {
         return resolve();
       }
 
@@ -123,24 +130,24 @@ export function execAsync(
 
       child.on('error', reject);
       child.on('close', (code, signal) => {
-        if (code !== 0) {
-          const cmd = opts.prettyCommand
-            ? `Command "${opts.prettyCommand}"`
-            : 'Command';
-
-          return reject(
-            new NowBuildError({
-              code: `BUILD_UTILS_EXEC_${code || signal}`,
-              message: `${cmd} exited with ${code || signal}`,
-            })
-          );
+        if (code === 0 || opts.ignoreNon0Exit) {
+          return resolve({
+            code,
+            stdout: Buffer.concat(stdoutList).toString(),
+            stderr: Buffer.concat(stderrList).toString(),
+          });
         }
 
-        return resolve({
-          code,
-          stdout: Buffer.concat(stdoutList).toString(),
-          stderr: Buffer.concat(stderrList).toString(),
-        });
+        const cmd = opts.prettyCommand
+          ? `Command "${opts.prettyCommand}"`
+          : 'Command';
+
+        return reject(
+          new NowBuildError({
+            code: `BUILD_UTILS_EXEC_${code || signal}`,
+            message: `${cmd} exited with ${code || signal}`,
+          })
+        );
       });
     }
   );
@@ -166,9 +173,30 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
-export async function getNodeBinPath({ cwd }: { cwd: string }) {
-  const { stdout } = await execAsync('npm', ['bin'], { cwd });
-  return stdout.trim();
+export async function getNodeBinPath({
+  cwd,
+}: {
+  cwd: string;
+}): Promise<string | undefined> {
+  const { code, stdout, stderr } = await execAsync('npm', ['bin'], {
+    cwd,
+    prettyCommand: 'npm bin',
+
+    // in some rare cases, we saw `npm bin` exit with a non-0 code, but still
+    // output the right bin path, so we ignore the exit code
+    ignoreNon0Exit: true,
+  });
+
+  const nodeBinPath = stdout.trim();
+
+  if (path.isAbsolute(nodeBinPath)) {
+    return nodeBinPath;
+  }
+
+  throw new NowBuildError({
+    code: `BUILD_UTILS_GET_NODE_BIN_PATH`,
+    message: `Running \`npm bin\` failed to return a valid bin path (code=${code}, stdout=${stdout}, stderr=${stderr})`,
+  });
 }
 
 async function chmodPlusX(fsPath: string) {
