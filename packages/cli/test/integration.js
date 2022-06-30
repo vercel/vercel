@@ -1933,7 +1933,7 @@ test('ensure we render a prompt when deploying home directory', async t => {
   t.is(exitCode, 0);
 
   t.true(
-    stdout.includes(
+    stderr.includes(
       'You are deploying your home directory. Do you want to continue? [y/N]'
     )
   );

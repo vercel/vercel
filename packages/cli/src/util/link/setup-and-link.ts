@@ -56,7 +56,7 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
   const link = await getLinkedProject(client, path);
-  const isTTY = process.stdout.isTTY;
+  const isTTY = client.stdin.isTTY;
   const quiet = !isTTY;
   let rootDirectory: string | null = null;
   let sourceFilesOutsideRootDirectory = true;
