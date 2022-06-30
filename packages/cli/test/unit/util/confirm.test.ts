@@ -1,8 +1,8 @@
-import confirm from '../../src/util/input/confirm';
-import { client } from '../mocks/client';
+import confirm from '../../../src/util/input/confirm';
+import { client } from '../../mocks/client';
 
-describe('MockClient', () => {
-  it('should mock `confirm()`', async () => {
+describe('confirm()', () => {
+  it('should work with multiple prompts', async () => {
     // true (explicit)
     let confirmedPromise = confirm(client, 'Explictly true?', false);
     await expect(client.stderr).toOutput('Explictly true? [y/N]');
