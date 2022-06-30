@@ -1,4 +1,4 @@
-import { client } from '../../mocks/client';
+import { client, MockClient } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import list, { stateString } from '../../../src/commands/list';
 import { join } from 'path';
@@ -31,7 +31,7 @@ describe('list', () => {
       await list(client);
 
       client.stderr.resume();
-      const output = await readOutputStream(client.stderr);
+      const output = await readOutputStream(client);
 
       const { org } = getDataFromIntro(output.split('\n')[0]);
       const header: string[] = formatTable(output.split('\n')[2]);
@@ -73,8 +73,7 @@ describe('list', () => {
       client.setArgv('--all');
       await list(client);
 
-      client.stderr.resume();
-      const output = await readOutputStream(client.stderr);
+      const output = await readOutputStream(client);
 
       const { project, org } = getDataFromIntro(output.split('\n')[0]);
       const header: string[] = formatTable(output.split('\n')[2]);
@@ -116,8 +115,7 @@ describe('list', () => {
       client.setArgv(deployment.name);
       await list(client);
 
-      client.stderr.resume();
-      const output = await readOutputStream(client.stderr);
+      const output = await readOutputStream(client);
 
       const { org } = getDataFromIntro(output.split('\n')[0]);
       const header: string[] = formatTable(output.split('\n')[2]);
@@ -164,10 +162,11 @@ function formatTable(output: string): string[] {
     .split(',');
 }
 
-function readOutputStream(stream: NodeJS.ReadableStream): Promise<string> {
+function readOutputStream(client: MockClient): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    stream.on('data', chunk => {
+    client.stderr.resume();
+    client.stderr.on('data', chunk => {
       chunks.push(chunk);
       if (chunks.length === 3) {
         resolve(chunks.toString().replace(/,/g, ''));
@@ -176,6 +175,6 @@ function readOutputStream(stream: NodeJS.ReadableStream): Promise<string> {
     setTimeout(() => {
       reject();
     }, 3000);
-    stream.on('error', reject);
+    client.stderr.on('error', reject);
   });
 }
