@@ -1,6 +1,5 @@
 import path from 'path';
 import chalk from 'chalk';
-import inquirer from 'inquirer';
 import { validateRootDirectory } from '../validate-paths';
 import Client from '../client';
 
@@ -15,11 +14,7 @@ export async function inputRootDirectory(
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const prompt = inquirer.createPromptModule({
-      input: client.stdin,
-      output: client.stdout,
-    });
-    const { rootDirectory } = await prompt({
+    const { rootDirectory } = await client.prompt({
       type: 'input',
       name: 'rootDirectory',
       message: `In which directory is your code located?`,

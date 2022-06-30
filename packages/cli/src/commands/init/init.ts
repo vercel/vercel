@@ -46,7 +46,11 @@ export default async function init(
   const exampleList = examples.filter(x => x.visible).map(x => x.name);
 
   if (!name) {
-    const chosen = await chooseFromDropdown('Select example:', exampleList);
+    const chosen = await chooseFromDropdown(
+      client,
+      'Select example:',
+      exampleList
+    );
 
     if (!chosen) {
       output.log('Aborted');
@@ -90,14 +94,18 @@ async function fetchExampleList(client: Client) {
 /**
  * Prompt user for choosing which example to init
  */
-async function chooseFromDropdown(message: string, exampleList: string[]) {
+async function chooseFromDropdown(
+  client: Client,
+  message: string,
+  exampleList: string[]
+) {
   const choices = exampleList.map(name => ({
     name,
     value: name,
     short: name,
   }));
 
-  return listInput({
+  return listInput(client, {
     message,
     choices,
   });
