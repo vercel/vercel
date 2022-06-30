@@ -1,7 +1,7 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
-import { Route, Source } from '@vercel/routing-utils';
+import type { Route, Source } from '@vercel/routing-utils';
 import frameworkList, { Framework } from '@vercel/frameworks';
 import type {
   PackageJson,
