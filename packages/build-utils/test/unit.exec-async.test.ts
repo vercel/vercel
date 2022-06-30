@@ -3,7 +3,7 @@ import { execAsync, NowBuildError } from '../src';
 it('should execute a command', async () => {
   const { code, stdout, stderr } = await execAsync('echo', ['hello']);
 
-  expect(code).toBe(0);
+  expect(code).toBe(process.platform === 'win32' ? 2 : 1);
   expect(stdout).toContain('hello');
   expect(stderr).toBe('');
 });
