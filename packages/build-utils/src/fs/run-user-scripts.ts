@@ -63,10 +63,11 @@ export interface SpawnOptionsExtended extends SpawnOptions {
   prettyCommand?: string;
 
   /**
-   * Returns instead of throwing an error. When relevant, the returned object
-   * will include the error code, stdout and stderr.
+   * Returns instead of throwing an error when the process exits with a
+   * non-0 exit code. When relevant, the returned object will include
+   * the error code, stdout and stderr.
    */
-  returnInsteadOfThrowing?: boolean;
+  ignoreNon0Exit?: boolean;
 }
 
 export function spawnAsync(
@@ -85,7 +86,7 @@ export function spawnAsync(
 
     child.on('error', reject);
     child.on('close', (code, signal) => {
-      if (code === 0 || opts.returnInsteadOfThrowing) {
+      if (code === 0 || opts.ignoreNon0Exit) {
         return resolve();
       }
 
@@ -129,7 +130,7 @@ export function execAsync(
 
       child.on('error', reject);
       child.on('close', (code, signal) => {
-        if (code === 0 || opts.returnInsteadOfThrowing) {
+        if (code === 0 || opts.ignoreNon0Exit) {
           return resolve({
             code,
             stdout: Buffer.concat(stdoutList).toString(),
@@ -179,7 +180,7 @@ export async function getNodeBinPath({
 }): Promise<string | undefined> {
   const { code, stdout, stderr } = await execAsync('npm', ['bin'], {
     cwd,
-    returnInsteadOfThrowing: true,
+    ignoreNon0Exit: true,
   });
 
   // in some rare cases, we saw `npm bin` exit with code 7, but still
