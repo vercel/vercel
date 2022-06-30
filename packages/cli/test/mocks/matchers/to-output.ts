@@ -43,7 +43,6 @@ export async function toOutput(
     };
 
     function onData(data: string) {
-      //console.log({ data });
       output += data;
       if (output.includes(test)) {
         cleanup();
