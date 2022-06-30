@@ -7,7 +7,7 @@ describe('login', () => {
     client.setArgv('login', '--token', 'foo');
     const exitCode = await login(client);
     expect(exitCode).toEqual(2);
-    expect(client.outputBuffer).toEqual(
+    await expect(client.stderr).toOutput(
       'Error! `--token` may not be used with the "login" command\n'
     );
   });
@@ -17,10 +17,8 @@ describe('login', () => {
     client.setArgv('login', user.email);
     const exitCode = await login(client);
     expect(exitCode).toEqual(0);
-    expect(
-      client.outputBuffer.includes(
-        `Success! Email authentication complete for ${user.email}`
-      )
-    ).toEqual(true);
+    await expect(client.stderr).toOutput(
+      `Success! Email authentication complete for ${user.email}`
+    );
   });
 });

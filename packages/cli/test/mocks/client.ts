@@ -22,6 +22,10 @@ class MockStream extends PassThrough {
     super();
     this.isTTY = true;
   }
+
+  // These is for the `ora` module
+  clearLine() {}
+  cursorTo() {}
 }
 
 export class MockClient extends Client {
