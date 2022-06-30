@@ -61,6 +61,12 @@ export interface SpawnOptionsExtended extends SpawnOptions {
    * Pretty formatted command that is being spawned for logging purposes.
    */
   prettyCommand?: string;
+
+  /**
+   * Returns instead of throwing an error. When relevant, the returned object
+   * will include the error code, stdout and stderr.
+   */
+  returnInsteadOfThrowing?: boolean;
 }
 
 export function spawnAsync(
@@ -79,7 +85,7 @@ export function spawnAsync(
 
     child.on('error', reject);
     child.on('close', (code, signal) => {
-      if (code === 0) {
+      if (code === 0 || opts.returnInsteadOfThrowing) {
         return resolve();
       }
 
@@ -123,24 +129,24 @@ export function execAsync(
 
       child.on('error', reject);
       child.on('close', (code, signal) => {
-        if (code !== 0) {
-          const cmd = opts.prettyCommand
-            ? `Command "${opts.prettyCommand}"`
-            : 'Command';
-
-          return reject(
-            new NowBuildError({
-              code: `BUILD_UTILS_EXEC_${code || signal}`,
-              message: `${cmd} exited with ${code || signal}`,
-            })
-          );
+        if (code === 0 || opts.returnInsteadOfThrowing) {
+          return resolve({
+            code,
+            stdout: Buffer.concat(stdoutList).toString(),
+            stderr: Buffer.concat(stderrList).toString(),
+          });
         }
 
-        return resolve({
-          code,
-          stdout: Buffer.concat(stdoutList).toString(),
-          stderr: Buffer.concat(stderrList).toString(),
-        });
+        const cmd = opts.prettyCommand
+          ? `Command "${opts.prettyCommand}"`
+          : 'Command';
+
+        return reject(
+          new NowBuildError({
+            code: `BUILD_UTILS_EXEC_${code || signal}`,
+            message: `${cmd} exited with ${code || signal}`,
+          })
+        );
       });
     }
   );
