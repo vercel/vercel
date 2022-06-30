@@ -102,6 +102,22 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
     },
     {
+      name: 'should not set path if corepack is enabled',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        lockfileVersion: 5.4,
+        env: {
+          FOO: 'bar',
+          ENABLE_EXPERIMENTAL_COREPACK: '1',
+        },
+      },
+      want: {
+        FOO: 'bar',
+        ENABLE_EXPERIMENTAL_COREPACK: '1',
+      },
+    },
+    {
       name: 'should not set path if pnpm 6 is detected',
       args: {
         cliType: 'pnpm',
