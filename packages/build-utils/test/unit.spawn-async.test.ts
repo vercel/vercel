@@ -1,7 +1,8 @@
 import { spawnAsync, NowBuildError } from '../src';
 
 it('should execute a command', async () => {
-  await expect(spawnAsync('echo', ['hello'])).resolves.toBeDefined();
+  // should resolve (it doesn't return anything, so it resolves with "undefined")
+  await expect(spawnAsync('echo', ['hello'])).resolves.toBeUndefined();
 });
 
 it('should throw if the command exits with non-0 code', async () => {
@@ -11,5 +12,10 @@ it('should throw if the command exits with non-0 code', async () => {
 });
 
 it('should return if the command exits with non-0 code and ignoreNon0Exit=true', async () => {
-  await expect(spawnAsync('echo', ['hello'])).resolves.toBeDefined();
+  // should resolve (it doesn't return anything, so it resolves with "undefined")
+  await expect(
+    spawnAsync('echo', ['hello'], {
+      ignoreNon0Exit: true,
+    })
+  ).resolves.toBeUndefined();
 });
