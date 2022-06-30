@@ -25,38 +25,35 @@ describe('projects', () => {
           id: 'unlink',
           name: 'unlink',
         });
-        client.setArgv('projects', 'connect', '--cwd', cwd, '--yes'); // todo: remove --yes
+        client.setArgv('projects', 'connect', '--cwd', cwd);
         const projectsPromise = projects(client);
 
-        // await waitForPrompt(client, chunk => /Set up [^?]+\?/.test(chunk));
-        // client.stdin.write('y\n');
+        await expect(client.stderr).toOutput('Set up');
+        client.stdin.write('y\n');
 
-        // await waitForPrompt(client, chunk => /Which scope [^?]+\?/.test(chunk));
-        // client.stdin.write('\n');
+        await expect(client.stderr).toOutput(
+          'Which scope should contain your project?'
+        );
+        client.stdin.write('\r');
 
-        // await waitForPrompt(client, chunk =>
-        //   chunk.includes('Link to existing project?')
-        // );
-        // client.stdin.write('no\n');
-
-        // await waitForPrompt(client, chunk =>
-        //   chunk.includes('What’s your project’s name?')
-        // );
-        // client.stdin.write('\n');
-
-        // await waitForPrompt(client, chunk =>
-        //   chunk.includes('In which directory is your code located?')
-        // );
-        // client.stdin.write('\n');
-
-        // await waitForPrompt(client, chunk =>
-        //   chunk.includes('Want to modify these settings?')
-        // );
-        // client.stdin.write('n');
+        await expect(client.stderr).toOutput('Found project');
+        client.stdin.write('y\n');
 
         const exitCode = await projectsPromise;
-        expect(client.outputBuffer).toContain('Connected user/repo!');
-        expect(exitCode, client.outputBuffer).toEqual(0);
+        await expect(client.stderr).toOutput('Connected user/repo!');
+
+        expect(exitCode).toEqual(0);
+
+        const project: Project = await client.fetch(`/v8/projects/unlink`);
+        expect(project.link).toMatchObject({
+          type: 'github',
+          repo: 'user/repo',
+          repoId: 1010,
+          gitCredentialId: '',
+          sourceless: true,
+          createdAt: 1656109539791,
+          updatedAt: 1656109539791,
+        });
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
         process.chdir(originalCwd);
@@ -76,7 +73,7 @@ describe('projects', () => {
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
-        expect(client.outputBuffer).toContain(
+        await expect(client.stderr).toOutput(
           `Error! No local git repo found. Run \`git clone <url>\` to clone a remote Git repository first.\n`
         );
       } finally {
@@ -98,7 +95,7 @@ describe('projects', () => {
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
-        expect(client.outputBuffer).toContain(
+        await expect(client.stderr).toOutput(
           `Error! No remote origin url found in your Git config. Make sure you've connected your local Git repo to a Git provider first.\n`
         );
       } finally {
@@ -121,7 +118,7 @@ describe('projects', () => {
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
-        expect(client.outputBuffer).toContain(
+        await expect(client.stderr).toOutput(
           `Error! Can't parse Git repo data from the following remote url in your Git config: bababooey\n`
         );
       } finally {
@@ -156,7 +153,7 @@ describe('projects', () => {
           createdAt: 1656109539791,
           updatedAt: 1656109539791,
         });
-        expect(client.outputBuffer).toContain(`> Connected user/repo!\n`);
+        expect(client.stderr).toOutput(`> Connected user/repo!\n`);
         expect(exitCode).toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
@@ -201,7 +198,7 @@ describe('projects', () => {
           createdAt: 1656109539791,
           updatedAt: 1656109539791,
         });
-        expect(client.outputBuffer).toContain(`> Connected user2/repo2!\n`);
+        await expect(client.stderr).toOutput(`> Connected user2/repo2!\n`);
         expect(exitCode).toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
@@ -233,7 +230,7 @@ describe('projects', () => {
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
-        expect(client.outputBuffer).toContain(
+        await expect(client.stderr).toOutput(
           `> user/repo is already connected to your project.\n`
         );
       } finally {
@@ -257,7 +254,7 @@ describe('projects', () => {
         client.setArgv('projects', 'connect', '--cwd', cwd, '--yes');
         const exitCode = await projects(client);
         expect(exitCode).toEqual(1);
-        expect(client.outputBuffer).toContain(
+        await expect(client.stderr).toOutput(
           `Failed to link laksfj/asdgklsadkl. Make sure there aren't any typos and that you have access to the repository if it's private.`
         );
       } finally {
