@@ -78,7 +78,6 @@ import {
   updateRouteSrc,
   validateEntrypoint,
 } from './utils';
-import assert from 'assert';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -1521,35 +1520,35 @@ export const build: BuildV2 = async ({
     const pageLambdaGroups: Array<LambdaGroup> = [];
 
     if (isSharedLambdas) {
-      const initialPageLambdaGroups = await getPageLambdaGroups(
+      const initialPageLambdaGroups = await getPageLambdaGroups({
         entryPath,
         config,
-        nonApiPages,
-        new Set(),
+        pages: nonApiPages,
+        prerenderRoutes: new Set(),
         pageTraces,
         compressedPages,
-        tracedPseudoLayer?.pseudoLayer || {},
-        0,
-        0,
+        tracedPseudoLayer: tracedPseudoLayer?.pseudoLayer || {},
+        initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
+        initialPseudoLayerUncompressed: 0,
         lambdaCompressedByteLimit,
         // internal pages are already referenced in traces for serverless
         // like builds
-        []
-      );
+        internalPages: [],
+      });
 
-      const initialApiLambdaGroups = await getPageLambdaGroups(
+      const initialApiLambdaGroups = await getPageLambdaGroups({
         entryPath,
         config,
-        apiPages,
-        new Set(),
+        pages: apiPages,
+        prerenderRoutes: new Set(),
         pageTraces,
         compressedPages,
-        tracedPseudoLayer?.pseudoLayer || {},
-        0,
-        0,
+        tracedPseudoLayer: tracedPseudoLayer?.pseudoLayer || {},
+        initialPseudoLayer: { pseudoLayer: {}, pseudoLayerBytes: 0 },
+        initialPseudoLayerUncompressed: 0,
         lambdaCompressedByteLimit,
-        []
-      );
+        internalPages: [],
+      });
 
       debug(
         JSON.stringify(
@@ -2613,15 +2612,6 @@ async function getServerlessPages(params: {
   for (const edgeFunctionFile of Object.keys(
     middlewareManifest?.functions ?? {}
   )) {
-    // `getStaticProps` are expecting `Prerender` output which is a Serverless function
-    // and not an Edge Function. Therefore we only remove API endpoints for now, as they
-    // don't have `getStaticProps`.
-    //
-    // Context: https://github.com/vercel/vercel/pull/7905#discussion_r890213165
-    assert(
-      edgeFunctionFile.startsWith('/api/'),
-      `Only API endpoints are currently supported for Edge endpoints.`
-    );
     delete pages[edgeFunctionFile.slice(1) + '.js'];
   }
 

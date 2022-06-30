@@ -47,11 +47,16 @@ export default async function inputProject(
 
   if (!detectedProject) {
     // did not auto-detect a project to link
-    shouldLinkProject = await confirm(`Link to existing project?`, false);
+    shouldLinkProject = await confirm(
+      client,
+      `Link to existing project?`,
+      false
+    );
   } else {
     // auto-detected a project to link
     if (
       await confirm(
+        client,
         `Found project ${chalk.cyan(
           `“${org.slug}/${detectedProject.name}”`
         )}. Link to it?`,
@@ -63,6 +68,7 @@ export default async function inputProject(
 
     // user doesn't want to link the auto-detected project
     shouldLinkProject = await confirm(
+      client,
       `Link to different existing project?`,
       true
     );
@@ -73,7 +79,11 @@ export default async function inputProject(
     let project: Project | ProjectNotFound | null = null;
 
     while (!project || project instanceof ProjectNotFound) {
-      const answers = await inquirer.prompt({
+      const prompt = inquirer.createPromptModule({
+        input: client.stdin,
+        output: client.stdout,
+      });
+      const answers = await prompt({
         type: 'input',
         name: 'existingProjectName',
         message: `What’s the name of your existing project?`,

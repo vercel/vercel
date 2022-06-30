@@ -80,6 +80,7 @@ export default async function setupAndLink(
   const shouldStartSetup =
     autoConfirm ||
     (await confirm(
+      client,
       `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true
     ));
@@ -120,7 +121,7 @@ export default async function setupAndLink(
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
-    rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+    rootDirectory = await inputRootDirectory(client, path, autoConfirm);
   } else {
     const project = projectOrNewProjectName;
 
@@ -224,7 +225,7 @@ export default async function setupAndLink(
       const { projectSettings, framework } = deployment;
 
       settings = await editProjectSettings(
-        output,
+        client,
         projectSettings,
         framework,
         autoConfirm,

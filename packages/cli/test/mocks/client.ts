@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
 import listen from 'async-listen';
@@ -23,10 +24,13 @@ export class MockClient extends Client {
       // Gets populated in `startMockServer()`
       apiUrl: '',
       authConfig: {},
+      stdin: new PassThrough(),
+      stdout: new PassThrough(),
       output: new Output(),
       config: {},
       localConfig: {},
     });
+
     this.mockOutput = jest.fn();
 
     this.app = express();
@@ -53,6 +57,12 @@ export class MockClient extends Client {
   }
 
   reset() {
+    this.stdin = new PassThrough();
+    this.stdin.isTTY = true;
+
+    this.stdout = new PassThrough();
+    this.stdout.isTTY = true;
+
     this.output = new Output();
     this.mockOutput = jest.fn();
     this.output.print = s => {

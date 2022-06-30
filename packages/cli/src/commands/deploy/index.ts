@@ -165,7 +165,7 @@ export default async (client: Client) => {
   const quiet = !isTTY;
 
   // check paths
-  const pathValidation = await validatePaths(output, paths);
+  const pathValidation = await validatePaths(client, paths);
 
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
@@ -243,6 +243,7 @@ export default async (client: Client) => {
     const shouldStartSetup =
       autoConfirm ||
       (await confirm(
+        client,
         `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
         true
       ));
@@ -287,7 +288,7 @@ export default async (client: Client) => {
 
     if (typeof projectOrNewProjectName === 'string') {
       newProjectName = projectOrNewProjectName;
-      rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+      rootDirectory = await inputRootDirectory(client, path, autoConfirm);
     } else {
       project = projectOrNewProjectName;
       rootDirectory = project.rootDirectory;
@@ -521,7 +522,7 @@ export default async (client: Client) => {
       }
 
       const settings = await editProjectSettings(
-        output,
+        client,
         projectSettings,
         framework,
         false,

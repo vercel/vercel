@@ -425,11 +425,8 @@ export async function serverBuild({
     const uncompressedInitialSize = Object.keys(
       initialPseudoLayer.pseudoLayer
     ).reduce((prev, cur) => {
-      return (
-        prev +
-          (initialPseudoLayer.pseudoLayer[cur] as PseudoFile)
-            .uncompressedSize || 0
-      );
+      const file = initialPseudoLayer.pseudoLayer[cur] as PseudoFile;
+      return prev + file.uncompressedSize || 0;
     }, 0);
 
     debug(
@@ -611,43 +608,36 @@ export async function serverBuild({
       }, {})
     );
 
-    const initialPseudoLayerSize = Object.keys(
-      initialPseudoLayer.pseudoLayer
-    ).reduce((prev, cur) => {
-      const file = initialPseudoLayer.pseudoLayer[cur] as PseudoFile;
-      return prev + file.uncompressedSize || 0;
-    }, 0);
-
     const pageExtensions = requiredServerFilesManifest.config?.pageExtensions;
 
-    const pageLambdaGroups = await getPageLambdaGroups(
-      requiredServerFilesManifest.appDir || entryPath,
+    const pageLambdaGroups = await getPageLambdaGroups({
+      entryPath: requiredServerFilesManifest.appDir || entryPath,
       config,
-      nonApiPages,
+      pages: nonApiPages,
       prerenderRoutes,
       pageTraces,
       compressedPages,
-      tracedPseudoLayer.pseudoLayer,
-      initialPseudoLayer.pseudoLayerBytes,
-      initialPseudoLayerSize,
+      tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
+      initialPseudoLayer,
+      lambdaCompressedByteLimit,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
+      internalPages,
+      pageExtensions,
+    });
+
+    const apiLambdaGroups = await getPageLambdaGroups({
+      entryPath: requiredServerFilesManifest.appDir || entryPath,
+      config,
+      pages: apiPages,
+      prerenderRoutes,
+      pageTraces,
+      compressedPages,
+      tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
+      initialPseudoLayer,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
       lambdaCompressedByteLimit,
       internalPages,
-      pageExtensions
-    );
-
-    const apiLambdaGroups = await getPageLambdaGroups(
-      requiredServerFilesManifest.appDir || entryPath,
-      config,
-      apiPages,
-      prerenderRoutes,
-      pageTraces,
-      compressedPages,
-      tracedPseudoLayer.pseudoLayer,
-      initialPseudoLayer.pseudoLayerBytes,
-      initialPseudoLayerSize,
-      lambdaCompressedByteLimit,
-      internalPages
-    );
+    });
 
     debug(
       JSON.stringify(
@@ -682,7 +672,6 @@ export async function serverBuild({
       const lambda = await createLambdaFromPseudoLayers({
         files: launcherFiles,
         layers: [
-          initialPseudoLayer.pseudoLayer,
           group.pseudoLayer,
           [...group.pages, ...internalPages].reduce((prev, page) => {
             const pageFileName = path.normalize(
@@ -906,6 +895,20 @@ export async function serverBuild({
               },
             ],
           },
+          // normalize "/index" from "/_next/data/index.json" to -> just "/"
+          // as matches a rewrite sources will expect just "/"
+          {
+            src: path.join('^/', entryDirectory, '/index'),
+            has: [
+              {
+                type: 'header',
+                key: 'x-nextjs-data',
+              },
+            ],
+            dest: path.join('/', entryDirectory),
+            ...(isOverride ? { override: true } : {}),
+            continue: true,
+          },
         ]
       : [];
   };
@@ -914,7 +917,30 @@ export async function serverBuild({
     return isNextDataServerResolving
       ? [
           {
-            src: path.join('^/', entryDirectory, '((?!_next/).*)$'),
+            src: path.join('^/', entryDirectory, '$'),
+            has: [
+              {
+                type: 'header',
+                key: 'x-nextjs-data',
+              },
+            ],
+            dest: `${path.join(
+              '/',
+              entryDirectory,
+              '/_next/data/',
+              buildId,
+              '/index.json'
+            )}`,
+            continue: true,
+            ...(isOverride ? { override: true } : {}),
+          },
+          // handle non-trailing slash
+          {
+            src: path.join(
+              '^/',
+              entryDirectory,
+              '((?!_next/)(?:.*[^/]|.*))/?$'
+            ),
             has: [
               {
                 type: 'header',

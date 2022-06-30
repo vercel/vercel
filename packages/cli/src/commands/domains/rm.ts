@@ -92,7 +92,10 @@ export default async function rm(
   const skipConfirmation = opts['--yes'] || false;
   if (
     !skipConfirmation &&
-    !(await promptBool(`Are you sure you want to remove ${param(domainName)}?`))
+    !(await promptBool(
+      `Are you sure you want to remove ${param(domainName)}?`,
+      client
+    ))
   ) {
     output.log('Aborted');
     return 0;
@@ -230,7 +233,7 @@ async function removeDomain(
 
     if (
       !skipConfirmation &&
-      !(await promptBool(`Remove conflicts associated with domain?`))
+      !(await promptBool(`Remove conflicts associated with domain?`, client))
     ) {
       output.log('Aborted');
       return 0;
