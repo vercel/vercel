@@ -57,7 +57,11 @@ export async function connectGitProvider(
             `\nVisit ${chalk.cyan(link(err.link))} for more information.`
         );
       } else {
-        client.output.error(`Failed to connect a Git provider repo.\n${err}`);
+        client.output.error(
+          `Failed to connect the ${formatProvider(
+            type
+          )} repository ${repo}.\n${err}`
+        );
       }
       return 1;
     });
