@@ -15,11 +15,16 @@ import link from '../util/output/link';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} login`)} <email or team>
+  ${chalk.bold(`${logo} ${getPkgName()} open`)} [options]
 
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
+    --prod                         Use the production environment
+    --yes                          Skip confirmation prompts
+    dash                           Open the dashboard in a browser
+    inspect                      Open the inspector URL for the latest deployment in a browser
+    deploy                         Open the latest deployment URL in a browser
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
@@ -29,21 +34,29 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Log into the Vercel platform
+  ${chalk.gray('–')} Open the dashboard for the current project in a browser
 
-    ${chalk.cyan(`$ ${getPkgName()} login`)}
+    ${chalk.cyan(`$ ${getPkgName()} open dash`)}
 
-  ${chalk.gray('–')} Log in using a specific email address
+  ${chalk.gray(
+    '–'
+  )} Open the inspector URL for the latest preview deployment in a browser
 
-    ${chalk.cyan(`$ ${getPkgName()} login john@doe.com`)}
+    ${chalk.cyan(`$ ${getPkgName()} open inspect`)}
 
-  ${chalk.gray('–')} Log in using a specific team "slug" for SAML Single Sign-On
+  ${chalk.gray(
+    '–'
+  )} Open the inspector URL for the latest production deployment in a browser
 
-    ${chalk.cyan(`$ ${getPkgName()} login acme`)}
+    ${chalk.cyan(`$ ${getPkgName()} open inspect --prod`)}
 
-  ${chalk.gray('–')} Log in using GitHub in "out-of-band" mode
+  ${chalk.gray('–')} Open the latest preview deployment URL in a browser
 
-    ${chalk.cyan(`$ ${getPkgName()} login --github --oob`)}
+    ${chalk.cyan(`$ ${getPkgName()} open deploy`)}
+
+  ${chalk.gray('–')} Open the latest production deployment URL in a browser
+
+    ${chalk.cyan(`$ ${getPkgName()} open deploy --prod`)}
 `);
 };
 
