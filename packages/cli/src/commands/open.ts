@@ -50,15 +50,20 @@ const help = () => {
 export default async function open(client: Client): Promise<number> {
   const { output } = client;
   let argv;
+  let subcommand: string | string[];
 
   try {
     argv = getArgs(client.argv.slice(2), {
       '--yes': Boolean,
+      '--prod': Boolean,
     });
   } catch (error) {
     handleError(error);
     return 1;
   }
+
+  argv._ = argv._.slice(1);
+  subcommand = argv._[0];
 
   if (argv['--help']) {
     help();
@@ -66,6 +71,7 @@ export default async function open(client: Client): Promise<number> {
   }
 
   const yes = argv['--yes'] || false;
+  const prod = argv['--prod'] || false;
 
   let scope = null;
 
@@ -90,7 +96,7 @@ export default async function open(client: Client): Promise<number> {
   }
   const { path } = validate;
 
-  const linkedProject = await ensureLink('project connect', client, path, yes);
+  const linkedProject = await ensureLink('open', client, path, yes);
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
@@ -107,48 +113,55 @@ export default async function open(client: Client): Promise<number> {
     team,
     true
   );
-  const latestDeploymentUrl = await getLatestDeploymentUrl(
-    client,
-    project,
-    team
-  );
-  const latestProductionDeployment = await getLatestDeploymentUrl(
+  const latestDeployment = await getLatestDeploymentUrl(client, project, team);
+  const latestProdDeployment = await getLatestDeploymentUrl(
     client,
     project,
     team,
     true
   );
 
-  const choice = await list(client, {
-    message: 'What do you want to open?',
-    choices: [
-      {
-        name: 'Dashboard',
-        value: dashboardUrl,
-        short: 'Dashboard',
-      },
-      {
-        name: 'Latest Preview Deployment',
-        value: latestDeploymentUrl || 'not_found',
-        short: 'Latest Preview Deployment',
-      },
-      {
-        name: 'Inspect Latest Preview Deployment',
-        value: inspectorUrl || 'not_found',
-        short: 'Deployment Inspector',
-      },
-      {
-        name: 'Latest Production Deployment',
-        value: latestProductionDeployment || 'not_found',
-        short: 'Latest Production Deployment',
-      },
-      {
-        name: 'Inspect Latest Production Deployment',
-        value: prodInspectorUrl || 'not_found',
-        short: 'Latest Production Deployment Inspector',
-      },
-    ],
-  });
+  let choice = '';
+
+  if (subcommand === 'dash') {
+    choice = dashboardUrl;
+  } else if (subcommand === 'deploy') {
+    choice = (prod ? latestProdDeployment : latestDeployment) || 'not_found';
+  } else if (subcommand === 'inspect') {
+    choice = (prod ? prodInspectorUrl : inspectorUrl) || 'not_found';
+  } else {
+    choice = await list(client, {
+      message: 'What do you want to open?',
+      choices: [
+        {
+          name: 'Dashboard',
+          value: dashboardUrl,
+          short: 'Dashboard',
+        },
+        {
+          name: 'Latest Preview Deployment',
+          value: latestDeployment || 'not_found',
+          short: 'Latest Preview Deployment',
+        },
+        {
+          name: 'Inspect Latest Preview Deployment',
+          value: inspectorUrl || 'not_found',
+          short: 'Deployment Inspector',
+        },
+        {
+          name: 'Latest Production Deployment',
+          value: latestProdDeployment || 'not_found',
+          short: 'Latest Production Deployment',
+        },
+        {
+          name: 'Inspect Latest Production Deployment',
+          value: prodInspectorUrl || 'not_found',
+          short: 'Latest Production Deployment Inspector',
+        },
+      ],
+    });
+  }
+
   if (choice === 'not_found') {
     output.log(
       `No deployments found. Run ${chalk.cyan(
