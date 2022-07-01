@@ -233,10 +233,23 @@ export function getSpawnOptions(
   };
 
   if (!meta.isDev) {
-    // Ensure that the selected Node version is at the beginning of the `$PATH`
-    opts.env.PATH = `/node${nodeVersion.major}/bin${path.delimiter}${
-      opts.env.PATH || process.env.PATH
-    }`;
+    let found = false;
+    const oldPath = opts.env.PATH || process.env.PATH || '';
+
+    const pathSegments = oldPath.split(path.delimiter).map(segment => {
+      if (/^\/node[0-9]+\/bin/.test(segment)) {
+        found = true;
+        return `/node${nodeVersion.major}/bin`;
+      }
+      return segment;
+    });
+
+    if (!found) {
+      // If we didn't find & replace, prepend at beginning of PATH
+      pathSegments.unshift(`/node${nodeVersion.major}/bin`);
+    }
+
+    opts.env.PATH = pathSegments.filter(Boolean).join(path.delimiter);
   }
 
   return opts;
