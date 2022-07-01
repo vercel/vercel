@@ -1,3 +1,4 @@
+import url from 'url';
 import { fork, spawn } from 'child_process';
 import {
   readFileSync,
@@ -471,7 +472,11 @@ export const startDevServer: StartDevServer = async opts => {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const matchers = new RegExp(getRegExpFromMatchers(staticConfig?.matcher));
 
-    if (!matchers.test(meta.requestUrl)) {
+    const parsed = url.parse(meta.requestUrl, true);
+    if (
+      typeof parsed.pathname !== 'string' ||
+      !matchers.test(parsed.pathname)
+    ) {
       // If the "matchers" doesn't say to handle this
       // path then skip middleware invocation
       return null;
