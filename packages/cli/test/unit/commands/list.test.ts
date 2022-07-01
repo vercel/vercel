@@ -164,16 +164,18 @@ function parseTable(output: string): string[] {
 function readOutputStream(client: MockClient): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
+    const timeout = setTimeout(() => {
+      reject();
+    }, 3000);
+
     client.stderr.resume();
     client.stderr.on('data', chunk => {
       chunks.push(chunk);
       if (chunks.length === 3) {
+        clearTimeout(timeout);
         resolve(chunks.toString().replace(/,/g, ''));
       }
     });
-    setTimeout(() => {
-      reject();
-    }, 3000);
     client.stderr.on('error', reject);
   });
 }
