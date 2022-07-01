@@ -100,15 +100,23 @@ export default async function open(client: Client): Promise<number> {
 
   const dashboardUrl = getDashboardUrl(org, project);
   const inspectorUrl = await getInspectorUrl(client, project, org, team);
+  const prodInspectorUrl = await getInspectorUrl(
+    client,
+    project,
+    org,
+    team,
+    true
+  );
   const latestDeploymentUrl = await getLatestDeploymentUrl(
     client,
     project,
     team
   );
-  const latestProductionDeployment = await getLatestProdDeployment(
+  const latestProductionDeployment = await getLatestDeploymentUrl(
     client,
     project,
-    team
+    team,
+    true
   );
 
   const choice = await list(client, {
@@ -120,19 +128,24 @@ export default async function open(client: Client): Promise<number> {
         short: 'Dashboard',
       },
       {
-        name: 'Latest Deployment Inspector',
-        value: inspectorUrl || 'not_found',
-        short: 'Deployment Inspector',
-      },
-      {
         name: 'Latest Preview Deployment',
         value: latestDeploymentUrl || 'not_found',
         short: 'Latest Preview Deployment',
       },
       {
+        name: 'Inspect Latest Preview Deployment',
+        value: inspectorUrl || 'not_found',
+        short: 'Deployment Inspector',
+      },
+      {
         name: 'Latest Production Deployment',
         value: latestProductionDeployment || 'not_found',
         short: 'Latest Production Deployment',
+      },
+      {
+        name: 'Inspect Latest Production Deployment',
+        value: prodInspectorUrl || 'not_found',
+        short: 'Latest Production Deployment Inspector',
       },
     ],
   });
@@ -161,14 +174,14 @@ async function getInspectorUrl(
   client: Client,
   project: Project,
   org: Org,
-  team: Team | null
+  team: Team | null,
+  prod: Boolean = false
 ): Promise<string | undefined> {
   const proj = await getProject(client, project, team);
   if (proj) {
-    const latestDeploymentId = proj.latestDeployments?.[0]?.id?.replace(
-      'dpl_',
-      ''
-    );
+    let latestDeploymentId = (
+      prod ? proj?.targets?.production?.id : proj.latestDeployments?.[0]?.id
+    )?.replace('dpl_', '');
     if (latestDeploymentId) {
       return `https://vercel.com/${org.slug}/${project.name}/${latestDeploymentId}`;
     }
@@ -177,21 +190,16 @@ async function getInspectorUrl(
 async function getLatestDeploymentUrl(
   client: Client,
   project: Project,
-  team: Team | null
+  team: Team | null,
+  prod: Boolean = false
 ): Promise<string | undefined> {
   const proj = await getProject(client, project, team);
-  if (proj?.latestDeployments?.[0]?.url) {
-    return `https://${proj.latestDeployments[0].url}`;
-  }
-}
-async function getLatestProdDeployment(
-  client: Client,
-  project: Project,
-  team: Team | null
-): Promise<string | undefined> {
-  const proj = await getProject(client, project, team);
-  if (proj?.targets?.production) {
+  if (prod && proj?.targets?.production) {
     return `https://${proj.targets.production.url}`;
+  } else {
+    if (proj?.latestDeployments?.[0]?.url) {
+      return `https://${proj.latestDeployments[0].url}`;
+    }
   }
 }
 
@@ -199,7 +207,7 @@ async function getProject(
   client: Client,
   project: Project,
   team: Team | null
-): Promise<Partial<Project> | undefined> {
+): Promise<Project | undefined> {
   const proj = await client
     .fetch(
       `/v9/projects/${project.name}?${stringify({
