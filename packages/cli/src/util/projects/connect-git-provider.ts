@@ -41,19 +41,19 @@ export async function connectGitProvider(
       }),
     })
     .catch(err => {
-      if (err.message.includes('install the GitHub integration')) {
+      if (
+        err.meta.action === 'Install GitHub App' ||
+        err.code === 'repo_not_found'
+      ) {
         client.output.error(
           `Failed to link ${chalk.cyan(
             repo
           )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
         );
-      } else if (err.message.includes('connect github first')) {
+      } else if (err.meta.action === 'Add a Login Connection') {
         client.output.error(
-          `Failed to link ${chalk.cyan(
-            repo
-          )}. You need to add a Login Connection to your Git provider first. Visit ${chalk.cyan(
-            `https://vercel.com/docs/concepts/personal-accounts/login-connections`
-          )} to learn how to do this.`
+          err.message +
+            ` Visit ${chalk.cyan(err.meta.link)} to learn how to do this.`
         );
       } else {
         client.output.error(`Failed to connect a Git provider repo.\n${err}`);

@@ -1,5 +1,6 @@
 import { client } from './client';
 import { Project } from '../../src/types';
+import { formatProvider } from '../../src/util/projects/connect-git-provider';
 
 const envs = [
   {
@@ -175,9 +176,23 @@ export function useProject(project: Partial<Project> = defaultProject) {
       };
       res.json(project);
     } else {
-      res.status(400).json({
-        message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
-      });
+      if (type === 'github') {
+        res.status(400).json({
+          message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
+          meta: {
+            action: 'Install GitHub App',
+            link: 'https://github.com/apps/vercel',
+            repo,
+          },
+        });
+      } else {
+        res.status(400).json({
+          code: 'repo_not_found',
+          message: `The repository "${repo}" couldn't be found in your linked ${formatProvider(
+            type
+          )} account.`,
+        });
+      }
     }
   });
   client.scenario.delete(`/v4/projects/${project.id}/link`, (req, res) => {
