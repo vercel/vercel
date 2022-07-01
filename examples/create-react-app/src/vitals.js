@@ -24,7 +24,6 @@ export function sendToVercelAnalytics(metric) {
     speed: getConnectionSpeed(),
   };
 
-  console.log({ body });
   const blob = new Blob([new URLSearchParams(body).toString()], {
     // This content type is necessary for `sendBeacon`
     type: 'application/x-www-form-urlencoded',
