@@ -54,12 +54,6 @@ import { Register, register } from './typescript';
 import { getRegExpFromMatchers } from './utils';
 
 export { shouldServe };
-export type {
-  NowRequest,
-  NowResponse,
-  VercelRequest,
-  VercelResponse,
-} from './types';
 
 interface DownloadOptions {
   files: Files;
