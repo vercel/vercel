@@ -19,12 +19,12 @@ describe('list', () => {
       process.chdir(cwd);
 
       const user = useUser();
-      const team = useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
+      const team = useTeams('team_dummy');
       teamSlug = team[0].slug;
       useProject({
         ...defaultProject,
-        id: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
-        name: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
+        id: 'with-team',
+        name: 'with-team',
       });
       const deployment = useDeployment({ creator: user });
 
@@ -61,11 +61,11 @@ describe('list', () => {
       process.chdir(cwd);
 
       const user = useUser();
-      useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
+      useTeams('team_dummy');
       useProject({
         ...defaultProject,
-        id: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
-        name: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
+        id: 'with-team',
+        name: 'with-team',
       });
       const deployment = useDeployment({ creator: user });
 
@@ -103,11 +103,11 @@ describe('list', () => {
       process.chdir(cwd);
 
       const user = useUser();
-      useTeams('team_MtLD9hKuWAvoDd3KmiHs9zUg');
+      useTeams('team_dummy');
       useProject({
         ...defaultProject,
-        id: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
-        name: 'prj_Am19DF8JBL9g89tn4RdDVD59axFi',
+        id: 'with-team',
+        name: 'with-team',
       });
       const deployment = useDeployment({ creator: user });
 
