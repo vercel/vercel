@@ -25,6 +25,7 @@ export default new Map([
   ['logout', 'logout'],
   ['logs', 'logs'],
   ['ls', 'list'],
+  ['open', 'open'],
   ['project', 'projects'],
   ['projects', 'projects'],
   ['pull', 'pull'],

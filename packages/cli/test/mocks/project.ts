@@ -96,7 +96,7 @@ export const defaultProject = {
       requestedAt: 1571239348998,
       target: 'production',
       teamId: null,
-      type: 'LAMBDAS',
+      type: undefined,
       url: 'a-project-name-rjtr4pz3f.vercel.app',
       userId: 'K4amb7K9dAt5R2vBJWF32bmY',
     },

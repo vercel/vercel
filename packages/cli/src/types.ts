@@ -117,6 +117,7 @@ export type Cert = {
 
 export type Deployment = {
   uid: string;
+  id?: string;
   url: string;
   name: string;
   type: 'LAMBDAS';
@@ -254,6 +255,9 @@ export interface Project extends ProjectSettings {
   createdAt: number;
   alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
+  targets?: {
+    production?: Partial<Deployment>;
+  };
 }
 
 export interface Org {
