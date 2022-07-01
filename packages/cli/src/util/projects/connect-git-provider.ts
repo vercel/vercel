@@ -54,7 +54,7 @@ export async function connectGitProvider(
       } else if (err.action === 'Add a Login Connection') {
         client.output.error(
           err.message.replace(repo, chalk.cyan(repo)) +
-            `\nVisit ${chalk.cyan(link(err.link))} for more information.`
+            `\nVisit ${link(err.link)} for more information.`
         );
       } else {
         client.output.error(
