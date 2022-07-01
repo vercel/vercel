@@ -2,6 +2,7 @@ import Client from '../client';
 import { stringify } from 'qs';
 import { Team } from '../../types';
 import chalk from 'chalk';
+import link from '../output/link';
 
 export async function disconnectGitProvider(
   client: Client,
@@ -42,7 +43,7 @@ export async function connectGitProvider(
     })
     .catch(err => {
       if (
-        err.meta.action === 'Install GitHub App' ||
+        err.meta?.action === 'Install GitHub App' ||
         err.code === 'repo_not_found'
       ) {
         client.output.error(
@@ -50,10 +51,10 @@ export async function connectGitProvider(
             repo
           )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
         );
-      } else if (err.meta.action === 'Add a Login Connection') {
+      } else if (err.action === 'Add a Login Connection') {
         client.output.error(
-          err.message +
-            ` Visit ${chalk.cyan(err.meta.link)} to learn how to do this.`
+          err.message.replace(repo, chalk.cyan(repo)) +
+            `\nVisit ${chalk.cyan(link(err.link))} for more information.`
         );
       } else {
         client.output.error(`Failed to connect a Git provider repo.\n${err}`);
