@@ -13,7 +13,6 @@
     "build": "node build.js",
     "test-integration-once": "yarn test test/test.js",
     "test": "jest --env node --verbose --bail --runInBand",
-    "test-unit": "yarn test test/build.test.ts",
     "prepublishOnly": "node build.js"
   },
   "files": [
