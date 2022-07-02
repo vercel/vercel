@@ -23,7 +23,7 @@ const help = () => {
     --prod                         Use the production environment
     --yes                          Skip confirmation prompts
     dash                           Open the dashboard in a browser
-    inspect                      Open the inspector URL for the latest deployment in a browser
+    inspect                        Open the inspector URL for the latest deployment in a browser
     deploy                         Open the latest deployment URL in a browser
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
