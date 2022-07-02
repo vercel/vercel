@@ -150,27 +150,33 @@ export default async function open(
       message: 'What do you want to open?',
       choices: [
         {
-          name: 'Dashboard',
+          name: `Dashboard ${chalk.gray('(vc open dash)')}`,
           value: dashboardUrl,
           short: 'Dashboard',
         },
         {
-          name: 'Latest Preview Deployment',
+          name: `Latest Preview Deployment ${chalk.gray('(vc open deploy)')}`,
           value: latestDeployment || 'not_found',
           short: 'Latest Preview Deployment',
         },
         {
-          name: 'Inspect Latest Preview Deployment',
+          name: `Inspect Latest Preview Deployment ${chalk.gray(
+            '(vc open inspect)'
+          )}`,
           value: inspectorUrl || 'not_found',
           short: 'Deployment Inspector',
         },
         {
-          name: 'Latest Production Deployment',
+          name: `Latest Production Deployment ${chalk.gray(
+            '(vc open deploy --prod)'
+          )}`,
           value: latestProdDeployment || 'not_found',
           short: 'Latest Production Deployment',
         },
         {
-          name: 'Inspect Latest Production Deployment',
+          name: `Inspect Latest Production Deployment ${chalk.gray(
+            '(vc open inspect --prod)'
+          )}`,
           value: prodInspectorUrl || 'not_found',
           short: 'Latest Production Deployment Inspector',
         },
@@ -225,10 +231,8 @@ async function getLatestDeploymentUrl(
   const proj = await getProject(client, project, team);
   if (prod && proj?.targets?.production) {
     return `https://${proj.targets.production.url}`;
-  } else {
-    if (proj?.latestDeployments?.[0]?.url) {
-      return `https://${proj.latestDeployments[0].url}`;
-    }
+  } else if (proj?.latestDeployments?.[0]?.url) {
+    return `https://${proj.latestDeployments[0].url}`;
   }
 }
 
@@ -245,7 +249,7 @@ async function getProject(
     )
     .catch(err => {
       client.output.error(err.message);
-      return undefined;
+      return;
     });
   return proj as Project;
 }
