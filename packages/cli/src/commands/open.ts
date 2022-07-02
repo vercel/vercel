@@ -34,6 +34,10 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
+  ${chalk.gray('–')} View all options
+
+    ${chalk.cyan(`$ ${getPkgName()} open`)}
+
   ${chalk.gray('–')} Open the dashboard for the current project in a browser
 
     ${chalk.cyan(`$ ${getPkgName()} open dash`)}
