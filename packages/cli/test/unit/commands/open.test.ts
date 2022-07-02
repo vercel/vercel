@@ -33,7 +33,7 @@ describe('open', () => {
       );
 
       const exitCode = await openPromise;
-      expect(exitCode).toBe(0);
+      expect(exitCode).toEqual(0);
     } finally {
       process.chdir(originalCwd);
     }
@@ -62,7 +62,7 @@ describe('open', () => {
       );
 
       const exitCode = await openPromise;
-      expect(exitCode).toBe(0);
+      expect(exitCode).toEqual(0);
     } finally {
       process.chdir(originalCwd);
     }
@@ -91,7 +91,7 @@ describe('open', () => {
       );
 
       const exitCode = await openPromise;
-      expect(exitCode).toBe(0);
+      expect(exitCode).toEqual(0);
     } finally {
       process.chdir(originalCwd);
     }
@@ -115,7 +115,7 @@ describe('open', () => {
       await expect(client.stderr).toOutput(`Opened https://${url}`);
 
       const exitCode = await openPromise;
-      expect(exitCode).toBe(0);
+      expect(exitCode).toEqual(0);
     } finally {
       process.chdir(originalCwd);
     }
@@ -139,7 +139,7 @@ describe('open', () => {
       await expect(client.stderr).toOutput(`Opened https://${url}`);
 
       const exitCode = await openPromise;
-      expect(exitCode).toBe(0);
+      expect(exitCode).toEqual(0);
     } finally {
       process.chdir(originalCwd);
     }
@@ -172,7 +172,7 @@ describe('open', () => {
       process.chdir(originalCwd);
     }
   });
-  it('should fail inspect when there are no deployments', async () => {
+  it('should fail when there are no deployments', async () => {
     const cwd = fixture('no-deployments');
     try {
       process.chdir(cwd);
@@ -187,39 +187,22 @@ describe('open', () => {
       project.project.latestDeployments = undefined;
 
       client.setArgv('open', 'inspect');
-      const openPromise = open(client, true);
+      const openPromiseInspect = open(client, true);
 
       await expect(client.stderr).toOutput(
         'No deployments found. Run `vercel deploy` to create a deployment.'
       );
-      const exitCode = await openPromise;
-      expect(exitCode).toEqual(1);
-    } finally {
-      process.chdir(originalCwd);
-    }
-  });
-  it('should fail deploy when there are no deployments', async () => {
-    const cwd = fixture('no-deployments');
-    try {
-      process.chdir(cwd);
-
-      useUser();
-      useTeams('team_dummy');
-      const project = useProject({
-        ...defaultProject,
-        id: 'no-deployments',
-        name: 'no-deployments',
-      });
-      project.project.latestDeployments = undefined;
+      const exitCodeInspect = await openPromiseInspect;
+      expect(exitCodeInspect).toEqual(1);
 
       client.setArgv('open', 'deploy');
-      const openPromise = open(client, true);
+      const openPromiseDeploy = open(client, true);
 
       await expect(client.stderr).toOutput(
         'No deployments found. Run `vercel deploy` to create a deployment.'
       );
-      const exitCode = await openPromise;
-      expect(exitCode).toEqual(1);
+      const exitCodeDeploy = await openPromiseDeploy;
+      expect(exitCodeDeploy).toEqual(1);
     } finally {
       process.chdir(originalCwd);
     }
