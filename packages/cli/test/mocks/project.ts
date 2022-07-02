@@ -131,6 +131,9 @@ export function useProject(project: Partial<Project> = defaultProject) {
   client.scenario.get(`/v8/projects/${project.id}`, (_req, res) => {
     res.json(project);
   });
+  client.scenario.get(`/v9/projects/${project.id}`, (_req, res) => {
+    res.json(project);
+  });
   client.scenario.get(
     `/v6/projects/${project.id}/system-env-values`,
     (_req, res) => {

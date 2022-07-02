@@ -60,7 +60,10 @@ const help = () => {
 `);
 };
 
-export default async function open(client: Client): Promise<number> {
+export default async function open(
+  client: Client,
+  test: Boolean
+): Promise<number> {
   const { output } = client;
   let argv;
   let subcommand: string | string[];
@@ -188,7 +191,7 @@ export default async function open(client: Client): Promise<number> {
     return 0;
   }
 
-  execa('open', [choice]);
+  if (!test) execa('open', [choice]);
   output.log(`🪄 Opened ${link(choice)}`);
   return 0;
 }
