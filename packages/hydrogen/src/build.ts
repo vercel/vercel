@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, join, relative } from 'path';
 import {
   debug,
   download,
@@ -20,7 +20,6 @@ export const build: BuildV2 = async ({
   entrypoint,
   files,
   workPath,
-  repoRootPath,
   config,
   meta = {},
 }) => {
@@ -29,18 +28,18 @@ export const build: BuildV2 = async ({
   await download(files, workPath, meta);
 
   const mountpoint = dirname(entrypoint);
-  const entrypointDirname = join(workPath, mountpoint);
+  const entrypointDir = join(workPath, mountpoint);
 
   // Run "Install Command"
   const nodeVersion = await getNodeVersion(
-    entrypointDirname,
+    entrypointDir,
     undefined,
     config,
     meta
   );
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion } = await scanParentDirs(entrypointDirname);
+  const { cliType, lockfileVersion } = await scanParentDirs(entrypointDir);
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
@@ -54,59 +53,65 @@ export const build: BuildV2 = async ({
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
         ...spawnOpts,
-        cwd: entrypointDirname,
+        cwd: entrypointDir,
       });
     } else {
       console.log(`Skipping "install" command...`);
     }
   } else {
-    await runNpmInstall(entrypointDirname, [], spawnOpts, meta, nodeVersion);
+    await runNpmInstall(entrypointDir, [], spawnOpts, meta, nodeVersion);
   }
 
   // Copy the edge entrypoint file into `.vercel/cache`
-  await fs.mkdir(join(repoRootPath, '.vercel/cache/hydrogen', mountpoint), {
-    recursive: true,
-  });
-  await fs.copyFile(
+  const edgeEntryDir = join(workPath, '.vercel/cache/hydrogen');
+  const edgeEntryRelative = relative(edgeEntryDir, workPath);
+  const edgeEntryDest = join(edgeEntryDir, 'edge-entry.js');
+  console.log({ edgeEntryDir, edgeEntryRelative, workPath, mountpoint });
+  let edgeEntryContents = await fs.readFile(
     join(__dirname, '..', 'edge-entry.js'),
-    join(repoRootPath, '.vercel/cache/hydrogen', mountpoint, 'edge-entry.js')
+    'utf8'
   );
+  edgeEntryContents = edgeEntryContents.replace(
+    /__RELATIVE__/g,
+    edgeEntryRelative
+  );
+  await fs.mkdir(edgeEntryDir, { recursive: true });
+  await fs.writeFile(edgeEntryDest, edgeEntryContents);
 
   // Make `shopify hydrogen build` output a Edge Function compatible bundle
   spawnOpts.env.SHOPIFY_FLAG_BUILD_TARGET = 'worker';
 
   // Use this file as the entrypoint for the Edge Function bundle build
-  spawnOpts.env.SHOPIFY_FLAG_BUILD_SSR_ENTRY =
-    '.vercel/cache/hydrogen/edge-entry.js';
+  spawnOpts.env.SHOPIFY_FLAG_BUILD_SSR_ENTRY = edgeEntryDest;
 
   // Run "Build Command"
   if (buildCommand) {
     debug(`Executing build command "${buildCommand}"`);
     await execCommand(buildCommand, {
       ...spawnOpts,
-      cwd: entrypointDirname,
+      cwd: entrypointDir,
     });
   } else {
     const pkg = await readConfigFile<PackageJson>(
-      join(entrypointDirname, 'package.json')
+      join(entrypointDir, 'package.json')
     );
     if (hasScript('vercel-build', pkg)) {
       debug(`Executing "yarn vercel-build"`);
-      await runPackageJsonScript(entrypointDirname, 'vercel-build', spawnOpts);
+      await runPackageJsonScript(entrypointDir, 'vercel-build', spawnOpts);
     } else if (hasScript('build', pkg)) {
       debug(`Executing "yarn build"`);
-      await runPackageJsonScript(entrypointDirname, 'build', spawnOpts);
+      await runPackageJsonScript(entrypointDir, 'build', spawnOpts);
     } else {
       await execCommand('shopify hydrogen build', {
         ...spawnOpts,
-        cwd: entrypointDirname,
+        cwd: entrypointDir,
       });
     }
   }
 
   const [staticFiles, edgeFunctionFiles] = await Promise.all([
-    glob('**', join(entrypointDirname, 'dist/client')),
-    glob('**', join(entrypointDirname, 'dist/worker')),
+    glob('**', join(entrypointDir, 'dist/client')),
+    glob('**', join(entrypointDir, 'dist/worker')),
   ]);
 
   const edgeFunction = new EdgeFunction({
