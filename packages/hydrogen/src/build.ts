@@ -66,7 +66,6 @@ export const build: BuildV2 = async ({
   const edgeEntryDir = join(workPath, '.vercel/cache/hydrogen');
   const edgeEntryRelative = relative(edgeEntryDir, workPath);
   const edgeEntryDest = join(edgeEntryDir, 'edge-entry.js');
-  console.log({ edgeEntryDir, edgeEntryRelative, workPath, mountpoint });
   let edgeEntryContents = await fs.readFile(
     join(__dirname, '..', 'edge-entry.js'),
     'utf8'
