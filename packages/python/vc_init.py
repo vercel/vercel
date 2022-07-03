@@ -171,13 +171,15 @@ elif 'app' in __vc_variables:
         # https://github.com/erm/mangum/blob/07ce20a0e2f67c5c2593258a92c03fdc66d9edda/LICENSE
         import asyncio
         import enum
+        import logging
+        from contextlib import ExitStack
         from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
 
         def get_event_loop():
             try:
                 return asyncio.get_running_loop()
-            except RuntimeError:
+            except:
                 if sys.version_info < (3, 10):
                     return asyncio.get_event_loop()
                 else:
@@ -203,7 +205,7 @@ elif 'app' in __vc_variables:
                 Runs until the response is completely read from the application.
                 """
                 loop = get_event_loop()
-                self.app_queue = asyncio.Queue(**({'loop': loop} if sys.version_info < (3, 10) else {}))
+                self.app_queue = asyncio.Queue()
                 self.put_message({'type': 'http.request', 'body': body, 'more_body': False})
 
                 asgi_instance = app(self.scope, self.receive, self.send)
@@ -265,51 +267,157 @@ elif 'app' in __vc_variables:
                     self.response['body'] = base64.b64encode(self.body).decode('utf-8')
                     self.response['encoding'] = 'base64'
 
+        class LifespanFailure(Exception):
+            """Raise when a lifespan failure event is sent by an application."""
+
+        class LifespanUnsupported(Exception):
+            """Raise when lifespan events are not supported by an application."""
+
+        class UnexpectedMessage(Exception):
+            """Raise when an unexpected message type is received during an ASGI cycle."""
+
+        class LifespanCycleState(enum.Enum):
+            """
+            The state of the ASGI `lifespan` connection.
+            * **CONNECTING** - Initial state. The ASGI application instance will be run with
+            the connection scope containing the `lifespan` type.
+            * **STARTUP** - The lifespan startup event has been pushed to the queue to be
+            received by the application.
+            * **SHUTDOWN** - The lifespan shutdown event has been pushed to the queue to be
+            received by the application.
+            * **FAILED** - A lifespan failure has been detected, and the connection will be
+            closed with an error.
+            * **UNSUPPORTED** - An application attempted to send a message before receiving
+            the lifepan startup event. If the lifespan argument is "on", then the connection
+            will be closed with an error.
+            """
+
+            CONNECTING = enum.auto()
+            STARTUP = enum.auto()
+            SHUTDOWN = enum.auto()
+            FAILED = enum.auto()
+            UNSUPPORTED = enum.auto()
+        
         class Lifespan:
-            startup_event = asyncio.Event()
-            shutdown_event = asyncio.Event()
-            app_queue = asyncio.Queue()
 
             def __init__(self, app):
                 self.app = app
+                self.state = LifespanCycleState.CONNECTING
+                self.exception = None
+                self.logger = logging.getLogger('lifespan')
+                self.loop = get_event_loop()
+                self.app_queue = asyncio.Queue()
+                self.startup_event = asyncio.Event()
+                self.shutdown_event = asyncio.Event()
+
+            
+            def __enter__(self) -> None:
+                """Runs the event loop for application startup."""
+                self.loop.create_task(self.run())
+                self.loop.run_until_complete(self.startup())
+
+            def __exit__(
+                self,
+                exc_type,
+                exc_value,
+                traceback,
+            ) -> None:
+                """Runs the event loop for application shutdown."""
+                self.loop.run_until_complete(self.shutdown())
                 
             async def run(self):
+                """Calls the application with the `lifespan` connection scope."""
                 try:
-                    await self.app({"type": "lifespan"}, self.receive, self.send)
+                    await self.app(
+                        {"type": "lifespan", "asgi": {"spec_version": "2.0", "version": "3.0"}},
+                        self.receive,
+                        self.send,
+                    )
+                except LifespanUnsupported:
+                    self.logger.info("ASGI 'lifespan' protocol appears unsupported.")
+                except (LifespanFailure, UnexpectedMessage) as exc:
+                    self.exception = exc
+                except BaseException as exc:
+                    self.logger.error("Exception in 'lifespan' protocol.", exc_info=exc)
                 finally:
                     self.startup_event.set()
                     self.shutdown_event.set()
 
             async def send(self, message):
-                assert message["type"] in (
+                """Awaited by the application to send ASGI `lifespan` events."""
+                message_type = message["type"]
+
+                if self.state is LifespanCycleState.CONNECTING:
+                    # If a message is sent before the startup event is received by the
+                    # application, then assume that lifespan is unsupported.
+                    self.state = LifespanCycleState.UNSUPPORTED
+                    raise LifespanUnsupported("Lifespan protocol appears unsupported.")
+
+                if message_type not in (
                     "lifespan.startup.complete",
                     "lifespan.shutdown.complete",
-                )
+                    "lifespan.startup.failed",
+                    "lifespan.shutdown.failed",
+                ):
+                    self.state = LifespanCycleState.FAILED
+                    raise UnexpectedMessage(f"Unexpected '{message_type}' event received.")
 
-                if message["type"] == "lifespan.startup.complete":
-                    self.startup_event.set()
-                elif message["type"] == "lifespan.shutdown.complete":
-                    self.shutdown_event.set()
-                else:  # pragma: no cover
-                    raise RuntimeError(
-                        f"Expected lifespan message type, received: {message['type']}"
-                    )
+                if self.state is LifespanCycleState.STARTUP:
+                    if message_type == "lifespan.startup.complete":
+                        self.startup_event.set()
+                    elif message_type == "lifespan.startup.failed":
+                        self.state = LifespanCycleState.FAILED
+                        self.startup_event.set()
+                        message_value = message.get("message", "")
+                        raise LifespanFailure(f"Lifespan startup failure. {message_value}")
+
+                elif self.state is LifespanCycleState.SHUTDOWN:
+                    if message_type == "lifespan.shutdown.complete":
+                        self.shutdown_event.set()
+                    elif message_type == "lifespan.shutdown.failed":
+                        self.state = LifespanCycleState.FAILED
+                        self.shutdown_event.set()
+                        message_value = message.get("message", "")
+                        raise LifespanFailure(f"Lifespan shutdown failure. {message_value}")
 
             async def receive(self):
-                message = await self.app_queue.get()
-                return message
+                """Awaited by the application to receive ASGI `lifespan` events."""
+                if self.state is LifespanCycleState.CONNECTING:
 
-            async def wait_startup(self):
+                    # Connection established. The next event returned by the queue will be
+                    # `lifespan.startup` to inform the application that the connection is
+                    # ready to receive lfiespan messages.
+                    self.state = LifespanCycleState.STARTUP
+
+                elif self.state is LifespanCycleState.STARTUP:
+
+                    # Connection shutting down. The next event returned by the queue will be
+                    # `lifespan.shutdown` to inform the application that the connection is now
+                    # closing so that it may perform cleanup.
+                    self.state = LifespanCycleState.SHUTDOWN
+
+                return await self.app_queue.get()
+
+            async def startup(self) -> None:
+                """Pushes the `lifespan` startup event to the queue and handles errors."""
                 await self.app_queue.put({"type": "lifespan.startup"})
                 await self.startup_event.wait()
+                if self.state is LifespanCycleState.FAILED:
+                    raise LifespanFailure(self.exception)
 
-            async def wait_shutdown(self):
+                if not self.exception:
+                    self.logger.info("Application startup complete.")
+                else:
+                    self.logger.info("Application startup failed.")
+
+            async def shutdown(self) -> None:
+                """Pushes the `lifespan` shutdown event to the queue and handles errors."""
                 await self.app_queue.put({"type": "lifespan.shutdown"})
                 await self.shutdown_event.wait()
-
-        lifespan = None
+                if self.state is LifespanCycleState.FAILED:
+                    raise LifespanFailure(self.exception)
+       
         def vc_handler(event, context):
-            global lifespan
             payload = json.loads(event['body'])
 
             headers = payload.get('headers', {})
@@ -340,18 +448,14 @@ elif 'app' in __vc_variables:
                 'path': path,
                 'raw_path': path.encode(),
             }
-            if not lifespan:
-                lifespan = Lifespan(__vc_module.app)
-                loop = get_event_loop()
-                loop.create_task(lifespan.run())
-                loop.run_until_complete(lifespan.wait_startup())
 
-            asgi_cycle = ASGICycle(scope)
-            response = asgi_cycle(__vc_module.app, body)
-            if lifespan:
-                loop = get_event_loop()
-                loop.run_until_complete(lifespan.wait_shutdown())
-            return response
+            with ExitStack() as stack:
+                lifespan = Lifespan(__vc_module.app)
+                stack.enter_context(lifespan)
+
+                asgi_cycle = ASGICycle(scope)
+                response = asgi_cycle(__vc_module.app, body)
+                return response
 
 else:
     print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
