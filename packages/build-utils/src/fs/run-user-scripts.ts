@@ -177,7 +177,7 @@ export async function getNodeBinPath({
   cwd,
 }: {
   cwd: string;
-}): Promise<string | undefined> {
+}): Promise<string> {
   const { code, stdout, stderr } = await execAsync('npm', ['bin'], {
     cwd,
     prettyCommand: 'npm bin',
