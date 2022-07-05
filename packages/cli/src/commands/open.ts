@@ -6,7 +6,7 @@ import handleError from '../util/handle-error';
 import logo from '../util/output/logo';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import validatePaths from '../util/validate-paths';
-import { ensureLink } from '../util/link-project';
+import { ensureLink } from '../util/ensure-link';
 import list from '../util/input/list';
 import { Org, Project, Team } from '../types';
 import { stringify } from 'querystring';
