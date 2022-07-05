@@ -77,7 +77,7 @@ export default async (client: Client) => {
       '--force': Boolean,
       '--with-cache': Boolean,
       '--public': Boolean,
-      '--no-clipboard': Boolean,
+      '--clipboard': Boolean,
       '--env': [String],
       '--build-env': [String],
       '--meta': [String],
@@ -91,7 +91,7 @@ export default async (client: Client) => {
       '-p': '--public',
       '-e': '--env',
       '-b': '--build-env',
-      '-C': '--no-clipboard',
+      '-C': '--clipboard',
       '-m': '--meta',
       '-c': '--confirm',
 
@@ -691,7 +691,7 @@ export default async (client: Client) => {
     client,
     deployment,
     deployStamp,
-    !argv['--no-clipboard']
+    argv['--clipboard'] || false
   );
 };
 
@@ -870,7 +870,7 @@ const printDeploymentStatus = async (
         await copy(previewUrl);
         isCopiedToClipboard = true;
       } catch (err) {
-        output.debug(`Error copyind to clipboard: ${err}`);
+        output.debug(`Error copying to clipboard: ${err}`);
       }
     }
 
