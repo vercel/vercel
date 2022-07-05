@@ -10,9 +10,9 @@ const changedFiles = execSync('git diff HEAD~ --name-only')
 const changedPackageVersions = new Map();
 
 for (const file of changedFiles) {
-  if (file.match(/packages\/.*?\/package.json/)) {
+  if (file.match(/packages\/.*+\/package.json/)) {
     const packageData = JSON.parse(
-      fs.readFileSync(path.join(__dirname, '../', file), 'utf8')
+      fs.readFileSync(path.join(__dirname, '..', file), 'utf8')
     );
     changedPackageVersions.set(packageData.name, packageData.version);
   }
@@ -21,12 +21,12 @@ for (const file of changedFiles) {
 for (const package of changedPackageVersions.keys()) {
   const version = changedPackageVersions.get(package);
 
-  if (!version.includes('canary')) {
-    console.log(execSync(`npm dist-tag add ${package}@${version} canary`));
-    console.log(`updated canary dist-tag for ${package}@${version}`);
-  } else {
+  if (version.includes('canary')) {
     console.log(
       `skipping ${package}@${version} as it is already a canary version`
     );
+  } else {
+    console.log(execSync(`npm dist-tag add ${package}@${version} canary`));
+    console.log(`updated canary dist-tag for ${package}@${version}`);
   }
 }
