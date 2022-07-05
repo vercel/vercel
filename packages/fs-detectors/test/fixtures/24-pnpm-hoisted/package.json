@@ -1,0 +1,11 @@
+{
+  "private": "true",
+  "name": "24-pnpm-hoisted",
+  "scripts": {
+    "build": "ls -Al node_modules && node index.js"
+  },
+  "dependencies": {
+    "exeggcute": "^1.0.0",
+    "once": "^1.4.0"
+  }
+}

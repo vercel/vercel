@@ -5,6 +5,7 @@ const { join, relative, sep } = require('path');
 const allPackages = [
   'routing-utils',
   'frameworks',
+  'fs-detectors',
   'build-utils',
   'static-config',
   'client',

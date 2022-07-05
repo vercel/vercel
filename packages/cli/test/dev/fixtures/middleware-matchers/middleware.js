@@ -4,7 +4,15 @@ export const config = {
 };
 
 export default function middleware(request, _event) {
-  const response = new Response('middleware response');
+  const url = new URL(request.url);
+
+  const response = new Response(
+    JSON.stringify({
+      pathname: url.pathname,
+      search: url.search,
+      fromMiddleware: true,
+    })
+  );
 
   // Set custom header
   response.headers.set('x-modified-edge', 'true');
