@@ -15,7 +15,7 @@ import getArgs from '../../util/get-args';
 import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
 import { Deployment, PaginationOptions } from '../../types';
-import { normalizeURL } from '../../util/bisect/normalize-url';
+import { normalizeURL } from '../../util/normalize-url';
 
 interface DeploymentV6
   extends Pick<

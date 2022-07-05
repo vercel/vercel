@@ -20,6 +20,7 @@ export function useDeployment({ creator }: { creator: Pick<User, 'id'> }) {
     plan: 'hobby',
     public: false,
     version: 2,
+    buildingAt: Date.now(),
     createdAt,
     createdIn: 'sfo1',
     ownerId: creator.id,

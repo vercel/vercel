@@ -63,6 +63,7 @@ export interface Deployment {
     | 'ERROR';
   createdAt: number;
   createdIn: string;
+  inspectorUrl?: string;
   env: Dictionary<string>;
   build: {
     env: Dictionary<string>;

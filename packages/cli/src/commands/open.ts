@@ -12,6 +12,8 @@ import { Org, Project, Team } from '../types';
 import { stringify } from 'querystring';
 import execa from 'execa';
 import link from '../util/output/link';
+import { getDeployment } from '../util/get-deployment';
+import { normalizeURL } from '../util/normalize-url';
 
 const help = () => {
   console.log(`
@@ -20,11 +22,11 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
-    --prod                         Use the production environment
     --yes                          Skip confirmation prompts
     dash                           Open the dashboard in a browser
-    inspect                        Open the inspector URL for the latest deployment in a browser
-    deploy                         Open the latest deployment URL in a browser
+    latest                         Open the latest preview deployment URL in a browser
+    prod                           Open the latest production deployment URL in a browser
+    [url]                          Open the specified deployment URL in a browser
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
@@ -38,29 +40,33 @@ const help = () => {
 
     ${chalk.cyan(`$ ${getPkgName()} open`)}
 
-  ${chalk.gray('–')} Open the dashboard for the current project in a browser
+  ${chalk.gray('–')} Open the dashboard for the current project
 
     ${chalk.cyan(`$ ${getPkgName()} open dash`)}
 
-  ${chalk.gray(
-    '–'
-  )} Open the inspector URL for the latest preview deployment in a browser
+  ${chalk.gray('–')} Open the latest preview deployment URL
 
-    ${chalk.cyan(`$ ${getPkgName()} open inspect`)}
+    ${chalk.cyan(`$ ${getPkgName()} open latest`)}
 
-  ${chalk.gray(
-    '–'
-  )} Open the inspector URL for the latest production deployment in a browser
+  ${chalk.gray('–')} Open the latest production deployment URL
 
-    ${chalk.cyan(`$ ${getPkgName()} open inspect --prod`)}
+    ${chalk.cyan(`$ ${getPkgName()} open prod`)}
 
-  ${chalk.gray('–')} Open the latest preview deployment URL in a browser
+  ${chalk.gray('–')} Open the dashboard for the latest preview deployment
 
-    ${chalk.cyan(`$ ${getPkgName()} open deploy`)}
+    ${chalk.cyan(`$ ${getPkgName()} open dash latest`)}
 
-  ${chalk.gray('–')} Open the latest production deployment URL in a browser
+  ${chalk.gray('–')} Open the dashboard for the latest production deployment
 
-    ${chalk.cyan(`$ ${getPkgName()} open deploy --prod`)}
+    ${chalk.cyan(`$ ${getPkgName()} open dash prod`)}
+
+  ${chalk.gray('–')} Open a specific deployment URL
+  
+    ${chalk.cyan(`$ ${getPkgName()} open [url]`)}
+
+  ${chalk.gray('–')} Open the dashboard for a specific deployment
+  
+    ${chalk.cyan(`$ ${getPkgName()} open dash [url]`)}
 `);
 };
 
@@ -71,6 +77,7 @@ export default async function open(
   const { output } = client;
   let argv;
   let subcommand: string | string[];
+  let narrow: string | string[];
 
   try {
     argv = getArgs(client.argv.slice(2), {
@@ -84,6 +91,7 @@ export default async function open(
 
   argv._ = argv._.slice(1);
   subcommand = argv._[0];
+  narrow = argv._[1];
 
   if (argv['--help']) {
     help();
@@ -91,7 +99,6 @@ export default async function open(
   }
 
   const yes = argv['--yes'] || false;
-  const prod = argv['--prod'] || false;
 
   let scope = null;
 
@@ -106,7 +113,7 @@ export default async function open(
     throw err;
   }
 
-  const { team } = scope;
+  const { team, contextName } = scope;
 
   let paths = [process.cwd()];
 
@@ -125,30 +132,45 @@ export default async function open(
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   const dashboardUrl = getDashboardUrl(org, project);
-  const inspectorUrl = await getInspectorUrl(client, project, org, team);
-  const prodInspectorUrl = await getInspectorUrl(
-    client,
-    project,
-    org,
-    team,
-    true
-  );
-  const latestDeployment = await getLatestDeploymentUrl(client, project, team);
-  const latestProdDeployment = await getLatestDeploymentUrl(
-    client,
-    project,
-    team,
-    true
-  );
+  const inspectorUrl =
+    (await getInspectorUrl(client, project, org, team)) || 'not_found';
+  const prodInspectorUrl =
+    (await getInspectorUrl(client, project, org, team, true)) || 'not_found';
+  const latestDeployment =
+    (await getLatestDeploymentUrl(client, project, team)) || 'not_found';
+  const latestProdDeployment =
+    (await getLatestDeploymentUrl(client, project, team, true)) || 'not_found';
 
   let choice = '';
 
   if (subcommand === 'dash') {
-    choice = dashboardUrl;
-  } else if (subcommand === 'deploy') {
-    choice = (prod ? latestProdDeployment : latestDeployment) || 'not_found';
-  } else if (subcommand === 'inspect') {
-    choice = (prod ? prodInspectorUrl : inspectorUrl) || 'not_found';
+    if (narrow === 'latest') {
+      choice = inspectorUrl;
+    } else if (narrow === 'prod') {
+      choice = prodInspectorUrl;
+    } else if (narrow) {
+      // Assume they're trying to pass in a deployment URL
+      const deployment = await verifyDeployment(client, narrow, contextName);
+      if (typeof deployment === 'number') {
+        return deployment;
+      }
+
+      choice = deployment.inspectorUrl;
+    } else {
+      choice = dashboardUrl;
+    }
+  } else if (subcommand === 'latest') {
+    choice = latestDeployment;
+  } else if (subcommand === 'prod') {
+    choice = latestProdDeployment;
+  } else if (subcommand) {
+    // Assume they're trying to pass in a deployment URL
+    const deployment = await verifyDeployment(client, subcommand, contextName);
+    if (typeof deployment === 'number') {
+      return deployment;
+    }
+
+    choice = deployment.url;
   } else {
     choice = await list(client, {
       message: 'What do you want to open?',
@@ -159,29 +181,27 @@ export default async function open(
           short: 'Dashboard',
         },
         {
-          name: `Latest Preview Deployment ${chalk.gray('(vc open deploy)')}`,
-          value: latestDeployment || 'not_found',
+          name: `Latest Preview Deployment ${chalk.gray('(vc open latest)')}`,
+          value: latestDeployment,
           short: 'Latest Preview Deployment',
         },
         {
           name: `Inspect Latest Preview Deployment ${chalk.gray(
-            '(vc open inspect)'
+            '(vc open dash latest)'
           )}`,
-          value: inspectorUrl || 'not_found',
+          value: inspectorUrl,
           short: 'Deployment Inspector',
         },
         {
-          name: `Latest Production Deployment ${chalk.gray(
-            '(vc open deploy --prod)'
-          )}`,
-          value: latestProdDeployment || 'not_found',
+          name: `Latest Production Deployment ${chalk.gray('(vc open prod)')}`,
+          value: latestProdDeployment,
           short: 'Latest Production Deployment',
         },
         {
           name: `Inspect Latest Production Deployment ${chalk.gray(
-            '(vc open inspect --prod)'
+            '(vc open dash prod)'
           )}`,
-          value: prodInspectorUrl || 'not_found',
+          value: prodInspectorUrl,
           short: 'Latest Production Deployment Inspector',
         },
       ],
@@ -204,6 +224,27 @@ export default async function open(
   if (!test) execa('open', [choice]);
   output.log(`🪄 Opened ${link(choice)}`);
   return 0;
+}
+
+async function verifyDeployment(
+  client: Client,
+  url: string,
+  contextName: string
+) {
+  try {
+    const deployment = await getDeployment(client, url);
+    return {
+      url: normalizeURL(deployment.url),
+      inspectorUrl: deployment.inspectorUrl,
+    };
+  } catch (err) {
+    if (err.status === 404) {
+      client.output.error(
+        `Could not find a deployment with URL ${link(url)} in ${contextName}.`
+      );
+    }
+    return 1;
+  }
 }
 
 function getDashboardUrl(org: Org, project: Project): string {
