@@ -36,12 +36,14 @@ import {
   StartDevServerResult,
   FileFsRef,
   PackageJson,
+  spawnCommand,
+} from '@vercel/build-utils';
+import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
-  spawnCommand,
   isOfficialRuntime,
-} from '@vercel/build-utils';
+} from '@vercel/fs-detectors';
 import frameworkList from '@vercel/frameworks';
 
 import cmd from '../output/cmd';
@@ -329,6 +331,8 @@ export default class DevServer {
   ): Promise<void> {
     const name = relative(this.cwd, fsPath);
     try {
+      await this.getVercelConfig();
+
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
       const extensionless = this.getExtensionlessFile(name);
       if (extensionless) {

@@ -3,7 +3,6 @@ import chalk from 'chalk';
 import dotenv from 'dotenv';
 import { join, normalize, relative, resolve } from 'path';
 import {
-  detectBuilders,
   normalizePath,
   Files,
   FileFsRef,
@@ -17,6 +16,7 @@ import {
   BuildResultV3,
   NowBuildError,
 } from '@vercel/build-utils';
+import { detectBuilders } from '@vercel/fs-detectors';
 import minimatch from 'minimatch';
 import {
   appendRoutesToPhase,
@@ -140,6 +140,7 @@ export default async function main(client: Client): Promise<number> {
       }
 
       confirmed = await confirm(
+        client,
         `No Project Settings found locally. Run ${cli.getCommandName(
           'pull'
         )} for retrieving them?`,

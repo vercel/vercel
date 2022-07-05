@@ -1275,26 +1275,39 @@ export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * 1000 * 1000; // 250MB
 const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * 1000 * 1000; // 2.5MB
 const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * 1000; // 250KB
 
-export async function getPageLambdaGroups(
-  entryPath: string,
-  config: Config,
-  pages: string[],
-  prerenderRoutes: Set<string>,
+export async function getPageLambdaGroups({
+  entryPath,
+  config,
+  pages,
+  prerenderRoutes,
+  pageTraces,
+  compressedPages,
+  tracedPseudoLayer,
+  initialPseudoLayer,
+  initialPseudoLayerUncompressed,
+  lambdaCompressedByteLimit,
+  internalPages,
+  pageExtensions,
+}: {
+  entryPath: string;
+  config: Config;
+  pages: string[];
+  prerenderRoutes: Set<string>;
   pageTraces: {
     [page: string]: {
       [key: string]: FileFsRef;
     };
-  },
+  };
   compressedPages: {
     [page: string]: PseudoFile;
-  },
-  tracedPseudoLayer: PseudoLayer,
-  initialPseudoLayer: PseudoLayerResult,
-  initialPseudoLayerUncompressed: number,
-  lambdaCompressedByteLimit: number,
-  internalPages: string[],
-  pageExtensions?: string[]
-) {
+  };
+  tracedPseudoLayer: PseudoLayer;
+  initialPseudoLayer: PseudoLayerResult;
+  initialPseudoLayerUncompressed: number;
+  lambdaCompressedByteLimit: number;
+  internalPages: string[];
+  pageExtensions?: string[];
+}) {
   const groups: Array<LambdaGroup> = [];
 
   for (const page of pages) {

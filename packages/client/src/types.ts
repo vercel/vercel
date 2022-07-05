@@ -1,9 +1,9 @@
-import {
+import type {
   Builder,
   BuilderFunctions,
   ProjectSettings,
 } from '@vercel/build-utils';
-import { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
+import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 

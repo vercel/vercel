@@ -85,6 +85,7 @@ export async function serverBuild({
   lambdaPages,
   nextVersion,
   canUsePreviewMode,
+  trailingSlash,
   prerenderManifest,
   omittedPrerenderRoutes,
   trailingSlashRedirects,
@@ -93,6 +94,7 @@ export async function serverBuild({
   requiredServerFilesManifest,
 }: {
   dynamicPages: string[];
+  trailingSlash: boolean;
   config: Config;
   pagesDir: string;
   baseDir: string;
@@ -610,34 +612,34 @@ export async function serverBuild({
 
     const pageExtensions = requiredServerFilesManifest.config?.pageExtensions;
 
-    const pageLambdaGroups = await getPageLambdaGroups(
-      requiredServerFilesManifest.appDir || entryPath,
+    const pageLambdaGroups = await getPageLambdaGroups({
+      entryPath: requiredServerFilesManifest.appDir || entryPath,
       config,
-      nonApiPages,
+      pages: nonApiPages,
       prerenderRoutes,
       pageTraces,
       compressedPages,
-      tracedPseudoLayer.pseudoLayer,
+      tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
       lambdaCompressedByteLimit,
-      uncompressedInitialSize,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
       internalPages,
-      pageExtensions
-    );
+      pageExtensions,
+    });
 
-    const apiLambdaGroups = await getPageLambdaGroups(
-      requiredServerFilesManifest.appDir || entryPath,
+    const apiLambdaGroups = await getPageLambdaGroups({
+      entryPath: requiredServerFilesManifest.appDir || entryPath,
       config,
-      apiPages,
+      pages: apiPages,
       prerenderRoutes,
       pageTraces,
       compressedPages,
-      tracedPseudoLayer.pseudoLayer,
+      tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
       initialPseudoLayer,
-      uncompressedInitialSize,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
       lambdaCompressedByteLimit,
-      internalPages
-    );
+      internalPages,
+    });
 
     debug(
       JSON.stringify(
@@ -885,7 +887,12 @@ export async function serverBuild({
               escapedBuildId,
               '/(.*).json'
             )}`,
-            dest: `${path.join('/', entryDirectory, '/$1')}`,
+            dest: `${path.join(
+              '/',
+              entryDirectory,
+              '/$1',
+              trailingSlash ? '/' : ''
+            )}`,
             ...(isOverride ? { override: true } : {}),
             continue: true,
             has: [
@@ -898,14 +905,14 @@ export async function serverBuild({
           // normalize "/index" from "/_next/data/index.json" to -> just "/"
           // as matches a rewrite sources will expect just "/"
           {
-            src: path.join('^/', entryDirectory, '/index'),
+            src: path.join('^/', entryDirectory, '/index(?:/)?'),
             has: [
               {
                 type: 'header',
                 key: 'x-nextjs-data',
               },
             ],
-            dest: path.join('/', entryDirectory),
+            dest: path.join('/', entryDirectory, trailingSlash ? '/' : ''),
             ...(isOverride ? { override: true } : {}),
             continue: true,
           },
@@ -917,7 +924,7 @@ export async function serverBuild({
     return isNextDataServerResolving
       ? [
           {
-            src: path.join('^/', entryDirectory, '$'),
+            src: path.join('^/', entryDirectory, trailingSlash ? '/' : '', '$'),
             has: [
               {
                 type: 'header',
@@ -934,7 +941,6 @@ export async function serverBuild({
             continue: true,
             ...(isOverride ? { override: true } : {}),
           },
-          // handle non-trailing slash
           {
             src: path.join(
               '^/',
