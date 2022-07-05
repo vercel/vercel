@@ -100,12 +100,7 @@ const main = async (client: Client) => {
     throw err;
   }
 
-  try {
-    return await run({ client, scope });
-  } catch (err) {
-    handleError(err);
-    exit(1);
-  }
+  return await run({ client, scope });
 };
 
 export default async (client: Client) => {
