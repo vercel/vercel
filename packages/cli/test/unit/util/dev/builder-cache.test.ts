@@ -12,13 +12,8 @@ describe('filterPackage', () => {
         '@vercel/build-utils': '0.0.1-canary.0',
       },
     };
-    const result = filterPackage(
-      '@vercel/build-utils',
-      'canary',
-      buildersPkg,
-      {}
-    );
-    expect(result).toEqual(true);
+    const result = filterPackage('@vercel/build-utils', buildersPkg);
+    expect(result).toEqual(false);
   });
 
   it('should filter install "canary", cached stable', () => {
@@ -27,13 +22,8 @@ describe('filterPackage', () => {
         '@vercel/build-utils': '0.0.1',
       },
     };
-    const result = filterPackage(
-      '@vercel/build-utils@canary',
-      'latest',
-      buildersPkg,
-      {}
-    );
-    expect(result).toEqual(true);
+    const result = filterPackage('@vercel/build-utils@canary', buildersPkg);
+    expect(result).toEqual(false);
   });
 
   it('should filter install "latest", cached stable', () => {
@@ -42,12 +32,7 @@ describe('filterPackage', () => {
         '@vercel/build-utils': '0.0.1',
       },
     };
-    const result = filterPackage(
-      '@vercel/build-utils',
-      'latest',
-      buildersPkg,
-      {}
-    );
+    const result = filterPackage('@vercel/build-utils', buildersPkg);
     expect(result).toEqual(false);
   });
 
@@ -57,12 +42,7 @@ describe('filterPackage', () => {
         '@vercel/build-utils': '0.0.1-canary.0',
       },
     };
-    const result = filterPackage(
-      '@vercel/build-utils@canary',
-      'canary',
-      buildersPkg,
-      {}
-    );
+    const result = filterPackage('@vercel/build-utils@canary', buildersPkg);
     expect(result).toEqual(false);
   });
 
@@ -72,12 +52,7 @@ describe('filterPackage', () => {
         '@vercel/build-utils': '0.0.1',
       },
     };
-    const result = filterPackage(
-      'https://tarball.now.sh',
-      'latest',
-      buildersPkg,
-      {}
-    );
+    const result = filterPackage('https://tarball.now.sh', buildersPkg);
     expect(result).toEqual(true);
   });
 
@@ -87,27 +62,7 @@ describe('filterPackage', () => {
         '@vercel/build-utils': '0.0.1-canary.0',
       },
     };
-    const result = filterPackage(
-      'https://tarball.now.sh',
-      'canary',
-      buildersPkg,
-      {}
-    );
-    expect(result).toEqual(true);
-  });
-
-  it('should filter install "latest", cached URL - stable', () => {
-    const buildersPkg = {
-      dependencies: {
-        '@vercel/build-utils': 'https://tarball.now.sh',
-      },
-    };
-    const result = filterPackage(
-      '@vercel/build-utils',
-      'latest',
-      buildersPkg,
-      {}
-    );
+    const result = filterPackage('https://tarball.now.sh', buildersPkg);
     expect(result).toEqual(true);
   });
 
@@ -117,13 +72,8 @@ describe('filterPackage', () => {
         '@vercel/build-utils': 'https://tarball.now.sh',
       },
     };
-    const result = filterPackage(
-      '@vercel/build-utils',
-      'canary',
-      buildersPkg,
-      {}
-    );
-    expect(result).toEqual(true);
+    const result = filterPackage('@vercel/build-utils', buildersPkg);
+    expect(result).toEqual(false);
   });
 
   it('should filter install not bundled version, cached same version', () => {
@@ -132,12 +82,7 @@ describe('filterPackage', () => {
         'not-bundled-package': '0.0.1',
       },
     };
-    const result = filterPackage(
-      'not-bundled-package@0.0.1',
-      '_',
-      buildersPkg,
-      {}
-    );
+    const result = filterPackage('not-bundled-package@0.0.1', buildersPkg);
     expect(result).toEqual(false);
   });
 
@@ -147,12 +92,7 @@ describe('filterPackage', () => {
         'not-bundled-package': '0.0.9',
       },
     };
-    const result = filterPackage(
-      'not-bundled-package@0.0.1',
-      '_',
-      buildersPkg,
-      {}
-    );
+    const result = filterPackage('not-bundled-package@0.0.1', buildersPkg);
     expect(result).toEqual(true);
   });
 
@@ -162,7 +102,7 @@ describe('filterPackage', () => {
         'not-bundled-package': '0.0.1',
       },
     };
-    const result = filterPackage('not-bundled-package', '_', buildersPkg, {});
+    const result = filterPackage('not-bundled-package', buildersPkg);
     expect(result).toEqual(true);
   });
 
@@ -172,12 +112,7 @@ describe('filterPackage', () => {
         'not-bundled-package': '16.9.0-alpha.0',
       },
     };
-    const result = filterPackage(
-      'not-bundled-package@alpha',
-      '_',
-      buildersPkg,
-      {}
-    );
+    const result = filterPackage('not-bundled-package@alpha', buildersPkg);
     expect(result).toEqual(true);
   });
 });
@@ -213,88 +148,71 @@ describe('getBuildUtils', () => {
 });
 
 describe('isBundledBuilder', () => {
-  it('should work with "stable" releases', () => {
-    const cliPkg = {
-      dependencies: {
-        '@vercel/node': '1.6.1',
-      },
-    };
+  // TODO: make separate tests
 
+  it('should work with "stable" releases', () => {
     // "canary" tag
     {
       const parsed = npa('@vercel/node@canary');
-      const result = isBundledBuilder(parsed, cliPkg);
-      expect(result).toEqual(false);
+      const result = isBundledBuilder(parsed);
+      expect(result).toEqual(true);
     }
 
     // "latest" tag
     {
       const parsed = npa('@vercel/node');
-      const result = isBundledBuilder(parsed, cliPkg);
+      const result = isBundledBuilder(parsed);
       expect(result).toEqual(true);
     }
 
     // specific matching version
     {
       const parsed = npa('@vercel/node@1.6.1');
-      const result = isBundledBuilder(parsed, cliPkg);
+      const result = isBundledBuilder(parsed);
       expect(result).toEqual(true);
-    }
-
-    // specific non-matching version
-    {
-      const parsed = npa('@vercel/node@1.6.0');
-      const result = isBundledBuilder(parsed, cliPkg);
-      expect(result).toEqual(false);
     }
 
     // URL
     {
       const parsed = npa('https://example.com');
-      const result = isBundledBuilder(parsed, cliPkg);
+      const result = isBundledBuilder(parsed);
       expect(result).toEqual(false);
     }
   });
 
   it('should work with "canary" releases', () => {
-    const cliPkg = {
-      dependencies: {
-        '@vercel/node': '1.6.1-canary.0',
-      },
-    };
-
     // "canary" tag
     {
       const parsed = npa('@vercel/node@canary');
-      const result = isBundledBuilder(parsed, cliPkg);
+      const result = isBundledBuilder(parsed);
       expect(result).toEqual(true);
     }
 
     // "latest" tag
     {
-      const parsed = npa('@vercel/node');
-      const result = isBundledBuilder(parsed, cliPkg);
-      expect(result).toEqual(false);
+      const parsed = npa('@vercel/node@latest');
+      const result = isBundledBuilder(parsed);
+      expect(result).toEqual(true);
     }
 
     // specific matching version
     {
       const parsed = npa('@vercel/node@1.6.1-canary.0');
-      const result = isBundledBuilder(parsed, cliPkg);
+      const result = isBundledBuilder(parsed);
       expect(result).toEqual(true);
-    }
-
-    // specific non-matching version
-    {
-      const parsed = npa('@vercel/node@1.5.2-canary.9');
-      const result = isBundledBuilder(parsed, cliPkg);
-      expect(result).toEqual(false);
     }
 
     // URL
     {
       const parsed = npa('https://example.com');
-      const result = isBundledBuilder(parsed, cliPkg);
+      const result = isBundledBuilder(parsed);
+      expect(result).toEqual(false);
+    }
+
+    // git
+    {
+      const parsed = npa('git://example.com/repo.git');
+      const result = isBundledBuilder(parsed);
       expect(result).toEqual(false);
     }
   });

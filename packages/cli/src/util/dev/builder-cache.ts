@@ -7,17 +7,13 @@ import { basename, join } from 'path';
 import XDGAppPaths from 'xdg-app-paths';
 import { mkdirp, readJSON, writeJSON } from 'fs-extra';
 import { NowBuildError, PackageJson } from '@vercel/build-utils';
-import cliPkg from '../pkg';
 
 import cmd from '../output/cmd';
 import { Output } from '../output';
-import { getDistTag } from '../get-dist-tag';
 import { NoBuilderCacheError } from '../errors-ts';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
-
-type CliPackageJson = typeof cliPkg;
 
 const require_: typeof require = eval('require');
 
@@ -36,8 +32,6 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': createStaticBuilder('now'),
   '@vercel/static': createStaticBuilder('vercel'),
 };
-
-const distTag = getDistTag(cliPkg.version);
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
@@ -100,18 +94,13 @@ function parseVersionSafe(rawSpec: string) {
   }
 }
 
-export function filterPackage(
-  builderSpec: string,
-  distTag: string,
-  buildersPkg: PackageJson,
-  cliPkg: Partial<CliPackageJson>
-) {
+export function filterPackage(builderSpec: string, buildersPkg: PackageJson) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
   const parsedVersion = parseVersionSafe(parsed.rawSpec);
 
   // Skip install of Runtimes that are part of Vercel CLI's `dependencies`
-  if (isBundledBuilder(parsed, cliPkg)) {
+  if (isBundledBuilder(parsed)) {
     return false;
   }
 
@@ -127,12 +116,7 @@ export function filterPackage(
   }
 
   // Skip install of already installed Runtime with tag compatible match
-  if (
-    parsed.name &&
-    parsed.type === 'tag' &&
-    parsed.fetchSpec === distTag &&
-    buildersPkg.dependencies
-  ) {
+  if (parsed.name && parsed.type === 'tag' && buildersPkg.dependencies) {
     const parsedInstalled = npa(
       `${parsed.name}@${buildersPkg.dependencies[parsed.name]}`
     );
@@ -142,12 +126,6 @@ export function filterPackage(
     const semverInstalled = semver.parse(parsedInstalled.rawSpec);
     if (!semverInstalled) {
       return true;
-    }
-    if (semverInstalled.prerelease.length > 0) {
-      return semverInstalled.prerelease[0] !== distTag;
-    }
-    if (distTag === 'latest') {
-      return false;
     }
   }
 
@@ -183,7 +161,7 @@ export async function installBuilders(
 
   // Filter out any packages that come packaged with Vercel CLI
   const packagesToInstall = packages.filter(p =>
-    filterPackage(p, distTag, buildersPkgBefore, cliPkg)
+    filterPackage(p, buildersPkgBefore)
   );
 
   if (packagesToInstall.length === 0) {
@@ -296,7 +274,7 @@ export async function updateBuilders(
 
     // If it's a builder that is part of Vercel CLI's
     // `dependencies` then don't update it
-    if (isBundledBuilder(npa(p), cliPkg)) {
+    if (isBundledBuilder(npa(p))) {
       return false;
     }
 
@@ -344,7 +322,7 @@ export async function getBuilder(
     const parsed = npa(builderPkg);
 
     // First check if it's a bundled Runtime in Vercel CLI's `node_modules`
-    const bundledBuilder = isBundledBuilder(parsed, cliPkg);
+    const bundledBuilder = isBundledBuilder(parsed);
     if (bundledBuilder && parsed.name) {
       requirePath = parsed.name;
     } else {
@@ -384,28 +362,17 @@ export async function getBuilder(
   return builderWithPkg;
 }
 
-export function isBundledBuilder(
-  parsed: npa.Result,
-  { dependencies = {} }: PackageJson
-): boolean {
+export function isBundledBuilder(parsed: npa.Result): boolean {
   if (!parsed.name) {
     return false;
   }
 
-  const bundledVersion = dependencies[parsed.name];
-  if (bundledVersion) {
-    if (parsed.type === 'tag') {
-      if (parsed.fetchSpec === 'canary') {
-        return bundledVersion.includes('canary');
-      } else if (parsed.fetchSpec === 'latest') {
-        return !bundledVersion.includes('canary');
-      }
-    } else if (parsed.type === 'version') {
-      return parsed.fetchSpec === bundledVersion;
-    }
-  }
+  const inScope = parsed.scope === '@vercel';
+  const isVersionedReference = ['tag', 'version', 'range'].includes(
+    parsed.type
+  );
 
-  return false;
+  return inScope && isVersionedReference;
 }
 
 function getPackageName(
