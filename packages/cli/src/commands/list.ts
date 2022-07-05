@@ -17,7 +17,7 @@ import Client from '../util/client';
 import { Deployment } from '../types';
 import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
-import { ensureLink } from '../util/link-project';
+import { ensureLink } from '../util/ensure-link';
 import getScope from '../util/get-scope';
 
 const help = () => {
