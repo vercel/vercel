@@ -348,7 +348,6 @@ function testFixtureStdio(
               : []),
             'deploy',
             '--public',
-            '--no-clipboard',
             '--debug',
           ],
           { cwd, stdio: 'pipe', reject: false }

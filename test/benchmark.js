@@ -3,9 +3,7 @@ const { tmpdir } = require('os');
 const { mkdirSync, writeFileSync } = require('fs');
 
 function getRandomId() {
-  return Math.random()
-    .toString()
-    .slice(2);
+  return Math.random().toString().slice(2);
 }
 
 function getRandomInt(min, max) {
@@ -14,9 +12,7 @@ function getRandomInt(min, max) {
 }
 
 function getRandomText(wordCount) {
-  return Array.from({ length: wordCount })
-    .map(getRandomId)
-    .join(' ');
+  return Array.from({ length: wordCount }).map(getRandomId).join(' ');
 }
 
 function getRandomFileData() {
@@ -50,7 +46,7 @@ function main(fileCount = 1000) {
   createRandomProject(dir, Number(fileCount));
   console.log(`Done. Run the following:`);
   console.log(`cd ${dir}`);
-  console.log('time vercel --no-clipboard');
+  console.log('time vercel');
 }
 
 main(process.argv[2]);
