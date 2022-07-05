@@ -9,4 +9,4 @@ verify_ssl = true
 sanic = "22.3.2"
 
 [requires]
-python_version = "3.9"
+python_version = "3.10"
