@@ -302,7 +302,7 @@ export default async function main(client: Client) {
         hsep: ' '.repeat(4),
         stringLength: strlen,
       }
-    ).replace(/^/gm, '  ')}\n`
+    ).replace(/^/gm, '  ')}\n\n`
   );
 
   if (pagination && pagination.count === 20) {
