@@ -34,7 +34,6 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
-    -a, --all                      Show all deployments in your team
     -y, --yes                      Skip the confirmation prompt
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -51,21 +50,11 @@ const help = () => {
 
     ${chalk.cyan(`$ ${getPkgName()} ls`)}
 
-  ${chalk.gray(
-    '–'
-  )} List all projects in the team of the currently linked project
-
-    ${chalk.cyan(`$ ${getPkgName()} ls --all`)}
-
   ${chalk.gray('–')} List all deployments for the project ${chalk.dim(
     '`my-app`'
   )} in the team of the currently linked project
   
     ${chalk.cyan(`$ ${getPkgName()} ls my-app`)}
-
-  ${chalk.gray('–')} List all projects in team ${chalk.dim('`my-team`')}
-
-    ${chalk.cyan(`$ ${getPkgName()} ls --scope my-team --all`)}
 
   ${chalk.gray('–')} Filter deployments by metadata
 
@@ -84,8 +73,6 @@ export default async function main(client: Client) {
 
   try {
     argv = getArgs(client.argv.slice(2), {
-      '--all': Boolean,
-      '-a': '--all',
       '--meta': [String],
       '-m': '--meta',
       '--next': Number,
@@ -111,7 +98,6 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const all = argv['--all'];
   const yes = argv['--yes'] || false;
 
   const meta = parseMeta(argv['--meta']);
@@ -144,7 +130,7 @@ export default async function main(client: Client) {
 
   // If there's no linked project and user doesn't pass `app` or `all` args,
   // prompt to link their current directory.
-  if (status === 'not_linked' && !app && !all) {
+  if (status === 'not_linked' && !app) {
     const linkedProject = await ensureLink('list', client, path, yes);
     if (typeof linkedProject === 'number') {
       return linkedProject;
@@ -220,7 +206,7 @@ export default async function main(client: Client) {
 
   debug('Fetching deployments');
 
-  const response = await now.list(all ? undefined : app, {
+  const response = await now.list(app, {
     version: 6,
     meta,
     nextTimestamp,
@@ -234,7 +220,7 @@ export default async function main(client: Client) {
     pagination: { count: number; next: number };
   } = response;
 
-  if (app && !all && !deployments.length) {
+  if (app && !deployments.length) {
     debug(
       'No deployments: attempting to find deployment that matches supplied app name'
     );

@@ -55,48 +55,6 @@ describe('list', () => {
       process.chdir(originalCwd);
     }
   });
-  it('should get all deployments in the project scope', async () => {
-    const cwd = fixture('with-team');
-    try {
-      process.chdir(cwd);
-
-      const user = useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'with-team',
-        name: 'with-team',
-      });
-      const deployment = useDeployment({ creator: user });
-
-      client.setArgv('--all');
-      await list(client);
-
-      const output = await readOutputStream(client);
-
-      const { project, org } = getDataFromIntro(output.split('\n')[0]);
-      const header: string[] = parseTable(output.split('\n')[2]);
-      const data: string[] = parseTable(output.split('\n')[3]);
-      data.splice(2, 1);
-
-      expect(project).toBeUndefined();
-      expect(org).toEqual(teamSlug);
-      expect(header).toEqual([
-        'project',
-        'latest deployment',
-        'state',
-        'age',
-        'username',
-      ]);
-      expect(data).toEqual([
-        deployment.url,
-        stateString(deployment.state || ''),
-        user.name,
-      ]);
-    } finally {
-      process.chdir(originalCwd);
-    }
-  });
   it('should get the deployments for a specified project', async () => {
     const cwd = fixture('with-team');
     try {
