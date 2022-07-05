@@ -18,8 +18,7 @@ for (const file of changedFiles) {
   }
 }
 
-for (const package of changedPackageVersions.keys()) {
-  const version = changedPackageVersions.get(package);
+for (const [package, version] of changedPackageVersions) {
 
   if (!version.includes('canary')) {
     console.log(execSync(`npm dist-tag add ${package}@${version} canary`));
