@@ -10,7 +10,7 @@ const changedFiles = execSync('git diff HEAD~ --name-only')
 const changedPackageVersions = new Map();
 
 for (const file of changedFiles) {
-  if (file.match(/packages\/.*?\/package.json/)) {
+  if (file.match(/packages\/.+\/package.json/)) {
     const packageData = JSON.parse(
       fs.readFileSync(path.join(__dirname, '../', file), 'utf8')
     );
