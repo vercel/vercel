@@ -68,7 +68,6 @@ export const help = () => `
     -m, --meta                     Add metadata for the deployment (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
-    -C, --clipboard                Copy URL to clipboard after deployment
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --prod                         Create a production deployment

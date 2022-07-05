@@ -89,7 +89,6 @@ export default async (client: Client) => {
       '-p': '--public',
       '-e': '--env',
       '-b': '--build-env',
-      '-C': '--clipboard',
       '-m': '--meta',
       '-c': '--confirm',
 
