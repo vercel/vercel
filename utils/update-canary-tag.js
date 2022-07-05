@@ -10,7 +10,7 @@ const changedFiles = execSync('git diff HEAD~ --name-only')
 const changedPackageVersions = new Map();
 
 for (const file of changedFiles) {
-  if (file.match(/packages\/.*+\/package.json/)) {
+  if (file.match(/packages\/.+\/package.json/)) {
     const packageData = JSON.parse(
       fs.readFileSync(path.join(__dirname, '..', file), 'utf8')
     );
@@ -18,9 +18,7 @@ for (const file of changedFiles) {
   }
 }
 
-for (const package of changedPackageVersions.keys()) {
-  const version = changedPackageVersions.get(package);
-
+for (const [package, version] of changedPackageVersions) {
   if (version.includes('canary')) {
     console.log(
       `skipping ${package}@${version} as it is already a canary version`
