@@ -235,7 +235,7 @@ async function verifyDeployment(
     const deployment = await getDeployment(client, url);
     return {
       url: normalizeURL(deployment.url),
-      inspectorUrl: deployment.inspectorUrl,
+      inspectorUrl: deployment.inspectorUrl || '',
     };
   } catch (err) {
     if (err.status === 404) {
