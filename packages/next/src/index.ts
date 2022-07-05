@@ -924,6 +924,7 @@ export const build: BuildV2 = async ({
   }
 
   const trailingSlashRedirects: Route[] = [];
+  let trailingSlash = false;
 
   redirects = redirects.filter(_redir => {
     const redir = _redir as Source;
@@ -941,6 +942,10 @@ export const build: BuildV2 = async ({
       // moving underneath i18n routes
       redir.continue = true;
       trailingSlashRedirects.push(redir);
+
+      if (location === '/$1/') {
+        trailingSlash = true;
+      }
       return false;
     }
     return true;
@@ -1257,6 +1262,7 @@ export const build: BuildV2 = async ({
       return serverBuild({
         config,
         nextVersion,
+        trailingSlash,
         dynamicPages,
         canUsePreviewMode,
         staticPages,
