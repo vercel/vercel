@@ -148,72 +148,46 @@ describe('getBuildUtils', () => {
 });
 
 describe('isBundledBuilder', () => {
-  // TODO: make separate tests
-
-  it('should work with "stable" releases', () => {
-    // "canary" tag
-    {
-      const parsed = npa('@vercel/node@canary');
-      const result = isBundledBuilder(parsed);
-      expect(result).toEqual(true);
-    }
-
-    // "latest" tag
-    {
-      const parsed = npa('@vercel/node');
-      const result = isBundledBuilder(parsed);
-      expect(result).toEqual(true);
-    }
-
-    // specific matching version
-    {
-      const parsed = npa('@vercel/node@1.6.1');
-      const result = isBundledBuilder(parsed);
-      expect(result).toEqual(true);
-    }
-
-    // URL
-    {
-      const parsed = npa('https://example.com');
-      const result = isBundledBuilder(parsed);
-      expect(result).toEqual(false);
-    }
+  it('should detect "canary" tagged releases', () => {
+    const parsed = npa('@vercel/node@canary');
+    const result = isBundledBuilder(parsed);
+    expect(result).toEqual(true);
   });
 
-  it('should work with "canary" releases', () => {
-    // "canary" tag
-    {
-      const parsed = npa('@vercel/node@canary');
-      const result = isBundledBuilder(parsed);
-      expect(result).toEqual(true);
-    }
+  it('should detect "canary" versioned releases', () => {
+    const parsed = npa('@vercel/node@1.6.1-canary.0');
+    const result = isBundledBuilder(parsed);
+    expect(result).toEqual(true);
+  });
 
+  it('should detect latest releases', () => {
+    const parsed = npa('@vercel/node');
+    const result = isBundledBuilder(parsed);
+    expect(result).toEqual(true);
+  });
+
+  it('should detect "latest" tagged releases', () => {
     // "latest" tag
-    {
-      const parsed = npa('@vercel/node@latest');
-      const result = isBundledBuilder(parsed);
-      expect(result).toEqual(true);
-    }
+    const parsed = npa('@vercel/node@latest');
+    const result = isBundledBuilder(parsed);
+    expect(result).toEqual(true);
+  });
 
-    // specific matching version
-    {
-      const parsed = npa('@vercel/node@1.6.1-canary.0');
-      const result = isBundledBuilder(parsed);
-      expect(result).toEqual(true);
-    }
+  it('should detect versioned releases', () => {
+    const parsed = npa('@vercel/node@1.6.1');
+    const result = isBundledBuilder(parsed);
+    expect(result).toEqual(true);
+  });
 
-    // URL
-    {
-      const parsed = npa('https://example.com');
-      const result = isBundledBuilder(parsed);
-      expect(result).toEqual(false);
-    }
+  it('should NOT detect URL releases', () => {
+    const parsed = npa('https://example.com');
+    const result = isBundledBuilder(parsed);
+    expect(result).toEqual(false);
+  });
 
-    // git
-    {
-      const parsed = npa('git://example.com/repo.git');
-      const result = isBundledBuilder(parsed);
-      expect(result).toEqual(false);
-    }
+  it('shouldNOT  detect git url releases', () => {
+    const parsed = npa('git://example.com/repo.git');
+    const result = isBundledBuilder(parsed);
+    expect(result).toEqual(false);
   });
 });
