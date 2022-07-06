@@ -130,6 +130,8 @@ export type Deployment = {
   version?: number;
   created: number;
   createdAt: number;
+  ready?: number;
+  buildingAt?: number;
   creator: { uid: string; username: string };
   target: string | null;
   ownerId: string;
