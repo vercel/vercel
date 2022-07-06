@@ -173,11 +173,9 @@ async function getChoice(
 ): Promise<string | number> {
   if (subcommand === 'dash') {
     if (narrow === 'latest') {
-      return (await getInspectorUrl(client, project, org, team)) || 'not_found';
+      return await getInspectorUrl(client, project, org, team);
     } else if (narrow === 'prod') {
-      return (
-        (await getInspectorUrl(client, project, org, team, true)) || 'not_found'
-      );
+      return await getInspectorUrl(client, project, org, team, true);
     } else if (narrow) {
       // Assume they're trying to pass in a deployment URL
       const deployment = await verifyDeployment(client, narrow, contextName);
@@ -190,11 +188,9 @@ async function getChoice(
       return getDashboardUrl(org, project);
     }
   } else if (subcommand === 'latest') {
-    return (await getLatestDeploymentUrl(client, project, team)) || 'not_found';
+    return await getLatestDeploymentUrl(client, project, team);
   } else if (subcommand === 'prod') {
-    return (
-      (await getLatestDeploymentUrl(client, project, team, true)) || 'not_found'
-    );
+    return await getLatestDeploymentUrl(client, project, team, true);
   } else if (subcommand) {
     // Assume they're trying to pass in a deployment URL
     const deployment = await verifyDeployment(client, subcommand, contextName);
