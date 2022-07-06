@@ -11,7 +11,7 @@ import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import validatePaths from '../util/validate-paths';
-import { ensureLink } from '../util/link-project';
+import { ensureLink } from '../util/ensure-link';
 import { parseGitConfig, pluckRemoteUrl } from '../util/create-git-meta';
 import {
   connectGitProvider,
