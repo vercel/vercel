@@ -167,7 +167,6 @@ describe('isBundledBuilder', () => {
   });
 
   it('should detect "latest" tagged releases', () => {
-    // "latest" tag
     const parsed = npa('@vercel/node@latest');
     const result = isBundledBuilder(parsed);
     expect(result).toEqual(true);
