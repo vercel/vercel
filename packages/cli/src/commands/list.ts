@@ -128,7 +128,7 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  // If there's no linked project and user doesn't pass `app` or `all` args,
+  // If there's no linked project and user doesn't pass `app` arg,
   // prompt to link their current directory.
   if (status === 'not_linked' && !app) {
     const linkedProject = await ensureLink('list', client, path, yes);
