@@ -64,7 +64,7 @@ const help = () => {
   
     ${chalk.cyan(`$ ${getPkgName()} open [url]`)}
 
-  ${chalk.gray('–')} Open the dashboard for a specific deployment
+  ${chalk.gray('–')} Open the dashboard for a specific deployment URL
   
     ${chalk.cyan(`$ ${getPkgName()} open dash [url]`)}
 `);
@@ -131,81 +131,17 @@ export default async function open(
   const { project, org } = linkedProject;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  const dashboardUrl = getDashboardUrl(org, project);
-  const inspectorUrl =
-    (await getInspectorUrl(client, project, org, team)) || 'not_found';
-  const prodInspectorUrl =
-    (await getInspectorUrl(client, project, org, team, true)) || 'not_found';
-  const latestDeployment =
-    (await getLatestDeploymentUrl(client, project, team)) || 'not_found';
-  const latestProdDeployment =
-    (await getLatestDeploymentUrl(client, project, team, true)) || 'not_found';
-
-  let choice = '';
-
-  if (subcommand === 'dash') {
-    if (narrow === 'latest') {
-      choice = inspectorUrl;
-    } else if (narrow === 'prod') {
-      choice = prodInspectorUrl;
-    } else if (narrow) {
-      // Assume they're trying to pass in a deployment URL
-      const deployment = await verifyDeployment(client, narrow, contextName);
-      if (typeof deployment === 'number') {
-        return deployment;
-      }
-
-      choice = deployment.inspectorUrl;
-    } else {
-      choice = dashboardUrl;
-    }
-  } else if (subcommand === 'latest') {
-    choice = latestDeployment;
-  } else if (subcommand === 'prod') {
-    choice = latestProdDeployment;
-  } else if (subcommand) {
-    // Assume they're trying to pass in a deployment URL
-    const deployment = await verifyDeployment(client, subcommand, contextName);
-    if (typeof deployment === 'number') {
-      return deployment;
-    }
-
-    choice = deployment.url;
-  } else {
-    choice = await list(client, {
-      message: 'What do you want to open?',
-      choices: [
-        {
-          name: `Dashboard ${chalk.gray('(vc open dash)')}`,
-          value: dashboardUrl,
-          short: 'Dashboard',
-        },
-        {
-          name: `Latest Preview Deployment ${chalk.gray('(vc open latest)')}`,
-          value: latestDeployment,
-          short: 'Latest Preview Deployment',
-        },
-        {
-          name: `Inspect Latest Preview Deployment ${chalk.gray(
-            '(vc open dash latest)'
-          )}`,
-          value: inspectorUrl,
-          short: 'Deployment Inspector',
-        },
-        {
-          name: `Latest Production Deployment ${chalk.gray('(vc open prod)')}`,
-          value: latestProdDeployment,
-          short: 'Latest Production Deployment',
-        },
-        {
-          name: `Inspect Latest Production Deployment ${chalk.gray(
-            '(vc open dash prod)'
-          )}`,
-          value: prodInspectorUrl,
-          short: 'Latest Production Deployment Inspector',
-        },
-      ],
-    });
+  const choice = await getChoice(
+    subcommand,
+    narrow,
+    contextName,
+    client,
+    project,
+    org,
+    team
+  );
+  if (typeof choice === 'number') {
+    return choice;
   }
 
   if (choice === 'not_found') {
@@ -224,6 +160,94 @@ export default async function open(
   if (!test) execa('open', [choice]);
   output.log(`🪄 Opened ${link(choice)}`);
   return 0;
+}
+
+async function getChoice(
+  subcommand: string,
+  narrow: string,
+  contextName: string,
+  client: Client,
+  project: Project,
+  org: Org,
+  team: Team | null
+): Promise<string | number> {
+  if (subcommand === 'dash') {
+    if (narrow === 'latest') {
+      return (await getInspectorUrl(client, project, org, team)) || 'not_found';
+    } else if (narrow === 'prod') {
+      return (
+        (await getInspectorUrl(client, project, org, team, true)) || 'not_found'
+      );
+    } else if (narrow) {
+      // Assume they're trying to pass in a deployment URL
+      const deployment = await verifyDeployment(client, narrow, contextName);
+      if (typeof deployment === 'number') {
+        return deployment;
+      }
+
+      return deployment.inspectorUrl;
+    } else {
+      return getDashboardUrl(org, project);
+    }
+  } else if (subcommand === 'latest') {
+    return (await getLatestDeploymentUrl(client, project, team)) || 'not_found';
+  } else if (subcommand === 'prod') {
+    return (
+      (await getLatestDeploymentUrl(client, project, team, true)) || 'not_found'
+    );
+  } else if (subcommand) {
+    // Assume they're trying to pass in a deployment URL
+    const deployment = await verifyDeployment(client, subcommand, contextName);
+    if (typeof deployment === 'number') {
+      return deployment;
+    }
+
+    return deployment.url;
+  } else {
+    return await listOptions(client, project, org, team);
+  }
+}
+
+async function listOptions(
+  client: Client,
+  project: Project,
+  org: Org,
+  team: Team | null
+): Promise<string> {
+  return await list(client, {
+    message: 'What do you want to open?',
+    choices: [
+      {
+        name: `Dashboard ${chalk.gray('(vc open dash)')}`,
+        value: getDashboardUrl(org, project),
+        short: 'Dashboard',
+      },
+      {
+        name: `Latest Preview Deployment ${chalk.gray('(vc open latest)')}`,
+        value: await getLatestDeploymentUrl(client, project, team),
+        short: 'Latest Preview Deployment',
+      },
+      {
+        name: `Inspect Latest Preview Deployment ${chalk.gray(
+          '(vc open dash latest)'
+        )}`,
+        value: await getInspectorUrl(client, project, org, team),
+        short: 'Deployment Inspector',
+      },
+      {
+        name: `Latest Production Deployment ${chalk.gray('(vc open prod)')}`,
+        value: await getLatestDeploymentUrl(client, project, team, true),
+        short: 'Latest Production Deployment',
+      },
+      {
+        name: `Inspect Latest Production Deployment ${chalk.gray(
+          '(vc open dash prod)'
+        )}`,
+        value: await getInspectorUrl(client, project, org, team, true),
+        short: 'Latest Production Deployment Inspector',
+      },
+    ],
+  });
 }
 
 async function verifyDeployment(
@@ -256,7 +280,7 @@ async function getInspectorUrl(
   org: Org,
   team: Team | null,
   prod: Boolean = false
-): Promise<string | undefined> {
+): Promise<string> {
   const proj = await getProject(client, project, team);
   if (proj) {
     let latestDeploymentId = (
@@ -266,26 +290,30 @@ async function getInspectorUrl(
       return `https://vercel.com/${org.slug}/${project.name}/${latestDeploymentId}`;
     }
   }
+
+  return 'not_found';
 }
 async function getLatestDeploymentUrl(
   client: Client,
   project: Project,
   team: Team | null,
   prod: Boolean = false
-): Promise<string | undefined> {
+): Promise<string> {
   const proj = await getProject(client, project, team);
   if (prod && proj?.targets?.production) {
     return `https://${proj.targets.production.url}`;
   } else if (proj?.latestDeployments?.[0]?.url) {
     return `https://${proj.latestDeployments[0].url}`;
   }
+
+  return 'not_found';
 }
 
 async function getProject(
   client: Client,
   project: Project,
   team: Team | null
-): Promise<Project | undefined> {
+): Promise<Project> {
   const proj = await client
     .fetch(
       `/v9/projects/${project.name}?${stringify({
