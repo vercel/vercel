@@ -11,16 +11,14 @@ const fixture = (name: string) =>
 
 describe('open', () => {
   const originalCwd = process.cwd();
-  let teamSlug: string = '';
 
   it('should open the dashboard', async () => {
-    const cwd = fixture('project');
+    const cwd = fixture('default');
     try {
       process.chdir(cwd);
 
       useUser();
-      const team = useTeams('team_dummy');
-      teamSlug = team[0].slug;
+      const team = useTeams('team_dashboard');
       useProject({
         ...defaultProject,
         id: 'test-project',
@@ -30,7 +28,7 @@ describe('open', () => {
       client.setArgv('open', 'dash');
       const openPromise = open(client, true);
       await expect(client.stderr).toOutput(
-        `Opened https://vercel.com/${teamSlug}/test-project`
+        `Opened https://vercel.com/${team[0].slug}/test-project`
       );
 
       const exitCode = await openPromise;
@@ -40,12 +38,12 @@ describe('open', () => {
     }
   });
   it('should open the preview inspect url', async () => {
-    const cwd = fixture('project');
+    const cwd = fixture('preview');
     try {
       process.chdir(cwd);
 
       useUser();
-      useTeams('team_dummy');
+      const team = useTeams('team_preview');
       const project = useProject({
         ...defaultProject,
         id: 'test-project',
@@ -59,7 +57,7 @@ describe('open', () => {
       client.setArgv('open', 'dash', 'latest');
       const openPromise = open(client, true);
       await expect(client.stderr).toOutput(
-        `Opened https://vercel.com/${teamSlug}/test-project/${deploymentId}`
+        `Opened https://vercel.com/${team[0].slug}/test-project/${deploymentId}`
       );
 
       const exitCode = await openPromise;
@@ -69,12 +67,12 @@ describe('open', () => {
     }
   });
   it('should open the production inspect url', async () => {
-    const cwd = fixture('project');
+    const cwd = fixture('prod');
     try {
       process.chdir(cwd);
 
       useUser();
-      useTeams('team_dummy');
+      const team = useTeams('team_prod');
       const project = useProject({
         ...defaultProject,
         id: 'test-project',
@@ -88,7 +86,7 @@ describe('open', () => {
       client.setArgv('open', 'dash', 'prod');
       const openPromise = open(client, true);
       await expect(client.stderr).toOutput(
-        `Opened https://vercel.com/${teamSlug}/test-project/${deploymentId}`
+        `Opened https://vercel.com/${team[0].slug}/test-project/${deploymentId}`
       );
 
       const exitCode = await openPromise;
@@ -98,7 +96,7 @@ describe('open', () => {
     }
   });
   it('should open the preview deploy url', async () => {
-    const cwd = fixture('project');
+    const cwd = fixture('default');
     try {
       process.chdir(cwd);
 
@@ -122,7 +120,7 @@ describe('open', () => {
     }
   });
   it('should open the production deploy url', async () => {
-    const cwd = fixture('project');
+    const cwd = fixture('default');
     try {
       process.chdir(cwd);
 
@@ -146,7 +144,7 @@ describe('open', () => {
     }
   });
   it('should open the latest preview deploy url from dropdown', async () => {
-    const cwd = fixture('project');
+    const cwd = fixture('default');
     try {
       process.chdir(cwd);
 
@@ -174,7 +172,7 @@ describe('open', () => {
     }
   });
   it('should open a passed-in deployment URL', async () => {
-    const cwd = fixture('project');
+    const cwd = fixture('default');
     try {
       process.chdir(cwd);
 
@@ -199,7 +197,7 @@ describe('open', () => {
     }
   });
   it('should fail when passed-in url is bad', async () => {
-    const cwd = fixture('project');
+    const cwd = fixture('default');
     try {
       process.chdir(cwd);
 
