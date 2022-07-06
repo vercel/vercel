@@ -7,7 +7,11 @@ import { Build, User } from '../../src/types';
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
 
-export function useDeployment({ creator }: { creator: Pick<User, 'id'> }) {
+export function useDeployment({
+  creator,
+}: {
+  creator: Pick<User, 'id' | 'email' | 'name'>;
+}) {
   const createdAt = Date.now();
   const url = new URL(chance().url());
   const deployment: Deployment = {
@@ -24,6 +28,11 @@ export function useDeployment({ creator }: { creator: Pick<User, 'id'> }) {
     createdAt,
     createdIn: 'sfo1',
     ownerId: creator.id,
+    creator: {
+      uid: creator.id,
+      email: creator.email,
+      username: creator.name,
+    },
     readyState: 'READY',
     env: {},
     build: { env: {} },
@@ -77,5 +86,10 @@ beforeEach(() => {
     }
     const builds = deploymentBuilds.get(deployment);
     res.json({ builds });
+  });
+
+  client.scenario.get('/:version/now/deployments', (req, res) => {
+    const deploymentsList = Array.from(deployments.values());
+    res.json({ deployments: deploymentsList });
   });
 });

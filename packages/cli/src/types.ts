@@ -131,6 +131,8 @@ export type Deployment = {
   version?: number;
   created: number;
   createdAt: number;
+  ready?: number;
+  buildingAt?: number;
   creator: { uid: string; username: string };
   target: string | null;
   ownerId: string;
@@ -247,12 +249,34 @@ export interface ProjectEnvVariable {
   gitBranch?: string;
 }
 
+export interface DeployHook {
+  createdAt: number;
+  id: string;
+  name: string;
+  ref: string;
+  url: string;
+}
+
+export interface ProjectLinkData {
+  type: string;
+  repo: string;
+  repoId: number;
+  org?: string;
+  gitCredentialId: string;
+  productionBranch?: string | null;
+  sourceless: boolean;
+  createdAt: number;
+  updatedAt: number;
+  deployHooks?: DeployHook[];
+}
+
 export interface Project extends ProjectSettings {
   id: string;
   name: string;
   accountId: string;
   updatedAt: number;
   createdAt: number;
+  link?: ProjectLinkData;
   alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
   targets?: {

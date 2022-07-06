@@ -64,6 +64,12 @@ export interface Deployment {
   createdAt: number;
   createdIn: string;
   inspectorUrl?: string;
+  buildingAt?: number;
+  creator?: {
+    uid?: string;
+    email?: string;
+    username?: string;
+  };
   env: Dictionary<string>;
   build: {
     env: Dictionary<string>;
