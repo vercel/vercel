@@ -17,7 +17,7 @@ import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import updateNotifier from 'update-notifier';
+import { UpdateNotifier } from './util/update-notifier';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
@@ -55,7 +55,7 @@ import { VercelConfig } from '@vercel/client';
 const isCanary = pkg.version.includes('canary');
 
 // Checks for available update and returns an instance
-const notifier = updateNotifier({
+const notifier = new UpdateNotifier({
   pkg,
   distTag: isCanary ? 'canary' : 'latest',
   updateCheckInterval: 1000 * 60 * 60 * 24 * 7, // 1 week
@@ -147,9 +147,10 @@ const main = async () => {
     process.chdir(cwd);
   }
 
-  // Print update information, if available
-  if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
-    const { latest } = notifier.update;
+  const latest = notifier.getLastestVersion();
+  if (!latest) {
+    notifier.fetchAndUpdateInBackground();
+  } else {
     console.log(
       info(
         `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +

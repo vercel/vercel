@@ -1,7 +1,7 @@
 import cpy from 'cpy';
 import execa from 'execa';
 import { join } from 'path';
-import { remove, writeFile } from 'fs-extra';
+import { remove, readJSON, writeFile } from 'fs-extra';
 
 const dirRoot = join(__dirname, '..');
 const distRoot = join(dirRoot, 'dist');
@@ -47,9 +47,15 @@ async function main() {
     });
   }
 
+  const pkg = await readJSON(join(dirRoot, 'package.json'));
+  const dependencies = Object.keys(pkg?.dependencies ?? {});
   // Do the initial `ncc` build
-  console.log();
-  const args = ['ncc', 'build', '--external', 'update-notifier'];
+  console.log('Dependencies:', dependencies);
+
+  const args = ['ncc', 'build'];
+  for (const dep of dependencies) {
+    args.push('--external', dep);
+  }
   if (isDev) {
     args.push('--source-map');
   }
