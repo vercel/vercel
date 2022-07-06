@@ -171,10 +171,10 @@ async function getChoice(
   org: Org,
   team: Team | null
 ): Promise<string | number> {
-  if (subcommand === 'dash') {
+  if (subcommand === 'dash' || subcommand === 'dashboard') {
     if (narrow === 'latest') {
       return await getInspectorUrl(client, project, org, team);
-    } else if (narrow === 'prod') {
+    } else if (narrow === 'prod' || narrow === 'production') {
       return await getInspectorUrl(client, project, org, team, true);
     } else if (narrow) {
       // Assume they're trying to pass in a deployment URL
