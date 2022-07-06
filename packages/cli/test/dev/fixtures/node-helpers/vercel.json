@@ -1,1 +1,1 @@
-{ "builds": [{ "src": "index.js", "use": "@vercel/node@canary" }] }
+{"builds":[{"src":"index.js","use":"@vercel/node@canary"}]}
