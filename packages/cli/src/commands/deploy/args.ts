@@ -21,7 +21,7 @@ export const help = () => `
       link                 [path]      Link local directory to a Vercel Project
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
-      open                 [options]   Opens a project URL in your browser
+      open                 [options]   Opens a Project URL in your browser
       pull                 [path]      Pull your Project Settings from the cloud
       switch               [scope]     Switches between teams and your personal account
       help                 [cmd]       Displays complete help for [cmd]
