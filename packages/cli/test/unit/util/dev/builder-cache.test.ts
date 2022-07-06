@@ -184,7 +184,7 @@ describe('isBundledBuilder', () => {
     expect(result).toEqual(false);
   });
 
-  it('shouldNOT  detect git url releases', () => {
+  it('should NOT detect git url releases', () => {
     const parsed = npa('git://example.com/repo.git');
     const result = isBundledBuilder(parsed);
     expect(result).toEqual(false);
