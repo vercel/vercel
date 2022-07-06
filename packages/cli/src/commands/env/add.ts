@@ -31,7 +31,7 @@ export default async function add(
   // improve the way we show inquirer prompts
   require('../../util/input/patch-inquirer');
 
-  const stdInput = await readStandardInput();
+  const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
 
   if (args.length > 3) {

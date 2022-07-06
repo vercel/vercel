@@ -104,6 +104,7 @@ export default async function rm(
   if (
     !skipConfirmation &&
     !(await confirm(
+      client,
       `Removing Environment Variable ${param(env.key)} from ${formatEnvTarget(
         env
       )} in Project ${chalk.bold(project.name)}. Are you sure?`,

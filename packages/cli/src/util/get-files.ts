@@ -1,5 +1,5 @@
-import { resolve } from 'path';
 import fs from 'fs-extra';
+import { resolve } from 'path';
 import { getVercelIgnore } from '@vercel/client';
 import uniqueStrings from './unique-strings';
 import { Output } from './output/create-output';
