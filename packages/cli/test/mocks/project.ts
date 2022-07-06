@@ -200,7 +200,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
       project.link = undefined;
     }
     res.json(project);
-
-    return { project, envs };
   });
+
+  return { project, envs };
 }
