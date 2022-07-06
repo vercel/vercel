@@ -200,12 +200,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
       project.link = undefined;
     }
     res.json(project);
-  client.scenario.get(`/v4/projects`, (req, res) => {
-    res.json({
-      projects: [defaultProject],
-      pagination: null,
-    });
-  });
 
-  return { project, envs };
+    return { project, envs };
+  });
 }
