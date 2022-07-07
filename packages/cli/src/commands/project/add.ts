@@ -1,0 +1,54 @@
+import chalk from 'chalk';
+import ms from 'ms';
+import Client from '../../util/client';
+import { getCommandName } from '../../util/pkg-name';
+
+export default async function add(
+  client: Client,
+  args: string[],
+  contextName: string
+) {
+  if (args.length !== 1) {
+    client.output.error(
+      `Invalid number of arguments. Usage: ${chalk.cyan(
+        `${getCommandName('projects add <name>')}`
+      )}`
+    );
+
+    if (args.length > 1) {
+      const example = chalk.cyan(
+        `${getCommandName(`projects add "${args.join(' ')}"`)}`
+      );
+      console.log(
+        `> If your project name  has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
+      );
+    }
+
+    return 1;
+  }
+
+  const start = Date.now();
+
+  const [name] = args;
+  try {
+    await client.fetch('/projects', {
+      method: 'POST',
+      body: { name },
+    });
+  } catch (error) {
+    if (error.status === 409) {
+      // project already exists, so we can
+      // show a success message
+    } else {
+      throw error;
+    }
+  }
+  const elapsed = ms(Date.now() - start);
+
+  console.log(
+    `${chalk.cyan('> Success!')} Project ${chalk.bold(
+      name.toLowerCase()
+    )} added (${chalk.bold(contextName)}) ${chalk.gray(`[${elapsed}]`)}`
+  );
+  return;
+}
