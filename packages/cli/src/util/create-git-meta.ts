@@ -6,26 +6,26 @@ import { exec } from 'child_process';
 import { GitMetadata } from '../types';
 import { Output } from './output';
 
-export function isDirty(directory: string): Promise<boolean> {
-  return new Promise((resolve, reject) => {
+export function isDirty(directory: string, output: Output): Promise<boolean> {
+  return new Promise(resolve => {
     exec('git status -s', { cwd: directory }, function (err, stdout, stderr) {
-      if (err) return reject(err);
-      if (stderr)
-        return reject(
-          new Error(
-            `Failed to determine if git repo has been modified: ${stderr.trim()}`
-          )
+      if (err) return resolve(false);
+      if (stderr) {
+        output.error(
+          `Failed to determine if git repo has been modified: ${stderr.trim()}`
         );
+        return resolve(false);
+      }
       resolve(stdout.trim().length > 0);
     });
   });
 }
 
-function getLastCommit(directory: string): Promise<git.Commit> {
-  return new Promise((resolve, reject) => {
+function getLastCommit(directory: string): Promise<git.Commit | void> {
+  return new Promise(resolve => {
     git.getLastCommit(
       (err, commit) => {
-        if (err) return reject(err);
+        if (err) return resolve();
         resolve(commit);
       },
       { dst: directory }
@@ -75,8 +75,12 @@ export async function createGitMeta(
   }
   const [commit, dirty] = await Promise.all([
     getLastCommit(directory),
-    isDirty(directory),
+    isDirty(directory, output),
   ]);
+
+  if (!commit) {
+    return;
+  }
 
   return {
     remoteUrl,
