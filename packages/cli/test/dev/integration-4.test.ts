@@ -443,6 +443,13 @@ test(
 );
 
 test(
+  '[vercel dev] Middleware that has no response',
+  testFixtureStdio('middleware-no-response', async (testPath: any) => {
+    await testPath(200, '/api/hello', 'hello form serverless function');
+  })
+);
+
+test(
   '[vercel dev] Middleware that does basic rewrite',
   testFixtureStdio('middleware-rewrite', async (testPath: any) => {
     await testPath(200, '/', '<h1>Index</h1>');
