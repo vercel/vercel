@@ -12,8 +12,9 @@ export default async function list(
   args: string[],
   contextName: string
 ) {
+  const { output } = client;
   if (args.length !== 0) {
-    client.output.error(
+    output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
         `${getCommandName('projects ls')}`
       )}`
@@ -23,7 +24,7 @@ export default async function list(
 
   const start = Date.now();
 
-  client.output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
+  output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
   let projectsUrl = '/v4/projects/?limit=20';
 
@@ -42,12 +43,12 @@ export default async function list(
     method: 'GET',
   });
 
-  client.output.stopSpinner();
+  output.stopSpinner();
 
   const elapsed = ms(Date.now() - start);
 
-  console.log(
-    `> ${list.length > 0 ? 'Projects' : 'No projects'} found under ${chalk.bold(
+  output.log(
+    `${list.length > 0 ? 'Projects' : 'No projects'} found under ${chalk.bold(
       contextName
     )} ${chalk.gray(`[${elapsed}]`)}`
   );
@@ -72,14 +73,14 @@ export default async function list(
     );
 
     if (out) {
-      console.log(`\n${out}\n`);
+      output.print(`\n${out}\n\n`);
     }
 
     if (pagination && pagination.count === 20) {
       const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d', '-y']);
       const nextCmd = `projects ls${flags} --next ${pagination.next}`;
-      console.log(`To display the next page run ${getCommandName(nextCmd)}`);
+      output.log(`To display the next page run ${getCommandName(nextCmd)}`);
     }
   }
-  return;
+  return 0;
 }

@@ -195,11 +195,17 @@ export function useProject(project: Partial<Project> = defaultProject) {
       }
     }
   });
-  client.scenario.delete(`/v4/projects/${project.id}/link`, (req, res) => {
+  client.scenario.delete(`/v4/projects/${project.id}/link`, (_req, res) => {
     if (project.link) {
       project.link = undefined;
     }
     res.json(project);
+  });
+  client.scenario.get(`/v4/projects`, (req, res) => {
+    res.json({
+      projects: [defaultProject],
+      pagination: null,
+    });
   });
 
   return { project, envs };

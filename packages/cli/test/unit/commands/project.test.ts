@@ -6,8 +6,50 @@ import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { client } from '../../mocks/client';
 import { Project } from '../../../src/types';
+import { readOutputStream } from '../../helpers/read-output-stream';
+import { getDataFromIntro, parseTable } from '../../helpers/parse-table';
 
 describe('projects', () => {
+  describe('list', () => {
+    it('should list deployments under a user', async () => {
+      const user = useUser();
+      const project = useProject({
+        ...defaultProject,
+      });
+
+      client.setArgv('project', 'ls');
+      await projects(client);
+
+      const output = await readOutputStream(client, 2);
+      const { org } = getDataFromIntro(output.split('\n')[0]);
+      const header: string[] = parseTable(output.split('\n')[2]);
+      const data: string[] = parseTable(output.split('\n')[3]);
+
+      expect(org).toEqual(user.username);
+      expect(header).toEqual(['name', 'updated']);
+      expect(data).toEqual([project.project.name, '1178d ago']);
+    });
+    it('should list deployments for a team', async () => {
+      useUser();
+      const team = useTeams('team_dummy');
+      const project = useProject({
+        ...defaultProject,
+      });
+
+      client.config.currentTeam = team[0].id;
+      client.setArgv('project', 'ls');
+      await projects(client);
+
+      const output = await readOutputStream(client, 2);
+      const { org } = getDataFromIntro(output.split('\n')[0]);
+      const header: string[] = parseTable(output.split('\n')[2]);
+      const data: string[] = parseTable(output.split('\n')[3]);
+
+      expect(org).toEqual(team[0].slug);
+      expect(header).toEqual(['name', 'updated']);
+      expect(data).toEqual([project.project.name, '1178d ago']);
+    });
+  });
   describe('connect', () => {
     const originalCwd = process.cwd();
     const fixture = (name: string) =>
