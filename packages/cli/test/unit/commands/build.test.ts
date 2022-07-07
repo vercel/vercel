@@ -515,6 +515,45 @@ describe('build', () => {
       const files = await fs.readdir(join(output, 'static'));
       expect(files.sort()).toEqual(['index.html']);
     } finally {
+      await fs.remove(output);
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  // This test is for `vercel-sapper` which doesn't export `version` property,
+  // but returns a structure that's compatible with `version: 2`
+  it("should support Builder that doesn't export `version`", async () => {
+    const cwd = fixture('versionless-builder');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      client.stderr.pipe(process.stderr);
+      client.setArgv('build');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: 'versionless-builder',
+            src: 'package.json',
+            use: 'versionless-builder@0.0.0',
+          },
+        ],
+      });
+
+      // "static" directory contains static files
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['file']);
+
+      expect(await fs.readFile(join(output, 'static/file'), 'utf8')).toEqual(
+        'file contents'
+      );
+    } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
