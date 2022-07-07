@@ -207,6 +207,12 @@ export function useProject(project: Partial<Project> = defaultProject) {
       pagination: null,
     });
   });
+  client.scenario.post(`/projects`, (req, res) => {
+    const { name } = req.body;
+    if (name === project.name) {
+      res.json(project);
+    }
+  });
 
   return { project, envs };
 }

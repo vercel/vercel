@@ -50,6 +50,26 @@ describe('projects', () => {
       expect(data).toEqual([project.project.name, '1178d ago']);
     });
   });
+  describe('add', () => {
+    it('should add a project', async () => {
+      const user = useUser();
+      useProject({
+        ...defaultProject,
+        id: 'test-project',
+        name: 'test-project',
+      });
+
+      client.setArgv('project', 'add', 'test-project');
+      await projects(client);
+
+      const project: Project = await client.fetch(`/v8/projects/test-project`);
+      expect(project).toBeDefined();
+
+      expect(client.stderr).toOutput(
+        `Success! Project test-project added (${user.username})`
+      );
+    });
+  });
   describe('connect', () => {
     const originalCwd = process.cwd();
     const fixture = (name: string) =>
