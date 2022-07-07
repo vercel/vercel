@@ -41,7 +41,7 @@ describe('createGitMeta', () => {
     const directory = fixture('dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory);
+      const dirty = await isDirty(directory, client.output);
       expect(dirty).toBeTruthy();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -51,7 +51,7 @@ describe('createGitMeta', () => {
     const directory = fixture('not-dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory);
+      const dirty = await isDirty(directory, client.output);
       expect(dirty).toBeFalsy();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
