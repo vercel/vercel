@@ -64,7 +64,7 @@ import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
-import { createGitMeta } from '../../util/deploy/create-git-meta';
+import { createGitMeta } from '../../util/create-git-meta';
 
 export default async (client: Client) => {
   const { output } = client;
