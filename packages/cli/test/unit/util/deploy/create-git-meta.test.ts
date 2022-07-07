@@ -1,5 +1,6 @@
 import { join } from 'path';
 import fs from 'fs-extra';
+import os from 'os';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
@@ -7,7 +8,6 @@ import {
   isDirty,
 } from '../../../../src/util/deploy/create-git-meta';
 import { client } from '../../../mocks/client';
-import execa from 'execa';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
@@ -126,28 +126,17 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('fails when `.git` is corrupt)', async () => {
+  it('fails when `.git` is corrupt', async () => {
     const directory = fixture('git-corrupt');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
+      await fs.copy(directory, join(os.tmpdir(), 'git-corrupt'));
+      const cpDirectory = join(os.tmpdir(), 'git-corrupt');
 
-      const data = await createGitMeta(directory, client.output);
-
-      // `getLastCommit()` runs `git log -1`, which searches parent directories as well.
-      // This test cannot return an undefined object for `data`, because it is running
-      // in vercel/vercel, which has a Git repo. Howeer, if `data` matches the latest commit
-      // to vercel/vercel, it means it did not find Git data in the `git-corrupt` fixture, which
-      // means it is working as expected.
-      const { stdout } = await execa('git', ['log', '-1']);
-      const sha = getSha(stdout);
-      expect(data?.commitSha).toEqual(sha);
+      const data = await createGitMeta(cpDirectory, client.output);
+      expect(data).toBeUndefined();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
 });
-
-function getSha(stdout: string): string {
-  const lines = stdout.split('\n');
-  return lines[0].split(' ')[1];
-}
