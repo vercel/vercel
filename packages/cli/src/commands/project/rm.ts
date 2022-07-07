@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import Client from '../../util/client';
+import { emoji, prependEmoji } from '../../util/emoji';
+import confirm from '../../util/input/confirm';
 import { getCommandName } from '../../util/pkg-name';
 
 const e = encodeURIComponent;
@@ -19,7 +21,8 @@ export default async function rm(client: Client, args: string[]) {
 
   const start = Date.now();
 
-  const yes = await readConfirmation(name);
+  const yes = await readConfirmation(client, name);
+
   if (!yes) {
     client.output.log('User abort');
     return 0;
@@ -36,30 +39,25 @@ export default async function rm(client: Client, args: string[]) {
     }
   }
   const elapsed = ms(Date.now() - start);
-  console.log(
-    `${chalk.cyan('> Success!')} Project ${chalk.bold(
-      name
-    )} removed ${chalk.gray(`[${elapsed}]`)}`
+  client.output.log(
+    `${chalk.cyan('Success!')} Project ${chalk.bold(name)} removed ${chalk.gray(
+      `[${elapsed}]`
+    )}`
   );
-  return;
+  return 0;
 }
 
-function readConfirmation(projectName: string) {
-  return new Promise(resolve => {
-    process.stdout.write(
-      `The project: ${chalk.bold(projectName)} will be removed permanently.\n` +
-        `It will also delete everything under the project including deployments.\n`
-    );
+async function readConfirmation(
+  client: Client,
+  projectName: string
+): Promise<boolean> {
+  client.output.print(
+    prependEmoji(
+      `The project ${chalk.bold(projectName)} will be removed permanently.\n` +
+        `It will also delete everything under the project including deployments.\n`,
+      emoji('warning')
+    )
+  );
 
-    process.stdout.write(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
-    );
-
-    process.stdin
-      .on('data', d => {
-        process.stdin.pause();
-        resolve(d.toString().trim().toLowerCase() === 'y');
-      })
-      .resume();
-  });
+  return await confirm(client, `${chalk.bold.red('Are you sure?')}`, false);
 }

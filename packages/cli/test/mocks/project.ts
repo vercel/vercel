@@ -213,6 +213,9 @@ export function useProject(project: Partial<Project> = defaultProject) {
       res.json(project);
     }
   });
+  client.scenario.delete(`/:version/projects/${project.id}`, (_req, res) => {
+    res.json({});
+  });
 
   return { project, envs };
 }
