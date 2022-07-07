@@ -128,15 +128,17 @@ describe('createGitMeta', () => {
   });
   it('fails when `.git` is corrupt', async () => {
     const directory = fixture('git-corrupt');
+    const tmpDir = join(os.tmpdir(), 'git-corrupt');
     try {
-      await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      await fs.copy(directory, join(os.tmpdir(), 'git-corrupt'));
-      const cpDirectory = join(os.tmpdir(), 'git-corrupt');
+      // Copy the fixture into a temp dir so that we don't pick
+      // up Git information from the `vercel/vercel` repo itself
+      await fs.copy(directory, tmpDir);
+      await fs.rename(join(tmpDir, 'git'), join(tmpDir, '.git'));
 
-      const data = await createGitMeta(cpDirectory, client.output);
+      const data = await createGitMeta(tmpDir, client.output);
       expect(data).toBeUndefined();
     } finally {
-      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+      await fs.remove(tmpDir);
     }
   });
 });
