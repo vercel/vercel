@@ -170,7 +170,7 @@ describe('build', () => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      // `builds.json` says that "@vercel/node" was run
+      // `builds.json` says that "txt-builder" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds).toMatchObject({
         target: 'preview',
@@ -235,7 +235,7 @@ describe('build', () => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      // `builds.json` says that "@vercel/node" was run
+      // `builds.json` says that "edge-function" Builder was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds).toMatchObject({
         target: 'production',
@@ -370,7 +370,7 @@ describe('build', () => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      // `builds.json` says that "@vercel/static" was run
+      // `builds.json` says that "@vercel/node" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds).toMatchObject({
         target: 'preview',
@@ -431,7 +431,7 @@ describe('build', () => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      // `builds.json` says that "@vercel/static" was run
+      // `builds.json` says that "@vercel/node" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds).toMatchObject({
         target: 'preview',
@@ -533,7 +533,7 @@ describe('build', () => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      // `builds.json` says that "@vercel/static" was run
+      // `builds.json` says that "versionless-builder" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds).toMatchObject({
         target: 'preview',
