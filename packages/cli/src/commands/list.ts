@@ -4,7 +4,6 @@ import table from 'text-table';
 import Now from '../util';
 import getArgs from '../util/get-args';
 import { handleError } from '../util/error';
-import cmd from '../util/output/cmd';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
 import strlen from '../util/strlen';
@@ -101,7 +100,6 @@ export default async function main(client: Client) {
   const yes = argv['--confirm'] || false;
 
   const meta = parseMeta(argv['--meta']);
-  const { includeScheme } = config;
 
   let paths = [process.cwd()];
   const pathValidation = await validatePaths(client, paths);
@@ -260,14 +258,16 @@ export default async function main(client: Client) {
     )}`
   );
 
+  log(
+    `To list all projects in your team, run ${getCommandName('project ls')}.`
+  );
+
   // information to help the user find other deployments or instances
-  if (app == null) {
-    log(
-      `To list more deployments for a project run ${cmd(
-        `${getCommandName('ls [project]')}`
-      )}`
-    );
-  }
+  log(
+    `To list more deployments for a project run ${getCommandName(
+      'ls [project]'
+    )}.`
+  );
 
   print('\n');
 
@@ -282,7 +282,7 @@ export default async function main(client: Client) {
           .map(dep => [
             [
               getProjectName(dep),
-              chalk.bold((includeScheme ? 'https://' : '') + dep.url),
+              chalk.bold(`https://${dep.url}`),
               stateString(dep.state),
               chalk.gray(ms(Date.now() - dep.createdAt)),
               dep.creator.username,
@@ -298,7 +298,7 @@ export default async function main(client: Client) {
           ),
       ],
       {
-        align: ['l', 'l', 'r', 'l', 'l'],
+        align: ['l', 'l', 'l', 'l', 'l'],
         hsep: ' '.repeat(4),
         stringLength: strlen,
       }
@@ -326,16 +326,23 @@ function getProjectName(d: Deployment) {
 
 // renders the state string
 export function stateString(s: string) {
-  switch (s) {
+  const CIRCLE = '● ';
+  // make `s` title case
+  s = `${s.substring(0, 1)}${s.toLowerCase().substring(1)}`;
+  switch (s.toUpperCase()) {
     case 'INITIALIZING':
-      return chalk.yellow(s);
-
+    case 'BUILDING':
+    case 'DEPLOYING':
+    case 'ANALYZING':
+      return chalk.yellow(CIRCLE) + s;
     case 'ERROR':
-      return chalk.red(s);
-
+      return chalk.red(CIRCLE) + s;
     case 'READY':
-      return s;
-
+      return chalk.green(CIRCLE) + s;
+    case 'QUEUED':
+      return chalk.white(CIRCLE) + s;
+    case 'CANCELED':
+      return chalk.gray(s);
     default:
       return chalk.gray('UNKNOWN');
   }

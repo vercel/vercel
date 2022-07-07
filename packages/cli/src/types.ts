@@ -28,7 +28,6 @@ export interface AuthConfig {
 export interface GlobalConfig {
   _?: string;
   currentTeam?: string;
-  includeScheme?: string;
   collectMetrics?: boolean;
   api?: string;
 
