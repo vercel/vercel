@@ -12,13 +12,13 @@ export default async function add(
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('projects add <name>')}`
+        `${getCommandName('project add <name>')}`
       )}`
     );
 
     if (args.length > 1) {
       const example = chalk.cyan(
-        `${getCommandName(`projects add "${args.join(' ')}"`)}`
+        `${getCommandName(`project add "${args.join(' ')}"`)}`
       );
       output.log(
         `If your project name  has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
