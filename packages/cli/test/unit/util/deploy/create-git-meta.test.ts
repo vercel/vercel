@@ -126,7 +126,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it('fails when .git is corrupt)', async () => {
+  it('fails when `.git` is corrupt)', async () => {
     const directory = fixture('git-corrupt');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));

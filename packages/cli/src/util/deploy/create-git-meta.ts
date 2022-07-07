@@ -22,10 +22,10 @@ export function isDirty(directory: string, output: Output): Promise<boolean> {
 }
 
 function getLastCommit(directory: string): Promise<git.Commit | void> {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     git.getLastCommit(
       (err, commit) => {
-        if (err) return resolve();
+        if (err) return reject(err);
         resolve(commit);
       },
       { dst: directory }
@@ -64,7 +64,7 @@ export async function createGitMeta(
     return;
   }
   const [commit, dirty] = await Promise.all([
-    getLastCommit(directory),
+    getLastCommit(directory).catch(() => {}),
     isDirty(directory, output),
   ]);
 
