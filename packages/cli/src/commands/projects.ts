@@ -10,20 +10,6 @@ import getScope from '../util/get-scope';
 import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
-import validatePaths from '../util/validate-paths';
-import { ensureLink } from '../util/ensure-link';
-import { parseGitConfig, pluckRemoteUrl } from '../util/create-git-meta';
-import {
-  connectGitProvider,
-  disconnectGitProvider,
-  formatProvider,
-  parseRepoUrl,
-} from '../util/projects/connect-git-provider';
-import { join } from 'path';
-import { Team, User } from '../types';
-import confirm from '../util/input/confirm';
-import { Output } from '../util/output';
-import link from '../util/output/link';
 
 const e = encodeURIComponent;
 
@@ -34,7 +20,6 @@ const help = () => {
   ${chalk.dim('Commands:')}
 
     ls                               Show all projects in the selected team/user
-    connect                          Connect a Git provider to your project
     add      [name]                  Add a new project
     rm       [name]                  Remove a project
 
@@ -69,7 +54,6 @@ const main = async (client: Client) => {
     argv = getArgs(client.argv.slice(2), {
       '--next': Number,
       '-N': '--next',
-      '--yes': Boolean,
     });
   } catch (error) {
     handleError(error);
@@ -87,10 +71,10 @@ const main = async (client: Client) => {
 
   const { output } = client;
 
-  let scope = null;
+  let contextName = null;
 
   try {
-    scope = await getScope(client);
+    ({ contextName } = await getScope(client));
   } catch (err) {
     if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
       output.error(err.message);
@@ -100,12 +84,17 @@ const main = async (client: Client) => {
     throw err;
   }
 
-  return await run({ client, scope });
+  try {
+    await run({ client, contextName });
+  } catch (err) {
+    handleError(err);
+    exit(1);
+  }
 };
 
 export default async (client: Client) => {
   try {
-    return await main(client);
+    await main(client);
   } catch (err) {
     handleError(err);
     process.exit(1);
@@ -114,147 +103,15 @@ export default async (client: Client) => {
 
 async function run({
   client,
-  scope,
+  contextName,
 }: {
   client: Client;
-  scope: {
-    contextName: string;
-    team: Team | null;
-    user: User;
-  };
+  contextName: string;
 }) {
   const { output } = client;
-  const { contextName, team } = scope;
   const args = argv._.slice(1);
 
   const start = Date.now();
-
-  if (subcommand === 'connect') {
-    const yes = Boolean(argv['--yes']);
-    if (args.length !== 0) {
-      output.error(
-        `Invalid number of arguments. Usage: ${chalk.cyan(
-          `${getCommandName('project connect')}`
-        )}`
-      );
-      return exit(2);
-    }
-
-    let paths = [process.cwd()];
-
-    const validate = await validatePaths(client, paths);
-    if (!validate.valid) {
-      return validate.exitCode;
-    }
-    const { path } = validate;
-
-    const linkedProject = await ensureLink(
-      'project connect',
-      client,
-      path,
-      yes
-    );
-    if (typeof linkedProject === 'number') {
-      return linkedProject;
-    }
-
-    const { project, org } = linkedProject;
-    const gitProviderLink = project.link;
-
-    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
-
-    // get project from .git
-    const gitConfigPath = join(path, '.git/config');
-    const gitConfig = await parseGitConfig(gitConfigPath, output);
-    if (!gitConfig) {
-      output.error(
-        `No local git repo found. Run ${chalk.cyan(
-          '`git clone <url>`'
-        )} to clone a remote Git repository first.`
-      );
-      return 1;
-    }
-    const remoteUrl = pluckRemoteUrl(gitConfig);
-    if (!remoteUrl) {
-      output.error(
-        `No remote origin URL found in your Git config. Make sure you've connected your local Git repo to a Git provider first.`
-      );
-      return 1;
-    }
-    const parsedUrl = parseRepoUrl(remoteUrl);
-    if (!parsedUrl) {
-      output.error(
-        `Failed to parse Git repo data from the following remote URL in your Git config: ${link(
-          remoteUrl
-        )}`
-      );
-      return 1;
-    }
-    const { provider, org: gitOrg, repo } = parsedUrl;
-    const repoPath = `${gitOrg}/${repo}`;
-    let connectedRepoPath;
-
-    if (!gitProviderLink) {
-      const connect = await connectGitProvider(
-        client,
-        team,
-        project.id,
-        provider,
-        repoPath
-      );
-      if (typeof connect === 'number') {
-        return connect;
-      }
-    } else {
-      const connectedProvider = gitProviderLink.type;
-      const connectedOrg = gitProviderLink.org;
-      const connectedRepo = gitProviderLink.repo;
-      connectedRepoPath = `${connectedOrg}/${connectedRepo}`;
-
-      const isSameRepo =
-        connectedProvider === provider &&
-        connectedOrg === gitOrg &&
-        connectedRepo === repo;
-      if (isSameRepo) {
-        output.log(
-          `${chalk.cyan(
-            connectedRepoPath
-          )} is already connected to your project.`
-        );
-        return 1;
-      }
-
-      const shouldReplaceRepo = await confirmRepoConnect(
-        client,
-        output,
-        yes,
-        connectedRepoPath
-      );
-      if (!shouldReplaceRepo) {
-        return 0;
-      }
-
-      await disconnectGitProvider(client, team, project.id);
-      const connect = await connectGitProvider(
-        client,
-        team,
-        project.id,
-        provider,
-        repoPath
-      );
-      if (typeof connect === 'number') {
-        return connect;
-      }
-    }
-
-    output.log(
-      `Connected ${formatProvider(provider)} repository ${chalk.cyan(
-        repoPath
-      )}!`
-    );
-
-    return 0;
-  }
 
   if (subcommand === 'ls' || subcommand === 'list') {
     if (args.length !== 0) {
@@ -414,7 +271,7 @@ async function run({
     return;
   }
 
-  output.error('Please specify a valid subcommand: ls | connect | add | rm');
+  console.error(error('Please specify a valid subcommand: ls | add | rm'));
   help();
   exit(2);
 }
@@ -423,28 +280,6 @@ process.on('uncaughtException', err => {
   handleError(err);
   exit(1);
 });
-
-async function confirmRepoConnect(
-  client: Client,
-  output: Output,
-  yes: boolean,
-  connectedRepoPath: string
-) {
-  let shouldReplaceProject = yes;
-  if (!shouldReplaceProject) {
-    shouldReplaceProject = await confirm(
-      client,
-      `Looks like you already have a repository connected: ${chalk.cyan(
-        connectedRepoPath
-      )}. Do you want to replace it?`,
-      true
-    );
-    if (!shouldReplaceProject) {
-      output.log(`Aborted. Repo not connected.`);
-    }
-  }
-  return shouldReplaceProject;
-}
 
 function readConfirmation(projectName: string) {
   return new Promise(resolve => {
