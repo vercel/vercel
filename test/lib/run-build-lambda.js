@@ -1,5 +1,6 @@
 const fs = require('fs-extra');
-const { glob, getWriteableDirectory } = require('@vercel/build-utils');
+const path = require('path');
+const { glob } = require('@vercel/build-utils');
 
 function runAnalyze(wrapper, context) {
   if (wrapper.analyze) {
@@ -37,7 +38,10 @@ async function runBuildLambda(inputPath) {
     config: build.config,
   });
 
-  const workPath = await fs.realpath(await getWriteableDirectory());
+  const tempDir = path.join(require('os').tmpdir(), 'vercel-' + Date.now());
+  await fs.ensureDir(tempDir);
+
+  const workPath = await fs.realpath(tempDir);
   const buildResult = await wrapper.build({
     files: inputFiles,
     entrypoint,
