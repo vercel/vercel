@@ -1,6 +1,5 @@
 import { client } from './client';
 import { Project } from '../../src/types';
-import { formatProvider } from '../../src/util/projects/connect-git-provider';
 
 const envs = [
   {
@@ -160,49 +159,6 @@ export function useProject(project: Partial<Project> = defaultProject) {
     }
 
     res.json({ envs });
-  });
-  client.scenario.post(`/v4/projects/${project.id}/link`, (req, res) => {
-    const { type, repo, org } = req.body;
-    if (
-      (type === 'github' || type === 'gitlab' || type === 'bitbucket') &&
-      (repo === 'user/repo' || repo === 'user2/repo2')
-    ) {
-      project.link = {
-        type,
-        repo,
-        repoId: 1010,
-        org,
-        gitCredentialId: '',
-        sourceless: true,
-        createdAt: 1656109539791,
-        updatedAt: 1656109539791,
-      };
-      res.json(project);
-    } else {
-      if (type === 'github') {
-        res.status(400).json({
-          message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
-          meta: {
-            action: 'Install GitHub App',
-            link: 'https://github.com/apps/vercel',
-            repo,
-          },
-        });
-      } else {
-        res.status(400).json({
-          code: 'repo_not_found',
-          message: `The repository "${repo}" couldn't be found in your linked ${formatProvider(
-            type
-          )} account.`,
-        });
-      }
-    }
-  });
-  client.scenario.delete(`/v4/projects/${project.id}/link`, (req, res) => {
-    if (project.link) {
-      project.link = undefined;
-    }
-    res.json(project);
   });
 
   return { project, envs };
