@@ -114,10 +114,12 @@ export default async function main(client: Client) {
 
   switch (subcommand) {
     case 'ls':
+    case 'list':
       return await list(client, argv, args, contextName);
     case 'add':
       return await add(client, args, contextName);
     case 'rm':
+    case 'remove':
       return await rm(client, args);
     case 'connect':
       return await connect(client, argv, args, project, org, team);

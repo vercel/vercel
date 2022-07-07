@@ -16,7 +16,7 @@ export default async function list(
   if (args.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('projects ls')}`
+        `${getCommandName('project ls')}`
       )}`
     );
     return 2;
@@ -78,7 +78,7 @@ export default async function list(
 
     if (pagination && pagination.count === 20) {
       const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d', '-y']);
-      const nextCmd = `projects ls${flags} --next ${pagination.next}`;
+      const nextCmd = `project ls${flags} --next ${pagination.next}`;
       output.log(`To display the next page run ${getCommandName(nextCmd)}`);
     }
   }

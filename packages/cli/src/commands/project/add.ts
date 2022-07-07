@@ -21,7 +21,7 @@ export default async function add(
         `${getCommandName(`projects add "${args.join(' ')}"`)}`
       );
       output.log(
-        `> If your project name  has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
+        `If your project name  has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
       );
     }
 
