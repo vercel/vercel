@@ -22,10 +22,10 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
-    --yes                          Skip confirmation prompts
+    --confirm                      Skip confirmation prompts
+    --prod                        Filter for production deployments
     dash                           Open the dashboard in a browser
     latest                         Open the latest preview deployment URL in a browser
-    prod                           Open the latest production deployment URL in a browser
     [url]                          Open the specified deployment URL in a browser
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
@@ -50,7 +50,7 @@ const help = () => {
 
   ${chalk.gray('–')} Open the latest production deployment URL
 
-    ${chalk.cyan(`$ ${getPkgName()} open prod`)}
+    ${chalk.cyan(`$ ${getPkgName()} open latest --prod`)}
 
   ${chalk.gray('–')} Open the dashboard for the latest preview deployment
 
@@ -58,7 +58,7 @@ const help = () => {
 
   ${chalk.gray('–')} Open the dashboard for the latest production deployment
 
-    ${chalk.cyan(`$ ${getPkgName()} open dash prod`)}
+    ${chalk.cyan(`$ ${getPkgName()} open dash latest --prod`)}
 
   ${chalk.gray('–')} Open a specific deployment URL
   
@@ -81,7 +81,7 @@ export default async function open(
 
   try {
     argv = getArgs(client.argv.slice(2), {
-      '--yes': Boolean,
+      '--confirm': Boolean,
       '--prod': Boolean,
     });
   } catch (error) {
@@ -98,7 +98,8 @@ export default async function open(
     return 2;
   }
 
-  const yes = argv['--yes'] || false;
+  const confirm = argv['--confirm'] || false;
+  const prod = argv['--prod'] || false;
 
   let scope = null;
 
@@ -123,7 +124,7 @@ export default async function open(
   }
   const { path } = validate;
 
-  const linkedProject = await ensureLink('open', client, path, yes);
+  const linkedProject = await ensureLink('open', client, path, confirm);
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
@@ -138,7 +139,8 @@ export default async function open(
     client,
     project,
     org,
-    team
+    team,
+    prod
   );
   if (typeof choice === 'number') {
     return choice;
@@ -169,13 +171,12 @@ async function getChoice(
   client: Client,
   project: Project,
   org: Org,
-  team: Team | null
+  team: Team | null,
+  prod: Boolean
 ): Promise<string | number> {
   if (subcommand === 'dash' || subcommand === 'dashboard') {
     if (narrow === 'latest') {
-      return await getInspectorUrl(client, project, org, team);
-    } else if (narrow === 'prod' || narrow === 'production') {
-      return await getInspectorUrl(client, project, org, team, true);
+      return await getInspectorUrl(client, project, org, team, prod);
     } else if (narrow) {
       // Assume they're trying to pass in a deployment URL
       const deployment = await verifyDeployment(client, narrow, contextName);
@@ -188,9 +189,7 @@ async function getChoice(
       return getDashboardUrl(org, project);
     }
   } else if (subcommand === 'latest') {
-    return await getLatestDeploymentUrl(client, project, team);
-  } else if (subcommand === 'prod') {
-    return await getLatestDeploymentUrl(client, project, team, true);
+    return await getLatestDeploymentUrl(client, project, team, prod);
   } else if (subcommand) {
     // Assume they're trying to pass in a deployment URL
     const deployment = await verifyDeployment(client, subcommand, contextName);
@@ -231,13 +230,15 @@ async function listOptions(
         short: 'Deployment Inspector',
       },
       {
-        name: `Latest Production Deployment ${chalk.gray('(vc open prod)')}`,
+        name: `Latest Production Deployment ${chalk.gray(
+          '(vc open latest --prod)'
+        )}`,
         value: await getLatestDeploymentUrl(client, project, team, true),
         short: 'Latest Production Deployment',
       },
       {
         name: `Inspect Latest Production Deployment ${chalk.gray(
-          '(vc open dash prod)'
+          '(vc open dash latest --prod)'
         )}`,
         value: await getInspectorUrl(client, project, org, team, true),
         short: 'Latest Production Deployment Inspector',

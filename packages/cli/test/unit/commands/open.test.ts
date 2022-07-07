@@ -83,7 +83,7 @@ describe('open', () => {
         ''
       );
 
-      client.setArgv('open', 'dash', 'prod');
+      client.setArgv('open', 'dash', 'latest', '--prod');
       const openPromise = open(client, true);
       await expect(client.stderr).toOutput(
         `Opened https://vercel.com/${team[0].slug}/test-project/${deploymentId}`
@@ -133,7 +133,7 @@ describe('open', () => {
       });
       const url = project?.project?.targets?.production?.url;
 
-      client.setArgv('open', 'prod');
+      client.setArgv('open', 'latest', '--prod');
       const openPromise = open(client, true);
       await expect(client.stderr).toOutput(`Opened https://${url}`);
 
