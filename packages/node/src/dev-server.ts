@@ -148,7 +148,7 @@ async function serializeRequest(message: IncomingMessage) {
   });
 }
 
-async function compileUserCode(entrypoint: string) {
+async function compileUserCode(entrypoint: string, isMiddleware: boolean) {
   try {
     const result = await esbuild.build({
       platform: 'node',
@@ -197,6 +197,19 @@ async function compileUserCode(entrypoint: string) {
           }
 
           let response = await edgeHandler(event.request, event);
+
+          if (!response) {
+            if (!${isMiddleware}) {
+              throw new Error('Edge Function "${entrypoint}" did not return a response.');
+            }
+
+            response = new Response(null, {
+              headers: {
+                // "Pass through" the middleware to complete the HTTP request
+                'x-middleware-next': '1'
+              }
+            });
+          }
 
           return event.respondWith(response);
         } catch (error) {
@@ -252,9 +265,10 @@ async function createEdgeRuntime(userCode: string | undefined) {
 }
 
 async function createEdgeEventHandler(
-  entrypoint: string
+  entrypoint: string,
+  isMiddleware: boolean
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const userCode = await compileUserCode(entrypoint);
+  const userCode = await compileUserCode(entrypoint, isMiddleware);
   const server = await createEdgeRuntime(userCode);
 
   return async function (request: IncomingMessage) {
@@ -324,7 +338,7 @@ async function createEventHandler(
   // an Edge Function, otherwise needs to be opted-in via
   // `export const config = { runtime: 'experimental-edge' }`
   if (config.middleware === true || runtime === 'experimental-edge') {
-    return createEdgeEventHandler(entryPointPath);
+    return createEdgeEventHandler(entryPointPath, !!config.middleware);
   }
 
   return createServerlessEventHandler(entryPointPath, options);
