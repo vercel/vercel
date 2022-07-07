@@ -81,7 +81,8 @@ export default async function transferIn(
   const shouldTransfer = await promptBool(
     transferPolicy === 'no-change'
       ? `Transfer now for ${chalk.bold(`$${price}`)}?`
-      : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`
+      : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`,
+    client
   );
   if (!shouldTransfer) {
     return 0;

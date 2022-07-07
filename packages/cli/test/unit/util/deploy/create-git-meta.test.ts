@@ -22,10 +22,7 @@ describe('getRemoteUrl', () => {
     client.output.debugEnabled = true;
     const data = await getRemoteUrl(join(dir, 'git/config'), client.output);
     expect(data).toBeNull();
-    expect(
-      client.outputBuffer.includes('Error while parsing repo data'),
-      'Debug message was not found'
-    ).toBeTruthy();
+    await expect(client.stderr).toOutput('Error while parsing repo data');
   });
 });
 

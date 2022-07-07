@@ -433,3 +433,98 @@ test(
     await testPath(404, '/i-do-not-exist');
   })
 );
+
+test(
+  '[vercel dev] Middleware that returns a 200 response',
+  testFixtureStdio('middleware-response', async (testPath: any) => {
+    await testPath(200, '/', 'hi from middleware');
+    await testPath(200, '/another', 'hi from middleware');
+  })
+);
+
+test(
+  '[vercel dev] Middleware that does basic rewrite',
+  testFixtureStdio('middleware-rewrite', async (testPath: any) => {
+    await testPath(200, '/', '<h1>Index</h1>');
+    await testPath(200, '/index', '<h1>Another</h1>');
+    await testPath(200, '/another', '<h1>Another</h1>');
+    await testPath(200, '/another.html', '<h1>Another</h1>');
+    await testPath(200, '/foo', '<h1>Another</h1>');
+  })
+);
+
+test(
+  '[vercel dev] Middleware that rewrites with custom query params',
+  testFixtureStdio('middleware-rewrite-query', async (testPath: any) => {
+    await testPath(200, '/?foo=bar', '{"url":"/?from-middleware=true"}');
+    await testPath(
+      200,
+      '/another?foo=bar',
+      '{"url":"/another?from-middleware=true"}'
+    );
+    await testPath(
+      200,
+      '/api/fn?foo=bar',
+      '{"url":"/api/fn?from-middleware=true"}'
+    );
+  })
+);
+
+test(
+  '[vercel dev] Middleware that redirects',
+  testFixtureStdio('middleware-redirect', async (testPath: any) => {
+    await testPath(302, '/', null, {
+      location: 'https://vercel.com/',
+    });
+    await testPath(302, '/home', null, {
+      location: 'https://vercel.com/home',
+    });
+    await testPath(302, '/?foo=bar', null, {
+      location: 'https://vercel.com/?foo=bar',
+    });
+  })
+);
+
+test(
+  '[vercel dev] Middleware with error in function handler',
+  testFixtureStdio('middleware-error-in-handler', async (testPath: any) => {
+    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+  })
+);
+
+test(
+  '[vercel dev] Middleware with error at init',
+  testFixtureStdio('middleware-error-at-init', async (testPath: any) => {
+    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+  })
+);
+
+test(
+  '[vercel dev] Middleware with an explicit 500 response',
+  testFixtureStdio('middleware-500-response', async (testPath: any) => {
+    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+  })
+);
+
+test(
+  '[vercel dev] Middleware with `matchers` config',
+  testFixtureStdio('middleware-matchers', async (testPath: any) => {
+    await testPath(404, '/');
+    await testPath(404, '/another');
+    await testPath(
+      200,
+      '/about/page',
+      '{"pathname":"/about/page","search":"","fromMiddleware":true}'
+    );
+    await testPath(
+      200,
+      '/dashboard/home',
+      '{"pathname":"/dashboard/home","search":"","fromMiddleware":true}'
+    );
+    await testPath(
+      200,
+      '/dashboard/home?a=b',
+      '{"pathname":"/dashboard/home","search":"?a=b","fromMiddleware":true}'
+    );
+  })
+);

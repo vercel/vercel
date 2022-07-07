@@ -1,3 +1,5 @@
+import type { Readable, Writable } from 'stream';
+
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
 export type Primitive =
@@ -128,6 +130,8 @@ export type Deployment = {
   version?: number;
   created: number;
   createdAt: number;
+  ready?: number;
+  buildingAt?: number;
   creator: { uid: string; username: string };
   target: string | null;
   ownerId: string;
@@ -441,4 +445,20 @@ export interface BuildOutput {
     timeout?: number;
     layers?: string[];
   } | null;
+}
+
+export interface ReadableTTY extends Readable {
+  isTTY?: boolean;
+  isRaw?: boolean;
+  setRawMode?: (mode: boolean) => void;
+}
+
+export interface WritableTTY extends Writable {
+  isTTY?: boolean;
+}
+
+export interface Stdio {
+  stdin: ReadableTTY;
+  stdout: WritableTTY;
+  stderr: WritableTTY;
 }

@@ -23,7 +23,7 @@ import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
 import commands from './commands';
 import pkg from './util/pkg';
-import createOutput from './util/output';
+import { Output } from './util/output';
 import cmd from './util/output/cmd';
 import info from './util/output/info';
 import error from './util/output/error';
@@ -109,7 +109,7 @@ const main = async () => {
   }
 
   const isDebugging = argv['--debug'];
-  const output = createOutput({ debug: isDebugging });
+  const output = new Output(process.stderr, { debug: isDebugging });
 
   debug = output.debug;
 
@@ -388,6 +388,9 @@ const main = async () => {
   // Shared API `Client` instance for all sub-commands to utilize
   client = new Client({
     apiUrl,
+    stdin: process.stdin,
+    stdout: process.stdout,
+    stderr: output.stream,
     output,
     config,
     authConfig,
@@ -797,7 +800,5 @@ process.on('uncaughtException', handleUnexpected);
 main()
   .then(exitCode => {
     process.exitCode = exitCode;
-    // @ts-ignore - "nowExit" is a non-standard event name
-    process.emit('nowExit');
   })
   .catch(handleUnexpected);

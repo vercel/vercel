@@ -257,6 +257,10 @@ async function testFixture(directory, opts = {}, args = []) {
   dev.kill = async (...args) => {
     dev._kill(...args);
     await exitResolver;
+    return {
+      stdout,
+      stderr,
+    };
   };
 
   return {
@@ -344,7 +348,6 @@ function testFixtureStdio(
               : []),
             'deploy',
             '--public',
-            '--no-clipboard',
             '--debug',
           ],
           { cwd, stdio: 'pipe', reject: false }

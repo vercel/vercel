@@ -110,9 +110,11 @@ export default async function dev(
   // v3 Build Output because it will incorrectly be detected by
   // @vercel/static-build in BuildOutputV3.getBuildOutputDirectory()
   if (!devCommand) {
-    output.log(`Removing ${OUTPUT_DIR}`);
     const outputDir = join(cwd, OUTPUT_DIR);
-    await fs.remove(outputDir);
+    if (await fs.pathExists(outputDir)) {
+      output.log(`Removing ${OUTPUT_DIR}`);
+      await fs.remove(outputDir);
+    }
   }
 
   const devServer = new DevServer(cwd, {

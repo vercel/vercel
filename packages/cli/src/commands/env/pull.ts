@@ -74,6 +74,7 @@ export default async function pull(
     exists &&
     !skipConfirmation &&
     !(await confirm(
+      client,
       `Found existing file ${param(filename)}. Do you want to overwrite?`,
       false
     ))

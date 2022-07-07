@@ -188,22 +188,32 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     hadTest = true;
   }
 
-  if (probe.mustContain || probe.mustNotContain) {
-    const shouldContain = !!probe.mustContain;
+  if (probe.mustContain) {
     const containsIt = text.includes(probe.mustContain);
-    if (
-      (!containsIt && probe.mustContain) ||
-      (containsIt && probe.mustNotContain)
-    ) {
+    if (!containsIt) {
       fs.writeFileSync(path.join(__dirname, 'failed-page.txt'), text);
       const headers = Array.from(resp.headers.entries())
         .map(([k, v]) => `  ${k}=${v}`)
         .join('\n');
       throw new Error(
-        `Fetched page ${probeUrl} does${shouldContain ? ' not' : ''} contain ${
-          shouldContain ? probe.mustContain : probe.mustNotContain
-        }.` +
-          (shouldContain ? ` Instead it contains ${text.slice(0, 60)}` : '') +
+        `Fetched page ${probeUrl} does not contain ${probe.mustContain}.` +
+          ` Content ${text}` +
+          ` Response headers:\n ${headers}`
+      );
+    }
+    hadTest = true;
+  }
+
+  if (probe.mustNotContain) {
+    const containsIt = text.includes(probe.mustNotContain);
+    if (containsIt) {
+      fs.writeFileSync(path.join(__dirname, 'failed-page.txt'), text);
+      const headers = Array.from(resp.headers.entries())
+        .map(([k, v]) => `  ${k}=${v}`)
+        .join('\n');
+      throw new Error(
+        `Fetched page ${probeUrl} does contain ${probe.mustNotContain}.` +
+          ` Content ${text}` +
           ` Response headers:\n ${headers}`
       );
     }

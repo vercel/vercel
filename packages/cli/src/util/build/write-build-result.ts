@@ -31,7 +31,7 @@ export async function writeBuildResult(
   cleanUrls?: boolean
 ) {
   const { version } = builder;
-  if (version === 2) {
+  if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(
       outputDir,
       buildResult as BuildResultV2,
@@ -385,8 +385,14 @@ export async function* findDirs(
   }
   for (const path of paths) {
     const abs = join(dir, path);
-    const s = await fs.stat(abs);
-    if (s.isDirectory()) {
+    let stat: fs.Stats;
+    try {
+      stat = await fs.lstat(abs);
+    } catch (err: any) {
+      if (err.code === 'ENOENT') continue;
+      throw err;
+    }
+    if (stat.isDirectory()) {
       if (path === name) {
         yield relative(root, abs);
       } else {

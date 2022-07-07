@@ -1,6 +1,7 @@
 import ms from 'ms';
 import fs from 'fs-extra';
 import { join } from 'path';
+import { getWriteableDirectory } from '@vercel/build-utils';
 import build from '../../../src/commands/build';
 import { client } from '../../mocks/client';
 import { defaultProject, useProject } from '../../mocks/project';
@@ -169,7 +170,7 @@ describe('build', () => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      // `builds.json` says that "@vercel/node" was run
+      // `builds.json` says that "txt-builder" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds).toMatchObject({
         target: 'preview',
@@ -234,7 +235,7 @@ describe('build', () => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      // `builds.json` says that "@vercel/node" was run
+      // `builds.json` says that "edge-function" Builder was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds).toMatchObject({
         target: 'production',
@@ -369,6 +370,67 @@ describe('build', () => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
+      // `builds.json` says that "@vercel/node" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/node',
+            apiVersion: 3,
+            use: '@vercel/node',
+            src: 'middleware.js',
+            config: {
+              zeroConfig: true,
+              middleware: true,
+            },
+          },
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            use: '@vercel/static',
+            src: '!{api/**,package.json,middleware.[jt]s}',
+            config: {
+              zeroConfig: true,
+            },
+          },
+        ],
+      });
+
+      // `config.json` includes the "middlewarePath" route
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toMatchObject({
+        version: 3,
+        routes: [
+          { src: '^/.*$', middlewarePath: 'middleware', continue: true },
+          { handle: 'filesystem' },
+          { src: '^/api(/.*)?$', status: 404 },
+          { handle: 'error' },
+          { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
+        ],
+      });
+
+      // "static" directory contains `index.html`, but *not* `middleware.js`
+      const staticFiles = await fs.readdir(join(output, 'static'));
+      expect(staticFiles.sort()).toEqual(['index.html']);
+
+      // "functions" directory contains `middleware.func`
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toEqual(['middleware.func']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should build root-level `middleware.js` with "Root Directory" setting', async () => {
+    const cwd = fixture('middleware-root-directory');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
       // `builds.json` says that "@vercel/static" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds).toMatchObject({
@@ -401,7 +463,7 @@ describe('build', () => {
       expect(config).toMatchObject({
         version: 3,
         routes: [
-          { src: '/.*', middlewarePath: 'middleware', continue: true },
+          { src: '^/.*$', middlewarePath: 'middleware', continue: true },
           { handle: 'filesystem' },
           { src: '^/api(/.*)?$', status: 404 },
           { handle: 'error' },
@@ -416,6 +478,142 @@ describe('build', () => {
       // "functions" directory contains `middleware.func`
       const functions = await fs.readdir(join(output, 'functions'));
       expect(functions.sort()).toEqual(['middleware.func']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should build root-level `middleware.js` with "matcher" config', async () => {
+    const cwd = fixture('middleware-with-matcher');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/node" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/node',
+            apiVersion: 3,
+            use: '@vercel/node',
+            src: 'middleware.js',
+            config: {
+              zeroConfig: true,
+              middleware: true,
+            },
+          },
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            use: '@vercel/static',
+            src: '!{api/**,package.json,middleware.[jt]s}',
+            config: {
+              zeroConfig: true,
+            },
+          },
+        ],
+      });
+
+      // `config.json` includes the "middlewarePath" route
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toMatchObject({
+        version: 3,
+        routes: [
+          {
+            src: '^\\/about(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$|^\\/dashboard(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
+            middlewarePath: 'middleware',
+            continue: true,
+          },
+          { handle: 'filesystem' },
+          { src: '^/api(/.*)?$', status: 404 },
+          { handle: 'error' },
+          { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
+        ],
+      });
+
+      // "static" directory contains `index.html`, but *not* `middleware.js`
+      const staticFiles = await fs.readdir(join(output, 'static'));
+      expect(staticFiles.sort()).toEqual(['index.html']);
+
+      // "functions" directory contains `middleware.func`
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toEqual(['middleware.func']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should support `--output` parameter', async () => {
+    const cwd = fixture('static');
+    const output = await getWriteableDirectory();
+    try {
+      process.chdir(cwd);
+      client.setArgv('build', '--output', output);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            src: '**',
+            use: '@vercel/static',
+          },
+        ],
+      });
+
+      // "static" directory contains static files
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['index.html']);
+    } finally {
+      await fs.remove(output);
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  // This test is for `vercel-sapper` which doesn't export `version` property,
+  // but returns a structure that's compatible with `version: 2`
+  it("should support Builder that doesn't export `version`", async () => {
+    const cwd = fixture('versionless-builder');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      client.stderr.pipe(process.stderr);
+      client.setArgv('build');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "versionless-builder" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: 'versionless-builder',
+            src: 'package.json',
+            use: 'versionless-builder@0.0.0',
+          },
+        ],
+      });
+
+      // "static" directory contains static files
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['file']);
+
+      expect(await fs.readFile(join(output, 'static/file'), 'utf8')).toEqual(
+        'file contents'
+      );
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;

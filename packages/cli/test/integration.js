@@ -553,8 +553,8 @@ test('default command should warn when deploying with conflicting subdirectory',
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
-  const listHeader = /project +latest deployment +state +age +username/;
-  t.regex(stdout || '', listHeader); // ensure `list` command still ran
+  const listHeader = /No deployments found/;
+  t.regex(stderr || '', listHeader); // ensure `list` command still ran
 });
 
 test('deploy command should not warn when deploying with conflicting subdirectory and using --cwd', async t => {
@@ -577,8 +577,8 @@ test('deploy command should not warn when deploying with conflicting subdirector
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
-  const listHeader = /project +latest deployment +state +age +username/;
-  t.regex(stdout || '', listHeader); // ensure `list` command still ran
+  const listHeader = /No deployments found/;
+  t.regex(stderr || '', listHeader); // ensure `list` command still ran
 });
 
 test('default command should work with --cwd option', async t => {
@@ -1813,31 +1813,6 @@ test('remove the wildcard alias', async t => {
 });
 */
 
-test('ensure username in list is right', async t => {
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    ['ls', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  const line = stdout
-    .split('\n')
-    .find(line => line.includes('.now.sh') || line.includes('.vercel.app'));
-  const columns = line.split(/\s+/);
-
-  // Ensure username column have username
-  t.truthy(columns.pop().includes(contextName));
-});
-
 test('ensure we render a warning for deployments with no files', async t => {
   const directory = fixture('empty-directory');
 
@@ -1958,7 +1933,7 @@ test('ensure we render a prompt when deploying home directory', async t => {
   t.is(exitCode, 0);
 
   t.true(
-    stdout.includes(
+    stderr.includes(
       'You are deploying your home directory. Do you want to continue? [y/N]'
     )
   );

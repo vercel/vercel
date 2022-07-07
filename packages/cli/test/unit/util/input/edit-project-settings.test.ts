@@ -1,13 +1,6 @@
 import { Framework, frameworks } from '@vercel/frameworks';
 import editProjectSettings from '../../../../src/util/input/edit-project-settings';
-import { Output } from '../../../../src/util/output';
-
-let output: Output;
-
-beforeEach(() => {
-  output = new Output();
-  output.print = jest.fn();
-});
+import { client } from '../../../mocks/client';
 
 const otherFramework = frameworks.find(
   fwk => fwk.name === 'Other'
@@ -20,7 +13,7 @@ describe('editProjectSettings', () => {
   describe('with no settings, "Other" framework, and no overrides provided', () => {
     test('should default all settings to `null` and print user default framework settings', async () => {
       const settings = await editProjectSettings(
-        output,
+        client,
         null,
         otherFramework,
         true,
@@ -34,22 +27,13 @@ describe('editProjectSettings', () => {
         installCommand: null,
         outputDirectory: null,
       });
-      expect((output.print as jest.Mock).mock.calls.length).toBe(5);
-      expect((output.print as jest.Mock).mock.calls[0][0]).toMatch(
-        /No framework detected. Default Project Settings:/
+      await expect(client.stderr).toOutput(
+        'No framework detected. Default Project Settings:'
       );
-      expect((output.print as jest.Mock).mock.calls[1][0]).toMatch(
-        /Build Command/
-      );
-      expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Development Command/
-      );
-      expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Install Command/
-      );
-      expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
-        /Output Directory/
-      );
+      await expect(client.stderr).toOutput('Build Command');
+      await expect(client.stderr).toOutput('Development Command');
+      await expect(client.stderr).toOutput('Install Command');
+      await expect(client.stderr).toOutput('Output Directory');
     });
   });
 
@@ -63,29 +47,20 @@ describe('editProjectSettings', () => {
         outputDirectory: 'OUTPUT_DIRECTORY',
       };
       const settings = await editProjectSettings(
-        output,
+        client,
         projectSettings,
         otherFramework,
         true,
         null
       );
       expect(settings).toStrictEqual({ ...projectSettings, framework: null });
-      expect((output.print as jest.Mock).mock.calls.length).toBe(5);
-      expect((output.print as jest.Mock).mock.calls[0][0]).toMatch(
-        /No framework detected. Default Project Settings:/
+      await expect(client.stderr).toOutput(
+        'No framework detected. Default Project Settings:'
       );
-      expect((output.print as jest.Mock).mock.calls[1][0]).toMatch(
-        /Build Command/
-      );
-      expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Development Command/
-      );
-      expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Install Command/
-      );
-      expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
-        /Output Directory/
-      );
+      await expect(client.stderr).toOutput('Build Command');
+      await expect(client.stderr).toOutput('Development Command');
+      await expect(client.stderr).toOutput('Install Command');
+      await expect(client.stderr).toOutput('Output Directory');
     });
   });
 
@@ -99,32 +74,21 @@ describe('editProjectSettings', () => {
         outputDirectory: 'OUTPUT_DIRECTORY',
       };
       const settings = await editProjectSettings(
-        output,
+        client,
         projectSettings,
         nextJSFramework,
         true,
         null
       );
-      expect((output.print as jest.Mock).mock.calls.length).toBe(5);
-      expect((output.print as jest.Mock).mock.calls[0][0]).toMatch(
-        /Auto-detected Project Settings/
-      );
-      expect((output.print as jest.Mock).mock.calls[1][0]).toMatch(
-        /Build Command/
-      );
-      expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Development Command/
-      );
-      expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Install Command/
-      );
-      expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
-        /Output Directory/
-      );
       expect(settings).toStrictEqual({
         ...projectSettings,
         framework: nextJSFramework.slug,
       });
+      await expect(client.stderr).toOutput('Auto-detected Project Settings');
+      await expect(client.stderr).toOutput('Build Command');
+      await expect(client.stderr).toOutput('Development Command');
+      await expect(client.stderr).toOutput('Install Command');
+      await expect(client.stderr).toOutput('Output Directory');
     });
   });
 
@@ -146,42 +110,26 @@ describe('editProjectSettings', () => {
         outputDirectory: 'OUTPUT_DIRECTORY',
       };
       const settings = await editProjectSettings(
-        output,
+        client,
         projectSettings,
         nextJSFramework,
         true,
         overrides
       );
-      expect((output.print as jest.Mock).mock.calls.length).toBe(9);
-      expect((output.print as jest.Mock).mock.calls[0][0]).toMatch(
-        /Local settings detected in vercel.json:/
-      );
-      expect((output.print as jest.Mock).mock.calls[1][0]).toMatch(
-        /Build Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Ignore Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Development Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
-        /Framework:/
-      );
-      expect((output.print as jest.Mock).mock.calls[5][0]).toMatch(
-        /Install Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[6][0]).toMatch(
-        /Output Directory:/
-      );
-      expect((output.print as jest.Mock).mock.calls[7][0]).toMatch(
-        /Merging default Project Settings for Svelte. Previously listed overrides are prioritized./
-      );
-      expect((output.print as jest.Mock).mock.calls[8][0]).toMatch(
-        /Auto-detected Project Settings/
-      );
-
       expect(settings).toStrictEqual(overrides);
+      await expect(client.stderr).toOutput(
+        'Local settings detected in vercel.json:'
+      );
+      await expect(client.stderr).toOutput('Build Command:');
+      await expect(client.stderr).toOutput('Ignore Command:');
+      await expect(client.stderr).toOutput('Development Command:');
+      await expect(client.stderr).toOutput('Framework:');
+      await expect(client.stderr).toOutput('Install Command:');
+      await expect(client.stderr).toOutput('Output Directory:');
+      await expect(client.stderr).toOutput(
+        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
+      );
+      await expect(client.stderr).toOutput('Auto-detected Project Settings');
     });
   });
 
@@ -196,41 +144,26 @@ describe('editProjectSettings', () => {
         outputDirectory: 'OUTPUT_DIRECTORY',
       };
       const settings = await editProjectSettings(
-        output,
+        client,
         null,
         nextJSFramework,
         true,
         overrides
       );
-      expect((output.print as jest.Mock).mock.calls.length).toBe(9);
-      expect((output.print as jest.Mock).mock.calls[0][0]).toMatch(
-        /Local settings detected in vercel.json:/
-      );
-      expect((output.print as jest.Mock).mock.calls[1][0]).toMatch(
-        /Build Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Ignore Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Development Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
-        /Framework:/
-      );
-      expect((output.print as jest.Mock).mock.calls[5][0]).toMatch(
-        /Install Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[6][0]).toMatch(
-        /Output Directory:/
-      );
-      expect((output.print as jest.Mock).mock.calls[7][0]).toMatch(
-        /Merging default Project Settings for Svelte. Previously listed overrides are prioritized./
-      );
-      expect((output.print as jest.Mock).mock.calls[8][0]).toMatch(
-        /Auto-detected Project Settings/
-      );
       expect(settings).toStrictEqual(overrides);
+      await expect(client.stderr).toOutput(
+        'Local settings detected in vercel.json:'
+      );
+      await expect(client.stderr).toOutput('Build Command:');
+      await expect(client.stderr).toOutput('Ignore Command:');
+      await expect(client.stderr).toOutput('Development Command:');
+      await expect(client.stderr).toOutput('Framework:');
+      await expect(client.stderr).toOutput('Install Command:');
+      await expect(client.stderr).toOutput('Output Directory:');
+      await expect(client.stderr).toOutput(
+        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
+      );
+      await expect(client.stderr).toOutput('Auto-detected Project Settings');
     });
   });
 
@@ -245,42 +178,26 @@ describe('editProjectSettings', () => {
         outputDirectory: 'OUTPUT_DIRECTORY',
       };
       const settings = await editProjectSettings(
-        output,
+        client,
         null,
         null,
         true,
         overrides
       );
-      expect((output.print as jest.Mock).mock.calls.length).toBe(9);
-      expect((output.print as jest.Mock).mock.calls[0][0]).toMatch(
-        /Local settings detected in vercel.json:/
-      );
-      expect((output.print as jest.Mock).mock.calls[1][0]).toMatch(
-        /Build Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[2][0]).toMatch(
-        /Ignore Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[3][0]).toMatch(
-        /Development Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[4][0]).toMatch(
-        /Framework:/
-      );
-      expect((output.print as jest.Mock).mock.calls[5][0]).toMatch(
-        /Install Command:/
-      );
-      expect((output.print as jest.Mock).mock.calls[6][0]).toMatch(
-        /Output Directory:/
-      );
-      expect((output.print as jest.Mock).mock.calls[7][0]).toMatch(
-        /Merging default Project Settings for Svelte. Previously listed overrides are prioritized./
-      );
-      expect((output.print as jest.Mock).mock.calls[8][0]).toMatch(
-        /Auto-detected Project Settings/
-      );
-
       expect(settings).toStrictEqual(overrides);
+      await expect(client.stderr).toOutput(
+        'Local settings detected in vercel.json:'
+      );
+      await expect(client.stderr).toOutput('Build Command:');
+      await expect(client.stderr).toOutput('Ignore Command:');
+      await expect(client.stderr).toOutput('Development Command:');
+      await expect(client.stderr).toOutput('Framework:');
+      await expect(client.stderr).toOutput('Install Command:');
+      await expect(client.stderr).toOutput('Output Directory:');
+      await expect(client.stderr).toOutput(
+        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
+      );
+      await expect(client.stderr).toOutput('Auto-detected Project Settings');
     });
   });
 });
