@@ -8,8 +8,9 @@ export default async function add(
   args: string[],
   contextName: string
 ) {
+  const { output } = client;
   if (args.length !== 1) {
-    client.output.error(
+    output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
         `${getCommandName('projects add <name>')}`
       )}`
@@ -19,7 +20,7 @@ export default async function add(
       const example = chalk.cyan(
         `${getCommandName(`projects add "${args.join(' ')}"`)}`
       );
-      console.log(
+      output.log(
         `> If your project name  has spaces, make sure to wrap it in quotes. Example: \n  ${example} `
       );
     }
@@ -45,8 +46,8 @@ export default async function add(
   }
   const elapsed = ms(Date.now() - start);
 
-  console.log(
-    `${chalk.cyan('> Success!')} Project ${chalk.bold(
+  output.log(
+    `${chalk.cyan('Success!')} Project ${chalk.bold(
       name.toLowerCase()
     )} added (${chalk.bold(contextName)}) ${chalk.gray(`[${elapsed}]`)}`
   );
