@@ -90,7 +90,7 @@ export default async function main(client: Client) {
   let org;
   let project;
   let contextName = '';
-  let team;
+  let team = null;
 
   if (subcommand === 'connect') {
     // || subcommand === 'disconnect'

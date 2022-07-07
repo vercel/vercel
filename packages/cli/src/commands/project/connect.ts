@@ -21,7 +21,7 @@ export default async function connect(
   args: string[],
   project: Project | undefined,
   org: Org | undefined,
-  team: Team | null | undefined
+  team: Team | null
 ) {
   const { output } = client;
   const yes = Boolean(argv['--yes']);
@@ -84,7 +84,7 @@ export default async function connect(
   if (!gitProviderLink) {
     const connect = await connectGitProvider(
       client,
-      team || null,
+      team,
       project.id,
       provider,
       repoPath
@@ -119,10 +119,10 @@ export default async function connect(
       return 0;
     }
 
-    await disconnectGitProvider(client, team || null, project.id);
+    await disconnectGitProvider(client, team, project.id);
     const connect = await connectGitProvider(
       client,
-      team || null,
+      team,
       project.id,
       provider,
       repoPath
