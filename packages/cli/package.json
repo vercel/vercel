@@ -44,6 +44,7 @@
   "dependencies": {
     "@vercel/build-utils": "5.0.1-canary.0",
     "@vercel/go": "2.0.5-canary.0",
+    "@vercel/hydrogen": "0.0.1",
     "@vercel/next": "3.1.4-canary.1",
     "@vercel/node": "2.4.1-canary.0",
     "@vercel/python": "3.0.5-canary.0",
