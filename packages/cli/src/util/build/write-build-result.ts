@@ -31,7 +31,7 @@ export async function writeBuildResult(
   cleanUrls?: boolean
 ) {
   const { version } = builder;
-  if (version === 2) {
+  if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(
       outputDir,
       buildResult as BuildResultV2,
