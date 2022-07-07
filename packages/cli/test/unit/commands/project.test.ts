@@ -1,6 +1,6 @@
 import { join } from 'path';
 import fs from 'fs-extra';
-import projects from '../../../src/commands/projects';
+import projects from '../../../src/commands/project';
 import { useUser } from '../../mocks/user';
 import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';

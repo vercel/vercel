@@ -34,7 +34,8 @@ export default async function connect(
     );
     return 2;
   }
-  if (!project || !org || typeof team === 'undefined') {
+  if (!project || !org) {
+    output.error('An unexpected error occurred.');
     return 1;
   }
 
@@ -83,7 +84,7 @@ export default async function connect(
   if (!gitProviderLink) {
     const connect = await connectGitProvider(
       client,
-      team,
+      team || null,
       project.id,
       provider,
       repoPath
@@ -118,10 +119,10 @@ export default async function connect(
       return 0;
     }
 
-    await disconnectGitProvider(client, team, project.id);
+    await disconnectGitProvider(client, team || null, project.id);
     const connect = await connectGitProvider(
       client,
-      team,
+      team || null,
       project.id,
       provider,
       repoPath

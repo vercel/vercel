@@ -7,7 +7,6 @@ import getScope from '../../util/get-scope';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
 import validatePaths from '../../util/validate-paths';
 import add from './add';
 import connect from './connect';
@@ -88,11 +87,6 @@ export default async function main(client: Client) {
   }
   const { path } = pathValidation;
 
-  let link = await getLinkedProject(client, path);
-  if (link.status === 'error') {
-    return link.exitCode;
-  }
-
   let org;
   let project;
   let contextName = '';
@@ -120,13 +114,13 @@ export default async function main(client: Client) {
 
   switch (subcommand) {
     case 'ls':
-      return list(client, argv, args, contextName);
+      return await list(client, argv, args, contextName);
     case 'add':
-      return add(client, args, contextName);
+      return await add(client, args, contextName);
     case 'rm':
-      return rm(client, args);
+      return await rm(client, args);
     case 'connect':
-      return connect(client, argv, args, project, org, team);
+      return await connect(client, argv, args, project, org, team);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       help();
