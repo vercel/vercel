@@ -258,10 +258,6 @@ export default async function main(client: Client) {
     )}`
   );
 
-  log(
-    `To list all projects in your team, run ${getCommandName('project ls')}.`
-  );
-
   // information to help the user find other deployments or instances
   log(
     `To list more deployments for a project run ${getCommandName(
