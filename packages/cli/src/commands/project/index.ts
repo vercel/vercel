@@ -16,7 +16,7 @@ import rm from './rm';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} projects`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} project`)} [options] <command>
 
   ${chalk.dim('Commands:')}
 
@@ -38,13 +38,13 @@ const help = () => {
 
   ${chalk.gray('–')} Add a new project
 
-    ${chalk.cyan(`$ ${getPkgName()} projects add my-project`)}
+    ${chalk.cyan(`$ ${getPkgName()} project add my-project`)}
 
   ${chalk.gray('–')} Paginate projects, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
 
-    ${chalk.cyan(`$ ${getPkgName()} projects ls --next 1584722256178`)}
+    ${chalk.cyan(`$ ${getPkgName()} project ls --next 1584722256178`)}
 `);
 };
 
