@@ -1826,7 +1826,6 @@ export const frameworks = [
     tagline: 'React framework for headless commerce',
     description: 'React framework for headless commerce',
     website: 'https://hydrogen.shopify.dev',
-    sort: 6,
     useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
     detectors: {
       every: [
