@@ -3,8 +3,8 @@ import { join } from 'path';
 import ini from 'ini';
 import git from 'git-last-commit';
 import { exec } from 'child_process';
-import { GitMetadata } from '../types';
-import { Output } from './output';
+import { GitMetadata } from '../../types';
+import { Output } from '../output';
 
 export function isDirty(directory: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
@@ -33,31 +33,21 @@ function getLastCommit(directory: string): Promise<git.Commit> {
   });
 }
 
-export async function parseGitConfig(configPath: string, output: Output) {
-  try {
-    return ini.parse(await fs.readFile(configPath, 'utf-8'));
-  } catch (error) {
-    output.debug(`Error while parsing repo data: ${error.message}`);
-  }
-}
-
-export function pluckRemoteUrl(gitConfig: {
-  [key: string]: any;
-}): string | undefined {
-  // Assuming "origin" is the remote url that the user would want to use
-  return gitConfig['remote "origin"']?.url;
-}
-
 export async function getRemoteUrl(
   configPath: string,
   output: Output
 ): Promise<string | null> {
-  let gitConfig = await parseGitConfig(configPath, output);
+  let gitConfig;
+  try {
+    gitConfig = ini.parse(await fs.readFile(configPath, 'utf-8'));
+  } catch (error) {
+    output.debug(`Error while parsing repo data: ${error.message}`);
+  }
   if (!gitConfig) {
     return null;
   }
 
-  const originUrl = pluckRemoteUrl(gitConfig);
+  const originUrl: string = gitConfig['remote "origin"']?.url;
   if (originUrl) {
     return originUrl;
   }

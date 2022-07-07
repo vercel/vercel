@@ -5,7 +5,7 @@ import {
   createGitMeta,
   getRemoteUrl,
   isDirty,
-} from '../../../../src/util/create-git-meta';
+} from '../../../../src/util/deploy/create-git-meta';
 import { client } from '../../../mocks/client';
 
 const fixture = (name: string) =>
