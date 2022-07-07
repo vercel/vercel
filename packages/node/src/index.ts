@@ -339,7 +339,7 @@ export const build: BuildV3 = async ({
   config = {},
   meta = {},
 }) => {
-  const baseDir = repoRootPath || workPath;
+  const baseDir = workPath || repoRootPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts } =
