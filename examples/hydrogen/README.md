@@ -1,10 +1,14 @@
-# Hydrogen Demo Store
+# Hydrogen
 
-Hydrogen is a React framework and SDK that you can use to build fast and dynamic Shopify custom storefronts.
+[Hydrogen](https://shopify.dev/custom-storefronts/hydrogen) is a React framework and SDK that you can use to build fast and dynamic Shopify custom storefronts.
 
-[Check out the docs](https://shopify.dev/custom-storefronts/hydrogen)
+## Deploy Your Own
 
-[Run this template on StackBlitz](https://stackblitz.com/github/Shopify/hydrogen/tree/stackblitz/templates/demo-store)
+Deploy your own Hydrogen project with Vercel.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/hydrogen&template=hydrogen)
+
+_Live Example: https://hydrogen-template.vercel.app_
 
 ## Getting started
 
