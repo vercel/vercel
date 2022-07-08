@@ -6,6 +6,7 @@ import {
   readlinkSync,
   statSync,
   promises as fsp,
+  readdirSync,
 } from 'fs';
 import {
   basename,
@@ -246,9 +247,14 @@ async function compile(
         !symlinkTarget.startsWith('..' + sep) &&
         !fileList.has(symlinkTarget)
       ) {
-        const stats = statSync(resolve(baseDir, symlinkTarget));
+        const fsPath = resolve(baseDir, symlinkTarget);
+        const stats = statSync(fsPath);
         if (stats.isFile()) {
           fileList.add(symlinkTarget);
+        } else {
+          readdirSync(symlinkTarget)
+            .filter(f => !fileList.has(f))
+            .forEach(f => fileList.add(f));
         }
       }
     }
