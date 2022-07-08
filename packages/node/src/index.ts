@@ -254,7 +254,7 @@ async function compile(
         } else {
           readdirSync(symlinkTarget)
             .filter(f => !fileList.has(f))
-            .forEach(f => fileList.add(f));
+            .forEach(f => fileList.add(join(symlinkTarget, f)));
         }
       }
     }
