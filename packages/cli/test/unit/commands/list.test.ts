@@ -5,7 +5,6 @@ import { join } from 'path';
 import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useDeployment } from '../../mocks/deployment';
-import { readOutputStream } from '../../helpers/read-output-stream';
 import { parseTable, getDataFromIntro } from '../../helpers/parse-table';
 
 const fixture = (name: string) =>
@@ -32,11 +31,10 @@ describe('list', () => {
 
       await list(client);
 
-      const output = await readOutputStream(client);
-
-      const { org } = getDataFromIntro(output.split('\n')[0]);
-      const header: string[] = parseTable(output.split('\n')[2]);
-      const data: string[] = parseTable(output.split('\n')[3]);
+      const [line0, , line2, line3] = client.outputBuffer.split('\n');
+      const { org } = getDataFromIntro(line0);
+      const header: string[] = parseTable(line2);
+      const data: string[] = parseTable(line3);
       data.splice(2, 1);
 
       expect(org).toEqual(team[0].slug);
@@ -74,11 +72,10 @@ describe('list', () => {
       client.setArgv(deployment.name);
       await list(client);
 
-      const output = await readOutputStream(client);
-
-      const { org } = getDataFromIntro(output.split('\n')[0]);
-      const header: string[] = parseTable(output.split('\n')[2]);
-      const data: string[] = parseTable(output.split('\n')[3]);
+      const [line0, , line2, line3] = client.outputBuffer.split('\n');
+      const { org } = getDataFromIntro(line0);
+      const header: string[] = parseTable(line2);
+      const data: string[] = parseTable(line3);
       data.splice(2, 1);
 
       expect(org).toEqual(teamSlug);
