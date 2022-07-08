@@ -1023,12 +1023,12 @@ export const frameworks = [
         placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `svelte-kit build`',
-        value: 'svelte-kit build',
+        placeholder: '`npm run build` or `vite build`',
+        value: 'vite build',
       },
       devCommand: {
-        value: 'svelte-kit dev --port $PORT',
-        placeholder: 'svelte-kit dev',
+        value: 'vite dev',
+        placeholder: 'vite dev',
       },
       outputDirectory: {
         value: 'public',
