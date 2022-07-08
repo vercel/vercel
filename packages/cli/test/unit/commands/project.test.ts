@@ -7,9 +7,12 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { client } from '../../mocks/client';
 import { Project } from '../../../src/types';
 import { readOutputStream } from '../../helpers/read-output-stream';
-import { getDataFromIntro, parseTable } from '../../helpers/parse-table';
+import {
+  pluckIdentifiersFromDeploymentList,
+  parseSpacedTableRow,
+} from '../../helpers/parse-table';
 
-describe('projects', () => {
+describe('project', () => {
   describe('list', () => {
     it('should list deployments under a user', async () => {
       const user = useUser();
@@ -21,9 +24,9 @@ describe('projects', () => {
       await projects(client);
 
       const output = await readOutputStream(client, 2);
-      const { org } = getDataFromIntro(output.split('\n')[0]);
-      const header: string[] = parseTable(output.split('\n')[2]);
-      const data: string[] = parseTable(output.split('\n')[3]);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
       data.pop();
 
       expect(org).toEqual(user.username);
@@ -42,9 +45,9 @@ describe('projects', () => {
       await projects(client);
 
       const output = await readOutputStream(client, 2);
-      const { org } = getDataFromIntro(output.split('\n')[0]);
-      const header: string[] = parseTable(output.split('\n')[2]);
-      const data: string[] = parseTable(output.split('\n')[3]);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
       data.pop();
 
       expect(org).toEqual(team[0].slug);
