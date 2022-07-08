@@ -3517,7 +3517,7 @@ test('`vc --debug project ls` should output the projects listing', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   t.true(
-    stdout.includes('> Projects found under'),
+    stderr.includes('> Projects found under'),
     formatOutput({ stderr, stdout })
   );
 });
