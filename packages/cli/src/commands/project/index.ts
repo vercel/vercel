@@ -21,7 +21,8 @@ const help = () => {
   ${chalk.dim('Commands:')}
 
     ls                               Show all projects in the selected team/user
-    connect                          Connect a Git provider to your project
+    connect                          Connect a Git provider repository to your project
+    disconnect                       Disconnect a Git provider repository from your project
     add      [name]                  Add a new project
     rm       [name]                  Remove a project
 
