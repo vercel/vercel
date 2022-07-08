@@ -7,24 +7,17 @@ import { Build, User } from '../../src/types';
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
 
+type State = Deployment['readyState'];
+
 export function useDeployment({
   creator,
+  state = 'READY',
 }: {
   creator: Pick<User, 'id' | 'email' | 'name'>;
+  state?: State;
 }) {
-  type State = Deployment['readyState'];
   const createdAt = Date.now();
   const url = new URL(chance().url());
-  const states: Array<State> = [
-    'READY',
-    'BUILDING',
-    'INITIALIZING',
-    'ANALYZING',
-    'DEPLOYING',
-    'ERROR',
-    'CANCELED',
-    'QUEUED',
-  ];
 
   const deployment: Deployment = {
     id: `dpl_${chance().guid()}`,
@@ -45,8 +38,8 @@ export function useDeployment({
       email: creator.email,
       username: creator.name,
     },
-    readyState: 'READY',
-    state: states[Math.floor(Math.random() * states.length)],
+    readyState: state,
+    state: state,
     env: {},
     build: { env: {} },
     target: 'production',
