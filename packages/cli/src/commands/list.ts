@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
+import title from 'title';
 import Now from '../util';
 import getArgs from '../util/get-args';
 import { handleError } from '../util/error';
@@ -324,21 +325,21 @@ function getProjectName(d: Deployment) {
 export function stateString(s: string) {
   const CIRCLE = '● ';
   // make `s` title case
-  s = `${s.substring(0, 1)}${s.toLowerCase().substring(1)}`;
-  switch (s.toUpperCase()) {
+  const sTitle = title(s);
+  switch (s) {
     case 'INITIALIZING':
     case 'BUILDING':
     case 'DEPLOYING':
     case 'ANALYZING':
-      return chalk.yellow(CIRCLE) + s;
+      return chalk.yellow(CIRCLE) + sTitle;
     case 'ERROR':
-      return chalk.red(CIRCLE) + s;
+      return chalk.red(CIRCLE) + sTitle;
     case 'READY':
-      return chalk.green(CIRCLE) + s;
+      return chalk.green(CIRCLE) + sTitle;
     case 'QUEUED':
-      return chalk.white(CIRCLE) + s;
+      return chalk.white(CIRCLE) + sTitle;
     case 'CANCELED':
-      return chalk.gray(s);
+      return chalk.gray(sTitle);
     default:
       return chalk.gray('UNKNOWN');
   }
