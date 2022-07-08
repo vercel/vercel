@@ -30,8 +30,8 @@ export async function connectGitProvider(
   const fetchUrl = `/v4/projects/${projectId}/link?${stringify({
     teamId: team?.id,
   })}`;
-  return client
-    .fetch(fetchUrl, {
+  try {
+    return await client.fetch(fetchUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -40,31 +40,31 @@ export async function connectGitProvider(
         type,
         repo,
       }),
-    })
-    .catch(err => {
-      if (
-        err.meta?.action === 'Install GitHub App' ||
-        err.code === 'repo_not_found'
-      ) {
-        client.output.error(
-          `Failed to link ${chalk.cyan(
-            repo
-          )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
-        );
-      } else if (err.action === 'Add a Login Connection') {
-        client.output.error(
-          err.message.replace(repo, chalk.cyan(repo)) +
-            `\nVisit ${link(err.link)} for more information.`
-        );
-      } else {
-        client.output.error(
-          `Failed to connect the ${formatProvider(
-            type
-          )} repository ${repo}.\n${err}`
-        );
-      }
-      return 1;
     });
+  } catch (err) {
+    if (
+      err.meta?.action === 'Install GitHub App' ||
+      err.code === 'repo_not_found'
+    ) {
+      client.output.error(
+        `Failed to link ${chalk.cyan(
+          repo
+        )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
+      );
+    } else if (err.action === 'Add a Login Connection') {
+      client.output.error(
+        err.message.replace(repo, chalk.cyan(repo)) +
+          `\nVisit ${link(err.link)} for more information.`
+      );
+    } else {
+      client.output.error(
+        `Failed to connect the ${formatProvider(
+          type
+        )} repository ${repo}.\n${err}`
+      );
+    }
+    return 1;
+  }
 }
 
 export function formatProvider(type: string): string {
