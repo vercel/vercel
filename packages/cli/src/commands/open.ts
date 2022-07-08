@@ -14,6 +14,7 @@ import openUrl from 'open';
 import link from '../util/output/link';
 import { getDeployment } from '../util/get-deployment';
 import { normalizeURL } from '../util/normalize-url';
+import { emoji, prependEmoji } from '../util/emoji';
 
 const help = () => {
   console.log(`
@@ -59,10 +60,6 @@ const help = () => {
   ${chalk.gray('–')} Open the dashboard for the latest production deployment
 
     ${chalk.cyan(`$ ${getPkgName()} open dash latest --prod`)}
-
-  ${chalk.gray('–')} Open a specific deployment URL
-  
-    ${chalk.cyan(`$ ${getPkgName()} open [url]`)}
 
   ${chalk.gray('–')} Open the dashboard for a specific deployment URL
   
@@ -190,15 +187,12 @@ async function getChoice(
     }
   } else if (subcommand === 'latest') {
     return await getLatestDeploymentUrl(client, project, team, prod);
-  } else if (subcommand) {
-    // Assume they're trying to pass in a deployment URL
-    const deployment = await verifyDeployment(client, subcommand, contextName);
-    if (typeof deployment === 'number') {
-      return deployment;
-    }
-
-    return deployment.url;
   } else {
+    if (subcommand) {
+      client.output.print(
+        prependEmoji('Unknown subcommand.\n', emoji('warning'))
+      );
+    }
     return await listOptions(client, project, org, team);
   }
 }
