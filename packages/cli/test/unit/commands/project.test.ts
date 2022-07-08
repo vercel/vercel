@@ -10,7 +10,7 @@ import {
   parseListTable,
 } from '../../helpers/parse-table';
 
-describe('projects', () => {
+describe('project', () => {
   describe('list', () => {
     it('should list deployments under a user', async () => {
       const user = useUser();
