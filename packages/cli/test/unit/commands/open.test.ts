@@ -4,7 +4,6 @@ import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import open from '../../../src/commands/open';
 import { client } from '../../mocks/client';
-import { useDeployment } from '../../mocks/deployment';
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/open', name);
@@ -167,56 +166,6 @@ describe('open', () => {
       await expect(client.stderr).toOutput(`Opened https://${url}`);
       const exitCode = await openPromise;
       expect(exitCode).toEqual(0);
-    } finally {
-      process.chdir(originalCwd);
-    }
-  });
-  it('should open a passed-in deployment URL', async () => {
-    const cwd = fixture('default');
-    try {
-      process.chdir(cwd);
-
-      const user = useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'test-project',
-        name: 'test-project',
-      });
-      const deployment = useDeployment({ creator: user });
-      const url = deployment.url;
-
-      client.setArgv('open', url);
-      const openPromise = open(client, true);
-      await expect(client.stderr).toOutput(`Opened https://${url}`);
-
-      const exitCode = await openPromise;
-      expect(exitCode).toEqual(0);
-    } finally {
-      process.chdir(originalCwd);
-    }
-  });
-  it('should fail when passed-in url is bad', async () => {
-    const cwd = fixture('default');
-    try {
-      process.chdir(cwd);
-
-      const user = useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'test-project',
-        name: 'test-project',
-      });
-
-      client.setArgv('open', 'https://bad-url');
-      const openPromise = open(client, true);
-      await expect(client.stderr).toOutput(
-        `Error! Could not find a deployment with URL https://bad-url in ${user.username}.`
-      );
-
-      const exitCode = await openPromise;
-      expect(exitCode).toEqual(1);
     } finally {
       process.chdir(originalCwd);
     }
