@@ -18,6 +18,7 @@ const help = () => {
   ${chalk.bold(`${logo} ${getPkgName()} project`)} [options] <command>
 
   ${chalk.dim('Commands:')}
+
     ls                               Show all projects in the selected team/user
     connect                          Connect a Git provider to your project
     add      [name]                  Add a new project
