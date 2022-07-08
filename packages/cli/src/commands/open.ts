@@ -10,7 +10,7 @@ import { ensureLink } from '../util/ensure-link';
 import list from '../util/input/list';
 import { Org, Project, Team } from '../types';
 import { stringify } from 'querystring';
-import execa from 'execa';
+import openUrl from 'open';
 import link from '../util/output/link';
 import { getDeployment } from '../util/get-deployment';
 import { normalizeURL } from '../util/normalize-url';
@@ -23,7 +23,7 @@ const help = () => {
 
     -h, --help                     Output usage information
     --confirm                      Skip confirmation prompts
-    --prod                        Filter for production deployments
+    --prod                         Filter for production deployments
     dash                           Open the dashboard in a browser
     latest                         Open the latest preview deployment URL in a browser
     [url]                          Open the specified deployment URL in a browser
@@ -159,7 +159,7 @@ export default async function open(
     return 0;
   }
 
-  if (!test) execa('open', [choice]);
+  if (!test) openUrl(choice);
   output.log(`🪄 Opened ${link(choice)}`);
   return 0;
 }
