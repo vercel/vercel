@@ -35,6 +35,7 @@ export class MockClient extends Client {
   scenario: Scenario;
   mockServer?: Server;
   private app: Express;
+  private mockOutput: jest.Mock<void, Parameters<Output['print']>>;
 
   constructor() {
     super({
@@ -51,6 +52,13 @@ export class MockClient extends Client {
       stderr: new PassThrough(),
       output: new Output(new PassThrough()),
     });
+
+    this.mockOutput = jest.fn();
+    const _print = this.output.print.bind(this.output);
+    this.output.print = s => {
+      _print(s);
+      this.mockOutput(s);
+    };
 
     this.app = express();
     this.app.use(express.json());
@@ -91,7 +99,13 @@ export class MockClient extends Client {
 
     this._createPromptModule();
 
+    this.mockOutput.mockReset();
     this.output = new Output(this.stderr);
+    const _print = this.output.print.bind(this.output);
+    this.output.print = s => {
+      _print(s);
+      this.mockOutput(s);
+    };
 
     this.argv = [];
     this.authConfig = {};
@@ -99,6 +113,10 @@ export class MockClient extends Client {
     this.localConfig = {};
 
     this.scenario = Router();
+  }
+
+  get outputBuffer() {
+    return this.mockOutput.mock.calls.map(c => c[0]).join('');
   }
 
   async startMockServer() {
