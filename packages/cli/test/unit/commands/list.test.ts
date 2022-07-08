@@ -36,7 +36,6 @@ describe('list', () => {
       await list(client);
 
       const output = await readOutputStream(client, 4);
-      console.log(output);
 
       const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
       const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
@@ -53,7 +52,6 @@ describe('list', () => {
         'username',
       ]);
 
-      console.log('data:', data);
       expect(data).toEqual([
         `https://${deployment.url}`,
         stateString(deployment.state || ''),
