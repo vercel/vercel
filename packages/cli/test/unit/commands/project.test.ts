@@ -22,10 +22,11 @@ describe('projects', () => {
       const { org } = getDataFromIntro(output.split('\n')[0]);
       const header: string[] = parseTable(output.split('\n')[2]);
       const data: string[] = parseTable(output.split('\n')[3]);
+      data.pop();
 
       expect(org).toEqual(user.username);
       expect(header).toEqual(['name', 'updated']);
-      expect(data).toEqual([project.project.name, '1178d ago']);
+      expect(data).toEqual([project.project.name]);
     });
     it('should list deployments for a team', async () => {
       useUser();
@@ -42,10 +43,11 @@ describe('projects', () => {
       const { org } = getDataFromIntro(output.split('\n')[0]);
       const header: string[] = parseTable(output.split('\n')[2]);
       const data: string[] = parseTable(output.split('\n')[3]);
+      data.pop();
 
       expect(org).toEqual(team[0].slug);
       expect(header).toEqual(['name', 'updated']);
-      expect(data).toEqual([project.project.name, '1178d ago']);
+      expect(data).toEqual([project.project.name]);
     });
   });
   describe('add', () => {
