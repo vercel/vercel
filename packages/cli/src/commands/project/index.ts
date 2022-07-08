@@ -10,6 +10,7 @@ import { getPkgName } from '../../util/pkg-name';
 import validatePaths from '../../util/validate-paths';
 import add from './add';
 import connect from './connect';
+import disconnect from './disconnect';
 import list from './list';
 import rm from './rm';
 
@@ -92,7 +93,7 @@ export default async function main(client: Client) {
   let contextName = '';
   let team = null;
 
-  if (subcommand === 'connect') {
+  if (subcommand === 'connect' || subcommand === 'disconnect') {
     const linkedProject = await ensureLink('project', client, path, confirm);
     if (typeof linkedProject === 'number') {
       return linkedProject;
@@ -122,6 +123,8 @@ export default async function main(client: Client) {
       return await rm(client, args);
     case 'connect':
       return await connect(client, argv, args, project, org, team);
+    case 'disconnect':
+      return await disconnect(client, args, project, org, team);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       help();
