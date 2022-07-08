@@ -138,10 +138,10 @@ describe('createGitMeta', () => {
       client.output.debugEnabled = true;
       const data = await createGitMeta(tmpDir, client.output);
 
-      expect(client.stderr).toOutput(
+      await expect(client.stderr).toOutput(
         `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
       );
-      expect(client.stderr).toOutput(
+      await expect(client.stderr).toOutput(
         `Failed to determine if Git repo has been modified:`
       );
       expect(data).toBeUndefined();
