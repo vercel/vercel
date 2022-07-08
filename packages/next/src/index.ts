@@ -35,7 +35,14 @@ import { Sema } from 'async-sema';
 // escape-string-regexp version must match Next.js version
 import escapeStringRegexp from 'escape-string-regexp';
 import findUp from 'find-up';
-import { lstat, pathExists, readFile, remove, writeFile } from 'fs-extra';
+import {
+  lstat,
+  pathExists,
+  readFile,
+  readJSON,
+  remove,
+  writeFile,
+} from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import resolveFrom from 'resolve-from';
@@ -1071,12 +1078,9 @@ export const build: BuildV2 = async ({
       'pages'
     );
 
-    const appPathRoutesManifest = await readFile(
-      path.join(entryPath, outputDirectory, 'app-path-routes-manifest.json'),
-      'utf8'
-    )
-      .then(content => JSON.parse(content))
-      .catch(() => null);
+    const appPathRoutesManifest = await readJSON(
+      path.join(entryPath, outputDirectory, 'app-path-routes-manifest.json')
+    ).catch(() => null);
 
     const { pages, appPaths: lambdaAppPaths } = await getServerlessPages({
       pagesDir,
