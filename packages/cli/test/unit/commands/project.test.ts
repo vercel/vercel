@@ -357,4 +357,80 @@ describe('project', () => {
       }
     });
   });
+  describe('disconnect', () => {
+    const originalCwd = process.cwd();
+    const fixture = (name: string) =>
+      join(__dirname, '../../fixtures/unit/commands/projects/connect', name);
+
+    it('should disconnect a repository', async () => {
+      const cwd = fixture('new-connection');
+      try {
+        process.chdir(cwd);
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        useUser();
+        useTeams('team_dummy');
+        const project = useProject({
+          ...defaultProject,
+          id: 'new-connection',
+          name: 'new-connection',
+        });
+        project.project.link = {
+          type: 'github',
+          repo: 'repo',
+          org: 'user',
+          repoId: 1010,
+          gitCredentialId: '',
+          sourceless: true,
+          createdAt: 1656109539791,
+          updatedAt: 1656109539791,
+        };
+        client.setArgv('project', 'disconnect');
+        const projectsPromise = projects(client);
+
+        await expect(client.stderr).toOutput(
+          `Are you sure you want to disconnect user/repo from your project?`
+        );
+        client.stdin.write('y\n');
+        await expect(client.stderr).toOutput('Disconnected user/repo.');
+
+        const newProjectData: Project = await client.fetch(
+          `/v8/projects/new-connection`
+        );
+        expect(newProjectData.link).toBeUndefined();
+
+        const exitCode = await projectsPromise;
+        expect(exitCode).toEqual(0);
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+        process.chdir(originalCwd);
+      }
+    });
+    it('should fail if there is no repository to disconnect', async () => {
+      const cwd = fixture('new-connection');
+      try {
+        process.chdir(cwd);
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        useUser();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'new-connection',
+          name: 'new-connection',
+        });
+
+        client.setArgv('project', 'disconnect');
+        const projectsPromise = projects(client);
+
+        await expect(client.stderr).toOutput(
+          'No Git repository connected. Run `vercel project connect` to connect one.'
+        );
+
+        const exitCode = await projectsPromise;
+        expect(exitCode).toEqual(1);
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+        process.chdir(originalCwd);
+      }
+    });
+  });
 });
