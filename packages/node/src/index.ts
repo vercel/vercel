@@ -51,7 +51,7 @@ import type {
 import { getConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
-import { entrypointToOutputPath, getRegExpFromMatchers } from './utils';
+import { getRegExpFromMatchers } from './utils';
 
 export { shouldServe };
 
@@ -230,8 +230,10 @@ async function compile(
       const fsPath = resolve(baseDir, path);
       const { mode } = lstatSync(fsPath);
       if (isSymbolicLink(mode)) {
+        console.log('[debug][@vercel/node] Found symlink: ' + fsPath);
         entry = new FileFsRef({ fsPath, mode });
       } else {
+        console.log('[debug][@vercel/node] Found file: ' + fsPath);
         const source = readFileSync(fsPath);
         entry = new FileBlob({ data: source, mode });
       }
@@ -242,12 +244,21 @@ async function compile(
         baseDir,
         resolve(dirname(entry.fsPath), readlinkSync(entry.fsPath))
       );
+      console.log(
+        '[debug][@vercel/node] relative symlinkTarget: ' + symlinkTarget
+      );
       if (
         !symlinkTarget.startsWith('..' + sep) &&
         !fileList.has(symlinkTarget)
       ) {
+        console.log(
+          '[debug][@vercel/node] first time symlinkTarget: ' + symlinkTarget
+        );
         const stats = statSync(resolve(baseDir, symlinkTarget));
         if (stats.isFile()) {
+          console.log(
+            '[debug][@vercel/node] symlinkTarget is a file: ' + symlinkTarget
+          );
           fileList.add(symlinkTarget);
         }
       }
@@ -340,6 +351,12 @@ export const build: BuildV3 = async ({
   meta = {},
 }) => {
   const baseDir = repoRootPath || workPath;
+  const rootPathContent = require('fs').readdirSync(baseDir);
+  console.log(
+    `[debug][@vercel/node] contents of repoRootPath "${repoRootPath}" is ${JSON.stringify(
+      rootPathContent
+    )}`
+  );
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
   const { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts } =
@@ -373,7 +390,10 @@ export const build: BuildV3 = async ({
   let output: BuildResultV3['output'] | undefined;
 
   const handler = renameTStoJS(relative(baseDir, entrypointPath));
-  const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
+  const outputName = config.zeroConfig
+    ? handler.substring(0, handler.length - 3)
+    : handler;
+
   const isMiddleware = config.middleware === true;
 
   // Will output an `EdgeFunction` for when `config.middleware = true`
@@ -409,7 +429,9 @@ export const build: BuildV3 = async ({
     routes = [
       {
         src,
-        middlewarePath: outputPath,
+        middlewarePath: config.zeroConfig
+          ? outputName
+          : relative(baseDir, entrypointPath),
         continue: true,
         override: true,
       },
@@ -422,7 +444,7 @@ export const build: BuildV3 = async ({
       files: preparedFiles,
 
       // TODO: remove - these two properties should not be required
-      name: outputPath,
+      name: outputName,
       deploymentTarget: 'v8-worker',
     });
   } else {
