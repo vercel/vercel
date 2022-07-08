@@ -32,8 +32,7 @@ describe('list', () => {
 
       await list(client);
 
-      const output = await readOutputStream(client);
-      console.log(output);
+      const output = await readOutputStream(client, 4);
 
       const { org } = getDataFromIntro(output.split('\n')[0]);
       const header: string[] = parseTable(output.split('\n')[3]);
@@ -76,7 +75,7 @@ describe('list', () => {
       client.setArgv(deployment.name);
       await list(client);
 
-      const output = await readOutputStream(client);
+      const output = await readOutputStream(client, 4);
 
       const { org } = getDataFromIntro(output.split('\n')[0]);
       const header: string[] = parseTable(output.split('\n')[3]);
