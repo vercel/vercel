@@ -1,11 +1,12 @@
 import { join } from 'path';
 import fs from 'fs-extra';
+import os from 'os';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
   getRemoteUrl,
   isDirty,
-} from '../../../../src/util/create-git-meta';
+} from '../../../../src/util/deploy/create-git-meta';
 import { client } from '../../../mocks/client';
 
 const fixture = (name: string) =>
@@ -41,7 +42,7 @@ describe('createGitMeta', () => {
     const directory = fixture('dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory);
+      const dirty = await isDirty(directory, client.output);
       expect(dirty).toBeTruthy();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -51,7 +52,7 @@ describe('createGitMeta', () => {
     const directory = fixture('not-dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory);
+      const dirty = await isDirty(directory, client.output);
       expect(dirty).toBeFalsy();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -123,6 +124,21 @@ describe('createGitMeta', () => {
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
+    }
+  });
+  it('fails when `.git` is corrupt', async () => {
+    const directory = fixture('git-corrupt');
+    const tmpDir = join(os.tmpdir(), 'git-corrupt');
+    try {
+      // Copy the fixture into a temp dir so that we don't pick
+      // up Git information from the `vercel/vercel` repo itself
+      await fs.copy(directory, tmpDir);
+      await fs.rename(join(tmpDir, 'git'), join(tmpDir, '.git'));
+
+      const data = await createGitMeta(tmpDir, client.output);
+      expect(data).toBeUndefined();
+    } finally {
+      await fs.remove(tmpDir);
     }
   });
 });

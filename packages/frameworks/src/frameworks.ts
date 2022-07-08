@@ -1819,6 +1819,41 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Hydrogen',
+    slug: 'hydrogen',
+    demo: 'https://hydrogen-template.vercel.app',
+    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/hydrogen.svg',
+    tagline: 'React framework for headless commerce',
+    description: 'React framework for headless commerce',
+    website: 'https://hydrogen.shopify.dev',
+    useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
+    detectors: {
+      every: [
+        {
+          path: 'hydrogen.config.js',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'shopify hydrogen build',
+        placeholder: '`npm run build` or `shopify hydrogen build`',
+      },
+      devCommand: {
+        value: 'shopify hydrogen dev',
+        placeholder: 'shopify hydrogen dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: '@shopify/hydrogen',
+    getOutputDirName: async () => 'dist',
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/other.svg',
