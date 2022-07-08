@@ -16,24 +16,32 @@ import rm from './rm';
 const help = () => {
   console.log(`
   ${chalk.bold(`${logo} ${getPkgName()} project`)} [options] <command>
+
   ${chalk.dim('Commands:')}
     ls                               Show all projects in the selected team/user
     connect                          Connect a Git provider to your project
     add      [name]                  Add a new project
     rm       [name]                  Remove a project
+
   ${chalk.dim('Options:')}
+
     -h, --help                     Output usage information
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
     -S, --scope                    Set a custom scope
     -N, --next                     Show next page of results
+
   ${chalk.dim('Examples:')}
+
   ${chalk.gray('–')} Add a new project
+
     ${chalk.cyan(`$ ${getPkgName()} project add my-project`)}
+
   ${chalk.gray('–')} Paginate projects, where ${chalk.dim(
     '`1584722256178`'
   )} is the time in milliseconds since the UNIX epoch.
+
     ${chalk.cyan(`$ ${getPkgName()} project ls --next 1584722256178`)}
 `);
 };
