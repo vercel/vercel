@@ -36,11 +36,12 @@ describe('list', () => {
       await list(client);
 
       const output = await readOutputStream(client, 4);
-
+      console.log(output);
 
       const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
+      data.shift();
       data.splice(2, 1);
 
       expect(org).toEqual(team[0].slug);
@@ -52,6 +53,7 @@ describe('list', () => {
         'username',
       ]);
 
+      console.log('data:', data);
       expect(data).toEqual([
         `https://${deployment.url}`,
         stateString(deployment.state || ''),
@@ -81,8 +83,9 @@ describe('list', () => {
       const output = await readOutputStream(client, 4);
 
       const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
+      data.shift();
       data.splice(2, 1);
 
       expect(org).toEqual(teamSlug);
