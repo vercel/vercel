@@ -31,10 +31,12 @@ describe('list', () => {
       await list(client);
 
       const output = await readOutputStream(client);
+      console.log(output);
 
       const { org } = getDataFromIntro(output.split('\n')[0]);
-      const header: string[] = parseTable(output.split('\n')[2]);
-      const data: string[] = parseTable(output.split('\n')[3]);
+      const header: string[] = parseTable(output.split('\n')[3]);
+      const data: string[] = parseTable(output.split('\n')[4]);
+      data.shift();
       data.splice(2, 1);
 
       expect(org).toEqual(team[0].slug);
@@ -47,7 +49,7 @@ describe('list', () => {
       ]);
 
       expect(data).toEqual([
-        deployment.url,
+        `https://${deployment.url}`,
         stateString(deployment.state || ''),
         user.name,
       ]);
@@ -75,8 +77,9 @@ describe('list', () => {
       const output = await readOutputStream(client);
 
       const { org } = getDataFromIntro(output.split('\n')[0]);
-      const header: string[] = parseTable(output.split('\n')[2]);
-      const data: string[] = parseTable(output.split('\n')[3]);
+      const header: string[] = parseTable(output.split('\n')[3]);
+      const data: string[] = parseTable(output.split('\n')[4]);
+      data.shift();
       data.splice(2, 1);
 
       expect(org).toEqual(teamSlug);
@@ -89,7 +92,7 @@ describe('list', () => {
         'username',
       ]);
       expect(data).toEqual([
-        deployment.url,
+        `https://${deployment.url}`,
         stateString(deployment.state || ''),
         user.name,
       ]);
@@ -129,7 +132,7 @@ function readOutputStream(client: MockClient): Promise<string> {
     client.stderr.resume();
     client.stderr.on('data', chunk => {
       chunks.push(chunk);
-      if (chunks.length === 3) {
+      if (chunks.length === 4) {
         clearTimeout(timeout);
         resolve(chunks.toString().replace(/,/g, ''));
       }
