@@ -12,18 +12,10 @@ export function useDeployment({
 }: {
   creator: Pick<User, 'id' | 'email' | 'name'>;
 }) {
-  type state =
-    | 'INITIALIZING'
-    | 'ANALYZING'
-    | 'BUILDING'
-    | 'DEPLOYING'
-    | 'READY'
-    | 'QUEUED'
-    | 'CANCELED'
-    | 'ERROR';
+  type State = Deployment['readyState'];
   const createdAt = Date.now();
   const url = new URL(chance().url());
-  const states: Array<state> = [
+  const states: Array<State> = [
     'READY',
     'BUILDING',
     'INITIALIZING',
@@ -37,7 +29,7 @@ export function useDeployment({
   const deployment: Deployment = {
     id: `dpl_${chance().guid()}`,
     url: url.hostname,
-    name: `dpl_${chance().guid()}`,
+    name: chance.name,
     meta: {},
     regions: [],
     routes: [],
