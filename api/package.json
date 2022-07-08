@@ -5,7 +5,7 @@
   "description": "API for the vercel/vercel repo",
   "main": "index.js",
   "scripts": {
-    "//TODO": "We should add this pkg to yarn workspaces"
+    "//TODO": "We should add this pkg to yarn workspaces",
     "vercel-build": "cd .. && yarn install && yarn vercel-build"
   },
   "dependencies": {
