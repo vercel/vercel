@@ -11,7 +11,9 @@ export function isDirty(directory: string, output: Output): Promise<boolean> {
     exec('git status -s', { cwd: directory }, function (err, stdout, stderr) {
       if (err || stderr) {
         output.debug(
-          `Failed to determine if git repo has been modified:\n${err}\n${stderr.trim()}`
+          `Failed to determine if git repo has been modified:\n${err}\n${
+            stderr && stderr.trim()
+          }`
         );
         return resolve(false);
       }
