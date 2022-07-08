@@ -93,7 +93,6 @@ export default async function main(client: Client) {
   let team = null;
 
   if (subcommand === 'connect') {
-    // || subcommand === 'disconnect'
     const linkedProject = await ensureLink('project', client, path, confirm);
     if (typeof linkedProject === 'number') {
       return linkedProject;
