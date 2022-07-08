@@ -25,8 +25,6 @@ type GetMatcherType<TP, TResult> = TP extends PromiseFunction
   ? (...args: Tail<Parameters<TP>>) => TResult
   : TP;
 
-//type T = GetMatcherType<typeof matchers['toOutput'], void>;
-
 type GetMatchersType<TMatchers, TResult> = {
   [P in keyof TMatchers]: GetMatcherType<TMatchers[P], TResult>;
 };

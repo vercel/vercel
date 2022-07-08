@@ -172,7 +172,8 @@ const main = async () => {
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  const betaCommands: string[] = ['build'];
+  // Currently no beta commands - add here as needed
+  const betaCommands: string[] = [''];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
