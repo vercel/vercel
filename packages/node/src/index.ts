@@ -200,8 +200,10 @@ async function compile(
           const { mode } = lstatSync(fsPath);
           let entry: File;
           if (isSymbolicLink(mode)) {
+            console.log('readFile is symlink' + fsPath);
             entry = new FileFsRef({ fsPath, mode });
           } else {
+            console.log('readFile is blob' + fsPath);
             entry = new FileBlob({ data: source, mode });
           }
           fsCache.set(relPath, entry);
@@ -209,6 +211,9 @@ async function compile(
           return source.toString();
         } catch (e) {
           if (e.code === 'ENOENT' || e.code === 'EISDIR') {
+            console.log(
+              'readFile threw an error ' + e.code + ' for fsPath ' + fsPath
+            );
             sourceCache.set(relPath, null);
             return null;
           }
@@ -225,6 +230,7 @@ async function compile(
   }
 
   for (const path of fileList) {
+    console.log('[debug][@vercel/node] fileList path: ' + path);
     let entry = fsCache.get(path);
     if (!entry) {
       const fsPath = resolve(baseDir, path);
@@ -260,6 +266,11 @@ async function compile(
             '[debug][@vercel/node] symlinkTarget is a file: ' + symlinkTarget
           );
           fileList.add(symlinkTarget);
+        } else {
+          console.log(
+            '[debug][@vercel/node] symlinkTarget is a directory: ' +
+              symlinkTarget
+          );
         }
       }
     }
