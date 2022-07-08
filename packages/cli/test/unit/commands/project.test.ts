@@ -6,8 +6,8 @@ import { client } from '../../mocks/client';
 import { Project } from '../../../src/types';
 import { readOutputStream } from '../../helpers/read-output-stream';
 import {
-  getDataFromListTableIntro,
-  parseListTable,
+  pluckIdentifiersFromDeploymentList,
+  parseSpacedTableRow,
 } from '../../helpers/parse-table';
 
 describe('project', () => {
@@ -22,9 +22,9 @@ describe('project', () => {
       await projects(client);
 
       const output = await readOutputStream(client, 2);
-      const { org } = getDataFromListTableIntro(output.split('\n')[0]);
-      const header: string[] = parseListTable(output.split('\n')[2]);
-      const data: string[] = parseListTable(output.split('\n')[3]);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
       data.pop();
 
       expect(org).toEqual(user.username);
@@ -43,9 +43,9 @@ describe('project', () => {
       await projects(client);
 
       const output = await readOutputStream(client, 2);
-      const { org } = getDataFromListTableIntro(output.split('\n')[0]);
-      const header: string[] = parseListTable(output.split('\n')[2]);
-      const data: string[] = parseListTable(output.split('\n')[3]);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
       data.pop();
 
       expect(org).toEqual(team[0].slug);

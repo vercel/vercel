@@ -1,4 +1,4 @@
-export function getDataFromListTableIntro(output: string): {
+export function pluckIdentifiersFromDeploymentList(output: string): {
   project: string | undefined;
   org: string | undefined;
 } {
@@ -11,7 +11,7 @@ export function getDataFromListTableIntro(output: string): {
   };
 }
 
-export function parseListTable(output: string): string[] {
+export function parseSpacedTableRow(output: string): string[] {
   return output
     .trim()
     .replace(/ {1} +/g, ',')
