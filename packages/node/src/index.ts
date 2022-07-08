@@ -1,12 +1,6 @@
 import url from 'url';
 import { fork, spawn } from 'child_process';
-import {
-  readFileSync,
-  lstatSync,
-  readlinkSync,
-  statSync,
-  promises as fsp,
-} from 'fs';
+import { readFileSync, lstatSync, readlinkSync, promises as fsp } from 'fs';
 import {
   basename,
   dirname,
@@ -200,10 +194,10 @@ async function compile(
           const { mode } = lstatSync(fsPath);
           let entry: File;
           if (isSymbolicLink(mode)) {
-            console.log('readFile is symlink' + fsPath);
+            console.log('[debug][@vercel/node] readFile is symlink' + fsPath);
             entry = new FileFsRef({ fsPath, mode });
           } else {
-            console.log('readFile is blob' + fsPath);
+            console.log('[debug][@vercel/node] readFile is blob' + fsPath);
             entry = new FileBlob({ data: source, mode });
           }
           fsCache.set(relPath, entry);
@@ -212,7 +206,10 @@ async function compile(
         } catch (e) {
           if (e.code === 'ENOENT' || e.code === 'EISDIR') {
             console.log(
-              'readFile threw an error ' + e.code + ' for fsPath ' + fsPath
+              '[debug][@vercel/node] readFile threw an error ' +
+                e.code +
+                ' for fsPath ' +
+                fsPath
             );
             sourceCache.set(relPath, null);
             return null;
@@ -258,20 +255,10 @@ async function compile(
         !fileList.has(symlinkTarget)
       ) {
         console.log(
-          '[debug][@vercel/node] first time symlinkTarget: ' + symlinkTarget
+          '[debug][@vercel/node] adding to fileList symlinkTarget: ' +
+            symlinkTarget
         );
-        const stats = statSync(resolve(baseDir, symlinkTarget));
-        if (stats.isFile()) {
-          console.log(
-            '[debug][@vercel/node] symlinkTarget is a file: ' + symlinkTarget
-          );
-          fileList.add(symlinkTarget);
-        } else {
-          console.log(
-            '[debug][@vercel/node] symlinkTarget is a directory: ' +
-              symlinkTarget
-          );
-        }
+        fileList.add(symlinkTarget);
       }
     }
 
