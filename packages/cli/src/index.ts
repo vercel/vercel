@@ -653,7 +653,7 @@ const main = async () => {
         func = require('./commands/logout').default;
         break;
       case 'projects':
-        func = require('./commands/projects').default;
+        func = require('./commands/project').default;
         break;
       case 'pull':
         func = require('./commands/pull').default;

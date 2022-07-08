@@ -1,10 +1,12 @@
-import { client, MockClient } from '../../mocks/client';
+import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import list, { stateString } from '../../../src/commands/list';
 import { join } from 'path';
 import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useDeployment } from '../../mocks/deployment';
+import { readOutputStream } from '../../helpers/read-output-stream';
+import { parseTable, getDataFromIntro } from '../../helpers/parse-table';
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/list', name);
@@ -101,42 +103,3 @@ describe('list', () => {
     }
   });
 });
-
-function getDataFromIntro(output: string): {
-  project: string | undefined;
-  org: string | undefined;
-} {
-  const project = output.match(/(?<=Deployments for )(.*)(?= under)/);
-  const org = output.match(/(?<=under )(.*)(?= \[)/);
-
-  return {
-    project: project?.[0],
-    org: org?.[0],
-  };
-}
-
-function parseTable(output: string): string[] {
-  return output
-    .trim()
-    .replace(/ {3} +/g, ',')
-    .split(',');
-}
-
-function readOutputStream(client: MockClient): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    const timeout = setTimeout(() => {
-      reject();
-    }, 3000);
-
-    client.stderr.resume();
-    client.stderr.on('data', chunk => {
-      chunks.push(chunk);
-      if (chunks.length === 4) {
-        clearTimeout(timeout);
-        resolve(chunks.toString().replace(/,/g, ''));
-      }
-    });
-    client.stderr.on('error', reject);
-  });
-}
