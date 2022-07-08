@@ -1,6 +1,6 @@
 import { lstatSync } from 'fs-extra';
-import { isAbsolute } from 'path';
-import { hashes, mapToObject } from './utils/hashes';
+import { isAbsolute, join } from 'path';
+import { hash, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
 import { DeploymentError } from './errors';
@@ -9,6 +9,8 @@ import {
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
+import { createZip } from '@vercel/build-utils/dist/lambda';
+import { FileFsRef, Files } from '@vercel/build-utils';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
@@ -82,7 +84,22 @@ export default function buildCreateDeployment() {
       };
     }
 
-    const files = await hashes(fileList);
+    //const files = await hashes(fileList);
+    // Populate Files -> FileFsRef mapping
+    const workPath = typeof path === 'string' ? path : path[0];
+    const filesMap: Files = {};
+    for (const path of fileList) {
+      const fsPath = join(workPath, path);
+      const { mode } = lstatSync(fsPath);
+      filesMap[path] = new FileFsRef({ mode, fsPath });
+    }
+    const zipBuffer = await createZip(filesMap);
+    const files = new Map([
+      [
+        hash(zipBuffer),
+        { names: ['.vercel/source.zip'], data: zipBuffer, mode: 0o666 },
+      ],
+    ]);
 
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);
     yield { type: 'hashes-calculated', payload: mapToObject(files) };
