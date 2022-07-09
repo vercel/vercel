@@ -1,5 +1,5 @@
 import { lstatSync } from 'fs-extra';
-import { isAbsolute, join } from 'path';
+import { isAbsolute, relative } from 'path';
 import { hash, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
@@ -85,13 +85,13 @@ export default function buildCreateDeployment() {
     }
 
     //const files = await hashes(fileList);
+
     // Populate Files -> FileFsRef mapping
     const workPath = typeof path === 'string' ? path : path[0];
     const filesMap: Files = {};
-    for (const path of fileList) {
-      const fsPath = join(workPath, path);
+    for (const fsPath of fileList) {
       const { mode } = lstatSync(fsPath);
-      filesMap[path] = new FileFsRef({ mode, fsPath });
+      filesMap[relative(workPath, fsPath)] = new FileFsRef({ mode, fsPath });
     }
     const zipBuffer = await createZip(filesMap);
     const files = new Map([

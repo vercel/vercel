@@ -1,7 +1,6 @@
 import { Agent } from 'https';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
-import fs from 'fs-extra';
 
 import { DeploymentFile } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
@@ -86,18 +85,18 @@ export async function* upload(
 
         await semaphore.acquire();
 
-        const fPath = file.names[0];
-
-        let body: fs.ReadStream | string | null = null;
-
-        const stat = await fs.lstat(fPath);
-        if (stat.isSymbolicLink()) {
-          body = await fs.readlink(fPath);
-        } else {
-          body = fs.createReadStream(fPath);
-        }
+        //let body: fs.ReadStream | string | null = null;
 
         const { data } = file;
+        const body = data;
+
+        //const stat = new Stats();
+        //stat.mode = mode;
+        //if (stat.isSymbolicLink()) {
+        //  body = await fs.readlink(fPath);
+        //} else {
+        //  body = fs.createReadStream(fPath);
+        //}
 
         let err;
         let result;
@@ -154,8 +153,8 @@ export async function* upload(
           err = new Error(e);
         } finally {
           if (body && typeof body !== 'string') {
-            body.close();
-            body.destroy();
+            //body.close();
+            //body.destroy();
           }
         }
 
