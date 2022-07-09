@@ -1,5 +1,6 @@
 import { join } from 'path';
 import fs from 'fs-extra';
+import os from 'os';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
@@ -41,7 +42,7 @@ describe('createGitMeta', () => {
     const directory = fixture('dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory);
+      const dirty = await isDirty(directory, client.output);
       expect(dirty).toBeTruthy();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -51,7 +52,7 @@ describe('createGitMeta', () => {
     const directory = fixture('not-dirty');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory);
+      const dirty = await isDirty(directory, client.output);
       expect(dirty).toBeFalsy();
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -123,6 +124,29 @@ describe('createGitMeta', () => {
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
+    }
+  });
+  it('fails when `.git` is corrupt', async () => {
+    const directory = fixture('git-corrupt');
+    const tmpDir = join(os.tmpdir(), 'git-corrupt');
+    try {
+      // Copy the fixture into a temp dir so that we don't pick
+      // up Git information from the `vercel/vercel` repo itself
+      await fs.copy(directory, tmpDir);
+      await fs.rename(join(tmpDir, 'git'), join(tmpDir, '.git'));
+
+      client.output.debugEnabled = true;
+      const data = await createGitMeta(tmpDir, client.output);
+
+      await expect(client.stderr).toOutput(
+        `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
+      );
+      await expect(client.stderr).toOutput(
+        `Failed to determine if Git repo has been modified:`
+      );
+      expect(data).toBeUndefined();
+    } finally {
+      await fs.remove(tmpDir);
     }
   });
 });

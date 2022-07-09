@@ -10,7 +10,6 @@ import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
 import Client from '../../util/client';
-import { write as copy } from 'clipboardy';
 import { getPrettyError } from '@vercel/build-utils';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
@@ -77,7 +76,6 @@ export default async (client: Client) => {
       '--force': Boolean,
       '--with-cache': Boolean,
       '--public': Boolean,
-      '--no-clipboard': Boolean,
       '--env': [String],
       '--build-env': [String],
       '--meta': [String],
@@ -91,7 +89,6 @@ export default async (client: Client) => {
       '-p': '--public',
       '-e': '--env',
       '-b': '--build-env',
-      '-C': '--no-clipboard',
       '-m': '--meta',
       '-c': '--confirm',
 
@@ -686,13 +683,7 @@ export default async (client: Client) => {
     return 1;
   }
 
-  return printDeploymentStatus(
-    output,
-    client,
-    deployment,
-    deployStamp,
-    !argv['--no-clipboard']
-  );
+  return printDeploymentStatus(output, client, deployment, deployStamp);
 };
 
 function handleCreateDeployError(
@@ -825,8 +816,7 @@ const printDeploymentStatus = async (
       action?: string;
     };
   },
-  deployStamp: () => string,
-  isClipboardEnabled: boolean
+  deployStamp: () => string
 ) => {
   indications = indications || [];
   const isProdDeployment = target === 'production';
@@ -847,40 +837,23 @@ const printDeploymentStatus = async (
   } else {
     // print preview/production url
     let previewUrl: string;
-    let isWildcard: boolean;
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
       if (previewUrlInfo) {
-        isWildcard = previewUrlInfo.isWildcard;
         previewUrl = previewUrlInfo.previewUrl;
       } else {
-        isWildcard = false;
         previewUrl = `https://${deploymentUrl}`;
       }
     } else {
       // fallback to deployment url
-      isWildcard = false;
       previewUrl = `https://${deploymentUrl}`;
-    }
-
-    // copy to clipboard
-    let isCopiedToClipboard = false;
-    if (isClipboardEnabled && !isWildcard) {
-      try {
-        await copy(previewUrl);
-        isCopiedToClipboard = true;
-      } catch (err) {
-        output.debug(`Error copyind to clipboard: ${err}`);
-      }
     }
 
     output.print(
       prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
           previewUrl
-        )}${
-          isCopiedToClipboard ? chalk.gray(` [copied to clipboard]`) : ''
-        } ${deployStamp()}`,
+        )} ${deployStamp()}`,
         emoji('success')
       ) + `\n`
     );
