@@ -336,8 +336,7 @@ export default async function main(client: Client): Promise<number> {
   const buildResults: Map<Builder, BuildResult> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
-  const rootPackageJsonPath = repoRootPath || workPath;
-  const corepackShimDir = await initCorepack({ cwd, rootPackageJsonPath });
+  const corepackShimDir = await initCorepack({ repoRootPath });
 
   for (const build of builds) {
     if (typeof build.src !== 'string') continue;
