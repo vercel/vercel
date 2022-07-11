@@ -74,7 +74,7 @@ export default async function main(client: Client) {
   }
   const { path } = pathValidation;
 
-  const linkedProject = await ensureLink('project', client, path, confirm);
+  const linkedProject = await ensureLink('git', client, path, confirm);
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }

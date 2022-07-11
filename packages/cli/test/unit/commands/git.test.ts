@@ -296,7 +296,7 @@ describe('git', () => {
           createdAt: 1656109539791,
           updatedAt: 1656109539791,
         };
-        client.setArgv('project', 'disconnect');
+        client.setArgv('git', 'disconnect');
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
@@ -330,7 +330,7 @@ describe('git', () => {
           name: 'new-connection',
         });
 
-        client.setArgv('project', 'disconnect');
+        client.setArgv('git', 'disconnect');
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
