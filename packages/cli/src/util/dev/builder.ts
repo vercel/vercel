@@ -13,8 +13,8 @@ import {
   Lambda,
   FileBlob,
   FileFsRef,
-  isOfficialRuntime,
 } from '@vercel/build-utils';
+import { isOfficialRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 

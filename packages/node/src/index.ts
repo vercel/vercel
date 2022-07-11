@@ -1,3 +1,4 @@
+import url from 'url';
 import { fork, spawn } from 'child_process';
 import {
   readFileSync,
@@ -50,15 +51,9 @@ import type {
 import { getConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
-import { getRegExpFromMatchers } from './utils';
+import { entrypointToOutputPath, getRegExpFromMatchers } from './utils';
 
 export { shouldServe };
-export type {
-  NowRequest,
-  NowResponse,
-  VercelRequest,
-  VercelResponse,
-} from './types';
 
 interface DownloadOptions {
   files: Files;
@@ -378,10 +373,7 @@ export const build: BuildV3 = async ({
   let output: BuildResultV3['output'] | undefined;
 
   const handler = renameTStoJS(relative(baseDir, entrypointPath));
-  const outputName = config.zeroConfig
-    ? handler.substring(0, handler.length - 3)
-    : handler;
-
+  const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
   const isMiddleware = config.middleware === true;
 
   // Will output an `EdgeFunction` for when `config.middleware = true`
@@ -417,9 +409,7 @@ export const build: BuildV3 = async ({
     routes = [
       {
         src,
-        middlewarePath: config.zeroConfig
-          ? outputName
-          : relative(baseDir, entrypointPath),
+        middlewarePath: outputPath,
         continue: true,
         override: true,
       },
@@ -432,7 +422,7 @@ export const build: BuildV3 = async ({
       files: preparedFiles,
 
       // TODO: remove - these two properties should not be required
-      name: outputName,
+      name: outputPath,
       deploymentTarget: 'v8-worker',
     });
   } else {
@@ -471,7 +461,11 @@ export const startDevServer: StartDevServer = async opts => {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const matchers = new RegExp(getRegExpFromMatchers(staticConfig?.matcher));
 
-    if (!matchers.test(meta.requestUrl)) {
+    const parsed = url.parse(meta.requestUrl, true);
+    if (
+      typeof parsed.pathname !== 'string' ||
+      !matchers.test(parsed.pathname)
+    ) {
       // If the "matchers" doesn't say to handle this
       // path then skip middleware invocation
       return null;

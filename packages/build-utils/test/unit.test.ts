@@ -18,6 +18,8 @@ import {
   Meta,
 } from '../src';
 
+jest.setTimeout(7 * 1000);
+
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
   let result;
   try {
