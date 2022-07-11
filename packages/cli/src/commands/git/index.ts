@@ -12,7 +12,7 @@ import disconnect from './disconnect';
 
 const help = () => {
   console.log(`
-  ${chalk.bold(`${logo} ${getPkgName()} project`)} [options] <command>
+  ${chalk.bold(`${logo} ${getPkgName()} git`)} <command>
 
   ${chalk.dim('Commands:')}
 
@@ -25,7 +25,6 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-    -S, --scope                    Set a custom scope
 
   ${chalk.dim('Examples:')}
 
