@@ -17,7 +17,7 @@ export function readOutputStream(
       lines++;
       if (lines === length) {
         clearTimeout(timeout);
-        resolve(output.toString());
+        resolve(output);
       }
     });
     client.stderr.on('error', reject);
