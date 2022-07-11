@@ -173,7 +173,7 @@ const main = async () => {
   const targetOrSubcommand = argv._[2];
 
   // Currently no beta commands - add here as needed
-  const betaCommands: string[] = [''];
+  const betaCommands: string[] = [];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
