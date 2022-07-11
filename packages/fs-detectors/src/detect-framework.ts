@@ -81,31 +81,13 @@ export async function detectFramework({
   fs,
   frameworkList,
 }: DetectFrameworkOptions): Promise<string | null> {
-  let framework: string | null;
-  try {
-    framework = await Promise.any(
-      frameworkList.map(async frameworkMatch => {
-        if (await matches(fs, frameworkMatch)) {
-          return frameworkMatch.slug;
-        }
-        throw new Error(`Framework not detected: "${frameworkMatch}"`);
-      })
-    );
-  } catch (errorOrErrors: unknown) {
-    // note the promise.any polyfill works differently from the native Promise.any!
-    // it returns an array of errors instead of an `AggregateError`
-    if (Array.isArray(errorOrErrors)) {
-      for (const e of errorOrErrors) {
-        // If it does not start with this text, we should throw the error as an
-        // unexpected error has occurred
-        if (!e.message.startsWith('Framework not detected:')) {
-          throw e;
-        }
+  const result = await Promise.all(
+    frameworkList.map(async frameworkMatch => {
+      if (await matches(fs, frameworkMatch)) {
+        return frameworkMatch.slug;
       }
       return null;
-    }
-    // if it is not an array, throw the error as an unexpected error has occurred
-    throw errorOrErrors;
-  }
-  return framework;
+    })
+  );
+  return result.find(res => res !== null) ?? null;
 }

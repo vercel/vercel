@@ -25,7 +25,6 @@
     "glob": "8.0.3",
     "js-yaml": "4.1.0",
     "minimatch": "3.0.4",
-    "promise-any-polyfill": "1.0.1",
     "semver": "6.1.1"
   },
   "devDependencies": {
