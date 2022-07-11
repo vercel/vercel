@@ -39,9 +39,6 @@ export async function initCorepack({
     await fs.mkdirp(corepackShimDir);
     process.env.COREPACK_HOME = corepackHomeDir;
     process.env.PATH = `${corepackShimDir}${delimiter}${process.env.PATH}`;
-    process.env.DEBUG = process.env.DEBUG
-      ? `corepack,${process.env.DEBUG}`
-      : 'corepack';
     const pkgManagerName = pkg.packageManager.split('@')[0];
     // We must explicitly call `corepack enable npm` since `corepack enable`
     // doesn't work with npm. See https://github.com/nodejs/corepack/pull/24
@@ -71,12 +68,5 @@ export function cleanupCorepack(corepackShimDir: string) {
       `${corepackShimDir}${delimiter}`,
       ''
     );
-  }
-  if (process.env.DEBUG) {
-    if (process.env.DEBUG === 'corepack') {
-      delete process.env.DEBUG;
-    } else {
-      process.env.DEBUG = process.env.DEBUG.replace('corepack,', '');
-    }
   }
 }
