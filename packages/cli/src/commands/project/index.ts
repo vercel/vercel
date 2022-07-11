@@ -1,16 +1,12 @@
 import chalk from 'chalk';
 import Client from '../../util/client';
-import { ensureLink } from '../../util/ensure-link';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getScope from '../../util/get-scope';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
-import validatePaths from '../../util/validate-paths';
 import add from './add';
-import connect from './connect';
-import disconnect from './disconnect';
 import list from './list';
 import rm from './rm';
 
@@ -21,8 +17,6 @@ const help = () => {
   ${chalk.dim('Commands:')}
 
     ls                               Show all projects in the selected team/user
-    connect                          Connect a Git provider repository to your project
-    disconnect                       Disconnect a Git provider repository from your project
     add      [name]                  Add a new project
     rm       [name]                  Remove a project
 
@@ -53,7 +47,6 @@ const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
   add: ['add'],
   rm: ['rm', 'remove'],
-  connect: ['connect'],
 };
 
 export default async function main(client: Client) {
@@ -64,7 +57,6 @@ export default async function main(client: Client) {
     argv = getArgs(client.argv.slice(2), {
       '--next': Number,
       '-N': '--next',
-      '--confirm': Boolean,
     });
   } catch (error) {
     handleError(error);
@@ -79,38 +71,18 @@ export default async function main(client: Client) {
   argv._ = argv._.slice(1);
   subcommand = argv._[0] || 'list';
   const args = argv._.slice(1);
-  const confirm = Boolean(argv['--confirm']);
   const { output } = client;
 
-  let paths = [process.cwd()];
-  const pathValidation = await validatePaths(client, paths);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-  const { path } = pathValidation;
-
-  let org;
-  let project;
   let contextName = '';
-  let team = null;
 
-  if (subcommand === 'connect' || subcommand === 'disconnect') {
-    const linkedProject = await ensureLink('project', client, path, confirm);
-    if (typeof linkedProject === 'number') {
-      return linkedProject;
+  try {
+    ({ contextName } = await getScope(client));
+  } catch (error) {
+    if (error.code === 'NOT_AUTHORIZED' || error.code === 'TEAM_DELETED') {
+      output.error(error.message);
+      return 1;
     }
-    org = linkedProject.org;
-    project = linkedProject.project;
-  } else {
-    try {
-      ({ contextName, team } = await getScope(client));
-    } catch (error) {
-      if (error.code === 'NOT_AUTHORIZED' || error.code === 'TEAM_DELETED') {
-        output.error(error.message);
-        return 1;
-      }
-      throw error;
-    }
+    throw error;
   }
 
   switch (subcommand) {
@@ -122,10 +94,6 @@ export default async function main(client: Client) {
     case 'rm':
     case 'remove':
       return await rm(client, args);
-    case 'connect':
-      return await connect(client, argv, args, project, org, team);
-    case 'disconnect':
-      return await disconnect(client, args, project, org, team);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       help();

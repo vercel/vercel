@@ -1,16 +1,16 @@
 import Client from '../client';
 import { stringify } from 'qs';
-import { Team } from '../../types';
+import { Org } from '../../types';
 import chalk from 'chalk';
 import link from '../output/link';
 
 export async function disconnectGitProvider(
   client: Client,
-  team: Team | null,
+  org: Org,
   projectId: string
 ) {
   const fetchUrl = `/v4/projects/${projectId}/link?${stringify({
-    teamId: team?.id,
+    teamId: org.type === 'team' ? org.id : undefined,
   })}`;
   return client.fetch(fetchUrl, {
     method: 'DELETE',
@@ -22,13 +22,13 @@ export async function disconnectGitProvider(
 
 export async function connectGitProvider(
   client: Client,
-  team: Team | null,
+  org: Org,
   projectId: string,
   type: string,
   repo: string
 ) {
   const fetchUrl = `/v4/projects/${projectId}/link?${stringify({
-    teamId: team?.id,
+    teamId: org.type === 'team' ? org.id : undefined,
   })}`;
   try {
     return await client.fetch(fetchUrl, {

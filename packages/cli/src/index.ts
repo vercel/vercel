@@ -632,6 +632,9 @@ const main = async () => {
       case 'env':
         func = require('./commands/env').default;
         break;
+      case 'git':
+        func = require('./commands/git').default;
+        break;
       case 'init':
         func = require('./commands/init').default;
         break;

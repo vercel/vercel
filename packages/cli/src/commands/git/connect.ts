@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { join } from 'path';
-import { Org, Project, Team } from '../../types';
+import { Org, Project } from '../../types';
 import Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrl } from '../../util/create-git-meta';
 import confirm from '../../util/input/confirm';
@@ -20,8 +20,7 @@ export default async function connect(
   argv: any,
   args: string[],
   project: Project | undefined,
-  org: Org | undefined,
-  team: Team | null
+  org: Org | undefined
 ) {
   const { output } = client;
   const confirm = Boolean(argv['--confirm']);
@@ -84,7 +83,7 @@ export default async function connect(
   if (!gitProviderLink) {
     const connect = await connectGitProvider(
       client,
-      team,
+      org,
       project.id,
       provider,
       repoPath
@@ -119,10 +118,10 @@ export default async function connect(
       return 0;
     }
 
-    await disconnectGitProvider(client, team, project.id);
+    await disconnectGitProvider(client, org, project.id);
     const connect = await connectGitProvider(
       client,
-      team,
+      org,
       project.id,
       provider,
       repoPath

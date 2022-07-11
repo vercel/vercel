@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { Org, Project, Team } from '../../types';
+import { Org, Project } from '../../types';
 import Client from '../../util/client';
 import confirm from '../../util/input/confirm';
 import { getCommandName } from '../../util/pkg-name';
@@ -9,8 +9,7 @@ export default async function disconnect(
   client: Client,
   args: string[],
   project: Project | undefined,
-  org: Org | undefined,
-  team: Team | null
+  org: Org | undefined
 ) {
   const { output } = client;
 
@@ -28,21 +27,21 @@ export default async function disconnect(
   }
 
   if (project.link) {
-    const { org, repo } = project.link;
+    const { org: linkOrg, repo } = project.link;
     output.print(
       `Your Vercel project will no longer create deployments when you push to this repository.\n`
     );
     const confirmDisconnect = await confirm(
       client,
       `Are you sure you want to disconnect ${chalk.cyan(
-        `${org}/${repo}`
+        `${linkOrg}/${repo}`
       )} from your project?`,
       false
     );
 
     if (confirmDisconnect) {
-      await disconnectGitProvider(client, team, project.id);
-      output.log(`Disconnected ${chalk.cyan(`${org}/${repo}`)}.`);
+      await disconnectGitProvider(client, org, project.id);
+      output.log(`Disconnected ${chalk.cyan(`${linkOrg}/${repo}`)}.`);
     } else {
       output.log('Aborted.');
     }
