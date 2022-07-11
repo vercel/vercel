@@ -8,6 +8,7 @@ import {
   isDirty,
 } from '../../../../src/util/deploy/create-git-meta';
 import { client } from '../../../mocks/client';
+import { readOutputStream } from '../../../helpers/read-output-stream';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
@@ -138,10 +139,12 @@ describe('createGitMeta', () => {
       client.output.debugEnabled = true;
       const data = await createGitMeta(tmpDir, client.output);
 
-      await expect(client.stderr).toOutput(
+      const output = await readOutputStream(client, 2);
+
+      expect(output).toContain(
         `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
       );
-      await expect(client.stderr).toOutput(
+      expect(output).toContain(
         `Failed to determine if Git repo has been modified:`
       );
       expect(data).toBeUndefined();
