@@ -2148,7 +2148,7 @@ interface EdgeFunctionInfo {
   page: string;
   regexp: string;
   wasm?: { filePath: string; name: string }[];
-  blobs?: { filePath: string; name: string }[];
+  assets?: { filePath: string; name: string }[];
 }
 
 export async function getMiddlewareBundle({
@@ -2235,14 +2235,14 @@ export async function getMiddlewareBundle({
                 {}
               );
 
-              const blobFiles = (edgeFunction.blobs ?? []).reduce(
+              const assetFiles = (edgeFunction.assets ?? []).reduce(
                 (acc: Files, { filePath, name }) => {
                   const fullFilePath = path.join(
                     entryPath,
                     outputDirectory,
                     filePath
                   );
-                  acc[`blobs/${name}`] = new FileFsRef({
+                  acc[`assets/${name}`] = new FileFsRef({
                     mode: 0o644,
                     contentType: 'application/octet-stream',
                     fsPath: fullFilePath,
@@ -2269,14 +2269,14 @@ export async function getMiddlewareBundle({
                     }),
                   }),
                   ...wasmFiles,
-                  ...blobFiles,
+                  ...assetFiles,
                 },
                 entrypoint: 'index.js',
                 envVarsInUse: edgeFunction.env,
-                blobs: (edgeFunction.blobs ?? []).map(({ name }) => {
+                assets: (edgeFunction.assets ?? []).map(({ name }) => {
                   return {
                     name,
-                    path: `blobs/${name}`,
+                    path: `assets/${name}`,
                   };
                 }),
               });

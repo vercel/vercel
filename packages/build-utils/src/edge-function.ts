@@ -36,7 +36,7 @@ export class EdgeFunction {
   /**
    * Extra binary files to be included in the edge function
    */
-  blobs?: { name: string; path: string }[];
+  assets?: { name: string; path: string }[];
 
   constructor(params: Omit<EdgeFunction, 'type'>) {
     this.type = 'EdgeFunction';
@@ -45,6 +45,6 @@ export class EdgeFunction {
     this.entrypoint = params.entrypoint;
     this.files = params.files;
     this.envVarsInUse = params.envVarsInUse;
-    this.blobs = params.blobs;
+    this.assets = params.assets;
   }
 }
