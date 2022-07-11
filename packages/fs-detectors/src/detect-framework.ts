@@ -91,7 +91,7 @@ export async function detectFramework({
         throw new Error(`Framework not detected: "${frameworkMatch}"`);
       })
     );
-  } catch (errorOrErrors: any) {
+  } catch (errorOrErrors: unknown) {
     // note the promise.any polyfill works differently from the native Promise.any!
     // it returns an array of errors instead of an `AggregateError`
     if (Array.isArray(errorOrErrors)) {
