@@ -148,21 +148,27 @@ async function serializeRequest(message: IncomingMessage) {
   });
 }
 
-async function compileUserCode(entrypoint: string, isMiddleware: boolean) {
+async function compileUserCode(
+  entrypointPath: string,
+  entrypointLabel: string,
+  isMiddleware: boolean
+) {
   try {
     const result = await esbuild.build({
       platform: 'node',
       target: 'node14',
       sourcemap: 'inline',
       bundle: true,
-      entryPoints: [entrypoint],
+      entryPoints: [entrypointPath],
       write: false, // operate in memory
       format: 'cjs',
     });
 
     const compiledFile = result.outputFiles?.[0];
     if (!compiledFile) {
-      throw new Error(`Compilation of ${entrypoint} produced no output files.`);
+      throw new Error(
+        `Compilation of ${entrypointLabel} produced no output files.`
+      );
     }
 
     const userCode = new TextDecoder().decode(compiledFile.contents);
@@ -200,7 +206,7 @@ async function compileUserCode(entrypoint: string, isMiddleware: boolean) {
 
           if (!response) {
             if (!${isMiddleware}) {
-              throw new Error('Edge Function "${entrypoint}" did not return a response.');
+              throw new Error('Edge Function "${entrypointLabel}" did not return a response.');
             }
 
             response = new Response(null, {
@@ -265,10 +271,15 @@ async function createEdgeRuntime(userCode: string | undefined) {
 }
 
 async function createEdgeEventHandler(
-  entrypoint: string,
+  entrypointPath: string,
+  entrypointLabel: string,
   isMiddleware: boolean
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const userCode = await compileUserCode(entrypoint, isMiddleware);
+  const userCode = await compileUserCode(
+    entrypointPath,
+    entrypointLabel,
+    isMiddleware
+  );
   const server = await createEdgeRuntime(userCode);
 
   return async function (request: IncomingMessage) {
@@ -331,17 +342,21 @@ async function createEventHandler(
   config: Config,
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const entryPointPath = join(process.cwd(), entrypoint!);
-  const runtime = parseRuntime(entrypoint, entryPointPath);
+  const entrypointPath = join(process.cwd(), entrypoint!);
+  const runtime = parseRuntime(entrypoint, entrypointPath);
 
   // `middleware.js`/`middleware.ts` file is always run as
   // an Edge Function, otherwise needs to be opted-in via
   // `export const config = { runtime: 'experimental-edge' }`
   if (config.middleware === true || runtime === 'experimental-edge') {
-    return createEdgeEventHandler(entryPointPath, !!config.middleware);
+    return createEdgeEventHandler(
+      entrypointPath,
+      entrypoint,
+      !!config.middleware
+    );
   }
 
-  return createServerlessEventHandler(entryPointPath, options);
+  return createServerlessEventHandler(entrypointPath, options);
 }
 
 let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;

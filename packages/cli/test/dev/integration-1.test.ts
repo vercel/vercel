@@ -71,7 +71,7 @@ test('[vercel dev] throws an error when an edge function has no response', async
     expect(await res.status).toBe(500);
     expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
     expect(stdout).toMatch(
-      /Unhandled rejection: Edge Function ".+edge-function-error\/api\/edge-no-response.js" did not return a response./g
+      /Unhandled rejection: Edge Function "api\/edge-no-response.js" did not return a response./g
     );
     expect(stderr).toMatch(
       /Failed to complete request to \/api\/edge-no-response: Error: socket hang up/g
