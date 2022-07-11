@@ -1323,12 +1323,7 @@ test('[vc projects] should create a project successfully', async t => {
     Math.random().toString(36).split('.')[1]
   }`;
 
-  const vc = execa(binaryPath, [
-    'projects',
-    'add',
-    projectName,
-    ...defaultArgs,
-  ]);
+  const vc = execa(binaryPath, ['project', 'add', projectName, ...defaultArgs]);
 
   await waitForPrompt(vc, chunk =>
     chunk.includes(`Success! Project ${projectName} added`)
@@ -1339,7 +1334,7 @@ test('[vc projects] should create a project successfully', async t => {
 
   // creating the same project again should succeed
   const vc2 = execa(binaryPath, [
-    'projects',
+    'project',
     'add',
     projectName,
     ...defaultArgs,
@@ -3517,7 +3512,7 @@ test('`vc --debug project ls` should output the projects listing', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   t.true(
-    stdout.includes('> Projects found under'),
+    stderr.includes('> Projects found under'),
     formatOutput({ stderr, stdout })
   );
 });

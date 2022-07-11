@@ -1,6 +1,5 @@
 import { client } from './client';
 import { Project } from '../../src/types';
-import { formatProvider } from '../../src/util/projects/connect-git-provider';
 
 const envs = [
   {
@@ -195,11 +194,26 @@ export function useProject(project: Partial<Project> = defaultProject) {
       }
     }
   });
-  client.scenario.delete(`/v4/projects/${project.id}/link`, (req, res) => {
+  client.scenario.delete(`/v4/projects/${project.id}/link`, (_req, res) => {
     if (project.link) {
       project.link = undefined;
     }
     res.json(project);
+  });
+  client.scenario.get(`/v4/projects`, (req, res) => {
+    res.json({
+      projects: [defaultProject],
+      pagination: null,
+    });
+  });
+  client.scenario.post(`/projects`, (req, res) => {
+    const { name } = req.body;
+    if (name === project.name) {
+      res.json(project);
+    }
+  });
+  client.scenario.delete(`/:version/projects/${project.id}`, (_req, res) => {
+    res.json({});
   });
 
   return { project, envs };

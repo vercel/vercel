@@ -193,7 +193,7 @@ async function compileUserCode(entrypoint: string, isMiddleware: boolean) {
 
           let edgeHandler = module.exports.default;
           if (!edgeHandler) {
-            throw new Error('No default export was found. Add a default export to handle requests.');
+            throw new Error('No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware');
           }
 
           let response = await edgeHandler(event.request, event);
@@ -319,7 +319,7 @@ function parseRuntime(
     throw new Error(
       `Invalid function runtime "${runtime}" for "${entrypoint}". Valid runtimes are: ${JSON.stringify(
         validRuntimes
-      )}`
+      )}. Learn more: https://vercel.link/creating-edge-functions`
     );
   }
 
