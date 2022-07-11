@@ -115,7 +115,7 @@ export const build = async ({
 
   console.log('Installing required dependencies...');
 
-  const packagesDir = 'vc__pypackages';
+  const packagesDir = '__pypackages__';
 
   await mkdirp(join(workPath, packagesDir));
 
