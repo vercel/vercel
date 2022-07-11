@@ -34,7 +34,11 @@ export default async function connect(
     return 2;
   }
   if (!project || !org) {
-    output.error('An unexpected error occurred.');
+    output.error(
+      `Can't find \`org\` or \`project\`. Make sure your current directory is linked to a Vercel projet by running ${getCommandName(
+        'link'
+      )}.`
+    );
     return 1;
   }
 
