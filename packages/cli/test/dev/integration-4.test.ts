@@ -444,9 +444,14 @@ test(
 
 test(
   '[vercel dev] Middleware that has no response',
-  testFixtureStdio('middleware-no-response', async (testPath: any) => {
-    await testPath(200, '/api/hello', 'hello form serverless function');
-  })
+  testFixtureStdio(
+    'middleware-no-response',
+    async (testPath: any) => {
+      await testPath(200, '/api/hello', 'hello from a serverless function');
+    },
+    // this doesn't work in production, yet
+    { skipDeploy: true }
+  )
 );
 
 test(
