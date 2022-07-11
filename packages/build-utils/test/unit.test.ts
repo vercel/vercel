@@ -520,7 +520,7 @@ it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)
   const meta: Meta = {};
   const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
   const apiDir = path.join(fixture, 'api');
-  let results: [boolean, boolean, boolean];
+  let results: [boolean, boolean, boolean] | undefined;
   await retry(
     async () => {
       results = await Promise.all([
@@ -531,7 +531,6 @@ it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)
     },
     { maxRetryTime: 3000 }
   );
-  // @ts-ignore use-before-assign
   const [run1, run2, run3] = results || [];
   expect(run1).toEqual(true);
   expect(run2).toEqual(false);
