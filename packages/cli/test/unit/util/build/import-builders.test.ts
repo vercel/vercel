@@ -1,9 +1,11 @@
 import ms from 'ms';
 import { join } from 'path';
 import { remove } from 'fs-extra';
+import retry from 'async-retry';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import { client } from '../../../mocks/client';
 import {
+  BuilderWithPkg,
   importBuilders,
   resolveBuilders,
 } from '../../../../src/util/build/import-builders';
@@ -32,7 +34,15 @@ describe('importBuilders()', () => {
     try {
       const spec = 'vercel-deno@2.0.1';
       const specs = new Set([spec]);
-      const builders = await importBuilders(specs, cwd, client.output);
+      let builders: Map<string, BuilderWithPkg> = new Map();
+      await retry(
+        async () => {
+          builders = await importBuilders(specs, cwd, client.output);
+        },
+        // @ts-ignore
+        { maxRetryTime: ms('5s') }
+      );
+
       expect(builders.size).toEqual(1);
       expect(builders.get(spec)?.pkg.name).toEqual('vercel-deno');
       expect(builders.get(spec)?.pkg.version).toEqual('2.0.1');
