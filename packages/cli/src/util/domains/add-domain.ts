@@ -3,7 +3,6 @@ import retry from 'async-retry';
 import { DomainAlreadyExists, InvalidDomain } from '../errors-ts';
 import { Domain } from '../../types';
 import Client from '../client';
-import wait from '../output/wait';
 
 type Response = {
   domain: Domain;
@@ -14,17 +13,11 @@ export default async function addDomain(
   domain: string,
   contextName: string
 ) {
-  const cancelWait = wait(
+  client.output.spinner(
     `Adding domain ${domain} under ${chalk.bold(contextName)}`
   );
-  try {
-    const addedDomain = await performAddRequest(client, domain);
-    cancelWait();
-    return addedDomain;
-  } catch (error) {
-    cancelWait();
-    throw error;
-  }
+  const addedDomain = await performAddRequest(client, domain);
+  return addedDomain;
 }
 
 async function performAddRequest(client: Client, domainName: string) {

@@ -2,12 +2,13 @@ import tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
 import { mkdirp, pathExists, readFile } from 'fs-extra';
-import { join } from 'path';
-import buildUtils from './build-utils';
+import { join, delimiter } from 'path';
 import stringArgv from 'string-argv';
-const { debug } = buildUtils;
+import { debug } from '@vercel/build-utils';
 const versionMap = new Map([
-  ['1.16', '1.16'],
+  ['1.18', '1.18.1'],
+  ['1.17', '1.17.3'],
+  ['1.16', '1.16.10'],
   ['1.15', '1.15.8'],
   ['1.14', '1.14.15'],
   ['1.13', '1.13.15'],
@@ -120,7 +121,7 @@ export async function createGo(
 ) {
   const binPath = join(getGoDir(workPath), 'bin');
   debug(`Adding ${binPath} to PATH`);
-  const path = `${binPath}:${process.env.PATH}`;
+  const path = `${binPath}${delimiter}${process.env.PATH}`;
   const env: { [key: string]: string } = {
     ...process.env,
     PATH: path,

@@ -27,7 +27,7 @@ export default async function reportError(
     if (user) {
       const spec = {
         email: user.email,
-        id: user.uid,
+        id: user.id,
         username: user.username,
         name: (user as any).name,
       };

@@ -1,9 +1,9 @@
 import fs from 'fs-extra';
 import { CantParseJSONFile } from './errors-ts';
 
-export default async function readJSONFile(
+export default async function readJSONFile<T>(
   file: string
-): Promise<Object | null | CantParseJSONFile> {
+): Promise<T | null | CantParseJSONFile> {
   const content = await readFileSafe(file);
   if (content === null) {
     return content;

@@ -1,12 +1,10 @@
-import { readdir as readRootFolder, lstatSync } from 'fs-extra';
-
-import { relative, isAbsolute } from 'path';
-import hashes, { mapToObject } from './utils/hashes';
+import { lstatSync } from 'fs-extra';
+import { isAbsolute } from 'path';
+import { hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
-import { buildFileTree, createDebug, parseVercelConfig } from './utils';
+import { buildFileTree, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import {
-  NowConfig,
   VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
@@ -15,13 +13,11 @@ import {
 export default function buildCreateDeployment() {
   return async function* createDeployment(
     clientOptions: VercelClientOptions,
-    deploymentOptions: DeploymentOptions = {},
-    nowConfig: NowConfig = {}
+    deploymentOptions: DeploymentOptions = {}
   ): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
     const { path } = clientOptions;
 
     const debug = createDebug(clientOptions.debug);
-    const cwd = process.cwd();
 
     debug('Creating deployment...');
 
@@ -50,8 +46,6 @@ export default function buildCreateDeployment() {
     clientOptions.isDirectory =
       !Array.isArray(path) && lstatSync(path).isDirectory();
 
-    let rootFiles: string[];
-
     if (Array.isArray(path)) {
       for (const filePath of path) {
         if (!isAbsolute(filePath)) {
@@ -69,45 +63,14 @@ export default function buildCreateDeployment() {
     }
 
     if (clientOptions.isDirectory && !Array.isArray(path)) {
-      debug(`Provided 'path' is a directory. Reading subpaths... `);
-      rootFiles = await readRootFolder(path);
-      debug(`Read ${rootFiles.length} subpaths`);
+      debug(`Provided 'path' is a directory.`);
     } else if (Array.isArray(path)) {
       debug(`Provided 'path' is an array of file paths`);
-      rootFiles = path;
     } else {
       debug(`Provided 'path' is a single file`);
-      rootFiles = [path];
     }
 
-    let { fileList } = await buildFileTree(
-      path,
-      clientOptions.isDirectory,
-      debug
-    );
-
-    let configPath: string | undefined;
-    if (!nowConfig) {
-      // If the user did not provide a config file, use the one in the root directory.
-      const relativePaths = fileList.map(f => relative(cwd, f));
-      const hasVercelConfig = relativePaths.includes('vercel.json');
-      const hasNowConfig = relativePaths.includes('now.json');
-
-      if (hasVercelConfig) {
-        if (hasNowConfig) {
-          throw new DeploymentError({
-            code: 'conflicting_config',
-            message:
-              'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
-          });
-        }
-        configPath = 'vercel.json';
-      } else if (hasNowConfig) {
-        configPath = 'now.json';
-      }
-
-      nowConfig = await parseVercelConfig(configPath);
-    }
+    const { fileList } = await buildFileTree(path, clientOptions, debug);
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.

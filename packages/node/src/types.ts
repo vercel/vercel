@@ -28,7 +28,7 @@ export type NowRequestCookies = VercelRequestCookies;
 /** @deprecated Use VercelRequestQuery instead. */
 export type NowRequestQuery = VercelRequestQuery;
 
-/** @deprecated Use `any` instead. */
+/** @deprecated Use VercelRequestBody instead. */
 export type NowRequestBody = any;
 
 /** @deprecated Use VercelRequest instead. */

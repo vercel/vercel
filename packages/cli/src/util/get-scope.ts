@@ -1,6 +1,6 @@
 import Client from './client';
 import getUser from './get-user';
-import getTeamById from './get-team-by-id';
+import getTeamById from './teams/get-team-by-id';
 import { TeamDeleted } from './errors-ts';
 import { Team } from '../types';
 

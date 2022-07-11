@@ -1,4 +1,4 @@
-import { walkParentDirs } from '../';
+import { walkParentDirs } from '../src';
 import { strict } from 'assert';
 import { join } from 'path';
 import { promises } from 'fs';

@@ -1,16 +1,16 @@
-![Hexo Logo](https://github.com/vercel/vercel/blob/master/packages/frameworks/logos/hexo.svg)
+![Hexo Logo](https://github.com/vercel/vercel/blob/main/packages/frameworks/logos/hexo.svg)
 
 # Hexo Example
 
-This directory is a brief example of a [Hexo](https://hexo.io/) site that can be deployed with Vercel and zero configuration.
+This directory is a brief example of a [Hexo](https://hexo.io/) site that can be deployed to Vercel with zero configuration.
 
 ## Deploy Your Own
 
 Deploy your own Hexo project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/hexo)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/hexo&template=hexo)
 
-_Live Example: https://hexo.now-examples.now.sh_
+_Live Example: https://hexo-template.vercel.app_
 
 ### How We Created This Example
 

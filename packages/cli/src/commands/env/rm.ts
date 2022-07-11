@@ -13,7 +13,6 @@ import {
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
-import withSpinner from '../../util/with-spinner';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
@@ -68,10 +67,16 @@ export default async function rm(
     return 1;
   }
 
-  const result = await getEnvRecords(output, client, project.id, {
-    target: envTarget,
-    gitBranch: envGitBranch,
-  });
+  const result = await getEnvRecords(
+    output,
+    client,
+    project.id,
+    'vercel-cli:env:rm',
+    {
+      target: envTarget,
+      gitBranch: envGitBranch,
+    }
+  );
 
   let envs = result.envs.filter(env => env.key === envName);
 
@@ -99,6 +104,7 @@ export default async function rm(
   if (
     !skipConfirmation &&
     !(await confirm(
+      client,
       `Removing Environment Variable ${param(env.key)} from ${formatEnvTarget(
         env
       )} in Project ${chalk.bold(project.name)}. Are you sure?`,
@@ -112,9 +118,8 @@ export default async function rm(
   const rmStamp = stamp();
 
   try {
-    await withSpinner('Removing', async () => {
-      await removeEnvRecord(output, client, project.id, env);
-    });
+    output.spinner('Removing');
+    await removeEnvRecord(output, client, project.id, env);
   } catch (error) {
     if (isKnownError(error) && error.serverMessage) {
       output.error(error.serverMessage);

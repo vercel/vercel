@@ -1,4 +1,4 @@
-import { Route } from '@vercel/routing-utils';
+import { Rewrite, Route } from '@vercel/routing-utils';
 
 export interface FrameworkDetectionItem {
   /**
@@ -26,11 +26,16 @@ export interface SettingValue {
    * A predefined setting for the detected framework
    * @example "next dev --port $PORT"
    */
-  value: string;
+  value: string | null;
   placeholder?: string;
 }
 
 export type Setting = SettingValue | SettingPlaceholder;
+
+export type Redirect = Rewrite & {
+  statusCode?: number;
+  permanent?: boolean;
+};
 
 /**
  * Framework detection information.
@@ -52,8 +57,18 @@ export interface Framework {
    */
   logo: string;
   /**
+   * An additional URL to the logo of the framework optimized for dark mode
+   * @example "https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next-dark.svg"
+   */
+  darkModeLogo?: string;
+  /**
+   * A URL to a screenshot of the demo
+   * @example "https://assets.vercel.com/image/upload/v1647366075/front/import/nextjs.png"
+   */
+  screenshot?: string;
+  /**
    * A URL to a deployed example of the framework
-   * @example "https://nextjs.now-examples.vercel.app"
+   * @example "https://nextjs-template.vercel.app"
    */
   demo?: string;
   /**
@@ -120,11 +135,11 @@ export interface Framework {
     /**
      * Default Build Command or a placeholder
      */
-    buildCommand: Setting;
+    buildCommand: SettingValue;
     /**
      * Default Development Command or a placeholder
      */
-    devCommand: Setting;
+    devCommand: SettingValue;
     /**
      * Default Output Directory
      */
@@ -148,11 +163,12 @@ export interface Framework {
   /**
    * Name of a dependency in `package.json` to detect this framework.
    * @example "hexo"
+   * @deprecated use `detectors` instead (new frameworks should not use this prop)
    */
   dependency?: string;
   /**
    * Function that returns the name of the directory that the framework outputs
-   * its build results to. In some cases this is read from a configuration file.
+   * its STATIC build results to. In some cases this is read from a configuration file.
    */
   getOutputDirName: (dirPrefix: string) => Promise<string>;
   /**
@@ -166,16 +182,6 @@ export interface Framework {
    * @example ".cache/**"
    */
   cachePattern?: string;
-  /**
-   * The default build command for the framework.
-   * @example "next build"
-   */
-  buildCommand: string | null;
-  /**
-   * The default development command for the framework.
-   * @example "next dev"
-   */
-  devCommand: string | null;
   /**
    * The default version of the framework command that is available within the
    * build image. Usually an environment variable can be set to override this.

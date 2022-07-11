@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import multiStream from 'multistream';
 import path from 'path';
 import Sema from 'async-sema';
-import { File } from './types';
+import { FileBase } from './types';
 
 const semaToPreventEMFILE = new Sema(20);
 
@@ -20,7 +20,7 @@ interface FromStreamOptions {
   fsPath: string;
 }
 
-class FileFsRef implements File {
+class FileFsRef implements FileBase {
   public type: 'FileFsRef';
   public mode: number;
   public fsPath: string;
@@ -100,4 +100,4 @@ class FileFsRef implements File {
   }
 }
 
-export = FileFsRef;
+export default FileFsRef;

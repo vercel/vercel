@@ -243,7 +243,7 @@ function printLogShort(log: any) {
 
   const date = new Date(log.created).toISOString();
 
-  data.split('\n').forEach((line, i) => {
+  data.split('\n').forEach(line => {
     if (
       line.includes('START RequestId:') ||
       line.includes('END RequestId:') ||
@@ -260,18 +260,9 @@ function printLogShort(log: any) {
       }
     }
 
-    if (i === 0) {
-      console.log(
-        `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}`
-      );
-    } else {
-      console.log(
-        `${' '.repeat(date.length)}  ${line.replace(
-          '[now-builder-debug] ',
-          ''
-        )}`
-      );
-    }
+    console.log(
+      `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}`
+    );
   });
 
   return 0;

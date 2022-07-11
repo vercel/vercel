@@ -2,16 +2,19 @@ import { validate as validateEmail } from 'email-validator';
 import chalk from 'chalk';
 import hp from '../util/humanize-path';
 import getArgs from '../util/get-args';
-import handleError from '../util/handle-error';
 import logo from '../util/output/logo';
 import prompt from '../util/login/prompt';
-import doSsoLogin from '../util/login/sso';
+import doSamlLogin from '../util/login/saml';
 import doEmailLogin from '../util/login/email';
+import doGithubLogin from '../util/login/github';
+import doGitlabLogin from '../util/login/gitlab';
+import doBitbucketLogin from '../util/login/bitbucket';
 import { prependEmoji, emoji } from '../util/emoji';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import getGlobalPathConfig from '../util/config/global-path';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
 import Client from '../util/client';
+import { LoginResult } from '../util/login/types';
 
 const help = () => {
   console.log(`
@@ -40,19 +43,22 @@ const help = () => {
   ${chalk.gray('–')} Log in using a specific team "slug" for SAML Single Sign-On
 
     ${chalk.cyan(`$ ${getPkgName()} login acme`)}
+
+  ${chalk.gray('–')} Log in using GitHub in "out-of-band" mode
+
+    ${chalk.cyan(`$ ${getPkgName()} login --github --oob`)}
 `);
 };
 
 export default async function login(client: Client): Promise<number> {
-  let argv;
   const { output } = client;
 
-  try {
-    argv = getArgs(client.argv.slice(2));
-  } catch (err) {
-    handleError(err);
-    return 1;
-  }
+  const argv = getArgs(client.argv.slice(2), {
+    '--oob': Boolean,
+    '--github': Boolean,
+    '--gitlab': Boolean,
+    '--bitbucket': Boolean,
+  });
 
   if (argv['--help']) {
     help();
@@ -66,18 +72,24 @@ export default async function login(client: Client): Promise<number> {
 
   const input = argv._[1];
 
-  let result: number | string = 1;
+  let result: LoginResult = 1;
 
   if (input) {
     // Email or Team slug was provided via command line
     if (validateEmail(input)) {
       result = await doEmailLogin(client, input);
     } else {
-      result = await doSsoLogin(client, input);
+      result = await doSamlLogin(client, input, argv['--oob']);
     }
+  } else if (argv['--github']) {
+    result = await doGithubLogin(client, argv['--oob']);
+  } else if (argv['--gitlab']) {
+    result = await doGitlabLogin(client, argv['--oob']);
+  } else if (argv['--bitbucket']) {
+    result = await doBitbucketLogin(client, argv['--oob']);
   } else {
     // Interactive mode
-    result = await prompt(client);
+    result = await prompt(client, undefined, argv['--oob']);
   }
 
   // The login function failed, so it returned an exit code
@@ -85,21 +97,28 @@ export default async function login(client: Client): Promise<number> {
     return result;
   }
 
-  // When `result` is a string it's the user's authentication token.
-  // It needs to be saved to the configuration file.
-  client.authConfig.token = result;
+  // If the token was upgraded (not a new login), then don't modify
+  // the current scope.
+  if (!client.authConfig.token) {
+    if (result.teamId) {
+      // SSO login, so set the current scope to the appropriate Team
+      client.config.currentTeam = result.teamId;
+    } else {
+      delete client.config.currentTeam;
+    }
+  }
 
-  // New user, so we can't keep the team
-  delete client.config.currentTeam;
+  // Save the user's authentication token to the configuration file.
+  client.authConfig.token = result.token;
 
   writeToAuthConfigFile(client.authConfig);
   writeToConfigFile(client.config);
 
   output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
-  console.log(
+  output.print(
     `${chalk.cyan('Congratulations!')} ` +
-      `You are now logged in. In order to deploy something, run ${getCommandName()}.`
+      `You are now logged in. In order to deploy something, run ${getCommandName()}.\n`
   );
 
   output.print(

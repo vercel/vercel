@@ -4,8 +4,14 @@ import { NowBuildError } from '../errors';
 import debug from '../debug';
 
 const allOptions = [
+  { major: 16, range: '16.x', runtime: 'nodejs16.x' },
   { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-  { major: 12, range: '12.x', runtime: 'nodejs12.x' },
+  {
+    major: 12,
+    range: '12.x',
+    runtime: 'nodejs12.x',
+    discontinueDate: new Date('2022-08-09'),
+  },
   {
     major: 10,
     range: '10.x',
@@ -20,7 +26,7 @@ const allOptions = [
   },
 ] as const;
 
-function getHint(isAuto: boolean) {
+function getHint(isAuto = false) {
   const { major, range } = getLatestNodeVersion();
   return isAuto
     ? `Please set Node.js Version to ${range} in your Project Settings to use Node.js ${major}.`
@@ -40,7 +46,7 @@ export function getDiscontinuedNodeVersions(): NodeVersion[] {
 
 export async function getSupportedNodeVersion(
   engineRange: string | undefined,
-  isAuto: boolean
+  isAuto = false
 ): Promise<NodeVersion> {
   let selection: NodeVersion = getLatestNodeVersion();
 

@@ -13,8 +13,8 @@ import {
   Lambda,
   FileBlob,
   FileFsRef,
-  isOfficialRuntime,
 } from '@vercel/build-utils';
+import { isOfficialRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 
@@ -35,6 +35,7 @@ import {
   BuildResultV3,
   BuilderOutputs,
   EnvConfigs,
+  BuiltLambda,
 } from './types';
 import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
@@ -96,7 +97,7 @@ async function createBuildProcess(
 }
 
 export async function executeBuild(
-  nowConfig: VercelConfig,
+  vercelConfig: VercelConfig,
   devServer: DevServer,
   files: BuilderInputs,
   match: BuildMatch,
@@ -109,7 +110,8 @@ export async function executeBuild(
     builderWithPkg: { runInProcess, requirePath, builder, package: pkg },
   } = match;
   const { entrypoint } = match;
-  const { debug, envConfigs, cwd: workPath, devCacheDir } = devServer;
+  const { envConfigs, cwd: workPath, devCacheDir } = devServer;
+  const debug = devServer.output.isDebugEnabled();
 
   const startTime = Date.now();
   const showBuildTimestamp =
@@ -140,6 +142,7 @@ export async function executeBuild(
     files,
     entrypoint,
     workPath,
+    repoRootPath: workPath,
     config,
     meta: {
       isDev: true,
@@ -216,13 +219,13 @@ export async function executeBuild(
 
     if (output.maxDuration) {
       throw new Error(
-        'The result of "builder.build()" must not contain `memory`'
+        'The result of "builder.build()" must not contain `maxDuration`'
       );
     }
 
     if (output.memory) {
       throw new Error(
-        'The result of "builder.build()" must not contain `maxDuration`'
+        'The result of "builder.build()" must not contain `memory`'
       );
     }
 
@@ -263,7 +266,7 @@ export async function executeBuild(
   }
 
   const { output } = result;
-  const { cleanUrls } = nowConfig;
+  const { cleanUrls } = vercelConfig;
 
   // Mimic fmeta-util and perform file renaming
   Object.entries(output).forEach(([path, value]) => {
@@ -286,8 +289,8 @@ export async function executeBuild(
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
   for (const name of Object.keys(output)) {
-    const obj = output[name] as File;
-    let lambda: Lambda;
+    const obj = output[name] as File | Lambda;
+    let lambda: BuiltLambda;
     let fileRef: FileFsRef;
     let fileBlob: FileBlob;
     switch (obj.type) {
@@ -301,7 +304,7 @@ export async function executeBuild(
         output[name] = fileBlob;
         break;
       case 'Lambda':
-        lambda = Object.assign(Object.create(Lambda.prototype), obj) as Lambda;
+        lambda = Object.assign(Object.create(Lambda.prototype), obj);
         // Convert the JSON-ified Buffer object back into an actual Buffer
         lambda.zipBuffer = Buffer.from((obj as any).zipBuffer.data);
         output[name] = lambda;
@@ -359,7 +362,7 @@ export async function executeBuild(
           MemorySize: asset.memory || 3008,
           Environment: {
             Variables: {
-              ...nowConfig.env,
+              ...vercelConfig.env,
               ...asset.environment,
               ...envConfigs.runEnv,
             },
@@ -383,7 +386,7 @@ export async function executeBuild(
 }
 
 export async function getBuildMatches(
-  nowConfig: VercelConfig,
+  vercelConfig: VercelConfig,
   cwd: string,
   output: Output,
   devServer: DevServer,
@@ -398,7 +401,7 @@ export async function getBuildMatches(
   }
 
   const noMatches: Builder[] = [];
-  const builds = nowConfig.builds || [{ src: '**', use: '@vercel/static' }];
+  const builds = vercelConfig.builds || [{ src: '**', use: '@vercel/static' }];
 
   for (const buildConfig of builds) {
     let { src = '**', use, config = {} } = buildConfig;
@@ -413,10 +416,6 @@ export async function getBuildMatches(
       // of Vercel deployments.
       src = src.substring(1);
     }
-
-    // We need to escape brackets since `glob` will
-    // try to find a group otherwise
-    src = src.replace(/(\[|\])/g, '[$1]');
 
     // lambda function files are trimmed of their file extension
     const mapToEntrypoint = new Map<string, string>();

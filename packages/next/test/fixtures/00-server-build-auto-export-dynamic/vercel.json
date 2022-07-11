@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "uploadNowJson": true,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/teams/invite/hello",
+      "mustContain": "hello from /teams/invite/[inviteCode] hello"
+    },
+    {
+      "path": "/groups/first",
+      "mustContain": "hello from /groups/[id] first"
+    },
+    {
+      "path": "/groups/second",
+      "mustContain": "hello from /groups/[id] second"
+    },
+    {
+      "path": "/groups/third",
+      "mustContain": "loading..."
+    },
+    {
+      "path": "/another/invite/hello",
+      "mustContain": "hello from /[teamSlug]/[project]/[id]"
+    }
+  ]
+}

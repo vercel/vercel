@@ -5,17 +5,18 @@ import { mkdirp } from 'fs-extra';
 import { promisify } from 'util';
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
-import buildUtils from './build-utils';
-import { BuildOptions } from '@vercel/build-utils';
-const {
+import {
+  BuildOptions,
   getWriteableDirectory,
   download,
   glob,
   createLambda,
   shouldServe,
   debug,
-} = buildUtils;
+  NowBuildError,
+} from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
+import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
@@ -23,6 +24,7 @@ async function pipenvConvert(cmd: string, srcDir: string) {
     const out = await execa.stdout(cmd, [], {
       cwd: srcDir,
     });
+    debug('Contents of requirements.txt is: ' + out);
     fs.writeFileSync(join(srcDir, 'requirements.txt'), out);
   } catch (err) {
     console.log('Failed to run "pipfile2req"');
@@ -60,7 +62,7 @@ export async function downloadFilesInWorkPath({
   workPath,
   files,
   meta = {},
-}: BuildOptions) {
+}: Pick<BuildOptions, 'entrypoint' | 'workPath' | 'files' | 'meta'>) {
   debug('Downloading user files...');
   let downloadedFiles = await download(files, workPath, meta);
   if (meta.isDev) {
@@ -85,12 +87,13 @@ export const build = async ({
   meta = {},
   config,
 }: BuildOptions) => {
+  let pythonVersion = getLatestPythonVersion(meta);
+
   workPath = await downloadFilesInWorkPath({
     workPath,
     files: originalFiles,
     entrypoint,
     meta,
-    config,
   });
 
   try {
@@ -117,6 +120,8 @@ export const build = async ({
   await mkdirp(join(workPath, packagesDir));
 
   await installRequirement({
+    pythonPath: pythonVersion.pythonPath,
+    pipPath: pythonVersion.pipPath,
     dependency: 'werkzeug',
     version: '1.0.1',
     workPath: join(workPath, packagesDir),
@@ -135,12 +140,28 @@ export const build = async ({
   if (pipfileLockDir) {
     debug('Found "Pipfile.lock"');
 
+    try {
+      const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
+      const obj = JSON.parse(json);
+      pythonVersion = getSupportedPythonVersion({
+        isDev: meta.isDev,
+        pipLockPythonVersion: obj?._meta?.requires?.python_version,
+      });
+    } catch (err) {
+      throw new NowBuildError({
+        code: 'INVALID_PIPFILE_LOCK',
+        message: 'Unable to parse Pipfile.lock',
+      });
+    }
+
     // Convert Pipenv.Lock to requirements.txt.
     // We use a different`workPath` here because we want `pipfile-requirements` and it's dependencies
     // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
     // it into a separate folder.
     const tempDir = await getWriteableDirectory();
     await installRequirement({
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
       dependency: 'pipfile-requirements',
       version: '0.3.0',
       workPath: tempDir,
@@ -168,6 +189,8 @@ export const build = async ({
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
     await installRequirementsFile({
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
       workPath: join(workPath, packagesDir),
       meta,
@@ -176,6 +199,8 @@ export const build = async ({
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
     await installRequirementsFile({
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
       workPath: join(workPath, packagesDir),
       meta,
@@ -200,9 +225,6 @@ export const build = async ({
   const handlerPyFilename = 'vc__handler__python';
 
   await writeFile(join(workPath, `${handlerPyFilename}.py`), handlerPyContents);
-
-  // Use the system-installed version of `python3` when running via `vercel dev`
-  const runtime = meta.isDev ? 'python3' : 'python3.6';
 
   const outputFiles = await glob('**', workPath);
 
@@ -238,7 +260,7 @@ export const build = async ({
   const lambda = await createLambda({
     files: outputFiles,
     handler: `${handlerPyFilename}.vc_handler`,
-    runtime,
+    runtime: pythonVersion.runtime,
     environment: {},
   });
 

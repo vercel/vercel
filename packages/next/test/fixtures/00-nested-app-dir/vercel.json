@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "outputDirectory": "dist/apps/app/.next"
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/another",
+      "status": 200,
+      "mustContain": "another page"
+    },
+    {
+      "path": "/_next/data/testing-build-id/another.json",
+      "status": 200,
+      "mustContain": "gsspData"
+    }
+  ]
+}

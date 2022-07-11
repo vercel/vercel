@@ -23,7 +23,6 @@ export { VercelConfig };
 
 export interface DevServerOptions {
   output: Output;
-  debug: boolean;
   devCommand?: string;
   frameworkSlug?: string;
   projectSettings?: ProjectSettings;
@@ -67,6 +66,7 @@ export interface BuilderInputs {
 }
 
 export interface BuiltLambda extends Lambda {
+  zipBuffer: Buffer;
   fn?: FunLambda;
 }
 

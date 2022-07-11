@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "declaration": false,
+    "declaration": true,
     "esModuleInterop": true,
-    "lib": ["esnext"],
+    "lib": ["ES2020"],
     "module": "commonjs",
     "moduleResolution": "node",
     "noEmitOnError": true,
@@ -11,8 +11,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "outDir": "dist",
-    "types": ["node"],
+    "types": ["node", "jest"],
     "strict": true,
-    "target": "esnext"
-  }
+    "target": "ES2020"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

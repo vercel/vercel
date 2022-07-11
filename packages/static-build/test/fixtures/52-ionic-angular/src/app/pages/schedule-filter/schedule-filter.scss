@@ -1,0 +1,32 @@
+/*
+ * Material Design
+ */
+
+.md ion-toolbar ion-button {
+  text-transform: capitalize;
+  letter-spacing: 0;
+}
+
+.md ion-checkbox {
+  --background-checked: transparent;
+  --border-color: transparent;
+  --border-color-checked: transparent;
+  --checkmark-color: var(--ion-color-primary);
+}
+
+.md ion-list {
+  background: inherit;
+}
+
+
+/*
+ * iOS
+ */
+
+.ios ion-list-header {
+  margin-top: 10px;
+}
+
+.ios ion-label {
+  color: var(--ion-color-primary);
+}

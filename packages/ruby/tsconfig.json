@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "declaration": false,
+    "declaration": true,
     "esModuleInterop": true,
-    "lib": ["esnext"],
+    "lib": ["ES2020"],
     "module": "commonjs",
     "moduleResolution": "node",
     "noEmitOnError": true,
@@ -12,6 +12,6 @@
     "noUnusedParameters": true,
     "outDir": "dist",
     "strict": true,
-    "target": "esnext"
+    "target": "ES2020"
   }
 }

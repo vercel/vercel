@@ -15,38 +15,42 @@
     "lerna": "3.16.4"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "2.0.0",
-    "@typescript-eslint/parser": "2.0.0",
-    "@vercel/ncc": "0.24.0",
+    "@typescript-eslint/eslint-plugin": "5.21.0",
+    "@typescript-eslint/parser": "5.21.0",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
-    "cheerio": "1.0.0-rc.3",
-    "eslint": "6.2.2",
-    "eslint-config-prettier": "6.1.0",
-    "eslint-plugin-jest": "23.8.2",
-    "husky": "6.0.0",
+    "eslint": "8.14.0",
+    "eslint-config-prettier": "8.5.0",
+    "eslint-plugin-jest": "26.1.5",
+    "husky": "7.0.4",
+    "jest": "28.0.2",
     "json5": "2.1.1",
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.1",
     "npm-package-arg": "6.1.0",
-    "prettier": "2.0.5"
+    "prettier": "2.6.2",
+    "ts-eager": "2.0.2",
+    "ts-jest": "28.0.5",
+    "turbo": "1.3.1"
   },
   "scripts": {
     "lerna": "lerna",
     "bootstrap": "lerna bootstrap",
     "publish-stable": "echo 'Run `yarn changelog` for instructions'",
-    "publish-canary": "git pull && lerna version prerelease --preid canary --message 'Publish Canary' --exact",
+    "publish-canary": "git checkout main && git pull && lerna version prerelease --preid canary --message \"Publish Canary\" --exact",
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
-    "build": "node utils/run.js build all",
-    "vercel-build": "mkdir -p public && echo '<a href=\"https://vercel.com/import\">Import</a>' > public/output.html",
+    "build": "turbo run build",
+    "vercel-build": "yarn build && yarn run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
-    "test-unit": "node utils/run.js test-unit",
-    "test-integration-cli": "node utils/run.js test-integration-cli",
-    "test-integration-once": "node utils/run.js test-integration-once",
-    "test-integration-dev": "node utils/run.js test-integration-dev",
+    "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
+    "test-unit": "yarn test && turbo run test-unit",
+    "test-integration-cli": "turbo run test-integration-cli",
+    "test-integration-once": "turbo run test-integration-once",
+    "test-integration-dev": "turbo run test-integration-dev",
     "lint": "eslint . --ext .ts,.js",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "pack": "cd utils && node -r ts-eager/register ./pack.ts"
   },
   "lint-staged": {
     "./{*,{api,packages,test,utils}/**/*}.{js,ts}": [
@@ -79,8 +83,7 @@
       "eslint:recommended",
       "plugin:@typescript-eslint/eslint-recommended",
       "plugin:@typescript-eslint/recommended",
-      "prettier",
-      "prettier/@typescript-eslint"
+      "prettier"
     ],
     "env": {
       "node": true,
@@ -88,27 +91,28 @@
       "es6": true
     },
     "rules": {
+      "no-restricted-syntax": [
+        "warn",
+        "WithStatement",
+        {
+          "message": "substr() is deprecated, use slice() or substring() instead",
+          "selector": "MemberExpression > Identifier[name='substr']"
+        }
+      ],
       "require-atomic-updates": 0,
-      "@typescript-eslint/ban-ts-ignore": 0,
+      "@typescript-eslint/ban-ts-comment": 0,
       "@typescript-eslint/camelcase": 0,
-      "@typescript-eslint/explicit-function-return-type": 0,
+      "@typescript-eslint/explicit-module-boundary-types": 0,
       "@typescript-eslint/no-empty-function": 0,
       "@typescript-eslint/no-explicit-any": 0,
       "@typescript-eslint/no-non-null-assertion": 0,
       "@typescript-eslint/no-unused-vars": 2,
       "@typescript-eslint/no-use-before-define": 0,
+      "@typescript-eslint/no-var-requires": 0,
       "jest/no-disabled-tests": 2,
       "jest/no-focused-tests": 2
     },
     "overrides": [
-      {
-        "files": [
-          "**/*.js"
-        ],
-        "rules": {
-          "@typescript-eslint/no-var-requires": "off"
-        }
-      },
       {
         "files": [
           "packages/cli/**/*"
@@ -125,8 +129,7 @@
           "@typescript-eslint/member-delimiter-style": 0,
           "@typescript-eslint/no-empty-function": 0,
           "@typescript-eslint/no-explicit-any": 0,
-          "@typescript-eslint/no-inferrable-types": 0,
-          "@typescript-eslint/no-var-requires": 0
+          "@typescript-eslint/no-inferrable-types": 0
         }
       },
       {

@@ -1,6 +1,5 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import wait from '../output/wait';
 import Client from '../client';
 import { Cert } from '../../types';
 
@@ -10,7 +9,7 @@ export default async function createCertFromFile(
   certPath: string,
   caPath: string
 ) {
-  const cancelWait = wait('Adding your custom certificate');
+  client.output.spinner('Adding your custom certificate');
 
   try {
     const cert = readFileSync(resolve(certPath), 'utf8');
@@ -36,7 +35,5 @@ export default async function createCertFromFile(
     }
 
     throw error;
-  } finally {
-    cancelWait();
   }
 }

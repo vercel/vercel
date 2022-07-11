@@ -5,7 +5,6 @@ import getSubcommand from '../../util/get-subcommand';
 import Client from '../../util/client';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
-import error from '../../util/output/error';
 import init from './init';
 import { getPkgName } from '../../util/pkg-name';
 
@@ -44,6 +43,7 @@ const help = () => {
 };
 
 export default async function main(client: Client) {
+  const { output } = client;
   let argv;
   let args;
 
@@ -64,15 +64,15 @@ export default async function main(client: Client) {
   }
 
   if (argv._.length > 3) {
-    client.output.error('Too much arguments.');
+    output.error('Too much arguments.');
     return 1;
   }
 
   try {
     return await init(client, argv, args);
   } catch (err) {
-    console.log(error(err.message));
-    client.output.debug(err.stack);
+    output.prettyError(err);
+    output.debug(err.stack);
     return 1;
   }
 }

@@ -4,16 +4,18 @@ import { nodeFetch, zeitFetch } from './fetch';
 import { join, sep, relative } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
-type Ignore = ReturnType<typeof ignore>;
 import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
-import { VercelClientOptions, DeploymentOptions, NowConfig } from '../types';
+import { VercelClientOptions, DeploymentOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
-import readdir from 'recursive-readdir';
+import readdir from './readdir-recursive';
+
+type Ignore = ReturnType<typeof ignore>;
+
 const semaphore = new Sema(10);
 
-export const API_FILES = '/v2/now/files';
+export const API_FILES = '/v2/files';
 
 const EVENTS_ARRAY = [
   // File events
@@ -31,6 +33,14 @@ const EVENTS_ARRAY = [
   'notice',
   'tip',
   'canceled',
+  // Checks events
+  'checks-registered',
+  'checks-completed',
+  'checks-running',
+  'checks-conclusion-succeeded',
+  'checks-conclusion-failed',
+  'checks-conclusion-skipped',
+  'checks-conclusion-canceled',
 ] as const;
 
 export type DeploymentEventType = typeof EVENTS_ARRAY[number];
@@ -40,13 +50,15 @@ export function getApiDeploymentsUrl(
   metadata?: Pick<DeploymentOptions, 'builds' | 'functions'>
 ) {
   if (metadata && metadata.builds && !metadata.functions) {
-    return '/v10/now/deployments';
+    return '/v10/deployments';
   }
 
-  return '/v13/now/deployments';
+  return '/v13/deployments';
 }
 
-export async function parseVercelConfig(filePath?: string): Promise<NowConfig> {
+export async function parseVercelConfig(
+  filePath?: string
+): Promise<VercelConfig> {
   if (!filePath) {
     return {};
   }
@@ -73,12 +85,15 @@ const maybeRead = async function <T>(path: string, default_: T) {
 
 export async function buildFileTree(
   path: string | string[],
-  isDirectory: boolean,
+  {
+    isDirectory,
+    prebuilt,
+  }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt'>,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
   const ignoreList: string[] = [];
   let fileList: string[];
-  let { ig, ignores } = await getVercelIgnore(path);
+  let { ig, ignores } = await getVercelIgnore(path, prebuilt);
 
   debug(`Found ${ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
@@ -109,61 +124,74 @@ export async function buildFileTree(
 }
 
 export async function getVercelIgnore(
-  cwd: string | string[]
+  cwd: string | string[],
+  prebuilt?: boolean
 ): Promise<{ ig: Ignore; ignores: string[] }> {
-  const ignores: string[] = [
-    '.hg',
-    '.git',
-    '.gitmodules',
-    '.svn',
-    '.cache',
-    '.next',
-    '.now',
-    '.vercel',
-    '.npmignore',
-    '.dockerignore',
-    '.gitignore',
-    '.*.swp',
-    '.DS_Store',
-    '.wafpicke-*',
-    '.lock-wscript',
-    '.env.local',
-    '.env.*.local',
-    '.venv',
-    'npm-debug.log',
-    'config.gypi',
-    'node_modules',
-    '__pycache__',
-    'venv',
-    'CVS',
-    '.vercel_build_output',
-  ];
+  const ig = ignore();
+  let ignores: string[];
 
-  const cwds = Array.isArray(cwd) ? cwd : [cwd];
+  if (prebuilt) {
+    const outputDir = '.vercel/output';
+    ignores = ['*'];
+    const parts = outputDir.split('/');
+    parts.forEach((_, i) => {
+      const level = parts.slice(0, i + 1).join('/');
+      ignores.push(`!${level}`);
+    });
+    ignores.push(`!${outputDir}/**`);
+    ig.add(ignores.join('\n'));
+  } else {
+    ignores = [
+      '.hg',
+      '.git',
+      '.gitmodules',
+      '.svn',
+      '.cache',
+      '.next',
+      '.now',
+      '.vercel',
+      '.npmignore',
+      '.dockerignore',
+      '.gitignore',
+      '.*.swp',
+      '.DS_Store',
+      '.wafpicke-*',
+      '.lock-wscript',
+      '.env.local',
+      '.env.*.local',
+      '.venv',
+      'npm-debug.log',
+      'config.gypi',
+      'node_modules',
+      '__pycache__',
+      'venv',
+      'CVS',
+    ];
 
-  const files = await Promise.all(
-    cwds.map(async cwd => {
-      const [vercelignore, nowignore] = await Promise.all([
-        maybeRead(join(cwd, '.vercelignore'), ''),
-        maybeRead(join(cwd, '.nowignore'), ''),
-      ]);
-      if (vercelignore && nowignore) {
-        throw new NowBuildError({
-          code: 'CONFLICTING_IGNORE_FILES',
-          message:
-            'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.',
-          link: 'https://vercel.link/combining-old-and-new-config',
-        });
-      }
-      return vercelignore || nowignore;
-    })
-  );
+    const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
-  const ignoreFile = files.join('\n');
+    const files = await Promise.all(
+      cwds.map(async cwd => {
+        const [vercelignore, nowignore] = await Promise.all([
+          maybeRead(join(cwd, '.vercelignore'), ''),
+          maybeRead(join(cwd, '.nowignore'), ''),
+        ]);
+        if (vercelignore && nowignore) {
+          throw new NowBuildError({
+            code: 'CONFLICTING_IGNORE_FILES',
+            message:
+              'Cannot use both a `.vercelignore` and `.nowignore` file. Please delete the `.nowignore` file.',
+            link: 'https://vercel.link/combining-old-and-new-config',
+          });
+        }
+        return vercelignore || nowignore;
+      })
+    );
 
-  const ig = ignore().add(
-    `${ignores.join('\n')}\n${clearRelative(ignoreFile)}`
-  );
+    const ignoreFile = files.join('\n');
+
+    ig.add(`${ignores.join('\n')}\n${clearRelative(ignoreFile)}`);
+  }
 
   return { ig, ignores };
 }
@@ -239,39 +267,31 @@ export const prepareFiles = (
   files: Map<string, DeploymentFile>,
   clientOptions: VercelClientOptions
 ): PreparedFile[] => {
-  const preparedFiles = [...files.keys()].reduce(
-    (acc: PreparedFile[], sha: string): PreparedFile[] => {
-      const next = [...acc];
+  const preparedFiles: PreparedFile[] = [];
+  for (const [sha, file] of files) {
+    for (const name of file.names) {
+      let fileName: string;
 
-      const file = files.get(sha) as DeploymentFile;
-
-      for (const name of file.names) {
-        let fileName: string;
-
-        if (clientOptions.isDirectory) {
-          // Directory
-          fileName =
-            typeof clientOptions.path === 'string'
-              ? relative(clientOptions.path, name)
-              : name;
-        } else {
-          // Array of files or single file
-          const segments = name.split(sep);
-          fileName = segments[segments.length - 1];
-        }
-
-        next.push({
-          file: isWin ? fileName.replace(/\\/g, '/') : fileName,
-          size: file.data.byteLength || file.data.length,
-          mode: file.mode,
-          sha,
-        });
+      if (clientOptions.isDirectory) {
+        // Directory
+        fileName =
+          typeof clientOptions.path === 'string'
+            ? relative(clientOptions.path, name)
+            : name;
+      } else {
+        // Array of files or single file
+        const segments = name.split(sep);
+        fileName = segments[segments.length - 1];
       }
 
-      return next;
-    },
-    []
-  );
+      preparedFiles.push({
+        file: isWin ? fileName.replace(/\\/g, '/') : fileName,
+        size: file.data.byteLength || file.data.length,
+        mode: file.mode,
+        sha,
+      });
+    }
+  }
 
   return preparedFiles;
 };

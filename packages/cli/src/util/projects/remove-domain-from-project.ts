@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import Client from '../client';
-import wait from '../output/wait';
 import { ProjectAliasTarget } from '../../types';
 
 export async function removeDomainFromProject(
@@ -8,7 +7,7 @@ export async function removeDomainFromProject(
   projectNameOrId: string,
   domain: string
 ) {
-  const cancelWait = wait(
+  client.output.spinner(
     `Removing domain ${domain} from project ${chalk.bold(projectNameOrId)}`
   );
   try {
@@ -28,7 +27,5 @@ export async function removeDomainFromProject(
     }
 
     throw err;
-  } finally {
-    cancelWait();
   }
 }

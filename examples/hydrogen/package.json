@@ -1,0 +1,49 @@
+{
+  "name": "hydrogen",
+  "description": "Demo store template for @shopify/hydrogen",
+  "version": "0.0.0",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "shopify hydrogen dev",
+    "build": "shopify hydrogen build",
+    "preview": "shopify hydrogen preview",
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx src",
+    "lint-ts": "tsc --noEmit",
+    "test": "WATCH=true vitest",
+    "test:ci": "yarn build -t node && vitest run"
+  },
+  "devDependencies": {
+    "@shopify/cli": "3.0.27",
+    "@shopify/cli-hydrogen": "3.0.27",
+    "@shopify/prettier-config": "^1.1.2",
+    "@tailwindcss/forms": "^0.5.2",
+    "@tailwindcss/typography": "^0.5.2",
+    "@types/react": "^18.0.14",
+    "eslint": "^8.18.0",
+    "eslint-plugin-hydrogen": "^0.12.2",
+    "playwright": "^1.22.2",
+    "postcss": "^8.4.14",
+    "postcss-import": "^14.1.0",
+    "postcss-preset-env": "^7.6.0",
+    "prettier": "^2.3.2",
+    "tailwindcss": "^3.0.24",
+    "typescript": "^4.7.2",
+    "vite": "^2.9.0",
+    "vitest": "^0.15.2"
+  },
+  "prettier": "@shopify/prettier-config",
+  "dependencies": {
+    "@headlessui/react": "^1.6.4",
+    "@heroicons/react": "^1.0.6",
+    "@shopify/hydrogen": "^1.0.2",
+    "clsx": "^1.1.1",
+    "graphql-tag": "^2.12.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-use": "^17.4.0",
+    "title": "^3.4.4",
+    "typographic-base": "^1.0.4"
+  },
+  "author": "nrajlich"
+}

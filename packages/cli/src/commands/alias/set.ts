@@ -6,7 +6,6 @@ import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
-import formatNSTable from '../../util/format-ns-table';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
 import getScope from '../../util/get-scope';
@@ -74,7 +73,7 @@ export default async function set(
   if (args.length === 0) {
     output.error(
       `To ship to production, optionally configure your domains (${link(
-        'https://vercel.com/docs/v2/custom-domains'
+        'https://vercel.link/domain-configuration'
       )}) and run ${getCommandName(`--prod`)}.`
     );
     return 1;
@@ -226,29 +225,6 @@ function handleSetupDomainError<T>(
   output: Output,
   error: SetupDomainError | T
 ): T | 1 {
-  if (
-    error instanceof ERRORS.DomainVerificationFailed ||
-    error instanceof ERRORS.DomainNsNotVerifiedForWildcard
-  ) {
-    const { nsVerification, domain } = error.meta;
-
-    output.error(
-      `We could not alias since the domain ${domain} could not be verified due to the following reasons:\n`
-    );
-    output.print(
-      `Nameservers verification failed since we see a different set than the intended set:`
-    );
-    output.print(
-      `\n${formatNSTable(
-        nsVerification.intendedNameservers,
-        nsVerification.nameservers,
-        { extraSpace: '     ' }
-      )}\n\n`
-    );
-    output.print('  Read more: https://err.sh/vercel/domain-verification\n');
-    return 1;
-  }
-
   if (error instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
@@ -421,7 +397,7 @@ function handleCreateAliasError<T>(
   return error;
 }
 
-function getTargetsForAlias(args: string[], { alias }: VercelConfig) {
+function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {
   if (args.length) {
     return [args[args.length - 1]]
       .map(target => (target.indexOf('.') !== -1 ? toHost(target) : target))

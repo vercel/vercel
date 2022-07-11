@@ -11,14 +11,20 @@ on:
 jobs:
   test:
     name: CLI
-    timeout-minutes: 30
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        node: [12]
+        node: [14]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Conditionally set remote env
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+            echo "TURBO_REMOTE_ONLY=true" >> $GITHUB_ENV
+            echo "TURBO_TEAM=vercel" >> $GITHUB_ENV
+            echo "TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}" >> $GITHUB_ENV
       - uses: actions/setup-go@v2
         with:
           go-version: '1.13.15'
@@ -34,7 +40,7 @@ jobs:
       - run: git diff origin/main...HEAD --name-only
       - run: yarn install --network-timeout 1000000
       - run: yarn run build
-      - run: yarn test-integration-cli --clean false
+      - run: yarn test-integration-cli
         env:
           VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
           VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}

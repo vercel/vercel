@@ -1,6 +1,6 @@
 {
   "name": "@vercel/frameworks",
-  "version": "0.4.1-canary.1",
+  "version": "1.1.0",
   "main": "./dist/frameworks.js",
   "types": "./dist/frameworks.d.ts",
   "files": [
@@ -9,21 +9,20 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "tsc",
-    "test-unit": "jest --env node --verbose --runInBand --bail"
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "yarn test"
   },
   "dependencies": {
     "@iarna/toml": "2.2.3",
     "js-yaml": "3.13.1"
   },
   "devDependencies": {
-    "@types/jest": "24.0.22",
+    "@types/jest": "27.4.1",
     "@types/js-yaml": "3.12.1",
     "@types/node": "12.0.4",
     "@types/node-fetch": "2.5.8",
-    "@vercel/routing-utils": "1.11.2-canary.1",
+    "@vercel/routing-utils": "1.13.5",
     "ajv": "6.12.2",
-    "jest": "24.9.0",
-    "ts-jest": "24.1.0",
-    "typescript": "3.9.3"
+    "typescript": "4.3.4"
   }
 }

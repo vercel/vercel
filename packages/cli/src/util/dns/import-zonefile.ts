@@ -4,7 +4,6 @@ import { resolve } from 'path';
 import { Response } from 'node-fetch';
 import { DomainNotFound, InvalidDomain } from '../errors-ts';
 import Client from '../client';
-import wait from '../output/wait';
 
 type JSONResponse = {
   recordIds: string[];
@@ -16,7 +15,7 @@ export default async function importZonefile(
   domain: string,
   zonefilePath: string
 ) {
-  const cancelWait = wait(
+  client.output.spinner(
     `Importing Zone file for domain ${domain} under ${chalk.bold(contextName)}`
   );
   const zonefile = readFileSync(resolve(zonefilePath), 'utf8');
@@ -33,10 +32,8 @@ export default async function importZonefile(
     );
 
     const { recordIds } = (await res.json()) as JSONResponse;
-    cancelWait();
     return recordIds;
   } catch (error) {
-    cancelWait();
     if (error.code === 'not_found') {
       return new DomainNotFound(domain, contextName);
     }

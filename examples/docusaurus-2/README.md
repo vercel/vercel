@@ -1,12 +1,14 @@
-# Docusaurus Example
+# Docusaurus 2
 
-This directory is a brief example of a [Docusaurus](https://v2.docusaurus.io) site that can be deployed with Vercel and zero configuration.
+This directory is a brief example of a [Docusaurus](https://v2.docusaurus.io) site that can be deployed to Vercel with zero configuration.
 
 ## Deploy Your Own
 
 Deploy your own Docusaurus project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/docusaurus-2)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/docusaurus-2&template=docusaurus-2)
+
+_Live Example: https://docusaurus-2-template.vercel.app_
 
 ### How We Created This Example
 

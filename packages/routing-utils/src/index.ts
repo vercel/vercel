@@ -8,6 +8,7 @@ import {
   GetRoutesProps,
   RouteApiError,
   Redirect,
+  HasField,
 } from './types';
 import {
   convertCleanUrls,
@@ -16,6 +17,7 @@ import {
   convertHeaders,
   convertTrailingSlash,
   sourceToRegex,
+  collectHasSegments,
 } from './superstatic';
 
 export { getCleanUrls } from './superstatic';
@@ -161,8 +163,10 @@ function checkPatternSyntax(
   {
     source,
     destination,
+    has,
   }: {
     source: string;
+    has?: HasField;
     destination?: string;
   }
 ): { message: string; link: string } | null {
@@ -197,11 +201,12 @@ function checkPatternSyntax(
       // replicate all possible URL parsing here so we consume the error.
       // If this really is an error, we'll throw later in convertRedirects().
     }
+    const hasSegments = collectHasSegments(has);
 
     for (const segment of destinationSegments) {
-      if (!sourceSegments.has(segment)) {
+      if (!sourceSegments.has(segment) && !hasSegments.includes(segment)) {
         return {
-          message: `${type} at index ${index} has segment ":${segment}" in \`destination\` property but not in \`source\` property.`,
+          message: `${type} at index ${index} has segment ":${segment}" in \`destination\` property but not in \`source\` or \`has\` property.`,
           link: 'https://vercel.link/invalid-route-destination-segment',
         };
       }

@@ -1,4 +1,8 @@
-import { ProjectEnvType, ProjectEnvVariable } from '../../types';
+import {
+  ProjectEnvType,
+  ProjectEnvVariable,
+  ProjectEnvTarget,
+} from '../../types';
 import { Env } from '@vercel/build-utils';
 
 function getSystemEnvValue(
@@ -16,13 +20,14 @@ export default function exposeSystemEnvs(
   projectEnvs: ProjectEnvVariable[],
   systemEnvValues: string[],
   autoExposeSystemEnvs: boolean | undefined,
-  vercelUrl?: string
+  vercelUrl?: string,
+  target?: ProjectEnvTarget
 ) {
   const envs: Env = {};
 
   if (autoExposeSystemEnvs) {
     envs['VERCEL'] = '1';
-    envs['VERCEL_ENV'] = 'development';
+    envs['VERCEL_ENV'] = target || 'development';
 
     for (const key of systemEnvValues) {
       envs[key] = getSystemEnvValue(key, { vercelUrl });

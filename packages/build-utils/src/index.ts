@@ -2,6 +2,7 @@ import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
 import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
+import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
 import download, { DownloadedFiles, isSymbolicLink } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
@@ -20,24 +21,28 @@ import {
   runBundleInstall,
   runPipInstall,
   runShellScript,
+  runCustomInstallCommand,
+  getEnvForPackageManager,
   getNodeVersion,
   getSpawnOptions,
   getNodeBinPath,
+  scanParentDirs,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
 } from './fs/node-version';
-import { NowBuildError } from './errors';
 import streamToBuffer from './fs/stream-to-buffer';
-import shouldServe from './should-serve';
 import debug from './debug';
+import getIgnoreFilter from './get-ignore-filter';
+import { getPlatformEnv } from './get-platform-env';
 
 export {
   FileBlob,
   FileFsRef,
   FileRef,
   Lambda,
+  NodejsLambda,
   createLambda,
   Prerender,
   download,
@@ -59,68 +64,26 @@ export {
   runBundleInstall,
   runPipInstall,
   runShellScript,
+  runCustomInstallCommand,
+  getEnvForPackageManager,
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   getSpawnOptions,
+  getPlatformEnv,
   streamToBuffer,
-  shouldServe,
   debug,
   isSymbolicLink,
   getLambdaOptionsFromFunction,
+  scanParentDirs,
+  getIgnoreFilter,
 };
 
-export {
-  detectBuilders,
-  detectOutputDirectory,
-  detectApiDirectory,
-  detectApiExtensions,
-} from './detect-builders';
-export { detectFramework } from './detect-framework';
-export { DetectorFilesystem } from './detectors/filesystem';
+export { EdgeFunction } from './edge-function';
 export { readConfigFile } from './fs/read-config-file';
+export { normalizePath } from './fs/normalize-path';
 
+export * from './should-serve';
 export * from './schemas';
 export * from './types';
 export * from './errors';
-
-/**
- * Helper function to support both `@vercel` and legacy `@now` official Runtimes.
- */
-export const isOfficialRuntime = (desired: string, name?: string): boolean => {
-  if (typeof name !== 'string') {
-    return false;
-  }
-  return (
-    name === `@vercel/${desired}` ||
-    name === `@now/${desired}` ||
-    name.startsWith(`@vercel/${desired}@`) ||
-    name.startsWith(`@now/${desired}@`)
-  );
-};
-
-export const isStaticRuntime = (name?: string): boolean => {
-  return isOfficialRuntime('static', name);
-};
-
-/**
- * Helper function to support both `VERCEL_` and legacy `NOW_` env vars.
- * Throws an error if *both* env vars are defined.
- */
-export const getPlatformEnv = (name: string): string | undefined => {
-  const vName = `VERCEL_${name}`;
-  const nName = `NOW_${name}`;
-  const v = process.env[vName];
-  const n = process.env[nName];
-  if (typeof v === 'string') {
-    if (typeof n === 'string') {
-      throw new NowBuildError({
-        code: 'CONFLICTING_ENV_VAR_NAMES',
-        message: `Both "${vName}" and "${nName}" env vars are defined. Please only define the "${vName}" env var.`,
-        link: 'https://vercel.link/combining-old-and-new-config',
-      });
-    }
-    return v;
-  }
-  return n;
-};

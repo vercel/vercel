@@ -4,8 +4,8 @@ import { Output } from './output';
 import chalk from 'chalk';
 import { homedir } from 'os';
 import confirm from './input/confirm';
-import { prependEmoji, emoji } from './emoji';
 import toHumanPath from './humanize-path';
+import Client from './client';
 
 const stat = promisify(lstatRaw);
 
@@ -52,12 +52,11 @@ export async function validateRootDirectory(
 }
 
 export default async function validatePaths(
-  output: Output,
+  client: Client,
   paths: string[]
-): Promise<
-  | { valid: true; path: string; isFile: boolean }
-  | { valid: false; exitCode: number }
-> {
+): Promise<{ valid: true; path: string } | { valid: false; exitCode: number }> {
+  const { output } = client;
+
   // can't deploy more than 1 path
   if (paths.length > 1) {
     output.print(`${chalk.red('Error!')} Can't deploy more than one path.\n`);
@@ -78,19 +77,18 @@ export default async function validatePaths(
     return { valid: false, exitCode: 1 };
   }
 
-  const isFile = pathStat && !pathStat.isDirectory();
-  if (isFile) {
-    output.print(
-      `${prependEmoji(
-        'Deploying files with Vercel is deprecated (https://vercel.link/faq-deploy-file)',
-        emoji('warning')
-      )}\n`
-    );
+  if (!pathStat.isDirectory()) {
+    output.prettyError({
+      message: 'Support for single file deployments has been removed.',
+      link: 'https://vercel.link/no-single-file-deployments',
+    });
+    return { valid: false, exitCode: 1 };
   }
 
   // ask confirmation if the directory is home
   if (path === homedir()) {
     const shouldDeployHomeDirectory = await confirm(
+      client,
       `You are deploying your home directory. Do you want to continue?`,
       false
     );
@@ -101,5 +99,5 @@ export default async function validatePaths(
     }
   }
 
-  return { valid: true, path, isFile };
+  return { valid: true, path };
 }

@@ -1,19 +1,19 @@
 import chalk from 'chalk';
-import { Project } from '../../types';
-import { Output } from '../../util/output';
-import confirm from '../../util/input/confirm';
+import { outputFile } from 'fs-extra';
+import { closeSync, openSync, readSync } from 'fs';
+import { resolve } from 'path';
+import { Project, ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
-import param from '../../util/output/param';
-import withSpinner from '../../util/with-spinner';
-import { join } from 'path';
-import { promises, openSync, closeSync, readSync } from 'fs';
-import { emoji, prependEmoji } from '../../util/emoji';
-import { getCommandName } from '../../util/pkg-name';
-const { writeFile } = promises;
 import exposeSystemEnvs from '../../util/dev/expose-system-envs';
+import { emoji, prependEmoji } from '../../util/emoji';
 import getSystemEnvValues from '../../util/env/get-system-env-values';
+import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
+import confirm from '../../util/input/confirm';
+import { Output } from '../../util/output';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
+import { getCommandName } from '../../util/pkg-name';
+import { EnvRecordsSource } from '../../util/env/get-env-records';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -46,9 +46,12 @@ function tryReadHeadSync(path: string, length: number) {
 export default async function pull(
   client: Client,
   project: Project,
+  environment: ProjectEnvTarget,
   opts: Partial<Options>,
   args: string[],
-  output: Output
+  output: Output,
+  cwd: string,
+  source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
 ) {
   if (args.length > 1) {
     output.error(
@@ -57,8 +60,9 @@ export default async function pull(
     return 1;
   }
 
+  // handle relative or absolute filename
   const [filename = '.env'] = args;
-  const fullPath = join(process.cwd(), filename);
+  const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
 
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
@@ -70,6 +74,7 @@ export default async function pull(
     exists &&
     !skipConfirmation &&
     !(await confirm(
+      client,
       `Found existing file ${param(filename)}. Do you want to overwrite?`,
       false
     ))
@@ -79,28 +84,27 @@ export default async function pull(
   }
 
   output.print(
-    `Downloading Development Environment Variables for Project ${chalk.bold(
+    `Downloading "${environment}" Environment Variables for Project ${chalk.bold(
       project.name
     )}\n`
   );
-  const pullStamp = stamp();
 
-  const [
-    { envs: projectEnvs },
-    { systemEnvValues },
-  ] = await withSpinner('Downloading', () =>
-    Promise.all([
-      getDecryptedEnvRecords(output, client, project.id),
-      project.autoExposeSystemEnvs
-        ? getSystemEnvValues(output, client, project.id)
-        : { systemEnvValues: [] },
-    ])
-  );
+  const pullStamp = stamp();
+  output.spinner('Downloading');
+
+  const [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
+    getDecryptedEnvRecords(output, client, project.id, source, environment),
+    project.autoExposeSystemEnvs
+      ? getSystemEnvValues(output, client, project.id)
+      : { systemEnvValues: [] },
+  ]);
 
   const records = exposeSystemEnvs(
     projectEnvs,
     systemEnvValues,
-    project.autoExposeSystemEnvs
+    project.autoExposeSystemEnvs,
+    undefined,
+    environment
   );
 
   const contents =
@@ -110,7 +114,7 @@ export default async function pull(
       .join('\n') +
     '\n';
 
-  await writeFile(fullPath, contents, 'utf8');
+  await outputFile(fullPath, contents, 'utf8');
 
   output.print(
     `${prependEmoji(
@@ -120,6 +124,7 @@ export default async function pull(
       emoji('success')
     )}\n`
   );
+
   return 0;
 }
 

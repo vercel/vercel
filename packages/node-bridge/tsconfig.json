@@ -1,14 +1,15 @@
 {
   "compilerOptions": {
-    "esModuleInterop": true,
-    "lib": ["esnext"],
-    "target": "esnext",
-    "module": "commonjs",
-    "outDir": ".",
+    "allowJs": true,
+    "checkJs": true,
+    "lib": ["ES2020"],
+    "noEmit": true,
+    "noImplicitReturns": true,
     "strict": true,
-    "sourceMap": true,
-    "declaration": true
+    "target": "ES2020",
+    "declaration": true,
+    "module": "commonjs"
   },
-  "include": ["src/**/*"],
+  "include": ["helpers.ts", "bridge.js", "launcher.js"],
   "exclude": ["node_modules"]
 }

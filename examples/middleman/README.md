@@ -1,14 +1,14 @@
 # Middleman Example
 
-This directory is a brief example of a [Middleman](https://middlemanapp.com/) site that can be deployed with Vercel and zero configuration.
+This directory is a brief example of a [Middleman](https://middlemanapp.com/) site that can be deployed to Vercel with zero configuration.
 
 ## Deploy Your Own
 
 Deploy your own Middleman project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/middleman)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/middleman&template=middleman)
 
-_Live Example: https://middleman.now-examples.now.sh_
+_Live Example: https://middleman-template.vercel.app_
 
 ### How We Created This Example
 

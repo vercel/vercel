@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import Client from '../client';
-import wait from '../output/wait';
 import { Domain } from '../../types';
 import { DomainPermissionDenied, DomainNotFound } from '../errors-ts';
 
@@ -16,14 +15,15 @@ export default async function getDomainByName(
     ignoreWait?: boolean;
   } = {}
 ) {
-  const cancelWait = options.ignoreWait
-    ? null
-    : wait(`Fetching domain ${domainName} under ${chalk.bold(contextName)}`);
+  if (!options.ignoreWait) {
+    client.output.spinner(
+      `Fetching domain ${domainName} under ${chalk.bold(contextName)}`
+    );
+  }
   try {
     const { domain } = await client.fetch<Response>(
       `/v4/domains/${encodeURIComponent(domainName)}`
     );
-
     return domain;
   } catch (error) {
     if (error.status === 404) {
@@ -35,7 +35,5 @@ export default async function getDomainByName(
     }
 
     throw error;
-  } finally {
-    cancelWait?.();
   }
 }

@@ -1,3 +1,7 @@
+import type { Readable, Writable } from 'stream';
+
+export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
+
 export type Primitive =
   | bigint
   | boolean
@@ -16,12 +20,15 @@ export interface JSONObject {
 }
 
 export interface AuthConfig {
+  _?: string;
   token?: string;
   skipWrite?: boolean;
 }
 
 export interface GlobalConfig {
+  _?: string;
   currentTeam?: string;
+  includeScheme?: string;
   collectMetrics?: boolean;
   api?: string;
 
@@ -42,25 +49,12 @@ type Billing = {
 };
 
 export type User = {
-  uid: string;
+  id: string;
   avatar: string;
-  bio?: string;
-  date: number;
+  createdAt: number;
   email: string;
   username: string;
-  website?: string;
-  billingChecked: boolean;
   billing: Billing;
-  github?: {
-    email: string;
-    installation: {
-      id: string;
-      login: string;
-      loginType: string;
-    };
-    login: string;
-    updatedAt: number;
-  };
   name?: string;
   limited?: boolean;
 };
@@ -93,10 +87,6 @@ export type Domain = {
   transferredAt?: number | null;
   orderedAt?: number;
   serviceType: 'zeit.world' | 'external' | 'na';
-  verified: boolean;
-  nsVerifiedAt: number | null;
-  txtVerifiedAt: number | null;
-  verificationRecord: string;
   nameservers: string[];
   intendedNameservers: string[];
   creator: {
@@ -139,7 +129,17 @@ export type Deployment = {
     | 'CANCELED';
   version?: number;
   created: number;
-  creator: { uid: string };
+  createdAt: number;
+  ready?: number;
+  buildingAt?: number;
+  creator: { uid: string; username: string };
+  target: string | null;
+  ownerId: string;
+  projectId: string;
+  inspectorUrl: string;
+  meta: {
+    [key: string]: any;
+  };
 };
 
 export type Alias = {
@@ -248,16 +248,6 @@ export interface ProjectEnvVariable {
   gitBranch?: string;
 }
 
-export interface ProjectSettings {
-  framework?: string | null;
-  devCommand?: string | null;
-  buildCommand?: string | null;
-  outputDirectory?: string | null;
-  rootDirectory?: string | null;
-  autoExposeSystemEnvs?: boolean;
-  directoryListing?: boolean;
-}
-
 export interface Project extends ProjectSettings {
   id: string;
   name: string;
@@ -265,11 +255,7 @@ export interface Project extends ProjectSettings {
   updatedAt: number;
   createdAt: number;
   alias?: ProjectAliasTarget[];
-  devCommand?: string | null;
-  framework?: string | null;
-  rootDirectory?: string | null;
   latestDeployments?: Partial<Deployment>[];
-  autoExposeSystemEnvs?: boolean;
 }
 
 export interface Org {
@@ -292,7 +278,17 @@ export interface PaginationOptions {
 export type ProjectLinkResult =
   | { status: 'linked'; org: Org; project: Project }
   | { status: 'not_linked'; org: null; project: null }
-  | { status: 'error'; exitCode: number };
+  | {
+      status: 'error';
+      exitCode: number;
+      reason?:
+        | 'HEADLESS'
+        | 'NOT_AUTHORIZED'
+        | 'TEAM_DELETED'
+        | 'PATH_IS_FILE'
+        | 'INVALID_ROOT_DIRECTORY'
+        | 'MISSING_PROJECT_SETTINGS';
+    };
 
 export interface Token {
   id: string;
@@ -302,4 +298,167 @@ export interface Token {
   activeAt: number;
   createdAt: number;
   teamId?: string;
+}
+
+export interface GitMetadata {
+  commitAuthorName?: string | undefined;
+  commitMessage?: string | undefined;
+  commitRef?: string | undefined;
+  commitSha?: string | undefined;
+  dirty?: boolean | undefined;
+  remoteUrl: string;
+}
+
+/**
+ * An object representing a Build on Vercel
+ */
+export interface Build {
+  /**
+   * The unique identifier of the Build
+   * @example "bld_q5fj68jh7eewfe8"
+   */
+  id: string;
+
+  /**
+   * The unique identifier of the deployment
+   * @example "dpl_BRGyoU2Jzzwx7myBnqv3xjRDD2GnHTwUWyFybnrUvjDD"
+   */
+  deploymentId: string;
+
+  /**
+   * The entrypoint of the deployment
+   * @example "api/index.js"
+   */
+  entrypoint: string;
+
+  /**
+   * The state of the deployment depending on the process of deploying,
+   * or if it is ready or in an error state
+   * @example "READY"
+   */
+  readyState:
+    | 'INITIALIZING'
+    | 'BUILDING'
+    | 'UPLOADING'
+    | 'DEPLOYING'
+    | 'READY'
+    | 'ARCHIVED'
+    | 'ERROR'
+    | 'QUEUED'
+    | 'CANCELED';
+
+  /**
+   * The time at which the Build state was last modified
+   * @example 1567024758130
+   */
+  readyStateAt?: number;
+
+  /**
+   * The time at which the Build was scheduled to be built
+   * @example 1567024756543
+   */
+  scheduledAt?: number | null;
+
+  /**
+   * The time at which the Build was created
+   * @example 1567071524208
+   */
+  createdAt?: number;
+
+  /**
+   * The time at which the Build was deployed
+   * @example 1567071598563
+   */
+  deployedAt?: number;
+
+  /**
+   * The region where the Build was first created
+   * @example "sfo1"
+   */
+  createdIn?: string;
+
+  /**
+   * The Runtime the Build used to generate the output
+   * @example "@vercel/node"
+   */
+  use?: string;
+
+  /**
+   * An object that contains the Build's configuration
+   * @example {"zeroConfig": true}
+   */
+  config?: {
+    distDir?: string | undefined;
+    forceBuildIn?: string | undefined;
+    reuseWorkPathFrom?: string | undefined;
+    zeroConfig?: boolean | undefined;
+  };
+
+  /**
+   * A list of outputs for the Build that can be either Serverless Functions or static files
+   */
+  output: BuildOutput[];
+
+  /**
+   * If the Build uses the `@vercel/static` Runtime, it contains a hashed string of all outputs
+   * @example null
+   */
+  fingerprint?: string | null;
+
+  copiedFrom?: string;
+}
+
+export interface BuildOutput {
+  /**
+   * The type of the output
+   */
+  type?: 'lambda' | 'file';
+
+  /**
+   * The absolute path of the file or Serverless Function
+   */
+  path: string;
+
+  /**
+   * The SHA1 of the file
+   */
+  digest: string;
+
+  /**
+   * The POSIX file permissions
+   */
+  mode: number;
+
+  /**
+   * The size of the file in bytes
+   */
+  size?: number;
+
+  /**
+   * If the output is a Serverless Function, an object
+   * containing the name, location and memory size of the function
+   */
+  lambda?: {
+    functionName: string;
+    deployedTo: string[];
+    memorySize?: number;
+    timeout?: number;
+    layers?: string[];
+  } | null;
+}
+
+export interface ReadableTTY extends Readable {
+  isTTY?: boolean;
+  isRaw?: boolean;
+  setRawMode?: (mode: boolean) => void;
+}
+
+export interface WritableTTY extends Writable {
+  isTTY?: boolean;
+}
+
+export interface Stdio {
+  stdin: ReadableTTY;
+  stdout: WritableTTY;
+  stderr: WritableTTY;
 }
