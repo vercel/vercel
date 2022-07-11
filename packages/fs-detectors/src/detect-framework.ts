@@ -1,6 +1,5 @@
 import type { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
 import { DetectorFilesystem } from './detectors/filesystem';
-import 'promise-any-polyfill';
 
 interface BaseFramework {
   slug: Framework['slug'];
