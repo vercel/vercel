@@ -2148,6 +2148,7 @@ interface EdgeFunctionInfo {
   page: string;
   regexp: string;
   wasm?: { filePath: string; name: string }[];
+  blobs?: { filePath: string; name: string }[];
 }
 
 export async function getMiddlewareBundle({
@@ -2234,6 +2235,23 @@ export async function getMiddlewareBundle({
                 {}
               );
 
+              const blobFiles = (edgeFunction.blobs ?? []).reduce(
+                (acc: Files, { filePath, name }) => {
+                  const fullFilePath = path.join(
+                    entryPath,
+                    outputDirectory,
+                    filePath
+                  );
+                  acc[`blobs/${name}`] = new FileFsRef({
+                    mode: 0o644,
+                    contentType: 'application/octet-stream',
+                    fsPath: fullFilePath,
+                  });
+                  return acc;
+                },
+                {}
+              );
+
               return new EdgeFunction({
                 deploymentTarget: 'v8-worker',
                 name: edgeFunction.name,
@@ -2251,9 +2269,16 @@ export async function getMiddlewareBundle({
                     }),
                   }),
                   ...wasmFiles,
+                  ...blobFiles,
                 },
                 entrypoint: 'index.js',
                 envVarsInUse: edgeFunction.env,
+                blobs: (edgeFunction.blobs ?? []).map(({ name }) => {
+                  return {
+                    name,
+                    path: `blobs/${name}`,
+                  };
+                }),
               });
             })(),
             routeSrc: getRouteSrc(edgeFunction, routesManifest),
