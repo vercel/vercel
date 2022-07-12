@@ -5,6 +5,7 @@ import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
   getOriginUrl,
+  getRemoteUrls,
   isDirty,
 } from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
@@ -26,6 +27,22 @@ describe('getOriginUrl', () => {
     const data = await getOriginUrl(join(dir, 'git/config'), client.output);
     expect(data).toBeNull();
     await expect(client.stderr).toOutput('Error while parsing repo data');
+  });
+});
+
+describe('getRemoteUrls', () => {
+  it('does not provide data when there are no remote urls', async () => {
+    const configPath = join(fixture('no-origin'), 'git/config');
+    const data = await getRemoteUrls(configPath, client.output);
+    expect(data).toBeUndefined();
+  });
+  it('returns an object when multiple urls are present', async () => {
+    const configPath = join(fixture('multiple-remotes'), 'git/config');
+    const data = await getRemoteUrls(configPath, client.output);
+    expect(data).toMatchObject({
+      origin: 'https://github.com/user/repo',
+      secondary: 'https://github.com/user/repo2',
+    });
   });
 });
 

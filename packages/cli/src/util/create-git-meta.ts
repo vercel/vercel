@@ -74,7 +74,9 @@ export async function parseGitConfig(configPath: string, output: Output) {
   }
 }
 
-export function pluckRemoteUrls(gitConfig: { [key: string]: any }) {
+export function pluckRemoteUrls(gitConfig: {
+  [key: string]: any;
+}): { [key: string]: string } | undefined {
   let remoteUrls: { [key: string]: string } = {};
 
   Object.keys(gitConfig).map(key => {
@@ -88,10 +90,17 @@ export function pluckRemoteUrls(gitConfig: { [key: string]: any }) {
     }
   });
 
+  if (Object.keys(remoteUrls).length === 0) {
+    return;
+  }
+
   return remoteUrls;
 }
 
-export async function getRemoteUrls(configPath: string, output: Output) {
+export async function getRemoteUrls(
+  configPath: string,
+  output: Output
+): Promise<{ [key: string]: string } | undefined> {
   const config = await parseGitConfig(configPath, output);
   if (!config) {
     return;
