@@ -42,6 +42,8 @@ const help = () => {
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
+    -i, --inspect                  Display dashboard inspect URLs
+    --prod                         Filter for production URLs
     -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
@@ -77,6 +79,9 @@ export default async function main(client: Client) {
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
+      '--inspect': Boolean,
+      '-i': '--inspect',
+      '--prod': Boolean,
       '--confirm': Boolean,
     });
   } catch (err) {
@@ -99,6 +104,8 @@ export default async function main(client: Client) {
   }
 
   const yes = argv['--confirm'] || false;
+  const inspect = argv['--inspect'] || false;
+  const prod = argv['--prod'] || false;
 
   const meta = parseMeta(argv['--meta']);
 
@@ -138,6 +145,7 @@ export default async function main(client: Client) {
     link.project = linkedProject.project;
   }
 
+  const isTeam = org?.type === 'team';
   let { contextName, team } = await getScope(client);
 
   // If user passed in a custom scope, update the current team & context name
@@ -254,7 +262,9 @@ export default async function main(client: Client) {
   }
 
   log(
-    `Deployments under ${chalk.bold(contextName)} ${elapsed(
+    `${prod ? `Production deployments` : `Deployments`} for ${chalk.bold(
+      chalk.magenta(app)
+    )} under ${chalk.bold(chalk.magenta(contextName))} ${elapsed(
       Date.now() - start
     )}`
   );
@@ -271,18 +281,32 @@ export default async function main(client: Client) {
   client.output.print(
     `${table(
       [
-        ['project', 'latest deployment', 'state', 'age', 'username'].map(
-          header => chalk.dim(header)
-        ),
+        (isTeam
+          ? [
+              'age',
+              inspect ? 'inspect url' : 'deployment url',
+              'state',
+              'duration',
+              'username',
+            ]
+          : [
+              'age',
+              inspect ? 'inspect url' : 'deployment url',
+              'state',
+              'duration',
+            ]
+        ).map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
-          .map(dep => [
+          .map((dep, i) => [
             [
-              getProjectName(dep),
-              chalk.bold(`https://${dep.url}`),
-              stateString(dep.state),
               chalk.gray(ms(Date.now() - dep.createdAt)),
-              dep.creator.username,
+              i === 0
+                ? chalk.bold(`${getDeployUrl(dep, inspect)}`)
+                : `${getDeployUrl(dep, inspect)}`,
+              stateString(dep.state),
+              chalk.gray(getDeploymentDuration(dep)),
+              isTeam ? chalk.gray(dep.creator.username) : '',
             ],
           ])
           // flatten since the previous step returns a nested
@@ -295,8 +319,8 @@ export default async function main(client: Client) {
           ),
       ],
       {
-        align: ['l', 'l', 'l', 'l', 'l'],
-        hsep: ' '.repeat(4),
+        align: isTeam ? ['l', 'l', 'l', 'l', 'l'] : ['l', 'l', 'l', 'l'],
+        hsep: ' '.repeat(isTeam ? 4 : 5),
         stringLength: strlen,
       }
     ).replace(/^/gm, '  ')}\n\n`
@@ -312,13 +336,22 @@ export default async function main(client: Client) {
   }
 }
 
-function getProjectName(d: Deployment) {
-  // We group both file and files into a single project
-  if (d.name === 'file') {
-    return 'files';
-  }
+function getDeployUrl(
+  deployment: Deployment,
+  inspect: boolean | undefined
+): string {
+  return inspect ? deployment.inspectorUrl : 'https://' + deployment.url;
+}
 
-  return d.name;
+export function getDeploymentDuration(dep: Deployment): string {
+  if (!dep || !dep.ready || !dep.buildingAt) {
+    return '?';
+  }
+  const duration = ms(dep.ready - dep.buildingAt);
+  if (duration === '0ms') {
+    return '--';
+  }
+  return duration;
 }
 
 // renders the state string
