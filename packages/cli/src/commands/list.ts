@@ -271,7 +271,7 @@ export default async function main(client: Client) {
 
   // information to help the user find other deployments or instances
   log(
-    `To list more deployments for a project run ${getCommandName(
+    `To list more deployments for a project, run ${getCommandName(
       'ls [project]'
     )}.`
   );
