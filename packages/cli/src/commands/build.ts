@@ -48,6 +48,7 @@ import {
 } from '../util/build/write-build-result';
 import { importBuilders, BuilderWithPkg } from '../util/build/import-builders';
 import { initCorepack, cleanupCorepack } from '../util/build/corepack';
+import { sortBuilders } from '../util/build/sort-builders';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -332,13 +333,14 @@ export default async function main(client: Client): Promise<number> {
   };
 
   // Execute Builders for detected entrypoints
-  // TODO: parallelize builds
+  // TODO: parallelize builds (except for frontend)
+  const sortedBuilders = sortBuilders(builds);
   const buildResults: Map<Builder, BuildResult> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
   const corepackShimDir = await initCorepack({ repoRootPath });
 
-  for (const build of builds) {
+  for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
 
     const builderWithPkg = buildersWithPkgs.get(build.use);
