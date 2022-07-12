@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, join, relative } from 'path';
 import {
   debug,
   download,
@@ -192,11 +192,9 @@ export const build: BuildV2 = async ({
     // If we are, prepend the app root directory from config onto the build path.
     // e.g. `/apps/my-remix-app/api/index.js`
     const isMonorepo = repoRootPath && repoRootPath !== workPath;
-    if (isMonorepo && config.projectSettings?.rootDirectory) {
-      serverBuildPath = join(
-        config.projectSettings.rootDirectory,
-        serverBuildPath
-      );
+    if (isMonorepo) {
+      const rootDirectory = relative(repoRootPath, workPath);
+      serverBuildPath = join(rootDirectory, serverBuildPath);
     }
   } catch (err: any) {
     // Ignore error if `remix.config.js` does not exist
