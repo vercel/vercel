@@ -44,6 +44,13 @@ describe('getRemoteUrls', () => {
       secondary: 'https://github.com/user/repo2',
     });
   });
+  it('returns an object for origin url', async () => {
+    const configPath = join(fixture('test-github'), 'git/config');
+    const data = await getRemoteUrls(configPath, client.output);
+    expect(data).toMatchObject({
+      origin: 'https://github.com/user/repo.git',
+    });
+  });
 });
 
 describe('parseRepoUrl', () => {
