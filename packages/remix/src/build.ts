@@ -192,6 +192,8 @@ export const build: BuildV2 = async ({
     // If we are, prepend the app root directory from config onto the build path.
     // e.g. `/apps/my-remix-app/api/index.js`
     const isMonorepo = repoRootPath && repoRootPath !== workPath;
+    console.log('config', config);
+    console.log('config.projectSettings', config.projectSettings);
     if (isMonorepo && config.projectSettings?.rootDirectory) {
       serverBuildPath = join(
         config.projectSettings.rootDirectory,
