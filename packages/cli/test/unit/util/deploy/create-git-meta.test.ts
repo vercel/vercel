@@ -4,7 +4,7 @@ import os from 'os';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
-  getRemoteUrl,
+  getOriginUrl,
   isDirty,
 } from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
@@ -14,16 +14,16 @@ import { readOutputStream } from '../../../helpers/read-output-stream';
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
 
-describe('getRemoteUrl', () => {
+describe('getOriginUrl', () => {
   it('does not provide data for no-origin', async () => {
     const configPath = join(fixture('no-origin'), 'git/config');
-    const data = await getRemoteUrl(configPath, client.output);
+    const data = await getOriginUrl(configPath, client.output);
     expect(data).toBeNull();
   });
   it('displays debug message when repo data cannot be parsed', async () => {
     const dir = await getWriteableDirectory();
     client.output.debugEnabled = true;
-    const data = await getRemoteUrl(join(dir, 'git/config'), client.output);
+    const data = await getOriginUrl(join(dir, 'git/config'), client.output);
     expect(data).toBeNull();
     await expect(client.stderr).toOutput('Error while parsing repo data');
   });
