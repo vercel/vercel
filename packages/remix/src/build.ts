@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, join, relative } from 'path';
 import {
   debug,
   download,
@@ -194,16 +194,17 @@ export const build: BuildV2 = async ({
     const isMonorepo = repoRootPath && repoRootPath !== workPath;
     console.log('config', config);
     console.log('config.projectSettings', config.projectSettings);
-    if (isMonorepo && config.projectSettings?.rootDirectory) {
-      serverBuildPath = join(
-        config.projectSettings.rootDirectory,
-        serverBuildPath
-      );
+    if (isMonorepo) {
+      const rootDirectory = relative(repoRootPath, workPath);
+      console.log({ rootDirectory });
+      serverBuildPath = join(rootDirectory, serverBuildPath);
     }
   } catch (err: any) {
     // Ignore error if `remix.config.js` does not exist
     if (err.code !== 'MODULE_NOT_FOUND') throw err;
   }
+
+  console.log({ serverBuildPath });
 
   const [staticFiles, renderFunction] = await Promise.all([
     glob('**', join(entrypointFsDirname, 'public')),
