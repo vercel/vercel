@@ -192,19 +192,14 @@ export const build: BuildV2 = async ({
     // If we are, prepend the app root directory from config onto the build path.
     // e.g. `/apps/my-remix-app/api/index.js`
     const isMonorepo = repoRootPath && repoRootPath !== workPath;
-    console.log('config', config);
-    console.log('config.projectSettings', config.projectSettings);
     if (isMonorepo) {
       const rootDirectory = relative(repoRootPath, workPath);
-      console.log({ rootDirectory });
       serverBuildPath = join(rootDirectory, serverBuildPath);
     }
   } catch (err: any) {
     // Ignore error if `remix.config.js` does not exist
     if (err.code !== 'MODULE_NOT_FOUND') throw err;
   }
-
-  console.log({ serverBuildPath });
 
   const [staticFiles, renderFunction] = await Promise.all([
     glob('**', join(entrypointFsDirname, 'public')),
