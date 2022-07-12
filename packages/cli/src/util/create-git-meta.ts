@@ -74,25 +74,30 @@ export async function parseGitConfig(configPath: string, output: Output) {
   }
 }
 
+export function pluckRemoteUrls(gitConfig: { [key: string]: any }) {
+  let remoteUrls: { [key: string]: string } = {};
+
+  Object.keys(gitConfig).map(key => {
+    if (key.includes('remote')) {
+      // ex. remote "origin" — matches origin
+      const remoteName = key.match(/(?<=").*(?=")/g)?.[0];
+      const remoteUrl = gitConfig[key]?.url;
+      if (remoteName && remoteUrl) {
+        remoteUrls[remoteName] = remoteUrl;
+      }
+    }
+  });
+
+  return remoteUrls;
+}
+
 export async function getRemoteUrls(configPath: string, output: Output) {
   const config = await parseGitConfig(configPath, output);
   if (!config) {
     return;
   }
 
-  let remoteUrls = {};
-
-  Object.keys(config).map(key => {
-    if (key.includes('remote')) {
-      // ex. remote "origin" — matches origin
-      const remoteName = key.match(/(?<=").*(?=")/g)?.[0];
-      const remoteUrl = config[key]?.url;
-      if (remoteName && remoteUrl) {
-        remoteUrl[remoteName] = remoteUrl;
-      }
-    }
-  });
-
+  const remoteUrls = pluckRemoteUrls(config);
   return remoteUrls;
 }
 
