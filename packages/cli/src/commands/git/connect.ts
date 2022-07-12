@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { join } from 'path';
 import { Org, Project } from '../../types';
 import Client from '../../util/client';
-import { parseGitConfig, pluckRemoteUrl } from '../../util/create-git-meta';
+import { parseGitConfig, pluckOriginUrl } from '../../util/create-git-meta';
 import confirm from '../../util/input/confirm';
 import { Output } from '../../util/output';
 import link from '../../util/output/link';
@@ -64,7 +64,7 @@ export default async function connect(
     );
     return 1;
   }
-  const remoteUrl = pluckRemoteUrl(gitConfig);
+  const remoteUrl = pluckOriginUrl(gitConfig);
   if (!remoteUrl) {
     output.error(
       `No remote origin URL found in your Git config. Make sure you've configured a remote repo in your local Git config. Run ${chalk.cyan(
