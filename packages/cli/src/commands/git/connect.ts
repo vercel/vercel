@@ -199,7 +199,7 @@ async function listOptions(
   });
 
   return await list(client, {
-    message: 'Which one do you want to list?',
+    message: 'Which one do you want to connect?',
     choices,
   });
 }
