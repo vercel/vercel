@@ -1,4 +1,3 @@
-import inquirer from 'inquirer';
 import Client from '../client';
 import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
@@ -43,7 +42,7 @@ export default async function selectOrg(
     return choices[defaultOrgIndex].value;
   }
 
-  const answers = await inquirer.prompt({
+  const answers = await client.prompt({
     type: 'list',
     name: 'org',
     message: question,

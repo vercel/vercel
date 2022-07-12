@@ -13,8 +13,6 @@ interface Metadata {
   hasMiddleware: boolean;
 }
 
-const enableFileSystemApiFrameworks = new Set(['solidstart']);
-
 /**
  * If the Deployment can be built with the new File System API,
  * return the new Builder. Otherwise an "Exclusion Condition"
@@ -61,11 +59,7 @@ export async function detectFileSystemAPI({
     hasMiddleware,
   };
 
-  const isEnabled =
-    enableFlag ||
-    hasMiddleware ||
-    hasDotOutput ||
-    enableFileSystemApiFrameworks.has(framework);
+  const isEnabled = enableFlag || hasMiddleware || hasDotOutput;
   if (!isEnabled) {
     return { metadata, fsApiBuilder: null, reason: 'Flag not enabled.' };
   }
