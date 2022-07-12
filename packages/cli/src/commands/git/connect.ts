@@ -87,7 +87,7 @@ export default async function connect(
 
   if (remoteUrl === '') {
     output.log('Aborted.');
-    return 1;
+    return 0;
   }
 
   output.log(`Connecting Git remote: ${link(remoteUrl)}`);
@@ -192,7 +192,7 @@ async function listOptions(
   let choices: ListChoice[] = [];
   Object.keys(remoteUrls).map(urlKey => {
     choices.push({
-      name: `${remoteUrls[urlKey]} ${chalk.gray(urlKey)}`,
+      name: `${remoteUrls[urlKey]} ${chalk.gray(`(${urlKey})`)}`,
       value: remoteUrls[urlKey],
       short: urlKey,
     });
