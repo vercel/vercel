@@ -67,10 +67,13 @@ export default async function connect(
   const remoteUrl = pluckRemoteUrl(gitConfig);
   if (!remoteUrl) {
     output.error(
-      `No remote origin URL found in your Git config. Make sure you've connected your local Git repo to a Git provider first.`
+      `No remote origin URL found in your Git config. Make sure you've configured a remote repo in your local Git config. Run ${chalk.cyan(
+        '`git remote --help`'
+      )} for more details.`
     );
     return 1;
   }
+  output.log(`Identified Git remote "origin": ${link(remoteUrl)}`);
   const parsedUrl = parseRepoUrl(remoteUrl);
   if (!parsedUrl) {
     output.error(

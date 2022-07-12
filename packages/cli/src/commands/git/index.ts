@@ -16,8 +16,8 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    connect                          Connect a Git provider repository to your project
-    disconnect                       Disconnect a Git provider repository from your project
+    connect                          Connect your Git config "origin" remote as a Git provider to your project
+    disconnect                       Disconnect the Git provider repository from your project
 
   ${chalk.dim('Options:')}
 
@@ -32,7 +32,7 @@ const help = () => {
 
     ${chalk.cyan(`$ ${getPkgName()} git connect`)}
 
-  ${chalk.gray('–')} Disconnect a Git provider repository
+  ${chalk.gray('–')} Disconnect the Git provider repository
 
     ${chalk.cyan(`$ ${getPkgName()} git disconnect`)}
 `);
