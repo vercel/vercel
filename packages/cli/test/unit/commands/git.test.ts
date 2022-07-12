@@ -39,6 +39,10 @@ describe('git', () => {
         await expect(client.stderr).toOutput('Found project');
         client.stdin.write('y\n');
 
+        await expect(client.stderr).toOutput(
+          `Identified Git remote "origin": https://github.com/user/repo.git`
+        );
+
         const exitCode = await gitPromise;
         await expect(client.stderr).toOutput(
           'Connected GitHub repository user/repo!'
@@ -98,7 +102,7 @@ describe('git', () => {
         const exitCode = await git(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
-          `Error! No remote origin URL found in your Git config. Make sure you've connected your local Git repo to a Git provider first.\n`
+          `Error! No remote origin URL found in your Git config. Make sure you've configured a remote repo in your local Git config. Run \`git remote --help\` for more details.`
         );
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
@@ -120,6 +124,10 @@ describe('git', () => {
         client.setArgv('projects', 'connect', '--confirm');
         const exitCode = await git(client);
         expect(exitCode).toEqual(1);
+
+        await expect(client.stderr).toOutput(
+          `Identified Git remote "origin": bababooey`
+        );
         await expect(client.stderr).toOutput(
           `Error! Failed to parse Git repo data from the following remote URL in your Git config: bababooey\n`
         );
@@ -141,7 +149,17 @@ describe('git', () => {
           name: 'new-connection',
         });
         client.setArgv('projects', 'connect', '--confirm');
-        const exitCode = await git(client);
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Identified Git remote "origin": https://github.com/user/repo`
+        );
+        await expect(client.stderr).toOutput(
+          `> Connected GitHub repository user/repo!\n`
+        );
+
+        const exitCode = await gitPromise;
+        expect(exitCode).toEqual(0);
 
         const project: Project = await client.fetch(
           `/v8/projects/new-connection`
@@ -155,10 +173,6 @@ describe('git', () => {
           createdAt: 1656109539791,
           updatedAt: 1656109539791,
         });
-        expect(client.stderr).toOutput(
-          `> Connected GitHub repository user/repo!\n`
-        );
-        expect(exitCode).toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
         process.chdir(originalCwd);
@@ -188,7 +202,17 @@ describe('git', () => {
         };
 
         client.setArgv('projects', 'connect', '--confirm');
-        const exitCode = await git(client);
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Identified Git remote "origin": https://github.com/user2/repo2`
+        );
+        await expect(client.stderr).toOutput(
+          `> Connected GitHub repository user2/repo2!\n`
+        );
+
+        const exitCode = await gitPromise;
+        expect(exitCode).toEqual(0);
 
         const newProjectData: Project = await client.fetch(
           `/v8/projects/existing-connection`
@@ -202,10 +226,6 @@ describe('git', () => {
           createdAt: 1656109539791,
           updatedAt: 1656109539791,
         });
-        await expect(client.stderr).toOutput(
-          `> Connected GitHub repository user2/repo2!\n`
-        );
-        expect(exitCode).toEqual(0);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
         process.chdir(originalCwd);
@@ -234,11 +254,17 @@ describe('git', () => {
           updatedAt: 1656109539791,
         };
         client.setArgv('projects', 'connect', '--confirm');
-        const exitCode = await git(client);
-        expect(exitCode).toEqual(1);
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Identified Git remote "origin": https://github.com/user/repo`
+        );
         await expect(client.stderr).toOutput(
           `> user/repo is already connected to your project.\n`
         );
+
+        const exitCode = await gitPromise;
+        expect(exitCode).toEqual(1);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
         process.chdir(originalCwd);
@@ -258,11 +284,17 @@ describe('git', () => {
         });
 
         client.setArgv('projects', 'connect', '--confirm');
-        const exitCode = await git(client);
-        expect(exitCode).toEqual(1);
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Identified Git remote "origin": https://github.com/laksfj/asdgklsadkl`
+        );
         await expect(client.stderr).toOutput(
           `Failed to link laksfj/asdgklsadkl. Make sure there aren't any typos and that you have access to the repository if it's private.`
         );
+
+        const exitCode = await gitPromise;
+        expect(exitCode).toEqual(1);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
         process.chdir(originalCwd);
