@@ -84,6 +84,7 @@ export async function getRemoteUrls(configPath: string, output: Output) {
 
   Object.keys(config).map(key => {
     if (key.includes('remote')) {
+      // ex. remote "origin" — matches origin
       const remoteName = key.match(/(?<=").*(?=")/g)?.[0];
       const remoteUrl = config[key]?.url;
       if (remoteName && remoteUrl) {
