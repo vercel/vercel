@@ -215,11 +215,15 @@ export default async function main(client: Client) {
 
   debug('Fetching deployments');
 
-  const response = await now.list(app, {
-    version: 6,
-    meta,
-    nextTimestamp,
-  });
+  const response = await now.list(
+    app,
+    {
+      version: 6,
+      meta,
+      nextTimestamp,
+    },
+    prod
+  );
 
   let {
     deployments,
