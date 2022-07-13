@@ -95,6 +95,7 @@ export default async (client: Client) => {
       // deprecated
       '--name': String,
       '-n': '--name',
+      '--no-clipboard': Boolean,
       '--target': String,
     });
   } catch (error) {
@@ -178,6 +179,15 @@ export default async (client: Client) => {
         `The ${param(
           '--name'
         )} option is deprecated (https://vercel.link/name-flag)`,
+        emoji('warning')
+      )}\n`
+    );
+  }
+  // deprecate --no-clipboard
+  if (argv['--no-clipboard']) {
+    output.print(
+      `${prependEmoji(
+        `The ${param('--no-clipboard')} option is deprecated.`,
         emoji('warning')
       )}\n`
     );
