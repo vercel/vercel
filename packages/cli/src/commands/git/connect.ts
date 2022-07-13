@@ -190,16 +190,16 @@ async function selectRemoteUrl(
   remoteUrls: { [key: string]: string }
 ): Promise<string> {
   let choices: ListChoice[] = [];
-  Object.keys(remoteUrls).map(urlKey => {
+  for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
     choices.push({
-      name: `${remoteUrls[urlKey]} ${chalk.gray(`(${urlKey})`)}`,
-      value: remoteUrls[urlKey],
+      name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,
+      value: urlValue,
       short: urlKey,
     });
-  });
+  }
 
   return await list(client, {
-    message: 'Which one do you want to connect?',
+    message: 'Which remote do you want to connect?',
     choices,
   });
 }
