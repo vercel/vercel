@@ -141,11 +141,24 @@ export default async function main(client: Client) {
     if (typeof linkedProject === 'number') {
       return linkedProject;
     }
-    link.org = linkedProject.org;
-    link.project = linkedProject.project;
+    org = linkedProject.org;
+    project = linkedProject.project;
+    app = project.name;
   }
 
-  let { contextName, team } = await getScope(client);
+  let contextName;
+  let team;
+
+  try {
+    ({ contextName, team } = await getScope(client));
+  } catch (err) {
+    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+      error(err.message);
+      return 1;
+    }
+
+    throw err;
+  }
 
   // If user passed in a custom scope, update the current team & context name
   if (argv['--scope']) {
@@ -157,17 +170,6 @@ export default async function main(client: Client) {
   }
 
   const { currentTeam } = config;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
 
   const nextTimestamp = argv['--next'];
 
