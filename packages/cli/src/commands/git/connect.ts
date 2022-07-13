@@ -79,9 +79,9 @@ export default async function connect(
 
   if (Object.keys(remoteUrls).length > 1) {
     output.log(`Found multiple remote URLs.`);
-    remoteUrl = await listOptions(client, remoteUrls);
+    remoteUrl = await listRemoteUrls(client, remoteUrls);
   } else {
-    // Get the object, usually "origin", but not always
+    // If only one is found, get it — usually "origin", but not always
     remoteUrl = Object.values(remoteUrls)[0];
   }
 
@@ -185,7 +185,7 @@ async function confirmRepoConnect(
   return shouldReplaceProject;
 }
 
-async function listOptions(
+async function listRemoteUrls(
   client: Client,
   remoteUrls: { [key: string]: string }
 ): Promise<string> {
