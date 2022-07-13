@@ -8,11 +8,10 @@ import { Output } from './output';
 
 export async function createGitMeta(
   directory: string,
-  project: Project | null,
-  output: Output
+  output: Output,
+  project?: Project | null
 ): Promise<GitMetadata | undefined> {
   // If a Git repository is already connected via `vc git`, use that remote url
-  // Otherwise, default to origin url
   let remoteUrl;
   if (project?.link) {
     const { org, repo } = project.link;
@@ -27,6 +26,7 @@ export async function createGitMeta(
     }
   }
 
+  // If we couldn't get a remote url from the connected repo, default to the origin url
   if (!remoteUrl) {
     remoteUrl = await getOriginUrl(join(directory, '.git/config'), output);
   }
