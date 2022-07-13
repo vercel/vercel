@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import title from 'title';
-import terminalLink from 'terminal-link';
 import Now from '../util';
 import getArgs from '../util/get-args';
 import { handleError } from '../util/error';
@@ -233,6 +232,14 @@ export default async function main(client: Client) {
     pagination: { count: number; next: number };
   } = response;
 
+  let showUsername = false;
+  for (const deployment of deployments) {
+    const username = deployment.creator.username;
+    if (username !== contextName) {
+      showUsername = true;
+    }
+  }
+
   if (app && !deployments.length) {
     debug(
       'No deployments: attempting to find deployment that matches supplied app name'
@@ -287,13 +294,20 @@ export default async function main(client: Client) {
   client.output.print(
     `${table(
       [
-        [
-          'age',
-          inspect ? 'inspect url' : 'deployment url',
-          'state',
-          'duration',
-          'username',
-        ].map(header => chalk.bold(chalk.cyan(header))),
+        showUsername
+          ? [
+              'age',
+              inspect ? 'inspect url' : 'deployment url',
+              'state',
+              'duration',
+              'username',
+            ]
+          : [
+              'age',
+              inspect ? 'inspect url' : 'deployment url',
+              'state',
+              'duration',
+            ].map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
           .map((dep, i) => [
@@ -304,7 +318,7 @@ export default async function main(client: Client) {
                 : `${getDeployUrl(dep, inspect)}`,
               stateString(dep.state),
               chalk.gray(getDeploymentDuration(dep)),
-              chalk.gray(dep.creator.username),
+              showUsername ? chalk.gray(dep.creator.username) : '',
             ],
           ])
           // flatten since the previous step returns a nested
@@ -335,27 +349,7 @@ export default async function main(client: Client) {
 }
 
 function getDeployUrl(deployment: Deployment, inspect?: boolean): string {
-  return formatDeployUrl(deployment, inspect);
-}
-
-function formatDeployUrl(deployment: Deployment, inspect?: boolean) {
-  const deploymentUrl = inspect
-    ? deployment.inspectorUrl
-    : 'https://' + deployment.url;
-  let id;
-  if (inspect) {
-    id = deploymentUrl.split('/').slice(-1)[0];
-  } else {
-    id = deploymentUrl
-      .replace(deployment.name + '-', '')
-      .replace('https://', '')
-      .split(/(\.|-)/g)[0];
-  }
-  if (terminalLink.isSupported) {
-    return terminalLink(id, deploymentUrl);
-  } else {
-    return deploymentUrl;
-  }
+  return inspect ? deployment.inspectorUrl : 'https://' + deployment.url;
 }
 
 export function getDeploymentDuration(dep: Deployment): string {
