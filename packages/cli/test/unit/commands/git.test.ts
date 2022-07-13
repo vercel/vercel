@@ -318,7 +318,7 @@ describe('git', () => {
 
         await expect(client.stderr).toOutput('Found multiple remote URLs.');
         await expect(client.stderr).toOutput(
-          'Which one do you want to connect?'
+          'Which remote do you want to connect?'
         );
 
         client.stdin.write('\r');
