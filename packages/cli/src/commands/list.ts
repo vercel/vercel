@@ -145,7 +145,6 @@ export default async function main(client: Client) {
     link.project = linkedProject.project;
   }
 
-  const isTeam = org?.type === 'team';
   let { contextName, team } = await getScope(client);
 
   // If user passed in a custom scope, update the current team & context name
@@ -281,21 +280,13 @@ export default async function main(client: Client) {
   client.output.print(
     `${table(
       [
-        (isTeam
-          ? [
-              'age',
-              inspect ? 'inspect url' : 'deployment url',
-              'state',
-              'duration',
-              'username',
-            ]
-          : [
-              'age',
-              inspect ? 'inspect url' : 'deployment url',
-              'state',
-              'duration',
-            ]
-        ).map(header => chalk.bold(chalk.cyan(header))),
+        [
+          'age',
+          inspect ? 'inspect url' : 'deployment url',
+          'state',
+          'duration',
+          'username',
+        ].map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
           .map((dep, i) => [
@@ -306,7 +297,7 @@ export default async function main(client: Client) {
                 : `${getDeployUrl(dep, inspect)}`,
               stateString(dep.state),
               chalk.gray(getDeploymentDuration(dep)),
-              isTeam ? chalk.gray(dep.creator.username) : '',
+              chalk.gray(dep.creator.username),
             ],
           ])
           // flatten since the previous step returns a nested
@@ -319,8 +310,8 @@ export default async function main(client: Client) {
           ),
       ],
       {
-        align: isTeam ? ['l', 'l', 'l', 'l', 'l'] : ['l', 'l', 'l', 'l'],
-        hsep: ' '.repeat(isTeam ? 4 : 5),
+        align: ['l', 'l', 'l', 'l', 'l'],
+        hsep: ' '.repeat(5),
         stringLength: strlen,
       }
     ).replace(/^/gm, '  ')}\n\n`
