@@ -14,12 +14,16 @@ export async function createGitMeta(
   // If a Git repository is already connected via `vc git`, use that remote url
   let remoteUrl;
   if (project?.link) {
-    const { org, repo } = project.link;
+    // in the form of org/repo
+    const { repo } = project.link;
 
-    const remoteUrls = await getRemoteUrls(directory, output);
+    const remoteUrls = await getRemoteUrls(
+      join(directory, '.git/config'),
+      output
+    );
     if (remoteUrls) {
       Object.keys(remoteUrls).map(urlKey => {
-        if (remoteUrls[urlKey].includes(`${org}/${repo}`)) {
+        if (remoteUrls[urlKey].includes(repo)) {
           remoteUrl = remoteUrls[urlKey];
         }
       });
