@@ -22,11 +22,11 @@ export async function createGitMeta(
       output
     );
     if (remoteUrls) {
-      Object.keys(remoteUrls).map(urlKey => {
-        if (remoteUrls[urlKey].includes(repo)) {
-          remoteUrl = remoteUrls[urlKey];
+      for (const [, urlValue] of Object.entries(remoteUrls)) {
+        if (urlValue.includes(repo)) {
+          remoteUrl = urlValue;
         }
-      });
+      }
     }
   }
 
