@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import title from 'title';
+import terminalLink from 'terminal-link';
 import Now from '../util';
 import getArgs from '../util/get-args';
 import { handleError } from '../util/error';
@@ -329,11 +330,20 @@ export default async function main(client: Client) {
   }
 }
 
-function getDeployUrl(
-  deployment: Deployment,
-  inspect: boolean | undefined
-): string {
-  return inspect ? deployment.inspectorUrl : 'https://' + deployment.url;
+function getDeployUrl(deployment: Deployment, inspect?: boolean): string {
+  return inspect ? deployment.inspectorUrl : formatDeployUrl(deployment);
+}
+
+function formatDeployUrl(deployment: Deployment) {
+  const deploymentUrl = deployment.url;
+  const id = deploymentUrl
+    .replace(deployment.name + '-', '')
+    .split(/(\.|-)/g)[0];
+  if (terminalLink.isSupported) {
+    return terminalLink(id, 'https://' + deploymentUrl);
+  } else {
+    return deploymentUrl;
+  }
 }
 
 export function getDeploymentDuration(dep: Deployment): string {
