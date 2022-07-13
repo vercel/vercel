@@ -65,6 +65,7 @@ export interface Deployment {
     | 'QUEUED'
     | 'CANCELED'
     | 'ERROR';
+  ready?: number;
   createdAt: number;
   createdIn: string;
   buildingAt?: number;

@@ -40,6 +40,7 @@ export function useDeployment({
     },
     readyState: state,
     state: state,
+    ready: Date.now() + Math.floor(Math.random() * 300000),
     env: {},
     build: { env: {} },
     target: 'production',

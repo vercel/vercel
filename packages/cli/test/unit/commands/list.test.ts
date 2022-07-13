@@ -1,6 +1,9 @@
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
-import list, { stateString } from '../../../src/commands/list';
+import list, {
+  getDeploymentDuration,
+  stateString,
+} from '../../../src/commands/list';
 import { join } from 'path';
 import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
@@ -10,6 +13,7 @@ import {
   parseSpacedTableRow,
   pluckIdentifiersFromDeploymentList,
 } from '../../helpers/parse-table';
+import { Deployment } from '../../../src/types';
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/list', name);
@@ -41,20 +45,20 @@ describe('list', () => {
       const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
       const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
       data.shift();
-      data.splice(2, 1);
 
       expect(org).toEqual(team[0].slug);
       expect(header).toEqual([
-        'project',
-        'latest deployment',
-        'state',
         'age',
+        'deployment url',
+        'state',
+        'duration',
         'username',
       ]);
 
       expect(data).toEqual([
         `https://${deployment.url}`,
         stateString(deployment.state || ''),
+        getDeploymentDuration(deployment as unknown as Deployment),
         user.name,
       ]);
     } finally {
@@ -84,20 +88,20 @@ describe('list', () => {
       const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
       const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
       data.shift();
-      data.splice(2, 1);
 
       expect(org).toEqual(teamSlug);
 
       expect(header).toEqual([
-        'project',
-        'latest deployment',
-        'state',
         'age',
+        'deployment url',
+        'state',
+        'duration',
         'username',
       ]);
       expect(data).toEqual([
         `https://${deployment.url}`,
         stateString(deployment.state || ''),
+        getDeploymentDuration(deployment as unknown as Deployment),
         user.name,
       ]);
     } finally {
