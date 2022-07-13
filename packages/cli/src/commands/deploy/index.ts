@@ -187,7 +187,7 @@ export default async (client: Client) => {
   if (argv['--no-clipboard']) {
     output.print(
       `${prependEmoji(
-        `The ${param('--no-clipboard')} option is deprecated.`,
+        `The ${param('--no-clipboard')} option was ignored because it is the default behavior. Please remove it.`,
         emoji('warning')
       )}\n`
     );
