@@ -335,16 +335,24 @@ export default async function main(client: Client) {
 }
 
 function getDeployUrl(deployment: Deployment, inspect?: boolean): string {
-  return inspect ? deployment.inspectorUrl : formatDeployUrl(deployment);
+  return formatDeployUrl(deployment, inspect);
 }
 
-function formatDeployUrl(deployment: Deployment) {
-  const deploymentUrl = deployment.url;
-  const id = deploymentUrl
-    .replace(deployment.name + '-', '')
-    .split(/(\.|-)/g)[0];
+function formatDeployUrl(deployment: Deployment, inspect?: boolean) {
+  const deploymentUrl = inspect
+    ? deployment.inspectorUrl
+    : 'https://' + deployment.url;
+  let id;
+  if (inspect) {
+    id = deploymentUrl.split('/').slice(-1)[0];
+  } else {
+    id = deploymentUrl
+      .replace(deployment.name + '-', '')
+      .replace('https://', '')
+      .split(/(\.|-)/g)[0];
+  }
   if (terminalLink.isSupported) {
-    return terminalLink(id, 'https://' + deploymentUrl);
+    return terminalLink(id, deploymentUrl);
   } else {
     return deploymentUrl;
   }
