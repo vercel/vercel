@@ -81,7 +81,7 @@ export default async function connect(
     output.log(`Found multiple remote URLs.`);
     remoteUrl = await listRemoteUrls(client, remoteUrls);
   } else {
-    // If only one is found, get it — usually "origin", but not always
+    // If only one is found, get it — usually "origin"
     remoteUrl = Object.values(remoteUrls)[0];
   }
 

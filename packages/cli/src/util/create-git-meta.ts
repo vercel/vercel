@@ -3,18 +3,38 @@ import { join } from 'path';
 import ini from 'ini';
 import git from 'git-last-commit';
 import { exec } from 'child_process';
-import { GitMetadata } from '../types';
+import { GitMetadata, Project } from '../types';
 import { Output } from './output';
 
 export async function createGitMeta(
   directory: string,
+  project: Project | null,
   output: Output
 ): Promise<GitMetadata | undefined> {
-  const remoteUrl = await getOriginUrl(join(directory, '.git/config'), output);
+  // If a Git repository is already connected via `vc git`, use that remote url
+  // Otherwise, default to origin url
+  let remoteUrl;
+  if (project?.link) {
+    const { org, repo } = project.link;
+
+    const remoteUrls = await getRemoteUrls(directory, output);
+    if (remoteUrls) {
+      Object.keys(remoteUrls).map(urlKey => {
+        if (remoteUrls[urlKey].includes(`${org}/${repo}`)) {
+          remoteUrl = remoteUrls[urlKey];
+        }
+      });
+    }
+  }
+
+  if (!remoteUrl) {
+    remoteUrl = await getOriginUrl(join(directory, '.git/config'), output);
+  }
   // If we can't get the repo URL, then don't return any metadata
   if (!remoteUrl) {
     return;
   }
+
   const [commit, dirty] = await Promise.all([
     getLastCommit(directory).catch(err => {
       output.debug(
