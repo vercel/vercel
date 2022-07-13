@@ -2045,10 +2045,11 @@ export const frameworks = [
         placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `vitepress build docs`',
+        placeholder: '`npm run docs:build`',
         value: 'vitepress build docs',
       },
       devCommand: {
+        placeholder: '`npm run docs:dev`',
         value: 'vitepress dev docs',
       },
       outputDirectory: {
@@ -2079,17 +2080,18 @@ export const frameworks = [
         placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `vuepress build src`',
+        placeholder: '`npm run build`',
         value: 'vuepress build src',
       },
       devCommand: {
+        placeholder: '`npm run dev`',
         value: 'vuepress dev src',
       },
       outputDirectory: {
-        value: 'docs/.vuepress/dist',
+        value: 'src/.vuepress/dist',
       },
     },
-    getOutputDirName: async () => 'docs/.vuepress/dist',
+    getOutputDirName: async () => 'src/.vuepress/dist',
   },
   {
     name: 'Parcel',

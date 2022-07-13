@@ -21,7 +21,7 @@ $ yarn install
 Start the development server
 
 ```bash
-$ yarn docs:dev
+$ yarn dev
 ```
 
 ### Build the project
@@ -29,7 +29,7 @@ $ yarn docs:dev
 Build for production
 
 ```bash
-$ yarn docs:build
+$ yarn build
 ```
 
 ### Deploy
