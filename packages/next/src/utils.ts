@@ -1901,7 +1901,7 @@ export const onPrerenderRoute =
       // a given path. All other query keys will be striped. We can automatically
       // detect this for prerender (ISR) pages by reading the routes manifest file.
       const pageKey = srcRoute || routeKey;
-      const isDynamic = isDynamicRoute(pageKey);
+      const isDynamic = isDynamicRoute(routeKey);
       const route = routesManifest?.dynamicRoutes.find(
         (r): r is RoutesManifestRoute =>
           r.page === pageKey && !('isMiddleware' in r)
@@ -1911,14 +1911,17 @@ export const onPrerenderRoute =
       // we have sufficient information to set it
       let allowQuery: string[] | undefined;
 
-      if (routeKeys) {
+      if (!isDynamic) {
+        // for non-dynamic routes we use an empty array since
+        // no query values bust the cache for non-dynamic prerenders
+        // prerendered paths also do not pass allowQuery as they match
+        // during handle: 'filesystem' so should not cache differently
+        // by query values
+        allowQuery = [];
+      } else if (routeKeys) {
         // if we have routeKeys in the routes-manifest we use those
         // for allowQuery for dynamic routes
         allowQuery = Object.values(routeKeys);
-      } else if (!isDynamic) {
-        // for non-dynamic routes we use an empty array since
-        // no query values bust the cache for non-dynamic prerenders
-        allowQuery = [];
       }
 
       prerenders[outputPathPage] = new Prerender({
