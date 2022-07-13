@@ -13,7 +13,7 @@ export function useDeployment({
   creator,
   state = 'READY',
 }: {
-  creator: Pick<User, 'id' | 'email' | 'name'>;
+  creator: Pick<User, 'id' | 'email' | 'name' | 'username'>;
   state?: State;
 }) {
   const createdAt = Date.now();
@@ -36,7 +36,8 @@ export function useDeployment({
     creator: {
       uid: creator.id,
       email: creator.email,
-      username: creator.name,
+      name: creator.name,
+      username: creator.username,
     },
     readyState: state,
     state: state,

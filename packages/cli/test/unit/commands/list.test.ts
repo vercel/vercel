@@ -59,7 +59,42 @@ describe('list', () => {
         `https://${deployment.url}`,
         stateString(deployment.state || ''),
         getDeploymentDuration(deployment as unknown as Deployment),
-        user.name,
+        user.username,
+      ]);
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
+  it('should get deployments for linked project where the scope is a user', async () => {
+    const cwd = fixture('without-team');
+    try {
+      process.chdir(cwd);
+
+      const user = useUser();
+      useTeams();
+      useProject({
+        ...defaultProject,
+        id: 'without-team',
+        name: 'without-team',
+      });
+      const deployment = useDeployment({ creator: user });
+
+      client.setArgv('--confirm');
+      await list(client);
+
+      const output = await readOutputStream(client, 8);
+
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[4]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[7]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[8]);
+      data.shift();
+
+      expect(org).toEqual(user.username);
+      expect(header).toEqual(['age', 'deployment url', 'state', 'duration']);
+      expect(data).toEqual([
+        'https://' + deployment.url,
+        stateString(deployment.state || ''),
+        getDeploymentDuration(deployment as unknown as Deployment),
       ]);
     } finally {
       process.chdir(originalCwd);
@@ -102,7 +137,7 @@ describe('list', () => {
         `https://${deployment.url}`,
         stateString(deployment.state || ''),
         getDeploymentDuration(deployment as unknown as Deployment),
-        user.name,
+        user.username,
       ]);
     } finally {
       process.chdir(originalCwd);

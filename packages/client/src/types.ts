@@ -72,6 +72,7 @@ export interface Deployment {
   creator?: {
     uid?: string;
     email?: string;
+    name?: string;
     username?: string;
   };
   env: Dictionary<string>;
