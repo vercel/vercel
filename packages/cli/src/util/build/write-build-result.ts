@@ -1,6 +1,14 @@
 import fs from 'fs-extra';
 import mimeTypes from 'mime-types';
-import { basename, dirname, extname, join, relative, resolve } from 'path';
+import {
+  basename,
+  dirname,
+  extname,
+  join,
+  relative,
+  resolve,
+  posix,
+} from 'path';
 import {
   Builder,
   BuildResultV2,
@@ -20,6 +28,7 @@ import pipe from 'promisepipe';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
 
+const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
 
 export async function writeBuildResult(
@@ -68,6 +77,13 @@ export interface PathOverride {
 }
 
 /**
+ * Remove duplicate slashes as well as leading/trailing slashes.
+ */
+function stripDuplicateSlashes(path: string): string {
+  return normalize(path).replace(/(^\/|\/$)/g, '');
+}
+
+/**
  * Writes the output from the `build()` return value of a v2 Builder to
  * the filesystem.
  */
@@ -84,16 +100,17 @@ async function writeBuildResultV2(
   const lambdas = new Map<Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
   for (const [path, output] of Object.entries(buildResult.output)) {
+    const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
-      await writeLambda(outputDir, output, path, lambdas);
+      await writeLambda(outputDir, output, normalizedPath, lambdas);
     } else if (isPrerender(output)) {
-      await writeLambda(outputDir, output.lambda, path, lambdas);
+      await writeLambda(outputDir, output.lambda, normalizedPath, lambdas);
 
       // Write the fallback file alongside the Lambda directory
       let fallback = output.fallback;
       if (fallback) {
         const ext = getFileExtension(fallback);
-        const fallbackName = `${path}.prerender-fallback${ext}`;
+        const fallbackName = `${normalizedPath}.prerender-fallback${ext}`;
         const fallbackPath = join(outputDir, 'functions', fallbackName);
         const stream = fallback.toStream();
         await pipe(
@@ -109,7 +126,7 @@ async function writeBuildResultV2(
       const prerenderConfigPath = join(
         outputDir,
         'functions',
-        `${path}.prerender-config.json`
+        `${normalizedPath}.prerender-config.json`
       );
       const prerenderConfig = {
         ...output,
@@ -118,12 +135,20 @@ async function writeBuildResultV2(
       };
       await fs.writeJSON(prerenderConfigPath, prerenderConfig, { spaces: 2 });
     } else if (isFile(output)) {
-      await writeStaticFile(outputDir, output, path, overrides, cleanUrls);
+      await writeStaticFile(
+        outputDir,
+        output,
+        normalizedPath,
+        overrides,
+        cleanUrls
+      );
     } else if (isEdgeFunction(output)) {
-      await writeEdgeFunction(outputDir, output, path);
+      await writeEdgeFunction(outputDir, output, normalizedPath);
     } else {
       throw new Error(
-        `Unsupported output type: "${(output as any).type}" for ${path}`
+        `Unsupported output type: "${
+          (output as any).type
+        }" for ${normalizedPath}`
       );
     }
   }
@@ -145,9 +170,9 @@ async function writeBuildResultV3(
     throw new Error(`Expected "build.src" to be a string`);
   }
   const ext = extname(src);
-  const path = build.config?.zeroConfig
-    ? src.substring(0, src.length - ext.length)
-    : src;
+  const path = stripDuplicateSlashes(
+    build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
+  );
   if (isLambda(output)) {
     await writeLambda(outputDir, output, path);
   } else if (isEdgeFunction(output)) {
