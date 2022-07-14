@@ -5,9 +5,9 @@ import {
   dirname,
   extname,
   join,
-  normalize,
   relative,
   resolve,
+  posix,
 } from 'path';
 import {
   Builder,
@@ -28,6 +28,7 @@ import pipe from 'promisepipe';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
 
+const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
 
 export async function writeBuildResult(
