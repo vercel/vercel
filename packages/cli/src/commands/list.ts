@@ -296,17 +296,17 @@ export default async function main(client: Client) {
       [
         (showUsername
           ? [
-              'age',
-              inspect ? 'inspect url' : 'deployment url',
-              'state',
-              'duration',
-              'username',
+              'Age',
+              inspect ? 'Inspect URL' : 'Deployment URL',
+              'Status',
+              'Duration',
+              'Username',
             ]
           : [
-              'age',
-              inspect ? 'inspect url' : 'deployment url',
-              'state',
-              'duration',
+              'Age',
+              inspect ? 'Inspect URL' : 'Deployment URL',
+              'Status',
+              'Duration',
             ]
         ).map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
