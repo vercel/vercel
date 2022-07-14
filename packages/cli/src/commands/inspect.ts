@@ -114,7 +114,15 @@ export default async function main(client: Client) {
     throw err;
   }
 
-  const { id, name, url, createdAt, routes, readyState, alias } = deployment;
+  const {
+    id,
+    name,
+    url,
+    createdAt,
+    routes,
+    readyState,
+    alias: aliases,
+  } = deployment;
 
   const { builds } =
     deployment.version === 2
@@ -143,11 +151,11 @@ export default async function main(client: Client) {
   }
   print('\n\n');
 
-  if (alias.length > 0) {
+  if (aliases.length > 0) {
     print(chalk.bold('  Aliases\n\n'));
     let aliases = '';
-    for (const al of alias) {
-      aliases += `${chalk.gray('╶')} ${al}\n`;
+    for (const alias of aliases) {
+      aliases += `${chalk.gray('╶')} ${alias}\n`;
     }
     print(indent(aliases, 4));
     print('\n\n');
