@@ -16,7 +16,7 @@ import {
   EdgeFunction,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
-import { Header, Rewrite, Route, Source } from '@vercel/routing-utils';
+import { Header, Rewrite, Route, RouteWithSrc } from '@vercel/routing-utils';
 import { Sema } from 'async-sema';
 import crc32 from 'buffer-crc32';
 import fs, { lstat, stat } from 'fs-extra';
@@ -273,8 +273,8 @@ export async function getDynamicRoutes(
   canUsePreviewMode?: boolean,
   bypassToken?: string,
   isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: Map<string, Source>
-): Promise<Source[]> {
+  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>
+): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
       case 1:
@@ -307,7 +307,7 @@ export async function getDynamicRoutes(
             }
 
             const { page, namedRegex, regex, routeKeys } = params;
-            const route: Source = {
+            const route: RouteWithSrc = {
               src: namedRegex || regex,
               dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
                 routeKeys
@@ -400,7 +400,7 @@ export async function getDynamicRoutes(
     matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
-  const routes: Source[] = [];
+  const routes: RouteWithSrc[] = [];
   pageMatchers.forEach(pageMatcher => {
     // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
@@ -419,7 +419,7 @@ export async function getDynamicRoutes(
 }
 
 export function localizeDynamicRoutes(
-  dynamicRoutes: Source[],
+  dynamicRoutes: RouteWithSrc[],
   dynamicPrefix: string,
   entryDirectory: string,
   staticPages: Files,
@@ -427,8 +427,8 @@ export function localizeDynamicRoutes(
   routesManifest?: RoutesManifest,
   isServerMode?: boolean,
   isCorrectLocaleAPIRoutes?: boolean
-): Source[] {
-  return dynamicRoutes.map((route: Source) => {
+): RouteWithSrc[] {
+  return dynamicRoutes.map((route: RouteWithSrc) => {
     // i18n is already handled for middleware
     if (route.middleware !== undefined || route.middlewarePath !== undefined)
       return route;
@@ -2292,7 +2292,7 @@ export async function getMiddlewareBundle({
 
     const source: {
       staticRoutes: Route[];
-      dynamicRouteMap: Map<string, Source>;
+      dynamicRouteMap: Map<string, RouteWithSrc>;
       edgeFunctions: Record<string, EdgeFunction>;
     } = {
       staticRoutes: [],

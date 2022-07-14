@@ -206,7 +206,7 @@ export default async function main(client: Client): Promise<number> {
     normalizePath(relative(workPath, f))
   );
 
-  const routesResult = getTransformedRoutes({ nowConfig: vercelConfig || {} });
+  const routesResult = getTransformedRoutes(vercelConfig || {});
   if (routesResult.error) {
     output.prettyError(routesResult.error);
     return 1;
