@@ -612,6 +612,10 @@ describe('build', () => {
       expect(await fs.readFile(join(output, 'static/file'), 'utf8')).toEqual(
         'file contents'
       );
+
+      // "functions" directory has output Functions
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toEqual(['withTrailingSlash.func']);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
