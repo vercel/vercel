@@ -131,22 +131,25 @@ export default async function main(client: Client) {
 
   const environmentArg = argv['--environment']?.toLowerCase();
   let target = ProjectEnvTarget.Development;
-  switch (environmentArg) {
-    case 'development':
-      target = ProjectEnvTarget.Development;
-      break;
-    case 'preview':
-      target = ProjectEnvTarget.Preview;
-      break;
-    case 'production':
-      target = ProjectEnvTarget.Production;
-      break;
-    default:
-      output.error(
-        `Invalid environment. Options: development, preview, production`
-      );
-      return 1;
+  if (environmentArg) {
+    switch (environmentArg) {
+      case 'development':
+        target = ProjectEnvTarget.Development;
+        break;
+      case 'preview':
+        target = ProjectEnvTarget.Preview;
+        break;
+      case 'production':
+        target = ProjectEnvTarget.Production;
+        break;
+      default:
+        output.error(
+          `Invalid environment. Options: development, preview, production`
+        );
+        return 1;
+    }
   }
+
   const link = await getLinkedProject(client, cwd);
   if (link.status === 'error') {
     return link.exitCode;
