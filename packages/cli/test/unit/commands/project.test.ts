@@ -9,6 +9,7 @@ import {
   pluckIdentifiersFromDeploymentList,
   parseSpacedTableRow,
 } from '../../helpers/parse-table';
+import { useDeployment } from '../../mocks/deployment';
 
 describe('project', () => {
   describe('list', () => {
@@ -18,6 +19,7 @@ describe('project', () => {
       const project = useProject({
         ...defaultProject,
       });
+      useDeployment({ creator: user });
 
       client.setArgv('project', 'ls');
       await projects(client);
@@ -29,10 +31,11 @@ describe('project', () => {
       data.pop();
 
       expect(org).toEqual(user.username);
-      expect(header).toEqual(['Project Name', 'Manage', 'Updated']);
+      expect(header).toEqual(['Project Name', 'Manage', 'Status', 'Updated']);
       expect(data).toEqual([
         project.project.name,
         `https://vercel.com/${org}/${project.project.name}`,
+        '● Ready',
       ]);
     });
   });

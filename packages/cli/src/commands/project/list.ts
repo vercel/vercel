@@ -3,6 +3,7 @@ import ms from 'ms';
 import table from 'text-table';
 import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
+import { stateString } from '../../util/list/state-string';
 import { getCommandName } from '../../util/pkg-name';
 import strlen from '../../util/strlen';
 
@@ -37,7 +38,13 @@ export default async function list(
     projects: projectList,
     pagination,
   }: {
-    projects: [{ name: string; updatedAt: number }];
+    projects: [
+      {
+        name: string;
+        updatedAt: number;
+        latestDeployments: [{ readyState: string }];
+      }
+    ];
     pagination: { count: number; next: number };
   } = await client.fetch(projectsUrl, {
     method: 'GET',
@@ -58,7 +65,7 @@ export default async function list(
   if (projectList.length > 0) {
     const tablePrint = table(
       [
-        ['Project Name', 'Manage', 'Updated'].map(header =>
+        ['Project Name', 'Manage', 'Status', 'Updated'].map(header =>
           chalk.bold(chalk.cyan(header))
         ),
         ...projectList
@@ -66,6 +73,7 @@ export default async function list(
             [
               project.name,
               chalk.bold(getInspectUrl(contextName, project.name)),
+              stateString(project.latestDeployments[0]?.readyState),
               chalk.gray(ms(Date.now() - project.updatedAt)),
             ],
           ])
