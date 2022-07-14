@@ -132,7 +132,7 @@ export default async function main(client: Client) {
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
   print(`    ${chalk.cyan('status')}\t${stateString(readyState)}\n`);
-  print(`    ${chalk.cyan('url')}\t\thttps://${url}\n`);
+  print(`    ${chalk.cyan('url')}\t\t${url}\n`);
   if (createdAt) {
     print(
       `    ${chalk.cyan('created')}\t${new Date(createdAt)} ${elapsed(
