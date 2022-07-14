@@ -129,7 +129,7 @@ export async function deployAndTest(fixtureDir) {
   };
 }
 
-async function waitFor(milliseconds) {
+export async function waitFor(milliseconds) {
   return new Promise(resolve => {
     setTimeout(resolve, milliseconds);
   });
