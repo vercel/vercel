@@ -66,7 +66,7 @@ describe('list', () => {
     }
   });
   it('should get deployments for linked project where the scope is a user', async () => {
-    const cwd = fixture('without-team');
+    const cwd = fixture('with-team');
     try {
       process.chdir(cwd);
 
@@ -74,8 +74,8 @@ describe('list', () => {
       useTeams('team_dummy');
       useProject({
         ...defaultProject,
-        id: 'without-team',
-        name: 'without-team',
+        id: 'with-team',
+        name: 'with-team',
       });
       const deployment = useDeployment({ creator: user });
 
