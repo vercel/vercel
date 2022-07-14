@@ -34,7 +34,7 @@ export default async function list(
   }
 
   const {
-    projects: list,
+    projects: projectList,
     pagination,
   }: {
     projects: [{ name: string; updatedAt: number }];
@@ -48,32 +48,40 @@ export default async function list(
   const elapsed = ms(Date.now() - start);
 
   output.log(
-    `${list.length > 0 ? 'Projects' : 'No projects'} found under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(`[${elapsed}]`)}`
+    `${
+      projectList.length > 0 ? 'Projects' : 'No projects'
+    } found under ${chalk.bold(chalk.magenta(contextName))} ${chalk.gray(
+      `[${elapsed}]`
+    )}`
   );
 
-  if (list.length > 0) {
-    const cur = Date.now();
-    const header = [['', 'name', 'updated'].map(title => chalk.dim(title))];
-
-    const out = table(
-      header.concat(
-        list.map(secret => [
-          '',
-          chalk.bold(secret.name),
-          chalk.gray(`${ms(cur - secret.updatedAt)} ago`),
-        ])
-      ),
+  if (projectList.length > 0) {
+    const tablePrint = `${table(
+      [
+        ['project', 'dashboard', 'updated'].map(header =>
+          chalk.bold(chalk.cyan(header))
+        ),
+        ...projectList
+          .map(project => [
+            [
+              project.name,
+              chalk.bold(getInspectUrl(contextName, project.name)),
+              chalk.gray(ms(Date.now() - project.updatedAt)),
+            ],
+          ])
+          // flatten since the previous step returns a nested
+          // array of the deployment and (optionally) its instances
+          .flat(),
+      ],
       {
-        align: ['l', 'l', 'l'],
-        hsep: ' '.repeat(2),
+        align: ['l', 'l', 'l', 'l'],
+        hsep: ' '.repeat(4),
         stringLength: strlen,
       }
-    );
+    ).replace(/^/gm, '  ')}\n`;
 
-    if (out) {
-      output.print(`\n${out}\n\n`);
+    if (tablePrint) {
+      output.print(`\n${tablePrint}\n\n`);
     }
 
     if (pagination && pagination.count === 20) {
@@ -83,4 +91,8 @@ export default async function list(
     }
   }
   return 0;
+}
+
+function getInspectUrl(contextName: string, projectName: string) {
+  return `https://vercel.com/${contextName}/${projectName}`;
 }
