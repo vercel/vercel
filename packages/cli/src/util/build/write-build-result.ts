@@ -78,7 +78,7 @@ export interface PathOverride {
 /**
  * Remove duplicate slashes as well as leading/trailing slashes.
  */
-function normalizePath(path: string): string {
+function stripDuplicateSlashes(path: string): string {
   return normalize(path).replace(/(^\/|\/$)/g, '');
 }
 
@@ -99,7 +99,7 @@ async function writeBuildResultV2(
   const lambdas = new Map<Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
   for (const [path, output] of Object.entries(buildResult.output)) {
-    const normalizedPath = normalizePath(path);
+    const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
       await writeLambda(outputDir, output, normalizedPath, lambdas);
     } else if (isPrerender(output)) {
@@ -169,7 +169,7 @@ async function writeBuildResultV3(
     throw new Error(`Expected "build.src" to be a string`);
   }
   const ext = extname(src);
-  const path = normalizePath(
+  const path = stripDuplicateSlashes(
     build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
   );
   if (isLambda(output)) {
