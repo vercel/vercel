@@ -3,7 +3,6 @@ import title from 'title';
 
 export function stateString(s: string) {
   const CIRCLE = '● ';
-  // make `s` title case
   const sTitle = s && title(s);
   switch (s) {
     case 'INITIALIZING':
