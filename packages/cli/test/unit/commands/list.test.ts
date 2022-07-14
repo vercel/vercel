@@ -48,11 +48,11 @@ describe('list', () => {
 
       expect(org).toEqual(team[0].slug);
       expect(header).toEqual([
-        'age',
-        'deployment url',
-        'state',
-        'duration',
-        'username',
+        'Age',
+        'Deployment URL',
+        'Status',
+        'Duration',
+        'Username',
       ]);
 
       expect(data).toEqual([
@@ -90,7 +90,7 @@ describe('list', () => {
       data.shift();
 
       expect(org).toEqual(user.username);
-      expect(header).toEqual(['age', 'deployment url', 'state', 'duration']);
+      expect(header).toEqual(['Age', 'Deployment URL', 'Status', 'Duration']);
       expect(data).toEqual([
         'https://' + deployment.url,
         stateString(deployment.state || ''),
@@ -126,11 +126,11 @@ describe('list', () => {
 
       expect(org).toEqual(teamSlug || team[0].slug);
       expect(header).toEqual([
-        'age',
-        'inspect url',
-        'state',
-        'duration',
-        'username',
+        'Age',
+        'Inspect URL',
+        'Status',
+        'Duration',
+        'Username',
       ]);
       expect(data).toEqual([
         deployment.inspectorUrl,
@@ -170,11 +170,11 @@ describe('list', () => {
       expect(org).toEqual(teamSlug || team[0].slug);
 
       expect(header).toEqual([
-        'age',
-        'deployment url',
-        'state',
-        'duration',
-        'username',
+        'Age',
+        'Deployment URL',
+        'Status',
+        'Duration',
+        'Username',
       ]);
       expect(data).toEqual([
         `https://${deployment.url}`,
