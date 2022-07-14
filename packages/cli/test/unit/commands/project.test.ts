@@ -12,8 +12,9 @@ import {
 
 describe('project', () => {
   describe('list', () => {
-    it('should list deployments under a user', async () => {
+    it('should list projects', async () => {
       const user = useUser();
+      useTeams('team_dummy');
       const project = useProject({
         ...defaultProject,
       });
@@ -28,29 +29,11 @@ describe('project', () => {
       data.pop();
 
       expect(org).toEqual(user.username);
-      expect(header).toEqual(['name', 'updated']);
-      expect(data).toEqual([project.project.name]);
-    });
-    it('should list deployments for a team', async () => {
-      useUser();
-      const team = useTeams('team_dummy');
-      const project = useProject({
-        ...defaultProject,
-      });
-
-      client.config.currentTeam = team[0].id;
-      client.setArgv('project', 'ls');
-      await projects(client);
-
-      const output = await readOutputStream(client, 2);
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
-      data.pop();
-
-      expect(org).toEqual(team[0].slug);
-      expect(header).toEqual(['name', 'updated']);
-      expect(data).toEqual([project.project.name]);
+      expect(header).toEqual(['Project Name', 'Manage', 'Updated']);
+      expect(data).toEqual([
+        project.project.name,
+        `https://vercel.com/${org}/${project.project.name}`,
+      ]);
     });
   });
   describe('add', () => {

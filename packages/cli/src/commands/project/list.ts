@@ -56,9 +56,9 @@ export default async function list(
   );
 
   if (projectList.length > 0) {
-    const tablePrint = `${table(
+    const tablePrint = table(
       [
-        ['project', 'dashboard', 'updated'].map(header =>
+        ['Project Name', 'Manage', 'Updated'].map(header =>
           chalk.bold(chalk.cyan(header))
         ),
         ...projectList
@@ -78,11 +78,9 @@ export default async function list(
         hsep: ' '.repeat(4),
         stringLength: strlen,
       }
-    ).replace(/^/gm, '  ')}\n`;
+    ).replace(/^/gm, '  ');
 
-    if (tablePrint) {
-      output.print(`\n${tablePrint}\n\n`);
-    }
+    output.print(`\n${tablePrint}\n\n`);
 
     if (pagination && pagination.count === 20) {
       const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d', '-y']);
