@@ -71,7 +71,7 @@ describe('list', () => {
       process.chdir(cwd);
 
       const user = useUser();
-      useTeams();
+      useTeams('team_dummy');
       useProject({
         ...defaultProject,
         id: 'without-team',
@@ -79,14 +79,14 @@ describe('list', () => {
       });
       const deployment = useDeployment({ creator: user });
 
-      client.setArgv('--confirm');
+      client.setArgv('-S', user.username);
       await list(client);
 
-      const output = await readOutputStream(client, 8);
+      const output = await readOutputStream(client, 4);
 
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[4]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[7]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[8]);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
       data.shift();
 
       expect(org).toEqual(user.username);
