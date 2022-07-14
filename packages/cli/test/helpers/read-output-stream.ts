@@ -7,7 +7,9 @@ export function readOutputStream(
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     const timeout = setTimeout(() => {
-      reject();
+      reject(
+        `Was waiting for ${length} lines, but only received ${chunks.length}`
+      );
     }, 3000);
 
     client.stderr.resume();
