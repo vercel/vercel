@@ -60,8 +60,15 @@ export default async function pull(
     return 1;
   }
 
+  let defaultFilename = '.env';
+  if (environment === ProjectEnvTarget.Development) {
+    defaultFilename = '.env.development';
+  } else if (environment === ProjectEnvTarget.Production) {
+    defaultFilename = '.env.production';
+  }
+
   // handle relative or absolute filename
-  const [filename = '.env'] = args;
+  const [filename = defaultFilename] = args;
   const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
 
