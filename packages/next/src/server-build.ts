@@ -56,7 +56,7 @@ import prettyBytes from 'pretty-bytes';
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
-const EMPTY_ALLOW_QUERY_FOR_PRERENDERED = 'v12.2.0';
+const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 
 export async function serverBuild({
   dynamicPages,
@@ -136,7 +136,7 @@ export async function serverBuild({
   const pageBuildTraces = await glob('**/*.js.nft.json', pagesDir);
   const isEmptyAllowQueryForPrendered = semver.gte(
     nextVersion,
-    EMPTY_ALLOW_QUERY_FOR_PRERENDERED
+    EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
   const isCorrectNotFoundRoutes = semver.gte(
     nextVersion,
