@@ -37,6 +37,7 @@ export interface Deployment {
   id: string;
   deploymentId?: string;
   url: string;
+  inspectorUrl: string;
   name: string;
   meta: Dictionary<string | number | boolean>;
   version: 2;
