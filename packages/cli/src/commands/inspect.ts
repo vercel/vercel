@@ -12,6 +12,7 @@ import Client from '../util/client';
 import { getDeployment } from '../util/get-deployment';
 import { Deployment } from '@vercel/client';
 import { Build } from '../types';
+import title from 'title';
 
 const help = () => {
   console.log(`
@@ -113,7 +114,7 @@ export default async function main(client: Client) {
     throw err;
   }
 
-  const { id, name, url, createdAt, routes, readyState } = deployment;
+  const { id, name, url, createdAt, routes, readyState, alias } = deployment;
 
   const { builds } =
     deployment.version === 2
@@ -121,26 +122,36 @@ export default async function main(client: Client) {
       : { builds: [] };
 
   log(
-    `Fetched deployment "${url}" in ${chalk.bold(contextName)} ${elapsed(
-      Date.now() - depFetchStart
-    )}`
+    `Fetched deployment ${chalk.bold(url)} in ${chalk.bold(
+      contextName
+    )} ${elapsed(Date.now() - depFetchStart)}`
   );
 
   print('\n');
   print(chalk.bold('  General\n\n'));
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
-  print(`    ${chalk.cyan('readyState')}\t${stateString(readyState)}\n`);
-  print(`    ${chalk.cyan('url')}\t\t${url}\n`);
+  print(`    ${chalk.cyan('status')}\t${stateString(readyState)}\n`);
+  print(`    ${chalk.cyan('url')}\t\thttps://${url}\n`);
   if (createdAt) {
     print(
-      `    ${chalk.cyan('createdAt')}\t${new Date(createdAt)} ${elapsed(
+      `    ${chalk.cyan('created')}\t${new Date(createdAt)} ${elapsed(
         Date.now() - createdAt,
         true
       )}\n`
     );
   }
   print('\n\n');
+
+  if (alias.length > 0) {
+    print(chalk.bold('  Aliases\n\n'));
+    let aliases = '';
+    for (const al of alias) {
+      aliases += `${chalk.gray('╶')} ${al}\n`;
+    }
+    print(indent(aliases, 4));
+    print('\n\n');
+  }
 
   if (builds.length > 0) {
     const times: { [id: string]: string | null } = {};
@@ -165,19 +176,24 @@ export default async function main(client: Client) {
   return 0;
 }
 
-// renders the state string
 function stateString(s: Deployment['readyState']) {
+  const CIRCLE = '● ';
+  const sTitle = s && title(s);
   switch (s) {
     case 'INITIALIZING':
-      return chalk.yellow(s);
-
+    case 'BUILDING':
+    case 'DEPLOYING':
+    case 'ANALYZING':
+      return chalk.yellow(CIRCLE) + sTitle;
     case 'ERROR':
-      return chalk.red(s);
-
+      return chalk.red(CIRCLE) + sTitle;
     case 'READY':
-      return s;
-
+      return chalk.green(CIRCLE) + sTitle;
+    case 'QUEUED':
+      return chalk.white(CIRCLE) + sTitle;
+    case 'CANCELED':
+      return chalk.gray(sTitle);
     default:
-      return chalk.gray(s || 'UNKNOWN');
+      return chalk.gray('  --');
   }
 }
