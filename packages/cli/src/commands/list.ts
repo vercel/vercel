@@ -294,7 +294,7 @@ export default async function main(client: Client) {
   client.output.print(
     `${table(
       [
-        showUsername
+        (showUsername
           ? [
               'age',
               inspect ? 'inspect url' : 'deployment url',
@@ -307,7 +307,8 @@ export default async function main(client: Client) {
               inspect ? 'inspect url' : 'deployment url',
               'state',
               'duration',
-            ].map(header => chalk.bold(chalk.cyan(header))),
+            ]
+        ).map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
           .map((dep, i) => [
