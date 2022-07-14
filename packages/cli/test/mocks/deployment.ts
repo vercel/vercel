@@ -22,6 +22,7 @@ export function useDeployment({
   const deployment: Deployment = {
     id: `dpl_${chance().guid()}`,
     url: url.hostname,
+    inspectorUrl: `https://vercel.com/${chance()}`,
     name: chance.name,
     meta: {},
     regions: [],

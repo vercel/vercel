@@ -20,7 +20,7 @@ const fixture = (name: string) =>
 
 describe('list', () => {
   const originalCwd = process.cwd();
-  let teamSlug: string = '';
+  let teamSlug: string;
 
   it('should get deployments from a project linked by a directory', async () => {
     const cwd = fixture('with-team');
@@ -100,13 +100,56 @@ describe('list', () => {
       process.chdir(originalCwd);
     }
   });
+  it('should use inspector urls', async () => {
+    const cwd = fixture('with-team');
+    try {
+      process.chdir(cwd);
+
+      const user = useUser();
+      const team = useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      const deployment = useDeployment({ creator: user });
+
+      client.setArgv('--inspect');
+      await list(client);
+
+      const output = await readOutputStream(client, 4);
+
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
+      data.shift();
+
+      expect(org).toEqual(teamSlug || team[0].slug);
+      expect(header).toEqual([
+        'age',
+        'inspect url',
+        'state',
+        'duration',
+        'username',
+      ]);
+      expect(data).toEqual([
+        deployment.inspectorUrl,
+        stateString(deployment.state || ''),
+        getDeploymentDuration(deployment as unknown as Deployment),
+        user.username,
+      ]);
+      data.shift();
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
   it('should get the deployments for a specified project', async () => {
     const cwd = fixture('with-team');
     try {
       process.chdir(cwd);
 
       const user = useUser();
-      useTeams('team_dummy');
+      const team = useTeams('team_dummy');
       useProject({
         ...defaultProject,
         id: 'with-team',
@@ -124,7 +167,7 @@ describe('list', () => {
       const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
       data.shift();
 
-      expect(org).toEqual(teamSlug);
+      expect(org).toEqual(teamSlug || team[0].slug);
 
       expect(header).toEqual([
         'age',
