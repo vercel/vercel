@@ -133,16 +133,20 @@ function getRealNextVersion(entryPath: string): string | false {
     // package.json. This allows the builder to be used with frameworks like Blitz that
     // bundle Next but where Next isn't in the project root's package.json
 
+    const requirePath = resolveFrom(entryPath, 'next/package.json');
+    console.log(
+      `Detecting Next.js version with: "${entryPath}" -> "${requirePath}"`
+    );
+
     // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
-    const nextVersion: string = eval('require')(
-      resolveFrom(entryPath, 'next/package.json')
-    ).version;
+    const nextVersion: string = eval('require')(requirePath).version;
     console.log(`Detected Next.js version: ${nextVersion}`);
     return nextVersion;
-  } catch (_ignored) {
-    console.log(
-      `Warning: Could not identify Next.js version, ensure it is defined as a project dependency.`
-    );
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.log(`Failed to detect Next.js version: ${error.message}`);
+    }
+
     return false;
   }
 }
@@ -198,10 +202,19 @@ export const build: BuildV2 = async ({
   let entryDirectory = path.dirname(entrypoint);
   let entryPath = path.join(workPath, entryDirectory);
 
+  console.log('Started Next.js build with: ');
+  console.log({
+    entrypoint,
+    entryDirectory,
+    entryPath,
+  });
+
   // allow testing root directory setting with vercel.json
   if (config.rootDirectory) {
     repoRootPath = entryPath;
     entryPath = path.join(entryPath, config.rootDirectory as string);
+
+    console.log(`Changing "entryPath" to: ${entryPath}`);
   }
   const outputDirectory = config.outputDirectory || '.next';
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
