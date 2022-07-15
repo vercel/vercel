@@ -57,6 +57,7 @@ const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
+const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
 export async function serverBuild({
   dynamicPages,
@@ -145,6 +146,10 @@ export async function serverBuild({
   const isCorrectMiddlewareOrder = semver.gte(
     nextVersion,
     CORRECT_MIDDLEWARE_ORDER_VERSION
+  );
+  const isCorrectManifests = semver.gte(
+    nextVersion,
+    CORRECTED_MANIFESTS_VERSION
   );
   let hasStatic500 = !!staticPages[path.join(entryDirectory, '500')];
 
@@ -676,18 +681,84 @@ export async function serverBuild({
     );
 
     for (const group of combinedGroups) {
-      const lambda = await createLambdaFromPseudoLayers({
-        files: launcherFiles,
-        layers: [
-          group.pseudoLayer,
-          [...group.pages, ...internalPages].reduce((prev, page) => {
-            const pageFileName = path.normalize(
-              path.relative(baseDir, lambdaPages[page].fsPath)
+      const groupPageFiles: { [key: string]: PseudoFile } = {};
+
+      for (const page of [...group.pages, ...internalPages]) {
+        const pageFileName = path.normalize(
+          path.relative(baseDir, lambdaPages[page].fsPath)
+        );
+        groupPageFiles[pageFileName] = compressedPages[page];
+      }
+
+      const updatedManifestFiles: { [name: string]: FileBlob } = {};
+
+      if (isCorrectManifests) {
+        // filter dynamic routes to only the included dynamic routes
+        // in this specific serverless function so that we don't
+        // accidentally match a dynamic route while resolving that
+        // is not actually in this specific serverless function
+        for (const manifest of [
+          'routes-manifest.json',
+          'server/pages-manifest.json',
+        ]) {
+          let fsPath = path.join(entryPath, outputDirectory, manifest);
+
+          if (requiredServerFilesManifest.appDir) {
+            fsPath = path.join(
+              requiredServerFilesManifest.appDir,
+              outputDirectory,
+              manifest
             );
-            prev[pageFileName] = compressedPages[page];
-            return prev;
-          }, {} as { [key: string]: PseudoFile }),
-        ],
+          }
+          const relativePath = path.join(path.relative(baseDir, fsPath));
+          delete group.pseudoLayer[relativePath];
+
+          const manifestData = await fs.readJSON(fsPath);
+          const normalizedPages = new Set(
+            group.pages.map(page => {
+              page = `/${page.replace(/\.js$/, '')}`;
+              if (page === '/index') page = '/';
+              return page;
+            })
+          );
+
+          switch (manifest) {
+            case 'routes-manifest.json': {
+              const filterItem = (item: { page: string }) =>
+                normalizedPages.has(item.page);
+
+              manifestData.dynamicRoutes =
+                manifestData.dynamicRoutes?.filter(filterItem);
+              manifestData.staticRoutes =
+                manifestData.staticRoutes?.filter(filterItem);
+              break;
+            }
+            case 'server/pages-manifest.json': {
+              for (const key of Object.keys(manifestData)) {
+                if (isDynamicRoute(key) && !normalizedPages.has(key)) {
+                  delete manifestData[key];
+                }
+              }
+              break;
+            }
+            default: {
+              break;
+            }
+          }
+
+          updatedManifestFiles[relativePath] = new FileBlob({
+            contentType: 'application/json',
+            data: JSON.stringify(manifestData),
+          });
+        }
+      }
+
+      const lambda = await createLambdaFromPseudoLayers({
+        files: {
+          ...launcherFiles,
+          ...updatedManifestFiles,
+        },
+        layers: [group.pseudoLayer, groupPageFiles],
         handler: path.join(
           path.relative(
             baseDir,
