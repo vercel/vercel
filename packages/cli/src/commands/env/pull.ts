@@ -210,14 +210,14 @@ function buildDeltaString(
   let { added, changed, removed } = findChanges(oldEnv, newEnv);
 
   let deltaString = '';
-  deltaString += chalk.green(addDeltaSection(added, '+'));
-  deltaString += chalk.yellow(addDeltaSection(changed, '~'));
-  deltaString += chalk.red(addDeltaSection(removed, '-'));
+  deltaString += chalk.green(addDeltaSection('+', added));
+  deltaString += chalk.yellow(addDeltaSection('~', changed));
+  deltaString += chalk.red(addDeltaSection('-', removed));
 
   return deltaString;
 }
 
-function addDeltaSection(arr: string[], prefix: string): string {
+function addDeltaSection(prefix: string, arr: string[]): string {
   let deltaSection = '';
   let ellipsis = '';
   for (const [i, item] of arr.entries()) {
