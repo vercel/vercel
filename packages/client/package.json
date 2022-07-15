@@ -51,7 +51,7 @@
     "ignore": "4.0.6",
     "minimatch": "5.0.1",
     "ms": "2.1.2",
-    "node-fetch": "2.6.1",
+    "node-fetch": "2.6.7",
     "querystring": "^0.2.0",
     "sleep-promise": "8.0.1"
   }
