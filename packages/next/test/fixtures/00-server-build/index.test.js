@@ -138,7 +138,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     await checkPaths(pathsToCheck);
 
-    expect(preRevalidateRandom).not.toBe(initialRandom);
-    expect(preRevalidateRandomData).not.toBe(initialRandomData);
+    expect(preRevalidateRandom).toBeDefined();
+    expect(preRevalidateRandomData).toBeDefined();
   });
 });
