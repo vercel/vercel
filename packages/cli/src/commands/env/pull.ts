@@ -137,7 +137,7 @@ export default async function pull(
   );
 
   if (deltaString !== '') {
-    output.print(deltaString + '\n');
+    output.print(deltaString);
   }
 
   return 0;
