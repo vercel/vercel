@@ -24,7 +24,9 @@ for (const [package, version] of changedPackageVersions) {
       `skipping ${package}@${version} as it is already a canary version`
     );
   } else {
-    console.log(execSync(`npm dist-tag add ${package}@${version} canary`));
+    console.log(
+      execSync(`npm dist-tag add ${package}@${version} canary`).toString()
+    );
     console.log(`updated canary dist-tag for ${package}@${version}`);
   }
 }
