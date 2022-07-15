@@ -15,6 +15,7 @@ import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { EnvRecordsSource } from '../../util/env/get-env-records';
+import { parseEnv } from '../../util/parse-env';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -170,30 +171,18 @@ function escapeValue(value: string | undefined) {
 //   }
 // }
 
-async function createEnvObject(envPath: string, output: Output) {
+async function createEnvObject(
+  envPath: string,
+  output: Output
+): Promise<Dictionary<string | undefined> | undefined> {
   try {
-    return (
-      (await readFile(envPath, 'utf-8'))
-        // split on new line
-        .split(/\r?\n|\r/)
-        // filter comments
-        .filter(line => /^[^#]/.test(line))
-        // needs equal sign
-        .filter(line => /=/i.test(line))
-        // turn lines into plain object
-        .reduce((memo: Record<string, string>, line) => {
-          // pull out key/values (value can have spaces, remove quotes)
-          const kv = line.match(/^([^=]+)=(.*)$/);
-          const key = kv?.[1].trim();
-          const val = kv?.[2].trim().replace(/['"]/g, '');
-
-          if (key && val) {
-            memo[key] = val;
-          }
-
-          return memo;
-        }, {})
-    );
+    // Inspired by https://github.com/tswaters/env-file-parser/blob/master/lib/parse.js
+    let envArr = (await readFile(envPath, 'utf-8'))
+      .replace(/"/g, '')
+      .split(/\r?\n|\r/)
+      .filter(line => /^[^#]/.test(line))
+      .filter(line => /=/i.test(line));
+    return parseEnv(envArr);
   } catch (err) {
     output.debug(`Error parsing env file: ${err}`);
   }
