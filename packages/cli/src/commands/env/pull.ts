@@ -136,7 +136,7 @@ export default async function pull(
     )}\n`
   );
 
-  if (exists && deltaString !== '') {
+  if (deltaString !== '') {
     output.print(deltaString + '\n');
   }
 
