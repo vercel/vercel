@@ -137,8 +137,8 @@ export default async function pull(
 
     if (oldEnv && records) {
       const deltaString = buildDeltaString(
-        records as Dictionary<string>,
-        oldEnv
+        oldEnv,
+        records as Dictionary<string>
       );
       if (deltaString !== '') {
         output.print(deltaString + '\n');
