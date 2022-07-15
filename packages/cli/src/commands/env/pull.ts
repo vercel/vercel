@@ -160,9 +160,13 @@ async function createEnvObject(
   try {
     // Inspired by https://github.com/tswaters/env-file-parser/blob/master/lib/parse.js
     let envArr = (await readFile(envPath, 'utf-8'))
+      // remove double quotes
       .replace(/"/g, '')
+      // split on new line
       .split(/\r?\n|\r/)
+      // filter comments
       .filter(line => /^[^#]/.test(line))
+      // needs equal sign
       .filter(line => /=/i.test(line));
     return parseEnv(envArr);
   } catch (err) {
