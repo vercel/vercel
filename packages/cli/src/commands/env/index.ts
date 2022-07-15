@@ -131,22 +131,15 @@ export default async function main(client: Client) {
 
   const environmentArg = argv['--environment']?.toLowerCase();
   let target = ProjectEnvTarget.Development;
-  if (environmentArg) {
-    switch (environmentArg) {
-      case 'development':
-        target = ProjectEnvTarget.Development;
-        break;
-      case 'preview':
-        target = ProjectEnvTarget.Preview;
-        break;
-      case 'production':
-        target = ProjectEnvTarget.Production;
-        break;
-      default:
-        output.error(
-          `Invalid environment. Options: development, preview, production`
-        );
-        return 1;
+  if (environmentArg && environmentArg !== 'development') {
+    if (environmentArg === 'preview') {
+      target = ProjectEnvTarget.Preview;
+    } else if (environmentArg === 'production') {
+      target = ProjectEnvTarget.Production;
+    } else {
+      output.error(
+        `Invalid environment. Options: development, preview, production`
+      );
     }
   }
 
