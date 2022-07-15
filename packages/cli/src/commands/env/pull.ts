@@ -154,23 +154,6 @@ function escapeValue(value: string | undefined) {
     : '';
 }
 
-// async function createEnvObject(
-//   envPath: string,
-//   output: Output
-// ): Promise<Dictionary<string | undefined> | undefined> {
-//   try {
-//     let envArr = (await readFile(envPath, 'utf-8'))
-//       .trim()
-//       .replace(/"/g, '')
-//       .replace(/^(?!.*=).*$/gm, '')
-//       .split('\n');
-
-//     return parseEnv(envArr);
-//   } catch (err) {
-//     output.debug(`Error parsing env file: ${err}`);
-//   }
-// }
-
 async function createEnvObject(
   envPath: string,
   output: Output
