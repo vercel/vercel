@@ -115,9 +115,6 @@ export default async function pull(
       envPath: fullPath,
     })) as Dictionary<string>;
 
-    console.log(oldEnv);
-    console.log(records);
-
     if (oldEnv && records) {
       deltaString = buildDeltaString(oldEnv, records as Dictionary<string>);
     }
@@ -169,7 +166,7 @@ async function createEnvObject(data: {
       .toString()
       .trim()
       .replace(/"/g, '')
-      .replace(/(?<=[\s>]|^)(# |#)(\w*[A-Za-z_]+\w*)/g, '')
+      .replace(/^(?!.*=).*$/gm, '')
       .split('\n');
     envArr.shift();
     obj = envArr;
@@ -183,20 +180,22 @@ async function createEnvObject(data: {
 function buildDeltaString(
   oldEnv: Dictionary<string>,
   newEnv: Dictionary<string>
-): string {
+) {
   let added = [];
   let changed = [];
   let removed = [];
 
   for (const key of Object.keys(newEnv)) {
-    if (!oldEnv[key]) {
+    if (key === '') continue;
+    if (!oldEnv[key] && oldEnv[key] !== '') {
       added.push(key);
     } else if (oldEnv[key] !== newEnv[key]) {
       changed.push(key);
     }
   }
   for (const key of Object.keys(oldEnv)) {
-    if (!newEnv[key]) {
+    if (key === '') continue;
+    if (!newEnv[key] && newEnv[key] !== '') {
       removed.push(key);
     }
   }
