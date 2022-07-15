@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import { join, resolve, basename } from 'path';
-import { fileNameSymbol, VercelConfig } from '@vercel/client';
+import { Dictionary, fileNameSymbol, VercelConfig } from '@vercel/client';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
@@ -65,7 +65,6 @@ import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { createGitMeta } from '../../util/create-git-meta';
-import { parseEnv } from '../../util/parse-env';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -894,4 +893,37 @@ const printDeploymentStatus = async (
         ) + newline;
     output.print(message + link);
   }
+};
+
+// Converts `env` Arrays, Strings and Objects into env Objects.
+const parseEnv = (env?: string[] | Dictionary<string>) => {
+  if (!env) {
+    return {};
+  }
+
+  if (typeof env === 'string') {
+    // a single `--env` arg comes in as a String
+    env = [env];
+  }
+
+  if (Array.isArray(env)) {
+    return env.reduce((o, e) => {
+      let key;
+      let value;
+      const equalsSign = e.indexOf('=');
+
+      if (equalsSign === -1) {
+        key = e;
+      } else {
+        key = e.slice(0, equalsSign);
+        value = e.slice(equalsSign + 1);
+      }
+
+      o[key] = value;
+      return o;
+    }, {} as Dictionary<string | undefined>);
+  }
+
+  // assume it's already an Object
+  return env;
 };
