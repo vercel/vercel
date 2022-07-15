@@ -642,6 +642,10 @@ describe('build', () => {
       expect(errorBuilds[0].error.message).toMatch(`',' expected.`);
       expect(errorBuilds[0].error.hideStackTrace).toEqual(true);
       expect(errorBuilds[0].error.code).toEqual('NODE_TYPESCRIPT_ERROR');
+
+      // `config.json`` contains `version`
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.version).toBe(3);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
