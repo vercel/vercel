@@ -1,7 +1,8 @@
 import chalk from 'chalk';
-import { outputFile } from 'fs-extra';
+import { outputFile, readFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
+import { Dictionary } from '@vercel/client';
 import { Project, ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
 import exposeSystemEnvs from '../../util/dev/expose-system-envs';
@@ -14,6 +15,7 @@ import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { EnvRecordsSource } from '../../util/env/get-env-records';
+import { parseEnv } from '../../util/parse-env';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -125,6 +127,25 @@ export default async function pull(
     )}\n`
   );
 
+  if (exists) {
+    const oldEnv = (await createEnvObject({
+      envPath: fullPath,
+    })) as Dictionary<string>;
+
+    console.log(oldEnv);
+    console.log(records);
+
+    if (oldEnv && records) {
+      const deltaString = buildDeltaString(
+        records as Dictionary<string>,
+        oldEnv
+      );
+      if (deltaString !== '') {
+        output.print(deltaString + '\n');
+      }
+    }
+  }
+
   return 0;
 }
 
@@ -134,4 +155,69 @@ function escapeValue(value: string | undefined) {
         .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
         .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
     : '';
+}
+
+async function createEnvObject(data: {
+  envPath?: string;
+  envData?: Dictionary<string>;
+}): Promise<Dictionary<string | undefined> | undefined> {
+  const { envPath, envData } = data;
+
+  let obj;
+
+  if (envPath) {
+    let envArr = (await readFile(envPath, 'utf-8'))
+      .toString()
+      .trim()
+      .replace(/"/g, '')
+      .split('\n');
+    envArr.shift();
+    obj = envArr;
+  }
+  if (envData) {
+    obj = envData;
+  }
+  return await parseEnv(obj);
+}
+
+function buildDeltaString(
+  oldEnv: Dictionary<string>,
+  newEnv: Dictionary<string>
+): string {
+  let added = [];
+  let changed = [];
+  let removed = [];
+
+  for (const key of Object.keys(newEnv)) {
+    if (!oldEnv[key]) {
+      added.push(key);
+    } else if (oldEnv[key] !== newEnv[key]) {
+      changed.push(key);
+    }
+  }
+  for (const key of Object.keys(oldEnv)) {
+    if (!newEnv[key]) {
+      removed.push(key);
+    }
+  }
+
+  let deltaString = '';
+  deltaString += addDeltaSection(added, '+');
+  deltaString += addDeltaSection(changed, '~');
+  deltaString += addDeltaSection(removed, '-');
+
+  return deltaString;
+}
+
+function addDeltaSection(arr: string[], prefix: string) {
+  let deltaSection = '';
+  for (const [i, item] of arr.entries()) {
+    if (i === 3) {
+      deltaSection += '...\n';
+      break;
+    }
+
+    deltaSection += `${prefix} ${item}\n`;
+  }
+  return deltaSection;
 }
