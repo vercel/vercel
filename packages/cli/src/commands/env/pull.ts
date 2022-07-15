@@ -169,6 +169,7 @@ async function createEnvObject(data: {
       .toString()
       .trim()
       .replace(/"/g, '')
+      .replace(/(?<=[\s>]|^)(# |#)(\w*[A-Za-z_]+\w*)/g, '')
       .split('\n');
     envArr.shift();
     obj = envArr;
