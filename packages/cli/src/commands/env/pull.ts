@@ -71,7 +71,7 @@ export default async function pull(
   const exists = typeof head !== 'undefined';
 
   if (head === CONTENTS_PREFIX) {
-    output.log(`Updating existing ${chalk.bold(filename)} file`);
+    output.log(`Overwriting existing ${chalk.bold(filename)} file`);
   } else if (
     exists &&
     !skipConfirmation &&
