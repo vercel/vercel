@@ -170,10 +170,14 @@ async function createEnvObject(
   }
 }
 
-function buildDeltaString(
+function findChanges(
   oldEnv: Dictionary<string | undefined>,
   newEnv: Dictionary<string | undefined>
-) {
+): {
+  added: string[];
+  changed: string[];
+  removed: string[];
+} {
   let added = [];
   let changed = [];
   let removed = [];
@@ -193,6 +197,19 @@ function buildDeltaString(
     }
   }
 
+  return {
+    added,
+    changed,
+    removed,
+  };
+}
+
+function buildDeltaString(
+  oldEnv: Dictionary<string | undefined>,
+  newEnv: Dictionary<string | undefined>
+): string {
+  let { added, changed, removed } = findChanges(oldEnv, newEnv);
+
   let deltaString = '';
   deltaString += chalk.green(addDeltaSection(added, '+'));
   deltaString += chalk.yellow(addDeltaSection(changed, '~'));
@@ -201,7 +218,7 @@ function buildDeltaString(
   return deltaString;
 }
 
-function addDeltaSection(arr: string[], prefix: string) {
+function addDeltaSection(arr: string[], prefix: string): string {
   let deltaSection = '';
   for (const [i, item] of arr.entries()) {
     if (i === 3) {
