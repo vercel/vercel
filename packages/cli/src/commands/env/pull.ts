@@ -138,7 +138,7 @@ export default async function pull(
 
   if (deltaString) {
     output.print('\n' + deltaString);
-  } else {
+  } else if (exists) {
     output.log('No changes found.');
   }
 
