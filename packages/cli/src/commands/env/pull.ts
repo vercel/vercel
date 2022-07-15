@@ -109,6 +109,20 @@ export default async function pull(
     environment
   );
 
+  let deltaString = '';
+  if (exists) {
+    const oldEnv = (await createEnvObject({
+      envPath: fullPath,
+    })) as Dictionary<string>;
+
+    console.log(oldEnv);
+    console.log(records);
+
+    if (oldEnv && records) {
+      deltaString = buildDeltaString(oldEnv, records as Dictionary<string>);
+    }
+  }
+
   const contents =
     CONTENTS_PREFIX +
     Object.entries(records)
@@ -127,23 +141,8 @@ export default async function pull(
     )}\n`
   );
 
-  if (exists) {
-    const oldEnv = (await createEnvObject({
-      envPath: fullPath,
-    })) as Dictionary<string>;
-
-    console.log(oldEnv);
-    console.log(records);
-
-    if (oldEnv && records) {
-      const deltaString = buildDeltaString(
-        oldEnv,
-        records as Dictionary<string>
-      );
-      if (deltaString !== '') {
-        output.print(deltaString + '\n');
-      }
-    }
+  if (exists && deltaString !== '') {
+    output.print(deltaString + '\n');
   }
 
   return 0;
