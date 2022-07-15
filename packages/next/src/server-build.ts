@@ -701,15 +701,8 @@ export async function serverBuild({
           'routes-manifest.json',
           'server/pages-manifest.json',
         ]) {
-          let fsPath = path.join(entryPath, outputDirectory, manifest);
+          const fsPath = path.join(entryPath, outputDirectory, manifest);
 
-          if (requiredServerFilesManifest.appDir) {
-            fsPath = path.join(
-              requiredServerFilesManifest.appDir,
-              outputDirectory,
-              manifest
-            );
-          }
           const relativePath = path.join(path.relative(baseDir, fsPath));
           delete group.pseudoLayer[relativePath];
 
