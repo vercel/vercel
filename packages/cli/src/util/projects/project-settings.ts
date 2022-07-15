@@ -5,6 +5,7 @@ import { join } from 'path';
 
 export type ProjectLinkAndSettings = ProjectLink & {
   settings: {
+    createdAt: Project['createdAt'];
     installCommand: Project['installCommand'];
     buildCommand: Project['buildCommand'];
     devCommand: Project['devCommand'];
@@ -28,6 +29,7 @@ export async function writeProjectSettings(
     projectId: project.id,
     orgId: org.id,
     settings: {
+      createdAt: project.createdAt,
       framework: project.framework,
       devCommand: project.devCommand,
       installCommand: project.installCommand,

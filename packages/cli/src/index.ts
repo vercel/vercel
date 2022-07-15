@@ -172,7 +172,8 @@ const main = async () => {
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  const betaCommands: string[] = ['build'];
+  // Currently no beta commands - add here as needed
+  const betaCommands: string[] = [];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
@@ -631,6 +632,9 @@ const main = async () => {
       case 'env':
         func = require('./commands/env').default;
         break;
+      case 'git':
+        func = require('./commands/git').default;
+        break;
       case 'init':
         func = require('./commands/init').default;
         break;
@@ -652,8 +656,8 @@ const main = async () => {
       case 'logout':
         func = require('./commands/logout').default;
         break;
-      case 'projects':
-        func = require('./commands/projects').default;
+      case 'project':
+        func = require('./commands/project').default;
         break;
       case 'pull':
         func = require('./commands/pull').default;

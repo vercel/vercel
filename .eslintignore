@@ -19,6 +19,9 @@ packages/cli/src/util/dev/templates/*.ts
 packages/client/tests/fixtures
 packages/client/lib
 
+# hydrogen
+packages/hydrogen/edge-entry.js
+
 # next
 packages/next/test/integration/middleware
 packages/next/test/integration/middleware-eval
