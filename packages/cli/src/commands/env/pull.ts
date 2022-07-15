@@ -138,6 +138,8 @@ export default async function pull(
 
   if (deltaString) {
     output.print('\n' + deltaString);
+  } else {
+    output.log('No changes found.');
   }
 
   return 0;
@@ -192,9 +194,9 @@ function buildDeltaString(
   }
 
   let deltaString = '';
-  deltaString += addDeltaSection(added, '+');
-  deltaString += addDeltaSection(changed, '~');
-  deltaString += addDeltaSection(removed, '-');
+  deltaString += chalk.green(addDeltaSection(added, '+'));
+  deltaString += chalk.yellow(addDeltaSection(changed, '~'));
+  deltaString += chalk.red(addDeltaSection(removed, '-'));
 
   return deltaString;
 }
