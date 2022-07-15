@@ -216,13 +216,12 @@ function buildDeltaString(
 
 function addDeltaSection(arr: string[], prefix: string): string {
   let deltaSection = '';
+  let ellipsis = '';
   for (const [i, item] of arr.entries()) {
-    if (i === 3) {
-      deltaSection += '...\n';
-      break;
-    }
+    if (i === 2) ellipsis = '…';
+    if (i === 3) break;
 
-    deltaSection += `${prefix} ${item}\n`;
+    deltaSection += `${prefix} ${item}${ellipsis}\n`;
   }
   return deltaSection;
 }
