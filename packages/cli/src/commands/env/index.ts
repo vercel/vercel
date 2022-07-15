@@ -138,8 +138,11 @@ export default async function main(client: Client) {
       target = ProjectEnvTarget.Production;
     } else {
       output.error(
-        `Invalid environment. Options: development, preview, production`
+        `Invalid environment \`${chalk.cyan(
+          environmentArg
+        )}\`. Options: development | preview | production`
       );
+      return 1;
     }
   }
 

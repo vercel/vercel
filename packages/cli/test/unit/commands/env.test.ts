@@ -92,6 +92,34 @@ describe('env', () => {
       expect(envFileHasEnv).toBeTruthy();
     });
 
+    it('should throw an error when it does not recognize given environment', async () => {
+      const cwd = setupFixture('vercel-env-pull');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+
+      client.setArgv(
+        'env',
+        'pull',
+        '.env.production',
+        '--environment',
+        'something-invalid',
+        '--cwd',
+        cwd
+      );
+
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        `Invalid environment \`something-invalid\`. Options: development | preview | production`
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
     it('should expose production system env variables', async () => {
       const cwd = setupFixture('vercel-env-pull');
       useUser();
