@@ -69,7 +69,7 @@ export default async function pull(
   const exists = typeof head !== 'undefined';
 
   if (head === CONTENTS_PREFIX) {
-    output.print(`Overwriting existing ${chalk.bold(filename)} file\n`);
+    output.log(`Updating existing ${chalk.bold(filename)} file`);
   } else if (
     exists &&
     !skipConfirmation &&
@@ -83,10 +83,10 @@ export default async function pull(
     return 0;
   }
 
-  output.print(
-    `Downloading "${environment}" Environment Variables for Project ${chalk.bold(
-      project.name
-    )}\n`
+  output.log(
+    `Downloading \`${chalk.cyan(
+      environment
+    )}\` Environment Variables for Project ${chalk.bold(project.name)}`
   );
 
   const pullStamp = stamp();
