@@ -111,13 +111,10 @@ export default async function pull(
 
   let deltaString = '';
   if (exists) {
-    const oldEnv = (await createEnvObject(
-      fullPath,
-      output
-    )) as Dictionary<string>;
+    const oldEnv = await createEnvObject(fullPath, output);
 
     if (oldEnv && records) {
-      deltaString = buildDeltaString(oldEnv, records as Dictionary<string>);
+      deltaString = buildDeltaString(oldEnv, records);
     }
   }
 
@@ -172,8 +169,8 @@ async function createEnvObject(
 }
 
 function buildDeltaString(
-  oldEnv: Dictionary<string>,
-  newEnv: Dictionary<string>
+  oldEnv: Dictionary<string | undefined>,
+  newEnv: Dictionary<string | undefined>
 ) {
   let added = [];
   let changed = [];
