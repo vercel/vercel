@@ -15,7 +15,6 @@ import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { EnvRecordsSource } from '../../util/env/get-env-records';
-import { parseEnv } from '../../util/parse-env';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -111,9 +110,10 @@ export default async function pull(
 
   let deltaString = '';
   if (exists) {
-    const oldEnv = (await createEnvObject({
-      envPath: fullPath,
-    })) as Dictionary<string>;
+    const oldEnv = (await createEnvObject(
+      fullPath,
+      output
+    )) as Dictionary<string>;
 
     if (oldEnv && records) {
       deltaString = buildDeltaString(oldEnv, records as Dictionary<string>);
@@ -153,28 +153,50 @@ function escapeValue(value: string | undefined) {
     : '';
 }
 
-async function createEnvObject(data: {
-  envPath?: string;
-  envData?: Dictionary<string>;
-}): Promise<Dictionary<string | undefined> | undefined> {
-  const { envPath, envData } = data;
+// async function createEnvObject(
+//   envPath: string,
+//   output: Output
+// ): Promise<Dictionary<string | undefined> | undefined> {
+//   try {
+//     let envArr = (await readFile(envPath, 'utf-8'))
+//       .trim()
+//       .replace(/"/g, '')
+//       .replace(/^(?!.*=).*$/gm, '')
+//       .split('\n');
 
-  let obj;
+//     return parseEnv(envArr);
+//   } catch (err) {
+//     output.debug(`Error parsing env file: ${err}`);
+//   }
+// }
 
-  if (envPath) {
-    let envArr = (await readFile(envPath, 'utf-8'))
-      .toString()
-      .trim()
-      .replace(/"/g, '')
-      .replace(/^(?!.*=).*$/gm, '')
-      .split('\n');
-    envArr.shift();
-    obj = envArr;
+async function createEnvObject(envPath: string, output: Output) {
+  try {
+    return (
+      (await readFile(envPath, 'utf-8'))
+        // split on new line
+        .split(/\r?\n|\r/)
+        // filter comments
+        .filter(line => /^[^#]/.test(line))
+        // needs equal sign
+        .filter(line => /=/i.test(line))
+        // turn lines into plain object
+        .reduce((memo: Record<string, string>, line) => {
+          // pull out key/values (value can have spaces, remove quotes)
+          const kv = line.match(/^([^=]+)=(.*)$/);
+          const key = kv?.[1].trim();
+          const val = kv?.[2].trim().replace(/['"]/g, '');
+
+          if (key && val) {
+            memo[key] = val;
+          }
+
+          return memo;
+        }, {})
+    );
+  } catch (err) {
+    output.debug(`Error parsing env file: ${err}`);
   }
-  if (envData) {
-    obj = envData;
-  }
-  return await parseEnv(obj);
 }
 
 function buildDeltaString(
