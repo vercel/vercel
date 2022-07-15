@@ -14,7 +14,7 @@ import {
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Handler, Route, Source } from '@vercel/routing-utils';
+import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
@@ -828,7 +828,7 @@ export async function serverBuild({
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
-  const notFoundPreviewRoutes: Source[] = [];
+  const notFoundPreviewRoutes: RouteWithSrc[] = [];
 
   if (prerenderManifest.notFoundRoutes?.length > 0 && canUsePreviewMode) {
     // we combine routes into one src here to reduce the number of needed
@@ -1384,7 +1384,7 @@ export async function serverBuild({
       },
 
       // error handling
-      { handle: 'error' } as Handler,
+      { handle: 'error' } as RouteWithHandle,
 
       // Custom Next.js 404 page
       ...(i18n && (static404Page || hasIsr404Page || lambdaPages['404.js'])
