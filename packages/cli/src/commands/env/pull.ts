@@ -109,7 +109,7 @@ export default async function pull(
     environment
   );
 
-  let deltaString = '';
+  let deltaString: string | undefined;
   if (exists) {
     const oldEnv = await createEnvObject(fullPath, output);
 
@@ -136,8 +136,8 @@ export default async function pull(
     )}\n`
   );
 
-  if (deltaString !== '') {
-    output.print(deltaString);
+  if (deltaString) {
+    output.print('\n' + deltaString);
   }
 
   return 0;
