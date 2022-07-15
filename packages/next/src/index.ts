@@ -10,6 +10,7 @@ import {
   download,
   getLambdaOptionsFromFunction,
   getNodeVersion,
+  getPrefixedEnvVars,
   getSpawnOptions,
   getScriptName,
   glob,
@@ -224,14 +225,10 @@ export const build: BuildV2 = async ({
     )
   );
 
-  Object.keys(process.env)
-    .filter(key => key.startsWith('VERCEL_'))
-    .forEach(key => {
-      const newKey = `NEXT_PUBLIC_${key}`;
-      if (!(newKey in process.env)) {
-        process.env[newKey] = process.env[key];
-      }
-    });
+  const prefixedEnvs = getPrefixedEnvVars('NEXT_PUBLIC_', process.env);
+  for (const [key, value] of Object.entries(prefixedEnvs)) {
+    process.env[key] = value;
+  }
 
   await download(files, workPath, meta);
 

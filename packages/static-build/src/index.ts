@@ -20,6 +20,7 @@ import {
   spawnCommand,
   runNpmInstall,
   getEnvForPackageManager,
+  getPrefixedEnvVars,
   getNodeBinPath,
   runBundleInstall,
   runPipInstall,
@@ -366,17 +367,13 @@ export const build: BuildV2 = async ({
         `Detected ${framework.name} framework. Optimizing your deployment...`
       );
 
-      if (process.env.VERCEL_URL) {
-        const { envPrefix } = framework;
-        if (envPrefix) {
-          Object.keys(process.env)
-            .filter(key => key.startsWith('VERCEL_'))
-            .forEach(key => {
-              const newKey = `${envPrefix}${key}`;
-              if (!(newKey in process.env)) {
-                process.env[newKey] = process.env[key];
-              }
-            });
+      if (process.env.VERCEL_URL && framework.envPrefix) {
+        const prefixedEnvs = getPrefixedEnvVars(
+          framework.envPrefix,
+          process.env
+        );
+        for (const [key, value] of Object.entries(prefixedEnvs)) {
+          process.env[key] = value;
         }
       }
 

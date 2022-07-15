@@ -15,6 +15,7 @@ import {
   glob,
   debug,
   getNodeVersion,
+  getPrefixedEnvVars,
   getSpawnOptions,
   runNpmInstall,
   runPackageJsonScript,
@@ -54,14 +55,10 @@ export const build: BuildV2 = async ({
 }) => {
   await download(files, workPath, meta);
 
-  Object.keys(process.env)
-    .filter(key => key.startsWith('VERCEL_'))
-    .forEach(key => {
-      const newKey = `REDWOOD_ENV_${key}`;
-      if (!(newKey in process.env)) {
-        process.env[newKey] = process.env[key];
-      }
-    });
+  const prefixedEnvs = getPrefixedEnvVars('REDWOOD_ENV_', process.env);
+  for (const [key, value] of Object.entries(prefixedEnvs)) {
+    process.env[key] = value;
+  }
 
   const { installCommand, buildCommand } = config;
   const mountpoint = dirname(entrypoint);
