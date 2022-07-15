@@ -206,7 +206,7 @@ export default async function main(client: Client): Promise<number> {
     normalizePath(relative(workPath, f))
   );
 
-  const routesResult = getTransformedRoutes({ nowConfig: vercelConfig || {} });
+  const routesResult = getTransformedRoutes(vercelConfig || {});
   if (routesResult.error) {
     output.prettyError(routesResult.error);
     return 1;
@@ -406,7 +406,16 @@ export default async function main(client: Client): Promise<number> {
         )
       );
     } catch (err: any) {
-      await writeBuildsJsonPromise;
+      const configJson = {
+        version: 3,
+      };
+      const configJsonPromise = fs.writeJSON(
+        join(outputDir, 'config.json'),
+        configJson,
+        { spaces: 2 }
+      );
+
+      await Promise.all([writeBuildsJsonPromise, configJsonPromise]);
 
       const buildJsonBuild = buildsJsonBuilds.get(build);
       if (buildJsonBuild) {
