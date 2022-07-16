@@ -110,7 +110,6 @@ describe('env', () => {
 
       await expect(addPromise).resolves.toEqual(0);
 
-      client.output.debugEnabled = true;
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
