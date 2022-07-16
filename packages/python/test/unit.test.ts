@@ -58,7 +58,7 @@ it('should throw for discontinued versions', async () => {
   expect(() =>
     getSupportedPythonVersion({ pipLockPythonVersion: '3.6' })
   ).toThrow(
-    'Python version "3.6" detected in Pipfile.lock is discontinued and must be upgraded. This change is the result of a decision made by an upstream infrastructure provider (AWS).'
+    'Python version "3.6" detected in Pipfile.lock is discontinued and must be upgraded.'
   );
   expect(warningMessages).toStrictEqual([]);
 });
@@ -70,6 +70,6 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
     getSupportedPythonVersion({ pipLockPythonVersion: '3.6' })
   ).toHaveProperty('runtime', 'python3.6');
   expect(warningMessages).toStrictEqual([
-    'Error: Python version "3.6" detected in Pipfile.lock is deprecated. Deployments created on or after 2022-07-18 will fail to build. This change is the result of a decision made by an upstream infrastructure provider (AWS). http://vercel.link/python-version',
+    'Error: Python version "3.6" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. http://vercel.link/python-version',
   ]);
 });
