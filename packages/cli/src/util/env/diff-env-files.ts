@@ -69,13 +69,9 @@ export function buildDeltaString(
 }
 
 function addDeltaSection(prefix: string, arr: string[]): string {
-  let deltaSection = '';
-  let ellipsis = '';
+  let deltaSection = arr.length > 0 ? `${prefix} ` : '';
   for (const [i, item] of arr.entries()) {
-    if (i === 2 && arr[3]) ellipsis = '…';
-    if (i === 3) break;
-
-    deltaSection += `${prefix} ${item}${ellipsis}\n`;
+    deltaSection += `${item}${arr[i + 1] ? ' ' : '\n'}`;
   }
   return deltaSection;
 }
