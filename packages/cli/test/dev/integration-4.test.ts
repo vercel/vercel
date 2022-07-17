@@ -444,14 +444,13 @@ test(
 
 test(
   '[vercel dev] Middleware that has no response',
-  testFixtureStdio(
-    'middleware-no-response',
-    async (testPath: any) => {
-      await testPath(200, '/api/hello', 'hello from a serverless function');
-    },
-    // this doesn't work in production, yet
-    { skipDeploy: true }
-  )
+  testFixtureStdio('middleware-no-response', async (testPath: any) => {
+    await testPath(
+      500,
+      '/api/hello',
+      'A server error has occurred\n\nEDGE_FUNCTION_INVOCATION_FAILED'
+    );
+  })
 );
 
 test(

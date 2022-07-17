@@ -150,8 +150,7 @@ async function serializeRequest(message: IncomingMessage) {
 
 async function compileUserCode(
   entrypointPath: string,
-  entrypointLabel: string,
-  isMiddleware: boolean
+  entrypointLabel: string
 ) {
   try {
     const result = await esbuild.build({
@@ -205,16 +204,7 @@ async function compileUserCode(
           let response = await edgeHandler(event.request, event);
 
           if (!response) {
-            if (!${isMiddleware}) {
-              throw new Error('Edge Function "${entrypointLabel}" did not return a response.');
-            }
-
-            response = new Response(null, {
-              headers: {
-                // "Pass through" the middleware to complete the HTTP request
-                'x-middleware-next': '1'
-              }
-            });
+            throw new Error('Edge Function "${entrypointLabel}" did not return a response.');
           }
 
           return event.respondWith(response);
@@ -272,14 +262,9 @@ async function createEdgeRuntime(userCode: string | undefined) {
 
 async function createEdgeEventHandler(
   entrypointPath: string,
-  entrypointLabel: string,
-  isMiddleware: boolean
+  entrypointLabel: string
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const userCode = await compileUserCode(
-    entrypointPath,
-    entrypointLabel,
-    isMiddleware
-  );
+  const userCode = await compileUserCode(entrypointPath, entrypointLabel);
   const server = await createEdgeRuntime(userCode);
 
   return async function (request: IncomingMessage) {
@@ -349,11 +334,7 @@ async function createEventHandler(
   // an Edge Function, otherwise needs to be opted-in via
   // `export const config = { runtime: 'experimental-edge' }`
   if (config.middleware === true || runtime === 'experimental-edge') {
-    return createEdgeEventHandler(
-      entrypointPath,
-      entrypoint,
-      !!config.middleware
-    );
+    return createEdgeEventHandler(entrypointPath, entrypoint);
   }
 
   return createServerlessEventHandler(entrypointPath, options);
