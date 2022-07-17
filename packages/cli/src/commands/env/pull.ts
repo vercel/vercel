@@ -1,8 +1,7 @@
 import chalk from 'chalk';
-import { outputFile, readFile } from 'fs-extra';
+import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
-import { Dictionary } from '@vercel/client';
 import { Project, ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
 import exposeSystemEnvs from '../../util/dev/expose-system-envs';
@@ -15,7 +14,10 @@ import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { EnvRecordsSource } from '../../util/env/get-env-records';
-import { parseEnv } from '../../util/parse-env';
+import {
+  buildDeltaString,
+  createEnvObject,
+} from '../../util/env/diff-env-files';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -151,80 +153,4 @@ function escapeValue(value: string | undefined) {
         .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
         .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
     : '';
-}
-
-async function createEnvObject(
-  envPath: string,
-  output: Output
-): Promise<Dictionary<string | undefined> | undefined> {
-  try {
-    // Inspired by https://github.com/tswaters/env-file-parser/blob/master/lib/parse.js
-    let envArr = (await readFile(envPath, 'utf-8'))
-      // remove double quotes
-      .replace(/"/g, '')
-      // split on new line
-      .split(/\r?\n|\r/)
-      // filter comments
-      .filter(line => /^[^#]/.test(line))
-      // needs equal sign
-      .filter(line => /=/i.test(line));
-    return parseEnv(envArr);
-  } catch (err) {
-    output.debug(`Error parsing env file: ${err}`);
-  }
-}
-
-function findChanges(
-  oldEnv: Dictionary<string | undefined>,
-  newEnv: Dictionary<string | undefined>
-): {
-  added: string[];
-  changed: string[];
-  removed: string[];
-} {
-  let added = [];
-  let changed = [];
-  let removed = [];
-
-  for (const key of Object.keys(newEnv)) {
-    if (!oldEnv[key] && oldEnv[key] !== '') {
-      added.push(key);
-    } else if (oldEnv[key] !== newEnv[key]) {
-      changed.push(key);
-    }
-    delete oldEnv[key];
-  }
-  removed = Object.keys(oldEnv);
-
-  return {
-    added,
-    changed,
-    removed,
-  };
-}
-
-function buildDeltaString(
-  oldEnv: Dictionary<string | undefined>,
-  newEnv: Dictionary<string | undefined>
-): string {
-  let { added, changed, removed } = findChanges(oldEnv, newEnv);
-
-  let deltaString = '';
-  deltaString += chalk.green(addDeltaSection('+', added));
-  deltaString += chalk.yellow(addDeltaSection('~', changed));
-  deltaString += chalk.red(addDeltaSection('-', removed));
-
-  return deltaString;
-}
-
-function addDeltaSection(prefix: string, arr: string[]): string {
-  let deltaSection = '';
-  let ellipsis = '';
-  for (const [i, item] of arr.entries()) {
-    if (i === 2) ellipsis = '…';
-    if (i === 3) break;
-
-    deltaSection += `${prefix} ${item}${ellipsis}\n`;
-  }
-  return deltaSection;
 }
