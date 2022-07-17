@@ -72,7 +72,7 @@ function addDeltaSection(prefix: string, arr: string[]): string {
   let deltaSection = '';
   let ellipsis = '';
   for (const [i, item] of arr.entries()) {
-    if (i === 2) ellipsis = '…';
+    if (i === 2 && arr[3]) ellipsis = '…';
     if (i === 3) break;
 
     deltaSection += `${prefix} ${item}${ellipsis}\n`;

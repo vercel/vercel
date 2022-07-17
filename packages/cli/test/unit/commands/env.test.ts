@@ -122,5 +122,49 @@ describe('env', () => {
 
       await expect(pullPromise).resolves.toEqual(0);
     });
+
+    it('should show a delta string with an ellipsis', async () => {
+      const cwd = setupFixture('env-pull-delta-ellipsis');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'env-pull-delta-ellipsis',
+        name: 'env-pull-delta-ellipsis',
+      });
+
+      await addEnvVar('TEST2', cwd);
+      await addEnvVar('TEST3', cwd);
+      await addEnvVar('TEST4', cwd);
+      await addEnvVar('TEST5', cwd);
+
+      client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+      const pullPromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Downloading `development` Environment Variables for Project env-pull-delta-ellipsis'
+      );
+      await expect(client.stderr).toOutput('Updated .env file');
+      await expect(client.stderr).toOutput('+ TEST2\n+ TEST3\n+ TEST4…\n');
+
+      await expect(pullPromise).resolves.toEqual(0);
+    });
   });
 });
+
+async function addEnvVar(envName: string, cwd: string) {
+  client.setArgv('env', 'add', envName, '--cwd', cwd);
+  const envPromise = env(client);
+
+  await expect(client.stderr).toOutput(`What’s the value of ${envName}?`);
+  client.stdin.write('testvalue\n');
+
+  await expect(client.stderr).toOutput(
+    `Add ${envName} to which Environments (select multiple)?`
+  );
+  client.stdin.write('\x1B[B'); // Down arrow
+  client.stdin.write('\x1B[B');
+  client.stdin.write(' ');
+  client.stdin.write('\r');
+
+  await expect(envPromise).resolves.toEqual(0);
+}
