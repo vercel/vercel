@@ -113,10 +113,17 @@ export default async function pull(
 
   let deltaString: string | undefined;
   if (exists) {
-    const oldEnv = await createEnvObject(fullPath, output);
+    try {
+      const oldEnv = await createEnvObject(fullPath, output);
 
-    if (oldEnv && records) {
-      deltaString = buildDeltaString(oldEnv, records);
+      if (oldEnv && records) {
+        deltaString = buildDeltaString(oldEnv, records);
+      }
+    } catch (err) {
+      deltaString = `Failed to find changes, but the \`${chalk.cyan(
+        filename
+      )}\` file was updated.`;
+      output.debug(`Failed to find changes: ${err}`);
     }
   }
 
