@@ -14,6 +14,7 @@ export default new Map([
   ['domain', 'domains'],
   ['domains', 'domains'],
   ['env', 'env'],
+  ['git', 'git'],
   ['help', 'help'],
   ['init', 'init'],
   ['inspect', 'inspect'],

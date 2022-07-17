@@ -64,7 +64,7 @@ import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
-import { createGitMeta } from '../../util/deploy/create-git-meta';
+import { createGitMeta } from '../../util/create-git-meta';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -95,6 +95,7 @@ export default async (client: Client) => {
       // deprecated
       '--name': String,
       '-n': '--name',
+      '--no-clipboard': Boolean,
       '--target': String,
     });
   } catch (error) {
@@ -178,6 +179,17 @@ export default async (client: Client) => {
         `The ${param(
           '--name'
         )} option is deprecated (https://vercel.link/name-flag)`,
+        emoji('warning')
+      )}\n`
+    );
+  }
+
+  if (argv['--no-clipboard']) {
+    output.print(
+      `${prependEmoji(
+        `The ${param(
+          '--no-clipboard'
+        )} option was ignored because it is the default behavior. Please remove it.`,
         emoji('warning')
       )}\n`
     );

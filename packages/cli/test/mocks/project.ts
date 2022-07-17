@@ -1,5 +1,6 @@
 import { client } from './client';
 import { Project } from '../../src/types';
+import { formatProvider } from '../../src/util/projects/connect-git-provider';
 
 const envs = [
   {

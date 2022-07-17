@@ -78,8 +78,20 @@ it('should build using server build', async () => {
   expect(output['dynamic/[slug]'].maxDuration).toBe(5);
   expect(output['fallback/[slug]'].type).toBe('Prerender');
   expect(output['fallback/[slug]'].allowQuery).toEqual(['slug']);
+  expect(output['_next/data/testing-build-id/fallback/[slug].json'].type).toBe(
+    'Prerender'
+  );
+  expect(
+    output['_next/data/testing-build-id/fallback/[slug].json'].allowQuery
+  ).toEqual(['slug']);
   expect(output['fallback/first'].type).toBe('Prerender');
-  expect(output['fallback/first'].allowQuery).toEqual(['slug']);
+  expect(output['fallback/first'].allowQuery).toEqual([]);
+  expect(output['_next/data/testing-build-id/fallback/first.json'].type).toBe(
+    'Prerender'
+  );
+  expect(
+    output['_next/data/testing-build-id/fallback/first.json'].allowQuery
+  ).toEqual([]);
   expect(output['api'].type).toBe('Lambda');
   expect(output['api'].allowQuery).toBe(undefined);
   expect(output['api'].memory).toBe(128);

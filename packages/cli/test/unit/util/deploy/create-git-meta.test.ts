@@ -6,8 +6,9 @@ import {
   createGitMeta,
   getRemoteUrl,
   isDirty,
-} from '../../../../src/util/deploy/create-git-meta';
+} from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
+import { parseRepoUrl } from '../../../../src/util/projects/connect-git-provider';
 import { readOutputStream } from '../../../helpers/read-output-stream';
 
 const fixture = (name: string) =>
@@ -25,6 +26,97 @@ describe('getRemoteUrl', () => {
     const data = await getRemoteUrl(join(dir, 'git/config'), client.output);
     expect(data).toBeNull();
     await expect(client.stderr).toOutput('Error while parsing repo data');
+  });
+});
+
+describe('parseRepoUrl', () => {
+  it('should be null when a url does not match the regex', () => {
+    const parsedUrl = parseRepoUrl('https://examplecom/foo');
+    expect(parsedUrl).toBeNull();
+  });
+  it('should be null when a url does not contain org and repo data', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/borked');
+    expect(parsedUrl).toBeNull();
+  });
+  it('should parse url with a period in the repo name', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/next.js');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('next.js');
+  });
+  it('should parse url that ends with .git', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/next.js.git');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('next.js');
+  });
+  it('should parse github https url', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel.git');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+  it('should parse github https url without the .git suffix', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+  it('should parse github git url', () => {
+    const parsedUrl = parseRepoUrl('git://github.com/vercel/vercel.git');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+  it('should parse github ssh url', () => {
+    const parsedUrl = parseRepoUrl('git@github.com:vercel/vercel.git');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+
+  it('should parse gitlab https url', () => {
+    const parsedUrl = parseRepoUrl(
+      'https://gitlab.com/gitlab-examples/knative-kotlin-app.git'
+    );
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('gitlab');
+    expect(parsedUrl?.org).toEqual('gitlab-examples');
+    expect(parsedUrl?.repo).toEqual('knative-kotlin-app');
+  });
+  it('should parse gitlab ssh url', () => {
+    const parsedUrl = parseRepoUrl(
+      'git@gitlab.com:gitlab-examples/knative-kotlin-app.git'
+    );
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('gitlab');
+    expect(parsedUrl?.org).toEqual('gitlab-examples');
+    expect(parsedUrl?.repo).toEqual('knative-kotlin-app');
+  });
+
+  it('should parse bitbucket https url', () => {
+    const parsedUrl = parseRepoUrl(
+      'https://bitbucket.org/atlassianlabs/maven-project-example.git'
+    );
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('bitbucket');
+    expect(parsedUrl?.org).toEqual('atlassianlabs');
+    expect(parsedUrl?.repo).toEqual('maven-project-example');
+  });
+  it('should parse bitbucket ssh url', () => {
+    const parsedUrl = parseRepoUrl(
+      'git@bitbucket.org:atlassianlabs/maven-project-example.git'
+    );
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('bitbucket');
+    expect(parsedUrl?.org).toEqual('atlassianlabs');
+    expect(parsedUrl?.repo).toEqual('maven-project-example');
   });
 });
 

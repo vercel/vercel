@@ -589,8 +589,6 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
-      client.stderr.pipe(process.stderr);
-      client.setArgv('build');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -614,6 +612,40 @@ describe('build', () => {
       expect(await fs.readFile(join(output, 'static/file'), 'utf8')).toEqual(
         'file contents'
       );
+
+      // "functions" directory has output Functions
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toEqual(['withTrailingSlash.func']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should store Builder error in `builds.json`', async () => {
+    const cwd = fixture('node-error');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      // `builds.json` contains "error" build
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.builds).toHaveLength(4);
+
+      const errorBuilds = builds.builds.filter((b: any) => 'error' in b);
+      expect(errorBuilds).toHaveLength(1);
+
+      expect(errorBuilds[0].error.name).toEqual('Error');
+      expect(errorBuilds[0].error.message).toMatch(`TS1005`);
+      expect(errorBuilds[0].error.message).toMatch(`',' expected.`);
+      expect(errorBuilds[0].error.hideStackTrace).toEqual(true);
+      expect(errorBuilds[0].error.code).toEqual('NODE_TYPESCRIPT_ERROR');
+
+      // `config.json`` contains `version`
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.version).toBe(3);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
