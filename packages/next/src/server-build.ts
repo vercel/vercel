@@ -414,7 +414,7 @@ export async function serverBuild({
           fsPath = path.join(requiredServerFilesManifest.appDir, file);
         }
 
-        const relativePath = path.join(path.relative(baseDir, fsPath));
+        const relativePath = path.relative(baseDir, fsPath);
         const { mode } = await fs.lstat(fsPath);
         lstatSema.release();
 
@@ -700,10 +700,10 @@ export async function serverBuild({
         for (const manifest of [
           'routes-manifest.json',
           'server/pages-manifest.json',
-        ]) {
+        ] as const) {
           const fsPath = path.join(entryPath, outputDirectory, manifest);
 
-          const relativePath = path.join(path.relative(baseDir, fsPath));
+          const relativePath = path.relative(baseDir, fsPath);
           delete group.pseudoLayer[relativePath];
 
           const manifestData = await fs.readJSON(fsPath);
@@ -735,7 +735,10 @@ export async function serverBuild({
               break;
             }
             default: {
-              break;
+              throw new NowBuildError({
+                message: `Unexpected manifest value ${manifest}, please contact support if this continues`,
+                code: 'NEXT_MANIFEST_INVARIANT',
+              });
             }
           }
 
