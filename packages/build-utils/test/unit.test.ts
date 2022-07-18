@@ -491,53 +491,61 @@ it('should detect pnpm Workspaces', async () => {
   expect(result.lockfileVersion).toEqual(5.3);
 });
 
-it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
-  const meta: Meta = {};
-  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
-  const apiDir = path.join(fixture, 'api');
-  const retryOpts = { maxRetryTime: 1000 };
-  let run1, run2, run3;
-  await retry(async () => {
-    run1 = await runNpmInstall(apiDir, [], undefined, meta);
+it(
+  'should only invoke `runNpmInstall()` once per `package.json` file (serial)',
+  async () => {
+    const meta: Meta = {};
+    const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+    const apiDir = path.join(fixture, 'api');
+    const retryOpts = { maxRetryTime: 1000 };
+    let run1, run2, run3;
+    await retry(async () => {
+      run1 = await runNpmInstall(apiDir, [], undefined, meta);
+      expect(run1).toEqual(true);
+      expect(
+        (meta.runNpmInstallSet as Set<string>).has(
+          path.join(fixture, 'package.json')
+        )
+      ).toEqual(true);
+    }, retryOpts);
+    await retry(async () => {
+      run2 = await runNpmInstall(apiDir, [], undefined, meta);
+      expect(run2).toEqual(false);
+    }, retryOpts);
+    await retry(async () => {
+      run3 = await runNpmInstall(fixture, [], undefined, meta);
+      expect(run3).toEqual(false);
+    }, retryOpts);
+  },
+  60 * 1000
+);
+
+it(
+  'should only invoke `runNpmInstall()` once per `package.json` file (parallel)',
+  async () => {
+    const meta: Meta = {};
+    const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+    const apiDir = path.join(fixture, 'api');
+    let results: [boolean, boolean, boolean] | undefined;
+    await retry(
+      async () => {
+        results = await Promise.all([
+          runNpmInstall(apiDir, [], undefined, meta),
+          runNpmInstall(apiDir, [], undefined, meta),
+          runNpmInstall(fixture, [], undefined, meta),
+        ]);
+      },
+      { maxRetryTime: 3000 }
+    );
+    const [run1, run2, run3] = results || [];
     expect(run1).toEqual(true);
+    expect(run2).toEqual(false);
+    expect(run3).toEqual(false);
     expect(
       (meta.runNpmInstallSet as Set<string>).has(
         path.join(fixture, 'package.json')
       )
     ).toEqual(true);
-  }, retryOpts);
-  await retry(async () => {
-    run2 = await runNpmInstall(apiDir, [], undefined, meta);
-    expect(run2).toEqual(false);
-  }, retryOpts);
-  await retry(async () => {
-    run3 = await runNpmInstall(fixture, [], undefined, meta);
-    expect(run3).toEqual(false);
-  }, retryOpts);
-});
-
-it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)', async () => {
-  const meta: Meta = {};
-  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
-  const apiDir = path.join(fixture, 'api');
-  let results: [boolean, boolean, boolean] | undefined;
-  await retry(
-    async () => {
-      results = await Promise.all([
-        runNpmInstall(apiDir, [], undefined, meta),
-        runNpmInstall(apiDir, [], undefined, meta),
-        runNpmInstall(fixture, [], undefined, meta),
-      ]);
-    },
-    { maxRetryTime: 3000 }
-  );
-  const [run1, run2, run3] = results || [];
-  expect(run1).toEqual(true);
-  expect(run2).toEqual(false);
-  expect(run3).toEqual(false);
-  expect(
-    (meta.runNpmInstallSet as Set<string>).has(
-      path.join(fixture, 'package.json')
-    )
-  ).toEqual(true);
-});
+  },
+  60 * 1000
+);
