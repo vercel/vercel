@@ -9,7 +9,7 @@ export async function createEnvObject(
   output: Output
 ): Promise<Dictionary<string | undefined> | undefined> {
   try {
-    // Inspired by https://github.com/tswaters/env-file-parser/blob/master/lib/parse.js
+    // Partially taken from https://github.com/tswaters/env-file-parser/blob/master/lib/parse.js
     let envArr = (await readFile(envPath, 'utf-8'))
       // remove double quotes
       .replace(/"/g, '')
@@ -65,7 +65,7 @@ export function buildDeltaString(
   deltaString += chalk.yellow(addDeltaSection('~', changed));
   deltaString += chalk.red(addDeltaSection('-', removed));
 
-  return deltaString;
+  return deltaString ? chalk.gray('Changes:\n') + deltaString : deltaString;
 }
 
 function addDeltaSection(prefix: string, arr: string[]): string {
