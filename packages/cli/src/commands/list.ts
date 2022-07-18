@@ -276,10 +276,8 @@ export default async function main(client: Client) {
 
   log(
     `${prod ? `Production deployments` : `Deployments`} for ${chalk.bold(
-      chalk.magenta(app)
-    )} under ${chalk.bold(chalk.magenta(contextName))} ${elapsed(
-      Date.now() - start
-    )}`
+      app
+    )} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
   );
 
   // information to help the user find other deployments or instances
