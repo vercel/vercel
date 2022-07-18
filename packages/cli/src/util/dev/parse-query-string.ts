@@ -1,6 +1,6 @@
 export function parseQueryString(querystring?: string) {
   let map = new Map<string, string[]>();
-  if (!querystring) {
+  if (!querystring || !querystring.startsWith('?') || querystring === '?') {
     return map;
   }
   const params = querystring.slice(1).split('&');
@@ -37,5 +37,5 @@ export function formatQueryString(
       prefix = '&';
     }
   }
-  return s;
+  return s || undefined;
 }
