@@ -66,6 +66,7 @@ function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {
     '--yes': Boolean,
     '--environment': String,
+    '--env': '--environment',
     '--debug': Boolean,
     '-d': '--debug',
     '-y': '--yes',
