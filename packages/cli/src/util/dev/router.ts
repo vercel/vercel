@@ -188,10 +188,8 @@ export async function devRouter(
           const { pathname: destPathname = '/', search: destSearch } =
             url.parse(destPath);
           const destQuery = parseQueryString(destSearch);
-          for (const [key, values] of reqQuery) {
-            if (!destQuery.has(key)) {
-              destQuery.set(key, values);
-            }
+          for (const [qKey, qValue] of reqQuery) {
+            destQuery.set(qKey, qValue);
           }
           result = {
             found: true,

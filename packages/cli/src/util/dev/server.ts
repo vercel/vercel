@@ -1390,7 +1390,11 @@ export default class DevServer {
       if (rr.dest) {
         if (rr.destQuery) {
           const destParsed = url.parse(rr.dest);
-          destParsed.search = formatQueryString(rr.destQuery);
+          const destQuery = parseQueryString(destParsed.search);
+          for (const [qKey, qValue] of rr.destQuery) {
+            destQuery.set(qKey, qValue);
+          }
+          destParsed.search = formatQueryString(destQuery);
           return url.format(destParsed);
         }
         return rr.dest;
@@ -1525,9 +1529,10 @@ export default class DevServer {
 
             // Retain orginal pathname, but override query parameters from the rewrite
             const beforeRewriteUrl = req.url || '/';
-            const rewriteUrlParsed = url.parse(beforeRewriteUrl, true);
-            delete rewriteUrlParsed.search;
-            rewriteUrlParsed.query = url.parse(rewritePath, true).query;
+            const rewriteUrlParsed = url.parse(beforeRewriteUrl);
+            rewriteUrlParsed.search = formatQueryString(
+              parseQueryString(rewritePath)
+            );
             req.url = url.format(rewriteUrlParsed);
             debug(
               `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
@@ -1763,19 +1768,15 @@ export default class DevServer {
 
         this.setResponseHeaders(res, requestId);
         const origUrl = url.parse(req.url || '/');
-        const origArgs = parseQueryString(origUrl.search);
-        delete origUrl.search;
+        const origQuery = parseQueryString(origUrl.search);
         origUrl.pathname = dest;
         if (destQuery) {
-          for (let [argKey, argValue] of origArgs) {
-            if (!destQuery.has(argKey)) {
-              destQuery.set(argKey, argValue);
-            }
+          for (const [qKey, kValue] of origQuery) {
+            destQuery.set(qKey, kValue);
           }
         }
-        origUrl.search = formatQueryString(origArgs);
+        origUrl.search = formatQueryString(origQuery);
         req.url = url.format(origUrl);
-
         return proxyPass(req, res, upstream, this, requestId, false);
       }
 
@@ -1800,10 +1801,11 @@ export default class DevServer {
       const origQuery = parseQueryString(origUrl.search);
       origUrl.pathname = dest;
       if (destQuery) {
-        for (const [key, values] of destQuery) {
-          origQuery.set(key, values);
+        for (const [qKey, qValue] of destQuery) {
+          origQuery.set(qKey, qValue);
         }
       }
+      origUrl.search = formatQueryString(origQuery);
       const newUrl = url.format(origUrl);
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
@@ -1899,16 +1901,17 @@ export default class DevServer {
         );
 
         // Mix in the routing based query parameters
-        const parsed = url.parse(req.url || '/');
-        const parsedQuery = parseQueryString(parsed.search);
+        const origUrl = url.parse(req.url || '/');
+        const origQuery = parseQueryString(origUrl.search);
         if (destQuery) {
           for (const [key, values] of destQuery) {
-            parsedQuery.set(key, values);
+            origQuery.set(key, values);
           }
         }
+        origUrl.search = formatQueryString(origQuery);
         req.url = url.format({
-          pathname: parsed.pathname,
-          search: formatQueryString(parsedQuery),
+          pathname: origUrl.pathname,
+          search: origUrl.search,
         });
 
         // Add the Vercel platform proxy request headers
@@ -2024,16 +2027,17 @@ export default class DevServer {
         requestId = generateRequestId(this.podId, true);
 
         // Mix the `routes` result dest query params into the req path
-        const parsed = url.parse(req.url || '/');
-        const parsedQuery = parseQueryString(parsed.search);
+        const origUrl = url.parse(req.url || '/');
+        const origQuery = parseQueryString(origUrl.search);
         if (destQuery) {
-          for (const [key, values] of destQuery) {
-            parsedQuery.set(key, values);
+          for (const [qKey, qValue] of destQuery) {
+            origQuery.set(qKey, qValue);
           }
         }
+        origUrl.search = formatQueryString(origQuery);
         const path = url.format({
-          pathname: parsed.pathname,
-          search: formatQueryString(parsedQuery),
+          pathname: origUrl.pathname,
+          search: origUrl.search,
         });
 
         const body = await rawBody(req);
