@@ -146,8 +146,8 @@ export interface RouteResult {
   status?: number;
   // "headers": <object of the added response header values>
   headers: HttpHeadersConfig;
-  // "uri_args": <object (key=value) list of new uri args to be passed along to dest >
-  uri_args?: { [key: string]: any };
+  // "destQuery": <Map (key=values) of new uri args to be passed along to dest >
+  destQuery?: Map<string, string[]>;
   // "matched_route": <object of the route spec that matched>
   matched_route?: Route;
   // "matched_route_idx": <integer of the index of the route matched>

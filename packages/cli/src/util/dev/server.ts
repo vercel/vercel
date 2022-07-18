@@ -94,6 +94,7 @@ import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
 import { treeKill } from '../tree-kill';
 import { nodeHeadersToFetchHeaders } from './headers';
+import { formatQueryString, parseQueryString } from './parse-query-string';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -1387,9 +1388,9 @@ export default class DevServer {
 
     const getReqUrl = (rr: RouteResult): string | undefined => {
       if (rr.dest) {
-        if (rr.uri_args) {
-          const destParsed = url.parse(rr.dest, true);
-          Object.assign(destParsed.query, rr.uri_args);
+        if (rr.destQuery) {
+          const destParsed = url.parse(rr.dest);
+          destParsed.search = formatQueryString(rr.destQuery);
           return url.format(destParsed);
         }
         return rr.dest;
@@ -1583,9 +1584,8 @@ export default class DevServer {
 
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
-        const destParsed = url.parse(routeResult.dest, true);
-        delete destParsed.search;
-        Object.assign(destParsed.query, routeResult.uri_args);
+        const destParsed = url.parse(routeResult.dest);
+        destParsed.search = formatQueryString(routeResult.destQuery);
         const destUrl = url.format(destParsed);
 
         debug(`ProxyPass: ${destUrl}`);
@@ -1726,7 +1726,7 @@ export default class DevServer {
       throw new Error('Expected Route Result but none was found.');
     }
 
-    const { dest, headers, uri_args } = routeResult;
+    const { dest, destQuery, headers } = routeResult;
 
     // Set any headers defined in the matched `route` config
     for (const [name, value] of Object.entries(headers)) {
@@ -1762,11 +1762,20 @@ export default class DevServer {
         }
 
         this.setResponseHeaders(res, requestId);
-        const origUrl = url.parse(req.url || '/', true);
+        const origUrl = url.parse(req.url || '/');
+        const origArgs = parseQueryString(origUrl.search);
         delete origUrl.search;
         origUrl.pathname = dest;
-        Object.assign(origUrl.query, uri_args);
+        if (destQuery) {
+          for (let [argKey, argValue] of origArgs) {
+            if (!destQuery.has(argKey)) {
+              destQuery.set(argKey, argValue);
+            }
+          }
+        }
+        origUrl.search = formatQueryString(origArgs);
         req.url = url.format(origUrl);
+
         return proxyPass(req, res, upstream, this, requestId, false);
       }
 
@@ -1787,10 +1796,14 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const origUrl = url.parse(req.url || '/', true);
-      delete origUrl.search;
+      const origUrl = url.parse(req.url || '/');
+      const origQuery = parseQueryString(origUrl.search);
       origUrl.pathname = dest;
-      Object.assign(origUrl.query, uri_args);
+      if (destQuery) {
+        for (const [key, values] of destQuery) {
+          origQuery.set(key, values);
+        }
+      }
       const newUrl = url.format(origUrl);
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
@@ -1886,11 +1899,16 @@ export default class DevServer {
         );
 
         // Mix in the routing based query parameters
-        const parsed = url.parse(req.url || '/', true);
-        Object.assign(parsed.query, uri_args);
+        const parsed = url.parse(req.url || '/');
+        const parsedQuery = parseQueryString(parsed.search);
+        if (destQuery) {
+          for (const [key, values] of destQuery) {
+            parsedQuery.set(key, values);
+          }
+        }
         req.url = url.format({
           pathname: parsed.pathname,
-          query: parsed.query,
+          search: formatQueryString(parsedQuery),
         });
 
         // Add the Vercel platform proxy request headers
@@ -2006,11 +2024,16 @@ export default class DevServer {
         requestId = generateRequestId(this.podId, true);
 
         // Mix the `routes` result dest query params into the req path
-        const parsed = url.parse(req.url || '/', true);
-        Object.assign(parsed.query, uri_args);
+        const parsed = url.parse(req.url || '/');
+        const parsedQuery = parseQueryString(parsed.search);
+        if (destQuery) {
+          for (const [key, values] of destQuery) {
+            parsedQuery.set(key, values);
+          }
+        }
         const path = url.format({
           pathname: parsed.pathname,
-          query: parsed.query,
+          search: formatQueryString(parsedQuery),
         });
 
         const body = await rawBody(req);
