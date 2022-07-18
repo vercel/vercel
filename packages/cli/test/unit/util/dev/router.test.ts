@@ -23,7 +23,7 @@ describe('devRouter', () => {
       isDestUrl: false,
       phase: undefined,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 
   it('should match captured groups', async () => {
@@ -42,7 +42,7 @@ describe('devRouter', () => {
       isDestUrl: false,
       phase: undefined,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 
   it('should match named groups', async () => {
@@ -61,9 +61,9 @@ describe('devRouter', () => {
       isDestUrl: false,
       phase: undefined,
     });
-    const destQuery = new Map<string, string[]>();
-    destQuery.set('id', ['123']);
-    expect(result.destQuery).toEqual(destQuery);
+    const query = new Map<string, string[]>();
+    query.set('id', ['123']);
+    expect(result.query).toEqual(query);
   });
 
   it('should match optional named groups', async () => {
@@ -87,9 +87,9 @@ describe('devRouter', () => {
       isDestUrl: false,
       phase: undefined,
     });
-    const destQuery = new Map<string, string[]>();
-    destQuery.set('name', ['']);
-    expect(result.destQuery).toEqual(destQuery);
+    const query = new Map<string, string[]>();
+    query.set('name', ['']);
+    expect(result.query).toEqual(query);
   });
 
   it('should match proxy_pass', async () => {
@@ -109,7 +109,7 @@ describe('devRouter', () => {
       isDestUrl: true,
       phase: undefined,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 
   it('should match `methods`', async () => {
@@ -131,7 +131,7 @@ describe('devRouter', () => {
       isDestUrl: false,
       phase: undefined,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
 
     result = await devRouter('/', 'POST', routesConfig);
     expect(result).toMatchObject({
@@ -146,7 +146,7 @@ describe('devRouter', () => {
       isDestUrl: false,
       phase: undefined,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 
   it('should match without prefix slash', async () => {
@@ -165,7 +165,7 @@ describe('devRouter', () => {
       isDestUrl: false,
       phase: undefined,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 
   it('should match with needed prefixed slash', async () => {
@@ -192,7 +192,7 @@ describe('devRouter', () => {
       },
       matched_route_idx: 0,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 
   it('should match `continue: true` with fallthrough', async () => {
@@ -222,7 +222,7 @@ describe('devRouter', () => {
         'cache-control': 'immutable,max-age=31536000',
       },
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 
   it('should match `continue: true` with match', async () => {
@@ -262,7 +262,7 @@ describe('devRouter', () => {
       },
       matched_route_idx: 1,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 
   it('should match with catch-all with prefix slash', async () => {
@@ -281,7 +281,7 @@ describe('devRouter', () => {
       matched_route: { src: '/(.*)', dest: '/www/$1' },
       matched_route_idx: 0,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 
   it('should match with catch-all with no prefix slash', async () => {
@@ -300,7 +300,7 @@ describe('devRouter', () => {
       matched_route: { src: '(.*)', dest: '/www$1' },
       matched_route_idx: 0,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 
   it('should match `continue: true` with `dest`', async () => {
@@ -325,6 +325,6 @@ describe('devRouter', () => {
       isDestUrl: true,
       phase: undefined,
     });
-    expect(result.destQuery).toEqual(new Map());
+    expect(result.query).toEqual(new Map());
   });
 });
