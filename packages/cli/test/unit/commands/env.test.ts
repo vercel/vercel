@@ -114,7 +114,7 @@ describe('env', () => {
 
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        `Invalid environment \`something-invalid\`. Options: development | preview | production`
+        `Invalid environment \`something-invalid\`. Valid options: <production | preview | development>`
       );
 
       await expect(exitCodePromise).resolves.toEqual(1);

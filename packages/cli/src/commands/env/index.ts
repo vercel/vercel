@@ -1,7 +1,10 @@
 import chalk from 'chalk';
 import { ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import {
+  getEnvTargetPlaceholder,
+  isValidEnvTarget,
+} from '../../util/env/env-target';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
@@ -105,6 +108,14 @@ const COMMAND_CONFIG = {
   pull: ['pull'],
 };
 
+function parseEnvironmentTarget(
+  environment = 'development'
+): ProjectEnvTarget | undefined {
+  if (isValidEnvTarget(environment)) {
+    return environment;
+  }
+}
+
 export default async function main(client: Client) {
   let argv;
 
@@ -131,20 +142,18 @@ export default async function main(client: Client) {
   const { output, config } = client;
 
   const environmentArg = argv['--environment']?.toLowerCase();
-  let target = ProjectEnvTarget.Development;
-  if (environmentArg && environmentArg !== 'development') {
-    if (environmentArg === 'preview') {
-      target = ProjectEnvTarget.Preview;
-    } else if (environmentArg === 'production') {
-      target = ProjectEnvTarget.Production;
-    } else {
-      output.error(
-        `Invalid environment \`${chalk.cyan(
-          environmentArg
-        )}\`. Options: development | preview | production`
-      );
-      return 1;
-    }
+
+  const target = environmentArg
+    ? parseEnvironmentTarget(environmentArg)
+    : ProjectEnvTarget.Development;
+
+  if (!target) {
+    output.error(
+      `Invalid environment \`${chalk.cyan(
+        environmentArg
+      )}\`. Valid options: ${getEnvTargetPlaceholder()}`
+    );
+    return 1;
   }
 
   const link = await getLinkedProject(client, cwd);
