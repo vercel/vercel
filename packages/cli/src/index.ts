@@ -750,9 +750,7 @@ const main = async () => {
 
       // Otherwise it is an unexpected error and we should show the trace
       // and an unexpected error message
-      output.error(
-        `An unexpected error occurred in ${subcommand}: ${err.stack}`
-      );
+      output.error(`An unexpected error occurred in ${subcommand}: ${err}`);
     }
 
     return 1;
