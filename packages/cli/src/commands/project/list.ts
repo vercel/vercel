@@ -57,9 +57,7 @@ export default async function list(
   output.log(
     `${
       projectList.length > 0 ? 'Projects' : 'No projects'
-    } found under ${chalk.bold(chalk.magenta(contextName))} ${chalk.gray(
-      `[${elapsed}]`
-    )}`
+    } found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
   );
 
   if (projectList.length > 0) {
