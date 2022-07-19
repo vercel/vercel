@@ -66,7 +66,7 @@ interface SerializedBuilder extends Builder {
 /**
  * Contents of the `builds.json` file.
  */
-interface BuildsManifest {
+export interface BuildsManifest {
   '//': string;
   target: string;
   argv: string[];

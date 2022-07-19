@@ -220,7 +220,7 @@ export default async (client: Client) => {
     // Ensure that there was not a build error
     const prebuiltError =
       prebuiltBuild?.error ||
-      prebuiltBuild?.builds?.find((build: any) => 'error' in build)?.error;
+      prebuiltBuild?.builds?.find(build => 'error' in build)?.error;
     if (prebuiltError) {
       output.log(
         `Prebuilt deployment cannot be created because ${getCommandName(
