@@ -198,7 +198,7 @@ describe('toEnumerableError()', () => {
     const enumerable = toEnumerableError(err);
     expect(JSON.stringify(err)).toEqual('{}');
 
-    // Delete `stack` since it makes stringify undeterministinc
+    // Delete `stack` since it makes stringify nondeterministic
     // (due to filenames / line numbers)
     expect(typeof enumerable.stack).toEqual('string');
     delete enumerable.stack;
