@@ -103,7 +103,7 @@ export function pluckRemoteUrls(gitConfig: {
 }): { [key: string]: string } | undefined {
   let remoteUrls: { [key: string]: string } = {};
 
-  Object.keys(gitConfig).map(key => {
+  for (const key of Object.keys(gitConfig)) {
     if (key.includes('remote')) {
       // ex. remote "origin" — matches origin
       const remoteName = key.match(/(?<=").*(?=")/g)?.[0];
@@ -112,7 +112,7 @@ export function pluckRemoteUrls(gitConfig: {
         remoteUrls[remoteName] = remoteUrl;
       }
     }
-  });
+  }
 
   if (Object.keys(remoteUrls).length === 0) {
     return;
