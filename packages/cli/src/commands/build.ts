@@ -236,6 +236,7 @@ export default async function main(client: Client): Promise<number> {
     const detectedBuilders = await detectBuilders(files, pkg, {
       ...vercelConfig,
       projectSettings: project.settings,
+      ignoreBuildScript: true,
       featHandleMiss: true,
     });
 
