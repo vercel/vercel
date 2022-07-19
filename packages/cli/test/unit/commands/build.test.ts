@@ -677,4 +677,35 @@ describe('build', () => {
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
+
+  it('should allow for missing "build" script', async () => {
+    const cwd = fixture('static-with-pkg');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            src: '**',
+            use: '@vercel/static',
+          },
+        ],
+      });
+
+      // "static" directory contains static files
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['index.html', 'package.json']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
 });
