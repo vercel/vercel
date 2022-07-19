@@ -39,4 +39,4 @@ curly_bracket_next_line = false
 spaces_around_operators = true
 spaces_around_brackets = outside
 # close enough to 1TB
-indent_brace_style = K&R
+indent_brace_style = K&k
