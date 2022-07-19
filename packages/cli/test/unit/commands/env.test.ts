@@ -78,7 +78,7 @@ describe('env', () => {
       );
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        `Downloading "production" Environment Variables for Project vercel-env-pull`
+        `Downloading \`production\` Environment Variables for Project vercel-env-pull`
       );
       await expect(client.stderr).toOutput('Created .env.production file');
       await expect(exitCodePromise).resolves.toEqual(0);
