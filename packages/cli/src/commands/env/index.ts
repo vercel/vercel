@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import { ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
 import {
   getEnvTargetPlaceholder,
@@ -108,14 +107,6 @@ const COMMAND_CONFIG = {
   pull: ['pull'],
 };
 
-function parseEnvironmentTarget(
-  environment: string
-): ProjectEnvTarget | undefined {
-  if (isValidEnvTarget(environment)) {
-    return environment;
-  }
-}
-
 export default async function main(client: Client) {
   let argv;
 
@@ -140,17 +131,11 @@ export default async function main(client: Client) {
   const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
   const { output, config } = client;
 
-  const environmentArg = argv['--environment']?.toLowerCase();
-
-  // "Development" if no argument is passed in, otherwise use the passed-in environment
-  const target = environmentArg
-    ? parseEnvironmentTarget(environmentArg)
-    : ProjectEnvTarget.Development;
-
-  if (!target) {
+  const target = argv['--environment']?.toLowerCase() || 'development';
+  if (!isValidEnvTarget(target)) {
     output.error(
       `Invalid environment \`${chalk.cyan(
-        environmentArg
+        target
       )}\`. Valid options: ${getEnvTargetPlaceholder()}`
     );
     return 1;
