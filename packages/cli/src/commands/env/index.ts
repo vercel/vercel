@@ -109,7 +109,7 @@ const COMMAND_CONFIG = {
 };
 
 function parseEnvironmentTarget(
-  environment = 'development'
+  environment: string
 ): ProjectEnvTarget | undefined {
   if (isValidEnvTarget(environment)) {
     return environment;
