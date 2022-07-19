@@ -5,12 +5,5 @@
       "src": "*.py",
       "use": "@vercel/python"
     }
-  ],
-  "probes": [
-    {
-      "path": "/",
-      "method": "GET",
-      "status": 200
-    }
   ]
 }

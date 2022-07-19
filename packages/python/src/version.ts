@@ -25,9 +25,6 @@ const allOptions: PythonVersion[] = [
   },
 ];
 
-const upstreamProvider =
-  'This change is the result of a decision made by an upstream infrastructure provider (AWS)';
-
 function getDevPythonVersion(): PythonVersion {
   // Use the system-installed version of `python3` when running `vercel dev`
   return {
@@ -75,14 +72,14 @@ export function getSupportedPythonVersion({
     throw new NowBuildError({
       code: 'BUILD_UTILS_PYTHON_VERSION_DISCONTINUED',
       link: 'http://vercel.link/python-version',
-      message: `Python version "${selection.version}" detected in Pipfile.lock is discontinued and must be upgraded. ${upstreamProvider}.`,
+      message: `Python version "${selection.version}" detected in Pipfile.lock is discontinued and must be upgraded.`,
     });
   }
 
   if (selection.discontinueDate) {
     const d = selection.discontinueDate.toISOString().split('T')[0];
     console.warn(
-      `Error: Python version "${selection.version}" detected in Pipfile.lock is deprecated. Deployments created on or after ${d} will fail to build. ${upstreamProvider}. http://vercel.link/python-version`
+      `Error: Python version "${selection.version}" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after ${d} will fail to build. http://vercel.link/python-version`
     );
   }
 

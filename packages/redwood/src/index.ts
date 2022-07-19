@@ -283,12 +283,10 @@ export const build: BuildV2 = async ({
     : '/index';
 
   const defaultRoutesConfig = getTransformedRoutes({
-    nowConfig: {
-      // this makes sure we send back 200.html for unprerendered pages
-      rewrites: [{ source: '/(.*)', destination: fallbackHtmlPage }],
-      cleanUrls: true,
-      trailingSlash: false,
-    },
+    // this makes sure we send back 200.html for unprerendered pages
+    rewrites: [{ source: '/(.*)', destination: fallbackHtmlPage }],
+    cleanUrls: true,
+    trailingSlash: false,
   });
 
   if (defaultRoutesConfig.error) {
