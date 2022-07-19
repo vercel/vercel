@@ -98,7 +98,11 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
       logWithinTest('state is READY, moving on');
       break;
     }
-    logWithinTest('state is ', readyState, 'retrying in 1 second');
+    if (i > 0 && i % 25 === 0) {
+      logWithinTest(
+        `State of https://${deploymentUrl} is ${readyState}, retry number ${i}`
+      );
+    }
     await new Promise(r => setTimeout(r, 1000));
   }
 
