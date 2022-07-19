@@ -622,6 +622,32 @@ describe('build', () => {
     }
   });
 
+  it('should store `detectBuilders()` error in `builds.json`', async () => {
+    const cwd = fixture('error-vercel-json-validation');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      // `builds.json` contains top-level "error" property
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.builds).toBeUndefined();
+
+      expect(builds.error.code).toEqual('invalid_function');
+      expect(builds.error.message).toEqual(
+        'Function must contain at least one property.'
+      );
+
+      // `config.json` contains `version`
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.version).toBe(3);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should store Builder error in `builds.json`', async () => {
     const cwd = fixture('node-error');
     const output = join(cwd, '.vercel/output');
@@ -643,7 +669,7 @@ describe('build', () => {
       expect(errorBuilds[0].error.hideStackTrace).toEqual(true);
       expect(errorBuilds[0].error.code).toEqual('NODE_TYPESCRIPT_ERROR');
 
-      // `config.json`` contains `version`
+      // `config.json` contains `version`
       const configJson = await fs.readJSON(join(output, 'config.json'));
       expect(configJson.version).toBe(3);
     } finally {
