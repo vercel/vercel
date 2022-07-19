@@ -98,7 +98,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
       logWithinTest('state is READY, moving on');
       break;
     }
-    if (i % 25 === 0) {
+    if (i > 0 && i % 25 === 0) {
       logWithinTest(
         `State of https://${deploymentUrl} is ${readyState}, retry number ${i}`
       );
