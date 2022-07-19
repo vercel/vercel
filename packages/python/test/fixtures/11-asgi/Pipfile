@@ -6,7 +6,28 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-sanic = "*"
+sanic = "20.12.6"
+
+# below is meant to lock the version of transitive deps
+aiofiles = "0.8.0"
+certifi = "2021.10.8"
+click = "8.1.2"
+h11 = "0.9.0"
+httpcore = "0.11.1"
+httptools = "0.4.0"
+httpx = "0.15.4"
+idna = "3.3"
+importlib-metadata = "4.11.3"
+itsdangerous = "2.1.2"
+jinja2 = "3.1.1"
+markupsafe = "2.1.1"
+multidict = "5.2.0"
+sniffio = "1.2.0"
+ujson = "5.2.0"
+uvloop = "0.16.0"
+websockets = "9.1"
+werkzeug = "2.1.1"
+zipp = "3.8.0"
 
 [requires]
 python_version = "3.9"
