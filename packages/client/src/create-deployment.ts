@@ -89,11 +89,14 @@ export default function buildCreateDeployment() {
     // Populate Files -> FileFsRef mapping
     const workPath = typeof path === 'string' ? path : path[0];
     const filesMap: Files = {};
+    debug('Collecting files map');
     for (const fsPath of fileList) {
       const { mode } = lstatSync(fsPath);
       filesMap[relative(workPath, fsPath)] = new FileFsRef({ mode, fsPath });
     }
+    debug('Creating zip');
     const zipBuffer = await createZip(filesMap);
+    debug('Created zip');
     const files = new Map([
       [
         hash(zipBuffer),
