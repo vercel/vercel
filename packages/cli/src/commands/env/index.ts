@@ -1,7 +1,9 @@
 import chalk from 'chalk';
-import { ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import {
+  getEnvTargetPlaceholder,
+  isValidEnvTarget,
+} from '../../util/env/env-target';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
@@ -29,6 +31,7 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
+    --environment                  Set the Environment (development, preview, production) when pulling Environment Variables
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
@@ -111,6 +114,7 @@ export default async function main(client: Client) {
     argv = getArgs(client.argv.slice(2), {
       '--yes': Boolean,
       '-y': '--yes',
+      '--environment': String,
     });
   } catch (error) {
     handleError(error);
@@ -126,6 +130,17 @@ export default async function main(client: Client) {
   const subArgs = argv._.slice(1);
   const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
   const { output, config } = client;
+
+  const target = argv['--environment']?.toLowerCase() || 'development';
+  if (!isValidEnvTarget(target)) {
+    output.error(
+      `Invalid environment \`${chalk.cyan(
+        target
+      )}\`. Valid options: ${getEnvTargetPlaceholder()}`
+    );
+    return 1;
+  }
+
   const link = await getLinkedProject(client, cwd);
   if (link.status === 'error') {
     return link.exitCode;
@@ -150,7 +165,7 @@ export default async function main(client: Client) {
         return pull(
           client,
           project,
-          ProjectEnvTarget.Development,
+          target,
           argv,
           args,
           output,
