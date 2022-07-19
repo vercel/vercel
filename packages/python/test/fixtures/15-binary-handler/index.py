@@ -6,6 +6,6 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "image/png")
         self.end_headers()
-        with open("zeit-white-triangle.png", "rb") as image:
+        with open("triangle.png", "rb") as image:
             self.wfile.write(image.read())
         return
