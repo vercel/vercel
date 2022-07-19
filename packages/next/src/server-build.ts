@@ -14,7 +14,7 @@ import {
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Handler, Route, Source } from '@vercel/routing-utils';
+import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
@@ -56,6 +56,7 @@ import prettyBytes from 'pretty-bytes';
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
+const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 
 export async function serverBuild({
   dynamicPages,
@@ -133,6 +134,10 @@ export async function serverBuild({
   const lambdaPageKeys = Object.keys(lambdaPages);
   const internalPages = ['_app.js', '_error.js', '_document.js'];
   const pageBuildTraces = await glob('**/*.js.nft.json', pagesDir);
+  const isEmptyAllowQueryForPrendered = semver.gte(
+    nextVersion,
+    EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
+  );
   const isCorrectNotFoundRoutes = semver.gte(
     nextVersion,
     CORRECT_NOT_FOUND_ROUTES_VERSION
@@ -756,6 +761,7 @@ export async function serverBuild({
     static404Page,
     hasPages404: routesManifest.pages404,
     isCorrectNotFoundRoutes,
+    isEmptyAllowQueryForPrendered,
   });
 
   Object.keys(prerenderManifest.staticRoutes).forEach(route =>
@@ -822,7 +828,7 @@ export async function serverBuild({
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
-  const notFoundPreviewRoutes: Source[] = [];
+  const notFoundPreviewRoutes: RouteWithSrc[] = [];
 
   if (prerenderManifest.notFoundRoutes?.length > 0 && canUsePreviewMode) {
     // we combine routes into one src here to reduce the number of needed
@@ -1378,7 +1384,7 @@ export async function serverBuild({
       },
 
       // error handling
-      { handle: 'error' } as Handler,
+      { handle: 'error' } as RouteWithHandle,
 
       // Custom Next.js 404 page
       ...(i18n && (static404Page || hasIsr404Page || lambdaPages['404.js'])
