@@ -124,7 +124,6 @@ export default async function main(client: Client) {
       '--yes': Boolean,
       '-y': '--yes',
       '--environment': String,
-      '--env': '--environment',
     });
   } catch (error) {
     handleError(error);
