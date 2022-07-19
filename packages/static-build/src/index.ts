@@ -31,7 +31,7 @@ import {
   NowBuildError,
   scanParentDirs,
 } from '@vercel/build-utils';
-import type { Route, Source } from '@vercel/routing-utils';
+import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
 import * as BuildOutputV2 from './utils/build-output-v2';
 import * as BuildOutputV3 from './utils/build-output-v3';
@@ -173,8 +173,8 @@ const nowDevChildProcesses = new Set<ChildProcess>();
   });
 });
 
-const getDevRoute = (srcBase: string, devPort: number, route: Source) => {
-  const basic: Source = {
+const getDevRoute = (srcBase: string, devPort: number, route: RouteWithSrc) => {
+  const basic: RouteWithSrc = {
     src: `${srcBase}${route.src}`,
     dest: `http://localhost:${devPort}${route.dest}`,
   };

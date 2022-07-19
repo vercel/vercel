@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const { version } = require('../package.json');
 
 const {
   packAndDeploy,
@@ -9,10 +8,15 @@ const {
 
 jest.setTimeout(12 * 60 * 1000);
 
+let buildUtilsUrl;
 let builderUrl;
-const buildUtilsUrl = version.includes('canary') ? '@canary' : undefined;
 
 beforeAll(async () => {
+  if (!buildUtilsUrl) {
+    const buildUtilsPath = path.resolve(__dirname, '..', '..', 'build-utils');
+    buildUtilsUrl = await packAndDeploy(buildUtilsPath);
+    console.log('buildUtilsUrl', buildUtilsUrl);
+  }
   const builderPath = path.resolve(__dirname, '..');
   builderUrl = await packAndDeploy(builderPath);
   console.log('builderUrl', builderUrl);
