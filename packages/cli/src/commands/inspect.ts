@@ -198,10 +198,10 @@ function stateString(s: Deployment['readyState']) {
     case 'READY':
       return chalk.green(CIRCLE) + sTitle;
     case 'QUEUED':
-      return chalk.white(CIRCLE) + sTitle;
+      return chalk.gray(CIRCLE) + sTitle;
     case 'CANCELED':
-      return chalk.gray(sTitle);
+      return chalk.gray(CIRCLE) + sTitle;
     default:
-      return chalk.gray('  --');
+      return chalk.gray('UNKNOWN');
   }
 }
