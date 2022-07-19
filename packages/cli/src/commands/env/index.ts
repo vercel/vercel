@@ -142,6 +142,7 @@ export default async function main(client: Client) {
 
   const environmentArg = argv['--environment']?.toLowerCase();
 
+  // "Development" if no argument is passed in, otherwise use the passed-in environment
   const target = environmentArg
     ? parseEnvironmentTarget(environmentArg)
     : ProjectEnvTarget.Development;
