@@ -775,24 +775,24 @@ describe('normalizeRoutes', () => {
 });
 
 describe('getTransformedRoutes', () => {
-  test('should normalize nowConfig.routes', () => {
-    const nowConfig = { routes: [{ src: '/page', dest: '/page.html' }] };
-    const actual = getTransformedRoutes({ nowConfig });
-    const expected = normalizeRoutes(nowConfig.routes);
+  test('should normalize vercelConfig.routes', () => {
+    const vercelConfig = { routes: [{ src: '/page', dest: '/page.html' }] };
+    const actual = getTransformedRoutes(vercelConfig);
+    const expected = normalizeRoutes(vercelConfig.routes);
     assert.deepEqual(actual, expected);
     assertValid(actual.routes);
   });
 
   test('should not error when routes is null and cleanUrls is true', () => {
-    const nowConfig = { cleanUrls: true, routes: null };
+    const vercelConfig = { cleanUrls: true, routes: null };
     // @ts-expect-error intentionally passing invalid `routes: null` here
-    const actual = getTransformedRoutes({ nowConfig });
+    const actual = getTransformedRoutes(vercelConfig);
     assert.equal(actual.error, null);
     assertValid(actual.routes);
   });
 
   test('should not error when has segment is used in destination', () => {
-    const nowConfig = {
+    const vercelConfig = {
       redirects: [
         {
           source: '/redirect',
@@ -809,17 +809,17 @@ describe('getTransformedRoutes', () => {
     };
 
     // @ts-expect-error not sure if this one is an error or not…
-    const actual = getTransformedRoutes({ nowConfig });
+    const actual = getTransformedRoutes(vercelConfig);
     assert.equal(actual.error, null);
     assertValid(actual.routes);
   });
 
   test('should error when routes is defined and cleanUrls is true', () => {
-    const nowConfig = {
+    const vercelConfig = {
       cleanUrls: true,
       routes: [{ src: '/page', dest: '/file.html' }],
     };
-    const { error } = getTransformedRoutes({ nowConfig });
+    const { error } = getTransformedRoutes(vercelConfig);
     assert.notEqual(error, null);
     assert.equal(error?.code, 'invalid_mixed_routes');
     assert.equal(
@@ -831,10 +831,10 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should error when redirects is invalid regex', () => {
-    const nowConfig = {
+    const vercelConfig = {
       redirects: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
     };
-    const { error } = getTransformedRoutes({ nowConfig });
+    const { error } = getTransformedRoutes(vercelConfig);
     assert.notEqual(error, null);
     assert.equal(error?.code, 'invalid_redirect');
     assert.equal(
@@ -846,10 +846,10 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should error when redirects is invalid pattern', () => {
-    const nowConfig = {
+    const vercelConfig = {
       redirects: [{ source: '/:?', destination: '/file.html' }],
     };
-    const { error } = getTransformedRoutes({ nowConfig });
+    const { error } = getTransformedRoutes(vercelConfig);
     assert.notEqual(error, null);
     assert.equal(error?.code, 'invalid_redirect');
     assert.equal(
@@ -861,7 +861,7 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should error when redirects defines both permanent and statusCode', () => {
-    const nowConfig = {
+    const vercelConfig = {
       redirects: [
         {
           source: '^/both$',
@@ -871,7 +871,7 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const { error } = getTransformedRoutes({ nowConfig });
+    const { error } = getTransformedRoutes(vercelConfig);
     assert.notEqual(error, null);
     assert.equal(error?.code, 'invalid_redirect');
     assert.equal(
@@ -883,7 +883,7 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should error when headers is invalid regex', () => {
-    const nowConfig = {
+    const vercelConfig = {
       headers: [
         {
           source: '^/(*.)\\.html$',
@@ -896,7 +896,7 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const { error } = getTransformedRoutes({ nowConfig });
+    const { error } = getTransformedRoutes(vercelConfig);
     assert.notEqual(error, null);
     assert.equal(error?.code, 'invalid_header');
     assert.equal(
@@ -908,12 +908,12 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should error when headers is invalid pattern', () => {
-    const nowConfig = {
+    const vercelConfig = {
       headers: [
         { source: '/:?', headers: [{ key: 'x-hello', value: 'world' }] },
       ],
     };
-    const { error } = getTransformedRoutes({ nowConfig });
+    const { error } = getTransformedRoutes(vercelConfig);
     assert.notEqual(error, null);
     assert.equal(error?.code, 'invalid_header');
     assert.equal(
@@ -925,10 +925,10 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should error when rewrites is invalid regex', () => {
-    const nowConfig = {
+    const vercelConfig = {
       rewrites: [{ source: '^/(*.)\\.html$', destination: '/file.html' }],
     };
-    const { error } = getTransformedRoutes({ nowConfig });
+    const { error } = getTransformedRoutes(vercelConfig);
     assert.notEqual(error, null);
     assert.equal(error?.code, 'invalid_rewrite');
     assert.equal(
@@ -940,10 +940,10 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should error when rewrites is invalid pattern', () => {
-    const nowConfig = {
+    const vercelConfig = {
       rewrites: [{ source: '/:?', destination: '/file.html' }],
     };
-    const { error } = getTransformedRoutes({ nowConfig });
+    const { error } = getTransformedRoutes(vercelConfig);
     assert.notEqual(error, null);
     assert.equal(error?.code, 'invalid_rewrite');
     assert.equal(
@@ -955,7 +955,7 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should normalize all redirects before rewrites', () => {
-    const nowConfig = {
+    const vercelConfig = {
       cleanUrls: true,
       rewrites: [{ source: '/v1', destination: '/v2/api.py' }],
       redirects: [
@@ -967,7 +967,7 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const { error, routes } = getTransformedRoutes({ nowConfig });
+    const { error, routes } = getTransformedRoutes(vercelConfig);
     const expected = [
       {
         src: '^/(?:(.+)/)?index(?:\\.html)?/?$',
@@ -998,7 +998,7 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should validate schemas', () => {
-    const nowConfig = {
+    const vercelConfig = {
       cleanUrls: true,
       rewrites: [
         { source: '/page', destination: '/page.html' },
@@ -1071,22 +1071,22 @@ describe('getTransformedRoutes', () => {
       ],
       trailingSlashSchema: false,
     };
-    assertValid(nowConfig.cleanUrls, cleanUrlsSchema);
-    assertValid(nowConfig.rewrites, rewritesSchema);
-    assertValid(nowConfig.redirects, redirectsSchema);
-    assertValid(nowConfig.headers, headersSchema);
-    assertValid(nowConfig.trailingSlashSchema, trailingSlashSchema);
+    assertValid(vercelConfig.cleanUrls, cleanUrlsSchema);
+    assertValid(vercelConfig.rewrites, rewritesSchema);
+    assertValid(vercelConfig.redirects, redirectsSchema);
+    assertValid(vercelConfig.headers, headersSchema);
+    assertValid(vercelConfig.trailingSlashSchema, trailingSlashSchema);
   });
 
   test('should return null routes if no transformations are performed', () => {
-    const nowConfig = { routes: null };
+    const vercelConfig = { routes: null };
     // @ts-expect-error intentionally passing invalid `routes: null`
-    const { routes } = getTransformedRoutes({ nowConfig });
+    const { routes } = getTransformedRoutes(vercelConfig);
     assert.equal(routes, null);
   });
 
   test('should error when segment is defined in `destination` but not `source`', () => {
-    const nowConfig = {
+    const vercelConfig = {
       redirects: [
         {
           source: '/iforgot/:id',
@@ -1094,7 +1094,7 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const { routes, error } = getTransformedRoutes({ nowConfig });
+    const { routes, error } = getTransformedRoutes(vercelConfig);
     assert.deepEqual(routes, null);
     assert.ok(
       error?.message.includes(
@@ -1105,7 +1105,7 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should error when segment is defined in HTTPS `destination` but not `source`', () => {
-    const nowConfig = {
+    const vercelConfig = {
       redirects: [
         {
           source: '/iforgot/:id',
@@ -1113,7 +1113,7 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const { routes, error } = getTransformedRoutes({ nowConfig });
+    const { routes, error } = getTransformedRoutes(vercelConfig);
     assert.deepEqual(routes, null);
     assert.ok(
       error?.message.includes(
@@ -1124,7 +1124,7 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should error when segment is defined in `destination` query string but not `source`', () => {
-    const nowConfig = {
+    const vercelConfig = {
       redirects: [
         {
           source: '/iforgot/:id',
@@ -1132,7 +1132,7 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const { routes, error } = getTransformedRoutes({ nowConfig });
+    const { routes, error } = getTransformedRoutes(vercelConfig);
     assert.deepEqual(routes, null);
     assert.ok(
       error?.message.includes(
@@ -1143,7 +1143,7 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should error when segment is defined in HTTPS `destination` query string but not `source`', () => {
-    const nowConfig = {
+    const vercelConfig = {
       redirects: [
         {
           source: '/iforgot/:id',
@@ -1151,7 +1151,7 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const { routes, error } = getTransformedRoutes({ nowConfig });
+    const { routes, error } = getTransformedRoutes(vercelConfig);
     assert.deepEqual(routes, null);
     assert.ok(
       error?.message.includes(
@@ -1162,7 +1162,7 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should work with content-security-policy header containing URL', () => {
-    const nowConfig = {
+    const vercelConfig = {
       headers: [
         {
           source: '/(.*)',
@@ -1201,7 +1201,7 @@ describe('getTransformedRoutes', () => {
         },
       ],
     };
-    const actual = getTransformedRoutes({ nowConfig });
+    const actual = getTransformedRoutes(vercelConfig);
     assert.deepEqual(actual.routes, [
       {
         continue: true,

@@ -558,9 +558,8 @@ export default class DevServer {
     ]);
 
     await this.validateVercelConfig(vercelConfig);
-    const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
-      nowConfig: vercelConfig,
-    });
+    const { error: routeError, routes: maybeRoutes } =
+      getTransformedRoutes(vercelConfig);
     if (routeError) {
       this.output.prettyError(routeError);
       await this.exit();
