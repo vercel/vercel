@@ -57,6 +57,69 @@ describe('env', () => {
       expect(devFileHasDevEnv).toBeTruthy();
     });
 
+    it('should use given environment', async () => {
+      const cwd = setupFixture('vercel-env-pull');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+
+      client.setArgv(
+        'env',
+        'pull',
+        '.env.production',
+        '--environment',
+        'production',
+        '--cwd',
+        cwd
+      );
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        `Downloading "production" Environment Variables for Project vercel-env-pull`
+      );
+      await expect(client.stderr).toOutput('Created .env.production file');
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      const rawProdEnv = await fs.readFile(path.join(cwd, '.env.production'));
+
+      // check for development env value
+      const envFileHasEnv = rawProdEnv
+        .toString()
+        .includes('REDIS_CONNECTION_STRING');
+      expect(envFileHasEnv).toBeTruthy();
+    });
+
+    it('should throw an error when it does not recognize given environment', async () => {
+      const cwd = setupFixture('vercel-env-pull');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+
+      client.setArgv(
+        'env',
+        'pull',
+        '.env.production',
+        '--environment',
+        'something-invalid',
+        '--cwd',
+        cwd
+      );
+
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        `Invalid environment \`something-invalid\`. Valid options: <production | preview | development>`
+      );
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
     it('should expose production system env variables', async () => {
       const cwd = setupFixture('vercel-env-pull');
       useUser();

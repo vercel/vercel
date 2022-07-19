@@ -26,7 +26,7 @@ const fixturesPath = path.resolve(__dirname, 'fixtures');
 const testsThatFailToBuild = new Map([
   [
     '11-version-2-5-error',
-    'Found `Gemfile` with discontinued Ruby version: `ruby "~> 2.5.x".` Please set `ruby "~> 2.7.x"` in your `Gemfile` to use Ruby 2.7.x. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Found `Gemfile` with discontinued Ruby version: `ruby "~> 2.5.x".` Please set `ruby "~> 2.7.x"` in your `Gemfile` to use Ruby 2.7.x.',
   ],
 ]);
 

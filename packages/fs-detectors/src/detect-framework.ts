@@ -80,11 +80,13 @@ export async function detectFramework({
   fs,
   frameworkList,
 }: DetectFrameworkOptions): Promise<string | null> {
-  for (const framework of frameworkList) {
-    if (await matches(fs, framework)) {
-      return framework.slug;
-    }
-  }
-
-  return null;
+  const result = await Promise.all(
+    frameworkList.map(async frameworkMatch => {
+      if (await matches(fs, frameworkMatch)) {
+        return frameworkMatch.slug;
+      }
+      return null;
+    })
+  );
+  return result.find(res => res !== null) ?? null;
 }
