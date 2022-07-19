@@ -216,7 +216,7 @@ export default async function main(client: Client): Promise<number> {
   };
 
   try {
-    return await doBuild(client, project, buildsJson, cwd, target, outputDir);
+    return await doBuild(client, project, buildsJson, cwd, outputDir);
   } catch (err: any) {
     output.prettyError(err);
 
@@ -242,7 +242,6 @@ async function doBuild(
   project: ProjectLinkAndSettings,
   buildsJson: BuildsManifest,
   cwd: string,
-  target: string,
   outputDir: string
 ): Promise<number> {
   const { output } = client;
