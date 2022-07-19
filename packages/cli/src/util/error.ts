@@ -87,3 +87,18 @@ export async function responseErrorMessage(
 
   return `${message} (${res.status})`;
 }
+
+/**
+ * Returns a new Object with enumberable properties that match
+ * the provided `err` instance, for use with `JSON.stringify()`.
+ */
+export function toEnumerableError<E extends Partial<Error>>(err: E) {
+  const enumerable: {
+    [K in keyof E]?: E[K];
+  } = {};
+  enumerable.name = err.name;
+  for (const key of Object.getOwnPropertyNames(err) as (keyof E)[]) {
+    enumerable[key] = err[key];
+  }
+  return enumerable;
+}

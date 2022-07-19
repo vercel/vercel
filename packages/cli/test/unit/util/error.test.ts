@@ -2,7 +2,11 @@ import fetch from 'node-fetch';
 import listen from 'async-listen';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
 import { JSONValue } from '../../../src/types';
-import { responseError, responseErrorMessage } from '../../../src/util/error';
+import {
+  responseError,
+  responseErrorMessage,
+  toEnumerableError,
+} from '../../../src/util/error';
 
 const send = (res: ServerResponse, statusCode: number, body: JSONValue) => {
   res.statusCode = statusCode;
@@ -10,7 +14,7 @@ const send = (res: ServerResponse, statusCode: number, body: JSONValue) => {
   res.end(JSON.stringify(body));
 };
 
-describe('responseError', () => {
+describe('responseError()', () => {
   let url: string;
   let server: Server;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -185,5 +189,45 @@ describe('responseError', () => {
     const formatted = await responseError(res);
     expect(formatted.message).toEqual('You were rate limited (429)');
     expect(formatted.retryAfter).toEqual(undefined);
+  });
+});
+
+describe('toEnumerableError()', () => {
+  it('should JSON stringify Error', () => {
+    const err = new Error('An error');
+    const enumerable = toEnumerableError(err);
+    expect(JSON.stringify(err)).toEqual('{}');
+
+    // Delete `stack` since it makes stringify undeterministinc
+    // (due to filenames / line numbers)
+    expect(typeof enumerable.stack).toEqual('string');
+    delete enumerable.stack;
+
+    expect(JSON.stringify(enumerable)).toEqual(
+      '{"name":"Error","message":"An error"}'
+    );
+  });
+
+  it('should JSON stringify Error with custom properties', () => {
+    const err = new Error('An error');
+    Object.defineProperty(err, 'custom', {
+      enumerable: false,
+      value: 'value',
+    });
+    Object.defineProperty(err, 'userError', {
+      enumerable: false,
+      value: true,
+    });
+    const enumerable = toEnumerableError(err);
+    expect(JSON.stringify(err)).toEqual('{}');
+
+    // Delete `stack` since it makes stringify undeterministinc
+    // (due to filenames / line numbers)
+    expect(typeof enumerable.stack).toEqual('string');
+    delete enumerable.stack;
+
+    expect(JSON.stringify(enumerable)).toEqual(
+      '{"name":"Error","message":"An error","custom":"value","userError":true}'
+    );
   });
 });
