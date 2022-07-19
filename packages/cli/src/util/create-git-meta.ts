@@ -22,7 +22,7 @@ export async function createGitMeta(
       output
     );
     if (remoteUrls) {
-      for (const [, urlValue] of Object.entries(remoteUrls)) {
+      for (const urlValue of Object.values(remoteUrls)) {
         if (urlValue.includes(repo)) {
           remoteUrl = urlValue;
         }
