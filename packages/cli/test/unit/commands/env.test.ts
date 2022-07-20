@@ -70,7 +70,6 @@ describe('env', () => {
       client.setArgv(
         'env',
         'pull',
-        '.env.production',
         '--environment',
         'production',
         '--cwd',
@@ -80,10 +79,10 @@ describe('env', () => {
       await expect(client.stderr).toOutput(
         `Downloading \`production\` Environment Variables for Project vercel-env-pull`
       );
-      await expect(client.stderr).toOutput('Created .env.production file');
+      await expect(client.stderr).toOutput('Created .env file');
       await expect(exitCodePromise).resolves.toEqual(0);
 
-      const rawProdEnv = await fs.readFile(path.join(cwd, '.env.production'));
+      const rawProdEnv = await fs.readFile(path.join(cwd, '.env'));
 
       // check for development env value
       const envFileHasEnv = rawProdEnv
