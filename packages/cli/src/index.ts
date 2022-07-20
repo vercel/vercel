@@ -39,8 +39,8 @@ import getConfig from './util/get-config';
 import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
 import {
-  getDefaultConfig,
-  getDefaultAuthConfig,
+  defaultAuthConfig,
+  defaultGlobalConfig,
 } from './util/config/get-default';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
@@ -212,22 +212,17 @@ const main = async () => {
     );
   }
 
-  let migrated = false;
   let configExists;
 
   try {
     configExists = existsSync(VERCEL_CONFIG_PATH);
   } catch (err) {
-    console.error(
-      error(
-        `${
-          'An unexpected error occurred while trying to find the ' +
-          `config file "${hp(VERCEL_CONFIG_PATH)}" `
-        }${err.message}`
-      )
+    output.error(
+      `An unexpected error occurred while trying to find the config file "${hp(
+        VERCEL_CONFIG_PATH
+      )}" ${err.message}`
     );
-
-    return 0;
+    return 1;
   }
 
   let config: GlobalConfig | null = null;
@@ -236,39 +231,15 @@ const main = async () => {
     try {
       config = configFiles.readConfigFile();
     } catch (err) {
-      console.error(
-        error(
-          `${
-            'An unexpected error occurred while trying to read the ' +
-            `config in "${hp(VERCEL_CONFIG_PATH)}" `
-          }${err.message}`
-        )
+      output.error(
+        `An unexpected error occurred while trying to read the config in "${hp(
+          VERCEL_CONFIG_PATH
+        )}" ${err.message}`
       );
-
       return 1;
     }
-
-    // This is from when Vercel CLI supported
-    // multiple providers. In that case, we really
-    // need to migrate.
-    if (
-      // @ts-ignore
-      config.sh ||
-      // @ts-ignore
-      config.user ||
-      // @ts-ignore
-      typeof config.user === 'object' ||
-      typeof config.currentTeam === 'object'
-    ) {
-      configExists = false;
-    }
-  }
-
-  if (!configExists) {
-    const results = await getDefaultConfig(config);
-
-    config = results.config;
-    migrated = results.migrated;
+  } else {
+    config = defaultGlobalConfig;
 
     try {
       configFiles.writeToConfigFile(config);
@@ -305,15 +276,6 @@ const main = async () => {
 
   let authConfig = null;
 
-  const subcommandsWithoutToken = [
-    'login',
-    'logout',
-    'help',
-    'init',
-    'update',
-    'build',
-  ];
-
   if (authConfigExists) {
     try {
       authConfig = configFiles.readAuthConfigFile();
@@ -329,19 +291,8 @@ const main = async () => {
 
       return 1;
     }
-
-    // This is from when Vercel CLI supported
-    // multiple providers. In that case, we really
-    // need to migrate.
-    // @ts-ignore
-    if (authConfig.credentials) {
-      authConfigExists = false;
-    }
   } else {
-    const results = await getDefaultAuthConfig(authConfig);
-
-    authConfig = results.config;
-    migrated = results.migrated;
+    authConfig = defaultAuthConfig;
 
     try {
       configFiles.writeToAuthConfigFile(authConfig);
@@ -356,14 +307,6 @@ const main = async () => {
       );
       return 1;
     }
-  }
-
-  // Let the user know we migrated the config
-  if (migrated) {
-    const directory = param(hp(VERCEL_DIR));
-    debug(
-      `The credentials and configuration within the ${directory} directory were upgraded`
-    );
   }
 
   if (typeof argv['--api'] === 'string') {
@@ -431,6 +374,15 @@ const main = async () => {
     subcommand = argv._[3] || 'deploy';
     client.argv.push('-h');
   }
+
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'update',
+    'build',
+  ];
 
   // Prompt for login if there is no current token
   if (
