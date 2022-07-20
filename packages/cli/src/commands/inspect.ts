@@ -140,7 +140,7 @@ export default async function main(client: Client) {
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
   print(`    ${chalk.cyan('status')}\t${stateString(readyState)}\n`);
-  print(`    ${chalk.cyan('url')}\t\t${url}\n`);
+  print(`    ${chalk.cyan('url')}\t\thttps://${url}\n`);
   if (createdAt) {
     print(
       `    ${chalk.cyan('created')}\t${new Date(createdAt)} ${elapsed(
@@ -153,11 +153,11 @@ export default async function main(client: Client) {
 
   if (aliases.length > 0) {
     print(chalk.bold('  Aliases\n\n'));
-    let aliases = '';
+    let aliasList = '';
     for (const alias of aliases) {
-      aliases += `${chalk.gray('╶')} ${alias}\n`;
+      aliasList += `${chalk.gray('╶')} https://${alias}\n`;
     }
-    print(indent(aliases, 4));
+    print(indent(aliasList, 4));
     print('\n\n');
   }
 
