@@ -1,7 +1,7 @@
 import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname } from 'path';
-import type { Route, Source } from '@vercel/routing-utils';
+import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import frameworkList, { Framework } from '@vercel/frameworks';
 import type {
   PackageJson,
@@ -155,8 +155,8 @@ export async function detectBuilders(
 
   let fallbackEntrypoint: string | null = null;
 
-  const apiRoutes: Source[] = [];
-  const dynamicRoutes: Source[] = [];
+  const apiRoutes: RouteWithSrc[] = [];
+  const dynamicRoutes: RouteWithSrc[] = [];
 
   // API
   for (const fileName of sortedFiles) {
@@ -692,7 +692,7 @@ function getApiRoute(
   options: Options,
   absolutePathCache: Map<string, string>
 ): {
-  apiRoute: Source | null;
+  apiRoute: RouteWithSrc | null;
   isDynamic: boolean;
   routeError: ErrorResponse | null;
 } {
@@ -886,7 +886,7 @@ function createRouteFromPath(
   filePath: string,
   featHandleMiss: boolean,
   cleanUrls: boolean
-): { route: Source; isDynamic: boolean } {
+): { route: RouteWithSrc; isDynamic: boolean } {
   const parts = filePath.split('/');
 
   let counter = 1;
@@ -932,7 +932,7 @@ function createRouteFromPath(
     ? `^/${srcParts.slice(0, -1).join('/')}${srcParts.slice(-1)[0]}$`
     : `^/${srcParts.join('/')}$`;
 
-  let route: Source;
+  let route: RouteWithSrc;
 
   if (featHandleMiss) {
     const extensionless = ext ? filePath.slice(0, -ext.length) : filePath;
@@ -959,8 +959,8 @@ interface LimitedRoutes {
 
 function getRouteResult(
   pkg: PackageJson | undefined | null,
-  apiRoutes: Source[],
-  dynamicRoutes: Source[],
+  apiRoutes: RouteWithSrc[],
+  dynamicRoutes: RouteWithSrc[],
   outputDirectory: string,
   apiBuilders: Builder[],
   frontendBuilder: Builder | null,
