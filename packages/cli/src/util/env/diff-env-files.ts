@@ -70,9 +70,9 @@ export function buildDeltaString(
 }
 
 function addDeltaSection(prefix: string, arr: string[]): string {
-  let deltaSection = arr.length > 0 ? `${prefix} ` : '';
-  for (const [i, item] of arr.entries()) {
-    deltaSection += `${item}${arr[i + 1] ? ' ' : '\n'}`;
+  let deltaSection = '';
+  for (const item of arr) {
+    deltaSection += `${prefix} ${item}\n`;
   }
   return deltaSection;
 }
