@@ -184,5 +184,24 @@ describe('env', () => {
 
       await expect(pullPromise).resolves.toEqual(0);
     });
+
+    it('should show a custom message when it fails to read a file', async () => {
+      const cwd = setupFixture('vercel-env-pull-delta-corrupt');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'env-pull-delta-corrupt',
+        name: 'env-pull-delta-corrupt',
+      });
+
+      client.output.debugEnabled = true;
+      client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+      const pullPromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Failed to find changes, but the `.env` file was updated.'
+      );
+      await expect(pullPromise).resolves.toEqual(0);
+    });
   });
 });

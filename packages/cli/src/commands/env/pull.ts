@@ -112,18 +112,11 @@ export default async function pull(
   );
 
   let deltaString = '';
+  let oldEnv;
   if (exists) {
-    try {
-      const oldEnv = await createEnvObject(fullPath, output);
-
-      if (oldEnv && records) {
-        deltaString = buildDeltaString(oldEnv, records);
-      }
-    } catch (err) {
-      deltaString = `Failed to find changes, but the \`${chalk.cyan(
-        filename
-      )}\` file was updated.`;
-      output.debug(`Failed to find changes: ${err}`);
+    oldEnv = await createEnvObject(fullPath, output);
+    if (oldEnv) {
+      deltaString = buildDeltaString(oldEnv, records);
     }
   }
 
@@ -145,10 +138,16 @@ export default async function pull(
     )}\n`
   );
 
+  output.print('\n');
   if (deltaString) {
-    output.print('\n' + deltaString);
+    output.print(deltaString);
+  } else if (!oldEnv) {
+    output.log(
+      `Failed to find changes, but the \`${chalk.cyan(
+        filename
+      )}\` file was updated.`
+    );
   } else if (exists) {
-    output.print('\n');
     output.log('No changes found.');
   }
 

@@ -8,21 +8,22 @@ export async function createEnvObject(
   envPath: string,
   output: Output
 ): Promise<Dictionary<string | undefined> | undefined> {
-  try {
-    // Partially taken from https://github.com/tswaters/env-file-parser/blob/master/lib/parse.js
-    let envArr = (await readFile(envPath, 'utf-8'))
-      // remove double quotes
-      .replace(/"/g, '')
-      // split on new line
-      .split(/\r?\n|\r/)
-      // filter comments
-      .filter(line => /^[^#]/.test(line))
-      // needs equal sign
-      .filter(line => /=/i.test(line));
-    return parseEnv(envArr);
-  } catch (err) {
-    output.debug(`Error parsing env file: ${err}`);
+  let envArr = (await readFile(envPath, 'utf-8'))
+    // remove double quotes
+    .replace(/"/g, '')
+    // split on new line
+    .split(/\r?\n|\r/)
+    // filter comments
+    .filter(line => /^[^#]/.test(line))
+    // needs equal sign
+    .filter(line => /=/i.test(line));
+
+  const parsedEnv = parseEnv(envArr);
+  if (Object.keys(parsedEnv).length === 0) {
+    output.debug('Failed to parse env file.');
+    return;
   }
+  return parseEnv(envArr);
 }
 
 function findChanges(
