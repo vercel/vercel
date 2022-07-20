@@ -2,8 +2,9 @@ import chalk from 'chalk';
 import { join } from 'path';
 import { Org, Project } from '../../types';
 import Client from '../../util/client';
-import { parseGitConfig, pluckRemoteUrl } from '../../util/create-git-meta';
+import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
 import confirm from '../../util/input/confirm';
+import list, { ListChoice } from '../../util/input/list';
 import { Output } from '../../util/output';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
@@ -64,20 +65,37 @@ export default async function connect(
     );
     return 1;
   }
-  const remoteUrl = pluckRemoteUrl(gitConfig);
-  if (!remoteUrl) {
+  const remoteUrls = pluckRemoteUrls(gitConfig);
+  if (!remoteUrls) {
     output.error(
-      `No remote origin URL found in your Git config. Make sure you've configured a remote repo in your local Git config. Run ${chalk.cyan(
+      `No remote URLs found in your Git config. Make sure you've configured a remote repo in your local Git config. Run ${chalk.cyan(
         '`git remote --help`'
       )} for more details.`
     );
     return 1;
   }
-  output.log(`Identified Git remote "origin": ${link(remoteUrl)}`);
+
+  let remoteUrl: string;
+
+  if (Object.keys(remoteUrls).length > 1) {
+    output.log(`Found multiple remote URLs.`);
+    remoteUrl = await selectRemoteUrl(client, remoteUrls);
+  } else {
+    // If only one is found, get it — usually "origin"
+    remoteUrl = Object.values(remoteUrls)[0];
+  }
+
+  if (remoteUrl === '') {
+    output.log('Aborted.');
+    return 0;
+  }
+
+  output.log(`Connecting Git remote: ${link(remoteUrl)}`);
+
   const parsedUrl = parseRepoUrl(remoteUrl);
   if (!parsedUrl) {
     output.error(
-      `Failed to parse Git repo data from the following remote URL in your Git config: ${link(
+      `Failed to parse Git repo data from the following remote URL: ${link(
         remoteUrl
       )}`
     );
@@ -165,4 +183,23 @@ async function confirmRepoConnect(
     }
   }
   return shouldReplaceProject;
+}
+
+async function selectRemoteUrl(
+  client: Client,
+  remoteUrls: { [key: string]: string }
+): Promise<string> {
+  let choices: ListChoice[] = [];
+  for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
+    choices.push({
+      name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,
+      value: urlValue,
+      short: urlKey,
+    });
+  }
+
+  return await list(client, {
+    message: 'Which remote do you want to connect?',
+    choices,
+  });
 }
