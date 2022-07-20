@@ -101,7 +101,9 @@ describe('pull', () => {
         Object {
           "orgId": "team_dummy",
           "projectId": "vercel-pull-next",
-          "settings": Object {},
+          "settings": Object {
+            "createdAt": 1555413045188,
+          },
         }
       `);
     } finally {

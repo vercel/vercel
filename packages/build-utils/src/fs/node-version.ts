@@ -33,9 +33,6 @@ function getHint(isAuto = false) {
     : `Please set "engines": { "node": "${range}" } in your \`package.json\` file to use Node.js ${major}.`;
 }
 
-const upstreamProvider =
-  'This change is the result of a decision made by an upstream infrastructure provider (AWS).';
-
 export function getLatestNodeVersion() {
   return allOptions[0];
 }
@@ -75,7 +72,7 @@ export async function getSupportedNodeVersion(
     throw new NowBuildError({
       code: 'BUILD_UTILS_NODE_VERSION_DISCONTINUED',
       link: 'http://vercel.link/node-version',
-      message: `${intro} ${getHint(isAuto)} ${upstreamProvider}`,
+      message: `${intro} ${getHint(isAuto)}`,
     });
   }
 
@@ -86,9 +83,9 @@ export async function getSupportedNodeVersion(
     console.warn(
       `Error: Node.js version ${
         selection.range
-      } is deprecated. Deployments created on or after ${d} will fail to build. ${getHint(
+      } has reached End-of-Life. Deployments created on or after ${d} will fail to build. ${getHint(
         isAuto
-      )} ${upstreamProvider}`
+      )}`
     );
   }
 

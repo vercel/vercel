@@ -15,6 +15,7 @@ export const help = () => `
       )}
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
+      git                              Manage Git provider repository for your current Project
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
       inspect              [id]        Displays information related to a deployment
@@ -68,7 +69,6 @@ export const help = () => `
     -m, --meta                     Add metadata for the deployment (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
-    -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --prod                         Create a production deployment
