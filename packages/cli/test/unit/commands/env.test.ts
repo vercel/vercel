@@ -195,7 +195,6 @@ describe('env', () => {
         name: 'env-pull-delta-corrupt',
       });
 
-      client.output.debugEnabled = true;
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
