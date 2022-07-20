@@ -141,13 +141,7 @@ export default async function pull(
   output.print('\n');
   if (deltaString) {
     output.print(deltaString);
-  } else if (!oldEnv) {
-    output.log(
-      `Failed to find changes, but the \`${chalk.cyan(
-        filename
-      )}\` file was updated.`
-    );
-  } else if (exists) {
+  } else if (oldEnv && exists) {
     output.log('No changes found.');
   }
 
