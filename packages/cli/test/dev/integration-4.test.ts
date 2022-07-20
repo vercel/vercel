@@ -443,6 +443,17 @@ test(
 );
 
 test(
+  '[vercel dev] Middleware that has no response',
+  testFixtureStdio('middleware-no-response', async (testPath: any) => {
+    await testPath(
+      500,
+      '/api/hello',
+      'A server error has occurred\n\nEDGE_FUNCTION_INVOCATION_FAILED'
+    );
+  })
+);
+
+test(
   '[vercel dev] Middleware that does basic rewrite',
   testFixtureStdio('middleware-rewrite', async (testPath: any) => {
     await testPath(200, '/', '<h1>Index</h1>');
