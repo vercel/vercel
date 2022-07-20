@@ -147,7 +147,7 @@ describe('env', () => {
     });
 
     it('should show a delta string', async () => {
-      const cwd = setupFixture('env-pull-delta');
+      const cwd = setupFixture('vercel-env-pull-delta');
       useUser();
       useTeams('team_dummy');
       useProject({
