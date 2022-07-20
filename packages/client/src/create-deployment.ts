@@ -1,5 +1,5 @@
 import { lstatSync } from 'fs-extra';
-import { isAbsolute, relative } from 'path';
+import { isAbsolute } from 'path';
 import { hash, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
@@ -9,8 +9,9 @@ import {
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
-import { createZip } from '@vercel/build-utils/dist/lambda';
-import { FileFsRef, Files } from '@vercel/build-utils';
+import { streamToBuffer } from '@vercel/build-utils';
+import tar from 'tar-fs';
+import { createGzip } from 'zlib';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
@@ -88,21 +89,20 @@ export default function buildCreateDeployment() {
 
     // Populate Files -> FileFsRef mapping
     const workPath = typeof path === 'string' ? path : path[0];
-    const filesMap: Files = {};
-    debug('Collecting files map');
-    for (const fsPath of fileList) {
-      const { mode } = lstatSync(fsPath);
-      filesMap[relative(workPath, fsPath)] = new FileFsRef({ mode, fsPath });
-    }
-    debug('Creating zip');
-    const zipBuffer = await createZip(filesMap);
-    debug('Created zip');
+    debug('Packing tarball');
+    let tarStream = tar.pack(workPath).pipe(createGzip());
+    debug('Created tgzStream');
+    const tarBuffer: Buffer = await streamToBuffer(tarStream);
+    debug('Created buf');
+    console.log(tarBuffer.buffer.byteLength);
+    debug('Packed tarball');
     const files = new Map([
       [
-        hash(zipBuffer),
-        { names: ['.vercel/source.zip'], data: zipBuffer, mode: 0o666 },
+        hash(tarBuffer),
+        { names: ['.vercel/source.tar.gz'], data: tarBuffer, mode: 0o666 },
       ],
     ]);
+    console.log('files length:', files.keys.length);
 
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);
     yield { type: 'hashes-calculated', payload: mapToObject(files) };
