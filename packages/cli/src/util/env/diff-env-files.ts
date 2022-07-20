@@ -24,7 +24,7 @@ export async function createEnvObject(
     output.debug('Failed to parse env file.');
     return;
   }
-  return parseEnv(envArr);
+  return parsedEnv;
 }
 
 function findChanges(
