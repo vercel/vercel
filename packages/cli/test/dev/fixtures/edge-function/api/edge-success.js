@@ -17,6 +17,7 @@ export default async function edge(request, event) {
       decamelized: decamelize('someCamelCaseThing'),
       uppercase: upper('someThing'),
       optionalChaining: request?.doesnotexist ?? 'fallback',
+      ENV_VAR_IN_EDGE: process.env.ENV_VAR_IN_EDGE,
     })
   );
 }
