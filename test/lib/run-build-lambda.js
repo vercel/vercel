@@ -39,7 +39,7 @@ async function runBuildLambda(inputPath) {
     config: build.config,
   });
 
-  const workPath = fs.realpath(
+  const workPath = await fs.realpath(
     path.join(
       os.tmpdir(),
       `vercel-${Date.now()}-${Math.floor(Math.random() * 100)}`
