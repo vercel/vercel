@@ -3,7 +3,6 @@ import ms from 'ms';
 import table from 'text-table';
 import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
-import { stateString } from '../../util/list/state-string';
 import { getCommandName } from '../../util/pkg-name';
 import strlen from '../../util/strlen';
 
@@ -63,7 +62,7 @@ export default async function list(
   if (projectList.length > 0) {
     const tablePrint = table(
       [
-        ['Project Name', 'Manage', 'Status', 'Updated'].map(header =>
+        ['Project Name', 'Manage', 'Updated'].map(header =>
           chalk.bold(chalk.cyan(header))
         ),
         ...projectList
@@ -71,7 +70,6 @@ export default async function list(
             [
               project.name,
               chalk.bold(getInspectUrl(contextName, project.name)),
-              stateString(project.latestDeployments[0]?.readyState),
               chalk.gray(ms(Date.now() - project.updatedAt)),
             ],
           ])
@@ -80,8 +78,8 @@ export default async function list(
           .flat(),
       ],
       {
-        align: ['l', 'l', 'l', 'l'],
-        hsep: ' '.repeat(4),
+        align: ['l', 'l', 'l'],
+        hsep: ' '.repeat(3),
         stringLength: strlen,
       }
     ).replace(/^/gm, '  ');
