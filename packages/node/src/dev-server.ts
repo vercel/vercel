@@ -242,6 +242,9 @@ async function createEdgeRuntime(userCode: string | undefined) {
           module: {
             exports: {},
           },
+          process: {
+            env: process.env,
+          },
         });
         return context;
       },
