@@ -9,8 +9,18 @@ const groupLog = require('./changelog/group');
 process.chdir(join(__dirname, '..'));
 
 async function getLatestStableTag() {
+  const headers = {};
+
+  const token = process.env.GITHUB_PAT;
+  if (token) {
+    headers['authorization'] = `token ${token}`;
+  }
+
   const res = await fetch(
-    'https://api.github.com/repos/vercel/vercel/releases/latest'
+    'https://api.github.com/repos/vercel/vercel/releases/latest',
+    {
+      headers,
+    }
   );
   const { tag_name } = await res.json();
   return tag_name;
