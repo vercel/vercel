@@ -691,7 +691,7 @@ const main = async () => {
       const category = 'Command Invocation';
 
       if (!metric) metric = metrics();
-      metrics()
+      metric
         .timing(category, targetCommand, end, pkg.version)
         .event(category, targetCommand, pkg.version)
         .send();
