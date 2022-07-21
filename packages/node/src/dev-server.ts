@@ -81,7 +81,7 @@ import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import esbuild from 'esbuild';
 import fetch from 'node-fetch';
-import { TextDecoder } from 'util';
+import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
 
 function logError(error: Error) {
   console.error(error.message);
@@ -151,13 +151,15 @@ async function serializeRequest(message: IncomingMessage) {
 async function compileUserCode(
   entrypointPath: string,
   entrypointLabel: string
-) {
+): Promise<undefined | { userCode: string; wasmAssets: WasmAssets }> {
+  const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
   try {
     const result = await esbuild.build({
       platform: 'node',
       target: 'node14',
       sourcemap: 'inline',
       bundle: true,
+      plugins: [edgeWasmPlugin],
       entryPoints: [entrypointPath],
       write: false, // operate in memory
       format: 'cjs',
@@ -170,10 +172,8 @@ async function compileUserCode(
       );
     }
 
-    const userCode = new TextDecoder().decode(compiledFile.contents);
-
-    return `
-      ${userCode};
+    const userCode = `
+      ${compiledFile.text};
 
       addEventListener('fetch', async (event) => {
         try {
@@ -219,6 +219,7 @@ async function compileUserCode(
           }));
         }
       })`;
+    return { userCode, wasmAssets };
   } catch (error) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
@@ -228,21 +229,30 @@ async function compileUserCode(
   }
 }
 
-async function createEdgeRuntime(userCode: string | undefined) {
+async function createEdgeRuntime(params?: {
+  userCode: string;
+  wasmAssets: WasmAssets;
+}) {
   try {
-    if (!userCode) {
+    if (!params) {
       return undefined;
     }
 
+    const wasmBindings = await params.wasmAssets.getContext();
     const edgeRuntime = new EdgeRuntime({
-      initialCode: userCode,
+      initialCode: params.userCode,
       extend: (context: Primitives) => {
-        Object.assign(context, {
-          __dirname: '',
-          module: {
-            exports: {},
+        Object.assign(
+          context,
+          {
+            __dirname: '',
+            module: {
+              exports: {},
+            },
           },
-        });
+          wasmBindings
+        );
+
         return context;
       },
     });
