@@ -22,8 +22,13 @@ async function getLatestStableTag() {
       headers,
     }
   );
-  const { tag_name } = await res.json();
-  return tag_name;
+  const result = await res.json();
+  if (!result.tag_name) {
+    const message = result.message || JSON.stringify(result);
+    throw new Error(`Failed to fetch releases from github: ${message}`);
+  }
+
+  return result.tag_name;
 }
 
 function serializeLog(groupedLog) {
