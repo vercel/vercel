@@ -184,5 +184,21 @@ describe('env', () => {
 
       await expect(pullPromise).resolves.toEqual(0);
     });
+
+    it('should not show a delta string when it fails to read a file', async () => {
+      const cwd = setupFixture('vercel-env-pull-delta-corrupt');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'env-pull-delta-corrupt',
+        name: 'env-pull-delta-corrupt',
+      });
+
+      client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+      const pullPromise = env(client);
+      await expect(client.stderr).toOutput('Updated .env file');
+      await expect(pullPromise).resolves.toEqual(0);
+    });
   });
 });
