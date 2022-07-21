@@ -31,11 +31,10 @@ describe('project', () => {
       data.pop();
 
       expect(org).toEqual(user.username);
-      expect(header).toEqual(['Project Name', 'Manage', 'Status', 'Updated']);
+      expect(header).toEqual(['Project Name', 'Manage', 'Updated']);
       expect(data).toEqual([
         project.project.name,
         `https://vercel.com/${org}/${project.project.name}`,
-        '● Ready',
       ]);
     });
   });
