@@ -69,7 +69,7 @@ jobs:
       - run: yarn install --network-timeout 1000000
 
       - name: Build ${{matrix.packageName}} and all its dependencies
-        run: yarn turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
+        run: yarn turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps --force
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
@@ -79,6 +79,7 @@ jobs:
           VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
           VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}
           FORCE_COLOR: '1'
+          ENABLE_VC_BUILD: '1'
 
   conclusion:
     needs:
