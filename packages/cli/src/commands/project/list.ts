@@ -71,7 +71,7 @@ export default async function list(
               .map(project => [
                 [
                   terminalLink(
-                    project.name,
+                    chalk.bold(project.name),
                     getInspectUrl(contextName, project.name)
                   ),
                   chalk.gray(ms(Date.now() - project.updatedAt)),
