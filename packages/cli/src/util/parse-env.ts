@@ -1,6 +1,6 @@
-// Converts `env` Arrays, Strings and Objects into env Objects.
-import { Dictionary } from '@vercel/client';
+import type { Dictionary } from '@vercel/client';
 
+// Converts `env` Arrays, Strings and Objects into env Objects.
 export const parseEnv = (env?: string | string[] | Dictionary<string>) => {
   if (!env) {
     return {};
