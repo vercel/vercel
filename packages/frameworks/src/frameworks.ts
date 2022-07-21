@@ -1750,7 +1750,7 @@ export const frameworks = [
         placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
-        placeholder: '`npm run docs:build`',
+        placeholder: '`npm run build` or `vitepress build docs`',
         value: 'vitepress build docs',
       },
       devCommand: {
@@ -1784,7 +1784,7 @@ export const frameworks = [
         placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
-        placeholder: '`npm run build`',
+        placeholder: '`npm run build` or `vuepress build src`',
         value: 'vuepress build src',
       },
       devCommand: {
