@@ -39,13 +39,12 @@ async function runBuildLambda(inputPath) {
     config: build.config,
   });
 
-  const workPath = await fs.realpath(
-    path.join(
-      os.tmpdir(),
-      `vercel-${Date.now()}-${Math.floor(Math.random() * 100)}`
-    )
+  let workPath = path.join(
+    os.tmpdir(),
+    `vercel-${Date.now()}-${Math.floor(Math.random() * 100)}`
   );
   await fs.ensureDir(workPath);
+  workPath = await fs.realpath(workPath);
   console.log('building in', workPath);
 
   const buildResult = await wrapper.build({
