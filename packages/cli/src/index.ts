@@ -49,7 +49,7 @@ import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
-import { GlobalConfig } from './types';
+import { AuthConfig, GlobalConfig } from './types';
 import { VercelConfig } from '@vercel/client';
 
 const isCanary = pkg.version.includes('canary');
@@ -202,35 +202,31 @@ const main = async () => {
   try {
     await mkdirp(VERCEL_DIR);
   } catch (err) {
-    console.error(
-      error(
-        `${
-          'An unexpected error occurred while trying to create the ' +
-          `global directory "${hp(VERCEL_DIR)}" `
-        }${err.message}`
-      )
-    );
-  }
-
-  let configExists;
-
-  try {
-    configExists = existsSync(VERCEL_CONFIG_PATH);
-  } catch (err) {
     output.error(
-      `An unexpected error occurred while trying to find the config file "${hp(
-        VERCEL_CONFIG_PATH
+      `An unexpected error occurred while trying to create the global directory "${hp(
+        VERCEL_DIR
       )}" ${err.message}`
     );
     return 1;
   }
 
-  let config: GlobalConfig | null = null;
-
-  if (configExists) {
-    try {
-      config = configFiles.readConfigFile();
-    } catch (err) {
+  let config: GlobalConfig;
+  try {
+    config = configFiles.readConfigFile();
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      config = defaultGlobalConfig;
+      try {
+        configFiles.writeToConfigFile(config);
+      } catch (err) {
+        output.error(
+          `An unexpected error occurred while trying to save the config to "${hp(
+            VERCEL_CONFIG_PATH
+          )}" ${err.message}`
+        );
+        return 1;
+      }
+    } else {
       output.error(
         `An unexpected error occurred while trying to read the config in "${hp(
           VERCEL_CONFIG_PATH
@@ -238,72 +234,29 @@ const main = async () => {
       );
       return 1;
     }
-  } else {
-    config = defaultGlobalConfig;
-
-    try {
-      configFiles.writeToConfigFile(config);
-    } catch (err) {
-      console.error(
-        error(
-          `${
-            'An unexpected error occurred while trying to write the ' +
-            `default config to "${hp(VERCEL_CONFIG_PATH)}" `
-          }${err.message}`
-        )
-      );
-
-      return 1;
-    }
   }
 
-  let authConfigExists;
-
+  let authConfig: AuthConfig;
   try {
-    authConfigExists = existsSync(VERCEL_AUTH_CONFIG_PATH);
+    authConfig = configFiles.readAuthConfigFile();
   } catch (err) {
-    console.error(
-      error(
-        `${
-          'An unexpected error occurred while trying to find the ' +
-          `auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-        }${err.message}`
-      )
-    );
-
-    return 1;
-  }
-
-  let authConfig = null;
-
-  if (authConfigExists) {
-    try {
-      authConfig = configFiles.readAuthConfigFile();
-    } catch (err) {
-      console.error(
-        error(
-          `${
-            'An unexpected error occurred while trying to read the ' +
-            `auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-          }${err.message}`
-        )
-      );
-
-      return 1;
-    }
-  } else {
-    authConfig = defaultAuthConfig;
-
-    try {
-      configFiles.writeToAuthConfigFile(authConfig);
-    } catch (err) {
-      console.error(
-        error(
-          `${
-            'An unexpected error occurred while trying to write the ' +
-            `default config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-          }${err.message}`
-        )
+    if (err.code === 'ENOENT') {
+      authConfig = defaultAuthConfig;
+      try {
+        configFiles.writeToAuthConfigFile(authConfig);
+      } catch (err) {
+        output.error(
+          `An unexpected error occurred while trying to write the auth config to "${hp(
+            VERCEL_AUTH_CONFIG_PATH
+          )}" ${err.message}`
+        );
+        return 1;
+      }
+    } else {
+      output.error(
+        `An unexpected error occurred while trying to read the auth config in "${hp(
+          VERCEL_AUTH_CONFIG_PATH
+        )}" ${err.message}`
       );
       return 1;
     }
@@ -320,11 +273,6 @@ const main = async () => {
     new URL(apiUrl);
   } catch (err) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
-    return 1;
-  }
-
-  if (!config) {
-    output.error(`Vercel global config was not loaded.`);
     return 1;
   }
 
