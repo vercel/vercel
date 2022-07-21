@@ -277,8 +277,9 @@ export const frameworks = [
         handle: 'filesystem',
       },
       {
-        src: '/(.*)',
-        dest: '/index.html',
+        src: '.*',
+        status: 404,
+        dest: '404.html',
       },
     ],
   },
