@@ -56,11 +56,11 @@ async function main() {
   args.push('src/index.ts');
   await execa('yarn', args, { stdio: 'inherit', cwd: dirRoot });
 
-  // `ncc` has some issues with `@zeit/fun`'s runtime files:
+  // `ncc` has some issues with `@vercel/fun`'s runtime files:
   //   - Executable bits on the `bootstrap` files appear to be lost:
-  //       https://github.com/zeit/ncc/pull/182
+  //       https://github.com/vercel/ncc/pull/182
   //   - The `bootstrap.js` asset does not get copied into the output dir:
-  //       https://github.com/zeit/ncc/issues/278
+  //       https://github.com/vercel/ncc/issues/278
   //
   // Aside from those issues, all the same files from the `runtimes` directory
   // should be copied into the output runtimes dir, specifically the `index.js`
@@ -70,7 +70,7 @@ async function main() {
   // with `fun`'s cache invalidation mechanism and they need to be shasum'd.
   const runtimes = join(
     dirRoot,
-    '../../node_modules/@zeit/fun/dist/src/runtimes'
+    '../../node_modules/@vercel/fun/dist/src/runtimes'
   );
   await cpy('**/*', join(distRoot, 'runtimes'), {
     parents: true,
