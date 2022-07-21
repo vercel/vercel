@@ -73,7 +73,7 @@ export default function buildCreateDeployment() {
       debug(`Provided 'path' is a single file`);
     }
 
-    const { fileList } = await buildFileTree(path, clientOptions, debug);
+    let { fileList } = await buildFileTree(path, clientOptions, debug);
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
@@ -90,19 +90,22 @@ export default function buildCreateDeployment() {
     // Populate Files -> FileFsRef mapping
     const workPath = typeof path === 'string' ? path : path[0];
     debug('Packing tarball');
-    let tarStream = tar.pack(workPath).pipe(createGzip());
+    fileList = fileList.map(file => file.replace(workPath, ''));
+    let tarStream = tar
+      .pack(workPath, {
+        entries: fileList,
+      })
+      .pipe(createGzip());
     debug('Created tgzStream');
     const tarBuffer: Buffer = await streamToBuffer(tarStream);
     debug('Created buf');
-    console.log(tarBuffer.buffer.byteLength);
     debug('Packed tarball');
     const files = new Map([
       [
         hash(tarBuffer),
-        { names: ['.vercel/source.tar.gz'], data: tarBuffer, mode: 0o666 },
+        { names: ['.vercel/source.tgz'], data: tarBuffer, mode: 0o666 },
       ],
     ]);
-    console.log('files length:', files.keys.length);
 
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);
     yield { type: 'hashes-calculated', payload: mapToObject(files) };
