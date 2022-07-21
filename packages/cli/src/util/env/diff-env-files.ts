@@ -71,7 +71,7 @@ export function buildDeltaString(
 
 function addDeltaSection(prefix: string, arr: string[]): string {
   let deltaSection = '';
-  for (const item of arr) {
+  for (const item of arr.sort()) {
     deltaSection += `${prefix} ${item}\n`;
   }
   return deltaSection;
