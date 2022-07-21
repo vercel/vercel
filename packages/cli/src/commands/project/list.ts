@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
+import terminalLink from 'terminal-link';
 import table from 'text-table';
 import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
@@ -61,29 +62,43 @@ export default async function list(
 
   if (projectList.length > 0) {
     const tablePrint = table(
-      [
-        ['Project Name', 'Manage', 'Updated'].map(header =>
-          chalk.bold(chalk.cyan(header))
-        ),
-        ...projectList
-          .map(project => [
-            [
-              project.name,
-              chalk.bold(getInspectUrl(contextName, project.name)),
-              chalk.gray(ms(Date.now() - project.updatedAt)),
-            ],
-          ])
-          // flatten since the previous step returns a nested
-          // array of the deployment and (optionally) its instances
-          .flat(),
-      ],
+      terminalLink.isSupported
+        ? [
+            ['Project Name', 'Updated'].map(header =>
+              chalk.bold(chalk.cyan(header))
+            ),
+            ...projectList
+              .map(project => [
+                [
+                  terminalLink(
+                    project.name,
+                    getInspectUrl(contextName, project.name)
+                  ),
+                  chalk.gray(ms(Date.now() - project.updatedAt)),
+                ],
+              ])
+              .flat(),
+          ]
+        : [
+            ['Project Name', 'Manage', 'Updated'].map(header =>
+              chalk.bold(chalk.cyan(header))
+            ),
+            ...projectList
+              .map(project => [
+                [
+                  project.name,
+                  chalk.bold(getInspectUrl(contextName, project.name)),
+                  chalk.gray(ms(Date.now() - project.updatedAt)),
+                ],
+              ])
+              .flat(),
+          ],
       {
         align: ['l', 'l', 'l'],
         hsep: ' '.repeat(3),
         stringLength: strlen,
       }
     ).replace(/^/gm, '  ');
-
     output.print(`\n${tablePrint}\n\n`);
 
     if (pagination && pagination.count === 20) {

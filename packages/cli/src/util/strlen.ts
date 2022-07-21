@@ -1,3 +1,5 @@
+import stripAnsi from 'strip-ansi';
+
 export default function strlen(str: string) {
-  return str.replace(/\u001b[^m]*m/g, '').length;
+  return stripAnsi(str).length;
 }
