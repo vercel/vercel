@@ -4,7 +4,7 @@ import ms from 'ms';
 import bytes from 'bytes';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
-import { createFunction } from '@zeit/fun';
+import { createFunction } from '@vercel/fun';
 import {
   Builder,
   BuildOptions,
