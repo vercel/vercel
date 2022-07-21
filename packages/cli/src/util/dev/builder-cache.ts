@@ -7,6 +7,7 @@ import { basename, join } from 'path';
 import XDGAppPaths from 'xdg-app-paths';
 import { mkdirp, readJSON, writeJSON } from 'fs-extra';
 import { NowBuildError, PackageJson } from '@vercel/build-utils';
+import cliPkg from '../pkg';
 
 import cmd from '../output/cmd';
 import { Output } from '../output';
@@ -94,13 +95,17 @@ function parseVersionSafe(rawSpec: string) {
   }
 }
 
-export function filterPackage(builderSpec: string, buildersPkg: PackageJson) {
+export function filterPackage(
+  builderSpec: string,
+  buildersPkg: PackageJson,
+  cliPkg: Partial<PackageJson>
+) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
   const parsedVersion = parseVersionSafe(parsed.rawSpec);
 
   // Skip install of Runtimes that are part of Vercel CLI's `dependencies`
-  if (isBundledBuilder(parsed)) {
+  if (isBundledBuilder(parsed, cliPkg)) {
     return false;
   }
 
@@ -113,20 +118,6 @@ export function filterPackage(builderSpec: string, buildersPkg: PackageJson) {
     parsedVersion.version == buildersPkg.dependencies[parsed.name]
   ) {
     return false;
-  }
-
-  // Skip install of already installed Runtime with tag compatible match
-  if (parsed.name && parsed.type === 'tag' && buildersPkg.dependencies) {
-    const parsedInstalled = npa(
-      `${parsed.name}@${buildersPkg.dependencies[parsed.name]}`
-    );
-    if (parsedInstalled.type !== 'version') {
-      return true;
-    }
-    const semverInstalled = semver.parse(parsedInstalled.rawSpec);
-    if (!semverInstalled) {
-      return true;
-    }
   }
 
   return true;
@@ -161,7 +152,7 @@ export async function installBuilders(
 
   // Filter out any packages that come packaged with Vercel CLI
   const packagesToInstall = packages.filter(p =>
-    filterPackage(p, buildersPkgBefore)
+    filterPackage(p, buildersPkgBefore, cliPkg)
   );
 
   if (packagesToInstall.length === 0) {
@@ -274,7 +265,7 @@ export async function updateBuilders(
 
     // If it's a builder that is part of Vercel CLI's
     // `dependencies` then don't update it
-    if (isBundledBuilder(npa(p))) {
+    if (isBundledBuilder(npa(p), cliPkg)) {
       return false;
     }
 
@@ -322,7 +313,7 @@ export async function getBuilder(
     const parsed = npa(builderPkg);
 
     // First check if it's a bundled Runtime in Vercel CLI's `node_modules`
-    const bundledBuilder = isBundledBuilder(parsed);
+    const bundledBuilder = isBundledBuilder(parsed, cliPkg);
     if (bundledBuilder && parsed.name) {
       requirePath = parsed.name;
     } else {
@@ -362,17 +353,21 @@ export async function getBuilder(
   return builderWithPkg;
 }
 
-export function isBundledBuilder(parsed: npa.Result): boolean {
+export function isBundledBuilder(
+  parsed: npa.Result,
+  { dependencies = {} }: PackageJson
+): boolean {
   if (!parsed.name) {
     return false;
   }
 
+  const inCliDependencyList = !!dependencies[parsed.name];
   const inScope = parsed.scope === '@vercel';
   const isVersionedReference = ['tag', 'version', 'range'].includes(
     parsed.type
   );
 
-  return inScope && isVersionedReference;
+  return inCliDependencyList && inScope && isVersionedReference;
 }
 
 function getPackageName(
