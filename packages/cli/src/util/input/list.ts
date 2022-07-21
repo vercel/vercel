@@ -14,7 +14,7 @@ interface ListSeparator {
   separator: string;
 }
 
-type ListChoice = ListEntry | ListSeparator | typeof inquirer.Separator;
+export type ListChoice = ListEntry | ListSeparator | typeof inquirer.Separator;
 
 interface ListOptions {
   message: string;

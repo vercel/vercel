@@ -4,28 +4,55 @@ import os from 'os';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
-  getRemoteUrl,
+  getOriginUrl,
+  getRemoteUrls,
   isDirty,
 } from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
 import { parseRepoUrl } from '../../../../src/util/projects/connect-git-provider';
 import { readOutputStream } from '../../../helpers/read-output-stream';
+import { useUser } from '../../../mocks/user';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { Project } from '../../../../src/types';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
 
-describe('getRemoteUrl', () => {
+describe('getOriginUrl', () => {
   it('does not provide data for no-origin', async () => {
     const configPath = join(fixture('no-origin'), 'git/config');
-    const data = await getRemoteUrl(configPath, client.output);
+    const data = await getOriginUrl(configPath, client.output);
     expect(data).toBeNull();
   });
   it('displays debug message when repo data cannot be parsed', async () => {
     const dir = await getWriteableDirectory();
     client.output.debugEnabled = true;
-    const data = await getRemoteUrl(join(dir, 'git/config'), client.output);
+    const data = await getOriginUrl(join(dir, 'git/config'), client.output);
     expect(data).toBeNull();
     await expect(client.stderr).toOutput('Error while parsing repo data');
+  });
+});
+
+describe('getRemoteUrls', () => {
+  it('does not provide data when there are no remote urls', async () => {
+    const configPath = join(fixture('no-origin'), 'git/config');
+    const data = await getRemoteUrls(configPath, client.output);
+    expect(data).toBeUndefined();
+  });
+  it('returns an object when multiple urls are present', async () => {
+    const configPath = join(fixture('multiple-remotes'), 'git/config');
+    const data = await getRemoteUrls(configPath, client.output);
+    expect(data).toMatchObject({
+      origin: 'https://github.com/user/repo',
+      secondary: 'https://github.com/user/repo2',
+    });
+  });
+  it('returns an object for origin url', async () => {
+    const configPath = join(fixture('test-github'), 'git/config');
+    const data = await getRemoteUrls(configPath, client.output);
+    expect(data).toMatchObject({
+      origin: 'https://github.com/user/repo.git',
+    });
   });
 });
 
@@ -242,6 +269,47 @@ describe('createGitMeta', () => {
       expect(data).toBeUndefined();
     } finally {
       await fs.remove(tmpDir);
+    }
+  });
+  it('uses the repo url for a connected project', async () => {
+    const originalCwd = process.cwd();
+    const directory = fixture('connected-repo');
+    try {
+      process.chdir(directory);
+      await fs.rename(join(directory, 'git'), join(directory, '.git'));
+
+      useUser();
+      const project = useProject({
+        ...defaultProject,
+        id: 'connected-repo',
+        name: 'connected-repo',
+      });
+      project.project.link = {
+        type: 'github',
+        repo: 'user/repo2',
+        repoId: 1010,
+        gitCredentialId: '',
+        sourceless: true,
+        createdAt: 1656109539791,
+        updatedAt: 1656109539791,
+      };
+
+      const data = await createGitMeta(
+        directory,
+        client.output,
+        project.project as Project
+      );
+      expect(data).toMatchObject({
+        remoteUrl: 'https://github.com/user/repo2',
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'add hi',
+        commitRef: 'master',
+        commitSha: '8050816205303e5957b2909083c50677930d5b29',
+        dirty: true,
+      });
+    } finally {
+      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+      process.chdir(originalCwd);
     }
   });
 });

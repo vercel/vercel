@@ -16,7 +16,11 @@ const {
 
 test('[vercel dev] should support edge functions', async () => {
   const dir = fixture('edge-function');
-  const { dev, port, readyResolver } = await testFixture(dir);
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      ENV_VAR_IN_EDGE: '1',
+    },
+  });
 
   try {
     await readyResolver;
@@ -42,6 +46,7 @@ test('[vercel dev] should support edge functions', async () => {
       decamelized: 'some_camel_case_thing',
       uppercase: 'SOMETHING',
       optionalChaining: 'fallback',
+      ENV_VAR_IN_EDGE: '1',
     });
   } finally {
     await dev.kill('SIGTERM');
@@ -55,6 +60,31 @@ test(
     await testPath(200, '/api/edge-success');
   })
 );
+
+test('[vercel dev] throws an error when an edge function has no response', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-no-response`);
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.status).toBe(500);
+    expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
+    expect(stdout).toMatch(
+      /Unhandled rejection: Edge Function "api\/edge-no-response.js" did not return a response./g
+    );
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-no-response: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
 
 test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
   const dir = fixture('edge-function');
