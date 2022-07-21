@@ -235,7 +235,20 @@ async function writeStaticFile(
   const dest = join(outputDir, 'static', fsPath);
   await fs.mkdirp(dirname(dest));
 
-  // TODO: handle (or skip) symlinks?
+  // if the source is a symlink, try to create it instead of copying the file
+  // however, if the symlink creation fails (e.g. Windows), fallback to copying
+  if (
+    file.type === 'FileFsRef' &&
+    (await fs.lstat(file.fsPath)).isSymbolicLink()
+  ) {
+    try {
+      await fs.symlink(file.fsPath, dest);
+      return;
+    } catch (e) {
+      // fall through
+    }
+  }
+
   const stream = file.toStream();
   await pipe(stream, fs.createWriteStream(dest, { mode: file.mode }));
 }
