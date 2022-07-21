@@ -17,6 +17,7 @@
 </p>
 <br/>
 
+
 ## Vercel
 
 Vercel is a platform for **static sites and frontend frameworks**, built to integrate with your headless content, commerce, or database.
