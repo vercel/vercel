@@ -349,6 +349,8 @@ function testFixtureStdio(
             'deploy',
             '--public',
             '--debug',
+            '--build-env',
+            'ENABLE_VC_BUILD="1"',
           ],
           { cwd, stdio: 'pipe', reject: false }
         );
