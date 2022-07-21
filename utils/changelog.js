@@ -11,7 +11,7 @@ process.chdir(join(__dirname, '..'));
 async function getLatestStableTag() {
   const headers = {};
 
-  const token = process.env.GITHUB_PAT;
+  const token = process.env.GITHUB_TOKEN;
   if (token) {
     headers['authorization'] = `token ${token}`;
   }
