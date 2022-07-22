@@ -49,6 +49,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
         FORCE_BUILD_IN_REGION,
         NOW_DEBUG,
         VERCEL_DEBUG,
+        ENABLE_VC_BUILD,
         NEXT_TELEMETRY_DISABLED: '1',
       },
     },
