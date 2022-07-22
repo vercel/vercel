@@ -11,6 +11,11 @@ export interface Dictionary<T> {
   [key: string]: T;
 }
 
+export enum ArchiveFormat {
+  Zip = 'zip',
+  Tgz = 'tgz',
+}
+
 export interface VercelClientOptions {
   token: string;
   path: string | string[];
@@ -25,6 +30,7 @@ export interface VercelClientOptions {
   defaultName?: string;
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
+  archive?: ArchiveFormat | undefined;
 }
 
 /** @deprecated Use VercelClientOptions instead. */

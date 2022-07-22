@@ -6,7 +6,7 @@ import mapCertError from '../certs/map-cert-error';
 import { Org } from '../../types';
 import Now, { CreateOptions } from '..';
 import Client from '../client';
-import { DeploymentError } from '../../../../client/dist';
+import { ArchiveFormat, DeploymentError } from '../../../../client/dist';
 
 export default async function createDeploy(
   client: Client,
@@ -16,10 +16,18 @@ export default async function createDeploy(
   createArgs: CreateOptions,
   org: Org,
   isSettingUpProject: boolean,
-  cwd?: string
+  cwd?: string,
+  archive?: ArchiveFormat
 ): Promise<any | DeploymentError> {
   try {
-    return await now.create(paths, createArgs, org, isSettingUpProject, cwd);
+    return await now.create(
+      paths,
+      createArgs,
+      org,
+      isSettingUpProject,
+      archive,
+      cwd
+    );
   } catch (error) {
     if (error.code === 'rate_limited') {
       throw new ERRORS_TS.DeploymentsRateLimited(error.message);

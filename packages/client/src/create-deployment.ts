@@ -1,6 +1,6 @@
 import { lstatSync } from 'fs-extra';
-import { isAbsolute } from 'path';
-import { hash, mapToObject } from './utils/hashes';
+import { isAbsolute, relative } from 'path';
+import { hash, hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
 import { DeploymentError } from './errors';
@@ -8,10 +8,12 @@ import {
   VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
+  ArchiveFormat,
 } from './types';
-import { streamToBuffer } from '@vercel/build-utils';
+import { FileFsRef, Files, streamToBuffer } from '@vercel/build-utils';
 import tar from 'tar-fs';
 import { createGzip } from 'zlib';
+import { createZip } from '../../build-utils/dist/lambda';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
@@ -89,23 +91,49 @@ export default function buildCreateDeployment() {
 
     // Populate Files -> FileFsRef mapping
     const workPath = typeof path === 'string' ? path : path[0];
-    debug('Packing tarball');
-    fileList = fileList.map(file => file.replace(workPath, ''));
-    let tarStream = tar
-      .pack(workPath, {
-        entries: fileList,
-      })
-      .pipe(createGzip());
-    debug('Created tgzStream');
-    const tarBuffer: Buffer = await streamToBuffer(tarStream);
-    debug('Created buf');
-    debug('Packed tarball');
-    const files = new Map([
-      [
-        hash(tarBuffer),
-        { names: ['.vercel/source.tgz'], data: tarBuffer, mode: 0o666 },
-      ],
-    ]);
+
+    let files;
+
+    if (clientOptions.archive === ArchiveFormat.Tgz) {
+      debug('Packing tarball');
+      fileList = fileList.map(file => file.replace(workPath, ''));
+      let tarStream = tar
+        .pack(workPath, {
+          entries: fileList,
+        })
+        .pipe(createGzip());
+      debug('Created tgzStream');
+      const tarBuffer: Buffer = await streamToBuffer(tarStream);
+      debug('Created buf');
+      debug('Packed tarball');
+      files = new Map([
+        [
+          hash(tarBuffer),
+          { names: ['.vercel/source.tgz'], data: tarBuffer, mode: 0o666 },
+        ],
+      ]);
+    } else if (clientOptions.archive === ArchiveFormat.Zip) {
+      const filesMap: Files = {};
+      debug('Collecting files map');
+      for (const fsPath of fileList) {
+        const { mode } = lstatSync(fsPath);
+        filesMap[relative(workPath, fsPath)] = new FileFsRef({
+          mode,
+          fsPath,
+        });
+      }
+      debug('Creating zip');
+      const zipBuffer = await createZip(filesMap);
+      debug('Created zip');
+      files = new Map([
+        [
+          hash(zipBuffer),
+          { names: ['.vercel/source.zip'], data: zipBuffer, mode: 0o666 },
+        ],
+      ]);
+    } else {
+      files = await hashes(fileList);
+    }
 
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);
     yield { type: 'hashes-calculated', payload: mapToObject(files) };

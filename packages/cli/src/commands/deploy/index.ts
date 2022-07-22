@@ -65,6 +65,7 @@ import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { createGitMeta } from '../../util/create-git-meta';
+import { isValidArchive } from '../../util/deploy/validate-archive-format';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -85,6 +86,7 @@ export default async (client: Client) => {
       '--prebuilt': Boolean,
       '--prod': Boolean,
       '--confirm': Boolean,
+      '--archive': String,
       '-f': '--force',
       '-p': '--public',
       '-e': '--env',
@@ -233,6 +235,12 @@ export default async (client: Client) => {
       });
       return 1;
     }
+  }
+
+  const archive = argv['--archive'];
+  if (typeof archive === 'string' && !isValidArchive(archive)) {
+    output.error('Format must be zip or tgz');
+    return 1;
   }
 
   // retrieve `project` and `org` from .vercel
@@ -516,7 +524,8 @@ export default async (client: Client) => {
       createArgs,
       org,
       !project,
-      path
+      path,
+      archive
     );
 
     if (deployment.code === 'missing_project_settings') {
