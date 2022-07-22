@@ -235,6 +235,9 @@ export default async function main(client: Client): Promise<number> {
     await fs.writeJSON(configJsonPath, { version: 3 }, { spaces: 2 });
 
     return 1;
+  } finally {
+    // Clean up environment variables
+    delete process.env.VERCEL_ANALYTICS_ID;
   }
 }
 
