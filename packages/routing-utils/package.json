@@ -1,6 +1,6 @@
 {
   "name": "@vercel/routing-utils",
-  "version": "1.13.3",
+  "version": "2.0.0",
   "description": "Vercel routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -24,6 +24,7 @@
     "path-to-regexp": "6.1.0"
   },
   "devDependencies": {
+    "@types/jest": "27.4.1",
     "@types/node": "12.12.20",
     "ajv": "^6.0.0",
     "typescript": "4.3.4"

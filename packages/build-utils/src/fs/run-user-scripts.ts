@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
+import { coerce, intersects, validRange } from 'semver';
 import { SpawnOptions } from 'child_process';
 import { deprecate } from 'util';
 import debug from '../debug';
@@ -60,6 +61,13 @@ export interface SpawnOptionsExtended extends SpawnOptions {
    * Pretty formatted command that is being spawned for logging purposes.
    */
   prettyCommand?: string;
+
+  /**
+   * Returns instead of throwing an error when the process exits with a
+   * non-0 exit code. When relevant, the returned object will include
+   * the error code, stdout and stderr.
+   */
+  ignoreNon0Exit?: boolean;
 }
 
 export function spawnAsync(
@@ -78,7 +86,7 @@ export function spawnAsync(
 
     child.on('error', reject);
     child.on('close', (code, signal) => {
-      if (code === 0) {
+      if (code === 0 || opts.ignoreNon0Exit) {
         return resolve();
       }
 
@@ -122,24 +130,24 @@ export function execAsync(
 
       child.on('error', reject);
       child.on('close', (code, signal) => {
-        if (code !== 0) {
-          const cmd = opts.prettyCommand
-            ? `Command "${opts.prettyCommand}"`
-            : 'Command';
-
-          return reject(
-            new NowBuildError({
-              code: `BUILD_UTILS_EXEC_${code || signal}`,
-              message: `${cmd} exited with ${code || signal}`,
-            })
-          );
+        if (code === 0 || opts.ignoreNon0Exit) {
+          return resolve({
+            code,
+            stdout: Buffer.concat(stdoutList).toString(),
+            stderr: Buffer.concat(stderrList).toString(),
+          });
         }
 
-        return resolve({
-          code,
-          stdout: Buffer.concat(stdoutList).toString(),
-          stderr: Buffer.concat(stderrList).toString(),
-        });
+        const cmd = opts.prettyCommand
+          ? `Command "${opts.prettyCommand}"`
+          : 'Command';
+
+        return reject(
+          new NowBuildError({
+            code: `BUILD_UTILS_EXEC_${code || signal}`,
+            message: `${cmd} exited with ${code || signal}`,
+          })
+        );
       });
     }
   );
@@ -165,9 +173,30 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
-export async function getNodeBinPath({ cwd }: { cwd: string }) {
-  const { stdout } = await execAsync('npm', ['bin'], { cwd });
-  return stdout.trim();
+export async function getNodeBinPath({
+  cwd,
+}: {
+  cwd: string;
+}): Promise<string> {
+  const { code, stdout, stderr } = await execAsync('npm', ['bin'], {
+    cwd,
+    prettyCommand: 'npm bin',
+
+    // in some rare cases, we saw `npm bin` exit with a non-0 code, but still
+    // output the right bin path, so we ignore the exit code
+    ignoreNon0Exit: true,
+  });
+
+  const nodeBinPath = stdout.trim();
+
+  if (path.isAbsolute(nodeBinPath)) {
+    return nodeBinPath;
+  }
+
+  throw new NowBuildError({
+    code: `BUILD_UTILS_GET_NODE_BIN_PATH`,
+    message: `Running \`npm bin\` failed to return a valid bin path (code=${code}, stdout=${stdout}, stderr=${stderr})`,
+  });
 }
 
 async function chmodPlusX(fsPath: string) {
@@ -204,8 +233,23 @@ export function getSpawnOptions(
   };
 
   if (!meta.isDev) {
-    // Ensure that the selected Node version is at the beginning of the `$PATH`
-    opts.env.PATH = `/node${nodeVersion.major}/bin:${opts.env.PATH}`;
+    let found = false;
+    const oldPath = opts.env.PATH || process.env.PATH || '';
+
+    const pathSegments = oldPath.split(path.delimiter).map(segment => {
+      if (/^\/node[0-9]+\/bin/.test(segment)) {
+        found = true;
+        return `/node${nodeVersion.major}/bin`;
+      }
+      return segment;
+    });
+
+    if (!found) {
+      // If we didn't find & replace, prepend at beginning of PATH
+      pathSegments.unshift(`/node${nodeVersion.major}/bin`);
+    }
+
+    opts.env.PATH = pathSegments.filter(Boolean).join(path.delimiter);
   }
 
   return opts;
@@ -217,9 +261,9 @@ export async function getNodeVersion(
   config: Config = {},
   meta: Meta = {}
 ): Promise<NodeVersion> {
+  const latest = getLatestNodeVersion();
   if (meta && meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
-    const latest = getLatestNodeVersion();
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
@@ -227,9 +271,26 @@ export async function getNodeVersion(
   let isAuto = true;
   if (packageJson && packageJson.engines && packageJson.engines.node) {
     const { node } = packageJson.engines;
-    if (nodeVersion && nodeVersion !== node && !meta.isDev) {
+    if (
+      nodeVersion &&
+      validRange(node) &&
+      !intersects(nodeVersion, node) &&
+      !meta.isDev
+    ) {
       console.warn(
         `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${nodeVersion}") will not apply. Learn More: http://vercel.link/node-version`
+      );
+    } else if (coerce(node)?.raw === node && !meta.isDev) {
+      console.warn(
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
+      );
+    } else if (
+      validRange(node) &&
+      intersects(`${latest.major + 1}.x`, node) &&
+      !meta.isDev
+    ) {
+      console.warn(
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
       );
     }
     nodeVersion = node;
@@ -426,20 +487,31 @@ export function getEnvForPackageManager({
   env: { [x: string]: string | undefined };
 }) {
   const newEnv: { [x: string]: string | undefined } = { ...env };
+  const oldPath = env.PATH + '';
+  const npm7 = '/node16/bin-npm7';
+  const pnpm7 = '/pnpm7/node_modules/.bin';
+  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
   if (cliType === 'npm') {
     if (
       typeof lockfileVersion === 'number' &&
       lockfileVersion >= 2 &&
-      (nodeVersion?.major || 0) < 16
+      (nodeVersion?.major || 0) < 16 &&
+      !oldPath.includes(npm7) &&
+      !corepackEnabled
     ) {
       // Ensure that npm 7 is at the beginning of the `$PATH`
-      newEnv.PATH = `/node16/bin-npm7:${env.PATH}`;
-      console.log('Detected `package-lock.json` generated by npm 7...');
+      newEnv.PATH = `${npm7}${path.delimiter}${oldPath}`;
+      console.log('Detected `package-lock.json` generated by npm 7+...');
     }
   } else if (cliType === 'pnpm') {
-    if (typeof lockfileVersion === 'number' && lockfileVersion === 5.4) {
+    if (
+      typeof lockfileVersion === 'number' &&
+      lockfileVersion === 5.4 &&
+      !oldPath.includes(pnpm7) &&
+      !corepackEnabled
+    ) {
       // Ensure that pnpm 7 is at the beginning of the `$PATH`
-      newEnv.PATH = `/pnpm7/node_modules/.bin:${env.PATH}`;
+      newEnv.PATH = `${pnpm7}${path.delimiter}${oldPath}`;
       console.log('Detected `pnpm-lock.yaml` generated by pnpm 7...');
     }
   } else {

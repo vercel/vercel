@@ -47,6 +47,11 @@ export function middleware(request) {
     return;
   }
 
+  if (url.pathname === '/somewhere') {
+    url.pathname = '/from-middleware';
+    return NextResponse.redirect(url);
+  }
+
   if (url.pathname === '/logs') {
     console.clear();
     for (let i = 0; i < 3; i++) console.count();
@@ -70,6 +75,13 @@ export function middleware(request) {
     url.pathname = '/about';
     url.searchParams.set('middleware', 'foo');
     return NextResponse.rewrite(url);
+  }
+
+  if (url.pathname === '/rewrite-to-site') {
+    const customUrl = new URL(url);
+    customUrl.pathname = '/_sites/subdomain-1/';
+    console.log('rewriting to', customUrl.pathname, customUrl.href);
+    return NextResponse.rewrite(customUrl);
   }
 
   if (url.pathname === '/redirect-me-to-about') {
@@ -195,15 +207,15 @@ export function middleware(request) {
   }
 
   if (pathname.startsWith('/home')) {
-    if (!request.cookies.bucket) {
+    if (!request.cookies.get('bucket')) {
       const bucket = Math.random() >= 0.5 ? 'a' : 'b';
       url.pathname = `/home/${bucket}`;
       const response = NextResponse.rewrite(url);
-      response.cookie('bucket', bucket);
+      response.cookies.set('bucket', bucket);
       return response;
     }
 
-    url.pathname = `/home/${request.cookies.bucket}`;
+    url.pathname = `/home/${request.cookies.get('bucket')}`;
     return NextResponse.rewrite(url);
   }
 

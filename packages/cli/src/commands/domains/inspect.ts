@@ -150,17 +150,7 @@ export default async function inspect(
       `This Domain is not configured properly. To configure it you should either:`,
       null,
       null,
-      null,
-      {
-        boxen: {
-          margin: {
-            left: 2,
-            right: 0,
-            bottom: 0,
-            top: 0,
-          },
-        },
-      }
+      null
     );
     output.print(
       `  ${chalk.grey('a)')} ` +

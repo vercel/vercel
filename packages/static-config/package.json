@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-config",
-  "version": "1.0.1",
+  "version": "2.0.1",
   "license": "MIT",
   "main": "./dist/index",
   "repository": {
@@ -23,6 +23,7 @@
     "ts-morph": "12.0.0"
   },
   "devDependencies": {
+    "@swc/core": "1.2.182",
     "@types/jest": "27.4.1",
     "@types/node": "*"
   },

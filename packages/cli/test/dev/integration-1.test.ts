@@ -1,6 +1,9 @@
 import os from 'os';
+import url from 'url';
 import fs from 'fs-extra';
 import { join } from 'path';
+import listen from 'async-listen';
+import { createServer } from 'http';
 
 const {
   exec,
@@ -8,7 +11,666 @@ const {
   fixture,
   testFixture,
   testFixtureStdio,
+  validateResponseHeaders,
 } = require('./utils.js');
+
+test('[vercel dev] should support edge functions', async () => {
+  const dir = fixture('edge-function');
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      ENV_VAR_IN_EDGE: '1',
+    },
+  });
+
+  try {
+    await readyResolver;
+
+    const body = { hello: 'world' };
+
+    let res = await fetch(`http://localhost:${port}/api/edge-success`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    validateResponseHeaders(res);
+
+    // support for edge functions has to manually ensure that these properties
+    // are set up; so, we test that they are all passed through properly
+    expect(await res.json()).toMatchObject({
+      headerContentType: 'application/json',
+      url: `http://localhost:${port}/api/edge-success`,
+      method: 'POST',
+      body: '{"hello":"world"}',
+      decamelized: 'some_camel_case_thing',
+      uppercase: 'SOMETHING',
+      optionalChaining: 'fallback',
+      ENV_VAR_IN_EDGE: '1',
+    });
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test(
+  '[vercel dev] edge functions respond properly the same as production',
+  testFixtureStdio('edge-function', async (testPath: any) => {
+    await testPath(500, '/api/edge-500-response');
+    await testPath(200, '/api/edge-success');
+  })
+);
+
+test('[vercel dev] throws an error when an edge function has no response', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-no-response`);
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.status).toBe(500);
+    expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
+    expect(stdout).toMatch(
+      /Unhandled rejection: Edge Function "api\/edge-no-response.js" did not return a response./g
+    );
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-no-response: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
+  const dir = fixture('edge-function');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const body = { hello: 'world' };
+
+    let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    validateResponseHeaders(res);
+
+    expect(await res.status).toBe(500);
+    expect(await res.text()).toBe(
+      'responding with intentional 500 from user code'
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle runtime errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-error-runtime`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle config errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-error-config`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stderr).toMatch(
+      /Invalid function runtime "invalid-runtime-value" for "api\/edge-error-config.js". Valid runtimes are: \["experimental-edge"\]/g
+    );
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-error-config: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle startup errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-error-startup`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stderr).toMatch(/Failed to instantiate edge runtime./g);
+    expect(stderr).toMatch(/intentional startup error/g);
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-error-startup: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle syntax errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-error-syntax`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stderr).toMatch(/Failed to instantiate edge runtime./g);
+    expect(stderr).toMatch(/Unexpected end of file/g);
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle import errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(
+      `http://localhost:${port}/api/edge-error-unknown-import`,
+      {
+        method: 'GET',
+        headers: {
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      }
+    );
+    validateResponseHeaders(res);
+
+    const { stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stderr).toMatch(
+      /Could not resolve "unknown-module-893427589372458934795843"/g
+    );
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-error-unknown-import: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle missing handler errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(
+      `http://localhost:${port}/api/edge-error-no-handler`,
+      {
+        method: 'GET',
+        headers: {
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      }
+    );
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stdout).toMatch(
+      /No default export was found. Add a default export to handle requests./g
+    );
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-error-no-handler: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support request body', async () => {
+  const dir = fixture('node-request-body');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const body = { hello: 'world' };
+
+    // Test that `req.body` works in dev
+    let res = await fetch(`http://localhost:${port}/api/req-body`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    validateResponseHeaders(res);
+    expect(await res.json()).toMatchObject(body);
+
+    // Test that `req` "data" events work in dev
+    res = await fetch(`http://localhost:${port}/api/data-events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should maintain query when invoking serverless function', async () => {
+  const dir = fixture('node-query-invoke');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/something?url-param=a`);
+    validateResponseHeaders(res);
+
+    const text = await res.text();
+    const parsed = url.parse(text, true);
+    expect(parsed.pathname).toEqual('/something');
+    expect(parsed.query['url-param']).toEqual('a');
+    expect(parsed.query['route-param']).toEqual('b');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should maintain query when proxy passing', async () => {
+  const dir = fixture('query-proxy');
+  const { dev, port, readyResolver } = await testFixture(dir);
+  const dest = createServer((req, res) => {
+    res.end(req.url);
+  });
+
+  try {
+    await Promise.all([readyResolver, listen(dest, 0)]);
+
+    const destAddr = dest.address();
+    if (!destAddr || typeof destAddr === 'string') {
+      throw new Error('Unexpected HTTP address');
+    }
+
+    const res = await fetch(
+      `http://localhost:${port}/${destAddr.port}?url-param=a`
+    );
+    validateResponseHeaders(res);
+
+    const text = await res.text();
+    const parsed = url.parse(text, true);
+    expect(parsed.pathname).toEqual('/something');
+    expect(parsed.query['url-param']).toEqual('a');
+    expect(parsed.query['route-param']).toEqual('b');
+  } finally {
+    dest.close();
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should maintain query when dev server defines routes', async () => {
+  const dir = fixture('dev-server-query');
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      VERCEL_DEV_COMMAND: 'next dev --port $PORT',
+    },
+  });
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/test?url-param=a`);
+    validateResponseHeaders(res);
+
+    const text = await res.text();
+
+    // Hacky way of getting the page payload from the response
+    // HTML since we don't have a HTML parser handy.
+    const json = text
+      .match(/<pre>(.*)<\/pre>/)![1]
+      .replace('</pre>', '')
+      .replace('<!-- -->', '')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"');
+    const parsed = JSON.parse(json);
+    const query = url.parse(parsed.url, true).query;
+
+    expect(query['url-param']).toEqual('a');
+    expect(query['route-param']).toEqual('b');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should allow `cache-control` to be overwritten', async () => {
+  const dir = fixture('headers');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(
+      `http://localhost:${port}/?name=cache-control&value=immutable`
+    );
+    expect(res.headers.get('cache-control')).toEqual('immutable');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should send `etag` header for static files', async () => {
+  const dir = fixture('headers');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/foo.txt`);
+    const expected = 'd263af8ab880c0b97eb6c5c125b5d44f9e5addd9';
+    expect(res.headers.get('etag')).toEqual(`"${expected}"`);
+    const body = await res.text();
+    expect(body.trim()).toEqual('hi');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should frontend dev server and routes', async () => {
+  const dir = fixture('dev-server-and-routes');
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      VERCEL_DEV_COMMAND: 'next dev --port $PORT',
+    },
+  });
+
+  try {
+    await readyResolver;
+
+    let podId: string;
+
+    let res = await fetch(`http://localhost:${port}/`);
+    validateResponseHeaders(res);
+    podId = res.headers.get('x-vercel-id')!.match(/:(\w+)-/)![1];
+    let body = await res.text();
+    expect(body.includes('hello, this is the frontend')).toBeTruthy();
+
+    res = await fetch(`http://localhost:${port}/api/users`);
+    validateResponseHeaders(res, podId);
+    body = await res.text();
+    expect(body).toEqual('users');
+
+    res = await fetch(`http://localhost:${port}/api/users/1`);
+    validateResponseHeaders(res, podId);
+    body = await res.text();
+    expect(body).toEqual('users/1');
+
+    res = await fetch(`http://localhost:${port}/api/welcome`);
+    validateResponseHeaders(res, podId);
+    body = await res.text();
+    expect(body).toEqual('hello and welcome');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support `@vercel/static` routing', async () => {
+  const dir = fixture('static-routes');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/`);
+    expect(res.status).toEqual(200);
+    const body = await res.text();
+    expect(body.trim()).toEqual('<body>Hello!</body>');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support `@vercel/static-build` routing', async () => {
+  const dir = fixture('static-build-routing');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    const res = await fetch(`http://localhost:${port}/api/date`);
+    expect(res.status).toEqual(200);
+    const body = await res.text();
+    expect(body.startsWith('The current date:')).toBeTruthy();
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support directory listing', async () => {
+  const dir = fixture('directory-listing');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    // Get directory listing
+    let res = await fetch(`http://localhost:${port}/`);
+    let body = await res.text();
+    expect(res.status).toEqual(200);
+    expect(body.includes('Index of')).toBeTruthy();
+
+    // Get a file
+    res = await fetch(`http://localhost:${port}/file.txt`);
+    body = await res.text();
+    expect(res.status).toEqual(200);
+    expect(body.trim()).toEqual('Hello from file!');
+
+    // Invoke a lambda
+    res = await fetch(`http://localhost:${port}/lambda.js`);
+    body = await res.text();
+    expect(res.status).toEqual(200);
+    expect(body).toEqual('Hello from Lambda!');
+
+    // Trigger a 404
+    res = await fetch(`http://localhost:${port}/does-not-exist`);
+    expect(res.status).toEqual(404);
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should respond with 404 listing with Accept header support', async () => {
+  const dir = fixture('directory-listing');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    // HTML response
+    let res = await fetch(`http://localhost:${port}/does-not-exist`, {
+      headers: {
+        Accept: 'text/html',
+      },
+    });
+    expect(res.status).toEqual(404);
+    expect(res.headers.get('content-type')).toEqual('text/html; charset=utf-8');
+    let body = await res.text();
+    expect(body.startsWith('<!DOCTYPE html>')).toBeTruthy();
+
+    // JSON response
+    res = await fetch(`http://localhost:${port}/does-not-exist`, {
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+    expect(res.status).toEqual(404);
+    expect(res.headers.get('content-type')).toEqual('application/json');
+    body = await res.text();
+    expect(body).toEqual(
+      '{"error":{"code":404,"message":"The page could not be found."}}\n'
+    );
+
+    // Plain text response
+    res = await fetch(`http://localhost:${port}/does-not-exist`);
+    expect(res.status).toEqual(404);
+    body = await res.text();
+    expect(res.headers.get('content-type')).toEqual(
+      'text/plain; charset=utf-8'
+    );
+    expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support `public` directory with zero config', async () => {
+  const dir = fixture('api-with-public');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/user`);
+    let body = await res.text();
+    expect(body).toEqual('hello:user');
+
+    res = await fetch(`http://localhost:${port}/`);
+    body = await res.text();
+    expect(body.startsWith('<h1>hello world</h1>')).toBeTruthy();
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support static files with zero config', async () => {
+  const dir = fixture('api-with-static');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/user`);
+    let body = await res.text();
+    expect(body).toEqual('bye:user');
+
+    res = await fetch(`http://localhost:${port}/`);
+    body = await res.text();
+    expect(body.startsWith('<h1>goodbye world</h1>')).toBeTruthy();
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should support custom 404 routes', async () => {
+  const dir = fixture('custom-404');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    // Test custom 404 with static dest
+    let res = await fetch(`http://localhost:${port}/error.html`);
+    expect(res.status).toEqual(404);
+    let body = await res.text();
+    expect(body.trim()).toEqual('<div>Custom 404 page</div>');
+
+    // Test custom 404 with lambda dest
+    res = await fetch(`http://localhost:${port}/error.js`);
+    expect(res.status).toEqual(404);
+    body = await res.text();
+    expect(body).toEqual('Custom 404 Lambda\n');
+
+    // Test regular 404 still works
+    res = await fetch(`http://localhost:${port}/does-not-exist`);
+    expect(res.status).toEqual(404);
+    body = await res.text();
+    expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
+  } finally {
+    dev.kill('SIGTERM');
+  }
+});
 
 test('[vercel dev] prints `npm install` errors', async () => {
   const dir = fixture('runtime-not-installed');

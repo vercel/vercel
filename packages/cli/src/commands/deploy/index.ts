@@ -10,7 +10,6 @@ import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
 import Client from '../../util/client';
-import { write as copy } from 'clipboardy';
 import { getPrettyError } from '@vercel/build-utils';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
@@ -43,7 +42,9 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import confirm from '../../util/input/confirm';
-import editProjectSettings from '../../util/input/edit-project-settings';
+import editProjectSettings, {
+  PartialProjectSettings,
+} from '../../util/input/edit-project-settings';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -63,6 +64,7 @@ import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
+import { createGitMeta } from '../../util/create-git-meta';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -74,7 +76,6 @@ export default async (client: Client) => {
       '--force': Boolean,
       '--with-cache': Boolean,
       '--public': Boolean,
-      '--no-clipboard': Boolean,
       '--env': [String],
       '--build-env': [String],
       '--meta': [String],
@@ -88,13 +89,13 @@ export default async (client: Client) => {
       '-p': '--public',
       '-e': '--env',
       '-b': '--build-env',
-      '-C': '--no-clipboard',
       '-m': '--meta',
       '-c': '--confirm',
 
       // deprecated
       '--name': String,
       '-n': '--name',
+      '--no-clipboard': Boolean,
       '--target': String,
     });
   } catch (error) {
@@ -157,12 +158,12 @@ export default async (client: Client) => {
     }
   }
 
-  const { log, debug, error, prettyError, isTTY } = output;
+  const { log, debug, error, prettyError } = output;
 
-  const quiet = !isTTY;
+  const quiet = !client.stdout.isTTY;
 
   // check paths
-  const pathValidation = await validatePaths(output, paths);
+  const pathValidation = await validatePaths(client, paths);
 
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
@@ -178,6 +179,17 @@ export default async (client: Client) => {
         `The ${param(
           '--name'
         )} option is deprecated (https://vercel.link/name-flag)`,
+        emoji('warning')
+      )}\n`
+    );
+  }
+
+  if (argv['--no-clipboard']) {
+    output.print(
+      `${prependEmoji(
+        `The ${param(
+          '--no-clipboard'
+        )} option was ignored because it is the default behavior. Please remove it.`,
         emoji('warning')
       )}\n`
     );
@@ -240,6 +252,7 @@ export default async (client: Client) => {
     const shouldStartSetup =
       autoConfirm ||
       (await confirm(
+        client,
         `Set up and deploy ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
         true
       ));
@@ -284,7 +297,7 @@ export default async (client: Client) => {
 
     if (typeof projectOrNewProjectName === 'string') {
       newProjectName = projectOrNewProjectName;
-      rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+      rootDirectory = await inputRootDirectory(client, path, autoConfirm);
     } else {
       project = projectOrNewProjectName;
       rootDirectory = project.rootDirectory;
@@ -415,6 +428,8 @@ export default async (client: Client) => {
     parseMeta(argv['--meta'])
   );
 
+  const gitMetadata = await createGitMeta(path, output, project);
+
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
     {},
@@ -453,6 +468,15 @@ export default async (client: Client) => {
   let deployStamp = stamp();
   let deployment = null;
 
+  const localConfigurationOverrides: PartialProjectSettings = {
+    buildCommand: localConfig?.buildCommand,
+    devCommand: localConfig?.devCommand,
+    framework: localConfig?.framework,
+    commandForIgnoringBuildStep: localConfig?.ignoreCommand,
+    installCommand: localConfig?.installCommand,
+    outputDirectory: localConfig?.outputDirectory,
+  };
+
   try {
     const createArgs: any = {
       name: project ? project.name : newProjectName,
@@ -468,6 +492,7 @@ export default async (client: Client) => {
       nowConfig: localConfig,
       regions,
       meta,
+      gitMetadata,
       deployStamp,
       target,
       skipAutoDetectionConfirmation: autoConfirm,
@@ -475,7 +500,12 @@ export default async (client: Client) => {
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
       // Only add projectSettings for zero config deployments
-      createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
+      createArgs.projectSettings =
+        status === 'not_linked'
+          ? {
+              sourceFilesOutsideRootDirectory,
+            }
+          : { ...localConfigurationOverrides, sourceFilesOutsideRootDirectory };
     }
 
     deployment = await createDeploy(
@@ -501,9 +531,11 @@ export default async (client: Client) => {
       }
 
       const settings = await editProjectSettings(
-        output,
+        client,
         projectSettings,
-        framework
+        framework,
+        false,
+        localConfigurationOverrides
       );
 
       // deploy again, but send projectSettings this time
@@ -663,13 +695,7 @@ export default async (client: Client) => {
     return 1;
   }
 
-  return printDeploymentStatus(
-    output,
-    client,
-    deployment,
-    deployStamp,
-    !argv['--no-clipboard']
-  );
+  return printDeploymentStatus(output, client, deployment, deployStamp);
 };
 
 function handleCreateDeployError(
@@ -802,8 +828,7 @@ const printDeploymentStatus = async (
       action?: string;
     };
   },
-  deployStamp: () => string,
-  isClipboardEnabled: boolean
+  deployStamp: () => string
 ) => {
   indications = indications || [];
   const isProdDeployment = target === 'production';
@@ -824,40 +849,23 @@ const printDeploymentStatus = async (
   } else {
     // print preview/production url
     let previewUrl: string;
-    let isWildcard: boolean;
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
       if (previewUrlInfo) {
-        isWildcard = previewUrlInfo.isWildcard;
         previewUrl = previewUrlInfo.previewUrl;
       } else {
-        isWildcard = false;
         previewUrl = `https://${deploymentUrl}`;
       }
     } else {
       // fallback to deployment url
-      isWildcard = false;
       previewUrl = `https://${deploymentUrl}`;
-    }
-
-    // copy to clipboard
-    let isCopiedToClipboard = false;
-    if (isClipboardEnabled && !isWildcard) {
-      try {
-        await copy(previewUrl);
-        isCopiedToClipboard = true;
-      } catch (err) {
-        output.debug(`Error copyind to clipboard: ${err}`);
-      }
     }
 
     output.print(
       prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
           previewUrl
-        )}${
-          isCopiedToClipboard ? chalk.gray(` [copied to clipboard]`) : ''
-        } ${deployStamp()}`,
+        )} ${deployStamp()}`,
         emoji('success')
       ) + `\n`
     );

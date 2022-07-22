@@ -17,6 +17,8 @@ const SIMPLE_PROJECT = path.resolve(
   '00-middleware'
 );
 
+jest.setTimeout(360000);
+
 describe('Middleware simple project', () => {
   const ctx: Context = {};
 
@@ -43,7 +45,7 @@ describe('Middleware simple project', () => {
     expect(typeof beforeFilesIndex).toBe('number');
     expect(redirectIndex).toBeLessThan(middlewareIndex);
     expect(redirectIndex).toBeLessThan(beforeFilesIndex);
-    expect(beforeFilesIndex).toBeLessThan(middlewareIndex);
+    expect(middlewareIndex).toBeLessThan(beforeFilesIndex);
     expect(middlewareIndex).toBeLessThan(handleFileSystemIndex);
   });
 
@@ -103,6 +105,14 @@ function sharedTests(ctx: Context) {
     const routes = ctx.buildResult.routes.filter(
       route => 'middleware' in route || 'middlewarePath' in route
     );
+    expect(
+      routes.every(
+        route =>
+          route.missing[0].type === 'header' &&
+          route.missing[0].key === 'x-prerender-revalidate' &&
+          route.missing[0].value.length > 0
+      )
+    ).toBeTruthy();
     expect(routes.length).toBeGreaterThan(0);
   });
 }

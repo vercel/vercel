@@ -1,5 +1,6 @@
 import inquirer from 'inquirer';
 import stripAnsi from 'strip-ansi';
+import Client from '../client';
 import eraseLines from '../output/erase-lines';
 
 interface ListEntry {
@@ -13,7 +14,7 @@ interface ListSeparator {
   separator: string;
 }
 
-type ListChoice = ListEntry | ListSeparator | typeof inquirer.Separator;
+export type ListChoice = ListEntry | ListSeparator | typeof inquirer.Separator;
 
 interface ListOptions {
   message: string;
@@ -35,21 +36,24 @@ function getLength(input: string): number {
   return biggestLength;
 }
 
-export default async function list({
-  message = 'the question',
-  // eslint-disable-line no-unused-vars
-  choices: _choices = [
-    {
-      name: 'something\ndescription\ndetails\netc',
-      value: 'something unique',
-      short: 'generally the first line of `name`',
-    },
-  ],
-  pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
-  separator = false, // Puts a blank separator between each choice
-  abort = 'end', // Whether the `abort` option will be at the `start` or the `end`,
-  eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
-}: ListOptions): Promise<string> {
+export default async function list(
+  client: Client,
+  {
+    message = 'the question',
+    // eslint-disable-line no-unused-vars
+    choices: _choices = [
+      {
+        name: 'something\ndescription\ndetails\netc',
+        value: 'something unique',
+        short: 'generally the first line of `name`',
+      },
+    ],
+    pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
+    separator = false, // Puts a blank separator between each choice
+    abort = 'end', // Whether the `abort` option will be at the `start` or the `end`,
+    eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
+  }: ListOptions
+): Promise<string> {
   require('./patch-inquirer-legacy');
 
   let biggestLength = 0;
@@ -106,7 +110,7 @@ export default async function list({
     choices.push(abortSeparator, _abort);
   }
 
-  const answer = await inquirer.prompt({
+  const answer = await client.prompt({
     name: 'value',
     type: 'list',
     default: selected,

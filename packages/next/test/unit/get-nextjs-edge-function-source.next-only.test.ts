@@ -1,5 +1,5 @@
 import { basename, join, dirname } from 'path';
-import { getNextjsEdgeFunctionSource } from '../../dist/edge-function-source/get-edge-function-source';
+import { getNextjsEdgeFunctionSource } from '../../src/edge-function-source/get-edge-function-source';
 import { nanoid } from 'nanoid';
 import { tmpdir } from 'os';
 import { writeFile } from 'fs-extra';
@@ -31,8 +31,47 @@ it('should throw an error when exceeds the script size limit', async () => {
       dir
     );
   }).rejects.toThrow(
-    /Exceeds maximum edge function script size: .+[MK]B \/ .+[M|K]B/i
+    /Exceeds maximum edge function size: .+[MK]B \/ .+[M|K]B/i
   );
+});
+
+it('throws an error if it contains too big WASM file', async () => {
+  const filepath = `${join(tmpdir(), nanoid())}.js`;
+  const file = basename(filepath);
+  const dir = dirname(filepath);
+  await writeFile(
+    filepath,
+    `
+      import wasm from './big.wasm?module';
+      module.exports.middleware = function () {
+        console.log(wasm)
+        return Response('hi')
+      }
+    `
+  );
+
+  const wasmPath = join(dir, 'big.wasm');
+  await writeFile(wasmPath, randomBytes(1200 * 1024));
+
+  expect(async () => {
+  await getNextjsEdgeFunctionSource(
+    [file],
+    {
+      name: 'middleware',
+      staticRoutes: [],
+      nextConfig: null,
+    },
+    dir,
+    [
+      {
+        name: 'wasm_big',
+        filePath: 'big.wasm',
+      },
+    ]
+  );
+}).rejects.toThrow(
+  /Exceeds maximum edge function size: .+[MK]B \/ .+[M|K]B/i
+);
 });
 
 it('uses the template', async () => {
@@ -48,6 +87,9 @@ it('uses the template', async () => {
     `
   );
 
+  const wasmPath = join(dir, 'small.wasm');
+  await writeFile(wasmPath, randomBytes(8));
+
   const edgeFunctionSource = await getNextjsEdgeFunctionSource(
     [file],
     {
@@ -58,12 +100,12 @@ it('uses the template', async () => {
     dir,
     [
       {
-        name: 'wasm_1234',
-        filePath: 'server/middleware-chunks/wasm_1234.wasm',
+        name: 'wasm_small',
+        filePath: 'small.wasm',
       },
     ]
   );
   const source = edgeFunctionSource.source();
   expect(source).toMatch(/nextConfig/);
-  expect(source).toContain(`const wasm_1234 = require("/wasm/wasm_1234.wasm")`);
+  expect(source).toContain(`const wasm_small = require("/wasm/wasm_small.wasm")`);
 });

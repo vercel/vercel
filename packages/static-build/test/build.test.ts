@@ -17,6 +17,7 @@ describe('build()', () => {
         const buildResult = await build({
           files: {},
           entrypoint: 'package.json',
+          repoRootPath: workPath,
           workPath,
           config: {},
           meta: {
@@ -46,6 +47,7 @@ describe('build()', () => {
         const buildResult = await build({
           files: {},
           entrypoint: 'package.json',
+          repoRootPath: workPath,
           workPath,
           config: {},
           meta: {
@@ -76,6 +78,7 @@ describe('build()', () => {
         const buildResult = await build({
           files: {},
           entrypoint: 'package.json',
+          repoRootPath: workPath,
           workPath,
           config: {},
           meta: {
@@ -96,7 +99,7 @@ describe('build()', () => {
   });
 
   describe('Build Output API v3', () => {
-    it('should detect the output format', async () => {
+    it('should detect the output format with `vercel build`', async () => {
       const workPath = path.join(
         __dirname,
         'build-fixtures',
@@ -105,6 +108,7 @@ describe('build()', () => {
       const buildResult = await build({
         files: {},
         entrypoint: 'package.json',
+        repoRootPath: workPath,
         workPath,
         config: {},
         meta: {
@@ -121,7 +125,32 @@ describe('build()', () => {
       );
     });
 
-    it('should throw an Error without `vercel build`', async () => {
+    it('should detect the output format without `vercel build`', async () => {
+      const workPath = path.join(
+        __dirname,
+        'build-fixtures',
+        '09-build-output-v3'
+      );
+      const buildResult = await build({
+        files: {},
+        entrypoint: 'package.json',
+        repoRootPath: workPath,
+        workPath,
+        config: {},
+        meta: {
+          skipDownload: true,
+        },
+      });
+      if ('output' in buildResult) {
+        throw new Error('Unexpected `output` in build result');
+      }
+      expect(buildResult.buildOutputVersion).toEqual(3);
+      expect(buildResult.buildOutputPath).toEqual(
+        path.join(workPath, '.vercel/output')
+      );
+    });
+
+    it('should throw an Error when `vercel dev` is used with `@vercel/static-build`', async () => {
       let err;
       const workPath = path.join(
         __dirname,
@@ -132,17 +161,19 @@ describe('build()', () => {
         await build({
           files: {},
           entrypoint: 'package.json',
+          repoRootPath: workPath,
           workPath,
           config: {},
           meta: {
             skipDownload: true,
+            isDev: true,
           },
         });
       } catch (_err: any) {
         err = _err;
       }
       expect(err.message).toEqual(
-        `Detected Build Output v3 from the "build" script, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable.`
+        `Detected Build Output v3 from the "build" script, but it is not supported for \`vercel dev\`. Please set the Development Command in your Project Settings.`
       );
     });
   });

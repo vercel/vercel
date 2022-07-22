@@ -54,12 +54,12 @@ export default async (client: Client): Promise<number> => {
     throw err;
   }
 
-  if (output.isTTY) {
+  if (client.stdout.isTTY) {
     output.log(contextName);
   } else {
     // If stdout is not a TTY, then only print the username
     // to support piping the output to another file / exe
-    output.print(`${contextName}\n`, { w: process.stdout });
+    client.stdout.write(`${contextName}\n`);
   }
 
   return 0;

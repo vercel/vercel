@@ -23,7 +23,7 @@ import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
 import commands from './commands';
 import pkg from './util/pkg';
-import createOutput from './util/output';
+import { Output } from './util/output';
 import cmd from './util/output/cmd';
 import info from './util/output/info';
 import error from './util/output/error';
@@ -58,6 +58,7 @@ const isCanary = pkg.version.includes('canary');
 const notifier = updateNotifier({
   pkg,
   distTag: isCanary ? 'canary' : 'latest',
+  updateCheckInterval: 1000 * 60 * 60 * 24 * 7, // 1 week
 });
 
 const VERCEL_DIR = getGlobalPathConfig();
@@ -108,7 +109,7 @@ const main = async () => {
   }
 
   const isDebugging = argv['--debug'];
-  const output = createOutput({ debug: isDebugging });
+  const output = new Output(process.stderr, { debug: isDebugging });
 
   debug = output.debug;
 
@@ -171,7 +172,8 @@ const main = async () => {
   //  * a subcommand (as in: `vercel ls`)
   const targetOrSubcommand = argv._[2];
 
-  const betaCommands: string[] = ['build'];
+  // Currently no beta commands - add here as needed
+  const betaCommands: string[] = [];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
@@ -386,6 +388,9 @@ const main = async () => {
   // Shared API `Client` instance for all sub-commands to utilize
   client = new Client({
     apiUrl,
+    stdin: process.stdin,
+    stdout: process.stdout,
+    stderr: output.stream,
     output,
     config,
     authConfig,
@@ -627,6 +632,9 @@ const main = async () => {
       case 'env':
         func = require('./commands/env').default;
         break;
+      case 'git':
+        func = require('./commands/git').default;
+        break;
       case 'init':
         func = require('./commands/init').default;
         break;
@@ -648,8 +656,8 @@ const main = async () => {
       case 'logout':
         func = require('./commands/logout').default;
         break;
-      case 'projects':
-        func = require('./commands/projects').default;
+      case 'project':
+        func = require('./commands/project').default;
         break;
       case 'pull':
         func = require('./commands/pull').default;
@@ -744,9 +752,7 @@ const main = async () => {
 
       // Otherwise it is an unexpected error and we should show the trace
       // and an unexpected error message
-      output.error(
-        `An unexpected error occurred in ${subcommand}: ${err.stack}`
-      );
+      output.error(`An unexpected error occurred in ${subcommand}: ${err}`);
     }
 
     return 1;
@@ -798,7 +804,5 @@ process.on('uncaughtException', handleUnexpected);
 main()
   .then(exitCode => {
     process.exitCode = exitCode;
-    // @ts-ignore - "nowExit" is a non-standard event name
-    process.emit('nowExit');
   })
   .catch(handleUnexpected);

@@ -13,7 +13,7 @@ const dateFormat = new Intl.DateTimeFormat('en-us', {
 
 function logWithinTest(...inputs) {
   const { testPath, currentTestName } =
-    typeof expect === 'undefined' ? expect.getState() : {};
+    typeof expect !== 'undefined' ? expect.getState() : {};
 
   const messages = [
     dateFormat.format(new Date()),

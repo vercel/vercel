@@ -38,10 +38,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }})
     if: ${{ needs.setup.outputs['tests'] != '[]' }}
-    env:
-      TURBO_REMOTE_ONLY: true
-      TURBO_TEAM: vercel
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
     needs:
       - setup
     strategy:
@@ -49,6 +45,12 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.setup.outputs['tests']) }}
     steps:
+      - name: Conditionally set remote env
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+            echo "TURBO_REMOTE_ONLY=true" >> $GITHUB_ENV
+            echo "TURBO_TEAM=vercel" >> $GITHUB_ENV
+            echo "TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}" >> $GITHUB_ENV
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
@@ -59,11 +61,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
-          
+
       - name: Install Hugo
         if: matrix.runner == 'macos-latest'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
-      
+
       - run: yarn install --network-timeout 1000000
 
       - name: Build ${{matrix.packageName}} and all its dependencies

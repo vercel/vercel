@@ -1,9 +1,9 @@
-import {
+import type {
   Builder,
   BuilderFunctions,
   ProjectSettings,
 } from '@vercel/build-utils';
-import { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
+import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 
@@ -63,6 +63,12 @@ export interface Deployment {
     | 'ERROR';
   createdAt: number;
   createdIn: string;
+  buildingAt?: number;
+  creator?: {
+    uid?: string;
+    email?: string;
+    username?: string;
+  };
   env: Dictionary<string>;
   build: {
     env: Dictionary<string>;
@@ -129,6 +135,21 @@ export interface VercelConfig {
   alias?: string | string[];
   regions?: string[];
   projectSettings?: ProjectSettings;
+  buildCommand?: string | null;
+  ignoreCommand?: string | null;
+  devCommand?: string | null;
+  installCommand?: string | null;
+  framework?: string | null;
+  outputDirectory?: string | null;
+}
+
+export interface GitMetadata {
+  commitAuthorName?: string | undefined;
+  commitMessage?: string | undefined;
+  commitRef?: string | undefined;
+  commitSha?: string | undefined;
+  dirty?: boolean | undefined;
+  remoteUrl: string;
 }
 
 /**
@@ -155,4 +176,5 @@ export interface DeploymentOptions {
   public?: boolean;
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
+  gitMetadata?: GitMetadata;
 }

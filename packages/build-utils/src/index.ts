@@ -80,15 +80,6 @@ export {
 };
 
 export { EdgeFunction } from './edge-function';
-export {
-  detectBuilders,
-  detectOutputDirectory,
-  detectApiDirectory,
-  detectApiExtensions,
-} from './detect-builders';
-export { detectFileSystemAPI } from './detect-file-system-api';
-export { detectFramework } from './detect-framework';
-export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
 
@@ -96,25 +87,3 @@ export * from './should-serve';
 export * from './schemas';
 export * from './types';
 export * from './errors';
-
-/**
- * Helper function to support both `@vercel` and legacy `@now` official Runtimes.
- */
-export const isOfficialRuntime = (desired: string, name?: string): boolean => {
-  if (typeof name !== 'string') {
-    return false;
-  }
-  return (
-    name === `@vercel/${desired}` ||
-    name === `@now/${desired}` ||
-    name.startsWith(`@vercel/${desired}@`) ||
-    name.startsWith(`@now/${desired}@`)
-  );
-};
-
-export const isStaticRuntime = (name?: string): boolean => {
-  return isOfficialRuntime('static', name);
-};
-
-export { workspaceManagers } from './workspaces/workspace-managers';
-export { monorepoManagers } from './monorepos/monorepo-managers';

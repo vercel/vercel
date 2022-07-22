@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { delimiter } from 'path';
 import { getEnvForPackageManager } from '../src';
 
 describe('Test `getEnvForPackageManager()`', () => {
@@ -34,7 +35,39 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
       want: {
         FOO: 'bar',
-        PATH: `/node16/bin-npm7:foo`,
+        PATH: `/node16/bin-npm7${delimiter}foo`,
+      },
+    },
+    {
+      name: 'should not set npm path if corepack enabled',
+      args: {
+        cliType: 'npm',
+        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
+        lockfileVersion: 2,
+        env: {
+          FOO: 'bar',
+          ENABLE_EXPERIMENTAL_COREPACK: '1',
+        },
+      },
+      want: {
+        FOO: 'bar',
+        ENABLE_EXPERIMENTAL_COREPACK: '1',
+      },
+    },
+    {
+      name: 'should not prepend npm path again if already detected',
+      args: {
+        cliType: 'npm',
+        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
+        lockfileVersion: 2,
+        env: {
+          FOO: 'bar',
+          PATH: `/node16/bin-npm7${delimiter}foo`,
+        },
+      },
+      want: {
+        FOO: 'bar',
+        PATH: `/node16/bin-npm7${delimiter}foo`,
       },
     },
     {
@@ -97,7 +130,39 @@ describe('Test `getEnvForPackageManager()`', () => {
       },
       want: {
         FOO: 'bar',
-        PATH: '/pnpm7/node_modules/.bin:foo',
+        PATH: `/pnpm7/node_modules/.bin${delimiter}foo`,
+      },
+    },
+    {
+      name: 'should not set pnpm path if corepack is enabled',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        lockfileVersion: 5.4,
+        env: {
+          FOO: 'bar',
+          ENABLE_EXPERIMENTAL_COREPACK: '1',
+        },
+      },
+      want: {
+        FOO: 'bar',
+        ENABLE_EXPERIMENTAL_COREPACK: '1',
+      },
+    },
+    {
+      name: 'should not prepend pnpm path again if already detected',
+      args: {
+        cliType: 'pnpm',
+        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        lockfileVersion: 5.4,
+        env: {
+          FOO: 'bar',
+          PATH: `/pnpm7/node_modules/.bin${delimiter}foo`,
+        },
+      },
+      want: {
+        FOO: 'bar',
+        PATH: `/pnpm7/node_modules/.bin${delimiter}foo`,
       },
     },
     {

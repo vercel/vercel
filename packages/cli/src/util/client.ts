@@ -1,3 +1,5 @@
+import { bold } from 'chalk';
+import inquirer from 'inquirer';
 import { EventEmitter } from 'events';
 import { URLSearchParams } from 'url';
 import { parse as parseUrl } from 'url';
@@ -11,10 +13,16 @@ import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
 import { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
-import { AuthConfig, GlobalConfig, JSONObject } from '../types';
+import type {
+  AuthConfig,
+  GlobalConfig,
+  JSONObject,
+  Stdio,
+  ReadableTTY,
+  WritableTTY,
+} from '../types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
-import { bold } from 'chalk';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -28,7 +36,7 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
   accountId?: string;
 }
 
-export interface ClientOptions {
+export interface ClientOptions extends Stdio {
   argv: string[];
   apiUrl: string;
   authConfig: AuthConfig;
@@ -41,13 +49,17 @@ export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
 
-export default class Client extends EventEmitter {
+export default class Client extends EventEmitter implements Stdio {
   argv: string[];
   apiUrl: string;
   authConfig: AuthConfig;
+  stdin: ReadableTTY;
+  stdout: WritableTTY;
+  stderr: WritableTTY;
   output: Output;
   config: GlobalConfig;
   localConfig?: VercelConfig;
+  prompt!: inquirer.PromptModule;
   private requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
@@ -55,10 +67,14 @@ export default class Client extends EventEmitter {
     this.argv = opts.argv;
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
+    this.stdin = opts.stdin;
+    this.stdout = opts.stdout;
+    this.stderr = opts.stderr;
     this.output = opts.output;
     this.config = opts.config;
     this.localConfig = opts.localConfig;
     this.requestIdCounter = 1;
+    this._createPromptModule();
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -124,7 +140,7 @@ export default class Client extends EventEmitter {
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
 
-      printIndications(res);
+      printIndications(this, res);
 
       if (!res.ok) {
         const error = await responseError(res);
@@ -180,4 +196,11 @@ export default class Client extends EventEmitter {
   _onRetry = (error: Error) => {
     this.output.debug(`Retrying: ${error}\n${error.stack}`);
   };
+
+  _createPromptModule() {
+    this.prompt = inquirer.createPromptModule({
+      input: this.stdin as NodeJS.ReadStream,
+      output: this.stderr as NodeJS.WriteStream,
+    });
+  }
 }
