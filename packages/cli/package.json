@@ -18,7 +18,8 @@
     "test-integration-dev": "yarn test test/dev/",
     "prepublishOnly": "yarn build",
     "coverage": "codecov",
-    "build": "ts-node ./scripts/build.ts"
+    "build": "ts-node ./scripts/build.ts",
+    "dev": "ts-node ./src/index.ts"
   },
   "bin": {
     "vc": "./dist/index.js",
