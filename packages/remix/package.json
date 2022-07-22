@@ -21,7 +21,7 @@
     "default-server.js"
   ],
   "dependencies": {
-    "@vercel/nft": "0.20.1"
+    "@vercel/nft": "0.21.0"
   },
   "devDependencies": {
     "@types/jest": "27.5.1",
