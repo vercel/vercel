@@ -56,10 +56,10 @@ cd packages/cli
 From within the `packages/cli` directory, you can use the `ts-node` command line tool to quickly excute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
 
 ```bash
-npx ts-node src
-npx ts-node src login
-npx ts-node src switch --debug
-npx ts-node src dev
+npx ts-node src/index.ts
+npx ts-node src/index.ts login
+npx ts-node src/index.ts switch --debug
+npx ts-node src/index.ts dev
 ```
 
 When you are satisfied with your changes, make a commit and create a pull request!
