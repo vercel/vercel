@@ -216,6 +216,22 @@ export default async (client: Client) => {
     }
 
     const prebuiltBuild = await getPrebuiltJson(path);
+
+    // Ensure that there was not a build error
+    const prebuiltError =
+      prebuiltBuild?.error ||
+      prebuiltBuild?.builds?.find(build => 'error' in build)?.error;
+    if (prebuiltError) {
+      output.log(
+        `Prebuilt deployment cannot be created because ${getCommandName(
+          'build'
+        )} failed with error:\n`
+      );
+      prettyError(prebuiltError);
+      return 1;
+    }
+
+    // Ensure that the deploy target matches the build target
     const assumedTarget = target || 'preview';
     if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
       let specifyTarget = '';
