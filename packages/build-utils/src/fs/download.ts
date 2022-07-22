@@ -27,9 +27,7 @@ async function prepareSymlinkTarget(
   }
 
   if (file.type === 'FileRef' || file.type === 'FileBlob') {
-    const targetPathBufferPromise = await streamToBuffer(
-      await file.toStreamAsync()
-    );
+    const targetPathBufferPromise = streamToBuffer(await file.toStreamAsync());
     const [targetPathBuffer] = await Promise.all([
       targetPathBufferPromise,
       mkdirPromise,
@@ -56,7 +54,10 @@ export async function downloadFile(
     try {
       await symlink(target, fsPath);
       return FileFsRef.fromFsPath({ mode, fsPath });
-    } catch (e) {
+    } catch (e: any) {
+      if (process.platform !== 'win32' || e.code !== 'EPERM') {
+        throw e;
+      }
       // fall through
     }
   }
