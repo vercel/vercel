@@ -39,7 +39,7 @@ function findChanges(
   const changed = [];
 
   for (const key of Object.keys(newEnv)) {
-    if (!oldEnv[key] && oldEnv[key] !== '') {
+    if (oldEnv[key] === undefined) {
       added.push(key);
     } else if (oldEnv[key] !== newEnv[key]) {
       changed.push(key);
