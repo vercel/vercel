@@ -158,6 +158,10 @@ export function useProject(project: Partial<Project> = defaultProject) {
 
     res.json({ envs });
   });
+  client.scenario.post(`/v8/projects/${project.id}/env`, (req, res) => {
+    envs.push(req.body);
+    res.json({ envs });
+  });
   client.scenario.post(`/v4/projects/${project.id}/link`, (req, res) => {
     const { type, repo, org } = req.body;
     if (
