@@ -16,7 +16,11 @@ const {
 
 test('[vercel dev] should support edge functions', async () => {
   const dir = fixture('edge-function');
-  const { dev, port, readyResolver } = await testFixture(dir);
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      ENV_VAR_IN_EDGE: '1',
+    },
+  });
 
   try {
     await readyResolver;
@@ -42,6 +46,7 @@ test('[vercel dev] should support edge functions', async () => {
       decamelized: 'some_camel_case_thing',
       uppercase: 'SOMETHING',
       optionalChaining: 'fallback',
+      ENV_VAR_IN_EDGE: '1',
     });
   } finally {
     await dev.kill('SIGTERM');
