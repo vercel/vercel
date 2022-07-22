@@ -305,67 +305,47 @@ export async function scanParentDirs(
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
-  let cliType: CliType = 'yarn';
-  let packageJson: PackageJson | undefined;
-  let packageJsonPath: string | undefined;
-  let currentDestPath = destPath;
+  const pkgJsonPath = await walkParentDirs({
+    base: '/',
+    start: destPath,
+    filename: 'package.json',
+  });
+  const packageJson: PackageJson | undefined =
+    readPackageJson && pkgJsonPath
+      ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
+      : undefined;
+  const [npmLockPath, yarnLockPath, pnpmLockPath] = await walkParentDirs2({
+    base: '/',
+    start: destPath,
+    filenames: ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'],
+  });
   let lockfileVersion: number | undefined;
+  let cliType: CliType = 'yarn';
 
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    packageJsonPath = path.join(currentDestPath, 'package.json');
-    // eslint-disable-next-line no-await-in-loop
-    if (await fs.pathExists(packageJsonPath)) {
-      // Only read the contents of the *first* `package.json` file found,
-      // since that's the one related to this installation.
-      if (readPackageJson && !packageJson) {
-        // eslint-disable-next-line no-await-in-loop
-        packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
-      }
+  const [packageLockJson, hasYarnLock, pnpmLockYaml] = await Promise.all([
+    npmLockPath
+      ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
+      : null,
+    Boolean(yarnLockPath),
+    pnpmLockPath
+      ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
+      : null,
+  ]);
 
-      // eslint-disable-next-line no-await-in-loop
-      const [packageLockJson, hasYarnLock, pnpmLockYaml] = await Promise.all([
-        fs
-          .readJson(path.join(currentDestPath, 'package-lock.json'))
-          .catch(error => {
-            // If the file doesn't exist, fail gracefully otherwise error
-            if (error.code === 'ENOENT') {
-              return null;
-            }
-            throw error;
-          }),
-        fs.pathExists(path.join(currentDestPath, 'yarn.lock')),
-        readConfigFile<{ lockfileVersion: number }>(
-          path.join(currentDestPath, 'pnpm-lock.yaml')
-        ),
-      ]);
-
-      // Priority order is Yarn > pnpm > npm
-      // - find highest priority lock file and use that
-      if (hasYarnLock) {
-        cliType = 'yarn';
-      } else if (pnpmLockYaml) {
-        cliType = 'pnpm';
-        // just ensure that it is read as a number and not a string
-        lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
-      } else if (packageLockJson) {
-        cliType = 'npm';
-        lockfileVersion = packageLockJson.lockfileVersion;
-      }
-
-      // Only stop iterating if a lockfile was found, because it's possible
-      // that the lockfile is in a higher path than where the `package.json`
-      // file was found.
-      if (packageLockJson || hasYarnLock || pnpmLockYaml) {
-        break;
-      }
-    }
-
-    const newDestPath = path.dirname(currentDestPath);
-    if (currentDestPath === newDestPath) break;
-    currentDestPath = newDestPath;
+  // Priority order is Yarn > pnpm > npm
+  // - find highest priority lock file and use that
+  if (hasYarnLock) {
+    cliType = 'yarn';
+  } else if (pnpmLockYaml) {
+    cliType = 'pnpm';
+    // just ensure that it is read as a number and not a string
+    lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
+  } else if (packageLockJson) {
+    cliType = 'npm';
+    lockfileVersion = packageLockJson.lockfileVersion;
   }
 
+  const packageJsonPath = pkgJsonPath || undefined;
   return { cliType, packageJson, lockfileVersion, packageJsonPath };
 }
 
@@ -390,6 +370,34 @@ export async function walkParentDirs({
   }
 
   return null;
+}
+
+async function walkParentDirs2({
+  base,
+  start,
+  filenames,
+}: {
+  base: string;
+  start: string;
+  filenames: string[];
+}): Promise<(string | undefined)[]> {
+  let parent = '';
+
+  for (let current = start; base.length <= current.length; current = parent) {
+    const fullPaths = filenames.map(f => path.join(current, f));
+    const existResults = await Promise.all(
+      fullPaths.map(f => fs.pathExists(f))
+    );
+    const foundOneOrMore = existResults.some(b => b);
+
+    if (foundOneOrMore) {
+      return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
+    }
+
+    parent = path.dirname(current);
+  }
+
+  return [];
 }
 
 function isSet<T>(v: any): v is Set<T> {

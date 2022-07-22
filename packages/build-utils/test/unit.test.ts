@@ -491,6 +491,24 @@ it('should detect pnpm Workspaces', async () => {
   expect(result.lockfileVersion).toEqual(5.3);
 });
 
+it('should detect package.json in nested backend', async () => {
+  const fixture = path.join(
+    __dirname,
+    '../../node/test/fixtures/18.1-nested-packagejson/backend'
+  );
+  const result = await scanParentDirs(fixture);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
+it('should detect package.json in nested frontend', async () => {
+  const fixture = path.join(
+    __dirname,
+    '../../node/test/fixtures/18.1-nested-packagejson/backend'
+  );
+  const result = await scanParentDirs(fixture);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
 it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
   const meta: Meta = {};
   const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
