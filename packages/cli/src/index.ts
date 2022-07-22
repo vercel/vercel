@@ -494,8 +494,8 @@ const main = async () => {
     }
   }
 
-  const metric = metrics();
   let exitCode;
+  let metric: ReturnType<typeof metrics> | undefined;
   const eventCategory = 'Exit Code';
 
   try {
@@ -598,6 +598,7 @@ const main = async () => {
     if (shouldCollectMetrics) {
       const category = 'Command Invocation';
 
+      if (!metric) metric = metrics();
       metric
         .timing(category, targetCommand, end, pkg.version)
         .event(category, targetCommand, pkg.version)
@@ -632,6 +633,7 @@ const main = async () => {
     }
 
     if (shouldCollectMetrics) {
+      if (!metric) metric = metrics();
       metric
         .event(eventCategory, '1', pkg.version)
         .exception(err.message)
@@ -657,6 +659,7 @@ const main = async () => {
   }
 
   if (shouldCollectMetrics) {
+    if (!metric) metric = metrics();
     metric.event(eventCategory, `${exitCode}`, pkg.version).send();
   }
 
