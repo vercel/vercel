@@ -70,5 +70,5 @@ export function buildDeltaString(
 }
 
 function addDeltaSection(prefix: string, arr: string[]): string {
-  return arr.sort().map(item =>`${prefix} ${item}`).join('\n') + '\n'
+  return arr.sort().map(item =>`${prefix} ${item}`).join('\n') + '\n';
 }
