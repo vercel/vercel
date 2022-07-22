@@ -13,6 +13,7 @@
     "directory": "packages/static-build"
   },
   "scripts": {
+    "foo": "invalidate-cache",
     "build": "node build",
     "test": "jest --env node --verbose --bail --runInBand",
     "test-unit": "yarn test test/build.test.ts test/prepare-cache.test.ts",

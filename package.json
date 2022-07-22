@@ -40,7 +40,7 @@
     "publish-canary": "git checkout main && git pull && lerna version prerelease --preid canary --message \"Publish Canary\" --exact",
     "publish-from-github": "./utils/publish.sh",
     "changelog": "node utils/changelog.js",
-    "build": "turbo run build --force",
+    "build": "turbo run build",
     "vercel-build": "yarn build && yarn run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
     "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",

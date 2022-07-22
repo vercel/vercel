@@ -10,6 +10,7 @@
     "directory": "packages/hydrogen"
   },
   "scripts": {
+    "foo": "invalidate-cache",
     "build": "node build.js",
     "test-integration-once": "yarn test test/test.js",
     "test": "jest --env node --verbose --bail --runInBand",

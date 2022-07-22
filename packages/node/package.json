@@ -10,6 +10,7 @@
     "directory": "packages/node"
   },
   "scripts": {
+    "foo": "invalidate-cache",
     "build": "node build",
     "test-integration-once": "yarn test test/integration.test.js",
     "test": "jest --env node --verbose --bail --runInBand",

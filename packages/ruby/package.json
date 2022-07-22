@@ -15,6 +15,7 @@
     "directory": "packages/ruby"
   },
   "scripts": {
+    "foo": "invalidate-cache",
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-integration-once": "yarn test",
