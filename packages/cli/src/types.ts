@@ -270,6 +270,12 @@ export interface ProjectLinkData {
 
 export interface Project extends ProjectSettings {
   id: string;
+  analytics?: {
+    id: string;
+    enabledAt?: number;
+    disabledAt?: number;
+    canceledAt?: number | null;
+  };
   name: string;
   accountId: string;
   updatedAt: number;
