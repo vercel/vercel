@@ -201,6 +201,8 @@ export default async function main(client: Client): Promise<number> {
     argv: process.argv,
   };
 
+  const originalProcessEnv = { ...process.env };
+
   try {
     const envPath = join(cwd, VERCEL_DIR, `.env.${target}.local`);
     // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
@@ -240,8 +242,8 @@ export default async function main(client: Client): Promise<number> {
 
     return 1;
   } finally {
-    // Clean up environment variables
-    delete process.env.VERCEL_ANALYTICS_ID;
+    // Restore original environment variables
+    process.env = originalProcessEnv;
   }
 }
 
