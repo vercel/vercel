@@ -289,24 +289,18 @@ export default async function main(client: Client) {
 
   print('\n');
 
+  const headers = [
+    'Age',
+    inspect ? 'Inspect URL' : 'Deployment URL',
+    'Status',
+    'Duration',
+  ];
+  if (showUsername) headers.push('Username');
+
   client.output.print(
     `${table(
       [
-        (showUsername
-          ? [
-              'Age',
-              inspect ? 'Inspect URL' : 'Deployment URL',
-              'Status',
-              'Duration',
-              'Username',
-            ]
-          : [
-              'Age',
-              inspect ? 'Inspect URL' : 'Deployment URL',
-              'Status',
-              'Duration',
-            ]
-        ).map(header => chalk.bold(chalk.cyan(header))),
+        headers.map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
           .map((dep, i) => [
