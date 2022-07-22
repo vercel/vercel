@@ -11,13 +11,10 @@ import cliPkg from '../pkg';
 
 import cmd from '../output/cmd';
 import { Output } from '../output';
-import { getDistTag } from '../get-dist-tag';
 import { NoBuilderCacheError } from '../errors-ts';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
-
-type CliPackageJson = typeof cliPkg;
 
 const require_: typeof require = eval('require');
 
@@ -36,8 +33,6 @@ const localBuilders: { [key: string]: BuilderWithPackage } = {
   '@now/static': createStaticBuilder('now'),
   '@vercel/static': createStaticBuilder('vercel'),
 };
-
-const distTag = getDistTag(cliPkg.version);
 
 export const cacheDirPromise = prepareCacheDir();
 export const builderDirPromise = prepareBuilderDir();
@@ -102,9 +97,8 @@ function parseVersionSafe(rawSpec: string) {
 
 export function filterPackage(
   builderSpec: string,
-  distTag: string,
   buildersPkg: PackageJson,
-  cliPkg: Partial<CliPackageJson>
+  cliPkg: Partial<PackageJson>
 ) {
   if (builderSpec in localBuilders) return false;
   const parsed = npa(builderSpec);
@@ -124,31 +118,6 @@ export function filterPackage(
     parsedVersion.version == buildersPkg.dependencies[parsed.name]
   ) {
     return false;
-  }
-
-  // Skip install of already installed Runtime with tag compatible match
-  if (
-    parsed.name &&
-    parsed.type === 'tag' &&
-    parsed.fetchSpec === distTag &&
-    buildersPkg.dependencies
-  ) {
-    const parsedInstalled = npa(
-      `${parsed.name}@${buildersPkg.dependencies[parsed.name]}`
-    );
-    if (parsedInstalled.type !== 'version') {
-      return true;
-    }
-    const semverInstalled = semver.parse(parsedInstalled.rawSpec);
-    if (!semverInstalled) {
-      return true;
-    }
-    if (semverInstalled.prerelease.length > 0) {
-      return semverInstalled.prerelease[0] !== distTag;
-    }
-    if (distTag === 'latest') {
-      return false;
-    }
   }
 
   return true;
@@ -183,7 +152,7 @@ export async function installBuilders(
 
   // Filter out any packages that come packaged with Vercel CLI
   const packagesToInstall = packages.filter(p =>
-    filterPackage(p, distTag, buildersPkgBefore, cliPkg)
+    filterPackage(p, buildersPkgBefore, cliPkg)
   );
 
   if (packagesToInstall.length === 0) {
@@ -392,20 +361,13 @@ export function isBundledBuilder(
     return false;
   }
 
-  const bundledVersion = dependencies[parsed.name];
-  if (bundledVersion) {
-    if (parsed.type === 'tag') {
-      if (parsed.fetchSpec === 'canary') {
-        return bundledVersion.includes('canary');
-      } else if (parsed.fetchSpec === 'latest') {
-        return !bundledVersion.includes('canary');
-      }
-    } else if (parsed.type === 'version') {
-      return parsed.fetchSpec === bundledVersion;
-    }
-  }
+  const inCliDependencyList = !!dependencies[parsed.name];
+  const inScope = parsed.scope === '@vercel';
+  const isVersionedReference = ['tag', 'version', 'range'].includes(
+    parsed.type
+  );
 
-  return false;
+  return inCliDependencyList && inScope && isVersionedReference;
 }
 
 function getPackageName(
