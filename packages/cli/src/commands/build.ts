@@ -199,6 +199,11 @@ export default async function main(client: Client): Promise<number> {
     output.log(`Loaded env from "${relative(cwd, envPath)}"`);
   }
 
+  // For Vercel Analytics support
+  if (project.settings.analyticsId) {
+    process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
+  }
+
   // Some build processes use these env vars to platform detect Vercel
   process.env.VERCEL = '1';
   process.env.NOW_BUILDER = '1';
@@ -230,6 +235,9 @@ export default async function main(client: Client): Promise<number> {
     await fs.writeJSON(configJsonPath, { version: 3 }, { spaces: 2 });
 
     return 1;
+  } finally {
+    // Clean up environment variables
+    delete process.env.VERCEL_ANALYTICS_ID;
   }
 }
 
