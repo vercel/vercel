@@ -13,7 +13,6 @@ import {
   parseSpacedTableRow,
   pluckIdentifiersFromDeploymentList,
 } from '../../helpers/parse-table';
-import { Deployment } from '../../../src/types';
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/list', name);
@@ -58,7 +57,7 @@ describe('list', () => {
       expect(data).toEqual([
         `https://${deployment.url}`,
         stateString(deployment.state || ''),
-        getDeploymentDuration(deployment as unknown as Deployment),
+        getDeploymentDuration(deployment),
         user.username,
       ]);
     } finally {
@@ -94,7 +93,7 @@ describe('list', () => {
       expect(data).toEqual([
         'https://' + deployment.url,
         stateString(deployment.state || ''),
-        getDeploymentDuration(deployment as unknown as Deployment),
+        getDeploymentDuration(deployment),
       ]);
     } finally {
       process.chdir(originalCwd);
@@ -135,7 +134,7 @@ describe('list', () => {
       expect(data).toEqual([
         deployment.inspectorUrl,
         stateString(deployment.state || ''),
-        getDeploymentDuration(deployment as unknown as Deployment),
+        getDeploymentDuration(deployment),
         user.username,
       ]);
       data.shift();
@@ -179,7 +178,7 @@ describe('list', () => {
       expect(data).toEqual([
         `https://${deployment.url}`,
         stateString(deployment.state || ''),
-        getDeploymentDuration(deployment as unknown as Deployment),
+        getDeploymentDuration(deployment),
         user.username,
       ]);
     } finally {

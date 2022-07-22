@@ -14,7 +14,7 @@ import { isValidName } from '../util/is-valid-name';
 import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
-import { Deployment } from '../types';
+import { Deployment } from '@vercel/client';
 import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
 import { ensureLink } from '../util/ensure-link';
@@ -234,7 +234,7 @@ export default async function main(client: Client) {
 
   let showUsername = false;
   for (const deployment of deployments) {
-    const username = deployment.creator.username;
+    const username = deployment.creator?.username;
     if (username !== contextName) {
       showUsername = true;
     }
@@ -309,9 +309,9 @@ export default async function main(client: Client) {
               i === 0
                 ? chalk.bold(`${getDeployUrl(dep, inspect)}`)
                 : `${getDeployUrl(dep, inspect)}`,
-              stateString(dep.state),
+              stateString(dep.state || ''),
               chalk.gray(getDeploymentDuration(dep)),
-              showUsername ? chalk.gray(dep.creator.username) : '',
+              showUsername ? chalk.gray(dep.creator?.username) : '',
             ],
           ])
           // flatten since the previous step returns a nested
