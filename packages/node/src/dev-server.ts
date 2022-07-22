@@ -249,6 +249,9 @@ async function createEdgeRuntime(params?: {
             module: {
               exports: {},
             },
+            process: {
+              env: process.env,
+            },
           },
           wasmBindings
         );
