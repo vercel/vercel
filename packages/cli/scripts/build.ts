@@ -27,33 +27,31 @@ function envToString(key: string) {
 }
 
 async function main() {
-  const isDev = process.argv[2] === '--dev';
+  // Read the secrets from GitHub Actions and generate a file.
+  // During local development, these secrets will be empty.
+  await createConstants();
 
-  if (!isDev) {
-    // Read the secrets from GitHub Actions and generate a file.
-    // During local development, these secrets will be empty.
-    await createConstants();
+  // `vercel dev` uses chokidar to watch the filesystem, but opts-out of the
+  // `fsevents` feature using `useFsEvents: false`, so delete the module here so
+  // that it is not compiled by ncc, which makes the npm package size larger
+  // than necessary.
+  await remove(join(dirRoot, '../../node_modules/fsevents'));
 
-    // `vercel dev` uses chokidar to watch the filesystem, but opts-out of the
-    // `fsevents` feature using `useFsEvents: false`, so delete the module here so
-    // that it is not compiled by ncc, which makes the npm package size larger
-    // than necessary.
-    await remove(join(dirRoot, '../../node_modules/fsevents'));
-
-    // Compile the `doT.js` template files for `vercel dev`
-    console.log();
-    await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
-      stdio: 'inherit',
-    });
-  }
+  // Compile the `doT.js` template files for `vercel dev`
+  console.log();
+  await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
+    stdio: 'inherit',
+  });
 
   // Do the initial `ncc` build
   console.log();
-  const args = ['ncc', 'build', '--external', 'update-notifier'];
-  if (isDev) {
-    args.push('--source-map');
-  }
-  args.push('src/index.ts');
+  const args = [
+    'ncc',
+    'build',
+    '--external',
+    'update-notifier',
+    'src/index.ts',
+  ];
   await execa('yarn', args, { stdio: 'inherit', cwd: dirRoot });
 
   // `ncc` has some issues with `@vercel/fun`'s runtime files:

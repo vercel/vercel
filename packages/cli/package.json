@@ -19,7 +19,7 @@
     "prepublishOnly": "yarn build",
     "coverage": "codecov",
     "build": "ts-node ./scripts/build.ts",
-    "build-dev": "ts-node ./scripts/build.ts --dev"
+    "dev": "ts-node ./src/index.ts"
   },
   "bin": {
     "vc": "./dist/index.js",
