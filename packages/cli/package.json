@@ -18,8 +18,7 @@
     "test-integration-dev": "yarn test test/dev/",
     "prepublishOnly": "yarn build",
     "coverage": "codecov",
-    "build": "node -r ts-eager/register ./scripts/build.ts",
-    "build-dev": "node -r ts-eager/register ./scripts/build.ts --dev"
+    "build": "node -r ts-eager/register ./scripts/build.ts"
   },
   "bin": {
     "vc": "./dist/index.js",
