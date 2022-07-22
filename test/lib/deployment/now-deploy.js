@@ -35,6 +35,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     VERCEL_DEBUG,
     ENABLE_VC_BUILD = '1',
   } = process.env;
+  console.log({ ENABLE_VC_BUILD });
   const nowJson = JSON.parse(bodies['vercel.json'] || bodies['now.json']);
 
   const nowDeployPayload = {
