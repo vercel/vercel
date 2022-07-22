@@ -358,7 +358,7 @@ export async function walkParentDirs({
   assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
   let parent = '';
 
-  for (let current = start; base.length <= current.length; current = parent) {
+  for (let current = start; base.length < current.length; current = parent) {
     const fullPath = path.join(current, filename);
 
     // eslint-disable-next-line no-await-in-loop
@@ -383,7 +383,7 @@ async function walkParentDirs2({
 }): Promise<(string | undefined)[]> {
   let parent = '';
 
-  for (let current = start; base.length <= current.length; current = parent) {
+  for (let current = start; base.length < current.length; current = parent) {
     const fullPaths = filenames.map(f => path.join(current, f));
     const existResults = await Promise.all(
       fullPaths.map(f => fs.pathExists(f))
