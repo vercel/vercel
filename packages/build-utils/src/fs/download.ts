@@ -42,14 +42,23 @@ async function prepareSymlinkTarget(
   );
 }
 
-async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
+export async function downloadFile(
+  file: File,
+  fsPath: string
+): Promise<FileFsRef> {
   const { mode } = file;
 
+  // if the source is a symlink, try to create it instead of copying the file
+  // however, if the symlink creation fails (e.g. Windows), fallback to copying
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
 
-    await symlink(target, fsPath);
-    return FileFsRef.fromFsPath({ mode, fsPath });
+    try {
+      await symlink(target, fsPath);
+      return FileFsRef.fromFsPath({ mode, fsPath });
+    } catch (e) {
+      // fall through
+    }
   }
 
   const stream = file.toStream();
