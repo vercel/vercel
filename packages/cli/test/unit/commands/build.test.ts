@@ -622,6 +622,32 @@ describe('build', () => {
     }
   });
 
+  it('should store `detectBuilders()` error in `builds.json`', async () => {
+    const cwd = fixture('error-vercel-json-validation');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      // `builds.json` contains top-level "error" property
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.builds).toBeUndefined();
+
+      expect(builds.error.code).toEqual('invalid_function');
+      expect(builds.error.message).toEqual(
+        'Function must contain at least one property.'
+      );
+
+      // `config.json` contains `version`
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.version).toBe(3);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should store Builder error in `builds.json`', async () => {
     const cwd = fixture('node-error');
     const output = join(cwd, '.vercel/output');
@@ -643,9 +669,56 @@ describe('build', () => {
       expect(errorBuilds[0].error.hideStackTrace).toEqual(true);
       expect(errorBuilds[0].error.code).toEqual('NODE_TYPESCRIPT_ERROR');
 
-      // `config.json`` contains `version`
+      // `config.json` contains `version`
       const configJson = await fs.readJSON(join(output, 'config.json'));
       expect(configJson.version).toBe(3);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should allow for missing "build" script', async () => {
+    const cwd = fixture('static-with-pkg');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            src: '**',
+            use: '@vercel/static',
+          },
+        ],
+      });
+
+      // "static" directory contains static files
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['index.html', 'package.json']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should set `VERCEL_ANALYTICS_ID` environment variable', async () => {
+    const cwd = fixture('vercel-analytics');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
