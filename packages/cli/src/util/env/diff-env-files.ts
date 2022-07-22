@@ -8,7 +8,8 @@ export async function createEnvObject(
   envPath: string,
   output: Output
 ): Promise<Dictionary<string | undefined> | undefined> {
-  // Partially taken from https://github.com/tswaters/env-file-parser/blob/master/lib/parse.js
+  // Originally authored by Tyler Waters under MIT License: https://github.com/tswaters/env-file-parser/blob/f17c009b39da599380e069ee72728d1cafdb56b8/lib/parse.js
+  // https://github.com/tswaters/env-file-parser/blob/f17c009b39da599380e069ee72728d1cafdb56b8/LICENSE
   const envArr = (await readFile(envPath, 'utf-8'))
     // remove double quotes
     .replace(/"/g, '')
