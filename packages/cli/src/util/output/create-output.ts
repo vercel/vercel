@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '../../types';
+import { getErrorMessage } from '../error';
 
 export interface OutputOptions {
   debug?: boolean;
@@ -80,9 +81,11 @@ export class Output {
   };
 
   prettyError = (
-    err: Pick<Error, 'message'> & { link?: string; action?: string }
+    //err: Pick<Error, 'message'> & { link?: string; action?: string }
+    err: unknown
   ) => {
-    return this.error(err.message, undefined, err.link, err.action);
+    const message = getErrorMessage(err);
+    return this.error(message, undefined, link, err.action);
   };
 
   ready = (str: string) => {

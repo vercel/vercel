@@ -17,21 +17,9 @@ import { getCommandName } from '../../util/pkg-name';
 type Options = {};
 
 async function rm(client: Client, opts: Options, args: string[]) {
-  const { output } = client;
   const rmStamp = stamp();
-
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { output } = client;
+  const { contextName } = await getScope(client);
 
   if (args.length !== 1) {
     output.error(
