@@ -15,6 +15,7 @@ import { NoBuilderCacheError } from '../errors-ts';
 
 import * as staticBuilder from './static-builder';
 import { BuilderWithPackage } from './types';
+import { isErrnoException } from '../is-error';
 
 const require_: typeof require = eval('require');
 
@@ -60,8 +61,8 @@ export async function prepareBuilderDir() {
   try {
     const buildersPkg = join(builderDir, 'package.json');
     await writeJSON(buildersPkg, { private: true }, { flag: 'wx' });
-  } catch (err) {
-    if (err.code !== 'EEXIST') {
+  } catch (err: unknown) {
+    if (!isErrnoException(err) || err.code !== 'EEXIST') {
       throw err;
     }
   }
@@ -331,8 +332,12 @@ export async function getBuilder(
         builder: Object.freeze(mod),
         package: Object.freeze(pkg),
       };
-    } catch (err) {
-      if (err.code === 'MODULE_NOT_FOUND' && !isRetry) {
+    } catch (err: unknown) {
+      if (
+        isErrnoException(err) &&
+        err.code === 'MODULE_NOT_FOUND' &&
+        !isRetry
+      ) {
         output.debug(
           `Attempted to require ${requirePath}, but it is not installed`
         );

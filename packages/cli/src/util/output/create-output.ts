@@ -80,12 +80,13 @@ export class Output {
     }
   };
 
-  prettyError = (
-    //err: Pick<Error, 'message'> & { link?: string; action?: string }
-    err: unknown
-  ) => {
-    const message = getErrorMessage(err);
-    return this.error(message, undefined, link, err.action);
+  prettyError = (err: unknown) => {
+    return this.error(
+      getErrorMessage(err),
+      undefined,
+      (err as any).link,
+      (err as any).action
+    );
   };
 
   ready = (str: string) => {

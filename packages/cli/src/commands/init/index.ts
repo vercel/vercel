@@ -68,11 +68,5 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  try {
-    return await init(client, argv, args);
-  } catch (err) {
-    output.prettyError(err);
-    output.debug(err.stack);
-    return 1;
-  }
+  return init(client, argv, args);
 }
