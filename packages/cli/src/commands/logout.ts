@@ -1,10 +1,11 @@
 import chalk from 'chalk';
 import logo from '../util/output/logo';
-import { handleError } from '../util/error';
+import { getErrorMessage, handleError } from '../util/error';
 import { writeToConfigFile, writeToAuthConfigFile } from '../util/config/files';
 import getArgs from '../util/get-args';
 import Client from '../util/client';
 import { getCommandName, getPkgName } from '../util/pkg-name';
+import { isAPIError } from '../util/errors-ts';
 
 const help = () => {
   console.log(`
@@ -63,12 +64,14 @@ export default async function main(client: Client): Promise<number> {
       method: 'DELETE',
       useCurrentTeam: false,
     });
-  } catch (err) {
-    if (err.status === 403) {
-      output.debug('Token is invalid so it cannot be revoked');
-    } else if (err.status !== 200) {
-      output.debug(err?.message ?? '');
-      exitCode = 1;
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.status === 403) {
+        output.debug('Token is invalid so it cannot be revoked');
+      } else if (err.status !== 200) {
+        output.debug(err?.message ?? '');
+        exitCode = 1;
+      }
     }
   }
 
@@ -86,8 +89,8 @@ export default async function main(client: Client): Promise<number> {
     writeToConfigFile(config);
     writeToAuthConfigFile(authConfig);
     output.debug('Configuration has been deleted');
-  } catch (err) {
-    output.debug(err?.message ?? '');
+  } catch (err: unknown) {
+    output.debug(getErrorMessage(err));
     exitCode = 1;
   }
 

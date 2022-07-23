@@ -604,7 +604,7 @@ function mergeImages(
   let images: BuildResultV2Typical['images'] = undefined;
   for (const result of buildResults) {
     if ('images' in result && result.images) {
-      images = Object.assign({} || images, result.images);
+      images = Object.assign({}, images, result.images);
     }
   }
   return images;

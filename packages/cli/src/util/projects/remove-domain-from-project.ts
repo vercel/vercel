@@ -21,7 +21,7 @@ export async function removeDomainFromProject(
     );
 
     return response;
-  } catch (err) {
+  } catch (err: any) {
     if (err.status < 500) {
       return err;
     }
