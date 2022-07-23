@@ -223,6 +223,7 @@ export default async function main(client: Client): Promise<number> {
 
     // For Vercel Analytics support
     if (project.settings.analyticsId) {
+      envToUnset.add('VERCEL_ANALYTICS_ID');
       process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
     }
 
