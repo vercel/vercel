@@ -11,8 +11,7 @@ import { getPkgName, getCommandName } from '../../util/pkg-name';
 import Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
-import { isError } from '../../util/is-error';
-import { getErrorMessage } from '../../util/error';
+import { errorToString, isError } from '../../util/is-error';
 
 const validateSlugKeypress = (data: string, value: string) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -76,7 +75,7 @@ export default async function add(client: Client): Promise<number> {
     } catch (err: unknown) {
       output.stopSpinner();
       output.print(eraseLines(2));
-      output.error(getErrorMessage(err));
+      output.error(errorToString(err));
     }
   } while (!team);
 

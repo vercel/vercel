@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '../../types';
-import { getErrorMessage } from '../error';
+import { errorToString } from '../is-error';
 
 export interface OutputOptions {
   debug?: boolean;
@@ -82,7 +82,7 @@ export class Output {
 
   prettyError = (err: unknown) => {
     return this.error(
-      getErrorMessage(err),
+      errorToString(err),
       undefined,
       (err as any).link,
       (err as any).action

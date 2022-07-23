@@ -1,5 +1,4 @@
 import { Response } from 'node-fetch';
-import { errorToString } from './is-error';
 import errorOutput from './output/error';
 
 export { default as handleError } from './handle-error';
@@ -102,8 +101,4 @@ export function toEnumerableError<E extends Partial<Error>>(err: E) {
     enumerable[key] = err[key];
   }
   return enumerable;
-}
-
-export function getErrorMessage(err: unknown): string {
-  return errorToString(err);
 }

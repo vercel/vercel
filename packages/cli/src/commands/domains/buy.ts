@@ -11,7 +11,7 @@ import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { getErrorMessage } from '../../util/error';
+import { errorToString } from '../../util/is-error';
 
 type Options = {};
 
@@ -108,7 +108,7 @@ export default async function buy(
     output.error(
       'An unexpected error occurred while purchasing your domain. Please try again later.'
     );
-    output.debug(`Server response: ${getErrorMessage(err)}`);
+    output.debug(`Server response: ${errorToString(err)}`);
     return 1;
   }
 

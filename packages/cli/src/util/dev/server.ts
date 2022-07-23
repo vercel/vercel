@@ -94,8 +94,12 @@ import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
 import { treeKill } from '../tree-kill';
 import { nodeHeadersToFetchHeaders } from './headers';
-import { isErrnoException, isError, isSpawnError } from '../is-error';
-import { getErrorMessage } from '../error';
+import {
+  errorToString,
+  isErrnoException,
+  isError,
+  isSpawnError,
+} from '../is-error';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -1316,7 +1320,7 @@ export default class DevServer {
 
       if (!res.finished) {
         res.statusCode = 500;
-        res.end(getErrorMessage(err));
+        res.end(errorToString(err));
       }
     }
   };

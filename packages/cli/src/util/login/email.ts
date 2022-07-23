@@ -6,8 +6,8 @@ import verify from './verify';
 import executeLogin from './login';
 import Client from '../client';
 import { LoginResult } from './types';
-import { getErrorMessage } from '../error';
 import { isAPIError } from '../errors-ts';
+import { errorToString } from '../is-error';
 
 export default async function doEmailLogin(
   client: Client,
@@ -25,7 +25,7 @@ export default async function doEmailLogin(
     verificationToken = data.token;
     securityCode = data.securityCode;
   } catch (err: unknown) {
-    output.error(getErrorMessage(err));
+    output.error(errorToString(err));
     return 1;
   }
 
@@ -55,7 +55,7 @@ export default async function doEmailLogin(
       );
     } catch (err: unknown) {
       if (!isAPIError(err) || err.serverMessage !== 'Confirmation incomplete') {
-        output.error(getErrorMessage(err));
+        output.error(errorToString(err));
         return 1;
       }
     }

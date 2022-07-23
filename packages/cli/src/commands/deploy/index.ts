@@ -8,7 +8,7 @@ import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
-import { getErrorMessage, handleError } from '../../util/error';
+import { handleError } from '../../util/error';
 import Client from '../../util/client';
 import { getPrettyError } from '@vercel/build-utils';
 import toHumanPath from '../../util/humanize-path';
@@ -67,7 +67,7 @@ import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { createGitMeta } from '../../util/create-git-meta';
 import { parseEnv } from '../../util/parse-env';
-import { isErrnoException, isError } from '../../util/is-error';
+import { errorToString, isErrnoException, isError } from '../../util/is-error';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -471,7 +471,7 @@ export default async (client: Client) => {
     await addProcessEnv(log, deploymentEnv);
     await addProcessEnv(log, deploymentBuildEnv);
   } catch (err: unknown) {
-    error(getErrorMessage(err));
+    error(errorToString(err));
     return 1;
   }
 

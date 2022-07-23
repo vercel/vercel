@@ -12,8 +12,7 @@ import { email as regexEmail } from '../../util/input/regexes';
 import getTeams from '../../util/teams/get-teams';
 import inviteUserToTeam from '../../util/teams/invite-user-to-team';
 import { isAPIError } from '../../util/errors-ts';
-import { isError } from '../../util/is-error';
-import { getErrorMessage } from '../../util/error';
+import { errorToString, isError } from '../../util/is-error';
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -167,7 +166,7 @@ export default async function invite(
       } catch (err) {
         output.stopSpinner();
         process.stderr.write(eraseLines(emails.length + 2));
-        output.error(getErrorMessage(err));
+        output.error(errorToString(err));
         hasError = true;
         for (const email of emails) {
           output.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);

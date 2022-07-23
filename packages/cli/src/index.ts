@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { isErrnoException, isError } from './util/is-error';
+import { isErrnoException, isError, errorToString } from './util/is-error';
 
 try {
   // Test to see if cwd has been deleted before
@@ -34,7 +34,7 @@ import getArgs from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
-import { getErrorMessage, handleError } from './util/error';
+import { handleError } from './util/error';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as configFiles from './util/config/files';
@@ -206,7 +206,7 @@ const main = async () => {
     output.error(
       `An unexpected error occurred while trying to create the global directory "${hp(
         VERCEL_DIR
-      )}" ${getErrorMessage(err)}`
+      )}" ${errorToString(err)}`
     );
   }
 
@@ -221,7 +221,7 @@ const main = async () => {
         `${
           'An unexpected error occurred while trying to find the ' +
           `config file "${hp(VERCEL_CONFIG_PATH)}" `
-        }${getErrorMessage(err)}`
+        }${errorToString(err)}`
       )
     );
 
@@ -239,7 +239,7 @@ const main = async () => {
           `${
             'An unexpected error occurred while trying to read the ' +
             `config in "${hp(VERCEL_CONFIG_PATH)}" `
-          }${getErrorMessage(err)}`
+          }${errorToString(err)}`
         )
       );
 
@@ -276,7 +276,7 @@ const main = async () => {
           `${
             'An unexpected error occurred while trying to write the ' +
             `default config to "${hp(VERCEL_CONFIG_PATH)}" `
-          }${getErrorMessage(err)}`
+          }${errorToString(err)}`
         )
       );
 
@@ -294,7 +294,7 @@ const main = async () => {
         `${
           'An unexpected error occurred while trying to find the ' +
           `auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-        }${getErrorMessage(err)}`
+        }${errorToString(err)}`
       )
     );
 
@@ -321,7 +321,7 @@ const main = async () => {
           `${
             'An unexpected error occurred while trying to read the ' +
             `auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-          }${getErrorMessage(err)}`
+          }${errorToString(err)}`
         )
       );
 
@@ -349,7 +349,7 @@ const main = async () => {
           `${
             'An unexpected error occurred while trying to write the ' +
             `default config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-          }${getErrorMessage(err)}`
+          }${errorToString(err)}`
         )
       );
       return 1;
@@ -739,7 +739,7 @@ const main = async () => {
       if (!metric) metric = metrics();
       metric
         .event(eventCategory, '1', pkg.version)
-        .exception(getErrorMessage(err))
+        .exception(errorToString(err))
         .send();
     }
 
