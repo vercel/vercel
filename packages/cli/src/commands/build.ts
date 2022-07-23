@@ -201,7 +201,7 @@ export default async function main(client: Client): Promise<number> {
     argv: process.argv,
   };
 
-  const originalProcessEnv = { ...process.env };
+  const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
 
   try {
     const envPath = join(cwd, VERCEL_DIR, `.env.${target}.local`);
@@ -214,7 +214,10 @@ export default async function main(client: Client): Promise<number> {
       output.debug(
         `Failed loading environment variables: ${dotenvResult.error}`
       );
-    } else {
+    } else if (dotenvResult.parsed) {
+      for (const key of Object.keys(dotenvResult.parsed)) {
+        envToUnset.add(key);
+      }
       output.debug(`Loaded environment variables from "${envPath}"`);
     }
 
@@ -242,8 +245,11 @@ export default async function main(client: Client): Promise<number> {
 
     return 1;
   } finally {
-    // Restore original environment variables
-    process.env = originalProcessEnv;
+    // Unset environment variables that were added by dotenv
+    // (this is mostly for the unit tests)
+    for (const key of envToUnset) {
+      delete process.env[key];
+    }
   }
 }
 
