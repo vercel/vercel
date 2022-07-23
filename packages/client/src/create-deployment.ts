@@ -12,7 +12,7 @@ import {
 } from './types';
 import { FileFsRef, Files, streamToBuffer } from '@vercel/build-utils';
 import tar from 'tar-fs';
-import { createGzip } from 'zlib';
+import { createBrotliCompress, createGzip } from 'zlib';
 import { createZip } from '../../build-utils/dist/lambda';
 
 export default function buildCreateDeployment() {
@@ -94,25 +94,7 @@ export default function buildCreateDeployment() {
 
     let files;
 
-    if (clientOptions.archive === ArchiveFormat.Tgz) {
-      debug('Packing tarball');
-      fileList = fileList.map(file => file.replace(workPath, ''));
-      let tarStream = tar
-        .pack(workPath, {
-          entries: fileList,
-        })
-        .pipe(createGzip());
-      debug('Created tgzStream');
-      const tarBuffer: Buffer = await streamToBuffer(tarStream);
-      debug('Created buf');
-      debug('Packed tarball');
-      files = new Map([
-        [
-          hash(tarBuffer),
-          { names: ['.vercel/source.tgz'], data: tarBuffer, mode: 0o666 },
-        ],
-      ]);
-    } else if (clientOptions.archive === ArchiveFormat.Zip) {
+    if (clientOptions.archive === ArchiveFormat.Zip) {
       const filesMap: Files = {};
       debug('Collecting files map');
       for (const fsPath of fileList) {
@@ -129,6 +111,30 @@ export default function buildCreateDeployment() {
         [
           hash(zipBuffer),
           { names: ['.vercel/source.zip'], data: zipBuffer, mode: 0o666 },
+        ],
+      ]);
+    } else if (
+      clientOptions.archive === ArchiveFormat.Tgz ||
+      clientOptions.archive === ArchiveFormat.TarBr
+    ) {
+      debug('Packing tarball');
+      const tarBr = clientOptions.archive === ArchiveFormat.TarBr;
+      fileList = fileList.map(file => file.replace(workPath, ''));
+      let tarStream = tar
+        .pack(workPath, {
+          entries: fileList,
+        })
+        .pipe(tarBr ? createBrotliCompress() : createGzip());
+      const tarBuffer: Buffer = await streamToBuffer(tarStream);
+      debug('Packed tarball');
+      files = new Map([
+        [
+          hash(tarBuffer),
+          {
+            names: [tarBr ? '.vercel/source.tar.br' : '.vercel/source.tgz'],
+            data: tarBuffer,
+            mode: 0o666,
+          },
         ],
       ]);
     } else {

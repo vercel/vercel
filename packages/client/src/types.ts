@@ -14,6 +14,7 @@ export interface Dictionary<T> {
 export enum ArchiveFormat {
   Zip = 'zip',
   Tgz = 'tgz',
+  TarBr = 'tar-br',
 }
 
 export interface VercelClientOptions {
