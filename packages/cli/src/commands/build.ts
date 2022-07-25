@@ -283,6 +283,14 @@ async function doBuild(
     normalizePath(relative(workPath, f))
   );
 
+  console.log('=========== FOUND SOME STUFF =========');
+  console.log({
+    vercelConfig,
+    files,
+    buildsJson,
+  });
+  console.log('======================================');
+
   const routesResult = getTransformedRoutes(vercelConfig || {});
   if (routesResult.error) {
     throw routesResult.error;
