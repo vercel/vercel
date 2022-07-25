@@ -285,7 +285,7 @@ async function doBuild(
 
   console.log('=========== FOUND SOME STUFF =========');
   console.log({
-    vercelConfig,
+    vercelConfig: JSON.stringify(vercelConfig),
     files,
     buildsJson,
   });
