@@ -719,10 +719,10 @@
   dependencies:
     "@jridgewell/trace-mapping" "0.3.9"
 
-"@edge-runtime/format@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@edge-runtime/format/-/format-1.0.0.tgz#c97183d1c85de3dc384f524f90f8d9ff5b13fdcb"
-  integrity sha512-mxi0n00nJwnjaXUQIfTS7l64yvwGXs435gEjuDhzTHZyrmnCYdELXdJr3Q+6v4DO1mmmtNTYFHUvIlpCmMUC6g==
+"@edge-runtime/format@^1.1.0-beta.19":
+  version "1.1.0-beta.19"
+  resolved "https://registry.yarnpkg.com/@edge-runtime/format/-/format-1.1.0-beta.19.tgz#ed5b3d17ac3d5efd0299831ef2120cc80c59f887"
+  integrity sha512-5U9boKiCRQ9T2bkv0Zlbn0yx5PEoCN3gJRpDzPbelF4IASic2ghcz0mUolpSO4sXSXegfgNYwJuBKI5jE5EXQQ==
 
 "@edge-runtime/jest-environment@1.1.0-beta.7":
   version "1.1.0-beta.7"
@@ -736,22 +736,22 @@
     jest-mock "28.1.1"
     jest-util "28.1.1"
 
-"@edge-runtime/primitives@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@edge-runtime/primitives/-/primitives-1.0.1.tgz#2bcdb6e37997b17e9f0be473f0644c84ade9b9d2"
-  integrity sha512-a5rouOhbkLHJZeXQZs5QppI8DwFsAyK7gzCIg6sWVTZnF5WxN0oQ85iEgSIjvQaHPbAAHDJ2WwKwP07CWv8SUA==
+"@edge-runtime/primitives@^1.1.0-beta.19":
+  version "1.1.0-beta.19"
+  resolved "https://registry.yarnpkg.com/@edge-runtime/primitives/-/primitives-1.1.0-beta.19.tgz#20f2e53b568abcfcba2f6eece1c292f585787f97"
+  integrity sha512-DfKXWYxsLWh6XOZQrQye/WG/uM+3KQcLvIa23QV0sswLFTzjoplYMZl56TJltm2vOIctjSEJidfypIZylJPi2Q==
 
 "@edge-runtime/primitives@^1.1.0-beta.7":
   version "1.1.0-beta.7"
   resolved "https://registry.yarnpkg.com/@edge-runtime/primitives/-/primitives-1.1.0-beta.7.tgz#0450ee3e5e03a8898ee072c0d0ee01fd2c1ed8f1"
   integrity sha512-ZwuSMpmrf2mAj/O7EWxKOXrC03YMkU64N+CgvVFOtJGfhydk4Db/392Zama3BjNYAMOr/oY9L7HxfPutAFesKw==
 
-"@edge-runtime/vm@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@edge-runtime/vm/-/vm-1.0.1.tgz#0285efd9ccc12efbbbd725c70721b39b9812c300"
-  integrity sha512-kkPeYBCGgeoyBxKdHwRy8zKtpGFS3aviPnDaRKNx/NaWFr/EwG8TTdv9T+VP3JzuFC48me0VF4fnnIEARrI/7Q==
+"@edge-runtime/vm@^1.1.0-beta.19":
+  version "1.1.0-beta.19"
+  resolved "https://registry.yarnpkg.com/@edge-runtime/vm/-/vm-1.1.0-beta.19.tgz#bfca0d0143da5489c255ca68636f2cba3cb1af88"
+  integrity sha512-fruJF1HvCM5ZUFF/RH71l0Pg5Pjuxmqob7nsh6eh2sY2xt5n80q3yh+wLMXWHRkhLkvgBYlKjbSESM/ptnV9sw==
   dependencies:
-    "@edge-runtime/primitives" "^1.0.1"
+    "@edge-runtime/primitives" "^1.1.0-beta.19"
 
 "@edge-runtime/vm@^1.1.0-beta.7":
   version "1.1.0-beta.7"
@@ -5463,13 +5463,13 @@ ecc-jsbn@~0.1.1:
     jsbn "~0.1.0"
     safer-buffer "^2.1.0"
 
-edge-runtime@1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/edge-runtime/-/edge-runtime-1.0.1.tgz#d6d7f17a7c575c857dddb262e640a6996e08ef02"
-  integrity sha512-1/7ZlGy7LUWufVoWPdphYvyOiNFiN1u/hIyWDBeJjoFAKQGjl70A0SdG2cwVd1UhcPlA95ieYly1B4h0/8MPog==
+edge-runtime@v1.1.0-beta.19:
+  version "1.1.0-beta.19"
+  resolved "https://registry.yarnpkg.com/edge-runtime/-/edge-runtime-1.1.0-beta.19.tgz#8122e615dcd81e402df3eef033bff341e2b32267"
+  integrity sha512-yfoQWT8wA32NcGObwEyOPPewh2s57rHUB5lHV1N11wagRpmApruD/1l0Cgqz30NWz1Ey9FxiorfN9AEziFOYkg==
   dependencies:
-    "@edge-runtime/format" "^1.0.0"
-    "@edge-runtime/vm" "^1.0.1"
+    "@edge-runtime/format" "^1.1.0-beta.19"
+    "@edge-runtime/vm" "^1.1.0-beta.19"
     exit-hook "2.2.1"
     http-status "~1.5.0"
     mri "1.2.0"
