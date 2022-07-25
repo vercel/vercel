@@ -356,12 +356,9 @@ export async function walkParentDirs({
 }: WalkParentDirsProps): Promise<string | null> {
   assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
   assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
+  let parent = '';
 
-  for (
-    let current = start;
-    base.length <= current.length;
-    current = path.dirname(current)
-  ) {
+  for (let current = start; base.length <= current.length; current = parent) {
     const fullPath = path.join(current, filename);
 
     // eslint-disable-next-line no-await-in-loop
@@ -369,7 +366,10 @@ export async function walkParentDirs({
       return fullPath;
     }
 
-    if (current === '/') {
+    parent = path.dirname(current);
+
+    if (parent === current) {
+      // Reached root directory of the filesystem
       break;
     }
   }
@@ -386,11 +386,8 @@ async function walkParentDirs2({
   start: string;
   filenames: string[];
 }): Promise<(string | undefined)[]> {
-  for (
-    let current = start;
-    base.length <= current.length;
-    current = path.dirname(current)
-  ) {
+  let parent = '';
+  for (let current = start; base.length <= current.length; current = parent) {
     const fullPaths = filenames.map(f => path.join(current, f));
     const existResults = await Promise.all(
       fullPaths.map(f => fs.pathExists(f))
@@ -401,7 +398,10 @@ async function walkParentDirs2({
       return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
     }
 
-    if (current === '/') {
+    parent = path.dirname(current);
+
+    if (parent === current) {
+      // Reached root directory of the filesystem
       break;
     }
   }
