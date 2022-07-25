@@ -34,7 +34,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     NOW_DEBUG,
     VERCEL_DEBUG,
     ENABLE_VC_BUILD = '1',
-    VERCEL_CLI_VERSION = 'https://vercel-88d8go2i4.vercel.sh/tarballs/vercel.tgz',
+    VERCEL_CLI_VERSION = 'https://vercel-lydeqeptt.vercel.sh/tarballs/vercel.tgz',
   } = process.env;
   const nowJson = JSON.parse(bodies['vercel.json'] || bodies['now.json']);
 
