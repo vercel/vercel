@@ -2281,6 +2281,30 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       },
     ]);
   });
+
+  it('should not add middleware builder when building "nextjs"', async () => {
+    const files = ['package.json', 'pages/index.ts', 'middleware.ts'];
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '12.2.0' },
+    };
+    const projectSettings = {
+      framework: null,
+    };
+    const { builders } = await detectBuilders(files, pkg, {
+      projectSettings,
+      featHandleMiss,
+    });
+    expect(builders).toEqual([
+      {
+        use: '@vercel/next',
+        src: 'package.json',
+        config: {
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
 });
 
 it('Test `detectRoutes`', async () => {
