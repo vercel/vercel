@@ -69,11 +69,11 @@ jobs:
       - run: yarn install --network-timeout 1000000
 
       - name: Build ${{matrix.packageName}} and all its dependencies
-        run: yarn turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
+        run: yarn turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps --force
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
-        run: node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
+        run: node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps --force -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
