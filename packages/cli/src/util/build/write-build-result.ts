@@ -1,5 +1,4 @@
 import fs from 'fs-extra';
-import minimatch from 'minimatch';
 import mimeTypes from 'mime-types';
 import {
   basename,
@@ -24,6 +23,7 @@ import {
   download,
   EdgeFunction,
   BuildResultBuildOutput,
+  getLambdaOptionsFromFunction,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { unzip } from './unzip';
@@ -192,22 +192,19 @@ async function writeBuildResultV3(
     throw new Error(`Expected "build.src" to be a string`);
   }
 
-  let customFunctionConfiguration: FunctionConfiguration | undefined;
-  if (vercelConfig?.functions) {
-    for (const [pattern, config] of Object.entries(vercelConfig.functions)) {
-      if (src === pattern || minimatch(src, pattern)) {
-        customFunctionConfiguration = config;
-        break;
-      }
-    }
-  }
+  const functionConfiguration = vercelConfig
+    ? getLambdaOptionsFromFunction({
+        sourceFile: src,
+        config: vercelConfig,
+      })
+    : {};
 
   const ext = extname(src);
   const path = stripDuplicateSlashes(
     build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
   );
   if (isLambda(output)) {
-    await writeLambda(outputDir, output, path, customFunctionConfiguration);
+    await writeLambda(outputDir, output, path, functionConfiguration);
   } else if (isEdgeFunction(output)) {
     await writeEdgeFunction(outputDir, output, path);
   } else {
