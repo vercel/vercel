@@ -771,4 +771,55 @@ describe('build', () => {
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
+
+  it('should load environment variables from `.vercel/.env.preview.local`', async () => {
+    const cwd = fixture('env-from-vc-pull');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(env['ENV_FILE']).toEqual('preview');
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should load environment variables from `.vercel/.env.production.local`', async () => {
+    const cwd = fixture('env-from-vc-pull');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      client.setArgv('build', '--prod');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(env['ENV_FILE']).toEqual('production');
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should NOT load environment variables from `.env`', async () => {
+    const cwd = fixture('env-root-level');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      // The `.env` in this fixture has `ENV_FILE=root"`,
+      // so if that's not defined then we're good
+      expect(env['ENV_FILE']).toBeUndefined();
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
 });
