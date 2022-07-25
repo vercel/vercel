@@ -1548,6 +1548,18 @@ export default class DevServer {
         // `startDevServer()` threw an error. Most likely this means the dev
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
+        if (isSpawnError(err) && err.code === 'ENOENT') {
+          err.message = `Command not found: ${chalk.cyan(
+            err.path,
+            ...err.spawnargs
+          )}\nPlease ensure that ${cmd(err.path!)} is properly installed`;
+          (err as any).link = 'https://vercel.link/command-not-found';
+        }
+
+        if (isError(err)) {
+          this.output.prettyError(err);
+        }
+
         await this.sendError(
           req,
           res,
