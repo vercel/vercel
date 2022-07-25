@@ -24,6 +24,7 @@ import {
   EdgeFunction,
   BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
+  normalizePath,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { unzip } from './unzip';
@@ -290,6 +291,7 @@ async function writeEdgeFunction(
   const config = {
     runtime: 'edge',
     ...edgeFunction,
+    entrypoint: normalizePath(edgeFunction.entrypoint),
     files: undefined,
     type: undefined,
   };
@@ -353,6 +355,7 @@ async function writeLambda(
 
   const config = {
     ...lambda,
+    handler: normalizePath(lambda.handler),
     memory,
     maxDuration,
     type: undefined,
