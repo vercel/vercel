@@ -193,7 +193,7 @@ async function writeBuildResultV3(
   }
 
   const functionConfiguration = vercelConfig
-    ? getLambdaOptionsFromFunction({
+    ? await getLambdaOptionsFromFunction({
         sourceFile: src,
         config: vercelConfig,
       })
