@@ -46,7 +46,6 @@ describe('Test `walkParentDirs`', () => {
     const base = fixture('every-directory');
     const start = base;
     const target = await walkParentDirs({ base, start, filename });
-    console.log({ base, start, filename, target });
     await assertContent(target, 'First');
   });
 
