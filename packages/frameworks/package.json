@@ -8,7 +8,7 @@
   ],
   "license": "UNLICENSED",
   "scripts": {
-    "foo": "invalidate-cache",
+    "foo": "invalidate-cache2",
     "build": "tsc",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "yarn test"

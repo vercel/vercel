@@ -5,7 +5,7 @@
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",
   "scripts": {
-    "foo": "invalidate-cache",
+    "foo": "invalidate-cache2",
     "build": "node build.js",
     "build-dev": "node build.js --dev",
     "test": "jest --env node --verbose --bail --runInBand",

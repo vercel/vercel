@@ -13,7 +13,7 @@
     "directory": "packages/redwood"
   },
   "scripts": {
-    "foo": "invalidate-cache",
+    "foo": "invalidate-cache2",
     "build": "node build.js",
     "test-integration-once": "yarn test test/test.js",
     "test": "jest --env node --verbose --bail --runInBand",

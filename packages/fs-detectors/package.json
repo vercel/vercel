@@ -14,7 +14,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "foo": "invalidate-cache",
+    "foo": "invalidate-cache2",
     "prepublishOnly": "tsc",
     "build": "tsc",
     "test": "yarn jest --env node --verbose --runInBand --bail test/unit.*test.*",

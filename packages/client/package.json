@@ -14,7 +14,7 @@
     "directory": "packages/client"
   },
   "scripts": {
-    "foo": "invalidate-cache",
+    "foo": "invalidate-cache2",
     "build": "tsc",
     "test-integration-once": "yarn test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
     "test": "jest --env node --verbose --runInBand --bail",

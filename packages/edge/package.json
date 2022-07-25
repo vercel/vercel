@@ -6,7 +6,7 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "foo": "invalidate-cache",
+    "foo": "invalidate-cache2",
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "test-unit": "jest",
     "prepublishOnly": "yarn build"

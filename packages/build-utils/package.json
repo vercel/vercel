@@ -11,7 +11,7 @@
     "directory": "packages/now-build-utils"
   },
   "scripts": {
-    "foo": "invalidate-cache",
+    "foo": "invalidate-cache2",
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "yarn test test/unit.*test.*",
