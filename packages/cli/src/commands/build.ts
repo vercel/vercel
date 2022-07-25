@@ -299,6 +299,7 @@ async function doBuild(
 
   let builds = vercelConfig?.builds || [];
   let zeroConfigRoutes: Route[] = [];
+  let isZeroConfig = false;
 
   if (builds.length > 0) {
     output.warn(
@@ -307,6 +308,7 @@ async function doBuild(
     builds = builds.map(b => expandBuild(files, b)).flat();
   } else {
     // Zero config
+    isZeroConfig = true;
 
     // Detect the Vercel Builders that will need to be invoked
     const detectedBuilders = await detectBuilders(files, pkg, {
@@ -421,16 +423,18 @@ async function doBuild(
     try {
       const { builder, pkg: builderPkg } = builderWithPkg;
 
-      const buildConfig: Config = {
-        outputDirectory: project.settings.outputDirectory ?? undefined,
-        ...build.config,
-        projectSettings: project.settings,
-        installCommand: project.settings.installCommand ?? undefined,
-        devCommand: project.settings.devCommand ?? undefined,
-        buildCommand: project.settings.buildCommand ?? undefined,
-        framework: project.settings.framework,
-        nodeVersion: project.settings.nodeVersion,
-      };
+      const buildConfig: Config = isZeroConfig
+        ? {
+            outputDirectory: project.settings.outputDirectory ?? undefined,
+            ...build.config,
+            projectSettings: project.settings,
+            installCommand: project.settings.installCommand ?? undefined,
+            devCommand: project.settings.devCommand ?? undefined,
+            buildCommand: project.settings.buildCommand ?? undefined,
+            framework: project.settings.framework,
+            nodeVersion: project.settings.nodeVersion,
+          }
+        : build.config || {};
       const buildOptions: BuildOptions = {
         files: filesMap,
         entrypoint: build.src,
