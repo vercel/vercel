@@ -77,6 +77,7 @@ async function main() {
 
   // Band-aid to bundle stuff that `ncc` neglects to bundle
   await cpy(join(dirRoot, 'src/util/projects/VERCEL_DIR_README.txt'), distRoot);
+  await cpy(join(dirRoot, 'src/util/dev/builder-worker.js'), distRoot);
 
   console.log('Finished building Vercel CLI');
 }

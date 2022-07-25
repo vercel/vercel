@@ -18,6 +18,7 @@ import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
+import { isErrnoException } from '../../util/is-error';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -40,8 +41,8 @@ function readHeadSync(path: string, length: number) {
 function tryReadHeadSync(path: string, length: number) {
   try {
     return readHeadSync(path, length);
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
+  } catch (err: unknown) {
+    if (!isErrnoException(err) || err.code !== 'ENOENT') {
       throw err;
     }
   }

@@ -775,4 +775,35 @@ describe('build', () => {
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
+
+  it('should apply function configuration from "vercel.json" to Serverless Functions', async () => {
+    const cwd = fixture('lambda-with-128-memory');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // "functions/api" directory has output Functions
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      expect(functions.sort()).toEqual(['memory.func']);
+
+      const vcConfig = await fs.readJSON(
+        join(output, 'functions/api/memory.func/.vc-config.json')
+      );
+      expect(vcConfig).toMatchObject({
+        handler: 'api/memory.js',
+        runtime: 'nodejs16.x',
+        memory: 128,
+        environment: {},
+        launcherType: 'Nodejs',
+        shouldAddHelpers: true,
+        shouldAddSourcemapSupport: false,
+        awsLambdaHandler: '',
+      });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
 });
