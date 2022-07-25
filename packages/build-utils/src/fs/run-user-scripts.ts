@@ -314,26 +314,25 @@ export async function scanParentDirs(
     readPackageJson && pkgJsonPath
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
-  const [npmLockPath, yarnLockPath, pnpmLockPath] = await walkParentDirs2({
+  const [yarnLockPath, npmLockPath, pnpmLockPath] = await walkParentDirsMulti({
     base: '/',
     start: destPath,
-    filenames: ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'],
+    filenames: ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'],
   });
   let lockfileVersion: number | undefined;
   let cliType: CliType = 'yarn';
 
-  const [packageLockJson, hasYarnLock, pnpmLockYaml] = await Promise.all([
+  const [hasYarnLock, packageLockJson, pnpmLockYaml] = await Promise.all([
+    Boolean(yarnLockPath),
     npmLockPath
       ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
       : null,
-    Boolean(yarnLockPath),
     pnpmLockPath
       ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
       : null,
   ]);
 
   // Priority order is Yarn > pnpm > npm
-  // - find highest priority lock file and use that
   if (hasYarnLock) {
     cliType = 'yarn';
   } else if (pnpmLockYaml) {
@@ -377,7 +376,7 @@ export async function walkParentDirs({
   return null;
 }
 
-async function walkParentDirs2({
+async function walkParentDirsMulti({
   base,
   start,
   filenames,
