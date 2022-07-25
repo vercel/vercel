@@ -45,7 +45,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
         NOW_DEBUG,
         VERCEL_DEBUG,
         ENABLE_VC_BUILD: '1',
-        VERCEL_CLI_VERSIONL:
+        VERCEL_CLI_VERSION:
           'https://vercel-ejvgov1n1.vercel.sh/tarballs/vercel.tgz',
         NEXT_TELEMETRY_DISABLED: '1',
       },
