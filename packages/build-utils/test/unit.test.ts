@@ -511,7 +511,7 @@ it('should detect package.json in nested backend', async () => {
 it('should detect package.json in nested frontend', async () => {
   const fixture = path.join(
     __dirname,
-    '../../node/test/fixtures/18.1-nested-packagejson/backend'
+    '../../node/test/fixtures/18.1-nested-packagejson/frontend'
   );
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
