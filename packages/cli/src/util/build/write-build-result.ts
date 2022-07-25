@@ -194,9 +194,7 @@ async function writeBuildResultV3(
 
   let customFunctionConfiguration: FunctionConfiguration | undefined;
   if (vercelConfig?.functions) {
-    // eslint-disable-next-line @typescript-eslint/no-shadow -- TODO: Fix eslint error following @vercel/style-guide migration
     for (const [pattern, config] of Object.entries(vercelConfig.functions)) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- TODO: Fix eslint error following @vercel/style-guide migration
       if (src === pattern || minimatch(src, pattern)) {
         customFunctionConfiguration = config;
         break;
