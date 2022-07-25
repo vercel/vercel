@@ -460,7 +460,7 @@ async function doBuild(
           build,
           builder,
           builderPkg,
-          vercelConfig?.cleanUrls
+          vercelConfig
         ).then(
           override => {
             if (override) overrides.push(override);
