@@ -7,6 +7,7 @@ import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import init from './init';
 import { getPkgName } from '../../util/pkg-name';
+import { isError } from '../../util/is-error';
 
 const COMMAND_CONFIG = {
   init: ['init'],
@@ -68,5 +69,13 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  return init(client, argv, args);
+  try {
+    return await init(client, argv, args);
+  } catch (err: unknown) {
+    output.prettyError(err);
+    if (isError(err) && typeof err.stack === 'string') {
+      output.debug(err.stack);
+    }
+    return 1;
+  }
 }
