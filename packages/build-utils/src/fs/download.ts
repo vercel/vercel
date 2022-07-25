@@ -51,15 +51,8 @@ export async function downloadFile(
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
 
-    try {
-      await symlink(target, fsPath);
-      return FileFsRef.fromFsPath({ mode, fsPath });
-    } catch (e: any) {
-      if (process.platform !== 'win32' || e.code !== 'EPERM') {
-        throw e;
-      }
-      // fall through
-    }
+    await symlink(target, fsPath);
+    return FileFsRef.fromFsPath({ mode, fsPath });
   }
 
   const stream = file.toStream();
