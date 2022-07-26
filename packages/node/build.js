@@ -33,7 +33,7 @@ async function main() {
     { stdio: 'inherit' }
   );
   await fs.rename(join(mainDir, 'index.js'), join(outDir, 'index.js'));
-  await fs.rename(join(mainDir, 'types.d.ts'), join(outDir, 'index.d.ts'));
+  await fs.rename(join(outDir, 'types.d.ts'), join(outDir, 'index.d.ts'));
 
   // Delete all *.d.ts except for index.d.ts which is the public interface
   await Promise.all([
