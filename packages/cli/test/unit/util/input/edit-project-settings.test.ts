@@ -1,6 +1,6 @@
 import { Framework, frameworks } from '@vercel/frameworks';
-import editProjectSettings from '../../../../src/util/input/edit-project-settings';
-import { client } from '../../../mocks/client';
+import editProjectSettings from '../../../../src/util/input/edit-project-settings.js';
+import { client } from '../../../mocks/client.js';
 
 const otherFramework = frameworks.find(
   fwk => fwk.name === 'Other'

@@ -9,7 +9,7 @@
 
 /// <reference types="@types/jest" />
 
-import * as matchers from './matchers';
+import * as matchers from './matchers.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type Tail<T extends unknown[]> = T extends [infer _Head, ...infer Tail]

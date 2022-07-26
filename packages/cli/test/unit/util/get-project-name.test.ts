@@ -1,4 +1,4 @@
-import getProjectName from '../../../src/util/get-project-name';
+import getProjectName from '../../../src/util/get-project-name.js';
 
 describe('getProjectName', () => {
   it('should work with argv', () => {

@@ -1,12 +1,12 @@
 import fetch from 'node-fetch';
 import listen from 'async-listen';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
-import { JSONValue } from '../../../src/types';
+import { JSONValue } from '../../../src/types.js';
 import {
   responseError,
   responseErrorMessage,
   toEnumerableError,
-} from '../../../src/util/error';
+} from '../../../src/util/error.js';
 
 const send = (res: ServerResponse, statusCode: number, body: JSONValue) => {
   res.statusCode = statusCode;
@@ -22,7 +22,7 @@ describe('responseError()', () => {
 
   beforeAll(async () => {
     server = createServer((req, res) => handler(req, res));
-    url = await listen(server);
+    url = await listen.default(server);
   });
 
   afterAll(() => {
