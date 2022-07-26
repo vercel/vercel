@@ -713,6 +713,7 @@ export const build: BuildV2 = async ({
             '.env',
             '.env.*',
             '.git/**',
+            '.vercel/**',
             'node_modules/**',
             'yarn.lock',
             'package-lock.json',

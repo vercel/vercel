@@ -3923,15 +3923,29 @@ test('[vc build] should build project with `@vercel/static-build`', async t => {
 
 test('[vc build] should not include .vercel when outputDirectory is set to "."', async t => {
   const directory = fixture('zero-config-dist-dir');
-  const output = await execute(['build'], { cwd: directory });
-  console.log(output);
-  t.is(output.exitCode, 0);
-  t.true(output.stderr.includes('Build Completed in .vercel/output'));
 
-  const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+  async function deployAndAssert() {
+    const output = await execute(['build'], { cwd: directory });
 
-  t.false(dir.includes('.vercel'));
-  t.true(dir.includes('index.txt'));
+    t.is(output.exitCode, 0);
+    t.true(output.stderr.includes('Build Completed in .vercel/output'));
+
+    const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+
+    t.false(dir.includes('.vercel'));
+    t.true(dir.includes('index.txt'));
+  }
+
+  // Test without zeroConfig
+  await deployAndAssert();
+
+  // Test with zeroConfig enabled
+  const vercelJsonPath = path.join(directory, 'vercel.json');
+  const vercelJsonData = JSON.parse(await fs.readFile(vercelJsonPath));
+  vercelJsonData.builds[0].config.zeroConfig = 'true';
+  await fs.writeFile(vercelJsonPath, JSON.stringify(vercelJsonData));
+
+  await deployAndAssert();
 });
 
 test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async t => {
