@@ -1,30 +1,14 @@
 const fs = require('fs');
 const path = require('path');
-const ms = require('ms');
-const { version } = require('../package.json');
 const { intoChunks, NUMBER_OF_CHUNKS } = require('../../../utils/chunk-tests');
 
 const {
-  packAndDeploy,
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
 jest.setTimeout(12 * 60 * 1000);
 
 module.exports = function setupTests(groupIndex) {
-  let builderUrl;
-  let builderUrlLastUpdated = 0;
-  const buildUtilsUrl = version.includes('canary') ? '@canary' : undefined;
-
-  beforeEach(async () => {
-    if (builderUrlLastUpdated < Date.now() - ms('30min')) {
-      const builderPath = path.resolve(__dirname, '..');
-      builderUrl = await packAndDeploy(builderPath);
-      builderUrlLastUpdated = Date.now();
-      console.log('builderUrl', builderUrl);
-    }
-  });
-
   const fixturesPath = path.resolve(__dirname, 'fixtures');
   const testsThatFailToBuild = new Map([
     [
@@ -61,10 +45,7 @@ module.exports = function setupTests(groupIndex) {
       // eslint-disable-next-line no-loop-func
       it(`should fail to build ${fixture}`, async () => {
         try {
-          await testDeployment(
-            { builderUrl, buildUtilsUrl },
-            path.join(fixturesPath, fixture)
-          );
+          await testDeployment({}, path.join(fixturesPath, fixture));
         } catch (err) {
           expect(err).toBeTruthy();
           expect(err.deployment).toBeTruthy();
@@ -75,10 +56,7 @@ module.exports = function setupTests(groupIndex) {
     }
     it(`should build ${fixture}`, async () => {
       await expect(
-        testDeployment(
-          { builderUrl, buildUtilsUrl },
-          path.join(fixturesPath, fixture)
-        )
+        testDeployment({}, path.join(fixturesPath, fixture))
       ).resolves.toBeDefined();
     });
   }

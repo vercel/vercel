@@ -265,7 +265,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
 }
 
 async function testDeployment(
-  { builderUrl, buildUtilsUrl },
+  { builderUrl = undefined, buildUtilsUrl = undefined },
   fixturePath,
   buildDelegate
 ) {

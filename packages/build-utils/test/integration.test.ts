@@ -1,21 +1,11 @@
 import path from 'path';
 import fs from 'fs-extra';
 import {
-  packAndDeploy,
   testDeployment,
   // @ts-ignore
 } from '../../../test/lib/deployment/test-deployment';
 
 jest.setTimeout(4 * 60 * 1000);
-
-const builderUrl = '@canary';
-let buildUtilsUrl: string;
-
-beforeAll(async () => {
-  const buildUtilsPath = path.resolve(__dirname, '..');
-  buildUtilsUrl = await packAndDeploy(buildUtilsPath);
-  console.log('buildUtilsUrl', buildUtilsUrl);
-});
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
@@ -42,10 +32,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   // eslint-disable-next-line no-loop-func
   it(`Should build "${fixture}"`, async () => {
     await expect(
-      testDeployment(
-        { builderUrl, buildUtilsUrl },
-        path.join(fixturesPath, fixture)
-      )
+      testDeployment({}, path.join(fixturesPath, fixture))
     ).resolves.toBeDefined();
   });
 }
@@ -68,10 +55,7 @@ for (const builder of buildersToTestWith) {
       // eslint-disable-next-line no-loop-func
       it(`Should build "${builder}/${fixture}"`, async () => {
         await expect(
-          testDeployment(
-            { builderUrl, buildUtilsUrl },
-            path.join(fixturesPath2, fixture)
-          )
+          testDeployment({}, path.join(fixturesPath2, fixture))
         ).resolves.toBeDefined();
       });
     }
