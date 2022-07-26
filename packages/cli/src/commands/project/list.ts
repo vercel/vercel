@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import terminalLink from 'terminal-link';
 import table from 'text-table';
+import { Project } from '../../types';
 import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
@@ -38,13 +39,7 @@ export default async function list(
     projects: projectList,
     pagination,
   }: {
-    projects: [
-      {
-        name: string;
-        updatedAt: number;
-        latestDeployments: [{ readyState: string }];
-      }
-    ];
+    projects: Project[];
     pagination: { count: number; next: number };
   } = await client.fetch(projectsUrl, {
     method: 'GET',
@@ -64,7 +59,7 @@ export default async function list(
     const tablePrint = table(
       terminalLink.isSupported
         ? [
-            ['Project Name', 'Updated'].map(header =>
+            ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
               chalk.bold(chalk.cyan(header))
             ),
             ...projectList
@@ -74,20 +69,21 @@ export default async function list(
                     chalk.bold(project.name),
                     getInspectUrl(contextName, project.name)
                   ),
+                  getLatestProdUrl(project),
                   chalk.gray(ms(Date.now() - project.updatedAt)),
                 ],
               ])
               .flat(),
           ]
         : [
-            ['Project Name', 'Manage', 'Updated'].map(header =>
+            ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
               chalk.bold(chalk.cyan(header))
             ),
             ...projectList
               .map(project => [
                 [
-                  project.name,
-                  chalk.bold(getInspectUrl(contextName, project.name)),
+                  chalk.bold(project.name),
+                  getLatestProdUrl(project),
                   chalk.gray(ms(Date.now() - project.updatedAt)),
                 ],
               ])
@@ -112,4 +108,12 @@ export default async function list(
 
 function getInspectUrl(contextName: string, projectName: string) {
   return `https://vercel.com/${contextName}/${projectName}`;
+}
+
+function getLatestProdUrl(project: Project): string {
+  const alias =
+    project.alias?.filter(al => al.deployment)?.[0]?.domain ||
+    project.alias?.[0]?.domain;
+  if (alias) return 'https://' + alias;
+  return '--';
 }
