@@ -72,18 +72,7 @@ export default async function main(client: Client) {
   subcommand = argv._[0] || 'list';
   const args = argv._.slice(1);
   const { output } = client;
-
-  let contextName = '';
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (error) {
-    if (error.code === 'NOT_AUTHORIZED' || error.code === 'TEAM_DELETED') {
-      output.error(error.message);
-      return 1;
-    }
-    throw error;
-  }
+  const { contextName } = await getScope(client);
 
   switch (subcommand) {
     case 'ls':
