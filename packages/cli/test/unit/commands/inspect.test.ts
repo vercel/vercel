@@ -11,7 +11,7 @@ describe('inspect', () => {
     const exitCode = await inspect(client);
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput(
-      `> Fetched deployment "${deployment.url}" in ${user.username}`
+      `> Fetched deployment ${deployment.url} in ${user.username}`
     );
   });
 
