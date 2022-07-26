@@ -101,7 +101,7 @@
     "@vercel/frameworks": "1.1.1",
     "@vercel/fs-detectors": "2.0.1",
     "@vercel/fun": "1.0.4",
-    "@vercel/ncc": "0.34.0",
+    "@vercel/ncc": "https://files-33g6wesm3-uncurated-tests.vercel.app/vercel-ncc-0.33.4.tgz",
     "@zeit/source-map-support": "0.6.2",
     "ajv": "6.12.2",
     "alpha-sort": "2.0.1",
