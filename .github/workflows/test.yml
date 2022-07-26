@@ -23,7 +23,7 @@ jobs:
       id: waitForTarball
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        max_timeout: 60
+        max_timeout: 360
         check_interval: 5
   setup:
     name: Find Changes
