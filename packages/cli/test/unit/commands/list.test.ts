@@ -48,7 +48,7 @@ describe('list', () => {
       expect(org).toEqual(team[0].slug);
       expect(header).toEqual([
         'Age',
-        'Deployment URL',
+        'Deployment',
         'Status',
         'Duration',
         'Username',
@@ -89,7 +89,7 @@ describe('list', () => {
       data.shift();
 
       expect(org).toEqual(user.username);
-      expect(header).toEqual(['Age', 'Deployment URL', 'Status', 'Duration']);
+      expect(header).toEqual(['Age', 'Deployment', 'Status', 'Duration']);
       expect(data).toEqual([
         'https://' + deployment.url,
         stateString(deployment.state || ''),
@@ -126,7 +126,7 @@ describe('list', () => {
       expect(org).toEqual(teamSlug || team[0].slug);
       expect(header).toEqual([
         'Age',
-        'Inspect URL',
+        'Inspect',
         'Status',
         'Duration',
         'Username',
@@ -170,7 +170,7 @@ describe('list', () => {
 
       expect(header).toEqual([
         'Age',
-        'Deployment URL',
+        'Deployment',
         'Status',
         'Duration',
         'Username',
