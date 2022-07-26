@@ -292,7 +292,7 @@ export default async function main(client: Client) {
 
   const headers = [
     'Age',
-    inspect ? 'Inspect' : 'Deployment',
+    inspect ? 'Inspect Deployment' : 'Deployment',
     'Status',
     'Duration',
   ];

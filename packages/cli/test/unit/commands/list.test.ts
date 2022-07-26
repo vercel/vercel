@@ -126,7 +126,7 @@ describe('list', () => {
       expect(org).toEqual(teamSlug || team[0].slug);
       expect(header).toEqual([
         'Age',
-        'Inspect',
+        'Inspect Deployment',
         'Status',
         'Duration',
         'Username',
