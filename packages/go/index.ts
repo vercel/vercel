@@ -622,7 +622,7 @@ async function waitForPortFile_(opts: {
         console.error('Could not delete port file: %j: %s', opts.portFile, err);
       });
       return { port };
-    } catch (err) {
+    } catch (err: any) {
       if (err.code !== 'ENOENT') {
         throw err;
       }

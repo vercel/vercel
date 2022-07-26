@@ -341,7 +341,7 @@ class Bridge {
         }
         try {
           req.setHeader(name, value);
-        } catch (err) {
+        } catch (/** @type {any} */ err) {
           console.error(`Skipping HTTP request header: "${name}: ${value}"`);
           console.error(err.message);
         }

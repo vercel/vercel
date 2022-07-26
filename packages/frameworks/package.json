@@ -23,6 +23,6 @@
     "@types/node-fetch": "2.5.8",
     "@vercel/routing-utils": "2.0.0",
     "ajv": "6.12.2",
-    "typescript": "4.3.4"
+    "typescript": "4.7.4"
   }
 }

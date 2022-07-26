@@ -26,6 +26,6 @@
     "@vercel/build-utils": "5.0.4",
     "@vercel/ncc": "0.24.0",
     "execa": "^1.0.0",
-    "typescript": "4.3.4"
+    "typescript": "4.7.4"
   }
 }
