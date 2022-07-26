@@ -5,6 +5,7 @@ import git from 'git-last-commit';
 import { exec } from 'child_process';
 import { GitMetadata, Project } from '../types';
 import { Output } from './output';
+import { errorToString } from './is-error';
 
 export async function createGitMeta(
   directory: string,
@@ -93,8 +94,8 @@ export function isDirty(directory: string, output: Output): Promise<boolean> {
 export async function parseGitConfig(configPath: string, output: Output) {
   try {
     return ini.parse(await fs.readFile(configPath, 'utf-8'));
-  } catch (error) {
-    output.debug(`Error while parsing repo data: ${error.message}`);
+  } catch (err: unknown) {
+    output.debug(`Error while parsing repo data: ${errorToString(err)}`);
   }
 }
 
