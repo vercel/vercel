@@ -21,6 +21,7 @@ import { getLinkedProject } from '../util/projects/link';
 import { ensureLink } from '../util/ensure-link';
 import getScope from '../util/get-scope';
 import { isAPIError } from '../util/errors-ts';
+import { isErrnoException } from '../util/is-error';
 
 const help = () => {
   console.log(`
@@ -153,13 +154,14 @@ export default async function main(client: Client) {
 
   try {
     ({ contextName, team } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+  } catch (err: unknown) {
+    if (
+      isErrnoException(err) &&
+      (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
+    ) {
       error(err.message);
       return 1;
     }
-
-    throw err;
   }
 
   // If user passed in a custom scope, update the current team & context name
