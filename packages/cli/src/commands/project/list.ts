@@ -30,6 +30,7 @@ export default async function list(
 
   let projectsUrl = '/v4/projects/?limit=20';
 
+  const inspect = argv['--inspect'] || false;
   const next = argv['--next'] || false;
   if (next) {
     projectsUrl += `&until=${next}`;
@@ -57,38 +58,29 @@ export default async function list(
 
   if (projectList.length > 0) {
     const tablePrint = table(
-      terminalLink.isSupported
-        ? [
-            ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
-              chalk.bold(chalk.cyan(header))
-            ),
-            ...projectList
-              .map(project => [
-                [
-                  terminalLink(
+      [
+        [
+          'Project Name',
+          inspect ? 'Inspect URL' : 'Latest Production URL',
+          'Updated',
+        ].map(header => chalk.bold(chalk.cyan(header))),
+        ...projectList
+          .map(project => [
+            [
+              terminalLink.isSupported
+                ? terminalLink(
                     chalk.bold(project.name),
                     getInspectUrl(contextName, project.name)
-                  ),
-                  getLatestProdUrl(project),
-                  chalk.gray(ms(Date.now() - project.updatedAt)),
-                ],
-              ])
-              .flat(),
-          ]
-        : [
-            ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
-              chalk.bold(chalk.cyan(header))
-            ),
-            ...projectList
-              .map(project => [
-                [
-                  chalk.bold(project.name),
-                  getLatestProdUrl(project),
-                  chalk.gray(ms(Date.now() - project.updatedAt)),
-                ],
-              ])
-              .flat(),
-          ],
+                  )
+                : chalk.bold(project.name),
+              inspect
+                ? getInspectUrl(contextName, project.name)
+                : getLatestProdUrl(project),
+              chalk.gray(ms(Date.now() - project.updatedAt)),
+            ],
+          ])
+          .flat(),
+      ],
       {
         align: ['l', 'l', 'l'],
         hsep: ' '.repeat(3),
@@ -97,10 +89,18 @@ export default async function list(
     ).replace(/^/gm, '  ');
     output.print(`\n${tablePrint}\n\n`);
 
+    if (!terminalLink.isSupported) {
+      output.log(
+        `To show the inspector URL for a project, type ${getCommandName(
+          'project ls --inspect'
+        )}.`
+      );
+    }
+
     if (pagination && pagination.count === 20) {
       const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d', '-y']);
       const nextCmd = `project ls${flags} --next ${pagination.next}`;
-      output.log(`To display the next page run ${getCommandName(nextCmd)}`);
+      output.log(`To display the next page, run ${getCommandName(nextCmd)}`);
     }
   }
   return 0;
