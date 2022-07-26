@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import { isErrnoException, isError, errorToString } from './util/is-error';
 
 try {
   // Test to see if cwd has been deleted before
   // importing 3rd party packages that might need cwd.
   process.cwd();
-} catch (e) {
-  if (e && e.message && e.message.includes('uv_cwd')) {
+} catch (err) {
+  if (isError(err) && err.message.includes('uv_cwd')) {
     console.error('Error! The current working directory does not exist.');
     process.exit(1);
   }
@@ -103,7 +104,7 @@ const main = async () => {
       },
       { permissive: true }
     );
-  } catch (err) {
+  } catch (err: unknown) {
     handleError(err);
     return 1;
   }
@@ -201,14 +202,11 @@ const main = async () => {
   // Ensure that the Vercel global configuration directory exists
   try {
     await mkdirp(VERCEL_DIR);
-  } catch (err) {
-    console.error(
-      error(
-        `${
-          'An unexpected error occurred while trying to create the ' +
-          `global directory "${hp(VERCEL_DIR)}" `
-        }${err.message}`
-      )
+  } catch (err: unknown) {
+    output.error(
+      `An unexpected error occurred while trying to create the global directory "${hp(
+        VERCEL_DIR
+      )}" ${errorToString(err)}`
     );
   }
 
@@ -217,13 +215,13 @@ const main = async () => {
 
   try {
     configExists = existsSync(VERCEL_CONFIG_PATH);
-  } catch (err) {
+  } catch (err: unknown) {
     console.error(
       error(
         `${
           'An unexpected error occurred while trying to find the ' +
           `config file "${hp(VERCEL_CONFIG_PATH)}" `
-        }${err.message}`
+        }${errorToString(err)}`
       )
     );
 
@@ -241,7 +239,7 @@ const main = async () => {
           `${
             'An unexpected error occurred while trying to read the ' +
             `config in "${hp(VERCEL_CONFIG_PATH)}" `
-          }${err.message}`
+          }${errorToString(err)}`
         )
       );
 
@@ -272,13 +270,13 @@ const main = async () => {
 
     try {
       configFiles.writeToConfigFile(config);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(
         error(
           `${
             'An unexpected error occurred while trying to write the ' +
             `default config to "${hp(VERCEL_CONFIG_PATH)}" `
-          }${err.message}`
+          }${errorToString(err)}`
         )
       );
 
@@ -290,13 +288,13 @@ const main = async () => {
 
   try {
     authConfigExists = existsSync(VERCEL_AUTH_CONFIG_PATH);
-  } catch (err) {
+  } catch (err: unknown) {
     console.error(
       error(
         `${
           'An unexpected error occurred while trying to find the ' +
           `auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-        }${err.message}`
+        }${errorToString(err)}`
       )
     );
 
@@ -317,13 +315,13 @@ const main = async () => {
   if (authConfigExists) {
     try {
       authConfig = configFiles.readAuthConfigFile();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(
         error(
           `${
             'An unexpected error occurred while trying to read the ' +
             `auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-          }${err.message}`
+          }${errorToString(err)}`
         )
       );
 
@@ -345,13 +343,13 @@ const main = async () => {
 
     try {
       configFiles.writeToAuthConfigFile(authConfig);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(
         error(
           `${
             'An unexpected error occurred while trying to write the ' +
             `default config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-          }${err.message}`
+          }${errorToString(err)}`
         )
       );
       return 1;
@@ -543,8 +541,8 @@ const main = async () => {
 
     try {
       user = await getUser(client);
-    } catch (err) {
-      if (err.code === 'NOT_AUTHORIZED') {
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
         output.prettyError({
           message: `You do not have access to the specified account`,
           link: 'https://err.sh/vercel/scope-not-accessible',
@@ -564,8 +562,8 @@ const main = async () => {
 
       try {
         teams = await getTeams(client);
-      } catch (err) {
-        if (err.code === 'not_authorized') {
+      } catch (err: unknown) {
+        if (isErrnoException(err) && err.code === 'not_authorized') {
           output.prettyError({
             message: `You do not have access to the specified team`,
             link: 'https://err.sh/vercel/scope-not-accessible',
@@ -594,8 +592,8 @@ const main = async () => {
     }
   }
 
-  const metric = metrics();
   let exitCode;
+  let metric: ReturnType<typeof metrics> | undefined;
   const eventCategory = 'Exit Code';
 
   try {
@@ -698,13 +696,14 @@ const main = async () => {
     if (shouldCollectMetrics) {
       const category = 'Command Invocation';
 
+      if (!metric) metric = metrics();
       metric
         .timing(category, targetCommand, end, pkg.version)
         .event(category, targetCommand, pkg.version)
         .send();
     }
-  } catch (err) {
-    if (err.code === 'ENOTFOUND') {
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
       // "request to https://api.vercel.com/v2/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
       const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
@@ -716,11 +715,16 @@ const main = async () => {
           )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
         );
       }
-      output.debug(err.stack);
+      if (typeof err.stack === 'string') {
+        output.debug(err.stack);
+      }
       return 1;
     }
 
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+    if (
+      isErrnoException(err) &&
+      (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
+    ) {
       output.prettyError(err);
       return 1;
     }
@@ -732,9 +736,10 @@ const main = async () => {
     }
 
     if (shouldCollectMetrics) {
+      if (!metric) metric = metrics();
       metric
         .event(eventCategory, '1', pkg.version)
-        .exception(err.message)
+        .exception(errorToString(err))
         .send();
     }
 
@@ -742,8 +747,10 @@ const main = async () => {
     // but instead show the message. Any error that is handled by this should
     // actually be handled in the sub command instead. Please make sure
     // that happens for anything that lands here. It should NOT bubble up to here.
-    if (err.code) {
-      output.debug(err.stack);
+    if (isErrnoException(err)) {
+      if (typeof err.stack === 'string') {
+        output.debug(err.stack);
+      }
       output.prettyError(err);
     } else {
       await reportError(Sentry, client, err);
@@ -757,6 +764,7 @@ const main = async () => {
   }
 
   if (shouldCollectMetrics) {
+    if (!metric) metric = metrics();
     metric.event(eventCategory, `${exitCode}`, pkg.version).send();
   }
 

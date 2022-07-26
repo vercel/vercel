@@ -53,13 +53,13 @@ At this point you can make modifications to the CLI source code and test them ou
 cd packages/cli
 ```
 
-From within the `packages/cli` directory, you can use the `ts-eager` command line tool to quickly excute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
+From within the `packages/cli` directory, you can use the "dev" script to quickly execute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
 
 ```bash
-npx ts-eager src
-npx ts-eager src login
-npx ts-eager src switch --debug
-npx ts-eager src dev
+yarn dev deploy
+yarn dev whoami
+yarn dev login
+yarn dev switch --debug
 ```
 
 When you are satisfied with your changes, make a commit and create a pull request!

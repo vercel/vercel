@@ -114,18 +114,7 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  let contextName: string | null = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   output.spinner(
     `Fetching deployment(s) ${ids

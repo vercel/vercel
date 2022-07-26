@@ -19,7 +19,7 @@ import {
   Meta,
 } from '../src';
 
-jest.setTimeout(7 * 1000);
+jest.setTimeout(10 * 1000);
 
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
   let result;
@@ -454,6 +454,7 @@ it('should return lockfileVersion 2 with npm7', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should not return lockfileVersion with yarn', async () => {
@@ -461,6 +462,7 @@ it('should not return lockfileVersion with yarn', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
   expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should return lockfileVersion 1 with older versions of npm', async () => {
@@ -468,6 +470,7 @@ it('should return lockfileVersion 1 with older versions of npm', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(1);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should detect npm Workspaces', async () => {
@@ -475,20 +478,45 @@ it('should detect npm Workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
-it('should detect pnpm', async () => {
+it('should detect pnpm without workspace', async () => {
   const fixture = path.join(__dirname, 'fixtures', '22-pnpm');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
-it('should detect pnpm Workspaces', async () => {
-  const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/a');
+it('should detect pnpm with workspaces', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/c');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
+it('should detect package.json in nested backend', async () => {
+  const fixture = path.join(
+    __dirname,
+    '../../node/test/fixtures/18.1-nested-packagejson/backend'
+  );
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('yarn');
+  expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
+it('should detect package.json in nested frontend', async () => {
+  const fixture = path.join(
+    __dirname,
+    '../../node/test/fixtures/18.1-nested-packagejson/frontend'
+  );
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('yarn');
+  expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
