@@ -20,6 +20,16 @@ describe('project', () => {
         ...defaultProject,
       });
       useDeployment({ creator: user });
+      project.project.alias = [
+        {
+          configuredBy: 'A',
+          configuredChangedAt: 1571239348998,
+          createdAt: 1571239348998,
+          domain: 'foobar.com',
+          redirect: null,
+          target: 'PRODUCTION',
+        },
+      ];
 
       client.setArgv('project', 'ls');
       await projects(client);
@@ -31,7 +41,11 @@ describe('project', () => {
       data.pop();
 
       expect(org).toEqual(user.username);
-      expect(header).toEqual(['Project Name', 'Manage', 'Updated']);
+      expect(header).toEqual([
+        'Project Name',
+        'Latest Production URL',
+        'Updated',
+      ]);
       expect(data).toEqual([
         project.project.name,
         `https://vercel.com/${org}/${project.project.name}`,
