@@ -46,8 +46,9 @@ export async function downloadFile(
 ): Promise<FileFsRef> {
   const { mode } = file;
 
-  // if the source is a symlink, try to create it instead of copying the file
-  // however, if the symlink creation fails (e.g. Windows), fallback to copying
+  // If the source is a symlink, try to create it instead of copying the file.
+  // Note: creating symlinks on Windows requires admin priviliges or symlinks
+  // enabled in the group policy. We may want to improve the error message.
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
 
