@@ -1,6 +1,6 @@
-import { Output } from '../output';
-import Client from '../client';
-import { ProjectEnvVariable, ProjectEnvTarget } from '../../types';
+import { Output } from '../output/index.js';
+import Client from '../client.js';
+import { ProjectEnvVariable, ProjectEnvTarget } from '../../types.js';
 import { URLSearchParams } from 'url';
 
 /** The CLI command that was used that needs the environment variables. */

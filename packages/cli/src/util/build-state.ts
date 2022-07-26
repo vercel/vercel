@@ -1,4 +1,4 @@
-import { Build } from '../types';
+import { Build } from '../types.js';
 
 export const isReady = ({ readyState }: Pick<Build, 'readyState'>) =>
   readyState === 'READY';

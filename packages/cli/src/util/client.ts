@@ -1,4 +1,4 @@
-import { bold } from 'chalk';
+import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { EventEmitter } from 'events';
 import { URLSearchParams } from 'url';
@@ -23,6 +23,8 @@ import type {
 } from '../types.js';
 import { sharedPromise } from './promise.js';
 import { APIError } from './errors-ts.js';
+
+const { bold } = chalk;
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;

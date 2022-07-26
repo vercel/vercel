@@ -1,4 +1,4 @@
-import { NowError } from './now-error';
+import { NowError } from './now-error.js';
 
 interface SchemaValidationFailedMeta {
   message: string;

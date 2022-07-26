@@ -1,8 +1,8 @@
 import chalk from 'chalk';
-import renderLink from './link';
-import wait, { StopSpinner } from './wait';
-import type { WritableTTY } from '../../types';
-import { errorToString } from '../is-error';
+import renderLink from './link.js';
+import wait, { StopSpinner } from './wait.js';
+import type { WritableTTY } from '../../types.js';
+import { errorToString } from '../is-error.js';
 
 export interface OutputOptions {
   debug?: boolean;

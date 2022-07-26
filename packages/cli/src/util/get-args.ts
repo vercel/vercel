@@ -1,5 +1,5 @@
 import arg from 'arg';
-import getCommonArgs from './arg-common';
+import getCommonArgs from './arg-common.js';
 
 type ArgOptions = {
   permissive?: boolean;

@@ -1,8 +1,10 @@
 import { Stats } from 'fs';
+import fs from 'fs-extra';
 import { sep, dirname, join, resolve } from 'path';
-import { lstat, readlink, readFile, realpath } from 'fs-extra';
-import { isCanary } from './is-canary';
-import { getPkgName } from './pkg-name';
+import { isCanary } from './is-canary.js';
+import { getPkgName } from './pkg-name.js';
+
+const { lstat, readlink, readFile, realpath } = fs;
 
 async function isYarn(): Promise<boolean> {
   let s: Stats;

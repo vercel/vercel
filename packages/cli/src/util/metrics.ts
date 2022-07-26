@@ -1,10 +1,12 @@
 import crypto from 'crypto';
 import ua from 'universal-analytics';
-import { getPlatformEnv } from '@vercel/build-utils';
+import buildUtils from '@vercel/build-utils';
 
-import userAgent from './ua-browser';
-import { GA_TRACKING_ID } from './constants';
-import * as configFiles from './config/files';
+import userAgent from './ua-browser.js';
+import { GA_TRACKING_ID } from './constants.js';
+import * as configFiles from './config/files.js';
+
+const { getPlatformEnv } = buildUtils;
 
 const config: any = configFiles.getConfigFilePath();
 

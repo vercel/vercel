@@ -1,8 +1,8 @@
-import Client from './client';
-import getUser from './get-user';
-import getTeamById from './teams/get-team-by-id';
-import { TeamDeleted } from './errors-ts';
-import { Team } from '../types';
+import Client from './client.js';
+import getUser from './get-user.js';
+import getTeamById from './teams/get-team-by-id.js';
+import { TeamDeleted } from './errors-ts.js';
+import type { Team } from '../types.js';
 
 interface GetScopeOptions {
   getTeam?: boolean;

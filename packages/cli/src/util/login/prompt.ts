@@ -1,13 +1,13 @@
-import Client from '../client';
-import error from '../output/error';
-import listInput from '../input/list';
-import { getCommandName } from '../pkg-name';
-import { LoginResult, SAMLError } from './types';
-import doSamlLogin from './saml';
-import doEmailLogin from './email';
-import doGithubLogin from './github';
-import doGitlabLogin from './gitlab';
-import doBitbucketLogin from './bitbucket';
+import Client from '../client.js';
+import error from '../output/error.js';
+import listInput from '../input/list.js';
+import { getCommandName } from '../pkg-name.js';
+import { LoginResult, SAMLError } from './types.js';
+import doSamlLogin from './saml.js';
+import doEmailLogin from './email.js';
+import doGithubLogin from './github.js';
+import doGitlabLogin from './gitlab.js';
+import doBitbucketLogin from './bitbucket.js';
 
 export default async function prompt(
   client: Client,

@@ -1,6 +1,6 @@
-import Client from './client';
-import { User } from '../types';
-import { APIError, InvalidToken, MissingUser } from './errors-ts';
+import Client from './client.js';
+import { User } from '../types.js';
+import { APIError, InvalidToken, MissingUser } from './errors-ts.js';
 
 export default async function getUser(client: Client) {
   try {

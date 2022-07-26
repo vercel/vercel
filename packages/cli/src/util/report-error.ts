@@ -1,8 +1,8 @@
-import Client from './client';
-import getScope from './get-scope';
-import getArgs from './get-args';
-import { isError } from './is-error';
-import type { Team, User } from '../types';
+import Client from './client.js';
+import getScope from './get-scope.js';
+import getArgs from './get-args.js';
+import { isError } from './is-error.js';
+import type { Team, User } from '../types.js';
 
 export default async function reportError(
   sentry: typeof import('@sentry/node'),

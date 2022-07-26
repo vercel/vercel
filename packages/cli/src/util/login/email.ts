@@ -1,13 +1,13 @@
 import ms from 'ms';
-import sleep from '../sleep';
-import highlight from '../output/highlight';
-import eraseLines from '../output/erase-lines';
-import verify from './verify';
-import executeLogin from './login';
-import Client from '../client';
-import { LoginResult } from './types';
-import { isAPIError } from '../errors-ts';
-import { errorToString } from '../is-error';
+import sleep from '../sleep.js';
+import highlight from '../output/highlight.js';
+import eraseLines from '../output/erase-lines.js';
+import verify from './verify.js';
+import executeLogin from './login.js';
+import Client from '../client.js';
+import { LoginResult } from './types.js';
+import { isAPIError } from '../errors-ts.js';
+import { errorToString } from '../is-error.js';
 
 export default async function doEmailLogin(
   client: Client,

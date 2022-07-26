@@ -1,7 +1,7 @@
-import Client from '../client';
-import { InvalidEmail, AccountNotFound, isAPIError } from '../errors-ts';
-import { errorToString } from '../is-error';
-import { LoginData } from './types';
+import Client from '../client.js';
+import { InvalidEmail, AccountNotFound, isAPIError } from '../errors-ts.js';
+import { errorToString } from '../is-error.js';
+import type { LoginData } from './types.js';
 
 export default async function login(
   client: Client,

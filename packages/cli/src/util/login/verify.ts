@@ -1,8 +1,8 @@
 import { URL } from 'url';
-import Client from '../client';
 import { hostname } from 'os';
-import { getTitleName } from '../pkg-name';
-import { LoginResultSuccess } from './types';
+import Client from '../client.js';
+import { getTitleName } from '../pkg-name.js';
+import type { LoginResultSuccess } from './types.js';
 
 export default function verify(
   client: Client,

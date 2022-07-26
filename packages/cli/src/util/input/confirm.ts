@@ -1,11 +1,11 @@
-import Client from '../client';
+import Client from '../client.js';
 
 export default async function confirm(
   client: Client,
   message: string,
   preferred: boolean
 ): Promise<boolean> {
-  require('./patch-inquirer');
+  await import('./patch-inquirer.js');
 
   const answers = await client.prompt({
     type: 'confirm',

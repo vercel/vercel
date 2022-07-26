@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import chalk, { ChalkInstance } from 'chalk';
 
 const colors = [
   chalk.cyan,
@@ -9,7 +9,7 @@ const colors = [
 ];
 
 let childIndex = 0;
-const packageNameColorCache = new Map<string, chalk.Chalk>();
+const packageNameColorCache = new Map<string, ChalkInstance>();
 
 /** Return a consistent (gradient) color for a given package name */
 export function getColorForPkgName(pkgName: string) {

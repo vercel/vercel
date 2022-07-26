@@ -1,4 +1,4 @@
-import { ProjectEnvTarget } from '../../types';
+import { ProjectEnvTarget } from '../../types.js';
 
 function envTargets(): string[] {
   return Object.values(ProjectEnvTarget);

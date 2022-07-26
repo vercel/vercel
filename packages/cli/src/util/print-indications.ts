@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import { Response } from 'node-fetch';
-import Client from './client';
-import linkStyle from './output/link';
-import { emoji, EmojiLabel, prependEmoji } from './emoji';
+import Client from './client.js';
+import linkStyle from './output/link.js';
+import { emoji, EmojiLabel, prependEmoji } from './emoji.js';
 
 export default function printIndications(client: Client, res: Response) {
   const indications = new Set(['warning', 'notice', 'tip']);

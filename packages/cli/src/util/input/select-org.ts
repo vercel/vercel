@@ -1,7 +1,7 @@
-import Client from '../client';
-import getUser from '../get-user';
-import getTeams from '../teams/get-teams';
-import { User, Team, Org } from '../../types';
+import Client from '../client.js';
+import getUser from '../get-user.js';
+import getTeams from '../teams/get-teams.js';
+import { User, Team, Org } from '../../types.js';
 
 type Choice = { name: string; value: Org };
 
@@ -10,7 +10,8 @@ export default async function selectOrg(
   question: string,
   autoConfirm?: boolean
 ): Promise<Org> {
-  require('./patch-inquirer');
+  await import('./patch-inquirer.js');
+
   const {
     output,
     config: { currentTeam },

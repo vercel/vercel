@@ -4,18 +4,18 @@ import execa from 'execa';
 import plural from 'pluralize';
 import inquirer from 'inquirer';
 import { resolve } from 'path';
-import chalk, { Chalk } from 'chalk';
+import chalk, { ChalkInstance } from 'chalk';
 import { URLSearchParams, parse } from 'url';
 
-import sleep from '../../util/sleep';
-import formatDate from '../../util/format-date';
-import link from '../../util/output/link';
-import logo from '../../util/output/logo';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
-import { getPkgName } from '../../util/pkg-name';
-import { Deployment, PaginationOptions } from '../../types';
-import { normalizeURL } from '../../util/bisect/normalize-url';
+import sleep from '../../util/sleep.js';
+import formatDate from '../../util/format-date.js';
+import link from '../../util/output/link.js';
+import logo from '../../util/output/logo.js';
+import getArgs from '../../util/get-args.js';
+import Client from '../../util/client.js';
+import { getPkgName } from '../../util/pkg-name.js';
+import { Deployment, PaginationOptions } from '../../types.js';
+import { normalizeURL } from '../../util/bisect/normalize-url.js';
 
 interface DeploymentV6
   extends Pick<
@@ -298,7 +298,7 @@ export default async function main(client: Client): Promise<number> {
         return 1;
       }
       const { exitCode } = proc;
-      let color: Chalk;
+      let color: ChalkInstance;
       if (exitCode === 0) {
         color = chalk.green;
         action = 'good';

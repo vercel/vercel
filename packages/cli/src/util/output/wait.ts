@@ -1,6 +1,6 @@
 import ora from 'ora';
 import chalk from 'chalk';
-import eraseLines from './erase-lines';
+import eraseLines from './erase-lines.js';
 
 export interface StopSpinner {
   (): void;
