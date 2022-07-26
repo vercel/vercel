@@ -5,7 +5,8 @@ export function readOutputStream(
   length: number = 3
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
+    let output: string = '';
+    let lines = 0;
     const timeout = setTimeout(() => {
       reject(
         `Was waiting for ${length} lines, but only received ${chunks.length}`
@@ -14,10 +15,11 @@ export function readOutputStream(
 
     client.stderr.resume();
     client.stderr.on('data', chunk => {
-      chunks.push(chunk);
-      if (chunks.length === length) {
+      output += chunk.toString();
+      lines++;
+      if (lines === length) {
         clearTimeout(timeout);
-        resolve(chunks.toString().replace(/,/g, ''));
+        resolve(output);
       }
     });
     client.stderr.on('error', reject);

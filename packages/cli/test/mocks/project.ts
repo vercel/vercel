@@ -1,5 +1,6 @@
 import { client } from './client';
 import { Project } from '../../src/types';
+import { formatProvider } from '../../src/util/projects/connect-git-provider';
 
 const envs = [
   {
@@ -155,6 +156,10 @@ export function useProject(project: Partial<Project> = defaultProject) {
       return;
     }
 
+    res.json({ envs });
+  });
+  client.scenario.post(`/v8/projects/${project.id}/env`, (req, res) => {
+    envs.push(req.body);
     res.json({ envs });
   });
   client.scenario.post(`/v4/projects/${project.id}/link`, (req, res) => {

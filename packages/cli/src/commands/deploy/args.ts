@@ -15,6 +15,7 @@ export const help = () => `
       )}
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
+      git                              Manage Git provider repository for your current Project
       init                 [example]   Initialize an example project
       ls | list            [app]       Lists deployments
       inspect              [id]        Displays information related to a deployment

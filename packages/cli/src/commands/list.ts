@@ -20,6 +20,7 @@ import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
 import { ensureLink } from '../util/ensure-link';
 import getScope from '../util/get-scope';
+import { isAPIError } from '../util/errors-ts';
 
 const help = () => {
   console.log(`
@@ -172,6 +173,8 @@ export default async function main(client: Client) {
 
   const { currentTeam } = config;
 
+  ({ contextName } = await getScope(client));
+
   const nextTimestamp = argv['--next'];
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
@@ -249,8 +252,8 @@ export default async function main(client: Client) {
 
     try {
       await now.findDeployment(app);
-    } catch (err) {
-      if (err.status === 404) {
+    } catch (err: unknown) {
+      if (isAPIError(err) && err.status === 404) {
         debug('Ignore findDeployment 404');
       } else {
         throw err;
