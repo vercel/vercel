@@ -76,7 +76,8 @@ import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
 import { Config, streamToBuffer, debug } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
-import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
+import { EdgeRuntime, runServer } from 'edge-runtime';
+import type { EdgeContext } from '@edge-runtime/vm';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import esbuild from 'esbuild';
@@ -236,7 +237,7 @@ async function createEdgeRuntime(userCode: string | undefined) {
 
     const edgeRuntime = new EdgeRuntime({
       initialCode: userCode,
-      extend: (context: Primitives) => {
+      extend: (context: EdgeContext) => {
         Object.assign(context, {
           __dirname: '',
           module: {
