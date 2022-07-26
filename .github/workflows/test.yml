@@ -12,24 +12,12 @@ env:
   NODE_VERSION: '14'
 
 jobs:
-  tarball:
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
-    outputs:
-      dpl-url: ${{ steps.waitForTarball.outputs.url }}
-    steps:
-    - name: Wait for Tarball
-      uses: patrickedqvist/wait-for-vercel-preview@v1.2.0
-      id: waitForTarball
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        max_timeout: 360
-        check_interval: 5
   setup:
     name: Find Changes
     runs-on: ubuntu-latest
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
+      dpl-url: ${{ steps.waitForTarball.outputs.url }}
     steps:
       - uses: actions/checkout@v2
       - run: git --version
@@ -46,6 +34,12 @@ jobs:
           echo "Files to test:"
           echo "$TESTS_ARRAY"
           echo "::set-output name=tests::$TESTS_ARRAY"
+      - uses: patrickedqvist/wait-for-vercel-preview@v1.2.0
+        id: waitForTarball
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 360
+          check_interval: 5
 
   test:
     timeout-minutes: 120
@@ -90,7 +84,7 @@ jobs:
         run: node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
-          VERCEL_CLI_VERSION: ${{ needs.tarball.outputs['dpl-url'] }}
+          VERCEL_CLI_VERSION: ${{ needs.setup.outputs['dpl-url'] }}
           VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
           VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}
           FORCE_COLOR: '1'
