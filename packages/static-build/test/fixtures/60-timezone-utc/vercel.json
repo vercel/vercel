@@ -6,8 +6,5 @@
       "use": "@vercel/static-build",
       "config": { "distDir": "." }
     }
-  ],
-  "probes": [
-    { "path": "/index.txt", "mustContain": "RANDOMNESS_PLACEHOLDER:offset:0" }
   ]
 }

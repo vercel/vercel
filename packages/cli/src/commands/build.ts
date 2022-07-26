@@ -477,6 +477,8 @@ async function doBuild(
         )
       );
     } catch (err: any) {
+      output.debug(`Error (writing to builds.json): ${err}`);
+
       const writeConfigJsonPromise = fs.writeJSON(
         join(outputDir, 'config.json'),
         { version: 3 },
