@@ -19,8 +19,8 @@ describe('path handling', () => {
           name: 'now-client-tests-v2',
         }
       );
-    } catch (e) {
-      expect(e.code).toEqual('invalid_path');
+    } catch (err: any) {
+      expect(err.code).toEqual('invalid_path');
     }
   });
 
@@ -35,8 +35,8 @@ describe('path handling', () => {
           name: 'now-client-tests-v2',
         }
       );
-    } catch (e) {
-      expect(e.code).toEqual('invalid_path');
+    } catch (err: any) {
+      expect(err.code).toEqual('invalid_path');
     }
   });
 });
