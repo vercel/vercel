@@ -42,7 +42,7 @@
     "node": ">= 14"
   },
   "dependencies": {
-"@vercel/build-utils": "5.0.4",
+    "@vercel/build-utils": "5.0.4",
     "@vercel/go": "2.0.8",
     "@vercel/hydrogen": "0.0.5",
     "@vercel/next": "3.1.8",
