@@ -30,7 +30,7 @@ describe('Test `getPlatformEnv()`', () => {
       process.env.NOW_FOO = 'bar';
       process.env.VERCEL_FOO = 'baz';
       getPlatformEnv('FOO');
-    } catch (_err) {
+    } catch (_err: any) {
       err = _err;
     } finally {
       delete process.env.NOW_FOO;
