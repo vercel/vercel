@@ -91,7 +91,7 @@ export default async function list(
 
     if (!terminalLink.isSupported) {
       output.log(
-        `To show the inspector URL for a project, type ${getCommandName(
+        `To show the inspector URL instead of the latest deployment, type ${getCommandName(
           'project ls --inspect'
         )}.`
       );
