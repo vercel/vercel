@@ -207,12 +207,12 @@ async function compile(
           fsCache.set(relPath, entry);
           sourceCache.set(relPath, source);
           return source.toString();
-        } catch (e) {
-          if (e.code === 'ENOENT' || e.code === 'EISDIR') {
+        } catch (err: any) {
+          if (err.code === 'ENOENT' || err.code === 'EISDIR') {
             sourceCache.set(relPath, null);
             return null;
           }
-          throw e;
+          throw err;
         }
       },
     }
@@ -567,7 +567,7 @@ async function doTypeCheck(
     const json = JSON.stringify(tsconfig, null, '\t');
     await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
-  } catch (err) {
+  } catch (err: any) {
     // Don't throw if the file already exists
     if (err.code !== 'EEXIST') {
       throw err;

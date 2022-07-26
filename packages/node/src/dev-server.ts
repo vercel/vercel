@@ -50,7 +50,7 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
   if (tsconfig) {
     try {
       config = ts.readConfigFile(tsconfig, ts.sys.readFile).config;
-    } catch (err) {
+    } catch (err: any) {
       if (err.code !== 'ENOENT') {
         console.error(`Error while parsing "${tsconfig}"`);
         throw err;
@@ -219,11 +219,11 @@ async function compileUserCode(
           }));
         }
       })`;
-  } catch (error) {
+  } catch (err: any) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
     console.error(`Failed to instantiate edge runtime.`);
-    logError(error);
+    logError(err);
     return undefined;
   }
 }
@@ -254,11 +254,11 @@ async function createEdgeRuntime(userCode: string | undefined) {
     exitHook(server.close);
 
     return server;
-  } catch (error) {
+  } catch (err: any) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
     console.error('Failed to instantiate edge runtime.');
-    logError(error);
+    logError(err);
     return undefined;
   }
 }
@@ -364,9 +364,9 @@ async function main() {
     handleEvent = await createEventHandler(entrypoint!, config, {
       shouldAddHelpers,
     });
-  } catch (error) {
-    logError(error);
-    handlerEventError = error;
+  } catch (err: any) {
+    logError(err);
+    handlerEventError = err;
   }
 
   const address = proxyServer.address();
@@ -418,9 +418,9 @@ export async function onDevRequest(
       }
     }
     res.end(Buffer.from(result.body, result.encoding));
-  } catch (error) {
+  } catch (err: any) {
     res.statusCode = 500;
-    res.end(error.stack);
+    res.end(err.stack);
   }
 }
 
