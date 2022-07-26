@@ -25,8 +25,8 @@ export default async function createDeploy(
       createArgs,
       org,
       isSettingUpProject,
-      cwd,
-      archive
+      archive,
+      cwd
     );
   } catch (err: unknown) {
     if (ERRORS_TS.isAPIError(err)) {
