@@ -40,6 +40,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 360
           check_interval: 5
+        run: echo "Deployment URL" && echo ${{steps.waitForTarball.outputs.url}}
 
   test:
     timeout-minutes: 120
@@ -81,7 +82,7 @@ jobs:
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
-        run: node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
+        run: echo ${{ needs.setup.outputs['dpl-url'] }}; node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs['dpl-url'] }}
