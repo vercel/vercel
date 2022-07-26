@@ -38,6 +38,30 @@ describe('project', () => {
       ]);
       expect(data).toEqual([project.project.name, `--`]);
     });
+    it('should use inspector url', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      const project = useProject({
+        ...defaultProject,
+      });
+      useDeployment({ creator: user });
+
+      client.setArgv('project', 'ls', '--inspect');
+      await projects(client);
+
+      const output = await readOutputStream(client, 2);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      data.pop();
+
+      expect(org).toEqual(user.username);
+      expect(header).toEqual(['Project Name', 'Inspect Project', 'Updated']);
+      expect(data).toEqual([
+        project.project.name,
+        `https://vercel.com/${org}/${project.project.name}`,
+      ]);
+    });
   });
   describe('add', () => {
     it('should add a project', async () => {
