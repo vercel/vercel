@@ -12,6 +12,8 @@ import Client from '../util/client';
 import { getDeployment } from '../util/get-deployment';
 import { Deployment } from '@vercel/client';
 import { Build } from '../types';
+import { isErrnoException } from '../util/is-error';
+import { isAPIError } from '../util/errors-ts';
 
 const help = () => {
   console.log(`
@@ -75,8 +77,11 @@ export default async function main(client: Client) {
 
   try {
     ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+  } catch (err: unknown) {
+    if (
+      isErrnoException(err) &&
+      (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
+    ) {
       error(err.message);
       return 1;
     }
@@ -92,22 +97,24 @@ export default async function main(client: Client) {
 
   try {
     deployment = await getDeployment(client, deploymentIdOrHost);
-  } catch (err) {
-    if (err.status === 404) {
-      error(
-        `Failed to find deployment "${deploymentIdOrHost}" in ${chalk.bold(
-          contextName
-        )}`
-      );
-      return 1;
-    }
-    if (err.status === 403) {
-      error(
-        `No permission to access deployment "${deploymentIdOrHost}" in ${chalk.bold(
-          contextName
-        )}`
-      );
-      return 1;
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.status === 404) {
+        error(
+          `Failed to find deployment "${deploymentIdOrHost}" in ${chalk.bold(
+            contextName
+          )}`
+        );
+        return 1;
+      }
+      if (err.status === 403) {
+        error(
+          `No permission to access deployment "${deploymentIdOrHost}" in ${chalk.bold(
+            contextName
+          )}`
+        );
+        return 1;
+      }
     }
     // unexpected
     throw err;
