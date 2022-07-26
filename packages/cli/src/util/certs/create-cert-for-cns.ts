@@ -15,17 +15,19 @@ export default async function createCertForCns(
   try {
     const certificate = await issueCert(client, cns);
     return certificate;
-  } catch (error) {
-    if (error.code === 'forbidden') {
-      return new ERRORS.DomainPermissionDenied(error.domain, context);
+  } catch (err: unknown) {
+    if (ERRORS.isAPIError(err)) {
+      if (err.code === 'forbidden') {
+        return new ERRORS.DomainPermissionDenied(err.domain, context);
+      }
+
+      const mappedError = mapCertError(err, cns);
+      if (mappedError) {
+        return mappedError;
+      }
     }
 
-    const mappedError = mapCertError(error, cns);
-    if (mappedError) {
-      return mappedError;
-    }
-
-    throw error;
+    throw err;
   } finally {
     output.stopSpinner();
   }

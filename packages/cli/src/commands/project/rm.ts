@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
+import { isAPIError } from '../../util/errors-ts';
 import confirm from '../../util/input/confirm';
 import { getCommandName } from '../../util/pkg-name';
 
@@ -32,8 +33,8 @@ export default async function rm(client: Client, args: string[]) {
     await client.fetch(`/v2/projects/${e(name)}`, {
       method: 'DELETE',
     });
-  } catch (err) {
-    if (err.status === 404) {
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status === 404) {
       client.output.error('No such project exists');
       return 1;
     }

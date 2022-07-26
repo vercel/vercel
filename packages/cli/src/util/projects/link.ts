@@ -8,7 +8,7 @@ import { promisify } from 'util';
 
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import Client from '../client';
-import { InvalidToken, ProjectNotFound } from '../errors-ts';
+import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../teams/get-team-by-id';
 import { Output } from '../output';
@@ -18,6 +18,7 @@ import { prependEmoji, emoji, EmojiLabel } from '../emoji';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
+import { isErrnoException, isError } from '../is-error';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -83,20 +84,24 @@ export async function getLinkFromDir<T = ProjectLink>(
     }
 
     return link;
-  } catch (error) {
+  } catch (err: unknown) {
     // link file does not exists, project is not linked
-    if (['ENOENT', 'ENOTDIR'].includes(error.code)) {
+    if (
+      isErrnoException(err) &&
+      err.code &&
+      ['ENOENT', 'ENOTDIR'].includes(err.code)
+    ) {
       return null;
     }
 
     // link file can't be read
-    if (error.name === 'SyntaxError') {
+    if (isError(err) && err.name === 'SyntaxError') {
       throw new Error(
         `Project Settings could not be retrieved. To link your project again, remove the ${dir} directory.`
       );
     }
 
-    throw error;
+    throw err;
   }
 }
 
@@ -149,8 +154,8 @@ export async function getLinkedProject(
       getOrgById(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
-  } catch (err) {
-    if (err && err.status === 403) {
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status === 403) {
       output.stopSpinner();
 
       if (err.missingToken) {
@@ -224,13 +229,13 @@ export async function linkFolderToProject(
 
   try {
     await ensureDir(join(path, VERCEL_DIR));
-  } catch (error) {
-    if (error.code === 'ENOTDIR') {
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOTDIR') {
       // folder couldn't be created because
       // we're deploying a static file
       return;
     }
-    throw error;
+    throw err;
   }
 
   await writeFile(

@@ -25,23 +25,13 @@ export default async function ls(
 ) {
   const { output } = client;
   const { '--next': nextTimestamp } = opts;
-  let contextName = null;
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
     output.error('Please provide a number for flag --next');
     return 1;
   }
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const lsStamp = stamp();
 

@@ -38,6 +38,7 @@ import {
   ConflictingPathSegment,
   BuildError,
   NotDomainOwner,
+  isAPIError,
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
@@ -66,6 +67,7 @@ import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { createGitMeta } from '../../util/create-git-meta';
 import { parseEnv } from '../../util/parse-env';
+import { errorToString, isErrnoException, isError } from '../../util/is-error';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -285,8 +287,11 @@ export default async (client: Client) => {
         'Which scope do you want to deploy to?',
         autoConfirm
       );
-    } catch (err) {
-      if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+    } catch (err: unknown) {
+      if (
+        isErrnoException(err) &&
+        (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
+      ) {
         output.error(err.message);
         return 1;
       }
@@ -465,8 +470,8 @@ export default async (client: Client) => {
   try {
     await addProcessEnv(log, deploymentEnv);
     await addProcessEnv(log, deploymentBuildEnv);
-  } catch (err) {
-    error(err.message);
+  } catch (err: unknown) {
+    error(errorToString(err));
     return 1;
   }
 
@@ -627,8 +632,10 @@ export default async (client: Client) => {
       error('Uploading failed. Please try again.');
       return 1;
     }
-  } catch (err) {
-    debug(`Error: ${err}\n${err.stack}`);
+  } catch (err: unknown) {
+    if (isError(err)) {
+      debug(`Error: ${err}\n${err.stack}`);
+    }
 
     if (err instanceof NotDomainOwner) {
       output.error(err.message);
@@ -695,13 +702,7 @@ export default async (client: Client) => {
       return 1;
     }
 
-    if (err.keyword === 'additionalProperties' && err.dataPath === '.scale') {
-      const { additionalProperty = '' } = err.params || {};
-      const message = `Invalid DC name for the scale option: ${additionalProperty}`;
-      error(message);
-    }
-
-    if (err.code === 'size_limit_exceeded') {
+    if (isAPIError(err) && err.code === 'size_limit_exceeded') {
       const { sizeLimit = 0 } = err;
       const message = `File size limit exceeded (${bytes(sizeLimit)})`;
       error(message);

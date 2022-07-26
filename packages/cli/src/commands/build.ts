@@ -189,25 +189,6 @@ export default async function main(client: Client): Promise<number> {
     project = await readProjectSettings(join(cwd, VERCEL_DIR));
   }
 
-  // TODO: load env vars from the API, fall back to local files if that fails
-  const envPath = await checkExists([
-    join(cwd, VERCEL_DIR, `.env.${target}.local`),
-    join(cwd, `.env`),
-  ]);
-  if (envPath) {
-    dotenv.config({ path: envPath, debug: client.output.isDebugEnabled() });
-    output.log(`Loaded env from "${relative(cwd, envPath)}"`);
-  }
-
-  // For Vercel Analytics support
-  if (project.settings.analyticsId) {
-    process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
-  }
-
-  // Some build processes use these env vars to platform detect Vercel
-  process.env.VERCEL = '1';
-  process.env.NOW_BUILDER = '1';
-
   // Delete output directory from potential previous build
   const outputDir = argv['--output']
     ? resolve(argv['--output'])
@@ -220,7 +201,36 @@ export default async function main(client: Client): Promise<number> {
     argv: process.argv,
   };
 
+  const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
+
   try {
+    const envPath = join(cwd, VERCEL_DIR, `.env.${target}.local`);
+    // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
+    const dotenvResult = dotenv.config({
+      path: envPath,
+      debug: client.output.isDebugEnabled(),
+    });
+    if (dotenvResult.error) {
+      output.debug(
+        `Failed loading environment variables: ${dotenvResult.error}`
+      );
+    } else if (dotenvResult.parsed) {
+      for (const key of Object.keys(dotenvResult.parsed)) {
+        envToUnset.add(key);
+      }
+      output.debug(`Loaded environment variables from "${envPath}"`);
+    }
+
+    // For Vercel Analytics support
+    if (project.settings.analyticsId) {
+      envToUnset.add('VERCEL_ANALYTICS_ID');
+      process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
+    }
+
+    // Some build processes use these env vars to platform detect Vercel
+    process.env.VERCEL = '1';
+    process.env.NOW_BUILDER = '1';
+
     return await doBuild(client, project, buildsJson, cwd, outputDir);
   } catch (err: any) {
     output.prettyError(err);
@@ -236,8 +246,11 @@ export default async function main(client: Client): Promise<number> {
 
     return 1;
   } finally {
-    // Clean up environment variables
-    delete process.env.VERCEL_ANALYTICS_ID;
+    // Unset environment variables that were added by dotenv
+    // (this is mostly for the unit tests)
+    for (const key of envToUnset) {
+      delete process.env[key];
+    }
   }
 }
 
@@ -286,6 +299,7 @@ async function doBuild(
 
   let builds = vercelConfig?.builds || [];
   let zeroConfigRoutes: Route[] = [];
+  let isZeroConfig = false;
 
   if (builds.length > 0) {
     output.warn(
@@ -294,6 +308,7 @@ async function doBuild(
     builds = builds.map(b => expandBuild(files, b)).flat();
   } else {
     // Zero config
+    isZeroConfig = true;
 
     // Detect the Vercel Builders that will need to be invoked
     const detectedBuilders = await detectBuilders(files, pkg, {
@@ -408,16 +423,18 @@ async function doBuild(
     try {
       const { builder, pkg: builderPkg } = builderWithPkg;
 
-      const buildConfig: Config = {
-        outputDirectory: project.settings.outputDirectory ?? undefined,
-        ...build.config,
-        projectSettings: project.settings,
-        installCommand: project.settings.installCommand ?? undefined,
-        devCommand: project.settings.devCommand ?? undefined,
-        buildCommand: project.settings.buildCommand ?? undefined,
-        framework: project.settings.framework,
-        nodeVersion: project.settings.nodeVersion,
-      };
+      const buildConfig: Config = isZeroConfig
+        ? {
+            outputDirectory: project.settings.outputDirectory ?? undefined,
+            ...build.config,
+            projectSettings: project.settings,
+            installCommand: project.settings.installCommand ?? undefined,
+            devCommand: project.settings.devCommand ?? undefined,
+            buildCommand: project.settings.buildCommand ?? undefined,
+            framework: project.settings.framework,
+            nodeVersion: project.settings.nodeVersion,
+          }
+        : build.config || {};
       const buildOptions: BuildOptions = {
         files: filesMap,
         entrypoint: build.src,
@@ -443,7 +460,7 @@ async function doBuild(
           build,
           builder,
           builderPkg,
-          vercelConfig?.cleanUrls
+          vercelConfig
         ).then(
           override => {
             if (override) overrides.push(override);
@@ -604,7 +621,7 @@ function mergeImages(
   let images: BuildResultV2Typical['images'] = undefined;
   for (const result of buildResults) {
     if ('images' in result && result.images) {
-      images = Object.assign({} || images, result.images);
+      images = Object.assign({}, images, result.images);
     }
   }
   return images;
@@ -621,15 +638,4 @@ function mergeWildcard(
     }
   }
   return wildcard;
-}
-
-async function checkExists(paths: Iterable<string>) {
-  for (const path of paths) {
-    try {
-      await fs.stat(path);
-      return path;
-    } catch (err: any) {
-      if (err.code !== 'ENOENT') throw err;
-    }
-  }
 }
