@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import Client from '../../util/client';
+import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function add(
@@ -36,12 +37,12 @@ export default async function add(
       method: 'POST',
       body: { name },
     });
-  } catch (error) {
-    if (error.status === 409) {
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status === 409) {
       // project already exists, so we can
       // show a success message
     } else {
-      throw error;
+      throw err;
     }
   }
   const elapsed = ms(Date.now() - start);

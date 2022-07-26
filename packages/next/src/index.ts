@@ -711,7 +711,7 @@ export const build: BuildV2 = async ({
           throw new NowBuildError({
             code: 'NEXT_IMAGES_DANGEROUSLYALLOWSVG',
             message:
-              'image-manifest.json "images.dangerouslyAllowSVG" must be an boolean. Contact support if this continues to happen.',
+              'image-manifest.json "images.dangerouslyAllowSVG" must be a boolean. Contact support if this continues to happen.',
           });
         }
         if (
@@ -721,7 +721,7 @@ export const build: BuildV2 = async ({
           throw new NowBuildError({
             code: 'NEXT_IMAGES_CONTENTSECURITYPOLICY',
             message:
-              'image-manifest.json "images.contentSecurityPolicy" must be an string. Contact support if this continues to happen.',
+              'image-manifest.json "images.contentSecurityPolicy" must be a string. Contact support if this continues to happen.',
           });
         }
         break;

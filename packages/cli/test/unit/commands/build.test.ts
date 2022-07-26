@@ -708,4 +708,102 @@ describe('build', () => {
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
+
+  it('should set `VERCEL_ANALYTICS_ID` environment variable', async () => {
+    const cwd = fixture('vercel-analytics');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should load environment variables from `.vercel/.env.preview.local`', async () => {
+    const cwd = fixture('env-from-vc-pull');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(env['ENV_FILE']).toEqual('preview');
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should load environment variables from `.vercel/.env.production.local`', async () => {
+    const cwd = fixture('env-from-vc-pull');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      client.setArgv('build', '--prod');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(env['ENV_FILE']).toEqual('production');
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should NOT load environment variables from `.env`', async () => {
+    const cwd = fixture('env-root-level');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      // The `.env` in this fixture has `ENV_FILE=root"`,
+      // so if that's not defined then we're good
+      expect(env['ENV_FILE']).toBeUndefined();
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should apply function configuration from "vercel.json" to Serverless Functions', async () => {
+    const cwd = fixture('lambda-with-128-memory');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // "functions/api" directory has output Functions
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      expect(functions.sort()).toEqual(['memory.func']);
+
+      const vcConfig = await fs.readJSON(
+        join(output, 'functions/api/memory.func/.vc-config.json')
+      );
+      expect(vcConfig).toMatchObject({
+        handler: 'api/memory.js',
+        runtime: 'nodejs16.x',
+        memory: 128,
+        environment: {},
+        launcherType: 'Nodejs',
+        shouldAddHelpers: true,
+        shouldAddSourcemapSupport: false,
+        awsLambdaHandler: '',
+      });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
 });

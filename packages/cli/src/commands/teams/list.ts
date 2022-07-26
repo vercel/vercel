@@ -43,17 +43,7 @@ export default async function list(client: Client): Promise<number> {
   const accountIsCurrent = !currentTeam;
 
   output.spinner('Fetching user information');
-  let user;
-  try {
-    user = await getUser(client);
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const user = await getUser(client);
 
   if (accountIsCurrent) {
     currentTeam = user.id;
