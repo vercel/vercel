@@ -353,7 +353,9 @@ function getDeploymentIdFromUrl(
   return inspect
     ? url.split('/').slice(-1)[0]
     : url
-        .match(/(?<=https:\/\/)(.*)(?=(.*)(\.vercel\.app|\.now\.sh))/g)?.[0]
+        .match(
+          /(?<=https:\/\/)(.*)(?=(.*)(\.vercel\.app|\.now\.sh|\.vercel\.sh))/g
+        )?.[0]
         ?.split(`${projectName}-`)?.[1]
         ?.split('-')?.[0] || url;
 }
