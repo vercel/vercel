@@ -46,10 +46,7 @@ describe('project', () => {
         'Latest Production URL',
         'Updated',
       ]);
-      expect(data).toEqual([
-        project.project.name,
-        `https://vercel.com/${org}/${project.project.name}`,
-      ]);
+      expect(data).toEqual([project.project.name, `--`]);
     });
   });
   describe('add', () => {
