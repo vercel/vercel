@@ -3921,6 +3921,19 @@ test('[vc build] should build project with `@vercel/static-build`', async t => {
   t.is(builds.builds[0].use, '@vercel/static-build');
 });
 
+test('[vc build] should not include .vercel when outputDirectory is set to "."', async t => {
+  const directory = fixture('zero-config-dist-dir');
+  const output = await execute(['build'], { cwd: directory });
+  console.log(output);
+  t.is(output.exitCode, 0);
+  t.true(output.stderr.includes('Build Completed in .vercel/output'));
+
+  const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+
+  t.false(dir.includes('.vercel'));
+  t.true(dir.includes('index.txt'));
+});
+
 test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async t => {
   const directory = fixture(
     'vercel-json-configuration-overrides-merging-prompts'

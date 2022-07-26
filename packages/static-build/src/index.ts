@@ -707,13 +707,12 @@ export const build: BuildV2 = async ({
           routes.push(...frameworkRoutes);
         }
 
-        let ignore: string[] = [];
+        let ignore: string[] = ['.vercel/**'];
         if (config.zeroConfig && config.outputDirectory === '.') {
           ignore = [
             '.env',
             '.env.*',
             '.git/**',
-            '.vercel/**',
             'node_modules/**',
             'yarn.lock',
             'package-lock.json',
