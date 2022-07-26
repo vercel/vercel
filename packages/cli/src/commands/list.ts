@@ -1,25 +1,25 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Now from '../util';
-import getArgs from '../util/get-args';
-import { handleError } from '../util/error';
-import cmd from '../util/output/cmd';
-import logo from '../util/output/logo';
-import elapsed from '../util/output/elapsed';
-import strlen from '../util/strlen';
-import toHost from '../util/to-host';
-import parseMeta from '../util/parse-meta';
-import { isValidName } from '../util/is-valid-name';
-import getCommandFlags from '../util/get-command-flags';
-import { getPkgName, getCommandName } from '../util/pkg-name';
-import Client from '../util/client';
-import { Deployment } from '../types';
-import validatePaths from '../util/validate-paths';
-import { getLinkedProject } from '../util/projects/link';
-import { ensureLink } from '../util/ensure-link';
-import getScope from '../util/get-scope';
-import { isAPIError } from '../util/errors-ts';
+import Now from '../util/index.js';
+import getArgs from '../util/get-args.js';
+import { handleError } from '../util/error.js';
+import cmd from '../util/output/cmd.js';
+import logo from '../util/output/logo.js';
+import elapsed from '../util/output/elapsed.js';
+import strlen from '../util/strlen.js';
+import toHost from '../util/to-host.js';
+import parseMeta from '../util/parse-meta.js';
+import { isValidName } from '../util/is-valid-name.js';
+import getCommandFlags from '../util/get-command-flags.js';
+import { getPkgName, getCommandName } from '../util/pkg-name.js';
+import Client from '../util/client.js';
+import { Deployment } from '../types.js';
+import validatePaths from '../util/validate-paths.js';
+import { getLinkedProject } from '../util/projects/link.js';
+import { ensureLink } from '../util/ensure-link.js';
+import getScope from '../util/get-scope.js';
+import { isAPIError } from '../util/errors-ts.js';
 
 const help = () => {
   console.log(`
@@ -204,6 +204,7 @@ export default async function main(client: Client) {
     nextTimestamp,
   });
 
+  // @ts-ignore
   let {
     deployments,
     pagination,

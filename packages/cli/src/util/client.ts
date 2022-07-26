@@ -6,13 +6,13 @@ import { parse as parseUrl } from 'url';
 import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
-import ua from './ua';
-import { Output } from './output/create-output';
-import responseError from './response-error';
-import printIndications from './print-indications';
-import reauthenticate from './login/reauthenticate';
-import { SAMLError } from './login/types';
-import { writeToAuthConfigFile } from './config/files';
+import ua from './ua.js';
+import { Output } from './output/create-output.js';
+import responseError from './response-error.js';
+import printIndications from './print-indications.js';
+import reauthenticate from './login/reauthenticate.js';
+import { SAMLError } from './login/types.js';
+import { writeToAuthConfigFile } from './config/files.js';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -20,9 +20,9 @@ import type {
   Stdio,
   ReadableTTY,
   WritableTTY,
-} from '../types';
-import { sharedPromise } from './promise';
-import { APIError } from './errors-ts';
+} from '../types.js';
+import { sharedPromise } from './promise.js';
+import { APIError } from './errors-ts.js';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -92,7 +92,18 @@ export default class Client extends EventEmitter implements Stdio {
       : '';
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
-      const query = new URLSearchParams(parsedUrl.query);
+      //const query = new URLSearchParams(parsedUrl.query);
+      // TODO: move this to a helper function?
+      const query = new URLSearchParams();
+      for (const [name, value] of Object.entries(parsedUrl.query)) {
+        if (Array.isArray(value)) {
+          for (const val of value) {
+            query.append(name, val);
+          }
+        } else if (typeof value === 'string') {
+          query.set(name, value);
+        }
+      }
 
       if (opts.accountId) {
         if (opts.accountId.startsWith('team_')) {

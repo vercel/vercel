@@ -1,7 +1,7 @@
 import { Response } from 'node-fetch';
-import errorOutput from './output/error';
+import errorOutput from './output/error.js';
 
-export { default as handleError } from './handle-error';
+export { default as handleError } from './handle-error.js';
 export const error = errorOutput;
 
 export interface ResponseError extends Error {
@@ -20,7 +20,7 @@ export async function responseError(
   let bodyError;
 
   if (res.status >= 400 && res.status < 500) {
-    let body;
+    let body: any;
 
     try {
       body = await res.json();
@@ -69,7 +69,7 @@ export async function responseErrorMessage(
   let message;
 
   if (res.status >= 400 && res.status < 500) {
-    let body;
+    let body: any;
 
     try {
       body = await res.json();

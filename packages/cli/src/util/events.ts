@@ -6,8 +6,8 @@ import retry from 'async-retry';
 import jsonlines from 'jsonlines';
 import { eraseLines } from 'ansi-escapes';
 
-import Client from './client';
-import { getDeployment } from './get-deployment';
+import Client from './client.js';
+import { getDeployment } from './get-deployment.js';
 
 export interface FindOpts {
   direction: 'forward' | 'backward';
@@ -66,7 +66,7 @@ async function printEvents(
         // handle the event stream and make the promise get rejected
         // if errors occur so we can retry
         return new Promise<void>((resolve, reject) => {
-          const stream = readable.pipe(jsonlines.parse());
+          const stream = readable!.pipe(jsonlines.parse());
 
           let poller: ReturnType<typeof setTimeout>;
 
@@ -151,7 +151,7 @@ async function printEvents(
           stream.on('end', finish);
           stream.on('data', onData);
           stream.on('error', onError);
-          readable.on('error', onError);
+          readable!.on('error', onError);
         });
       }
       const err = new Error(`Deployment events status ${eventsRes.status}`);

@@ -1,10 +1,10 @@
 import url from 'url';
 import PCRE from 'pcre-to-regexp';
 
-import isURL from './is-url';
-import DevServer from './server';
+import isURL from './is-url.js';
+import DevServer from './server.js';
 
-import { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
+import { VercelConfig, HttpHeadersConfig, RouteResult } from './types.js';
 import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
 
 export function resolveRouteParameters(
@@ -56,7 +56,8 @@ export async function devRouter(
   phase?: HandleValue | null
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;
-  let { query, pathname: reqPathname = '/' } = url.parse(reqUrl, true);
+  let { query, pathname: _reqPathname } = url.parse(reqUrl, true);
+  let reqPathname = _reqPathname || '/';
   const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
   let status: number | undefined;
   let isContinue = false;
@@ -128,9 +129,9 @@ export async function devRouter(
           phase !== 'hit' &&
           !isDestUrl
         ) {
-          const { pathname = '/' } = url.parse(destPath);
+          const { pathname } = url.parse(destPath);
           const hasDestFile = await devServer.hasFilesystem(
-            pathname,
+            pathname || '/',
             vercelConfig
           );
 

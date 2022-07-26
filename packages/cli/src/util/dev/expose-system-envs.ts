@@ -2,7 +2,7 @@ import {
   ProjectEnvType,
   ProjectEnvVariable,
   ProjectEnvTarget,
-} from '../../types';
+} from '../../types.js';
 import { Env } from '@vercel/build-utils';
 
 function getSystemEnvValue(

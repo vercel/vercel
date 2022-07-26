@@ -1,5 +1,5 @@
 import { Response } from 'node-fetch';
-import { APIError } from './errors-ts';
+import { APIError } from './errors-ts.js';
 
 export default async function responseError(
   res: Response,
@@ -9,7 +9,7 @@ export default async function responseError(
   let bodyError;
 
   if (!res.ok) {
-    let body;
+    let body: any;
 
     try {
       body = await res.json();

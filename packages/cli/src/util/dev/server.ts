@@ -44,36 +44,39 @@ import {
   detectApiExtensions,
   isOfficialRuntime,
 } from '@vercel/fs-detectors';
-import frameworkList from '@vercel/frameworks';
+import frameworks from '@vercel/frameworks';
 
-import cmd from '../output/cmd';
-import link from '../output/link';
-import sleep from '../sleep';
-import { Output } from '../output';
-import { relative } from '../path-helpers';
-import { getDistTag } from '../get-dist-tag';
-import getVercelConfigPath from '../config/local-path';
-import { MissingDotenvVarsError } from '../errors-ts';
-import cliPkg from '../pkg';
-import { getVercelDirectory } from '../projects/link';
-import { staticFiles as getFiles } from '../get-files';
-import { validateConfig } from './validate';
-import { devRouter, getRoutesTypes } from './router';
-import getMimeType from './mime-type';
-import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
-import { generateErrorMessage, generateHttpStatusDescription } from './errors';
+import cmd from '../output/cmd.js';
+import link from '../output/link.js';
+import sleep from '../sleep.js';
+import { Output } from '../output/index.js';
+import { relative } from '../path-helpers.js';
+import { getDistTag } from '../get-dist-tag.js';
+import getVercelConfigPath from '../config/local-path.js';
+import { MissingDotenvVarsError } from '../errors-ts.js';
+import cliPkg from '../pkg.js';
+import { getVercelDirectory } from '../projects/link.js';
+import { staticFiles as getFiles } from '../get-files.js';
+import { validateConfig } from './validate.js';
+import { devRouter, getRoutesTypes } from './router.js';
+import getMimeType from './mime-type.js';
+import { executeBuild, getBuildMatches, shutdownBuilder } from './builder.js';
+import {
+  generateErrorMessage,
+  generateHttpStatusDescription,
+} from './errors.js';
 import {
   installBuilders,
   updateBuilders,
   builderDirPromise,
-} from './builder-cache';
+} from './builder-cache.js';
 
 // HTML templates
-import errorTemplate from './templates/error';
-import errorTemplateBase from './templates/error_base';
-import errorTemplate404 from './templates/error_404';
-import errorTemplate502 from './templates/error_502';
-import redirectTemplate from './templates/redirect';
+import errorTemplate from './templates/error.js';
+import errorTemplateBase from './templates/error_base.js';
+import errorTemplate404 from './templates/error_404.js';
+import errorTemplate502 from './templates/error_502.js';
+import redirectTemplate from './templates/redirect.js';
 
 import {
   VercelConfig,
@@ -89,20 +92,20 @@ import {
   RouteResult,
   HttpHeadersConfig,
   EnvConfigs,
-} from './types';
-import { ProjectEnvVariable, ProjectSettings } from '../../types';
-import exposeSystemEnvs from './expose-system-envs';
-import { treeKill } from '../tree-kill';
-import { nodeHeadersToFetchHeaders } from './headers';
+} from './types.js';
+import { ProjectEnvVariable, ProjectSettings } from '../../types.js';
+import exposeSystemEnvs from './expose-system-envs.js';
+import { treeKill } from '../tree-kill.js';
+import { nodeHeadersToFetchHeaders } from './headers.js';
 import {
   errorToString,
   isErrnoException,
   isError,
   isSpawnError,
-} from '../is-error';
+} from '../is-error.js';
 
 const frontendRuntimeSet = new Set(
-  frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
+  frameworks.default.map(f => f.useRuntime?.use || '@vercel/static-build')
 );
 
 interface FSEvent {
@@ -858,7 +861,7 @@ export default class DevServer {
     let address: string | null = null;
     while (typeof address !== 'string') {
       try {
-        address = await listen(this.server, ...listenSpec);
+        address = await listen.default(this.server, ...listenSpec);
       } catch (err: unknown) {
         if (isErrnoException(err)) {
           this.output.debug(`Got listen error: ${err.code}`);
@@ -1536,7 +1539,7 @@ export default class DevServer {
             // Retain orginal pathname, but override query parameters from the rewrite
             const beforeRewriteUrl = req.url || '/';
             const rewriteUrlParsed = url.parse(beforeRewriteUrl, true);
-            delete rewriteUrlParsed.search;
+            rewriteUrlParsed.search = null;
             rewriteUrlParsed.query = url.parse(rewritePath, true).query;
             req.url = url.format(rewriteUrlParsed);
             debug(
@@ -1595,7 +1598,7 @@ export default class DevServer {
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
         const destParsed = url.parse(routeResult.dest, true);
-        delete destParsed.search;
+        destParsed.search = null;
         Object.assign(destParsed.query, routeResult.uri_args);
         const destUrl = url.format(destParsed);
 
@@ -1774,7 +1777,7 @@ export default class DevServer {
 
         this.setResponseHeaders(res, requestId);
         const origUrl = url.parse(req.url || '/', true);
-        delete origUrl.search;
+        origUrl.search = null;
         origUrl.pathname = dest;
         Object.assign(origUrl.query, uri_args);
         req.url = url.format(origUrl);
@@ -1799,7 +1802,7 @@ export default class DevServer {
       buildResult.routes.length > 0
     ) {
       const origUrl = url.parse(req.url || '/', true);
-      delete origUrl.search;
+      origUrl.search = null;
       origUrl.pathname = dest;
       Object.assign(origUrl.query, uri_args);
       const newUrl = url.format(origUrl);

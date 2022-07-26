@@ -1,16 +1,16 @@
 import { join, basename } from 'path';
 import loadJSON from 'load-json-file';
-import writeJSON from 'write-json-file';
+import { writeJsonFileSync } from 'write-json-file';
 import { existsSync } from 'fs';
 import { fileNameSymbol } from '@vercel/client';
-import getGlobalPathConfig from './global-path';
-import getLocalPathConfig from './local-path';
-import { NowError } from '../now-error';
-import error from '../output/error';
-import highlight from '../output/highlight';
-import { VercelConfig } from '../dev/types';
-import { AuthConfig, GlobalConfig } from '../../types';
-import { isErrnoException, isError } from '../is-error';
+import getGlobalPathConfig from './global-path.js';
+import getLocalPathConfig from './local-path.js';
+import { NowError } from '../now-error.js';
+import error from '../output/error.js';
+import highlight from '../output/highlight.js';
+import { VercelConfig } from '../dev/types.js';
+import { AuthConfig, GlobalConfig } from '../../types.js';
+import { isErrnoException, isError } from '../is-error.js';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
@@ -25,7 +25,7 @@ export const readConfigFile = (): GlobalConfig => {
 // writes whatever's in `stuff` to "global config" file, atomically
 export const writeToConfigFile = (stuff: GlobalConfig): void => {
   try {
-    return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
+    return writeJsonFileSync(CONFIG_FILE_PATH, stuff, { indent: 2 });
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (isErrnoException(err) && err.code === 'EPERM') {
@@ -64,7 +64,7 @@ export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
     return;
   }
   try {
-    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, authConfig, {
+    return writeJsonFileSync(AUTH_CONFIG_FILE_PATH, authConfig, {
       indent: 2,
       mode: 0o600,
     });

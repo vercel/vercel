@@ -1,10 +1,10 @@
 import inquirer from 'inquirer';
-import confirm from './confirm';
+import confirm from './confirm.js';
 import chalk from 'chalk';
-import frameworkList, { Framework } from '@vercel/frameworks';
-import Client from '../client';
-import { isSettingValue } from '../is-setting-value';
-import { ProjectSettings } from '../../types';
+import frameworks, { Framework } from '@vercel/frameworks';
+import Client from '../client.js';
+import { isSettingValue } from '../is-setting-value.js';
+import { ProjectSettings } from '../../types.js';
 
 const settingMap = {
   buildCommand: 'Build Command',
@@ -67,7 +67,7 @@ export default async function editProjectSettings(
 
     // If framework is overridden, set it to the `framework` parameter and let the normal framework-flow occur
     if (localConfigurationOverrides.framework) {
-      const overrideFramework = frameworkList.find(
+      const overrideFramework = frameworks.default.find(
         f => f.slug === localConfigurationOverrides.framework
       );
 

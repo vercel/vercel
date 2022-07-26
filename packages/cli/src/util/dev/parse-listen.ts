@@ -1,5 +1,5 @@
 import { parse } from 'url';
-import { ListenSpec } from './types';
+import { ListenSpec } from './types.js';
 
 export default function parseListen(
   str: string,
@@ -34,11 +34,11 @@ export default function parseListen(
       return [url.pathname];
     case 'tcp:':
       url.port = url.port || String(defaultPort);
-      return [parseInt(url.port, 10), url.hostname];
+      return [parseInt(url.port, 10), url.hostname ?? undefined];
     default:
       if (!url.slashes) {
         if (url.protocol === null) {
-          return [defaultPort, url.pathname];
+          return [defaultPort, url.pathname ?? undefined];
         }
         port = Number(url.hostname);
         if (url.protocol && !isNaN(port)) {

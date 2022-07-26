@@ -7,17 +7,17 @@ import fetch, { Headers } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import ua from './ua';
-import processDeployment from './deploy/process-deployment';
-import highlight from './output/highlight';
-import { responseError } from './error';
-import stamp from './output/stamp';
-import { APIError, BuildError } from './errors-ts';
-import printIndications from './print-indications';
-import { GitMetadata, Org } from '../types';
-import { VercelConfig } from './dev/types';
-import Client, { FetchOptions, isJSONObject } from './client';
-import { Dictionary } from '@vercel/client';
+import ua from './ua.js';
+import processDeployment from './deploy/process-deployment.js';
+import highlight from './output/highlight.js';
+import { responseError } from './error.js';
+import stamp from './output/stamp.js';
+import { APIError, BuildError } from './errors-ts.js';
+import printIndications from './print-indications.js';
+import { GitMetadata, Org } from '../types.js';
+import { VercelConfig } from './dev/types.js';
+import Client, { FetchOptions, isJSONObject } from './client.js';
+import type { Dictionary } from '@vercel/client';
 
 export interface NowOptions {
   client: Client;
@@ -363,6 +363,7 @@ export default class Now extends EventEmitter {
       if (nextTimestamp) {
         query.set('until', String(nextTimestamp));
       }
+      // @ts-ignore
       const { projects, pagination } = await fetchRetry(
         `/v4/projects/?${query}`
       );
@@ -370,6 +371,7 @@ export default class Now extends EventEmitter {
       const deployments = await Promise.all(
         projects.map(async ({ id: projectId }: any) => {
           const query = new URLSearchParams({ limit: '1', projectId });
+          // @ts-ignore
           const { deployments } = await fetchRetry(
             `/v${version}/now/deployments?${query}`
           );
@@ -377,6 +379,7 @@ export default class Now extends EventEmitter {
         })
       );
 
+      // @ts-ignore
       return { deployments: deployments.filter(x => x), pagination };
     }
 
@@ -435,6 +438,7 @@ export default class Now extends EventEmitter {
         { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
       );
 
+      // @ts-ignore
       id = deployment.id;
     }
 
@@ -511,20 +515,22 @@ export default class Now extends EventEmitter {
       delete opts.useCurrentTeam;
     }
 
-    opts.headers = new Headers(opts.headers);
-    opts.headers.set('accept', 'application/json');
+    const headers = new Headers(opts.headers);
+    headers.set('accept', 'application/json');
     if (this._token) {
-      opts.headers.set('authorization', `Bearer ${this._token}`);
+      headers.set('authorization', `Bearer ${this._token}`);
     }
-    opts.headers.set('user-agent', ua);
+    headers.set('user-agent', ua);
 
     let body;
     if (isJSONObject(opts.body)) {
       body = JSON.stringify(opts.body);
-      opts.headers.set('content-type', 'application/json; charset=utf8');
+      headers.set('content-type', 'application/json; charset=utf8');
     } else {
       body = opts.body;
     }
+
+    opts.headers = headers;
 
     const res = await this._output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,

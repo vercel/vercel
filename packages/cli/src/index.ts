@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { isErrnoException, isError, errorToString } from './util/is-error';
+import { isErrnoException, isError, errorToString } from './util/is-error.js';
 
 try {
   // Test to see if cwd has been deleted before
@@ -21,37 +21,37 @@ import epipebomb from 'epipebomb';
 import updateNotifier from 'update-notifier';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
-import hp from './util/humanize-path';
-import commands from './commands';
-import pkg from './util/pkg';
-import { Output } from './util/output';
-import cmd from './util/output/cmd';
-import info from './util/output/info';
-import error from './util/output/error';
-import param from './util/output/param';
-import highlight from './util/output/highlight';
-import getArgs from './util/get-args';
-import getUser from './util/get-user';
-import getTeams from './util/teams/get-teams';
-import Client from './util/client';
-import { handleError } from './util/error';
-import reportError from './util/report-error';
-import getConfig from './util/get-config';
-import * as configFiles from './util/config/files';
-import getGlobalPathConfig from './util/config/global-path';
+import hp from './util/humanize-path.js';
+import commands from './commands/index.js';
+import pkg from './util/pkg.js';
+import { Output } from './util/output/index.js';
+import cmd from './util/output/cmd.js';
+import info from './util/output/info.js';
+import error from './util/output/error.js';
+import param from './util/output/param.js';
+import highlight from './util/output/highlight.js';
+import getArgs from './util/get-args.js';
+import getUser from './util/get-user.js';
+import getTeams from './util/teams/get-teams.js';
+import Client from './util/client.js';
+import { handleError } from './util/error.js';
+import reportError from './util/report-error.js';
+import getConfig from './util/get-config.js';
+import * as configFiles from './util/config/files.js';
+import getGlobalPathConfig from './util/config/global-path.js';
 import {
   getDefaultConfig,
   getDefaultAuthConfig,
-} from './util/config/get-default';
-import * as ERRORS from './util/errors-ts';
-import { APIError } from './util/errors-ts';
-import { SENTRY_DSN } from './util/constants';
-import getUpdateCommand from './util/get-update-command';
-import { metrics, shouldCollectMetrics } from './util/metrics';
-import { getCommandName, getTitleName } from './util/pkg-name';
-import doLoginPrompt from './util/login/prompt';
-import { GlobalConfig } from './types';
-import { VercelConfig } from '@vercel/client';
+} from './util/config/get-default.js';
+import * as ERRORS from './util/errors-ts.js';
+import { APIError } from './util/errors-ts.js';
+import { SENTRY_DSN } from './util/constants.js';
+import getUpdateCommand from './util/get-update-command.js';
+import { metrics, shouldCollectMetrics } from './util/metrics.js';
+import { getCommandName, getTitleName } from './util/pkg-name.js';
+import doLoginPrompt from './util/login/prompt.js';
+import type { GlobalConfig } from './types.js';
+import type { VercelConfig } from '@vercel/client';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -256,6 +256,7 @@ const main = async () => {
       config.user ||
       // @ts-ignore
       typeof config.user === 'object' ||
+      // @ts-ignore
       typeof config.currentTeam === 'object'
     ) {
       configExists = false;

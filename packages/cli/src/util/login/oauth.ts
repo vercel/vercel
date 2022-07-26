@@ -3,13 +3,13 @@ import open from 'open';
 import { URL } from 'url';
 import listen from 'async-listen';
 import isDocker from 'is-docker';
-import Client from '../client';
-import prompt, { readInput } from './prompt';
-import verify from './verify';
-import highlight from '../output/highlight';
-import link from '../output/link';
-import eraseLines from '../output/erase-lines';
-import { LoginResult } from './types';
+import Client from '../client.js';
+import prompt, { readInput } from './prompt.js';
+import verify from './verify.js';
+import highlight from '../output/highlight.js';
+import link from '../output/link.js';
+import eraseLines from '../output/erase-lines.js';
+import { LoginResult } from './types.js';
 
 export default async function doOauthLogin(
   client: Client,
@@ -64,7 +64,7 @@ async function getVerificationTokenInBand(
 ) {
   const { output } = client;
   const server = http.createServer();
-  const address = await listen(server, 0, '127.0.0.1');
+  const address = await listen.default(server, 0, '127.0.0.1');
   const { port } = new URL(address);
   url.searchParams.set('next', `http://localhost:${port}`);
 

@@ -18,14 +18,14 @@ import { isOfficialRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 
-import { Output } from '../output';
-import highlight from '../output/highlight';
-import { treeKill } from '../tree-kill';
-import { relative } from '../path-helpers';
-import { LambdaSizeExceededError } from '../errors-ts';
+import { Output } from '../output/index.js';
+import highlight from '../output/highlight.js';
+import { treeKill } from '../tree-kill.js';
+import { relative } from '../path-helpers.js';
+import { LambdaSizeExceededError } from '../errors-ts.js';
 
-import DevServer from './server';
-import { getBuilder } from './builder-cache';
+import DevServer from './server.js';
+import { getBuilder } from './builder-cache.js';
 import {
   VercelConfig,
   BuildMatch,
@@ -36,10 +36,10 @@ import {
   BuilderOutputs,
   EnvConfigs,
   BuiltLambda,
-} from './types';
+} from './types.js';
 import { normalizeRoutes } from '@vercel/routing-utils';
-import getUpdateCommand from '../get-update-command';
-import { getTitleName } from '../pkg-name';
+import getUpdateCommand from '../get-update-command.js';
+import { getTitleName } from '../pkg-name.js';
 
 interface BuildMessage {
   type: string;
@@ -86,7 +86,7 @@ async function createBuildProcess(
 
   return new Promise((resolve, reject) => {
     // The first message that the builder process sends is the `ready` event
-    buildProcess.once('message', ({ type }) => {
+    buildProcess.once('message', ({ type }: { type?: string }) => {
       if (type !== 'ready') {
         reject(new Error('Did not get "ready" event from builder'));
       } else {

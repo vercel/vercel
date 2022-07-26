@@ -1,8 +1,8 @@
-import frameworkList from '@vercel/frameworks';
+import { frameworks } from '@vercel/frameworks';
 
 export function sortBuilders<B extends { use: string }>(builds: B[]): B[] {
   const frontendRuntimeSet = new Set(
-    frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
+    frameworks.map(f => (f as any).useRuntime?.use || '@vercel/static-build')
   );
   const toNumber = (build: B) => (frontendRuntimeSet.has(build.use) ? 0 : 1);
 

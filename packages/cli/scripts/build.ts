@@ -1,8 +1,12 @@
 import cpy from 'cpy';
 import execa from 'execa';
+import fs from 'fs-extra';
 import { join } from 'path';
-import { remove, writeFile } from 'fs-extra';
+import { fileURLToPath } from 'url';
 
+const { remove, writeFile } = fs;
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const dirRoot = join(__dirname, '..');
 const distRoot = join(dirRoot, 'dist');
 
@@ -38,10 +42,11 @@ async function main() {
   await remove(join(dirRoot, '../../node_modules/fsevents'));
 
   // Compile the `doT.js` template files for `vercel dev`
-  console.log();
-  await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
-    stdio: 'inherit',
-  });
+  // TODO
+  //console.log();
+  //await execa(process.execPath, [join(__dirname, 'compile-templates.cjs')], {
+  //  stdio: 'inherit',
+  //});
 
   // Do the initial `ncc` build
   console.log();

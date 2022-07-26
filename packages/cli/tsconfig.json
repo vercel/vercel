@@ -3,12 +3,13 @@
     "strict": true,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
-    "moduleResolution": "node",
-    "module": "commonjs",
+    "moduleResolution": "Node16",
+    "module": "Node16",
     "target": "ES2020",
     "esModuleInterop": true,
     "allowJs": true,
     "lib": ["ES2020"],
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "sourceMap": true,
     "outDir": "./dist",
@@ -16,6 +17,7 @@
   },
   "include": ["./types", "src/**/*"],
   "ts-node": {
+    "esm": true,
     "swc": true // https://typestrong.org/ts-node/docs/swc/
   }
 }

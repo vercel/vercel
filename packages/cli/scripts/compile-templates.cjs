@@ -36,7 +36,7 @@ async function main() {
     const def = await readFile(fnPath.replace(/\.js$/, '.tsdef'), 'utf8');
     const interfaceName = def.match(/interface (\w+)/)[1];
 
-    const lines = require(fnPath)
+    const lines = (await import(fnPath))
       .toString()
       .split('\n');
     let errorHtmlStart = -1;
