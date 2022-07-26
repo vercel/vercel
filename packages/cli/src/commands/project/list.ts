@@ -61,7 +61,7 @@ export default async function list(
       [
         [
           'Project Name',
-          inspect ? 'Inspect URL' : 'Latest Production URL',
+          inspect ? 'Inspect Project' : 'Latest Production URL',
           'Updated',
         ].map(header => chalk.bold(chalk.cyan(header))),
         ...projectList
