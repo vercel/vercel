@@ -20,16 +20,6 @@ describe('project', () => {
         ...defaultProject,
       });
       useDeployment({ creator: user });
-      project.project.alias = [
-        {
-          configuredBy: 'A',
-          configuredChangedAt: 1571239348998,
-          createdAt: 1571239348998,
-          domain: 'foobar.com',
-          redirect: null,
-          target: 'PRODUCTION',
-        },
-      ];
 
       client.setArgv('project', 'ls');
       await projects(client);
