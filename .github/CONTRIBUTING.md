@@ -12,6 +12,7 @@ To get started, execute the following:
 
 ```
 git clone https://github.com/vercel/vercel
+cd vercel
 yarn install
 yarn bootstrap
 yarn build
@@ -23,7 +24,7 @@ Make sure all the tests pass before making changes.
 
 ## Verifying your change
 
-Once you are done with your changes (we even suggest doing it along the way), make sure all the test still pass by running:
+Once you are done with your changes (we even suggest doing it along the way), make sure all the tests still pass by running:
 
 ```
 yarn test-unit
@@ -64,7 +65,7 @@ Integration tests create deployments to your Vercel account using the `test` pro
       x-now-trace=iad1]
 ```
 
-In such cases you can visit the URL of the failed deployment and append `/_logs` so see the build error. In the case above, that would be https://test-8ashcdlew.vercel.app/_logs
+In such cases, you can visit the URL of the failed deployment and append `/_logs` to see the build error. In the case above, that would be https://test-8ashcdlew.vercel.app/_logs
 
 The logs of this deployment will contain the actual error which may help you to understand what went wrong.
 
@@ -82,11 +83,11 @@ nodeFileTrace(['path/to/entrypoint.js'], {
   .then(e => console.error(e));
 ```
 
-When you run this script, you'll see all imported files. If anything file is missing, the bug is in [@vercel/nft](https://github.com/vercel/nft) and not the Builder.
+When you run this script, you'll see all the imported files. If anything file is missing, the bug is in [@vercel/nft](https://github.com/vercel/nft) and not the Builder.
 
 ## Deploy a Builder with existing project
 
-Sometimes you want to test changes to a Builder against an existing project, maybe with `vercel dev` or an actual deployment. You can avoid publishing every Builder change to npm by uploading the Builder as a tarball.
+Sometimes you want to test changes to a Builder against an existing project, maybe with `vercel dev` or actual deployment. You can avoid publishing every Builder change to npm by uploading the Builder as a tarball.
 
 1. Change directory to the desired Builder `cd ./packages/node`
 2. Run `yarn build` to compile typescript and other build steps

@@ -15,12 +15,6 @@ async function main() {
     stdio: 'inherit',
   });
 
-  // Copy type file for ts test
-  await fs.copyFile(
-    join(outDir, 'types.d.ts'),
-    join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
-  );
-
   const mainDir = join(outDir, 'main');
   await execa(
     'ncc',
@@ -39,11 +33,23 @@ async function main() {
     { stdio: 'inherit' }
   );
   await fs.rename(join(mainDir, 'index.js'), join(outDir, 'index.js'));
+  await fs.rename(join(mainDir, 'types.d.ts'), join(outDir, 'index.d.ts'));
+
+  // Delete all *.d.ts except for index.d.ts which is the public interface
   await Promise.all([
     fs.remove(mainDir),
-    fs.remove(join(outDir, 'example-import.js')),
-    fs.remove(join(outDir, 'example-import.d.ts')),
+    fs.remove(join(outDir, 'babel.d.ts')),
+    fs.remove(join(outDir, 'dev-server.d.ts')),
+    fs.remove(join(outDir, 'types.d.ts')),
+    fs.remove(join(outDir, 'typescript.d.ts')),
+    fs.remove(join(outDir, 'utils.d.ts')),
   ]);
+
+  // Copy type file for ts test
+  await fs.copyFile(
+    join(outDir, 'index.d.ts'),
+    join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
+  );
 }
 
 main().catch(err => {

@@ -20,11 +20,14 @@ import selectOrg from '../input/select-org';
 import inputProject from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
-import editProjectSettings from '../input/edit-project-settings';
+import editProjectSettings, {
+  PartialProjectSettings,
+} from '../input/edit-project-settings';
 import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
+import { isAPIError } from '../errors-ts';
 
 export interface SetupAndLinkOptions {
   forceDelete?: boolean;
@@ -54,7 +57,7 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
   const link = await getLinkedProject(client, path);
-  const isTTY = process.stdout.isTTY;
+  const isTTY = client.stdin.isTTY;
   const quiet = !isTTY;
   let rootDirectory: string | null = null;
   let sourceFilesOutsideRootDirectory = true;
@@ -78,6 +81,7 @@ export default async function setupAndLink(
   const shouldStartSetup =
     autoConfirm ||
     (await confirm(
+      client,
       `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true
     ));
@@ -93,15 +97,17 @@ export default async function setupAndLink(
       'Which scope should contain your project?',
       autoConfirm
     );
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED') {
-      output.prettyError(err);
-      return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
-    }
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.code === 'NOT_AUTHORIZED') {
+        output.prettyError(err);
+        return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+      }
 
-    if (err.code === 'TEAM_DELETED') {
-      output.prettyError(err);
-      return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+      if (err.code === 'TEAM_DELETED') {
+        output.prettyError(err);
+        return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+      }
     }
 
     throw err;
@@ -118,7 +124,7 @@ export default async function setupAndLink(
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
-    rootDirectory = await inputRootDirectory(path, output, autoConfirm);
+    rootDirectory = await inputRootDirectory(client, path, autoConfirm);
   } else {
     const project = projectOrNewProjectName;
 
@@ -162,6 +168,16 @@ export default async function setupAndLink(
         client,
         currentTeam: config.currentTeam,
       });
+
+      const localConfigurationOverrides: PartialProjectSettings = {
+        buildCommand: localConfig?.buildCommand,
+        devCommand: localConfig?.devCommand,
+        framework: localConfig?.framework,
+        commandForIgnoringBuildStep: localConfig?.ignoreCommand,
+        installCommand: localConfig?.installCommand,
+        outputDirectory: localConfig?.outputDirectory,
+      };
+
       const createArgs: CreateOptions = {
         name: newProjectName,
         env: {},
@@ -176,12 +192,11 @@ export default async function setupAndLink(
         deployStamp: stamp(),
         target: undefined,
         skipAutoDetectionConfirmation: false,
+        projectSettings: {
+          ...localConfigurationOverrides,
+          sourceFilesOutsideRootDirectory,
+        },
       };
-
-      if (isZeroConfig) {
-        // Only add projectSettings for zero config deployments
-        createArgs.projectSettings = { sourceFilesOutsideRootDirectory };
-      }
 
       const deployment = await createDeploy(
         client,
@@ -213,10 +228,11 @@ export default async function setupAndLink(
       const { projectSettings, framework } = deployment;
 
       settings = await editProjectSettings(
-        output,
+        client,
         projectSettings,
         framework,
-        autoConfirm
+        autoConfirm,
+        localConfigurationOverrides
       );
     }
 

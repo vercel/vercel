@@ -1,3 +1,4 @@
+import url from 'url';
 import { fork, spawn } from 'child_process';
 import {
   readFileSync,
@@ -16,20 +17,15 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
-// @ts-ignore - `@types/mkdirp-promise` is broken
-import mkdirp from 'mkdirp-promise';
+import { Project } from 'ts-morph';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
 import {
-  File,
-  Files,
-  Meta,
-  Config,
-  StartDevServerOptions,
   glob,
   download,
   FileBlob,
   FileFsRef,
+  EdgeFunction,
   NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
@@ -39,21 +35,25 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+} from '@vercel/build-utils';
+import type {
+  File,
+  Files,
+  Meta,
+  Config,
+  StartDevServerOptions,
   BuildV3,
   PrepareCache,
   StartDevServer,
   NodeVersion,
+  BuildResultV3,
 } from '@vercel/build-utils';
+import { getConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
+import { entrypointToOutputPath, getRegExpFromMatchers } from './utils';
 
 export { shouldServe };
-export type {
-  NowRequest,
-  NowResponse,
-  VercelRequest,
-  VercelResponse,
-} from './types';
 
 interface DownloadOptions {
   files: Files;
@@ -70,6 +70,8 @@ interface PortInfo {
 function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
+
+const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge'];
 
 const require_ = eval('require');
 
@@ -189,7 +191,10 @@ async function compile(
         if (cached === null) return null;
         try {
           let source: string | Buffer = readFileSync(fsPath);
-          if (fsPath.endsWith('.ts') || fsPath.endsWith('.tsx')) {
+          if (
+            (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
+            fsPath.endsWith('.tsx')
+          ) {
             source = compileTypeScript(fsPath, source.toString());
           }
           const { mode } = lstatSync(fsPath);
@@ -364,20 +369,79 @@ export const build: BuildV3 = async ({
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
-  const shouldAddHelpers = !(
-    config.helpers === false || process.env.NODEJS_HELPERS === '0'
-  );
+  let routes: BuildResultV3['routes'];
+  let output: BuildResultV3['output'] | undefined;
 
-  const lambda = new NodejsLambda({
-    files: preparedFiles,
-    handler: renameTStoJS(relative(baseDir, entrypointPath)),
-    runtime: nodeVersion.runtime,
-    shouldAddHelpers,
-    shouldAddSourcemapSupport,
-    awsLambdaHandler,
-  });
+  const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
+  const isMiddleware = config.middleware === true;
 
-  return { output: lambda };
+  // Will output an `EdgeFunction` for when `config.middleware = true`
+  // (i.e. for root-level "middleware" file) or if source code contains:
+  // `export const config = { runtime: 'experimental-edge' }`
+  let isEdgeFunction = isMiddleware;
+
+  const project = new Project();
+  const staticConfig = getConfig(project, entrypointPath);
+  if (staticConfig?.runtime) {
+    if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
+      throw new Error(
+        `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
+          staticConfig.runtime
+        )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
+      );
+    }
+    isEdgeFunction = staticConfig.runtime === 'experimental-edge';
+  }
+
+  // Add a `route` for Middleware
+  if (isMiddleware) {
+    if (!isEdgeFunction) {
+      // Root-level middleware file can not have `export const config = { runtime: 'nodejs' }`
+      throw new Error(
+        `Middleware file can not be a Node.js Serverless Function`
+      );
+    }
+
+    // Middleware is a catch-all for all paths unless a `matcher` property is defined
+    const src = getRegExpFromMatchers(staticConfig?.matcher);
+
+    routes = [
+      {
+        src,
+        middlewarePath: outputPath,
+        continue: true,
+        override: true,
+      },
+    ];
+  }
+
+  if (isEdgeFunction) {
+    output = new EdgeFunction({
+      entrypoint: handler,
+      files: preparedFiles,
+
+      // TODO: remove - these two properties should not be required
+      name: outputPath,
+      deploymentTarget: 'v8-worker',
+    });
+  } else {
+    // "nodejs" runtime is the default
+    const shouldAddHelpers = !(
+      config.helpers === false || process.env.NODEJS_HELPERS === '0'
+    );
+
+    output = new NodejsLambda({
+      files: preparedFiles,
+      handler,
+      runtime: nodeVersion.runtime,
+      shouldAddHelpers,
+      shouldAddSourcemapSupport,
+      awsLambdaHandler,
+    });
+  }
+
+  return { routes, output };
 };
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
@@ -386,7 +450,30 @@ export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
 
 export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, config, meta = {} } = opts;
-  const entryDir = join(workPath, dirname(entrypoint));
+  const entrypointPath = join(workPath, entrypoint);
+
+  if (config.middleware === true && typeof meta.requestUrl === 'string') {
+    // TODO: static config is also parsed in `dev-server.ts`.
+    // we should pass in this version as an env var instead.
+    const project = new Project();
+    const staticConfig = getConfig(project, entrypointPath);
+
+    // Middleware is a catch-all for all paths unless a `matcher` property is defined
+    const matchers = new RegExp(getRegExpFromMatchers(staticConfig?.matcher));
+
+    const parsed = url.parse(meta.requestUrl, true);
+    if (
+      typeof parsed.pathname !== 'string' ||
+      !matchers.test(parsed.pathname)
+    ) {
+      // If the "matchers" doesn't say to handle this
+      // path then skip middleware invocation
+      return null;
+    }
+  }
+
+  const entryDir = dirname(entrypointPath);
+
   const projectTsConfig = await walkParentDirs({
     base: workPath,
     start: entryDir,
@@ -418,6 +505,12 @@ export const startDevServer: StartDevServer = async opts => {
   });
 
   const { pid } = child;
+  if (!pid) {
+    throw new Error(
+      `Child Process has no "pid" when forking: "${devServerPath}"`
+    );
+  }
+
   const onMessage = once<{ port: number }>(child, 'message');
   const onExit = once.spread<[number, string | null]>(child, 'exit');
   const result = await Promise.race([onMessage, onExit]);
@@ -440,7 +533,7 @@ export const startDevServer: StartDevServer = async opts => {
     // Got "exit" event from child process
     const [exitCode, signal] = result;
     const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
-    throw new Error(`\`node ${entrypoint}\` failed with ${reason}`);
+    throw new Error(`Function \`${entrypoint}\` failed with ${reason}`);
   }
 };
 
@@ -448,7 +541,7 @@ async function doTypeCheck(
   { entrypoint, workPath, meta = {} }: StartDevServerOptions,
   projectTsConfig: string | null
 ): Promise<void> {
-  const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
+  const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
 
   // In order to type-check a single file, a standalone tsconfig
@@ -472,7 +565,7 @@ async function doTypeCheck(
 
   try {
     const json = JSON.stringify(tsconfig, null, '\t');
-    await mkdirp(entrypointCacheDir);
+    await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
   } catch (err) {
     // Don't throw if the file already exists

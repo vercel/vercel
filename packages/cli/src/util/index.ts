@@ -14,7 +14,7 @@ import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { Org } from '../types';
+import { GitMetadata, Org } from '../types';
 import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
 import { Dictionary } from '@vercel/client';
@@ -38,6 +38,7 @@ export interface CreateOptions {
   prebuilt?: boolean;
   rootDirectory?: string;
   meta: Dictionary<string>;
+  gitMetadata?: GitMetadata;
   regions?: string[];
   quiet?: boolean;
   env: Dictionary<string>;
@@ -116,6 +117,7 @@ export default class Now extends EventEmitter {
       rootDirectory,
       wantsPublic,
       meta,
+      gitMetadata,
       regions,
       quiet = false,
       env,
@@ -142,6 +144,7 @@ export default class Now extends EventEmitter {
       name,
       project,
       meta,
+      gitMetadata,
       regions,
       target: target || undefined,
       projectSettings,
@@ -527,7 +530,7 @@ export default class Now extends EventEmitter {
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
       fetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
-    printIndications(res);
+    printIndications(this._client, res);
     return res;
   }
 

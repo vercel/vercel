@@ -1,12 +1,13 @@
+import ms from 'ms';
 import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import chalk from 'chalk';
+import fetch from 'node-fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
 import listen from 'async-listen';
 import minimatch from 'minimatch';
-import ms from 'ms';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
@@ -16,11 +17,11 @@ import path, { isAbsolute, basename, dirname, extname, join } from 'path';
 import once from '@tootallnate/once';
 import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
-import { ChildProcess } from 'child_process';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import which from 'which';
 import npa from 'npm-package-arg';
+import type { ChildProcess } from 'child_process';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
@@ -35,12 +36,14 @@ import {
   StartDevServerResult,
   FileFsRef,
   PackageJson,
+  spawnCommand,
+} from '@vercel/build-utils';
+import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
-  spawnCommand,
   isOfficialRuntime,
-} from '@vercel/build-utils';
+} from '@vercel/fs-detectors';
 import frameworkList from '@vercel/frameworks';
 
 import cmd from '../output/cmd';
@@ -90,6 +93,13 @@ import {
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
 import { treeKill } from '../tree-kill';
+import { nodeHeadersToFetchHeaders } from './headers';
+import {
+  errorToString,
+  isErrnoException,
+  isError,
+  isSpawnError,
+} from '../is-error';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -327,6 +337,8 @@ export default class DevServer {
   ): Promise<void> {
     const name = relative(this.cwd, fsPath);
     try {
+      await this.getVercelConfig();
+
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
       const extensionless = this.getExtensionlessFile(name);
       if (extensionless) {
@@ -334,8 +346,8 @@ export default class DevServer {
       }
       fileChanged(name, changed, removed);
       this.output.debug(`File created: ${name}`);
-    } catch (err) {
-      if (err.code === 'ENOENT') {
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'ENOENT') {
         this.output.debug(`File created, but has since been deleted: ${name}`);
         fileRemoved(name, this.files, changed, removed);
       } else {
@@ -369,8 +381,8 @@ export default class DevServer {
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
       fileChanged(name, changed, removed);
       this.output.debug(`File modified: ${name}`);
-    } catch (err) {
-      if (err.code === 'ENOENT') {
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'ENOENT') {
         this.output.debug(`File modified, but has since been deleted: ${name}`);
         fileRemoved(name, this.files, changed, removed);
       } else {
@@ -501,8 +513,8 @@ export default class DevServer {
       this.output.debug(`Using local env: ${filePath}`);
       env = parseDotenv(dotenv);
       env = this.injectSystemValuesInDotenv(env);
-    } catch (err) {
-      if (err.code !== 'ENOENT') {
+    } catch (err: unknown) {
+      if (!isErrnoException(err) || err.code !== 'ENOENT') {
         throw err;
       }
     }
@@ -552,9 +564,8 @@ export default class DevServer {
     ]);
 
     await this.validateVercelConfig(vercelConfig);
-    const { error: routeError, routes: maybeRoutes } = getTransformedRoutes({
-      nowConfig: vercelConfig,
-    });
+    const { error: routeError, routes: maybeRoutes } =
+      getTransformedRoutes(vercelConfig);
     if (routeError) {
       this.output.prettyError(routeError);
       await this.exit();
@@ -593,7 +604,7 @@ export default class DevServer {
         await this.exit();
       }
 
-      if (warnings && warnings.length > 0) {
+      if (warnings?.length > 0) {
         warnings.forEach(warning =>
           this.output.warn(warning.message, null, warning.link, warning.action)
         );
@@ -714,13 +725,15 @@ export default class DevServer {
       const parsed: WithFileNameSymbol<T> = JSON.parse(raw);
       parsed[fileNameSymbol] = rel;
       return parsed;
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        this.output.debug(`No \`${rel}\` file present`);
-      } else if (err.name === 'SyntaxError') {
-        this.output.warn(
-          `There is a syntax error in the \`${rel}\` file: ${err.message}`
-        );
+    } catch (err: unknown) {
+      if (isError(err)) {
+        if (isErrnoException(err) && err.code === 'ENOENT') {
+          this.output.debug(`No \`${rel}\` file present`);
+        } else if (err.name === 'SyntaxError') {
+          this.output.warn(
+            `There is a syntax error in the \`${rel}\` file: ${err.message}`
+          );
+        }
       } else {
         throw err;
       }
@@ -846,22 +859,26 @@ export default class DevServer {
     while (typeof address !== 'string') {
       try {
         address = await listen(this.server, ...listenSpec);
-      } catch (err) {
-        this.output.debug(`Got listen error: ${err.code}`);
-        if (err.code === 'EADDRINUSE') {
-          if (typeof listenSpec[0] === 'number') {
-            // Increase port and try again
-            this.output.note(
-              `Requested port ${chalk.yellow(
-                String(listenSpec[0])
-              )} is already in use`
-            );
-            listenSpec[0]++;
-          } else {
-            this.output.error(
-              `Requested socket ${chalk.cyan(listenSpec[0])} is already in use`
-            );
-            process.exit(1);
+      } catch (err: unknown) {
+        if (isErrnoException(err)) {
+          this.output.debug(`Got listen error: ${err.code}`);
+          if (err.code === 'EADDRINUSE') {
+            if (typeof listenSpec[0] === 'number') {
+              // Increase port and try again
+              this.output.note(
+                `Requested port ${chalk.yellow(
+                  String(listenSpec[0])
+                )} is already in use`
+              );
+              listenSpec[0]++;
+            } else {
+              this.output.error(
+                `Requested socket ${chalk.cyan(
+                  listenSpec[0]
+                )} is already in use`
+              );
+              process.exit(1);
+            }
           }
         } else {
           throw err;
@@ -1023,12 +1040,8 @@ export default class DevServer {
 
     try {
       await Promise.all(ops);
-    } catch (err) {
-      // Node 8 doesn't have a code for that error
-      if (
-        err.code === 'ERR_SERVER_NOT_RUNNING' ||
-        err.message === 'Not running'
-      ) {
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'ERR_SERVER_NOT_RUNNING') {
         process.exit(exitCode || 0);
       } else {
         throw err;
@@ -1106,6 +1119,7 @@ export default class DevServer {
         view = errorTemplate({
           http_status_code: statusCode,
           http_status_description,
+          error_code,
           request_id: requestId,
         });
       }
@@ -1297,13 +1311,16 @@ export default class DevServer {
     try {
       const vercelConfig = await this.getVercelConfig();
       await this.serveProjectAsNowV2(req, res, requestId, vercelConfig);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      this.output.debug(err.stack);
+
+      if (isError(err) && typeof err.stack === 'string') {
+        this.output.debug(err.stack);
+      }
 
       if (!res.finished) {
         res.statusCode = 500;
-        res.end(err.message);
+        res.end(errorToString(err));
       }
     }
   };
@@ -1336,32 +1353,6 @@ export default class DevServer {
 
     return false;
   };
-
-  /*
-  runDevMiddleware = async (
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ) => {
-    const { devMiddlewarePlugins } = await loadCliPlugins(
-      this.cwd,
-      this.output
-    );
-    try {
-      for (let plugin of devMiddlewarePlugins) {
-        const result = await plugin.plugin.runDevMiddleware(req, res, this.cwd);
-        if (result.finished) {
-          return result;
-        }
-      }
-      return { finished: false };
-    } catch (e) {
-      return {
-        finished: true,
-        error: e,
-      };
-    }
-  };
-  */
 
   /**
    * Serve project directory as a v2 deployment.
@@ -1429,13 +1420,143 @@ export default class DevServer {
     let statusCode: number | undefined;
     let prevUrl = req.url;
     let prevHeaders: HttpHeadersConfig = {};
+    let middlewarePid: number | undefined;
 
-    /*
-    const middlewareResult = await this.runDevMiddleware(req, res);
+    // Run the middleware file, if present, and apply any
+    // mutations to the incoming request based on the
+    // result of the middleware invocation.
+    const middleware = [...this.buildMatches.values()].find(
+      m => m.config?.middleware === true
+    );
+    if (middleware) {
+      let startMiddlewareResult: StartDevServerResult | undefined;
+      // TODO: can we add some caching to prevent (re-)starting
+      // the middleware server for every HTTP request?
+      const { envConfigs, files, devCacheDir, cwd: workPath } = this;
+      try {
+        startMiddlewareResult =
+          await middleware.builderWithPkg.builder.startDevServer?.({
+            files,
+            entrypoint: middleware.entrypoint,
+            workPath,
+            repoRootPath: this.cwd,
+            config: middleware.config || {},
+            meta: {
+              isDev: true,
+              devCacheDir,
+              requestUrl: req.url,
+              env: { ...envConfigs.runEnv },
+              buildEnv: { ...envConfigs.buildEnv },
+            },
+          });
 
-    if (middlewareResult) {
-      if (middlewareResult.error) {
-        this.sendError(
+        if (startMiddlewareResult) {
+          const { port, pid } = startMiddlewareResult;
+          middlewarePid = pid;
+          this.devServerPids.add(pid);
+
+          const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
+
+          // Add the Vercel platform proxy request headers
+          const proxyHeaders = this.getProxyHeaders(req, requestId, true);
+          for (const [name, value] of nodeHeadersToFetchHeaders(proxyHeaders)) {
+            middlewareReqHeaders.set(name, value);
+          }
+
+          const middlewareRes = await fetch(
+            `http://127.0.0.1:${port}${parsed.path}`,
+            {
+              headers: middlewareReqHeaders,
+              method: req.method,
+              redirect: 'manual',
+            }
+          );
+
+          if (middlewareRes.status === 500) {
+            await this.sendError(
+              req,
+              res,
+              requestId,
+              'EDGE_FUNCTION_INVOCATION_FAILED',
+              500
+            );
+            return;
+          }
+
+          // Apply status code from middleware invocation,
+          // for i.e. redirects or a custom 404 page
+          res.statusCode = middlewareRes.status;
+
+          let rewritePath = '';
+          let contentType = '';
+          let shouldContinue = false;
+          const skipMiddlewareHeaders = new Set([
+            'date',
+            'connection',
+            'content-length',
+            'transfer-encoding',
+          ]);
+          for (const [name, value] of middlewareRes.headers) {
+            if (name === 'x-middleware-next') {
+              shouldContinue = value === '1';
+            } else if (name === 'x-middleware-rewrite') {
+              rewritePath = value;
+              shouldContinue = true;
+            } else if (name === 'content-type') {
+              contentType = value;
+            } else if (!skipMiddlewareHeaders.has(name)) {
+              // Any other kind of response header should be included
+              // on both the incoming HTTP request (for when proxying
+              // to another function) and the outgoing HTTP response.
+              res.setHeader(name, value);
+              req.headers[name] = value;
+            }
+          }
+
+          if (!shouldContinue) {
+            const middlewareBody = await middlewareRes.buffer();
+            this.setResponseHeaders(res, requestId);
+            if (middlewareBody.length > 0) {
+              res.setHeader('content-length', middlewareBody.length);
+              if (contentType) {
+                res.setHeader('content-type', contentType);
+              }
+              res.end(middlewareBody);
+            } else {
+              res.end();
+            }
+            return;
+          }
+
+          if (rewritePath) {
+            // TODO: add validation?
+            debug(`Detected rewrite path from middleware: "${rewritePath}"`);
+            prevUrl = rewritePath;
+
+            // Retain orginal pathname, but override query parameters from the rewrite
+            const beforeRewriteUrl = req.url || '/';
+            const rewriteUrlParsed = url.parse(beforeRewriteUrl, true);
+            delete rewriteUrlParsed.search;
+            rewriteUrlParsed.query = url.parse(rewritePath, true).query;
+            req.url = url.format(rewriteUrlParsed);
+            debug(
+              `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
+            );
+          }
+        }
+      } catch (err: unknown) {
+        // `startDevServer()` threw an error. Most likely this means the dev
+        // server process exited before sending the port information message
+        // (missing dependency at runtime, for example).
+        if (isSpawnError(err) && err.code === 'ENOENT') {
+          err.message = `Command not found: ${chalk.cyan(
+            err.path,
+            ...err.spawnargs
+          )}\nPlease ensure that ${cmd(err.path!)} is properly installed`;
+          (err as any).link = 'https://vercel.link/command-not-found';
+        }
+
+        await this.sendError(
           req,
           res,
           requestId,
@@ -1443,24 +1564,12 @@ export default class DevServer {
           500
         );
         return;
-      }
-      if (middlewareResult.finished) {
-        return;
-      }
-
-      if (middlewareResult.pathname) {
-        const origUrl = url.parse(req.url || '/', true);
-        origUrl.pathname = middlewareResult.pathname;
-        prevUrl = url.format(origUrl);
-      }
-      if (middlewareResult.query && prevUrl) {
-        const origUrl = url.parse(req.url || '/', true);
-        delete origUrl.search;
-        Object.assign(origUrl.query, middlewareResult.query);
-        prevUrl = url.format(origUrl);
+      } finally {
+        if (middlewarePid) {
+          this.killBuilderDevServer(middlewarePid);
+        }
       }
     }
-    */
 
     for (const phase of phases) {
       statusCode = undefined;
@@ -1735,24 +1844,28 @@ export default class DevServer {
           entrypoint: match.entrypoint,
           workPath,
           config: match.config || {},
+          repoRootPath: this.cwd,
           meta: {
             isDev: true,
             requestPath,
             devCacheDir,
-            env: { ...envConfigs.runEnv },
+            env: {
+              ...envConfigs.runEnv,
+              VERCEL_BUILDER_DEBUG: this.output.debugEnabled ? '1' : undefined,
+            },
             buildEnv: { ...envConfigs.buildEnv },
           },
         });
-      } catch (err) {
+      } catch (err: unknown) {
         // `startDevServer()` threw an error. Most likely this means the dev
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
-        if (err.code === 'ENOENT') {
+        if (isSpawnError(err) && err.code === 'ENOENT') {
           err.message = `Command not found: ${chalk.cyan(
             err.path,
             ...err.spawnargs
-          )}\nPlease ensure that ${cmd(err.path)} is properly installed`;
-          err.link = 'https://vercel.link/command-not-found';
+          )}\nPlease ensure that ${cmd(err.path!)} is properly installed`;
+          (err as any).link = 'https://vercel.link/command-not-found';
         }
 
         this.output.prettyError(err);
@@ -2184,13 +2297,7 @@ function proxyPass(
         `Failed to complete request to ${req.url}: ${error}`
       );
       if (!res.headersSent) {
-        devServer.sendError(
-          req,
-          res,
-          requestId,
-          'NO_RESPONSE_FROM_FUNCTION',
-          502
-        );
+        devServer.sendError(req, res, requestId, 'FUNCTION_INVOCATION_FAILED');
       }
     }
   );
@@ -2268,11 +2375,12 @@ async function findBuildMatch(
       if (!isIndex(match.src)) {
         return match;
       } else {
-        // if isIndex === true and ends in .html, we're done. Otherwise, keep searching
-        bestIndexMatch = match;
+        // If isIndex === true and ends in `.html`, we're done.
+        // Otherwise, keep searching.
         if (extname(match.src) === '.html') {
-          return bestIndexMatch;
+          return match;
         }
+        bestIndexMatch = match;
       }
     }
   }
@@ -2294,6 +2402,13 @@ async function shouldServe(
     config,
     builderWithPkg: { builder },
   } = match;
+
+  // "middleware" file is not served as a regular asset,
+  // instead it gets invoked as part of the routing logic.
+  if (config?.middleware === true) {
+    return false;
+  }
+
   const cleanSrc = src.endsWith('.html') ? src.slice(0, -5) : src;
   const trimmedPath = requestPath.endsWith('/')
     ? requestPath.slice(0, -1)
@@ -2446,12 +2561,10 @@ function needsBlockingBuild(buildMatch: BuildMatch): boolean {
   return typeof builder.shouldServe !== 'function';
 }
 
-async function checkForPort(
-  port: number | undefined,
-  timeout: number
-): Promise<void> {
+async function checkForPort(port: number, timeout: number): Promise<void> {
+  const opts = { host: '127.0.0.1' };
   const start = Date.now();
-  while (!(await isPortReachable(port))) {
+  while (!(await isPortReachable(port, opts))) {
     if (Date.now() - start > timeout) {
       throw new Error(`Detecting port ${port} timed out after ${timeout}ms`);
     }

@@ -16,7 +16,7 @@ import {
   EdgeFunction,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
-import { Header, Rewrite, Route, Source } from '@vercel/routing-utils';
+import { Header, Rewrite, Route, RouteWithSrc } from '@vercel/routing-utils';
 import { Sema } from 'async-sema';
 import crc32 from 'buffer-crc32';
 import fs, { lstat, stat } from 'fs-extra';
@@ -244,9 +244,7 @@ export async function getRoutesManifest(
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const routesManifest: RoutesManifest = require(pathRoutesManifest);
-
+  const routesManifest: RoutesManifest = await fs.readJSON(pathRoutesManifest);
   // remove temporary array based routeKeys from v1/v2 of routes
   // manifest since it can result in invalid routes
   for (const route of routesManifest.dataRoutes || []) {
@@ -275,8 +273,8 @@ export async function getDynamicRoutes(
   canUsePreviewMode?: boolean,
   bypassToken?: string,
   isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: Map<string, Source>
-): Promise<Source[]> {
+  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>
+): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
       case 1:
@@ -309,7 +307,7 @@ export async function getDynamicRoutes(
             }
 
             const { page, namedRegex, regex, routeKeys } = params;
-            const route: Source = {
+            const route: RouteWithSrc = {
               src: namedRegex || regex,
               dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
                 routeKeys
@@ -368,10 +366,10 @@ export async function getDynamicRoutes(
   let getSortedRoutes: ((normalizedPages: string[]) => string[]) | undefined;
 
   try {
-    ({ getRouteRegex, getSortedRoutes } = require(resolveFrom(
-      entryPath,
-      'next-server/dist/lib/router/utils'
-    )));
+    // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
+    ({ getRouteRegex, getSortedRoutes } = eval('require')(
+      resolveFrom(entryPath, 'next-server/dist/lib/router/utils')
+    ));
     if (typeof getRouteRegex !== 'function') {
       getRouteRegex = undefined;
     }
@@ -379,10 +377,10 @@ export async function getDynamicRoutes(
 
   if (!getRouteRegex || !getSortedRoutes) {
     try {
-      ({ getRouteRegex, getSortedRoutes } = require(resolveFrom(
-        entryPath,
-        'next/dist/next-server/lib/router/utils'
-      )));
+      // NOTE: `eval('require')` is necessary to avoid bad transpilation to `__webpack_require__`
+      ({ getRouteRegex, getSortedRoutes } = eval('require')(
+        resolveFrom(entryPath, 'next/dist/next-server/lib/router/utils')
+      ));
       if (typeof getRouteRegex !== 'function') {
         getRouteRegex = undefined;
       }
@@ -402,7 +400,7 @@ export async function getDynamicRoutes(
     matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
-  const routes: Source[] = [];
+  const routes: RouteWithSrc[] = [];
   pageMatchers.forEach(pageMatcher => {
     // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
@@ -421,7 +419,7 @@ export async function getDynamicRoutes(
 }
 
 export function localizeDynamicRoutes(
-  dynamicRoutes: Source[],
+  dynamicRoutes: RouteWithSrc[],
   dynamicPrefix: string,
   entryDirectory: string,
   staticPages: Files,
@@ -429,8 +427,8 @@ export function localizeDynamicRoutes(
   routesManifest?: RoutesManifest,
   isServerMode?: boolean,
   isCorrectLocaleAPIRoutes?: boolean
-): Source[] {
-  return dynamicRoutes.map((route: Source) => {
+): RouteWithSrc[] {
+  return dynamicRoutes.map((route: RouteWithSrc) => {
     // i18n is already handled for middleware
     if (route.middleware !== undefined || route.middlewarePath !== undefined)
       return route;
@@ -536,9 +534,7 @@ export async function getImagesManifest(
     return undefined;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const imagesManifest: NextImagesManifest = require(pathImagesManifest);
-  return imagesManifest;
+  return fs.readJson(pathImagesManifest);
 }
 
 type FileMap = { [page: string]: FileFsRef };
@@ -1279,26 +1275,39 @@ export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * 1000 * 1000; // 250MB
 const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * 1000 * 1000; // 2.5MB
 const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * 1000; // 250KB
 
-export async function getPageLambdaGroups(
-  entryPath: string,
-  config: Config,
-  pages: string[],
-  prerenderRoutes: Set<string>,
+export async function getPageLambdaGroups({
+  entryPath,
+  config,
+  pages,
+  prerenderRoutes,
+  pageTraces,
+  compressedPages,
+  tracedPseudoLayer,
+  initialPseudoLayer,
+  initialPseudoLayerUncompressed,
+  lambdaCompressedByteLimit,
+  internalPages,
+  pageExtensions,
+}: {
+  entryPath: string;
+  config: Config;
+  pages: string[];
+  prerenderRoutes: Set<string>;
   pageTraces: {
     [page: string]: {
       [key: string]: FileFsRef;
     };
-  },
+  };
   compressedPages: {
     [page: string]: PseudoFile;
-  },
-  tracedPseudoLayer: PseudoLayer,
-  initialPseudoLayerSize: number,
-  initialPseudoLayerUncompressedSize: number,
-  lambdaCompressedByteLimit: number,
-  internalPages: string[],
-  pageExtensions?: string[]
-) {
+  };
+  tracedPseudoLayer: PseudoLayer;
+  initialPseudoLayer: PseudoLayerResult;
+  initialPseudoLayerUncompressed: number;
+  lambdaCompressedByteLimit: number;
+  internalPages: string[];
+  pageExtensions?: string[];
+}) {
   const groups: Array<LambdaGroup> = [];
 
   for (const page of pages) {
@@ -1345,10 +1354,10 @@ export async function getPageLambdaGroups(
         }
 
         const underUncompressedLimit =
-          newTracedFilesUncompressedSize + initialPseudoLayerUncompressedSize <
+          newTracedFilesUncompressedSize <
           MAX_UNCOMPRESSED_LAMBDA_SIZE - LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
         const underCompressedLimit =
-          newTracedFilesSize + initialPseudoLayerSize <
+          newTracedFilesSize <
           lambdaCompressedByteLimit - LAMBDA_RESERVED_COMPRESSED_SIZE;
 
         return underUncompressedLimit && underCompressedLimit;
@@ -1363,9 +1372,9 @@ export async function getPageLambdaGroups(
         pages: [page],
         ...opts,
         isPrerenders: isPrerenderRoute,
-        pseudoLayerBytes: 0,
-        pseudoLayerUncompressedBytes: 0,
-        pseudoLayer: {},
+        pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
+        pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
+        pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
@@ -1656,6 +1665,7 @@ type OnPrerenderRouteArgs = {
   pageLambdaMap: { [key: string]: string };
   routesManifest?: RoutesManifest;
   isCorrectNotFoundRoutes?: boolean;
+  isEmptyAllowQueryForPrendered?: boolean;
 };
 let prerenderGroup = 1;
 
@@ -1689,6 +1699,7 @@ export const onPrerenderRoute =
       pageLambdaMap,
       routesManifest,
       isCorrectNotFoundRoutes,
+      isEmptyAllowQueryForPrendered,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -1892,7 +1903,6 @@ export const onPrerenderRoute =
       // a given path. All other query keys will be striped. We can automatically
       // detect this for prerender (ISR) pages by reading the routes manifest file.
       const pageKey = srcRoute || routeKey;
-      const isDynamic = isDynamicRoute(pageKey);
       const route = routesManifest?.dynamicRoutes.find(
         (r): r is RoutesManifestRoute =>
           r.page === pageKey && !('isMiddleware' in r)
@@ -1902,14 +1912,33 @@ export const onPrerenderRoute =
       // we have sufficient information to set it
       let allowQuery: string[] | undefined;
 
-      if (routeKeys) {
-        // if we have routeKeys in the routes-manifest we use those
-        // for allowQuery for dynamic routes
-        allowQuery = Object.values(routeKeys);
-      } else if (!isDynamic) {
-        // for non-dynamic routes we use an empty array since
-        // no query values bust the cache for non-dynamic prerenders
-        allowQuery = [];
+      if (isEmptyAllowQueryForPrendered) {
+        const isDynamic = isDynamicRoute(routeKey);
+
+        if (!isDynamic) {
+          // for non-dynamic routes we use an empty array since
+          // no query values bust the cache for non-dynamic prerenders
+          // prerendered paths also do not pass allowQuery as they match
+          // during handle: 'filesystem' so should not cache differently
+          // by query values
+          allowQuery = [];
+        } else if (routeKeys) {
+          // if we have routeKeys in the routes-manifest we use those
+          // for allowQuery for dynamic routes
+          allowQuery = Object.values(routeKeys);
+        }
+      } else {
+        const isDynamic = isDynamicRoute(pageKey);
+
+        if (routeKeys) {
+          // if we have routeKeys in the routes-manifest we use those
+          // for allowQuery for dynamic routes
+          allowQuery = Object.values(routeKeys);
+        } else if (!isDynamic) {
+          // for non-dynamic routes we use an empty array since
+          // no query values bust the cache for non-dynamic prerenders
+          allowQuery = [];
+        }
       }
 
       prerenders[outputPathPage] = new Prerender({
@@ -2128,43 +2157,65 @@ export {
 interface MiddlewareManifest {
   version: 1;
   sortedMiddleware: string[];
-  middleware: {
-    [page: string]: MiddlewareInfo;
-  };
+  middleware: { [page: string]: EdgeFunctionInfo };
+  functions?: { [page: string]: EdgeFunctionInfo };
 }
 
-interface MiddlewareInfo {
+interface EdgeFunctionInfo {
   env: string[];
   files: string[];
   name: string;
   page: string;
   regexp: string;
   wasm?: { filePath: string; name: string }[];
+  assets?: { filePath: string; name: string }[];
 }
 
 export async function getMiddlewareBundle({
   entryPath,
   outputDirectory,
   routesManifest,
+  isCorrectMiddlewareOrder,
+  prerenderBypassToken,
 }: {
   entryPath: string;
   outputDirectory: string;
+  prerenderBypassToken: string;
   routesManifest: RoutesManifest;
+  isCorrectMiddlewareOrder: boolean;
 }) {
   const middlewareManifest = await getMiddlewareManifest(
     entryPath,
     outputDirectory
   );
+  const sortedFunctions = [
+    ...(!middlewareManifest
+      ? []
+      : middlewareManifest.sortedMiddleware.map(key => ({
+          key,
+          edgeFunction: middlewareManifest?.middleware[key],
+          type: 'middleware' as const,
+        }))),
 
-  if (middlewareManifest && middlewareManifest?.sortedMiddleware.length > 0) {
+    ...Object.entries(middlewareManifest?.functions ?? {}).map(
+      ([key, edgeFunction]) => {
+        return {
+          key,
+          edgeFunction,
+          type: 'function' as const,
+        };
+      }
+    ),
+  ];
+
+  if (middlewareManifest && sortedFunctions.length > 0) {
     const workerConfigs = await Promise.all(
-      middlewareManifest.sortedMiddleware.map(async key => {
-        const middleware = middlewareManifest.middleware[key];
+      sortedFunctions.map(async ({ key, edgeFunction, type }) => {
         try {
           const wrappedModuleSource = await getNextjsEdgeFunctionSource(
-            middleware.files,
+            edgeFunction.files,
             {
-              name: middleware.name,
+              name: edgeFunction.name,
               staticRoutes: routesManifest.staticRoutes,
               dynamicRoutes: routesManifest.dynamicRoutes.filter(
                 r => !('isMiddleware' in r)
@@ -2175,18 +2226,19 @@ export async function getMiddlewareBundle({
               },
             },
             path.resolve(entryPath, outputDirectory),
-            middleware.wasm
+            edgeFunction.wasm
           );
 
           return {
-            page: middlewareManifest.middleware[key].page,
+            type,
+            page: edgeFunction.page,
             edgeFunction: (() => {
               const { source, map } = wrappedModuleSource.sourceAndMap();
               const transformedMap = stringifySourceMap(
                 transformSourceMap(map)
               );
 
-              const wasmFiles = (middleware.wasm ?? []).reduce(
+              const wasmFiles = (edgeFunction.wasm ?? []).reduce(
                 (acc: Files, { filePath, name }) => {
                   const fullFilePath = path.join(
                     entryPath,
@@ -2203,9 +2255,26 @@ export async function getMiddlewareBundle({
                 {}
               );
 
+              const assetFiles = (edgeFunction.assets ?? []).reduce(
+                (acc: Files, { filePath, name }) => {
+                  const fullFilePath = path.join(
+                    entryPath,
+                    outputDirectory,
+                    filePath
+                  );
+                  acc[`assets/${name}`] = new FileFsRef({
+                    mode: 0o644,
+                    contentType: 'application/octet-stream',
+                    fsPath: fullFilePath,
+                  });
+                  return acc;
+                },
+                {}
+              );
+
               return new EdgeFunction({
                 deploymentTarget: 'v8-worker',
-                name: middleware.name,
+                name: edgeFunction.name,
                 files: {
                   'index.js': new FileBlob({
                     data: source,
@@ -2220,15 +2289,19 @@ export async function getMiddlewareBundle({
                     }),
                   }),
                   ...wasmFiles,
+                  ...assetFiles,
                 },
                 entrypoint: 'index.js',
-                envVarsInUse: middleware.env,
+                envVarsInUse: edgeFunction.env,
+                assets: (edgeFunction.assets ?? []).map(({ name }) => {
+                  return {
+                    name,
+                    path: `assets/${name}`,
+                  };
+                }),
               });
             })(),
-            routeSrc: getRouteSrc(
-              middlewareManifest.middleware[key],
-              routesManifest
-            ),
+            routeSrc: getRouteSrc(edgeFunction, routesManifest),
           };
         } catch (e: any) {
           e.message = `Can't build edge function ${key}: ${e.message}`;
@@ -2239,7 +2312,7 @@ export async function getMiddlewareBundle({
 
     const source: {
       staticRoutes: Route[];
-      dynamicRouteMap: Map<string, Source>;
+      dynamicRouteMap: Map<string, RouteWithSrc>;
       edgeFunctions: Record<string, EdgeFunction>;
     } = {
       staticRoutes: [],
@@ -2249,14 +2322,29 @@ export async function getMiddlewareBundle({
 
     for (const worker of workerConfigs.values()) {
       const edgeFile = worker.edgeFunction.name;
-      worker.edgeFunction.name = edgeFile.replace(/^pages\//, '');
-      source.edgeFunctions[edgeFile] = worker.edgeFunction;
-      const route = {
+      const shortPath = edgeFile.replace(/^pages\//, '');
+      worker.edgeFunction.name = shortPath;
+      source.edgeFunctions[shortPath] = worker.edgeFunction;
+      const route: Route = {
         continue: true,
-        override: true,
-        middlewarePath: edgeFile,
         src: worker.routeSrc,
+        missing: [
+          {
+            type: 'header',
+            key: 'x-prerender-revalidate',
+            value: prerenderBypassToken,
+          },
+        ],
       };
+
+      if (worker.type === 'function') {
+        route.dest = shortPath;
+      } else {
+        route.middlewarePath = shortPath;
+        if (isCorrectMiddlewareOrder) {
+          route.override = true;
+        }
+      }
 
       if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
         source.dynamicRouteMap.set(worker.page, route);
@@ -2280,7 +2368,7 @@ export async function getMiddlewareBundle({
  * location. If the manifest can't be found it will resolve to
  * undefined.
  */
-async function getMiddlewareManifest(
+export async function getMiddlewareManifest(
   entryPath: string,
   outputDirectory: string
 ): Promise<MiddlewareManifest | undefined> {
@@ -2299,8 +2387,7 @@ async function getMiddlewareManifest(
     return;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require(middlewareManifestPath);
+  return fs.readJSON(middlewareManifestPath);
 }
 
 /**
@@ -2313,7 +2400,7 @@ async function getMiddlewareManifest(
  * @returns A regexp string for the middleware route.
  */
 function getRouteSrc(
-  { regexp, page }: MiddlewareInfo,
+  { regexp, page }: EdgeFunctionInfo,
   { basePath = '', i18n }: RoutesManifest
 ): string {
   if (page === '/') {

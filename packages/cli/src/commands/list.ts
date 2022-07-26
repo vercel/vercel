@@ -8,7 +8,6 @@ import cmd from '../util/output/cmd';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
 import strlen from '../util/strlen';
-import getScope from '../util/get-scope';
 import toHost from '../util/to-host';
 import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
@@ -16,6 +15,11 @@ import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
 import { Deployment } from '../types';
+import validatePaths from '../util/validate-paths';
+import { getLinkedProject } from '../util/projects/link';
+import { ensureLink } from '../util/ensure-link';
+import getScope from '../util/get-scope';
+import { isAPIError } from '../util/errors-ts';
 
 const help = () => {
   console.log(`
@@ -31,6 +35,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --confirm                      Skip the confirmation prompt
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -42,12 +47,14 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} List all deployments
+  ${chalk.gray('–')} List all deployments for the currently linked project
 
     ${chalk.cyan(`$ ${getPkgName()} ls`)}
 
-  ${chalk.gray('–')} List all deployments for the app ${chalk.dim('`my-app`')}
-
+  ${chalk.gray('–')} List all deployments for the project ${chalk.dim(
+    '`my-app`'
+  )} in the team of the currently linked project
+  
     ${chalk.cyan(`$ ${getPkgName()} ls my-app`)}
 
   ${chalk.gray('–')} Filter deployments by metadata
@@ -71,6 +78,7 @@ export default async function main(client: Client) {
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
+      '--confirm': Boolean,
     });
   } catch (err) {
     handleError(err);
@@ -86,29 +94,66 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  let app: string | undefined = argv._[1];
-  let host: string | undefined = undefined;
-
   if (argv['--help']) {
     help();
     return 2;
   }
 
+  const yes = argv['--confirm'] || false;
+
   const meta = parseMeta(argv['--meta']);
-  const { currentTeam, includeScheme } = config;
+  const { includeScheme } = config;
 
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      error(err.message);
-      return 1;
-    }
-
-    throw err;
+  let paths = [process.cwd()];
+  const pathValidation = await validatePaths(client, paths);
+  if (!pathValidation.valid) {
+    return pathValidation.exitCode;
   }
+
+  const { path } = pathValidation;
+
+  // retrieve `project` and `org` from .vercel
+  let link = await getLinkedProject(client, path);
+
+  if (link.status === 'error') {
+    return link.exitCode;
+  }
+
+  let { org, project, status } = link;
+  const appArg: string | undefined = argv._[1];
+  let app: string | undefined = appArg || project?.name;
+  let host: string | undefined = undefined;
+
+  if (app && !isValidName(app)) {
+    error(`The provided argument "${app}" is not a valid project name`);
+    return 1;
+  }
+
+  // If there's no linked project and user doesn't pass `app` arg,
+  // prompt to link their current directory.
+  if (status === 'not_linked' && !app) {
+    const linkedProject = await ensureLink('list', client, path, yes);
+    if (typeof linkedProject === 'number') {
+      return linkedProject;
+    }
+    link.org = linkedProject.org;
+    link.project = linkedProject.project;
+  }
+
+  let { contextName, team } = await getScope(client);
+
+  // If user passed in a custom scope, update the current team & context name
+  if (argv['--scope']) {
+    client.config.currentTeam = team?.id || undefined;
+    if (team?.slug) contextName = team.slug;
+  } else {
+    client.config.currentTeam = org?.type === 'team' ? org.id : undefined;
+    if (org?.slug) contextName = org.slug;
+  }
+
+  const { currentTeam } = config;
+
+  ({ contextName } = await getScope(client));
 
   const nextTimestamp = argv['--next'];
 
@@ -152,6 +197,7 @@ export default async function main(client: Client) {
   }
 
   debug('Fetching deployments');
+
   const response = await now.list(app, {
     version: 6,
     meta,
@@ -174,8 +220,8 @@ export default async function main(client: Client) {
 
     try {
       await now.findDeployment(app);
-    } catch (err) {
-      if (err.status === 404) {
+    } catch (err: unknown) {
+      if (isAPIError(err) && err.status === 404) {
         debug('Ignore findDeployment 404');
       } else {
         throw err;
@@ -194,16 +240,17 @@ export default async function main(client: Client) {
     deployments = deployments.filter(deployment => deployment.url === host);
   }
 
+  // we don't output the table headers if we have no deployments
+  if (!deployments.length) {
+    log(`No deployments found.`);
+    return 0;
+  }
+
   log(
     `Deployments under ${chalk.bold(contextName)} ${elapsed(
       Date.now() - start
     )}`
   );
-
-  // we don't output the table headers if we have no deployments
-  if (!deployments.length) {
-    return 0;
-  }
 
   // information to help the user find other deployments or instances
   if (app == null) {
@@ -216,7 +263,7 @@ export default async function main(client: Client) {
 
   print('\n');
 
-  console.log(
+  client.output.print(
     `${table(
       [
         ['project', 'latest deployment', 'state', 'age', 'username'].map(
@@ -247,7 +294,7 @@ export default async function main(client: Client) {
         hsep: ' '.repeat(4),
         stringLength: strlen,
       }
-    ).replace(/^/gm, '  ')}\n`
+    ).replace(/^/gm, '  ')}\n\n`
   );
 
   if (pagination && pagination.count === 20) {
@@ -270,7 +317,7 @@ function getProjectName(d: Deployment) {
 }
 
 // renders the state string
-function stateString(s: string) {
+export function stateString(s: string) {
   switch (s) {
     case 'INITIALIZING':
       return chalk.yellow(s);

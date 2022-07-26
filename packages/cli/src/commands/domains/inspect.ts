@@ -23,19 +23,7 @@ export default async function inspect(
   args: string[]
 ) {
   const { output } = client;
-
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const [domainName] = args;
   const inspectStamp = stamp();
@@ -150,17 +138,7 @@ export default async function inspect(
       `This Domain is not configured properly. To configure it you should either:`,
       null,
       null,
-      null,
-      {
-        boxen: {
-          margin: {
-            left: 2,
-            right: 0,
-            bottom: 0,
-            top: 0,
-          },
-        },
-      }
+      null
     );
     output.print(
       `  ${chalk.grey('a)')} ` +

@@ -4,7 +4,7 @@ import ms from 'ms';
 import bytes from 'bytes';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
-import { createFunction } from '@zeit/fun';
+import { createFunction } from '@vercel/fun';
 import {
   Builder,
   BuildOptions,
@@ -13,8 +13,8 @@ import {
   Lambda,
   FileBlob,
   FileFsRef,
-  isOfficialRuntime,
 } from '@vercel/build-utils';
+import { isOfficialRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 
@@ -142,6 +142,7 @@ export async function executeBuild(
     files,
     entrypoint,
     workPath,
+    repoRootPath: workPath,
     config,
     meta: {
       isDev: true,
@@ -415,10 +416,6 @@ export async function getBuildMatches(
       // of Vercel deployments.
       src = src.substring(1);
     }
-
-    // We need to escape brackets since `glob` will
-    // try to find a group otherwise
-    src = src.replace(/(\[|\])/g, '[$1]');
 
     // lambda function files are trimmed of their file extension
     const mapToEntrypoint = new Map<string, string>();

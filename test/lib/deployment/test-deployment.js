@@ -177,34 +177,50 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   const { text, resp } = await fetchDeploymentUrl(probeUrl, fetchOpts);
   logWithinTest('finished testing', JSON.stringify(probe));
 
+  let hadTest = false;
+
   if (probe.status) {
     if (probe.status !== resp.status) {
       throw new Error(
         `Fetched page ${probeUrl} does not return the status ${probe.status} Instead it has ${resp.status}`
       );
     }
+    hadTest = true;
   }
 
-  if (probe.mustContain || probe.mustNotContain) {
-    const shouldContain = !!probe.mustContain;
+  if (probe.mustContain) {
     const containsIt = text.includes(probe.mustContain);
-    if (
-      (!containsIt && probe.mustContain) ||
-      (containsIt && probe.mustNotContain)
-    ) {
+    if (!containsIt) {
       fs.writeFileSync(path.join(__dirname, 'failed-page.txt'), text);
       const headers = Array.from(resp.headers.entries())
         .map(([k, v]) => `  ${k}=${v}`)
         .join('\n');
       throw new Error(
-        `Fetched page ${probeUrl} does${shouldContain ? ' not' : ''} contain ${
-          shouldContain ? probe.mustContain : probe.mustNotContain
-        }.` +
-          (shouldContain ? ` Instead it contains ${text.slice(0, 60)}` : '') +
+        `Fetched page ${probeUrl} does not contain ${probe.mustContain}.` +
+          ` Content ${text}` +
           ` Response headers:\n ${headers}`
       );
     }
-  } else if (probe.responseHeaders) {
+    hadTest = true;
+  }
+
+  if (probe.mustNotContain) {
+    const containsIt = text.includes(probe.mustNotContain);
+    if (containsIt) {
+      fs.writeFileSync(path.join(__dirname, 'failed-page.txt'), text);
+      const headers = Array.from(resp.headers.entries())
+        .map(([k, v]) => `  ${k}=${v}`)
+        .join('\n');
+      throw new Error(
+        `Fetched page ${probeUrl} does contain ${probe.mustNotContain}.` +
+          ` Content ${text}` +
+          ` Response headers:\n ${headers}`
+      );
+    }
+    hadTest = true;
+  }
+
+  if (probe.responseHeaders) {
     // eslint-disable-next-line no-loop-func
     Object.keys(probe.responseHeaders).forEach(header => {
       const actual = resp.headers.get(header);
@@ -226,6 +242,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         );
       }
     });
+    hadTest = true;
   } else if (probe.notResponseHeaders) {
     Object.keys(probe.notResponseHeaders).forEach(header => {
       const headerValue = resp.headers.get(header);
@@ -241,9 +258,10 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
         );
       }
     });
-  } else if (!probe.status) {
-    assert(false, 'probe must have a test condition');
+    hadTest = true;
   }
+
+  assert(hadTest, 'probe must have a test condition');
 }
 
 async function testDeployment(

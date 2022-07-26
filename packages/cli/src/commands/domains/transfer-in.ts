@@ -23,18 +23,7 @@ export default async function transferIn(
   args: string[]
 ) {
   const { output } = client;
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const [domainName] = args;
   if (!domainName) {
@@ -81,7 +70,8 @@ export default async function transferIn(
   const shouldTransfer = await promptBool(
     transferPolicy === 'no-change'
       ? `Transfer now for ${chalk.bold(`$${price}`)}?`
-      : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`
+      : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`,
+    client
   );
   if (!shouldTransfer) {
     return 0;

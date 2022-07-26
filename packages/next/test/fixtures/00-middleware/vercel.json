@@ -3,6 +3,15 @@
   "builds": [{ "src": "package.json", "use": "@vercel/next" }],
   "probes": [
     {
+      "path": "/_next/data/testing-build-id/rewrite-to-site.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": 1
+      },
+      "mustContain": "site\":\"subdomain-1\"",
+      "mustNotContain": "<html>"
+    },
+    {
       "path": "/redirect-me",
       "status": 307,
       "responseHeaders": {
@@ -11,6 +20,47 @@
       "fetchOptions": {
         "redirect": "manual"
       }
+    },
+    {
+      "path": "/rewrite-before-files",
+      "status": 404,
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/somewhere",
+      "status": 307,
+      "responseHeaders": {
+        "Location": "/from-middleware/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/after-file-rewrite",
+      "status": 200,
+      "mustContain": "About Page"
+    },
+    {
+      "path": "/_next/data/testing-build-id/after-file-rewrite.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": "1"
+      },
+      "mustContain": "page\":\"about\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/after-file-rewrite-auto-static-dynamic.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": "1"
+      },
+      "responseHeaders": {
+        "x-nextjs-matched-path": "/dynamic/first"
+      },
+      "mustContain": "{}"
     }
   ]
 }

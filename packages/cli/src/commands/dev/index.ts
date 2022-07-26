@@ -15,6 +15,7 @@ import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
 import { getPkgName, getCommandName } from '../../util/pkg-name';
 import { CantParseJSONFile } from '../../util/errors-ts';
+import { isErrnoException } from '../../util/is-error';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -136,7 +137,7 @@ export default async function main(client: Client) {
   try {
     return await dev(client, argv, args);
   } catch (err) {
-    if (err.code === 'ENOTFOUND') {
+    if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
       // "request to https://api.vercel.com/v2/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
       const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
@@ -148,7 +149,9 @@ export default async function main(client: Client) {
           )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
         );
       }
-      output.debug(err.stack);
+      if (typeof err.stack === 'string') {
+        output.debug(err.stack);
+      }
       return 1;
     }
     output.prettyError(err);
