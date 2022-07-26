@@ -68,7 +68,7 @@ export async function readInput(
         message,
       });
       input = val;
-    } catch (err) {
+    } catch (err: any) {
       console.log(); // \n
 
       if (err.isTtyError) {

@@ -5,6 +5,7 @@ import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
   InvalidDeploymentId,
+  isAPIError,
 } from '../errors-ts';
 import mapCertError from '../certs/map-cert-error';
 
@@ -26,23 +27,25 @@ export default async function getDeploymentByIdOrHost(
           )
         : await getDeploymentById(client, idOrHost, apiVersion);
     return deployment;
-  } catch (error) {
-    if (error.status === 404) {
-      return new DeploymentNotFound({ id: idOrHost, context: contextName });
-    }
-    if (error.status === 403) {
-      return new DeploymentPermissionDenied(idOrHost, contextName);
-    }
-    if (error.status === 400 && error.message.includes('`id`')) {
-      return new InvalidDeploymentId(idOrHost);
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.status === 404) {
+        return new DeploymentNotFound({ id: idOrHost, context: contextName });
+      }
+      if (err.status === 403) {
+        return new DeploymentPermissionDenied(idOrHost, contextName);
+      }
+      if (err.status === 400 && err.message.includes('`id`')) {
+        return new InvalidDeploymentId(idOrHost);
+      }
+
+      const certError = mapCertError(err);
+      if (certError) {
+        return certError;
+      }
     }
 
-    const certError = mapCertError(error);
-    if (certError) {
-      return certError;
-    }
-
-    throw error;
+    throw err;
   }
 }
 

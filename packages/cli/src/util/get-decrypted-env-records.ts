@@ -7,6 +7,7 @@ import {
   Secret,
 } from '../types';
 import getEnvRecords, { EnvRecordsSource } from './env/get-env-records';
+import { isAPIError } from './errors-ts';
 
 export default async function getDecryptedEnvRecords(
   output: Output,
@@ -39,12 +40,12 @@ export default async function getDecryptedEnvRecords(
           );
 
           return { id, type, key, value: secret.value, found: true };
-        } catch (error) {
-          if (error && error.status === 404) {
+        } catch (err: unknown) {
+          if (isAPIError(err) && err.status === 404) {
             return { id, type, key, value: '', found: false };
           }
 
-          throw error;
+          throw err;
         }
       }
 

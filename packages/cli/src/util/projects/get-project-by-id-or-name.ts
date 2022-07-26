@@ -1,6 +1,6 @@
 import Client from '../client';
 import { Project } from '../../types';
-import { ProjectNotFound } from '../errors-ts';
+import { isAPIError, ProjectNotFound } from '../errors-ts';
 
 export default async function getProjectByNameOrId(
   client: Client,
@@ -13,11 +13,11 @@ export default async function getProjectByNameOrId(
       { accountId }
     );
     return project;
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status === 404) {
       return new ProjectNotFound(projectNameOrId);
     }
 
-    throw error;
+    throw err;
   }
 }
