@@ -20,7 +20,7 @@ describe('pull', () => {
     client.setArgv('pull', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      'Downloading "development" Environment Variables for Project vercel-pull-next'
+      'Downloading `development` Environment Variables for Project vercel-pull-next'
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.development.local file`
@@ -86,7 +86,7 @@ describe('pull', () => {
       client.setArgv('pull', cwd);
       const exitCodePromise = pull(client);
       await expect(client.stderr).toOutput(
-        'Downloading "development" Environment Variables for Project vercel-pull-next'
+        'Downloading `development` Environment Variables for Project vercel-pull-next'
       );
       await expect(client.stderr).toOutput(
         `Created .vercel${path.sep}.env.development.local file`
@@ -101,7 +101,9 @@ describe('pull', () => {
         Object {
           "orgId": "team_dummy",
           "projectId": "vercel-pull-next",
-          "settings": Object {},
+          "settings": Object {
+            "createdAt": 1555413045188,
+          },
         }
       `);
     } finally {
@@ -122,7 +124,7 @@ describe('pull', () => {
     client.setArgv('pull', '--environment=preview', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      'Downloading "preview" Environment Variables for Project vercel-pull-next'
+      'Downloading `preview` Environment Variables for Project vercel-pull-next'
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.preview.local file`
@@ -153,7 +155,7 @@ describe('pull', () => {
     client.setArgv('pull', '--environment=production', cwd);
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
-      'Downloading "production" Environment Variables for Project vercel-pull-next'
+      'Downloading `production` Environment Variables for Project vercel-pull-next'
     );
     await expect(client.stderr).toOutput(
       `Created .vercel${path.sep}.env.production.local file`

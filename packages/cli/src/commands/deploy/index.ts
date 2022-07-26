@@ -3,14 +3,13 @@ import fs from 'fs-extra';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import { join, resolve, basename } from 'path';
-import { Dictionary, fileNameSymbol, VercelConfig } from '@vercel/client';
+import { fileNameSymbol, VercelConfig } from '@vercel/client';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
 import Client from '../../util/client';
-import { write as copy } from 'clipboardy';
 import { getPrettyError } from '@vercel/build-utils';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
@@ -39,6 +38,7 @@ import {
   ConflictingPathSegment,
   BuildError,
   NotDomainOwner,
+  isAPIError,
 } from '../../util/errors-ts';
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
@@ -65,7 +65,9 @@ import { help } from './args';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
-import { createGitMeta } from '../../util/deploy/create-git-meta';
+import { createGitMeta } from '../../util/create-git-meta';
+import { parseEnv } from '../../util/parse-env';
+import { errorToString, isErrnoException, isError } from '../../util/is-error';
 
 export default async (client: Client) => {
   const { output } = client;
@@ -77,7 +79,6 @@ export default async (client: Client) => {
       '--force': Boolean,
       '--with-cache': Boolean,
       '--public': Boolean,
-      '--no-clipboard': Boolean,
       '--env': [String],
       '--build-env': [String],
       '--meta': [String],
@@ -91,13 +92,13 @@ export default async (client: Client) => {
       '-p': '--public',
       '-e': '--env',
       '-b': '--build-env',
-      '-C': '--no-clipboard',
       '-m': '--meta',
       '-c': '--confirm',
 
       // deprecated
       '--name': String,
       '-n': '--name',
+      '--no-clipboard': Boolean,
       '--target': String,
     });
   } catch (error) {
@@ -186,6 +187,17 @@ export default async (client: Client) => {
     );
   }
 
+  if (argv['--no-clipboard']) {
+    output.print(
+      `${prependEmoji(
+        `The ${param(
+          '--no-clipboard'
+        )} option was ignored because it is the default behavior. Please remove it.`,
+        emoji('warning')
+      )}\n`
+    );
+  }
+
   // build `target`
   const target = parseTarget(output, argv['--target'], argv['--prod']);
   if (typeof target === 'number') {
@@ -207,6 +219,22 @@ export default async (client: Client) => {
     }
 
     const prebuiltBuild = await getPrebuiltJson(path);
+
+    // Ensure that there was not a build error
+    const prebuiltError =
+      prebuiltBuild?.error ||
+      prebuiltBuild?.builds?.find(build => 'error' in build)?.error;
+    if (prebuiltError) {
+      output.log(
+        `Prebuilt deployment cannot be created because ${getCommandName(
+          'build'
+        )} failed with error:\n`
+      );
+      prettyError(prebuiltError);
+      return 1;
+    }
+
+    // Ensure that the deploy target matches the build target
     const assumedTarget = target || 'preview';
     if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
       let specifyTarget = '';
@@ -259,8 +287,11 @@ export default async (client: Client) => {
         'Which scope do you want to deploy to?',
         autoConfirm
       );
-    } catch (err) {
-      if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+    } catch (err: unknown) {
+      if (
+        isErrnoException(err) &&
+        (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
+      ) {
         output.error(err.message);
         return 1;
       }
@@ -419,7 +450,7 @@ export default async (client: Client) => {
     parseMeta(argv['--meta'])
   );
 
-  const gitMetadata = await createGitMeta(path, output);
+  const gitMetadata = await createGitMeta(path, output, project);
 
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
@@ -439,8 +470,8 @@ export default async (client: Client) => {
   try {
     await addProcessEnv(log, deploymentEnv);
     await addProcessEnv(log, deploymentBuildEnv);
-  } catch (err) {
-    error(err.message);
+  } catch (err: unknown) {
+    error(errorToString(err));
     return 1;
   }
 
@@ -601,8 +632,10 @@ export default async (client: Client) => {
       error('Uploading failed. Please try again.');
       return 1;
     }
-  } catch (err) {
-    debug(`Error: ${err}\n${err.stack}`);
+  } catch (err: unknown) {
+    if (isError(err)) {
+      debug(`Error: ${err}\n${err.stack}`);
+    }
 
     if (err instanceof NotDomainOwner) {
       output.error(err.message);
@@ -669,13 +702,7 @@ export default async (client: Client) => {
       return 1;
     }
 
-    if (err.keyword === 'additionalProperties' && err.dataPath === '.scale') {
-      const { additionalProperty = '' } = err.params || {};
-      const message = `Invalid DC name for the scale option: ${additionalProperty}`;
-      error(message);
-    }
-
-    if (err.code === 'size_limit_exceeded') {
+    if (isAPIError(err) && err.code === 'size_limit_exceeded') {
       const { sizeLimit = 0 } = err;
       const message = `File size limit exceeded (${bytes(sizeLimit)})`;
       error(message);
@@ -686,13 +713,7 @@ export default async (client: Client) => {
     return 1;
   }
 
-  return printDeploymentStatus(
-    output,
-    client,
-    deployment,
-    deployStamp,
-    !argv['--no-clipboard']
-  );
+  return printDeploymentStatus(output, client, deployment, deployStamp);
 };
 
 function handleCreateDeployError(
@@ -825,8 +846,7 @@ const printDeploymentStatus = async (
       action?: string;
     };
   },
-  deployStamp: () => string,
-  isClipboardEnabled: boolean
+  deployStamp: () => string
 ) => {
   indications = indications || [];
   const isProdDeployment = target === 'production';
@@ -847,40 +867,23 @@ const printDeploymentStatus = async (
   } else {
     // print preview/production url
     let previewUrl: string;
-    let isWildcard: boolean;
     if (Array.isArray(aliasList) && aliasList.length > 0) {
       const previewUrlInfo = await getPreferredPreviewURL(client, aliasList);
       if (previewUrlInfo) {
-        isWildcard = previewUrlInfo.isWildcard;
         previewUrl = previewUrlInfo.previewUrl;
       } else {
-        isWildcard = false;
         previewUrl = `https://${deploymentUrl}`;
       }
     } else {
       // fallback to deployment url
-      isWildcard = false;
       previewUrl = `https://${deploymentUrl}`;
-    }
-
-    // copy to clipboard
-    let isCopiedToClipboard = false;
-    if (isClipboardEnabled && !isWildcard) {
-      try {
-        await copy(previewUrl);
-        isCopiedToClipboard = true;
-      } catch (err) {
-        output.debug(`Error copyind to clipboard: ${err}`);
-      }
     }
 
     output.print(
       prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
           previewUrl
-        )}${
-          isCopiedToClipboard ? chalk.gray(` [copied to clipboard]`) : ''
-        } ${deployStamp()}`,
+        )} ${deployStamp()}`,
         emoji('success')
       ) + `\n`
     );
@@ -908,37 +911,4 @@ const printDeploymentStatus = async (
         ) + newline;
     output.print(message + link);
   }
-};
-
-// Converts `env` Arrays, Strings and Objects into env Objects.
-const parseEnv = (env?: string[] | Dictionary<string>) => {
-  if (!env) {
-    return {};
-  }
-
-  if (typeof env === 'string') {
-    // a single `--env` arg comes in as a String
-    env = [env];
-  }
-
-  if (Array.isArray(env)) {
-    return env.reduce((o, e) => {
-      let key;
-      let value;
-      const equalsSign = e.indexOf('=');
-
-      if (equalsSign === -1) {
-        key = e;
-      } else {
-        key = e.slice(0, equalsSign);
-        value = e.slice(equalsSign + 1);
-      }
-
-      o[key] = value;
-      return o;
-    }, {} as Dictionary<string | undefined>);
-  }
-
-  // assume it's already an Object
-  return env;
 };

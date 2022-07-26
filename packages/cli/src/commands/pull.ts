@@ -179,6 +179,8 @@ export default async function main(client: Client) {
     return pullResultCode;
   }
 
+  client.output.print('\n');
+  client.output.log('Downloading project settings');
   await writeProjectSettings(cwd, project, org);
 
   const settingsStamp = stamp();

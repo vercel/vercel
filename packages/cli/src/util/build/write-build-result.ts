@@ -1,6 +1,14 @@
 import fs from 'fs-extra';
 import mimeTypes from 'mime-types';
-import { basename, dirname, extname, join, relative, resolve } from 'path';
+import {
+  basename,
+  dirname,
+  extname,
+  join,
+  relative,
+  resolve,
+  posix,
+} from 'path';
 import {
   Builder,
   BuildResultV2,
@@ -15,12 +23,24 @@ import {
   download,
   EdgeFunction,
   BuildResultBuildOutput,
+  getLambdaOptionsFromFunction,
+  normalizePath,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
+import { VercelConfig } from '@vercel/client';
 
+const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
+
+/**
+ * An entry in the "functions" object in `vercel.json`.
+ */
+interface FunctionConfiguration {
+  memory?: number;
+  maxDuration?: number;
+}
 
 export async function writeBuildResult(
   outputDir: string,
@@ -28,17 +48,22 @@ export async function writeBuildResult(
   build: Builder,
   builder: BuilderV2 | BuilderV3,
   builderPkg: PackageJson,
-  cleanUrls?: boolean
+  vercelConfig: VercelConfig | null
 ) {
   const { version } = builder;
-  if (version === 2) {
+  if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(
       outputDir,
       buildResult as BuildResultV2,
-      cleanUrls
+      vercelConfig
     );
   } else if (version === 3) {
-    return writeBuildResultV3(outputDir, buildResult as BuildResultV3, build);
+    return writeBuildResultV3(
+      outputDir,
+      buildResult as BuildResultV3,
+      build,
+      vercelConfig
+    );
   }
   throw new Error(
     `Unsupported Builder version \`${version}\` from "${builderPkg.name}"`
@@ -68,13 +93,20 @@ export interface PathOverride {
 }
 
 /**
+ * Remove duplicate slashes as well as leading/trailing slashes.
+ */
+function stripDuplicateSlashes(path: string): string {
+  return normalize(path).replace(/(^\/|\/$)/g, '');
+}
+
+/**
  * Writes the output from the `build()` return value of a v2 Builder to
  * the filesystem.
  */
 async function writeBuildResultV2(
   outputDir: string,
   buildResult: BuildResultV2,
-  cleanUrls?: boolean
+  vercelConfig: VercelConfig | null
 ) {
   if ('buildOutputPath' in buildResult) {
     await mergeBuilderOutput(outputDir, buildResult);
@@ -84,16 +116,23 @@ async function writeBuildResultV2(
   const lambdas = new Map<Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
   for (const [path, output] of Object.entries(buildResult.output)) {
+    const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
-      await writeLambda(outputDir, output, path, lambdas);
+      await writeLambda(outputDir, output, normalizedPath, undefined, lambdas);
     } else if (isPrerender(output)) {
-      await writeLambda(outputDir, output.lambda, path, lambdas);
+      await writeLambda(
+        outputDir,
+        output.lambda,
+        normalizedPath,
+        undefined,
+        lambdas
+      );
 
       // Write the fallback file alongside the Lambda directory
       let fallback = output.fallback;
       if (fallback) {
         const ext = getFileExtension(fallback);
-        const fallbackName = `${path}.prerender-fallback${ext}`;
+        const fallbackName = `${normalizedPath}.prerender-fallback${ext}`;
         const fallbackPath = join(outputDir, 'functions', fallbackName);
         const stream = fallback.toStream();
         await pipe(
@@ -109,7 +148,7 @@ async function writeBuildResultV2(
       const prerenderConfigPath = join(
         outputDir,
         'functions',
-        `${path}.prerender-config.json`
+        `${normalizedPath}.prerender-config.json`
       );
       const prerenderConfig = {
         ...output,
@@ -118,12 +157,20 @@ async function writeBuildResultV2(
       };
       await fs.writeJSON(prerenderConfigPath, prerenderConfig, { spaces: 2 });
     } else if (isFile(output)) {
-      await writeStaticFile(outputDir, output, path, overrides, cleanUrls);
+      await writeStaticFile(
+        outputDir,
+        output,
+        normalizedPath,
+        overrides,
+        vercelConfig?.cleanUrls
+      );
     } else if (isEdgeFunction(output)) {
-      await writeEdgeFunction(outputDir, output, path);
+      await writeEdgeFunction(outputDir, output, normalizedPath);
     } else {
       throw new Error(
-        `Unsupported output type: "${(output as any).type}" for ${path}`
+        `Unsupported output type: "${
+          (output as any).type
+        }" for ${normalizedPath}`
       );
     }
   }
@@ -137,19 +184,28 @@ async function writeBuildResultV2(
 async function writeBuildResultV3(
   outputDir: string,
   buildResult: BuildResultV3,
-  build: Builder
+  build: Builder,
+  vercelConfig: VercelConfig | null
 ) {
   const { output } = buildResult;
   const src = build.src;
   if (typeof src !== 'string') {
     throw new Error(`Expected "build.src" to be a string`);
   }
+
+  const functionConfiguration = vercelConfig
+    ? await getLambdaOptionsFromFunction({
+        sourceFile: src,
+        config: vercelConfig,
+      })
+    : {};
+
   const ext = extname(src);
-  const path = build.config?.zeroConfig
-    ? src.substring(0, src.length - ext.length)
-    : src;
+  const path = stripDuplicateSlashes(
+    build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
+  );
   if (isLambda(output)) {
-    await writeLambda(outputDir, output, path);
+    await writeLambda(outputDir, output, path, functionConfiguration);
   } else if (isEdgeFunction(output)) {
     await writeEdgeFunction(outputDir, output, path);
   } else {
@@ -235,6 +291,7 @@ async function writeEdgeFunction(
   const config = {
     runtime: 'edge',
     ...edgeFunction,
+    entrypoint: normalizePath(edgeFunction.entrypoint),
     files: undefined,
     type: undefined,
   };
@@ -258,6 +315,7 @@ async function writeLambda(
   outputDir: string,
   lambda: Lambda,
   path: string,
+  functionConfiguration?: FunctionConfiguration,
   lambdas?: Map<Lambda, string>
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
@@ -292,8 +350,14 @@ async function writeLambda(
     throw new Error('Malformed `Lambda` - no "files" present');
   }
 
+  const memory = functionConfiguration?.memory ?? lambda.memory;
+  const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
+
   const config = {
     ...lambda,
+    handler: normalizePath(lambda.handler),
+    memory,
+    maxDuration,
     type: undefined,
     files: undefined,
     zipBuffer: undefined,

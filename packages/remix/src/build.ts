@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, join, relative } from 'path';
 import {
   debug,
   download,
@@ -187,6 +187,15 @@ export const build: BuildV2 = async ({
       // Explicit directory path the server output will be
       serverBuildPath = join(remixConfig.serverBuildDirectory, 'index.js');
     }
+
+    // Also check for whether were in a monorepo.
+    // If we are, prepend the app root directory from config onto the build path.
+    // e.g. `/apps/my-remix-app/api/index.js`
+    const isMonorepo = repoRootPath && repoRootPath !== workPath;
+    if (isMonorepo) {
+      const rootDirectory = relative(repoRootPath, workPath);
+      serverBuildPath = join(rootDirectory, serverBuildPath);
+    }
   } catch (err: any) {
     // Ignore error if `remix.config.js` does not exist
     if (err.code !== 'MODULE_NOT_FOUND') throw err;
@@ -196,6 +205,7 @@ export const build: BuildV2 = async ({
     glob('**', join(entrypointFsDirname, 'public')),
     createRenderFunction(
       entrypointFsDirname,
+      repoRootPath,
       serverBuildPath,
       needsHandler,
       nodeVersion
@@ -230,6 +240,7 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
 }
 
 async function createRenderFunction(
+  entrypointDir: string,
   rootDir: string,
   serverBuildPath: string,
   needsHandler: boolean,
@@ -250,6 +261,7 @@ async function createRenderFunction(
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
+    processCwd: entrypointDir,
   });
 
   for (const warning of trace.warnings) {

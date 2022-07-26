@@ -553,8 +553,8 @@ test('default command should warn when deploying with conflicting subdirectory',
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
-  const listHeader = /project +latest deployment +state +age +username/;
-  t.regex(stdout || '', listHeader); // ensure `list` command still ran
+  const listHeader = /No deployments found/;
+  t.regex(stderr || '', listHeader); // ensure `list` command still ran
 });
 
 test('deploy command should not warn when deploying with conflicting subdirectory and using --cwd', async t => {
@@ -577,8 +577,8 @@ test('deploy command should not warn when deploying with conflicting subdirector
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
-  const listHeader = /project +latest deployment +state +age +username/;
-  t.regex(stdout || '', listHeader); // ensure `list` command still ran
+  const listHeader = /No deployments found/;
+  t.regex(stderr || '', listHeader); // ensure `list` command still ran
 });
 
 test('default command should work with --cwd option', async t => {
@@ -1323,12 +1323,7 @@ test('[vc projects] should create a project successfully', async t => {
     Math.random().toString(36).split('.')[1]
   }`;
 
-  const vc = execa(binaryPath, [
-    'projects',
-    'add',
-    projectName,
-    ...defaultArgs,
-  ]);
+  const vc = execa(binaryPath, ['project', 'add', projectName, ...defaultArgs]);
 
   await waitForPrompt(vc, chunk =>
     chunk.includes(`Success! Project ${projectName} added`)
@@ -1339,7 +1334,7 @@ test('[vc projects] should create a project successfully', async t => {
 
   // creating the same project again should succeed
   const vc2 = execa(binaryPath, [
-    'projects',
+    'project',
     'add',
     projectName,
     ...defaultArgs,
@@ -1812,31 +1807,6 @@ test('remove the wildcard alias', async t => {
   t.true(stdout.startsWith(goal));
 });
 */
-
-test('ensure username in list is right', async t => {
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    ['ls', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0);
-
-  const line = stdout
-    .split('\n')
-    .find(line => line.includes('.now.sh') || line.includes('.vercel.app'));
-  const columns = line.split(/\s+/);
-
-  // Ensure username column have username
-  t.truthy(columns.pop().includes(contextName));
-});
 
 test('ensure we render a warning for deployments with no files', async t => {
   const directory = fixture('empty-directory');
@@ -3542,7 +3512,7 @@ test('`vc --debug project ls` should output the projects listing', async t => {
 
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
   t.true(
-    stdout.includes('> Projects found under'),
+    stderr.includes('> Projects found under'),
     formatOutput({ stderr, stdout })
   );
 });
@@ -3949,6 +3919,26 @@ test('[vc build] should build project with `@vercel/static-build`', async t => {
   t.is(builds.target, 'preview');
   t.is(builds.builds[0].src, 'package.json');
   t.is(builds.builds[0].use, '@vercel/static-build');
+});
+
+test('[vc build] should not include .vercel when distDir is "."', async t => {
+  const directory = fixture('static-build-dist-dir');
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  t.true(output.stderr.includes('Build Completed in .vercel/output'));
+  const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+  t.false(dir.includes('.vercel'));
+  t.true(dir.includes('index.txt'));
+});
+
+test('[vc build] should not include .vercel when zeroConfig is true and outputDirectory is "."', async t => {
+  const directory = fixture('static-build-zero-config-output-directory');
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  t.true(output.stderr.includes('Build Completed in .vercel/output'));
+  const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+  t.false(dir.includes('.vercel'));
+  t.true(dir.includes('index.txt'));
 });
 
 test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async t => {

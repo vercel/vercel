@@ -1,4 +1,8 @@
-import type { Source, Route, Handler } from '@vercel/routing-utils';
+import type {
+  Route,
+  RouteWithHandle as Handler,
+  RouteWithSrc as Source,
+} from '@vercel/routing-utils';
 import {
   detectBuilders,
   detectOutputDirectory,

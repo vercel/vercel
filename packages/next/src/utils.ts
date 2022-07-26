@@ -16,7 +16,7 @@ import {
   EdgeFunction,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
-import { Header, Rewrite, Route, Source } from '@vercel/routing-utils';
+import { Header, Rewrite, Route, RouteWithSrc } from '@vercel/routing-utils';
 import { Sema } from 'async-sema';
 import crc32 from 'buffer-crc32';
 import fs, { lstat, stat } from 'fs-extra';
@@ -273,8 +273,8 @@ export async function getDynamicRoutes(
   canUsePreviewMode?: boolean,
   bypassToken?: string,
   isServerMode?: boolean,
-  dynamicMiddlewareRouteMap?: Map<string, Source>
-): Promise<Source[]> {
+  dynamicMiddlewareRouteMap?: Map<string, RouteWithSrc>
+): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
       case 1:
@@ -307,7 +307,7 @@ export async function getDynamicRoutes(
             }
 
             const { page, namedRegex, regex, routeKeys } = params;
-            const route: Source = {
+            const route: RouteWithSrc = {
               src: namedRegex || regex,
               dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
                 routeKeys
@@ -400,7 +400,7 @@ export async function getDynamicRoutes(
     matcher: getRouteRegex && getRouteRegex(pageName).re,
   }));
 
-  const routes: Source[] = [];
+  const routes: RouteWithSrc[] = [];
   pageMatchers.forEach(pageMatcher => {
     // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
@@ -419,7 +419,7 @@ export async function getDynamicRoutes(
 }
 
 export function localizeDynamicRoutes(
-  dynamicRoutes: Source[],
+  dynamicRoutes: RouteWithSrc[],
   dynamicPrefix: string,
   entryDirectory: string,
   staticPages: Files,
@@ -427,8 +427,8 @@ export function localizeDynamicRoutes(
   routesManifest?: RoutesManifest,
   isServerMode?: boolean,
   isCorrectLocaleAPIRoutes?: boolean
-): Source[] {
-  return dynamicRoutes.map((route: Source) => {
+): RouteWithSrc[] {
+  return dynamicRoutes.map((route: RouteWithSrc) => {
     // i18n is already handled for middleware
     if (route.middleware !== undefined || route.middlewarePath !== undefined)
       return route;
@@ -1665,6 +1665,7 @@ type OnPrerenderRouteArgs = {
   pageLambdaMap: { [key: string]: string };
   routesManifest?: RoutesManifest;
   isCorrectNotFoundRoutes?: boolean;
+  isEmptyAllowQueryForPrendered?: boolean;
 };
 let prerenderGroup = 1;
 
@@ -1698,6 +1699,7 @@ export const onPrerenderRoute =
       pageLambdaMap,
       routesManifest,
       isCorrectNotFoundRoutes,
+      isEmptyAllowQueryForPrendered,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -1901,7 +1903,6 @@ export const onPrerenderRoute =
       // a given path. All other query keys will be striped. We can automatically
       // detect this for prerender (ISR) pages by reading the routes manifest file.
       const pageKey = srcRoute || routeKey;
-      const isDynamic = isDynamicRoute(pageKey);
       const route = routesManifest?.dynamicRoutes.find(
         (r): r is RoutesManifestRoute =>
           r.page === pageKey && !('isMiddleware' in r)
@@ -1911,14 +1912,33 @@ export const onPrerenderRoute =
       // we have sufficient information to set it
       let allowQuery: string[] | undefined;
 
-      if (routeKeys) {
-        // if we have routeKeys in the routes-manifest we use those
-        // for allowQuery for dynamic routes
-        allowQuery = Object.values(routeKeys);
-      } else if (!isDynamic) {
-        // for non-dynamic routes we use an empty array since
-        // no query values bust the cache for non-dynamic prerenders
-        allowQuery = [];
+      if (isEmptyAllowQueryForPrendered) {
+        const isDynamic = isDynamicRoute(routeKey);
+
+        if (!isDynamic) {
+          // for non-dynamic routes we use an empty array since
+          // no query values bust the cache for non-dynamic prerenders
+          // prerendered paths also do not pass allowQuery as they match
+          // during handle: 'filesystem' so should not cache differently
+          // by query values
+          allowQuery = [];
+        } else if (routeKeys) {
+          // if we have routeKeys in the routes-manifest we use those
+          // for allowQuery for dynamic routes
+          allowQuery = Object.values(routeKeys);
+        }
+      } else {
+        const isDynamic = isDynamicRoute(pageKey);
+
+        if (routeKeys) {
+          // if we have routeKeys in the routes-manifest we use those
+          // for allowQuery for dynamic routes
+          allowQuery = Object.values(routeKeys);
+        } else if (!isDynamic) {
+          // for non-dynamic routes we use an empty array since
+          // no query values bust the cache for non-dynamic prerenders
+          allowQuery = [];
+        }
       }
 
       prerenders[outputPathPage] = new Prerender({
@@ -2148,6 +2168,7 @@ interface EdgeFunctionInfo {
   page: string;
   regexp: string;
   wasm?: { filePath: string; name: string }[];
+  assets?: { filePath: string; name: string }[];
 }
 
 export async function getMiddlewareBundle({
@@ -2234,6 +2255,23 @@ export async function getMiddlewareBundle({
                 {}
               );
 
+              const assetFiles = (edgeFunction.assets ?? []).reduce(
+                (acc: Files, { filePath, name }) => {
+                  const fullFilePath = path.join(
+                    entryPath,
+                    outputDirectory,
+                    filePath
+                  );
+                  acc[`assets/${name}`] = new FileFsRef({
+                    mode: 0o644,
+                    contentType: 'application/octet-stream',
+                    fsPath: fullFilePath,
+                  });
+                  return acc;
+                },
+                {}
+              );
+
               return new EdgeFunction({
                 deploymentTarget: 'v8-worker',
                 name: edgeFunction.name,
@@ -2251,9 +2289,16 @@ export async function getMiddlewareBundle({
                     }),
                   }),
                   ...wasmFiles,
+                  ...assetFiles,
                 },
                 entrypoint: 'index.js',
                 envVarsInUse: edgeFunction.env,
+                assets: (edgeFunction.assets ?? []).map(({ name }) => {
+                  return {
+                    name,
+                    path: `assets/${name}`,
+                  };
+                }),
               });
             })(),
             routeSrc: getRouteSrc(edgeFunction, routesManifest),
@@ -2267,7 +2312,7 @@ export async function getMiddlewareBundle({
 
     const source: {
       staticRoutes: Route[];
-      dynamicRouteMap: Map<string, Source>;
+      dynamicRouteMap: Map<string, RouteWithSrc>;
       edgeFunctions: Record<string, EdgeFunction>;
     } = {
       staticRoutes: [],

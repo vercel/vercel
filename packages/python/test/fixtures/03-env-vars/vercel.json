@@ -7,8 +7,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "RANDOMNESS_PLACEHOLDER:env",
-      "logMustContain": "Python version \"3.6\" detected in Pipfile.lock is deprecated. Deployments created on or after 2022-07-18 will fail to build"
+      "mustContain": "RANDOMNESS_PLACEHOLDER:env"
     }
   ]
 }
