@@ -89,7 +89,7 @@ export default async function list(
     ).replace(/^/gm, '  ');
     output.print(`\n${tablePrint}\n\n`);
 
-    if (!terminalLink.isSupported) {
+    if (!terminalLink.isSupported && !inspect) {
       output.log(
         `To show the inspector URL instead of the latest deployment, type ${getCommandName(
           'project ls --inspect'
