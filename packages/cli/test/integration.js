@@ -3921,31 +3921,24 @@ test('[vc build] should build project with `@vercel/static-build`', async t => {
   t.is(builds.builds[0].use, '@vercel/static-build');
 });
 
-test('[vc build] should not include .vercel when outputDirectory is set to "."', async t => {
-  const directory = fixture('zero-config-dist-dir');
+test('[vc build] should not include .vercel when distDir is "."', async t => {
+  const directory = fixture('static-build-dist-dir');
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  t.true(output.stderr.includes('Build Completed in .vercel/output'));
+  const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+  t.false(dir.includes('.vercel'));
+  t.true(dir.includes('index.txt'));
+});
 
-  async function deployAndAssert() {
-    const output = await execute(['build'], { cwd: directory });
-
-    t.is(output.exitCode, 0);
-    t.true(output.stderr.includes('Build Completed in .vercel/output'));
-
-    const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
-
-    t.false(dir.includes('.vercel'));
-    t.true(dir.includes('index.txt'));
-  }
-
-  // Test without zeroConfig
-  await deployAndAssert();
-
-  // Test with zeroConfig enabled
-  const vercelJsonPath = path.join(directory, 'vercel.json');
-  const vercelJsonData = JSON.parse(await fs.readFile(vercelJsonPath));
-  vercelJsonData.builds[0].config.zeroConfig = 'true';
-  await fs.writeFile(vercelJsonPath, JSON.stringify(vercelJsonData));
-
-  await deployAndAssert();
+test('[vc build] should not include .vercel when zeroConfig is true and outputDirectory is "."', async t => {
+  const directory = fixture('static-build-zero-config-output-directory');
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  t.true(output.stderr.includes('Build Completed in .vercel/output'));
+  const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+  t.false(dir.includes('.vercel'));
+  t.true(dir.includes('index.txt'));
 });
 
 test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async t => {

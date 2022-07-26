@@ -707,8 +707,8 @@ export const build: BuildV2 = async ({
           routes.push(...frameworkRoutes);
         }
 
-        let ignore: string[] = ['.vercel/**'];
-        if (config.zeroConfig && config.outputDirectory === '.') {
+        let ignore: string[] = [];
+        if (config.outputDirectory === '.' || config.distDir === '.') {
           ignore = [
             '.env',
             '.env.*',

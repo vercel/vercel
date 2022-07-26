@@ -503,7 +503,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
-    'zero-config-dist-dir': {
+    'static-build-dist-dir': {
       '.vercel/project.json': JSON.stringify({
         orgId: '.',
         projectId: '.',
@@ -518,6 +518,31 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
             src: 'package.json',
             use: '@vercel/static-build',
             config: { distDir: '.' },
+          },
+        ],
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'echo "Hello, World!" >> index.txt',
+        },
+      }),
+    },
+    'static-build-zero-config-output-directory': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'vercel.json': JSON.stringify({
+        version: 2,
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+            config: { zeroConfig: true, outputDirectory: '.' },
           },
         ],
       }),
