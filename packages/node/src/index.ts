@@ -219,7 +219,9 @@ async function compile(
                 pkgJson.main = val;
 
                 // Create the `entry` with the original so that the output is unmodified
-                entry = new FileBlob({ data: source, mode });
+                if (!entry) {
+                  entry = new FileBlob({ data: source, mode });
+                }
 
                 // Return the modified `package.json` to nft
                 source = JSON.stringify(pkgJson);
