@@ -238,10 +238,12 @@ async function createEdgeRuntime(userCode: string | undefined) {
       initialCode: userCode,
       extend: (context: Primitives) => {
         Object.assign(context, {
-          __dirname: '',
-          module: {
-            exports: {},
-          },
+          // This is required for esbuild wrapping logic to resolve
+          module: {},
+
+          // This is required for environment variable access.
+          // In production, env var access is provided by static analysis
+          // so that only the used values are available.
           process: {
             env: process.env,
           },
