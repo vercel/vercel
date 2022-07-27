@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
-      dpl-url: ${{ steps.waitForTarball.outputs.url }}
+      dplUrl: ${{ steps.waitForTarball.outputs.url }}
     steps:
       - uses: actions/checkout@v2
       - run: git --version
@@ -81,10 +81,10 @@ jobs:
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
-        run: echo ${{ needs.setup.outputs['dpl-url'] }}; node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
+        run: echo ${{ needs.setup.outputs.dplUrl }}; node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
-          VERCEL_CLI_VERSION: ${{ needs.setup.outputs['dpl-url'] }}
+          VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
           VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}
           FORCE_COLOR: '1'
