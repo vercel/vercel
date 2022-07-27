@@ -33,6 +33,8 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     process.env;
   const nowJson = JSON.parse(bodies['vercel.json'] || bodies['now.json']);
 
+  delete nowJson.probes;
+
   const nowDeployPayload = {
     version: 2,
     public: true,
@@ -50,15 +52,9 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     },
     name: 'test2020',
     files,
-    builds: nowJson.builds,
     meta: {},
+    ...nowJson,
   };
-
-  for (const field of ['routes', 'rewrites', 'headers', 'redirects']) {
-    if (nowJson[field]) {
-      nowDeployPayload[field] = nowJson[field];
-    }
-  }
 
   logWithinTest(`posting ${files.length} files`);
 
@@ -154,7 +150,7 @@ async function filePost(body, digest) {
 }
 
 async function deploymentPost(payload) {
-  const url = '/v6/now/deployments?forceNew=1';
+  const url = '/v13/deployments?skipAutoDetectionConfirmation=1&forceNew=1';
   const resp = await fetchWithAuth(url, {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -172,7 +168,7 @@ async function deploymentPost(payload) {
 }
 
 async function deploymentGet(deploymentId) {
-  const url = `/v12/now/deployments/${deploymentId}`;
+  const url = `/v13/deployments/${deploymentId}`;
   logWithinTest('fetching deployment', url);
   const resp = await fetchWithAuth(url);
   const json = await resp.json();
