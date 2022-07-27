@@ -33,6 +33,8 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     process.env;
   const nowJson = JSON.parse(bodies['vercel.json'] || bodies['now.json']);
 
+  delete nowJson.probes;
+
   const nowDeployPayload = {
     version: 2,
     public: true,
@@ -50,15 +52,9 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
     },
     name: 'test2020',
     files,
-    builds: nowJson.builds,
     meta: {},
+    ...nowJson,
   };
-
-  for (const field of ['routes', 'rewrites', 'headers', 'redirects']) {
-    if (nowJson[field]) {
-      nowDeployPayload[field] = nowJson[field];
-    }
-  }
 
   logWithinTest(`posting ${files.length} files`);
 
