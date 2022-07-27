@@ -2289,7 +2289,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
       dependencies: { next: '12.2.0' },
     };
     const projectSettings = {
-      framework: null,
+      framework: null, // "Other" framework
+      createdAt: Date.parse('2020-02-01'),
     };
     const { builders } = await detectBuilders(files, pkg, {
       projectSettings,

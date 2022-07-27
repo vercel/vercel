@@ -311,7 +311,12 @@ export async function detectBuilders(
   // While maybeGetApiBuilder() excludes the middleware builder, however,
   // we need to check if it's a Next.js app here again for the case where
   // `projectSettings.framework == null`.
-  if (frontendBuilder?.use === '@vercel/next' && apiBuilders.length > 0) {
+  if (
+    framework === null &&
+    detectFrontBuilder(pkg, files, usedFunctions, fallbackEntrypoint, options)
+      .use === '@vercel/next' &&
+    apiBuilders.length > 0
+  ) {
     apiBuilders = apiBuilders.filter(builder => {
       const isMiddlewareBuilder =
         builder.use === '@vercel/node' &&
