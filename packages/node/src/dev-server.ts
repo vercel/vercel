@@ -245,12 +245,10 @@ async function createEdgeRuntime(params?: {
         Object.assign(
           context,
           {
-            // This is required for esbuild wrapping logic to resolve
-            module: {},
-
-            // This is required for environment variable access.
-            // In production, env var access is provided by static analysis
-            // so that only the used values are available.
+            __dirname: '',
+            module: {
+              exports: {},
+            },
             process: {
               env: process.env,
             },
