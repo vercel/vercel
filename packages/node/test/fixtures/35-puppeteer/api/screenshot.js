@@ -28,7 +28,7 @@ async function getScreenshot(url) {
 module.exports = async (req, res) => {
   const buffer = await getScreenshot('https://vercel.com/about');
   if (buffer.length > 0) {
-    res.end('screenshot:RANDOMNESS_PLACEHOLDER');
+    res.end('/api/screenshot:RANDOMNESS_PLACEHOLDER');
   } else {
     res.end('buffer is empty');
   }
