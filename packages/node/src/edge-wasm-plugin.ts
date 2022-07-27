@@ -1,3 +1,6 @@
+// copied from `edge-functions-bridge`:
+// https://github.com/vercel/runtimes/blob/c076db9e3ce5635f7c2690396e3d9f791a0fd808/packages/edge-functions-bridge/src/get-edge-function-source.ts#L282-L317
+
 import type { Plugin } from 'esbuild';
 import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
