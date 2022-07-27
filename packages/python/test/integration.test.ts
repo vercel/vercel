@@ -6,19 +6,10 @@ const execa = require('execa');
 const { spawn } = require('child_process');
 
 const {
-  packAndDeploy,
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
 jest.setTimeout(4 * 60 * 1000);
-const buildUtilsUrl = '@canary';
-let builderUrl: string;
-
-beforeAll(async () => {
-  const builderPath = path.resolve(__dirname, '..');
-  builderUrl = await packAndDeploy(builderPath);
-  console.log('builderUrl', builderUrl);
-});
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
@@ -85,10 +76,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
-      testDeployment(
-        { builderUrl, buildUtilsUrl },
-        path.join(fixturesPath, fixture)
-      )
+      testDeployment(path.join(fixturesPath, fixture))
     ).resolves.toBeDefined();
   });
 }
