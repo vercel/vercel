@@ -708,7 +708,7 @@ export const build: BuildV2 = async ({
         }
 
         let ignore: string[] = [];
-        if (config.zeroConfig && config.outputDirectory === '.') {
+        if (config.outputDirectory === '.' || config.distDir === '.') {
           ignore = [
             '.env',
             '.env.*',
