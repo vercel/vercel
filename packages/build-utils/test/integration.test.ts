@@ -32,7 +32,7 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
   // eslint-disable-next-line no-loop-func
   it(`Should build "${fixture}"`, async () => {
     await expect(
-      testDeployment({}, path.join(fixturesPath, fixture))
+      testDeployment(path.join(fixturesPath, fixture))
     ).resolves.toBeDefined();
   });
 }
@@ -55,7 +55,7 @@ for (const builder of buildersToTestWith) {
       // eslint-disable-next-line no-loop-func
       it(`Should build "${builder}/${fixture}"`, async () => {
         await expect(
-          testDeployment({}, path.join(fixturesPath2, fixture))
+          testDeployment(path.join(fixturesPath2, fixture))
         ).resolves.toBeDefined();
       });
     }

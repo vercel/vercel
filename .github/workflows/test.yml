@@ -33,13 +33,12 @@ jobs:
           echo "Files to test:"
           echo "$TESTS_ARRAY"
           echo "::set-output name=tests::$TESTS_ARRAY"
-      - uses: patrickedqvist/wait-for-vercel-preview@v1.2.0
+      - uses: patrickedqvist/wait-for-vercel-preview@ae34b392ef30297f2b672f9afb3c329bde9bd487
         id: waitForTarball
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 360
           check_interval: 5
-        run: echo "Deployment URL" && echo ${{steps.waitForTarball.outputs.url}}
 
   test:
     timeout-minutes: 120
@@ -81,7 +80,7 @@ jobs:
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
-        run: echo ${{ needs.setup.outputs.dplUrl }}; node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
+        run: node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz

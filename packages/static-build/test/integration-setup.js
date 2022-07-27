@@ -45,7 +45,7 @@ module.exports = function setupTests(groupIndex) {
       // eslint-disable-next-line no-loop-func
       it(`should fail to build ${fixture}`, async () => {
         try {
-          await testDeployment({}, path.join(fixturesPath, fixture));
+          await testDeployment(path.join(fixturesPath, fixture));
         } catch (err) {
           expect(err).toBeTruthy();
           expect(err.deployment).toBeTruthy();
@@ -56,7 +56,7 @@ module.exports = function setupTests(groupIndex) {
     }
     it(`should build ${fixture}`, async () => {
       await expect(
-        testDeployment({}, path.join(fixturesPath, fixture))
+        testDeployment(path.join(fixturesPath, fixture))
       ).resolves.toBeDefined();
     });
   }

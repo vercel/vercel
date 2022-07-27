@@ -264,11 +264,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   assert(hadTest, 'probe must have a test condition');
 }
 
-async function testDeployment(
-  { builderUrl = undefined, buildUtilsUrl = undefined },
-  fixturePath,
-  buildDelegate
-) {
+async function testDeployment(fixturePath, buildDelegate) {
   logWithinTest('testDeployment', fixturePath);
   const globResult = await glob(`${fixturePath}/**`, {
     nodir: true,
@@ -321,24 +317,6 @@ async function testDeployment(
   });
 
   for (const build of nowJson.builds || []) {
-    if (builderUrl) {
-      if (builderUrl === '@canary') {
-        build.use = `${build.use}@canary`;
-      } else {
-        build.use = `https://${builderUrl}`;
-      }
-    }
-    if (buildUtilsUrl) {
-      build.config = build.config || {};
-      const { config } = build;
-      if (buildUtilsUrl === '@canary') {
-        const buildUtils = config.useBuildUtils || '@vercel/build-utils';
-        config.useBuildUtils = `${buildUtils}@canary`;
-      } else {
-        config.useBuildUtils = `https://${buildUtilsUrl}`;
-      }
-    }
-
     if (buildDelegate) {
       buildDelegate(build);
     }

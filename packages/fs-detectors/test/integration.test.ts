@@ -66,7 +66,7 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
     JSON.stringify(nowConfig, null, 2)
   );
 
-  const deployment = await testDeployment({}, fixture);
+  const deployment = await testDeployment(fixture);
   expect(deployment).toBeDefined();
 });
 
@@ -145,6 +145,6 @@ it('Test `detectBuilders` with `index` files', async () => {
     JSON.stringify(nowConfig, null, 2)
   );
 
-  const deployment = await testDeployment({}, fixture);
+  const deployment = await testDeployment(fixture);
   expect(deployment).toBeDefined();
 });
