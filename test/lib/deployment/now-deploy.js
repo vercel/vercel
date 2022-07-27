@@ -142,7 +142,7 @@ async function filePost(body, digest) {
 }
 
 async function deploymentPost(payload) {
-  const url = '/v6/now/deployments?forceNew=1';
+  const url = '/v13/deployments?skipAutoDetectionConfirmation=1';
   const resp = await fetchWithAuth(url, {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -160,7 +160,7 @@ async function deploymentPost(payload) {
 }
 
 async function deploymentGet(deploymentId) {
-  const url = `/v12/now/deployments/${deploymentId}`;
+  const url = `/v13/deployments/${deploymentId}`;
   logWithinTest('fetching deployment', url);
   const resp = await fetchWithAuth(url);
   const json = await resp.json();
