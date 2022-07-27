@@ -242,7 +242,7 @@ async function compile(
           }
           fsCache.set(relPath, entry);
           sourceCache.set(relPath, source);
-          return source;
+          return source.toString();
         } catch (e) {
           if (e.code === 'ENOENT' || e.code === 'EISDIR') {
             sourceCache.set(relPath, null);
