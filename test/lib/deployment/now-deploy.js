@@ -142,7 +142,7 @@ async function filePost(body, digest) {
 }
 
 async function deploymentPost(payload) {
-  const url = '/v13/deployments?skipAutoDetectionConfirmation=1';
+  const url = '/v13/deployments?skipAutoDetectionConfirmation=1&forceNew=1';
   const resp = await fetchWithAuth(url, {
     method: 'POST',
     body: JSON.stringify(payload),
