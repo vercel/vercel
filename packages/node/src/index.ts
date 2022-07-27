@@ -20,6 +20,7 @@ import {
 import { Project } from 'ts-morph';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
+import nftResolveDependency from '@vercel/nft/out/resolve-dependency';
 import {
   glob,
   download,
@@ -182,6 +183,15 @@ async function compile(
       processCwd: workPath,
       ts: true,
       mixedModules: true,
+      resolve(id, parent, job, cjsResolve) {
+        const normalizedWasmImports = id.replace(/\.wasm\?module$/i, '.wasm');
+        return nftResolveDependency(
+          normalizedWasmImports,
+          parent,
+          job,
+          cjsResolve
+        );
+      },
       ignore: config.excludeFiles,
       async readFile(fsPath: string): Promise<Buffer | string | null> {
         const relPath = relative(baseDir, fsPath);
