@@ -9,7 +9,6 @@ const {
 jest.setTimeout(12 * 60 * 1000);
 
 module.exports = function setupTests(groupIndex) {
-  // TODO: wait for vercel cli to create a tarball
   const fixturesPath = path.resolve(__dirname, 'fixtures');
   const testsThatFailToBuild = new Map([
     [
