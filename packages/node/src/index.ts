@@ -196,10 +196,11 @@ async function compile(
       ignore: config.excludeFiles,
       async readFile(fsPath: string): Promise<Buffer | string | null> {
         const relPath = relative(baseDir, fsPath);
+
+        // If this file has already been read then return from the cache
         const cached = sourceCache.get(relPath);
-        if (cached) return cached.toString();
-        // null represents a not found
-        if (cached === null) return null;
+        if (typeof cached !== 'undefined') return cached;
+
         try {
           let entry: File | undefined;
           let source: string | Buffer = readFileSync(fsPath);
@@ -242,9 +243,10 @@ async function compile(
           }
           fsCache.set(relPath, entry);
           sourceCache.set(relPath, source);
-          return source.toString();
+          return source;
         } catch (e) {
           if (e.code === 'ENOENT' || e.code === 'EISDIR') {
+            // `null` represents a not found
             sourceCache.set(relPath, null);
             return null;
           }
