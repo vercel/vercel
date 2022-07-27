@@ -51,12 +51,7 @@ async function main() {
   for (const dep of dependencies) {
     externs.push('--external', dep);
   }
-  const args = [
-    'ncc',
-    'build',
-    'src/index.ts',
-    ...externs
-  ];
+  const args = ['ncc', 'build', 'src/index.ts', ...externs];
   await execa('yarn', args, { stdio: 'inherit', cwd: dirRoot });
 
   // `ncc` has some issues with `@vercel/fun`'s runtime files:
@@ -83,6 +78,10 @@ async function main() {
   // Band-aid to bundle stuff that `ncc` neglects to bundle
   await cpy(join(dirRoot, 'src/util/projects/VERCEL_DIR_README.txt'), distRoot);
   await cpy(join(dirRoot, 'src/util/dev/builder-worker.js'), distRoot);
+  await cpy(
+    join(dirRoot, 'src/util/update-notifier/update-worker.js'),
+    distRoot
+  );
 
   console.log('Finished building Vercel CLI');
 }
