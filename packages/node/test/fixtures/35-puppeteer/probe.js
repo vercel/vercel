@@ -33,12 +33,6 @@ async function tryTest({
 
 module.exports = async ({ deploymentUrl, fetch, randomness }) => {
   await tryTest({
-    testName: '/api/lighthouse',
-    deploymentUrl,
-    fetch,
-    randomness,
-  });
-  await tryTest({
     testName: '/api/screenshot',
     deploymentUrl,
     fetch,
