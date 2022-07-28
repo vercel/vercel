@@ -152,7 +152,7 @@ const main = async () => {
     if (latest) {
       console.log(
         info(
-          `${chalk.black.bgCyan.bold('UPDATE AVAILABLE')} ` +
+          `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
             `Run ${cmd(
               await getUpdateCommand()
             )} to install ${getTitleName()} CLI ${latest}`
