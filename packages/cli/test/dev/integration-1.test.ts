@@ -55,17 +55,10 @@ test('[vercel dev] should support edge functions', async () => {
 
 test(
   '[vercel dev] edge functions respond properly the same as production',
-  testFixtureStdio(
-    'edge-function',
-    async (testPath: any) => {
-      await testPath(500, '/api/edge-500-response');
-      await testPath(200, '/api/edge-success');
-    },
-    {
-      // TODO: why is this failing in prod?
-      skipDeploy: true,
-    }
-  )
+  testFixtureStdio('edge-function', async (testPath: any) => {
+    await testPath(500, '/api/edge-500-response');
+    await testPath(200, '/api/edge-success');
+  })
 );
 
 test('[vercel dev] throws an error when an edge function has no response', async () => {
