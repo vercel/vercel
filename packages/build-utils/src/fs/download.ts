@@ -27,9 +27,7 @@ async function prepareSymlinkTarget(
   }
 
   if (file.type === 'FileRef' || file.type === 'FileBlob') {
-    const targetPathBufferPromise = await streamToBuffer(
-      await file.toStreamAsync()
-    );
+    const targetPathBufferPromise = streamToBuffer(await file.toStreamAsync());
     const [targetPathBuffer] = await Promise.all([
       targetPathBufferPromise,
       mkdirPromise,
@@ -42,9 +40,15 @@ async function prepareSymlinkTarget(
   );
 }
 
-async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
+export async function downloadFile(
+  file: File,
+  fsPath: string
+): Promise<FileFsRef> {
   const { mode } = file;
 
+  // If the source is a symlink, try to create it instead of copying the file.
+  // Note: creating symlinks on Windows requires admin priviliges or symlinks
+  // enabled in the group policy. We may want to improve the error message.
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
 

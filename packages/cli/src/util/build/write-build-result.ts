@@ -21,6 +21,7 @@ import {
   PackageJson,
   Prerender,
   download,
+  downloadFile,
   EdgeFunction,
   BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
@@ -266,9 +267,7 @@ async function writeStaticFile(
   const dest = join(outputDir, 'static', fsPath);
   await fs.mkdirp(dirname(dest));
 
-  // TODO: handle (or skip) symlinks?
-  const stream = file.toStream();
-  await pipe(stream, fs.createWriteStream(dest, { mode: file.mode }));
+  await downloadFile(file, dest);
 }
 
 /**

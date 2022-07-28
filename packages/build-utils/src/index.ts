@@ -4,7 +4,11 @@ import FileRef from './file-ref';
 import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
 import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
-import download, { DownloadedFiles, isSymbolicLink } from './fs/download';
+import download, {
+  downloadFile,
+  DownloadedFiles,
+  isSymbolicLink,
+} from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
 import rename from './fs/rename';
@@ -46,6 +50,7 @@ export {
   createLambda,
   Prerender,
   download,
+  downloadFile,
   DownloadedFiles,
   getWriteableDirectory,
   glob,
