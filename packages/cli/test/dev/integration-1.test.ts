@@ -307,6 +307,35 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
   }
 });
 
+test('[vercel dev] should handle invalid middleware config', async () => {
+  const dir = fixture('middleware-matchers-invalid');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/whatever`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stderr).toMatch(
+      /Error! Middleware's `config.matcher` values must start with "\/". Received: not-a-valid-matcher/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
 test('[vercel dev] should support request body', async () => {
   const dir = fixture('node-request-body');
   const { dev, port, readyResolver } = await testFixture(dir);
