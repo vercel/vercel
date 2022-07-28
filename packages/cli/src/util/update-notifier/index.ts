@@ -35,13 +35,15 @@ export default async function updateNotifier({
   wait?: boolean;
 }): Promise<string | undefined> {
   const cacheFile = join(cacheDir, `${pkg.name}-${distTag}.json`);
+  const loadCache = async (): Promise<UpdateNotifierConfig | undefined> => {
+    try {
+      return await readJSON(cacheFile);
+    } catch (e: any) {
+      // cache does not exist or malformed
+    }
+  };
 
-  let cache: UpdateNotifierConfig | undefined;
-  try {
-    cache = await readJSON(cacheFile);
-  } catch (e: any) {
-    // cache does not exist or malformed
-  }
+  let cache = await loadCache();
 
   if (!cache || cache.expireAt < Date.now()) {
     await new Promise<void>(resolve => {
@@ -69,6 +71,11 @@ export default async function updateNotifier({
         }
       });
     });
+
+    if (wait) {
+      // if we waited, might as well reload the cache with the latest version
+      cache = await loadCache();
+    }
   }
 
   if (
