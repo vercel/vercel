@@ -13,7 +13,7 @@ import {
   disconnectGitProvider,
   formatProvider,
   parseRepoUrl,
-} from '../../util/projects/connect-git-provider';
+} from '../../util/git/connect-git-provider';
 import validatePaths from '../../util/validate-paths';
 
 export default async function connect(
