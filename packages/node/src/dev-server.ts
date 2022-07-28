@@ -241,10 +241,10 @@ async function createEdgeRuntime(params?: {
 
     const wasmBindings = await params.wasmAssets.getContext();
     const edgeRuntime = new EdgeRuntime({
-      initialCode: userCode,
+      initialCode: params.userCode,
       extend: (context: EdgeContext) => {
         Object.assign(context, {
-         // This is required for esbuild wrapping logic to resolve
+          // This is required for esbuild wrapping logic to resolve
           module: {},
 
           // This is required for environment variable access.
@@ -253,8 +253,8 @@ async function createEdgeRuntime(params?: {
           process: {
             env: process.env,
           },
-          wasmBindings
-        );
+          wasmBindings,
+        });
 
         return context;
       },
