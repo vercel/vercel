@@ -329,7 +329,7 @@ test('[vercel dev] should handle invalid middleware config', async () => {
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
     expect(stderr).toMatch(
-      /Error! Middleware's `config.matcher` values must start with "\/". Received: not-a-valid-matcher/g
+      /Error! Middleware's `config.matcher` .+ Received: not-a-valid-matcher/g
     );
   } finally {
     await dev.kill('SIGTERM');
