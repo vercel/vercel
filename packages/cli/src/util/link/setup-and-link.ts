@@ -128,6 +128,12 @@ export default async function setupAndLink(
   } else {
     const project = projectOrNewProjectName;
 
+    // if (project.link) {
+    //   ask if user wants to replace
+    // } else {
+    //   ask user if they want to connect git
+    // }
+
     await linkFolderToProject(
       output,
       path,
@@ -243,6 +249,9 @@ export default async function setupAndLink(
     const project = await createProject(client, newProjectName);
     await updateProject(client, project.id, settings);
     Object.assign(project, settings);
+
+    // git link is guaranteed to not exist
+    // ask user if they want to connect git
 
     await linkFolderToProject(
       output,
