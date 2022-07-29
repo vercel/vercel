@@ -8,7 +8,7 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 
-jest.setTimeout(ms('10s'));
+jest.setTimeout(ms('1 minute'));
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/build', name);
