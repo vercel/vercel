@@ -329,7 +329,7 @@ async function testDeployment(fixturePath, buildDelegate) {
   } else if ('probes.json' in bodies) {
     probes = json5.parse(bodies['probes.json']).probes;
   } else if (fs.existsSync(probePath)) {
-    await require(probePath)({ deploymentUrl, fetch, randomness });
+    // we'll run probes after we have the deployment url below
   } else {
     throw new Error(
       `Test fixture "${fixturePath}" does not contain probes.json, probe.js, or vercel.json`
@@ -345,6 +345,10 @@ async function testDeployment(fixturePath, buildDelegate) {
     uploadNowJson
   );
   const probeCtx = {};
+
+  if (fs.existsSync(probePath)) {
+    await require(probePath)({ deploymentUrl, fetch, randomness });
+  }
 
   for (const probe of probes) {
     const stringifiedProbe = JSON.stringify(probe);
@@ -375,11 +379,6 @@ async function testDeployment(fixturePath, buildDelegate) {
         }
       }
     }
-  }
-
-  const probeJsFullPath = path.resolve(fixturePath, 'probe.js');
-  if (fs.existsSync(probeJsFullPath)) {
-    await require(probeJsFullPath)({ deploymentUrl, fetch, randomness });
   }
 
   return { deploymentId, deploymentUrl };
