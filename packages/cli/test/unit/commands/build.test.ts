@@ -775,4 +775,150 @@ describe('build', () => {
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
+
+  it('should apply function configuration from "vercel.json" to Serverless Functions', async () => {
+    const cwd = fixture('lambda-with-128-memory');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // "functions/api" directory has output Functions
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      expect(functions.sort()).toEqual(['memory.func']);
+
+      const vcConfig = await fs.readJSON(
+        join(output, 'functions/api/memory.func/.vc-config.json')
+      );
+      expect(vcConfig).toMatchObject({
+        handler: 'api/memory.js',
+        runtime: 'nodejs16.x',
+        memory: 128,
+        environment: {},
+        launcherType: 'Nodejs',
+        shouldAddHelpers: true,
+        shouldAddSourcemapSupport: false,
+        awsLambdaHandler: '',
+      });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  describe('should find packages with different main/module/browser keys', function () {
+    let output: string;
+
+    beforeAll(async function () {
+      const cwd = fixture('import-from-main-keys');
+      output = join(cwd, '.vercel/output');
+
+      process.chdir(cwd);
+      client.stderr.pipe(process.stderr);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      const sortedFunctions = functions.sort();
+      expect(sortedFunctions).toEqual([
+        'prefer-browser.func',
+        'prefer-main.func',
+        'prefer-module.func',
+        'use-browser.func',
+        'use-classic.func',
+        'use-main.func',
+        'use-module.func',
+      ]);
+    });
+
+    afterAll(function () {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    });
+
+    it('use-classic', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'use-classic.func',
+        'packages',
+        'only-classic'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('index.js');
+    });
+
+    it('use-main', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'use-main.func',
+        'packages',
+        'only-main'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-main.js');
+    });
+
+    it('use-module', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'use-module.func',
+        'packages',
+        'only-module'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-module.js');
+    });
+
+    it('use-browser', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'use-browser.func',
+        'packages',
+        'only-browser'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-browser.js');
+    });
+
+    it('prefer-browser', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'prefer-browser.func',
+        'packages',
+        'prefer-browser'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-browser.js');
+    });
+
+    it('prefer-main', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'prefer-main.func',
+        'packages',
+        'prefer-main'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-main.js');
+    });
+
+    it('prefer-module', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'prefer-module.func',
+        'packages',
+        'prefer-module'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-module.js');
+    });
+  });
 });
