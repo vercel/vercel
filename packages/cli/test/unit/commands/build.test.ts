@@ -47,6 +47,37 @@ describe('build', () => {
     }
   });
 
+  it('should build with `@now/static`', async () => {
+    const cwd = fixture('now-static');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@now/static',
+            apiVersion: 2,
+            src: 'www/index.html',
+            use: '@now/static',
+          },
+        ],
+      });
+
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files).toEqual(['www']);
+      const www = await fs.readdir(join(output, 'static', 'www'));
+      expect(www).toEqual(['index.html']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should build with `@vercel/node`', async () => {
     const cwd = fixture('node');
     const output = join(cwd, '.vercel/output');
