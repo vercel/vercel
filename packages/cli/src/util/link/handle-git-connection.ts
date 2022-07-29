@@ -1,5 +1,6 @@
 import {
   connectGitProvider,
+  disconnectGitProvider,
   formatProvider,
   parseRepoUrl,
 } from '../git/connect-git-provider';
@@ -39,12 +40,12 @@ async function addSingleGitRemote(
       project.link.type !== provider);
 
   if (replace) {
-    const currentRemoteUrl = project.link?.repo;
+    const currentRemote = `${project.link?.org}/${project.link?.repo}`;
     const currentProvider = project.link?.type;
     output.log(
       `Found Git remote url ${newRemoteUrl}, which is different from the connected ${formatProvider(
         currentProvider || ''
-      )} repository ${currentRemoteUrl}.`
+      )} repository ${currentRemote}.`
     );
   } else {
     output.log(`Found local Git remote URL ${newRemoteUrl}.`);
@@ -129,6 +130,9 @@ async function parseOptions(
   parsedOrg: string
 ) {
   if (option === 'yes') {
+    if (project.link) {
+      await disconnectGitProvider(client, org, project.id);
+    }
     const connect = await connectGitProvider(
       client,
       org,
