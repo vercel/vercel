@@ -8,7 +8,7 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 
-jest.setTimeout(ms('1 minute'));
+jest.setTimeout(ms('10s'));
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/build', name);
@@ -55,7 +55,6 @@ describe('build', () => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
-      // `builds.json` says that "@vercel/static" was run
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds).toMatchObject({
         target: 'preview',
@@ -63,15 +62,16 @@ describe('build', () => {
           {
             require: '@now/static',
             apiVersion: 2,
-            src: '**',
+            src: 'www/index.html',
             use: '@now/static',
           },
         ],
       });
 
-      // "static" directory contains static files
       const files = await fs.readdir(join(output, 'static'));
-      expect(files.sort()).toEqual(['index.html']);
+      expect(files).toEqual(['www']);
+      const www = await fs.readdir(join(output, 'static', 'www'));
+      expect(www).toEqual(['index.html']);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
