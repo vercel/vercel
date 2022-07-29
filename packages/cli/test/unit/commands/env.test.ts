@@ -183,6 +183,9 @@ describe('env', () => {
       );
 
       await expect(pullPromise).resolves.toEqual(0);
+
+      client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
+      await env(client);
     });
 
     it('should not show a delta string when it fails to read a file', async () => {
@@ -198,6 +201,23 @@ describe('env', () => {
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const pullPromise = env(client);
       await expect(client.stderr).toOutput('Updated .env file');
+      await expect(pullPromise).resolves.toEqual(0);
+    });
+
+    it('should show that no changes were found', async () => {
+      const cwd = setupFixture('vercel-env-pull-delta-no-changes');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'env-pull-delta-no-changes',
+        name: 'env-pull-delta-no-changes',
+      });
+
+      client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+      const pullPromise = env(client);
+      await expect(client.stderr).toOutput('Updated .env file');
+      await expect(client.stderr).toOutput('> No changes found.');
       await expect(pullPromise).resolves.toEqual(0);
     });
   });
