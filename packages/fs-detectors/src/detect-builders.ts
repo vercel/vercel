@@ -320,9 +320,7 @@ export async function detectBuilders(
   ) {
     apiBuilders = apiBuilders.filter(builder => {
       const isMiddlewareBuilder =
-        builder.use === '@vercel/node' &&
-        builder.config?.middleware &&
-        (builder.src === 'middleware.js' || builder.src === 'middleware.ts');
+        builder.use === '@vercel/node' && builder.config?.middleware;
       return !isMiddlewareBuilder;
     });
   }
