@@ -1,6 +1,6 @@
 {
   "private": true,
   "dependencies": {
-    "decamelize": "6.0.0"
+    "snake-case": "3.0.4"
   }
 }
