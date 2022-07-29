@@ -171,6 +171,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
       for (const [i, env] of envs.entries()) {
         if (env.key === envId) {
           envs.splice(i, 1);
+          break;
         }
       }
       res.json(envs);
