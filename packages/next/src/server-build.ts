@@ -1363,7 +1363,25 @@ export async function serverBuild({
       ...denormalizeNextDataRoute(),
 
       // /_next/data routes for getServerProps/getStaticProps pages
-      ...dataRoutes,
+      ...(isNextDataServerResolving
+        ? // when resolving data routes for middleware we need to include
+          // all dynamic routes including non-SSG/SSP so that the priority
+          // is correct
+          dynamicRoutes
+            .map(route => {
+              return {
+                ...route,
+                src: path.join(
+                  '^/',
+                  entryDirectory,
+                  '_next/data/',
+                  escapedBuildId,
+                  route.src.replace(/(^\^|\$$)/g, '') + '.json$'
+                ),
+              };
+            })
+            .filter(Boolean)
+        : dataRoutes),
 
       ...(!isNextDataServerResolving
         ? [
@@ -1395,6 +1413,7 @@ export async function serverBuild({
                 'x-nextjs-matched-path': '/$1',
               },
               continue: true,
+              override: true,
             },
             // add a catch-all data route so we don't 404 when getting
             // middleware effects

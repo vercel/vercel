@@ -1,7 +1,42 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next@https://files-7mzyyh21l-ijjk-testing.vercel.app"
+    }
+  ],
   "probes": [
+    {
+      "path": "/_next/data/testing-build-id/dynamic/static.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": 1
+      },
+      "responseHeaders": {
+        "x-matched-path": "/dynamic/static"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/team-1/slug-1.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": 1
+      },
+      "responseHeaders": {
+        "x-matched-path": "/[teamId]/[slug]"
+      }
+    },
+    {
+      "path": "/_next/data/testing-build-id/dynamic/id-1.json",
+      "status": 200,
+      "headers": {
+        "x-nextjs-data": 1
+      },
+      "responseHeaders": {
+        "x-matched-path": "/dynamic/[id]"
+      }
+    },
     {
       "path": "/_next/data/testing-build-id/rewrite-to-site.json",
       "status": 200,
@@ -58,7 +93,7 @@
         "x-nextjs-data": "1"
       },
       "responseHeaders": {
-        "x-nextjs-matched-path": "/dynamic/first"
+        "x-matched-path": "/dynamic/[id]"
       },
       "mustContain": "{}"
     }
