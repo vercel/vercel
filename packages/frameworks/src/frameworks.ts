@@ -192,46 +192,6 @@ export const frameworks = [
     cachePattern: '{.cache,public}/**',
   },
   {
-    name: 'Gatsby 4',
-    slug: 'gatsby-4',
-    demo: 'https://gatsbydefaultstarter.vercel.app',
-    logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/gatsby.svg',
-    tagline:
-      'Gatsby helps developers build blazing fast websites and apps with React.',
-    description: 'A Gatsby starter app with support for Gatsby 4',
-    website: 'https://gatsbyjs.org',
-    envPrefix: 'GATSBY_',
-    useRuntime: { src: 'package.json', use: '@vercel/gatsby' },
-    detectors: {
-      every: [
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"gatsby":\\s*"(?:[\\^~])?4.+"[^}]*}',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
-      },
-      buildCommand: {
-        placeholder: '`npm run build` or `gatsby build`',
-        value: 'gatsby build',
-      },
-      devCommand: {
-        value: 'gatsby develop --port $PORT',
-        placeholder: 'gatsby develop',
-      },
-      outputDirectory: {
-        value: 'public',
-      },
-    },
-    dependency: 'gatsby',
-    getOutputDirName: async () => 'public',
-    cachePattern: '{.cache,public}/**',
-  },
-  {
     name: 'Remix',
     slug: 'remix',
     demo: 'https://remix-run-template.vercel.app',
