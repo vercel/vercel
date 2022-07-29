@@ -342,7 +342,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'lambda-with-php-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
             runtime: 'vercel-php@0.1.0',
@@ -352,7 +352,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'lambda-with-invalid-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
             memory: 128,
