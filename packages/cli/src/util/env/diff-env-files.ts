@@ -71,11 +71,11 @@ export function buildDeltaString(
 }
 
 function addDeltaSection(prefix: string, arr: string[]): string {
-  const joinChar = arr.length > 0 ? '\n' : '';
+  if (arr.length === 0) return '';
   return (
     arr
       .sort()
       .map(item => `${prefix} ${item}`)
-      .join(joinChar) + joinChar
+      .join('\n') + '\n'
   );
 }
