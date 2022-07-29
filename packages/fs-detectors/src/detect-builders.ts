@@ -313,8 +313,9 @@ export async function detectBuilders(
   // `projectSettings.framework == null`.
   if (
     framework === null &&
-    detectFrontBuilder(pkg, files, usedFunctions, fallbackEntrypoint, options)
-      .use === '@vercel/next' &&
+    frontendBuilder?.use === '@vercel/next' &&
+    projectSettings.createdAt &&
+    projectSettings.createdAt < Date.parse('2020-03-01') &&
     apiBuilders.length > 0
   ) {
     apiBuilders = apiBuilders.filter(builder => {
