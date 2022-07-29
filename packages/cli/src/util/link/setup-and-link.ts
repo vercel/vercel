@@ -130,7 +130,7 @@ export default async function setupAndLink(
   } else {
     const project = projectOrNewProjectName;
 
-    const remoteUrls = await getRemoteUrls(path, output);
+    const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
     if (remoteUrls) {
       await handleGitConnection(client, org, output, project, remoteUrls);
     }
@@ -251,9 +251,9 @@ export default async function setupAndLink(
     await updateProject(client, project.id, settings);
     Object.assign(project, settings);
 
-    // git link is guaranteed to not exist
+    // existing link is guaranteed to not exist
     // ask user if they want to connect git
-    const remoteUrls = await getRemoteUrls(path, output);
+    const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
     if (remoteUrls) {
       await handleGitConnection(client, org, output, project, remoteUrls);
     }

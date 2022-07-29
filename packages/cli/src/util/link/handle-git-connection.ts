@@ -16,7 +16,6 @@ async function addSingleGitRemote(
   project: Project,
   remoteUrls: { [key: string]: string }
 ) {
-  const replace: boolean = typeof project.link !== undefined;
   const newRemoteUrl = Object.values(remoteUrls)[0];
 
   const parsedNewRemoteUrl = parseRepoUrl(newRemoteUrl);
@@ -25,6 +24,19 @@ async function addSingleGitRemote(
     return;
   }
   const { org: parsedOrg, repo, provider } = parsedNewRemoteUrl;
+  const alreadyLinked =
+    project.link?.org === parsedOrg &&
+    project.link.repo === repo &&
+    project.link.type === provider;
+  if (alreadyLinked) {
+    output.debug('Project already linked. Skipping...');
+    return;
+  }
+  const replace =
+    project.link &&
+    (project.link.org !== parsedOrg ||
+      project.link.repo !== repo ||
+      project.link.type !== provider);
 
   if (replace) {
     const currentRemoteUrl = project.link?.repo;
@@ -99,10 +111,9 @@ export async function handleGitConnection(
   project: Project,
   remoteUrls: { [key: string]: string }
 ) {
-  const replace = typeof project.link !== undefined;
   if (Object.keys(remoteUrls).length === 1) {
     await addSingleGitRemote(client, org, output, project, remoteUrls);
-  } else if (Object.keys(remoteUrls).length > 1 && !replace) {
+  } else if (Object.keys(remoteUrls).length > 1 && !project.link) {
     await addMultipleGitRemotes(client, org, output, project, remoteUrls);
   }
 }
@@ -186,7 +197,7 @@ export async function promptGitConnectMultipleUrls(
       short: 'opt-out',
     },
   ];
-  const choices = [];
+  let choices = [];
   for (const url of Object.values(remoteUrls)) {
     choices.push({
       name: url,
@@ -194,7 +205,7 @@ export async function promptGitConnectMultipleUrls(
       short: url,
     });
   }
-  choices.push.apply(staticOptions);
+  choices = choices.concat(staticOptions);
 
   return await list(client, {
     message: 'Do you want to connect a Git repository to your Vercel project?',
