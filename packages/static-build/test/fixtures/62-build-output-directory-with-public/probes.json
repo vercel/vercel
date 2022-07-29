@@ -1,0 +1,18 @@
+{
+  "probes": [
+    { "path": "/static.txt", "mustContain": "static" },
+    { "path": "/", "mustContain": "Hello from /root/index.js on /" },
+    {
+      "path": "/about",
+      "mustContain": "Hello from /about/index.js on /about - Milkshake"
+    },
+    {
+      "path": "/esm",
+      "mustContain": "Hello from .mjs"
+    },
+    {
+      "path": "/product",
+      "mustContain": "Hello from /product/index.js on /product - Information about a Product"
+    }
+  ]
+}

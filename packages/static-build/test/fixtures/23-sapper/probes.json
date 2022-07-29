@@ -1,0 +1,7 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "Great" },
+    { "path": "/about", "mustContain": "page" },
+    { "path": "/blog", "mustContain": "posts" }
+  ]
+}

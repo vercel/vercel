@@ -322,8 +322,13 @@ async function testDeployment(fixturePath, buildDelegate) {
     }
   }
 
+  let probes = nowJson.probes || [];
+  if ('probes.json' in bodies) {
+    probes = json5.parse(bodies['probes.json']).probes;
+  }
   bodies[configName] = Buffer.from(JSON.stringify(nowJson));
   delete bodies['probe.js'];
+  delete bodies['probes.json'];
 
   const { deploymentId, deploymentUrl } = await nowDeploy(
     bodies,
@@ -332,7 +337,7 @@ async function testDeployment(fixturePath, buildDelegate) {
   );
   const probeCtx = {};
 
-  for (const probe of nowJson.probes || []) {
+  for (const probe of probes) {
     const stringifiedProbe = JSON.stringify(probe);
     logWithinTest('testing', stringifiedProbe);
 
