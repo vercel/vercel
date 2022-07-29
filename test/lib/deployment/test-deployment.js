@@ -322,9 +322,18 @@ async function testDeployment(fixturePath, buildDelegate) {
     }
   }
 
-  let probes = nowJson.probes || [];
-  if ('probes.json' in bodies) {
+  const probePath = path.resolve(fixturePath, 'probe.js');
+  let probes = [];
+  if ('probes' in nowJson) {
+    probes = nowJson.probes;
+  } else if ('probes.json' in bodies) {
     probes = json5.parse(bodies['probes.json']).probes;
+  } else if (fs.existsSync(probePath)) {
+    await require(probePath)({ deploymentUrl, fetch, randomness });
+  } else {
+    throw new Error(
+      `Test fixture "${fixturePath}" does not contain probes.json, probe.js, or vercel.json`
+    );
   }
   bodies[configName] = Buffer.from(JSON.stringify(nowJson));
   delete bodies['probe.js'];
