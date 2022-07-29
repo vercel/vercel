@@ -348,7 +348,7 @@ function testFixtureStdio(
               : []),
             'deploy',
             ...(process.env.VERCEL_CLI_VERSION
-              ? ['--build-env', process.env.VERCEL_CLI_VERSION]
+              ? ['--build-env', `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`]
               : []),
             '--public',
             '--debug',
