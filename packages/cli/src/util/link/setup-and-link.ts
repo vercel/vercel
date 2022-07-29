@@ -28,6 +28,8 @@ import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';
+import { getRemoteUrls } from '../create-git-meta';
+import { handleGitConnection } from './handle-git-connection';
 
 export interface SetupAndLinkOptions {
   forceDelete?: boolean;
@@ -128,11 +130,10 @@ export default async function setupAndLink(
   } else {
     const project = projectOrNewProjectName;
 
-    // if (project.link) {
-    //   ask if user wants to replace
-    // } else {
-    //   ask user if they want to connect git
-    // }
+    const remoteUrls = await getRemoteUrls(path, output);
+    if (remoteUrls) {
+      await handleGitConnection(client, org, output, project, remoteUrls);
+    }
 
     await linkFolderToProject(
       output,
@@ -252,6 +253,10 @@ export default async function setupAndLink(
 
     // git link is guaranteed to not exist
     // ask user if they want to connect git
+    const remoteUrls = await getRemoteUrls(path, output);
+    if (remoteUrls) {
+      await handleGitConnection(client, org, output, project, remoteUrls);
+    }
 
     await linkFolderToProject(
       output,

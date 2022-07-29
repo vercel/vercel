@@ -1,5 +1,3 @@
-import { join } from 'path';
-import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
 import {
   connectGitProvider,
   formatProvider,
@@ -11,106 +9,127 @@ import Client from '../client';
 import { Org, Project } from '../../types';
 import { getCommandName } from '../pkg-name';
 
+async function addSingleGitRemote(
+  client: Client,
+  org: Org,
+  output: Output,
+  project: Project,
+  remoteUrls: { [key: string]: string }
+) {
+  const replace: boolean = typeof project.link !== undefined;
+  const newRemoteUrl = Object.values(remoteUrls)[0];
+
+  const parsedNewRemoteUrl = parseRepoUrl(newRemoteUrl);
+  if (!parsedNewRemoteUrl) {
+    output.debug(`Could not parse repo url ${newRemoteUrl}.`);
+    return;
+  }
+  const { org: parsedOrg, repo, provider } = parsedNewRemoteUrl;
+
+  if (replace) {
+    const currentRemoteUrl = project.link?.repo;
+    const currentProvider = project.link?.type;
+    output.log(
+      `Found Git remote url ${newRemoteUrl}, which is different from the connected ${formatProvider(
+        currentProvider || ''
+      )} repository ${currentRemoteUrl}.`
+    );
+  } else {
+    output.log(`Found local Git remote URL ${newRemoteUrl}.`);
+  }
+  const shouldConnect = await promptGitConnectSingleUrl(client, replace);
+  await parseOptions(
+    shouldConnect,
+    client,
+    output,
+    org,
+    project,
+    provider,
+    repo,
+    parsedOrg
+  );
+}
+
+async function addMultipleGitRemotes(
+  client: Client,
+  org: Org,
+  output: Output,
+  project: Project,
+  remoteUrls: { [key: string]: string }
+) {
+  output.log('Found multiple Git remote URLs in Git config.');
+  const remoteUrl = await promptGitConnectMultipleUrls(client, remoteUrls);
+  if (remoteUrl === 'no' || remoteUrl === 'opt-out') {
+    return await parseOptions(
+      remoteUrl,
+      client,
+      output,
+      org,
+      project,
+      '',
+      '',
+      ''
+    );
+  }
+
+  // remoteUrl is now guaranteed to be a URL.
+  const parsedUrl = parseRepoUrl(remoteUrl);
+  if (!parsedUrl) {
+    output.debug(`Could not parse repo url ${remoteUrl}.`);
+    return;
+  }
+  const { provider, org: parsedOrg, repo } = parsedUrl;
+
+  const connect = await connectGitProvider(
+    client,
+    org,
+    project.id,
+    provider,
+    repo
+  );
+  if (connect !== 1) {
+    output.log(`Connected ${parsedOrg}/${repo}!`);
+  }
+}
+
 export async function handleGitConnection(
-  path: string,
+  client: Client,
+  org: Org,
+  output: Output,
+  project: Project,
+  remoteUrls: { [key: string]: string }
+) {
+  const replace = typeof project.link !== undefined;
+  if (Object.keys(remoteUrls).length === 1) {
+    await addSingleGitRemote(client, org, output, project, remoteUrls);
+  } else if (Object.keys(remoteUrls).length > 1 && !replace) {
+    await addMultipleGitRemotes(client, org, output, project, remoteUrls);
+  }
+}
+
+async function parseOptions(
+  option: string,
+  client: Client,
+  output: Output,
   org: Org,
   project: Project,
-  client: Client,
-  output: Output
+  provider: string,
+  repo: string,
+  parsedOrg: string
 ) {
-  const gitConfigPath = join(path, '.git/config');
-  const gitConfig = await parseGitConfig(gitConfigPath, output);
-
-  if (gitConfig) {
-    const remoteUrls = pluckRemoteUrls(gitConfig);
-    if (!remoteUrls) {
-      return;
+  if (option === 'yes') {
+    const connect = await connectGitProvider(
+      client,
+      org,
+      project.id,
+      provider,
+      repo
+    );
+    if (connect !== 1) {
+      output.log(`Connected ${parsedOrg}/${repo}!`);
     }
-    if (!project.link) {
-      if (Object.keys(remoteUrls).length === 1) {
-        const parsedUrl = parseRepoUrl(remoteUrls[0]);
-        if (parsedUrl) {
-          const { provider, org: parsedOrg, repo } = parsedUrl;
-          const formattedProvider = formatProvider(provider);
-
-          output.log(
-            `Found local ${formattedProvider} repository ${parsedOrg}/${repo}.`
-          );
-          const shouldConnect = await promptSingleUrl(client);
-          if (shouldConnect === 'yes') {
-            const connect = await connectGitProvider(
-              client,
-              org,
-              project.id,
-              provider,
-              repo
-            );
-            if (connect !== 1) {
-              output.log(`Connected ${parsedOrg}/${repo}!`);
-            }
-          }
-          if (shouldConnect === 'no') {
-            skip(output);
-          }
-          // TODO: if (shouldConnect) === 'opt-out'
-        }
-      } else if (Object.keys(remoteUrls).length > 1) {
-        output.log('Found multiple remote URLs in Git config.');
-        const url = await promptMultipleUrls(client, remoteUrls);
-        if (url === 'no') {
-          skip(output);
-        }
-        // TODO: else if (url === 'opt-out')
-        else {
-          // `url` is actually a remote URL now
-          const parsedUrl = parseRepoUrl(url);
-          if (parsedUrl) {
-            const { provider, org: parsedOrg, repo } = parsedUrl;
-            const connect = await connectGitProvider(
-              client,
-              org,
-              project.id,
-              provider,
-              repo
-            );
-            if (connect !== 1) {
-              output.log(`Connected ${parsedOrg}/${repo}!`);
-            }
-          }
-        }
-      }
-    } else if (project.link && Object.keys(remoteUrls).length === 1) {
-      const parsedUrl = parseRepoUrl(remoteUrls[0]);
-      if (!parsedUrl) return;
-      const { provider, org: parsedOrg, repo } = parsedUrl;
-      // project.link.repo is in the form of `org/repo`
-      if (project.link.repo !== `${parsedOrg}/${repo}`) {
-        output.log(
-          `Found ${formatProvider(
-            provider
-          )} repo ${parsedOrg}/${repo}, which is different from the currently-linked ${formatProvider(
-            project.link.type
-          )} repo ${project.link.repo}.`
-        );
-        const shouldConnect = await promptSingleUrl(client, true);
-        if (shouldConnect === 'yes') {
-          const connect = await connectGitProvider(
-            client,
-            org,
-            project.id,
-            provider,
-            repo
-          );
-          if (connect !== 1) {
-            output.log(`Connected ${parsedOrg}/${repo}!`);
-          }
-        }
-        if (shouldConnect === 'no') {
-          skip(output);
-        }
-        // TODO: if (shouldConnect) === 'opt-out'
-      }
-    }
+  } else if (option === 'no') {
+    skip(output);
   }
 }
 
@@ -123,7 +142,10 @@ function skip(output: Output) {
   );
 }
 
-async function promptSingleUrl(client: Client, replace = false) {
+export async function promptGitConnectSingleUrl(
+  client: Client,
+  replace = false
+) {
   return await list(client, {
     message: replace
       ? 'Do you want to replace it?'
@@ -148,7 +170,7 @@ async function promptSingleUrl(client: Client, replace = false) {
   });
 }
 
-async function promptMultipleUrls(
+export async function promptGitConnectMultipleUrls(
   client: Client,
   remoteUrls: { [key: string]: string }
 ) {
