@@ -145,9 +145,8 @@ const main = async () => {
   if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
     // Checks for available update and returns an instance
     const latest = await updateNotifier({
-      pkg,
       distTag: isCanary ? 'canary' : 'latest',
-      updateCheckInterval: 1000 * 60 * 60 * 24 * 7, // 1 week
+      pkg,
     });
     if (latest) {
       console.log(

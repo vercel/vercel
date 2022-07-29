@@ -1,6 +1,6 @@
 import semver from 'semver';
 import XDGAppPaths from 'xdg-app-paths';
-import { dirname, join } from 'path';
+import { dirname, resolve as resolvePath } from 'path';
 // import { fileURLToPath } from 'url';
 import { outputJSON, readJSON } from 'fs-extra';
 import type { PackageJson } from '@vercel/build-utils';
@@ -12,29 +12,30 @@ interface UpdateNotifierConfig {
   notified: boolean;
 }
 
-const xdgDir = XDGAppPaths('com.vercel.cli').cache();
-const cacheDir = join(xdgDir, 'update-notifier');
-
-const script = join(dirname(dirname(__filename)), 'dist', 'update-worker.js');
-// const script = join(dirname(dirname(fileURLToPath(import.meta.url))), 'dist', 'update-worker.js');
-
 /**
  * Determines if it needs to check for a newer CLI version and returns the last
  * detected version. The version could be stale, but still newer than the
  * current version.
  */
 export default async function updateNotifier({
+  cacheDir = XDGAppPaths('com.vercel.cli').cache(),
+  distTag = 'latest',
   pkg,
-  distTag,
-  updateCheckInterval,
+  updateCheckInterval = 1000 * 60 * 60 * 24 * 7, // 1 week
   wait,
 }: {
+  cacheDir?: string;
+  distTag?: string;
   pkg: PackageJson;
-  distTag: string;
-  updateCheckInterval: number;
+  updateCheckInterval?: number;
   wait?: boolean;
 }): Promise<string | undefined> {
-  const cacheFile = join(cacheDir, `${pkg.name}-${distTag}.json`);
+  const cacheFile = resolvePath(
+    cacheDir,
+    'update-notifier',
+    `${pkg.name}-${distTag}.json`
+  );
+
   const loadCache = async (): Promise<UpdateNotifierConfig | undefined> => {
     try {
       return await readJSON(cacheFile);
@@ -49,6 +50,17 @@ export default async function updateNotifier({
     await new Promise<void>(resolve => {
       // spawn the worker, wait for the worker to report it's ready, then
       // signal the worker to fetch the latest version
+
+      const script = resolvePath(
+        dirname(__filename),
+        '..',
+        '..',
+        '..',
+        'dist',
+        'update-worker.js'
+      );
+      // const script = resolvePath(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'dist', 'update-worker.js');
+
       const worker = spawn(process.execPath, [script], {
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
         windowsHide: true,
