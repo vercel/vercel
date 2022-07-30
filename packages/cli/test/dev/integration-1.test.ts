@@ -43,8 +43,8 @@ test('[vercel dev] should support edge functions', async () => {
       url: `http://localhost:${port}/api/edge-success`,
       method: 'POST',
       body: '{"hello":"world"}',
-      decamelized: 'some_camel_case_thing',
-      uppercase: 'SOMETHING',
+      snakeCase: 'some_camel_case_thing',
+      upperCase: 'SOMETHING',
       optionalChaining: 'fallback',
       ENV_VAR_IN_EDGE: '1',
     });
