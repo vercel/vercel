@@ -47,22 +47,22 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
 
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
-    console.log('Found symlink', { target, fsPath });
 
     try {
       await symlink(target, fsPath);
     } catch (error: any) {
       if (error?.code === 'EEXIST') {
-        const fsLink = await readlink(fsPath).catch((err: Error) => err);
-        console.log('Symlink already exists', { target, fsPath, fsLink });
-      } else {
-        throw error;
+        // HACK: Some builders resolve symlinks and return both
+        // a file, node_modules/<symlink>/package.json, and
+        // node_modules/<symlink>, a symlink.
+        // This remove() matches how the yazl lambda zip behaves
+        // so we can use download() with `vercel build`.
+        await remove(fsPath);
+        await symlink(target, fsPath);
       }
     }
 
     return FileFsRef.fromFsPath({ mode, fsPath });
-  } else {
-    console.log('Found file', { fsPath });
   }
 
   const stream = file.toStream();
@@ -96,21 +96,21 @@ export default async function download(
 
   const start = Date.now();
   const files2: DownloadedFiles = {};
-  const entries = Object.entries(files);
+  const filenames = Object.keys(files);
 
   await Promise.all(
-    entries.map(async ([name, file]) => {
+    filenames.map(async name => {
       // If the file does not exist anymore, remove it.
       if (Array.isArray(filesRemoved) && filesRemoved.includes(name)) {
         await removeFile(basePath, name);
         return;
       }
-
       // If a file didn't change, do not re-download it.
       if (Array.isArray(filesChanged) && !filesChanged.includes(name)) {
         return;
       }
 
+      const file = files[name];
       const fsPath = path.join(basePath, name);
 
       files2[name] = await downloadFile(file, fsPath);
@@ -118,7 +118,7 @@ export default async function download(
   );
 
   const duration = Date.now() - start;
-  debug(`Downloaded ${entries.length} source files: ${duration}ms`);
+  debug(`Downloaded ${filenames.length} source files: ${duration}ms`);
 
   return files2;
 }
