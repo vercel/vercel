@@ -195,8 +195,7 @@ async function optOut(
   settings: ProjectSettings
 ) {
   settings.noGitPrompt = true;
-  const update = await updateProject(client, project.name, settings);
-  console.log('update response:', update);
+  await updateProject(client, project.name, settings);
   client.output
     .log(`Opted out. You can re-enable this prompt by visiting the Settings > Git page on the
   dashboard for this Project.`);
