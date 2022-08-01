@@ -11,6 +11,53 @@ import { Org, Project, ProjectSettings } from '../../types';
 import { getCommandName } from '../pkg-name';
 import updateProject from '../projects/update-project';
 
+function getProjectSettings(project: Project): ProjectSettings {
+  return {
+    createdAt: project.createdAt,
+    framework: project.framework,
+    devCommand: project.devCommand,
+    installCommand: project.installCommand,
+    buildCommand: project.buildCommand,
+    outputDirectory: project.outputDirectory,
+    rootDirectory: project.rootDirectory,
+    directoryListing: project.directoryListing,
+    nodeVersion: project.nodeVersion,
+    noGitPrompt: project.noGitPrompt,
+  };
+}
+
+export async function handleGitConnection(
+  client: Client,
+  org: Org,
+  output: Output,
+  project: Project,
+  remoteUrls: { [key: string]: string },
+  settings?: ProjectSettings
+) {
+  if (!settings) {
+    settings = getProjectSettings(project);
+  }
+  if (Object.keys(remoteUrls).length === 1) {
+    await addSingleGitRemote(
+      client,
+      org,
+      output,
+      project,
+      remoteUrls,
+      settings
+    );
+  } else if (Object.keys(remoteUrls).length > 1 && !project.link) {
+    await addMultipleGitRemotes(
+      client,
+      org,
+      output,
+      project,
+      remoteUrls,
+      settings
+    );
+  }
+}
+
 async function addSingleGitRemote(
   client: Client,
   org: Org,
@@ -108,53 +155,6 @@ async function addMultipleGitRemotes(
   if (connect !== 1) {
     output.log(`Connected ${parsedOrg}/${repo}!`);
   }
-}
-
-export async function handleGitConnection(
-  client: Client,
-  org: Org,
-  output: Output,
-  project: Project,
-  remoteUrls: { [key: string]: string },
-  settings?: ProjectSettings
-) {
-  if (!settings) {
-    settings = getProjectSettings(project);
-  }
-  if (Object.keys(remoteUrls).length === 1) {
-    await addSingleGitRemote(
-      client,
-      org,
-      output,
-      project,
-      remoteUrls,
-      settings
-    );
-  } else if (Object.keys(remoteUrls).length > 1 && !project.link) {
-    await addMultipleGitRemotes(
-      client,
-      org,
-      output,
-      project,
-      remoteUrls,
-      settings
-    );
-  }
-}
-
-function getProjectSettings(project: Project): ProjectSettings {
-  return {
-    createdAt: project.createdAt,
-    framework: project.framework,
-    devCommand: project.devCommand,
-    installCommand: project.installCommand,
-    buildCommand: project.buildCommand,
-    outputDirectory: project.outputDirectory,
-    rootDirectory: project.rootDirectory,
-    directoryListing: project.directoryListing,
-    nodeVersion: project.nodeVersion,
-    noGitPrompt: project.noGitPrompt,
-  };
 }
 
 async function parseOptions(
