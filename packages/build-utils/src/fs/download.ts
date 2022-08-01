@@ -53,7 +53,8 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
       await symlink(target, fsPath);
     } catch (error: any) {
       if (error?.code === 'EEXIST') {
-        console.log('Symlink already exists', { target, fsPath });
+        const fsLink = await readlink(fsPath);
+        console.log('Symlink already exists', { target, fsPath, fsLink });
       } else {
         throw error;
       }
