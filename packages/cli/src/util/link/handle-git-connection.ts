@@ -7,15 +7,17 @@ import {
 import { Output } from '../output';
 import list from '../input/list';
 import Client from '../client';
-import { Org, Project } from '../../types';
+import { Org, Project, ProjectSettings } from '../../types';
 import { getCommandName } from '../pkg-name';
+import updateProject from '../projects/update-project';
 
 async function addSingleGitRemote(
   client: Client,
   org: Org,
   output: Output,
   project: Project,
-  remoteUrls: { [key: string]: string }
+  remoteUrls: { [key: string]: string },
+  settings: ProjectSettings
 ) {
   const newRemoteUrl = Object.values(remoteUrls)[0];
 
@@ -59,7 +61,8 @@ async function addSingleGitRemote(
     project,
     provider,
     repo,
-    parsedOrg
+    parsedOrg,
+    settings
   );
 }
 
@@ -68,7 +71,8 @@ async function addMultipleGitRemotes(
   org: Org,
   output: Output,
   project: Project,
-  remoteUrls: { [key: string]: string }
+  remoteUrls: { [key: string]: string },
+  settings: ProjectSettings
 ) {
   output.log('Found multiple Git remote URLs in Git config.');
   const remoteUrl = await promptGitConnectMultipleUrls(client, remoteUrls);
@@ -81,7 +85,8 @@ async function addMultipleGitRemotes(
       project,
       '',
       '',
-      ''
+      '',
+      settings
     );
   }
 
@@ -110,13 +115,46 @@ export async function handleGitConnection(
   org: Org,
   output: Output,
   project: Project,
-  remoteUrls: { [key: string]: string }
+  remoteUrls: { [key: string]: string },
+  settings?: ProjectSettings
 ) {
-  if (Object.keys(remoteUrls).length === 1) {
-    await addSingleGitRemote(client, org, output, project, remoteUrls);
-  } else if (Object.keys(remoteUrls).length > 1 && !project.link) {
-    await addMultipleGitRemotes(client, org, output, project, remoteUrls);
+  if (!settings) {
+    settings = getProjectSettings(project);
   }
+  if (Object.keys(remoteUrls).length === 1) {
+    await addSingleGitRemote(
+      client,
+      org,
+      output,
+      project,
+      remoteUrls,
+      settings
+    );
+  } else if (Object.keys(remoteUrls).length > 1 && !project.link) {
+    await addMultipleGitRemotes(
+      client,
+      org,
+      output,
+      project,
+      remoteUrls,
+      settings
+    );
+  }
+}
+
+function getProjectSettings(project: Project): ProjectSettings {
+  return {
+    createdAt: project.createdAt,
+    framework: project.framework,
+    devCommand: project.devCommand,
+    installCommand: project.installCommand,
+    buildCommand: project.buildCommand,
+    outputDirectory: project.outputDirectory,
+    rootDirectory: project.rootDirectory,
+    directoryListing: project.directoryListing,
+    nodeVersion: project.nodeVersion,
+    noGitPrompt: project.noGitPrompt,
+  };
 }
 
 async function parseOptions(
@@ -127,7 +165,8 @@ async function parseOptions(
   project: Project,
   provider: string,
   repo: string,
-  parsedOrg: string
+  parsedOrg: string,
+  settings: ProjectSettings
 ) {
   if (option === 'yes') {
     if (project.link) {
@@ -145,7 +184,22 @@ async function parseOptions(
     }
   } else if (option === 'no') {
     skip(output);
+  } else if (option === 'opt-out') {
+    await optOut(client, project, settings);
   }
+}
+
+async function optOut(
+  client: Client,
+  project: Project,
+  settings: ProjectSettings
+) {
+  settings.noGitPrompt = true;
+  const update = await updateProject(client, project.name, settings);
+  console.log('update response:', update);
+  client.output
+    .log(`Opted out. You can re-enable this prompt by visiting the Settings > Git page on the
+  dashboard for this Project.`);
 }
 
 function skip(output: Output) {
