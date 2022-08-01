@@ -43,7 +43,7 @@ describe('link', () => {
         await expect(client.stderr).toOutput(
           'Connected GitHub repository user/repo!'
         );
-        await expect(client.stderr).toOutput('✅  Linked');
+        await expect(client.stderr).toOutput('Linked to');
 
         await expect(linkPromise).resolves.toEqual(0);
       } finally {
@@ -91,7 +91,7 @@ describe('link', () => {
         await expect(client.stderr).toOutput(
           'Connected GitHub repository user2/repo2!'
         );
-        await expect(client.stderr).toOutput('✅  Linked');
+        await expect(client.stderr).toOutput('Linked to');
 
         await expect(linkPromise).resolves.toEqual(0);
       } finally {
@@ -129,7 +129,7 @@ describe('link', () => {
         await expect(client.stderr).toOutput(
           'Connected GitHub repository user/repo!'
         );
-        await expect(client.stderr).toOutput('✅  Linked');
+        await expect(client.stderr).toOutput('Linked to');
 
         await expect(linkPromise).resolves.toEqual(0);
       } finally {
@@ -171,7 +171,7 @@ describe('link', () => {
         client.stdin.write('y\n');
 
         expect(client.stderr).not.toOutput('Found multiple Git remote URLs');
-        await expect(client.stderr).toOutput('✅  Linked');
+        await expect(client.stderr).toOutput('Linked to');
 
         await expect(linkPromise).resolves.toEqual(0);
       } finally {

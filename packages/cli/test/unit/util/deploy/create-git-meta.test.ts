@@ -9,7 +9,7 @@ import {
   isDirty,
 } from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
-import { parseRepoUrl } from '../../../../src/util/projects/connect-git-provider';
+import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 import { readOutputStream } from '../../../helpers/read-output-stream';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
