@@ -96,6 +96,16 @@
         "x-matched-path": "/dynamic/[id]"
       },
       "mustContain": "{}"
+    },
+    {
+      "path": "/_next/data/testing-build-id/redirect-me.json",
+      "status": 307,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "Location": "/from-middleware/"
+      }
     }
   ]
 }
