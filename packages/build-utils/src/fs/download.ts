@@ -53,7 +53,7 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
       await symlink(target, fsPath);
     } catch (error: any) {
       if (error?.code === 'EEXIST') {
-        const fsLink = await readlink(fsPath);
+        const fsLink = await readlink(fsPath).catch((err: Error) => err);
         console.log('Symlink already exists', { target, fsPath, fsLink });
       } else {
         throw error;
@@ -61,6 +61,8 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
     }
 
     return FileFsRef.fromFsPath({ mode, fsPath });
+  } else {
+    console.log('Found file', { fsPath });
   }
 
   const stream = file.toStream();
@@ -94,10 +96,10 @@ export default async function download(
 
   const start = Date.now();
   const files2: DownloadedFiles = {};
-  const filenames = Object.keys(files);
+  const entries = Object.entries(files);
 
   await Promise.all(
-    filenames.map(async name => {
+    entries.map(async ([name, file]) => {
       // If the file does not exist anymore, remove it.
       if (Array.isArray(filesRemoved) && filesRemoved.includes(name)) {
         await removeFile(basePath, name);
@@ -109,7 +111,6 @@ export default async function download(
         return;
       }
 
-      const file = files[name];
       const fsPath = path.join(basePath, name);
 
       files2[name] = await downloadFile(file, fsPath);
@@ -117,7 +118,7 @@ export default async function download(
   );
 
   const duration = Date.now() - start;
-  debug(`Downloaded ${filenames.length} source files: ${duration}ms`);
+  debug(`Downloaded ${entries.length} source files: ${duration}ms`);
 
   return files2;
 }
