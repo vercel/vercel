@@ -388,8 +388,7 @@ test(
     await testPath(200, `/api/index.go`, 'This is the index page');
     await testPath(200, `/api/another`, 'This is another page');
     await testPath(200, '/api/another.go', 'This is another page');
-    // DISABLED: These assertions rely on different bracket names working. Fixing in:
-    //   https://linear.app/vercel/issue/VCCLI-111/fix-gotestfixtures08-include-files
+    // DISABLED: These assertions rely on different bracket names working.
     // await testPath(200, `/api/foo`, 'Req Path: /api/foo');
     // await testPath(200, `/api/bar`, 'Req Path: /api/bar');
   })
