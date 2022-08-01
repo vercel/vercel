@@ -107,7 +107,7 @@ export default async function download(
         const dir = parts.slice(0, i).join('/');
         const parent = files[dir];
         if (parent && isSymbolicLink(parent.mode)) {
-          console.log(
+          console.warn(
             `Warning: file "${name}" is within a symlinked directory "${dir}" and will be ignored`
           );
           return;
