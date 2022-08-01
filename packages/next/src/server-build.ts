@@ -1056,17 +1056,20 @@ export async function serverBuild({
 
   // We stopped duplicating matchers for _next/data routes when we added
   // x-nextjs-data header resolving but we should still resolve middleware
-  // when the header isn't present so we augment the source to include that
-  middleware.staticRoutes.forEach(route => {
-    if (!route.src?.match(/_next[\\/]{1,}data/)) {
-      route.src =
-        `^(\\/_next\\/data\\/${escapedBuildId})?(` +
-        route.src
-          ?.replace(/\|\^/g, '|')
-          .replace(/\$$/, ')$')
-          .replace(/\$/g, '(\\.json)?$');
-    }
-  });
+  // when the header isn't present so we augment the source to include that.
+  // We don't apply this modification for nested middleware > 1 staticRoute
+  if (middleware.staticRoutes.length < 2) {
+    middleware.staticRoutes.forEach(route => {
+      if (!route.src?.match(/_next[\\/]{1,}data/)) {
+        route.src =
+          `^(\\/_next\\/data\\/${escapedBuildId})?(` +
+          route.src
+            ?.replace(/\|\^/g, '|')
+            .replace(/\$$/, ')$')
+            .replace(/\$/g, '(\\.json)?$');
+      }
+    });
+  }
 
   return {
     wildcard: wildcardConfig,
