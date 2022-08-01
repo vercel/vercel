@@ -49,7 +49,6 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
     const target = await prepareSymlinkTarget(file, fsPath);
 
     await symlink(target, fsPath);
-
     return FileFsRef.fromFsPath({ mode, fsPath });
   }
 
