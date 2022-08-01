@@ -1,3 +1,4 @@
+import { Dictionary } from '@vercel/client';
 import {
   connectGitProvider,
   disconnectGitProvider,
@@ -31,7 +32,7 @@ export async function handleGitConnection(
   org: Org,
   output: Output,
   project: Project,
-  remoteUrls: { [key: string]: string },
+  remoteUrls: Dictionary<string>,
   settings?: ProjectSettings
 ) {
   if (!settings) {
@@ -63,7 +64,7 @@ async function addSingleGitRemote(
   org: Org,
   output: Output,
   project: Project,
-  remoteUrls: { [key: string]: string },
+  remoteUrls: Dictionary<string>,
   settings: ProjectSettings
 ) {
   const newRemoteUrl = Object.values(remoteUrls)[0];
@@ -118,7 +119,7 @@ async function addMultipleGitRemotes(
   org: Org,
   output: Output,
   project: Project,
-  remoteUrls: { [key: string]: string },
+  remoteUrls: Dictionary<string>,
   settings: ProjectSettings
 ) {
   output.log('Found multiple Git remote URLs in Git config.');
@@ -238,9 +239,9 @@ export async function promptGitConnectSingleUrl(
   });
 }
 
-export async function promptGitConnectMultipleUrls(
+async function promptGitConnectMultipleUrls(
   client: Client,
-  remoteUrls: { [key: string]: string }
+  remoteUrls: Dictionary<string>
 ) {
   const staticOptions = [
     {
