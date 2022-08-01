@@ -170,6 +170,7 @@ async function parseOptions(
   settings: ProjectSettings
 ) {
   if (option === 'yes') {
+    const repoPath = `${parsedOrg}/${repo}`;
     if (project.link) {
       await disconnectGitProvider(client, org, project.id);
     }
@@ -178,10 +179,12 @@ async function parseOptions(
       org,
       project.id,
       provider,
-      repo
+      repoPath
     );
     if (connect !== 1) {
-      output.log(`Connected ${parsedOrg}/${repo}!`);
+      output.log(
+        `Connected ${formatProvider(provider)} repository ${parsedOrg}/${repo}!`
+      );
     }
   } else if (option === 'no') {
     skip(output);
