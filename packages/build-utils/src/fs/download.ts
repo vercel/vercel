@@ -92,7 +92,7 @@ export default async function download(
     // source files are already available.
     return files as DownloadedFiles;
   }
-  debug('Downloading deployment source files to ', basePath);
+  debug('Downloading deployment source files...');
 
   const start = Date.now();
   const files2: DownloadedFiles = {};
