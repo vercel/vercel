@@ -103,7 +103,7 @@ export default async function download(
       // Removing the file matches how the yazl lambda zip
       // behaves so we can use download() with `vercel build`.
       const parts = name.split('/');
-      for (let i = 0; i < parts.length; i++) {
+      for (let i = 1; i < parts.length; i++) {
         const dir = parts.slice(0, i).join('/');
         const parent = files[dir];
         if (parent && isSymbolicLink(parent.mode)) {
