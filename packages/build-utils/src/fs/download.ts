@@ -48,19 +48,7 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
 
-    try {
-      await symlink(target, fsPath);
-    } catch (error: any) {
-      if (error?.code === 'EEXIST') {
-        // HACK: Some builders resolve symlinks and return both
-        // a file, node_modules/<symlink>/package.json, and
-        // node_modules/<symlink>, a symlink.
-        // This remove() matches how the yazl lambda zip behaves
-        // so we can use download() with `vercel build`.
-        await remove(fsPath);
-        await symlink(target, fsPath);
-      }
-    }
+    await symlink(target, fsPath);
 
     return FileFsRef.fromFsPath({ mode, fsPath });
   }
@@ -108,6 +96,23 @@ export default async function download(
       // If a file didn't change, do not re-download it.
       if (Array.isArray(filesChanged) && !filesChanged.includes(name)) {
         return;
+      }
+
+      // Some builders resolve symlinks and return both
+      // a file, node_modules/<symlink>/package.json, and
+      // node_modules/<symlink>, a symlink.
+      // Removing the file matches how the yazl lambda zip
+      // behaves so we can use download() with `vercel build`.
+      const parts = name.split('/');
+      for (let i = 0; i < parts.length; i++) {
+        const dir = parts.slice(0, i).join('/');
+        const parent = files[dir];
+        if (parent && isSymbolicLink(parent.mode)) {
+          console.log(
+            `Warning: file "${name}" is within a symlinked directory "${dir}" and will be ignored`
+          );
+          return;
+        }
       }
 
       const file = files[name];
