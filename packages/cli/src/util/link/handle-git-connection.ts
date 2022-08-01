@@ -145,16 +145,17 @@ async function addMultipleGitRemotes(
     return;
   }
   const { provider, org: parsedOrg, repo } = parsedUrl;
+  const repoPath = `${parsedOrg}/${repo}`;
 
   const connect = await connectGitProvider(
     client,
     org,
     project.id,
     provider,
-    repo
+    repoPath
   );
   if (connect !== 1) {
-    output.log(`Connected ${parsedOrg}/${repo}!`);
+    output.log(`Connected ${formatProvider(provider)} repository ${repoPath}!`);
   }
 }
 
@@ -183,7 +184,7 @@ async function parseOptions(
     );
     if (connect !== 1) {
       output.log(
-        `Connected ${formatProvider(provider)} repository ${parsedOrg}/${repo}!`
+        `Connected ${formatProvider(provider)} repository ${repoPath}!`
       );
     }
   } else if (option === 'no') {
