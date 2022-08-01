@@ -233,7 +233,7 @@ export async function promptGitConnectSingleUrl(
       {
         name: 'Do not ask again for this project',
         value: 'opt-out',
-        short: 'opt-out',
+        short: 'no (opt out)',
       },
     ],
   });
@@ -252,7 +252,7 @@ async function promptGitConnectMultipleUrls(
     {
       name: 'Do not ask again for this project',
       value: 'opt-out',
-      short: 'opt-out',
+      short: 'no (opt out)',
     },
   ];
   let choices = [];
