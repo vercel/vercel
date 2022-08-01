@@ -47,6 +47,7 @@ async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
 
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
+    console.log('Found symlink', { target, fsPath });
 
     try {
       await symlink(target, fsPath);
@@ -88,7 +89,7 @@ export default async function download(
     // source files are already available.
     return files as DownloadedFiles;
   }
-  debug('Downloading deployment source files...');
+  debug('Downloading deployment source files to ', basePath);
 
   const start = Date.now();
   const files2: DownloadedFiles = {};
