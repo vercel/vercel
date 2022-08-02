@@ -104,6 +104,8 @@ export async function build({
   const downloadPath = meta.skipDownload ? workPath : srcPath;
   await download(files, downloadPath, meta);
 
+  console.log(`[debug] meta.skipDownload: ${meta.skipDownload}`);
+
   // keep track of file system actions we need to undo
   // the keys "from" and "to" refer to what needs to be done
   // in order to undo the action, not what the original action was
