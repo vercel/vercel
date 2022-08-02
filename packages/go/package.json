@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "node build",
-    "test": "yarn jest --env node --verbose --runInBand --bail",
+    "test": "VERCEL_DEBUG=1 VERCEL_BUILDER_DEBUG=1 yarn jest --env node --verbose --runInBand --bail",
     "test-integration-once": "yarn test",
     "prepublishOnly": "node build"
   },
