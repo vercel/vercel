@@ -1,31 +1,32 @@
-import { dirname, join, parse, basename, relative, resolve } from 'path';
-import { readJSON, remove, readdirSync, existsSync } from 'fs-extra';
+import { dirname, join } from 'path';
 import {
   debug,
   download,
   execCommand,
-  FileFsRef,
   getNodeVersion,
   getSpawnOptions,
-  glob,
-  Lambda,
-  NodejsLambda,
   readConfigFile,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
-  Prerender,
-  BuildV2,
+  BuildV3,
   PackageJson,
 } from '@vercel/build-utils';
-import { buildVercelOutput } from '.';
+import {
+  createAPIRoutes,
+  createFunctionLambda,
+  createServerlessFunction,
+} from './helpers/functions';
+import { createStaticOutput } from './helpers/static';
+import { getTransformedRoutes } from '@vercel/routing-utils';
+import type { IGatsbyPage, IGatsbyState } from 'gatsby/dist/redux/types';
 
 function hasScript(scriptName: string, pkg: PackageJson | null) {
   const scripts = (pkg && pkg.scripts) || {};
   return typeof scripts[scriptName] === 'string';
 }
 
-export const build: BuildV2 = async ({
+export const build: BuildV3 = async ({
   entrypoint,
   files,
   workPath,
@@ -120,130 +121,63 @@ export const build: BuildV2 = async ({
     }
   }
 
-  await buildVercelOutput();
+  const { store } = require('gatsby/dist/redux');
+  const { pages, redirects, functions } =
+    (await store.getState()) as IGatsbyState;
 
-  const staticOutput = await createStaticOutput({
-    entrypointFsDirname,
-  });
+  const { ssrRoutes, dsgRoutes } = [...pages.values()].reduce(
+    (acc, cur: IGatsbyPage) => {
+      if (cur.mode === 'SSR') {
+        acc.ssrRoutes.push(cur.path);
+      } else if (cur.mode === 'DSG') {
+        acc.dsgRoutes.push(cur.path);
+      }
 
-  const lambdas = await createLambdaOutput({
-    entrypointFsDirname,
-    nodeVersion,
-  });
-
-  const { routes } = await readJSON(
-    join(entrypointFsDirname, '.vercel', 'output', 'config.json')
+      return acc;
+    },
+    {
+      ssrRoutes: [] as IGatsbyPage['path'][],
+      dsgRoutes: [] as IGatsbyPage['path'][],
+    }
   );
 
-  await remove(join('.vercel', 'output'));
+  const { routes } = getTransformedRoutes({
+    trailingSlash: false,
+    redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
+      source: fromPath,
+      destination: toPath,
+      permanent: isPermanent,
+    })),
+    rewrites: [
+      {
+        source: '^/page-data(?:/(.*))/page-data\\.json$',
+        destination: '/_page-data',
+      },
+    ],
+  });
 
   return {
-    output: { ...staticOutput, ...lambdas },
+    output: {
+      ...(await createStaticOutput({
+        staticDir: join(entrypointFsDirname, 'public'),
+      })),
+      ...(await createServerlessFunction({
+        ssrRoutes,
+        dsgRoutes,
+        nodeVersion,
+      })),
+      ...(await createAPIRoutes({ functions, nodeVersion })),
+      'page-data': await createFunctionLambda({
+        nodeVersion,
+        handlerFile: join(
+          __dirname,
+          '..',
+          'handlers',
+          'templates',
+          './page-data'
+        ),
+      }),
+    },
     routes,
   };
 };
-
-async function* getFiles(dir: any): any {
-  const files = readdirSync(dir, { withFileTypes: true });
-
-  for (const file of files) {
-    const res = resolve(dir, file.name);
-    if (!file.isDirectory() && !file.isSymbolicLink()) return;
-
-    if (!res.endsWith('.func')) {
-      yield* getFiles(res);
-    } else {
-      yield res;
-    }
-  }
-}
-
-async function createLambdaOutput({
-  entrypointFsDirname,
-  nodeVersion,
-}: {
-  entrypointFsDirname: string;
-  nodeVersion: Awaited<ReturnType<typeof getNodeVersion>>;
-}) {
-  const lambdas: { [key: string]: Lambda } = {};
-  const functionDir = join(
-    entrypointFsDirname,
-    '.vercel',
-    'output',
-    'functions'
-  );
-
-  for await (const filePath of getFiles(functionDir)) {
-    const lambdaFiles: Record<string, FileFsRef> = {};
-    const functionFiles = Object.keys(await glob('**', filePath));
-
-    functionFiles.forEach(async functionFile => {
-      lambdaFiles[functionFile] = await FileFsRef.fromFsPath({
-        fsPath: join(`${filePath}/${functionFile}`),
-      });
-    });
-
-    const funcName = filePath
-      .replace(functionDir, '')
-      .replace('.func', '')
-      .replace(/^\//, '');
-
-    const lambda = new NodejsLambda({
-      files: lambdaFiles,
-      handler: 'index.js',
-      runtime: nodeVersion.runtime,
-      shouldAddHelpers: false,
-      shouldAddSourcemapSupport: false,
-    });
-
-    const isPrerender = existsSync(
-      join(functionDir, `${funcName}.prerender-config.json`)
-    );
-
-    if (isPrerender) {
-      // @ts-ignore
-      lambdas[funcName] = new Prerender({
-        lambda,
-        // Gatsby DSR doesn't have expiration or fallback
-        expiration: false,
-        fallback: null,
-      });
-    } else {
-      lambdas[funcName] = lambda;
-    }
-  }
-
-  return lambdas;
-}
-
-async function createStaticOutput({
-  entrypointFsDirname,
-}: {
-  entrypointFsDirname: string;
-}) {
-  const staticOutput: Record<string, FileFsRef> = {};
-  const staticDir = join(entrypointFsDirname, '.vercel', 'output', 'static');
-
-  const staticFiles = await glob('**', staticDir);
-
-  for (const [fileName, fileFsRef] of Object.entries(staticFiles)) {
-    const parsedPath = parse(fileFsRef.fsPath);
-
-    if (parsedPath.ext !== '.html') {
-      staticOutput[fileName] = fileFsRef;
-    } else {
-      const fileNameWithoutExtension = basename(fileName, '.html');
-
-      const pathWithoutHtmlExtension = join(
-        parsedPath.dir,
-        fileNameWithoutExtension
-      );
-
-      fileFsRef.contentType = 'text/html; charset=utf-8';
-
-      staticOutput[relative(staticDir, pathWithoutHtmlExtension)] = fileFsRef;
-    }
-  }
-
-  return staticOutput;
-}
