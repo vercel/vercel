@@ -125,12 +125,6 @@ export const defaultProject = {
   ],
 };
 
-export function handleUnknownProject() {
-  client.scenario.get(`/v8/projects/:projectNameOrId`, (_req, res) => {
-    res.status(404).send();
-  });
-}
-
 export function useProject(project: Partial<Project> = defaultProject) {
   client.scenario.get(`/v8/projects/${project.name}`, (_req, res) => {
     res.json(project);
