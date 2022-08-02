@@ -380,22 +380,19 @@ test(
   })
 );
 
-// DISABLED: These assertions rely on different Go api endpoints existing
-//   but we can't currently compile those. Fixing in:
-//   https://linear.app/vercel/issue/VCCLI-111/fix-gotestfixtures08-include-files
-// test(
-//   '[vercel dev] Should support `*.go` API serverless functions',
-//   testFixtureStdio('go', async (testPath: any) => {
-
-//     await testPath(200, `/api`, 'This is the index page');
-//     await testPath(200, `/api/index`, 'This is the index page');
-//     await testPath(200, `/api/index.go`, 'This is the index page');
-//     await testPath(200, `/api/another`, 'This is another page');
-//     await testPath(200, '/api/another.go', 'This is another page');
-//     await testPath(200, `/api/foo`, 'Req Path: /api/foo');
-//     await testPath(200, `/api/bar`, 'Req Path: /api/bar');
-//   })
-// );
+test(
+  '[vercel dev] Should support `*.go` API serverless functions',
+  testFixtureStdio('go', async (testPath: any) => {
+    await testPath(200, `/api`, 'This is the index page');
+    await testPath(200, `/api/index`, 'This is the index page');
+    await testPath(200, `/api/index.go`, 'This is the index page');
+    await testPath(200, `/api/another`, 'This is another page');
+    await testPath(200, '/api/another.go', 'This is another page');
+    // DISABLED: These assertions rely on different bracket names working.
+    // await testPath(200, `/api/foo`, 'Req Path: /api/foo');
+    // await testPath(200, `/api/bar`, 'Req Path: /api/bar');
+  })
+);
 
 test(
   '[vercel dev] Should set the `ts-node` "target" to match Node.js version',
