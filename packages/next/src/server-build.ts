@@ -1392,7 +1392,7 @@ export async function serverBuild({
           dynamicRoutes
             .map(route => {
               route = Object.assign({}, route);
-              route.src = path.join(
+              route.src = path.posix.join(
                 '^/',
                 entryDirectory,
                 '_next/data/',
