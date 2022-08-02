@@ -179,15 +179,12 @@ export async function build({
     const modFileRefs = await glob('**/*.mod', workPath);
     const modFiles = Object.keys(modFileRefs);
 
-    console.log({
-      modFiles,
-    });
     for (const file of modFiles) {
       const fileDirname = dirname(file);
       if (file === 'go.mod') {
         isGoModExist = true;
         isGoModInRootDir = true;
-        goModPath = fileDirname;
+        goModPath = join(workPath, fileDirname);
 
         // TODO: if no `go.sum`, queue up a delete
 
@@ -197,7 +194,7 @@ export async function build({
 
         if (entrypointDirname === fileDirname) {
           isGoModExist = true;
-          goModPath = fileDirname;
+          goModPath = join(workPath, fileDirname);
 
           // TODO: if no `go.sum`, queue up a delete
 
@@ -237,11 +234,6 @@ export async function build({
         }
       }
     }
-
-    console.log({
-      isGoModExist,
-      isGoModInRootDir,
-    });
 
     const input = entrypointDirname;
     const includedFiles: Files = {};
@@ -384,6 +376,10 @@ export async function build({
         }
 
         if (dirname(entrypointAbsolute) === goModPath || !isGoModExist) {
+          debug(
+            `moving entrypoint "${entrypointAbsolute}" to "${finalDestination}"`
+          );
+
           await move(entrypointAbsolute, finalDestination);
           undoFileActions.push({
             to: entrypointAbsolute,
