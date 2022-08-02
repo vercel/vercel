@@ -1556,6 +1556,8 @@ export default class DevServer {
           (err as any).link = 'https://vercel.link/command-not-found';
         }
 
+        this.output.prettyError(err);
+
         await this.sendError(
           req,
           res,
