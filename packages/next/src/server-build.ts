@@ -58,6 +58,7 @@ const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
+const NON_NESTED_MIDDLEWARE_VERSION = 'v12.1.7-canary.9';
 
 export async function serverBuild({
   dynamicPages,
@@ -150,6 +151,10 @@ export async function serverBuild({
   const isCorrectManifests = semver.gte(
     nextVersion,
     CORRECTED_MANIFESTS_VERSION
+  );
+  const isNonNestedMiddleware = semver.gte(
+    nextVersion,
+    NON_NESTED_MIDDLEWARE_VERSION
   );
   let hasStatic500 = !!staticPages[path.join(entryDirectory, '500')];
 
@@ -1058,7 +1063,7 @@ export async function serverBuild({
   // x-nextjs-data header resolving but we should still resolve middleware
   // when the header isn't present so we augment the source to include that.
   // We don't apply this modification for nested middleware > 1 staticRoute
-  if (middleware.staticRoutes.length < 2) {
+  if (isNonNestedMiddleware) {
     middleware.staticRoutes.forEach(route => {
       if (!route.src?.match(/_next[\\/]{1,}data/)) {
         route.src =
