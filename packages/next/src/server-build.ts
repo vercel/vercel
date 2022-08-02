@@ -1386,16 +1386,21 @@ export async function serverBuild({
           // is correct
           dynamicRoutes
             .map(route => {
-              return {
-                ...route,
-                src: path.join(
-                  '^/',
-                  entryDirectory,
-                  '_next/data/',
-                  escapedBuildId,
-                  route.src.replace(/(^\^|\$$)/g, '') + '.json$'
-                ),
-              };
+              route = Object.assign({}, route);
+              route.src = path.join(
+                '^/',
+                entryDirectory,
+                '_next/data/',
+                escapedBuildId,
+                route.src.replace(/(^\^|\$$)/g, '') + '.json$'
+              );
+
+              const { pathname } = new URL(route.dest || '/', 'http://n');
+
+              if (prerenders[path.join('./', pathname)]) {
+                route.dest = `/_next/data/${buildId}${pathname}.json`;
+              }
+              return route;
             })
             .filter(Boolean)
         : dataRoutes),

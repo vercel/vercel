@@ -106,6 +106,15 @@
       "responseHeaders": {
         "Location": "/from-middleware/"
       }
+    },
+    {
+      "path": "/_next/data/testing-build-id/_sites/subdomain-1.json",
+      "status": 200,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "mustNotContain": "<html>",
+      "mustContain": "\"site\":\"subdomain-1\""
     }
   ]
 }
