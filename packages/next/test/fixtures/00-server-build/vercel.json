@@ -32,6 +32,26 @@
       "mustContain": "index page"
     },
     {
+      "path": "/build-time-not-found/first",
+      "status": 307,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+    {
+      "path": "/build-time-not-found/second",
+      "status": 307,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+    {
       "path": "/static",
       "status": 200,
       "mustContain": "static page"
