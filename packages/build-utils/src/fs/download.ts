@@ -92,10 +92,26 @@ export default async function download(
         await removeFile(basePath, name);
         return;
       }
-
       // If a file didn't change, do not re-download it.
       if (Array.isArray(filesChanged) && !filesChanged.includes(name)) {
         return;
+      }
+
+      // Some builders resolve symlinks and return both
+      // a file, node_modules/<symlink>/package.json, and
+      // node_modules/<symlink>, a symlink.
+      // Removing the file matches how the yazl lambda zip
+      // behaves so we can use download() with `vercel build`.
+      const parts = name.split('/');
+      for (let i = 1; i < parts.length; i++) {
+        const dir = parts.slice(0, i).join('/');
+        const parent = files[dir];
+        if (parent && isSymbolicLink(parent.mode)) {
+          console.warn(
+            `Warning: file "${name}" is within a symlinked directory "${dir}" and will be ignored`
+          );
+          return;
+        }
       }
 
       const file = files[name];
