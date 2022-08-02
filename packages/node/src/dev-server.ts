@@ -224,7 +224,7 @@ async function compileUserCode(
   } catch (error) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
-    console.error(`Failed to instantiate edge runtime.`);
+    console.error(`Failed to compile user code for edge runtime.`);
     logError(error);
     return undefined;
   }
