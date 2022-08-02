@@ -203,13 +203,23 @@ export async function build({
           pathParts.pop(); // Remove api
           pathParts.push('go.mod');
           const newFsPath = pathParts.join(sep);
+
           debug(`Moving api/go.mod to root: ${file} to ${newFsPath}`);
           await move(file, newFsPath);
+          undoFileActions.push({
+            to: file,
+            from: newFsPath,
+          });
+
           const oldSumPath = join(dirname(file), 'go.sum');
           const newSumPath = join(dirname(newFsPath), 'go.sum');
           if (await pathExists(oldSumPath)) {
             debug(`Moving api/go.sum to root: ${oldSumPath} to ${newSumPath}`);
             await move(oldSumPath, newSumPath);
+            undoFileActions.push({
+              to: oldSumPath,
+              from: newSumPath,
+            });
           }
           break;
         }
