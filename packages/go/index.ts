@@ -12,7 +12,6 @@ import {
   mkdirp,
   move,
   remove,
-  readdir,
   rmdir,
 } from 'fs-extra';
 import {
@@ -104,8 +103,6 @@ export async function build({
   const downloadPath = meta.skipDownload ? workPath : srcPath;
   await download(files, downloadPath, meta);
 
-  console.log(`[debug] meta.skipDownload: ${meta.skipDownload}`);
-
   // keep track of file system actions we need to undo
   // the keys "from" and "to" refer to what needs to be done
   // in order to undo the action, not what the original action was
@@ -141,9 +138,6 @@ export async function build({
     }
 
     const entrypointAbsolute = join(workPath, entrypoint);
-
-    const downloadedFiles = await readdir(dirname(entrypoint));
-
     const entrypointArr = entrypoint.split(sep);
 
     debug(`Parsing AST for "${entrypoint}"`);
@@ -181,16 +175,32 @@ export async function build({
     let isGoModExist = false;
     let goModPath = '';
     let isGoModInRootDir = false;
-    for (const file of downloadedFiles) {
+
+    const modFileRefs = await glob('**/*.mod', workPath);
+    const modFiles = Object.keys(modFileRefs);
+
+    console.log({
+      modFiles,
+    });
+    for (const file of modFiles) {
       const fileDirname = dirname(file);
       if (file === 'go.mod') {
         isGoModExist = true;
         isGoModInRootDir = true;
         goModPath = fileDirname;
+
+        // TODO: if no `go.sum`, queue up a delete
+
+        console.log('in case file === "go.mod"');
       } else if (file.endsWith('go.mod')) {
+        console.log('in case file.endsWith("go.mod")');
+
         if (entrypointDirname === fileDirname) {
           isGoModExist = true;
           goModPath = fileDirname;
+
+          // TODO: if no `go.sum`, queue up a delete
+
           debug(`Found file dirname equals entrypoint dirname: ${fileDirname}`);
           break;
         }
@@ -228,6 +238,11 @@ export async function build({
       }
     }
 
+    console.log({
+      isGoModExist,
+      isGoModInRootDir,
+    });
+
     const input = entrypointDirname;
     const includedFiles: Files = {};
 
@@ -248,8 +263,10 @@ export async function build({
       `Found exported function "${handlerFunctionName}" in "${entrypoint}"`
     );
 
-    if (!isGoModExist && 'vendor' in downloadedFiles) {
-      throw new Error('`go.mod` is required to use a `vendor` directory.');
+    if (!isGoModExist) {
+      if (await pathExists(join(workPath, 'vendor'))) {
+        throw new Error('`go.mod` is required to use a `vendor` directory.');
+      }
     }
 
     // check if package name other than main
