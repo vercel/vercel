@@ -1231,10 +1231,6 @@ export async function serverBuild({
           ]
         : []),
 
-      // ensure prerender's for notFound: true static routes
-      // have 404 status code when not in preview mode
-      ...notFoundPreviewRoutes,
-
       ...headers,
 
       ...redirects,
@@ -1244,6 +1240,10 @@ export async function serverBuild({
       ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
 
       ...beforeFilesRewrites,
+
+      // ensure prerender's for notFound: true static routes
+      // have 404 status code when not in preview mode
+      ...notFoundPreviewRoutes,
 
       // Make sure to 404 for the /404 path itself
       ...(i18n
