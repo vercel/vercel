@@ -227,7 +227,7 @@ test('[vercel dev] should handle syntax errors thrown in edge functions', async 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stderr).toMatch(/Failed to instantiate edge runtime./g);
+    expect(stderr).toMatch(/Failed to compile user code for edge runtime./g);
     expect(stderr).toMatch(/Unexpected end of file/g);
     expect(stderr).toMatch(
       /Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g

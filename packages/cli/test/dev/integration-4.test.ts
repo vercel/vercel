@@ -505,6 +505,13 @@ test(
 );
 
 test(
+  '[vercel dev] Middleware with error at init',
+  testFixtureStdio('middleware-error-at-init', async (testPath: any) => {
+    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+  })
+);
+
+test(
   '[vercel dev] Middleware with an explicit 500 response',
   testFixtureStdio('middleware-500-response', async (testPath: any) => {
     await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
