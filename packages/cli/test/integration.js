@@ -352,6 +352,54 @@ test.after.always(async () => {
   }
 });
 
+test('connect git provider repository to new project in vc link', async t => {
+  const directory = fixture('vc-link-git-connection');
+
+  // remove previously linked project if it exists
+  await remove(path.join(directory, '.vercel'));
+
+  const vc = execa(binaryPath, ['link', ...defaultArgs], {
+    reject: false,
+    cwd: directory,
+  });
+
+  await waitForPrompt(vc, chunk => chunk.includes('Set up and deploy'));
+  vc.stdin.write('y\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Which scope do you want to deploy to?')
+  );
+  vc.stdin.write('\n');
+  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
+  vc.stdin.write('n\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('What’s your project’s name?')
+  );
+  vc.stdin.write('\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('In which directory is your code located?')
+  );
+  vc.stdin.write('\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Want to modify these settings?')
+  );
+
+  await waitForPrompt(vc, chunk =>
+    chunk.includes(
+      'Found local Git remote URL https://github.com/user/repo.git'
+    )
+  );
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Do you want to connect it to your Vercel project?')
+  );
+  vc.stdin.write('\n');
+  await waitForPrompt(vc, chunk =>
+    chunk.includes('Connected GitHub repository user/repo!')
+  );
+  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
+
+  t.is(vc.exitCode, 0, formatOutput({ stderr: vc.stderr, stdout: vc.stdout }));
+});
+
 test('default command should prompt login with empty auth.json', async t => {
   await fs.writeFile(getConfigAuthPath(), JSON.stringify({}));
   try {
@@ -4075,49 +4123,4 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   page = await fetch(deployment.stdout);
   text = await page.text();
   t.regex(text, /Next\.js Test/);
-});
-
-test('connect git provider repository to new project in vc link', async t => {
-  const directory = fixture('vc-link-git-connection');
-
-  // remove previously linked project if it exists
-  await remove(path.join(directory, '.vercel'));
-
-  const vc = execa(binaryPath, [directory, 'link'], { reject: false });
-
-  await waitForPrompt(vc, chunk => chunk.includes('Set up and deploy'));
-  vc.stdin.write('y\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('Which scope do you want to deploy to?')
-  );
-  vc.stdin.write('\n');
-  await waitForPrompt(vc, chunk => chunk.includes('Link to existing project?'));
-  vc.stdin.write('n\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('What’s your project’s name?')
-  );
-  vc.stdin.write('\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('In which directory is your code located?')
-  );
-  vc.stdin.write('\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('Want to modify these settings?')
-  );
-
-  await waitForPrompt(vc, chunk =>
-    chunk.includes(
-      'Found local Git remote URL https://github.com/user/repo.git'
-    )
-  );
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('Do you want to connect it to your Vercel project?')
-  );
-  vc.stdin.write('\n');
-  await waitForPrompt(vc, chunk =>
-    chunk.includes('Connected GitHub repository user/repo!')
-  );
-  await waitForPrompt(vc, chunk => chunk.includes('Linked to'));
-
-  t.is(vc.exitCode, 0, formatOutput({ stderr: vc.stderr, stdout: vc.stdout }));
 });
