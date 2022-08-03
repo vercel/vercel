@@ -5,7 +5,7 @@ try {
   // Test to see if cwd has been deleted before
   // importing 3rd party packages that might need cwd.
   process.cwd();
-} catch (err) {
+} catch (err: unknown) {
   if (isError(err) && err.message.includes('uv_cwd')) {
     console.error('Error! The current working directory does not exist.');
     process.exit(1);
@@ -214,8 +214,8 @@ const main = async () => {
   let config: GlobalConfig;
   try {
     config = configFiles.readConfigFile();
-  } catch (err) {
-    if (err.code === 'ENOENT') {
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
       config = defaultGlobalConfig;
       try {
         configFiles.writeToConfigFile(config);
@@ -240,12 +240,12 @@ const main = async () => {
   let authConfig: AuthConfig;
   try {
     authConfig = configFiles.readAuthConfigFile();
-  } catch (err) {
-    if (err.code === 'ENOENT') {
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
       authConfig = defaultAuthConfig;
       try {
         configFiles.writeToAuthConfigFile(authConfig);
-      } catch (err) {
+      } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to write the auth config to "${hp(
             VERCEL_AUTH_CONFIG_PATH
@@ -270,9 +270,9 @@ const main = async () => {
   }
 
   try {
-    // eslint-disable-next-line no-new
+    // eslint-disable-nex-line no-new
     new URL(apiUrl);
-  } catch (err) {
+  } catch (err: unknown) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
     return 1;
   }
