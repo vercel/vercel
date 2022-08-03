@@ -10,6 +10,7 @@ import {
 } from '../../mocks/project';
 import { client } from '../../mocks/client';
 import { useDeploymentMissingProjectSettings } from '../../mocks/deployment';
+import { Project } from '../../../src/types';
 
 describe('link', () => {
   describe('git prompt', () => {
@@ -223,6 +224,52 @@ describe('link', () => {
         await expect(client.stderr).toOutput('Linked to');
 
         await expect(linkPromise).resolves.toEqual(0);
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+        process.chdir(originalCwd);
+      }
+    });
+    it('should set a project setting if user opts out', async () => {
+      const cwd = fixture('single-remote');
+      try {
+        process.chdir(cwd);
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+
+        useUser();
+        useProject({
+          ...defaultProject,
+          name: 'single-remote',
+          id: 'single-remote',
+        });
+        useTeams('team_dummy');
+        client.stderr.pipe(process.stderr);
+        const linkPromise = link(client);
+
+        await expect(client.stderr).toOutput('Set up');
+        client.stdin.write('y\n');
+        await expect(client.stderr).toOutput('Which scope');
+        client.stdin.write('\r');
+        await expect(client.stderr).toOutput('Found project');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          'Found local Git remote URL: https://github.com/user/repo.git'
+        );
+        await expect(client.stderr).toOutput(
+          'Do you want to connect it to your Vercel project?'
+        );
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\x1B[B');
+        client.stdin.write('\r'); // Opt out
+
+        await expect(client.stderr).toOutput(`Opted out.`);
+        await expect(client.stderr).toOutput('Linked to');
+        await expect(linkPromise).resolves.toEqual(0);
+
+        const newProjectData: Project = await client.fetch(
+          `/v8/projects/single-remote`
+        );
+        expect(newProjectData.noGitPrompt).toBeTruthy();
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
         process.chdir(originalCwd);
