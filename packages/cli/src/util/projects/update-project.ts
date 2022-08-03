@@ -1,5 +1,5 @@
 import Client from '../client';
-import { ProjectSettings } from '../../types';
+import { JSONObject, ProjectSettings } from '../../types';
 
 interface ProjectSettingsResponse extends ProjectSettings {
   id: string;
@@ -17,7 +17,7 @@ export default async function updateProject(
     `/v2/projects/${encodeURIComponent(prjNameOrId)}`,
     {
       method: 'PATCH',
-      body: JSON.stringify(settings),
+      body: settings as JSONObject, // TODO: figure out how to not make this cast necessary
     }
   );
   return res;

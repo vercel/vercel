@@ -132,7 +132,16 @@ export default async function setupAndLink(
 
     const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
     if (remoteUrls && !project.noGitPrompt) {
-      await handleGitConnection(client, org, output, project, remoteUrls);
+      const connectGit = await handleGitConnection(
+        client,
+        org,
+        output,
+        project,
+        remoteUrls
+      );
+      if (typeof connectGit === 'number') {
+        return { status: 'error', exitCode: connectGit };
+      }
     }
 
     await linkFolderToProject(
@@ -253,7 +262,7 @@ export default async function setupAndLink(
     // ask user if they want to connect git
     const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
     if (remoteUrls) {
-      await handleGitConnection(
+      const connectGit = await handleGitConnection(
         client,
         org,
         output,
@@ -261,6 +270,9 @@ export default async function setupAndLink(
         remoteUrls,
         settings
       );
+      if (typeof connectGit === 'number') {
+        return { status: 'error', exitCode: connectGit };
+      }
     }
 
     await updateProject(client, project.id, settings);

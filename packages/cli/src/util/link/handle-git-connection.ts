@@ -34,12 +34,12 @@ export async function handleGitConnection(
   project: Project,
   remoteUrls: Dictionary<string>,
   settings?: ProjectSettings
-) {
+): Promise<number | void> {
   if (!settings) {
     settings = getProjectSettings(project);
   }
   if (Object.keys(remoteUrls).length === 1) {
-    await addSingleGitRemote(
+    return addSingleGitRemote(
       client,
       org,
       output,
@@ -48,7 +48,7 @@ export async function handleGitConnection(
       settings
     );
   } else if (Object.keys(remoteUrls).length > 1 && !project.link) {
-    await addMultipleGitRemotes(
+    return addMultipleGitRemotes(
       client,
       org,
       output,
@@ -98,10 +98,10 @@ async function addSingleGitRemote(
       )} repository ${currentRemote}.`
     );
   } else {
-    output.log(`Found local Git remote URL ${newRemoteUrl}.`);
+    output.log(`Found local Git remote URL: ${newRemoteUrl}`);
   }
   const shouldConnect = await promptGitConnectSingleUrl(client, replace);
-  await parseOptions(
+  return parseOptions(
     shouldConnect,
     client,
     output,
@@ -125,7 +125,7 @@ async function addMultipleGitRemotes(
   output.log('Found multiple Git remote URLs in Git config.');
   const remoteUrl = await promptGitConnectMultipleUrls(client, remoteUrls);
   if (remoteUrl === 'no' || remoteUrl === 'opt-out') {
-    return await parseOptions(
+    return parseOptions(
       remoteUrl,
       client,
       output,
@@ -186,6 +186,8 @@ async function parseOptions(
       output.log(
         `Connected ${formatProvider(provider)} repository ${repoPath}!`
       );
+    } else {
+      return connect;
     }
   } else if (option === 'no') {
     skip(output);
