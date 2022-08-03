@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercelruntimes/next@https://files-9tn6zofic-ijjk-testing.vercel.app"
+      "use": "@vercel/next"
     }
   ],
   "probes": [
