@@ -1401,8 +1401,16 @@ export async function serverBuild({
               );
 
               const { pathname } = new URL(route.dest || '/', 'http://n');
+              let prerenderPathname = pathname;
 
-              if (prerenders[path.join('./', pathname)]) {
+              if (routesManifest.i18n) {
+                prerenderPathname = pathname.replace(
+                  /^\/\$nextLocale/,
+                  `/${routesManifest.i18n.defaultLocale}`
+                );
+              }
+
+              if (prerenders[path.join('./', prerenderPathname)]) {
                 route.dest = `/_next/data/${buildId}${pathname}.json`;
               }
               return route;
