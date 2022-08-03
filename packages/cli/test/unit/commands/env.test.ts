@@ -178,10 +178,10 @@ describe('env', () => {
         await expect(client.stderr).toOutput(
           'Downloading `development` Environment Variables for Project env-pull-delta'
         );
-        await expect(client.stderr).toOutput('Updated .env file');
         await expect(client.stderr).toOutput(
-          '+ NEW_VAR\n~ SPECIAL_FLAG\n- TEST\n'
+          '+ SPECIAL_FLAG (Updated)\n+ NEW_VAR\n- TEST\n'
         );
+        await expect(client.stderr).toOutput('Updated .env file');
 
         await expect(pullPromise).resolves.toEqual(0);
       } finally {
@@ -218,8 +218,8 @@ describe('env', () => {
 
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const pullPromise = env(client);
-      await expect(client.stderr).toOutput('Updated .env file');
       await expect(client.stderr).toOutput('> No changes found.');
+      await expect(client.stderr).toOutput('Updated .env file');
       await expect(pullPromise).resolves.toEqual(0);
     });
   });
