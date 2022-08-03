@@ -4,7 +4,7 @@
   "probes": [
     {
       "path": "/api/[hello].go",
-      "mustContain": "Req Path: [hello].go"
+      "mustContain": "Req Path: /api/[hello].go"
     },
     {
       "path": "/api/whatever",

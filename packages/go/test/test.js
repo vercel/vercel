@@ -10,7 +10,7 @@ jest.setTimeout(4 * 60 * 1000);
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 // eslint-disable-next-line no-restricted-syntax
-for (const fixture of fs.readdirSync(fixturesPath)) {
+for (const fixture of ['20-square-brackets']) {
   // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
