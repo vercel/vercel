@@ -89,12 +89,12 @@ async function addSingleGitRemote(
       project.link.repo !== repo ||
       project.link.type !== provider);
   if (replace) {
-    const currentRemote = `${project.link!.org}/${project.link!.repo}`;
+    const currentRepoPath = `${project.link!.org}/${project.link!.repo}`;
     const currentProvider = project.link!.type;
     output.log(
       `Found Git remote url ${remoteUrl}, which is different from the connected ${formatProvider(
         currentProvider
-      )} repository ${currentRemote}.`
+      )} repository ${currentRepoPath}.`
     );
   } else {
     output.log(`Found local Git remote URL: ${remoteUrl}`);
