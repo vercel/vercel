@@ -503,7 +503,7 @@ export async function build({
     try {
       await cleanupFileSystem(undoFileActions, undoDirectoryCreation);
     } catch (error) {
-      console.log(`Build succeeded, but cleanup failed: ${error.message}`);
+      console.log(`Build cleanup failed: ${error.message}`);
       debug('Cleanup Error: ' + error);
     }
   }
