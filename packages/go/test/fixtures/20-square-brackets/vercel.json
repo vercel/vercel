@@ -7,7 +7,7 @@
     },
     {
       "path": "/api/whatever",
-      "mustContain": "Req Path: whatever"
+      "mustContain": "Req Path: /api/whatever"
     },
     { "path": "/api/sub/[hi].go", "mustContain": "hi:RANDOMNESS_PLACEHOLDER" }
   ]
