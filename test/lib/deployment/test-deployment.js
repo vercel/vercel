@@ -300,7 +300,7 @@ async function testDeployment(fixturePath) {
   const configName = 'vercel.json' in bodies ? 'vercel.json' : 'now.json';
 
   // we use json5 to allow comments for probes
-  const nowJson = json5.parse(bodies[configName]);
+  const nowJson = json5.parse(bodies[configName] || '{}');
   const uploadNowJson = nowJson.uploadNowJson;
   delete nowJson.uploadNowJson;
 
