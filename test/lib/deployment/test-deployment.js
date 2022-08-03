@@ -265,8 +265,11 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
 }
 
 async function testDeployment(fixturePath) {
-  const projectName = path.basename(fixturePath).toLowerCase();
-  logWithinTest('testDeployment', projectName);
+  const projectName = path
+    .basename(fixturePath)
+    .toLowerCase()
+    .replace(/(_|\.)/g, '-');
+  logWithinTest(`testDeployment "${projectName}"`);
   const globResult = await glob(`${fixturePath}/**`, {
     nodir: true,
     dot: true,
