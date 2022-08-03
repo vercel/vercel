@@ -83,18 +83,18 @@ async function addSingleGitRemote(
     output.debug('Project already linked. Skipping...');
     return;
   }
+
   const replace =
     project.link &&
     (project.link.org !== parsedOrg ||
       project.link.repo !== repo ||
       project.link.type !== provider);
-
   if (replace) {
-    const currentRemote = `${project.link?.org}/${project.link?.repo}`;
-    const currentProvider = project.link?.type;
+    const currentRemote = `${project.link!.org}/${project.link?.repo}`;
+    const currentProvider = project.link!.type;
     output.log(
       `Found Git remote url ${newRemoteUrl}, which is different from the connected ${formatProvider(
-        currentProvider || ''
+        currentProvider
       )} repository ${currentRemote}.`
     );
   } else {
