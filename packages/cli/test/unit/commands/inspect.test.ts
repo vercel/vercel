@@ -15,6 +15,17 @@ describe('inspect', () => {
     );
   });
 
+  it('should strip the scheme of a url', async () => {
+    const user = useUser();
+    const deployment = useDeployment({ creator: user });
+    client.setArgv('inspect', `http://${deployment.url}`);
+    const exitCode = await inspect(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      `> Fetched deployment ${deployment.url} in ${user.username}`
+    );
+  });
+
   it('should print error when deployment not found', async () => {
     const user = useUser();
     useDeployment({ creator: user });
