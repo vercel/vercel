@@ -1,4 +1,12 @@
 {
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "zeroConfig": true }
+    }
+  ],
   "probes": [
     { "path": "/static.txt", "mustContain": "static" },
     { "path": "/", "mustContain": "Hello from /root/index.js on /" },
