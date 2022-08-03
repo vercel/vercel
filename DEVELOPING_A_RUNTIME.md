@@ -1,7 +1,9 @@
 # Runtime Developer Reference
 
 The following page is a reference for how to create a Runtime by implementing
-the Runtime API interface.
+the Runtime API interface. It's a way to add support for a new programming language to Vercel.
+
+> Note: If you're the author of a web framework, please use the [Build Output API](https://vercel.com/docs/build-output-api/v3) instead to make your framework compatible with Vercel.
 
 A Runtime is an npm module that implements the following interface:
 
