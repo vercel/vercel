@@ -171,7 +171,7 @@ export async function build({
 
     const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
 
-    // find `go.mod` in downloadedFiles
+    // find `go.mod` in modFiles
     const entrypointDirname = dirname(entrypointAbsolute);
     let isGoModExist = false;
     let goModPath = '';
