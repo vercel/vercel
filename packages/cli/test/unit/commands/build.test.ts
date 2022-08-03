@@ -706,8 +706,11 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
-      const exitCode = await build(client);
-      expect(exitCode).toEqual(1);
+      const exitCodePromise = build(client);
+      await expect(client.stderr).toOutput(
+        'Error! Function must contain at least one property.'
+      );
+      await expect(exitCodePromise).resolves.toEqual(1);
 
       // `builds.json` contains top-level "error" property
       const builds = await fs.readJSON(join(output, 'builds.json'));
@@ -732,8 +735,9 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
-      const exitCode = await build(client);
-      expect(exitCode).toEqual(1);
+      const exitCodePromise = build(client);
+      await expect(client.stderr).toOutput("Duplicate identifier 'res'.");
+      await expect(exitCodePromise).resolves.toEqual(1);
 
       // `builds.json` contains "error" build
       const builds = await fs.readJSON(join(output, 'builds.json'));
