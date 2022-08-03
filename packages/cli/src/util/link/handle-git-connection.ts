@@ -11,6 +11,7 @@ import Client from '../client';
 import { Org, Project, ProjectSettings } from '../../types';
 import { getCommandName } from '../pkg-name';
 import updateProject from '../projects/update-project';
+import chalk from 'chalk';
 
 function getProjectSettings(project: Project): ProjectSettings {
   return {
@@ -92,12 +93,14 @@ async function addSingleGitRemote(
     const currentRepoPath = `${project.link!.org}/${project.link!.repo}`;
     const currentProvider = project.link!.type;
     output.log(
-      `Found Git remote url ${remoteUrl}, which is different from the connected ${formatProvider(
+      `Found Git remote url ${chalk.cyan(
+        remoteUrl
+      )}, which is different from the connected ${formatProvider(
         currentProvider
-      )} repository ${currentRepoPath}.`
+      )} repository ${chalk.cyan(currentRepoPath)}.`
     );
   } else {
-    output.log(`Found local Git remote URL: ${remoteUrl}`);
+    output.log(`Found local Git remote URL: ${chalk.cyan(remoteUrl)}`);
   }
   const shouldConnect = await promptGitConnectSingleUrl(client, replace);
   return handleOptions(
@@ -176,7 +179,9 @@ async function handleOptions(
     );
     if (connect !== 1) {
       output.log(
-        `Connected ${formatProvider(provider)} repository ${repoPath}!`
+        `Connected ${formatProvider(provider)} repository ${chalk.cyan(
+          repoPath
+        )}!`
       );
     } else {
       return connect;
