@@ -90,6 +90,12 @@ type UndoFileAction = {
   to: string | undefined;
 };
 
+type UndoFunctionRename = {
+  fsPath: string;
+  from: string;
+  to: string;
+};
+
 export const version = 3;
 
 export async function build({
@@ -109,6 +115,7 @@ export async function build({
   // in order to undo the action, not what the original action was
   const undoFileActions: UndoFileAction[] = [];
   const undoDirectoryCreation: string[] = [];
+  const undoFunctionRenames: UndoFunctionRename[] = [];
 
   try {
     if (process.env.GIT_CREDENTIALS) {
@@ -245,10 +252,21 @@ export async function build({
       }
     }
 
-    const handlerFunctionName = parsedAnalyzed.functionName;
-    debug(
-      `Found exported function "${handlerFunctionName}" in "${entrypoint}"`
+    const originalFunctionName = parsedAnalyzed.functionName;
+    const handlerFunctionName = await getNewHandlerFunctionName(
+      originalFunctionName,
+      entrypoint
     );
+    await renameHandlerFunction(
+      entrypointAbsolute,
+      originalFunctionName,
+      handlerFunctionName
+    );
+    undoFunctionRenames.push({
+      fsPath: entrypointAbsolute,
+      from: handlerFunctionName,
+      to: originalFunctionName,
+    });
 
     if (!isGoModExist) {
       if (await pathExists(join(workPath, 'vendor'))) {
@@ -501,7 +519,11 @@ export async function build({
     throw error;
   } finally {
     try {
-      await cleanupFileSystem(undoFileActions, undoDirectoryCreation);
+      await cleanupFileSystem(
+        undoFileActions,
+        undoDirectoryCreation,
+        undoFunctionRenames
+      );
     } catch (error) {
       console.log(`Build succeeded, but cleanup failed: ${error.message}`);
       debug('Cleanup Error: ' + error);
@@ -509,9 +531,40 @@ export async function build({
   }
 }
 
+async function renameHandlerFunction(fsPath: string, from: string, to: string) {
+  let fileContents = (await readFile(fsPath)).toString('utf-8');
+
+  const fromRegex = new RegExp(`func ${from}`, 'g');
+  fileContents = fileContents.replace(fromRegex, `func ${to}`);
+
+  await writeFile(fsPath, fileContents);
+}
+
+async function getNewHandlerFunctionName(
+  originalFunctionName: string,
+  entrypoint: string
+) {
+  debug(`Found exported function "${originalFunctionName}" in "${entrypoint}"`);
+
+  const pathSlug = entrypoint
+    .replace(/\\/g, '_')
+    .replace(/\//g, '_')
+    .replace(/ /g, '_')
+    .replace(/-/g, '_')
+    .replace(/\./g, '_');
+
+  const newHandlerName = `${originalFunctionName}_${pathSlug}`;
+  debug(
+    `Renaming handler function temporarily from "${originalFunctionName}" to "${newHandlerName}"`
+  );
+
+  return newHandlerName;
+}
+
 async function cleanupFileSystem(
   undoFileActions: UndoFileAction[],
-  undoDirectoryCreation: string[]
+  undoDirectoryCreation: string[],
+  undoFunctionRenames: UndoFunctionRename[]
 ) {
   // we have to undo the actions in reverse order in cases
   // where one file was moved multiple times, which happens
@@ -522,6 +575,12 @@ async function cleanupFileSystem(
     } else {
       await remove(action.from);
     }
+  }
+
+  // after files are moved back, we can undo function renames
+  // these reference the original file location
+  for (const rename of undoFunctionRenames) {
+    await renameHandlerFunction(rename.fsPath, rename.from, rename.to);
   }
 
   const undoDirectoryPromises = undoDirectoryCreation.map(async directory => {

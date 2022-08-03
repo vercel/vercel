@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "builds": [{ "src": "**/*.go", "use": "@vercel/go" }],
   "probes": [
     { "path": "/", "mustContain": "from index.go" },
     { "path": "/dupe-handler.go", "mustContain": "from dupe-handler.go" },
