@@ -304,11 +304,7 @@ async function testDeployment(fixturePath, buildDelegate) {
   const uploadNowJson = nowJson.uploadNowJson;
   delete nowJson.uploadNowJson;
 
-  [
-    'VERCEL_BUILDER_DEBUG',
-    'VERCEL_BUILD_CLI_PACKAGE',
-    'VERCEL_CLI_VERSION',
-  ].forEach(name => {
+  ['VERCEL_BUILDER_DEBUG', 'VERCEL_BUILD_CLI_PACKAGE'].forEach(name => {
     if (process.env[name]) {
       if (!nowJson.build) {
         nowJson.build = {};
