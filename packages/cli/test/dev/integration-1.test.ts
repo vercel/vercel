@@ -16,7 +16,11 @@ const {
 
 test('[vercel dev] should support edge functions', async () => {
   const dir = fixture('edge-function');
-  const { dev, port, readyResolver } = await testFixture(dir);
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      ENV_VAR_IN_EDGE: '1',
+    },
+  });
 
   try {
     await readyResolver;
@@ -39,9 +43,10 @@ test('[vercel dev] should support edge functions', async () => {
       url: `http://localhost:${port}/api/edge-success`,
       method: 'POST',
       body: '{"hello":"world"}',
-      decamelized: 'some_camel_case_thing',
-      uppercase: 'SOMETHING',
+      snakeCase: 'some_camel_case_thing',
+      upperCase: 'SOMETHING',
       optionalChaining: 'fallback',
+      ENV_VAR_IN_EDGE: '1',
     });
   } finally {
     await dev.kill('SIGTERM');
@@ -55,6 +60,31 @@ test(
     await testPath(200, '/api/edge-success');
   })
 );
+
+test('[vercel dev] throws an error when an edge function has no response', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-no-response`);
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.status).toBe(500);
+    expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
+    expect(stdout).toMatch(
+      /Unhandled rejection: Edge Function "api\/edge-no-response.js" did not return a response./g
+    );
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-no-response: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
 
 test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
   const dir = fixture('edge-function');
@@ -197,7 +227,7 @@ test('[vercel dev] should handle syntax errors thrown in edge functions', async 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stderr).toMatch(/Failed to instantiate edge runtime./g);
+    expect(stderr).toMatch(/Failed to compile user code for edge runtime./g);
     expect(stderr).toMatch(/Unexpected end of file/g);
     expect(stderr).toMatch(
       /Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
@@ -271,6 +301,35 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
     );
     expect(stderr).toMatch(
       /Failed to complete request to \/api\/edge-error-no-handler: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] should handle invalid middleware config', async () => {
+  const dir = fixture('middleware-matchers-invalid');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/whatever`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stderr } = await dev.kill('SIGTERM');
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stderr).toMatch(
+      /Middleware's `config.matcher` .+ Received: not-a-valid-matcher/g
     );
   } finally {
     await dev.kill('SIGTERM');

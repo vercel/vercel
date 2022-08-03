@@ -47,6 +47,9 @@ describe('Middleware simple project', () => {
     expect(redirectIndex).toBeLessThan(beforeFilesIndex);
     expect(middlewareIndex).toBeLessThan(beforeFilesIndex);
     expect(middlewareIndex).toBeLessThan(handleFileSystemIndex);
+    expect(ctx.buildResult.routes[middlewareIndex].src).toMatch(
+      /_next[\\/]{1,}data/
+    );
   });
 
   it('generates deterministic code', async () => {

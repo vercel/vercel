@@ -14,6 +14,11 @@ import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { EnvRecordsSource } from '../../util/env/get-env-records';
+import {
+  buildDeltaString,
+  createEnvObject,
+} from '../../util/env/diff-env-files';
+import { isErrnoException } from '../../util/is-error';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -36,8 +41,8 @@ function readHeadSync(path: string, length: number) {
 function tryReadHeadSync(path: string, length: number) {
   try {
     return readHeadSync(path, length);
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
+  } catch (err: unknown) {
+    if (!isErrnoException(err) || err.code !== 'ENOENT') {
       throw err;
     }
   }
@@ -69,7 +74,7 @@ export default async function pull(
   const exists = typeof head !== 'undefined';
 
   if (head === CONTENTS_PREFIX) {
-    output.print(`Overwriting existing ${chalk.bold(filename)} file\n`);
+    output.log(`Overwriting existing ${chalk.bold(filename)} file`);
   } else if (
     exists &&
     !skipConfirmation &&
@@ -83,10 +88,10 @@ export default async function pull(
     return 0;
   }
 
-  output.print(
-    `Downloading "${environment}" Environment Variables for Project ${chalk.bold(
-      project.name
-    )}\n`
+  output.log(
+    `Downloading \`${chalk.cyan(
+      environment
+    )}\` Environment Variables for Project ${chalk.bold(project.name)}`
   );
 
   const pullStamp = stamp();
@@ -107,6 +112,15 @@ export default async function pull(
     environment
   );
 
+  let deltaString = '';
+  let oldEnv;
+  if (exists) {
+    oldEnv = await createEnvObject(fullPath, output);
+    if (oldEnv) {
+      deltaString = buildDeltaString(oldEnv, records);
+    }
+  }
+
   const contents =
     CONTENTS_PREFIX +
     Object.entries(records)
@@ -124,6 +138,13 @@ export default async function pull(
       emoji('success')
     )}\n`
   );
+
+  output.print('\n');
+  if (deltaString) {
+    output.print(deltaString);
+  } else if (oldEnv && exists) {
+    output.log('No changes found.');
+  }
 
   return 0;
 }

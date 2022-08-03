@@ -233,14 +233,6 @@ const waitForPrompt = (cp, assertion) =>
     cp.stderr.on('data', listener);
   });
 
-const getDeploymentBuildsByUrl = async url => {
-  const hostRes = await apiFetch(`/v10/now/deployments/get?url=${url}`);
-  const { id } = await hostRes.json();
-  const buildsRes = await apiFetch(`/v10/now/deployments/${id}/builds`);
-  const { builds } = await buildsRes.json();
-  return builds;
-};
-
 const createUser = async () => {
   await retry(
     async () => {
@@ -2907,11 +2899,10 @@ test('deploy a Lambda with a specific runtime', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host: url } = new URL(output.stdout);
-
-  const builds = await getDeploymentBuildsByUrl(url);
-  const build = builds.find(b => b.use && b.use.includes('php')) || builds[0];
-  t.is(build.use, 'vercel-php@0.1.0', JSON.stringify(build, null, 2));
+  const url = new URL(output.stdout);
+  const res = await fetch(`${url}/api/test`);
+  const text = await res.text();
+  t.is(text, 'Hello from PHP');
 });
 
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
@@ -3919,6 +3910,26 @@ test('[vc build] should build project with `@vercel/static-build`', async t => {
   t.is(builds.target, 'preview');
   t.is(builds.builds[0].src, 'package.json');
   t.is(builds.builds[0].use, '@vercel/static-build');
+});
+
+test('[vc build] should not include .vercel when distDir is "."', async t => {
+  const directory = fixture('static-build-dist-dir');
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  t.true(output.stderr.includes('Build Completed in .vercel/output'));
+  const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+  t.false(dir.includes('.vercel'));
+  t.true(dir.includes('index.txt'));
+});
+
+test('[vc build] should not include .vercel when zeroConfig is true and outputDirectory is "."', async t => {
+  const directory = fixture('static-build-zero-config-output-directory');
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  t.true(output.stderr.includes('Build Completed in .vercel/output'));
+  const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+  t.false(dir.includes('.vercel'));
+  t.true(dir.includes('index.txt'));
 });
 
 test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async t => {

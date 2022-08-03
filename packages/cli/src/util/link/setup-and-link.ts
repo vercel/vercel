@@ -27,6 +27,7 @@ import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
+import { isAPIError } from '../errors-ts';
 
 export interface SetupAndLinkOptions {
   forceDelete?: boolean;
@@ -96,15 +97,17 @@ export default async function setupAndLink(
       'Which scope should contain your project?',
       autoConfirm
     );
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED') {
-      output.prettyError(err);
-      return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
-    }
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.code === 'NOT_AUTHORIZED') {
+        output.prettyError(err);
+        return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+      }
 
-    if (err.code === 'TEAM_DELETED') {
-      output.prettyError(err);
-      return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+      if (err.code === 'TEAM_DELETED') {
+        output.prettyError(err);
+        return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+      }
     }
 
     throw err;

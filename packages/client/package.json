@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "12.1.2",
+  "version": "12.1.7",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -42,7 +42,7 @@
     ]
   },
   "dependencies": {
-    "@vercel/build-utils": "5.0.3",
+    "@vercel/build-utils": "5.0.8",
     "@vercel/routing-utils": "2.0.0",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
@@ -51,7 +51,7 @@
     "ignore": "4.0.6",
     "minimatch": "5.0.1",
     "ms": "2.1.2",
-    "node-fetch": "2.6.1",
+    "node-fetch": "2.6.7",
     "querystring": "^0.2.0",
     "sleep-promise": "8.0.1"
   }

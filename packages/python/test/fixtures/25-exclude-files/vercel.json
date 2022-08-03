@@ -1,33 +1,21 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/all.py", "use": "@vercel/python" },
+    { "src": "api/yes.py", "use": "@vercel/python" },
     {
-      "src": "api/none.py",
+      "src": "api/no.py",
       "use": "@vercel/python",
       "config": { "excludeFiles": "ignoreme/**" }
-    },
-    {
-      "src": "api/one.py",
-      "use": "@vercel/python",
-      "config": {
-        "excludeFiles": "ignoreme/**",
-        "includeFiles": "ignoreme/second.txt"
-      }
     }
   ],
   "probes": [
     {
-      "path": "/api/all.py",
+      "path": "/api/yes.py",
       "mustContain": "True:True:RANDOMNESS_PLACEHOLDER"
     },
     {
-      "path": "/api/none.py",
+      "path": "/api/no.py",
       "mustContain": "False:False:RANDOMNESS_PLACEHOLDER"
-    },
-    {
-      "path": "/api/one.py",
-      "mustContain": "False:True:RANDOMNESS_PLACEHOLDER"
     }
   ]
 }

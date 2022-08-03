@@ -15,7 +15,6 @@ import {
 } from 'fs-extra';
 import {
   BuildOptions,
-  Meta,
   Files,
   PrepareCacheOptions,
   StartDevServerOptions,
@@ -72,15 +71,10 @@ async function initPrivateGit(credentials: string) {
  * which works great for this feature. We also need to add a suffix during `vercel dev`
  * since the entrypoint is already stripped of its suffix before build() is called.
  */
-async function getRenamedEntrypoint(
-  entrypoint: string,
-  files: Files,
-  meta: Meta
-) {
+async function getRenamedEntrypoint(entrypoint: string, files: Files) {
   const filename = basename(entrypoint);
   if (filename.startsWith('[')) {
-    const suffix = meta.isDev && !entrypoint.endsWith('.go') ? '.go' : '';
-    const newEntrypoint = entrypoint.replace('/[', '/now-bracket[') + suffix;
+    const newEntrypoint = entrypoint.replace('/[', '/now-bracket[');
     const file = files[entrypoint];
     delete files[entrypoint];
     files[newEntrypoint] = file;
@@ -100,7 +94,7 @@ export async function build({
   workPath,
   meta = {},
 }: BuildOptions) {
-  if (process.env.GIT_CREDENTIALS && !meta.isDev) {
+  if (process.env.GIT_CREDENTIALS) {
     debug('Initialize Git credentials...');
     await initPrivateGit(process.env.GIT_CREDENTIALS);
   }
@@ -116,7 +110,7 @@ We highly recommend you leverage Go Modules in your project.
 Learn more: https://github.com/golang/go/wiki/Modules
 `);
   }
-  entrypoint = await getRenamedEntrypoint(entrypoint, files, meta);
+  entrypoint = await getRenamedEntrypoint(entrypoint, files);
   const entrypointArr = entrypoint.split(sep);
 
   // eslint-disable-next-line prefer-const
@@ -125,10 +119,9 @@ Learn more: https://github.com/golang/go/wiki/Modules
     getWriteableDirectory(),
   ]);
 
-  const forceMove = Boolean(meta.isDev);
   const srcPath = join(goPath, 'src', 'lambda');
-  let downloadPath = meta.isDev || meta.skipDownload ? workPath : srcPath;
-  let downloadedFiles = await download(files, downloadPath, meta);
+  const downloadPath = meta.skipDownload ? workPath : srcPath;
+  const downloadedFiles = await download(files, downloadPath, meta);
 
   debug(`Parsing AST for "${entrypoint}"`);
   let analyzed: string;
@@ -164,17 +157,6 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
 
   const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
 
-  if (meta.isDev) {
-    // Create cache so Go rebuilds fast with `vercel dev`
-    // Old versions of the CLI don't assign this property
-    const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
-    goPath = join(devCacheDir, 'go', basename(entrypoint, '.go'));
-    const destLambda = join(goPath, 'src', 'lambda');
-    await download(downloadedFiles, destLambda);
-    downloadedFiles = await glob('**', destLambda);
-    downloadPath = destLambda;
-  }
-
   // find `go.mod` in downloadedFiles
   const entrypointDirname = dirname(downloadedFiles[entrypoint].fsPath);
   let isGoModExist = false;
@@ -206,12 +188,12 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
         pathParts.push('go.mod');
         const newFsPath = pathParts.join(sep);
         debug(`Moving api/go.mod to root: ${fsPath} to ${newFsPath}`);
-        await move(fsPath, newFsPath, { overwrite: forceMove });
+        await move(fsPath, newFsPath);
         const oldSumPath = join(dirname(fsPath), 'go.sum');
         const newSumPath = join(dirname(newFsPath), 'go.sum');
         if (await pathExists(oldSumPath)) {
           debug(`Moving api/go.sum to root: ${oldSumPath} to ${newSumPath}`);
-          await move(oldSumPath, newSumPath, { overwrite: forceMove });
+          await move(oldSumPath, newSumPath);
         }
         break;
       }
@@ -327,9 +309,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
         dirname(downloadedFiles[entrypoint].fsPath) === goModPath ||
         !isGoModExist
       ) {
-        await move(downloadedFiles[entrypoint].fsPath, finalDestination, {
-          overwrite: forceMove,
-        });
+        await move(downloadedFiles[entrypoint].fsPath, finalDestination);
       }
     } catch (err) {
       console.log('Failed to move entry to package folder');
@@ -343,22 +323,6 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
       baseGoModPath = goModPath;
     } else {
       baseGoModPath = entrypointDirname;
-    }
-
-    if (meta.isDev) {
-      const isGoModBk = await pathExists(join(baseGoModPath, 'go.mod.bk'));
-      if (isGoModBk) {
-        await move(
-          join(baseGoModPath, 'go.mod.bk'),
-          join(baseGoModPath, 'go.mod'),
-          { overwrite: forceMove }
-        );
-        await move(
-          join(baseGoModPath, 'go.sum.bk'),
-          join(baseGoModPath, 'go.sum'),
-          { overwrite: forceMove }
-        );
-      }
     }
 
     debug('Tidy `go.mod` file...');
@@ -380,19 +344,6 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
     } catch (err) {
       console.log('failed to `go build`');
       throw err;
-    }
-    if (meta.isDev) {
-      // caching for `vercel dev`
-      await move(
-        join(baseGoModPath, 'go.mod'),
-        join(baseGoModPath, 'go.mod.bk'),
-        { overwrite: forceMove }
-      );
-      await move(
-        join(baseGoModPath, 'go.sum'),
-        join(baseGoModPath, 'go.sum.bk'),
-        { overwrite: forceMove }
-      );
     }
   } else {
     // legacy mode
