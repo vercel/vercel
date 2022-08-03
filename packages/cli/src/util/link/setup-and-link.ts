@@ -258,8 +258,6 @@ export default async function setupAndLink(
 
     const project = await createProject(client, newProjectName);
 
-    // existing link is guaranteed to not exist
-    // ask user if they want to connect git
     const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
     if (remoteUrls) {
       const connectGit = await handleGitConnection(

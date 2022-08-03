@@ -67,13 +67,13 @@ async function addSingleGitRemote(
   remoteUrls: Dictionary<string>,
   settings: ProjectSettings
 ) {
-  const newRemoteUrl = Object.values(remoteUrls)[0];
-  const parsedNewRemoteUrl = parseRepoUrl(newRemoteUrl);
-  if (!parsedNewRemoteUrl) {
-    output.debug(`Could not parse repo url ${newRemoteUrl}.`);
+  const remoteUrl = Object.values(remoteUrls)[0];
+  const parsedUrl = parseRepoUrl(remoteUrl);
+  if (!parsedUrl) {
+    output.debug(`Could not parse repo url ${parsedUrl}.`);
     return;
   }
-  const { org: parsedOrg, repo, provider } = parsedNewRemoteUrl;
+  const { org: parsedOrg, repo, provider } = parsedUrl;
   const alreadyLinked =
     project.link?.org === parsedOrg &&
     project.link.repo === repo &&
@@ -89,25 +89,25 @@ async function addSingleGitRemote(
       project.link.repo !== repo ||
       project.link.type !== provider);
   if (replace) {
-    const currentRemote = `${project.link!.org}/${project.link?.repo}`;
+    const currentRemote = `${project.link!.org}/${project.link!.repo}`;
     const currentProvider = project.link!.type;
     output.log(
-      `Found Git remote url ${newRemoteUrl}, which is different from the connected ${formatProvider(
+      `Found Git remote url ${remoteUrl}, which is different from the connected ${formatProvider(
         currentProvider
       )} repository ${currentRemote}.`
     );
   } else {
-    output.log(`Found local Git remote URL: ${newRemoteUrl}`);
+    output.log(`Found local Git remote URL: ${remoteUrl}`);
   }
   const shouldConnect = await promptGitConnectSingleUrl(client, replace);
-  return parseOptions(
+  return handleOptions(
     shouldConnect,
     client,
     output,
     org,
     project,
     settings,
-    parsedNewRemoteUrl
+    parsedUrl
   );
 }
 
@@ -124,7 +124,7 @@ async function addMultipleGitRemotes(
     client,
     remoteUrls
   );
-  return parseOptions(
+  return handleOptions(
     remoteUrlOrOptions,
     client,
     output,
@@ -134,7 +134,7 @@ async function addMultipleGitRemotes(
   );
 }
 
-async function parseOptions(
+async function handleOptions(
   option: string,
   client: Client,
   output: Output,
