@@ -5,7 +5,6 @@ const { join, dirname } = require('path');
 // Packages
 const { imageSync: getImageFile } = require('qr-image');
 const { mkdirp, writeFile } = require('fs-extra');
-import { stringify } from 'ini';
 
 const randomAliasSuffix = randomBytes(6).toString('hex');
 
@@ -438,24 +437,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'package.json': JSON.stringify({
         scripts: {
           build: 'mkdir -p public && echo hi > public/index.txt',
-        },
-      }),
-    },
-    'vc-link-git-connection': {
-      'vercel.json': '{}',
-      'package.json': '{}',
-      '.git/config': stringify({
-        core: {
-          repositoryformatversion: 0,
-          filemode: true,
-          bare: false,
-          logallrefupdates: true,
-          ingorecase: true,
-          precomposeunicode: true,
-        },
-        'remote "origin"': {
-          url: 'https://github.com/user/repo.git',
-          fetch: '+refs/heads/*:refs/remotes/origin/*',
         },
       }),
     },
