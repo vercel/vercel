@@ -13,6 +13,7 @@ import {
   move,
   remove,
   rmdir,
+  readdir,
 } from 'fs-extra';
 import {
   BuildOptions,
@@ -186,8 +187,6 @@ export async function build({
         isGoModInRootDir = true;
         goModPath = join(workPath, fileDirname);
 
-        // TODO: if no `go.sum`, queue up a delete
-
         console.log('in case file === "go.mod"');
       } else if (file.endsWith('go.mod')) {
         console.log('in case file.endsWith("go.mod")');
@@ -195,8 +194,6 @@ export async function build({
         if (entrypointDirname === fileDirname) {
           isGoModExist = true;
           goModPath = join(workPath, fileDirname);
-
-          // TODO: if no `go.sum`, queue up a delete
 
           debug(`Found file dirname equals entrypoint dirname: ${fileDirname}`);
           break;
@@ -506,26 +503,40 @@ export async function build({
     throw error;
   } finally {
     try {
-      // we have to undo the actions in reverse order in cases
-      // where one file was moved multiple times, which happens
-      // using files that start with brackets
-      for (const action of undoFileActions.reverse()) {
-        if (action.to) {
-          await move(action.from, action.to);
-        } else {
-          await remove(action.from);
-        }
-      }
-
-      const undoDirectoryPromises = undoDirectoryCreation.map(directory => {
-        return rmdir(directory);
-      });
-      await Promise.all(undoDirectoryPromises);
+      await cleanupFileSystem(undoFileActions, undoDirectoryCreation);
     } catch (error) {
       console.log('Build succeeded, but cleanup failed: error.message');
       debug('Cleanup Error: ' + error);
     }
   }
+}
+
+async function cleanupFileSystem(
+  undoFileActions: UndoFileAction[],
+  undoDirectoryCreation: string[]
+) {
+  // we have to undo the actions in reverse order in cases
+  // where one file was moved multiple times, which happens
+  // using files that start with brackets
+  for (const action of undoFileActions.reverse()) {
+    if (action.to) {
+      await move(action.from, action.to);
+    } else {
+      await remove(action.from);
+    }
+  }
+
+  const undoDirectoryPromises = undoDirectoryCreation.map(async directory => {
+    const contents = await readdir(directory);
+    // only delete an empty directory
+    // if it has contents, either something went wrong during cleanup or this
+    // directory contains project source code that should not be deleted
+    if (!contents.length) {
+      return rmdir(directory);
+    }
+    return undefined;
+  });
+  await Promise.all(undoDirectoryPromises);
 }
 
 async function findGoModPath(workPath: string): Promise<string> {
