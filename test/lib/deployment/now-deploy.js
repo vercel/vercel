@@ -9,7 +9,7 @@ const ms = require('ms');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function nowDeploy(bodies, randomness, uploadNowJson) {
+async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
   const files = Object.keys(bodies)
     .filter(n =>
       uploadNowJson
@@ -51,7 +51,7 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
         NEXT_TELEMETRY_DISABLED: '1',
       },
     },
-    name: 'test2020',
+    name: projectName,
     files,
     meta: {},
     ...nowJson,

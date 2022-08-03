@@ -265,7 +265,8 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
 }
 
 async function testDeployment(fixturePath) {
-  logWithinTest('testDeployment', fixturePath);
+  const projectName = path.basename(fixturePath);
+  logWithinTest('testDeployment', projectName);
   const globResult = await glob(`${fixturePath}/**`, {
     nodir: true,
     dot: true,
@@ -334,6 +335,7 @@ async function testDeployment(fixturePath) {
   delete bodies['probes.json'];
 
   const { deploymentId, deploymentUrl } = await nowDeploy(
+    projectName,
     bodies,
     randomness,
     uploadNowJson
@@ -384,7 +386,7 @@ async function nowDeployIndexTgz(file) {
     'now.json': Buffer.from(JSON.stringify({ version: 2 })),
   };
 
-  return (await nowDeploy(bodies)).deploymentUrl;
+  return (await nowDeploy('pack-n-deploy', bodies)).deploymentUrl;
 }
 
 async function fetchDeploymentUrl(url, opts) {
