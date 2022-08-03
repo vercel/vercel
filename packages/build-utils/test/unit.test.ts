@@ -170,6 +170,53 @@ it('should create zip files with symlinks properly', async () => {
   assert(aStat.isFile());
 });
 
+it('should download symlinks even with incorrect file', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
+  const files = {
+    'dir/file.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'file text',
+    }),
+    linkdir: new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'dir',
+    }),
+    'linkdir/file.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'this file should be discarded',
+    }),
+  };
+
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+  await fs.mkdirp(outDir);
+
+  await download(files, outDir);
+
+  const [dir, file, linkdir] = await Promise.all([
+    fs.lstat(path.join(outDir, 'dir')),
+    fs.lstat(path.join(outDir, 'dir/file.txt')),
+    fs.lstat(path.join(outDir, 'linkdir')),
+  ]);
+  expect(dir.isFile()).toBe(false);
+  expect(dir.isSymbolicLink()).toBe(false);
+
+  expect(file.isFile()).toBe(true);
+  expect(file.isSymbolicLink()).toBe(false);
+
+  expect(linkdir.isSymbolicLink()).toBe(true);
+
+  expect(warningMessages).toEqual([
+    'Warning: file "linkdir/file.txt" is within a symlinked directory "linkdir" and will be ignored',
+  ]);
+});
+
 it('should only match supported node versions, otherwise throw an error', async () => {
   expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
     'major',

@@ -76,7 +76,8 @@ import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
 import { Config, streamToBuffer, debug } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
-import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
+import { EdgeRuntime, runServer } from 'edge-runtime';
+import type { EdgeContext } from '@edge-runtime/vm';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import esbuild from 'esbuild';
@@ -223,7 +224,7 @@ async function compileUserCode(
   } catch (error) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
-    console.error(`Failed to instantiate edge runtime.`);
+    console.error(`Failed to compile user code for edge runtime.`);
     logError(error);
     return undefined;
   }
@@ -241,22 +242,19 @@ async function createEdgeRuntime(params?: {
     const wasmBindings = await params.wasmAssets.getContext();
     const edgeRuntime = new EdgeRuntime({
       initialCode: params.userCode,
-      extend: (context: Primitives) => {
-        Object.assign(
-          context,
-          {
-            // This is required for esbuild wrapping logic to resolve
-            module: {},
+      extend: (context: EdgeContext) => {
+        Object.assign(context, {
+          // This is required for esbuild wrapping logic to resolve
+          module: {},
 
-            // This is required for environment variable access.
-            // In production, env var access is provided by static analysis
-            // so that only the used values are available.
-            process: {
-              env: process.env,
-            },
+          // This is required for environment variable access.
+          // In production, env var access is provided by static analysis
+          // so that only the used values are available.
+          process: {
+            env: process.env,
           },
-          wasmBindings
-        );
+          wasmBindings,
+        });
 
         return context;
       },
