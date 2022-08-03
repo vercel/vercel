@@ -264,7 +264,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   assert(hadTest, 'probe must have a test condition');
 }
 
-async function testDeployment(fixturePath, buildDelegate) {
+async function testDeployment(fixturePath) {
   logWithinTest('testDeployment', fixturePath);
   const globResult = await glob(`${fixturePath}/**`, {
     nodir: true,
@@ -316,12 +316,6 @@ async function testDeployment(fixturePath, buildDelegate) {
     }
   });
 
-  for (const build of nowJson.builds || []) {
-    if (buildDelegate) {
-      buildDelegate(build);
-    }
-  }
-
   const probePath = path.resolve(fixturePath, 'probe.js');
   let probes = [];
   if ('probes' in nowJson) {
@@ -331,8 +325,8 @@ async function testDeployment(fixturePath, buildDelegate) {
   } else if (fs.existsSync(probePath)) {
     // we'll run probes after we have the deployment url below
   } else {
-    throw new Error(
-      `Test fixture "${fixturePath}" does not contain probes.json, probe.js, or vercel.json`
+    console.warn(
+      `WARNING: Test fixture "${fixturePath}" does not contain probes.json, probe.js, or vercel.json`
     );
   }
   bodies[configName] = Buffer.from(JSON.stringify(nowJson));
