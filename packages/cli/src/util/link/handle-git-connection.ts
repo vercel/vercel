@@ -23,7 +23,7 @@ function getProjectSettings(project: Project): ProjectSettings {
     rootDirectory: project.rootDirectory,
     directoryListing: project.directoryListing,
     nodeVersion: project.nodeVersion,
-    noGitPrompt: project.noGitPrompt,
+    skipGitConnectDuringLink: project.skipGitConnectDuringLink,
   };
 }
 
@@ -201,7 +201,7 @@ async function optOut(
   project: Project,
   settings: ProjectSettings
 ) {
-  settings.noGitPrompt = true;
+  settings.skipGitConnectDuringLink = true;
   await updateProject(client, project.name, settings);
   client.output
     .log(`Opted out. You can re-enable this prompt by visiting the Settings > Git page on the

@@ -131,7 +131,7 @@ export default async function setupAndLink(
     const project = projectOrNewProjectName;
 
     const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
-    if (remoteUrls && !project.noGitPrompt) {
+    if (remoteUrls && !project.skipGitConnectDuringLink) {
       const connectGit = await handleGitConnection(
         client,
         org,

@@ -335,7 +335,7 @@ export interface ProjectSettings {
   directoryListing?: boolean;
   gitForkProtection?: boolean;
   commandForIgnoringBuildStep?: string | null;
-  noGitPrompt?: boolean;
+  skipGitConnectDuringLink?: boolean;
 }
 
 export interface BuilderV2 {

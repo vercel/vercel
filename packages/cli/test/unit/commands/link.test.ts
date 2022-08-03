@@ -269,7 +269,7 @@ describe('link', () => {
         const newProjectData: Project = await client.fetch(
           `/v8/projects/single-remote`
         );
-        expect(newProjectData.noGitPrompt).toBeTruthy();
+        expect(newProjectData.skipGitConnectDuringLink).toBeTruthy();
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
         process.chdir(originalCwd);
