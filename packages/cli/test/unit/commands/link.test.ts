@@ -5,7 +5,7 @@ import { useUser } from '../../mocks/user';
 import { useTeams } from '../../mocks/team';
 import {
   defaultProject,
-  handleUnknownProject,
+  useUnknownProject,
   useProject,
 } from '../../mocks/project';
 import { client } from '../../mocks/client';
@@ -24,7 +24,7 @@ describe('link', () => {
         process.chdir(cwd);
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         useUser();
-        handleUnknownProject();
+        useUnknownProject();
         useDeploymentMissingProjectSettings();
         useTeams('team_dummy');
         const linkPromise = link(client);
