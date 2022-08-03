@@ -1384,6 +1384,15 @@ export async function serverBuild({
       // re-build /_next/data URL after resolving
       ...denormalizeNextDataRoute(),
 
+      ...(isNextDataServerResolving
+        ? dataRoutes.filter(route => {
+            // filter to only static data routes as dynamic routes will be handled
+            // below
+            const { pathname } = new URL(route.dest || '/', 'http://n');
+            return !isDynamicRoute(pathname.replace(/\.json$/, ''));
+          })
+        : []),
+
       // /_next/data routes for getServerProps/getStaticProps pages
       ...(isNextDataServerResolving
         ? // when resolving data routes for middleware we need to include
