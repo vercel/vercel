@@ -1384,6 +1384,15 @@ export async function serverBuild({
       // re-build /_next/data URL after resolving
       ...denormalizeNextDataRoute(),
 
+      ...(isNextDataServerResolving
+        ? dataRoutes.filter(route => {
+            // filter to only static data routes as dynamic routes will be handled
+            // below
+            const { pathname } = new URL(route.dest || '/', 'http://n');
+            return !isDynamicRoute(pathname.replace(/\.json$/, ''));
+          })
+        : []),
+
       // /_next/data routes for getServerProps/getStaticProps pages
       ...(isNextDataServerResolving
         ? // when resolving data routes for middleware we need to include
@@ -1401,16 +1410,22 @@ export async function serverBuild({
               );
 
               const { pathname } = new URL(route.dest || '/', 'http://n');
-              let prerenderPathname = pathname;
+              let isPrerender = !!prerenders[path.join('./', pathname)];
 
               if (routesManifest.i18n) {
-                prerenderPathname = pathname.replace(
-                  /^\/\$nextLocale/,
-                  `/${routesManifest.i18n.defaultLocale}`
-                );
+                for (const locale of routesManifest.i18n?.locales || []) {
+                  const prerenderPathname = pathname.replace(
+                    /^\/\$nextLocale/,
+                    `/${locale}`
+                  );
+                  if (prerenders[path.join('./', prerenderPathname)]) {
+                    isPrerender = true;
+                    break;
+                  }
+                }
               }
 
-              if (prerenders[path.join('./', prerenderPathname)]) {
+              if (isPrerender) {
                 route.dest = `/_next/data/${buildId}${pathname}.json`;
               }
               return route;
