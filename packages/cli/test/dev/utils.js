@@ -433,7 +433,7 @@ function testFixtureStdio(
           );
         }
 
-        if (stderr.includes('Command failed') || stderr.includes('Error!')) {
+        if (stderr.includes('Command failed')) {
           dev.kill('SIGTERM');
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
