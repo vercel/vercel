@@ -68,7 +68,6 @@ async function addSingleGitRemote(
   settings: ProjectSettings
 ) {
   const newRemoteUrl = Object.values(remoteUrls)[0];
-
   const parsedNewRemoteUrl = parseRepoUrl(newRemoteUrl);
   if (!parsedNewRemoteUrl) {
     output.debug(`Could not parse repo url ${newRemoteUrl}.`);
@@ -164,6 +163,7 @@ async function parseOptions(
     }
     const { provider, org: parsedOrg, repo } = parsedUrl;
     const repoPath = `${parsedOrg}/${repo}`;
+
     if (project.link) {
       await disconnectGitProvider(client, org, project.id);
     }
