@@ -66,7 +66,7 @@ export default async function main(client: Client) {
   const { print, log, error } = client.output;
 
   // extract the first parameter
-  const [, deploymentIdOrHost] = argv._;
+  let [, deploymentIdOrHost] = argv._;
 
   if (argv._.length !== 2) {
     error(`${getCommandName('inspect <url>')} expects exactly one argument`);
@@ -92,6 +92,7 @@ export default async function main(client: Client) {
 
   // resolve the deployment, since we might have been given an alias
   const depFetchStart = Date.now();
+  deploymentIdOrHost = stripScheme(deploymentIdOrHost);
   client.output.spinner(
     `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
   );
@@ -211,4 +212,12 @@ function stateString(s: Deployment['readyState']) {
     default:
       return chalk.gray('UNKNOWN');
   }
+}
+
+function stripScheme(deploymentIdOrHost: string): string {
+  const match = deploymentIdOrHost.match(/http:\/\/|https:\/\//g)?.[0];
+  if (match) {
+    deploymentIdOrHost = deploymentIdOrHost.replace(match, '');
+  }
+  return deploymentIdOrHost;
 }
