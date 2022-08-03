@@ -270,7 +270,6 @@ const main = async () => {
   }
 
   try {
-    // eslint-disable-nex-line no-new
     new URL(apiUrl);
   } catch (err: unknown) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
