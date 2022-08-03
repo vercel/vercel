@@ -186,11 +186,7 @@ export async function build({
         isGoModExist = true;
         isGoModInRootDir = true;
         goModPath = join(workPath, fileDirname);
-
-        console.log('in case file === "go.mod"');
       } else if (file.endsWith('go.mod')) {
-        console.log('in case file.endsWith("go.mod")');
-
         if (entrypointDirname === fileDirname) {
           isGoModExist = true;
           goModPath = join(workPath, fileDirname);
