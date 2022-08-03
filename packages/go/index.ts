@@ -204,7 +204,9 @@ export async function build({
           pathParts.pop(); // Remove go.mod
           pathParts.pop(); // Remove api
           pathParts.push('go.mod');
-          const newFsPath = pathParts.join(sep);
+
+          const newRoot = pathParts.join(sep);
+          const newFsPath = join(workPath, newRoot);
 
           debug(`Moving api/go.mod to root: ${file} to ${newFsPath}`);
           await move(file, newFsPath);
