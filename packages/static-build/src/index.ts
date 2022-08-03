@@ -367,16 +367,20 @@ export const build: BuildV2 = async ({
       );
 
       if (process.env.VERCEL_URL) {
+        const vercelSystemEnvPrefix = 'VERCEL_';
         const { envPrefix } = framework;
         if (envPrefix) {
           Object.keys(process.env)
-            .filter(key => key.startsWith('VERCEL_'))
+            .filter(key => key.startsWith(vercelSystemEnvPrefix))
             .forEach(key => {
               const newKey = `${envPrefix}${key}`;
               if (!(newKey in process.env)) {
                 process.env[newKey] = process.env[key];
               }
             });
+
+          // tell turbo to exclude all vercel system env vars (envPrefix includes trailing underscore)
+          process.env.TURBO_CI_VENDOR_ENV_KEY = `${envPrefix}${vercelSystemEnvPrefix}`;
         }
       }
 
@@ -708,7 +712,7 @@ export const build: BuildV2 = async ({
         }
 
         let ignore: string[] = [];
-        if (config.zeroConfig && config.outputDirectory === '.') {
+        if (config.outputDirectory === '.' || config.distDir === '.') {
           ignore = [
             '.env',
             '.env.*',

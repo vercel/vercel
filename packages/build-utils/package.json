@@ -1,6 +1,6 @@
 {
   "name": "@vercel/build-utils",
-  "version": "5.0.4",
+  "version": "5.0.8",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
@@ -35,7 +35,6 @@
     "aggregate-error": "3.0.1",
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",
-    "boxen": "4.2.0",
     "cross-spawn": "6.0.5",
     "end-of-stream": "1.4.1",
     "fs-extra": "10.0.0",

@@ -170,6 +170,53 @@ it('should create zip files with symlinks properly', async () => {
   assert(aStat.isFile());
 });
 
+it('should download symlinks even with incorrect file', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
+  const files = {
+    'dir/file.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'file text',
+    }),
+    linkdir: new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'dir',
+    }),
+    'linkdir/file.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'this file should be discarded',
+    }),
+  };
+
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+  await fs.mkdirp(outDir);
+
+  await download(files, outDir);
+
+  const [dir, file, linkdir] = await Promise.all([
+    fs.lstat(path.join(outDir, 'dir')),
+    fs.lstat(path.join(outDir, 'dir/file.txt')),
+    fs.lstat(path.join(outDir, 'linkdir')),
+  ]);
+  expect(dir.isFile()).toBe(false);
+  expect(dir.isSymbolicLink()).toBe(false);
+
+  expect(file.isFile()).toBe(true);
+  expect(file.isSymbolicLink()).toBe(false);
+
+  expect(linkdir.isSymbolicLink()).toBe(true);
+
+  expect(warningMessages).toEqual([
+    'Warning: file "linkdir/file.txt" is within a symlinked directory "linkdir" and will be ignored',
+  ]);
+});
+
 it('should only match supported node versions, otherwise throw an error', async () => {
   expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
     'major',
@@ -454,6 +501,7 @@ it('should return lockfileVersion 2 with npm7', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should not return lockfileVersion with yarn', async () => {
@@ -461,6 +509,7 @@ it('should not return lockfileVersion with yarn', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
   expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should return lockfileVersion 1 with older versions of npm', async () => {
@@ -468,6 +517,7 @@ it('should return lockfileVersion 1 with older versions of npm', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(1);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should detect npm Workspaces', async () => {
@@ -475,20 +525,45 @@ it('should detect npm Workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
-it('should detect pnpm', async () => {
+it('should detect pnpm without workspace', async () => {
   const fixture = path.join(__dirname, 'fixtures', '22-pnpm');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
-it('should detect pnpm Workspaces', async () => {
-  const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/a');
+it('should detect pnpm with workspaces', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/c');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
+it('should detect package.json in nested backend', async () => {
+  const fixture = path.join(
+    __dirname,
+    '../../node/test/fixtures/18.1-nested-packagejson/backend'
+  );
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('yarn');
+  expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
+it('should detect package.json in nested frontend', async () => {
+  const fixture = path.join(
+    __dirname,
+    '../../node/test/fixtures/18.1-nested-packagejson/frontend'
+  );
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('yarn');
+  expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {

@@ -5,6 +5,7 @@ import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
 import chalk from 'chalk';
+import { isError } from './is-error';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -43,6 +44,10 @@ export class APIError extends Error {
       }
     }
   }
+}
+
+export function isAPIError(v: unknown): v is APIError {
+  return isError(v) && 'status' in v;
 }
 
 /**
