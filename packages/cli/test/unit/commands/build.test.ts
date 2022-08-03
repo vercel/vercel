@@ -152,6 +152,7 @@ describe('build', () => {
       await fs.unlink(join(cwd, 'foo.html'));
       await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
     } catch (e) {
+      console.log('Symlinks not available, skipping test');
       return;
     }
 
