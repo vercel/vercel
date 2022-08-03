@@ -15,6 +15,7 @@ import { Build } from '../types';
 import title from 'title';
 import { isErrnoException } from '../util/is-error';
 import { isAPIError } from '../util/errors-ts';
+import { URL } from 'url';
 
 const help = () => {
   console.log(`
@@ -90,13 +91,16 @@ export default async function main(client: Client) {
     throw err;
   }
 
-  // resolve the deployment, since we might have been given an alias
   const depFetchStart = Date.now();
-  deploymentIdOrHost = stripScheme(deploymentIdOrHost);
+
+  try {
+    deploymentIdOrHost = new URL(deploymentIdOrHost).hostname;
+  } catch {}
   client.output.spinner(
     `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
   );
 
+  // resolve the deployment, since we might have been given an alias
   try {
     deployment = await getDeployment(client, deploymentIdOrHost);
   } catch (err: unknown) {
@@ -212,12 +216,4 @@ function stateString(s: Deployment['readyState']) {
     default:
       return chalk.gray('UNKNOWN');
   }
-}
-
-function stripScheme(deploymentIdOrHost: string): string {
-  const match = deploymentIdOrHost.match(/http:\/\/|https:\/\//g)?.[0];
-  if (match) {
-    deploymentIdOrHost = deploymentIdOrHost.replace(match, '');
-  }
-  return deploymentIdOrHost;
 }
