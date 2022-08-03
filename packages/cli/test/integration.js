@@ -233,14 +233,6 @@ const waitForPrompt = (cp, assertion) =>
     cp.stderr.on('data', listener);
   });
 
-const getDeploymentBuildsByUrl = async url => {
-  const hostRes = await apiFetch(`/v10/now/deployments/get?url=${url}`);
-  const { id } = await hostRes.json();
-  const buildsRes = await apiFetch(`/v10/now/deployments/${id}/builds`);
-  const { builds } = await buildsRes.json();
-  return builds;
-};
-
 const createUser = async () => {
   await retry(
     async () => {
@@ -2907,11 +2899,10 @@ test('deploy a Lambda with a specific runtime', async t => {
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host: url } = new URL(output.stdout);
-
-  const builds = await getDeploymentBuildsByUrl(url);
-  const build = builds.find(b => b.use && b.use.includes('php')) || builds[0];
-  t.is(build.use, 'vercel-php@0.1.0', JSON.stringify(build, null, 2));
+  const url = new URL(output.stdout);
+  const res = await fetch(`${url}/api/test`);
+  const text = await res.text();
+  t.is(text, 'Hello from PHP');
 });
 
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {

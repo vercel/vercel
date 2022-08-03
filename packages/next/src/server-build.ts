@@ -58,6 +58,7 @@ const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
+const NON_NESTED_MIDDLEWARE_VERSION = 'v12.1.7-canary.9';
 
 export async function serverBuild({
   dynamicPages,
@@ -150,6 +151,10 @@ export async function serverBuild({
   const isCorrectManifests = semver.gte(
     nextVersion,
     CORRECTED_MANIFESTS_VERSION
+  );
+  const isNonNestedMiddleware = semver.gte(
+    nextVersion,
+    NON_NESTED_MIDDLEWARE_VERSION
   );
   let hasStatic500 = !!staticPages[path.join(entryDirectory, '500')];
 
@@ -1054,6 +1059,23 @@ export async function serverBuild({
     });
   }
 
+  // We stopped duplicating matchers for _next/data routes when we added
+  // x-nextjs-data header resolving but we should still resolve middleware
+  // when the header isn't present so we augment the source to include that.
+  // We don't apply this modification for nested middleware > 1 staticRoute
+  if (isNonNestedMiddleware) {
+    middleware.staticRoutes.forEach(route => {
+      if (!route.src?.match(/_next[\\/]{1,}data/)) {
+        route.src =
+          `^(\\/_next\\/data\\/${escapedBuildId})?(` +
+          route.src
+            ?.replace(/\|\^/g, '|')
+            .replace(/\$$/, ')$')
+            .replace(/\$/g, '(\\.json)?$');
+      }
+    });
+  }
+
   return {
     wildcard: wildcardConfig,
     images:
@@ -1209,10 +1231,6 @@ export async function serverBuild({
           ]
         : []),
 
-      // ensure prerender's for notFound: true static routes
-      // have 404 status code when not in preview mode
-      ...notFoundPreviewRoutes,
-
       ...headers,
 
       ...redirects,
@@ -1222,6 +1240,10 @@ export async function serverBuild({
       ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
 
       ...beforeFilesRewrites,
+
+      // ensure prerender's for notFound: true static routes
+      // have 404 status code when not in preview mode
+      ...notFoundPreviewRoutes,
 
       // Make sure to 404 for the /404 path itself
       ...(i18n
@@ -1363,7 +1385,38 @@ export async function serverBuild({
       ...denormalizeNextDataRoute(),
 
       // /_next/data routes for getServerProps/getStaticProps pages
-      ...dataRoutes,
+      ...(isNextDataServerResolving
+        ? // when resolving data routes for middleware we need to include
+          // all dynamic routes including non-SSG/SSP so that the priority
+          // is correct
+          dynamicRoutes
+            .map(route => {
+              route = Object.assign({}, route);
+              route.src = path.posix.join(
+                '^/',
+                entryDirectory,
+                '_next/data/',
+                escapedBuildId,
+                route.src.replace(/(^\^|\$$)/g, '') + '.json$'
+              );
+
+              const { pathname } = new URL(route.dest || '/', 'http://n');
+              let prerenderPathname = pathname;
+
+              if (routesManifest.i18n) {
+                prerenderPathname = pathname.replace(
+                  /^\/\$nextLocale/,
+                  `/${routesManifest.i18n.defaultLocale}`
+                );
+              }
+
+              if (prerenders[path.join('./', prerenderPathname)]) {
+                route.dest = `/_next/data/${buildId}${pathname}.json`;
+              }
+              return route;
+            })
+            .filter(Boolean)
+        : dataRoutes),
 
       ...(!isNextDataServerResolving
         ? [
@@ -1395,6 +1448,7 @@ export async function serverBuild({
                 'x-nextjs-matched-path': '/$1',
               },
               continue: true,
+              override: true,
             },
             // add a catch-all data route so we don't 404 when getting
             // middleware effects
