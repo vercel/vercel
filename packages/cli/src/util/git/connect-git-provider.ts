@@ -65,8 +65,8 @@ export async function connectGitProvider(
           type
         )} repository ${repo}.\n${err}`
       );
-      return 1;
     }
+    return 1;
   }
 }
 
