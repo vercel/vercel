@@ -107,10 +107,8 @@ async function addSingleGitRemote(
     output,
     org,
     project,
-    provider,
-    repo,
-    parsedOrg,
-    settings
+    settings,
+    parsedNewRemoteUrl
   );
 }
 
@@ -123,40 +121,18 @@ async function addMultipleGitRemotes(
   settings: ProjectSettings
 ) {
   output.log('Found multiple Git remote URLs in Git config.');
-  const remoteUrl = await promptGitConnectMultipleUrls(client, remoteUrls);
-  if (remoteUrl === 'no' || remoteUrl === 'opt-out') {
-    return parseOptions(
-      remoteUrl,
-      client,
-      output,
-      org,
-      project,
-      '',
-      '',
-      '',
-      settings
-    );
-  }
-
-  // remoteUrl is now guaranteed to be a URL.
-  const parsedUrl = parseRepoUrl(remoteUrl);
-  if (!parsedUrl) {
-    output.debug(`Could not parse repo url ${remoteUrl}.`);
-    return;
-  }
-  const { provider, org: parsedOrg, repo } = parsedUrl;
-  const repoPath = `${parsedOrg}/${repo}`;
-
-  const connect = await connectGitProvider(
+  const remoteUrlOrOptions = await promptGitConnectMultipleUrls(
     client,
-    org,
-    project.id,
-    provider,
-    repoPath
+    remoteUrls
   );
-  if (connect !== 1) {
-    output.log(`Connected ${formatProvider(provider)} repository ${repoPath}!`);
-  }
+  return parseOptions(
+    remoteUrlOrOptions,
+    client,
+    output,
+    org,
+    project,
+    settings
+  );
 }
 
 async function parseOptions(
@@ -165,12 +141,28 @@ async function parseOptions(
   output: Output,
   org: Org,
   project: Project,
-  provider: string,
-  repo: string,
-  parsedOrg: string,
-  settings: ProjectSettings
+  settings: ProjectSettings,
+  parsedUrl?: {
+    provider: string;
+    org: string;
+    repo: string;
+  }
 ) {
-  if (option === 'yes') {
+  if (option === 'no') {
+    skip(output);
+  } else if (option === 'opt-out') {
+    await optOut(client, project, settings);
+  } else if (option !== '') {
+    // Option is "yes" or a URL
+    if (!parsedUrl) {
+      const _parsedUrl = parseRepoUrl(option);
+      if (!_parsedUrl) {
+        output.debug(`Could not parse repo url ${option}.`);
+        return;
+      }
+      parsedUrl = _parsedUrl;
+    }
+    const { provider, org: parsedOrg, repo } = parsedUrl;
     const repoPath = `${parsedOrg}/${repo}`;
     if (project.link) {
       await disconnectGitProvider(client, org, project.id);
@@ -189,10 +181,6 @@ async function parseOptions(
     } else {
       return connect;
     }
-  } else if (option === 'no') {
-    skip(output);
-  } else if (option === 'opt-out') {
-    await optOut(client, project, settings);
   }
 }
 
