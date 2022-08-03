@@ -1,6 +1,0 @@
-{
-  "private": true,
-  "scripts": {
-    "build": "jekyll build && mv _site public"
-  }
-}
