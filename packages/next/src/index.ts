@@ -225,7 +225,10 @@ export const build: BuildV2 = async ({
     )
   );
 
-  const prefixedEnvs = getPrefixedEnvVars('NEXT_PUBLIC_', process.env);
+  const prefixedEnvs = getPrefixedEnvVars({
+    envPrefix: 'NEXT_PUBLIC_',
+    envs: process.env,
+  });
   for (const [key, value] of Object.entries(prefixedEnvs)) {
     process.env[key] = value;
   }

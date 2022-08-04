@@ -6,7 +6,13 @@ type Envs = { [key: string]: string | undefined };
  * @param envPrefix - Prefix, typically from `@vercel/frameworks`
  * @param envs - Environment Variables, typically from `process.env`
  */
-export function getPrefixedEnvVars(envPrefix: string, envs: Envs): Envs {
+export function getPrefixedEnvVars({
+  envPrefix,
+  envs,
+}: {
+  envPrefix: string;
+  envs: Envs;
+}): Envs {
   const vercelSystemEnvPrefix = 'VERCEL_';
   const newEnvs: Envs = {};
   if (envs.VERCEL_URL) {

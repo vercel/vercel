@@ -368,10 +368,10 @@ export const build: BuildV2 = async ({
       );
 
       if (process.env.VERCEL_URL && framework.envPrefix) {
-        const prefixedEnvs = getPrefixedEnvVars(
-          framework.envPrefix,
-          process.env
-        );
+        const prefixedEnvs = getPrefixedEnvVars({
+          envPrefix: framework.envPrefix,
+          envs: process.env,
+        });
         for (const [key, value] of Object.entries(prefixedEnvs)) {
           process.env[key] = value;
         }

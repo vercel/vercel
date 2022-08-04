@@ -55,7 +55,10 @@ export const build: BuildV2 = async ({
 }) => {
   await download(files, workPath, meta);
 
-  const prefixedEnvs = getPrefixedEnvVars('REDWOOD_ENV_', process.env);
+  const prefixedEnvs = getPrefixedEnvVars({
+    envPrefix: 'REDWOOD_ENV_',
+    envs: process.env,
+  });
   for (const [key, value] of Object.entries(prefixedEnvs)) {
     process.env[key] = value;
   }
