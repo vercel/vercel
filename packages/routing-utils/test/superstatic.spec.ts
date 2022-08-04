@@ -1,5 +1,5 @@
 import { deepEqual } from 'assert';
-import { Route, Source, normalizeRoutes } from '../src';
+import { Route, RouteWithSrc, normalizeRoutes } from '../src';
 import {
   getCleanUrls,
   convertCleanUrls,
@@ -15,7 +15,7 @@ function routesToRegExps(routeArray: Route[]) {
     throw error;
   }
   return (routes || [])
-    .filter((r): r is Source => 'src' in r)
+    .filter((r): r is RouteWithSrc => 'src' in r)
     .map(r => new RegExp(r.src));
 }
 

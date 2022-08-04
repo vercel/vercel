@@ -21,18 +21,8 @@ async function ls(
 ): Promise<number> {
   const { output } = client;
   const { '--next': nextTimestamp } = opts;
-  let contextName = null;
+  const { contextName } = await getScope(client);
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
   if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
     output.error('Please provide a number for flag --next');
     return 1;

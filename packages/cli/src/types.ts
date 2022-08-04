@@ -20,13 +20,15 @@ export interface JSONObject {
 }
 
 export interface AuthConfig {
-  _?: string;
+  '// Note'?: string;
+  '// Docs'?: string;
   token?: string;
   skipWrite?: boolean;
 }
 
 export interface GlobalConfig {
-  _?: string;
+  '// Note'?: string;
+  '// Docs'?: string;
   currentTeam?: string;
   includeScheme?: string;
   collectMetrics?: boolean;
@@ -271,6 +273,12 @@ export interface ProjectLinkData {
 
 export interface Project extends ProjectSettings {
   id: string;
+  analytics?: {
+    id: string;
+    enabledAt?: number;
+    disabledAt?: number;
+    canceledAt?: number | null;
+  };
   name: string;
   accountId: string;
   updatedAt: number;

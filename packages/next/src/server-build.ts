@@ -14,7 +14,7 @@ import {
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Handler, Route, Source } from '@vercel/routing-utils';
+import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
@@ -56,6 +56,8 @@ import prettyBytes from 'pretty-bytes';
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
+const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
+const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
 export async function serverBuild({
   dynamicPages,
@@ -133,6 +135,10 @@ export async function serverBuild({
   const lambdaPageKeys = Object.keys(lambdaPages);
   const internalPages = ['_app.js', '_error.js', '_document.js'];
   const pageBuildTraces = await glob('**/*.js.nft.json', pagesDir);
+  const isEmptyAllowQueryForPrendered = semver.gte(
+    nextVersion,
+    EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
+  );
   const isCorrectNotFoundRoutes = semver.gte(
     nextVersion,
     CORRECT_NOT_FOUND_ROUTES_VERSION
@@ -141,6 +147,11 @@ export async function serverBuild({
     nextVersion,
     CORRECT_MIDDLEWARE_ORDER_VERSION
   );
+  const isCorrectManifests = semver.gte(
+    nextVersion,
+    CORRECTED_MANIFESTS_VERSION
+  );
+
   let hasStatic500 = !!staticPages[path.join(entryDirectory, '500')];
 
   if (lambdaPageKeys.length === 0) {
@@ -404,7 +415,7 @@ export async function serverBuild({
           fsPath = path.join(requiredServerFilesManifest.appDir, file);
         }
 
-        const relativePath = path.join(path.relative(baseDir, fsPath));
+        const relativePath = path.relative(baseDir, fsPath);
         const { mode } = await fs.lstat(fsPath);
         lstatSema.release();
 
@@ -671,18 +682,80 @@ export async function serverBuild({
     );
 
     for (const group of combinedGroups) {
+      const groupPageFiles: { [key: string]: PseudoFile } = {};
+
+      for (const page of [...group.pages, ...internalPages]) {
+        const pageFileName = path.normalize(
+          path.relative(baseDir, lambdaPages[page].fsPath)
+        );
+        groupPageFiles[pageFileName] = compressedPages[page];
+      }
+
+      const updatedManifestFiles: { [name: string]: FileBlob } = {};
+
+      if (isCorrectManifests) {
+        // filter dynamic routes to only the included dynamic routes
+        // in this specific serverless function so that we don't
+        // accidentally match a dynamic route while resolving that
+        // is not actually in this specific serverless function
+        for (const manifest of [
+          'routes-manifest.json',
+          'server/pages-manifest.json',
+        ] as const) {
+          const fsPath = path.join(entryPath, outputDirectory, manifest);
+
+          const relativePath = path.relative(baseDir, fsPath);
+          delete group.pseudoLayer[relativePath];
+
+          const manifestData = await fs.readJSON(fsPath);
+          const normalizedPages = new Set(
+            group.pages.map(page => {
+              page = `/${page.replace(/\.js$/, '')}`;
+              if (page === '/index') page = '/';
+              return page;
+            })
+          );
+
+          switch (manifest) {
+            case 'routes-manifest.json': {
+              const filterItem = (item: { page: string }) =>
+                normalizedPages.has(item.page);
+
+              manifestData.dynamicRoutes =
+                manifestData.dynamicRoutes?.filter(filterItem);
+              manifestData.staticRoutes =
+                manifestData.staticRoutes?.filter(filterItem);
+              break;
+            }
+            case 'server/pages-manifest.json': {
+              for (const key of Object.keys(manifestData)) {
+                if (isDynamicRoute(key) && !normalizedPages.has(key)) {
+                  delete manifestData[key];
+                }
+              }
+              break;
+            }
+            default: {
+              throw new NowBuildError({
+                message: `Unexpected manifest value ${manifest}, please contact support if this continues`,
+                code: 'NEXT_MANIFEST_INVARIANT',
+              });
+            }
+          }
+
+          updatedManifestFiles[relativePath] = new FileBlob({
+            contentType: 'application/json',
+            data: JSON.stringify(manifestData),
+          });
+        }
+      }
+
       const lambda = await createLambdaFromPseudoLayers({
-        files: launcherFiles,
-        layers: [
-          group.pseudoLayer,
-          [...group.pages, ...internalPages].reduce((prev, page) => {
-            const pageFileName = path.normalize(
-              path.relative(baseDir, lambdaPages[page].fsPath)
-            );
-            prev[pageFileName] = compressedPages[page];
-            return prev;
-          }, {} as { [key: string]: PseudoFile }),
-        ],
+        files: {
+          ...launcherFiles,
+          ...updatedManifestFiles,
+        },
+        layers: [group.pseudoLayer, groupPageFiles],
         handler: path.join(
           path.relative(
             baseDir,
@@ -756,6 +829,7 @@ export async function serverBuild({
     static404Page,
     hasPages404: routesManifest.pages404,
     isCorrectNotFoundRoutes,
+    isEmptyAllowQueryForPrendered,
   });
 
   Object.keys(prerenderManifest.staticRoutes).forEach(route =>
@@ -822,7 +896,7 @@ export async function serverBuild({
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
-  const notFoundPreviewRoutes: Source[] = [];
+  const notFoundPreviewRoutes: RouteWithSrc[] = [];
 
   if (prerenderManifest.notFoundRoutes?.length > 0 && canUsePreviewMode) {
     // we combine routes into one src here to reduce the number of needed
@@ -1136,10 +1210,6 @@ export async function serverBuild({
           ]
         : []),
 
-      // ensure prerender's for notFound: true static routes
-      // have 404 status code when not in preview mode
-      ...notFoundPreviewRoutes,
-
       ...headers,
 
       ...redirects,
@@ -1149,6 +1219,10 @@ export async function serverBuild({
       ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
 
       ...beforeFilesRewrites,
+
+      // ensure prerender's for notFound: true static routes
+      // have 404 status code when not in preview mode
+      ...notFoundPreviewRoutes,
 
       // Make sure to 404 for the /404 path itself
       ...(i18n
@@ -1255,7 +1329,8 @@ export async function serverBuild({
         dest: '$0',
       },
 
-      // remove locale prefixes to check public files
+      // remove locale prefixes to check public files and
+      // to allow checking non-prefixed lambda outputs
       ...(i18n
         ? [
             {
@@ -1268,20 +1343,6 @@ export async function serverBuild({
           ]
         : []),
 
-      // for non-shared lambdas remove locale prefix if present
-      // to allow checking for lambda
-      ...(!i18n
-        ? []
-        : [
-            {
-              src: `${path.join('/', entryDirectory, '/')}(?:${i18n?.locales
-                .map(locale => escapeStringRegexp(locale))
-                .join('|')})/(.*)`,
-              dest: '/$1',
-              check: true,
-            },
-          ]),
-
       // routes that are called after each rewrite or after routes
       // if there no rewrites
       { handle: 'rewrite' },
@@ -1289,8 +1350,54 @@ export async function serverBuild({
       // re-build /_next/data URL after resolving
       ...denormalizeNextDataRoute(),
 
+      ...(isNextDataServerResolving
+        ? dataRoutes.filter(route => {
+            // filter to only static data routes as dynamic routes will be handled
+            // below
+            const { pathname } = new URL(route.dest || '/', 'http://n');
+            return !isDynamicRoute(pathname.replace(/\.json$/, ''));
+          })
+        : []),
+
       // /_next/data routes for getServerProps/getStaticProps pages
-      ...dataRoutes,
+      ...(isNextDataServerResolving
+        ? // when resolving data routes for middleware we need to include
+          // all dynamic routes including non-SSG/SSP so that the priority
+          // is correct
+          dynamicRoutes
+            .map(route => {
+              route = Object.assign({}, route);
+              route.src = path.posix.join(
+                '^/',
+                entryDirectory,
+                '_next/data/',
+                escapedBuildId,
+                route.src.replace(/(^\^|\$$)/g, '') + '.json$'
+              );
+
+              const { pathname } = new URL(route.dest || '/', 'http://n');
+              let isPrerender = !!prerenders[path.join('./', pathname)];
+
+              if (routesManifest.i18n) {
+                for (const locale of routesManifest.i18n?.locales || []) {
+                  const prerenderPathname = pathname.replace(
+                    /^\/\$nextLocale/,
+                    `/${locale}`
+                  );
+                  if (prerenders[path.join('./', prerenderPathname)]) {
+                    isPrerender = true;
+                    break;
+                  }
+                }
+              }
+
+              if (isPrerender) {
+                route.dest = `/_next/data/${buildId}${pathname}.json`;
+              }
+              return route;
+            })
+            .filter(Boolean)
+        : dataRoutes),
 
       ...(!isNextDataServerResolving
         ? [
@@ -1322,6 +1429,7 @@ export async function serverBuild({
                 'x-nextjs-matched-path': '/$1',
               },
               continue: true,
+              override: true,
             },
             // add a catch-all data route so we don't 404 when getting
             // middleware effects
@@ -1378,7 +1486,7 @@ export async function serverBuild({
       },
 
       // error handling
-      { handle: 'error' } as Handler,
+      { handle: 'error' } as RouteWithHandle,
 
       // Custom Next.js 404 page
       ...(i18n && (static404Page || hasIsr404Page || lambdaPages['404.js'])
