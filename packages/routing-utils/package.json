@@ -14,9 +14,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "prepublishOnly": "tsc",
     "build": "tsc",
-    "watch": "tsc --watch",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "yarn test"
   },

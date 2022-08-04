@@ -16,7 +16,6 @@
     "test-unit": "yarn test test/unit/",
     "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
     "test-integration-dev": "yarn test test/dev/",
-    "prepublishOnly": "yarn build",
     "coverage": "codecov",
     "build": "ts-node ./scripts/build.ts",
     "dev": "ts-node ./src/index.ts"
