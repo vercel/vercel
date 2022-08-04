@@ -19,7 +19,7 @@ export async function handleGitConnection(
   output: Output,
   project: Project,
   remoteUrls: Dictionary<string>,
-  settings?: ProjectSettings | Project
+  settings?: ProjectSettings
 ): Promise<number | void> {
   if (Object.keys(remoteUrls).length === 1) {
     return addSingleGitRemote(
