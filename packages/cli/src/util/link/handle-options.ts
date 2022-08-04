@@ -72,6 +72,8 @@ async function connect(
   const { provider, org: parsedOrg, repo } = parsedUrl;
   const repoPath = `${parsedOrg}/${repo}`;
 
+  output.log('Connecting...');
+
   if (project.link) {
     await disconnectGitProvider(client, org, project.id);
   }
