@@ -43,6 +43,40 @@ describe('Test `getPrefixedEnvVars()`', () => {
         TURBO_CI_VENDOR_ENV_KEY: 'GATSBY_VERCEL_',
       },
     },
+    {
+      name: 'should not return anything if no system env vars detected',
+      args: {
+        envPrefix: 'GATSBY_',
+        envs: {
+          USER_ENV_VAR_NOT_VERCEL: 'example.com',
+          FOO: 'bar',
+          BLARG_VERCEL_THING: 'fake',
+        },
+      },
+      want: {},
+    },
+    {
+      name: 'should not return anything if envPrefix is empty string',
+      args: {
+        envPrefix: '',
+        envs: {
+          VERCEL: '1',
+          VERCEL_URL: 'example.vercel.sh',
+        },
+      },
+      want: {},
+    },
+    {
+      name: 'should not return anything if envPrefix is undefined',
+      args: {
+        envPrefix: undefined,
+        envs: {
+          VERCEL: '1',
+          VERCEL_URL: 'example.vercel.sh',
+        },
+      },
+      want: {},
+    },
   ];
 
   for (const { name, args, want } of cases) {
