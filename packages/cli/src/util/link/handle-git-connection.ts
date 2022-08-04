@@ -1,9 +1,8 @@
 import { Dictionary } from '@vercel/client';
-import { formatProvider, parseRepoUrl } from '../git/connect-git-provider';
+import { parseRepoUrl } from '../git/connect-git-provider';
 import { Output } from '../output';
 import Client from '../client';
 import { Org, Project, ProjectSettings } from '../../types';
-import chalk from 'chalk';
 import { handleOptions } from './handle-options';
 import {
   promptGitConnectMultipleUrls,
@@ -51,7 +50,7 @@ async function addSingleGitRemote(
   const parsedUrl = parseRepoUrl(remoteUrl);
   if (!parsedUrl) {
     output.debug(`Could not parse repo url ${parsedUrl}.`);
-    return;
+    return 1;
   }
   const { org: parsedOrg, repo, provider } = parsedUrl;
   const alreadyLinked =
@@ -68,20 +67,13 @@ async function addSingleGitRemote(
     (project.link.org !== parsedOrg ||
       project.link.repo !== repo ||
       project.link.type !== provider);
-  if (replace) {
-    const currentRepoPath = `${project.link!.org}/${project.link!.repo}`;
-    const currentProvider = project.link!.type;
-    output.log(
-      `Found Git remote url ${chalk.cyan(
-        remoteUrl
-      )}, which is different from the connected ${formatProvider(
-        currentProvider
-      )} repository ${chalk.cyan(currentRepoPath)}.`
-    );
-  } else {
-    output.log(`Found local Git remote URL: ${chalk.cyan(remoteUrl)}`);
-  }
-  const shouldConnect = await promptGitConnectSingleUrl(client, replace);
+  const shouldConnect = await promptGitConnectSingleUrl(
+    client,
+    output,
+    project,
+    remoteUrl,
+    replace
+  );
   return handleOptions(
     shouldConnect,
     client,

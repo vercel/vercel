@@ -1,11 +1,31 @@
 import { Dictionary } from '@vercel/client';
+import chalk from 'chalk';
+import { Project } from '../../types';
 import Client from '../client';
+import { formatProvider } from '../git/connect-git-provider';
 import list from '../input/list';
+import { Output } from '../output';
 
 export async function promptGitConnectSingleUrl(
   client: Client,
+  output: Output,
+  project: Project,
+  remoteUrl: string,
   replace = false
 ) {
+  if (replace) {
+    const currentRepoPath = `${project.link!.org}/${project.link!.repo}`;
+    const currentProvider = project.link!.type;
+    output.log(
+      `Found Git remote url ${chalk.cyan(
+        remoteUrl
+      )}, which is different from the connected ${formatProvider(
+        currentProvider
+      )} repository ${chalk.cyan(currentRepoPath)}.`
+    );
+  } else {
+    output.log(`Found local Git remote URL: ${chalk.cyan(remoteUrl)}`);
+  }
   return await list(client, {
     message: replace
       ? 'Do you want to replace it?'
