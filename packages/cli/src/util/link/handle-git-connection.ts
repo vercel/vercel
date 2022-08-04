@@ -3,6 +3,7 @@ import {
   connectGitProvider,
   disconnectGitProvider,
   formatProvider,
+  ParsedRepoUrl,
   parseRepoUrl,
 } from '../git/connect-git-provider';
 import { Output } from '../output';
@@ -126,48 +127,25 @@ async function handleOptions(
   org: Org,
   project: Project,
   settings: ProjectSettings,
-  parsedUrl?: {
-    provider: string;
-    org: string;
-    repo: string;
-  }
+  parsedUrl?: ParsedRepoUrl
 ) {
   if (option === 'no') {
-    skip(output);
+    return skip(output);
   } else if (option === 'opt-out') {
-    await optOut(client, project, settings);
+    return optOut(client, project, settings);
   } else if (option !== '') {
     // Option is "yes" or a URL
+
+    // Ensure parsed url exists
     if (!parsedUrl) {
       const _parsedUrl = parseRepoUrl(option);
       if (!_parsedUrl) {
         output.debug(`Could not parse repo url ${option}.`);
-        return;
+        return 1;
       }
       parsedUrl = _parsedUrl;
     }
-    const { provider, org: parsedOrg, repo } = parsedUrl;
-    const repoPath = `${parsedOrg}/${repo}`;
-
-    if (project.link) {
-      await disconnectGitProvider(client, org, project.id);
-    }
-    const connect = await connectGitProvider(
-      client,
-      org,
-      project.id,
-      provider,
-      repoPath
-    );
-    if (connect !== 1) {
-      output.log(
-        `Connected ${formatProvider(provider)} repository ${chalk.cyan(
-          repoPath
-        )}!`
-      );
-    } else {
-      return connect;
-    }
+    return connect(client, output, org, project, parsedUrl);
   }
 }
 
@@ -190,6 +168,37 @@ function skip(output: Output) {
       'git connect'
     )}.`
   );
+}
+
+async function connect(
+  client: Client,
+  output: Output,
+  org: Org,
+  project: Project,
+  parsedUrl: ParsedRepoUrl
+): Promise<number | void> {
+  const { provider, org: parsedOrg, repo } = parsedUrl;
+  const repoPath = `${parsedOrg}/${repo}`;
+
+  if (project.link) {
+    await disconnectGitProvider(client, org, project.id);
+  }
+  const connect = await connectGitProvider(
+    client,
+    org,
+    project.id,
+    provider,
+    repoPath
+  );
+  if (connect !== 1) {
+    output.log(
+      `Connected ${formatProvider(provider)} repository ${chalk.cyan(
+        repoPath
+      )}!`
+    );
+  } else {
+    return connect;
+  }
 }
 
 export async function promptGitConnectSingleUrl(

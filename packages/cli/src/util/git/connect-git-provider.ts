@@ -5,6 +5,12 @@ import chalk from 'chalk';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';
 
+export interface ParsedRepoUrl {
+  provider: string;
+  org: string;
+  repo: string;
+}
+
 export async function disconnectGitProvider(
   client: Client,
   org: Org,
