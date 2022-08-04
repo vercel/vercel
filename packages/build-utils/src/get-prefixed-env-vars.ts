@@ -10,25 +10,23 @@ export function getPrefixedEnvVars({
   envPrefix,
   envs,
 }: {
-  envPrefix: string;
+  envPrefix: string | undefined;
   envs: Envs;
 }): Envs {
   const vercelSystemEnvPrefix = 'VERCEL_';
   const newEnvs: Envs = {};
-  if (envs.VERCEL_URL) {
-    if (envPrefix) {
-      Object.keys(envs)
-        .filter(key => key.startsWith(vercelSystemEnvPrefix))
-        .forEach(key => {
-          const newKey = `${envPrefix}${key}`;
-          if (!(newKey in envs)) {
-            newEnvs[newKey] = envs[key];
-          }
-        });
-      // Tell turbo to exclude all Vercel System Env Vars
-      // See https://github.com/vercel/turborepo/pull/1622
-      newEnvs.TURBO_CI_VENDOR_ENV_KEY = `${envPrefix}${vercelSystemEnvPrefix}`;
-    }
+  if (envPrefix && envs.VERCEL_URL) {
+    Object.keys(envs)
+      .filter(key => key.startsWith(vercelSystemEnvPrefix))
+      .forEach(key => {
+        const newKey = `${envPrefix}${key}`;
+        if (!(newKey in envs)) {
+          newEnvs[newKey] = envs[key];
+        }
+      });
+    // Tell turbo to exclude all Vercel System Env Vars
+    // See https://github.com/vercel/turborepo/pull/1622
+    newEnvs.TURBO_CI_VENDOR_ENV_KEY = `${envPrefix}${vercelSystemEnvPrefix}`;
   }
   return newEnvs;
 }

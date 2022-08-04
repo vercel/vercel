@@ -229,6 +229,7 @@ export const build: BuildV2 = async ({
     envPrefix: 'NEXT_PUBLIC_',
     envs: process.env,
   });
+
   for (const [key, value] of Object.entries(prefixedEnvs)) {
     process.env[key] = value;
   }
