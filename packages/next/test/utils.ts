@@ -8,6 +8,7 @@ import http from 'http';
 import listen from 'test-listen';
 import ms from 'ms';
 import ndjson from 'ndjson';
+import os from 'os';
 import path from 'path';
 
 jest.setTimeout(ms('6m'));
@@ -112,4 +113,14 @@ export async function check(contentFn, regex, hardError = true) {
     throw new Error('TIMED OUT: ' + regex + '\n\n' + content);
   }
   return false;
+}
+
+export async function genDir(structure: { [path: string]: string }) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'next-test-'));
+  for (const [p, content] of Object.entries(structure)) {
+    const p2 = path.join(dir, p);
+    await fs.mkdirp(path.dirname(p2));
+    await fs.writeFile(p2, content);
+  }
+  return dir;
 }
