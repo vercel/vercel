@@ -388,9 +388,8 @@ test(
     await testPath(200, `/api/index.go`, 'This is the index page');
     await testPath(200, `/api/another`, 'This is another page');
     await testPath(200, '/api/another.go', 'This is another page');
-    // DISABLED: These assertions rely on different bracket names working.
-    // await testPath(200, `/api/foo`, 'Req Path: /api/foo');
-    // await testPath(200, `/api/bar`, 'Req Path: /api/bar');
+    await testPath(200, `/api/foo`, 'Req Path: /api/foo');
+    await testPath(200, `/api/bar`, 'Req Path: /api/bar');
   })
 );
 
