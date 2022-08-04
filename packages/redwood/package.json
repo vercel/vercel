@@ -16,8 +16,7 @@
     "build": "node build.js",
     "test-integration-once": "yarn test test/test.js",
     "test": "jest --env node --verbose --bail --runInBand",
-    "test-unit": "yarn test test/prepare-cache.test.js",
-    "prepublishOnly": "node build.js"
+    "test-unit": "yarn test test/prepare-cache.test.js"
   },
   "dependencies": {
     "@vercel/nft": "0.21.0",

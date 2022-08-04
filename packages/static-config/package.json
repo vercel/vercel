@@ -10,9 +10,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-unit": "jest",
-    "test": "jest",
-    "prepublishOnly": "tsc"
+    "test-unit": "yarn test",
+    "test": "jest --env node --verbose --runInBand --bail"
   },
   "files": [
     "dist"

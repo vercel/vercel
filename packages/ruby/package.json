@@ -17,8 +17,7 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-integration-once": "yarn test",
-    "prepublishOnly": "node build"
+    "test-integration-once": "yarn test"
   },
   "devDependencies": {
     "@types/fs-extra": "8.0.0",

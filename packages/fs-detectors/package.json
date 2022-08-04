@@ -14,9 +14,8 @@
   },
   "license": "MIT",
   "scripts": {
-    "prepublishOnly": "tsc",
     "build": "tsc",
-    "test": "yarn jest --env node --verbose --runInBand --bail test/unit.*test.*",
+    "test": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
     "test-unit": "yarn test"
   },
   "dependencies": {

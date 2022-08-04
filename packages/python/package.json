@@ -17,8 +17,7 @@
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "yarn test test/unit.test.ts",
-    "test-integration-once": "yarn test test/integration.test.ts",
-    "prepublishOnly": "node build"
+    "test-integration-once": "yarn test test/integration.test.ts"
   },
   "devDependencies": {
     "@types/execa": "^0.9.0",
