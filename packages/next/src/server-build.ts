@@ -1355,10 +1355,10 @@ export async function serverBuild({
       ...(i18n
         ? [
             {
-              src: `${path.join('/', entryDirectory, '/')}(?:${i18n?.locales
+              src: `^${path.join('/', entryDirectory)}/?(?:${i18n.locales
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})/(.*)`,
-              dest: '/$1',
+              dest: `${path.join('/', entryDirectory, '/')}$1`,
               check: true,
             },
           ]
