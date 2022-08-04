@@ -1,18 +1,14 @@
 import { Dictionary } from '@vercel/client';
-import {
-  connectGitProvider,
-  disconnectGitProvider,
-  formatProvider,
-  ParsedRepoUrl,
-  parseRepoUrl,
-} from '../git/connect-git-provider';
+import { formatProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { Output } from '../output';
-import list from '../input/list';
 import Client from '../client';
 import { Org, Project, ProjectSettings } from '../../types';
-import { getCommandName } from '../pkg-name';
-import updateProject from '../projects/update-project';
 import chalk from 'chalk';
+import { handleOptions } from './handle-options';
+import {
+  promptGitConnectMultipleUrls,
+  promptGitConnectSingleUrl,
+} from './git-connect-prompts';
 
 export async function handleGitConnection(
   client: Client,
@@ -118,145 +114,4 @@ async function addMultipleGitRemotes(
     project,
     settings
   );
-}
-
-async function handleOptions(
-  option: string,
-  client: Client,
-  output: Output,
-  org: Org,
-  project: Project,
-  settings: ProjectSettings,
-  parsedUrl?: ParsedRepoUrl
-) {
-  if (option === 'no') {
-    return skip(output);
-  } else if (option === 'opt-out') {
-    return optOut(client, project, settings);
-  } else if (option !== '') {
-    // Option is "yes" or a URL
-
-    // Ensure parsed url exists
-    if (!parsedUrl) {
-      const _parsedUrl = parseRepoUrl(option);
-      if (!_parsedUrl) {
-        output.debug(`Could not parse repo url ${option}.`);
-        return 1;
-      }
-      parsedUrl = _parsedUrl;
-    }
-    return connect(client, output, org, project, parsedUrl);
-  }
-}
-
-async function optOut(
-  client: Client,
-  project: Project,
-  settings: ProjectSettings
-) {
-  settings.skipGitConnectDuringLink = true;
-  await updateProject(client, project.name, settings);
-  client.output
-    .log(`Opted out. You can re-enable this prompt by visiting the Settings > Git page on the
-  dashboard for this Project.`);
-}
-
-function skip(output: Output) {
-  output.log('Skipping...');
-  output.log(
-    `You can connect a Git repository in the future by running ${getCommandName(
-      'git connect'
-    )}.`
-  );
-}
-
-async function connect(
-  client: Client,
-  output: Output,
-  org: Org,
-  project: Project,
-  parsedUrl: ParsedRepoUrl
-): Promise<number | void> {
-  const { provider, org: parsedOrg, repo } = parsedUrl;
-  const repoPath = `${parsedOrg}/${repo}`;
-
-  if (project.link) {
-    await disconnectGitProvider(client, org, project.id);
-  }
-  const connect = await connectGitProvider(
-    client,
-    org,
-    project.id,
-    provider,
-    repoPath
-  );
-  if (connect !== 1) {
-    output.log(
-      `Connected ${formatProvider(provider)} repository ${chalk.cyan(
-        repoPath
-      )}!`
-    );
-  } else {
-    return connect;
-  }
-}
-
-export async function promptGitConnectSingleUrl(
-  client: Client,
-  replace = false
-) {
-  return await list(client, {
-    message: replace
-      ? 'Do you want to replace it?'
-      : 'Do you want to connect it to your Vercel project?',
-    choices: [
-      {
-        name: 'Yes',
-        value: 'yes',
-        short: 'yes',
-      },
-      {
-        name: 'No',
-        value: 'no',
-        short: 'no',
-      },
-      {
-        name: 'Do not ask again for this project',
-        value: 'opt-out',
-        short: 'no (opt out)',
-      },
-    ],
-  });
-}
-
-async function promptGitConnectMultipleUrls(
-  client: Client,
-  remoteUrls: Dictionary<string>
-) {
-  const staticOptions = [
-    {
-      name: 'No',
-      value: 'no',
-      short: 'no',
-    },
-    {
-      name: 'Do not ask again for this project',
-      value: 'opt-out',
-      short: 'no (opt out)',
-    },
-  ];
-  let choices = [];
-  for (const url of Object.values(remoteUrls)) {
-    choices.push({
-      name: url,
-      value: url,
-      short: url,
-    });
-  }
-  choices = choices.concat(staticOptions);
-
-  return await list(client, {
-    message: 'Do you want to connect a Git repository to your Vercel project?',
-    choices,
-  });
 }
