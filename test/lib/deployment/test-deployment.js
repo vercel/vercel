@@ -264,8 +264,12 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   assert(hadTest, 'probe must have a test condition');
 }
 
-async function testDeployment(fixturePath, buildDelegate) {
-  logWithinTest('testDeployment', fixturePath);
+async function testDeployment(fixturePath) {
+  const projectName = path
+    .basename(fixturePath)
+    .toLowerCase()
+    .replace(/(_|\.)/g, '-');
+  logWithinTest(`testDeployment "${projectName}"`);
   const globResult = await glob(`${fixturePath}/**`, {
     nodir: true,
     dot: true,
@@ -300,7 +304,7 @@ async function testDeployment(fixturePath, buildDelegate) {
   const configName = 'vercel.json' in bodies ? 'vercel.json' : 'now.json';
 
   // we use json5 to allow comments for probes
-  const nowJson = json5.parse(bodies[configName]);
+  const nowJson = json5.parse(bodies[configName] || '{}');
   const uploadNowJson = nowJson.uploadNowJson;
   delete nowJson.uploadNowJson;
 
@@ -316,23 +320,36 @@ async function testDeployment(fixturePath, buildDelegate) {
     }
   });
 
-  for (const build of nowJson.builds || []) {
-    if (buildDelegate) {
-      buildDelegate(build);
-    }
+  const probePath = path.resolve(fixturePath, 'probe.js');
+  let probes = [];
+  if ('probes' in nowJson) {
+    probes = nowJson.probes;
+  } else if ('probes.json' in bodies) {
+    probes = json5.parse(bodies['probes.json']).probes;
+  } else if (fs.existsSync(probePath)) {
+    // we'll run probes after we have the deployment url below
+  } else {
+    console.warn(
+      `WARNING: Test fixture "${fixturePath}" does not contain probes.json, probe.js, or vercel.json`
+    );
   }
-
   bodies[configName] = Buffer.from(JSON.stringify(nowJson));
   delete bodies['probe.js'];
+  delete bodies['probes.json'];
 
   const { deploymentId, deploymentUrl } = await nowDeploy(
+    projectName,
     bodies,
     randomness,
     uploadNowJson
   );
   const probeCtx = {};
 
-  for (const probe of nowJson.probes || []) {
+  if (fs.existsSync(probePath)) {
+    await require(probePath)({ deploymentUrl, fetch, randomness });
+  }
+
+  for (const probe of probes) {
     const stringifiedProbe = JSON.stringify(probe);
     logWithinTest('testing', stringifiedProbe);
 
@@ -363,11 +380,6 @@ async function testDeployment(fixturePath, buildDelegate) {
     }
   }
 
-  const probeJsFullPath = path.resolve(fixturePath, 'probe.js');
-  if (fs.existsSync(probeJsFullPath)) {
-    await require(probeJsFullPath)({ deploymentUrl, fetch, randomness });
-  }
-
   return { deploymentId, deploymentUrl };
 }
 
@@ -377,7 +389,7 @@ async function nowDeployIndexTgz(file) {
     'now.json': Buffer.from(JSON.stringify({ version: 2 })),
   };
 
-  return (await nowDeploy(bodies)).deploymentUrl;
+  return (await nowDeploy('pack-n-deploy', bodies)).deploymentUrl;
 }
 
 async function fetchDeploymentUrl(url, opts) {
