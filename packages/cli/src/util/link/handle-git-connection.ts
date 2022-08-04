@@ -13,32 +13,14 @@ import { getCommandName } from '../pkg-name';
 import updateProject from '../projects/update-project';
 import chalk from 'chalk';
 
-function getProjectSettings(project: Project): ProjectSettings {
-  return {
-    createdAt: project.createdAt,
-    framework: project.framework,
-    devCommand: project.devCommand,
-    installCommand: project.installCommand,
-    buildCommand: project.buildCommand,
-    outputDirectory: project.outputDirectory,
-    rootDirectory: project.rootDirectory,
-    directoryListing: project.directoryListing,
-    nodeVersion: project.nodeVersion,
-    skipGitConnectDuringLink: project.skipGitConnectDuringLink,
-  };
-}
-
 export async function handleGitConnection(
   client: Client,
   org: Org,
   output: Output,
   project: Project,
   remoteUrls: Dictionary<string>,
-  settings?: ProjectSettings
+  settings?: ProjectSettings | Project
 ): Promise<number | void> {
-  if (!settings) {
-    settings = getProjectSettings(project);
-  }
   if (Object.keys(remoteUrls).length === 1) {
     return addSingleGitRemote(
       client,
@@ -46,7 +28,7 @@ export async function handleGitConnection(
       output,
       project,
       remoteUrls,
-      settings
+      settings || project
     );
   } else if (Object.keys(remoteUrls).length > 1 && !project.link) {
     return addMultipleGitRemotes(
@@ -55,7 +37,7 @@ export async function handleGitConnection(
       output,
       project,
       remoteUrls,
-      settings
+      settings || project
     );
   }
 }
