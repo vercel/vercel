@@ -8,13 +8,6 @@
   ],
   "probes": [
     {
-      "path": "/_next/data/testing-build-id/en/about.json",
-      "status": 200,
-      "responseHeaders": {
-        "x-matched-path": "/en/about"
-      }
-    },
-    {
       "path": "/_next/data/testing-build-id/en/dynamic/static.json",
       "status": 200,
       "headers": {
