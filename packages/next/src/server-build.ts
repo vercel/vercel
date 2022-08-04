@@ -1350,7 +1350,8 @@ export async function serverBuild({
         dest: '$0',
       },
 
-      // remove locale prefixes to check public files
+      // remove locale prefixes to check public files and
+      // to allow checking non-prefixed lambda outputs
       ...(i18n
         ? [
             {
@@ -1362,20 +1363,6 @@ export async function serverBuild({
             },
           ]
         : []),
-
-      // for non-shared lambdas remove locale prefix if present
-      // to allow checking for lambda
-      ...(!i18n
-        ? []
-        : [
-            {
-              src: `${path.join('/', entryDirectory, '/')}(?:${i18n?.locales
-                .map(locale => escapeStringRegexp(locale))
-                .join('|')})/(.*)`,
-              dest: '/$1',
-              check: true,
-            },
-          ]),
 
       // routes that are called after each rewrite or after routes
       // if there no rewrites

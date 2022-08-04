@@ -1,0 +1,5 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "Test Site · A website for testing" }
+  ]
+}

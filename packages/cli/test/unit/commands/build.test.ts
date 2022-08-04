@@ -143,6 +143,54 @@ describe('build', () => {
     }
   });
 
+  it('should handle symlinked static files', async () => {
+    const cwd = fixture('static-symlink');
+    const output = join(cwd, '.vercel/output');
+
+    // try to create the symlink, if it fails (e.g. Windows), skip the test
+    try {
+      await fs.unlink(join(cwd, 'foo.html'));
+      await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
+    } catch (e) {
+      console.log('Symlinks not available, skipping test');
+      return;
+    }
+
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            src: '**',
+            use: '@vercel/static',
+          },
+        ],
+      });
+
+      // "static" directory contains static files
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['foo.html', 'index.html']);
+      expect(
+        (await fs.lstat(join(output, 'static', 'foo.html'))).isSymbolicLink()
+      ).toEqual(true);
+      expect(
+        (await fs.lstat(join(output, 'static', 'index.html'))).isSymbolicLink()
+      ).toEqual(false);
+    } finally {
+      await fs.unlink(join(cwd, 'foo.html'));
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should normalize "src" path in `vercel.json`', async () => {
     const cwd = fixture('normalize-src');
     const output = join(cwd, '.vercel/output');
@@ -658,11 +706,13 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
-      const exitCodePromise = build(client);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      // Error gets printed to the terminal
       await expect(client.stderr).toOutput(
         'Error! Function must contain at least one property.'
       );
-      await expect(exitCodePromise).resolves.toEqual(1);
 
       // `builds.json` contains top-level "error" property
       const builds = await fs.readJSON(join(output, 'builds.json'));
@@ -687,9 +737,11 @@ describe('build', () => {
     const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
-      const exitCodePromise = build(client);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      // Error gets printed to the terminal
       await expect(client.stderr).toOutput("Duplicate identifier 'res'.");
-      await expect(exitCodePromise).resolves.toEqual(1);
 
       // `builds.json` contains "error" build
       const builds = await fs.readJSON(join(output, 'builds.json'));
