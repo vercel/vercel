@@ -16,15 +16,16 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    connect                          Connect your Git config "origin" remote as a Git provider to your project
-    disconnect                       Disconnect the Git provider repository from your project
+    connect                   Connect your Git config "origin" remote as a Git provider to your project
+    disconnect                Disconnect the Git provider repository from your project
 
   ${chalk.dim('Options:')}
 
-    -h, --help                     Output usage information
+    -h, --help                Output usage information
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
-  )}        Login token
+  )}   Login token
+    -y, --yes                 Skip questions when setting up new project using default scope and settings
 
   ${chalk.dim('Examples:')}
 
@@ -49,7 +50,12 @@ export default async function main(client: Client) {
 
   try {
     argv = getArgs(client.argv.slice(2), {
-      '--confirm': Boolean,
+      '--yes': Boolean,
+      '-y': '--yes',
+
+      // deprecated
+      '-c': '--yes',
+      '--confirm': '--yes',
     });
   } catch (error) {
     handleError(error);
@@ -64,7 +70,7 @@ export default async function main(client: Client) {
   argv._ = argv._.slice(1);
   subcommand = argv._[0];
   const args = argv._.slice(1);
-  const confirm = Boolean(argv['--confirm']);
+  const confirm = Boolean(argv['--yes']);
   const { output } = client;
 
   let paths = [process.cwd()];

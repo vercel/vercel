@@ -17,7 +17,7 @@ import { OUTPUT_DIR } from '../../util/build/write-build-result';
 
 type Options = {
   '--listen': string;
-  '--confirm': boolean;
+  '--yes': boolean;
 };
 
 export default async function dev(
@@ -38,7 +38,7 @@ export default async function dev(
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     link = await setupAndLink(client, cwd, {
-      autoConfirm: opts['--confirm'],
+      autoConfirm: opts['--yes'],
       successEmoji: 'link',
       setupMsg: 'Set up and develop',
     });
@@ -54,7 +54,7 @@ export default async function dev(
       client.output.error(
         `Command ${getCommandName(
           'dev'
-        )} requires confirmation. Use option ${param('--confirm')} to confirm.`
+        )} requires confirmation. Use option ${param('--yes')} to confirm.`
       );
     }
     return link.exitCode;

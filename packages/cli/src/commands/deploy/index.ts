@@ -87,19 +87,21 @@ export default async (client: Client) => {
       '--regions': String,
       '--prebuilt': Boolean,
       '--prod': Boolean,
-      '--confirm': Boolean,
+      '--yes': Boolean,
       '-f': '--force',
       '-p': '--public',
       '-e': '--env',
       '-b': '--build-env',
       '-m': '--meta',
-      '-c': '--confirm',
+      '-y': '--yes',
 
       // deprecated
       '--name': String,
       '-n': '--name',
       '--no-clipboard': Boolean,
       '--target': String,
+      '-c': '--yes',
+      '--confirm': '--yes',
     });
   } catch (error) {
     handleError(error);
@@ -173,7 +175,7 @@ export default async (client: Client) => {
   }
 
   const { path } = pathValidation;
-  const autoConfirm = argv['--confirm'];
+  const autoConfirm = argv['--yes'];
 
   // deprecate --name
   if (argv['--name']) {

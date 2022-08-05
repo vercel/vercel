@@ -35,7 +35,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
-    --confirm                      Skip the confirmation prompt
+    -y, --yes                      Skip questions when setting up new project using default scope and settings
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -78,7 +78,12 @@ export default async function main(client: Client) {
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
-      '--confirm': Boolean,
+      '--yes': Boolean,
+      '-y': '--yes',
+
+      // deprecated
+      '-c': '--yes',
+      '--confirm': '--yes',
     });
   } catch (err) {
     handleError(err);
@@ -99,7 +104,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const yes = argv['--confirm'] || false;
+  const yes = !!argv['--yes'];
 
   const meta = parseMeta(argv['--meta']);
   const { includeScheme } = config;

@@ -45,6 +45,7 @@ const help = () => {
   )}        Login token
     -S, --scope                    Set a custom scope
     -N, --next                     Show next page of results
+    -y, --yes                      Skip questions when setting up new project using default scope and settings
 
   ${chalk.dim('Examples:')}
 
@@ -92,6 +93,7 @@ export default async function main(client: Client) {
       '--force': Boolean,
       '--next': Number,
       '-N': '--next',
+      '-y': '--yes',
     });
   } catch (error) {
     handleError(error);
