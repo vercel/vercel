@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';
 import { Dictionary } from '@vercel/client';
+import { Output } from '../output';
 
 export async function disconnectGitProvider(
   client: Client,
@@ -121,10 +122,13 @@ export function parseRepoUrl(originUrl: string): {
   };
 }
 
-export function printRemoteUrls(remoteUrls: Dictionary<string>) {
+export function printRemoteUrls(
+  output: Output,
+  remoteUrls: Dictionary<string>
+) {
   let str = '';
   for (const [name, url] of Object.entries(remoteUrls)) {
-    str += chalk.cyan(`• ${name}: ${url}\n`);
+    str += chalk.cyan(`  • ${name}: ${url}\n`);
   }
-  return str;
+  output.print(str);
 }
