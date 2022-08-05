@@ -47,6 +47,7 @@ export async function connectGitProvider(
     if (isAPIError(err)) {
       if (
         err.action === 'Install GitHub App' ||
+        err.meta?.action === 'Install GitHub App' ||
         err.code === 'repo_not_found'
       ) {
         client.output.error(
