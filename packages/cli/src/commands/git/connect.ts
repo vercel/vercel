@@ -1,6 +1,7 @@
+import { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
 import { join } from 'path';
-import { Org, Project } from '../../types';
+import { Org, Project, ProjectLinkData } from '../../types';
 import Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
 import confirm from '../../util/input/confirm';
@@ -13,6 +14,7 @@ import {
   disconnectGitProvider,
   formatProvider,
   parseRepoUrl,
+  printRemoteUrls,
 } from '../../util/projects/connect-git-provider';
 import validatePaths from '../../util/validate-paths';
 
@@ -25,8 +27,9 @@ export default async function connect(
 ) {
   const { output } = client;
   const confirm = Boolean(argv['--confirm']);
+  const repoArg = argv._[1];
 
-  if (args.length !== 0) {
+  if (args.length !== 0 && args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
         `${getCommandName('project connect')}`
@@ -57,6 +60,23 @@ export default async function connect(
   // get project from .git
   const gitConfigPath = join(path, '.git/config');
   const gitConfig = await parseGitConfig(gitConfigPath, output);
+
+  if (repoArg) {
+    if (gitConfig) {
+      return await connectArgWithLocalGit(
+        client,
+        output,
+        org,
+        project,
+        confirm,
+        gitConfig,
+        repoArg
+      );
+    } else {
+      return await connectArg(client, output, confirm, org, project, repoArg);
+    }
+  }
+
   if (!gitConfig) {
     output.error(
       `No local git repo found. Run ${chalk.cyan(
@@ -101,10 +121,180 @@ export default async function connect(
     );
     return 1;
   }
-  const { provider, org: gitOrg, repo } = parsedUrl;
-  const repoPath = `${gitOrg}/${repo}`;
-  let connectedRepoPath;
+  const { provider, org: parsedOrg, repo } = parsedUrl;
+  const repoPath = `${parsedOrg}/${repo}`;
 
+  const checkAndConnect = await checkExistsAndConnect(
+    client,
+    output,
+    confirm,
+    org,
+    project,
+    gitProviderLink,
+    provider,
+    repoPath,
+    parsedOrg,
+    repo
+  );
+  if (typeof checkAndConnect === 'number') {
+    return checkAndConnect;
+  }
+
+  output.log(
+    `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
+  );
+
+  return 0;
+}
+
+async function connectArg(
+  client: Client,
+  output: Output,
+  confirm: boolean,
+  org: Org,
+  project: Project,
+  repoArg: string
+) {
+  output.log(`Connecting Git remote: ${link(repoArg)}`);
+  const parsedRepoArg = parseRepoUrl(repoArg);
+  if (!parsedRepoArg) {
+    output.error(
+      `Cannot parse URL ${repoArg}. Make sure you didn't make any typos.`
+    );
+    return 1;
+  }
+  const { provider, org: parsedOrg, repo } = parsedRepoArg;
+  const repoPath = `${parsedOrg}/${repo}`;
+  const connect = await checkExistsAndConnect(
+    client,
+    output,
+    confirm,
+    org,
+    project,
+    project.link,
+    provider,
+    repoPath,
+    parsedOrg,
+    repo
+  );
+  if (typeof connect === 'number') {
+    return connect;
+  }
+  output.log(
+    `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
+  );
+}
+
+async function connectArgWithLocalGit(
+  client: Client,
+  output: Output,
+  org: Org,
+  project: Project,
+  confirm: boolean,
+  gitConfig: Dictionary<any>,
+  repoArg: string
+) {
+  const remoteUrls = pluckRemoteUrls(gitConfig);
+  if (remoteUrls) {
+    for (const url of Object.values(remoteUrls)) {
+      const parsedUrl = parseRepoUrl(url);
+      const parsedUrlArg = parseRepoUrl(repoArg);
+      if (parsedUrlArg) {
+        if (JSON.stringify(parsedUrl) !== JSON.stringify(parsedUrlArg)) {
+          const shouldConnect = await promptConnectArg(
+            client,
+            output,
+            confirm,
+            repoArg,
+            remoteUrls
+          );
+          if (shouldConnect) {
+            const { provider, org: parsedOrg, repo } = parsedUrlArg;
+            const repoPath = `${parsedOrg}/${repo}`;
+            output.log(`Connecting Git remote: ${link(repoArg)}`);
+            const connect = await checkExistsAndConnect(
+              client,
+              output,
+              confirm,
+              org,
+              project,
+              project.link,
+              provider,
+              repoPath,
+              parsedOrg,
+              repo
+            );
+            if (typeof connect === 'number') {
+              return connect;
+            }
+            output.log(
+              `Connected ${formatProvider(provider)} repository ${chalk.cyan(
+                repoPath
+              )}!`
+            );
+          }
+          return 0;
+        } else {
+          return await connectArg(
+            client,
+            output,
+            confirm,
+            org,
+            project,
+            repoArg
+          );
+        }
+      }
+    }
+  }
+}
+
+async function promptConnectArg(
+  client: Client,
+  output: Output,
+  yes: boolean,
+  arg: string,
+  remoteUrls: Dictionary<string>
+) {
+  const multiple = Object.keys(remoteUrls).length > 1;
+  if (multiple) {
+    output.log(`Found multiple Git repositories in your local Git config:`);
+    printRemoteUrls(remoteUrls);
+  } else {
+    console.log(remoteUrls);
+    output.log(
+      `Found a repository in your local Git Config: ${chalk.cyan(
+        Object.values(remoteUrls)[0]
+      )}`
+    );
+  }
+
+  let shouldConnect = yes;
+  if (!shouldConnect) {
+    shouldConnect = await confirm(
+      client,
+      `Do you still want to connect ${chalk.cyan(arg)}?`,
+      false
+    );
+    if (!shouldConnect) {
+      output.log(`Aborted. Repo not connected.`);
+    }
+  }
+  return shouldConnect;
+}
+
+async function checkExistsAndConnect(
+  client: Client,
+  output: Output,
+  confirm: boolean,
+  org: Org,
+  project: Project,
+  gitProviderLink: ProjectLinkData | undefined,
+  provider: string,
+  repoPath: string,
+  parsedOrg: string,
+  repo: string
+) {
   if (!gitProviderLink) {
     const connect = await connectGitProvider(
       client,
@@ -120,11 +310,11 @@ export default async function connect(
     const connectedProvider = gitProviderLink.type;
     const connectedOrg = gitProviderLink.org;
     const connectedRepo = gitProviderLink.repo;
-    connectedRepoPath = `${connectedOrg}/${connectedRepo}`;
+    const connectedRepoPath = `${connectedOrg}/${connectedRepo}`;
 
     const isSameRepo =
       connectedProvider === provider &&
-      connectedOrg === gitOrg &&
+      connectedOrg === parsedOrg &&
       connectedRepo === repo;
     if (isSameRepo) {
       output.log(
@@ -137,6 +327,7 @@ export default async function connect(
       client,
       output,
       confirm,
+      connectedProvider,
       connectedRepoPath
     );
     if (!shouldReplaceRepo) {
@@ -155,25 +346,22 @@ export default async function connect(
       return connect;
     }
   }
-
-  output.log(
-    `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
-  );
-
-  return 0;
 }
 
 async function confirmRepoConnect(
   client: Client,
   output: Output,
   yes: boolean,
+  connectedProvider: string,
   connectedRepoPath: string
 ) {
   let shouldReplaceProject = yes;
   if (!shouldReplaceProject) {
     shouldReplaceProject = await confirm(
       client,
-      `Looks like you already have a repository connected: ${chalk.cyan(
+      `Looks like you already have a ${formatProvider(
+        connectedProvider
+      )} repository connected: ${chalk.cyan(
         connectedRepoPath
       )}. Do you want to replace it?`,
       true
