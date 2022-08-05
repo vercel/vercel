@@ -61,7 +61,6 @@ export default async function dev(
   }
 
   let devCommand: string | undefined;
-  let frameworkSlug: string | undefined;
   let projectSettings: ProjectSettings | undefined;
   let projectEnvs: ProjectEnvVariable[] = [];
   let systemEnvValues: string[] = [];
@@ -77,10 +76,6 @@ export default async function dev(
       const framework = frameworks.find(f => f.slug === project.framework);
 
       if (framework) {
-        if (framework.slug) {
-          frameworkSlug = framework.slug;
-        }
-
         const defaults = framework.settings.devCommand.value;
         if (defaults) {
           devCommand = defaults;
@@ -120,7 +115,6 @@ export default async function dev(
   const devServer = new DevServer(cwd, {
     output,
     devCommand,
-    frameworkSlug,
     projectSettings,
     projectEnvs,
     systemEnvValues,
