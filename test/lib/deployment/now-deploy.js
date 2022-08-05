@@ -9,7 +9,7 @@ const ms = require('ms');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function nowDeploy(bodies, randomness, uploadNowJson) {
+async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
   const files = Object.keys(bodies)
     .filter(n =>
       uploadNowJson
@@ -29,9 +29,11 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
         (path.extname(n) === '.sh' ? 0o100755 : 0o100644),
     }));
 
-  const { FORCE_BUILD_IN_REGION, NOW_DEBUG, VERCEL_DEBUG, VERCEL_CLI_VERSION } =
+  const { FORCE_BUILD_IN_REGION, VERCEL_DEBUG, VERCEL_CLI_VERSION } =
     process.env;
-  const nowJson = JSON.parse(bodies['vercel.json'] || bodies['now.json']);
+  const nowJson = JSON.parse(
+    bodies['vercel.json'] || bodies['now.json'] || '{}'
+  );
 
   delete nowJson.probes;
 
@@ -44,13 +46,12 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
         ...(nowJson.build || {}).env,
         RANDOMNESS_BUILD_ENV_VAR: randomness,
         FORCE_BUILD_IN_REGION,
-        NOW_DEBUG,
         VERCEL_DEBUG,
         VERCEL_CLI_VERSION,
         NEXT_TELEMETRY_DISABLED: '1',
       },
     },
-    name: 'test2020',
+    name: projectName,
     files,
     meta: {},
     ...nowJson,

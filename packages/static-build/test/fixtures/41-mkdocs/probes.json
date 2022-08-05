@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "For full documentation visit" },
+    { "path": "/another/", "mustContain": "This is another page" }
+  ]
+}

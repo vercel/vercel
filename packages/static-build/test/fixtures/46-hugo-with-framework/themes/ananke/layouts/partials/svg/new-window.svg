@@ -1,3 +1,0 @@
-<svg {{ with .size }} height="{{ . }}" {{ end }} style="enable-background:new 0 0 1000 1000;" version="1.1" viewBox="0 0 1000 1000" width="{{ .size }}" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" >
-<path d="M598 128h298v298h-86v-152l-418 418-60-60 418-418h-152v-86zM810 810v-298h86v298c0 46-40 86-86 86h-596c-48 0-86-40-86-86v-596c0-46 38-86 86-86h298v86h-298v596h596z" style="fill-rule:evenodd;clip-rule:evenodd;fill:{{ .fill }};"/>
-</svg>
