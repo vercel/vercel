@@ -55,13 +55,18 @@ export default async function main(client: Client) {
     '-p': '--project',
 
     // deprecated
-    '-c': '--yes',
-    '--confirm': '--yes',
+    '--confirm': Boolean,
+    '-c': '--confirm',
   });
 
   if (argv['--help']) {
     help();
     return 2;
+  }
+
+  if ('--confirm' in argv) {
+    client.output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    argv['--yes'] = argv['--confirm'];
   }
 
   const cwd = argv._[1] || process.cwd();

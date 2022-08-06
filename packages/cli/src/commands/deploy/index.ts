@@ -100,9 +100,14 @@ export default async (client: Client) => {
       '-n': '--name',
       '--no-clipboard': Boolean,
       '--target': String,
-      '-c': '--yes',
-      '--confirm': '--yes',
+      '--confirm': Boolean,
+      '-c': '--confirm',
     });
+
+    if ('--confirm' in argv) {
+      output.warn('`--confirm` is deprecated, please use `--yes` instead');
+      argv['--yes'] = argv['--confirm'];
+    }
   } catch (error) {
     handleError(error);
     return 1;

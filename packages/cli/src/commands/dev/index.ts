@@ -80,10 +80,15 @@ export default async function main(client: Client) {
       // Deprecated
       '--port': Number,
       '-p': '--port',
-      '-c': '--yes',
-      '--confirm': '--yes',
+      '--confirm': Boolean,
+      '-c': '--confirm',
     });
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
+
+    if ('--confirm' in argv) {
+      output.warn('`--confirm` is deprecated, please use `--yes` instead');
+      argv['--yes'] = argv['--confirm'];
+    }
 
     if ('--port' in argv) {
       output.warn('`--port` is deprecated, please use `--listen` instead');

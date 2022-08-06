@@ -45,7 +45,7 @@ const help = () => {
   )}        Login token
     -S, --scope                    Set a custom scope
     -N, --next                     Show next page of results
-    -y, --yes                      Confirm deletion without prompting
+    -y, --yes                      Skip the confirmation prompt
 
   ${chalk.dim('Examples:')}
 

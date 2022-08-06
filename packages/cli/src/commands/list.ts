@@ -82,8 +82,8 @@ export default async function main(client: Client) {
       '-y': '--yes',
 
       // deprecated
-      '-c': '--yes',
-      '--confirm': '--yes',
+      '--confirm': Boolean,
+      '-c': '--confirm',
     });
   } catch (err) {
     handleError(err);
@@ -91,6 +91,11 @@ export default async function main(client: Client) {
   }
 
   const { output, config } = client;
+
+  if ('--confirm' in argv) {
+    output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    argv['--yes'] = argv['--confirm'];
+  }
 
   const { print, log, error, note, debug, spinner } = output;
 
