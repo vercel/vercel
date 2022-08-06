@@ -517,5 +517,55 @@ describe('git', () => {
         process.chdir(originalCwd);
       }
     });
+    it('should prompt when it finds multiple remotes', async () => {
+      const cwd = fixture('multiple-remotes');
+      try {
+        process.chdir(cwd);
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        useUser();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'multiple-remotes',
+          name: 'multiple-remotes',
+        });
+
+        client.setArgv('git', 'connect', 'https://github.com/user3/repo3');
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Found multiple Git repositories in your local Git config:\n  • origin: https://github.com/user/repo.git\n  • secondary: https://github.com/user/repo2.git`
+        );
+        await expect(client.stderr).toOutput(
+          `Do you still want to connect https://github.com/user3/repo3? [y/N]`
+        );
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          `Connecting Git remote: https://github.com/user3/repo3`
+        );
+        await expect(client.stderr).toOutput(
+          `Connected GitHub repository user3/repo3!`
+        );
+
+        const newProjectData: Project = await client.fetch(
+          `/v8/projects/multiple-remotes`
+        );
+        expect(newProjectData.link).toMatchObject({
+          type: 'github',
+          repo: 'user3/repo3',
+          repoId: 1010,
+          gitCredentialId: '',
+          sourceless: true,
+          createdAt: 1656109539791,
+          updatedAt: 1656109539791,
+        });
+
+        await expect(gitPromise).resolves.toEqual(0);
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+        process.chdir(originalCwd);
+      }
+    });
   });
 });
