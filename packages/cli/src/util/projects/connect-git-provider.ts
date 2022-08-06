@@ -128,7 +128,7 @@ export function printRemoteUrls(
 ) {
   let str = '';
   for (const [name, url] of Object.entries(remoteUrls)) {
-    str += chalk.cyan(`  • ${name}: ${url}\n`);
+    str += `  • ${name}: ${chalk.cyan(url)}\n`;
   }
   output.print(str);
 }
