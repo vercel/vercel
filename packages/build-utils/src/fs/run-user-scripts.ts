@@ -328,7 +328,7 @@ export async function scanParentDirs(
   });
   let lockfileVersion: number | undefined;
   let cliType: CliType = 'yarn';
-  const cliVersion = packageJson?.packageManager?.version;
+  const cliVersion = packageJson?.packageManager?.split('@')[1];
 
   const [hasYarnLock, packageLockJson, pnpmLockYaml] = await Promise.all([
     Boolean(yarnLockPath),
@@ -462,7 +462,7 @@ function getInstallCommandForCli(cliType: CliType) {
   }
 }
 
-export async function updatePackageManager(
+export async function runUpdatePackageManager(
   destPath: string,
   spawnOpts?: SpawnOptions,
   nodeVersion?: NodeVersion

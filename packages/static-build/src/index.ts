@@ -31,6 +31,7 @@ import {
   debug,
   NowBuildError,
   scanParentDirs,
+  runUpdatePackageManager,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
@@ -441,6 +442,9 @@ export const build: BuildV2 = async ({
           hasPrintedInstall = true;
         }
       };
+
+      // Update package manager
+      await runUpdatePackageManager(entrypointDir, spawnOpts, nodeVersion);
 
       if (!config.zeroConfig) {
         debug('Detected "builds" - not zero config');
