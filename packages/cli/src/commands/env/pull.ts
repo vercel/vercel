@@ -130,6 +130,12 @@ export default async function pull(
 
   await outputFile(fullPath, contents, 'utf8');
 
+  if (deltaString) {
+    output.print('\n' + deltaString);
+  } else if (oldEnv && exists) {
+    output.log('No changes found.');
+  }
+
   output.print(
     `${prependEmoji(
       `${exists ? 'Updated' : 'Created'} ${chalk.bold(
@@ -138,13 +144,6 @@ export default async function pull(
       emoji('success')
     )}\n`
   );
-
-  output.print('\n');
-  if (deltaString) {
-    output.print(deltaString);
-  } else if (oldEnv && exists) {
-    output.log('No changes found.');
-  }
 
   return 0;
 }

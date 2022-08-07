@@ -1,0 +1,7 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "AngularApp" },
+    { "path": "/main-es2015.js", "mustContain": "Tour of Heroes" },
+    { "path": "/iudieufwunifiwwnuwfuw", "mustContain": "AngularApp" }
+  ]
+}
