@@ -12,6 +12,9 @@ import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 import { readConfigFile } from './read-config-file';
 
+// Only allow one `updatePackageManager` invocation to concurrently
+const updatePackageManagerSema = new Sema(1);
+
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
 
@@ -22,6 +25,10 @@ export interface ScanParentDirsResult {
    * "yarn", "npm", or "pnpm" depending on the presence of lockfiles.
    */
   cliType: CliType;
+  /**
+   * The version of the package manager configured to use.
+   */
+  cliVersion: string | undefined;
   /**
    * The file path of found `package.json` file, or `undefined` if none was
    * found.
@@ -321,6 +328,7 @@ export async function scanParentDirs(
   });
   let lockfileVersion: number | undefined;
   let cliType: CliType = 'yarn';
+  const cliVersion = packageJson?.packageManager?.version;
 
   const [hasYarnLock, packageLockJson, pnpmLockYaml] = await Promise.all([
     Boolean(yarnLockPath),
@@ -345,7 +353,7 @@ export async function scanParentDirs(
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
-  return { cliType, packageJson, lockfileVersion, packageJsonPath };
+  return { cliType, packageJson, lockfileVersion, packageJsonPath, cliVersion };
 }
 
 export async function walkParentDirs({
@@ -412,6 +420,89 @@ function isSet<T>(v: any): v is Set<T> {
   return v?.constructor?.name === 'Set';
 }
 
+function getInstallCommandArgs(
+  cliType: CliType,
+  args: string[],
+  opts: SpawnOptionsExtended
+) {
+  let commandArgs: string[];
+
+  if (cliType === 'npm') {
+    opts.prettyCommand = 'npm install';
+    commandArgs = args
+      .filter(a => a !== '--prefer-offline')
+      .concat(['install', '--no-audit', '--unsafe-perm']);
+  } else if (cliType === 'pnpm') {
+    // PNPM's install command is similar to NPM's but without the audit nonsense
+    // @see options https://pnpm.io/cli/install
+    opts.prettyCommand = 'pnpm install';
+    commandArgs = args
+      .filter(a => a !== '--prefer-offline')
+      .concat(['install', '--unsafe-perm']);
+  } else {
+    opts.prettyCommand = 'yarn install';
+    commandArgs = ['install', ...args];
+  }
+
+  if (process.env.NPM_ONLY_PRODUCTION) {
+    commandArgs.push('--production');
+  }
+
+  return commandArgs;
+}
+
+function getInstallCommandForCli(cliType: CliType) {
+  if (cliType === 'npm') {
+    return 'install';
+  } else {
+    // PNPM and yarn uses the `add` command
+    // @see usage https://pnpm.io/cli/add
+    // @see usage https://yarnpkg.com/cli/add
+    return 'add';
+  }
+}
+
+export async function updatePackageManager(
+  destPath: string,
+  spawnOpts?: SpawnOptions,
+  nodeVersion?: NodeVersion
+): Promise<boolean> {
+  try {
+    await updatePackageManagerSema.acquire();
+    const { cliType, cliVersion, lockfileVersion } = await scanParentDirs(
+      destPath
+    );
+
+    if (cliVersion === undefined) {
+      return false;
+    }
+
+    const updateTime = Date.now();
+    debug(`Updating package manager to version: ${cliVersion}`);
+    debug(`Using Node.js version ${nodeVersion}`);
+
+    const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
+    const env = opts.env ? { ...opts.env } : { ...process.env };
+    delete env.NODE_ENV;
+    opts.env = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      nodeVersion,
+      env,
+    });
+    const commandArgs = [
+      getInstallCommandForCli(cliType),
+      cliType + '@' + cliVersion,
+    ];
+
+    await spawnAsync(cliType, commandArgs, opts);
+    debug(`Install complete [${Date.now() - updateTime}ms]`);
+    return true;
+  } finally {
+    updatePackageManagerSema.release();
+  }
+}
+
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
@@ -460,28 +551,8 @@ export async function runNpmInstall(
       nodeVersion,
       env,
     });
-    let commandArgs: string[];
 
-    if (cliType === 'npm') {
-      opts.prettyCommand = 'npm install';
-      commandArgs = args
-        .filter(a => a !== '--prefer-offline')
-        .concat(['install', '--no-audit', '--unsafe-perm']);
-    } else if (cliType === 'pnpm') {
-      // PNPM's install command is similar to NPM's but without the audit nonsense
-      // @see options https://pnpm.io/cli/install
-      opts.prettyCommand = 'pnpm install';
-      commandArgs = args
-        .filter(a => a !== '--prefer-offline')
-        .concat(['install', '--unsafe-perm']);
-    } else {
-      opts.prettyCommand = 'yarn install';
-      commandArgs = ['install', ...args];
-    }
-
-    if (process.env.NPM_ONLY_PRODUCTION) {
-      commandArgs.push('--production');
-    }
+    const commandArgs = getInstallCommandArgs(cliType, args, opts);
 
     await spawnAsync(cliType, commandArgs, opts);
     debug(`Install complete [${Date.now() - installTime}ms]`);
