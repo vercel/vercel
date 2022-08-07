@@ -266,11 +266,6 @@ export namespace PackageJson {
   }
 }
 
-export interface PackageManager {
-  name: 'npm' | 'pnpm ' | 'yarn';
-  version: string;
-}
-
 export interface PackageJson {
   readonly name?: string;
   readonly version?: string;
@@ -300,7 +295,7 @@ export interface PackageJson {
   readonly preferGlobal?: boolean;
   readonly private?: boolean;
   readonly publishConfig?: PackageJson.PublishConfig;
-  readonly packageManager?: PackageManager;
+  readonly packageManager?: string;
 }
 
 export interface NodeVersion {
