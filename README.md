@@ -35,6 +35,6 @@ For details on how to use Vercel, check out our [documentation](https://vercel.c
 
 ## Contributing
 
-- [Code of Conduct](.github/CODE_OF_CONDUCT.md)
-- [Contributing Guidelines](.github/CONTRIBUTING.md)
-- [MIT License](LICENSE)
+- [Code of Conduct](./.github/CODE_OF_CONDUCT.md)
+- [Contributing Guidelines](./.github/CONTRIBUTING.md)
+- [MIT License](./LICENSE)
