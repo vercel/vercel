@@ -269,10 +269,6 @@ export async function build({
       to: originalFunctionName,
     });
 
-    debug(
-      `Found exported function "${handlerFunctionName}" in "${entrypoint}"`
-    );
-
     if (!isGoModExist) {
       if (await pathExists(join(workPath, 'vendor'))) {
         throw new Error('`go.mod` is required to use a `vendor` directory.');
