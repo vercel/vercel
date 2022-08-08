@@ -85,18 +85,7 @@ export async function* upload(
 
         await semaphore.acquire();
 
-        //let body: fs.ReadStream | string | null = null;
-
         const { data } = file;
-        const body = data;
-
-        //const stat = new Stats();
-        //stat.mode = mode;
-        //if (stat.isSymbolicLink()) {
-        //  body = await fs.readlink(fPath);
-        //} else {
-        //  body = fs.createReadStream(fPath);
-        //}
 
         let err;
         let result;
@@ -114,7 +103,7 @@ export async function* upload(
                 'x-now-digest': sha,
                 'x-now-size': data.length,
               },
-              body,
+              body: data,
               teamId,
               apiUrl,
               userAgent,
@@ -151,11 +140,6 @@ export async function* upload(
         } catch (e: any) {
           debug(`An unexpected error occurred in upload promise:\n${e}`);
           err = new Error(e);
-        } finally {
-          if (body && typeof body !== 'string') {
-            //body.close();
-            //body.destroy();
-          }
         }
 
         semaphore.release();

@@ -66,7 +66,10 @@ import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { createGitMeta } from '../../util/create-git-meta';
-import { isValidArchive } from '../../util/deploy/validate-archive-format';
+import {
+  archiveFormats,
+  isValidArchive,
+} from '../../util/deploy/validate-archive-format';
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '../../util/is-error';
 
@@ -258,7 +261,7 @@ export default async (client: Client) => {
 
   const archive = argv['--archive'];
   if (typeof archive === 'string' && !isValidArchive(archive)) {
-    output.error('Format must be zip or tgz');
+    output.error(`Format must be one of: ${archiveFormats().join(', ')}`);
     return 1;
   }
 

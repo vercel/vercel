@@ -86,8 +86,6 @@ export default function buildCreateDeployment() {
       };
     }
 
-    //const files = await hashes(fileList);
-
     // Populate Files -> FileFsRef mapping
     const workPath = typeof path === 'string' ? path : path[0];
 
