@@ -14,12 +14,14 @@ export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
 function getRegExpFromMatcher(matcher: unknown): string {
   if (typeof matcher !== 'string') {
     throw new Error(
-      '`matcher` must be a path matcher or an array of path matchers'
+      "Middleware's `config.matcher` must be a path matcher (string) or an array of path matchers (string[])"
     );
   }
 
   if (!matcher.startsWith('/')) {
-    throw new Error('`matcher`: path matcher must start with /');
+    throw new Error(
+      `Middleware's \`config.matcher\` values must start with "/". Received: ${matcher}`
+    );
   }
 
   const re = pathToRegexp(matcher);

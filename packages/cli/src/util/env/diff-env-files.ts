@@ -63,18 +63,25 @@ export function buildDeltaString(
   const { added, changed, removed } = findChanges(oldEnv, newEnv);
 
   let deltaString = '';
+  deltaString += chalk.green(addDeltaSection('+', changed, true));
   deltaString += chalk.green(addDeltaSection('+', added));
-  deltaString += chalk.yellow(addDeltaSection('~', changed));
   deltaString += chalk.red(addDeltaSection('-', removed));
 
-  return deltaString ? chalk.gray('Changes:\n') + deltaString : deltaString;
+  return deltaString
+    ? chalk.gray('Changes:\n') + deltaString + '\n'
+    : deltaString;
 }
 
-function addDeltaSection(prefix: string, arr: string[]): string {
+function addDeltaSection(
+  prefix: string,
+  arr: string[],
+  changed: boolean = false
+): string {
+  if (arr.length === 0) return '';
   return (
     arr
       .sort()
-      .map(item => `${prefix} ${item}`)
+      .map(item => `${prefix} ${item}${changed ? ' (Updated)' : ''}`)
       .join('\n') + '\n'
   );
 }

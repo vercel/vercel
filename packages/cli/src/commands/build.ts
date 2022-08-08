@@ -157,7 +157,7 @@ export default async function main(client: Client): Promise<number> {
         client.output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
             'pull --yes'
-          )} to retreive them.`
+          )} to retrieve them.`
         );
         return 1;
       }
@@ -469,6 +469,8 @@ async function doBuild(
         )
       );
     } catch (err: any) {
+      output.prettyError(err);
+
       const writeConfigJsonPromise = fs.writeJSON(
         join(outputDir, 'config.json'),
         { version: 3 },

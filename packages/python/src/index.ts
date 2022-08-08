@@ -109,19 +109,27 @@ export const build = async ({
   if (pipfileLockDir) {
     debug('Found "Pipfile.lock"');
 
+    let lock: {
+      _meta?: {
+        requires?: {
+          python_version?: string;
+        };
+      };
+    } = {};
     try {
       const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
-      const obj = JSON.parse(json);
-      pythonVersion = getSupportedPythonVersion({
-        isDev: meta.isDev,
-        pipLockPythonVersion: obj?._meta?.requires?.python_version,
-      });
+      lock = JSON.parse(json);
     } catch (err) {
       throw new NowBuildError({
         code: 'INVALID_PIPFILE_LOCK',
         message: 'Unable to parse Pipfile.lock',
       });
     }
+
+    pythonVersion = getSupportedPythonVersion({
+      isDev: meta.isDev,
+      pipLockPythonVersion: lock?._meta?.requires?.python_version,
+    });
 
     // Convert Pipenv.Lock to requirements.txt.
     // We use a different`workPath` here because we want `pipfile-requirements` and it's dependencies
