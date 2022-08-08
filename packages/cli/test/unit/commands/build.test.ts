@@ -902,7 +902,6 @@ describe('build', () => {
       output = join(cwd, '.vercel/output');
 
       process.chdir(cwd);
-      client.stderr.pipe(process.stderr);
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
