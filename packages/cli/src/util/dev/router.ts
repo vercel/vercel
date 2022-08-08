@@ -130,8 +130,9 @@ export async function devRouter(
           phase !== 'hit' &&
           !isDestUrl
         ) {
+          const { pathname = '/' } = url.parse(destPath);
           const hasDestFile = await devServer.hasFilesystem(
-            destPath,
+            pathname,
             vercelConfig
           );
 
