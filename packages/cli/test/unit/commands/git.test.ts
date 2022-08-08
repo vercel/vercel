@@ -567,7 +567,7 @@ describe('git', () => {
         process.chdir(originalCwd);
       }
     });
-    it('should continue as normal when input matches singlegit remote', async () => {
+    it('should continue as normal when input matches single git remote', async () => {
       const cwd = fixture('new-connection');
       try {
         process.chdir(cwd);
