@@ -30,7 +30,7 @@ const help = () => {
 
   ${chalk.gray(
     '–'
-  )} Connect a Git provider repository from your local Git config
+  )} Connect your Vercel Project your Git repository defined in your local .git config
 
     ${chalk.cyan(`$ ${getPkgName()} git connect`)}
   
