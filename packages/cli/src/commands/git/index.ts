@@ -34,7 +34,7 @@ const help = () => {
 
     ${chalk.cyan(`$ ${getPkgName()} git connect`)}
   
-  ${chalk.gray('–')} Connect a Git provider repository
+  ${chalk.gray('–')} Connect your Vercel Project to a Git repository using the remote URL
 
     ${chalk.cyan(
       `$ ${getPkgName()} git connect https://github.com/user/repo.git`
