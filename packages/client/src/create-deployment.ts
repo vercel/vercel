@@ -1,5 +1,5 @@
 import { lstatSync } from 'fs-extra';
-import { isAbsolute, relative } from 'path';
+import { isAbsolute } from 'path';
 import { hash, hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
@@ -10,10 +10,9 @@ import {
   DeploymentEventType,
   ArchiveFormat,
 } from './types';
-import { FileFsRef, Files, streamToBuffer } from '@vercel/build-utils';
+import { streamToBuffer } from '@vercel/build-utils';
 import tar from 'tar-fs';
-import { createBrotliCompress, createGzip } from 'zlib';
-import { createZip } from '../../build-utils/dist/lambda';
+import { createGzip } from 'zlib';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
@@ -94,44 +93,21 @@ export default function buildCreateDeployment() {
 
     let files;
 
-    if (clientOptions.archive === ArchiveFormat.Zip) {
-      const filesMap: Files = {};
-      debug('Collecting files map');
-      for (const fsPath of fileList) {
-        const { mode } = lstatSync(fsPath);
-        filesMap[relative(workPath, fsPath)] = new FileFsRef({
-          mode,
-          fsPath,
-        });
-      }
-      debug('Creating zip');
-      const zipBuffer = await createZip(filesMap);
-      debug('Created zip');
-      files = new Map([
-        [
-          hash(zipBuffer),
-          { names: ['.vercel/source.zip'], data: zipBuffer, mode: 0o666 },
-        ],
-      ]);
-    } else if (
-      clientOptions.archive === ArchiveFormat.Tgz ||
-      clientOptions.archive === ArchiveFormat.TarBr
-    ) {
+    if (clientOptions.archive === ArchiveFormat.Tgz) {
       debug('Packing tarball');
-      const tarBr = clientOptions.archive === ArchiveFormat.TarBr;
       fileList = fileList.map(file => file.replace(workPath, ''));
       let tarStream = tar
         .pack(workPath, {
           entries: fileList,
         })
-        .pipe(tarBr ? createBrotliCompress() : createGzip());
+        .pipe(createGzip());
       const tarBuffer: Buffer = await streamToBuffer(tarStream);
       debug('Packed tarball');
       files = new Map([
         [
           hash(tarBuffer),
           {
-            names: [tarBr ? '.vercel/source.tar.br' : '.vercel/source.tgz'],
+            names: ['.vercel/source.tgz'],
             data: tarBuffer,
             mode: 0o666,
           },
