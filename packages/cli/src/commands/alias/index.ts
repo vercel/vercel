@@ -37,7 +37,7 @@ const help = () => {
   )}             Login token
     -S, --scope                         Set a custom scope
     -N, --next                          Show next page of results
-    -y, --yes                           Skip questions when setting up new project using default scope and settings
+    -y, --yes                           Skip the confirmation prompt when removing an alias
 
   ${chalk.dim('Examples:')}
 
