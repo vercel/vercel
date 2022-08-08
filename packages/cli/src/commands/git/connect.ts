@@ -389,7 +389,7 @@ async function confirmRepoConnect(
 
 async function selectRemoteUrl(
   client: Client,
-  remoteUrls: { [key: string]: string }
+  remoteUrls: Dictionary<string>
 ): Promise<string> {
   let choices: ListChoice[] = [];
   for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
