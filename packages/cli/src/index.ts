@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import { isErrnoException, isError, errorToString } from './util/is-error';
 
 try {
   // Test to see if cwd has been deleted before
   // importing 3rd party packages that might need cwd.
   process.cwd();
-} catch (e) {
-  if (e && e.message && e.message.includes('uv_cwd')) {
+} catch (err: unknown) {
+  if (isError(err) && err.message.includes('uv_cwd')) {
     console.error('Error! The current working directory does not exist.');
     process.exit(1);
   }
@@ -39,8 +40,8 @@ import getConfig from './util/get-config';
 import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
 import {
-  getDefaultConfig,
-  getDefaultAuthConfig,
+  defaultAuthConfig,
+  defaultGlobalConfig,
 } from './util/config/get-default';
 import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
@@ -49,7 +50,7 @@ import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
-import { GlobalConfig } from './types';
+import { AuthConfig, GlobalConfig } from './types';
 import { VercelConfig } from '@vercel/client';
 
 const isCanary = pkg.version.includes('canary');
@@ -103,7 +104,7 @@ const main = async () => {
       },
       { permissive: true }
     );
-  } catch (err) {
+  } catch (err: unknown) {
     handleError(err);
     return 1;
   }
@@ -201,169 +202,65 @@ const main = async () => {
   // Ensure that the Vercel global configuration directory exists
   try {
     await mkdirp(VERCEL_DIR);
-  } catch (err) {
-    console.error(
-      error(
-        `${
-          'An unexpected error occurred while trying to create the ' +
-          `global directory "${hp(VERCEL_DIR)}" `
-        }${err.message}`
-      )
+  } catch (err: unknown) {
+    output.error(
+      `An unexpected error occurred while trying to create the global directory "${hp(
+        VERCEL_DIR
+      )}" ${errorToString(err)}`
     );
-  }
-
-  let migrated = false;
-  let configExists;
-
-  try {
-    configExists = existsSync(VERCEL_CONFIG_PATH);
-  } catch (err) {
-    console.error(
-      error(
-        `${
-          'An unexpected error occurred while trying to find the ' +
-          `config file "${hp(VERCEL_CONFIG_PATH)}" `
-        }${err.message}`
-      )
-    );
-
-    return 0;
-  }
-
-  let config: GlobalConfig | null = null;
-
-  if (configExists) {
-    try {
-      config = configFiles.readConfigFile();
-    } catch (err) {
-      console.error(
-        error(
-          `${
-            'An unexpected error occurred while trying to read the ' +
-            `config in "${hp(VERCEL_CONFIG_PATH)}" `
-          }${err.message}`
-        )
-      );
-
-      return 1;
-    }
-
-    // This is from when Vercel CLI supported
-    // multiple providers. In that case, we really
-    // need to migrate.
-    if (
-      // @ts-ignore
-      config.sh ||
-      // @ts-ignore
-      config.user ||
-      // @ts-ignore
-      typeof config.user === 'object' ||
-      typeof config.currentTeam === 'object'
-    ) {
-      configExists = false;
-    }
-  }
-
-  if (!configExists) {
-    const results = await getDefaultConfig(config);
-
-    config = results.config;
-    migrated = results.migrated;
-
-    try {
-      configFiles.writeToConfigFile(config);
-    } catch (err) {
-      console.error(
-        error(
-          `${
-            'An unexpected error occurred while trying to write the ' +
-            `default config to "${hp(VERCEL_CONFIG_PATH)}" `
-          }${err.message}`
-        )
-      );
-
-      return 1;
-    }
-  }
-
-  let authConfigExists;
-
-  try {
-    authConfigExists = existsSync(VERCEL_AUTH_CONFIG_PATH);
-  } catch (err) {
-    console.error(
-      error(
-        `${
-          'An unexpected error occurred while trying to find the ' +
-          `auth file "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-        }${err.message}`
-      )
-    );
-
     return 1;
   }
 
-  let authConfig = null;
-
-  const subcommandsWithoutToken = [
-    'login',
-    'logout',
-    'help',
-    'init',
-    'update',
-    'build',
-  ];
-
-  if (authConfigExists) {
-    try {
-      authConfig = configFiles.readAuthConfigFile();
-    } catch (err) {
-      console.error(
-        error(
-          `${
-            'An unexpected error occurred while trying to read the ' +
-            `auth config in "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-          }${err.message}`
-        )
-      );
-
-      return 1;
-    }
-
-    // This is from when Vercel CLI supported
-    // multiple providers. In that case, we really
-    // need to migrate.
-    // @ts-ignore
-    if (authConfig.credentials) {
-      authConfigExists = false;
-    }
-  } else {
-    const results = await getDefaultAuthConfig(authConfig);
-
-    authConfig = results.config;
-    migrated = results.migrated;
-
-    try {
-      configFiles.writeToAuthConfigFile(authConfig);
-    } catch (err) {
-      console.error(
-        error(
-          `${
-            'An unexpected error occurred while trying to write the ' +
-            `default config to "${hp(VERCEL_AUTH_CONFIG_PATH)}" `
-          }${err.message}`
-        )
+  let config: GlobalConfig;
+  try {
+    config = configFiles.readConfigFile();
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
+      config = defaultGlobalConfig;
+      try {
+        configFiles.writeToConfigFile(config);
+      } catch (err: unknown) {
+        output.error(
+          `An unexpected error occurred while trying to save the config to "${hp(
+            VERCEL_CONFIG_PATH
+          )}" ${errorToString(err)}`
+        );
+        return 1;
+      }
+    } else {
+      output.error(
+        `An unexpected error occurred while trying to read the config in "${hp(
+          VERCEL_CONFIG_PATH
+        )}" ${errorToString(err)}`
       );
       return 1;
     }
   }
 
-  // Let the user know we migrated the config
-  if (migrated) {
-    const directory = param(hp(VERCEL_DIR));
-    debug(
-      `The credentials and configuration within the ${directory} directory were upgraded`
-    );
+  let authConfig: AuthConfig;
+  try {
+    authConfig = configFiles.readAuthConfigFile();
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
+      authConfig = defaultAuthConfig;
+      try {
+        configFiles.writeToAuthConfigFile(authConfig);
+      } catch (err: unknown) {
+        output.error(
+          `An unexpected error occurred while trying to write the auth config to "${hp(
+            VERCEL_AUTH_CONFIG_PATH
+          )}" ${errorToString(err)}`
+        );
+        return 1;
+      }
+    } else {
+      output.error(
+        `An unexpected error occurred while trying to read the auth config in "${hp(
+          VERCEL_AUTH_CONFIG_PATH
+        )}" ${errorToString(err)}`
+      );
+      return 1;
+    }
   }
 
   if (typeof argv['--api'] === 'string') {
@@ -373,15 +270,9 @@ const main = async () => {
   }
 
   try {
-    // eslint-disable-next-line no-new
     new URL(apiUrl);
-  } catch (err) {
+  } catch (err: unknown) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
-    return 1;
-  }
-
-  if (!config) {
-    output.error(`Vercel global config was not loaded.`);
     return 1;
   }
 
@@ -431,6 +322,15 @@ const main = async () => {
     subcommand = argv._[3] || 'deploy';
     client.argv.push('-h');
   }
+
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'update',
+    'build',
+  ];
 
   // Prompt for login if there is no current token
   if (
@@ -543,8 +443,8 @@ const main = async () => {
 
     try {
       user = await getUser(client);
-    } catch (err) {
-      if (err.code === 'NOT_AUTHORIZED') {
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
         output.prettyError({
           message: `You do not have access to the specified account`,
           link: 'https://err.sh/vercel/scope-not-accessible',
@@ -564,8 +464,8 @@ const main = async () => {
 
       try {
         teams = await getTeams(client);
-      } catch (err) {
-        if (err.code === 'not_authorized') {
+      } catch (err: unknown) {
+        if (isErrnoException(err) && err.code === 'not_authorized') {
           output.prettyError({
             message: `You do not have access to the specified team`,
             link: 'https://err.sh/vercel/scope-not-accessible',
@@ -594,8 +494,8 @@ const main = async () => {
     }
   }
 
-  const metric = metrics();
   let exitCode;
+  let metric: ReturnType<typeof metrics> | undefined;
   const eventCategory = 'Exit Code';
 
   try {
@@ -698,13 +598,14 @@ const main = async () => {
     if (shouldCollectMetrics) {
       const category = 'Command Invocation';
 
+      if (!metric) metric = metrics();
       metric
         .timing(category, targetCommand, end, pkg.version)
         .event(category, targetCommand, pkg.version)
         .send();
     }
-  } catch (err) {
-    if (err.code === 'ENOTFOUND') {
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
       // "request to https://api.vercel.com/v2/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
       const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
@@ -716,11 +617,16 @@ const main = async () => {
           )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
         );
       }
-      output.debug(err.stack);
+      if (typeof err.stack === 'string') {
+        output.debug(err.stack);
+      }
       return 1;
     }
 
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
+    if (
+      isErrnoException(err) &&
+      (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
+    ) {
       output.prettyError(err);
       return 1;
     }
@@ -732,9 +638,10 @@ const main = async () => {
     }
 
     if (shouldCollectMetrics) {
+      if (!metric) metric = metrics();
       metric
         .event(eventCategory, '1', pkg.version)
-        .exception(err.message)
+        .exception(errorToString(err))
         .send();
     }
 
@@ -742,8 +649,10 @@ const main = async () => {
     // but instead show the message. Any error that is handled by this should
     // actually be handled in the sub command instead. Please make sure
     // that happens for anything that lands here. It should NOT bubble up to here.
-    if (err.code) {
-      output.debug(err.stack);
+    if (isErrnoException(err)) {
+      if (typeof err.stack === 'string') {
+        output.debug(err.stack);
+      }
       output.prettyError(err);
     } else {
       await reportError(Sentry, client, err);
@@ -757,6 +666,7 @@ const main = async () => {
   }
 
   if (shouldCollectMetrics) {
+    if (!metric) metric = metrics();
     metric.event(eventCategory, `${exitCode}`, pkg.version).send();
   }
 

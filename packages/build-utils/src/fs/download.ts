@@ -27,9 +27,7 @@ async function prepareSymlinkTarget(
   }
 
   if (file.type === 'FileRef' || file.type === 'FileBlob') {
-    const targetPathBufferPromise = await streamToBuffer(
-      await file.toStreamAsync()
-    );
+    const targetPathBufferPromise = streamToBuffer(await file.toStreamAsync());
     const [targetPathBuffer] = await Promise.all([
       targetPathBufferPromise,
       mkdirPromise,
@@ -42,9 +40,15 @@ async function prepareSymlinkTarget(
   );
 }
 
-async function downloadFile(file: File, fsPath: string): Promise<FileFsRef> {
+export async function downloadFile(
+  file: File,
+  fsPath: string
+): Promise<FileFsRef> {
   const { mode } = file;
 
+  // If the source is a symlink, try to create it instead of copying the file.
+  // Note: creating symlinks on Windows requires admin priviliges or symlinks
+  // enabled in the group policy. We may want to improve the error message.
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
 
@@ -92,10 +96,26 @@ export default async function download(
         await removeFile(basePath, name);
         return;
       }
-
       // If a file didn't change, do not re-download it.
       if (Array.isArray(filesChanged) && !filesChanged.includes(name)) {
         return;
+      }
+
+      // Some builders resolve symlinks and return both
+      // a file, node_modules/<symlink>/package.json, and
+      // node_modules/<symlink>, a symlink.
+      // Removing the file matches how the yazl lambda zip
+      // behaves so we can use download() with `vercel build`.
+      const parts = name.split('/');
+      for (let i = 1; i < parts.length; i++) {
+        const dir = parts.slice(0, i).join('/');
+        const parent = files[dir];
+        if (parent && isSymbolicLink(parent.mode)) {
+          console.warn(
+            `Warning: file "${name}" is within a symlinked directory "${dir}" and will be ignored`
+          );
+          return;
+        }
       }
 
       const file = files[name];

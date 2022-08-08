@@ -1,0 +1,7 @@
+{
+  "name": "only-module",
+  "private": true,
+  "main": "dist-main.js",
+  "module": "dist-module.js",
+  "browser": "dist-browser.js"
+}

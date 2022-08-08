@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
+      dplUrl: ${{ steps.waitForTarball.outputs.url }}
     steps:
       - uses: actions/checkout@v2
       - run: git --version
@@ -32,6 +33,12 @@ jobs:
           echo "Files to test:"
           echo "$TESTS_ARRAY"
           echo "::set-output name=tests::$TESTS_ARRAY"
+      - uses: patrickedqvist/wait-for-vercel-preview@ae34b392ef30297f2b672f9afb3c329bde9bd487
+        id: waitForTarball
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 360
+          check_interval: 5
 
   test:
     timeout-minutes: 120
@@ -69,13 +76,14 @@ jobs:
       - run: yarn install --network-timeout 1000000
 
       - name: Build ${{matrix.packageName}} and all its dependencies
-        run: yarn turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
+        run: node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
         run: node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
+          VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
           VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}
           FORCE_COLOR: '1'

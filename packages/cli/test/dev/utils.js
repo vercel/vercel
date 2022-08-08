@@ -347,6 +347,12 @@ function testFixtureStdio(
               ? ['--scope', process.env.VERCEL_TEAM_ID]
               : []),
             'deploy',
+            ...(process.env.VERCEL_CLI_VERSION
+              ? [
+                  '--build-env',
+                  `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`,
+                ]
+              : []),
             '--public',
             '--debug',
           ],
@@ -427,7 +433,7 @@ function testFixtureStdio(
           );
         }
 
-        if (stderr.includes('Command failed') || stderr.includes('Error!')) {
+        if (stderr.includes('Command failed')) {
           dev.kill('SIGTERM');
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }

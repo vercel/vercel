@@ -10,6 +10,7 @@ import {
   download,
   getLambdaOptionsFromFunction,
   getNodeVersion,
+  getPrefixedEnvVars,
   getSpawnOptions,
   getScriptName,
   glob,
@@ -224,14 +225,14 @@ export const build: BuildV2 = async ({
     )
   );
 
-  Object.keys(process.env)
-    .filter(key => key.startsWith('VERCEL_'))
-    .forEach(key => {
-      const newKey = `NEXT_PUBLIC_${key}`;
-      if (!(newKey in process.env)) {
-        process.env[newKey] = process.env[key];
-      }
-    });
+  const prefixedEnvs = getPrefixedEnvVars({
+    envPrefix: 'NEXT_PUBLIC_',
+    envs: process.env,
+  });
+
+  for (const [key, value] of Object.entries(prefixedEnvs)) {
+    process.env[key] = value;
+  }
 
   await download(files, workPath, meta);
 
@@ -711,7 +712,7 @@ export const build: BuildV2 = async ({
           throw new NowBuildError({
             code: 'NEXT_IMAGES_DANGEROUSLYALLOWSVG',
             message:
-              'image-manifest.json "images.dangerouslyAllowSVG" must be an boolean. Contact support if this continues to happen.',
+              'image-manifest.json "images.dangerouslyAllowSVG" must be a boolean. Contact support if this continues to happen.',
           });
         }
         if (
@@ -721,7 +722,7 @@ export const build: BuildV2 = async ({
           throw new NowBuildError({
             code: 'NEXT_IMAGES_CONTENTSECURITYPOLICY',
             message:
-              'image-manifest.json "images.contentSecurityPolicy" must be an string. Contact support if this continues to happen.',
+              'image-manifest.json "images.contentSecurityPolicy" must be a string. Contact support if this continues to happen.',
           });
         }
         break;

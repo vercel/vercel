@@ -1,6 +1,6 @@
 import http from 'http';
 import { ChildProcess } from 'child_process';
-import { Lambda as FunLambda } from '@zeit/fun';
+import { Lambda as FunLambda } from '@vercel/fun';
 import {
   Builder as BuildConfig,
   BuildOptions,
@@ -24,7 +24,6 @@ export { VercelConfig };
 export interface DevServerOptions {
   output: Output;
   devCommand?: string;
-  frameworkSlug?: string;
   projectSettings?: ProjectSettings;
   systemEnvValues?: string[];
   projectEnvs?: ProjectEnvVariable[];

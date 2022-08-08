@@ -14,6 +14,7 @@ export type ProjectLinkAndSettings = ProjectLink & {
     rootDirectory: Project['rootDirectory'];
     framework: Project['framework'];
     nodeVersion: Project['nodeVersion'];
+    analyticsId?: string;
   };
 };
 
@@ -38,6 +39,7 @@ export async function writeProjectSettings(
       rootDirectory: project.rootDirectory,
       directoryListing: project.directoryListing,
       nodeVersion: project.nodeVersion,
+      analyticsId: project.analytics?.id,
     },
   };
   const path = join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT);

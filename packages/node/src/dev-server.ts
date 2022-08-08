@@ -76,12 +76,13 @@ import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
 import { Config, streamToBuffer, debug } from '@vercel/build-utils';
 import exitHook from 'exit-hook';
-import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
+import { EdgeRuntime, runServer } from 'edge-runtime';
+import type { EdgeContext } from '@edge-runtime/vm';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import esbuild from 'esbuild';
 import fetch from 'node-fetch';
-import { TextDecoder } from 'util';
+import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
 
 function logError(error: Error) {
   console.error(error.message);
@@ -148,27 +149,32 @@ async function serializeRequest(message: IncomingMessage) {
   });
 }
 
-async function compileUserCode(entrypoint: string) {
+async function compileUserCode(
+  entrypointPath: string,
+  entrypointLabel: string
+): Promise<undefined | { userCode: string; wasmAssets: WasmAssets }> {
+  const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
   try {
     const result = await esbuild.build({
       platform: 'node',
       target: 'node14',
       sourcemap: 'inline',
       bundle: true,
-      entryPoints: [entrypoint],
+      plugins: [edgeWasmPlugin],
+      entryPoints: [entrypointPath],
       write: false, // operate in memory
       format: 'cjs',
     });
 
     const compiledFile = result.outputFiles?.[0];
     if (!compiledFile) {
-      throw new Error(`Compilation of ${entrypoint} produced no output files.`);
+      throw new Error(
+        `Compilation of ${entrypointLabel} produced no output files.`
+      );
     }
 
-    const userCode = new TextDecoder().decode(compiledFile.contents);
-
-    return `
-      ${userCode};
+    const userCode = `
+      ${compiledFile.text};
 
       addEventListener('fetch', async (event) => {
         try {
@@ -198,6 +204,10 @@ async function compileUserCode(entrypoint: string) {
 
           let response = await edgeHandler(event.request, event);
 
+          if (!response) {
+            throw new Error('Edge Function "${entrypointLabel}" did not return a response.');
+          }
+
           return event.respondWith(response);
         } catch (error) {
           // we can't easily show a meaningful stack trace
@@ -210,30 +220,42 @@ async function compileUserCode(entrypoint: string) {
           }));
         }
       })`;
+    return { userCode, wasmAssets };
   } catch (error) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
     // So, stick with just the message for now.
-    console.error(`Failed to instantiate edge runtime.`);
+    console.error(`Failed to compile user code for edge runtime.`);
     logError(error);
     return undefined;
   }
 }
 
-async function createEdgeRuntime(userCode: string | undefined) {
+async function createEdgeRuntime(params?: {
+  userCode: string;
+  wasmAssets: WasmAssets;
+}) {
   try {
-    if (!userCode) {
+    if (!params) {
       return undefined;
     }
 
+    const wasmBindings = await params.wasmAssets.getContext();
     const edgeRuntime = new EdgeRuntime({
-      initialCode: userCode,
-      extend: (context: Primitives) => {
+      initialCode: params.userCode,
+      extend: (context: EdgeContext) => {
         Object.assign(context, {
-          __dirname: '',
-          module: {
-            exports: {},
+          // This is required for esbuild wrapping logic to resolve
+          module: {},
+
+          // This is required for environment variable access.
+          // In production, env var access is provided by static analysis
+          // so that only the used values are available.
+          process: {
+            env: process.env,
           },
+          wasmBindings,
         });
+
         return context;
       },
     });
@@ -252,9 +274,10 @@ async function createEdgeRuntime(userCode: string | undefined) {
 }
 
 async function createEdgeEventHandler(
-  entrypoint: string
+  entrypointPath: string,
+  entrypointLabel: string
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const userCode = await compileUserCode(entrypoint);
+  const userCode = await compileUserCode(entrypointPath, entrypointLabel);
   const server = await createEdgeRuntime(userCode);
 
   return async function (request: IncomingMessage) {
@@ -317,17 +340,17 @@ async function createEventHandler(
   config: Config,
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const entryPointPath = join(process.cwd(), entrypoint!);
-  const runtime = parseRuntime(entrypoint, entryPointPath);
+  const entrypointPath = join(process.cwd(), entrypoint!);
+  const runtime = parseRuntime(entrypoint, entrypointPath);
 
   // `middleware.js`/`middleware.ts` file is always run as
   // an Edge Function, otherwise needs to be opted-in via
   // `export const config = { runtime: 'experimental-edge' }`
   if (config.middleware === true || runtime === 'experimental-edge') {
-    return createEdgeEventHandler(entryPointPath);
+    return createEdgeEventHandler(entrypointPath, entrypoint);
   }
 
-  return createServerlessEventHandler(entryPointPath, options);
+  return createServerlessEventHandler(entrypointPath, options);
 }
 
 let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;

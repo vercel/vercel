@@ -342,7 +342,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'lambda-with-php-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
             runtime: 'vercel-php@0.1.0',
@@ -352,7 +352,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'lambda-with-invalid-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
             memory: 128,
@@ -500,6 +500,56 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         packageManager: 'yarn@2.4.3',
         scripts: {
           build: 'mkdir -p public && yarn --version > public/index.txt',
+        },
+      }),
+    },
+    'static-build-dist-dir': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'vercel.json': JSON.stringify({
+        version: 2,
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+            config: { distDir: '.' },
+          },
+        ],
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'echo "Hello, World!" >> index.txt',
+        },
+      }),
+    },
+    'static-build-zero-config-output-directory': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          framework: null,
+        },
+      }),
+      'vercel.json': JSON.stringify({
+        version: 2,
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+            config: { zeroConfig: true, outputDirectory: '.' },
+          },
+        ],
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'echo "Hello, World!" >> index.txt',
         },
       }),
     },
