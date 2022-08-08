@@ -179,7 +179,7 @@ export async function build({
 
     const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
 
-    // find `go.mod` in downloadedFiles
+    // find `go.mod` in modFiles
     const entrypointDirname = dirname(entrypointAbsolute);
     let isGoModExist = false;
     let goModPath = '';
@@ -268,6 +268,10 @@ export async function build({
       from: handlerFunctionName,
       to: originalFunctionName,
     });
+
+    debug(
+      `Found exported function "${handlerFunctionName}" in "${entrypoint}"`
+    );
 
     if (!isGoModExist) {
       if (await pathExists(join(workPath, 'vendor'))) {
@@ -526,7 +530,7 @@ export async function build({
         undoFunctionRenames
       );
     } catch (error) {
-      console.log(`Build succeeded, but cleanup failed: ${error.message}`);
+      console.log(`Build cleanup failed: ${error.message}`);
       debug('Cleanup Error: ' + error);
     }
   }

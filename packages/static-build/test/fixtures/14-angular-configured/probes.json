@@ -1,0 +1,7 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "Angular + Node.js API" },
+    { "path": "/main-es2015.js", "mustContain": "Loading date..." },
+    { "path": "/iudieufwunifiwwnuwfuw", "mustContain": "Angular + Node.js API" }
+  ]
+}

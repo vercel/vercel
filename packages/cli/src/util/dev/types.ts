@@ -24,7 +24,6 @@ export { VercelConfig };
 export interface DevServerOptions {
   output: Output;
   devCommand?: string;
-  frameworkSlug?: string;
   projectSettings?: ProjectSettings;
   systemEnvValues?: string[];
   projectEnvs?: ProjectEnvVariable[];
