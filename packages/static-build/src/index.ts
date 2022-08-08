@@ -20,6 +20,7 @@ import {
   spawnCommand,
   runNpmInstall,
   getEnvForPackageManager,
+  getPrefixedEnvVars,
   getNodeBinPath,
   runBundleInstall,
   runPipInstall,
@@ -366,22 +367,13 @@ export const build: BuildV2 = async ({
         `Detected ${framework.name} framework. Optimizing your deployment...`
       );
 
-      if (process.env.VERCEL_URL) {
-        const vercelSystemEnvPrefix = 'VERCEL_';
-        const { envPrefix } = framework;
-        if (envPrefix) {
-          Object.keys(process.env)
-            .filter(key => key.startsWith(vercelSystemEnvPrefix))
-            .forEach(key => {
-              const newKey = `${envPrefix}${key}`;
-              if (!(newKey in process.env)) {
-                process.env[newKey] = process.env[key];
-              }
-            });
+      const prefixedEnvs = getPrefixedEnvVars({
+        envPrefix: framework.envPrefix,
+        envs: process.env,
+      });
 
-          // tell turbo to exclude all vercel system env vars (envPrefix includes trailing underscore)
-          process.env.TURBO_CI_VENDOR_ENV_KEY = `${envPrefix}${vercelSystemEnvPrefix}`;
-        }
+      for (const [key, value] of Object.entries(prefixedEnvs)) {
+        process.env[key] = value;
       }
 
       if (process.env.VERCEL_ANALYTICS_ID) {

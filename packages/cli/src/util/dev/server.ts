@@ -131,7 +131,6 @@ export default class DevServer {
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
-  public frameworkSlug?: string;
   public files: BuilderInputs;
   public address: string;
   public devCacheDir: string;
@@ -175,7 +174,6 @@ export default class DevServer {
     this.address = '';
     this.devCommand = options.devCommand;
     this.projectSettings = options.projectSettings;
-    this.frameworkSlug = options.frameworkSlug;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -2210,7 +2208,10 @@ export default class DevServer {
       // Because of child process 'pipe' below, isTTY will be false.
       // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
       FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
-      ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
+      // Prevent framework dev servers from automatically opening a web
+      // browser window, since it will not be the port that `vc dev`
+      // is listening on and thus will be missing Vercel features.
+      BROWSER: 'none',
       ...process.env,
       ...this.envConfigs.allEnv,
       PORT: `${port}`,
