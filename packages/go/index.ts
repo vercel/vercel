@@ -254,7 +254,7 @@ export async function build({
     }
 
     const originalFunctionName = parsedAnalyzed.functionName;
-    const handlerFunctionName = await getNewHandlerFunctionName(
+    const handlerFunctionName = getNewHandlerFunctionName(
       originalFunctionName,
       entrypoint
     );
@@ -541,20 +541,25 @@ async function renameHandlerFunction(fsPath: string, from: string, to: string) {
   await writeFile(fsPath, fileContents);
 }
 
-async function getNewHandlerFunctionName(
+export function getNewHandlerFunctionName(
   originalFunctionName: string,
   entrypoint: string
 ) {
+  if (!originalFunctionName) {
+    throw new Error(
+      'Handler function renaming failed because original function name was empty.'
+    );
+  }
+
+  if (!entrypoint) {
+    throw new Error(
+      'Handler function renaming failed because entrypoint was empty.'
+    );
+  }
+
   debug(`Found exported function "${originalFunctionName}" in "${entrypoint}"`);
 
-  const pathSlug = entrypoint
-    .replace(/\\/g, '_')
-    .replace(/\//g, '_')
-    .replace(/\[/g, '_')
-    .replace(/\]/g, '_')
-    .replace(/ /g, '_')
-    .replace(/-/g, '_')
-    .replace(/\./g, '_');
+  const pathSlug = entrypoint.replace(/(\s|\\|\/|\]|\[|-|\.)/g, '_');
 
   const newHandlerName = `${originalFunctionName}_${pathSlug}`;
   debug(
