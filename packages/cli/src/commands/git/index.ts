@@ -16,7 +16,7 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    connect [url]                    Connect your Vercel Project your Git repository or provide the remote URL to your Git repository
+    connect [url]                    Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository
     disconnect                       Disconnect the Git provider repository from your project
 
   ${chalk.dim('Options:')}
