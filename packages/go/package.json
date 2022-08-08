@@ -17,11 +17,22 @@
   "files": [
     "dist"
   ],
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "globals": {
+      "ts-jest": {
+        "diagnostics": true,
+        "isolatedModules": true
+      }
+    }
+  },
   "devDependencies": {
     "@tootallnate/once": "1.1.2",
     "@types/async-retry": "1.4.2",
     "@types/execa": "^0.9.0",
     "@types/fs-extra": "^5.0.5",
+    "@types/jest": "28.1.6",
     "@types/node-fetch": "^2.3.0",
     "@types/tar": "^4.0.0",
     "@vercel/build-utils": "5.2.0",
