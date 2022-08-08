@@ -157,7 +157,7 @@ export default async function main(client: Client): Promise<number> {
         client.output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
             'pull --yes'
-          )} to retreive them.`
+          )} to retrieve them.`
         );
         return 1;
       }
