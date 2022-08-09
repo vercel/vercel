@@ -24,6 +24,7 @@ export async function promptGitConnectSingleUrl(
       )} repository ${chalk.cyan(currentRepoPath)}.`
     );
   } else {
+    output.print('\n');
     output.log(`Found local Git remote URL: ${chalk.cyan(remoteUrl)}`);
   }
   return await list(client, {

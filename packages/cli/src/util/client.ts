@@ -86,13 +86,13 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   private _fetch(_url: string, opts: FetchOptions = {}) {
-    const parsedUrl = parseUrl(_url, true);
-    const apiUrl = parsedUrl.host
-      ? `${parsedUrl.protocol}//${parsedUrl.host}`
+    const repoInfo = parseUrl(_url, true);
+    const apiUrl = repoInfo.host
+      ? `${repoInfo.protocol}//${repoInfo.host}`
       : '';
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
-      const query = new URLSearchParams(parsedUrl.query);
+      const query = new URLSearchParams(repoInfo.query);
 
       if (opts.accountId) {
         if (opts.accountId.startsWith('team_')) {
@@ -104,7 +104,7 @@ export default class Client extends EventEmitter implements Stdio {
         query.set('teamId', this.config.currentTeam);
       }
 
-      _url = `${apiUrl}${parsedUrl.pathname}?${query}`;
+      _url = `${apiUrl}${repoInfo.pathname}?${query}`;
     }
 
     const headers = new Headers(opts.headers);

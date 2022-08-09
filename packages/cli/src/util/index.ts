@@ -503,11 +503,11 @@ export default class Now extends EventEmitter {
 
   async _fetch(_url: string, opts: FetchOptions = {}) {
     if (opts.useCurrentTeam !== false && this.currentTeam) {
-      const parsedUrl = parseUrl(_url, true);
-      const query = parsedUrl.query;
+      const repoInfo = parseUrl(_url, true);
+      const query = repoInfo.query;
 
       query.teamId = this.currentTeam;
-      _url = `${parsedUrl.pathname}?${qs.stringify(query)}`;
+      _url = `${repoInfo.pathname}?${qs.stringify(query)}`;
       delete opts.useCurrentTeam;
     }
 

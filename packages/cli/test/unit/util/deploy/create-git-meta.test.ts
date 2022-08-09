@@ -58,92 +58,92 @@ describe('getRemoteUrls', () => {
 
 describe('parseRepoUrl', () => {
   it('should be null when a url does not match the regex', () => {
-    const parsedUrl = parseRepoUrl('https://examplecom/foo');
-    expect(parsedUrl).toBeNull();
+    const repoInfo = parseRepoUrl('https://examplecom/foo');
+    expect(repoInfo).toBeNull();
   });
   it('should be null when a url does not contain org and repo data', () => {
-    const parsedUrl = parseRepoUrl('https://github.com/borked');
-    expect(parsedUrl).toBeNull();
+    const repoInfo = parseRepoUrl('https://github.com/borked');
+    expect(repoInfo).toBeNull();
   });
   it('should parse url with a period in the repo name', () => {
-    const parsedUrl = parseRepoUrl('https://github.com/vercel/next.js');
-    expect(parsedUrl).toBeDefined();
-    expect(parsedUrl?.provider).toEqual('github');
-    expect(parsedUrl?.org).toEqual('vercel');
-    expect(parsedUrl?.repo).toEqual('next.js');
+    const repoInfo = parseRepoUrl('https://github.com/vercel/next.js');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('github');
+    expect(repoInfo?.org).toEqual('vercel');
+    expect(repoInfo?.repo).toEqual('next.js');
   });
   it('should parse url that ends with .git', () => {
-    const parsedUrl = parseRepoUrl('https://github.com/vercel/next.js.git');
-    expect(parsedUrl).toBeDefined();
-    expect(parsedUrl?.provider).toEqual('github');
-    expect(parsedUrl?.org).toEqual('vercel');
-    expect(parsedUrl?.repo).toEqual('next.js');
+    const repoInfo = parseRepoUrl('https://github.com/vercel/next.js.git');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('github');
+    expect(repoInfo?.org).toEqual('vercel');
+    expect(repoInfo?.repo).toEqual('next.js');
   });
   it('should parse github https url', () => {
-    const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel.git');
-    expect(parsedUrl).toBeDefined();
-    expect(parsedUrl?.provider).toEqual('github');
-    expect(parsedUrl?.org).toEqual('vercel');
-    expect(parsedUrl?.repo).toEqual('vercel');
+    const repoInfo = parseRepoUrl('https://github.com/vercel/vercel.git');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('github');
+    expect(repoInfo?.org).toEqual('vercel');
+    expect(repoInfo?.repo).toEqual('vercel');
   });
   it('should parse github https url without the .git suffix', () => {
-    const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel');
-    expect(parsedUrl).toBeDefined();
-    expect(parsedUrl?.provider).toEqual('github');
-    expect(parsedUrl?.org).toEqual('vercel');
-    expect(parsedUrl?.repo).toEqual('vercel');
+    const repoInfo = parseRepoUrl('https://github.com/vercel/vercel');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('github');
+    expect(repoInfo?.org).toEqual('vercel');
+    expect(repoInfo?.repo).toEqual('vercel');
   });
   it('should parse github git url', () => {
-    const parsedUrl = parseRepoUrl('git://github.com/vercel/vercel.git');
-    expect(parsedUrl).toBeDefined();
-    expect(parsedUrl?.provider).toEqual('github');
-    expect(parsedUrl?.org).toEqual('vercel');
-    expect(parsedUrl?.repo).toEqual('vercel');
+    const repoInfo = parseRepoUrl('git://github.com/vercel/vercel.git');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('github');
+    expect(repoInfo?.org).toEqual('vercel');
+    expect(repoInfo?.repo).toEqual('vercel');
   });
   it('should parse github ssh url', () => {
-    const parsedUrl = parseRepoUrl('git@github.com:vercel/vercel.git');
-    expect(parsedUrl).toBeDefined();
-    expect(parsedUrl?.provider).toEqual('github');
-    expect(parsedUrl?.org).toEqual('vercel');
-    expect(parsedUrl?.repo).toEqual('vercel');
+    const repoInfo = parseRepoUrl('git@github.com:vercel/vercel.git');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('github');
+    expect(repoInfo?.org).toEqual('vercel');
+    expect(repoInfo?.repo).toEqual('vercel');
   });
 
   it('should parse gitlab https url', () => {
-    const parsedUrl = parseRepoUrl(
+    const repoInfo = parseRepoUrl(
       'https://gitlab.com/gitlab-examples/knative-kotlin-app.git'
     );
-    expect(parsedUrl).toBeDefined();
-    expect(parsedUrl?.provider).toEqual('gitlab');
-    expect(parsedUrl?.org).toEqual('gitlab-examples');
-    expect(parsedUrl?.repo).toEqual('knative-kotlin-app');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('gitlab');
+    expect(repoInfo?.org).toEqual('gitlab-examples');
+    expect(repoInfo?.repo).toEqual('knative-kotlin-app');
   });
   it('should parse gitlab ssh url', () => {
-    const parsedUrl = parseRepoUrl(
+    const repoInfo = parseRepoUrl(
       'git@gitlab.com:gitlab-examples/knative-kotlin-app.git'
     );
-    expect(parsedUrl).toBeDefined();
-    expect(parsedUrl?.provider).toEqual('gitlab');
-    expect(parsedUrl?.org).toEqual('gitlab-examples');
-    expect(parsedUrl?.repo).toEqual('knative-kotlin-app');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('gitlab');
+    expect(repoInfo?.org).toEqual('gitlab-examples');
+    expect(repoInfo?.repo).toEqual('knative-kotlin-app');
   });
 
   it('should parse bitbucket https url', () => {
-    const parsedUrl = parseRepoUrl(
+    const repoInfo = parseRepoUrl(
       'https://bitbucket.org/atlassianlabs/maven-project-example.git'
     );
-    expect(parsedUrl).toBeDefined();
-    expect(parsedUrl?.provider).toEqual('bitbucket');
-    expect(parsedUrl?.org).toEqual('atlassianlabs');
-    expect(parsedUrl?.repo).toEqual('maven-project-example');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('bitbucket');
+    expect(repoInfo?.org).toEqual('atlassianlabs');
+    expect(repoInfo?.repo).toEqual('maven-project-example');
   });
   it('should parse bitbucket ssh url', () => {
-    const parsedUrl = parseRepoUrl(
+    const repoInfo = parseRepoUrl(
       'git@bitbucket.org:atlassianlabs/maven-project-example.git'
     );
-    expect(parsedUrl).toBeDefined();
-    expect(parsedUrl?.provider).toEqual('bitbucket');
-    expect(parsedUrl?.org).toEqual('atlassianlabs');
-    expect(parsedUrl?.repo).toEqual('maven-project-example');
+    expect(repoInfo).toBeDefined();
+    expect(repoInfo?.provider).toEqual('bitbucket');
+    expect(repoInfo?.org).toEqual('atlassianlabs');
+    expect(repoInfo?.repo).toEqual('maven-project-example');
   });
 });
 

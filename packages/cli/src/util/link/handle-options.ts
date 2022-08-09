@@ -19,7 +19,7 @@ export async function handleOptions(
   org: Org,
   project: Project,
   settings: ProjectSettings,
-  parsedUrl?: RepoInfo
+  repoInfo?: RepoInfo
 ) {
   if (option === 'no') {
     return skip(output);
@@ -29,15 +29,15 @@ export async function handleOptions(
     // Option is "yes" or a URL
 
     // Ensure parsed url exists
-    if (!parsedUrl) {
-      const _parsedUrl = parseRepoUrl(option);
-      if (!_parsedUrl) {
+    if (!repoInfo) {
+      const _repoInfo = parseRepoUrl(option);
+      if (!_repoInfo) {
         output.debug(`Could not parse repo url ${option}.`);
         return 1;
       }
-      parsedUrl = _parsedUrl;
+      repoInfo = _repoInfo;
     }
-    return connect(client, output, org, project, parsedUrl);
+    return connect(client, output, org, project, repoInfo);
   }
 }
 
@@ -67,9 +67,9 @@ async function connect(
   output: Output,
   org: Org,
   project: Project,
-  parsedUrl: RepoInfo
+  repoInfo: RepoInfo
 ): Promise<number | void> {
-  const { provider, org: parsedOrg, repo } = parsedUrl;
+  const { provider, org: parsedOrg, repo } = repoInfo;
   const repoPath = `${parsedOrg}/${repo}`;
 
   output.log('Connecting...');
