@@ -26,7 +26,7 @@ export default async function connect(
   org: Org | undefined
 ) {
   const { output } = client;
-  const confirm = Boolean(argv['--confirm']);
+  const confirm = Boolean(argv['--yes']);
   const repoArg = argv._[1];
 
   if (args.length !== 0 && args.length !== 1) {

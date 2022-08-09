@@ -73,7 +73,7 @@ export const help = () => `
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --prod                         Create a production deployment
-    -c, --confirm                  Confirm default options and skip questions
+    -y, --yes                      Skip questions when setting up new project using default scope and settings
 
   ${chalk.dim('Examples:')}
 
