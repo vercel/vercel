@@ -29,7 +29,7 @@ import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';
 import { getRemoteUrls } from '../create-git-meta';
-import { handleGitConnection } from './handle-git-connection';
+import { addGitConnection } from './add-git-connection';
 
 export interface SetupAndLinkOptions {
   forceDelete?: boolean;
@@ -132,7 +132,7 @@ export default async function setupAndLink(
 
     const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
     if (remoteUrls && !project.skipGitConnectDuringLink) {
-      const connectGit = await handleGitConnection(
+      const connectGit = await addGitConnection(
         client,
         org,
         project,
@@ -259,7 +259,7 @@ export default async function setupAndLink(
 
     const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
     if (remoteUrls) {
-      const connectGit = await handleGitConnection(
+      const connectGit = await addGitConnection(
         client,
         org,
         project,

@@ -23,7 +23,7 @@ function getProjectSettings(project: Project): ProjectSettings {
   };
 }
 
-export async function handleGitConnection(
+export async function addGitConnection(
   client: Client,
   org: Org,
   project: Project,
