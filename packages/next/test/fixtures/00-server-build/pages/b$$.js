@@ -1,7 +1,7 @@
 function Page({ date }) {
   return (
     <>
-      <h1>$$b</h1>
+      <h1>b$$</h1>
       <p>Date: {date}</p>
     </>
   );
