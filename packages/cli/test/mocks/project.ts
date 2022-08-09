@@ -126,7 +126,7 @@ export const defaultProject = {
 };
 
 export function useUnknownProject() {
-  let project: any; // TODO: properly type
+  let project: Project;
   client.scenario.get(`/v8/projects/:projectNameOrId`, (_req, res) => {
     res.status(404).send();
   });
