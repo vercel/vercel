@@ -164,11 +164,9 @@ export function useUnknownProject() {
       if (type === 'github') {
         res.status(400).json({
           message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
-          meta: {
-            action: 'Install GitHub App',
-            link: 'https://github.com/apps/vercel',
-            repo,
-          },
+          action: 'Install GitHub App',
+          link: 'https://github.com/apps/vercel',
+          repo,
         });
       } else {
         res.status(400).json({
@@ -263,11 +261,9 @@ export function useProject(project: Partial<Project> = defaultProject) {
       if (type === 'github') {
         res.status(400).json({
           message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
-          meta: {
-            action: 'Install GitHub App',
-            link: 'https://github.com/apps/vercel',
-            repo,
-          },
+          action: 'Install GitHub App',
+          link: 'https://github.com/apps/vercel',
+          repo,
         });
       } else {
         res.status(400).json({

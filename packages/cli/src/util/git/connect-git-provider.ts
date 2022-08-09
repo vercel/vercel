@@ -53,8 +53,7 @@ export async function connectGitProvider(
     const apiError = isAPIError(err);
     if (
       apiError &&
-      (err.meta?.action === 'Install GitHub App' ||
-        err.code === 'repo_not_found')
+      (err.action === 'Install GitHub App' || err.code === 'repo_not_found')
     ) {
       client.output.error(
         `Failed to link ${chalk.cyan(
