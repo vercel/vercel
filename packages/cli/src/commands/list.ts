@@ -19,6 +19,7 @@ import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
 import { ensureLink } from '../util/ensure-link';
 import getScope from '../util/get-scope';
+import { isAPIError } from '../util/errors-ts';
 
 const help = () => {
   console.log(`
@@ -34,7 +35,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
-    --confirm                      Skip the confirmation prompt
+    -y, --yes                      Skip questions when setting up new project using default scope and settings
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -77,7 +78,12 @@ export default async function main(client: Client) {
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
+      '--yes': Boolean,
+      '-y': '--yes',
+
+      // deprecated
       '--confirm': Boolean,
+      '-c': '--confirm',
     });
   } catch (err) {
     handleError(err);
@@ -85,6 +91,11 @@ export default async function main(client: Client) {
   }
 
   const { output, config } = client;
+
+  if ('--confirm' in argv) {
+    output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    argv['--yes'] = argv['--confirm'];
+  }
 
   const { print, log, error, note, debug, spinner } = output;
 
@@ -98,7 +109,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const yes = argv['--confirm'] || false;
+  const yes = !!argv['--yes'];
 
   const meta = parseMeta(argv['--meta']);
   const { includeScheme } = config;
@@ -152,16 +163,7 @@ export default async function main(client: Client) {
 
   const { currentTeam } = config;
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  ({ contextName } = await getScope(client));
 
   const nextTimestamp = argv['--next'];
 
@@ -228,8 +230,8 @@ export default async function main(client: Client) {
 
     try {
       await now.findDeployment(app);
-    } catch (err) {
-      if (err.status === 404) {
+    } catch (err: unknown) {
+      if (isAPIError(err) && err.status === 404) {
         debug('Ignore findDeployment 404');
       } else {
         throw err;

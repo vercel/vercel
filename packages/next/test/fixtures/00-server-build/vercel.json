@@ -27,9 +27,59 @@
   ],
   "probes": [
     {
+      "path": "/$$",
+      "status": 200,
+      "mustContain": ">$$<"
+    },
+    {
+      "path": "/_next/data/testing-build-id/$$.json",
+      "status": 200,
+      "mustContain": "\"$$\""
+    },
+    {
+      "path": "/$$b",
+      "status": 200,
+      "mustContain": ">$$b<"
+    },
+    {
+      "path": "/_next/data/testing-build-id/$$b.json",
+      "status": 200,
+      "mustContain": "\"$$b\""
+    },
+    {
+      "path": "/b$$",
+      "status": 200,
+      "mustContain": ">b$$<"
+    },
+    {
+      "path": "/_next/data/testing-build-id/b$$.json",
+      "status": 200,
+      "mustContain": "\"b$$\""
+    },
+    {
       "path": "/",
       "status": 200,
       "mustContain": "index page"
+    },
+    {
+      "path": "/build-time-not-found/first",
+      "status": 307,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
+    },
+    {
+      "path": "/build-time-not-found/second",
+      "status": 307,
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "responseHeaders": {
+        "location": "//somewhere-else/"
+      }
     },
     {
       "path": "/static",
