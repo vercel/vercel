@@ -1,41 +1,40 @@
 import chalk from 'chalk';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
-import { Writable } from 'stream';
+import type { WritableTTY } from '../../types';
+import { errorToString } from '../is-error';
 
 export interface OutputOptions {
   debug?: boolean;
 }
 
-export interface PrintOptions {
-  w?: Writable;
-}
-
-export interface LogOptions extends PrintOptions {
+export interface LogOptions {
   color?: typeof chalk;
 }
 
 export class Output {
+  stream: WritableTTY;
   debugEnabled: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
-  isTTY: boolean;
 
-  constructor({ debug: debugEnabled = false }: OutputOptions = {}) {
+  constructor(
+    stream: WritableTTY,
+    { debug: debugEnabled = false }: OutputOptions = {}
+  ) {
+    this.stream = stream;
     this.debugEnabled = debugEnabled;
     this.spinnerMessage = '';
     this._spinner = null;
-    this.isTTY = process.stdout.isTTY || false;
   }
 
   isDebugEnabled = () => {
     return this.debugEnabled;
   };
 
-  print = (str: string, { w }: PrintOptions = { w: process.stderr }) => {
+  print = (str: string) => {
     this.stopSpinner();
-    const stream: Writable = w || process.stderr;
-    stream.write(str);
+    this.stream.write(str);
   };
 
   log = (str: string, color = chalk.grey) => {
@@ -81,10 +80,13 @@ export class Output {
     }
   };
 
-  prettyError = (
-    err: Pick<Error, 'message'> & { link?: string; action?: string }
-  ) => {
-    return this.error(err.message, undefined, err.link, err.action);
+  prettyError = (err: unknown) => {
+    return this.error(
+      errorToString(err),
+      undefined,
+      (err as any).link,
+      (err as any).action
+    );
   };
 
   ready = (str: string) => {
@@ -111,11 +113,17 @@ export class Output {
       this.debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       return;
     }
-    if (this.isTTY) {
+    if (this.stream.isTTY) {
       if (this._spinner) {
         this._spinner.text = message;
       } else {
-        this._spinner = wait(message, delay);
+        this._spinner = wait(
+          {
+            text: message,
+            stream: this.stream,
+          },
+          delay
+        );
       }
     } else {
       this.print(`${message}\n`);
@@ -156,8 +164,4 @@ export class Output {
 
     return promise;
   };
-}
-
-export default function createOutput(opts?: OutputOptions) {
-  return new Output(opts);
 }

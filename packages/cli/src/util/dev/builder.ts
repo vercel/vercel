@@ -4,7 +4,7 @@ import ms from 'ms';
 import bytes from 'bytes';
 import { delimiter, dirname, join } from 'path';
 import { fork, ChildProcess } from 'child_process';
-import { createFunction } from '@zeit/fun';
+import { createFunction } from '@vercel/fun';
 import {
   Builder,
   BuildOptions,
@@ -13,8 +13,8 @@ import {
   Lambda,
   FileBlob,
   FileFsRef,
-  isOfficialRuntime,
 } from '@vercel/build-utils';
+import { isOfficialRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 
@@ -424,10 +424,6 @@ export async function getBuildMatches(
       mapToEntrypoint.set(extensionless, src);
       src = extensionless;
     }
-
-    // We need to escape brackets since `glob` will
-    // try to find a group otherwise
-    src = src.replace(/(\[|\])/g, '[$1]');
 
     const files = fileList
       .filter(name => name === src || minimatch(name, src, { dot: true }))

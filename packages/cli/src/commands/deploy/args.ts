@@ -15,26 +15,28 @@ export const help = () => `
       )}
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
+      git                              Manage Git provider repository for your current Project
+      help                 [cmd]       Displays complete help for [cmd]
       init                 [example]   Initialize an example project
-      ls | list            [app]       Lists deployments
       inspect              [id]        Displays information related to a deployment
       link                 [path]      Link local directory to a Vercel Project
+      ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
       pull                 [path]      Pull your Project Settings from the cloud
       switch               [scope]     Switches between teams and your personal account
-      help                 [cmd]       Displays complete help for [cmd]
 
     ${chalk.dim('Advanced')}
 
-      rm | remove          [id]        Removes a deployment
+      alias                [cmd]       Manages your domain aliases
       bisect                           Use binary search to find the deployment that introduced a bug
-      domains              [name]      Manages your domain names
-      projects                         Manages your Projects
-      dns                  [name]      Manages your DNS records
       certs                [cmd]       Manages your SSL certificates
-      secrets              [name]      Manages your global Secrets, for use in Environment Variables
+      dns                  [name]      Manages your DNS records
+      domains              [name]      Manages your domain names
       logs                 [url]       Displays the logs for a deployment
+      projects                         Manages your Projects
+      rm | remove          [id]        Removes a deployment
+      secrets              [name]      Manages your global Secrets, for use in Environment Variables
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
 
@@ -68,11 +70,10 @@ export const help = () => `
     -m, --meta                     Add metadata for the deployment (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
-    -C, --no-clipboard             Do not attempt to copy URL to clipboard
     -S, --scope                    Set a custom scope
     --regions                      Set default regions to enable the deployment on
     --prod                         Create a production deployment
-    -c, --confirm                  Confirm default options and skip questions
+    -y, --yes                      Skip questions when setting up new project using default scope and settings
 
   ${chalk.dim('Examples:')}
 

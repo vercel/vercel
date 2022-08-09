@@ -530,7 +530,7 @@ export default class Now extends EventEmitter {
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
       fetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
-    printIndications(res);
+    printIndications(this._client, res);
     return res;
   }
 

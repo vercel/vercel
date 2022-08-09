@@ -4,7 +4,11 @@ import FileRef from './file-ref';
 import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
 import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
-import download, { DownloadedFiles, isSymbolicLink } from './fs/download';
+import download, {
+  downloadFile,
+  DownloadedFiles,
+  isSymbolicLink,
+} from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
 import rename from './fs/rename';
@@ -36,6 +40,7 @@ import streamToBuffer from './fs/stream-to-buffer';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
+import { getPrefixedEnvVars } from './get-prefixed-env-vars';
 
 export {
   FileBlob,
@@ -46,6 +51,7 @@ export {
   createLambda,
   Prerender,
   download,
+  downloadFile,
   DownloadedFiles,
   getWriteableDirectory,
   glob,
@@ -71,6 +77,7 @@ export {
   getDiscontinuedNodeVersions,
   getSpawnOptions,
   getPlatformEnv,
+  getPrefixedEnvVars,
   streamToBuffer,
   debug,
   isSymbolicLink,
@@ -80,16 +87,6 @@ export {
 };
 
 export { EdgeFunction } from './edge-function';
-export {
-  detectBuilders,
-  detectOutputDirectory,
-  detectApiDirectory,
-  detectApiExtensions,
-} from './detect-builders';
-export { detectFileSystemAPI } from './detect-file-system-api';
-export { detectFramework } from './detect-framework';
-export { getProjectPaths } from './get-project-paths';
-export { DetectorFilesystem } from './detectors/filesystem';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
 
@@ -97,35 +94,3 @@ export * from './should-serve';
 export * from './schemas';
 export * from './types';
 export * from './errors';
-
-/**
- * Helper function to support both `@vercel` and legacy `@now` official Runtimes.
- */
-export const isOfficialRuntime = (desired: string, name?: string): boolean => {
-  if (typeof name !== 'string') {
-    return false;
-  }
-  return (
-    name === `@vercel/${desired}` ||
-    name === `@now/${desired}` ||
-    name.startsWith(`@vercel/${desired}@`) ||
-    name.startsWith(`@now/${desired}@`)
-  );
-};
-
-export const isStaticRuntime = (name?: string): boolean => {
-  return isOfficialRuntime('static', name);
-};
-
-export { workspaceManagers } from './workspaces/workspace-managers';
-export {
-  getWorkspaces,
-  GetWorkspaceOptions,
-  Workspace,
-  WorkspaceType,
-} from './workspaces/get-workspaces';
-export {
-  getWorkspacePackagePaths,
-  GetWorkspacePackagePathsOptions,
-} from './workspaces/get-workspace-package-paths';
-export { monorepoManagers } from './monorepos/monorepo-managers';

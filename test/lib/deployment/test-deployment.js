@@ -188,22 +188,32 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     hadTest = true;
   }
 
-  if (probe.mustContain || probe.mustNotContain) {
-    const shouldContain = !!probe.mustContain;
+  if (probe.mustContain) {
     const containsIt = text.includes(probe.mustContain);
-    if (
-      (!containsIt && probe.mustContain) ||
-      (containsIt && probe.mustNotContain)
-    ) {
+    if (!containsIt) {
       fs.writeFileSync(path.join(__dirname, 'failed-page.txt'), text);
       const headers = Array.from(resp.headers.entries())
         .map(([k, v]) => `  ${k}=${v}`)
         .join('\n');
       throw new Error(
-        `Fetched page ${probeUrl} does${shouldContain ? ' not' : ''} contain ${
-          shouldContain ? probe.mustContain : probe.mustNotContain
-        }.` +
-          (shouldContain ? ` Instead it contains ${text.slice(0, 60)}` : '') +
+        `Fetched page ${probeUrl} does not contain ${probe.mustContain}.` +
+          ` Content ${text}` +
+          ` Response headers:\n ${headers}`
+      );
+    }
+    hadTest = true;
+  }
+
+  if (probe.mustNotContain) {
+    const containsIt = text.includes(probe.mustNotContain);
+    if (containsIt) {
+      fs.writeFileSync(path.join(__dirname, 'failed-page.txt'), text);
+      const headers = Array.from(resp.headers.entries())
+        .map(([k, v]) => `  ${k}=${v}`)
+        .join('\n');
+      throw new Error(
+        `Fetched page ${probeUrl} does contain ${probe.mustNotContain}.` +
+          ` Content ${text}` +
           ` Response headers:\n ${headers}`
       );
     }
@@ -254,12 +264,12 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   assert(hadTest, 'probe must have a test condition');
 }
 
-async function testDeployment(
-  { builderUrl, buildUtilsUrl },
-  fixturePath,
-  buildDelegate
-) {
-  logWithinTest('testDeployment', fixturePath);
+async function testDeployment(fixturePath) {
+  const projectName = path
+    .basename(fixturePath)
+    .toLowerCase()
+    .replace(/(_|\.)/g, '-');
+  logWithinTest(`testDeployment "${projectName}"`);
   const globResult = await glob(`${fixturePath}/**`, {
     nodir: true,
     dot: true,
@@ -294,7 +304,7 @@ async function testDeployment(
   const configName = 'vercel.json' in bodies ? 'vercel.json' : 'now.json';
 
   // we use json5 to allow comments for probes
-  const nowJson = json5.parse(bodies[configName]);
+  const nowJson = json5.parse(bodies[configName] || '{}');
   const uploadNowJson = nowJson.uploadNowJson;
   delete nowJson.uploadNowJson;
 
@@ -310,41 +320,36 @@ async function testDeployment(
     }
   });
 
-  for (const build of nowJson.builds || []) {
-    if (builderUrl) {
-      if (builderUrl === '@canary') {
-        build.use = `${build.use}@canary`;
-      } else {
-        build.use = `https://${builderUrl}`;
-      }
-    }
-    if (buildUtilsUrl) {
-      build.config = build.config || {};
-      const { config } = build;
-      if (buildUtilsUrl === '@canary') {
-        const buildUtils = config.useBuildUtils || '@vercel/build-utils';
-        config.useBuildUtils = `${buildUtils}@canary`;
-      } else {
-        config.useBuildUtils = `https://${buildUtilsUrl}`;
-      }
-    }
-
-    if (buildDelegate) {
-      buildDelegate(build);
-    }
+  const probePath = path.resolve(fixturePath, 'probe.js');
+  let probes = [];
+  if ('probes' in nowJson) {
+    probes = nowJson.probes;
+  } else if ('probes.json' in bodies) {
+    probes = json5.parse(bodies['probes.json']).probes;
+  } else if (fs.existsSync(probePath)) {
+    // we'll run probes after we have the deployment url below
+  } else {
+    console.warn(
+      `WARNING: Test fixture "${fixturePath}" does not contain probes.json, probe.js, or vercel.json`
+    );
   }
-
   bodies[configName] = Buffer.from(JSON.stringify(nowJson));
   delete bodies['probe.js'];
+  delete bodies['probes.json'];
 
   const { deploymentId, deploymentUrl } = await nowDeploy(
+    projectName,
     bodies,
     randomness,
     uploadNowJson
   );
   const probeCtx = {};
 
-  for (const probe of nowJson.probes || []) {
+  if (fs.existsSync(probePath)) {
+    await require(probePath)({ deploymentUrl, fetch, randomness });
+  }
+
+  for (const probe of probes) {
     const stringifiedProbe = JSON.stringify(probe);
     logWithinTest('testing', stringifiedProbe);
 
@@ -375,11 +380,6 @@ async function testDeployment(
     }
   }
 
-  const probeJsFullPath = path.resolve(fixturePath, 'probe.js');
-  if (fs.existsSync(probeJsFullPath)) {
-    await require(probeJsFullPath)({ deploymentUrl, fetch, randomness });
-  }
-
   return { deploymentId, deploymentUrl };
 }
 
@@ -389,7 +389,7 @@ async function nowDeployIndexTgz(file) {
     'now.json': Buffer.from(JSON.stringify({ version: 2 })),
   };
 
-  return (await nowDeploy(bodies)).deploymentUrl;
+  return (await nowDeploy('pack-n-deploy', bodies)).deploymentUrl;
 }
 
 async function fetchDeploymentUrl(url, opts) {

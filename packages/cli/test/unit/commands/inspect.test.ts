@@ -10,11 +10,20 @@ describe('inspect', () => {
     client.setArgv('inspect', deployment.url);
     const exitCode = await inspect(client);
     expect(exitCode).toEqual(0);
-    expect(
-      client.mockOutput.mock.calls[0][0].startsWith(
-        `> Fetched deployment "${deployment.url}" in ${user.username}`
-      )
-    ).toBeTruthy();
+    await expect(client.stderr).toOutput(
+      `> Fetched deployment ${deployment.url} in ${user.username}`
+    );
+  });
+
+  it('should strip the scheme of a url', async () => {
+    const user = useUser();
+    const deployment = useDeployment({ creator: user });
+    client.setArgv('inspect', `http://${deployment.url}`);
+    const exitCode = await inspect(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      `> Fetched deployment ${deployment.url} in ${user.username}`
+    );
   });
 
   it('should print error when deployment not found', async () => {
@@ -23,7 +32,7 @@ describe('inspect', () => {
     client.setArgv('inspect', 'bad.com');
     const exitCode = await inspect(client);
     expect(exitCode).toEqual(1);
-    expect(client.outputBuffer).toEqual(
+    await expect(client.stderr).toOutput(
       `Error! Failed to find deployment "bad.com" in ${user.username}\n`
     );
   });

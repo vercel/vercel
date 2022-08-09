@@ -25,20 +25,7 @@ export default async function move(
   args: string[]
 ) {
   const { output } = client;
-  let contextName = null;
-  let user = null;
-
-  try {
-    ({ contextName, user } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
-
+  const { contextName, user } = await getScope(client);
   const { domainName, destination } = await getArgs(args);
   if (!isRootDomain(domainName)) {
     output.error(
@@ -77,7 +64,8 @@ export default async function move(
       !(await promptBool(
         `Are you sure you want to move ${param(domainName)} to ${param(
           destination
-        )}?`
+        )}?`,
+        client
       ))
     ) {
       output.log('Aborted');
@@ -95,7 +83,8 @@ export default async function move(
       );
       if (
         !(await promptBool(
-          `Are you sure you want to move ${param(domainName)}?`
+          `Are you sure you want to move ${param(domainName)}?`,
+          client
         ))
       ) {
         output.log('Aborted');

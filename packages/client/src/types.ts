@@ -1,9 +1,9 @@
-import {
+import type {
   Builder,
   BuilderFunctions,
   ProjectSettings,
 } from '@vercel/build-utils';
-import { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
+import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
 export { DeploymentEventType } from './utils';
 
@@ -53,6 +53,8 @@ export interface Deployment {
     | 'BUILDING'
     | 'DEPLOYING'
     | 'READY'
+    | 'QUEUED'
+    | 'CANCELED'
     | 'ERROR';
   state?:
     | 'INITIALIZING'
@@ -60,9 +62,17 @@ export interface Deployment {
     | 'BUILDING'
     | 'DEPLOYING'
     | 'READY'
+    | 'QUEUED'
+    | 'CANCELED'
     | 'ERROR';
   createdAt: number;
   createdIn: string;
+  buildingAt?: number;
+  creator?: {
+    uid?: string;
+    email?: string;
+    username?: string;
+  };
   env: Dictionary<string>;
   build: {
     env: Dictionary<string>;

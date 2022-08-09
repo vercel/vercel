@@ -1,6 +1,0 @@
-{
-  "private": true,
-  "dependencies": {
-    "decamelize": "6.0.0"
-  }
-}

@@ -45,6 +45,7 @@ const help = () => {
   )}        Login token
     -S, --scope                    Set a custom scope
     -N, --next                     Show next page of results
+    -y, --yes                      Skip the confirmation prompt when removing a domain
 
   ${chalk.dim('Examples:')}
 
@@ -92,6 +93,7 @@ export default async function main(client: Client) {
       '--force': Boolean,
       '--next': Number,
       '-N': '--next',
+      '-y': '--yes',
     });
   } catch (error) {
     handleError(error);

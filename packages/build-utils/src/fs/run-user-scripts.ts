@@ -61,6 +61,13 @@ export interface SpawnOptionsExtended extends SpawnOptions {
    * Pretty formatted command that is being spawned for logging purposes.
    */
   prettyCommand?: string;
+
+  /**
+   * Returns instead of throwing an error when the process exits with a
+   * non-0 exit code. When relevant, the returned object will include
+   * the error code, stdout and stderr.
+   */
+  ignoreNon0Exit?: boolean;
 }
 
 export function spawnAsync(
@@ -79,7 +86,7 @@ export function spawnAsync(
 
     child.on('error', reject);
     child.on('close', (code, signal) => {
-      if (code === 0) {
+      if (code === 0 || opts.ignoreNon0Exit) {
         return resolve();
       }
 
@@ -123,24 +130,24 @@ export function execAsync(
 
       child.on('error', reject);
       child.on('close', (code, signal) => {
-        if (code !== 0) {
-          const cmd = opts.prettyCommand
-            ? `Command "${opts.prettyCommand}"`
-            : 'Command';
-
-          return reject(
-            new NowBuildError({
-              code: `BUILD_UTILS_EXEC_${code || signal}`,
-              message: `${cmd} exited with ${code || signal}`,
-            })
-          );
+        if (code === 0 || opts.ignoreNon0Exit) {
+          return resolve({
+            code,
+            stdout: Buffer.concat(stdoutList).toString(),
+            stderr: Buffer.concat(stderrList).toString(),
+          });
         }
 
-        return resolve({
-          code,
-          stdout: Buffer.concat(stdoutList).toString(),
-          stderr: Buffer.concat(stderrList).toString(),
-        });
+        const cmd = opts.prettyCommand
+          ? `Command "${opts.prettyCommand}"`
+          : 'Command';
+
+        return reject(
+          new NowBuildError({
+            code: `BUILD_UTILS_EXEC_${code || signal}`,
+            message: `${cmd} exited with ${code || signal}`,
+          })
+        );
       });
     }
   );
@@ -166,9 +173,30 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
-export async function getNodeBinPath({ cwd }: { cwd: string }) {
-  const { stdout } = await execAsync('npm', ['bin'], { cwd });
-  return stdout.trim();
+export async function getNodeBinPath({
+  cwd,
+}: {
+  cwd: string;
+}): Promise<string> {
+  const { code, stdout, stderr } = await execAsync('npm', ['bin'], {
+    cwd,
+    prettyCommand: 'npm bin',
+
+    // in some rare cases, we saw `npm bin` exit with a non-0 code, but still
+    // output the right bin path, so we ignore the exit code
+    ignoreNon0Exit: true,
+  });
+
+  const nodeBinPath = stdout.trim();
+
+  if (path.isAbsolute(nodeBinPath)) {
+    return nodeBinPath;
+  }
+
+  throw new NowBuildError({
+    code: `BUILD_UTILS_GET_NODE_BIN_PATH`,
+    message: `Running \`npm bin\` failed to return a valid bin path (code=${code}, stdout=${stdout}, stderr=${stderr})`,
+  });
 }
 
 async function chmodPlusX(fsPath: string) {
@@ -205,10 +233,23 @@ export function getSpawnOptions(
   };
 
   if (!meta.isDev) {
-    // Ensure that the selected Node version is at the beginning of the `$PATH`
-    opts.env.PATH = `/node${nodeVersion.major}/bin${path.delimiter}${
-      opts.env.PATH || process.env.PATH
-    }`;
+    let found = false;
+    const oldPath = opts.env.PATH || process.env.PATH || '';
+
+    const pathSegments = oldPath.split(path.delimiter).map(segment => {
+      if (/^\/node[0-9]+\/bin/.test(segment)) {
+        found = true;
+        return `/node${nodeVersion.major}/bin`;
+      }
+      return segment;
+    });
+
+    if (!found) {
+      // If we didn't find & replace, prepend at beginning of PATH
+      pathSegments.unshift(`/node${nodeVersion.major}/bin`);
+    }
+
+    opts.env.PATH = pathSegments.filter(Boolean).join(path.delimiter);
   }
 
   return opts;
@@ -264,67 +305,46 @@ export async function scanParentDirs(
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
-  let cliType: CliType = 'yarn';
-  let packageJson: PackageJson | undefined;
-  let packageJsonPath: string | undefined;
-  let currentDestPath = destPath;
+  const pkgJsonPath = await walkParentDirs({
+    base: '/',
+    start: destPath,
+    filename: 'package.json',
+  });
+  const packageJson: PackageJson | undefined =
+    readPackageJson && pkgJsonPath
+      ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
+      : undefined;
+  const [yarnLockPath, npmLockPath, pnpmLockPath] = await walkParentDirsMulti({
+    base: '/',
+    start: destPath,
+    filenames: ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'],
+  });
   let lockfileVersion: number | undefined;
+  let cliType: CliType = 'yarn';
 
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    packageJsonPath = path.join(currentDestPath, 'package.json');
-    // eslint-disable-next-line no-await-in-loop
-    if (await fs.pathExists(packageJsonPath)) {
-      // Only read the contents of the *first* `package.json` file found,
-      // since that's the one related to this installation.
-      if (readPackageJson && !packageJson) {
-        // eslint-disable-next-line no-await-in-loop
-        packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
-      }
+  const [hasYarnLock, packageLockJson, pnpmLockYaml] = await Promise.all([
+    Boolean(yarnLockPath),
+    npmLockPath
+      ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
+      : null,
+    pnpmLockPath
+      ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
+      : null,
+  ]);
 
-      // eslint-disable-next-line no-await-in-loop
-      const [packageLockJson, hasYarnLock, pnpmLockYaml] = await Promise.all([
-        fs
-          .readJson(path.join(currentDestPath, 'package-lock.json'))
-          .catch(error => {
-            // If the file doesn't exist, fail gracefully otherwise error
-            if (error.code === 'ENOENT') {
-              return null;
-            }
-            throw error;
-          }),
-        fs.pathExists(path.join(currentDestPath, 'yarn.lock')),
-        readConfigFile<{ lockfileVersion: number }>(
-          path.join(currentDestPath, 'pnpm-lock.yaml')
-        ),
-      ]);
-
-      // Priority order is Yarn > pnpm > npm
-      // - find highest priority lock file and use that
-      if (hasYarnLock) {
-        cliType = 'yarn';
-      } else if (pnpmLockYaml) {
-        cliType = 'pnpm';
-        // just ensure that it is read as a number and not a string
-        lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
-      } else if (packageLockJson) {
-        cliType = 'npm';
-        lockfileVersion = packageLockJson.lockfileVersion;
-      }
-
-      // Only stop iterating if a lockfile was found, because it's possible
-      // that the lockfile is in a higher path than where the `package.json`
-      // file was found.
-      if (packageLockJson || hasYarnLock || pnpmLockYaml) {
-        break;
-      }
-    }
-
-    const newDestPath = path.dirname(currentDestPath);
-    if (currentDestPath === newDestPath) break;
-    currentDestPath = newDestPath;
+  // Priority order is Yarn > pnpm > npm
+  if (hasYarnLock) {
+    cliType = 'yarn';
+  } else if (pnpmLockYaml) {
+    cliType = 'pnpm';
+    // just ensure that it is read as a number and not a string
+    lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
+  } else if (packageLockJson) {
+    cliType = 'npm';
+    lockfileVersion = packageLockJson.lockfileVersion;
   }
 
+  const packageJsonPath = pkgJsonPath || undefined;
   return { cliType, packageJson, lockfileVersion, packageJsonPath };
 }
 
@@ -346,9 +366,46 @@ export async function walkParentDirs({
     }
 
     parent = path.dirname(current);
+
+    if (parent === current) {
+      // Reached root directory of the filesystem
+      break;
+    }
   }
 
   return null;
+}
+
+async function walkParentDirsMulti({
+  base,
+  start,
+  filenames,
+}: {
+  base: string;
+  start: string;
+  filenames: string[];
+}): Promise<(string | undefined)[]> {
+  let parent = '';
+  for (let current = start; base.length <= current.length; current = parent) {
+    const fullPaths = filenames.map(f => path.join(current, f));
+    const existResults = await Promise.all(
+      fullPaths.map(f => fs.pathExists(f))
+    );
+    const foundOneOrMore = existResults.some(b => b);
+
+    if (foundOneOrMore) {
+      return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
+    }
+
+    parent = path.dirname(current);
+
+    if (parent === current) {
+      // Reached root directory of the filesystem
+      break;
+    }
+  }
+
+  return [];
 }
 
 function isSet<T>(v: any): v is Set<T> {
@@ -446,20 +503,31 @@ export function getEnvForPackageManager({
   env: { [x: string]: string | undefined };
 }) {
   const newEnv: { [x: string]: string | undefined } = { ...env };
+  const oldPath = env.PATH + '';
+  const npm7 = '/node16/bin-npm7';
+  const pnpm7 = '/pnpm7/node_modules/.bin';
+  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
   if (cliType === 'npm') {
     if (
       typeof lockfileVersion === 'number' &&
       lockfileVersion >= 2 &&
-      (nodeVersion?.major || 0) < 16
+      (nodeVersion?.major || 0) < 16 &&
+      !oldPath.includes(npm7) &&
+      !corepackEnabled
     ) {
       // Ensure that npm 7 is at the beginning of the `$PATH`
-      newEnv.PATH = `/node16/bin-npm7${path.delimiter}${env.PATH}`;
-      console.log('Detected `package-lock.json` generated by npm 7...');
+      newEnv.PATH = `${npm7}${path.delimiter}${oldPath}`;
+      console.log('Detected `package-lock.json` generated by npm 7+...');
     }
   } else if (cliType === 'pnpm') {
-    if (typeof lockfileVersion === 'number' && lockfileVersion === 5.4) {
+    if (
+      typeof lockfileVersion === 'number' &&
+      lockfileVersion === 5.4 &&
+      !oldPath.includes(pnpm7) &&
+      !corepackEnabled
+    ) {
       // Ensure that pnpm 7 is at the beginning of the `$PATH`
-      newEnv.PATH = `/pnpm7/node_modules/.bin${path.delimiter}${env.PATH}`;
+      newEnv.PATH = `${pnpm7}${path.delimiter}${oldPath}`;
       console.log('Detected `pnpm-lock.yaml` generated by pnpm 7...');
     }
   } else {

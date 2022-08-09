@@ -4,6 +4,10 @@
     {
       "path": "/api/edge.js",
       "mustContain": "RANDOMNESS_PLACEHOLDER:edge"
+    },
+    {
+      "path": "/api/wasm.js",
+      "mustContain": "RANDOMNESS_PLACEHOLDER:edge, 11."
     }
   ]
 }
