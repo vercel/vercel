@@ -67,7 +67,8 @@ async function addSingleGitRemote(
   }
   const { org: parsedOrg, repo, provider } = repoInfo;
   const alreadyLinked =
-    project.link?.org === parsedOrg &&
+    project.link &&
+    project.link.org === parsedOrg &&
     project.link.repo === repo &&
     project.link.type === provider;
   if (alreadyLinked) {
