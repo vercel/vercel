@@ -9,6 +9,7 @@ type LinkResult = {
   org: Org;
   project: Project;
 };
+
 export async function ensureLink(
   commandName: string,
   client: Client,
