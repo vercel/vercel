@@ -273,7 +273,7 @@ async function promptConnectArg(
       return 1;
     }
     if (JSON.stringify(parsedUrl) === JSON.stringify(parsedUrlArg)) {
-      return true;
+      return 0;
     }
 
     output.log(
