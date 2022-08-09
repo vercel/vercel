@@ -135,7 +135,6 @@ export default async function setupAndLink(
       const connectGit = await handleGitConnection(
         client,
         org,
-        output,
         project,
         remoteUrls
       );
@@ -263,7 +262,6 @@ export default async function setupAndLink(
       const connectGit = await handleGitConnection(
         client,
         org,
-        output,
         project,
         remoteUrls,
         settings

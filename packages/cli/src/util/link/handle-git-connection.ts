@@ -1,6 +1,5 @@
 import { Dictionary } from '@vercel/client';
 import { parseRepoUrl } from '../git/connect-git-provider';
-import { Output } from '../output';
 import Client from '../client';
 import { Org, Project, ProjectSettings } from '../../types';
 import { handleOptions } from './handle-options';
@@ -27,7 +26,6 @@ function getProjectSettings(project: Project): ProjectSettings {
 export async function handleGitConnection(
   client: Client,
   org: Org,
-  output: Output,
   project: Project,
   remoteUrls: Dictionary<string>,
   settings?: ProjectSettings
@@ -39,7 +37,6 @@ export async function handleGitConnection(
     return addSingleGitRemote(
       client,
       org,
-      output,
       project,
       remoteUrls,
       settings || project
@@ -48,7 +45,6 @@ export async function handleGitConnection(
     return addMultipleGitRemotes(
       client,
       org,
-      output,
       project,
       remoteUrls,
       settings || project
@@ -59,7 +55,6 @@ export async function handleGitConnection(
 async function addSingleGitRemote(
   client: Client,
   org: Org,
-  output: Output,
   project: Project,
   remoteUrls: Dictionary<string>,
   settings: ProjectSettings
@@ -67,7 +62,7 @@ async function addSingleGitRemote(
   const [remoteName, remoteUrl] = Object.entries(remoteUrls)[0];
   const repoInfo = parseRepoUrl(remoteUrl);
   if (!repoInfo) {
-    output.debug(`Could not parse repo url ${repoInfo}.`);
+    client.output.debug(`Could not parse repo url ${repoInfo}.`);
     return 1;
   }
   const { org: parsedOrg, repo, provider } = repoInfo;
@@ -76,7 +71,7 @@ async function addSingleGitRemote(
     project.link.repo === repo &&
     project.link.type === provider;
   if (alreadyLinked) {
-    output.debug('Project already linked. Skipping...');
+    client.output.debug('Project already linked. Skipping...');
     return;
   }
 
@@ -87,42 +82,25 @@ async function addSingleGitRemote(
       project.link.type !== provider);
   const shouldConnect = await promptGitConnectSingleUrl(
     client,
-    output,
     project,
     remoteName,
     remoteUrl,
     replace
   );
-  return handleOptions(
-    shouldConnect,
-    client,
-    output,
-    org,
-    project,
-    settings,
-    repoInfo
-  );
+  return handleOptions(shouldConnect, client, org, project, settings, repoInfo);
 }
 
 async function addMultipleGitRemotes(
   client: Client,
   org: Org,
-  output: Output,
   project: Project,
   remoteUrls: Dictionary<string>,
   settings: ProjectSettings
 ) {
-  output.log('Found multiple Git remote URLs in Git config.');
+  client.output.log('Found multiple Git remote URLs in Git config.');
   const remoteUrlOrOptions = await promptGitConnectMultipleUrls(
     client,
     remoteUrls
   );
-  return handleOptions(
-    remoteUrlOrOptions,
-    client,
-    output,
-    org,
-    project,
-    settings
-  );
+  return handleOptions(remoteUrlOrOptions, client, org, project, settings);
 }

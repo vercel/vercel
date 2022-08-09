@@ -4,16 +4,14 @@ import { Project } from '../../types';
 import Client from '../client';
 import { formatProvider } from '../git/connect-git-provider';
 import list from '../input/list';
-import { Output } from '../output';
-
 export async function promptGitConnectSingleUrl(
   client: Client,
-  output: Output,
   project: Project,
   remoteName: string,
   remoteUrl: string,
   replace = false
 ) {
+  const { output } = client;
   if (replace) {
     const currentRepoPath = `${project.link!.org}/${project.link!.repo}`;
     const currentProvider = project.link!.type;

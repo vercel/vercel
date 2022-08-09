@@ -15,12 +15,12 @@ import updateProject from '../projects/update-project';
 export async function handleOptions(
   option: string,
   client: Client,
-  output: Output,
   org: Org,
   project: Project,
   settings: ProjectSettings,
   repoInfo?: RepoInfo
 ) {
+  const { output } = client;
   if (option === 'no') {
     return skip(output);
   } else if (option === 'opt-out') {
@@ -37,7 +37,7 @@ export async function handleOptions(
       }
       repoInfo = _repoInfo;
     }
-    return connect(client, output, org, project, repoInfo);
+    return connect(client, org, project, repoInfo);
   }
 }
 
@@ -64,11 +64,11 @@ function skip(output: Output) {
 
 async function connect(
   client: Client,
-  output: Output,
   org: Org,
   project: Project,
   repoInfo: RepoInfo
 ): Promise<number | void> {
+  const { output } = client;
   const { provider, org: parsedOrg, repo } = repoInfo;
   const repoPath = `${parsedOrg}/${repo}`;
 
