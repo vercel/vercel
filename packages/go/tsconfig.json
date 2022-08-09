@@ -11,7 +11,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitThis": false,
-    "types": ["node"],
+    "types": ["node", "jest"],
     "strict": true,
     "target": "ES2020"
   }
