@@ -80,7 +80,7 @@ describe('git', () => {
         const exitCode = await git(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
-          `Error! No local git repo found. Run \`git clone <url>\` to clone a remote Git repository first.\n`
+          `Error! No local Git repository found. Run \`git clone <url>\` to clone a remote Git repository first.\n`
         );
       } finally {
         process.chdir(originalCwd);

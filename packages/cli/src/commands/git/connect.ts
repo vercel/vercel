@@ -79,7 +79,7 @@ export default async function connect(
 
   if (!gitConfig) {
     output.error(
-      `No local git repo found. Run ${chalk.cyan(
+      `No local Git repository found. Run ${chalk.cyan(
         '`git clone <url>`'
       )} to clone a remote Git repository first.`
     );
