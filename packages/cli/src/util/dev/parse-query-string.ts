@@ -1,5 +1,5 @@
 export function parseQueryString(querystring?: string) {
-  let map = new Map<string, string[]>();
+  const map = new Map<string, string[]>();
   if (!querystring || !querystring.startsWith('?') || querystring === '?') {
     return map;
   }
