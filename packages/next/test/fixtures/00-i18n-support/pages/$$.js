@@ -7,7 +7,7 @@ function Page({ date }) {
   );
 }
 
-export async function getServerSideProps() {
+export async function getStaticProps() {
   return {
     props: {
       date: new Date().toISOString(),
