@@ -1537,11 +1537,7 @@ export default class DevServer {
             // Retain orginal pathname, but override query parameters from the rewrite
             const beforeRewriteUrl = req.url || '/';
             const rewriteUrlParsed = url.parse(beforeRewriteUrl);
-            const rewriteQuery = parseQueryString(
-              url.parse(rewritePath).search
-            );
-            rewriteUrlParsed.search = formatQueryString(rewriteQuery);
-            req.url = url.format(rewriteUrlParsed);
+            rewriteUrlParsed.search = url.parse(rewritePath).search;
             debug(
               `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
             );
