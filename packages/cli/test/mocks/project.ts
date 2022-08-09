@@ -125,6 +125,11 @@ export const defaultProject = {
   ],
 };
 
+/**
+ * Responds to any GET for a project with a 404.
+ * `useUnknownProject` should always come after `useProject`, if any,
+ * to allow `useProject` responses to still happen.
+ */ 
 export function useUnknownProject() {
   let project: Project;
   client.scenario.get(`/v8/projects/:projectNameOrId`, (_req, res) => {
