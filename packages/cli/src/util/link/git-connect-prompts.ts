@@ -9,10 +9,10 @@ export async function promptGitConnectSingleUrl(
   project: Project,
   remoteName: string,
   remoteUrl: string,
-  replace = false
+  hasDiffConnectedProvider = false
 ) {
   const { output } = client;
-  if (replace) {
+  if (hasDiffConnectedProvider) {
     const currentRepoPath = `${project.link!.org}/${project.link!.repo}`;
     const currentProvider = project.link!.type;
     output.log(
@@ -29,7 +29,7 @@ export async function promptGitConnectSingleUrl(
     );
   }
   return await list(client, {
-    message: replace
+    message: hasDiffConnectedProvider
       ? 'Do you want to replace it?'
       : `Do you want to connect "${remoteName}" to your Vercel project?`,
     choices: [
