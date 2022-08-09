@@ -129,9 +129,7 @@ export function printRemoteUrls(
   output: Output,
   remoteUrls: Dictionary<string>
 ) {
-  let str = '';
   for (const [name, url] of Object.entries(remoteUrls)) {
-    str += `  • ${name}: ${chalk.cyan(url)}\n`;
+    output.print(`  • ${name}: ${chalk.cyan(url)}\n`);
   }
-  output.print(str);
 }
