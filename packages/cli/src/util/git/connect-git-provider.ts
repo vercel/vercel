@@ -90,11 +90,7 @@ export function formatProvider(type: string): string {
   }
 }
 
-export function parseRepoUrl(originUrl: string): {
-  provider: string;
-  org: string;
-  repo: string;
-} | null {
+export function parseRepoUrl(originUrl: string): ParsedRepoUrl | null {
   const isSSH = originUrl.startsWith('git@');
   // Matches all characters between (// or @) and (.com or .org)
   // eslint-disable-next-line prefer-named-capture-group
@@ -120,6 +116,7 @@ export function parseRepoUrl(originUrl: string): {
   }
 
   return {
+    url: originUrl,
     provider: provider[0],
     org,
     repo,
