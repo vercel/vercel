@@ -1835,7 +1835,6 @@ export const onPrerenderRoute =
         `${routeFileNoExt}.json`
       );
     }
-    f;
 
     if (isSharedLambdas) {
       const outputSrcPathPage = normalizeIndexOutput(
