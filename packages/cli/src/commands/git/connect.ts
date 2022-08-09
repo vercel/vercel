@@ -29,7 +29,7 @@ export default async function connect(
   const confirm = Boolean(argv['--yes']);
   const repoArg = argv._[1];
 
-  if (args.length !== 0 && args.length !== 1) {
+  if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
         `${getCommandName('project connect')}`
