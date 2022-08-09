@@ -198,7 +198,7 @@ async function connectArgWithLocalGit(
   const parsedUrlArg = parseRepoUrl(repoArg);
   if (!parsedUrlArg) {
     output.error(
-      `Cannot parse URL ${repoArg}. Make sure you didn't make any typos.`
+      `Failed to parse URL "${repoArg}". Please ensure the URL is valid.`
     );
     return 1;
   }
