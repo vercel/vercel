@@ -142,8 +142,6 @@ export async function* deploy(
 
   try {
     debug('Creating deployment');
-    console.log('files', files);
-    console.log('deployment options', deploymentOptions);
     for await (const event of postDeployment(
       files,
       clientOptions,
@@ -152,7 +150,6 @@ export async function* deploy(
       if (event.type === 'created') {
         debug('Deployment created');
         deployment = event.payload;
-        console.log('created deployment', deployment);
       }
 
       yield event;

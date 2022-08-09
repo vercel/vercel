@@ -6,7 +6,7 @@ import mapCertError from '../certs/map-cert-error';
 import { Org } from '../../types';
 import Now, { CreateOptions } from '..';
 import Client from '../client';
-import { ArchiveFormat, DeploymentError } from '../../../../client/dist';
+import { ArchiveFormat, DeploymentError } from '@vercel/client';
 
 export default async function createDeploy(
   client: Client,

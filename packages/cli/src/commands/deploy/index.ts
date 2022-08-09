@@ -73,7 +73,7 @@ import {
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '../../util/is-error';
 
-export default async (client: Client) => {
+export default async (client: Client): Promise<number> => {
   const { output } = client;
 
   let argv = null;
@@ -923,4 +923,6 @@ const printDeploymentStatus = async (
         ) + newline;
     output.print(message + link);
   }
+
+  return 0;
 };
