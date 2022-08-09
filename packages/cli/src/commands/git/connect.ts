@@ -212,8 +212,8 @@ async function connectArgWithLocalGit(
       repoArg,
       remoteUrls
     );
-    if (typeof shouldConnect === 'number') {
-      return shouldConnect;
+    if (!shouldConnect) {
+      return 1;
     }
     if (shouldConnect) {
       const { provider, org: parsedOrg, repo } = parsedUrlArg;
@@ -263,17 +263,17 @@ async function promptConnectArg(
       output.error(
         `Failed to parse URL "${url}". Please ensure the URL is valid.`
       );
-      return 1;
+      return false;
     }
     const parsedUrlArg = parseRepoUrl(arg);
     if (!parsedUrlArg) {
       output.error(
         `Failed to parse URL "${arg}". Please ensure the URL is valid.`
       );
-      return 1;
+      return false;
     }
     if (JSON.stringify(parsedUrl) === JSON.stringify(parsedUrlArg)) {
-      return 0;
+      return true;
     }
 
     output.log(
