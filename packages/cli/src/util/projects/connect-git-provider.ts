@@ -93,7 +93,10 @@ export function parseRepoUrl(originUrl: string): {
   const isSSH = originUrl.startsWith('git@');
   // Matches all characters between (// or @) and (.com or .org)
   // eslint-disable-next-line prefer-named-capture-group
-  const provider = /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl);
+  // const provider = /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl);
+  let provider =
+    /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl)?.[0] ||
+    originUrl.replace('www.', '').split('.')[0];
   if (!provider) {
     return null;
   }
@@ -106,8 +109,9 @@ export function parseRepoUrl(originUrl: string): {
     repo = originUrl.split('/')[1]?.replace('.git', '');
   } else {
     // Assume https:// or git://
-    org = originUrl.split('/')[3];
-    repo = originUrl.split('/')[4]?.replace('.git', '');
+    originUrl = originUrl.replace('//', '');
+    org = originUrl.split('/')[1];
+    repo = originUrl.split('/')[2]?.replace('.git', '');
   }
 
   if (!org || !repo) {
@@ -115,7 +119,7 @@ export function parseRepoUrl(originUrl: string): {
   }
 
   return {
-    provider: provider[0],
+    provider,
     org,
     repo,
   };
