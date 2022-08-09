@@ -98,7 +98,7 @@ export default async function connect(
   let remoteUrl: string;
 
   if (Object.keys(remoteUrls).length > 1) {
-    output.log(`Found multiple remote URLs.`);
+    output.log('Found multiple remote URLs.');
     remoteUrl = await selectRemoteUrl(client, remoteUrls);
   } else {
     // If only one is found, get it — usually "origin"
@@ -254,7 +254,7 @@ async function promptConnectArg(
 ) {
   const multiple = Object.keys(remoteUrls).length > 1;
   if (multiple) {
-    output.log(`Found multiple Git repositories in your local Git config:`);
+    output.log('Found multiple Git repositories in your local Git config:');
     printRemoteUrls(output, remoteUrls);
   } else {
     const url = Object.values(remoteUrls)[0];
@@ -291,7 +291,7 @@ async function promptConnectArg(
       false
     );
     if (!shouldConnect) {
-      output.log(`Aborted. Repo not connected.`);
+      output.log('Aborted. Repo not connected.');
     }
   }
   return shouldConnect;
@@ -381,7 +381,7 @@ async function confirmRepoConnect(
       true
     );
     if (!shouldReplaceProject) {
-      output.log(`Aborted. Repo not connected.`);
+      output.log('Aborted. Repo not connected.');
     }
   }
   return shouldReplaceProject;
