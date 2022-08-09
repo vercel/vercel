@@ -1045,3 +1045,19 @@ test('[vercel dev] validate rewrites', async () => {
     /Invalid vercel\.json - `rewrites\[0\].destination` should be string/m
   );
 });
+
+test(
+  '[vercel dev] should correctly proxy to vite dev',
+  testFixtureStdio(
+    'vite-dev',
+    async (testPath: any) => {
+      await testPath(200, '/', /<title>Vite App<\/title>/gm);
+      await testPath(
+        200,
+        '/src/App.vue?vue&type=style&index=0&lang.css',
+        /__vite__createHotContext/gm
+      );
+    },
+    { skipDeploy: true }
+  )
+);
