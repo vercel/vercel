@@ -6,7 +6,6 @@ import Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
 import confirm from '../../util/input/confirm';
 import list, { ListChoice } from '../../util/input/list';
-import { Output } from '../../util/output';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
@@ -24,7 +23,6 @@ interface GitRepoCheckParams {
   confirm: boolean;
   gitProviderLink?: ProjectLinkData;
   org: Org;
-  output: Output;
   gitOrg: string;
   project: Project;
   provider: string;
@@ -34,7 +32,6 @@ interface GitRepoCheckParams {
 
 interface ConnectArgParams {
   client: Client;
-  output: Output;
   org: Org;
   project: Project;
   confirm: boolean;
@@ -47,7 +44,6 @@ interface ConnectGitArgParams extends ConnectArgParams {
 
 interface PromptConnectArgParams {
   client: Client;
-  output: Output;
   yes: boolean;
   repoInfo: ParsedRepoUrl;
   remoteUrls: Dictionary<string>;
@@ -108,7 +104,6 @@ export default async function connect(
     if (gitConfig) {
       return await connectArgWithLocalGit({
         client,
-        output,
         org,
         project,
         confirm,
@@ -118,7 +113,6 @@ export default async function connect(
     }
     return await connectArg({
       client,
-      output,
       confirm,
       org,
       project,
@@ -175,7 +169,6 @@ export default async function connect(
 
   const checkAndConnect = await checkExistsAndConnect({
     client,
-    output,
     confirm,
     org,
     project,
@@ -198,17 +191,16 @@ export default async function connect(
 
 async function connectArg({
   client,
-  output,
   confirm,
   org,
   project,
   repoInfo,
 }: ConnectArgParams) {
   const { url: repoUrl } = repoInfo;
-  output.log(`Connecting Git remote: ${link(repoUrl)}`);
+  client.output.log(`Connecting Git remote: ${link(repoUrl)}`);
   const parsedRepoArg = parseRepoUrl(repoUrl);
   if (!parsedRepoArg) {
-    output.error(
+    client.output.error(
       `Failed to parse URL "${repoUrl}". Please ensure the URL is valid.`
     );
     return 1;
@@ -217,7 +209,6 @@ async function connectArg({
   const repoPath = `${gitOrg}/${repo}`;
   const connect = await checkExistsAndConnect({
     client,
-    output,
     confirm,
     org,
     project,
@@ -230,7 +221,7 @@ async function connectArg({
   if (typeof connect === 'number') {
     return connect;
   }
-  output.log(
+  client.output.log(
     `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
   );
   return 0;
@@ -238,7 +229,6 @@ async function connectArg({
 
 async function connectArgWithLocalGit({
   client,
-  output,
   org,
   project,
   confirm,
@@ -249,7 +239,6 @@ async function connectArgWithLocalGit({
   if (remoteUrls) {
     const shouldConnect = await promptConnectArg({
       client,
-      output,
       yes: confirm,
       repoInfo,
       remoteUrls,
@@ -260,10 +249,9 @@ async function connectArgWithLocalGit({
     if (shouldConnect) {
       const { provider, org: gitOrg, repo, url: repoUrl } = repoInfo;
       const repoPath = `${gitOrg}/${repo}`;
-      output.log(`Connecting Git remote: ${link(repoUrl)}`);
+      client.output.log(`Connecting Git remote: ${link(repoUrl)}`);
       const connect = await checkExistsAndConnect({
         client,
-        output,
         confirm,
         org,
         project,
@@ -276,7 +264,7 @@ async function connectArgWithLocalGit({
       if (typeof connect === 'number') {
         return connect;
       }
-      output.log(
+      client.output.log(
         `Connected ${formatProvider(provider)} repository ${chalk.cyan(
           repoPath
         )}!`
@@ -284,24 +272,25 @@ async function connectArgWithLocalGit({
     }
     return 0;
   }
-  return await connectArg({ client, output, confirm, org, project, repoInfo });
+  return await connectArg({ client, confirm, org, project, repoInfo });
 }
 
 async function promptConnectArg({
   client,
-  output,
   yes,
   repoInfo: repoInfoFromArg,
   remoteUrls,
 }: PromptConnectArgParams) {
   if (Object.keys(remoteUrls).length > 1) {
-    output.log('Found multiple Git repositories in your local Git config:');
-    printRemoteUrls(output, remoteUrls);
+    client.output.log(
+      'Found multiple Git repositories in your local Git config:'
+    );
+    printRemoteUrls(client.output, remoteUrls);
   } else {
     const url = Object.values(remoteUrls)[0];
     const repoInfoFromGitConfig = parseRepoUrl(url);
     if (!repoInfoFromGitConfig) {
-      output.error(
+      client.output.error(
         `Failed to parse URL "${url}". Please ensure the URL is valid.`
       );
       return false;
@@ -312,7 +301,7 @@ async function promptConnectArg({
       return true;
     }
 
-    output.log(
+    client.output.log(
       `Found a repository in your local Git Config: ${chalk.cyan(
         Object.values(remoteUrls)[0]
       )}`
@@ -328,7 +317,7 @@ async function promptConnectArg({
       false
     );
     if (!shouldConnect) {
-      output.log('Aborted. Repo not connected.');
+      client.output.log('Aborted. Repo not connected.');
     }
   }
   return shouldConnect;
@@ -336,7 +325,6 @@ async function promptConnectArg({
 
 async function checkExistsAndConnect({
   client,
-  output,
   confirm,
   org,
   project,
@@ -368,7 +356,7 @@ async function checkExistsAndConnect({
       connectedOrg === gitOrg &&
       connectedRepo === repo;
     if (isSameRepo) {
-      output.log(
+      client.output.log(
         `${chalk.cyan(connectedRepoPath)} is already connected to your project.`
       );
       return 1;
@@ -376,7 +364,6 @@ async function checkExistsAndConnect({
 
     const shouldReplaceRepo = await confirmRepoConnect(
       client,
-      output,
       confirm,
       connectedProvider,
       connectedRepoPath
@@ -401,7 +388,6 @@ async function checkExistsAndConnect({
 
 async function confirmRepoConnect(
   client: Client,
-  output: Output,
   yes: boolean,
   connectedProvider: string,
   connectedRepoPath: string
@@ -418,7 +404,7 @@ async function confirmRepoConnect(
       true
     );
     if (!shouldReplaceProject) {
-      output.log('Aborted. Repo not connected.');
+      client.output.log('Aborted. Repo not connected.');
     }
   }
   return shouldReplaceProject;
