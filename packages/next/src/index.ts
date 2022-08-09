@@ -2624,11 +2624,10 @@ async function getServerlessPages(params: {
   const normalizedAppPaths: typeof appPaths = {};
 
   if (params.appPathRoutesManifest) {
-    for (const entry of Object.keys(params.appPathRoutesManifest || {})) {
-      const normalizedPath = `${path.join(
-        '.',
-        params.appPathRoutesManifest[entry]
-      )}.js`;
+    for (const [entry, normalizedEntry] of Object.entries(
+      params.appPathRoutesManifest || {}
+    )) {
+      const normalizedPath = `${path.join('.', normalizedEntry)}.js`;
       const globPath = `${path.join('.', entry)}.js`;
 
       if (appPaths[globPath]) {
@@ -2641,8 +2640,9 @@ async function getServerlessPages(params: {
   for (const edgeFunctionFile of Object.keys(
     middlewareManifest?.functions ?? {}
   )) {
-    delete normalizedAppPaths[edgeFunctionFile.slice(1) + '.js'];
-    delete pages[edgeFunctionFile.slice(1) + '.js'];
+    const edgePath = edgeFunctionFile.slice(1) + '.js';
+    delete normalizedAppPaths[edgePath];
+    delete pages[edgePath];
   }
 
   return { pages, appPaths: normalizedAppPaths };

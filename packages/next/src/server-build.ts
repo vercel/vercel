@@ -135,7 +135,7 @@ export async function serverBuild({
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
 }): Promise<BuildResult> {
-  Object.assign(lambdaPages, lambdaAppPaths);
+  lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
