@@ -5,13 +5,14 @@ import {
 
 describe('parseQueryString', () => {
   it('should parse to Map and format back to original String', async () => {
-    const querystring = '?a&b=1&c=2&c=3&d=&space%20bar=4&html=%3Ch1%3E';
+    const querystring =
+      '?a&a=&a&b=1&c=2&c=3&d=&d&d=&space%20bar=4&html=%3Ch1%3E';
     const parsed = parseQueryString(querystring);
     expect(parsed).toEqual({
-      a: [],
+      a: [undefined, '', undefined],
       b: ['1'],
       c: ['2', '3'],
-      d: [''],
+      d: ['', undefined, ''],
       'space bar': ['4'],
       html: ['<h1>'],
     });

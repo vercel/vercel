@@ -1,3 +1,8 @@
+/**
+ * This function is necessary to account for the difference between
+ * `?a=` and `?a` because native `url.parse(str, true)` can't tell.
+ * @param querystring - The querystring to parse, also known as the "search" string.
+ */
 export function parseQueryString(
   querystring?: string
 ): Record<string, string[]> {
@@ -26,6 +31,11 @@ export function parseQueryString(
   return query;
 }
 
+/**
+ * This function is necessary to account for the difference between
+ * `?a=` and `?a` because native `url.format({ query })` can't tell.
+ * @param query - The query object to stringify.
+ */
 export function formatQueryString(
   query: Record<string, string[]> | undefined
 ): string | undefined {
