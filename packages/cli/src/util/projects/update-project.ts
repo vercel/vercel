@@ -13,11 +13,14 @@ export default async function updateProject(
   prjNameOrId: string,
   settings: ProjectSettings
 ) {
+  // `ProjectSettings` is technically compatible with JSONObject
+  const body = settings as JSONObject;
+
   const res = await client.fetch<ProjectSettingsResponse>(
     `/v2/projects/${encodeURIComponent(prjNameOrId)}`,
     {
       method: 'PATCH',
-      body: settings as JSONObject, // TODO: figure out how to not make this cast necessary
+      body,
     }
   );
   return res;
