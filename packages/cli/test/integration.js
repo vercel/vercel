@@ -126,7 +126,7 @@ ${stdout}
 async function vcLink(t, projectPath) {
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    ['link', '--confirm', ...defaultArgs],
+    ['link', '--yes', ...defaultArgs],
     {
       reject: false,
       cwd: projectPath,
@@ -232,14 +232,6 @@ const waitForPrompt = (cp, assertion) =>
     cp.stdout.on('data', listener);
     cp.stderr.on('data', listener);
   });
-
-const getDeploymentBuildsByUrl = async url => {
-  const hostRes = await apiFetch(`/v10/now/deployments/get?url=${url}`);
-  const { id } = await hostRes.json();
-  const buildsRes = await apiFetch(`/v10/now/deployments/${id}/builds`);
-  const { builds } = await buildsRes.json();
-  return builds;
-};
 
 const createUser = async () => {
   await retry(
@@ -666,7 +658,7 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    ['link', '--confirm', ...defaultArgs],
+    ['link', '--yes', ...defaultArgs],
     {
       reject: false,
       cwd: directory,
@@ -691,7 +683,7 @@ test('deploy using only now.json with `redirects` defined', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [target, ...defaultArgs, '--confirm'],
+    [target, ...defaultArgs, '--yes'],
     {
       reject: false,
     }
@@ -711,14 +703,7 @@ test('deploy using --local-config flag v2', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [
-      'deploy',
-      target,
-      '--local-config',
-      configPath,
-      ...defaultArgs,
-      '--confirm',
-    ],
+    ['deploy', target, '--local-config', configPath, ...defaultArgs, '--yes'],
     {
       reject: false,
     }
@@ -755,7 +740,7 @@ test('deploy fails using --local-config flag with non-existent path', async t =>
       '--local-config',
       'does-not-exist.json',
       ...defaultArgs,
-      '--confirm',
+      '--yes',
     ],
     {
       reject: false,
@@ -780,7 +765,7 @@ test('deploy using --local-config flag above target', async t => {
       '--local-config',
       './now-root.json',
       ...defaultArgs,
-      '--confirm',
+      '--yes',
     ],
     {
       cwd: root,
@@ -809,7 +794,7 @@ test('Deploy `api-env` fixture and test `vercel env` command', async t => {
   async function vcLink() {
     const { exitCode, stderr, stdout } = await execa(
       binaryPath,
-      ['link', '--confirm', ...defaultArgs],
+      ['link', '--yes', ...defaultArgs],
       {
         reject: false,
         cwd: target,
@@ -1323,12 +1308,7 @@ test('[vc projects] should create a project successfully', async t => {
     Math.random().toString(36).split('.')[1]
   }`;
 
-  const vc = execa(binaryPath, [
-    'projects',
-    'add',
-    projectName,
-    ...defaultArgs,
-  ]);
+  const vc = execa(binaryPath, ['project', 'add', projectName, ...defaultArgs]);
 
   await waitForPrompt(vc, chunk =>
     chunk.includes(`Success! Project ${projectName} added`)
@@ -1339,7 +1319,7 @@ test('[vc projects] should create a project successfully', async t => {
 
   // creating the same project again should succeed
   const vc2 = execa(binaryPath, [
-    'projects',
+    'project',
     'add',
     projectName,
     ...defaultArgs,
@@ -1358,7 +1338,7 @@ test('deploy with metadata containing "=" in the value', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [target, ...defaultArgs, '--confirm', '--meta', 'someKey=='],
+    [target, ...defaultArgs, '--yes', '--meta', 'someKey=='],
     { reject: false }
   );
 
@@ -1434,7 +1414,7 @@ test('should add secret with hyphen prefix', async t => {
     formatOutput({ stderr: secretCall.stderr, stdout: secretCall.stdout })
   );
 
-  let targetCall = await execa(binaryPath, [...defaultArgs, '--confirm'], {
+  let targetCall = await execa(binaryPath, [...defaultArgs, '--yes'], {
     cwd: target,
     reject: false,
   });
@@ -1488,7 +1468,7 @@ test('ignore files specified in .nowignore', async t => {
     '--name',
     session,
     ...defaultArgs,
-    '--confirm',
+    '--yes',
   ];
   const targetCall = await execa(binaryPath, args, {
     cwd: directory,
@@ -1516,7 +1496,7 @@ test('ignore files specified in .nowignore via allowlist', async t => {
     '--name',
     session,
     ...defaultArgs,
-    '--confirm',
+    '--yes',
   ];
   const targetCall = await execa(binaryPath, args, {
     cwd: directory,
@@ -1588,7 +1568,7 @@ test('domains inspect', async t => {
     `-V`,
     `2`,
     `--name=${projectName}`,
-    '--confirm',
+    '--yes',
     '--public',
   ]);
   t.is(output.exitCode, 0, formatOutput(output));
@@ -1824,7 +1804,7 @@ test('ensure we render a warning for deployments with no files', async t => {
       '--name',
       session,
       ...defaultArgs,
-      '--confirm',
+      '--yes',
       '--force',
     ],
     {
@@ -1952,7 +1932,7 @@ test('ensure the `scope` property works with email', async t => {
       session,
       ...defaultArgs,
       '--force',
-      '--confirm',
+      '--yes',
     ],
     {
       reject: false,
@@ -1992,7 +1972,7 @@ test('ensure the `scope` property works with username', async t => {
       session,
       ...defaultArgs,
       '--force',
-      '--confirm',
+      '--yes',
     ],
     {
       reject: false,
@@ -2025,7 +2005,7 @@ test('try to create a builds deployments with wrong now.json', async t => {
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [directory, '--public', ...defaultArgs, '--confirm'],
+    [directory, '--public', ...defaultArgs, '--yes'],
     {
       reject: false,
     }
@@ -2050,7 +2030,7 @@ test('try to create a builds deployments with wrong vercel.json', async t => {
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [directory, '--public', ...defaultArgs, '--confirm'],
+    [directory, '--public', ...defaultArgs, '--yes'],
     {
       reject: false,
     }
@@ -2074,7 +2054,7 @@ test('try to create a builds deployments with wrong `build.env` property', async
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    ['--public', ...defaultArgs, '--confirm'],
+    ['--public', ...defaultArgs, '--yes'],
     {
       cwd: directory,
       reject: false,
@@ -2106,7 +2086,7 @@ test('create a builds deployments with no actual builds', async t => {
       session,
       ...defaultArgs,
       '--force',
-      '--confirm',
+      '--yes',
     ],
     {
       reject: false,
@@ -2133,7 +2113,7 @@ test('create a staging deployment', async t => {
     directory,
     '--target=staging',
     ...args,
-    '--confirm',
+    '--yes',
   ]);
 
   console.log(targetCall.stderr);
@@ -2163,7 +2143,7 @@ test('create a production deployment', async t => {
     directory,
     '--target=production',
     ...args,
-    '--confirm',
+    '--yes',
   ]);
 
   console.log(targetCall.stderr);
@@ -2224,7 +2204,7 @@ test('use build-env', async t => {
 
   const { stdout, stderr, exitCode } = await execa(
     binaryPath,
-    [directory, '--public', ...defaultArgs, '--confirm'],
+    [directory, '--public', ...defaultArgs, '--yes'],
     {
       reject: false,
     }
@@ -2257,7 +2237,7 @@ test('use `--debug` CLI flag', async t => {
       session,
       '--debug',
       ...defaultArgs,
-      '--confirm',
+      '--yes',
     ],
     {
       reject: false,
@@ -2289,7 +2269,7 @@ test('try to deploy non-existing path', async t => {
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [session, ...defaultArgs, '--confirm'],
+    [session, ...defaultArgs, '--yes'],
     {
       reject: false,
     }
@@ -2309,7 +2289,7 @@ test('try to deploy with non-existing team', async t => {
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
-    [target, '--scope', session, ...defaultArgs, '--confirm'],
+    [target, '--scope', session, ...defaultArgs, '--yes'],
     {
       reject: false,
     }
@@ -2447,7 +2427,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
       stdout: deploymentUrl,
       stderr,
       exitCode,
-    } = await execute([firstDeployment, '--confirm']);
+    } = await execute([firstDeployment, '--yes']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2468,7 +2448,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
       stdout: deploymentUrl,
       stderr,
       exitCode,
-    } = await execute([secondDeployment, '--confirm']);
+    } = await execute([secondDeployment, '--yes']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2491,7 +2471,7 @@ test('try to revert a deployment and assign the automatic aliases', async t => {
       stdout: deploymentUrl,
       stderr,
       exitCode,
-    } = await execute([firstDeployment, '--confirm']);
+    } = await execute([firstDeployment, '--yes']);
 
     t.is(exitCode, 0, formatOutput({ stderr, stdout: deploymentUrl }));
 
@@ -2573,7 +2553,7 @@ test('`vercel rm` removes a deployment', async t => {
       '-V',
       2,
       '--force',
-      '--confirm',
+      '--yes',
     ],
     {
       reject: false,
@@ -2629,7 +2609,7 @@ test('`vercel rm` 404 exits quickly', async t => {
 
 test('render build errors', async t => {
   const deploymentPath = fixture('failing-build');
-  const output = await execute([deploymentPath, '--confirm']);
+  const output = await execute([deploymentPath, '--yes']);
 
   console.log(output.stderr);
   console.log(output.stdout);
@@ -2703,12 +2683,7 @@ test('vercel hasOwnProperty not a valid subcommand', async t => {
 
 test('create zero-config deployment', async t => {
   const fixturePath = fixture('zero-config-next-js');
-  const output = await execute([
-    fixturePath,
-    '--force',
-    '--public',
-    '--confirm',
-  ]);
+  const output = await execute([fixturePath, '--force', '--public', '--yes']);
 
   console.log('isCanary', isCanary);
   console.log(output.stderr);
@@ -2739,12 +2714,7 @@ test('create zero-config deployment', async t => {
 
 test('next unsupported functions config shows warning link', async t => {
   const fixturePath = fixture('zero-config-next-js-functions-warning');
-  const output = await execute([
-    fixturePath,
-    '--force',
-    '--public',
-    '--confirm',
-  ]);
+  const output = await execute([fixturePath, '--force', '--public', '--yes']);
 
   console.log('isCanary', isCanary);
   console.log(output.stderr);
@@ -2832,7 +2802,7 @@ test('vercel secret rm', async t => {
 
 test('deploy a Lambda with 128MB of memory', async t => {
   const directory = fixture('lambda-with-128-memory');
-  const output = await execute([directory, '--confirm']);
+  const output = await execute([directory, '--yes']);
 
   t.is(output.exitCode, 0, formatOutput(output));
 
@@ -2849,7 +2819,7 @@ test('deploy a Lambda with 128MB of memory', async t => {
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async t => {
   const directory = fixture('lambda-with-200-memory');
-  const output = await execute([directory, '--confirm']);
+  const output = await execute([directory, '--yes']);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(output.stderr, /steps of 64/gm, formatOutput(output));
@@ -2858,7 +2828,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async t =>
 
 test('deploy a Lambda with 3 seconds of maxDuration', async t => {
   const directory = fixture('lambda-with-3-second-timeout');
-  const output = await execute([directory, '--confirm']);
+  const output = await execute([directory, '--yes']);
 
   t.is(output.exitCode, 0, formatOutput(output));
 
@@ -2885,7 +2855,7 @@ test('deploy a Lambda with 3 seconds of maxDuration', async t => {
 
 test('fail to deploy a Lambda with an incorrect value for maxDuration', async t => {
   const directory = fixture('lambda-with-1000-second-timeout');
-  const output = await execute([directory, '--confirm']);
+  const output = await execute([directory, '--yes']);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
@@ -2908,20 +2878,19 @@ test('invalid `--token`', async t => {
 
 test('deploy a Lambda with a specific runtime', async t => {
   const directory = fixture('lambda-with-php-runtime');
-  const output = await execute([directory, '--public', '--confirm']);
+  const output = await execute([directory, '--public', '--yes']);
 
   t.is(output.exitCode, 0, formatOutput(output));
 
-  const { host: url } = new URL(output.stdout);
-
-  const builds = await getDeploymentBuildsByUrl(url);
-  const build = builds.find(b => b.use && b.use.includes('php')) || builds[0];
-  t.is(build.use, 'vercel-php@0.1.0', JSON.stringify(build, null, 2));
+  const url = new URL(output.stdout);
+  const res = await fetch(`${url}/api/test`);
+  const text = await res.text();
+  t.is(text, 'Hello from PHP');
 });
 
 test('fail to deploy a Lambda with a specific runtime but without a locked version', async t => {
   const directory = fixture('lambda-with-invalid-runtime');
-  const output = await execute([directory, '--confirm']);
+  const output = await execute([directory, '--yes']);
 
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
@@ -2971,7 +2940,7 @@ test('assign a domain to a project', async t => {
   const domain = `project-domain.${contextName}.vercel.app`;
   const directory = fixture('static-deployment');
 
-  const deploymentOutput = await execute([directory, '--public', '--confirm']);
+  const deploymentOutput = await execute([directory, '--public', '--yes']);
   t.is(deploymentOutput.exitCode, 0, formatOutput(deploymentOutput));
 
   const host = deploymentOutput.stdout.trim().replace('https://', '');
@@ -2991,7 +2960,7 @@ test('assign a domain to a project', async t => {
 
 test('ensure `github` and `scope` are not sent to the API', async t => {
   const directory = fixture('github-and-scope-config');
-  const output = await execute([directory, '--confirm']);
+  const output = await execute([directory, '--yes']);
 
   t.is(output.exitCode, 0, formatOutput(output));
 });
@@ -3306,7 +3275,7 @@ test('deploy with `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`', async t => {
   const directory = fixture('static-deployment');
 
   // generate `.vercel`
-  await execute([directory, '--confirm']);
+  await execute([directory, '--yes']);
 
   const link = require(path.join(directory, '.vercel/project.json'));
   await remove(path.join(directory, '.vercel'));
@@ -3357,7 +3326,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async t =>
 test('use `rootDirectory` from project when deploying', async t => {
   const directory = fixture('project-root-directory');
 
-  const firstResult = await execute([directory, '--confirm', '--public']);
+  const firstResult = await execute([directory, '--yes', '--public']);
   t.is(firstResult.exitCode, 0, formatOutput(firstResult));
 
   const { host: firstHost } = new URL(firstResult.stdout);
@@ -3452,7 +3421,7 @@ test('deploys with only now.json and README.md', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [...defaultArgs, '--confirm'],
+    [...defaultArgs, '--yes'],
     {
       cwd: directory,
       reject: false,
@@ -3471,7 +3440,7 @@ test('deploys with only vercel.json and README.md', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [...defaultArgs, '--confirm'],
+    [...defaultArgs, '--yes'],
     {
       cwd: directory,
       reject: false,
@@ -3490,7 +3459,7 @@ test('reject conflicting `vercel.json` and `now.json` files', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [...defaultArgs, '--confirm'],
+    [...defaultArgs, '--yes'],
     {
       cwd: directory,
       reject: false,
@@ -3529,7 +3498,7 @@ test('deploy gatsby twice and print cached directories', async t => {
   const pkg = JSON.parse(packageJsonOriginal);
 
   async function tryDeploy(cwd) {
-    await execa(binaryPath, [...defaultArgs, '--public', '--confirm'], {
+    await execa(binaryPath, [...defaultArgs, '--public', '--yes'], {
       cwd,
       stdio: 'inherit',
       reject: true,
@@ -3567,7 +3536,7 @@ test('deploy pnpm twice using pnp and symlink=false', async t => {
       session,
       ...defaultArgs,
       '--public',
-      '--confirm',
+      '--yes',
     ]);
   }
 
@@ -3595,7 +3564,7 @@ test('reject deploying with wrong team .vercel config', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [...defaultArgs, '--confirm'],
+    [...defaultArgs, '--yes'],
     {
       cwd: directory,
       reject: false,
@@ -3615,7 +3584,7 @@ test('reject deploying with invalid token', async t => {
   const directory = fixture('unauthorized-vercel-config');
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    [...defaultArgs, '--confirm'],
+    [...defaultArgs, '--yes'],
     {
       cwd: directory,
       reject: false,
@@ -3672,7 +3641,7 @@ test('[vc link] should show prompts to set up project', async t => {
   );
 });
 
-test('[vc link --confirm] should not show prompts and autolink', async t => {
+test('[vc link --yes] should not show prompts and autolink', async t => {
   const dir = fixture('project-link-confirm');
 
   // remove previously linked project if it exists
@@ -3680,7 +3649,7 @@ test('[vc link --confirm] should not show prompts and autolink', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    ['link', '--confirm', ...defaultArgs],
+    ['link', '--yes', ...defaultArgs],
     { cwd: dir, reject: false }
   );
 
@@ -3715,7 +3684,7 @@ test('[vc link] should not duplicate paths in .gitignore', async t => {
 
   const { exitCode, stderr, stdout } = await execa(
     binaryPath,
-    ['link', '--confirm', ...defaultArgs],
+    ['link', '--yes', ...defaultArgs],
     {
       cwd: dir,
       reject: false,
@@ -3889,7 +3858,7 @@ test('[vc link] should support the `--project` flag', async t => {
 
   const [user, output] = await Promise.all([
     fetchTokenInformation(token),
-    execute(['link', '--confirm', '--project', projectName, directory]),
+    execute(['link', '--yes', '--project', projectName, directory]),
   ]);
 
   t.is(output.exitCode, 0, formatOutput(output));
@@ -3924,6 +3893,26 @@ test('[vc build] should build project with `@vercel/static-build`', async t => {
   t.is(builds.target, 'preview');
   t.is(builds.builds[0].src, 'package.json');
   t.is(builds.builds[0].use, '@vercel/static-build');
+});
+
+test('[vc build] should not include .vercel when distDir is "."', async t => {
+  const directory = fixture('static-build-dist-dir');
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  t.true(output.stderr.includes('Build Completed in .vercel/output'));
+  const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+  t.false(dir.includes('.vercel'));
+  t.true(dir.includes('index.txt'));
+});
+
+test('[vc build] should not include .vercel when zeroConfig is true and outputDirectory is "."', async t => {
+  const directory = fixture('static-build-zero-config-output-directory');
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  t.true(output.stderr.includes('Build Completed in .vercel/output'));
+  const dir = await fs.readdir(path.join(directory, '.vercel/output/static'));
+  t.false(dir.includes('.vercel'));
+  t.true(dir.includes('index.txt'));
 });
 
 test('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async t => {
@@ -3990,7 +3979,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
     const deployment = await execa(
       binaryPath,
       [directory, ...defaultArgs, '--public'].concat(
-        autoConfirm ? ['--confirm'] : []
+        autoConfirm ? ['--yes'] : []
       ),
       { reject: false }
     );

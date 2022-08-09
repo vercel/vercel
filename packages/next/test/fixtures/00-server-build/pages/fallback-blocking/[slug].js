@@ -16,7 +16,7 @@ export const getStaticProps = ({ params }) => {
 
 export const getStaticPaths = () => {
   return {
-    paths: ['/fallback-blocking/first'],
+    paths: ['/fallback-blocking/first', '/fallback-blocking/on-demand-1'],
     fallback: 'blocking',
   };
 };

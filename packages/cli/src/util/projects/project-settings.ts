@@ -5,6 +5,7 @@ import { join } from 'path';
 
 export type ProjectLinkAndSettings = ProjectLink & {
   settings: {
+    createdAt: Project['createdAt'];
     installCommand: Project['installCommand'];
     buildCommand: Project['buildCommand'];
     devCommand: Project['devCommand'];
@@ -13,6 +14,7 @@ export type ProjectLinkAndSettings = ProjectLink & {
     rootDirectory: Project['rootDirectory'];
     framework: Project['framework'];
     nodeVersion: Project['nodeVersion'];
+    analyticsId?: string;
   };
 };
 
@@ -28,6 +30,7 @@ export async function writeProjectSettings(
     projectId: project.id,
     orgId: org.id,
     settings: {
+      createdAt: project.createdAt,
       framework: project.framework,
       devCommand: project.devCommand,
       installCommand: project.installCommand,
@@ -36,6 +39,7 @@ export async function writeProjectSettings(
       rootDirectory: project.rootDirectory,
       directoryListing: project.directoryListing,
       nodeVersion: project.nodeVersion,
+      analyticsId: project.analytics?.id,
     },
   };
   const path = join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT);

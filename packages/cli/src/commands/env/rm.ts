@@ -16,6 +16,7 @@ import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
+import { isAPIError } from '../../util/errors-ts';
 
 type Options = {
   '--debug': boolean;
@@ -120,12 +121,12 @@ export default async function rm(
   try {
     output.spinner('Removing');
     await removeEnvRecord(output, client, project.id, env);
-  } catch (error) {
-    if (isKnownError(error) && error.serverMessage) {
-      output.error(error.serverMessage);
+  } catch (err: unknown) {
+    if (isAPIError(err) && isKnownError(err)) {
+      output.error(err.serverMessage);
       return 1;
     }
-    throw error;
+    throw err;
   }
 
   output.print(

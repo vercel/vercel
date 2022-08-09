@@ -1,6 +1,7 @@
 import ms from 'ms';
 import path from 'path';
 import fs, { readlink } from 'fs-extra';
+import retry from 'async-retry';
 import { strict as assert, strictEqual } from 'assert';
 import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
@@ -18,7 +19,7 @@ import {
   Meta,
 } from '../src';
 
-jest.setTimeout(7 * 1000);
+jest.setTimeout(10 * 1000);
 
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
   let result;
@@ -167,6 +168,53 @@ it('should create zip files with symlinks properly', async () => {
   assert(linkStat.isSymbolicLink());
   assert(linkDirStat.isSymbolicLink());
   assert(aStat.isFile());
+});
+
+it('should download symlinks even with incorrect file', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
+  const files = {
+    'dir/file.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'file text',
+    }),
+    linkdir: new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'dir',
+    }),
+    'linkdir/file.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'this file should be discarded',
+    }),
+  };
+
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+  await fs.mkdirp(outDir);
+
+  await download(files, outDir);
+
+  const [dir, file, linkdir] = await Promise.all([
+    fs.lstat(path.join(outDir, 'dir')),
+    fs.lstat(path.join(outDir, 'dir/file.txt')),
+    fs.lstat(path.join(outDir, 'linkdir')),
+  ]);
+  expect(dir.isFile()).toBe(false);
+  expect(dir.isSymbolicLink()).toBe(false);
+
+  expect(file.isFile()).toBe(true);
+  expect(file.isSymbolicLink()).toBe(false);
+
+  expect(linkdir.isSymbolicLink()).toBe(true);
+
+  expect(warningMessages).toEqual([
+    'Warning: file "linkdir/file.txt" is within a symlinked directory "linkdir" and will be ignored',
+  ]);
 });
 
 it('should only match supported node versions, otherwise throw an error', async () => {
@@ -346,7 +394,7 @@ it('should get latest node version', async () => {
 it('should throw for discontinued versions', async () => {
   // Mock a future date so that Node 8 and 10 become discontinued
   const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2022-09-01').getTime();
+  global.Date.now = () => new Date('2022-10-15').getTime();
 
   expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
@@ -386,10 +434,10 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
     12
   );
   expect(warningMessages).toStrictEqual([
-    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
-    'Error: Node.js version 10.x is deprecated. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
-    'Error: Node.js version 12.x is deprecated. Deployments created on or after 2022-08-09 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
-    'Error: Node.js version 12.x is deprecated. Deployments created on or after 2022-08-09 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16. This change is the result of a decision made by an upstream infrastructure provider (AWS).',
+    'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
+    'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.',
+    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-01 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
+    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-01 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.',
   ]);
 
   global.Date.now = realDateNow;
@@ -453,6 +501,7 @@ it('should return lockfileVersion 2 with npm7', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should not return lockfileVersion with yarn', async () => {
@@ -460,6 +509,7 @@ it('should not return lockfileVersion with yarn', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
   expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should return lockfileVersion 1 with older versions of npm', async () => {
@@ -467,6 +517,7 @@ it('should return lockfileVersion 1 with older versions of npm', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(1);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should detect npm Workspaces', async () => {
@@ -474,48 +525,88 @@ it('should detect npm Workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
-it('should detect pnpm', async () => {
+it('should detect pnpm without workspace', async () => {
   const fixture = path.join(__dirname, 'fixtures', '22-pnpm');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
-it('should detect pnpm Workspaces', async () => {
-  const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/a');
+it('should detect pnpm with workspaces', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/c');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
+it('should detect package.json in nested backend', async () => {
+  const fixture = path.join(
+    __dirname,
+    '../../node/test/fixtures/18.1-nested-packagejson/backend'
+  );
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('yarn');
+  expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
+it('should detect package.json in nested frontend', async () => {
+  const fixture = path.join(
+    __dirname,
+    '../../node/test/fixtures/18.1-nested-packagejson/frontend'
+  );
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('yarn');
+  expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
 it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
   const meta: Meta = {};
   const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
   const apiDir = path.join(fixture, 'api');
-  const run1 = await runNpmInstall(apiDir, [], undefined, meta);
-  expect(run1).toEqual(true);
-  expect(
-    (meta.runNpmInstallSet as Set<string>).has(
-      path.join(fixture, 'package.json')
-    )
-  ).toEqual(true);
-  const run2 = await runNpmInstall(apiDir, [], undefined, meta);
-  expect(run2).toEqual(false);
-  const run3 = await runNpmInstall(fixture, [], undefined, meta);
-  expect(run3).toEqual(false);
+  const retryOpts = { maxRetryTime: 1000 };
+  let run1, run2, run3;
+  await retry(async () => {
+    run1 = await runNpmInstall(apiDir, [], undefined, meta);
+    expect(run1).toEqual(true);
+    expect(
+      (meta.runNpmInstallSet as Set<string>).has(
+        path.join(fixture, 'package.json')
+      )
+    ).toEqual(true);
+  }, retryOpts);
+  await retry(async () => {
+    run2 = await runNpmInstall(apiDir, [], undefined, meta);
+    expect(run2).toEqual(false);
+  }, retryOpts);
+  await retry(async () => {
+    run3 = await runNpmInstall(fixture, [], undefined, meta);
+    expect(run3).toEqual(false);
+  }, retryOpts);
 });
 
 it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)', async () => {
   const meta: Meta = {};
   const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
   const apiDir = path.join(fixture, 'api');
-  const [run1, run2, run3] = await Promise.all([
-    runNpmInstall(apiDir, [], undefined, meta),
-    runNpmInstall(apiDir, [], undefined, meta),
-    runNpmInstall(fixture, [], undefined, meta),
-  ]);
+  let results: [boolean, boolean, boolean] | undefined;
+  await retry(
+    async () => {
+      results = await Promise.all([
+        runNpmInstall(apiDir, [], undefined, meta),
+        runNpmInstall(apiDir, [], undefined, meta),
+        runNpmInstall(fixture, [], undefined, meta),
+      ]);
+    },
+    { maxRetryTime: 3000 }
+  );
+  const [run1, run2, run3] = results || [];
   expect(run1).toEqual(true);
   expect(run2).toEqual(false);
   expect(run3).toEqual(false);

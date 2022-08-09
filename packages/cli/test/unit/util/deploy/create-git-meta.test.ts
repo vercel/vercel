@@ -4,26 +4,146 @@ import os from 'os';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
-  getRemoteUrl,
+  getOriginUrl,
+  getRemoteUrls,
   isDirty,
-} from '../../../../src/util/deploy/create-git-meta';
+} from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
+import { parseRepoUrl } from '../../../../src/util/projects/connect-git-provider';
+import { readOutputStream } from '../../../helpers/read-output-stream';
+import { useUser } from '../../../mocks/user';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { Project } from '../../../../src/types';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
 
-describe('getRemoteUrl', () => {
+describe('getOriginUrl', () => {
   it('does not provide data for no-origin', async () => {
     const configPath = join(fixture('no-origin'), 'git/config');
-    const data = await getRemoteUrl(configPath, client.output);
+    const data = await getOriginUrl(configPath, client.output);
     expect(data).toBeNull();
   });
   it('displays debug message when repo data cannot be parsed', async () => {
     const dir = await getWriteableDirectory();
     client.output.debugEnabled = true;
-    const data = await getRemoteUrl(join(dir, 'git/config'), client.output);
+    const data = await getOriginUrl(join(dir, 'git/config'), client.output);
     expect(data).toBeNull();
     await expect(client.stderr).toOutput('Error while parsing repo data');
+  });
+});
+
+describe('getRemoteUrls', () => {
+  it('does not provide data when there are no remote urls', async () => {
+    const configPath = join(fixture('no-origin'), 'git/config');
+    const data = await getRemoteUrls(configPath, client.output);
+    expect(data).toBeUndefined();
+  });
+  it('returns an object when multiple urls are present', async () => {
+    const configPath = join(fixture('multiple-remotes'), 'git/config');
+    const data = await getRemoteUrls(configPath, client.output);
+    expect(data).toMatchObject({
+      origin: 'https://github.com/user/repo',
+      secondary: 'https://github.com/user/repo2',
+    });
+  });
+  it('returns an object for origin url', async () => {
+    const configPath = join(fixture('test-github'), 'git/config');
+    const data = await getRemoteUrls(configPath, client.output);
+    expect(data).toMatchObject({
+      origin: 'https://github.com/user/repo.git',
+    });
+  });
+});
+
+describe('parseRepoUrl', () => {
+  it('should be null when a url does not match the regex', () => {
+    const parsedUrl = parseRepoUrl('https://examplecom/foo');
+    expect(parsedUrl).toBeNull();
+  });
+  it('should be null when a url does not contain org and repo data', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/borked');
+    expect(parsedUrl).toBeNull();
+  });
+  it('should parse url with a period in the repo name', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/next.js');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('next.js');
+  });
+  it('should parse url that ends with .git', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/next.js.git');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('next.js');
+  });
+  it('should parse github https url', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel.git');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+  it('should parse github https url without the .git suffix', () => {
+    const parsedUrl = parseRepoUrl('https://github.com/vercel/vercel');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+  it('should parse github git url', () => {
+    const parsedUrl = parseRepoUrl('git://github.com/vercel/vercel.git');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+  it('should parse github ssh url', () => {
+    const parsedUrl = parseRepoUrl('git@github.com:vercel/vercel.git');
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('vercel');
+    expect(parsedUrl?.repo).toEqual('vercel');
+  });
+
+  it('should parse gitlab https url', () => {
+    const parsedUrl = parseRepoUrl(
+      'https://gitlab.com/gitlab-examples/knative-kotlin-app.git'
+    );
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('gitlab');
+    expect(parsedUrl?.org).toEqual('gitlab-examples');
+    expect(parsedUrl?.repo).toEqual('knative-kotlin-app');
+  });
+  it('should parse gitlab ssh url', () => {
+    const parsedUrl = parseRepoUrl(
+      'git@gitlab.com:gitlab-examples/knative-kotlin-app.git'
+    );
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('gitlab');
+    expect(parsedUrl?.org).toEqual('gitlab-examples');
+    expect(parsedUrl?.repo).toEqual('knative-kotlin-app');
+  });
+
+  it('should parse bitbucket https url', () => {
+    const parsedUrl = parseRepoUrl(
+      'https://bitbucket.org/atlassianlabs/maven-project-example.git'
+    );
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('bitbucket');
+    expect(parsedUrl?.org).toEqual('atlassianlabs');
+    expect(parsedUrl?.repo).toEqual('maven-project-example');
+  });
+  it('should parse bitbucket ssh url', () => {
+    const parsedUrl = parseRepoUrl(
+      'git@bitbucket.org:atlassianlabs/maven-project-example.git'
+    );
+    expect(parsedUrl).toBeDefined();
+    expect(parsedUrl?.provider).toEqual('bitbucket');
+    expect(parsedUrl?.org).toEqual('atlassianlabs');
+    expect(parsedUrl?.repo).toEqual('maven-project-example');
   });
 });
 
@@ -135,10 +255,61 @@ describe('createGitMeta', () => {
       await fs.copy(directory, tmpDir);
       await fs.rename(join(tmpDir, 'git'), join(tmpDir, '.git'));
 
+      client.output.debugEnabled = true;
       const data = await createGitMeta(tmpDir, client.output);
+
+      const output = await readOutputStream(client, 2);
+
+      expect(output).toContain(
+        `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
+      );
+      expect(output).toContain(
+        `Failed to determine if Git repo has been modified:`
+      );
       expect(data).toBeUndefined();
     } finally {
       await fs.remove(tmpDir);
+    }
+  });
+  it('uses the repo url for a connected project', async () => {
+    const originalCwd = process.cwd();
+    const directory = fixture('connected-repo');
+    try {
+      process.chdir(directory);
+      await fs.rename(join(directory, 'git'), join(directory, '.git'));
+
+      useUser();
+      const project = useProject({
+        ...defaultProject,
+        id: 'connected-repo',
+        name: 'connected-repo',
+      });
+      project.project.link = {
+        type: 'github',
+        repo: 'user/repo2',
+        repoId: 1010,
+        gitCredentialId: '',
+        sourceless: true,
+        createdAt: 1656109539791,
+        updatedAt: 1656109539791,
+      };
+
+      const data = await createGitMeta(
+        directory,
+        client.output,
+        project.project as Project
+      );
+      expect(data).toMatchObject({
+        remoteUrl: 'https://github.com/user/repo2',
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'add hi',
+        commitRef: 'master',
+        commitSha: '8050816205303e5957b2909083c50677930d5b29',
+        dirty: true,
+      });
+    } finally {
+      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+      process.chdir(originalCwd);
     }
   });
 });

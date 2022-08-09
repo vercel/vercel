@@ -6,7 +6,6 @@ import getScope from '../../util/get-scope';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
-import validatePaths from '../../util/validate-paths';
 import add from './add';
 import list from './list';
 import rm from './rm';
@@ -48,7 +47,6 @@ const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
   add: ['add'],
   rm: ['rm', 'remove'],
-  connect: ['connect'],
 };
 
 export default async function main(client: Client) {
@@ -59,7 +57,6 @@ export default async function main(client: Client) {
     argv = getArgs(client.argv.slice(2), {
       '--next': Number,
       '-N': '--next',
-      '--yes': Boolean,
     });
   } catch (error) {
     handleError(error);
@@ -75,24 +72,7 @@ export default async function main(client: Client) {
   subcommand = argv._[0] || 'list';
   const args = argv._.slice(1);
   const { output } = client;
-
-  let paths = [process.cwd()];
-  const pathValidation = await validatePaths(client, paths);
-  if (!pathValidation.valid) {
-    return pathValidation.exitCode;
-  }
-
-  let contextName = '';
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (error) {
-    if (error.code === 'NOT_AUTHORIZED' || error.code === 'TEAM_DELETED') {
-      output.error(error.message);
-      return 1;
-    }
-    throw error;
-  }
+  const { contextName } = await getScope(client);
 
   switch (subcommand) {
     case 'ls':

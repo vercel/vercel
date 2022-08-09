@@ -10,6 +10,7 @@ import {
   download,
   getLambdaOptionsFromFunction,
   getNodeVersion,
+  getPrefixedEnvVars,
   getSpawnOptions,
   getScriptName,
   glob,
@@ -24,7 +25,7 @@ import {
   NodejsLambda,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Handler, Route, Source } from '@vercel/routing-utils';
+import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
@@ -231,14 +232,14 @@ export const build: BuildV2 = async ({
     )
   );
 
-  Object.keys(process.env)
-    .filter(key => key.startsWith('VERCEL_'))
-    .forEach(key => {
-      const newKey = `NEXT_PUBLIC_${key}`;
-      if (!(newKey in process.env)) {
-        process.env[newKey] = process.env[key];
-      }
-    });
+  const prefixedEnvs = getPrefixedEnvVars({
+    envPrefix: 'NEXT_PUBLIC_',
+    envs: process.env,
+  });
+
+  for (const [key, value] of Object.entries(prefixedEnvs)) {
+    process.env[key] = value;
+  }
 
   await download(files, workPath, meta);
 
@@ -406,6 +407,7 @@ export const build: BuildV2 = async ({
   const env: typeof process.env = { ...spawnOpts.env };
   const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
   env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
+  env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
 
   if (target) {
     // Since version v10.0.8-canary.15 of Next.js the NEXT_PRIVATE_TARGET env
@@ -717,7 +719,7 @@ export const build: BuildV2 = async ({
           throw new NowBuildError({
             code: 'NEXT_IMAGES_DANGEROUSLYALLOWSVG',
             message:
-              'image-manifest.json "images.dangerouslyAllowSVG" must be an boolean. Contact support if this continues to happen.',
+              'image-manifest.json "images.dangerouslyAllowSVG" must be a boolean. Contact support if this continues to happen.',
           });
         }
         if (
@@ -727,7 +729,7 @@ export const build: BuildV2 = async ({
           throw new NowBuildError({
             code: 'NEXT_IMAGES_CONTENTSECURITYPOLICY',
             message:
-              'image-manifest.json "images.contentSecurityPolicy" must be an string. Contact support if this continues to happen.',
+              'image-manifest.json "images.contentSecurityPolicy" must be a string. Contact support if this continues to happen.',
           });
         }
         break;
@@ -902,7 +904,7 @@ export const build: BuildV2 = async ({
         ...(output[path.join('./', entryDirectory, '404')] ||
         output[path.join('./', entryDirectory, '404/index')]
           ? [
-              { handle: 'error' } as Handler,
+              { handle: 'error' } as RouteWithHandle,
 
               {
                 status: 404,
@@ -934,7 +936,7 @@ export const build: BuildV2 = async ({
   let trailingSlash = false;
 
   redirects = redirects.filter(_redir => {
-    const redir = _redir as Source;
+    const redir = _redir as RouteWithSrc;
     // detect the trailing slash redirect and make sure it's
     // kept above the wildcard mapping to prevent erroneous redirects
     // since non-continue routes come after continue the $wildcard
@@ -1157,7 +1159,7 @@ export const build: BuildV2 = async ({
                 continue;
               }
 
-              const route: Source & { dest: string } = {
+              const route: RouteWithSrc & { dest: string } = {
                 src: (
                   dataRoute.namedDataRouteRegex || dataRoute.dataRouteRegex
                 ).replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
@@ -1186,7 +1188,7 @@ export const build: BuildV2 = async ({
               if (isOmittedRoute && isServerMode) {
                 // only match this route when in preview mode so
                 // preview works for non-prerender fallback: false pages
-                (route as Source).has = [
+                (route as RouteWithSrc).has = [
                   {
                     type: 'cookie',
                     key: '__prerender_bypass',
@@ -2467,7 +2469,7 @@ export const build: BuildV2 = async ({
         ? []
         : [
             // Custom Next.js 404 page
-            { handle: 'error' } as Handler,
+            { handle: 'error' } as RouteWithHandle,
 
             ...(i18n && (static404Page || hasIsr404Page)
               ? [

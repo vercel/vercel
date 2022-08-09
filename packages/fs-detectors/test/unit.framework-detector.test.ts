@@ -252,6 +252,19 @@ describe('DetectorFilesystem', () => {
       expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
     });
 
+    it('Detect frameworks based on ascending order in framework list', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          dependencies: {
+            next: '9.0.0',
+            gatsby: '4.18.0',
+          },
+        }),
+      });
+
+      expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
+    });
+
     it('Detect Nuxt.js', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({

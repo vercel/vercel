@@ -1,4 +1,8 @@
-import type { Source, Route, Handler } from '@vercel/routing-utils';
+import type {
+  Route,
+  RouteWithHandle as Handler,
+  RouteWithSrc as Source,
+} from '@vercel/routing-utils';
 import {
   detectBuilders,
   detectOutputDirectory,
@@ -2273,6 +2277,31 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
         config: {
           zeroConfig: true,
           framework: projectSettings.framework,
+        },
+      },
+    ]);
+  });
+
+  it('should not add middleware builder when building "nextjs"', async () => {
+    const files = ['package.json', 'pages/index.ts', 'middleware.ts'];
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '12.2.0' },
+    };
+    const projectSettings = {
+      framework: null, // "Other" framework
+      createdAt: Date.parse('2020-02-01'),
+    };
+    const { builders } = await detectBuilders(files, pkg, {
+      projectSettings,
+      featHandleMiss,
+    });
+    expect(builders).toEqual([
+      {
+        use: '@vercel/next',
+        src: 'package.json',
+        config: {
+          zeroConfig: true,
         },
       },
     ]);
