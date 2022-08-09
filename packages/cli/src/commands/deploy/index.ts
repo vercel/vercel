@@ -87,20 +87,27 @@ export default async (client: Client) => {
       '--regions': String,
       '--prebuilt': Boolean,
       '--prod': Boolean,
-      '--confirm': Boolean,
+      '--yes': Boolean,
       '-f': '--force',
       '-p': '--public',
       '-e': '--env',
       '-b': '--build-env',
       '-m': '--meta',
-      '-c': '--confirm',
+      '-y': '--yes',
 
       // deprecated
       '--name': String,
       '-n': '--name',
       '--no-clipboard': Boolean,
       '--target': String,
+      '--confirm': Boolean,
+      '-c': '--confirm',
     });
+
+    if ('--confirm' in argv) {
+      output.warn('`--confirm` is deprecated, please use `--yes` instead');
+      argv['--yes'] = argv['--confirm'];
+    }
   } catch (error) {
     handleError(error);
     return 1;
@@ -173,7 +180,7 @@ export default async (client: Client) => {
   }
 
   const { path } = pathValidation;
-  const autoConfirm = argv['--confirm'];
+  const autoConfirm = argv['--yes'];
 
   // deprecate --name
   if (argv['--name']) {
