@@ -64,7 +64,7 @@ async function addSingleGitRemote(
   remoteUrls: Dictionary<string>,
   settings: ProjectSettings
 ) {
-  const remoteUrl = Object.values(remoteUrls)[0];
+  const [remoteName, remoteUrl] = Object.entries(remoteUrls)[0];
   const repoInfo = parseRepoUrl(remoteUrl);
   if (!repoInfo) {
     output.debug(`Could not parse repo url ${repoInfo}.`);
@@ -89,6 +89,7 @@ async function addSingleGitRemote(
     client,
     output,
     project,
+    remoteName,
     remoteUrl,
     replace
   );

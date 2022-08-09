@@ -10,6 +10,7 @@ export async function promptGitConnectSingleUrl(
   client: Client,
   output: Output,
   project: Project,
+  remoteName: string,
   remoteUrl: string,
   replace = false
 ) {
@@ -25,12 +26,14 @@ export async function promptGitConnectSingleUrl(
     );
   } else {
     output.print('\n');
-    output.log(`Found local Git remote URL: ${chalk.cyan(remoteUrl)}`);
+    output.log(
+      `Found local Git remote "${remoteName}": ${chalk.cyan(remoteUrl)}`
+    );
   }
   return await list(client, {
     message: replace
       ? 'Do you want to replace it?'
-      : 'Do you want to connect it to your Vercel project?',
+      : `Do you want to connect "${remoteName}" to your Vercel project?`,
     choices: [
       {
         name: 'Yes',

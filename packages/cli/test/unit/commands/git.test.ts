@@ -40,7 +40,7 @@ describe('git', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          'Do you want to connect it to your Vercel project?'
+          'Do you want to connect "origin" to your Vercel project?'
         );
         client.stdin.write('n\n');
 
