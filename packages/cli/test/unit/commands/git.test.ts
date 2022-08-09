@@ -439,7 +439,7 @@ describe('git', () => {
           name: 'no-remote-url',
         });
 
-        client.setArgv('git', 'connect', 'https://github.com/user2/repo2'); // TODO: accept urls with no scheme
+        client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
