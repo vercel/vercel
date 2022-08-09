@@ -159,7 +159,7 @@ async function connectArg(
   const parsedRepoArg = parseRepoUrl(repoArg);
   if (!parsedRepoArg) {
     output.error(
-      `Cannot parse URL ${repoArg}. Make sure you didn't make any typos.`
+      `Failed to parse URL "${repoArg}". Please ensure the URL is valid.`
     );
     return 1;
   }
