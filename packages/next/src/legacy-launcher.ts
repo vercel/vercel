@@ -10,6 +10,6 @@ if (!process.env.NODE_ENV) {
 const app = next({});
 
 module.exports = (req: IncomingMessage, res: ServerResponse) => {
-  const repoInfo = url.parse(req.url || '', true);
-  app.render(req, res, 'PATHNAME_PLACEHOLDER', repoInfo.query, repoInfo);
+  const parsedUrl = url.parse(req.url || '', true);
+  app.render(req, res, 'PATHNAME_PLACEHOLDER', parsedUrl.query, parsedUrl);
 };

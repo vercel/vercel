@@ -227,9 +227,9 @@ export const fetch = async (
   delete opts.apiUrl;
 
   if (opts.teamId) {
-    const repoInfo = new URL(url);
-    repoInfo.searchParams.set('teamId', opts.teamId);
-    url = repoInfo.toString();
+    const parsedUrl = new URL(url);
+    parsedUrl.searchParams.set('teamId', opts.teamId);
+    url = parsedUrl.toString();
     delete opts.teamId;
   }
 
