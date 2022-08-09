@@ -189,9 +189,7 @@ export async function devRouter(
           const { pathname: destPathname = '/', search: destSearch } =
             url.parse(destPath);
           const destQuery = parseQueryString(destSearch);
-          for (const [qKey, qValue] of reqQuery) {
-            destQuery.set(qKey, qValue);
-          }
+          Object.assign(destQuery, reqQuery);
           result = {
             found: true,
             dest: destPathname,

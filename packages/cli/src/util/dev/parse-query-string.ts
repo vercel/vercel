@@ -1,7 +1,9 @@
-export function parseQueryString(querystring?: string) {
-  const map = new Map<string, string[]>();
+export function parseQueryString(
+  querystring?: string
+): Record<string, string[]> {
+  const query: Record<string, string[]> = Object.create(null);
   if (!querystring || !querystring.startsWith('?') || querystring === '?') {
-    return map;
+    return query;
   }
   const params = querystring.slice(1).split('&');
   for (let param of params) {
@@ -13,26 +15,26 @@ export function parseQueryString(querystring?: string) {
       value = decodeURIComponent(value);
     }
 
-    let existing = map.get(key);
+    let existing = query[key];
     if (!existing) {
       existing = [];
-      map.set(key, existing);
+      query[key] = existing;
     }
 
     existing.push(value);
   }
-  return map;
+  return query;
 }
 
 export function formatQueryString(
-  map: Map<string, string[]> | undefined
+  query: Record<string, string[]> | undefined
 ): string | undefined {
-  if (!map) {
+  if (!query) {
     return undefined;
   }
   let s = '';
   let prefix = '?';
-  for (let [key, values] of map) {
+  for (let [key, values] of Object.entries(query)) {
     for (let value of values) {
       s += prefix;
       s += encodeURIComponent(key);
