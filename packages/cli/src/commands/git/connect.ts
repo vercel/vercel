@@ -261,7 +261,7 @@ async function promptConnectArg(
     const parsedUrl = parseRepoUrl(url);
     if (!parsedUrl) {
       output.error(
-        `Cannot parse URL ${url}. Make sure you didn't make any typos.`
+        `Failed to parse URL "${url}". Please ensure the URL is valid.`
       );
       return 1;
     }
