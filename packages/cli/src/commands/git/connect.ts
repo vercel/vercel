@@ -252,8 +252,7 @@ async function promptConnectArg(
   arg: string,
   remoteUrls: Dictionary<string>
 ) {
-  const multiple = Object.keys(remoteUrls).length > 1;
-  if (multiple) {
+  if (Object.keys(remoteUrls).length > 1) {
     output.log('Found multiple Git repositories in your local Git config:');
     printRemoteUrls(output, remoteUrls);
   } else {
