@@ -24,7 +24,7 @@ export default async function connect(
   org: Org | undefined
 ) {
   const { output } = client;
-  const confirm = Boolean(argv['--confirm']);
+  const confirm = Boolean(argv['--yes']);
 
   if (args.length !== 0) {
     output.error(
