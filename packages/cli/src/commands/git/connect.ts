@@ -13,10 +13,45 @@ import {
   connectGitProvider,
   disconnectGitProvider,
   formatProvider,
+  ParsedRepoUrl,
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/projects/connect-git-provider';
 import validatePaths from '../../util/validate-paths';
+
+interface GitRepoCheckParams {
+  client: Client;
+  confirm: boolean;
+  gitProviderLink?: ProjectLinkData;
+  org: Org;
+  output: Output;
+  gitOrg: string;
+  project: Project;
+  provider: string;
+  repo: string;
+  repoPath: string;
+}
+
+interface ConnectArgParams {
+  client: Client;
+  output: Output;
+  org: Org;
+  project: Project;
+  confirm: boolean;
+  repoInfo: ParsedRepoUrl;
+}
+
+interface ConnectGitArgParams extends ConnectArgParams {
+  gitConfig: Dictionary<any>;
+}
+
+interface PromptConnectArgParams {
+  client: Client;
+  output: Output;
+  yes: boolean;
+  repoInfo: ParsedRepoUrl;
+  remoteUrls: Dictionary<string>;
+}
 
 export default async function connect(
   client: Client,
@@ -62,18 +97,33 @@ export default async function connect(
   const gitConfig = await parseGitConfig(gitConfigPath, output);
 
   if (repoArg) {
+    // parse repo arg
+    const parsedUrlArg = parseRepoUrl(repoArg);
+    if (!parsedUrlArg) {
+      output.error(
+        `Failed to parse URL "${repoArg}". Please ensure the URL is valid.`
+      );
+      return 1;
+    }
     if (gitConfig) {
-      return await connectArgWithLocalGit(
+      return await connectArgWithLocalGit({
         client,
         output,
         org,
         project,
         confirm,
         gitConfig,
-        repoArg
-      );
+        repoInfo: parsedUrlArg,
+      });
     }
-    return await connectArg(client, output, confirm, org, project, repoArg);
+    return await connectArg({
+      client,
+      output,
+      confirm,
+      org,
+      project,
+      repoInfo: repoArg,
+    });
   }
 
   if (!gitConfig) {
@@ -120,10 +170,10 @@ export default async function connect(
     );
     return 1;
   }
-  const { provider, org: parsedOrg, repo } = parsedUrl;
-  const repoPath = `${parsedOrg}/${repo}`;
+  const { provider, org: gitOrg, repo } = parsedUrl;
+  const repoPath = `${gitOrg}/${repo}`;
 
-  const checkAndConnect = await checkExistsAndConnect(
+  const checkAndConnect = await checkExistsAndConnect({
     client,
     output,
     confirm,
@@ -132,9 +182,9 @@ export default async function connect(
     gitProviderLink,
     provider,
     repoPath,
-    parsedOrg,
-    repo
-  );
+    gitOrg,
+    repo,
+  });
   if (typeof checkAndConnect === 'number') {
     return checkAndConnect;
   }
@@ -146,36 +196,37 @@ export default async function connect(
   return 0;
 }
 
-async function connectArg(
-  client: Client,
-  output: Output,
-  confirm: boolean,
-  org: Org,
-  project: Project,
-  repoArg: string
-) {
-  output.log(`Connecting Git remote: ${link(repoArg)}`);
-  const parsedRepoArg = parseRepoUrl(repoArg);
+async function connectArg({
+  client,
+  output,
+  confirm,
+  org,
+  project,
+  repoInfo,
+}: ConnectArgParams) {
+  const { url: repoUrl } = repoInfo;
+  output.log(`Connecting Git remote: ${link(repoUrl)}`);
+  const parsedRepoArg = parseRepoUrl(repoUrl);
   if (!parsedRepoArg) {
     output.error(
-      `Failed to parse URL "${repoArg}". Please ensure the URL is valid.`
+      `Failed to parse URL "${repoUrl}". Please ensure the URL is valid.`
     );
     return 1;
   }
-  const { provider, org: parsedOrg, repo } = parsedRepoArg;
-  const repoPath = `${parsedOrg}/${repo}`;
-  const connect = await checkExistsAndConnect(
+  const { provider, org: gitOrg, repo } = parsedRepoArg;
+  const repoPath = `${gitOrg}/${repo}`;
+  const connect = await checkExistsAndConnect({
     client,
     output,
     confirm,
     org,
     project,
-    project.link,
+    gitProviderLink: project.link,
     provider,
     repoPath,
-    parsedOrg,
-    repo
-  );
+    gitOrg,
+    repo,
+  });
   if (typeof connect === 'number') {
     return connect;
   }
@@ -185,51 +236,43 @@ async function connectArg(
   return 0;
 }
 
-async function connectArgWithLocalGit(
-  client: Client,
-  output: Output,
-  org: Org,
-  project: Project,
-  confirm: boolean,
-  gitConfig: Dictionary<any>,
-  repoArg: string
-) {
-  const parsedUrlArg = parseRepoUrl(repoArg);
-  if (!parsedUrlArg) {
-    output.error(
-      `Failed to parse URL "${repoArg}". Please ensure the URL is valid.`
-    );
-    return 1;
-  }
-
+async function connectArgWithLocalGit({
+  client,
+  output,
+  org,
+  project,
+  confirm,
+  gitConfig,
+  repoInfo,
+}: ConnectGitArgParams) {
   const remoteUrls = pluckRemoteUrls(gitConfig);
   if (remoteUrls) {
-    const shouldConnect = await promptConnectArg(
+    const shouldConnect = await promptConnectArg({
       client,
       output,
-      confirm,
-      repoArg,
-      remoteUrls
-    );
+      yes: confirm,
+      repoInfo,
+      remoteUrls,
+    });
     if (!shouldConnect) {
       return 1;
     }
     if (shouldConnect) {
-      const { provider, org: parsedOrg, repo } = parsedUrlArg;
-      const repoPath = `${parsedOrg}/${repo}`;
-      output.log(`Connecting Git remote: ${link(repoArg)}`);
-      const connect = await checkExistsAndConnect(
+      const { provider, org: gitOrg, repo, url: repoUrl } = repoInfo;
+      const repoPath = `${gitOrg}/${repo}`;
+      output.log(`Connecting Git remote: ${link(repoUrl)}`);
+      const connect = await checkExistsAndConnect({
         client,
         output,
         confirm,
         org,
         project,
-        project.link,
+        gitProviderLink: project.link,
         provider,
         repoPath,
-        parsedOrg,
-        repo
-      );
+        gitOrg,
+        repo,
+      });
       if (typeof connect === 'number') {
         return connect;
       }
@@ -241,36 +284,31 @@ async function connectArgWithLocalGit(
     }
     return 0;
   }
-  return await connectArg(client, output, confirm, org, project, repoArg);
+  return await connectArg({ client, output, confirm, org, project, repoInfo });
 }
 
-async function promptConnectArg(
-  client: Client,
-  output: Output,
-  yes: boolean,
-  arg: string,
-  remoteUrls: Dictionary<string>
-) {
+async function promptConnectArg({
+  client,
+  output,
+  yes,
+  repoInfo: repoInfoFromArg,
+  remoteUrls,
+}: PromptConnectArgParams) {
   if (Object.keys(remoteUrls).length > 1) {
     output.log('Found multiple Git repositories in your local Git config:');
     printRemoteUrls(output, remoteUrls);
   } else {
     const url = Object.values(remoteUrls)[0];
-    const parsedUrl = parseRepoUrl(url);
-    if (!parsedUrl) {
+    const repoInfoFromGitConfig = parseRepoUrl(url);
+    if (!repoInfoFromGitConfig) {
       output.error(
         `Failed to parse URL "${url}". Please ensure the URL is valid.`
       );
       return false;
     }
-    const parsedUrlArg = parseRepoUrl(arg);
-    if (!parsedUrlArg) {
-      output.error(
-        `Failed to parse URL "${arg}". Please ensure the URL is valid.`
-      );
-      return false;
-    }
-    if (JSON.stringify(parsedUrl) === JSON.stringify(parsedUrlArg)) {
+    if (
+      JSON.stringify(repoInfoFromGitConfig) === JSON.stringify(repoInfoFromArg)
+    ) {
       return true;
     }
 
@@ -283,9 +321,10 @@ async function promptConnectArg(
 
   let shouldConnect = yes;
   if (!shouldConnect) {
+    const { url: repoUrlFromArg } = repoInfoFromArg;
     shouldConnect = await confirm(
       client,
-      `Do you still want to connect ${chalk.cyan(arg)}?`,
+      `Do you still want to connect ${link(repoUrlFromArg)}?`,
       false
     );
     if (!shouldConnect) {
@@ -295,18 +334,18 @@ async function promptConnectArg(
   return shouldConnect;
 }
 
-async function checkExistsAndConnect(
-  client: Client,
-  output: Output,
-  confirm: boolean,
-  org: Org,
-  project: Project,
-  gitProviderLink: ProjectLinkData | undefined,
-  provider: string,
-  repoPath: string,
-  parsedOrg: string,
-  repo: string
-) {
+async function checkExistsAndConnect({
+  client,
+  output,
+  confirm,
+  org,
+  project,
+  gitProviderLink,
+  provider,
+  repoPath,
+  gitOrg,
+  repo,
+}: GitRepoCheckParams) {
   if (!gitProviderLink) {
     const connect = await connectGitProvider(
       client,
@@ -326,7 +365,7 @@ async function checkExistsAndConnect(
 
     const isSameRepo =
       connectedProvider === provider &&
-      connectedOrg === parsedOrg &&
+      connectedOrg === gitOrg &&
       connectedRepo === repo;
     if (isSameRepo) {
       output.log(

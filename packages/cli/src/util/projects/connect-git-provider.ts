@@ -7,6 +7,13 @@ import { isAPIError } from '../errors-ts';
 import { Dictionary } from '@vercel/client';
 import { Output } from '../output';
 
+export interface ParsedRepoUrl {
+  url: string;
+  provider: string;
+  org: string;
+  repo: string;
+}
+
 export async function disconnectGitProvider(
   client: Client,
   org: Org,
@@ -85,11 +92,7 @@ export function formatProvider(type: string): string {
   }
 }
 
-export function parseRepoUrl(originUrl: string): {
-  provider: string;
-  org: string;
-  repo: string;
-} | null {
+export function parseRepoUrl(originUrl: string): ParsedRepoUrl | null {
   const isSSH = originUrl.startsWith('git@');
   // Matches all characters between (// or @) and (.com or .org)
   // eslint-disable-next-line prefer-named-capture-group
@@ -109,9 +112,8 @@ export function parseRepoUrl(originUrl: string): {
     repo = originUrl.split('/')[1]?.replace('.git', '');
   } else {
     // Assume https:// or git://
-    originUrl = originUrl.replace('//', '');
-    org = originUrl.split('/')[1];
-    repo = originUrl.split('/')[2]?.replace('.git', '');
+    org = originUrl.replace('//', '').split('/')[1];
+    repo = originUrl.replace('//', '').split('/')[2]?.replace('.git', '');
   }
 
   if (!org || !repo) {
@@ -119,6 +121,7 @@ export function parseRepoUrl(originUrl: string): {
   }
 
   return {
+    url: originUrl,
     provider,
     org,
     repo,
