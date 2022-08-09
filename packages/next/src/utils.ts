@@ -1832,6 +1832,9 @@ export const onPrerenderRoute =
     if (nonDynamicSsg || isFallback || isOmitted) {
       outputPathData = outputPathData.replace(
         new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
+        // ensure we escape "$" correctly while replacing a "$" is a special
+        // character, we need to do double escaping as first is for the initial
+        // replace and then the second
         `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
       );
     }
