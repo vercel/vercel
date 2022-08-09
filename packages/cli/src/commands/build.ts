@@ -91,7 +91,7 @@ const help = () => {
       --output [path]                Directory where built assets should be written to
       --prod                         Build a production deployment
       -d, --debug                    Debug mode [off]
-      -y, --yes                      Skip the confirmation prompt
+      -y, --yes                      Pull environment variables and project settings if not found locally
 
     ${chalk.dim('Examples:')}
 
@@ -157,7 +157,7 @@ export default async function main(client: Client): Promise<number> {
         client.output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
             'pull --yes'
-          )} to retreive them.`
+          )} to retrieve them.`
         );
         return 1;
       }

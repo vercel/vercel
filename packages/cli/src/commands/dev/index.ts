@@ -33,7 +33,7 @@ const help = () => {
     -d, --debug            Debug mode [off]
     -l, --listen  [uri]    Specify a URI endpoint on which to listen [0.0.0.0:3000]
     -t, --token   [token]  Specify an Authorization Token
-    --confirm              Skip questions and use defaults when setting up a new project
+    -y, --yes              Skip questions when setting up new project using default scope and settings
 
   ${chalk.dim('Examples:')}
 
@@ -74,13 +74,21 @@ export default async function main(client: Client) {
     argv = getArgs(client.argv.slice(2), {
       '--listen': String,
       '-l': '--listen',
-      '--confirm': Boolean,
+      '--yes': Boolean,
+      '-y': '--yes',
 
       // Deprecated
       '--port': Number,
       '-p': '--port',
+      '--confirm': Boolean,
+      '-c': '--confirm',
     });
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
+
+    if ('--confirm' in argv) {
+      output.warn('`--confirm` is deprecated, please use `--yes` instead');
+      argv['--yes'] = argv['--confirm'];
+    }
 
     if ('--port' in argv) {
       output.warn('`--port` is deprecated, please use `--listen` instead');
