@@ -6,6 +6,7 @@ import link from '../output/link';
 import { isAPIError } from '../errors-ts';
 
 export interface ParsedRepoUrl {
+  url: string;
   provider: string;
   org: string;
   repo: string;
