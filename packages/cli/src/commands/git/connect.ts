@@ -16,7 +16,7 @@ import {
   ParsedRepoUrl,
   parseRepoUrl,
   printRemoteUrls,
-} from '../../util/projects/connect-git-provider';
+} from '../../util/git/connect-git-provider';
 import validatePaths from '../../util/validate-paths';
 
 interface GitRepoCheckParams {
