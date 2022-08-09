@@ -1538,6 +1538,7 @@ export default class DevServer {
             const beforeRewriteUrl = req.url || '/';
             const rewriteUrlParsed = url.parse(beforeRewriteUrl);
             rewriteUrlParsed.search = url.parse(rewritePath).search;
+            req.url = url.format(rewriteUrlParsed);
             debug(
               `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
             );
