@@ -72,9 +72,8 @@ export default async function connect(
         gitConfig,
         repoArg
       );
-    } else {
-      return await connectArg(client, output, confirm, org, project, repoArg);
     }
+    return await connectArg(client, output, confirm, org, project, repoArg);
   }
 
   if (!gitConfig) {
