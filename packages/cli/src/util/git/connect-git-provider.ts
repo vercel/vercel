@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';
 
-export interface ParsedRepoUrl {
+export interface RepoInfo {
   url: string;
   provider: string;
   org: string;
@@ -90,7 +90,7 @@ export function formatProvider(type: string): string {
   }
 }
 
-export function parseRepoUrl(originUrl: string): ParsedRepoUrl | null {
+export function parseRepoUrl(originUrl: string): RepoInfo | null {
   const isSSH = originUrl.startsWith('git@');
   // Matches all characters between (// or @) and (.com or .org)
   // eslint-disable-next-line prefer-named-capture-group

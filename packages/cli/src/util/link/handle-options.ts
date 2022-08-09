@@ -5,7 +5,7 @@ import {
   connectGitProvider,
   disconnectGitProvider,
   formatProvider,
-  ParsedRepoUrl,
+  RepoInfo,
   parseRepoUrl,
 } from '../git/connect-git-provider';
 import { Output } from '../output';
@@ -19,7 +19,7 @@ export async function handleOptions(
   org: Org,
   project: Project,
   settings: ProjectSettings,
-  parsedUrl?: ParsedRepoUrl
+  parsedUrl?: RepoInfo
 ) {
   if (option === 'no') {
     return skip(output);
@@ -67,7 +67,7 @@ async function connect(
   output: Output,
   org: Org,
   project: Project,
-  parsedUrl: ParsedRepoUrl
+  parsedUrl: RepoInfo
 ): Promise<number | void> {
   const { provider, org: parsedOrg, repo } = parsedUrl;
   const repoPath = `${parsedOrg}/${repo}`;
