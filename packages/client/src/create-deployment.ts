@@ -1,5 +1,5 @@
 import { lstatSync } from 'fs-extra';
-import { isAbsolute } from 'path';
+import { isAbsolute, join } from 'path';
 import { hash, hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
@@ -105,7 +105,7 @@ export default function buildCreateDeployment() {
         [
           hash(tarBuffer),
           {
-            names: ['.vercel/source.tgz'],
+            names: [join(workPath, '.vercel/source.tgz')],
             data: tarBuffer,
             mode: 0o666,
           },
