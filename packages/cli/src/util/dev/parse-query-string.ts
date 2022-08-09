@@ -5,7 +5,13 @@ export function parseQueryString(querystring?: string) {
   }
   const params = querystring.slice(1).split('&');
   for (let param of params) {
-    const [key, value] = param.split('=');
+    let [key, value] = param.split('=');
+    if (key !== undefined) {
+      key = decodeURIComponent(key);
+    }
+    if (value !== undefined) {
+      value = decodeURIComponent(value);
+    }
 
     let existing = map.get(key);
     if (!existing) {
@@ -29,10 +35,10 @@ export function formatQueryString(
   for (let [key, values] of map) {
     for (let value of values) {
       s += prefix;
-      s += key;
+      s += encodeURIComponent(key);
       if (value !== undefined) {
         s += '=';
-        s += value;
+        s += encodeURIComponent(value);
       }
       prefix = '&';
     }
