@@ -2,6 +2,7 @@ import bytes from 'bytes';
 import Progress from 'progress';
 import chalk from 'chalk';
 import {
+  ArchiveFormat,
   createDeployment,
   DeploymentOptions,
   VercelClientOptions,
@@ -32,6 +33,7 @@ export default async function processDeployment({
   cwd,
   projectName,
   isSettingUpProject,
+  archive,
   skipAutoDetectionConfirmation,
   ...args
 }: {
@@ -48,6 +50,7 @@ export default async function processDeployment({
   prebuilt: boolean;
   projectName: string;
   isSettingUpProject: boolean;
+  archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
   cwd?: string;
   rootDirectory?: string;
@@ -87,6 +90,7 @@ export default async function processDeployment({
     prebuilt,
     rootDirectory,
     skipAutoDetectionConfirmation,
+    archive,
   };
 
   output.spinner(

@@ -17,7 +17,7 @@ import printIndications from './print-indications';
 import { GitMetadata, Org } from '../types';
 import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
-import { Dictionary } from '@vercel/client';
+import { ArchiveFormat, Dictionary } from '@vercel/client';
 
 export interface NowOptions {
   client: Client;
@@ -131,6 +131,7 @@ export default class Now extends EventEmitter {
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
+    archive?: ArchiveFormat,
     cwd?: string
   ) {
     let hashes: any = {};
@@ -168,6 +169,7 @@ export default class Now extends EventEmitter {
       org,
       projectName: name,
       isSettingUpProject,
+      archive,
       skipAutoDetectionConfirmation,
       cwd,
       prebuilt,
