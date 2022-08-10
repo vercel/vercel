@@ -136,4 +136,67 @@ describe('deploy', () => {
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
+
+  it('should send a tgz file when `--archive=tgz`', async () => {
+    const cwd = setupFixture('commands/deploy/archive');
+    const originalCwd = process.cwd();
+    try {
+      process.chdir(cwd);
+
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'archive',
+        id: 'archive',
+      });
+
+      let body: any;
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        body = req.body;
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_archive_test',
+        });
+      });
+      client.scenario.get(`/v13/deployments/dpl_archive_test`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_archive_test',
+          readyState: 'READY',
+          aliasAssigned: true,
+          alias: [],
+        });
+      });
+      client.scenario.get(
+        `/v10/now/deployments/dpl_archive_test`,
+        (req, res) => {
+          res.json({
+            creator: {
+              uid: user.id,
+              username: user.username,
+            },
+            id: 'dpl_archive_test',
+            readyState: 'READY',
+            aliasAssigned: true,
+            alias: [],
+          });
+        }
+      );
+
+      client.setArgv('deploy', '--archive=tgz');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+      expect(body?.files?.length).toEqual(1);
+      expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
 });
