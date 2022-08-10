@@ -8,7 +8,6 @@ import {
   VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
-  ArchiveFormat,
 } from './types';
 import { streamToBuffer } from '@vercel/build-utils';
 import tar from 'tar-fs';
@@ -91,7 +90,7 @@ export default function buildCreateDeployment() {
 
     let files;
 
-    if (clientOptions.archive === ArchiveFormat.Tgz) {
+    if (clientOptions.archive === 'tgz') {
       debug('Packing tarball');
       const tarStream = tar
         .pack(workPath, {

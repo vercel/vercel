@@ -1,9 +1,7 @@
-import { ArchiveFormat } from '@vercel/client';
+import { ArchiveFormat, VALID_ARCHIVE_FORMATS } from '@vercel/client';
 
-export function archiveFormats(): string[] {
-  return Object.values(ArchiveFormat);
-}
+const validArchiveFormats = new Set<string>(VALID_ARCHIVE_FORMATS);
 
 export function isValidArchive(archive: string): archive is ArchiveFormat {
-  return archiveFormats().includes(archive);
+  return validArchiveFormats.has(archive);
 }

@@ -3,7 +3,11 @@ import fs from 'fs-extra';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import { join, resolve, basename } from 'path';
-import { fileNameSymbol, VercelConfig } from '@vercel/client';
+import {
+  fileNameSymbol,
+  VALID_ARCHIVE_FORMATS,
+  VercelConfig,
+} from '@vercel/client';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
@@ -66,10 +70,7 @@ import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { createGitMeta } from '../../util/create-git-meta';
-import {
-  archiveFormats,
-  isValidArchive,
-} from '../../util/deploy/validate-archive-format';
+import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '../../util/is-error';
 
@@ -268,7 +269,7 @@ export default async (client: Client): Promise<number> => {
 
   const archive = argv['--archive'];
   if (typeof archive === 'string' && !isValidArchive(archive)) {
-    output.error(`Format must be one of: ${archiveFormats().join(', ')}`);
+    output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
     return 1;
   }
 

@@ -11,9 +11,8 @@ export interface Dictionary<T> {
   [key: string]: T;
 }
 
-export enum ArchiveFormat {
-  Tgz = 'tgz',
-}
+export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
+export type ArchiveFormat = typeof VALID_ARCHIVE_FORMATS[number];
 
 export interface VercelClientOptions {
   token: string;
