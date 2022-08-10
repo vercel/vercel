@@ -96,8 +96,7 @@ export function parseRepoUrl(originUrl: string): ParsedRepoUrl | null {
   const isSSH = originUrl.startsWith('git@');
   // Matches all characters between (// or @) and (.com or .org)
   // eslint-disable-next-line prefer-named-capture-group
-  // const provider = /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl);
-  let provider =
+  const provider =
     /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl)?.[0] ||
     originUrl.replace('www.', '').split('.')[0];
   if (!provider) {
