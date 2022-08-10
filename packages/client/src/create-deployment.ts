@@ -1,5 +1,5 @@
 import { lstatSync } from 'fs-extra';
-import { isAbsolute, join } from 'path';
+import { isAbsolute, join, relative } from 'path';
 import { hash, hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
@@ -93,10 +93,9 @@ export default function buildCreateDeployment() {
 
     if (clientOptions.archive === ArchiveFormat.Tgz) {
       debug('Packing tarball');
-      const entries = fileList.map(file => path.relative(workPath, file));
       const tarStream = tar
         .pack(workPath, {
-          entries: fileList,
+          entries: fileList.map(file => relative(workPath, file)),
         })
         .pipe(createGzip());
       const tarBuffer = await streamToBuffer(tarStream);
