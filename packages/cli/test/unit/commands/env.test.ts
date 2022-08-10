@@ -148,41 +148,46 @@ describe('env', () => {
 
     it('should show a delta string', async () => {
       const cwd = setupFixture('vercel-env-pull-delta');
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'env-pull-delta',
-        name: 'env-pull-delta',
-      });
+      try {
+        useUser();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'env-pull-delta',
+          name: 'env-pull-delta',
+        });
 
-      client.setArgv('env', 'add', 'NEW_VAR', '--cwd', cwd);
-      const addPromise = env(client);
+        client.setArgv('env', 'add', 'NEW_VAR', '--cwd', cwd);
+        const addPromise = env(client);
 
-      await expect(client.stderr).toOutput('What’s the value of NEW_VAR?');
-      client.stdin.write('testvalue\n');
+        await expect(client.stderr).toOutput('What’s the value of NEW_VAR?');
+        client.stdin.write('testvalue\n');
 
-      await expect(client.stderr).toOutput(
-        'Add NEW_VAR to which Environments (select multiple)?'
-      );
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B');
-      client.stdin.write(' ');
-      client.stdin.write('\r');
+        await expect(client.stderr).toOutput(
+          'Add NEW_VAR to which Environments (select multiple)?'
+        );
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\x1B[B');
+        client.stdin.write(' ');
+        client.stdin.write('\r');
 
-      await expect(addPromise).resolves.toEqual(0);
+        await expect(addPromise).resolves.toEqual(0);
 
-      client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
-      const pullPromise = env(client);
-      await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for Project env-pull-delta'
-      );
-      await expect(client.stderr).toOutput('Updated .env file');
-      await expect(client.stderr).toOutput(
-        '+ NEW_VAR\n~ SPECIAL_FLAG\n- TEST\n'
-      );
+        client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+        const pullPromise = env(client);
+        await expect(client.stderr).toOutput(
+          'Downloading `development` Environment Variables for Project env-pull-delta'
+        );
+        await expect(client.stderr).toOutput(
+          '+ SPECIAL_FLAG (Updated)\n+ NEW_VAR\n- TEST\n'
+        );
+        await expect(client.stderr).toOutput('Updated .env file');
 
-      await expect(pullPromise).resolves.toEqual(0);
+        await expect(pullPromise).resolves.toEqual(0);
+      } finally {
+        client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
+        await env(client);
+      }
     });
 
     it('should not show a delta string when it fails to read a file', async () => {
@@ -197,6 +202,23 @@ describe('env', () => {
 
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const pullPromise = env(client);
+      await expect(client.stderr).toOutput('Updated .env file');
+      await expect(pullPromise).resolves.toEqual(0);
+    });
+
+    it('should show that no changes were found', async () => {
+      const cwd = setupFixture('vercel-env-pull-delta-no-changes');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'env-pull-delta-no-changes',
+        name: 'env-pull-delta-no-changes',
+      });
+
+      client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
+      const pullPromise = env(client);
+      await expect(client.stderr).toOutput('> No changes found.');
       await expect(client.stderr).toOutput('Updated .env file');
       await expect(pullPromise).resolves.toEqual(0);
     });

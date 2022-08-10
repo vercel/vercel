@@ -17,7 +17,7 @@ import { OUTPUT_DIR } from '../../util/build/write-build-result';
 
 type Options = {
   '--listen': string;
-  '--confirm': boolean;
+  '--yes': boolean;
 };
 
 export default async function dev(
@@ -38,7 +38,7 @@ export default async function dev(
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     link = await setupAndLink(client, cwd, {
-      autoConfirm: opts['--confirm'],
+      autoConfirm: opts['--yes'],
       successEmoji: 'link',
       setupMsg: 'Set up and develop',
     });
@@ -54,14 +54,13 @@ export default async function dev(
       client.output.error(
         `Command ${getCommandName(
           'dev'
-        )} requires confirmation. Use option ${param('--confirm')} to confirm.`
+        )} requires confirmation. Use option ${param('--yes')} to confirm.`
       );
     }
     return link.exitCode;
   }
 
   let devCommand: string | undefined;
-  let frameworkSlug: string | undefined;
   let projectSettings: ProjectSettings | undefined;
   let projectEnvs: ProjectEnvVariable[] = [];
   let systemEnvValues: string[] = [];
@@ -77,10 +76,6 @@ export default async function dev(
       const framework = frameworks.find(f => f.slug === project.framework);
 
       if (framework) {
-        if (framework.slug) {
-          frameworkSlug = framework.slug;
-        }
-
         const defaults = framework.settings.devCommand.value;
         if (defaults) {
           devCommand = defaults;
@@ -120,7 +115,6 @@ export default async function dev(
   const devServer = new DevServer(cwd, {
     output,
     devCommand,
-    frameworkSlug,
     projectSettings,
     projectEnvs,
     systemEnvValues,
