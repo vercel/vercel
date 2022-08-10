@@ -8,7 +8,7 @@ import { DeploymentError } from './errors';
 import { deploy } from './deploy';
 import { VercelClientOptions, DeploymentOptions } from './types';
 
-const isClientNetworkError = (err: Error | DeploymentError) => {
+const isClientNetworkError = (err: Error) => {
   if (err.message) {
     // These are common network errors that may happen occasionally and we should retry if we encounter these
     return (
