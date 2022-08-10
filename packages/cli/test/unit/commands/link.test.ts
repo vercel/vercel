@@ -45,10 +45,10 @@ describe('link', () => {
         client.stdin.write('n\n');
 
         await expect(client.stderr).toOutput(
-          'Found local Git remote URL: https://github.com/user/repo.git'
+          'Found local Git remote "origin": https://github.com/user/repo.git'
         );
         await expect(client.stderr).toOutput(
-          'Do you want to connect it to your Vercel project?'
+          'Do you want to connect "origin" to your Vercel project?'
         );
         client.stdin.write('\r');
         await expect(client.stderr).toOutput(
@@ -84,10 +84,10 @@ describe('link', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          'Found local Git remote URL: https://github.com/user/repo.git'
+          'Found local Git remote "origin": https://github.com/user/repo.git'
         );
         await expect(client.stderr).toOutput(
-          'Do you want to connect it to your Vercel project?'
+          'Do you want to connect "origin" to your Vercel project?'
         );
         client.stdin.write('\r');
         await expect(client.stderr).toOutput(
@@ -252,10 +252,10 @@ describe('link', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          'Found local Git remote URL: https://github.com/user/repo.git'
+          'Found local Git remote "origin": https://github.com/user/repo.git'
         );
         await expect(client.stderr).toOutput(
-          'Do you want to connect it to your Vercel project?'
+          'Do you want to connect "origin" to your Vercel project?'
         );
         client.stdin.write('\x1B[B'); // Down arrow
         client.stdin.write('\x1B[B');
@@ -297,7 +297,7 @@ describe('link', () => {
         await expect(client.stderr).toOutput('Found project');
         client.stdin.write('y\n');
 
-        expect(client.stderr).not.toOutput('Found local Git remote URL');
+        expect(client.stderr).not.toOutput('Found local Git remote "origin"');
 
         await expect(client.stderr).toOutput('Linked to');
         await expect(linkPromise).resolves.toEqual(0);
