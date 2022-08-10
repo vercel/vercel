@@ -18,6 +18,7 @@ import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
+import { isErrnoException } from '../../util/is-error';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -40,8 +41,8 @@ function readHeadSync(path: string, length: number) {
 function tryReadHeadSync(path: string, length: number) {
   try {
     return readHeadSync(path, length);
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
+  } catch (err: unknown) {
+    if (!isErrnoException(err) || err.code !== 'ENOENT') {
       throw err;
     }
   }
@@ -129,6 +130,12 @@ export default async function pull(
 
   await outputFile(fullPath, contents, 'utf8');
 
+  if (deltaString) {
+    output.print('\n' + deltaString);
+  } else if (oldEnv && exists) {
+    output.log('No changes found.');
+  }
+
   output.print(
     `${prependEmoji(
       `${exists ? 'Updated' : 'Created'} ${chalk.bold(
@@ -137,13 +144,6 @@ export default async function pull(
       emoji('success')
     )}\n`
   );
-
-  output.print('\n');
-  if (deltaString) {
-    output.print(deltaString);
-  } else if (oldEnv && exists) {
-    output.log('No changes found.');
-  }
 
   return 0;
 }

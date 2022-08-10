@@ -94,6 +94,13 @@ import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import exposeSystemEnvs from './expose-system-envs';
 import { treeKill } from '../tree-kill';
 import { nodeHeadersToFetchHeaders } from './headers';
+import { formatQueryString, parseQueryString } from './parse-query-string';
+import {
+  errorToString,
+  isErrnoException,
+  isError,
+  isSpawnError,
+} from '../is-error';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -125,7 +132,6 @@ export default class DevServer {
   public output: Output;
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
-  public frameworkSlug?: string;
   public files: BuilderInputs;
   public address: string;
   public devCacheDir: string;
@@ -169,7 +175,6 @@ export default class DevServer {
     this.address = '';
     this.devCommand = options.devCommand;
     this.projectSettings = options.projectSettings;
-    this.frameworkSlug = options.frameworkSlug;
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
@@ -340,8 +345,8 @@ export default class DevServer {
       }
       fileChanged(name, changed, removed);
       this.output.debug(`File created: ${name}`);
-    } catch (err) {
-      if (err.code === 'ENOENT') {
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'ENOENT') {
         this.output.debug(`File created, but has since been deleted: ${name}`);
         fileRemoved(name, this.files, changed, removed);
       } else {
@@ -375,8 +380,8 @@ export default class DevServer {
       this.files[name] = await FileFsRef.fromFsPath({ fsPath });
       fileChanged(name, changed, removed);
       this.output.debug(`File modified: ${name}`);
-    } catch (err) {
-      if (err.code === 'ENOENT') {
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'ENOENT') {
         this.output.debug(`File modified, but has since been deleted: ${name}`);
         fileRemoved(name, this.files, changed, removed);
       } else {
@@ -507,8 +512,8 @@ export default class DevServer {
       this.output.debug(`Using local env: ${filePath}`);
       env = parseDotenv(dotenv);
       env = this.injectSystemValuesInDotenv(env);
-    } catch (err) {
-      if (err.code !== 'ENOENT') {
+    } catch (err: unknown) {
+      if (!isErrnoException(err) || err.code !== 'ENOENT') {
         throw err;
       }
     }
@@ -719,13 +724,15 @@ export default class DevServer {
       const parsed: WithFileNameSymbol<T> = JSON.parse(raw);
       parsed[fileNameSymbol] = rel;
       return parsed;
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        this.output.debug(`No \`${rel}\` file present`);
-      } else if (err.name === 'SyntaxError') {
-        this.output.warn(
-          `There is a syntax error in the \`${rel}\` file: ${err.message}`
-        );
+    } catch (err: unknown) {
+      if (isError(err)) {
+        if (isErrnoException(err) && err.code === 'ENOENT') {
+          this.output.debug(`No \`${rel}\` file present`);
+        } else if (err.name === 'SyntaxError') {
+          this.output.warn(
+            `There is a syntax error in the \`${rel}\` file: ${err.message}`
+          );
+        }
       } else {
         throw err;
       }
@@ -851,22 +858,26 @@ export default class DevServer {
     while (typeof address !== 'string') {
       try {
         address = await listen(this.server, ...listenSpec);
-      } catch (err) {
-        this.output.debug(`Got listen error: ${err.code}`);
-        if (err.code === 'EADDRINUSE') {
-          if (typeof listenSpec[0] === 'number') {
-            // Increase port and try again
-            this.output.note(
-              `Requested port ${chalk.yellow(
-                String(listenSpec[0])
-              )} is already in use`
-            );
-            listenSpec[0]++;
-          } else {
-            this.output.error(
-              `Requested socket ${chalk.cyan(listenSpec[0])} is already in use`
-            );
-            process.exit(1);
+      } catch (err: unknown) {
+        if (isErrnoException(err)) {
+          this.output.debug(`Got listen error: ${err.code}`);
+          if (err.code === 'EADDRINUSE') {
+            if (typeof listenSpec[0] === 'number') {
+              // Increase port and try again
+              this.output.note(
+                `Requested port ${chalk.yellow(
+                  String(listenSpec[0])
+                )} is already in use`
+              );
+              listenSpec[0]++;
+            } else {
+              this.output.error(
+                `Requested socket ${chalk.cyan(
+                  listenSpec[0]
+                )} is already in use`
+              );
+              process.exit(1);
+            }
           }
         } else {
           throw err;
@@ -1028,12 +1039,8 @@ export default class DevServer {
 
     try {
       await Promise.all(ops);
-    } catch (err) {
-      // Node 8 doesn't have a code for that error
-      if (
-        err.code === 'ERR_SERVER_NOT_RUNNING' ||
-        err.message === 'Not running'
-      ) {
+    } catch (err: unknown) {
+      if (isErrnoException(err) && err.code === 'ERR_SERVER_NOT_RUNNING') {
         process.exit(exitCode || 0);
       } else {
         throw err;
@@ -1303,13 +1310,16 @@ export default class DevServer {
     try {
       const vercelConfig = await this.getVercelConfig();
       await this.serveProjectAsNowV2(req, res, requestId, vercelConfig);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      this.output.debug(err.stack);
+
+      if (isError(err) && typeof err.stack === 'string') {
+        this.output.debug(err.stack);
+      }
 
       if (!res.finished) {
         res.statusCode = 500;
-        res.end(err.message);
+        res.end(errorToString(err));
       }
     }
   };
@@ -1387,9 +1397,11 @@ export default class DevServer {
 
     const getReqUrl = (rr: RouteResult): string | undefined => {
       if (rr.dest) {
-        if (rr.uri_args) {
-          const destParsed = url.parse(rr.dest, true);
-          Object.assign(destParsed.query, rr.uri_args);
+        if (rr.query) {
+          const destParsed = url.parse(rr.dest);
+          const destQuery = parseQueryString(destParsed.search);
+          Object.assign(destQuery, rr.query);
+          destParsed.search = formatQueryString(destQuery);
           return url.format(destParsed);
         }
         return rr.dest;
@@ -1524,26 +1536,27 @@ export default class DevServer {
 
             // Retain orginal pathname, but override query parameters from the rewrite
             const beforeRewriteUrl = req.url || '/';
-            const rewriteUrlParsed = url.parse(beforeRewriteUrl, true);
-            delete rewriteUrlParsed.search;
-            rewriteUrlParsed.query = url.parse(rewritePath, true).query;
+            const rewriteUrlParsed = url.parse(beforeRewriteUrl);
+            rewriteUrlParsed.search = url.parse(rewritePath).search;
             req.url = url.format(rewriteUrlParsed);
             debug(
               `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
             );
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         // `startDevServer()` threw an error. Most likely this means the dev
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
-        if (err.code === 'ENOENT') {
+        if (isSpawnError(err) && err.code === 'ENOENT') {
           err.message = `Command not found: ${chalk.cyan(
             err.path,
             ...err.spawnargs
-          )}\nPlease ensure that ${cmd(err.path)} is properly installed`;
-          err.link = 'https://vercel.link/command-not-found';
+          )}\nPlease ensure that ${cmd(err.path!)} is properly installed`;
+          (err as any).link = 'https://vercel.link/command-not-found';
         }
+
+        this.output.prettyError(err);
 
         await this.sendError(
           req,
@@ -1583,9 +1596,10 @@ export default class DevServer {
 
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
-        const destParsed = url.parse(routeResult.dest, true);
-        delete destParsed.search;
-        Object.assign(destParsed.query, routeResult.uri_args);
+        const destParsed = url.parse(routeResult.dest);
+        const destQuery = parseQueryString(destParsed.search);
+        Object.assign(destQuery, routeResult.query);
+        destParsed.search = formatQueryString(destQuery);
         const destUrl = url.format(destParsed);
 
         debug(`ProxyPass: ${destUrl}`);
@@ -1726,7 +1740,7 @@ export default class DevServer {
       throw new Error('Expected Route Result but none was found.');
     }
 
-    const { dest, headers, uri_args } = routeResult;
+    const { dest, query, headers } = routeResult;
 
     // Set any headers defined in the matched `route` config
     for (const [name, value] of Object.entries(headers)) {
@@ -1762,10 +1776,11 @@ export default class DevServer {
         }
 
         this.setResponseHeaders(res, requestId);
-        const origUrl = url.parse(req.url || '/', true);
-        delete origUrl.search;
+        const origUrl = url.parse(req.url || '/');
+        const origQuery = parseQueryString(origUrl.search);
         origUrl.pathname = dest;
-        Object.assign(origUrl.query, uri_args);
+        Object.assign(origQuery, query);
+        origUrl.search = formatQueryString(origQuery);
         req.url = url.format(origUrl);
         return proxyPass(req, res, upstream, this, requestId, false);
       }
@@ -1787,10 +1802,11 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const origUrl = url.parse(req.url || '/', true);
-      delete origUrl.search;
+      const origUrl = url.parse(req.url || '/');
+      const origQuery = parseQueryString(origUrl.search);
       origUrl.pathname = dest;
-      Object.assign(origUrl.query, uri_args);
+      Object.assign(origQuery, query);
+      origUrl.search = formatQueryString(origQuery);
       const newUrl = url.format(origUrl);
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
@@ -1845,16 +1861,16 @@ export default class DevServer {
             buildEnv: { ...envConfigs.buildEnv },
           },
         });
-      } catch (err) {
+      } catch (err: unknown) {
         // `startDevServer()` threw an error. Most likely this means the dev
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
-        if (err.code === 'ENOENT') {
+        if (isSpawnError(err) && err.code === 'ENOENT') {
           err.message = `Command not found: ${chalk.cyan(
             err.path,
             ...err.spawnargs
-          )}\nPlease ensure that ${cmd(err.path)} is properly installed`;
-          err.link = 'https://vercel.link/command-not-found';
+          )}\nPlease ensure that ${cmd(err.path!)} is properly installed`;
+          (err as any).link = 'https://vercel.link/command-not-found';
         }
 
         this.output.prettyError(err);
@@ -1886,11 +1902,13 @@ export default class DevServer {
         );
 
         // Mix in the routing based query parameters
-        const parsed = url.parse(req.url || '/', true);
-        Object.assign(parsed.query, uri_args);
+        const origUrl = url.parse(req.url || '/');
+        const origQuery = parseQueryString(origUrl.search);
+        Object.assign(origQuery, query);
+        origUrl.search = formatQueryString(origQuery);
         req.url = url.format({
-          pathname: parsed.pathname,
-          query: parsed.query,
+          pathname: origUrl.pathname,
+          search: origUrl.search,
         });
 
         // Add the Vercel platform proxy request headers
@@ -2006,11 +2024,13 @@ export default class DevServer {
         requestId = generateRequestId(this.podId, true);
 
         // Mix the `routes` result dest query params into the req path
-        const parsed = url.parse(req.url || '/', true);
-        Object.assign(parsed.query, uri_args);
+        const origUrl = url.parse(req.url || '/');
+        const origQuery = parseQueryString(origUrl.search);
+        Object.assign(origQuery, query);
+        origUrl.search = formatQueryString(origQuery);
         const path = url.format({
-          pathname: parsed.pathname,
-          query: parsed.query,
+          pathname: origUrl.pathname,
+          search: origUrl.search,
         });
 
         const body = await rawBody(req);
@@ -2197,7 +2217,10 @@ export default class DevServer {
       // Because of child process 'pipe' below, isTTY will be false.
       // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
       FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
-      ...(this.frameworkSlug === 'create-react-app' ? { BROWSER: 'none' } : {}),
+      // Prevent framework dev servers from automatically opening a web
+      // browser window, since it will not be the port that `vc dev`
+      // is listening on and thus will be missing Vercel features.
+      BROWSER: 'none',
       ...process.env,
       ...this.envConfigs.allEnv,
       PORT: `${port}`,

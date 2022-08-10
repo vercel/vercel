@@ -3,6 +3,7 @@ import { stringify } from 'qs';
 import { Org } from '../../types';
 import chalk from 'chalk';
 import link from '../output/link';
+import { isAPIError } from '../errors-ts';
 
 export async function disconnectGitProvider(
   client: Client,
@@ -41,21 +42,23 @@ export async function connectGitProvider(
         repo,
       }),
     });
-  } catch (err) {
-    if (
-      err.meta?.action === 'Install GitHub App' ||
-      err.code === 'repo_not_found'
-    ) {
-      client.output.error(
-        `Failed to link ${chalk.cyan(
-          repo
-        )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
-      );
-    } else if (err.action === 'Add a Login Connection') {
-      client.output.error(
-        err.message.replace(repo, chalk.cyan(repo)) +
-          `\nVisit ${link(err.link)} for more information.`
-      );
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (
+        err.meta?.action === 'Install GitHub App' ||
+        err.code === 'repo_not_found'
+      ) {
+        client.output.error(
+          `Failed to link ${chalk.cyan(
+            repo
+          )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
+        );
+      } else if (err.action === 'Add a Login Connection') {
+        client.output.error(
+          err.message.replace(repo, chalk.cyan(repo)) +
+            `\nVisit ${link(err.link)} for more information.`
+        );
+      }
     } else {
       client.output.error(
         `Failed to connect the ${formatProvider(
