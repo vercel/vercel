@@ -24,6 +24,7 @@ import type {
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import type { AppConfig } from './types';
+import type { Images } from '@vercel/build-utils';
 
 // Name of the Remix runtime adapter npm package for Vercel
 const REMIX_RUNTIME_ADAPTER_NAME = '@remix-run/vercel';
@@ -162,7 +163,7 @@ export const build: BuildV2 = async ({
 
   let serverBuildPath = 'build/index.js';
   let needsHandler = true;
-  let images: AppConfig['images'];
+  let images: Images | undefined;
   try {
     const remixConfig: AppConfig = require(join(
       entrypointFsDirname,
@@ -198,8 +199,8 @@ export const build: BuildV2 = async ({
       serverBuildPath = join(rootDirectory, serverBuildPath);
     }
 
-    if (remixConfig.images) {
-      images = remixConfig.images;
+    if (remixConfig.vercel?.images) {
+      images = remixConfig.vercel.images;
     }
 
     if (images) {

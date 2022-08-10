@@ -6,5 +6,7 @@ export interface AppConfig {
   serverBuildDirectory?: string;
   serverBuildPath?: string;
   serverBuildTarget?: string;
-  images?: Images;
+  vercel?: {
+    images?: Images;
+  };
 }
