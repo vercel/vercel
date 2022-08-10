@@ -206,19 +206,19 @@ export const build: BuildV2 = async ({
     if (images) {
       if (typeof images !== 'object') {
         throw new Error(
-          `remix.config.js "images" should be an object received ${typeof images}.`
+          `remix.config.js "vercel.images" should be an object received ${typeof images}.`
         );
       }
 
       if (!Array.isArray(images.domains)) {
         throw new Error(
-          `remix.config.js "images.domains" should be an Array received ${typeof images.domains}.`
+          `remix.config.js "vercel.images.domains" should be an Array received ${typeof images.domains}.`
         );
       }
 
       if (images.domains.length > 50) {
         throw new Error(
-          `remix.config.js "images.domains" exceeds length of 50 received length (${images.domains.length}).`
+          `remix.config.js "vercel.images.domains" exceeds length of 50 received length (${images.domains.length}).`
         );
       }
 
@@ -227,7 +227,7 @@ export const build: BuildV2 = async ({
       );
       if (invalidImageDomains.length > 0) {
         throw new Error(
-          `remix.config.js "images.domains" should be an Array of strings received invalid values (${invalidImageDomains.join(
+          `remix.config.js "vercel.images.domains" should be an Array of strings received invalid values (${invalidImageDomains.join(
             ', '
           )}).`
         );
@@ -236,13 +236,13 @@ export const build: BuildV2 = async ({
       if (images.remotePatterns) {
         if (!Array.isArray(images.remotePatterns)) {
           throw new Error(
-            `remix.config.js "images.remotePatterns" should be an Array received ${typeof images.remotePatterns}.`
+            `remix.config.js "vercel.images.remotePatterns" should be an Array received ${typeof images.remotePatterns}.`
           );
         }
 
         if (images.remotePatterns.length > 50) {
           throw new Error(
-            `remix.config.js "images.remotePatterns" exceeds length of 50, received length (${images.remotePatterns.length}).`
+            `remix.config.js "vercel.images.remotePatterns" exceeds length of 50, received length (${images.remotePatterns.length}).`
           );
         }
 
@@ -264,7 +264,7 @@ export const build: BuildV2 = async ({
         );
         if (invalidPatterns.length > 0) {
           throw new Error(
-            `remix.config.js "images.remotePatterns" received invalid values:\n${invalidPatterns
+            `remix.config.js "vercel.images.remotePatterns" received invalid values:\n${invalidPatterns
               .map(item => JSON.stringify(item))
               .join(
                 '\n'
@@ -275,13 +275,13 @@ export const build: BuildV2 = async ({
 
       if (!Array.isArray(images.sizes)) {
         throw new Error(
-          `remix.config.js "images.sizes" should be an Array received ${typeof images.sizes}.`
+          `remix.config.js "vercel.images.sizes" should be an Array received ${typeof images.sizes}.`
         );
       }
 
       if (images.sizes.length < 1 || images.sizes.length > 50) {
         throw new Error(
-          `remix.config.js "images.sizes" should be an Array of length between 1 to 50 received length (${images.sizes.length}).`
+          `remix.config.js "vercel.images.sizes" should be an Array of length between 1 to 50 received length (${images.sizes.length}).`
         );
       }
 
@@ -290,7 +290,7 @@ export const build: BuildV2 = async ({
       });
       if (invalidImageSizes.length > 0) {
         throw new Error(
-          `remix.config.js "images.sizes" should be an Array of numbers that are between 1 and 10000, received invalid values (${invalidImageSizes.join(
+          `remix.config.js "vercel.images.sizes" should be an Array of numbers that are between 1 and 10000, received invalid values (${invalidImageSizes.join(
             ', '
           )}).`
         );
@@ -302,7 +302,7 @@ export const build: BuildV2 = async ({
           images.minimumCacheTTL < 0
         ) {
           throw new Error(
-            `remix.config.js "images.minimumCacheTTL" should be an integer 0 or more received (${images.minimumCacheTTL}).`
+            `remix.config.js "vercel.images.minimumCacheTTL" should be an integer 0 or more received (${images.minimumCacheTTL}).`
           );
         }
       }
@@ -310,12 +310,12 @@ export const build: BuildV2 = async ({
       if (images.formats) {
         if (!Array.isArray(images.formats)) {
           throw new Error(
-            `remix.config.js "images.formats" should be an Array received ${typeof images.formats}.`
+            `remix.config.js "vercel.images.formats" should be an Array received ${typeof images.formats}.`
           );
         }
         if (images.formats.length < 1 || images.formats.length > 2) {
           throw new Error(
-            `remix.config.js "images.formats" must be length 1 or 2, received length (${images.formats.length}).`
+            `remix.config.js "vercel.images.formats" must be length 1 or 2, received length (${images.formats.length}).`
           );
         }
 
@@ -324,7 +324,7 @@ export const build: BuildV2 = async ({
         });
         if (invalid.length > 0) {
           throw new Error(
-            `remix.config.js "images.formats" should be an Array of mime type strings, received invalid values (${invalid.join(
+            `remix.config.js "vercel.images.formats" should be an Array of mime type strings, received invalid values (${invalid.join(
               ', '
             )}).`
           );
@@ -336,7 +336,7 @@ export const build: BuildV2 = async ({
         typeof images.dangerouslyAllowSVG !== 'boolean'
       ) {
         throw new Error(
-          `remix.config.js "images.dangerouslyAllowSVG" should be a boolean received (${images.dangerouslyAllowSVG}).`
+          `remix.config.js "vercel.images.dangerouslyAllowSVG" should be a boolean received (${images.dangerouslyAllowSVG}).`
         );
       }
 
@@ -345,7 +345,7 @@ export const build: BuildV2 = async ({
         typeof images.contentSecurityPolicy !== 'string'
       ) {
         throw new Error(
-          `remix.config.js "images.contentSecurityPolicy" should be a string received ${images.contentSecurityPolicy}`
+          `remix.config.js "vercel.images.contentSecurityPolicy" should be a string received ${images.contentSecurityPolicy}`
         );
       }
     }
