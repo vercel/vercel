@@ -129,7 +129,7 @@ export const defaultProject = {
  * Responds to any GET for a project with a 404.
  * `useUnknownProject` should always come after `useProject`, if any,
  * to allow `useProject` responses to still happen.
- */ 
+ */
 export function useUnknownProject() {
   let project: Project;
   client.scenario.get(`/v8/projects/:projectNameOrId`, (_req, res) => {
@@ -144,7 +144,7 @@ export function useUnknownProject() {
     };
     res.json(project);
   });
-  client.scenario.post(`/v4/projects/:projectNameOrId/link`, (req, res) => {
+  client.scenario.post(`/v9/projects/:projectNameOrId/link`, (req, res) => {
     const { type, repo, org } = req.body;
     const projName = req.params.projectNameOrId;
     if (projName !== project.name && projName !== project.id) {
@@ -245,7 +245,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
       res.json(envs);
     }
   );
-  client.scenario.post(`/v4/projects/${project.id}/link`, (req, res) => {
+  client.scenario.post(`/v9/projects/${project.id}/link`, (req, res) => {
     const { type, repo, org } = req.body;
     if (
       (type === 'github' || type === 'gitlab' || type === 'bitbucket') &&
@@ -280,7 +280,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
       }
     }
   });
-  client.scenario.delete(`/v4/projects/${project.id}/link`, (_req, res) => {
+  client.scenario.delete(`/v9/projects/${project.id}/link`, (_req, res) => {
     if (project.link) {
       project.link = undefined;
     }

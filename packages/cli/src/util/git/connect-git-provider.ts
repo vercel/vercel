@@ -17,7 +17,7 @@ export async function disconnectGitProvider(
   org: Org,
   projectId: string
 ) {
-  const fetchUrl = `/v4/projects/${projectId}/link?${stringify({
+  const fetchUrl = `/v9/projects/${projectId}/link?${stringify({
     teamId: org.type === 'team' ? org.id : undefined,
   })}`;
   return client.fetch(fetchUrl, {
@@ -35,7 +35,7 @@ export async function connectGitProvider(
   type: string,
   repo: string
 ) {
-  const fetchUrl = `/v4/projects/${projectId}/link?${stringify({
+  const fetchUrl = `/v9/projects/${projectId}/link?${stringify({
     teamId: org.type === 'team' ? org.id : undefined,
   })}`;
   try {
