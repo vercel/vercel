@@ -26,12 +26,12 @@ jobs:
         fi
     - name: Setup Go
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: '1.13.15'
     - name: Setup Node
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
         node-version: 14
     - name: Install
