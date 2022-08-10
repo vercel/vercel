@@ -99,7 +99,7 @@ export default function buildCreateDeployment() {
           entries: fileList,
         })
         .pipe(createGzip());
-      const tarBuffer: Buffer = await streamToBuffer(tarStream);
+      const tarBuffer = await streamToBuffer(tarStream);
       debug('Packed tarball');
       files = new Map([
         [
