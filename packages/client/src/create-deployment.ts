@@ -93,7 +93,7 @@ export default function buildCreateDeployment() {
 
     if (clientOptions.archive === ArchiveFormat.Tgz) {
       debug('Packing tarball');
-      fileList = fileList.map(file => file.replace(workPath, ''));
+      const entries = fileList.map(file => path.relative(workPath, file));
       const tarStream = tar
         .pack(workPath, {
           entries: fileList,
