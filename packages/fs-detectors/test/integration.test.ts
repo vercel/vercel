@@ -5,21 +5,11 @@ import { detectBuilders } from '../src';
 const fs = promises;
 
 import {
-  packAndDeploy,
   testDeployment,
   // @ts-ignore
 } from '../../../test/lib/deployment/test-deployment';
 
 jest.setTimeout(4 * 60 * 1000);
-
-const builderUrl = '@canary';
-let buildUtilsUrl: string;
-
-beforeAll(async () => {
-  const buildUtilsPath = path.resolve(__dirname, '..');
-  buildUtilsUrl = await packAndDeploy(buildUtilsPath);
-  console.log('buildUtilsUrl', buildUtilsUrl);
-});
 
 it('Test `detectBuilders` and `detectRoutes`', async () => {
   const fixture = path.join(__dirname, 'fixtures', '01-zero-config-api');
@@ -76,10 +66,7 @@ it('Test `detectBuilders` and `detectRoutes`', async () => {
     JSON.stringify(nowConfig, null, 2)
   );
 
-  const deployment = await testDeployment(
-    { builderUrl, buildUtilsUrl },
-    fixture
-  );
+  const deployment = await testDeployment(fixture);
   expect(deployment).toBeDefined();
 });
 
@@ -158,9 +145,6 @@ it('Test `detectBuilders` with `index` files', async () => {
     JSON.stringify(nowConfig, null, 2)
   );
 
-  const deployment = await testDeployment(
-    { builderUrl, buildUtilsUrl },
-    fixture
-  );
+  const deployment = await testDeployment(fixture);
   expect(deployment).toBeDefined();
 });

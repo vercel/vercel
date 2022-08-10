@@ -1,14 +1,14 @@
 {
   "name": "@vercel/edge",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --dts --format esm,cjs",
-    "test-unit": "jest",
-    "prepublishOnly": "yarn build"
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "yarn test"
   },
   "devDependencies": {
     "@edge-runtime/jest-environment": "1.1.0-beta.7",

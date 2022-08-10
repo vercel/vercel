@@ -20,13 +20,15 @@ export interface JSONObject {
 }
 
 export interface AuthConfig {
-  _?: string;
+  '// Note'?: string;
+  '// Docs'?: string;
   token?: string;
   skipWrite?: boolean;
 }
 
 export interface GlobalConfig {
-  _?: string;
+  '// Note'?: string;
+  '// Docs'?: string;
   currentTeam?: string;
   collectMetrics?: boolean;
   api?: string;

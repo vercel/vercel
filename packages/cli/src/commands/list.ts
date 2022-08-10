@@ -37,7 +37,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
-    --confirm                      Skip the confirmation prompt
+    -y, --yes                      Skip questions when setting up new project using default scope and settings
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -85,7 +85,12 @@ export default async function main(client: Client) {
       '--inspect': Boolean,
       '-i': '--inspect',
       '--prod': Boolean,
+      '--yes': Boolean,
+      '-y': '--yes',
+
+      // deprecated
       '--confirm': Boolean,
+      '-c': '--confirm',
     });
   } catch (err) {
     handleError(err);
@@ -93,6 +98,11 @@ export default async function main(client: Client) {
   }
 
   const { output, config } = client;
+
+  if ('--confirm' in argv) {
+    output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    argv['--yes'] = argv['--confirm'];
+  }
 
   const { print, log, error, note, debug, spinner } = output;
 
@@ -106,7 +116,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const yes = argv['--confirm'] || false;
+  const yes = !!argv['--yes'];
   const inspect = argv['--inspect'] || false;
   const prod = argv['--prod'] || false;
 
