@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import terminalLink from 'terminal-link';
 import table from 'text-table';
 import { Project } from '../../types';
 import Client from '../../util/client';
@@ -30,7 +29,6 @@ export default async function list(
 
   let projectsUrl = '/v4/projects/?limit=20';
 
-  const inspect = argv['--inspect'] || false;
   const next = argv['--next'] || false;
   if (next) {
     projectsUrl += `&until=${next}`;
@@ -59,23 +57,14 @@ export default async function list(
   if (projectList.length > 0) {
     const tablePrint = table(
       [
-        [
-          'Project Name',
-          inspect ? 'Inspect Project' : 'Latest Production URL',
-          'Updated',
-        ].map(header => chalk.bold(chalk.cyan(header))),
+        ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
+          chalk.bold(chalk.cyan(header))
+        ),
         ...projectList
           .map(project => [
             [
-              terminalLink.isSupported
-                ? terminalLink(
-                    chalk.bold(project.name),
-                    getInspectUrl(contextName, project.name)
-                  )
-                : chalk.bold(project.name),
-              inspect
-                ? getInspectUrl(contextName, project.name)
-                : getLatestProdUrl(project),
+              chalk.bold(project.name),
+              getLatestProdUrl(project),
               chalk.gray(ms(Date.now() - project.updatedAt)),
             ],
           ])
@@ -89,14 +78,6 @@ export default async function list(
     ).replace(/^/gm, '  ');
     output.print(`\n${tablePrint}\n\n`);
 
-    if (!terminalLink.isSupported && !inspect) {
-      output.log(
-        `To show the inspector URL instead of the latest deployment, type ${getCommandName(
-          'project ls --inspect'
-        )}.`
-      );
-    }
-
     if (pagination && pagination.count === 20) {
       const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d', '-y']);
       const nextCmd = `project ls${flags} --next ${pagination.next}`;
@@ -104,10 +85,6 @@ export default async function list(
     }
   }
   return 0;
-}
-
-function getInspectUrl(contextName: string, projectName: string) {
-  return `https://vercel.com/${contextName}/${projectName}`;
 }
 
 function getLatestProdUrl(project: Project): string {
