@@ -305,7 +305,7 @@ function testFixtureStdio(
               ? ['--scope', process.env.VERCEL_TEAM_ID]
               : []),
             'link',
-            '--confirm',
+            '--yes',
           ],
           { cwd, stdio: 'pipe', reject: false }
         );

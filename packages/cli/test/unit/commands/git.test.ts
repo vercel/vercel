@@ -81,7 +81,7 @@ describe('git', () => {
           id: 'no-git-config',
           name: 'no-git-config',
         });
-        client.setArgv('git', 'connect', '--confirm');
+        client.setArgv('git', 'connect', '--yes');
         const exitCode = await git(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
@@ -103,7 +103,7 @@ describe('git', () => {
           id: 'no-remote-url',
           name: 'no-remote-url',
         });
-        client.setArgv('git', 'connect', '--confirm');
+        client.setArgv('git', 'connect', '--yes');
         const exitCode = await git(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
@@ -126,7 +126,7 @@ describe('git', () => {
           id: 'bad-remote-url',
           name: 'bad-remote-url',
         });
-        client.setArgv('git', 'connect', '--confirm');
+        client.setArgv('git', 'connect', '--yes');
         const exitCode = await git(client);
         expect(exitCode).toEqual(1);
 
@@ -153,7 +153,7 @@ describe('git', () => {
           id: 'new-connection',
           name: 'new-connection',
         });
-        client.setArgv('git', 'connect', '--confirm');
+        client.setArgv('git', 'connect', '--yes');
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
@@ -206,7 +206,7 @@ describe('git', () => {
           updatedAt: 1656109539791,
         };
 
-        client.setArgv('git', 'connect', '--confirm');
+        client.setArgv('git', 'connect', '--yes');
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
@@ -258,7 +258,7 @@ describe('git', () => {
           createdAt: 1656109539791,
           updatedAt: 1656109539791,
         };
-        client.setArgv('git', 'connect', '--confirm');
+        client.setArgv('git', 'connect', '--yes');
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
@@ -288,7 +288,7 @@ describe('git', () => {
           name: 'invalid-repo',
         });
 
-        client.setArgv('git', 'connect', '--confirm');
+        client.setArgv('git', 'connect', '--yes');
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(

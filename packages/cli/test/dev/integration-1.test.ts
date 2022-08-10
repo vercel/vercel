@@ -1045,3 +1045,20 @@ test('[vercel dev] validate rewrites', async () => {
     /Invalid vercel\.json - `rewrites\[0\].destination` should be string/m
   );
 });
+
+test(
+  '[vercel dev] should correctly proxy to vite dev',
+  testFixtureStdio(
+    'vite-dev',
+    async (testPath: any) => {
+      const url = '/src/App.vue?vue&type=style&index=0&lang.css';
+      // The first request should return the HTML template
+      await testPath(200, url, /<template>/gm);
+      // The second request should return the HMR JS
+      await testPath(200, url, /__vite__createHotContext/gm);
+      // Home page should always return HTML
+      await testPath(200, '/', /<title>Vite App<\/title>/gm);
+    },
+    { skipDeploy: true }
+  )
+);
