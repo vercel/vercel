@@ -135,10 +135,7 @@ export default async function inspect(
 
   if (domainConfig.misconfigured) {
     output.warn(
-      `This Domain is not configured properly. To configure it you should either:`,
-      null,
-      null,
-      null
+      `This Domain is not configured properly. To configure it you should either:`
     );
     output.print(
       `  ${chalk.grey('a)')} ` +

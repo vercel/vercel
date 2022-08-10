@@ -1,4 +1,6 @@
 import chalk from 'chalk';
+import * as ansiEscapes from 'ansi-escapes';
+import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '../../types';
@@ -6,24 +8,34 @@ import { errorToString } from '../is-error';
 
 export interface OutputOptions {
   debug?: boolean;
+  supportsHyperlink?: boolean;
 }
 
 export interface LogOptions {
   color?: typeof chalk;
 }
 
+interface LinkOptions {
+  fallback?: false | (() => string);
+}
+
 export class Output {
   stream: WritableTTY;
   debugEnabled: boolean;
+  supportsHyperlink: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
   constructor(
     stream: WritableTTY,
-    { debug: debugEnabled = false }: OutputOptions = {}
+    {
+      debug: debugEnabled = false,
+      supportsHyperlink = detectSupportsHyperlink(stream),
+    }: OutputOptions = {}
   ) {
     this.stream = stream;
     this.debugEnabled = debugEnabled;
+    this.supportsHyperlink = supportsHyperlink;
     this.spinnerMessage = '';
     this._spinner = null;
   }
@@ -49,7 +61,7 @@ export class Output {
     str: string,
     slug: string | null = null,
     link: string | null = null,
-    action: string | null = 'Learn More'
+    action: string = 'Learn More'
   ) => {
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
 
@@ -57,7 +69,11 @@ export class Output {
       chalk.yellow(
         chalk.bold('WARN! ') +
           str +
-          (details ? `\n${action}: ${renderLink(details)}` : '')
+          (details
+            ? `\n${this.link(action, details, {
+                fallback: () => `${action}: ${renderLink(details)}`,
+              })}`
+            : '')
       )
     );
     this.print('\n');
@@ -76,7 +92,11 @@ export class Output {
     this.print(`${chalk.red(`Error!`)} ${str}\n`);
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
-      this.print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
+      this.print(
+        `${this.link(action, details, {
+          fallback: () => `${chalk.bold(action)}: ${renderLink(details)}`,
+        })}\n`
+      );
     }
   };
 
@@ -163,5 +183,29 @@ export class Output {
     }
 
     return promise;
+  };
+
+  /**
+   * Returns an ANSI formatted hyperlink when support has been enabled.
+   */
+  link = (
+    text: string,
+    url: string,
+    { fallback }: LinkOptions = {}
+  ): string => {
+    // Credit: https://github.com/sindresorhus/terminal-link
+
+    if (!this.supportsHyperlink) {
+      // If the fallback has been explicitly disabled, don't modify the text itself
+      if (fallback === false) {
+        return renderLink(text);
+      }
+
+      return typeof fallback === 'function'
+        ? fallback()
+        : `${text} (${renderLink(url)})`;
+    }
+
+    return ansiEscapes.link(chalk.cyan(text), url);
   };
 }
