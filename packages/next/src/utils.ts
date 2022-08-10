@@ -2199,9 +2199,6 @@ interface EdgeFunctionInfoV2 extends BaseEdgeFunctionInfo {
 interface EdgeFunctionMatcher {
   regexp: string;
   has?: HasField;
-  // TODO: these are not supported yet
-  basePath?: false;
-  locale?: false;
 }
 
 export async function getMiddlewareBundle({
