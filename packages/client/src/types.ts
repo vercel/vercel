@@ -28,7 +28,7 @@ export interface VercelClientOptions {
   defaultName?: string;
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
-  archive?: ArchiveFormat | undefined;
+  archive?: ArchiveFormat;
 }
 
 /** @deprecated Use VercelClientOptions instead. */
