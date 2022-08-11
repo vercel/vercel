@@ -22,7 +22,8 @@ export async function handleOptions(
 ) {
   const { output } = client;
   if (option === 'no') {
-    return skip(output);
+    skip(output);
+    return;
   } else if (option === 'opt-out') {
     return optOut(client, project, settings);
   } else if (option !== '') {
