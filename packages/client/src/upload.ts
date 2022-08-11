@@ -100,9 +100,9 @@ export async function* upload(
 
         // Split out into chunks
         const body = new Readable();
-        const read = body.read;
+        const originalRead = body.read.bind(body);
         body.read = function (...args) {
-          const chunk = read.apply(this, args);
+          const chunk = originalRead(...args);
           if (chunk) {
             uploadProgress.bytesUploaded += chunk.length;
             uploadProgress.emit('progress');
