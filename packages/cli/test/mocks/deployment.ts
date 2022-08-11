@@ -14,8 +14,9 @@ export function useDeployment({
 }) {
   const createdAt = Date.now();
   const url = new URL(chance().url());
+  const id = `dpl_${chance().guid()}`;
   const deployment: Deployment = {
-    id: `dpl_${chance().guid()}`,
+    id,
     url: url.hostname,
     name: '',
     meta: {},
@@ -39,6 +40,7 @@ export function useDeployment({
     alias: [],
     aliasAssigned: true,
     aliasError: null,
+    inspectorUrl: `https://vercel.com/${creator.name}/${id}`,
   };
 
   deployments.set(deployment.id, deployment);
