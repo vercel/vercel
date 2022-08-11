@@ -24,7 +24,6 @@ import type {
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import type { AppConfig } from './types';
-import type { Images } from '@vercel/build-utils';
 
 // Name of the Remix runtime adapter npm package for Vercel
 const REMIX_RUNTIME_ADAPTER_NAME = '@remix-run/vercel';
@@ -163,7 +162,6 @@ export const build: BuildV2 = async ({
 
   let serverBuildPath = 'build/index.js';
   let needsHandler = true;
-  let images: Images | undefined;
   try {
     const remixConfig: AppConfig = require(join(
       entrypointFsDirname,
@@ -198,157 +196,6 @@ export const build: BuildV2 = async ({
       const rootDirectory = relative(repoRootPath, workPath);
       serverBuildPath = join(rootDirectory, serverBuildPath);
     }
-
-    if (remixConfig.vercel?.images) {
-      images = remixConfig.vercel.images;
-    }
-
-    if (images) {
-      if (typeof images !== 'object') {
-        throw new Error(
-          `remix.config.js "vercel.images" should be an object received ${typeof images}.`
-        );
-      }
-
-      if (!Array.isArray(images.domains)) {
-        throw new Error(
-          `remix.config.js "vercel.images.domains" should be an Array received ${typeof images.domains}.`
-        );
-      }
-
-      if (images.domains.length > 50) {
-        throw new Error(
-          `remix.config.js "vercel.images.domains" exceeds length of 50 received length (${images.domains.length}).`
-        );
-      }
-
-      const invalidImageDomains = images.domains.filter(
-        (d: unknown) => typeof d !== 'string'
-      );
-      if (invalidImageDomains.length > 0) {
-        throw new Error(
-          `remix.config.js "vercel.images.domains" should be an Array of strings received invalid values (${invalidImageDomains.join(
-            ', '
-          )}).`
-        );
-      }
-
-      if (images.remotePatterns) {
-        if (!Array.isArray(images.remotePatterns)) {
-          throw new Error(
-            `remix.config.js "vercel.images.remotePatterns" should be an Array received ${typeof images.remotePatterns}.`
-          );
-        }
-
-        if (images.remotePatterns.length > 50) {
-          throw new Error(
-            `remix.config.js "vercel.images.remotePatterns" exceeds length of 50, received length (${images.remotePatterns.length}).`
-          );
-        }
-
-        const validProps = new Set([
-          'protocol',
-          'hostname',
-          'pathname',
-          'port',
-        ]);
-        const requiredProps = ['hostname'];
-        const invalidPatterns = images.remotePatterns.filter(
-          (d: unknown) =>
-            !d ||
-            typeof d !== 'object' ||
-            Object.entries(d).some(
-              ([k, v]) => !validProps.has(k) || typeof v !== 'string'
-            ) ||
-            requiredProps.some(k => !(k in d))
-        );
-        if (invalidPatterns.length > 0) {
-          throw new Error(
-            `remix.config.js "vercel.images.remotePatterns" received invalid values:\n${invalidPatterns
-              .map(item => JSON.stringify(item))
-              .join(
-                '\n'
-              )}\n\nremotePatterns value must follow format { protocol: 'https', hostname: 'example.com', port: '', pathname: '/imgs/**' }.`
-          );
-        }
-      }
-
-      if (!Array.isArray(images.sizes)) {
-        throw new Error(
-          `remix.config.js "vercel.images.sizes" should be an Array received ${typeof images.sizes}.`
-        );
-      }
-
-      if (images.sizes.length < 1 || images.sizes.length > 50) {
-        throw new Error(
-          `remix.config.js "vercel.images.sizes" should be an Array of length between 1 to 50 received length (${images.sizes.length}).`
-        );
-      }
-
-      const invalidImageSizes = images.sizes.filter((d: unknown) => {
-        return typeof d !== 'number' || d < 1 || d > 10000;
-      });
-      if (invalidImageSizes.length > 0) {
-        throw new Error(
-          `remix.config.js "vercel.images.sizes" should be an Array of numbers that are between 1 and 10000, received invalid values (${invalidImageSizes.join(
-            ', '
-          )}).`
-        );
-      }
-
-      if (images.minimumCacheTTL) {
-        if (
-          !Number.isInteger(images.minimumCacheTTL) ||
-          images.minimumCacheTTL < 0
-        ) {
-          throw new Error(
-            `remix.config.js "vercel.images.minimumCacheTTL" should be an integer 0 or more received (${images.minimumCacheTTL}).`
-          );
-        }
-      }
-
-      if (images.formats) {
-        if (!Array.isArray(images.formats)) {
-          throw new Error(
-            `remix.config.js "vercel.images.formats" should be an Array received ${typeof images.formats}.`
-          );
-        }
-        if (images.formats.length < 1 || images.formats.length > 2) {
-          throw new Error(
-            `remix.config.js "vercel.images.formats" must be length 1 or 2, received length (${images.formats.length}).`
-          );
-        }
-
-        const invalid = images.formats.filter(f => {
-          return f !== 'image/avif' && f !== 'image/webp';
-        });
-        if (invalid.length > 0) {
-          throw new Error(
-            `remix.config.js "vercel.images.formats" should be an Array of mime type strings, received invalid values (${invalid.join(
-              ', '
-            )}).`
-          );
-        }
-      }
-
-      if (
-        typeof images.dangerouslyAllowSVG !== 'undefined' &&
-        typeof images.dangerouslyAllowSVG !== 'boolean'
-      ) {
-        throw new Error(
-          `remix.config.js "vercel.images.dangerouslyAllowSVG" should be a boolean received (${images.dangerouslyAllowSVG}).`
-        );
-      }
-
-      if (
-        typeof images.contentSecurityPolicy !== 'undefined' &&
-        typeof images.contentSecurityPolicy !== 'string'
-      ) {
-        throw new Error(
-          `remix.config.js "vercel.images.contentSecurityPolicy" should be a string received ${images.contentSecurityPolicy}`
-        );
-      }
-    }
   } catch (err: any) {
     // Ignore error if `remix.config.js` does not exist
     if (err.code !== 'MODULE_NOT_FOUND') throw err;
@@ -380,7 +227,6 @@ export const build: BuildV2 = async ({
         dest: '/render',
       },
     ],
-    images,
     output: {
       render: renderFunction,
       ...staticFiles,
