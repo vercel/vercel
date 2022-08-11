@@ -4,6 +4,15 @@ import { Org } from '../../types';
 import chalk from 'chalk';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';
+import { Dictionary } from '@vercel/client';
+import { Output } from '../output';
+
+export interface ParsedRepoUrl {
+  url: string;
+  provider: string;
+  org: string;
+  repo: string;
+}
 
 export async function disconnectGitProvider(
   client: Client,
@@ -45,7 +54,7 @@ export async function connectGitProvider(
   } catch (err: unknown) {
     if (isAPIError(err)) {
       if (
-        err.meta?.action === 'Install GitHub App' ||
+        err.action === 'Install GitHub App' ||
         err.code === 'repo_not_found'
       ) {
         client.output.error(
@@ -83,15 +92,13 @@ export function formatProvider(type: string): string {
   }
 }
 
-export function parseRepoUrl(originUrl: string): {
-  provider: string;
-  org: string;
-  repo: string;
-} | null {
+export function parseRepoUrl(originUrl: string): ParsedRepoUrl | null {
   const isSSH = originUrl.startsWith('git@');
   // Matches all characters between (// or @) and (.com or .org)
   // eslint-disable-next-line prefer-named-capture-group
-  const provider = /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl);
+  const provider =
+    /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl)?.[0] ||
+    originUrl.replace('www.', '').split('.')[0];
   if (!provider) {
     return null;
   }
@@ -104,8 +111,8 @@ export function parseRepoUrl(originUrl: string): {
     repo = originUrl.split('/')[1]?.replace('.git', '');
   } else {
     // Assume https:// or git://
-    org = originUrl.split('/')[3];
-    repo = originUrl.split('/')[4]?.replace('.git', '');
+    org = originUrl.replace('//', '').split('/')[1];
+    repo = originUrl.replace('//', '').split('/')[2]?.replace('.git', '');
   }
 
   if (!org || !repo) {
@@ -113,8 +120,18 @@ export function parseRepoUrl(originUrl: string): {
   }
 
   return {
-    provider: provider[0],
+    url: originUrl,
+    provider,
     org,
     repo,
   };
+}
+
+export function printRemoteUrls(
+  output: Output,
+  remoteUrls: Dictionary<string>
+) {
+  for (const [name, url] of Object.entries(remoteUrls)) {
+    output.print(`  • ${name}: ${chalk.cyan(url)}\n`);
+  }
 }
