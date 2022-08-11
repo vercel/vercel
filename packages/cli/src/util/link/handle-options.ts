@@ -25,7 +25,8 @@ export async function handleOptions(
     skip(output);
     return;
   } else if (option === 'opt-out') {
-    return optOut(client, project, settings);
+    optOut(client, project, settings);
+    return;
   } else if (option !== '') {
     // Option is "yes" or a URL
 
