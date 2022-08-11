@@ -51,6 +51,7 @@ export function useDeployment({
     alias: [],
     aliasAssigned: true,
     aliasError: null,
+    inspectorUrl: `https://vercel.com/${creator.name}/${id}`,
   };
 
   deployments.set(deployment.id, deployment);
