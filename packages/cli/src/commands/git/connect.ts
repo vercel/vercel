@@ -12,7 +12,7 @@ import {
   connectGitProvider,
   disconnectGitProvider,
   formatProvider,
-  ParsedRepoUrl,
+  RepoInfo,
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
@@ -35,7 +35,7 @@ interface ConnectArgParams {
   org: Org;
   project: Project;
   confirm: boolean;
-  repoInfo: ParsedRepoUrl;
+  repoInfo: RepoInfo;
 }
 
 interface ConnectGitArgParams extends ConnectArgParams {
@@ -45,7 +45,7 @@ interface ConnectGitArgParams extends ConnectArgParams {
 interface PromptConnectArgParams {
   client: Client;
   yes: boolean;
-  repoInfo: ParsedRepoUrl;
+  repoInfo: RepoInfo;
   remoteUrls: Dictionary<string>;
 }
 

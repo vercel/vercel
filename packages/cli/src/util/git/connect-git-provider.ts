@@ -4,6 +4,8 @@ import { Org } from '../../types';
 import chalk from 'chalk';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';
+import { Output } from '../output';
+import { Dictionary } from '@vercel/client';
 
 export interface RepoInfo {
   url: string;
