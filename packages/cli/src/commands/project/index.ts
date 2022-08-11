@@ -57,8 +57,6 @@ export default async function main(client: Client) {
     argv = getArgs(client.argv.slice(2), {
       '--next': Number,
       '-N': '--next',
-      '--inspect': Boolean,
-      '-i': '--inspect',
     });
   } catch (error) {
     handleError(error);
