@@ -15,8 +15,9 @@ export async function promptGitConnectSingleUrl(
   if (hasDiffConnectedProvider) {
     const currentRepoPath = `${project.link!.org}/${project.link!.repo}`;
     const currentProvider = project.link!.type;
+    output.print('\n');
     output.log(
-      `Found Git remote url ${chalk.cyan(
+      `Found Git remote URL ${chalk.cyan(
         remoteUrl
       )}, which is different from the connected ${formatProvider(
         currentProvider

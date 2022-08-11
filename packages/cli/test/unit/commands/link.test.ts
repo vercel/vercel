@@ -134,7 +134,7 @@ describe('link', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          `Found Git remote url https://github.com/user2/repo2.git, which is different from the connected GitHub repository user/repo.`
+          `Found Git remote URL https://github.com/user2/repo2.git, which is different from the connected GitHub repository user/repo.`
         );
         await expect(client.stderr).toOutput('Do you want to replace it?');
         client.stdin.write('\r');
