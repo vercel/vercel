@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
 import title from 'title';
-import terminalLink from 'terminal-link';
 import Now from '../util';
 import getArgs from '../util/get-args';
 import { handleError } from '../util/error';
@@ -357,35 +356,12 @@ export default async function main(client: Client) {
   }
 }
 
-function getDeploymentIdFromUrl(
-  url: string,
-  projectName: string | undefined,
-  inspect?: boolean
-): string {
-  if (!projectName) {
-    return url;
-  }
-  return inspect
-    ? url.split('/').slice(-1)[0]
-    : url
-        .match(
-          /(?<=https:\/\/)(.*)(?=(.*)(\.vercel\.app|\.now\.sh|\.vercel\.sh))/g
-        )?.[0]
-        ?.split(`${projectName}-`)?.[1]
-        ?.split('-')?.[0] || url;
-}
-
 function getDeployUrl(
   deployment: Deployment,
   projectName: string | undefined,
   inspect?: boolean
 ): string {
-  const url = inspect ? deployment.inspectorUrl : 'https://' + deployment.url;
-  if (terminalLink.isSupported) {
-    const depId = getDeploymentIdFromUrl(url, projectName, inspect);
-    return terminalLink(depId, url);
-  }
-  return url;
+  return inspect ? deployment.inspectorUrl : 'https://' + deployment.url;
 }
 
 export function getDeploymentDuration(dep: Deployment): string {
