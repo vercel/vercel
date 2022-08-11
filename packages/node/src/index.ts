@@ -151,11 +151,6 @@ async function compile(
     }
   }
 
-  debug(
-    'Tracing input files: ' +
-      [...inputFiles].map(p => relative(workPath, p)).join(', ')
-  );
-
   let tsCompile: Register;
   function compileTypeScript(path: string, source: string): string {
     const relPath = relative(baseDir, path);
@@ -257,11 +252,8 @@ async function compile(
   );
 
   for (const warning of warnings) {
-    if (warning?.stack) {
-      debug(warning.stack.replace('Error: ', 'Warning: '));
-    }
+    debug(`Warning from trace: ${warning.message}`);
   }
-
   for (const path of fileList) {
     let entry = fsCache.get(path);
     if (!entry) {
