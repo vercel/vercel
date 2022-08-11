@@ -6,7 +6,9 @@ describe('Output', () => {
     it('should return hyperlink ANSI codes when `supportsHyperlink=true`', () => {
       client.output.supportsHyperlink = true;
       const val = client.output.link('Click Here', 'https://example.com');
-      expect(val).not.toEqual('Click Here');
+      expect(val).toEqual(
+        '\x1B]8;;https://example.com\x07Click Here\x1B]8;;\x07'
+      );
       expect(stripAnsi(val)).toEqual('Click Here');
     });
 
