@@ -116,7 +116,7 @@ export default async function buy(
 
   if (buyResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method on the dashbaord.`
+      `Could not purchase domain. Please add a payment method using the dashboard.`
     );
     return 1;
   }
