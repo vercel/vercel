@@ -43,7 +43,6 @@ describe('project', () => {
       const project = useProject({
         ...defaultProject,
       });
-      console.log(project);
 
       client.setArgv('project', 'ls');
       await projects(client);
