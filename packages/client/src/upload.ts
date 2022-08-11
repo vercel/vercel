@@ -80,7 +80,7 @@ export async function* upload(
   const semaphore = new Sema(50, { capacity: 50 });
   const agent = new Agent({ keepAlive: true });
 
-  shas.map((sha, index): void => {
+  shas.forEach((sha, index) => {
     const uploadProgress = uploads[index];
 
     uploadList[sha] = retry(
