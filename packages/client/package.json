@@ -31,6 +31,7 @@
     "@types/node": "12.0.4",
     "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
+    "@types/tar-fs": "^2.0.1",
     "typescript": "4.3.4"
   },
   "jest": {
