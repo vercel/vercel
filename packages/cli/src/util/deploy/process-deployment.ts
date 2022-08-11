@@ -8,7 +8,6 @@ import {
   VercelClientOptions,
 } from '@vercel/client';
 import { Output } from '../output';
-// @ts-ignore
 import Now from '../../util';
 import { Org } from '../../types';
 import ua from '../ua';
@@ -93,12 +92,10 @@ export default async function processDeployment({
     archive,
   };
 
-  output.spinner(
-    isSettingUpProject
-      ? 'Setting up project'
-      : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
-    0
-  );
+  const deployingSpinnerVal = isSettingUpProject
+    ? 'Setting up project'
+    : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`;
+  output.spinner(deployingSpinnerVal, 0);
 
   // collect indications to show the user once
   // the deployment is done
@@ -111,12 +108,11 @@ export default async function processDeployment({
       }
 
       if (event.type === 'file-count') {
-        debug(
-          `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
-        );
+        const { total, missing, uploads } = event.payload;
+        debug(`Total files ${total.size}, ${missing.length} changed`);
 
-        const missingSize = event.payload.missing
-          .map((sha: string) => event.payload.total.get(sha).data.length)
+        const missingSize = missing
+          .map((sha: string) => total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
 
         output.stopSpinner();
@@ -127,6 +123,24 @@ export default async function processDeployment({
           total: missingSize,
           clear: true,
         });
+
+        bar.tick(0);
+
+        uploads.forEach((e: any) =>
+          e.on('progress', () => {
+            if (!bar) return;
+
+            const totalBytesUploaded = uploads.reduce((acc: number, e: any) => {
+              return acc + e.bytesUploaded;
+            }, 0);
+            bar.curr = totalBytesUploaded;
+            bar.tick(0);
+
+            if (bar.complete) {
+              output.spinner(deployingSpinnerVal, 0);
+            }
+          })
+        );
       }
 
       if (event.type === 'file-uploaded') {
@@ -135,10 +149,6 @@ export default async function processDeployment({
             event.payload.file.data.length
           )})`
         );
-
-        if (bar) {
-          bar.tick(event.payload.file.data.length);
-        }
       }
 
       if (event.type === 'created') {
