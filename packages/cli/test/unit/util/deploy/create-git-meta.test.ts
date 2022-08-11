@@ -145,6 +145,18 @@ describe('parseRepoUrl', () => {
     expect(repoInfo?.org).toEqual('atlassianlabs');
     expect(repoInfo?.repo).toEqual('maven-project-example');
   });
+  it('should parse url without a scheme', () => {
+    const parsedUrl = parseRepoUrl('github.com/user/repo');
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('user');
+    expect(parsedUrl?.repo).toEqual('repo');
+  });
+  it('should parse a url that includes www.', () => {
+    const parsedUrl = parseRepoUrl('www.github.com/user/repo');
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('user');
+    expect(parsedUrl?.repo).toEqual('repo');
+  });
 });
 
 describe('createGitMeta', () => {

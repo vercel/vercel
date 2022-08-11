@@ -93,7 +93,9 @@ export function parseRepoUrl(originUrl: string): RepoInfo | null {
   const isSSH = originUrl.startsWith('git@');
   // Matches all characters between (// or @) and (.com or .org)
   // eslint-disable-next-line prefer-named-capture-group
-  const provider = /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl);
+  const provider =
+    /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl)?.[0] ||
+    originUrl.replace('www.', '').split('.')[0];
   if (!provider) {
     return null;
   }
@@ -106,8 +108,8 @@ export function parseRepoUrl(originUrl: string): RepoInfo | null {
     repo = originUrl.split('/')[1]?.replace('.git', '');
   } else {
     // Assume https:// or git://
-    org = originUrl.split('/')[3];
-    repo = originUrl.split('/')[4]?.replace('.git', '');
+    org = originUrl.replace('//', '').split('/')[1];
+    repo = originUrl.replace('//', '').split('/')[2]?.replace('.git', '');
   }
 
   if (!org || !repo) {
@@ -116,8 +118,16 @@ export function parseRepoUrl(originUrl: string): RepoInfo | null {
 
   return {
     url: originUrl,
-    provider: provider[0],
+    provider,
     org,
     repo,
   };
+}
+export function printRemoteUrls(
+  output: Output,
+  remoteUrls: Dictionary<string>
+) {
+  for (const [name, url] of Object.entries(remoteUrls)) {
+    output.print(`  • ${name}: ${chalk.cyan(url)}\n`);
+  }
 }
