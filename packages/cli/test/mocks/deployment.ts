@@ -18,12 +18,14 @@ export function useDeployment({
 }) {
   const createdAt = Date.now();
   const url = new URL(chance().url());
+  const name = chance().name();
+  const id = `dpl_${chance().guid()}`;
 
   const deployment: Deployment = {
-    id: `dpl_${chance().guid()}`,
+    id,
     url: url.hostname,
-    inspectorUrl: `https://vercel.com/${chance()}`,
-    name: chance.name,
+    inspectorUrl: `https://vercel.com/team/project/${id.replace('dpl_', '')}`,
+    name,
     meta: {},
     regions: [],
     routes: [],
@@ -42,7 +44,7 @@ export function useDeployment({
     },
     readyState: state,
     state: state,
-    ready: Date.now() + Math.floor(Math.random() * 300000),
+    ready: createdAt + 30000,
     env: {},
     build: { env: {} },
     target: 'production',
