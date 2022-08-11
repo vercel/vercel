@@ -9,7 +9,7 @@ import {
   isDirty,
 } from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
-import { parseRepoUrl } from '../../../../src/util/projects/connect-git-provider';
+import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 import { readOutputStream } from '../../../helpers/read-output-stream';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -144,6 +144,18 @@ describe('parseRepoUrl', () => {
     expect(parsedUrl?.provider).toEqual('bitbucket');
     expect(parsedUrl?.org).toEqual('atlassianlabs');
     expect(parsedUrl?.repo).toEqual('maven-project-example');
+  });
+  it('should parse url without a scheme', () => {
+    const parsedUrl = parseRepoUrl('github.com/user/repo');
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('user');
+    expect(parsedUrl?.repo).toEqual('repo');
+  });
+  it('should parse a url that includes www.', () => {
+    const parsedUrl = parseRepoUrl('www.github.com/user/repo');
+    expect(parsedUrl?.provider).toEqual('github');
+    expect(parsedUrl?.org).toEqual('user');
+    expect(parsedUrl?.repo).toEqual('repo');
   });
 });
 
