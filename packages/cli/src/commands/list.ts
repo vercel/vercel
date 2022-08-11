@@ -44,7 +44,6 @@ const help = () => {
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
       '`-m KEY=value`'
     )}). Can appear many times.
-    -i, --inspect                  Display dashboard inspect URLs
     --prod                         Filter for production URLs
     -N, --next                     Show next page of results
 
@@ -81,8 +80,6 @@ export default async function main(client: Client) {
       '-m': '--meta',
       '--next': Number,
       '-N': '--next',
-      '--inspect': Boolean,
-      '-i': '--inspect',
       '--prod': Boolean,
       '--yes': Boolean,
       '-y': '--yes',
@@ -116,7 +113,6 @@ export default async function main(client: Client) {
   }
 
   const yes = !!argv['--yes'];
-  const inspect = argv['--inspect'] || false;
   const prod = argv['--prod'] || false;
 
   const meta = parseMeta(argv['--meta']);
@@ -304,12 +300,7 @@ export default async function main(client: Client) {
 
   print('\n');
 
-  const headers = [
-    'Age',
-    inspect ? 'Inspect Deployment' : 'Deployment',
-    'Status',
-    'Duration',
-  ];
+  const headers = ['Age', 'Deployment', 'Status', 'Duration'];
   if (showUsername) headers.push('Username');
 
   client.output.print(
@@ -318,12 +309,10 @@ export default async function main(client: Client) {
         headers.map(header => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
-          .map((dep, i) => [
+          .map(dep => [
             [
               chalk.gray(ms(Date.now() - dep.createdAt)),
-              i === 0
-                ? chalk.bold(`${getDeployUrl(dep, app, inspect)}`)
-                : `${getDeployUrl(dep, app, inspect)}`,
+              `https://${dep.url}`,
               stateString(dep.state || ''),
               chalk.gray(getDeploymentDuration(dep)),
               showUsername ? chalk.gray(dep.creator?.username) : '',
@@ -354,14 +343,6 @@ export default async function main(client: Client) {
       )}`
     );
   }
-}
-
-function getDeployUrl(
-  deployment: Deployment,
-  projectName: string | undefined,
-  inspect?: boolean
-): string {
-  return inspect ? deployment.inspectorUrl : 'https://' + deployment.url;
 }
 
 export function getDeploymentDuration(dep: Deployment): string {
