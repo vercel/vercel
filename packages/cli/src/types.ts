@@ -142,6 +142,7 @@ export type Deployment = {
   meta: {
     [key: string]: any;
   };
+  alias?: string[];
 };
 
 export type Alias = {
@@ -211,6 +212,7 @@ export interface ProjectAliasTarget {
   configuredBy?: null | 'CNAME' | 'A';
   configuredChangedAt?: null | number;
   configuredChangeAttempts?: [number, number];
+  deployment?: Deployment | undefined;
 }
 
 export interface Secret {
