@@ -9,7 +9,6 @@ import {
   pluckIdentifiersFromDeploymentList,
   parseSpacedTableRow,
 } from '../../helpers/parse-table';
-import { useDeployment } from '../../mocks/deployment';
 
 describe('project', () => {
   describe('list', () => {
@@ -19,7 +18,6 @@ describe('project', () => {
       const project = useProject({
         ...defaultProject,
       });
-      useDeployment({ creator: user });
 
       client.setArgv('project', 'ls');
       await projects(client);
@@ -36,7 +34,33 @@ describe('project', () => {
         'Latest Production URL',
         'Updated',
       ]);
-      expect(data).toEqual([project.project.name, `--`]);
+      expect(data).toEqual([project.project.name, 'https://foobar.com']);
+    });
+    it('should list projects when there is no production deployment', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      defaultProject.alias = [];
+      const project = useProject({
+        ...defaultProject,
+      });
+      console.log(project);
+
+      client.setArgv('project', 'ls');
+      await projects(client);
+
+      const output = await readOutputStream(client, 2);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      data.pop();
+
+      expect(org).toEqual(user.username);
+      expect(header).toEqual([
+        'Project Name',
+        'Latest Production URL',
+        'Updated',
+      ]);
+      expect(data).toEqual([project.project.name, '--']);
     });
   });
   describe('add', () => {

@@ -123,6 +123,12 @@ export const defaultProject = {
       userId: 'K4amb7K9dAt5R2vBJWF32bmY',
     },
   ],
+  alias: [
+    {
+      domain: 'foobar.com',
+      target: 'PRODUCTION' as const,
+    },
+  ],
 };
 
 export function useProject(project: Partial<Project> = defaultProject) {
