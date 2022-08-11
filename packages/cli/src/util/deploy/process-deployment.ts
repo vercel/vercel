@@ -133,7 +133,9 @@ export default async function processDeployment({
             const totalBytesUploaded = uploads.reduce((acc: number, e: any) => {
               return acc + e.bytesUploaded;
             }, 0);
+            // set the current progress bar value
             bar.curr = totalBytesUploaded;
+            // trigger rendering
             bar.tick(0);
 
             if (bar.complete) {
