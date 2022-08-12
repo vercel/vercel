@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "path": "/api", "mustContain": "Hello World" },
+    { "path": "/api?name=Ruby", "mustContain": "Hello Ruby" }
+  ]
+}
