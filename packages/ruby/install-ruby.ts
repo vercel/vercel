@@ -5,15 +5,13 @@ import { Meta, NodeVersion, debug, NowBuildError } from '@vercel/build-utils';
 
 interface RubyVersion extends NodeVersion {
   minor: number;
-  patch: number;
 }
 
 const allOptions: RubyVersion[] = [
-  { major: 2, minor: 7, patch: 0, range: '2.7.x', runtime: 'ruby2.7' },
+  { major: 2, minor: 7, range: '2.7.x', runtime: 'ruby2.7' },
   {
     major: 2,
     minor: 5,
-    patch: 0,
     range: '2.5.x',
     runtime: 'ruby2.5',
     discontinueDate: new Date('2021-11-30'),
@@ -57,7 +55,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       if (isDiscontinued(selection)) {
         const latest = getLatestRubyVersion();
         const intro = `Found \`Gemfile\` with discontinued Ruby version: \`${line}.\``;
-        const hint = `Please set \`ruby "~> ${latest.major}.${latest.minor}.${latest.patch}"\` in your \`Gemfile\` to use the latest Ruby version.`;
+        const hint = `Please set \`ruby "~> ${latest.range}"\` in your \`Gemfile\` to use Ruby ${latest.range}.`;
         throw new NowBuildError({
           code: 'RUBY_DISCONTINUED_VERSION',
           link: 'http://vercel.link/ruby-version',
