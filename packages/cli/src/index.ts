@@ -505,9 +505,6 @@ const main = async () => {
       case 'alias':
         func = require('./commands/alias').default;
         break;
-      case 'billing':
-        func = require('./commands/billing').default;
-        break;
       case 'bisect':
         func = require('./commands/bisect').default;
         break;

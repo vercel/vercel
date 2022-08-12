@@ -91,7 +91,7 @@ const help = () => {
       --output [path]                Directory where built assets should be written to
       --prod                         Build a production deployment
       -d, --debug                    Debug mode [off]
-      -y, --yes                      Pull environment variables and project settings if not found locally
+      -y, --yes                      Skip the confirmation prompt about pulling environment variables and project settings when not found locally
 
     ${chalk.dim('Examples:')}
 
