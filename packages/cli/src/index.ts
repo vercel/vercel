@@ -323,14 +323,7 @@ const main = async () => {
     client.argv.push('-h');
   }
 
-  const subcommandsWithoutToken = [
-    'login',
-    'logout',
-    'help',
-    'init',
-    'update',
-    'build',
-  ];
+  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'build'];
 
   // Prompt for login if there is no current token
   if (
@@ -567,9 +560,6 @@ const main = async () => {
         break;
       case 'teams':
         func = require('./commands/teams').default;
-        break;
-      case 'update':
-        func = require('./commands/update').default;
         break;
       case 'whoami':
         func = require('./commands/whoami').default;
