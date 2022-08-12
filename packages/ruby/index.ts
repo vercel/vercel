@@ -62,7 +62,10 @@ async function bundleInstall(
     }
   );
 
-  if (exitCode === 0 || exitCode === 18) {
+  if (
+    exitCode === 0 ||
+    (exitCode === 18 && stderr.includes('Gemfile specified -1'))
+  ) {
     // Gemfile might contain "2.7.x" so install might exit with code 18 and message:
     // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
     // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
