@@ -1719,7 +1719,7 @@ export const frameworks = [
       },
       devCommand: {
         placeholder: 'vite',
-        value: 'vite --port $PORT',
+        value: 'vite --port $PORT --host 0.0.0.0',
       },
       outputDirectory: {
         value: 'dist',
