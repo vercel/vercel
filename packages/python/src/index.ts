@@ -208,7 +208,12 @@ export const build = async ({
     files: await glob('**', globOptions),
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
-    environment: {},
+    environment: {
+      // This is required for environment variable access.
+      // In production, env var access is provided by static analysis
+      // so that only the used values are available.
+      ...(process.env as { [key: string]: string }),
+    },
   });
 
   return { output: lambda };

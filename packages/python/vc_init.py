@@ -1,3 +1,4 @@
+import os
 import sys
 import base64
 import json
@@ -145,7 +146,7 @@ elif 'app' in __vc_variables:
 
             for key, value in environ.items():
                 if isinstance(value, string_types):
-                    environ[key] = wsgi_encoding_dance(value)
+                    os.environ[key] = wsgi_encoding_dance(value)
 
             for key, value in headers.items():
                 key = 'HTTP_' + key.upper().replace('-', '_')
