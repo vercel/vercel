@@ -257,6 +257,45 @@ describe('env', () => {
       } finally {
         client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
         await env(client);
+        defaultProject.env.pop();
+      }
+    });
+
+    it('should correctly render delta string when local env variable has quotes', async () => {
+      const cwd = setupFixture('vercel-env-pull-delta-quotes');
+      try {
+        useUser();
+        useTeams('team_dummy');
+        defaultProject.env.push({
+          type: 'encrypted',
+          id: '781dt89g8r2h789g',
+          key: 'NEW_VAR',
+          value: 'testvalue',
+          target: ['development'],
+          gitBranch: null,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        });
+        useProject({
+          ...defaultProject,
+          id: 'env-pull-delta-quotes',
+          name: 'env-pull-delta-quotes',
+        });
+
+        client.setArgv('env', 'pull', '.env.testquotes', '--yes', '--cwd', cwd);
+        const pullPromise = env(client);
+        await expect(client.stderr).toOutput(
+          'Downloading `development` Environment Variables for Project env-pull-delta'
+        );
+        await expect(client.stderr).toOutput('No changes found.\n');
+        await expect(client.stderr).toOutput('Updated .env.testquotes file');
+
+        await expect(pullPromise).resolves.toEqual(0);
+      } finally {
+        client.setArgv('env', 'rm', 'NEW_VAR', '--yes', '--cwd', cwd);
+        await env(client);
+        defaultProject.env.pop();
       }
     });
   });
