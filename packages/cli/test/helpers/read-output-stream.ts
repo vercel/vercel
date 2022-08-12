@@ -8,7 +8,9 @@ export function readOutputStream(
     let output: string = '';
     let lines = 0;
     const timeout = setTimeout(() => {
-      reject();
+      reject(
+        new Error(`Was waiting for ${length} lines, but only received ${chunks.length}`)
+      );
     }, 3000);
 
     client.stderr.resume();

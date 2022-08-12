@@ -4,13 +4,22 @@ import { Org } from '../../types';
 import chalk from 'chalk';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';
+import { Output } from '../output';
+import { Dictionary } from '@vercel/client';
+
+export interface RepoInfo {
+  url: string;
+  provider: string;
+  org: string;
+  repo: string;
+}
 
 export async function disconnectGitProvider(
   client: Client,
   org: Org,
   projectId: string
 ) {
-  const fetchUrl = `/v4/projects/${projectId}/link?${stringify({
+  const fetchUrl = `/v9/projects/${projectId}/link?${stringify({
     teamId: org.type === 'team' ? org.id : undefined,
   })}`;
   return client.fetch(fetchUrl, {
@@ -28,7 +37,7 @@ export async function connectGitProvider(
   type: string,
   repo: string
 ) {
-  const fetchUrl = `/v4/projects/${projectId}/link?${stringify({
+  const fetchUrl = `/v9/projects/${projectId}/link?${stringify({
     teamId: org.type === 'team' ? org.id : undefined,
   })}`;
   try {
@@ -43,22 +52,21 @@ export async function connectGitProvider(
       }),
     });
   } catch (err: unknown) {
-    if (isAPIError(err)) {
-      if (
-        err.meta?.action === 'Install GitHub App' ||
-        err.code === 'repo_not_found'
-      ) {
-        client.output.error(
-          `Failed to link ${chalk.cyan(
-            repo
-          )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
-        );
-      } else if (err.action === 'Add a Login Connection') {
-        client.output.error(
-          err.message.replace(repo, chalk.cyan(repo)) +
-            `\nVisit ${link(err.link)} for more information.`
-        );
-      }
+    const apiError = isAPIError(err);
+    if (
+      apiError &&
+      (err.action === 'Install GitHub App' || err.code === 'repo_not_found')
+    ) {
+      client.output.error(
+        `Failed to link ${chalk.cyan(
+          repo
+        )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
+      );
+    } else if (apiError && err.action === 'Add a Login Connection') {
+      client.output.error(
+        err.message.replace(repo, chalk.cyan(repo)) +
+          `\nVisit ${link(err.link)} for more information.`
+      );
     } else {
       client.output.error(
         `Failed to connect the ${formatProvider(
@@ -83,15 +91,13 @@ export function formatProvider(type: string): string {
   }
 }
 
-export function parseRepoUrl(originUrl: string): {
-  provider: string;
-  org: string;
-  repo: string;
-} | null {
+export function parseRepoUrl(originUrl: string): RepoInfo | null {
   const isSSH = originUrl.startsWith('git@');
   // Matches all characters between (// or @) and (.com or .org)
   // eslint-disable-next-line prefer-named-capture-group
-  const provider = /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl);
+  const provider =
+    /(?<=(\/\/|@)).*(?=(\.com|\.org))/.exec(originUrl)?.[0] ||
+    originUrl.replace('www.', '').split('.')[0];
   if (!provider) {
     return null;
   }
@@ -104,8 +110,8 @@ export function parseRepoUrl(originUrl: string): {
     repo = originUrl.split('/')[1]?.replace('.git', '');
   } else {
     // Assume https:// or git://
-    org = originUrl.split('/')[3];
-    repo = originUrl.split('/')[4]?.replace('.git', '');
+    org = originUrl.replace('//', '').split('/')[1];
+    repo = originUrl.replace('//', '').split('/')[2]?.replace('.git', '');
   }
 
   if (!org || !repo) {
@@ -113,8 +119,17 @@ export function parseRepoUrl(originUrl: string): {
   }
 
   return {
-    provider: provider[0],
+    url: originUrl,
+    provider,
     org,
     repo,
   };
+}
+export function printRemoteUrls(
+  output: Output,
+  remoteUrls: Dictionary<string>
+) {
+  for (const [name, url] of Object.entries(remoteUrls)) {
+    output.print(`  • ${name}: ${chalk.cyan(url)}\n`);
+  }
 }
