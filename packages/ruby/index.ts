@@ -67,7 +67,9 @@ async function bundleInstall(
     // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
     // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
   } else {
-    throw new Error(stdout + stderr);
+    throw new Error(
+      `"bundle install" failed with exit code ${exitCode}: ${stdout}\n${stderr}`
+    );
   }
 }
 
