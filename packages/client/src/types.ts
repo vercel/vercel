@@ -41,6 +41,7 @@ export interface Deployment {
   id: string;
   deploymentId?: string;
   url: string;
+  inspectorUrl: string;
   name: string;
   meta: Dictionary<string | number | boolean>;
   version: 2;
@@ -69,12 +70,14 @@ export interface Deployment {
     | 'QUEUED'
     | 'CANCELED'
     | 'ERROR';
+  ready?: number;
   createdAt: number;
   createdIn: string;
   buildingAt?: number;
   creator?: {
     uid?: string;
     email?: string;
+    name?: string;
     username?: string;
   };
   env: Dictionary<string>;

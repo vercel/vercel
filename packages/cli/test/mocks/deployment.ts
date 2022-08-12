@@ -7,18 +7,25 @@ import { Build, User } from '../../src/types';
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
 
+type State = Deployment['readyState'];
+
 export function useDeployment({
   creator,
+  state = 'READY',
 }: {
-  creator: Pick<User, 'id' | 'email' | 'name'>;
+  creator: Pick<User, 'id' | 'email' | 'name' | 'username'>;
+  state?: State;
 }) {
   const createdAt = Date.now();
   const url = new URL(chance().url());
+  const name = chance().name();
   const id = `dpl_${chance().guid()}`;
+
   const deployment: Deployment = {
     id,
     url: url.hostname,
-    name: '',
+    inspectorUrl: `https://vercel.com/team/project/${id.replace('dpl_', '')}`,
+    name,
     meta: {},
     regions: [],
     routes: [],
@@ -27,13 +34,17 @@ export function useDeployment({
     version: 2,
     createdAt,
     createdIn: 'sfo1',
+    buildingAt: Date.now(),
     ownerId: creator.id,
     creator: {
       uid: creator.id,
       email: creator.email,
-      username: creator.name,
+      name: creator.name,
+      username: creator.username,
     },
-    readyState: 'READY',
+    readyState: state,
+    state: state,
+    ready: createdAt + 30000,
     env: {},
     build: { env: {} },
     target: 'production',

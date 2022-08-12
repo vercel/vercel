@@ -30,7 +30,6 @@ export interface GlobalConfig {
   '// Note'?: string;
   '// Docs'?: string;
   currentTeam?: string;
-  includeScheme?: string;
   collectMetrics?: boolean;
   api?: string;
 
