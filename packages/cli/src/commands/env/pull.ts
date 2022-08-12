@@ -117,7 +117,8 @@ export default async function pull(
   if (exists) {
     oldEnv = await createEnvObject(fullPath, output);
     if (oldEnv) {
-      deltaString = buildDeltaString(oldEnv, records);
+      const newEnv = JSON.parse(JSON.stringify(records).replace(/\\"/g, ''));
+      deltaString = buildDeltaString(oldEnv, newEnv);
     }
   }
 
