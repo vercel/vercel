@@ -332,7 +332,8 @@ export default class Now extends EventEmitter {
 
   async list(
     app?: string,
-    { version = 4, meta = {}, nextTimestamp }: ListOptions = {}
+    { version = 4, meta = {}, nextTimestamp }: ListOptions = {},
+    prod?: boolean
   ) {
     const fetchRetry = async (url: string, options: FetchOptions = {}) => {
       return this.retry(
@@ -394,6 +395,9 @@ export default class Now extends EventEmitter {
 
     if (nextTimestamp) {
       query.set('until', String(nextTimestamp));
+    }
+    if (prod) {
+      query.set('target', 'production');
     }
 
     const response = await fetchRetry(`/v${version}/now/deployments?${query}`);
