@@ -16,7 +16,7 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    connect                   Connect your Git config "origin" remote as a Git provider to your project
+    connect [url]             Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository
     disconnect                Disconnect the Git provider repository from your project
 
   ${chalk.dim('Options:')}
@@ -29,9 +29,17 @@ const help = () => {
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Connect a Git provider repository
+  ${chalk.gray(
+    '–'
+  )} Connect your Vercel Project to your Git repository defined in your local .git config
 
     ${chalk.cyan(`$ ${getPkgName()} git connect`)}
+  
+  ${chalk.gray('–')} Connect your Vercel Project to a Git repository using the remote URL
+
+    ${chalk.cyan(
+      `$ ${getPkgName()} git connect https://github.com/user/repo.git`
+    )}
 
   ${chalk.gray('–')} Disconnect the Git provider repository
 

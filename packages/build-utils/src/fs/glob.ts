@@ -8,17 +8,13 @@ import FileFsRef from '../file-fs-ref';
 
 export type GlobOptions = vanillaGlob_.IOptions;
 
-interface FsFiles {
-  [filePath: string]: FileFsRef;
-}
-
 const vanillaGlob = promisify(vanillaGlob_);
 
 export default async function glob(
   pattern: string,
   opts: GlobOptions | string,
   mountpoint?: string
-): Promise<FsFiles> {
+): Promise<Record<string, FileFsRef>> {
   let options: GlobOptions;
   if (typeof opts === 'string') {
     options = { cwd: opts };
@@ -36,10 +32,11 @@ export default async function glob(
     throw new Error(`basePath/cwd must be an absolute path (${options.cwd})`);
   }
 
-  const results: FsFiles = {};
+  const results: Record<string, FileFsRef> = {};
+  const statCache: Record<string, Stats> = {};
 
   options.symlinks = {};
-  options.statCache = {};
+  options.statCache = statCache;
   options.stat = true;
   options.dot = true;
 
@@ -47,7 +44,7 @@ export default async function glob(
 
   for (const relativePath of files) {
     const fsPath = normalizePath(path.join(options.cwd, relativePath));
-    let stat: Stats = options.statCache[fsPath] as Stats;
+    let stat = statCache[fsPath];
     assert(
       stat,
       `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`
