@@ -11,7 +11,7 @@ describe('progress()', () => {
     { current: 0, total: 12, expected: '____________________' },
     { current: 1, total: 12, expected: '=___________________' },
     { current: 2, total: 12, expected: '===_________________' },
-    { current: 600, total: 1200, expected: '===_________________' },
+    { current: 600, total: 1200, expected: '==========__________' },
   ])('$current / $total -> $expected', ({ current, total, opts, expected }) => {
     expect(progress(current, total, opts)).toEqual(expected);
   });
