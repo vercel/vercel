@@ -12,8 +12,9 @@ import {
 
 describe('project', () => {
   describe('list', () => {
-    it('should list deployments under a user', async () => {
+    it('should list projects', async () => {
       const user = useUser();
+      useTeams('team_dummy');
       const project = useProject({
         ...defaultProject,
       });
@@ -28,17 +29,21 @@ describe('project', () => {
       data.pop();
 
       expect(org).toEqual(user.username);
-      expect(header).toEqual(['name', 'updated']);
-      expect(data).toEqual([project.project.name]);
+      expect(header).toEqual([
+        'Project Name',
+        'Latest Production URL',
+        'Updated',
+      ]);
+      expect(data).toEqual([project.project.name, 'https://foobar.com']);
     });
-    it('should list deployments for a team', async () => {
-      useUser();
-      const team = useTeams('team_dummy');
+    it('should list projects when there is no production deployment', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      defaultProject.alias = [];
       const project = useProject({
         ...defaultProject,
       });
 
-      client.config.currentTeam = team[0].id;
       client.setArgv('project', 'ls');
       await projects(client);
 
@@ -48,9 +53,13 @@ describe('project', () => {
       const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
       data.pop();
 
-      expect(org).toEqual(team[0].slug);
-      expect(header).toEqual(['name', 'updated']);
-      expect(data).toEqual([project.project.name]);
+      expect(org).toEqual(user.username);
+      expect(header).toEqual([
+        'Project Name',
+        'Latest Production URL',
+        'Updated',
+      ]);
+      expect(data).toEqual([project.project.name, '--']);
     });
   });
   describe('add', () => {

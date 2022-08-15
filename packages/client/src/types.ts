@@ -11,6 +11,9 @@ export interface Dictionary<T> {
   [key: string]: T;
 }
 
+export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
+export type ArchiveFormat = typeof VALID_ARCHIVE_FORMATS[number];
+
 export interface VercelClientOptions {
   token: string;
   path: string | string[];
@@ -25,6 +28,7 @@ export interface VercelClientOptions {
   defaultName?: string;
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
+  archive?: ArchiveFormat;
 }
 
 /** @deprecated Use VercelClientOptions instead. */
@@ -37,6 +41,7 @@ export interface Deployment {
   id: string;
   deploymentId?: string;
   url: string;
+  inspectorUrl: string;
   name: string;
   meta: Dictionary<string | number | boolean>;
   version: 2;
@@ -65,12 +70,14 @@ export interface Deployment {
     | 'QUEUED'
     | 'CANCELED'
     | 'ERROR';
+  ready?: number;
   createdAt: number;
   createdIn: string;
   buildingAt?: number;
   creator?: {
     uid?: string;
     email?: string;
+    name?: string;
     username?: string;
   };
   env: Dictionary<string>;
