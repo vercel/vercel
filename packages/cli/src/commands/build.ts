@@ -549,7 +549,153 @@ async function doBuild(
     builds: builderRoutes,
   });
 
-  const mergedImages = mergeImages(buildResults.values());
+  let images: BuildResultV2Typical['images'] = undefined;
+  if (vercelConfig?.images) {
+    images = vercelConfig?.images;
+  }
+  if (images) {
+    if (typeof images !== 'object') {
+      throw new Error(
+        `vercel.json "images" should be an object received ${typeof images}.`
+      );
+    }
+
+    if (!Array.isArray(images.domains)) {
+      throw new Error(
+        `vercel.json "images.domains" should be an Array received ${typeof images.domains}.`
+      );
+    }
+
+    if (images.domains.length > 50) {
+      throw new Error(
+        `vercel.json "images.domains" exceeds length of 50 received length (${images.domains.length}).`
+      );
+    }
+
+    const invalidImageDomains = images.domains.filter(
+      (d: unknown) => typeof d !== 'string'
+    );
+    if (invalidImageDomains.length > 0) {
+      throw new Error(
+        `vercel.json "images.domains" should be an Array of strings received invalid values (${invalidImageDomains.join(
+          ', '
+        )}).`
+      );
+    }
+
+    if (images.remotePatterns) {
+      if (!Array.isArray(images.remotePatterns)) {
+        throw new Error(
+          `vercel.json "images.remotePatterns" should be an Array received ${typeof images.remotePatterns}.`
+        );
+      }
+
+      if (images.remotePatterns.length > 50) {
+        throw new Error(
+          `vercel.json "images.remotePatterns" exceeds length of 50, received length (${images.remotePatterns.length}).`
+        );
+      }
+
+      const validProps = new Set(['protocol', 'hostname', 'pathname', 'port']);
+      const requiredProps = ['hostname'];
+      const invalidPatterns = images.remotePatterns.filter(
+        (d: unknown) =>
+          !d ||
+          typeof d !== 'object' ||
+          Object.entries(d).some(
+            ([k, v]) => !validProps.has(k) || typeof v !== 'string'
+          ) ||
+          requiredProps.some(k => !(k in d))
+      );
+      if (invalidPatterns.length > 0) {
+        throw new Error(
+          `vercel.json "images.remotePatterns" received invalid values:\n${invalidPatterns
+            .map(item => JSON.stringify(item))
+            .join(
+              '\n'
+            )}\n\nremotePatterns value must follow format { protocol: 'https', hostname: 'example.com', port: '', pathname: '/imgs/**' }.`
+        );
+      }
+    }
+
+    if (!Array.isArray(images.sizes)) {
+      throw new Error(
+        `vercel.json "images.sizes" should be an Array received ${typeof images.sizes}.`
+      );
+    }
+
+    if (images.sizes.length < 1 || images.sizes.length > 50) {
+      throw new Error(
+        `vercel.json "images.sizes" should be an Array of length between 1 to 50 received length (${images.sizes.length}).`
+      );
+    }
+
+    const invalidImageSizes = images.sizes.filter((d: unknown) => {
+      return typeof d !== 'number' || d < 1 || d > 10000;
+    });
+    if (invalidImageSizes.length > 0) {
+      throw new Error(
+        `vercel.json "images.sizes" should be an Array of numbers that are between 1 and 10000, received invalid values (${invalidImageSizes.join(
+          ', '
+        )}).`
+      );
+    }
+
+    if (images.minimumCacheTTL) {
+      if (
+        !Number.isInteger(images.minimumCacheTTL) ||
+        images.minimumCacheTTL < 0
+      ) {
+        throw new Error(
+          `vercel.json "images.minimumCacheTTL" should be an integer 0 or more received (${images.minimumCacheTTL}).`
+        );
+      }
+    }
+
+    if (images.formats) {
+      if (!Array.isArray(images.formats)) {
+        throw new Error(
+          `vercel.json "images.formats" should be an Array received ${typeof images.formats}.`
+        );
+      }
+      if (images.formats.length < 1 || images.formats.length > 2) {
+        throw new Error(
+          `vercel.json "images.formats" must be length 1 or 2, received length (${images.formats.length}).`
+        );
+      }
+
+      const invalid = images.formats.filter(f => {
+        return f !== 'image/avif' && f !== 'image/webp';
+      });
+      if (invalid.length > 0) {
+        throw new Error(
+          `vercel.json "images.formats" should be an Array of mime type strings, received invalid values (${invalid.join(
+            ', '
+          )}).`
+        );
+      }
+    }
+
+    if (
+      typeof images.dangerouslyAllowSVG !== 'undefined' &&
+      typeof images.dangerouslyAllowSVG !== 'boolean'
+    ) {
+      throw new Error(
+        `vercel.json "images.dangerouslyAllowSVG" should be a boolean received (${images.dangerouslyAllowSVG}).`
+      );
+    }
+
+    if (
+      typeof images.contentSecurityPolicy !== 'undefined' &&
+      typeof images.contentSecurityPolicy !== 'string'
+    ) {
+      throw new Error(
+        `vercel.json "images.contentSecurityPolicy" should be a string received ${images.contentSecurityPolicy}`
+      );
+    }
+  }
+
+  const mergedImages = mergeImages(images, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
@@ -618,9 +764,9 @@ function expandBuild(files: string[], build: Builder): Builder[] {
 }
 
 function mergeImages(
+  images: BuildResultV2Typical['images'],
   buildResults: Iterable<BuildResult>
 ): BuildResultV2Typical['images'] {
-  let images: BuildResultV2Typical['images'] = undefined;
   for (const result of buildResults) {
     if ('images' in result && result.images) {
       images = Object.assign({}, images, result.images);
