@@ -12,11 +12,13 @@ type State = Deployment['readyState'];
 export function useDeployment({
   creator,
   state = 'READY',
+  createdAt,
 }: {
   creator: Pick<User, 'id' | 'email' | 'name' | 'username'>;
   state?: State;
+  createdAt?: number;
 }) {
-  const createdAt = Date.now();
+  createdAt = createdAt || Date.now();
   const url = new URL(chance().url());
   const name = chance().name();
   const id = `dpl_${chance().guid()}`;
@@ -57,6 +59,18 @@ export function useDeployment({
   deploymentBuilds.set(deployment, []);
 
   return deployment;
+}
+
+export function useDeployments() {
+  client.scenario.get('/:version/deployments', (_req, res) => {
+    const currentDeployments = Array.from(deployments.values());
+    res.json({
+      pagination: {
+        count: currentDeployments.length,
+      },
+      deployments: currentDeployments,
+    });
+  });
 }
 
 export function useDeploymentMissingProjectSettings() {
