@@ -99,6 +99,7 @@
           "selector": "MemberExpression > Identifier[name='substr']"
         }
       ],
+      "no-dupe-keys": 2,
       "require-atomic-updates": 0,
       "@typescript-eslint/ban-ts-comment": 0,
       "@typescript-eslint/camelcase": 0,
