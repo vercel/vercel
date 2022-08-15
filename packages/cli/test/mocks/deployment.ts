@@ -3,9 +3,11 @@ import chance from 'chance';
 import { Deployment } from '@vercel/client';
 import { client } from './client';
 import { Build, User } from '../../src/types';
+import type { Request, Response } from 'express';
 
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
+let alreadySetupDeplomentEndpoints = false;
 
 type State = Deployment['readyState'];
 
@@ -18,6 +20,8 @@ export function useDeployment({
   state?: State;
   createdAt?: number;
 }) {
+  setupDeploymentEndpoints();
+
   createdAt = createdAt || Date.now();
   const url = new URL(chance().url());
   const name = chance().name();
@@ -61,14 +65,15 @@ export function useDeployment({
   return deployment;
 }
 
-export function useDeployments() {
-  client.scenario.get('/:version/deployments', (_req, res) => {
-    const currentDeployments = Array.from(deployments.values());
+export function useDeploymentWithSamlError() {
+  client.scenario.get(`/:version/deployments/:id`, (req, res) => {
+    res.statusCode = 403;
     res.json({
-      pagination: {
-        count: currentDeployments.length,
-      },
-      deployments: currentDeployments,
+      code: 'forbidden',
+      scope: 'vercel',
+      teamId: 'dummy_team',
+      enforced: true,
+      saml: true,
     });
   });
 }
@@ -113,6 +118,15 @@ export function useDeploymentMissingProjectSettings() {
 beforeEach(() => {
   deployments = new Map();
   deploymentBuilds = new Map();
+  alreadySetupDeplomentEndpoints = false;
+});
+
+function setupDeploymentEndpoints() {
+  if (alreadySetupDeplomentEndpoints) {
+    return;
+  }
+
+  alreadySetupDeplomentEndpoints = true;
 
   client.scenario.get('/:version/deployments/:id', (req, res) => {
     const { id } = req.params;
@@ -150,8 +164,21 @@ beforeEach(() => {
     res.json({ builds });
   });
 
-  client.scenario.get('/:version/now/deployments', (req, res) => {
-    const deploymentsList = Array.from(deployments.values());
-    res.json({ deployments: deploymentsList });
-  });
-});
+  function handleGetDeployments(req: Request, res: Response) {
+    const currentDeployments = Array.from(deployments.values()).sort(
+      (a: Deployment, b: Deployment) => {
+        // sort in reverse chronological order
+        return b.createdAt - a.createdAt;
+      }
+    );
+
+    res.json({
+      pagination: {
+        count: currentDeployments.length,
+      },
+      deployments: currentDeployments,
+    });
+  }
+  client.scenario.get('/:version/now/deployments', handleGetDeployments);
+  client.scenario.get('/:version/deployments', handleGetDeployments);
+}
