@@ -110,9 +110,12 @@ async function addMultipleGitRemotes(
   autoConfirm: Boolean
 ) {
   let remoteUrlOrOptions = autoConfirm ? Object.values(remoteUrls)[0] : '';
-  if (!remoteUrlOrOptions) {
+  let remoteUrl: string | undefined;
+  if (autoConfirm) {
+    remoteUrl = Object.values(remoteUrls)[0];
+  } else {
     client.output.log('Found multiple Git remote URLs in Git config.');
-    remoteUrlOrOptions = await promptGitConnectMultipleUrls(client, remoteUrls);
+    remoteUrl = await promptGitConnectMultipleUrls(client, remoteUrls);
   }
-  return handleOptions(remoteUrlOrOptions, client, org, project, settings);
+  return handleOptions(remoteUrl, client, org, project, settings);
 }
