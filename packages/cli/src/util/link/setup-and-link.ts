@@ -136,7 +136,8 @@ export default async function setupAndLink(
         client,
         org,
         project,
-        remoteUrls
+        remoteUrls,
+        autoConfirm
       );
       if (typeof connectGit === 'number') {
         return { status: 'error', exitCode: connectGit };
@@ -264,6 +265,7 @@ export default async function setupAndLink(
         org,
         project,
         remoteUrls,
+        autoConfirm,
         settings
       );
       if (typeof connectGit === 'number') {
