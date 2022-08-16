@@ -98,7 +98,14 @@ async function addSingleGitRemote(
       replace
     );
   }
-  return handleOptions(shouldConnectOption, client, org, project, settings, repoInfo);
+  return handleOptions(
+    shouldConnectOption,
+    client,
+    org,
+    project,
+    settings,
+    repoInfo
+  );
 }
 
 async function addMultipleGitRemotes(
@@ -109,10 +116,9 @@ async function addMultipleGitRemotes(
   settings: ProjectSettings,
   autoConfirm: Boolean
 ) {
-  let remoteUrlOrOptions = autoConfirm ? Object.values(remoteUrls)[0] : '';
   let remoteUrl: string | undefined;
   if (autoConfirm) {
-    remoteUrl = Object.values(remoteUrls)[0];
+    remoteUrl = remoteUrls['origin'] || Object.values(remoteUrls)[0];
   } else {
     client.output.log('Found multiple Git remote URLs in Git config.');
     remoteUrl = await promptGitConnectMultipleUrls(client, remoteUrls);
