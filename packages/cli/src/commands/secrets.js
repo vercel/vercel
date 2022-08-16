@@ -229,7 +229,7 @@ async function run({ output, contextName, currentTeam, client }) {
         argv.yes ||
         (await readConfirmation(client, output, theSecret, contextName));
       if (!yes) {
-        output.print(`Cancelled. Secret not deleted.\n`);
+        output.print(`Canceled. Secret not deleted.\n`);
         return 0;
       }
     } else {

@@ -94,7 +94,7 @@ export default async function validatePaths(
     );
 
     if (!shouldDeployHomeDirectory) {
-      output.print(`Cancelled\n`);
+      output.print(`Canceled\n`);
       return { valid: false, exitCode: 0 };
     }
   }

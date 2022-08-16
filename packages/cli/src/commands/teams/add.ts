@@ -59,7 +59,7 @@ export default async function add(client: Client): Promise<number> {
       });
     } catch (err: unknown) {
       if (isError(err) && err.message === 'USER_ABORT') {
-        output.log('Cancelled');
+        output.log('Canceled');
         return 0;
       }
 

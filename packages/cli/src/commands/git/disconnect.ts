@@ -43,7 +43,7 @@ export default async function disconnect(
       await disconnectGitProvider(client, org, project.id);
       output.log(`Disconnected ${chalk.cyan(`${linkOrg}/${repo}`)}.`);
     } else {
-      output.log('Cancelled.');
+      output.log('Canceled.');
     }
   } else {
     output.error(

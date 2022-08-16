@@ -149,7 +149,7 @@ export default async function connect(
   }
 
   if (remoteUrl === '') {
-    output.log('Cancelled.');
+    output.log('Canceled.');
     return 0;
   }
 
@@ -317,7 +317,7 @@ async function promptConnectArg({
       false
     );
     if (!shouldConnect) {
-      client.output.log('Cancelled. Repo not connected.');
+      client.output.log('Canceled. Repo not connected.');
     }
   }
   return shouldConnect;
@@ -404,7 +404,7 @@ async function confirmRepoConnect(
       true
     );
     if (!shouldReplaceProject) {
-      client.output.log('Cancelled. Repo not connected.');
+      client.output.log('Canceled. Repo not connected.');
     }
   }
   return shouldReplaceProject;

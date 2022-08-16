@@ -39,7 +39,7 @@ export default function handleError(error: unknown, { debug = false } = {}) {
   } else if (status === 500) {
     console.error(errorOutput('Unexpected server error. Please retry.'));
   } else if (code === 'USER_ABORT') {
-    info('Cancelled');
+    info('Canceled');
   } else {
     console.error(
       errorOutput(`Unexpected error. Please try again later. (${message})`)

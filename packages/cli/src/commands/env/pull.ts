@@ -84,7 +84,7 @@ export default async function pull(
       false
     ))
   ) {
-    output.log('Cancelled');
+    output.log('Canceled');
     return 0;
   }
 
