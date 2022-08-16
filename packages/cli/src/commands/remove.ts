@@ -226,7 +226,7 @@ export default async function main(client: Client) {
     ).toLowerCase();
 
     if (confirmation !== 'y' && confirmation !== 'yes') {
-      output.log('Aborted');
+      output.log('Canceled');
       return 1;
     }
   }
