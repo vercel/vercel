@@ -1,7 +1,6 @@
 package main
 
 import (
-	"example/learner-api/api"
 	"net/http"
 )
 
