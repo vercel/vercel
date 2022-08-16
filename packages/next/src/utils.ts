@@ -2326,8 +2326,16 @@ export async function getMiddlewareBundle({
     for (const worker of workerConfigs.values()) {
       const edgeFile = worker.edgeFunction.name;
       const shortPath = edgeFile.replace(/^pages\//, '');
+
       worker.edgeFunction.name = shortPath;
       source.edgeFunctions[shortPath] = worker.edgeFunction;
+
+      // we don't add the route for edge functions as these
+      // are already added in the routes-manifest under dynamicRoutes
+      if (worker.type === 'function') {
+        continue;
+      }
+
       const route: Route = {
         continue: true,
         src: worker.routeSrc,
@@ -2340,13 +2348,9 @@ export async function getMiddlewareBundle({
         ],
       };
 
-      if (worker.type === 'function') {
-        route.dest = shortPath;
-      } else {
-        route.middlewarePath = shortPath;
-        if (isCorrectMiddlewareOrder) {
-          route.override = true;
-        }
+      route.middlewarePath = shortPath;
+      if (isCorrectMiddlewareOrder) {
+        route.override = true;
       }
 
       if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
