@@ -329,5 +329,29 @@ describe('link', () => {
         process.chdir(originalCwd);
       }
     });
+    it('should respect --yes for multiple remotes when origin is not the first', async () => {
+      const cwd = fixture('multiple-remotes-prefer-origin');
+      try {
+        process.chdir(cwd);
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        useUser();
+        useProject({
+          ...defaultProject,
+          name: 'multiple-remotes-prefer-origin',
+          id: 'multiple-remotes-prefer-origin',
+        });
+        useTeams('team_dummy');
+        client.setArgv('--yes');
+        const linkPromise = link(client);
+        expect(client.stderr).not.toOutput('Found multiple Git remote URLs');
+        await expect(client.stderr).toOutput(
+          'Connected GitHub repository user/repo'
+        );
+        await expect(linkPromise).resolves.toEqual(0);
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+        process.chdir(originalCwd);
+      }
+    });
   });
 });
