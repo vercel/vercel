@@ -116,8 +116,6 @@ export default async function main(client: Client): Promise<number> {
     }
   }
 
-  const badDeploymentPromise = getDeployment(client, bad).catch(err => err);
-
   good = normalizeURL(good);
   parsed = parse(good);
   if (!parsed.hostname) {
@@ -138,8 +136,6 @@ export default async function main(client: Client): Promise<number> {
     );
   }
 
-  const goodDeploymentPromise = getDeployment(client, good).catch(err => err);
-
   if (!subpath) {
     subpath = await prompt(
       client,
@@ -148,10 +144,9 @@ export default async function main(client: Client): Promise<number> {
   }
 
   output.spinner('Retrieving deployments…');
-  const [badDeployment, goodDeployment] = await Promise.all([
-    badDeploymentPromise,
-    goodDeploymentPromise,
-  ]);
+
+  // `getDeployment` cannot be parallelized because it might prompt for login
+  const badDeployment = await getDeployment(client, bad).catch(err => err);
 
   if (badDeployment) {
     if (badDeployment instanceof Error) {
@@ -165,7 +160,8 @@ export default async function main(client: Client): Promise<number> {
     return 1;
   }
 
-  const { projectId } = badDeployment;
+  // `getDeployment` cannot be parallelized because it might prompt for login
+  const goodDeployment = await getDeployment(client, good).catch(err => err);
 
   if (goodDeployment) {
     if (goodDeployment instanceof Error) {
@@ -180,6 +176,8 @@ export default async function main(client: Client): Promise<number> {
     );
     return 1;
   }
+
+  const { projectId } = badDeployment;
 
   if (projectId !== goodDeployment.projectId) {
     output.error(`Good and Bad deployments must be from the same Project`);
