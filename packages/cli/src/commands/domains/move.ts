@@ -68,7 +68,7 @@ export default async function move(
         client
       ))
     ) {
-      output.log('Canceled.');
+      output.log('Canceled');
       return 0;
     }
   }

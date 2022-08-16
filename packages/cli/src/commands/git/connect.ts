@@ -149,7 +149,7 @@ export default async function connect(
   }
 
   if (remoteUrl === '') {
-    output.log('Canceled.');
+    output.log('Canceled');
     return 0;
   }
 
