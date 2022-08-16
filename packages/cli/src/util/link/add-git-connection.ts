@@ -86,9 +86,11 @@ async function addSingleGitRemote(
       project.link.repo !== repo ||
       project.link.type !== provider);
 
-  let shouldConnect = autoConfirm ? 'yes' : '';
-  if (!shouldConnect) {
-    shouldConnect = await promptGitConnectSingleUrl(
+  let shouldConnectOption: string | undefined;
+  if (autoConfirm) {
+    shouldConnectOption = 'yes';
+  } else {
+    shouldConnectOption = await promptGitConnectSingleUrl(
       client,
       project,
       remoteName,
@@ -96,7 +98,7 @@ async function addSingleGitRemote(
       replace
     );
   }
-  return handleOptions(shouldConnect, client, org, project, settings, repoInfo);
+  return handleOptions(shouldConnectOption, client, org, project, settings, repoInfo);
 }
 
 async function addMultipleGitRemotes(
