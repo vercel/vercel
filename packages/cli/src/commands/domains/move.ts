@@ -68,7 +68,7 @@ export default async function move(
         client
       ))
     ) {
-      output.log('Aborted');
+      output.log('Cancelled.');
       return 0;
     }
   }
@@ -87,7 +87,7 @@ export default async function move(
           client
         ))
       ) {
-        output.log('Aborted');
+        output.log('Cancelled');
         return 0;
       }
     }

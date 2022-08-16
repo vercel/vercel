@@ -220,7 +220,7 @@ function handleSetupDomainError<T>(
   }
 
   if (error instanceof ERRORS.UserAborted) {
-    output.error(`User aborted`);
+    output.error(`User cancelled.`);
     return 1;
   }
 

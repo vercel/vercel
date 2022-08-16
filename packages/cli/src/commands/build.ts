@@ -171,7 +171,7 @@ export default async function main(client: Client): Promise<number> {
       );
     }
     if (!confirmed) {
-      client.output.print(`Aborted. No Project Settings retrieved.\n`);
+      client.output.print(`Cancelled. No Project Settings retrieved.\n`);
       return 0;
     }
     const { argv: originalArgv } = client;

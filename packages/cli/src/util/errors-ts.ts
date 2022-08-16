@@ -426,7 +426,7 @@ export class UserAborted extends NowError<'USER_ABORTED', {}> {
     super({
       code: 'USER_ABORTED',
       meta: {},
-      message: `The user aborted the operation.`,
+      message: `The user cancelled the operation.`,
     });
   }
 }

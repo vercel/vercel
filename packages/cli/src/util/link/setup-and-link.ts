@@ -89,7 +89,7 @@ export default async function setupAndLink(
     ));
 
   if (!shouldStartSetup) {
-    output.print(`Aborted. Project not set up.\n`);
+    output.print(`Cancelled. Project not set up.\n`);
     return { status: 'not_linked', org: null, project: null };
   }
 

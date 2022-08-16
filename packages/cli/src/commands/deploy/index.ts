@@ -296,7 +296,7 @@ export default async (client: Client): Promise<number> => {
       ));
 
     if (!shouldStartSetup) {
-      output.print(`Aborted. Project not set up.\n`);
+      output.print(`Cancelled. Project not set up.\n`);
       return 0;
     }
 
