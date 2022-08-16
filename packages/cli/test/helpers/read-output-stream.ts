@@ -9,7 +9,7 @@ export function readOutputStream(
     let lines = 0;
     const timeout = setTimeout(() => {
       reject(
-        new Error(`Was waiting for ${length} lines, but only received ${chunks.length}`)
+        new Error(`Was waiting for ${length} lines, but only received ${lines}`)
       );
     }, 3000);
 
