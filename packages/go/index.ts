@@ -321,7 +321,7 @@ export async function build({
         }
       }
 
-      const mainModGoFileName = 'main__mod__.go';
+      const mainModGoFileName = 'main.go';
       const modMainGoContents = await readFile(
         join(__dirname, mainModGoFileName),
         'utf8'
@@ -449,14 +449,13 @@ export async function build({
         },
         false
       );
-      const origianlMainGoContents = await readFile(
+      const originalMainGoContents = await readFile(
         join(__dirname, 'main.go'),
         'utf8'
       );
-      const mainGoContents = origianlMainGoContents.replace(
-        '__VC_HANDLER_FUNC_NAME',
-        handlerFunctionName
-      );
+      const mainGoContents = originalMainGoContents
+        .replace('"__VC_HANDLER_PACKAGE_NAME"', '')
+        .replace('__VC_HANDLER_FUNC_NAME', handlerFunctionName);
 
       // in order to allow the user to have `main.go`,
       // we need our `main.go` to be called something else
@@ -498,6 +497,7 @@ export async function build({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: handlerFileName,
       runtime: 'go1.x',
+      supportsWrapper: true,
       environment: {},
     });
 
