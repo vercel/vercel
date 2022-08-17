@@ -12,7 +12,7 @@ import {
   connectGitProvider,
   disconnectGitProvider,
   formatProvider,
-  ParsedRepoUrl,
+  RepoInfo,
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
@@ -35,7 +35,7 @@ interface ConnectArgParams {
   org: Org;
   project: Project;
   confirm: boolean;
-  repoInfo: ParsedRepoUrl;
+  repoInfo: RepoInfo;
 }
 
 interface ConnectGitArgParams extends ConnectArgParams {
@@ -45,7 +45,7 @@ interface ConnectGitArgParams extends ConnectArgParams {
 interface PromptConnectArgParams {
   client: Client;
   yes: boolean;
-  repoInfo: ParsedRepoUrl;
+  repoInfo: RepoInfo;
   remoteUrls: Dictionary<string>;
 }
 
@@ -149,14 +149,14 @@ export default async function connect(
   }
 
   if (remoteUrl === '') {
-    output.log('Aborted.');
+    output.log('Canceled');
     return 0;
   }
 
   output.log(`Connecting Git remote: ${link(remoteUrl)}`);
 
-  const parsedUrl = parseRepoUrl(remoteUrl);
-  if (!parsedUrl) {
+  const repoInfo = parseRepoUrl(remoteUrl);
+  if (!repoInfo) {
     output.error(
       `Failed to parse Git repo data from the following remote URL: ${link(
         remoteUrl
@@ -164,7 +164,7 @@ export default async function connect(
     );
     return 1;
   }
-  const { provider, org: gitOrg, repo } = parsedUrl;
+  const { provider, org: gitOrg, repo } = repoInfo;
   const repoPath = `${gitOrg}/${repo}`;
 
   const checkAndConnect = await checkExistsAndConnect({
@@ -317,7 +317,7 @@ async function promptConnectArg({
       false
     );
     if (!shouldConnect) {
-      client.output.log('Aborted. Repo not connected.');
+      client.output.log('Canceled. Repo not connected.');
     }
   }
   return shouldConnect;
@@ -404,7 +404,7 @@ async function confirmRepoConnect(
       true
     );
     if (!shouldReplaceProject) {
-      client.output.log('Aborted. Repo not connected.');
+      client.output.log('Canceled. Repo not connected.');
     }
   }
   return shouldReplaceProject;

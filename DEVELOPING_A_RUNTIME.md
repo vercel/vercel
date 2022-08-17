@@ -63,9 +63,6 @@ export async function build(options: BuildOptions) {
   const lambda = createLambda(/* … */);
   return {
     output: lambda,
-    watch: [
-      // Dependent files to trigger a rebuild in `vercel dev` go here…
-    ],
     routes: [
       // If your Runtime needs to define additional routing, define it here…
     ],

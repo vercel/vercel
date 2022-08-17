@@ -1538,23 +1538,6 @@ test('list the scopes', async t => {
   );
 });
 
-test('list the payment methods', async t => {
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    ['billing', 'ls', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 0);
-  t.true(stdout.startsWith(`> 0 cards found under ${contextName}`));
-});
-
 test('domains inspect', async t => {
   const domainName = `inspect-${contextName}-${Math.random()
     .toString()
@@ -1699,44 +1682,6 @@ test('try to move an invalid domain', async t => {
 
   t.true(stderr.includes(`Error! Domain not found under `));
   t.is(exitCode, 1);
-});
-
-test('try to set default without existing payment method', async t => {
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    ['billing', 'set-default', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 0);
-  t.true(stderr.includes('You have no credit cards to choose from'));
-});
-
-test('try to remove a non-existing payment method', async t => {
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 0);
-  t.true(
-    stderr.includes(
-      `You have no credit cards to choose from to delete under ${contextName}`
-    )
-  );
 });
 
 /*
@@ -1917,7 +1862,7 @@ test('ensure we render a prompt when deploying home directory', async t => {
       'You are deploying your home directory. Do you want to continue? [y/N]'
     )
   );
-  t.true(stderr.includes('Aborted'));
+  t.true(stderr.includes('Canceled'));
 });
 
 test('ensure the `scope` property works with email', async t => {

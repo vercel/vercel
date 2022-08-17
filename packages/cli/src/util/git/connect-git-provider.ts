@@ -4,10 +4,10 @@ import { Org } from '../../types';
 import chalk from 'chalk';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';
-import { Dictionary } from '@vercel/client';
 import { Output } from '../output';
+import { Dictionary } from '@vercel/client';
 
-export interface ParsedRepoUrl {
+export interface RepoInfo {
   url: string;
   provider: string;
   org: string;
@@ -19,7 +19,7 @@ export async function disconnectGitProvider(
   org: Org,
   projectId: string
 ) {
-  const fetchUrl = `/v4/projects/${projectId}/link?${stringify({
+  const fetchUrl = `/v9/projects/${projectId}/link?${stringify({
     teamId: org.type === 'team' ? org.id : undefined,
   })}`;
   return client.fetch(fetchUrl, {
@@ -37,7 +37,7 @@ export async function connectGitProvider(
   type: string,
   repo: string
 ) {
-  const fetchUrl = `/v4/projects/${projectId}/link?${stringify({
+  const fetchUrl = `/v9/projects/${projectId}/link?${stringify({
     teamId: org.type === 'team' ? org.id : undefined,
   })}`;
   try {
@@ -52,22 +52,21 @@ export async function connectGitProvider(
       }),
     });
   } catch (err: unknown) {
-    if (isAPIError(err)) {
-      if (
-        err.action === 'Install GitHub App' ||
-        err.code === 'repo_not_found'
-      ) {
-        client.output.error(
-          `Failed to link ${chalk.cyan(
-            repo
-          )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
-        );
-      } else if (err.action === 'Add a Login Connection') {
-        client.output.error(
-          err.message.replace(repo, chalk.cyan(repo)) +
-            `\nVisit ${link(err.link)} for more information.`
-        );
-      }
+    const apiError = isAPIError(err);
+    if (
+      apiError &&
+      (err.action === 'Install GitHub App' || err.code === 'repo_not_found')
+    ) {
+      client.output.error(
+        `Failed to link ${chalk.cyan(
+          repo
+        )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
+      );
+    } else if (apiError && err.action === 'Add a Login Connection') {
+      client.output.error(
+        err.message.replace(repo, chalk.cyan(repo)) +
+          `\nVisit ${link(err.link)} for more information.`
+      );
     } else {
       client.output.error(
         `Failed to connect the ${formatProvider(
@@ -92,7 +91,7 @@ export function formatProvider(type: string): string {
   }
 }
 
-export function parseRepoUrl(originUrl: string): ParsedRepoUrl | null {
+export function parseRepoUrl(originUrl: string): RepoInfo | null {
   const isSSH = originUrl.startsWith('git@');
   // Matches all characters between (// or @) and (.com or .org)
   // eslint-disable-next-line prefer-named-capture-group
@@ -126,7 +125,6 @@ export function parseRepoUrl(originUrl: string): ParsedRepoUrl | null {
     repo,
   };
 }
-
 export function printRemoteUrls(
   output: Output,
   remoteUrls: Dictionary<string>
