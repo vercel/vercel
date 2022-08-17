@@ -37,7 +37,7 @@ export default async function add(
   const { domain, data: argData } = parsedParams;
   const data = await getDNSData(client, argData);
   if (!data) {
-    output.log(`Aborted`);
+    output.log(`Canceled`);
     return 1;
   }
 

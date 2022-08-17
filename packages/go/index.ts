@@ -285,6 +285,10 @@ export async function build({
 
     const outDir = await getWriteableDirectory();
 
+    // in order to allow the user to have `main.go`,
+    // we need our `main.go` to be called something else
+    const mainGoFileName = 'main__vc__go__.go';
+
     if (packageName !== 'main') {
       const go = await createGo(
         workPath,
@@ -321,9 +325,8 @@ export async function build({
         }
       }
 
-      const mainModGoFileName = 'main__mod__.go';
       const modMainGoContents = await readFile(
-        join(__dirname, mainModGoFileName),
+        join(__dirname, 'main.go'),
         'utf8'
       );
 
@@ -349,29 +352,29 @@ export async function build({
       if (isGoModExist && isGoModInRootDir) {
         debug('[mod-root] Write main file to ' + downloadPath);
         await writeFile(
-          join(downloadPath, mainModGoFileName),
+          join(downloadPath, mainGoFileName),
           mainModGoContents
         );
         undoFileActions.push({
           to: undefined, // delete
-          from: join(downloadPath, mainModGoFileName),
+          from: join(downloadPath, mainGoFileName),
         });
       } else if (isGoModExist && !isGoModInRootDir) {
         debug('[mod-other] Write main file to ' + goModPath);
-        await writeFile(join(goModPath, mainModGoFileName), mainModGoContents);
+        await writeFile(join(goModPath, mainGoFileName), mainModGoContents);
         undoFileActions.push({
           to: undefined, // delete
-          from: join(goModPath, mainModGoFileName),
+          from: join(goModPath, mainGoFileName),
         });
       } else {
         debug('[entrypoint] Write main file to ' + entrypointDirname);
         await writeFile(
-          join(entrypointDirname, mainModGoFileName),
+          join(entrypointDirname, mainGoFileName),
           mainModGoContents
         );
         undoFileActions.push({
           to: undefined, // delete
-          from: join(entrypointDirname, mainModGoFileName),
+          from: join(entrypointDirname, mainGoFileName),
         });
       }
 
@@ -428,7 +431,7 @@ export async function build({
       const destPath = join(outDir, handlerFileName);
 
       try {
-        const src = [join(baseGoModPath, mainModGoFileName)];
+        const src = [join(baseGoModPath, mainGoFileName)];
 
         await go.build(src, destPath);
       } catch (err) {
@@ -449,18 +452,13 @@ export async function build({
         },
         false
       );
-      const origianlMainGoContents = await readFile(
+      const originalMainGoContents = await readFile(
         join(__dirname, 'main.go'),
         'utf8'
       );
-      const mainGoContents = origianlMainGoContents.replace(
-        '__VC_HANDLER_FUNC_NAME',
-        handlerFunctionName
-      );
-
-      // in order to allow the user to have `main.go`,
-      // we need our `main.go` to be called something else
-      const mainGoFileName = 'main__vc__go__.go';
+      const mainGoContents = originalMainGoContents
+        .replace('"__VC_HANDLER_PACKAGE_NAME"', '')
+        .replace('__VC_HANDLER_FUNC_NAME', handlerFunctionName);
 
       // Go doesn't like to build files in different directories,
       // so now we place `main.go` together with the user code
@@ -498,6 +496,7 @@ export async function build({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: handlerFileName,
       runtime: 'go1.x',
+      supportsWrapper: true,
       environment: {},
     });
 

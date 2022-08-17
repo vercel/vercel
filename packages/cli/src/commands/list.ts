@@ -293,9 +293,7 @@ export default async function main(client: Client) {
 
   // information to help the user find other deployments or instances
   log(
-    `To list more deployments for a project, run ${getCommandName(
-      'ls [project]'
-    )}.`
+    `To list deployments for a project, run ${getCommandName('ls [project]')}.`
   );
 
   print('\n');
@@ -338,7 +336,7 @@ export default async function main(client: Client) {
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next']);
     log(
-      `To display the next page run ${getCommandName(
+      `To display the next page, run ${getCommandName(
         `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
       )}`
     );

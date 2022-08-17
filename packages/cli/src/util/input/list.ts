@@ -21,7 +21,7 @@ interface ListOptions {
   choices: ListChoice[];
   pageSize?: number;
   separator?: boolean;
-  abort?: 'start' | 'end';
+  cancel?: 'start' | 'end';
   eraseFinalAnswer?: boolean;
 }
 
@@ -50,7 +50,7 @@ export default async function list(
     ],
     pageSize = 15, // Show 15 lines without scrolling (~4 credit cards)
     separator = false, // Puts a blank separator between each choice
-    abort = 'end', // Whether the `abort` option will be at the `start` or the `end`,
+    cancel = 'end', // Whether the `cancel` option will be at the `start` or the `end`,
     eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
   }: ListOptions
 ): Promise<string> {
@@ -97,17 +97,17 @@ export default async function list(
     }
   }
 
-  const abortSeparator = new inquirer.Separator('─'.repeat(biggestLength));
-  const _abort = {
-    name: 'Abort',
+  const cancelSeparator = new inquirer.Separator('─'.repeat(biggestLength));
+  const _cancel = {
+    name: 'Cancel',
     value: '',
     short: '',
   };
 
-  if (abort === 'start') {
-    choices.unshift(_abort, abortSeparator);
+  if (cancel === 'start') {
+    choices.unshift(_cancel, cancelSeparator);
   } else {
-    choices.push(abortSeparator, _abort);
+    choices.push(cancelSeparator, _cancel);
   }
 
   const answer = await client.prompt({
