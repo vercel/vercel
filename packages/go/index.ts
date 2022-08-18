@@ -149,7 +149,7 @@ export async function build({
     const entrypointAbsolute = join(workPath, entrypoint);
     const entrypointArr = entrypoint.split(sep);
 
-    debug(`Parsing AST for "${entrypoint}"`);
+    debug(`Parsing kjsdhfjkds AST for "${entrypoint}"`);
     let analyzed: string;
     try {
       const goModAbsPath = await findGoModPath(workPath);
@@ -162,6 +162,10 @@ export async function build({
         entrypointAbsolute,
         dirname(goModAbsPath)
       );
+
+      console.log({
+        analyzed,
+      });
     } catch (err) {
       console.log(`Failed to parse AST for "${entrypoint}"`);
       throw err;
@@ -351,10 +355,7 @@ export async function build({
 
       if (isGoModExist && isGoModInRootDir) {
         debug('[mod-root] Write main file to ' + downloadPath);
-        await writeFile(
-          join(downloadPath, mainGoFileName),
-          mainModGoContents
-        );
+        await writeFile(join(downloadPath, mainGoFileName), mainModGoContents);
         undoFileActions.push({
           to: undefined, // delete
           from: join(downloadPath, mainGoFileName),
