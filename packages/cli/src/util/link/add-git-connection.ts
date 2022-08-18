@@ -88,7 +88,7 @@ async function addSingleGitRemote(
 
   let shouldConnectOption: string | undefined;
   if (autoConfirm) {
-    shouldConnectOption = 'yes';
+    shouldConnectOption = 'no';
   } else {
     shouldConnectOption = await promptGitConnectSingleUrl(
       client,
