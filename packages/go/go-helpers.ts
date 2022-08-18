@@ -50,13 +50,6 @@ export async function getAnalyzedEntrypoint(
 
   const args = [`-modpath=${modulePath}`, filePath];
 
-  console.log('=====================');
-  console.log({
-    bin,
-    args,
-  });
-  console.log('=====================');
-
   const analyzed = await execa.stdout(bin, args);
   debug('Analyzed entrypoint %o', analyzed);
   return analyzed;
