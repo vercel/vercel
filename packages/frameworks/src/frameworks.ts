@@ -18,8 +18,8 @@ const { readdir, readFile, unlink } = promises;
 
 export const frameworks = [
   {
-    name: 'Blitz.js (Legacy)',
-    slug: 'legacy-blitzjs',
+    name: 'Blitz.js',
+    slug: 'blitzjs',
     demo: 'https://blitz-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/blitz.svg',
     tagline: 'Blitz.js: The Fullstack React Framework',
