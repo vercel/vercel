@@ -18,22 +18,20 @@ const { readdir, readFile, unlink } = promises;
 
 export const frameworks = [
   {
-    name: 'Blitz.js',
-    slug: 'blitzjs',
+    name: 'Blitz.js (Legacy)',
+    slug: 'legacy-blitzjs',
     demo: 'https://blitz-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/blitz.svg',
     tagline: 'Blitz.js: The Fullstack React Framework',
     description:
-      'A brand new Blitz.js app - the result of running `npx blitz new`.',
+      'A brand new Blitz.js app - the result of running `npx blitz@0.45.4 new`.',
     website: 'https://blitzjs.com',
     envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"blitz":\\s*".+?"[^}]*}',
+          path: 'blitz.config.(js|ts)',
         },
       ],
     },
