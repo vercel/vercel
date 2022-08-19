@@ -84,7 +84,7 @@ export default async function pull(
       false
     ))
   ) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 
