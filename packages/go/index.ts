@@ -351,7 +351,10 @@ export async function build({
 
       if (isGoModExist && isGoModInRootDir) {
         debug('[mod-root] Write main file to ' + downloadPath);
-        await writeFile(join(downloadPath, mainGoFileName), mainModGoContents);
+        await writeFile(
+          join(downloadPath, mainGoFileName),
+          mainModGoContents
+        );
         undoFileActions.push({
           to: undefined, // delete
           from: join(downloadPath, mainGoFileName),
