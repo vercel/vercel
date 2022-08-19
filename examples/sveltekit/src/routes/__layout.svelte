@@ -5,7 +5,7 @@
   import { page } from '$app/stores';
   import '../app.css';
 
-  let analyticsId = import.meta.env.VERCEL_ANALYTICS_ID;
+  let analyticsId = import.meta.env.VITE_VERCEL_ANALYTICS_ID;
 
   $: if (browser && analyticsId) {
     webVitals({
