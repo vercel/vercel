@@ -37,6 +37,7 @@ export interface SetupAndLinkOptions {
   successEmoji: EmojiLabel;
   setupMsg: string;
   projectName?: string;
+  skipGitProviderConnection?: boolean;
 }
 
 export default async function setupAndLink(
@@ -48,6 +49,7 @@ export default async function setupAndLink(
     successEmoji,
     setupMsg,
     projectName,
+    skipGitProviderConnection = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { localConfig, output, config } = client;
@@ -130,17 +132,20 @@ export default async function setupAndLink(
   } else {
     const project = projectOrNewProjectName;
 
-    const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
-    if (remoteUrls && !project.skipGitConnectDuringLink) {
-      const connectGit = await addGitConnection(
-        client,
-        org,
-        project,
-        remoteUrls,
-        autoConfirm
-      );
-      if (typeof connectGit === 'number') {
-        return { status: 'error', exitCode: connectGit };
+    if (!skipGitProviderConnection) {
+      const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
+
+      if (remoteUrls && !project.skipGitConnectDuringLink) {
+        const connectGit = await addGitConnection(
+          client,
+          org,
+          project,
+          remoteUrls,
+          autoConfirm
+        );
+        if (typeof connectGit === 'number') {
+          return { status: 'error', exitCode: connectGit };
+        }
       }
     }
 
@@ -258,18 +263,20 @@ export default async function setupAndLink(
 
     const project = await createProject(client, newProjectName);
 
-    const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
-    if (remoteUrls) {
-      const connectGit = await addGitConnection(
-        client,
-        org,
-        project,
-        remoteUrls,
-        autoConfirm,
-        settings
-      );
-      if (typeof connectGit === 'number') {
-        return { status: 'error', exitCode: connectGit };
+    if (!skipGitProviderConnection) {
+      const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
+      if (remoteUrls && !project.skipGitConnectDuringLink) {
+        const connectGit = await addGitConnection(
+          client,
+          org,
+          project,
+          remoteUrls,
+          autoConfirm,
+          settings
+        );
+        if (typeof connectGit === 'number') {
+          return { status: 'error', exitCode: connectGit };
+        }
       }
     }
 

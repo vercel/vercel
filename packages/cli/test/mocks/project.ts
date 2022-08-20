@@ -193,6 +193,9 @@ export function useUnknownProject() {
     Object.assign(project, req.body);
     res.json(project);
   });
+  client.scenario.get(`/v8/projects/:id/env`, (_req, res) => {
+    res.json({ envs });
+  });
 }
 
 export function useProject(project: Partial<Project> = defaultProject) {

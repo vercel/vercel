@@ -93,6 +93,11 @@ export function isDirty(directory: string, output: Output): Promise<boolean> {
 
 export async function parseGitConfig(configPath: string, output: Output) {
   try {
+    const configExists = await fs.pathExists(configPath);
+    if (!configExists) {
+      return;
+    }
+
     return ini.parse(await fs.readFile(configPath, 'utf-8'));
   } catch (err: unknown) {
     output.debug(`Error while parsing repo data: ${errorToString(err)}`);

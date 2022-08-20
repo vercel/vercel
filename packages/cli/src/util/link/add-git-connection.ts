@@ -70,13 +70,18 @@ async function addSingleGitRemote(
     return 1;
   }
   const { org: parsedOrg, repo, provider } = repoInfo;
-  const alreadyLinked =
+
+  // The Project calls a Git Provider Connection a "link",
+  // which is not the same as linking a local repo to a Vercel Project
+  const alreadyConnected =
     project.link &&
     project.link.org === parsedOrg &&
     project.link.repo === repo &&
     project.link.type === provider;
-  if (alreadyLinked) {
-    client.output.debug('Project already linked. Skipping...');
+  if (alreadyConnected) {
+    client.output.debug(
+      `Project already connected to Git Provider: ${remoteUrl}. Skipping...`
+    );
     return;
   }
 

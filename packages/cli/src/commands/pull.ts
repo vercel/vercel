@@ -98,6 +98,10 @@ async function ensureLink(
       autoConfirm: yes,
       successEmoji: 'link',
       setupMsg: 'Set up',
+      // always skip git provider connection
+      // because the intent behind `vc pull` is not
+      // project setup, like it often is with `vc link`
+      skipGitProviderConnection: true,
     });
 
     if (link.status === 'not_linked') {
