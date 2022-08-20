@@ -24,12 +24,12 @@ describe('getOriginUrl', () => {
     const data = await getOriginUrl(configPath, client.output);
     expect(data).toBeNull();
   });
-  it('displays debug message when repo data cannot be parsed', async () => {
+  it('does not find git data when `.git/config` does not exist', async () => {
     const dir = await getWriteableDirectory();
     client.output.debugEnabled = true;
     const data = await getOriginUrl(join(dir, 'git/config'), client.output);
     expect(data).toBeNull();
-    await expect(client.stderr).toOutput('Error while parsing repo data');
+    await expect(client.stderr).not.toOutput('Error while parsing repo data');
   });
 });
 
