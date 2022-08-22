@@ -1,9 +1,1 @@
-{
-  "version": 2,
-  "probes": [
-    {
-      "path": "/api/bad-receiver",
-      "mustContain": "some/path"
-    }
-  ]
-}
+{}
