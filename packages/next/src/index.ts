@@ -477,6 +477,14 @@ export const build: BuildV2 = async ({
         : '/404'
     ]?.initialRevalidate === 'number';
 
+  const hasIsr500Page =
+    typeof prerenderManifest.staticRoutes[
+      routesManifest?.i18n
+        ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+          path.join('/', routesManifest?.i18n!.defaultLocale!, '/500')
+        : '/500'
+    ]?.initialRevalidate === 'number';
+
   const wildcardConfig: BuildResult['wildcard'] =
     routesManifest?.i18n?.domains && routesManifest.i18n.domains.length > 0
       ? routesManifest.i18n.domains.map(item => {
@@ -1296,6 +1304,7 @@ export const build: BuildV2 = async ({
         requiredServerFilesManifest,
         privateOutputs,
         hasIsr404Page,
+        hasIsr500Page,
       });
     }
 

@@ -80,6 +80,7 @@ export async function serverBuild({
   headers,
   dataRoutes,
   hasIsr404Page,
+  hasIsr500Page,
   imagesManifest,
   wildcardConfig,
   routesManifest,
@@ -122,6 +123,7 @@ export async function serverBuild({
   dataRoutes: Route[];
   nextVersion: string;
   hasIsr404Page: boolean;
+  hasIsr500Page: boolean;
   trailingSlashRedirects: Route[];
   routesManifest: RoutesManifest;
   lambdaCompressedByteLimit: number;
@@ -1534,10 +1536,8 @@ export async function serverBuild({
             },
           ]),
 
-      // static 500 page if present
-      ...(!hasStatic500
-        ? []
-        : i18n
+      // custom 500 page if present
+      ...(i18n && (hasStatic500 || hasIsr500Page || lambdaPages['500.js'])
         ? [
             {
               src: `${path.join(
@@ -1549,6 +1549,7 @@ export async function serverBuild({
                 .join('|')})(/.*|$)`,
               dest: path.join('/', entryDirectory, '/$nextLocale/500'),
               status: 500,
+              caseSensitive: true,
             },
             {
               src: path.join('/', entryDirectory, '.*'),
@@ -1563,7 +1564,15 @@ export async function serverBuild({
         : [
             {
               src: path.join('/', entryDirectory, '.*'),
-              dest: path.join('/', entryDirectory, '/500'),
+              dest: path.join(
+                '/',
+                entryDirectory,
+                hasStatic500 ||
+                  hasIsr500Page ||
+                  lambdas[path.join(entryDirectory, '500')]
+                  ? '/500'
+                  : '/_error'
+              ),
               status: 500,
             },
           ]),
