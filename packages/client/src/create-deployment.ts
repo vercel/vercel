@@ -1,6 +1,6 @@
 import { lstatSync } from 'fs-extra';
-import { isAbsolute } from 'path';
-import { hashes, mapToObject } from './utils/hashes';
+import { isAbsolute, join, relative } from 'path';
+import { hash, hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
 import { DeploymentError } from './errors';
@@ -9,6 +9,9 @@ import {
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
+import { streamToBuffer } from '@vercel/build-utils';
+import tar from 'tar-fs';
+import { createGzip } from 'zlib';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
@@ -70,7 +73,7 @@ export default function buildCreateDeployment() {
       debug(`Provided 'path' is a single file`);
     }
 
-    const { fileList } = await buildFileTree(path, clientOptions, debug);
+    let { fileList } = await buildFileTree(path, clientOptions, debug);
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
@@ -82,7 +85,33 @@ export default function buildCreateDeployment() {
       };
     }
 
-    const files = await hashes(fileList);
+    // Populate Files -> FileFsRef mapping
+    const workPath = typeof path === 'string' ? path : path[0];
+
+    let files;
+
+    if (clientOptions.archive === 'tgz') {
+      debug('Packing tarball');
+      const tarStream = tar
+        .pack(workPath, {
+          entries: fileList.map(file => relative(workPath, file)),
+        })
+        .pipe(createGzip());
+      const tarBuffer = await streamToBuffer(tarStream);
+      debug('Packed tarball');
+      files = new Map([
+        [
+          hash(tarBuffer),
+          {
+            names: [join(workPath, '.vercel/source.tgz')],
+            data: tarBuffer,
+            mode: 0o666,
+          },
+        ],
+      ]);
+    } else {
+      files = await hashes(fileList);
+    }
 
     debug(`Yielding a 'hashes-calculated' event with ${files.size} hashes`);
     yield { type: 'hashes-calculated', payload: mapToObject(files) };

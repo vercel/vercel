@@ -14,7 +14,7 @@ export interface DeploymentFile {
  * @param {Buffer} file data
  * @return {String} hex digest
  */
-function hash(buf: Buffer): string {
+export function hash(buf: Buffer): string {
   return createHash('sha1').update(buf).digest('hex');
 }
 

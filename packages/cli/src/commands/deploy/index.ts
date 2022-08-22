@@ -3,7 +3,11 @@ import fs from 'fs-extra';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import { join, resolve, basename } from 'path';
-import { fileNameSymbol, VercelConfig } from '@vercel/client';
+import {
+  fileNameSymbol,
+  VALID_ARCHIVE_FORMATS,
+  VercelConfig,
+} from '@vercel/client';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
@@ -66,10 +70,11 @@ import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { createGitMeta } from '../../util/create-git-meta';
+import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '../../util/is-error';
 
-export default async (client: Client) => {
+export default async (client: Client): Promise<number> => {
   const { output } = client;
 
   let argv = null;
@@ -87,6 +92,7 @@ export default async (client: Client) => {
       '--regions': String,
       '--prebuilt': Boolean,
       '--prod': Boolean,
+      '--archive': String,
       '--yes': Boolean,
       '-f': '--force',
       '-p': '--public',
@@ -261,6 +267,12 @@ export default async (client: Client) => {
     }
   }
 
+  const archive = argv['--archive'];
+  if (typeof archive === 'string' && !isValidArchive(archive)) {
+    output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
+    return 1;
+  }
+
   // retrieve `project` and `org` from .vercel
   const link = await getLinkedProject(client, path);
 
@@ -284,7 +296,7 @@ export default async (client: Client) => {
       ));
 
     if (!shouldStartSetup) {
-      output.print(`Aborted. Project not set up.\n`);
+      output.print(`Canceled. Project not set up.\n`);
       return 0;
     }
 
@@ -545,7 +557,8 @@ export default async (client: Client) => {
       createArgs,
       org,
       !project,
-      path
+      path,
+      archive
     );
 
     if (deployment.code === 'missing_project_settings') {
@@ -918,4 +931,6 @@ const printDeploymentStatus = async (
         ) + newline;
     output.print(message + link);
   }
+
+  return 0;
 };

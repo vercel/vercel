@@ -28,6 +28,8 @@ import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';
+import { getRemoteUrls } from '../create-git-meta';
+import { addGitConnection } from './add-git-connection';
 
 export interface SetupAndLinkOptions {
   forceDelete?: boolean;
@@ -87,7 +89,7 @@ export default async function setupAndLink(
     ));
 
   if (!shouldStartSetup) {
-    output.print(`Aborted. Project not set up.\n`);
+    output.print(`Canceled. Project not set up.\n`);
     return { status: 'not_linked', org: null, project: null };
   }
 
@@ -127,6 +129,20 @@ export default async function setupAndLink(
     rootDirectory = await inputRootDirectory(client, path, autoConfirm);
   } else {
     const project = projectOrNewProjectName;
+
+    const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
+    if (remoteUrls && !project.skipGitConnectDuringLink) {
+      const connectGit = await addGitConnection(
+        client,
+        org,
+        project,
+        remoteUrls,
+        autoConfirm
+      );
+      if (typeof connectGit === 'number') {
+        return { status: 'error', exitCode: connectGit };
+      }
+    }
 
     await linkFolderToProject(
       output,
@@ -241,6 +257,22 @@ export default async function setupAndLink(
     }
 
     const project = await createProject(client, newProjectName);
+
+    const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
+    if (remoteUrls) {
+      const connectGit = await addGitConnection(
+        client,
+        org,
+        project,
+        remoteUrls,
+        autoConfirm,
+        settings
+      );
+      if (typeof connectGit === 'number') {
+        return { status: 'error', exitCode: connectGit };
+      }
+    }
+
     await updateProject(client, project.id, settings);
     Object.assign(project, settings);
 

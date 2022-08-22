@@ -6,7 +6,7 @@ import mapCertError from '../certs/map-cert-error';
 import { Org } from '../../types';
 import Now, { CreateOptions } from '..';
 import Client from '../client';
-import { DeploymentError } from '../../../../client/dist';
+import { ArchiveFormat, DeploymentError } from '@vercel/client';
 
 export default async function createDeploy(
   client: Client,
@@ -16,10 +16,18 @@ export default async function createDeploy(
   createArgs: CreateOptions,
   org: Org,
   isSettingUpProject: boolean,
-  cwd?: string
+  cwd?: string,
+  archive?: ArchiveFormat
 ): Promise<any | DeploymentError> {
   try {
-    return await now.create(paths, createArgs, org, isSettingUpProject, cwd);
+    return await now.create(
+      paths,
+      createArgs,
+      org,
+      isSettingUpProject,
+      archive,
+      cwd
+    );
   } catch (err: unknown) {
     if (ERRORS_TS.isAPIError(err)) {
       if (err.code === 'rate_limited') {
