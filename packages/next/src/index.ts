@@ -2634,7 +2634,7 @@ async function getServerlessPages(params: {
 
   if (params.appPathRoutesManifest) {
     for (const [entry, normalizedEntry] of Object.entries(
-      params.appPathRoutesManifest || {}
+      params.appPathRoutesManifest
     )) {
       const normalizedPath = `${path.join('.', normalizedEntry)}.js`;
       const globPath = `${path.join('.', entry)}.js`;
