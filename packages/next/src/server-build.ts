@@ -1375,7 +1375,10 @@ export async function serverBuild({
                 route.src.replace(/(^\^|\$$)/g, '') + '.json$'
               );
 
-              const { pathname } = new URL(route.dest || '/', 'http://n');
+              const { pathname, search } = new URL(
+                route.dest || '/',
+                'http://n'
+              );
               let isPrerender = !!prerenders[path.join('./', pathname)];
 
               if (routesManifest.i18n) {
@@ -1392,7 +1395,9 @@ export async function serverBuild({
               }
 
               if (isPrerender) {
-                route.dest = `/_next/data/${buildId}${pathname}.json`;
+                route.dest = `/_next/data/${buildId}${pathname}.json${
+                  search || ''
+                }`;
               }
               return route;
             })
