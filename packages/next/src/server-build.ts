@@ -41,6 +41,7 @@ import {
   getNextServerPath,
   getMiddlewareBundle,
   getFilesMapFromReasons,
+  UnwrapPromise,
 } from './utils';
 import {
   nodeFileTrace,
@@ -87,15 +88,18 @@ export async function serverBuild({
   staticPages,
   lambdaPages,
   nextVersion,
+  lambdaAppPaths,
   canUsePreviewMode,
   trailingSlash,
   prerenderManifest,
+  appPathRoutesManifest,
   omittedPrerenderRoutes,
   trailingSlashRedirects,
   isCorrectLocaleAPIRoutes,
   lambdaCompressedByteLimit,
   requiredServerFilesManifest,
 }: {
+  appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
   trailingSlash: boolean;
   config: Config;
@@ -104,6 +108,7 @@ export async function serverBuild({
   canUsePreviewMode: boolean;
   omittedPrerenderRoutes: Set<string>;
   staticPages: { [key: string]: FileFsRef };
+  lambdaAppPaths: { [key: string]: FileFsRef };
   lambdaPages: { [key: string]: FileFsRef };
   privateOutputs: { files: Files; routes: Route[] };
   entryPath: string;
@@ -132,6 +137,8 @@ export async function serverBuild({
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
 }): Promise<BuildResult> {
+  lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
+
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
   const lambdaPageKeys = Object.keys(lambdaPages);
@@ -141,6 +148,14 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
+  let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
+  let appDir: string | null = null;
+
+  if (appPathRoutesManifest) {
+    appDir = path.join(pagesDir, '../app');
+    appBuildTraces = await glob('**/*.js.nft.json', appDir);
+  }
+
   const isCorrectNotFoundRoutes = semver.gte(
     nextVersion,
     CORRECT_NOT_FOUND_ROUTES_VERSION
@@ -533,9 +548,26 @@ export async function serverBuild({
     const mergedPageKeys = [...nonApiPages, ...apiPages, ...internalPages];
     const traceCache = {};
 
+    const getOriginalPagePath = (page: string) => {
+      let originalPagePath = page;
+
+      if (appDir && lambdaAppPaths[page]) {
+        const { fsPath } = lambdaAppPaths[page];
+        originalPagePath = path.relative(appDir, fsPath);
+      }
+      return originalPagePath;
+    };
+
+    const getBuildTraceFile = (page: string) => {
+      return (
+        pageBuildTraces[page + '.nft.json'] ||
+        appBuildTraces[page + '.nft.json']
+      );
+    };
+
     const pathsToTrace: string[] = mergedPageKeys
       .map(page => {
-        if (!pageBuildTraces[page + '.nft.json']) {
+        if (!getBuildTraceFile(page)) {
           return lambdaPages[page].fsPath;
         }
       })
@@ -559,7 +591,8 @@ export async function serverBuild({
 
     for (const page of mergedPageKeys) {
       const tracedFiles: { [key: string]: FileFsRef } = {};
-      const pageBuildTrace = pageBuildTraces[page + '.nft.json'];
+      const originalPagePath = getOriginalPagePath(page);
+      const pageBuildTrace = getBuildTraceFile(originalPagePath);
       let fileList: string[];
       let reasons: NodeFileTraceReasons;
 
@@ -567,8 +600,38 @@ export async function serverBuild({
         const { files } = JSON.parse(
           await fs.readFile(pageBuildTrace.fsPath, 'utf8')
         );
+
+        // TODO: this will be moved to a separate worker in the future
+        // although currently this is needed in the lambda
+        const isAppPath = appDir && lambdaAppPaths[page];
+        const serverComponentFile = isAppPath
+          ? pageBuildTrace.fsPath.replace(
+              /\.js\.nft\.json$/,
+              '.__sc_client__.js'
+            )
+          : null;
+
+        if (serverComponentFile && (await fs.pathExists(serverComponentFile))) {
+          files.push(
+            path.relative(
+              path.dirname(pageBuildTrace.fsPath),
+              serverComponentFile
+            )
+          );
+
+          try {
+            const scTrace = JSON.parse(
+              await fs.readFile(`${serverComponentFile}.nft.json`, 'utf8')
+            );
+            scTrace.files.forEach((file: string) => files.push(file));
+          } catch (err) {
+            /* non-fatal for now */
+          }
+        }
+
         fileList = [];
-        const pageDir = path.dirname(path.join(pagesDir, page));
+        const curPagesDir = isAppPath && appDir ? appDir : pagesDir;
+        const pageDir = path.dirname(path.join(curPagesDir, originalPagePath));
         const normalizedBaseDir = `${baseDir}${
           baseDir.endsWith('/') ? '' : '/'
         }`;
