@@ -3,10 +3,13 @@ package handler
 import (
 	"fmt"
 	"net/http"
-	"runtime"
 )
 
 type SampleDecoder struct {
+}
+
+type Servers struct {
+	path string
 }
 
 // the handler location logic looks for the first function that matches the proper signature;
@@ -14,10 +17,18 @@ type SampleDecoder struct {
 
 // this handler will not be found because it is a receiver function
 func (d *SampleDecoder) BadReceiverHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "version:%v:from BadHandler", runtime.Version())
+	fmt.Fprintf(w, "from BadHandler")
+}
+
+// this handler can be delegated to without being renamed
+func (s Servers) Handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, s.path)
 }
 
 // this handler will be found because it has the correct function signature
-func GoodHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "version:%v:from GoodHandler", runtime.Version())
+func GoodHandler_api_bad_receiver_go(w http.ResponseWriter, r *http.Request) {
+	server := Servers{"some/path"}
+
+	// this occurence of "Handler" should not be renamed
+	server.Handler(w, r)
 }

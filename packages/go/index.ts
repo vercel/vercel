@@ -351,10 +351,7 @@ export async function build({
 
       if (isGoModExist && isGoModInRootDir) {
         debug('[mod-root] Write main file to ' + downloadPath);
-        await writeFile(
-          join(downloadPath, mainGoFileName),
-          mainModGoContents
-        );
+        await writeFile(join(downloadPath, mainGoFileName), mainModGoContents);
         undoFileActions.push({
           to: undefined, // delete
           from: join(downloadPath, mainGoFileName),
@@ -534,8 +531,8 @@ export async function build({
 async function renameHandlerFunction(fsPath: string, from: string, to: string) {
   let fileContents = await readFile(fsPath, 'utf8');
 
-  const fromRegex = new RegExp(`\\b${from}\\b`, 'g');
-  fileContents = fileContents.replace(fromRegex, to);
+  const fromRegex = new RegExp(String.raw`func (${from})\(`, 'g');
+  fileContents = fileContents.replace(fromRegex, `func ${to}(`);
 
   await writeFile(fsPath, fileContents);
 }
