@@ -9,7 +9,9 @@ function exec(cmd, args, opts) {
 module.exports = async ({ github, context }) => {
   const oldVersion = require('../examples/nextjs/package.json').dependencies
     .next;
-  const newVersion = exec('npm', ['view', 'next', 'dist-tags.latest']);
+  const newVersion = exec('npm', ['view', 'next', 'dist-tags.latest'])
+    .toString()
+    .trim();
   const branch = `next-${newVersion.replaceAll('.', '-')}`;
 
   if (oldVersion === newVersion) {
