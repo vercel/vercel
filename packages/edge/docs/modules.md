@@ -6,11 +6,8 @@
 
 ### Interfaces
 
+- [ExtraResponseInit](interfaces/ExtraResponseInit.md)
 - [Geo](interfaces/Geo.md)
-
-### Type Aliases
-
-- [ExtraResponseInit](modules.md#extraresponseinit)
 
 ### Variables
 
@@ -28,16 +25,6 @@
 - [next](modules.md#next)
 - [rewrite](modules.md#rewrite)
 
-## Type Aliases
-
-### ExtraResponseInit
-
-Ƭ **ExtraResponseInit**: `Omit`<`ResponseInit`, `"headers"`\> & { `headers?`: `HeadersInit` }
-
-#### Defined in
-
-[middleware-helpers.ts:1](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L1)
-
 ## Variables
 
 ### CITY_HEADER_NAME
@@ -48,7 +35,7 @@ City of the original client IP calculated by Vercel Proxy.
 
 #### Defined in
 
-[edge-headers.ts:4](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L4)
+[src/edge-headers.ts:4](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L4)
 
 ---
 
@@ -60,7 +47,7 @@ Country of the original client IP calculated by Vercel Proxy.
 
 #### Defined in
 
-[edge-headers.ts:8](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L8)
+[src/edge-headers.ts:8](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L8)
 
 ---
 
@@ -72,7 +59,7 @@ Ip from Vercel Proxy. Do not confuse it with the client Ip.
 
 #### Defined in
 
-[edge-headers.ts:12](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L12)
+[src/edge-headers.ts:12](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L12)
 
 ---
 
@@ -84,7 +71,7 @@ Latitude of the original client IP calculated by Vercel Proxy.
 
 #### Defined in
 
-[edge-headers.ts:16](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L16)
+[src/edge-headers.ts:16](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L16)
 
 ---
 
@@ -96,7 +83,7 @@ Longitude of the original client IP calculated by Vercel Proxy.
 
 #### Defined in
 
-[edge-headers.ts:20](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L20)
+[src/edge-headers.ts:20](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L20)
 
 ---
 
@@ -108,7 +95,7 @@ Region of the original client IP calculated by Vercel Proxy.
 
 #### Defined in
 
-[edge-headers.ts:24](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L24)
+[src/edge-headers.ts:24](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L24)
 
 ## Functions
 
@@ -128,9 +115,9 @@ Returns the location information from for the incoming request
 
 #### Parameters
 
-| Name      | Type      |
-| :-------- | :-------- |
-| `request` | `Request` |
+| Name      | Type      | Description                                              |
+| :-------- | :-------- | :------------------------------------------------------- |
+| `request` | `Request` | The incoming request object to grab the geolocation data |
 
 #### Returns
 
@@ -138,7 +125,7 @@ Returns the location information from for the incoming request
 
 #### Defined in
 
-[edge-headers.ts:74](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L74)
+[src/edge-headers.ts:76](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L76)
 
 ---
 
@@ -154,9 +141,9 @@ Returns the IP address of the request from the headers.
 
 #### Parameters
 
-| Name      | Type      |
-| :-------- | :-------- |
-| `request` | `Request` |
+| Name      | Type      | Description                                     |
+| :-------- | :-------- | :---------------------------------------------- |
+| `request` | `Request` | The incoming request object to grab the IP from |
 
 #### Returns
 
@@ -164,7 +151,7 @@ Returns the IP address of the request from the headers.
 
 #### Defined in
 
-[edge-headers.ts:61](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L61)
+[src/edge-headers.ts:62](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L62)
 
 ---
 
@@ -172,13 +159,13 @@ Returns the IP address of the request from the headers.
 
 ▸ **next**(`init?`): `Response`
 
-This tells the Middleware to continue with the request.
+Continue with the request without changing the URL
 
 #### Parameters
 
-| Name    | Type                                                |
-| :------ | :-------------------------------------------------- |
-| `init?` | [`ExtraResponseInit`](modules.md#extraresponseinit) |
+| Name    | Type                                                   | Description                         |
+| :------ | :----------------------------------------------------- | :---------------------------------- |
+| `init?` | [`ExtraResponseInit`](interfaces/ExtraResponseInit.md) | additional options for the response |
 
 #### Returns
 
@@ -186,7 +173,7 @@ This tells the Middleware to continue with the request.
 
 #### Defined in
 
-[middleware-helpers.ts:27](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L27)
+[src/middleware-helpers.ts:32](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L32)
 
 ---
 
@@ -198,10 +185,10 @@ Rewrite the request into a different URL.
 
 #### Parameters
 
-| Name          | Type                                                                      |
-| :------------ | :------------------------------------------------------------------------ |
-| `destination` | `string` \| [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL) |
-| `init?`       | [`ExtraResponseInit`](modules.md#extraresponseinit)                       |
+| Name          | Type                                                                      | Description                           |
+| :------------ | :------------------------------------------------------------------------ | :------------------------------------ |
+| `destination` | `string` \| [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL) | the new URL to rewrite the request to |
+| `init?`       | [`ExtraResponseInit`](interfaces/ExtraResponseInit.md)                    | additional options for the response   |
 
 #### Returns
 
@@ -209,4 +196,4 @@ Rewrite the request into a different URL.
 
 #### Defined in
 
-[middleware-helpers.ts:12](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L12)
+[src/middleware-helpers.ts:15](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L15)

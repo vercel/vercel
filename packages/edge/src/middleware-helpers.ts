@@ -1,13 +1,16 @@
-export type ExtraResponseInit = Omit<ResponseInit, 'headers'> & {
+export interface ExtraResponseInit extends Omit<ResponseInit, 'headers'> {
   /**
    * These headers will be sent to the user response
    * along with the response headers from the origin
    */
   headers?: HeadersInit;
-};
+}
 
 /**
  * Rewrite the request into a different URL.
+ *
+ * @param destination the new URL to rewrite the request to
+ * @param init additional options for the response
  */
 export function rewrite(
   destination: string | URL,
@@ -22,7 +25,9 @@ export function rewrite(
 }
 
 /**
- * This tells the Middleware to continue with the request.
+ * Continue with the request without changing the URL
+ *
+ * @param init additional options for the response
  */
 export function next(init?: ExtraResponseInit): Response {
   const headers = new Headers(init?.headers ?? {});

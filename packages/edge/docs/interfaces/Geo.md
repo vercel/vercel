@@ -24,7 +24,7 @@ The city that the request originated from
 
 #### Defined in
 
-[edge-headers.ts:41](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L41)
+[src/edge-headers.ts:41](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L41)
 
 ---
 
@@ -36,7 +36,7 @@ The country that the request originated from
 
 #### Defined in
 
-[edge-headers.ts:43](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L43)
+[src/edge-headers.ts:43](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L43)
 
 ---
 
@@ -48,7 +48,7 @@ The latitude of the client
 
 #### Defined in
 
-[edge-headers.ts:47](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L47)
+[src/edge-headers.ts:47](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L47)
 
 ---
 
@@ -60,7 +60,7 @@ The longitude of the client
 
 #### Defined in
 
-[edge-headers.ts:49](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L49)
+[src/edge-headers.ts:49](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L49)
 
 ---
 
@@ -72,4 +72,4 @@ The Vercel Edge Network region that received the request
 
 #### Defined in
 
-[edge-headers.ts:45](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L45)
+[src/edge-headers.ts:45](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L45)

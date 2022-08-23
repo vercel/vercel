@@ -9,7 +9,7 @@
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "yarn test",
-    "build:docs": "typedoc && prettier --write docs/**/*.md"
+    "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },
   "devDependencies": {
     "@edge-runtime/jest-environment": "1.1.0-beta.7",

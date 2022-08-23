@@ -57,6 +57,7 @@ function getHeader(request: Request, key: string): string | undefined {
  * Returns the IP address of the request from the headers.
  *
  * @see {@link IP_HEADER_NAME}
+ * @param request The incoming request object to grab the IP from
  */
 export function ipAddress(request: Request): string | undefined {
   return getHeader(request, IP_HEADER_NAME);
@@ -70,6 +71,7 @@ export function ipAddress(request: Request): string | undefined {
  * @see {@link REGION_HEADER_NAME}
  * @see {@link LATITUDE_HEADER_NAME}
  * @see {@link LONGITUDE_HEADER_NAME}
+ * @param request The incoming request object to grab the geolocation data
  */
 export function geolocation(request: Request): Geo {
   return {
