@@ -101,6 +101,7 @@ import {
   isError,
   isSpawnError,
 } from '../is-error';
+import { pickOverrides } from '../projects/project-settings';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -149,10 +150,10 @@ export default class DevServer {
   private watchAggregationTimeout: number;
   private filter: (path: string) => boolean;
   private podId: string;
-  private devCommand?: string;
   private devProcess?: ChildProcess;
   private devProcessPort?: number;
   private devServerPids: Set<number>;
+  private originalProjectSettings?: ProjectSettings;
   private projectSettings?: ProjectSettings;
 
   private vercelConfigWarning: boolean;
@@ -173,7 +174,7 @@ export default class DevServer {
     this.projectEnvs = options.projectEnvs || [];
     this.files = {};
     this.address = '';
-    this.devCommand = options.devCommand;
+    this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
     this.caseSensitive = false;
     this.apiDir = null;
@@ -549,6 +550,23 @@ export default class DevServer {
     return this.getVercelConfigPromise;
   }
 
+  get devCommand() {
+    if (this.projectSettings?.devCommand) {
+      return this.projectSettings.devCommand;
+    } else if (this.projectSettings?.framework) {
+      const frameworkSlug = this.projectSettings.framework;
+      const framework = frameworkList.find(f => f.slug === frameworkSlug);
+
+      if (framework) {
+        const defaults = framework.settings.devCommand.value;
+        if (defaults) {
+          return defaults;
+        }
+      }
+    }
+    return undefined;
+  }
+
   async _getVercelConfig(): Promise<VercelConfig> {
     const configPath = getVercelConfigPath(this.cwd);
 
@@ -563,6 +581,12 @@ export default class DevServer {
     ]);
 
     await this.validateVercelConfig(vercelConfig);
+
+    this.projectSettings = {
+      ...this.originalProjectSettings,
+      ...pickOverrides(vercelConfig),
+    };
+
     const { error: routeError, routes: maybeRoutes } =
       getTransformedRoutes(vercelConfig);
     if (routeError) {

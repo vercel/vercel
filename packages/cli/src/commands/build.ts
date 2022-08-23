@@ -37,6 +37,7 @@ import cliPkg from '../util/pkg';
 import readJSONFile from '../util/read-json-file';
 import { CantParseJSONFile } from '../util/errors-ts';
 import {
+  pickOverrides,
   ProjectLinkAndSettings,
   readProjectSettings,
 } from '../util/projects/project-settings';
@@ -278,6 +279,11 @@ async function doBuild(
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
 
+  const projectSettings = {
+    ...project.settings,
+    ...pickOverrides(vercelConfig || {}),
+  };
+
   // Get a list of source files
   const files = (await getFiles(workPath, client)).map(f =>
     normalizePath(relative(workPath, f))
@@ -313,7 +319,7 @@ async function doBuild(
     // Detect the Vercel Builders that will need to be invoked
     const detectedBuilders = await detectBuilders(files, pkg, {
       ...vercelConfig,
-      projectSettings: project.settings,
+      projectSettings: projectSettings,
       ignoreBuildScript: true,
       featHandleMiss: true,
     });
@@ -425,14 +431,14 @@ async function doBuild(
 
       const buildConfig: Config = isZeroConfig
         ? {
-            outputDirectory: project.settings.outputDirectory ?? undefined,
+            outputDirectory: projectSettings.outputDirectory ?? undefined,
             ...build.config,
-            projectSettings: project.settings,
-            installCommand: project.settings.installCommand ?? undefined,
-            devCommand: project.settings.devCommand ?? undefined,
-            buildCommand: project.settings.buildCommand ?? undefined,
-            framework: project.settings.framework,
-            nodeVersion: project.settings.nodeVersion,
+            projectSettings,
+            installCommand: projectSettings.installCommand ?? undefined,
+            devCommand: projectSettings.devCommand ?? undefined,
+            buildCommand: projectSettings.buildCommand ?? undefined,
+            framework: projectSettings.framework,
+            nodeVersion: projectSettings.nodeVersion,
           }
         : build.config || {};
       const buildOptions: BuildOptions = {

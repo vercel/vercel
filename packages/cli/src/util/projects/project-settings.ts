@@ -2,6 +2,8 @@ import { outputJSON } from 'fs-extra';
 import { Org, Project, ProjectLink } from '../../types';
 import { getLinkFromDir, VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 import { join } from 'path';
+import { VercelConfig } from '@vercel/client';
+import { PartialProjectSettings } from '../input/edit-project-settings';
 
 export type ProjectLinkAndSettings = ProjectLink & {
   settings: {
@@ -50,4 +52,17 @@ export async function writeProjectSettings(
 
 export async function readProjectSettings(cwd: string) {
   return await getLinkFromDir<ProjectLinkAndSettings>(cwd);
+}
+
+export function pickOverrides(
+  vercelConfig: VercelConfig
+): PartialProjectSettings {
+  return {
+    buildCommand: vercelConfig.buildCommand,
+    devCommand: vercelConfig.devCommand,
+    framework: vercelConfig.framework,
+    commandForIgnoringBuildStep: vercelConfig.ignoreCommand,
+    installCommand: vercelConfig.installCommand,
+    outputDirectory: vercelConfig.outputDirectory,
+  };
 }

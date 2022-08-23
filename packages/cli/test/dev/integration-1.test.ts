@@ -422,11 +422,7 @@ test('[vercel dev] should maintain query when proxy passing', async () => {
 
 test('[vercel dev] should maintain query when dev server defines routes', async () => {
   const dir = fixture('dev-server-query');
-  const { dev, port, readyResolver } = await testFixture(dir, {
-    env: {
-      VERCEL_DEV_COMMAND: 'next dev --port $PORT',
-    },
-  });
+  const { dev, port, readyResolver } = await testFixture(dir);
 
   try {
     await readyResolver;
@@ -489,11 +485,7 @@ test('[vercel dev] should send `etag` header for static files', async () => {
 
 test('[vercel dev] should frontend dev server and routes', async () => {
   const dir = fixture('dev-server-and-routes');
-  const { dev, port, readyResolver } = await testFixture(dir, {
-    env: {
-      VERCEL_DEV_COMMAND: 'next dev --port $PORT',
-    },
-  });
+  const { dev, port, readyResolver } = await testFixture(dir);
 
   try {
     await readyResolver;
