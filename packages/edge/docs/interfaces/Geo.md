@@ -1,4 +1,4 @@
-[@vercel/edge](../README.md) / [Exports](../modules.md) / Geo
+[@vercel/edge](../README.md) / Geo
 
 # Interface: Geo
 

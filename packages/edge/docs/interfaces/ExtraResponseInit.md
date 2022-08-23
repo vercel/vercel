@@ -1,4 +1,4 @@
-[@vercel/edge](../README.md) / [Exports](../modules.md) / ExtraResponseInit
+[@vercel/edge](../README.md) / ExtraResponseInit
 
 # Interface: ExtraResponseInit
 
