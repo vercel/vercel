@@ -80,8 +80,9 @@ describe('middleware routes', () => {
               regexp: '^\\/bar[\\/#\\?]?$',
               has: [
                 {
-                  type: 'header',
-                  key: 'x-rewrite-me',
+                  type: 'query',
+                  key: 'mykey',
+                  value: 'myvalue',
                 },
               ],
             },
@@ -107,6 +108,54 @@ describe('middleware routes', () => {
         continue: true,
         has: [
           {
+            type: 'query',
+            key: 'mykey',
+            value: 'myvalue',
+          },
+        ],
+        middlewarePath: 'middleware',
+        missing: [
+          {
+            key: 'x-prerender-revalidate',
+            type: 'header',
+            value: '',
+          },
+        ],
+        override: true,
+        src: '^\\/bar[\\/#\\?]?$',
+      },
+    ]);
+  });
+
+  it('should make header key lowercase', async () => {
+    const routes = await getMiddlewareRoutes({
+      version: 2,
+      sortedMiddleware: ['/'],
+      middleware: {
+        '/': {
+          env: [],
+          files: [],
+          name: 'middleware',
+          page: '/',
+          matchers: [
+            {
+              regexp: '^\\/asdf[\\/#\\?]?$',
+              has: [
+                {
+                  type: 'header',
+                  key: 'X-Rewrite-Me',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(routes).toEqual([
+      {
+        continue: true,
+        has: [
+          {
             type: 'header',
             key: 'x-rewrite-me',
           },
@@ -120,7 +169,7 @@ describe('middleware routes', () => {
           },
         ],
         override: true,
-        src: '^\\/bar[\\/#\\?]?$',
+        src: '^\\/asdf[\\/#\\?]?$',
       },
     ]);
   });

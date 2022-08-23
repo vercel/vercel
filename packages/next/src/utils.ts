@@ -2488,10 +2488,26 @@ function getRouteMatchers(
     return `(?:^${basePath}${locale}${regexp.substring(1)})`;
   }
 
-  return info.matchers.map(matcher => ({
-    ...matcher,
-    regexp: getRegexp(matcher.regexp),
-  }));
+  function normalizeHas(has: HasField): HasField {
+    return has.map(v =>
+      v.type === 'header'
+        ? {
+            ...v,
+            key: v.key.toLowerCase(),
+          }
+        : v
+    );
+  }
+
+  return info.matchers.map(matcher => {
+    const m: EdgeFunctionMatcher = {
+      regexp: getRegexp(matcher.regexp),
+    };
+    if (matcher.has) {
+      m.has = normalizeHas(matcher.has);
+    }
+    return m;
+  });
 }
 
 /**
