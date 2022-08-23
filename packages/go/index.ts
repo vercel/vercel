@@ -531,7 +531,7 @@ export async function build({
 async function renameHandlerFunction(fsPath: string, from: string, to: string) {
   let fileContents = await readFile(fsPath, 'utf8');
 
-  // This regex has to walk a fine line where it replaces the mostl-likey occurences
+  // This regex has to walk a fine line where it replaces the most-likely occurrences
   // of the handler's identifier without clobbering other syntax.
   // Left-hand Side: A single space was chosen because it can catch `func Handler`
   //   as well as `var _ http.HandlerFunc = Index`.
