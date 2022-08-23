@@ -351,10 +351,7 @@ export async function build({
 
       if (isGoModExist && isGoModInRootDir) {
         debug('[mod-root] Write main file to ' + downloadPath);
-        await writeFile(
-          join(downloadPath, mainGoFileName),
-          mainModGoContents
-        );
+        await writeFile(join(downloadPath, mainGoFileName), mainModGoContents);
         undoFileActions.push({
           to: undefined, // delete
           from: join(downloadPath, mainGoFileName),
@@ -534,8 +531,14 @@ export async function build({
 async function renameHandlerFunction(fsPath: string, from: string, to: string) {
   let fileContents = await readFile(fsPath, 'utf8');
 
-  const fromRegex = new RegExp(`\\b${from}\\b`, 'g');
-  fileContents = fileContents.replace(fromRegex, to);
+  // This regex has to walk a fine line where it replaces the most-likely occurrences
+  // of the handler's identifier without clobbering other syntax.
+  // Left-hand Side: A single space was chosen because it can catch `func Handler`
+  //   as well as `var _ http.HandlerFunc = Index`.
+  // Right-hand Side: a word boundary was chosen because this can be an end of line
+  //   or an open paren (as in `func Handler(`).
+  const fromRegex = new RegExp(String.raw` ${from}\b`, 'g');
+  fileContents = fileContents.replace(fromRegex, ` ${to}`);
 
   await writeFile(fsPath, fileContents);
 }
