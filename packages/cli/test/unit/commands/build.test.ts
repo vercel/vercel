@@ -894,6 +894,27 @@ describe('build', () => {
     }
   });
 
+  it('should apply project settings overrides from "vercel.json"', async () => {
+    const cwd = fixture('project-settings-override');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // The `buildCommand` override in "vercel.json" outputs "3" to the
+      // index.txt file, so verify that that was produced in the build output
+      const contents = await fs.readFile(
+        join(output, 'static/index.txt'),
+        'utf8'
+      );
+      expect(contents.trim()).toEqual('3');
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   describe('should find packages with different main/module/browser keys', function () {
     let output: string;
 

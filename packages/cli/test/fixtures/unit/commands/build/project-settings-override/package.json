@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "build": "this will be ignored because of the Project-level settings"
+  }
+}
