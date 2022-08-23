@@ -2,16 +2,17 @@ const { execFileSync } = require('child_process');
 
 function exec(cmd, args, opts) {
   // eslint-disable-next-line no-console
-  console.log(`${cmd} ${args.join(' ')}`);
-  return execFileSync(cmd, args, opts);
+  console.log({ input: `${cmd} ${args.join(' ')}` });
+  const output = execFileSync(cmd, args, opts).toString().trim();
+  console.log({ output });
+  console.log();
+  return output;
 }
 
 module.exports = async ({ github, context }) => {
   const oldVersion = require('../examples/nextjs/package.json').dependencies
     .next;
-  const newVersion = exec('npm', ['view', 'next', 'dist-tags.latest'])
-    .toString()
-    .trim();
+  const newVersion = exec('npm', ['view', 'next', 'dist-tags.latest']);
   const branch = `next-${newVersion.replaceAll('.', '-')}`;
 
   if (oldVersion === newVersion) {
