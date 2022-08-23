@@ -137,6 +137,7 @@ export default class DevServer {
   public address: string;
   public devCacheDir: string;
 
+  private currentDevCommand?: string;
   private caseSensitive: boolean;
   private apiDir: string | null;
   private apiExtensions: Set<string>;
@@ -727,6 +728,11 @@ export default class DevServer {
     }
 
     this.envConfigs = { buildEnv, runEnv, allEnv };
+
+    // If the `devCommand` was modified via project settings
+    // overrides then the dev process needs to be restarted
+    await this.runDevCommand();
+
     return vercelConfig;
   }
 
@@ -2227,8 +2233,19 @@ export default class DevServer {
   async runDevCommand() {
     const { devCommand, cwd } = this;
 
+    if (devCommand === this.currentDevCommand) {
+      // `devCommand` has not changed, so don't restart frontend dev process
+      return;
+    }
+
+    this.currentDevCommand = devCommand;
+
     if (!devCommand) {
       return;
+    }
+
+    if (this.devProcess) {
+      await treeKill(this.devProcess.pid);
     }
 
     this.output.log(

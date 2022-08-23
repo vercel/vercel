@@ -57,12 +57,22 @@ export async function readProjectSettings(cwd: string) {
 export function pickOverrides(
   vercelConfig: VercelConfig
 ): PartialProjectSettings {
-  return {
-    buildCommand: vercelConfig.buildCommand,
-    devCommand: vercelConfig.devCommand,
-    framework: vercelConfig.framework,
-    commandForIgnoringBuildStep: vercelConfig.ignoreCommand,
-    installCommand: vercelConfig.installCommand,
-    outputDirectory: vercelConfig.outputDirectory,
-  };
+  const overrides: PartialProjectSettings = {};
+  for (const prop of [
+    'buildCommand',
+    'devCommand',
+    'framework',
+    'ignoreCommand',
+    'installCommand',
+    'outputDirectory',
+  ] as const) {
+    if (typeof vercelConfig[prop] !== 'undefined') {
+      if (prop === 'ignoreCommand') {
+        overrides.commandForIgnoringBuildStep = vercelConfig[prop];
+      } else {
+        overrides[prop] = vercelConfig[prop];
+      }
+    }
+  }
+  return overrides;
 }
