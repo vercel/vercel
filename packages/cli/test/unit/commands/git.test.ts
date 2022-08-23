@@ -40,11 +40,6 @@ describe('git', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          'Do you want to connect "origin" to your Vercel project?'
-        );
-        client.stdin.write('n\n');
-
-        await expect(client.stderr).toOutput(
           `Connecting Git remote: https://github.com/user/repo.git`
         );
 
