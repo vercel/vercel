@@ -550,20 +550,24 @@ test(
       const originalVercelJson = await fs.readJSON(vercelJsonPath);
 
       try {
-        const originalResponse = await fetch(`http://localhost:${port}`);
+        const originalResponse = await fetch(
+          `http://localhost:${port}/index.txt`
+        );
         validateResponseHeaders(originalResponse);
         const body = await originalResponse.text();
-        console.log(body);
+        expect(body.trim()).toEqual('This is the original');
         expect(originalResponse.status).toBe(200);
 
         await fs.writeJSON(vercelJsonPath, {
           devCommand: 'serve -p $PORT overridden',
         });
 
-        const overriddenResponse = await fetch(`http://localhost:${port}`);
+        const overriddenResponse = await fetch(
+          `http://localhost:${port}/index.txt`
+        );
         validateResponseHeaders(overriddenResponse);
         const body2 = await overriddenResponse.text();
-        console.log(body2);
+        expect(body2.trim()).toEqual('This is the overridden!');
         expect(overriddenResponse.status).toBe(200);
       } finally {
         await fs.writeJSON(vercelJsonPath, originalVercelJson);
