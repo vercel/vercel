@@ -18,6 +18,7 @@
     "tsup": "6.1.2",
     "typedoc": "0.23.10",
     "typedoc-plugin-markdown": "3.13.4",
+    "typedoc-plugin-mdn-links": "2.0.0",
     "typescript": "4.7.4"
   },
   "jest": {

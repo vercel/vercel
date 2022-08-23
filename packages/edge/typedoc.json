@@ -1,9 +1,9 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "entryPoints": ["src/index.ts"],
-  "plugin": ["typedoc-plugin-markdown"],
+  "plugin": ["typedoc-plugin-markdown", "typedoc-plugin-mdn-links"],
   "out": "docs",
-  "hideBreadcrumbs": true,
   "githubPages": false,
-  "gitRevision": "main"
+  "gitRevision": "main",
+  "readme": null
 }

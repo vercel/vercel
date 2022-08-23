@@ -1,3 +1,5 @@
+@vercel/edge / [Exports](modules.md)
+
 # `@vercel/edge`
 
 A set of utilities to help you deploy any framework on the Edge using Vercel:
