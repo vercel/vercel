@@ -549,10 +549,7 @@ async function doBuild(
     builds: builderRoutes,
   });
 
-  let images: BuildResultV2Typical['images'] = undefined;
-  if (vercelConfig?.images) {
-    images = vercelConfig?.images;
-  }
+  const images = vercelConfig?.images
   if (images) {
     if (typeof images !== 'object') {
       throw new Error(
