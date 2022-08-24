@@ -1,4 +1,4 @@
-import { progress } from '../../../src/util/output/progress';
+import { progress } from '../../../../src/util/output/progress';
 
 describe('progress()', () => {
   test.each([
@@ -12,7 +12,18 @@ describe('progress()', () => {
     { current: 1, total: 12, expected: '=___________________' },
     { current: 2, total: 12, expected: '===_________________' },
     { current: 600, total: 1200, expected: '==========__________' },
-  ])('$current / $total -> $expected', ({ current, total, opts, expected }) => {
-    expect(progress(current, total, opts)).toEqual(expected);
-  });
+    {
+      current: 9,
+      total: 10,
+      opts: { complete: '.', incomplete: ' ', width: 10 },
+      expected: '......... ',
+    },
+    { current: 10, total: 10, expected: '====================' },
+    { current: 11, total: 10, expected: null },
+  ])(
+    '$current / $total -> "$expected"',
+    ({ current, total, opts, expected }) => {
+      expect(progress(current, total, opts)).toEqual(expected);
+    }
+  );
 });
