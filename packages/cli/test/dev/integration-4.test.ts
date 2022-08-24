@@ -467,11 +467,11 @@ test(
 test(
   '[vercel dev] Middleware that rewrites with custom query params',
   testFixtureStdio('middleware-rewrite-query', async (testPath: any) => {
-    await testPath(200, '/?foo=bar', '{"url":"/?from-middleware=true"}');
+    await testPath(200, '/?foo=bar', '{"url":"/api/fn?from-middleware=true"}');
     await testPath(
       200,
       '/another?foo=bar',
-      '{"url":"/another?from-middleware=true"}'
+      '{"url":"/api/fn?from-middleware=true"}'
     );
     await testPath(
       200,
