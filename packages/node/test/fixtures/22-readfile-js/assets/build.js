@@ -1,2 +1,1 @@
-const dep = require('./dep.js');
-console.log(dep);
+import dep from './dep.js';
