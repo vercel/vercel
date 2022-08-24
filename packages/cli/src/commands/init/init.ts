@@ -53,7 +53,7 @@ export default async function init(
     );
 
     if (!chosen) {
-      output.log('Aborted');
+      output.log('Canceled');
       return 0;
     }
 
