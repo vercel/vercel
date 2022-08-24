@@ -894,6 +894,31 @@ describe('build', () => {
     }
   });
 
+  it('should apply "images" configuration from `vercel.json`', async () => {
+    const cwd = fixture('images');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `config.json` includes "images" from `vercel.json`
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      console.log({ configJson });
+      expect(configJson).toMatchObject({
+        images: {
+          sizes: [256, 384, 600, 1000],
+          domains: [],
+          minimumCacheTTL: 60,
+          formats: ['image/webp', 'image/avif'],
+        },
+      });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   describe('should find packages with different main/module/browser keys', function () {
     let output: string;
 
