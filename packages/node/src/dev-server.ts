@@ -253,7 +253,9 @@ async function createEdgeRuntime(params?: {
           process: {
             env: process.env,
           },
-          wasmBindings,
+
+          // These are the global bindings for WebAssembly module
+          ...wasmBindings,
         });
 
         return context;
