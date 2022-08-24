@@ -7,7 +7,7 @@ export interface ExtraResponseInit extends Omit<ResponseInit, 'headers'> {
 }
 
 /**
- * Rewrite the request into a different URL.
+ * Returns a response that rewrites the request to a different URL.
  *
  * @param destination the new URL to rewrite the request to
  * @param init additional options for the response
@@ -63,7 +63,7 @@ export function rewrite(
 }
 
 /**
- * Continue with the request without changing the URL
+ * Returns a Response that instructs the system to continue processing the request.
  *
  * @param init additional options for the response
  *

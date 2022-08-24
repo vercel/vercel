@@ -115,9 +115,9 @@ Returns the location information from for the incoming request
 
 #### Parameters
 
-| Name      | Type      | Description                                              |
-| :-------- | :-------- | :------------------------------------------------------- |
-| `request` | `Request` | The incoming request object to grab the geolocation data |
+| Name      | Type      | Description                                                     |
+| :-------- | :-------- | :-------------------------------------------------------------- |
+| `request` | `Request` | The incoming request object which provides the geolocation data |
 
 #### Returns
 
@@ -141,9 +141,9 @@ Returns the IP address of the request from the headers.
 
 #### Parameters
 
-| Name      | Type      | Description                                     |
-| :-------- | :-------- | :---------------------------------------------- |
-| `request` | `Request` | The incoming request object to grab the IP from |
+| Name      | Type      | Description                                       |
+| :-------- | :-------- | :------------------------------------------------ |
+| `request` | `Request` | The incoming request object which provides the IP |
 
 #### Returns
 
@@ -159,7 +159,7 @@ Returns the IP address of the request from the headers.
 
 ▸ **next**(`init?`): `Response`
 
-Continue with the request without changing the URL
+Returns a Response that instructs the system to continue processing the request.
 
 **`Example`**
 
@@ -207,7 +207,7 @@ export default function middleware(_req: Request) {
 
 ▸ **rewrite**(`destination`, `init?`): `Response`
 
-Rewrite the request into a different URL.
+Returns a response that rewrites the request to a different URL.
 
 **`Example`**
 
