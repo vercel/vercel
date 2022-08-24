@@ -2,8 +2,11 @@ const { execFileSync } = require('child_process');
 
 function exec(cmd, args, opts) {
   // eslint-disable-next-line no-console
-  console.log(`${cmd} ${args.join(' ')}`);
-  return execFileSync(cmd, args, opts);
+  console.log({ input: `${cmd} ${args.join(' ')}` });
+  const output = execFileSync(cmd, args, opts).toString().trim();
+  console.log({ output });
+  console.log();
+  return output;
 }
 
 module.exports = async ({ github, context }) => {
