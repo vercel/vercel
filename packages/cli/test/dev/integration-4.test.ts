@@ -472,7 +472,7 @@ test(
     await testPath(
       200,
       '/another?foo=bar',
-      '{"url":"/api/fn?from-middleware=true"}'
+      '{"url":"/another?from-middleware=true"}'
     );
     await testPath(
       200,

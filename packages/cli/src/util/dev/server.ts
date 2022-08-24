@@ -1559,7 +1559,10 @@ export default class DevServer {
                 return;
               }
             } else {
-              req.url = rewritePath;
+              // Retain orginal pathname, but override query parameters from the rewrite
+              const rewriteUrlParsed = url.parse(beforeRewriteUrl);
+              rewriteUrlParsed.search = url.parse(rewritePath).search;
+              req.url = url.format(rewriteUrlParsed);
             }
 
             debug(
