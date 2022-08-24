@@ -47,12 +47,22 @@ async function bundleInstall(
 ) {
   debug(`running "bundle install --deployment"...`);
   const bundleAppConfig = await getWriteableDirectory();
-  const { exitCode, stderr, stdout } = await execa(
+  const gemfileContent = await readFile(gemfilePath, 'utf8');
+  if (gemfileContent.includes('ruby "~> 2.7.x"')) {
+    // Gemfile contains "2.7.x" which will cause an error message:
+    // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
+    // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
+    // We must correct to the actual version in the build container.
+    await writeFile(
+      gemfilePath,
+      gemfileContent.replace('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"')
+    );
+  }
+  await execa(
     bundlePath,
     ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
     {
       stdio: 'pipe',
-      reject: false,
       env: {
         ...process.env,
         BUNDLE_SILENCE_ROOT_WARNING: '1',
@@ -61,19 +71,6 @@ async function bundleInstall(
       },
     }
   );
-
-  if (
-    exitCode === 0 ||
-    (exitCode === 18 && stderr.includes('Gemfile specified -1'))
-  ) {
-    // Gemfile might contain "2.7.x" so install might exit with code 18 and message:
-    // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
-    // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
-  } else {
-    throw new Error(
-      `"bundle install" failed with exit code ${exitCode}: ${stdout}\n${stderr}`
-    );
-  }
 }
 
 export const version = 3;

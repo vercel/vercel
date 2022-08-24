@@ -111,7 +111,7 @@ export default async function rm(
       false
     ))
   ) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 

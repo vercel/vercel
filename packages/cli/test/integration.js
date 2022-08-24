@@ -1862,7 +1862,7 @@ test('ensure we render a prompt when deploying home directory', async t => {
       'You are deploying your home directory. Do you want to continue? [y/N]'
     )
   );
-  t.true(stderr.includes('Aborted'));
+  t.true(stderr.includes('Canceled'));
 });
 
 test('ensure the `scope` property works with email', async t => {
