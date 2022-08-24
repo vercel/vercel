@@ -33,4 +33,4 @@ test('docs are up to date', async () => {
   expect(1).toEqual(1);
 
   expect(result.stdout.trim()).toEqual('');
-});
+}, 120000);
