@@ -79,7 +79,7 @@ export function rewrite(
  * ```
  *
  * @example
- * <caption>Add a response headers to all requests</caption>
+ * <caption>Add response headers to all requests</caption>
  *
  * ```ts
  * import { next } from '@vercel/edge';
