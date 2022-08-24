@@ -461,6 +461,7 @@ test(
     await testPath(200, '/another', '<h1>Another</h1>');
     await testPath(200, '/another.html', '<h1>Another</h1>');
     await testPath(200, '/foo', '<h1>Another</h1>');
+    await testPath(200, '?to=http://example.com', /Example Domain/);
   })
 );
 
@@ -471,7 +472,7 @@ test(
     await testPath(
       200,
       '/another?foo=bar',
-      '{"url":"/another?from-middleware=true"}'
+      '{"url":"/api/fn?from-middleware=true"}'
     );
     await testPath(
       200,

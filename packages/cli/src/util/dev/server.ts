@@ -101,6 +101,7 @@ import {
   isError,
   isSpawnError,
 } from '../is-error';
+import isURL from './is-url';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -1536,9 +1537,31 @@ export default class DevServer {
 
             // Retain orginal pathname, but override query parameters from the rewrite
             const beforeRewriteUrl = req.url || '/';
-            const rewriteUrlParsed = url.parse(beforeRewriteUrl);
-            rewriteUrlParsed.search = url.parse(rewritePath).search;
-            req.url = url.format(rewriteUrlParsed);
+
+            if (isURL(rewritePath)) {
+              const rewriteUrlParsed = new URL(rewritePath);
+              const rewriteOrigin = `${rewriteUrlParsed.protocol}//${rewriteUrlParsed.host}`;
+
+              const originalUrlParsed = new URL(
+                `http://127.0.0.1/${beforeRewriteUrl}`
+              );
+              const isSameOrigin =
+                `${originalUrlParsed.protocol}//${originalUrlParsed.host}` ===
+                rewriteOrigin;
+
+              if (isSameOrigin) {
+                req.url = rewritePath.replace(rewriteOrigin, '');
+              } else {
+                // Proxy to absolute URL with different origin
+                debug(`ProxyPass: ${rewritePath}`);
+                this.setResponseHeaders(res, requestId);
+                proxyPass(req, res, rewritePath, this, requestId);
+                return;
+              }
+            } else {
+              req.url = rewritePath;
+            }
+
             debug(
               `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
             );
