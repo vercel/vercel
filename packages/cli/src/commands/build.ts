@@ -319,7 +319,7 @@ async function doBuild(
     // Detect the Vercel Builders that will need to be invoked
     const detectedBuilders = await detectBuilders(files, pkg, {
       ...vercelConfig,
-      projectSettings: projectSettings,
+      projectSettings,
       ignoreBuildScript: true,
       featHandleMiss: true,
     });
