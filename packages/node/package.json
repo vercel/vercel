@@ -53,7 +53,7 @@
     "@types/node-fetch": "^2.6.1",
     "@types/test-listen": "1.1.0",
     "@vercel/ncc": "0.24.0",
-    "@vercel/nft": "0.21.0",
+    "@vercel/nft": "0.22.0",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",
