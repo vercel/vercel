@@ -161,6 +161,32 @@ Returns the IP address of the request from the headers.
 
 Continue with the request without changing the URL
 
+**`Example`**
+
+<caption>No-op middleware</caption>
+
+```ts
+import { next } from '@vercel/edge';
+
+export default function middleware(_req: Request) {
+  return next();
+}
+```
+
+**`Example`**
+
+<caption>Add a response headers to all requests</caption>
+
+```ts
+import { next } from '@vercel/edge';
+
+export default function middleware(_req: Request) {
+  return next({
+    headers: { 'x-from-middleware': 'true' },
+  });
+}
+```
+
 #### Parameters
 
 | Name    | Type                                                   | Description                         |
@@ -173,7 +199,7 @@ Continue with the request without changing the URL
 
 #### Defined in
 
-[src/middleware-helpers.ts:32](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L32)
+[src/middleware-helpers.ts:94](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L94)
 
 ---
 
@@ -182,6 +208,45 @@ Continue with the request without changing the URL
 ▸ **rewrite**(`destination`, `init?`): `Response`
 
 Rewrite the request into a different URL.
+
+**`Example`**
+
+<caption>Rewrite all feature-flagged requests from `/:path*` to `/experimental/:path*`</caption>
+
+```ts
+import { rewrite, next } from '@vercel/edge';
+
+export default async function middleware(req: Request) {
+  const flagged = await getFlag(req, 'isExperimental');
+  if (flagged) {
+    const url = new URL(req.url);
+    url.pathname = `/experimental{url.pathname}`;
+    return rewrite(url);
+  }
+
+  return next();
+}
+```
+
+**`Example`**
+
+<caption>JWT authentication for `/api/:path*` requests</caption>
+
+```ts
+import { rewrite, next } from '@vercel/edge';
+
+export default function middleware(req: Request) {
+  const auth = checkJwt(req.headers.get('Authorization'));
+  if (!checkJwt) {
+    return rewrite(new URL('/api/error-unauthorized', req.url));
+  }
+  const url = new URL(req.url);
+  url.searchParams.set('_userId', auth.userId);
+  return rewrite(url);
+}
+
+export const config = { matcher: '/api/users/:path*' };
+```
 
 #### Parameters
 
@@ -196,4 +261,4 @@ Rewrite the request into a different URL.
 
 #### Defined in
 
-[src/middleware-helpers.ts:15](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L15)
+[src/middleware-helpers.ts:53](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L53)
