@@ -13,6 +13,7 @@ import {
   Lambda,
   FileBlob,
   FileFsRef,
+  normalizePath,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
@@ -269,7 +270,9 @@ export async function executeBuild(
   const { cleanUrls } = vercelConfig;
 
   // Mimic fmeta-util and perform file renaming
-  Object.entries(output).forEach(([path, value]) => {
+  for (const [originalPath, value] of Object.entries(output)) {
+    let path = normalizePath(originalPath);
+
     if (cleanUrls && path.endsWith('.html')) {
       path = path.slice(0, -5);
 
@@ -284,7 +287,7 @@ export async function executeBuild(
     }
 
     output[path] = value;
-  });
+  }
 
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
