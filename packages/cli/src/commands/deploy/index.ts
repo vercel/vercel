@@ -47,9 +47,7 @@ import {
 import { SchemaValidationFailed } from '../../util/errors';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import confirm from '../../util/input/confirm';
-import editProjectSettings, {
-  PartialProjectSettings,
-} from '../../util/input/edit-project-settings';
+import editProjectSettings from '../../util/input/edit-project-settings';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -73,6 +71,7 @@ import { createGitMeta } from '../../util/create-git-meta';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '../../util/is-error';
+import { pickOverrides } from '../../util/projects/project-settings';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
@@ -509,14 +508,7 @@ export default async (client: Client): Promise<number> => {
   let deployStamp = stamp();
   let deployment = null;
 
-  const localConfigurationOverrides: PartialProjectSettings = {
-    buildCommand: localConfig?.buildCommand,
-    devCommand: localConfig?.devCommand,
-    framework: localConfig?.framework,
-    commandForIgnoringBuildStep: localConfig?.ignoreCommand,
-    installCommand: localConfig?.installCommand,
-    outputDirectory: localConfig?.outputDirectory,
-  };
+  const localConfigurationOverrides = pickOverrides(localConfig);
 
   try {
     const createArgs: any = {
