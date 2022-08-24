@@ -2475,8 +2475,7 @@ function getRouteMatchers(
 ): EdgeFunctionMatcher[] {
   function getRegexp(regexp: string) {
     if (info.page === '/') {
-      const base = basePath?.substring(1);
-      return regexp.replace('_next', `${base ? `${base}/` : ''}_next`);
+      return regexp;
     }
 
     const locale = i18n?.locales.length
