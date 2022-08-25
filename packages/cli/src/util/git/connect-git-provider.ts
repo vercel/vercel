@@ -58,9 +58,9 @@ export async function connectGitProvider(
       (err.action === 'Install GitHub App' || err.code === 'repo_not_found')
     ) {
       client.output.error(
-        `Failed to link ${chalk.cyan(
+        `Failed to connect ${chalk.cyan(
           repo
-        )}. Make sure there aren't any typos and that you have access to the repository if it's private.`
+        )} to project. Make sure there aren't any typos and that you have access to the repository if it's private.`
       );
     } else if (apiError && err.action === 'Add a Login Connection') {
       client.output.error(
