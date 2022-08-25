@@ -8,17 +8,15 @@ jobs:
     steps:
       - name: Check PR Labels
         uses: actions/github-script@v6
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         with:
           script: |
             const labels = context.payload.pull_request.labels.map(l => l.name);
             if (labels.filter(l => l.startsWith('area:')).length === 0) {
-              console.error('PR must have at least one "area" label');
+              console.error('\u001b[31mPR must have at least one "area" label.');
               process.exit(1);
             }
             if (labels.filter(l => l.startsWith('semver:')).length !== 1) {
-              console.error('PR must have at exactly one "semver" label');
+              console.error('\u001b[31mPR must have at exactly one "semver" label.');
               process.exit(1);
             }
-            console.log('PR has correct labels')
+            console.log('\u001b[32mPR has correct labels, thanks!');
