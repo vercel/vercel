@@ -212,7 +212,8 @@ async function compileUserCode(
         } catch (error) {
           // we can't easily show a meaningful stack trace
           // so, stick to just the error message for now
-          event.respondWith(new Response(error.message, {
+          const msg = error.cause ? (error.message + ': ' + (error.cause.message || error.cause)) : error.message;
+          event.respondWith(new Response(msg, {
             status: 500,
             headers: {
               'x-vercel-failed': 'edge-wrapper'
