@@ -12,5 +12,5 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         with:
           script: |
-            const pull_request = context.payload.pull_request
-            console.log({ pull_request })
+            const labels = context.payload.pull_request.labels
+            console.log({ labels })
