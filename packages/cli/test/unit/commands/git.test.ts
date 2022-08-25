@@ -40,11 +40,6 @@ describe('git', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          'Do you want to connect "origin" to your Vercel project?'
-        );
-        client.stdin.write('n\n');
-
-        await expect(client.stderr).toOutput(
           `Connecting Git remote: https://github.com/user/repo.git`
         );
 
@@ -295,7 +290,7 @@ describe('git', () => {
           `Connecting Git remote: https://github.com/laksfj/asdgklsadkl`
         );
         await expect(client.stderr).toOutput(
-          `Failed to link laksfj/asdgklsadkl. Make sure there aren't any typos and that you have access to the repository if it's private.`
+          `Failed to connect laksfj/asdgklsadkl to project. Make sure there aren't any typos and that you have access to the repository if it's private.`
         );
 
         const exitCode = await gitPromise;

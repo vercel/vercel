@@ -242,9 +242,7 @@ export const build: BuildV2 = async ({
     );
 
     for (const warning of warnings) {
-      if (warning?.stack) {
-        debug(warning.stack.replace('Error: ', 'Warning: '));
-      }
+      debug(`Warning from trace: ${warning.message}`);
     }
 
     const lambdaFiles: Files = {};
