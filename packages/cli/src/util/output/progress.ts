@@ -12,9 +12,11 @@ export function progress(
   total: number,
   opts: ProgressOptions = {}
 ): string | null {
-  const width = opts?.width ?? 20;
-  const complete = opts?.complete ?? '=';
-  const incomplete = opts?.incomplete ?? '_';
+  const {
+    width = 20,
+    complete = '=', 
+    incomplete = '_',
+} = opts;
   const unit = total / width;
   let pos = unit === 0 ? width : Math.floor(current / unit);
 
