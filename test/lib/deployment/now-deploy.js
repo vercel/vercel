@@ -75,12 +75,6 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
   }
 
   logWithinTest('id', deploymentId);
-  const st = typeof expect !== 'undefined' ? expect.getState() : {};
-  const expectstate = {
-    currentTestName: st.currentTestName,
-    testPath: st.testPath,
-  };
-  logWithinTest('deploymentUrl', `https://${deploymentUrl}`, expectstate);
 
   for (let i = 0; i < 750; i += 1) {
     const deployment = await deploymentGet(deploymentId);
@@ -94,10 +88,10 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
       throw error;
     }
     if (readyState === 'READY') {
-      logWithinTest('state is READY, moving on');
+      logWithinTest(`State of https://${deploymentUrl} is READY, moving on`);
       break;
     }
-    if (i > 0 && i % 25 === 0) {
+    if (i % 25 === 0) {
       logWithinTest(
         `State of https://${deploymentUrl} is ${readyState}, retry number ${i}`
       );
@@ -162,7 +156,6 @@ async function deploymentPost(payload) {
 
 async function deploymentGet(deploymentId) {
   const url = `/v13/deployments/${deploymentId}`;
-  logWithinTest('fetching deployment', url);
   const resp = await fetchWithAuth(url);
   const json = await resp.json();
   if (json.error) {
