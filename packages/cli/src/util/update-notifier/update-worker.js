@@ -20,7 +20,14 @@ process.on('unhandledRejection', err => {
   process.exit(1);
 });
 
-process.on('message', async msg => {
+// this timer will prevent this worker process from running longer than 10s
+const timer = setTimeout(() => {
+  console.error('Update worker timed out, exiting');
+  process.exit(1);
+}, 10000);
+
+// wait for the parent to give us the work payload
+process.once('message', async msg => {
   try {
     const pending = fetchLatest(msg);
     if (msg.wait) {
@@ -57,11 +64,15 @@ async function fetchLatest({ cacheFile, distTag, name, updateCheckInterval }) {
     notified: false,
     version,
   });
+
+  // success, no more need for the timeout
+  clearTimeout(timer);
 }
 
-/**
- * Signal the parent process we're ready to fetch.
- */
+// signal the parent process we're ready
 if (process.connected && process.send) {
   process.send({ type: 'ready' });
+} else {
+  console.error('No IPC bridge detected, exiting');
+  process.exit(1);
 }
