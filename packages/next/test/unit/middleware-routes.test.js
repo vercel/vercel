@@ -173,6 +173,38 @@ describe('middleware routes', () => {
       },
     ]);
   });
+
+  it('should generate routes with _next/data', async () => {
+    const routes = await getMiddlewareRoutes({
+      version: 1,
+      sortedMiddleware: ['/'],
+      middleware: {
+        '/': {
+          env: [],
+          files: [],
+          name: 'middleware',
+          page: '/',
+          regexp:
+            '^\\/docs(?:\\/(_next\\/data\\/[^/]{1,}))?\\/hello(.json)?[\\/#\\?]?$',
+        },
+      },
+    });
+    expect(routes).toEqual([
+      {
+        continue: true,
+        middlewarePath: 'middleware',
+        missing: [
+          {
+            key: 'x-prerender-revalidate',
+            type: 'header',
+            value: '',
+          },
+        ],
+        override: true,
+        src: '^\\/docs(?:\\/(_next\\/data\\/[^/]{1,}))?\\/hello(.json)?[\\/#\\?]?$',
+      },
+    ]);
+  });
 });
 
 async function getMiddlewareRoutes(manifest) {
