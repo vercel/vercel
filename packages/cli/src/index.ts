@@ -146,6 +146,7 @@ const main = async () => {
     // Checks for available update and returns an instance
     const latest = await updateNotifier({
       distTag: isCanary ? 'canary' : 'latest',
+      output,
       pkg,
     });
     if (latest) {

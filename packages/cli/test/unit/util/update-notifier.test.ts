@@ -3,7 +3,6 @@ import sleep from '../../../src/util/sleep';
 import tmp from 'tmp-promise';
 import updateNotifier from '../../../src/util/update-notifier';
 import { join } from 'path';
-// import { client } from '../../mocks/client';
 
 tmp.setGracefulCleanup();
 
