@@ -894,6 +894,27 @@ describe('build', () => {
     }
   });
 
+  it('should apply project settings overrides from "vercel.json"', async () => {
+    const cwd = fixture('project-settings-override');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // The `buildCommand` override in "vercel.json" outputs "3" to the
+      // index.txt file, so verify that that was produced in the build output
+      const contents = await fs.readFile(
+        join(output, 'static/index.txt'),
+        'utf8'
+      );
+      expect(contents.trim()).toEqual('3');
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+  
   it('should apply "images" configuration from `vercel.json`', async () => {
     const cwd = fixture('images');
     const output = join(cwd, '.vercel/output');
@@ -904,7 +925,6 @@ describe('build', () => {
 
       // `config.json` includes "images" from `vercel.json`
       const configJson = await fs.readJSON(join(output, 'config.json'));
-      console.log({ configJson });
       expect(configJson).toMatchObject({
         images: {
           sizes: [256, 384, 600, 1000],

@@ -24,7 +24,6 @@ export function useDeployment({
   const deployment: Deployment = {
     id,
     url: url.hostname,
-    inspectorUrl: `https://vercel.com/team/project/${id.replace('dpl_', '')}`,
     name,
     meta: {},
     regions: [],

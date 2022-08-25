@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "next": "https://files-26yo0dy1b-ijjk-testing.vercel.app",
+    "react": "experimental",
+    "react-dom": "experimental"
+  }
+}

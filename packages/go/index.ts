@@ -285,6 +285,10 @@ export async function build({
 
     const outDir = await getWriteableDirectory();
 
+    // in order to allow the user to have `main.go`,
+    // we need our `main.go` to be called something else
+    const mainGoFileName = 'main__vc__go__.go';
+
     if (packageName !== 'main') {
       const go = await createGo(
         workPath,
@@ -321,9 +325,8 @@ export async function build({
         }
       }
 
-      const mainModGoFileName = 'main.go';
       const modMainGoContents = await readFile(
-        join(__dirname, mainModGoFileName),
+        join(__dirname, 'main.go'),
         'utf8'
       );
 
@@ -348,30 +351,27 @@ export async function build({
 
       if (isGoModExist && isGoModInRootDir) {
         debug('[mod-root] Write main file to ' + downloadPath);
-        await writeFile(
-          join(downloadPath, mainModGoFileName),
-          mainModGoContents
-        );
+        await writeFile(join(downloadPath, mainGoFileName), mainModGoContents);
         undoFileActions.push({
           to: undefined, // delete
-          from: join(downloadPath, mainModGoFileName),
+          from: join(downloadPath, mainGoFileName),
         });
       } else if (isGoModExist && !isGoModInRootDir) {
         debug('[mod-other] Write main file to ' + goModPath);
-        await writeFile(join(goModPath, mainModGoFileName), mainModGoContents);
+        await writeFile(join(goModPath, mainGoFileName), mainModGoContents);
         undoFileActions.push({
           to: undefined, // delete
-          from: join(goModPath, mainModGoFileName),
+          from: join(goModPath, mainGoFileName),
         });
       } else {
         debug('[entrypoint] Write main file to ' + entrypointDirname);
         await writeFile(
-          join(entrypointDirname, mainModGoFileName),
+          join(entrypointDirname, mainGoFileName),
           mainModGoContents
         );
         undoFileActions.push({
           to: undefined, // delete
-          from: join(entrypointDirname, mainModGoFileName),
+          from: join(entrypointDirname, mainGoFileName),
         });
       }
 
@@ -428,7 +428,7 @@ export async function build({
       const destPath = join(outDir, handlerFileName);
 
       try {
-        const src = [join(baseGoModPath, mainModGoFileName)];
+        const src = [join(baseGoModPath, mainGoFileName)];
 
         await go.build(src, destPath);
       } catch (err) {
@@ -456,10 +456,6 @@ export async function build({
       const mainGoContents = originalMainGoContents
         .replace('"__VC_HANDLER_PACKAGE_NAME"', '')
         .replace('__VC_HANDLER_FUNC_NAME', handlerFunctionName);
-
-      // in order to allow the user to have `main.go`,
-      // we need our `main.go` to be called something else
-      const mainGoFileName = 'main__vc__go__.go';
 
       // Go doesn't like to build files in different directories,
       // so now we place `main.go` together with the user code
@@ -535,8 +531,14 @@ export async function build({
 async function renameHandlerFunction(fsPath: string, from: string, to: string) {
   let fileContents = await readFile(fsPath, 'utf8');
 
-  const fromRegex = new RegExp(`\\b${from}\\b`, 'g');
-  fileContents = fileContents.replace(fromRegex, to);
+  // This regex has to walk a fine line where it replaces the most-likely occurrences
+  // of the handler's identifier without clobbering other syntax.
+  // Left-hand Side: A single space was chosen because it can catch `func Handler`
+  //   as well as `var _ http.HandlerFunc = Index`.
+  // Right-hand Side: a word boundary was chosen because this can be an end of line
+  //   or an open paren (as in `func Handler(`).
+  const fromRegex = new RegExp(String.raw` ${from}\b`, 'g');
+  fileContents = fileContents.replace(fromRegex, ` ${to}`);
 
   await writeFile(fsPath, fileContents);
 }

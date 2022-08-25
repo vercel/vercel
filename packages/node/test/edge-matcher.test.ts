@@ -27,6 +27,15 @@ describe('middleware matchers', () => {
         '^\\/index[\\/#\\?]?$',
       ],
     },
+    {
+      title: 'do not duplicates /index if already present',
+      matcher: ['/about/:slug', '/index', '/'],
+      regExps: [
+        '^\\/about(?:\\/([^\\/#\\?]+?))[\\/#\\?]?$',
+        '^\\/index[\\/#\\?]?$',
+        '^\\/[\\/#\\?]?$',
+      ],
+    },
   ])('$title', async ({ matcher, regExps }) => {
     const filesystem = await prepareFilesystem({
       'middleware.js': `
