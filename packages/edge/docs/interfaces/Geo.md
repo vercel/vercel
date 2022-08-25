@@ -1,5 +1,3 @@
-[@vercel/edge](../README.md) / Geo
-
 # Interface: Geo
 
 The location information of a given request

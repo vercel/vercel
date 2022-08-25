@@ -1,5 +1,3 @@
-[@vercel/edge](../README.md) / ExtraResponseInit
-
 # Interface: ExtraResponseInit
 
 ## Hierarchy
@@ -23,7 +21,7 @@
 • `Optional` **headers**: `HeadersInit`
 
 These headers will be sent to the user response
-along with the response headers from the origin
+along with the response headers from the origin.
 
 #### Defined in
 

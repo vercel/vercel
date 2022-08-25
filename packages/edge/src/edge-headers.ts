@@ -1,25 +1,25 @@
 /**
- * City of the original client IP calculated by Vercel Proxy.
+ * City of the original client IP as calculated by Vercel Proxy.
  */
 export const CITY_HEADER_NAME = 'x-vercel-ip-city';
 /**
- * Country of the original client IP calculated by Vercel Proxy.
+ * Country of the original client IP as calculated by Vercel Proxy.
  */
 export const COUNTRY_HEADER_NAME = 'x-vercel-ip-country';
 /**
- * Ip from Vercel Proxy. Do not confuse it with the client Ip.
+ * Client IP as calcualted by Vercel Proxy.
  */
 export const IP_HEADER_NAME = 'x-real-ip';
 /**
- * Latitude of the original client IP calculated by Vercel Proxy.
+ * Latitude of the original client IP as calculated by Vercel Proxy.
  */
 export const LATITUDE_HEADER_NAME = 'x-vercel-ip-latitude';
 /**
- * Longitude of the original client IP calculated by Vercel Proxy.
+ * Longitude of the original client IP as calculated by Vercel Proxy.
  */
 export const LONGITUDE_HEADER_NAME = 'x-vercel-ip-longitude';
 /**
- * Region of the original client IP calculated by Vercel Proxy.
+ * Region of the original client IP as calculated by Vercel Proxy.
  */
 export const REGION_HEADER_NAME = 'x-vercel-ip-country-region';
 
@@ -64,7 +64,7 @@ export function ipAddress(request: Request): string | undefined {
 }
 
 /**
- * Returns the location information from for the incoming request
+ * Returns the location information for the incoming request.
  *
  * @see {@link CITY_HEADER_NAME}
  * @see {@link COUNTRY_HEADER_NAME}
