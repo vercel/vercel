@@ -25,7 +25,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}   Login token
-    -y, --yes                 Skip questions when setting up new project using default scope and settings
+    -y, --yes                 Skip confirmation when connecting a Git provider
 
   ${chalk.dim('Examples:')}
 
@@ -35,7 +35,9 @@ const help = () => {
 
     ${chalk.cyan(`$ ${getPkgName()} git connect`)}
   
-  ${chalk.gray('–')} Connect your Vercel Project to a Git repository using the remote URL
+  ${chalk.gray(
+    '–'
+  )} Connect your Vercel Project to a Git repository using the remote URL
 
     ${chalk.cyan(
       `$ ${getPkgName()} git connect https://github.com/user/repo.git`
