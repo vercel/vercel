@@ -18,7 +18,7 @@ The location information of a given request
 
 • `Optional` **city**: `string`
 
-The city that the request originated from
+The city that the request originated from.
 
 #### Defined in
 
@@ -30,11 +30,11 @@ The city that the request originated from
 
 • `Optional` **country**: `string`
 
-The country that the request originated from
+The country that the request originated from.
 
 #### Defined in
 
-[src/edge-headers.ts:43](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L43)
+[src/edge-headers.ts:44](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L44)
 
 ---
 
@@ -42,11 +42,11 @@ The country that the request originated from
 
 • `Optional` **latitude**: `string`
 
-The latitude of the client
+The latitude of the client.
 
 #### Defined in
 
-[src/edge-headers.ts:47](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L47)
+[src/edge-headers.ts:50](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L50)
 
 ---
 
@@ -54,11 +54,11 @@ The latitude of the client
 
 • `Optional` **longitude**: `string`
 
-The longitude of the client
+The longitude of the client.
 
 #### Defined in
 
-[src/edge-headers.ts:49](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L49)
+[src/edge-headers.ts:53](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L53)
 
 ---
 
@@ -66,8 +66,8 @@ The longitude of the client
 
 • `Optional` **region**: `string`
 
-The Vercel Edge Network region that received the request
+The [Vercel Edge Network region](https://vercel.com/docs/concepts/edge-network/regions) that received the request.
 
 #### Defined in
 
-[src/edge-headers.ts:45](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L45)
+[src/edge-headers.ts:47](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L47)

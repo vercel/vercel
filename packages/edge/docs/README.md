@@ -123,7 +123,7 @@ Returns the location information for the incoming request.
 
 #### Defined in
 
-[src/edge-headers.ts:76](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L76)
+[src/edge-headers.ts:80](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L80)
 
 ---
 
@@ -149,7 +149,7 @@ Returns the IP address of the request from the headers.
 
 #### Defined in
 
-[src/edge-headers.ts:62](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L62)
+[src/edge-headers.ts:66](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L66)
 
 ---
 

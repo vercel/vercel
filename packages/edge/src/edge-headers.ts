@@ -37,15 +37,19 @@ interface Request {
  * The location information of a given request
  */
 export interface Geo {
-  /** The city that the request originated from */
+  /** The city that the request originated from. */
   city?: string;
-  /** The country that the request originated from */
+
+  /** The country that the request originated from. */
   country?: string;
-  /** The Vercel Edge Network region that received the request */
+
+  /** The [Vercel Edge Network region](https://vercel.com/docs/concepts/edge-network/regions) that received the request. */
   region?: string;
-  /** The latitude of the client */
+
+  /** The latitude of the client. */
   latitude?: string;
-  /** The longitude of the client */
+
+  /** The longitude of the client. */
   longitude?: string;
 }
 
