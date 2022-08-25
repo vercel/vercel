@@ -1,0 +1,9 @@
+{
+  "orgId": ".",
+  "projectId": ".",
+  "settings": {
+    "buildCommand": "mkdir -p output && echo 2 > output/index.txt",
+    "outputDirectory": "output",
+    "framework": null
+  }
+}
