@@ -53,6 +53,33 @@ test('[vercel dev] should support edge functions', async () => {
   }
 });
 
+test('[vercel dev] edge functions support WebAssembly files', async () => {
+  const dir = fixture('edge-function');
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      ENV_VAR_IN_EDGE: '1',
+    },
+  });
+
+  try {
+    await readyResolver;
+
+    for (const { number, result } of [
+      { number: 1, result: 2 },
+      { number: 2, result: 3 },
+      { number: 12, result: 13 },
+    ]) {
+      let res = await fetch(
+        `http://localhost:${port}/api/webassembly?number=${number}`
+      );
+      validateResponseHeaders(res);
+      await expect(res.text()).resolves.toEqual(`${number} + 1 = ${result}`);
+    }
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
 test(
   '[vercel dev] edge functions respond properly the same as production',
   testFixtureStdio('edge-function', async (testPath: any) => {
@@ -422,11 +449,7 @@ test('[vercel dev] should maintain query when proxy passing', async () => {
 
 test('[vercel dev] should maintain query when dev server defines routes', async () => {
   const dir = fixture('dev-server-query');
-  const { dev, port, readyResolver } = await testFixture(dir, {
-    env: {
-      VERCEL_DEV_COMMAND: 'next dev --port $PORT',
-    },
-  });
+  const { dev, port, readyResolver } = await testFixture(dir);
 
   try {
     await readyResolver;
@@ -489,11 +512,7 @@ test('[vercel dev] should send `etag` header for static files', async () => {
 
 test('[vercel dev] should frontend dev server and routes', async () => {
   const dir = fixture('dev-server-and-routes');
-  const { dev, port, readyResolver } = await testFixture(dir, {
-    env: {
-      VERCEL_DEV_COMMAND: 'next dev --port $PORT',
-    },
-  });
+  const { dev, port, readyResolver } = await testFixture(dir);
 
   try {
     await readyResolver;
