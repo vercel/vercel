@@ -187,9 +187,9 @@ export default function middleware(_req: Request) {
 
 #### Parameters
 
-| Name    | Type                                                   | Description              |
-| :------ | :----------------------------------------------------- | :----------------------- |
-| `init?` | [`ExtraResponseInit`](interfaces/ExtraResponseInit.md) | options for the response |
+| Name    | Type                                                   | Description                         |
+| :------ | :----------------------------------------------------- | :---------------------------------- |
+| `init?` | [`ExtraResponseInit`](interfaces/ExtraResponseInit.md) | Additional options for the response |
 
 #### Returns
 
@@ -248,10 +248,10 @@ export const config = { matcher: '/api/users/:path*' };
 
 #### Parameters
 
-| Name          | Type                                                                      | Description                       |
-| :------------ | :------------------------------------------------------------------------ | :-------------------------------- |
-| `destination` | `string` \| [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL) | new URL to rewrite the request to |
-| `init?`       | [`ExtraResponseInit`](interfaces/ExtraResponseInit.md)                    | options for the response          |
+| Name          | Type                                                                      | Description                         |
+| :------------ | :------------------------------------------------------------------------ | :---------------------------------- |
+| `destination` | `string` \| [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL) | new URL to rewrite the request to   |
+| `init?`       | [`ExtraResponseInit`](interfaces/ExtraResponseInit.md)                    | Additional options for the response |
 
 #### Returns
 
