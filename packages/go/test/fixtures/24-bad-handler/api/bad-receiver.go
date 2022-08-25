@@ -26,7 +26,7 @@ func (s Servers) Handler(w http.ResponseWriter, r *http.Request) {
 }
 
 // this handler will be found because it has the correct function signature
-func GoodHandler_api_bad_receiver_go(w http.ResponseWriter, r *http.Request) {
+func GoodHandler(w http.ResponseWriter, r *http.Request) {
 	server := Servers{"some/path"}
 
 	// this occurence of "Handler" should not be renamed
