@@ -6,7 +6,6 @@ import parseListen from '../../util/dev/parse-listen';
 import { ProjectEnvVariable } from '../../types';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
-import { getFrameworks } from '../../util/get-frameworks';
 import { ProjectSettings } from '../../types';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import setupAndLink from '../../util/link/setup-and-link';
@@ -31,10 +30,7 @@ export default async function dev(
   const listen = parseListen(opts['--listen'] || '3000');
 
   // retrieve dev command
-  let [link, frameworks] = await Promise.all([
-    getLinkedProject(client, cwd),
-    getFrameworks(client),
-  ]);
+  let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     link = await setupAndLink(client, cwd, {
@@ -60,7 +56,6 @@ export default async function dev(
     return link.exitCode;
   }
 
-  let devCommand: string | undefined;
   let projectSettings: ProjectSettings | undefined;
   let projectEnvs: ProjectEnvVariable[] = [];
   let systemEnvValues: string[] = [];
@@ -69,19 +64,6 @@ export default async function dev(
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
-
-    if (project.devCommand) {
-      devCommand = project.devCommand;
-    } else if (project.framework) {
-      const framework = frameworks.find(f => f.slug === project.framework);
-
-      if (framework) {
-        const defaults = framework.settings.devCommand.value;
-        if (defaults) {
-          devCommand = defaults;
-        }
-      }
-    }
 
     if (project.rootDirectory) {
       cwd = join(cwd, project.rootDirectory);
@@ -95,30 +77,23 @@ export default async function dev(
     ]);
   }
 
-  // This is just for tests - can be removed once project settings
-  // are respected locally in `.vercel/project.json`
-  if (process.env.VERCEL_DEV_COMMAND) {
-    devCommand = process.env.VERCEL_DEV_COMMAND;
-  }
+  const devServer = new DevServer(cwd, {
+    output,
+    projectSettings,
+    projectEnvs,
+    systemEnvValues,
+  });
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by
   // @vercel/static-build in BuildOutputV3.getBuildOutputDirectory()
-  if (!devCommand) {
+  if (!devServer.devCommand) {
     const outputDir = join(cwd, OUTPUT_DIR);
     if (await fs.pathExists(outputDir)) {
       output.log(`Removing ${OUTPUT_DIR}`);
       await fs.remove(outputDir);
     }
   }
-
-  const devServer = new DevServer(cwd, {
-    output,
-    devCommand,
-    projectSettings,
-    projectEnvs,
-    systemEnvValues,
-  });
 
   await devServer.start(...listen);
 }

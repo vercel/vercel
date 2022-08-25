@@ -539,3 +539,40 @@ test(
     );
   })
 );
+
+test(
+  '[vercel dev] restarts dev process when `devCommand` setting is modified',
+  testFixtureStdio(
+    'project-settings-override',
+    async (_testPath: any, port: any) => {
+      const directory = fixture('project-settings-override');
+      const vercelJsonPath = join(directory, 'vercel.json');
+      const originalVercelJson = await fs.readJSON(vercelJsonPath);
+
+      try {
+        const originalResponse = await fetch(
+          `http://localhost:${port}/index.txt`
+        );
+        validateResponseHeaders(originalResponse);
+        const body = await originalResponse.text();
+        expect(body.trim()).toEqual('This is the original');
+        expect(originalResponse.status).toBe(200);
+
+        await fs.writeJSON(vercelJsonPath, {
+          devCommand: 'serve -p $PORT overridden',
+        });
+
+        const overriddenResponse = await fetch(
+          `http://localhost:${port}/index.txt`
+        );
+        validateResponseHeaders(overriddenResponse);
+        const body2 = await overriddenResponse.text();
+        expect(body2.trim()).toEqual('This is the overridden!');
+        expect(overriddenResponse.status).toBe(200);
+      } finally {
+        await fs.writeJSON(vercelJsonPath, originalVercelJson);
+      }
+    },
+    { skipDeploy: true }
+  )
+);
