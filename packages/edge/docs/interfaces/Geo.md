@@ -1,6 +1,6 @@
 # Interface: Geo
 
-The location information of a given request
+The location information of a given request.
 
 ## Table of contents
 

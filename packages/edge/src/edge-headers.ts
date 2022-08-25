@@ -34,7 +34,7 @@ interface Request {
 }
 
 /**
- * The location information of a given request
+ * The location information of a given request.
  */
 export interface Geo {
   /** The city that the request originated from. */
