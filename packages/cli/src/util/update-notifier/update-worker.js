@@ -21,10 +21,7 @@ process.on('unhandledRejection', err => {
 });
 
 // this timer will prevent this worker process from running longer than 10s
-const timer = setTimeout(() => {
-  console.error('Update worker timed out, exiting');
-  process.exit(1);
-}, 10000);
+const timer = setTimeout(() => process.exit(1), 10000);
 
 // wait for the parent to give us the work payload
 process.once('message', async msg => {
