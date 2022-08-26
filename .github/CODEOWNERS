@@ -6,6 +6,7 @@
 /packages/cli/src/commands/domains       @mglagola @anatrajkovska
 /packages/cli/src/commands/certs         @mglagola @anatrajkovska
 /packages/cli/src/commands/env           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood
+/packages/fs-detectors                   @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @agadzik @chloetedder
 /packages/middleware                     @gdborton @javivelasco @Schniz
 /packages/node-bridge                    @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
 /packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
