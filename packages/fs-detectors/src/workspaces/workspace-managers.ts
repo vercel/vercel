@@ -59,6 +59,19 @@ export const workspaceManagers: Array<
       ],
     },
   },
+  {
+    name: 'default',
+    slug: 'npm',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"workspaces":\\s*(?:\\[[^\\]]*]|{[^}]*"packages":[^}]*})',
+        },
+      ],
+    },
+  },
 ];
 
 export default workspaceManagers;
