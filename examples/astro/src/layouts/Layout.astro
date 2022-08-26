@@ -14,6 +14,19 @@ const { title } = Astro.props as Props;
 		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
+    <script>
+      import { webVitals } from "../lib/vitals";
+
+      let analyticsId = import.meta.env.PUBLIC_VERCEL_ANALYTICS_ID;
+
+      if (analyticsId) {
+        webVitals({
+          path: location.pathname,
+          params: location.search,
+          analyticsId,
+        });
+      }
+    </script>
 	</head>
 	<body>
 		<slot />

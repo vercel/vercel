@@ -8,6 +8,7 @@
     "astro": "astro"
   },
   "devDependencies": {
-    "astro": "^1.0.0-rc.8"
+    "astro": "^1.0.0-rc.8",
+    "web-vitals": "^3.0.0"
   }
 }
