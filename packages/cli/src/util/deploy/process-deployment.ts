@@ -1,5 +1,4 @@
 import bytes from 'bytes';
-import Progress from 'progress';
 import chalk from 'chalk';
 import {
   ArchiveFormat,
@@ -8,6 +7,7 @@ import {
   VercelClientOptions,
 } from '@vercel/client';
 import { Output } from '../output';
+import { progress } from '../output/progress';
 import Now from '../../util';
 import { Org } from '../../types';
 import ua from '../ua';
@@ -68,7 +68,6 @@ export default async function processDeployment({
   } = args;
 
   const { debug } = output;
-  let bar: Progress | null = null;
 
   const { env = {} } = requestBody;
 
@@ -114,32 +113,28 @@ export default async function processDeployment({
         const missingSize = missing
           .map((sha: string) => total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
-
-        output.stopSpinner();
-        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
-          width: 20,
-          complete: '=',
-          incomplete: '',
-          total: missingSize,
-          clear: true,
-        });
-
-        bar.tick(0);
+        const totalSizeHuman = bytes.format(missingSize, { decimalPlaces: 1 });
 
         uploads.forEach((e: any) =>
           e.on('progress', () => {
-            if (!bar) return;
-
-            const totalBytesUploaded = uploads.reduce((acc: number, e: any) => {
+            const uploadedBytes = uploads.reduce((acc: number, e: any) => {
               return acc + e.bytesUploaded;
             }, 0);
-            // set the current progress bar value
-            bar.curr = totalBytesUploaded;
-            // trigger rendering
-            bar.tick(0);
 
-            if (bar.complete) {
+            const bar = progress(uploadedBytes, missingSize);
+            if (!bar || uploadedBytes === missingSize) {
               output.spinner(deployingSpinnerVal, 0);
+            } else {
+              const uploadedHuman = bytes.format(uploadedBytes, {
+                decimalPlaces: 1,
+                fixedDecimals: true,
+              });
+              output.spinner(
+                `Uploading ${chalk.reset(
+                  `[${bar}] (${uploadedHuman}/${totalSizeHuman})`
+                )}`,
+                0
+              );
             }
           })
         );
@@ -154,10 +149,6 @@ export default async function processDeployment({
       }
 
       if (event.type === 'created') {
-        if (bar && !bar.complete) {
-          bar.tick(bar.total + 1);
-        }
-
         await linkFolderToProject(
           output,
           cwd || paths[0],
