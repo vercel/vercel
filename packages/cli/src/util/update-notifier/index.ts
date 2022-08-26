@@ -60,7 +60,7 @@ export default async function updateNotifier({
       // signal the worker to fetch the latest version
 
       // we need to find the update worker script since the location is
-      // different based on production vs tests because
+      // different based on production vs tests
       let dir = dirname(__filename);
       let script = resolvePath(dir, 'dist', 'update-worker.js');
       const { root } = parsePath(dir);
@@ -83,8 +83,9 @@ export default async function updateNotifier({
       });
 
       // we allow the child 2 seconds to let us know it's ready before we give up
-      const timer = setTimeout(() => {
+      const workerReadyTimer = setTimeout(() => {
         worker.kill();
+        output?.debug('Update worker script timed out, terminating');
         resolve();
       }, 2000);
 
@@ -98,7 +99,7 @@ export default async function updateNotifier({
 
       // wait for the worker to start and notify us it is ready
       worker.once('message', () => {
-        clearTimeout(timer);
+        clearTimeout(workerReadyTimer);
 
         // tell the worker to check the latest version
         worker.send({
