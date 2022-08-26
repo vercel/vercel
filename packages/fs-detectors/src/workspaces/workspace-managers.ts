@@ -61,7 +61,7 @@ export const workspaceManagers: Array<
   },
   {
     name: 'default',
-    slug: 'npm',
+    slug: 'yarn',
     detectors: {
       every: [
         {

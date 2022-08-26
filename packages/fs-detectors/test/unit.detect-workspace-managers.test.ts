@@ -11,7 +11,7 @@ describe('workspace-managers', () => {
     ['25-multiple-lock-files-yarn', 'yarn'],
     ['26-multiple-lock-files-pnpm', 'pnpm'],
     ['22-pnpm', null],
-    ['38-workspaces-no-lock-file', 'npm'],
+    ['38-workspaces-no-lock-file', 'yarn'],
   ])('with detectFramework', (fixturePath, frameworkSlug) => {
     const testName = frameworkSlug
       ? `should detect a ${frameworkSlug} workspace for ${fixturePath}`
