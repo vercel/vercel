@@ -118,7 +118,7 @@ export default async function processDeployment({
         const progressOpts = {
           width: 20,
           complete: '=',
-          incomplete: ' ',
+          incomplete: '-',
         };
 
         uploads.forEach((e: any) =>
