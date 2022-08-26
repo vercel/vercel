@@ -127,10 +127,10 @@ export default async function processDeployment({
               return acc + e.bytesUploaded;
             }, 0);
 
-            if (uploadedBytes === missingSize) {
+            const bar = progress(uploadedBytes, missingSize, progressOpts);
+            if (!bar || uploadedBytes === missingSize) {
               output.spinner(deployingSpinnerVal, 0);
             } else {
-              const bar = progress(uploadedBytes, missingSize, progressOpts);
               const uploadedHuman = bytes.format(uploadedBytes, {
                 decimalPlaces: 1,
                 fixedDecimals: true,
