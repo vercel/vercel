@@ -1,5 +1,5 @@
 {
-  "name": "nextjs",
+  "name": "nextjs-src-dir",
   "license": "MIT",
   "scripts": {
     "dev": "next",
