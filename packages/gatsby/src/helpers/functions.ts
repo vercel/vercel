@@ -1,6 +1,4 @@
 import { join, sep } from 'path';
-import { IGatsbyFunction } from 'gatsby/dist/redux/types';
-
 import {
   getFunctionLibsFiles,
   getFunctionHTMLFiles,
@@ -8,6 +6,7 @@ import {
 } from '../handlers/build';
 import {
   FileBlob,
+  FileFsRef,
   NodejsLambda,
   NodeVersion,
   Prerender,
@@ -40,7 +39,7 @@ export async function createServerlessFunction({
   dsgRoutes: string[];
   ssrRoutes: string[];
   nodeVersion: NodeVersion;
-}) {
+}): Promise<Record<string, NodejsLambda>> {
   const lambda = await createFunctionLambda({
     nodeVersion,
     handlerFile: join(
@@ -79,16 +78,14 @@ export async function createAPIRoutes({
   functions,
   nodeVersion,
 }: {
-  functions: IGatsbyFunction[];
+  functions: Record<string, FileFsRef>;
   nodeVersion: NodeVersion;
-}) {
-  return functions.reduce(async (acc, cur) => {
-    const handlerFile = cur.originalAbsoluteFilePath;
-
-    acc[cur.functionRoute] = new FileBlob({
+}): Promise<Record<string, FileBlob>> {
+  return Object.entries(functions).reduce(async (acc, [key, { fsPath }]) => {
+    acc[key] = new FileBlob({
       data: await getHandler({
         nodeVersion,
-        handlerFile,
+        handlerFile: fsPath,
       }),
     });
 

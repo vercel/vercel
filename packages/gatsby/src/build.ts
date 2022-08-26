@@ -11,6 +11,7 @@ import {
   scanParentDirs,
   BuildV3,
   PackageJson,
+  glob,
 } from '@vercel/build-utils';
 import {
   createAPIRoutes,
@@ -18,7 +19,7 @@ import {
   createServerlessFunction,
 } from './helpers/functions';
 import { createStaticOutput } from './helpers/static';
-import { getTransformedRoutes } from '@vercel/routing-utils';
+import { getTransformedRoutes, Rewrite } from '@vercel/routing-utils';
 import type { IGatsbyPage, IGatsbyState } from 'gatsby/dist/redux/types';
 
 function hasScript(scriptName: string, pkg: PackageJson | null) {
@@ -122,8 +123,11 @@ export const build: BuildV3 = async ({
   }
 
   const { store } = require('gatsby/dist/redux');
-  const { pages, redirects, functions } =
-    (await store.getState()) as IGatsbyState;
+  const { pages } = store.getState() as IGatsbyState;
+  const vercelConfig = await readConfigFile<{
+    redirects?: [];
+    rewrites?: [];
+  }>(join(entrypointFsDirname, 'vercel.json'));
 
   const { ssrRoutes, dsgRoutes } = [...pages.values()].reduce(
     (acc, cur: IGatsbyPage) => {
@@ -143,17 +147,14 @@ export const build: BuildV3 = async ({
 
   const { routes } = getTransformedRoutes({
     trailingSlash: false,
-    redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
-      source: fromPath,
-      destination: toPath,
-      permanent: isPermanent,
-    })),
     rewrites: [
       {
         source: '^/page-data(?:/(.*))/page-data\\.json$',
         destination: '/_page-data',
       },
+      ...(vercelConfig?.rewrites as Rewrite[]),
     ],
+    redirects: vercelConfig?.redirects,
   });
 
   return {
@@ -166,7 +167,10 @@ export const build: BuildV3 = async ({
         dsgRoutes,
         nodeVersion,
       })),
-      ...(await createAPIRoutes({ functions, nodeVersion })),
+      ...(await createAPIRoutes({
+        functions: await glob('**', join(process.cwd(), 'src', 'api')),
+        nodeVersion,
+      })),
       'page-data': await createFunctionLambda({
         nodeVersion,
         handlerFile: join(
