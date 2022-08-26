@@ -6,6 +6,10 @@ This error occurs when your application is not configured for Serverless Next.js
 
 #### Possible Ways to Fix It
 
+:bulb: Remove  `now.json` file (or rename the file to save it as backup) and run your build.
+
+If removing `now.json` doesn't work, proceed to try the steps below.
+
 In order to create the smallest possible lambdas Next.js has to be configured to build for the `serverless` target.
 
 1. Serverless Next.js requires Next.js 8 or later, to upgrade you can install the `latest` version:
