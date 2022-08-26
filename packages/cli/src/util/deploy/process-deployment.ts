@@ -115,19 +115,13 @@ export default async function processDeployment({
           .reduce((a: number, b: number) => a + b, 0);
         const totalSizeHuman = bytes.format(missingSize, { decimalPlaces: 1 });
 
-        const progressOpts = {
-          width: 20,
-          complete: '=',
-          incomplete: '-',
-        };
-
         uploads.forEach((e: any) =>
           e.on('progress', () => {
             const uploadedBytes = uploads.reduce((acc: number, e: any) => {
               return acc + e.bytesUploaded;
             }, 0);
 
-            const bar = progress(uploadedBytes, missingSize, progressOpts);
+            const bar = progress(uploadedBytes, missingSize);
             if (!bar || uploadedBytes === missingSize) {
               output.spinner(deployingSpinnerVal, 0);
             } else {
