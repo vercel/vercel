@@ -24,9 +24,12 @@ test('docs are up to date', async () => {
     .trim();
 
   if (lines !== '') {
+    const diff = await execAsync(`git diff docs`, { cwd, encoding: 'utf8' });
     throw new Error(
       'Docs are not up to date. Please re-run `yarn build:docs` to re-generate them.\nChanges:\n' +
-        lines
+        lines +
+        '\n\n' +
+        diff.stdout
     );
   }
 
