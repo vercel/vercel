@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import path from 'path';
 
 const execAsync = promisify(exec);
+const test = process.platform === 'win32' ? it.skip : it;
 
 test('docs are up to date', async () => {
   const cwd = path.resolve(__dirname, '../');
@@ -32,8 +33,6 @@ test('docs are up to date', async () => {
         diff.stdout
     );
   }
-
-  expect(1).toEqual(1);
 
   expect(result.stdout.trim()).toEqual('');
 }, 120000);
