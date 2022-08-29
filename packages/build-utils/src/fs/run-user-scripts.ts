@@ -183,7 +183,8 @@ export async function getNodeBinPath({
   cwd: string;
 }): Promise<string> {
   const { lockfilePath } = await scanParentDirs(cwd);
-  return lockfilePath || path.join(cwd, 'node_modules', '.bin');
+  const dir = path.dirname(lockfilePath || cwd);
+  return path.join(dir, 'node_modules', '.bin');
 }
 
 async function chmodPlusX(fsPath: string) {
