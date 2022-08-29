@@ -188,7 +188,7 @@ async function parseGoVersion(modulePath: string): Promise<string> {
     } else {
       console.log(`Warning: Unknown Go version in ${file}`);
     }
-  } catch (err) {
+  } catch (err: any) {
     if (err.code === 'ENOENT') {
       debug(`File not found: ${file}`);
     } else {

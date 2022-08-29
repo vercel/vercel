@@ -118,7 +118,7 @@ async function getMiddleware(
     if (manifest.pages['_middleware.js'].runtime !== 'web') {
       return;
     }
-  } catch (error) {
+  } catch (error: any) {
     if (error.code !== 'ENOENT') throw error;
     return;
   }

@@ -10,7 +10,8 @@ export const isFailed = ({
 }: Deployment | DeploymentBuild): boolean =>
   readyState
     ? readyState.endsWith('_ERROR') || readyState === 'ERROR'
-    : (state && state.endsWith('_ERROR')) || state === 'ERROR';
+    : (typeof state === 'string' && (state as string).endsWith('_ERROR')) ||
+      state === 'ERROR';
 export const isDone = (
   buildOrDeployment: Deployment | DeploymentBuild
 ): boolean => isReady(buildOrDeployment) || isFailed(buildOrDeployment);

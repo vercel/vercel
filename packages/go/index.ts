@@ -521,7 +521,7 @@ export async function build({
         undoDirectoryCreation,
         undoFunctionRenames
       );
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Build cleanup failed: ${error.message}`);
       debug('Cleanup Error: ' + error);
     }
@@ -771,7 +771,7 @@ async function waitForPortFile_(opts: {
         console.error('Could not delete port file: %j: %s', opts.portFile, err);
       });
       return { port };
-    } catch (err) {
+    } catch (err: any) {
       if (err.code !== 'ENOENT') {
         throw err;
       }
