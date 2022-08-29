@@ -1,25 +1,25 @@
 /**
- * City of the original client IP calculated by Vercel Proxy.
+ * City of the original client IP as calculated by Vercel Proxy.
  */
 export const CITY_HEADER_NAME = 'x-vercel-ip-city';
 /**
- * Country of the original client IP calculated by Vercel Proxy.
+ * Country of the original client IP as calculated by Vercel Proxy.
  */
 export const COUNTRY_HEADER_NAME = 'x-vercel-ip-country';
 /**
- * Ip from Vercel Proxy. Do not confuse it with the client Ip.
+ * Client IP as calcualted by Vercel Proxy.
  */
 export const IP_HEADER_NAME = 'x-real-ip';
 /**
- * Latitude of the original client IP calculated by Vercel Proxy.
+ * Latitude of the original client IP as calculated by Vercel Proxy.
  */
 export const LATITUDE_HEADER_NAME = 'x-vercel-ip-latitude';
 /**
- * Longitude of the original client IP calculated by Vercel Proxy.
+ * Longitude of the original client IP as calculated by Vercel Proxy.
  */
 export const LONGITUDE_HEADER_NAME = 'x-vercel-ip-longitude';
 /**
- * Region of the original client IP calculated by Vercel Proxy.
+ * Region of the original client IP as calculated by Vercel Proxy.
  */
 export const REGION_HEADER_NAME = 'x-vercel-ip-country-region';
 
@@ -34,18 +34,22 @@ interface Request {
 }
 
 /**
- * The location information of a given request
+ * The location information of a given request.
  */
 export interface Geo {
-  /** The city that the request originated from */
+  /** The city that the request originated from. */
   city?: string;
-  /** The country that the request originated from */
+
+  /** The country that the request originated from. */
   country?: string;
-  /** The Vercel Edge Network region that received the request */
+
+  /** The [Vercel Edge Network region](https://vercel.com/docs/concepts/edge-network/regions) that received the request. */
   region?: string;
-  /** The latitude of the client */
+
+  /** The latitude of the client. */
   latitude?: string;
-  /** The longitude of the client */
+
+  /** The longitude of the client. */
   longitude?: string;
 }
 
@@ -57,19 +61,21 @@ function getHeader(request: Request, key: string): string | undefined {
  * Returns the IP address of the request from the headers.
  *
  * @see {@link IP_HEADER_NAME}
+ * @param request The incoming request object which provides the IP
  */
 export function ipAddress(request: Request): string | undefined {
   return getHeader(request, IP_HEADER_NAME);
 }
 
 /**
- * Returns the location information from for the incoming request
+ * Returns the location information for the incoming request.
  *
  * @see {@link CITY_HEADER_NAME}
  * @see {@link COUNTRY_HEADER_NAME}
  * @see {@link REGION_HEADER_NAME}
  * @see {@link LATITUDE_HEADER_NAME}
  * @see {@link LONGITUDE_HEADER_NAME}
+ * @param request The incoming request object which provides the geolocation data
  */
 export function geolocation(request: Request): Geo {
   return {
