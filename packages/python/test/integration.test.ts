@@ -87,10 +87,8 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     it(`should fail to build ${fixture}`, async () => {
       try {
         await testDeployment(path.join(fixturesPath, fixture));
-      } catch (err) {
-        expect(err).toBeTruthy();
-        expect(err.deployment).toBeTruthy();
-        expect(err.deployment.errorMessage).toBe(errMsg);
+      } catch (err: any) {
+        expect(err?.deployment?.errorMessage).toBe(errMsg);
       }
     });
     continue; //eslint-disable-line
