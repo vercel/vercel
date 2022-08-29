@@ -30,15 +30,14 @@ describe('Test `getPlatformEnv()`', () => {
       process.env.NOW_FOO = 'bar';
       process.env.VERCEL_FOO = 'baz';
       getPlatformEnv('FOO');
-    } catch (_err) {
+    } catch (_err: any) {
       err = _err;
     } finally {
       delete process.env.NOW_FOO;
       delete process.env.VERCEL_FOO;
     }
-    assert(err);
     assert.equal(
-      err!.message,
+      err?.message,
       'Both "VERCEL_FOO" and "NOW_FOO" env vars are defined. Please only define the "VERCEL_FOO" env var.'
     );
   });
