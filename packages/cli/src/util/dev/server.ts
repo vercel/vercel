@@ -1,4 +1,3 @@
-import ms from 'ms';
 import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
@@ -62,11 +61,6 @@ import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
-import {
-  installBuilders,
-  updateBuilders,
-  builderDirPromise,
-} from './builder-cache';
 
 // HTML templates
 import errorTemplate from './templates/error';
@@ -475,33 +469,6 @@ export default class DevServer {
         return sortBuilders(matchA[1] as Builder, matchB[1] as Builder);
       })
     );
-  }
-
-  async invalidateBuildMatches(
-    vercelConfig: VercelConfig,
-    updatedBuilders: string[]
-  ): Promise<void> {
-    if (updatedBuilders.length === 0) {
-      this.output.debug('No builders were updated');
-      return;
-    }
-
-    // Delete any build matches that have the old builder required already
-    for (const buildMatch of this.buildMatches.values()) {
-      const {
-        src,
-        builderWithPkg: { package: pkg },
-      } = buildMatch;
-      if (isOfficialRuntime('static', pkg.name)) continue;
-      if (pkg.name && updatedBuilders.includes(pkg.name)) {
-        shutdownBuilder(buildMatch, this.output);
-        this.buildMatches.delete(src);
-        this.output.debug(`Invalidated build match for "${src}"`);
-      }
-    }
-
-    // Re-add the build matches that were just removed, but with the new builder
-    await this.updateBuildMatches(vercelConfig);
   }
 
   async getLocalEnv(fileName: string, base?: Env): Promise<Env> {
@@ -934,29 +901,7 @@ export default class DevServer {
       }
     }
 
-    const builders = new Set<string>(
-      (vercelConfig.builds || [])
-        .filter((b: Builder) => b.use)
-        .map((b: Builder) => b.use)
-    );
-
-    await installBuilders(builders, this.output);
     await this.updateBuildMatches(vercelConfig, true);
-
-    // Updating builders happens lazily, and any builders that were updated
-    // get their "build matches" invalidated so that the new version is used.
-    this.updateBuildersTimeout = setTimeout(() => {
-      this.updateBuildersPromise = updateBuilders(builders, this.output)
-        .then(updatedBuilders => {
-          this.updateBuildersPromise = null;
-          this.invalidateBuildMatches(vercelConfig, updatedBuilders);
-        })
-        .catch(err => {
-          this.updateBuildersPromise = null;
-          this.output.prettyError(err);
-          this.output.debug(err.stack);
-        });
-    }, ms('30s'));
 
     // Builders that do not define a `shouldServe()` function need to be
     // executed at boot-up time in order to get the initial assets and/or routes
@@ -1063,9 +1008,6 @@ export default class DevServer {
     for (const pid of this.devServerPids) {
       ops.push(this.killBuilderDevServer(pid));
     }
-
-    // Ensure that the builders module cache is created
-    ops.push(builderDirPromise);
 
     try {
       await Promise.all(ops);
@@ -1465,8 +1407,9 @@ export default class DevServer {
       // the middleware server for every HTTP request?
       const { envConfigs, files, devCacheDir, cwd: workPath } = this;
       try {
-        startMiddlewareResult =
-          await middleware.builderWithPkg.builder.startDevServer?.({
+        const { builder } = middleware.builderWithPkg;
+        if (builder.version === 3) {
+          startMiddlewareResult = await builder.startDevServer?.({
             files,
             entrypoint: middleware.entrypoint,
             workPath,
@@ -1480,6 +1423,7 @@ export default class DevServer {
               buildEnv: { ...envConfigs.buildEnv },
             },
           });
+        }
 
         if (startMiddlewareResult) {
           const { port, pid } = startMiddlewareResult;
@@ -1869,8 +1813,8 @@ export default class DevServer {
     // up a single-serve dev HTTP server that vercel dev will proxy this HTTP request
     // to. Once the proxied request is finished, vercel dev shuts down the dev
     // server child process.
-    const { builder, package: builderPkg } = match.builderWithPkg;
-    if (typeof builder.startDevServer === 'function') {
+    const { builder, pkg: builderPkg } = match.builderWithPkg;
+    if (builder.version === 3 && typeof builder.startDevServer === 'function') {
       let devServerResult: StartDevServerResult = null;
       try {
         const { envConfigs, files, devCacheDir, cwd: workPath } = this;
@@ -2490,7 +2434,10 @@ async function shouldServe(
   ) {
     // Mimic fmeta-util and convert trailingSlash
     return true;
-  } else if (typeof builder.shouldServe === 'function') {
+  } else if (
+    builder.version === 3 &&
+    typeof builder.shouldServe === 'function'
+  ) {
     const shouldServe = await builder.shouldServe({
       entrypoint: src,
       files,
@@ -2613,7 +2560,7 @@ function fileRemoved(
 
 function needsBlockingBuild(buildMatch: BuildMatch): boolean {
   const { builder } = buildMatch.builderWithPkg;
-  return typeof builder.shouldServe !== 'function';
+  return builder.version !== 3 || typeof builder.shouldServe !== 'function';
 }
 
 async function checkForPort(port: number, timeout: number): Promise<void> {

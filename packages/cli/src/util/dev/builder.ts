@@ -15,7 +15,7 @@ import {
   FileFsRef,
   normalizePath,
 } from '@vercel/build-utils';
-import { isOfficialRuntime } from '@vercel/fs-detectors';
+import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 
@@ -26,7 +26,7 @@ import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
 
 import DevServer from './server';
-import { getBuilder } from './builder-cache';
+//import { getBuilder } from './builder-cache';
 import {
   VercelConfig,
   BuildMatch,
@@ -41,6 +41,7 @@ import {
 import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
 import { getTitleName } from '../pkg-name';
+import { importBuilders } from '../build/import-builders';
 
 interface BuildMessage {
   type: string;
@@ -108,18 +109,18 @@ export async function executeBuild(
   filesRemoved?: string[]
 ): Promise<void> {
   const {
-    builderWithPkg: { runInProcess, requirePath, builder, package: pkg },
+    builderWithPkg: { path: requirePath, builder, pkg },
   } = match;
-  const { entrypoint } = match;
+  const { entrypoint, use } = match;
+  const isStatic = isStaticRuntime(use);
   const { envConfigs, cwd: workPath, devCacheDir } = devServer;
   const debug = devServer.output.isDebugEnabled();
 
   const startTime = Date.now();
-  const showBuildTimestamp =
-    !isOfficialRuntime('static', match.use) && (!isInitialBuild || debug);
+  const showBuildTimestamp = !isStatic && (!isInitialBuild || debug);
 
   if (showBuildTimestamp) {
-    devServer.output.log(`Building ${match.use}:${entrypoint}`);
+    devServer.output.log(`Building ${use}:${entrypoint}`);
     devServer.output.debug(
       `Using \`${pkg.name}${pkg.version ? `@${pkg.version}` : ''}\``
     );
@@ -130,7 +131,7 @@ export async function executeBuild(
   let result: BuildResult;
 
   let { buildProcess } = match;
-  if (!runInProcess && !buildProcess) {
+  if (!isStatic && !buildProcess) {
     buildProcess = await createBuildProcess(
       match,
       envConfigs,
@@ -158,7 +159,7 @@ export async function executeBuild(
     },
   };
 
-  let buildResultOrOutputs: BuilderOutputs | BuildResult | BuildResultV3;
+  let buildResultOrOutputs;
   if (buildProcess) {
     buildProcess.send({
       type: 'build',
@@ -198,18 +199,15 @@ export async function executeBuild(
   }
 
   // Sort out build result to builder v2 shape
-  if (!builder.version || builder.version === 1) {
-    // `BuilderOutputs` map was returned (Now Builder v1 behavior)
-    result = {
-      output: buildResultOrOutputs as BuilderOutputs,
-      routes: [],
-      watch: [],
-      distPath:
-        typeof buildResultOrOutputs.distPath === 'string'
-          ? buildResultOrOutputs.distPath
-          : undefined,
-    };
-  } else if (builder.version === 2) {
+  //if (!builder.version || builder.version === 1) {
+  //  // `BuilderOutputs` map was returned (Now Builder v1 behavior)
+  //  result = {
+  //    output: buildResultOrOutputs as BuilderOutputs,
+  //    routes: [],
+  //    watch: [],
+  //  };
+  //} else if (builder.version === 2) {
+  if (builder.version === 2) {
     result = buildResultOrOutputs as BuildResult;
   } else if (builder.version === 3) {
     const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
@@ -253,7 +251,7 @@ export async function executeBuild(
   } else {
     throw new Error(
       `${getTitleName()} CLI does not support builder version ${
-        builder.version
+        (builder as any).version
       }.\nPlease run \`${await getUpdateCommand()}\` to update to the latest CLI.`
     );
   }
@@ -383,7 +381,7 @@ export async function executeBuild(
   if (showBuildTimestamp) {
     const endTime = Date.now();
     devServer.output.log(
-      `Built ${match.use}:${entrypoint} [${ms(endTime - startTime)}]`
+      `Built ${use}:${entrypoint} [${ms(endTime - startTime)}]`
     );
   }
 }
@@ -405,6 +403,8 @@ export async function getBuildMatches(
 
   const noMatches: Builder[] = [];
   const builds = vercelConfig.builds || [{ src: '**', use: '@vercel/static' }];
+  const builderSpecs = new Set(builds.map(b => b.use).filter(Boolean));
+  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
 
   for (const buildConfig of builds) {
     let { src = '**', use, config = {} } = buildConfig;
@@ -447,7 +447,11 @@ export async function getBuildMatches(
         }
       }
 
-      const builderWithPkg = await getBuilder(use, output);
+      const builderWithPkg = buildersWithPkgs.get(use);
+      if (!builderWithPkg) {
+        throw new Error(`Failed to load Builder "${use}"`);
+      }
+
       matches.push({
         ...buildConfig,
         src,
