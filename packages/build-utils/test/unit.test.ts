@@ -501,6 +501,7 @@ it('should return lockfileVersion 2 with npm7', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'package-lock.json'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -509,6 +510,7 @@ it('should not return lockfileVersion with yarn', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
   expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'yarn.lock'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -517,6 +519,7 @@ it('should return lockfileVersion 1 with older versions of npm', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(1);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'package-lock.json'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -525,6 +528,9 @@ it('should detect npm Workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+  expect(result.lockfilePath).toEqual(
+    path.join(fixture, '..', 'package-lock.json')
+  );
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -533,6 +539,7 @@ it('should detect pnpm without workspace', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'pnpm-lock.yaml'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -541,6 +548,9 @@ it('should detect pnpm with workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.lockfilePath).toEqual(
+    path.join(fixture, '..', 'pnpm-lock.yaml')
+  );
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -552,6 +562,7 @@ it('should detect package.json in nested backend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
   expect(result.lockfileVersion).toEqual(undefined);
+  // There is no lockfile but this test will pick up vercel/vercel/yarn.lock
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -563,6 +574,7 @@ it('should detect package.json in nested frontend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
   expect(result.lockfileVersion).toEqual(undefined);
+  // There is no lockfile but this test will pick up vercel/vercel/yarn.lock
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
