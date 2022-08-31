@@ -160,6 +160,17 @@ describe('DetectorFilesystem', () => {
     ]);
   });
 
+  it('should be able to write files', async () => {
+    const files = {};
+    const fs = new VirtualFilesystem(files);
+
+    fs.writeFile('file.txt', 'Hello World');
+
+    expect(await fs.readFile('file.txt')).toEqual(Buffer.from('Hello World'));
+    expect(await fs.hasPath('file.txt')).toBe(true);
+    expect(await fs.isFile('file.txt')).toBe(true);
+  });
+
   it('should be able to change directories', async () => {
     const nextPackageJson = JSON.stringify({
       dependencies: {
