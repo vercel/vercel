@@ -205,7 +205,12 @@ async function compileUserCode(
           let response = await edgeHandler(event.request, event);
 
           if (!response) {
-            throw new Error('Edge Function "${entrypointLabel}" did not return a response.');
+            // allow empty responses to pass through
+            response = new Response(null, {
+              headers: {
+                'x-middleware-next': '1',
+              },
+            });
           }
 
           return event.respondWith(response);
@@ -216,7 +221,7 @@ async function compileUserCode(
             ? (error.message + ': ' + (error.cause.message || error.cause))
             : error.message;
           event.respondWith(new Response(msg, {
-            status: 500,
+            status: 501,
             headers: {
               'x-vercel-failed': 'edge-wrapper'
             }
