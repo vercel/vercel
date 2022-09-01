@@ -151,7 +151,8 @@ async function serializeRequest(message: IncomingMessage) {
 
 async function compileUserCode(
   entrypointPath: string,
-  entrypointLabel: string
+  entrypointLabel: string,
+  isMiddleware: boolean
 ): Promise<undefined | { userCode: string; wasmAssets: WasmAssets }> {
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
   try {
@@ -175,6 +176,8 @@ async function compileUserCode(
 
     const userCode = `
       ${compiledFile.text};
+
+      const isMiddleware = ${isMiddleware};
 
       addEventListener('fetch', async (event) => {
         try {
@@ -205,7 +208,16 @@ async function compileUserCode(
           let response = await edgeHandler(event.request, event);
 
           if (!response) {
-            throw new Error('Edge Function "${entrypointLabel}" did not return a response.');
+            if (isMiddleware) {
+              // allow empty responses to pass through
+              response = new Response(null, {
+                headers: {
+                  'x-middleware-next': '1',
+                },
+              });
+            } else {
+              throw new Error('Edge Function "${entrypointLabel}" did not return a response.');
+            }
           }
 
           return event.respondWith(response);
@@ -280,9 +292,14 @@ async function createEdgeRuntime(params?: {
 
 async function createEdgeEventHandler(
   entrypointPath: string,
-  entrypointLabel: string
+  entrypointLabel: string,
+  isMiddleware: boolean
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const userCode = await compileUserCode(entrypointPath, entrypointLabel);
+  const userCode = await compileUserCode(
+    entrypointPath,
+    entrypointLabel,
+    isMiddleware
+  );
   const server = await createEdgeRuntime(userCode);
 
   return async function (request: IncomingMessage) {
@@ -352,7 +369,11 @@ async function createEventHandler(
   // an Edge Function, otherwise needs to be opted-in via
   // `export const config = { runtime: 'experimental-edge' }`
   if (config.middleware === true || runtime === 'experimental-edge') {
-    return createEdgeEventHandler(entrypointPath, entrypoint);
+    return createEdgeEventHandler(
+      entrypointPath,
+      entrypoint,
+      config.middleware || false
+    );
   }
 
   return createServerlessEventHandler(entrypointPath, options);
