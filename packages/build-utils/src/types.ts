@@ -41,6 +41,7 @@ export interface Config {
   devCommand?: string;
   framework?: string | null;
   nodeVersion?: string;
+  middleware?: boolean;
   [key: string]: unknown;
 }
 
