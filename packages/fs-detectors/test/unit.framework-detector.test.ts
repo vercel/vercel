@@ -164,19 +164,19 @@ describe('DetectorFilesystem', () => {
     const files = {};
     const fs = new VirtualFilesystem(files);
 
-    fs.writeFile('file.txt', true, 'Hello World');
+    fs.writeFile('file.txt', 'Hello World');
 
     expect(await fs.readFile('file.txt')).toEqual(Buffer.from('Hello World'));
     expect(await fs.hasPath('file.txt')).toBe(true);
     expect(await fs.isFile('file.txt')).toBe(true);
 
-    fs.writeFile('file2.txt', false);
+    fs.writeFile('file2.txt', '', { exists: false });
 
     await expect(fs.readFile('file2.txt')).rejects.toThrow();
     expect(await fs.hasPath('file2.txt')).toBe(false);
     expect(await fs.isFile('file2.txt')).toBe(false);
 
-    fs.writeFile('file3.txt', false, 'Test');
+    fs.writeFile('file3.txt', 'Test', { exists: false });
 
     await expect(fs.readFile('file3.txt')).rejects.toThrow();
     expect(await fs.hasPath('file3.txt')).toBe(false);

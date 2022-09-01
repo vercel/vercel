@@ -96,13 +96,22 @@ export abstract class DetectorFilesystem {
   /**
    * Writes a file to the filesystem cache.
    * @param name the name of the file to write
-   * @param exists true if the files exists, false otherwise
    * @param content contents of the file
+   * @param options.exists true if the files exists, false otherwise
    */
-  public writeFile(name: string, exists?: boolean, content?: string): void {
-    if (content !== undefined && exists)
-      this.readFileCache.set(name, Promise.resolve(Buffer.from(content)));
-    if (exists !== undefined) this.fileCache.set(name, Promise.resolve(exists));
-    if (exists !== undefined) this.pathCache.set(name, Promise.resolve(exists));
+  public writeFile(
+    name: string,
+    content: string,
+    options?: { exists?: boolean }
+  ): void {
+    if (options?.exists !== false) {
+      this.readFileCache.set(
+        name,
+        Promise.resolve(Buffer.from(String(content)))
+      );
+    }
+
+    this.fileCache.set(name, Promise.resolve(options?.exists ?? true));
+    this.pathCache.set(name, Promise.resolve(options?.exists ?? true));
   }
 }
