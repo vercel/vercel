@@ -181,6 +181,12 @@ describe('DetectorFilesystem', () => {
     await expect(fs.readFile('file3.txt')).rejects.toThrow();
     expect(await fs.hasPath('file3.txt')).toBe(false);
     expect(await fs.isFile('file3.txt')).toBe(false);
+
+    fs.writeFile('file4.txt', '', { exists: true });
+
+    expect(await fs.readFile('file4.txt')).toEqual(Buffer.from(''));
+    expect(await fs.hasPath('file4.txt')).toBe(true);
+    expect(await fs.isFile('file4.txt')).toBe(true);
   });
 
   it('should be able to change directories', async () => {
