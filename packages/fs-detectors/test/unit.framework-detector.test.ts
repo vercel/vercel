@@ -164,11 +164,23 @@ describe('DetectorFilesystem', () => {
     const files = {};
     const fs = new VirtualFilesystem(files);
 
-    fs.writeFile('file.txt', 'Hello World');
+    fs.writeFile('file.txt', true, 'Hello World');
 
     expect(await fs.readFile('file.txt')).toEqual(Buffer.from('Hello World'));
     expect(await fs.hasPath('file.txt')).toBe(true);
     expect(await fs.isFile('file.txt')).toBe(true);
+
+    fs.writeFile('file2.txt', false);
+
+    await expect(fs.readFile('file2.txt')).rejects.toThrow();
+    expect(await fs.hasPath('file2.txt')).toBe(false);
+    expect(await fs.isFile('file2.txt')).toBe(false);
+
+    fs.writeFile('file3.txt', false, 'Test');
+
+    await expect(fs.readFile('file3.txt')).rejects.toThrow();
+    expect(await fs.hasPath('file3.txt')).toBe(false);
+    expect(await fs.isFile('file3.txt')).toBe(false);
   });
 
   it('should be able to change directories', async () => {
