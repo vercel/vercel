@@ -1,8 +1,0 @@
-{
-  "probes": [
-    {
-      "path": "/api",
-      "mustContain": "import dep from './dep.js';"
-    }
-  ]
-}
