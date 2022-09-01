@@ -97,7 +97,7 @@ export abstract class DetectorFilesystem {
    * Writes a file to the filesystem cache.
    * @param name the name of the file to write
    * @param content contents of the file
-   * @param options.exists true if the files exists, false otherwise
+   * @param options.exists optional. true (default) if the files exists, false otherwise
    */
   public writeFile(
     name: string,
