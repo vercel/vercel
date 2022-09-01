@@ -7,7 +7,7 @@ describe('login', () => {
     client.setArgv('login', '--token', 'foo');
     const exitCodePromise = login(client);
     await expect(client.stderr).toOutput(
-      'Error! `--token` may not be used with the "login" command\n'
+      'Error: `--token` may not be used with the "login" command\n'
     );
     await expect(exitCodePromise).resolves.toEqual(2);
   });

@@ -33,7 +33,7 @@ describe('inspect', () => {
     const exitCode = await inspect(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput(
-      `Error! Failed to find deployment "bad.com" in ${user.username}\n`
+      `Error: Failed to find deployment "bad.com" in ${user.username}\n`
     );
   });
 });
