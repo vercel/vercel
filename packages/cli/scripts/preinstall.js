@@ -4,7 +4,7 @@ const { statSync } = require('fs');
 const pkg = require('../package');
 
 function error(command) {
-  console.error('> Error!', command);
+  console.error('> Error:', command);
 }
 
 function debug(str) {
