@@ -1,6 +1,6 @@
 {
   "name": "@vercel/remix",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "license": "MIT",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -20,7 +20,7 @@
     "default-server.js"
   ],
   "dependencies": {
-    "@vercel/nft": "0.22.0"
+    "@vercel/nft": "0.22.1"
   },
   "devDependencies": {
     "@types/jest": "27.5.1",

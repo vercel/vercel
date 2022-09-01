@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs",
@@ -19,7 +19,7 @@
     "test-unit": "yarn test test/prepare-cache.test.js"
   },
   "dependencies": {
-    "@vercel/nft": "0.22.0",
+    "@vercel/nft": "0.22.1",
     "@vercel/routing-utils": "2.0.2",
     "semver": "6.1.1"
   },
