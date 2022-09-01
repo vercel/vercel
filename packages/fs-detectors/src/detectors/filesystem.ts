@@ -104,14 +104,15 @@ export abstract class DetectorFilesystem {
     content: string,
     options?: { exists?: boolean }
   ): void {
-    if (options?.exists !== false) {
+    const exists = typeof options?.exists === 'boolean' ? options.exists : true
+    if (exists) {
       this.readFileCache.set(
         name,
         Promise.resolve(Buffer.from(String(content)))
       );
     }
 
-    this.fileCache.set(name, Promise.resolve(options?.exists ?? true));
-    this.pathCache.set(name, Promise.resolve(options?.exists ?? true));
+    this.fileCache.set(name, Promise.resolve(exists));
+    this.pathCache.set(name, Promise.resolve(exists));
   }
 }
