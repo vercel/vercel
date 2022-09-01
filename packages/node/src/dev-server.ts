@@ -221,7 +221,7 @@ async function compileUserCode(
             ? (error.message + ': ' + (error.cause.message || error.cause))
             : error.message;
           event.respondWith(new Response(msg, {
-            status: 501,
+            status: 500,
             headers: {
               'x-vercel-failed': 'edge-wrapper'
             }
