@@ -183,6 +183,7 @@ it('should create zip files with empty directories', async () => {
     const files = {
       dir: new FileBlob({
         mode: 16877,
+        // contents are not used for directories
         data: Buffer.alloc(0),
       }),
       file: new FileBlob({
