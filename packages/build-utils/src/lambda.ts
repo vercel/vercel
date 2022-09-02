@@ -2,8 +2,7 @@ import assert from 'assert';
 import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import minimatch from 'minimatch';
-import { readlink } from 'fs-extra';
-import { isSymbolicLink } from './fs/download';
+import { readlink, Stats } from 'fs-extra';
 import streamToBuffer from './fs/stream-to-buffer';
 import type { Files, Config } from './types';
 
@@ -167,37 +166,27 @@ export async function createLambda(opts: LambdaOptions): Promise<Lambda> {
 }
 
 export async function createZip(files: Files): Promise<Buffer> {
-  const names = Object.keys(files).sort();
+  const stat = new Stats();
+  const zipFile = new ZipFile();
 
-  const symlinkTargets = new Map<string, string>();
-  for (const name of names) {
+  for (const name of Object.keys(files).sort()) {
     const file = files[name];
-    if (file.mode && isSymbolicLink(file.mode) && file.type === 'FileFsRef') {
+    const opts = { mode: file.mode, mtime };
+    stat.mode = file.mode;
+    if (stat.isSymbolicLink() && file.type === 'FileFsRef') {
       const symlinkTarget = await readlink(file.fsPath);
-      symlinkTargets.set(name, symlinkTarget);
+      zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), name, opts);
+    } else if (stat.isDirectory()) {
+      zipFile.addEmptyDirectory(name);
+    } else {
+      // Assume a regular file
+      const stream = file.toStream();
+      zipFile.addReadStream(stream, name, opts);
     }
   }
 
-  const zipFile = new ZipFile();
-  const zipBuffer = await new Promise<Buffer>((resolve, reject) => {
-    for (const name of names) {
-      const file = files[name];
-      const opts = { mode: file.mode, mtime };
-      const symlinkTarget = symlinkTargets.get(name);
-      if (typeof symlinkTarget === 'string') {
-        zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), name, opts);
-      } else {
-        const stream = file.toStream();
-        stream.on('error', reject);
-        zipFile.addReadStream(stream, name, opts);
-      }
-    }
-
-    zipFile.end();
-    streamToBuffer(zipFile.outputStream).then(resolve).catch(reject);
-  });
-
-  return zipBuffer;
+  zipFile.end();
+  return streamToBuffer(zipFile.outputStream);
 }
 
 export async function getLambdaOptionsFromFunction({

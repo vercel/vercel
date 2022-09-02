@@ -147,27 +147,67 @@ it('should create zip files with symlinks properly', async () => {
     console.log('Skipping test on windows');
     return;
   }
-  const files = await glob('**', path.join(__dirname, 'symlinks'));
-  assert.equal(Object.keys(files).length, 4);
-
-  const outFile = path.join(__dirname, 'symlinks.zip');
-  await fs.remove(outFile);
-
   const outDir = path.join(__dirname, 'symlinks-out');
-  await fs.remove(outDir);
-  await fs.mkdirp(outDir);
+  const outFile = path.join(__dirname, 'symlinks.zip');
+  try {
+    const files = await glob('**', path.join(__dirname, 'symlinks'));
+    assert.equal(Object.keys(files).length, 4);
 
-  await fs.writeFile(outFile, await createZip(files));
-  await spawnAsync('unzip', [outFile], { cwd: outDir });
+    await fs.mkdirp(outDir);
+    await fs.writeFile(outFile, await createZip(files));
+    await spawnAsync('unzip', [outFile], { cwd: outDir });
 
-  const [linkStat, linkDirStat, aStat] = await Promise.all([
-    fs.lstat(path.join(outDir, 'link.txt')),
-    fs.lstat(path.join(outDir, 'link-dir')),
-    fs.lstat(path.join(outDir, 'a.txt')),
-  ]);
-  assert(linkStat.isSymbolicLink());
-  assert(linkDirStat.isSymbolicLink());
-  assert(aStat.isFile());
+    const [linkStat, linkDirStat, aStat] = await Promise.all([
+      fs.lstat(path.join(outDir, 'link.txt')),
+      fs.lstat(path.join(outDir, 'link-dir')),
+      fs.lstat(path.join(outDir, 'a.txt')),
+    ]);
+    assert(linkStat.isSymbolicLink());
+    assert(linkDirStat.isSymbolicLink());
+    assert(aStat.isFile());
+  } finally {
+    await fs.remove(outFile);
+    await fs.remove(outDir);
+  }
+});
+
+it('should create zip files with empty directories', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
+
+  const outDir = path.join(__dirname, 'out');
+  const outFile = path.join(__dirname, 'out.zip');
+  try {
+    const files = {
+      dir: new FileBlob({
+        mode: 16877,
+        data: Buffer.alloc(0),
+      }),
+      file: new FileBlob({
+        mode: 33188,
+        data: 'contents',
+      }),
+    };
+
+    await fs.mkdirp(outDir);
+    await fs.writeFile(outFile, await createZip(files));
+    await spawnAsync('unzip', [outFile], { cwd: outDir });
+
+    const [dirStat, fileStat] = await Promise.all([
+      fs.lstat(path.join(outDir, 'dir')),
+      fs.lstat(path.join(outDir, 'file')),
+    ]);
+    assert(dirStat.isDirectory());
+    assert(fileStat.isFile());
+
+    // Dir is empty
+    expect(await fs.readdir(path.join(outDir, 'dir'))).toEqual([]);
+  } finally {
+    await fs.remove(outFile);
+    await fs.remove(outDir);
+  }
 });
 
 it('should download symlinks even with incorrect file', async () => {
@@ -194,27 +234,29 @@ it('should download symlinks even with incorrect file', async () => {
   };
 
   const outDir = path.join(__dirname, 'symlinks-out');
-  await fs.remove(outDir);
-  await fs.mkdirp(outDir);
+  try {
+    await fs.mkdirp(outDir);
+    await download(files, outDir);
 
-  await download(files, outDir);
+    const [dir, file, linkdir] = await Promise.all([
+      fs.lstat(path.join(outDir, 'dir')),
+      fs.lstat(path.join(outDir, 'dir/file.txt')),
+      fs.lstat(path.join(outDir, 'linkdir')),
+    ]);
+    expect(dir.isFile()).toBe(false);
+    expect(dir.isSymbolicLink()).toBe(false);
 
-  const [dir, file, linkdir] = await Promise.all([
-    fs.lstat(path.join(outDir, 'dir')),
-    fs.lstat(path.join(outDir, 'dir/file.txt')),
-    fs.lstat(path.join(outDir, 'linkdir')),
-  ]);
-  expect(dir.isFile()).toBe(false);
-  expect(dir.isSymbolicLink()).toBe(false);
+    expect(file.isFile()).toBe(true);
+    expect(file.isSymbolicLink()).toBe(false);
 
-  expect(file.isFile()).toBe(true);
-  expect(file.isSymbolicLink()).toBe(false);
+    expect(linkdir.isSymbolicLink()).toBe(true);
 
-  expect(linkdir.isSymbolicLink()).toBe(true);
-
-  expect(warningMessages).toEqual([
-    'Warning: file "linkdir/file.txt" is within a symlinked directory "linkdir" and will be ignored',
-  ]);
+    expect(warningMessages).toEqual([
+      'Warning: file "linkdir/file.txt" is within a symlinked directory "linkdir" and will be ignored',
+    ]);
+  } finally {
+    await fs.remove(outDir);
+  }
 });
 
 it('should only match supported node versions, otherwise throw an error', async () => {
