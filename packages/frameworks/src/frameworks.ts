@@ -59,8 +59,6 @@ export const frameworks = [
     slug: 'nextjs',
     demo: 'https://nextjs-template.vercel.app',
     logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next.svg',
-    darkModeLogo:
-      'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next-dark.svg',
     screenshot:
       'https://assets.vercel.com/image/upload/v1647366075/front/import/nextjs.png',
     tagline:
