@@ -61,27 +61,29 @@ it('should re-create FileFsRef symlinks properly', async () => {
   assert.equal(Object.keys(files).length, 4);
 
   const outDir = path.join(__dirname, 'symlinks-out');
-  await fs.remove(outDir);
+  try {
+    const files2 = await download(files, outDir);
+    assert.equal(Object.keys(files2).length, 4);
 
-  const files2 = await download(files, outDir);
-  assert.equal(Object.keys(files2).length, 4);
+    const [linkStat, linkDirStat, aStat] = await Promise.all([
+      fs.lstat(path.join(outDir, 'link.txt')),
+      fs.lstat(path.join(outDir, 'link-dir')),
+      fs.lstat(path.join(outDir, 'a.txt')),
+    ]);
+    assert(linkStat.isSymbolicLink());
+    assert(linkDirStat.isSymbolicLink());
+    assert(aStat.isFile());
 
-  const [linkStat, linkDirStat, aStat] = await Promise.all([
-    fs.lstat(path.join(outDir, 'link.txt')),
-    fs.lstat(path.join(outDir, 'link-dir')),
-    fs.lstat(path.join(outDir, 'a.txt')),
-  ]);
-  assert(linkStat.isSymbolicLink());
-  assert(linkDirStat.isSymbolicLink());
-  assert(aStat.isFile());
+    const [linkDirContents, linkTextContents] = await Promise.all([
+      readlink(path.join(outDir, 'link-dir')),
+      readlink(path.join(outDir, 'link.txt')),
+    ]);
 
-  const [linkDirContents, linkTextContents] = await Promise.all([
-    readlink(path.join(outDir, 'link-dir')),
-    readlink(path.join(outDir, 'link.txt')),
-  ]);
-
-  strictEqual(linkDirContents, 'dir');
-  strictEqual(linkTextContents, './a.txt');
+    strictEqual(linkDirContents, 'dir');
+    strictEqual(linkTextContents, './a.txt');
+  } finally {
+    await fs.remove(outDir);
+  }
 });
 
 it('should re-create FileBlob symlinks properly', async () => {
@@ -116,30 +118,32 @@ it('should re-create FileBlob symlinks properly', async () => {
   strictEqual(Object.keys(files).length, 4);
 
   const outDir = path.join(__dirname, 'symlinks-out');
-  await fs.remove(outDir);
+  try {
+    const files2 = await download(files, outDir);
+    strictEqual(Object.keys(files2).length, 4);
 
-  const files2 = await download(files, outDir);
-  strictEqual(Object.keys(files2).length, 4);
+    const [linkStat, linkDirStat, aStat, dirStat] = await Promise.all([
+      fs.lstat(path.join(outDir, 'link.txt')),
+      fs.lstat(path.join(outDir, 'link-dir')),
+      fs.lstat(path.join(outDir, 'a.txt')),
+      fs.lstat(path.join(outDir, 'dir')),
+    ]);
 
-  const [linkStat, linkDirStat, aStat, dirStat] = await Promise.all([
-    fs.lstat(path.join(outDir, 'link.txt')),
-    fs.lstat(path.join(outDir, 'link-dir')),
-    fs.lstat(path.join(outDir, 'a.txt')),
-    fs.lstat(path.join(outDir, 'dir')),
-  ]);
+    assert(linkStat.isSymbolicLink());
+    assert(linkDirStat.isSymbolicLink());
+    assert(aStat.isFile());
+    assert(dirStat.isDirectory());
 
-  assert(linkStat.isSymbolicLink());
-  assert(linkDirStat.isSymbolicLink());
-  assert(aStat.isFile());
-  assert(dirStat.isDirectory());
+    const [linkDirContents, linkTextContents] = await Promise.all([
+      readlink(path.join(outDir, 'link-dir')),
+      readlink(path.join(outDir, 'link.txt')),
+    ]);
 
-  const [linkDirContents, linkTextContents] = await Promise.all([
-    readlink(path.join(outDir, 'link-dir')),
-    readlink(path.join(outDir, 'link.txt')),
-  ]);
-
-  strictEqual(linkDirContents, 'dir');
-  strictEqual(linkTextContents, 'a.txt');
+    strictEqual(linkDirContents, 'dir');
+    strictEqual(linkTextContents, 'a.txt');
+  } finally {
+    await fs.remove(outDir);
+  }
 });
 
 it('should create zip files with symlinks properly', async () => {
