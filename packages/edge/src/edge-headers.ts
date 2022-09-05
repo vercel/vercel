@@ -21,7 +21,7 @@ export const LONGITUDE_HEADER_NAME = 'x-vercel-ip-longitude';
 /**
  * Country region of the original client IP calculated by Vercel Proxy.
  *
- * See https://vercel.com/docs/concepts/edge-network/headers#x-vercel-ip-country-region
+ * See [docs](https://vercel.com/docs/concepts/edge-network/headers#x-vercel-ip-country-region).
  */
 export const REGION_HEADER_NAME = 'x-vercel-ip-country-region';
 /**

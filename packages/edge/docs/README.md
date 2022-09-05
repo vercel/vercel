@@ -92,7 +92,7 @@ src/edge-headers.ts:20
 
 Country region of the original client IP calculated by Vercel Proxy.
 
-See https://vercel.com/docs/concepts/edge-network/headers#x-vercel-ip-country-region
+See [docs](https://vercel.com/docs/concepts/edge-network/headers#x-vercel-ip-country-region).
 
 #### Defined in
 
