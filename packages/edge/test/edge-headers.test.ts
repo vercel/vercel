@@ -11,7 +11,7 @@ import {
   IP_HEADER_NAME,
   LATITUDE_HEADER_NAME,
   LONGITUDE_HEADER_NAME,
-  COUNTRY_REGION_HEADER_NAME,
+  REGION_HEADER_NAME,
   REQUEST_ID_HEADER_NAME,
 } from '../src';
 
@@ -44,7 +44,7 @@ describe('`geolocation`', () => {
         [COUNTRY_HEADER_NAME]: 'Israel',
         [LATITUDE_HEADER_NAME]: '32.109333',
         [LONGITUDE_HEADER_NAME]: '34.855499',
-        [COUNTRY_REGION_HEADER_NAME]: 'TA', // https://en.wikipedia.org/wiki/ISO_3166-2:IL
+        [REGION_HEADER_NAME]: 'TA', // https://en.wikipedia.org/wiki/ISO_3166-2:IL
         [REQUEST_ID_HEADER_NAME]: 'fra1::kpwjx-123455678-c0ffee',
       },
     });
@@ -65,7 +65,7 @@ describe('`geolocation`', () => {
         [COUNTRY_HEADER_NAME]: 'Japan',
         [LATITUDE_HEADER_NAME]: '37.1233',
         [LONGITUDE_HEADER_NAME]: '30.733399',
-        [COUNTRY_REGION_HEADER_NAME]: '13',
+        [REGION_HEADER_NAME]: '13',
         [REQUEST_ID_HEADER_NAME]: 'hnd1:iad1::kpwjx-123455678-c0ffee',
       },
     });
@@ -86,7 +86,7 @@ describe('`geolocation`', () => {
         [COUNTRY_HEADER_NAME]: 'Japan',
         [LATITUDE_HEADER_NAME]: '37.1233',
         [LONGITUDE_HEADER_NAME]: '30.733399',
-        [COUNTRY_REGION_HEADER_NAME]: '13',
+        [REGION_HEADER_NAME]: '13',
       },
     });
     expect(geolocation(req)).toEqual<Geo>({
