@@ -1561,11 +1561,9 @@ export default class DevServer {
           }
 
           if (rewritePath) {
-            // TODO: add validation?
             debug(`Detected rewrite path from middleware: "${rewritePath}"`);
             prevUrl = rewritePath;
 
-            // Retain orginal pathname, but override query parameters from the rewrite
             const beforeRewriteUrl = req.url || '/';
 
             if (isURL(rewritePath)) {
