@@ -1570,14 +1570,14 @@ export default class DevServer {
 
             if (isURL(rewritePath)) {
               const rewriteUrlParsed = new URL(rewritePath);
-              const rewriteOrigin = rewriteUrlParsed.origin;
 
               // `this.address` already has localhost normalized from ip4 and ip6 values
-              const devServerHost = new URL(this.address).host;
-              const isSameOrigin = devServerHost === rewriteUrlParsed.host;
+              const devServerOrigin = new URL(this.address).origin;
+              const isSameOrigin = devServerOrigin === rewriteUrlParsed.origin;
 
               if (isSameOrigin) {
-                req.url = rewritePath.replace(rewriteOrigin, '');
+                // remove origin, leaving the path
+                req.url = rewritePath.slice(rewriteUrlParsed.origin.length);
               } else {
                 // Proxy to absolute URL with different origin
                 debug(`ProxyPass: ${rewritePath}`);
