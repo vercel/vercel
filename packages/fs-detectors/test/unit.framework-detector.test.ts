@@ -135,11 +135,18 @@ describe('DetectorFilesystem', () => {
     };
 
     const fs = new VirtualFilesystem(files);
+    const hasPathSpy = jest.spyOn(fs, '_hasPath');
 
-    expect(await fs.readdir('/')).toEqual([
+    expect(await fs.readdir('/', { potentialFiles: ['config.rb'] })).toEqual([
       { name: 'package.json', path: 'package.json', type: 'file' },
       { name: 'packages', path: 'packages', type: 'dir' },
     ]);
+    expect(await fs.hasPath('package.json')).toBe(true);
+    expect(hasPathSpy).not.toHaveBeenCalled();
+    expect(await fs.hasPath('config.rb')).toBe(false);
+    expect(hasPathSpy).not.toHaveBeenCalled();
+    expect(await fs.hasPath('tsconfig.json')).toBe(false);
+    expect(hasPathSpy).toHaveBeenCalled();
 
     expect(await fs.readdir('packages')).toEqual([
       { name: 'app1', path: 'packages/app1', type: 'dir' },
@@ -158,35 +165,6 @@ describe('DetectorFilesystem', () => {
         type: 'file',
       },
     ]);
-  });
-
-  it('should be able to write files', async () => {
-    const files = {};
-    const fs = new VirtualFilesystem(files);
-
-    fs.writeFile('file.txt', 'Hello World');
-
-    expect(await fs.readFile('file.txt')).toEqual(Buffer.from('Hello World'));
-    expect(await fs.hasPath('file.txt')).toBe(true);
-    expect(await fs.isFile('file.txt')).toBe(true);
-
-    fs.writeFile('file2.txt', '', { exists: false });
-
-    await expect(fs.readFile('file2.txt')).rejects.toThrow();
-    expect(await fs.hasPath('file2.txt')).toBe(false);
-    expect(await fs.isFile('file2.txt')).toBe(false);
-
-    fs.writeFile('file3.txt', 'Test', { exists: false });
-
-    await expect(fs.readFile('file3.txt')).rejects.toThrow();
-    expect(await fs.hasPath('file3.txt')).toBe(false);
-    expect(await fs.isFile('file3.txt')).toBe(false);
-
-    fs.writeFile('file4.txt', '', { exists: true });
-
-    expect(await fs.readFile('file4.txt')).toEqual(Buffer.from(''));
-    expect(await fs.hasPath('file4.txt')).toBe(true);
-    expect(await fs.isFile('file4.txt')).toBe(true);
   });
 
   it('should be able to change directories', async () => {

@@ -76,12 +76,39 @@ export abstract class DetectorFilesystem {
 
   /**
    * Returns a list of Stat objects from the current working directory.
+   * @param name The name of the directory to read.
+   * @param options.potentialFiles optional. Array of potential file paths.  If provided, these paths will be used to mark the filesystem caches as existing or not existing.
    */
-  public readdir = async (name: string): Promise<Stat[]> => {
+  public readdir = async (
+    name: string,
+    options?: { potentialFiles?: string[] }
+  ): Promise<Stat[]> => {
     let p = this.readdirCache.get(name);
     if (!p) {
       p = this._readdir(name);
       this.readdirCache.set(name, p);
+
+      const directoryContent = await p;
+      for (const file of directoryContent) {
+        if (file.type === 'file') {
+          // we know this file exists, mark it as so on the filesystem
+          this.fileCache.set(file.name, Promise.resolve(true));
+          this.pathCache.set(file.name, Promise.resolve(true));
+        }
+      }
+
+      if (options?.potentialFiles) {
+        // calculate the set of paths that truly do not exist
+        const filesThatDoNotExist = options?.potentialFiles.filter(
+          path =>
+            directoryContent.find(file => file.name === path) === undefined
+        );
+        for (const filePath of filesThatDoNotExist) {
+          // we know this file does not exist, mark it as so on the filesystem
+          this.fileCache.set(filePath, Promise.resolve(false));
+          this.pathCache.set(filePath, Promise.resolve(false));
+        }
+      }
     }
     return p;
   };
@@ -92,27 +119,4 @@ export abstract class DetectorFilesystem {
   public chdir = (name: string): DetectorFilesystem => {
     return this._chdir(name);
   };
-
-  /**
-   * Writes a file to the filesystem cache.
-   * @param name the name of the file to write
-   * @param content contents of the file
-   * @param options.exists optional. undefined or true (default) if the files exists, false otherwise
-   */
-  public writeFile(
-    name: string,
-    content: string,
-    options?: { exists?: boolean }
-  ): void {
-    const exists = typeof options?.exists === 'boolean' ? options.exists : true
-    if (exists) {
-      this.readFileCache.set(
-        name,
-        Promise.resolve(Buffer.from(String(content)))
-      );
-    }
-
-    this.fileCache.set(name, Promise.resolve(exists));
-    this.pathCache.set(name, Promise.resolve(exists));
-  }
 }
