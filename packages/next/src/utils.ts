@@ -2361,6 +2361,7 @@ export async function getMiddlewareBundle({
       // For `app/`, use folder name, handle the root page as index:
       //    app/route/page -> route
       //    app/page -> index
+      //    app/index/page -> index/index
       if (shortPath.startsWith('pages/')) {
         shortPath = shortPath.replace(/^pages\//, '');
       } else if (shortPath.startsWith('app/') && shortPath.endsWith('/page')) {
