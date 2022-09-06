@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "next": "12.2.6-canary.10",
+    "next": "canary",
     "react": "experimental",
     "react-dom": "experimental"
   }
