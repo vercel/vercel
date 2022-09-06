@@ -92,4 +92,16 @@ export abstract class DetectorFilesystem {
   public chdir = (name: string): DetectorFilesystem => {
     return this._chdir(name);
   };
+
+  /**
+   * Writes a file to the filesystem cache.
+   * @param name the name of the file to write
+   * @param content The content of the file
+   */
+  public writeFile(name: string, content?: string): void {
+    if (content)
+      this.readFileCache.set(name, Promise.resolve(Buffer.from(content)));
+    this.fileCache.set(name, Promise.resolve(true));
+    this.pathCache.set(name, Promise.resolve(true));
+  }
 }
