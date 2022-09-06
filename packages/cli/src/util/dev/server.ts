@@ -1570,7 +1570,7 @@ export default class DevServer {
 
             if (isURL(rewritePath)) {
               const rewriteUrlParsed = new URL(rewritePath);
-              const rewriteOrigin = `${rewriteUrlParsed.protocol}//${rewriteUrlParsed.host}`;
+              const rewriteOrigin = rewriteUrlParsed.origin;
 
               // `this.address` already has localhost normalized from ip4 and ip6 values
               const devServerHost = new URL(this.address).host;
