@@ -2352,7 +2352,21 @@ export async function getMiddlewareBundle({
 
     for (const worker of workerConfigs.values()) {
       const edgeFile = worker.edgeFunction.name;
-      const shortPath = edgeFile.replace(/^pages\//, '');
+      let shortPath = edgeFile;
+
+      // Replacing the folder prefix for the page
+      //
+      // For `pages/`, use file base name directly:
+      //    pages/index -> index
+      // For `app/`, use folder name, handle the root page as index:
+      //    app/route/page -> route
+      //    app/page -> index
+      if (shortPath.startsWith('pages/')) {
+        shortPath = shortPath.replace(/^pages\//, '');
+      } else if (shortPath.startsWith('app/') && shortPath.endsWith('/page')) {
+        shortPath =
+          shortPath.replace(/^app\//, '').replace(/(^|\/)page$/, '') || 'index';
+      }
 
       worker.edgeFunction.name = shortPath;
       source.edgeFunctions[shortPath] = worker.edgeFunction;

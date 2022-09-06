@@ -27,6 +27,24 @@ it('should build with app-dir correctly', async () => {
   expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
 });
 
+it('should build with app-dir in edg runtime correctly', async () => {
+  const { buildResult } = await runBuildLambda(
+    path.join(__dirname, '../fixtures/00-app-dir-edge')
+  );
+
+  console.log('buildResult', buildResult);
+  const lambdas = new Set();
+
+  for (const key of Object.keys(buildResult.output)) {
+    if (buildResult.output[key].type === 'Lambda') {
+      lambdas.add(buildResult.output[key]);
+      console.log('found lambda', key);
+    }
+  }
+  expect(lambdas.size).toBe(1);
+  expect(buildResult.output['edge']).toBeDefined();
+});
+
 it('should show error from basePath with legacy monorepo build', async () => {
   let error;
 
