@@ -12,7 +12,7 @@ describe('deploy', () => {
     client.setArgv('deploy', __filename);
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      `Error! Support for single file deployments has been removed.\nLearn More: https://vercel.link/no-single-file-deployments\n`
+      `Error: Support for single file deployments has been removed.\nLearn More: https://vercel.link/no-single-file-deployments\n`
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
@@ -21,7 +21,7 @@ describe('deploy', () => {
     client.setArgv('deploy', __filename, join(__dirname, 'inspect.test.ts'));
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      `Error! Can't deploy more than one path.\n`
+      `Error: Can't deploy more than one path.\n`
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
@@ -30,7 +30,7 @@ describe('deploy', () => {
     client.setArgv('deploy', 'does-not-exists');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      `Error! The specified file or directory "does-not-exists" does not exist.\n`
+      `Error: The specified file or directory "does-not-exists" does not exist.\n`
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
@@ -41,7 +41,7 @@ describe('deploy', () => {
     client.setArgv('deploy', cwd, '--prebuilt');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      '> Prebuilt deployment cannot be created because `vercel build` failed with error:\n\nError! The build failed (top-level)\n'
+      '> Prebuilt deployment cannot be created because `vercel build` failed with error:\n\nError: The build failed (top-level)\n'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
@@ -52,7 +52,7 @@ describe('deploy', () => {
     client.setArgv('deploy', cwd, '--prebuilt');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      '> Prebuilt deployment cannot be created because `vercel build` failed with error:\n\nError! The build failed within a Builder\n'
+      '> Prebuilt deployment cannot be created because `vercel build` failed with error:\n\nError: The build failed within a Builder\n'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
@@ -61,7 +61,7 @@ describe('deploy', () => {
     client.setArgv('deploy', __dirname, '--prebuilt');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'Error! The "--prebuilt" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
+      'Error: The "--prebuilt" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
@@ -80,7 +80,7 @@ describe('deploy', () => {
     client.setArgv('deploy', cwd, '--prebuilt', '--prod');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'Error! The "--prebuilt" option was used with the target environment "production",' +
+      'Error: The "--prebuilt" option was used with the target environment "production",' +
         ' but the prebuilt output found in ".vercel/output" was built with target environment "preview".' +
         ' Please run `vercel --prebuilt`.\n' +
         'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
@@ -102,7 +102,7 @@ describe('deploy', () => {
     client.setArgv('deploy', cwd, '--prebuilt');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'Error! The "--prebuilt" option was used with the target environment "preview",' +
+      'Error: The "--prebuilt" option was used with the target environment "preview",' +
         ' but the prebuilt output found in ".vercel/output" was built with target environment "production".' +
         ' Please run `vercel --prebuilt --prod`.\n' +
         'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
@@ -118,7 +118,7 @@ describe('deploy', () => {
     };
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'Error! The value of the `version` property within vercel.json can only be `2`.\n'
+      'Error: The value of the `version` property within vercel.json can only be `2`.\n'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
@@ -132,7 +132,7 @@ describe('deploy', () => {
     };
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'Error! The `version` property inside your vercel.json file must be a number.\n'
+      'Error: The `version` property inside your vercel.json file must be a number.\n'
     );
     await expect(exitCodePromise).resolves.toEqual(1);
   });
