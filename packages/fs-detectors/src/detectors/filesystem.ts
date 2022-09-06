@@ -99,7 +99,7 @@ export abstract class DetectorFilesystem {
 
       if (options?.potentialFiles) {
         // calculate the set of paths that truly do not exist
-        const filesThatDoNotExist = options?.potentialFiles.filter(
+        const filesThatDoNotExist = options.potentialFiles.filter(
           path =>
             directoryContent.find(file => file.name === path) === undefined
         );
