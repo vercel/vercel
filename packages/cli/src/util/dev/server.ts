@@ -1572,12 +1572,9 @@ export default class DevServer {
               const rewriteUrlParsed = new URL(rewritePath);
               const rewriteOrigin = `${rewriteUrlParsed.protocol}//${rewriteUrlParsed.host}`;
 
-              const originalUrlParsed = new URL(
-                `http://127.0.0.1/${beforeRewriteUrl}`
-              );
-              const isSameOrigin =
-                `${originalUrlParsed.protocol}//${originalUrlParsed.host}` ===
-                rewriteOrigin;
+              // `this.address` already has localhost normalized from ip4 and ip6 values
+              const devServerHost = new URL(this.address).host;
+              const isSameOrigin = devServerHost === rewriteUrlParsed.host;
 
               if (isSameOrigin) {
                 req.url = rewritePath.replace(rewriteOrigin, '');
