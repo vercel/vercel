@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "next": "https://files-26yo0dy1b-ijjk-testing.vercel.app",
+    "next": "12.2.6-canary.10",
     "react": "experimental",
     "react-dom": "experimental"
   }

@@ -17,7 +17,6 @@ it('should build with app-dir correctly', async () => {
   for (const key of Object.keys(buildResult.output)) {
     if (buildResult.output[key].type === 'Lambda') {
       lambdas.add(buildResult.output[key]);
-      console.log('found lambda', key);
     }
   }
   expect(lambdas.size).toBe(1);
@@ -33,16 +32,16 @@ it('should build with app-dir in edg runtime correctly', async () => {
   );
 
   console.log('buildResult', buildResult);
-  const lambdas = new Set();
+  const edgeFunctions = new Set();
 
   for (const key of Object.keys(buildResult.output)) {
-    if (buildResult.output[key].type === 'Lambda') {
-      lambdas.add(buildResult.output[key]);
-      console.log('found lambda', key);
+    if (buildResult.output[key].type === 'EdgeFunction') {
+      edgeFunctions.add(buildResult.output[key]);
     }
   }
-  expect(lambdas.size).toBe(1);
+
   expect(buildResult.output['edge']).toBeDefined();
+  expect(buildResult.output['index']).toBeDefined();
 });
 
 it('should show error from basePath with legacy monorepo build', async () => {
