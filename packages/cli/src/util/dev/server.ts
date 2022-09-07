@@ -1576,10 +1576,8 @@ export default class DevServer {
               const rewriteUrlParsed = new URL(rewritePath);
 
               // `this.address` already has localhost normalized from ip4 and ip6 values
-              const devServerOrigin = new URL(this.address).origin;
-              const isSameOrigin = devServerOrigin === rewriteUrlParsed.origin;
-
-              if (isSameOrigin) {
+              const devServerParsed = new URL(this.address);
+              if (devServerParsed.origin === rewriteUrlParsed.origin) {
                 // remove origin, leaving the path
                 req.url = rewritePath.slice(rewriteUrlParsed.origin.length);
               } else {
