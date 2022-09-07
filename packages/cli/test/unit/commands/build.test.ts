@@ -711,7 +711,7 @@ describe('build', () => {
 
       // Error gets printed to the terminal
       await expect(client.stderr).toOutput(
-        'Error! Function must contain at least one property.'
+        'Error: Function must contain at least one property.'
       );
 
       // `builds.json` contains top-level "error" property

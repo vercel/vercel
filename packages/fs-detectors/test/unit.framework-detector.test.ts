@@ -135,11 +135,18 @@ describe('DetectorFilesystem', () => {
     };
 
     const fs = new VirtualFilesystem(files);
+    const hasPathSpy = jest.spyOn(fs, '_hasPath');
 
-    expect(await fs.readdir('/')).toEqual([
+    expect(await fs.readdir('/', { potentialFiles: ['config.rb'] })).toEqual([
       { name: 'package.json', path: 'package.json', type: 'file' },
       { name: 'packages', path: 'packages', type: 'dir' },
     ]);
+    expect(await fs.hasPath('package.json')).toBe(true);
+    expect(hasPathSpy).not.toHaveBeenCalled();
+    expect(await fs.hasPath('config.rb')).toBe(false);
+    expect(hasPathSpy).not.toHaveBeenCalled();
+    expect(await fs.hasPath('tsconfig.json')).toBe(false);
+    expect(hasPathSpy).toHaveBeenCalled();
 
     expect(await fs.readdir('packages')).toEqual([
       { name: 'app1', path: 'packages/app1', type: 'dir' },
@@ -151,13 +158,19 @@ describe('DetectorFilesystem', () => {
       { name: 'app2', path: 'packages/app2', type: 'dir' },
     ]);
 
-    expect(await fs.readdir('packages/app1')).toEqual([
+    expect(
+      await fs.readdir('packages/app1', { potentialFiles: ['package.json'] })
+    ).toEqual([
       {
         name: 'package.json',
         path: 'packages/app1/package.json',
         type: 'file',
       },
     ]);
+
+    hasPathSpy.mock.calls.length = 0;
+    expect(await fs.hasPath('packages/app1/package.json')).toBe(true);
+    expect(hasPathSpy).not.toHaveBeenCalled();
   });
 
   it('should be able to change directories', async () => {

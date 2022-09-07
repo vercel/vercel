@@ -24,7 +24,7 @@
     {
       "path": "/",
       "status": 200,
-      "mustContain": "hello from pages/index"
+      "mustContain": "index app page"
     },
     {
       "path": "/blog/123",

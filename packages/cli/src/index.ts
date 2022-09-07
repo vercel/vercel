@@ -7,7 +7,7 @@ try {
   process.cwd();
 } catch (err: unknown) {
   if (isError(err) && err.message.includes('uv_cwd')) {
-    console.error('Error! The current working directory does not exist.');
+    console.error('Error: The current working directory does not exist.');
     process.exit(1);
   }
 }
