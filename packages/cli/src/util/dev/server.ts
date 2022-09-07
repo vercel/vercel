@@ -101,6 +101,7 @@ import {
   isError,
   isSpawnError,
 } from '../is-error';
+import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
 
 const frontendRuntimeSet = new Set(
@@ -180,11 +181,17 @@ export default class DevServer {
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
+
     this.proxy = httpProxy.createProxyServer({
       changeOrigin: true,
       ws: true,
       xfwd: true,
     });
+    this.proxy.on('proxyRes', proxyRes => {
+      // override "server" header, like production
+      proxyRes.headers['server'] = 'Vercel';
+    });
+
     this.server = http.createServer(this.devServerHandler);
     this.server.timeout = 0; // Disable timeout
     this.stopping = false;
@@ -1560,15 +1567,33 @@ export default class DevServer {
           }
 
           if (rewritePath) {
-            // TODO: add validation?
             debug(`Detected rewrite path from middleware: "${rewritePath}"`);
             prevUrl = rewritePath;
 
-            // Retain orginal pathname, but override query parameters from the rewrite
             const beforeRewriteUrl = req.url || '/';
-            const rewriteUrlParsed = url.parse(beforeRewriteUrl);
-            rewriteUrlParsed.search = url.parse(rewritePath).search;
-            req.url = url.format(rewriteUrlParsed);
+
+            if (isURL(rewritePath)) {
+              const rewriteUrlParsed = new URL(rewritePath);
+
+              // `this.address` already has localhost normalized from ip4 and ip6 values
+              const devServerParsed = new URL(this.address);
+              if (devServerParsed.origin === rewriteUrlParsed.origin) {
+                // remove origin, leaving the path
+                req.url = rewritePath.slice(rewriteUrlParsed.origin.length);
+              } else {
+                // Proxy to absolute URL with different origin
+                debug(`ProxyPass: ${rewritePath}`);
+                this.setResponseHeaders(res, requestId);
+                proxyPass(req, res, rewritePath, this, requestId);
+                return;
+              }
+            } else {
+              // Retain orginal pathname, but override query parameters from the rewrite
+              const rewriteUrlParsed = url.parse(beforeRewriteUrl);
+              rewriteUrlParsed.search = url.parse(rewritePath).search;
+              req.url = url.format(rewriteUrlParsed);
+            }
+
             debug(
               `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
             );
