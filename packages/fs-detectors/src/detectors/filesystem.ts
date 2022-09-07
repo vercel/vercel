@@ -78,17 +78,17 @@ export abstract class DetectorFilesystem {
 
   /**
    * Returns a list of Stat objects from the current working directory.
-   * @param path The path of the directory to read.
+   * @param dirPath The path of the directory to read.
    * @param options.potentialFiles optional. Array of potential file names (relative to the path).  If provided, these will be used to mark the filesystem caches as existing or not existing.
    */
   public readdir = async (
-    path: string,
+    dirPath: string,
     options?: { potentialFiles?: string[] }
   ): Promise<Stat[]> => {
-    let p = this.readdirCache.get(path);
+    let p = this.readdirCache.get(dirPath);
     if (!p) {
-      p = this._readdir(path);
-      this.readdirCache.set(path, p);
+      p = this._readdir(dirPath);
+      this.readdirCache.set(dirPath, p);
 
       const directoryContent = await p;
       const directoryFiles = new Set<string>();
@@ -109,7 +109,7 @@ export abstract class DetectorFilesystem {
         );
         for (const filePath of filesThatDoNotExist) {
           const fullFilePath =
-            path === '/' ? filePath : posixPath.join(path, filePath);
+            dirPath === '/' ? filePath : posixPath.join(dirPath, filePath);
           // we know this file does not exist, mark it as so on the filesystem
           this.fileCache.set(fullFilePath, Promise.resolve(false));
           this.pathCache.set(fullFilePath, Promise.resolve(false));
