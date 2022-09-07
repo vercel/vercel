@@ -89,19 +89,21 @@ export abstract class DetectorFilesystem {
       this.readdirCache.set(name, p);
 
       const directoryContent = await p;
+      const directoryFiles = new Set<string>();
+
       for (const file of directoryContent) {
         if (file.type === 'file') {
           // we know this file exists, mark it as so on the filesystem
           this.fileCache.set(file.name, Promise.resolve(true));
           this.pathCache.set(file.name, Promise.resolve(true));
+          directoryFiles.add(file.name);
         }
       }
 
       if (options?.potentialFiles) {
         // calculate the set of paths that truly do not exist
         const filesThatDoNotExist = options.potentialFiles.filter(
-          path =>
-            directoryContent.find(file => file.name === path) === undefined
+          path => !directoryFiles.has(path)
         );
         for (const filePath of filesThatDoNotExist) {
           // we know this file does not exist, mark it as so on the filesystem
