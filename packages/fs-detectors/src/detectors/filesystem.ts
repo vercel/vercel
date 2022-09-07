@@ -1,3 +1,7 @@
+import path from 'path';
+
+const posixPath = path.posix;
+
 export interface Stat {
   name: string;
   path: string;
@@ -94,8 +98,8 @@ export abstract class DetectorFilesystem {
       for (const file of directoryContent) {
         if (file.type === 'file') {
           // we know this file exists, mark it as so on the filesystem
-          this.fileCache.set(file.name, Promise.resolve(true));
-          this.pathCache.set(file.name, Promise.resolve(true));
+          this.fileCache.set(file.path, Promise.resolve(true));
+          this.pathCache.set(file.path, Promise.resolve(true));
           directoryFiles.add(file.name);
         }
       }
@@ -106,9 +110,11 @@ export abstract class DetectorFilesystem {
           path => !directoryFiles.has(path)
         );
         for (const filePath of filesThatDoNotExist) {
+          const fullFilePath =
+            name === '/' ? filePath : posixPath.join(name, filePath);
           // we know this file does not exist, mark it as so on the filesystem
-          this.fileCache.set(filePath, Promise.resolve(false));
-          this.pathCache.set(filePath, Promise.resolve(false));
+          this.fileCache.set(fullFilePath, Promise.resolve(false));
+          this.pathCache.set(fullFilePath, Promise.resolve(false));
         }
       }
     }
