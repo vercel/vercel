@@ -217,7 +217,10 @@ export function getSpawnOptions(
   nodeVersion: NodeVersion
 ): SpawnOptions {
   const opts = {
-    env: { ...process.env },
+    env: {
+      PATH: process.env.PATH,
+      ...process.env,
+    },
   };
 
   if (!meta.isDev) {
@@ -449,7 +452,8 @@ export async function runNpmInstall(
     debug(`Installing to ${destPath}`);
 
     const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
-    const env = opts.env ? { ...opts.env } : { ...process.env };
+    const envObj = opts.env || process.env;
+    const env: typeof process.env = { PATH: envObj.PATH, ...envObj };
     delete env.NODE_ENV;
     opts.env = getEnvForPackageManager({
       cliType,
@@ -592,6 +596,7 @@ export async function runPackageJsonScript(
       lockfileVersion,
       nodeVersion: undefined,
       env: {
+        PATH: process.env.PATH,
         ...process.env,
         ...spawnOpts?.env,
       },

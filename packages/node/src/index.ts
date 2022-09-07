@@ -526,6 +526,7 @@ export const startDevServer: StartDevServer = async opts => {
     cwd: workPath,
     execArgv: [],
     env: {
+      PATH: process.env.PATH,
       ...process.env,
       ...meta.env,
       VERCEL_DEV_ENTRYPOINT: entrypoint,

@@ -466,6 +466,7 @@ export const build: BuildV2 = async ({
           printInstall();
           const opts = {
             env: {
+              PATH: process.env.PATH,
               ...process.env,
               // See more: https://github.com/rubygems/rubygems/blob/a82d04856deba58be6b90f681a5e42a7c0f2baa7/bundler/lib/bundler/man/bundle-config.1.ronn
               BUNDLE_BIN: 'vendor/bin',
