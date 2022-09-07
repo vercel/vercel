@@ -181,11 +181,17 @@ export default class DevServer {
     this.caseSensitive = false;
     this.apiDir = null;
     this.apiExtensions = new Set();
+
     this.proxy = httpProxy.createProxyServer({
       changeOrigin: true,
       ws: true,
       xfwd: true,
     });
+    this.proxy.on('proxyRes', proxyRes => {
+      // override "server" header, like production
+      proxyRes.headers['server'] = 'Vercel';
+    });
+
     this.server = http.createServer(this.devServerHandler);
     this.server.timeout = 0; // Disable timeout
     this.stopping = false;

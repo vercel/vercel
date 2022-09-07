@@ -98,6 +98,7 @@ function shouldSkip(name, versions) {
 
 function validateResponseHeaders(res, podId) {
   if (res.status < 500) {
+    expect(res.headers.get('server')).toEqual('Vercel');
     expect(res.headers.get('cache-control').length > 0).toBeTruthy();
     expect(res.headers.get('x-vercel-id')).toBeTruthy();
     if (podId) {
