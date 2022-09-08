@@ -135,9 +135,18 @@ export default class DevServer {
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
   public files: BuilderInputs;
-  public address: string;
-  public devCacheDir: string;
 
+  private address: URL | undefined;
+  public get addressUrl(): URL {
+    if (!this.address) {
+      throw new Error(
+        'Invalid access to `addressUrl` because `start` has not yet populated `this.address`.'
+      );
+    }
+    return this.address;
+  }
+
+  public devCacheDir: string;
   private currentDevCommand?: string;
   private caseSensitive: boolean;
   private apiDir: string | null;
@@ -175,7 +184,6 @@ export default class DevServer {
     this.systemEnvValues = options.systemEnvValues || [];
     this.projectEnvs = options.projectEnvs || [];
     this.files = {};
-    this.address = '';
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
     this.caseSensitive = false;
@@ -714,7 +722,7 @@ export default class DevServer {
         this.projectEnvs || [],
         this.systemEnvValues || [],
         this.projectSettings?.autoExposeSystemEnvs,
-        new URL(this.address).host
+        this.addressUrl.host
       );
 
       allEnv = { ...cloudEnv };
@@ -849,7 +857,7 @@ export default class DevServer {
   injectSystemValuesInDotenv(env: Env): Env {
     for (const name of Object.keys(env)) {
       if (name === 'VERCEL_URL') {
-        env['VERCEL_URL'] = new URL(this.address).host;
+        env['VERCEL_URL'] = this.addressUrl.host;
       } else if (name === 'VERCEL_REGION') {
         env['VERCEL_REGION'] = 'dev1';
       }
@@ -922,9 +930,9 @@ export default class DevServer {
       }
     }
 
-    this.address = address
-      .replace('[::]', 'localhost')
-      .replace('127.0.0.1', 'localhost');
+    this.address = new URL(
+      address.replace('[::]', 'localhost').replace('127.0.0.1', 'localhost')
+    );
 
     const vercelConfig = await this.getVercelConfig();
     const devCommandPromise = this.runDevCommand();
@@ -1028,7 +1036,7 @@ export default class DevServer {
 
     await devCommandPromise;
 
-    this.output.ready(`Available at ${link(this.address)}`);
+    this.output.ready(`Available at ${link(this.addressUrl.toString())}`);
   }
 
   /**
@@ -1576,7 +1584,7 @@ export default class DevServer {
               const rewriteUrlParsed = new URL(rewritePath);
 
               // `this.address` already has localhost normalized from ip4 and ip6 values
-              const devServerParsed = new URL(this.address);
+              const devServerParsed = this.addressUrl;
               if (devServerParsed.origin === rewriteUrlParsed.origin) {
                 // remove origin, leaving the path
                 req.url = rewritePath.slice(rewriteUrlParsed.origin.length);
@@ -2326,7 +2334,7 @@ export default class DevServer {
 
     this.output.debug(`Spawning dev command: ${command}`);
 
-    const devPort = new URL(this.address).port;
+    const devPort = this.addressUrl.port;
     const proxyPort = new RegExp(port.toString(), 'g');
     const p = spawnCommand(command, {
       stdio: ['inherit', 'pipe', 'pipe'],
