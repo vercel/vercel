@@ -1644,12 +1644,16 @@ export default class DevServer {
         missRoutes,
         phase
       );
-      prevUrl =
-        routeResult.continue && routeResult.dest
-          ? getReqUrl(routeResult)
-          : prevUrl;
-      prevHeaders =
-        routeResult.continue && routeResult.headers ? routeResult.headers : {};
+
+      if (routeResult.continue) {
+        if (routeResult.dest) {
+          prevUrl = getReqUrl(routeResult);
+        }
+
+        if (routeResult.headers) {
+          prevHeaders = routeResult.headers;
+        }
+      }
 
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
