@@ -1579,7 +1579,9 @@ export default class DevServer {
               const devServerParsed = new URL(this.address);
               if (devServerParsed.origin === rewriteUrlParsed.origin) {
                 // remove origin, leaving the path
-                req.url = rewritePath.slice(rewriteUrlParsed.origin.length);
+                req.url =
+                  rewritePath.slice(rewriteUrlParsed.origin.length) || '/';
+                prevUrl = req.url;
               } else {
                 // Proxy to absolute URL with different origin
                 debug(`ProxyPass: ${rewritePath}`);
