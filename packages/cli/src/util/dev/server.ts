@@ -1645,7 +1645,7 @@ export default class DevServer {
       prevUrl =
         routeResult.continue && routeResult.dest
           ? getReqUrl(routeResult)
-          : req.url;
+          : prevUrl;
       prevHeaders =
         routeResult.continue && routeResult.headers ? routeResult.headers : {};
 
