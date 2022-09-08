@@ -895,6 +895,12 @@ describe('build', () => {
   });
 
   it('should apply project settings overrides from "vercel.json"', async () => {
+    if (process.platform === 'win32') {
+      // this test runs a build command with `mkdir -p` which is unsupported on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
     const cwd = fixture('project-settings-override');
     const output = join(cwd, '.vercel/output');
     try {
