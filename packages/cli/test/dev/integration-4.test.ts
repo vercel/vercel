@@ -511,6 +511,14 @@ test(
 );
 
 test(
+  '[vercel dev] Middleware that rewrites to 404s',
+  testFixtureStdio('middleware-rewrite-404', async (testPath: any) => {
+    await testPath(404, '/api/edge', /NOT_FOUND/);
+    await testPath(404, '/index.html', /NOT_FOUND/);
+  })
+);
+
+test(
   '[vercel dev] Middleware that redirects',
   testFixtureStdio('middleware-redirect', async (testPath: any) => {
     await testPath(302, '/', null, {
