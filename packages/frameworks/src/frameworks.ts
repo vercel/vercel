@@ -1785,9 +1785,15 @@ export const frameworks = [
     website: 'https://www.sanity.io',
     envPrefix: 'SANITY_STUDIO_',
     detectors: {
-      every: [
+      some: [
         {
           path: 'sanity.json',
+        },
+        {
+          path: 'sanity.config.js',
+        },
+        {
+          path: 'sanity.config.ts',
         },
       ],
     },
