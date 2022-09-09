@@ -1037,7 +1037,10 @@ export default class DevServer {
     await devCommandPromise;
 
     let addressFormatted = this.addressURL.toString();
-    if (this.addressURL.pathname === '/') {
+    if (
+      this.addressURL.pathname === '/' &&
+      this.addressURL.protocol === 'http:'
+    ) {
       // log address without trailing slash to maintain backwards compatibility
       addressFormatted = addressFormatted.replace(/\/$/, '');
     }
