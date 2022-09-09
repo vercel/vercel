@@ -439,6 +439,8 @@ export async function getBuildMatches(
     for (const file of files) {
       src = relative(cwd, file);
 
+      const entrypoint = mapToEntrypoint.get(src) || src;
+
       // Remove the output directory prefix
       if (config.zeroConfig && config.outputDirectory) {
         const outputMatch = config.outputDirectory + '/';
@@ -455,7 +457,7 @@ export async function getBuildMatches(
       matches.push({
         ...buildConfig,
         src,
-        entrypoint: mapToEntrypoint.get(src) || src,
+        entrypoint,
         builderWithPkg,
         buildOutput: {},
         buildResults: new Map(),

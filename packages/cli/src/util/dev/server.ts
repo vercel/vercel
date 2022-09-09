@@ -164,8 +164,6 @@ export default class DevServer {
   private vercelConfigWarning: boolean;
   private getVercelConfigPromise: Promise<VercelConfig> | null;
   private blockingBuildsPromise: Promise<void> | null;
-  private updateBuildersPromise: Promise<void> | null;
-  private updateBuildersTimeout: NodeJS.Timeout | undefined;
   private startPromise: Promise<void> | null;
 
   private systemEnvValues: string[];
@@ -204,7 +202,6 @@ export default class DevServer {
     this.vercelConfigWarning = false;
     this.getVercelConfigPromise = null;
     this.blockingBuildsPromise = null;
-    this.updateBuildersPromise = null;
     this.startPromise = null;
 
     this.watchAggregationId = null;
@@ -993,16 +990,11 @@ export default class DevServer {
    * Shuts down the `vercel dev` server, and cleans up any temporary resources.
    */
   async stop(exitCode?: number): Promise<void> {
-    const { devProcess } = this;
-    const { debug } = this.output;
     if (this.stopping) return;
-
     this.stopping = true;
 
-    if (typeof this.updateBuildersTimeout !== 'undefined') {
-      clearTimeout(this.updateBuildersTimeout);
-    }
-
+    const { devProcess } = this;
+    const { debug } = this.output;
     const ops: Promise<any>[] = [];
 
     for (const match of this.buildMatches.values()) {
@@ -1018,11 +1010,6 @@ export default class DevServer {
     if (this.watcher) {
       debug(`Closing file watcher`);
       ops.push(this.watcher.close());
-    }
-
-    if (this.updateBuildersPromise) {
-      debug(`Waiting for builders update to complete`);
-      ops.push(this.updateBuildersPromise);
     }
 
     for (const pid of this.devServerPids) {
@@ -2468,10 +2455,7 @@ async function shouldServe(
   ) {
     // Mimic fmeta-util and convert trailingSlash
     return true;
-  } else if (
-    builder.version === 3 &&
-    typeof builder.shouldServe === 'function'
-  ) {
+  } else if (typeof builder.shouldServe === 'function') {
     const shouldServe = await builder.shouldServe({
       entrypoint: src,
       files,
@@ -2594,7 +2578,7 @@ function fileRemoved(
 
 function needsBlockingBuild(buildMatch: BuildMatch): boolean {
   const { builder } = buildMatch.builderWithPkg;
-  return builder.version !== 3 || typeof builder.shouldServe !== 'function';
+  return typeof builder.shouldServe !== 'function';
 }
 
 async function checkForPort(port: number, timeout: number): Promise<string> {
