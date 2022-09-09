@@ -153,7 +153,7 @@ export default class DevServer {
   private filter: (path: string) => boolean;
   private podId: string;
   private devProcess?: ChildProcess;
-  private devProcessPort?: number;
+  private devProcessOrigin?: string;
   private devServerPids: Set<number>;
   private originalProjectSettings?: ProjectSettings;
   private projectSettings?: ProjectSettings;
@@ -1014,14 +1014,14 @@ export default class DevServer {
     // Configure the server to forward WebSocket "upgrade" events to the proxy.
     this.server.on('upgrade', async (req, socket, head) => {
       await this.startPromise;
-      if (!this.devProcessPort) {
+      if (!this.devProcessOrigin) {
         this.output.debug(
           `Detected "upgrade" event, but closing socket because no frontend dev server is running`
         );
         socket.destroy();
         return;
       }
-      const target = `http://127.0.0.1:${this.devProcessPort}`;
+      const target = this.devProcessOrigin;
       this.output.debug(`Detected "upgrade" event, proxying to ${target}`);
       this.proxy.ws(req, socket, head, { target });
     });
@@ -1579,7 +1579,9 @@ export default class DevServer {
               const devServerParsed = new URL(this.address);
               if (devServerParsed.origin === rewriteUrlParsed.origin) {
                 // remove origin, leaving the path
-                req.url = rewritePath.slice(rewriteUrlParsed.origin.length);
+                req.url =
+                  rewritePath.slice(rewriteUrlParsed.origin.length) || '/';
+                prevUrl = req.url;
               } else {
                 // Proxy to absolute URL with different origin
                 debug(`ProxyPass: ${rewritePath}`);
@@ -1642,12 +1644,16 @@ export default class DevServer {
         missRoutes,
         phase
       );
-      prevUrl =
-        routeResult.continue && routeResult.dest
-          ? getReqUrl(routeResult)
-          : req.url;
-      prevHeaders =
-        routeResult.continue && routeResult.headers ? routeResult.headers : {};
+
+      if (routeResult.continue) {
+        if (routeResult.dest) {
+          prevUrl = getReqUrl(routeResult);
+        }
+
+        if (routeResult.headers) {
+          prevHeaders = routeResult.headers;
+        }
+      }
 
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
@@ -1820,8 +1826,8 @@ export default class DevServer {
 
     if (!match) {
       // If the dev command is started, then proxy to it
-      if (this.devProcessPort) {
-        const upstream = `http://127.0.0.1:${this.devProcessPort}`;
+      if (this.devProcessOrigin) {
+        const upstream = this.devProcessOrigin;
         debug(`Proxying to frontend dev server: ${upstream}`);
 
         // Add the Vercel platform proxy request headers
@@ -2000,7 +2006,7 @@ export default class DevServer {
     // - when there is no asset
     // - when the asset is not a Lambda (the dev server must take care of all static files)
     if (
-      this.devProcessPort &&
+      this.devProcessOrigin &&
       (!foundAsset || (foundAsset && foundAsset.asset.type !== 'Lambda'))
     ) {
       debug('Proxying to frontend dev server');
@@ -2012,14 +2018,7 @@ export default class DevServer {
       }
 
       this.setResponseHeaders(res, requestId);
-      return proxyPass(
-        req,
-        res,
-        `http://127.0.0.1:${this.devProcessPort}`,
-        this,
-        requestId,
-        false
-      );
+      return proxyPass(req, res, this.devProcessOrigin, this, requestId, false);
     }
 
     if (!foundAsset) {
@@ -2348,12 +2347,11 @@ export default class DevServer {
 
     p.on('exit', (code, signal) => {
       this.output.debug(`Dev command exited with "${signal || code}"`);
-      this.devProcessPort = undefined;
+      this.devProcessOrigin = undefined;
     });
 
-    await checkForPort(port, 1000 * 60 * 5);
-
-    this.devProcessPort = port;
+    const devProcessHost = await checkForPort(port, 1000 * 60 * 5);
+    this.devProcessOrigin = `http://${devProcessHost}:${port}`;
   }
 }
 
@@ -2641,15 +2639,29 @@ function needsBlockingBuild(buildMatch: BuildMatch): boolean {
   return typeof builder.shouldServe !== 'function';
 }
 
-async function checkForPort(port: number, timeout: number): Promise<void> {
-  const opts = { host: '127.0.0.1' };
+async function checkForPort(port: number, timeout: number): Promise<string> {
+  let host;
   const start = Date.now();
-  while (!(await isPortReachable(port, opts))) {
+  while (!(host = await getReachableHostOnPort(port))) {
     if (Date.now() - start > timeout) {
-      throw new Error(`Detecting port ${port} timed out after ${timeout}ms`);
+      break;
     }
     await sleep(100);
   }
+  if (!host) {
+    throw new Error(`Detecting port ${port} timed out after ${timeout}ms`);
+  }
+  return host;
+}
+
+async function getReachableHostOnPort(port: number): Promise<string | false> {
+  const optsIpv4 = { host: '127.0.0.1' };
+  const optsIpv6 = { host: '::1' };
+  const results = await Promise.all([
+    isPortReachable(port, optsIpv6).then(r => r && `[${optsIpv6.host}]`),
+    isPortReachable(port, optsIpv4).then(r => r && optsIpv4.host),
+  ]);
+  return results.find(Boolean) || false;
 }
 
 function filterFrontendBuilds(build: Builder) {
