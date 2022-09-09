@@ -1589,8 +1589,7 @@ export default class DevServer {
               const rewriteUrlParsed = new URL(rewritePath);
 
               // `this.address` already has localhost normalized from ip4 and ip6 values
-              const devServerParsed = this.address;
-              if (devServerParsed.origin === rewriteUrlParsed.origin) {
+              if (this.address.origin === rewriteUrlParsed.origin) {
                 // remove origin, leaving the path
                 req.url = rewritePath.slice(rewriteUrlParsed.origin.length);
               } else {
@@ -2332,7 +2331,6 @@ export default class DevServer {
 
     this.output.debug(`Spawning dev command: ${command}`);
 
-    const devPort = this.address.port;
     const proxyPort = new RegExp(port.toString(), 'g');
     const p = spawnCommand(command, {
       stdio: ['inherit', 'pipe', 'pipe'],
@@ -2349,7 +2347,7 @@ export default class DevServer {
     p.stdout.setEncoding('utf8');
 
     p.stdout.on('data', (data: string) => {
-      process.stdout.write(data.replace(proxyPort, devPort));
+      process.stdout.write(data.replace(proxyPort, this.address.port));
     });
 
     p.on('exit', (code, signal) => {
