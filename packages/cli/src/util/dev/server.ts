@@ -1036,7 +1036,7 @@ export default class DevServer {
 
     await devCommandPromise;
 
-    // log address without trailing slash to maintian backwards compatibility
+    // log address without trailing slash to maintain backwards compatibility
     const addressFormatted = this.addressUrl.toString().replace(/\/$/, '');
     this.output.ready(`Available at ${link(addressFormatted)}`);
   }
