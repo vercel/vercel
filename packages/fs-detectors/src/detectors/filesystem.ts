@@ -131,9 +131,9 @@ export abstract class DetectorFilesystem {
    * @param name the name of the file to write
    * @param content The content of the file
    */
-  public writeFile(name: string, content: string): void {
+  public writeFile = async (name: string, content: string): Promise<void> => {
     this.readFileCache.set(name, Promise.resolve(Buffer.from(content)));
     this.fileCache.set(name, Promise.resolve(true));
     this.pathCache.set(name, Promise.resolve(true));
-  }
+  };
 }

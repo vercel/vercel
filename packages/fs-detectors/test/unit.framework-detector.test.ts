@@ -180,7 +180,7 @@ describe('DetectorFilesystem', () => {
     const isFileSpy = jest.spyOn(fs, '_isFile');
     const readFileSpy = jest.spyOn(fs, '_readFile');
 
-    fs.writeFile('file.txt', 'Hello World');
+    await fs.writeFile('file.txt', 'Hello World');
 
     expect(await fs.readFile('file.txt')).toEqual(Buffer.from('Hello World'));
     expect(await fs.hasPath('file.txt')).toBe(true);
