@@ -1591,7 +1591,9 @@ export default class DevServer {
               // `this.address` already has localhost normalized from ip4 and ip6 values
               if (this.address.origin === rewriteUrlParsed.origin) {
                 // remove origin, leaving the path
-                req.url = rewritePath.slice(rewriteUrlParsed.origin.length);
+                req.url =
+                  rewritePath.slice(rewriteUrlParsed.origin.length) || '/';
+                prevUrl = req.url;
               } else {
                 // Proxy to absolute URL with different origin
                 debug(`ProxyPass: ${rewritePath}`);
@@ -1654,12 +1656,16 @@ export default class DevServer {
         missRoutes,
         phase
       );
-      prevUrl =
-        routeResult.continue && routeResult.dest
-          ? getReqUrl(routeResult)
-          : req.url;
-      prevHeaders =
-        routeResult.continue && routeResult.headers ? routeResult.headers : {};
+
+      if (routeResult.continue) {
+        if (routeResult.dest) {
+          prevUrl = getReqUrl(routeResult);
+        }
+
+        if (routeResult.headers) {
+          prevHeaders = routeResult.headers;
+        }
+      }
 
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
