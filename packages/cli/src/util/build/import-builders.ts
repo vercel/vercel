@@ -1,4 +1,5 @@
 import { URL } from 'url';
+import plural from 'pluralize';
 import npa from 'npm-package-arg';
 import { satisfies } from 'semver';
 import { dirname, join } from 'path';
@@ -205,7 +206,11 @@ async function installBuilders(
     if (err.code !== 'EEXIST') throw err;
   }
 
-  output.log(`Installing Builders: ${Array.from(buildersToAdd).join(', ')}`);
+  output.log(
+    `Installing ${plural('Builder', buildersToAdd.size)}: ${Array.from(
+      buildersToAdd
+    ).join(', ')}`
+  );
   try {
     await spawnAsync('yarn', ['add', '@vercel/build-utils', ...buildersToAdd], {
       cwd: buildersDir,
