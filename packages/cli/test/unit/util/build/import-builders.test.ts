@@ -46,9 +46,37 @@ describe('importBuilders()', () => {
         join(cwd, '.vercel/builders/node_modules/vercel-deno/package.json')
       );
       expect(typeof builders.get(spec)?.builder.build).toEqual('function');
+      await expect(client.stderr).toOutput(
+        '> Installing Builder: vercel-deno@2.0.1'
+      );
     } finally {
       await remove(cwd);
     }
+  });
+
+  it('should throw when importing a Builder that is not on npm registry', async () => {
+    let err: Error | undefined;
+    const cwd = await getWriteableDirectory();
+    try {
+      const spec = '@vercel/does-not-exist@0.0.1';
+      const specs = new Set([spec]);
+      await importBuilders(specs, cwd, client.output);
+    } catch (_err) {
+      err = _err;
+    } finally {
+      await remove(cwd);
+    }
+
+    if (!err) {
+      throw new Error('Expected `err` to be defined');
+    }
+
+    expect(err.message).toEqual(
+      'The package `@vercel/does-not-exist` is not published on the npm registry'
+    );
+    expect((err as any).link).toEqual(
+      'https://vercel.link/npm-install-failed-dev'
+    );
   });
 
   it('should import legacy `@now/build-utils` Builders', async () => {
