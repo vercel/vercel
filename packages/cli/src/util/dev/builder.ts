@@ -26,7 +26,6 @@ import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
 
 import DevServer from './server';
-//import { getBuilder } from './builder-cache';
 import {
   VercelConfig,
   BuildMatch,
@@ -199,15 +198,14 @@ export async function executeBuild(
   }
 
   // Sort out build result to builder v2 shape
-  //if (!builder.version || builder.version === 1) {
-  //  // `BuilderOutputs` map was returned (Now Builder v1 behavior)
-  //  result = {
-  //    output: buildResultOrOutputs as BuilderOutputs,
-  //    routes: [],
-  //    watch: [],
-  //  };
-  //} else if (builder.version === 2) {
-  if (builder.version === 2) {
+  if (!builder.version || (builder as any).version === 1) {
+    // `BuilderOutputs` map was returned (Now Builder v1 behavior)
+    result = {
+      output: buildResultOrOutputs as BuilderOutputs,
+      routes: [],
+      watch: [],
+    };
+  } else if (builder.version === 2) {
     result = buildResultOrOutputs as BuildResult;
   } else if (builder.version === 3) {
     const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
