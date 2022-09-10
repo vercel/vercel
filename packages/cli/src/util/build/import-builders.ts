@@ -1,3 +1,4 @@
+import { URL } from 'url';
 import npa from 'npm-package-arg';
 import { satisfies } from 'semver';
 import { dirname, join } from 'path';
@@ -13,6 +14,9 @@ import { VERCEL_DIR } from '../projects/link';
 import { Output } from '../output';
 import readJSONFile from '../read-json-file';
 import { CantParseJSONFile } from '../errors-ts';
+import { errorToString, isErrnoException, isError } from '../is-error';
+import cmd from '../output/cmd';
+import code from '../output/code';
 
 export interface BuilderWithPkg {
   path: string;
@@ -201,15 +205,46 @@ async function installBuilders(
     if (err.code !== 'EEXIST') throw err;
   }
 
-  output.debug(`Installing Builders: ${Array.from(buildersToAdd).join(', ')}`);
-  await spawnAsync('yarn', ['add', '@vercel/build-utils', ...buildersToAdd], {
-    cwd: buildersDir,
-  });
+  output.log(`Installing Builders: ${Array.from(buildersToAdd).join(', ')}`);
+  try {
+    await spawnAsync('yarn', ['add', '@vercel/build-utils', ...buildersToAdd], {
+      cwd: buildersDir,
+      stdio: 'pipe',
+    });
+  } catch (err: unknown) {
+    if (isError(err)) {
+      if (isErrnoException(err) && err.code === 'ENOENT') {
+        // `yarn` is not installed
+        err.message = `Please install ${cmd('yarn')} before continuing`;
+        (err as any).link = 'https://classic.yarnpkg.com/lang/en/docs/install';
+      } else {
+        const message = errorToString(err);
+        const notFound = /"(.*): Not found"/.exec(message);
+        (err as any).link = 'https://vercel.link/npm-install-failed-dev';
+        if (notFound) {
+          const url = new URL(notFound[1]);
+          const packageName = decodeURIComponent(url.pathname.slice(1));
+          err.message = `The package ${code(
+            packageName
+          )} is not published on the npm registry`;
+        }
+      }
+    }
+    throw err;
+  }
 
   // Symlink `@now/build-utils` -> `@vercel/build-utils` to support legacy Builders
   const nowScopePath = join(buildersDir, 'node_modules/@now');
   await mkdirp(nowScopePath);
-  await symlink('../@vercel/build-utils', join(nowScopePath, 'build-utils'));
+
+  try {
+    await symlink('../@vercel/build-utils', join(nowScopePath, 'build-utils'));
+  } catch (err: unknown) {
+    if (!isErrnoException(err) || err.code !== 'EEXIST') {
+      // Throw unless the error is due to the symlink already existing
+      throw err;
+    }
+  }
 
   // Cross-reference any builderSpecs from the saved `package.json` file,
   // in case they were installed from a URL
