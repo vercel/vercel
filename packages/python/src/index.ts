@@ -18,6 +18,8 @@ import {
 import { installRequirement, installRequirementsFile } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
+// force tests to run
+
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
   try {
