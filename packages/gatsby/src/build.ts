@@ -20,7 +20,6 @@ import {
 } from './helpers/functions';
 import { createStaticOutput } from './helpers/static';
 import { getTransformedRoutes, Rewrite } from '@vercel/routing-utils';
-import type { IGatsbyPage, IGatsbyState } from 'gatsby/dist/redux/types';
 
 function hasScript(scriptName: string, pkg: PackageJson | null) {
   const scripts = (pkg && pkg.scripts) || {};
@@ -122,15 +121,22 @@ export const build: BuildV3 = async ({
     }
   }
 
-  const { store } = require('gatsby/dist/redux');
-  const { pages } = store.getState() as IGatsbyState;
+  function getPages() {
+    const curDir = process.cwd();
+    // Change dir into `entrypointFsDirname` to get correct `pages` from redux store.
+    process.chdir(entrypointFsDirname);
+    const { pages } = require('gatsby/dist/redux').getState();
+    process.chdir(curDir);
+    return pages;
+  }
+
   const vercelConfig = await readConfigFile<{
     redirects?: [];
     rewrites?: [];
   }>(join(entrypointFsDirname, 'vercel.json'));
 
-  const { ssrRoutes, dsgRoutes } = [...pages.values()].reduce(
-    (acc, cur: IGatsbyPage) => {
+  const { ssrRoutes, dsgRoutes } = [...getPages().values()].reduce(
+    (acc, cur) => {
       if (cur.mode === 'SSR') {
         acc.ssrRoutes.push(cur.path);
       } else if (cur.mode === 'DSG') {
@@ -140,8 +146,8 @@ export const build: BuildV3 = async ({
       return acc;
     },
     {
-      ssrRoutes: [] as IGatsbyPage['path'][],
-      dsgRoutes: [] as IGatsbyPage['path'][],
+      ssrRoutes: [],
+      dsgRoutes: [],
     }
   );
 
@@ -152,7 +158,7 @@ export const build: BuildV3 = async ({
         source: '^/page-data(?:/(.*))/page-data\\.json$',
         destination: '/_page-data',
       },
-      ...(vercelConfig?.rewrites as Rewrite[]),
+      ...((vercelConfig?.rewrites as Rewrite[]) || []),
     ],
     redirects: vercelConfig?.redirects,
   });
@@ -168,18 +174,12 @@ export const build: BuildV3 = async ({
         nodeVersion,
       })),
       ...(await createAPIRoutes({
-        functions: await glob('**', join(process.cwd(), 'src', 'api')),
+        functions: await glob('**', join(entrypointFsDirname, 'src', 'api')),
         nodeVersion,
       })),
-      'page-data': await createFunctionLambda({
+      '_page-data': await createFunctionLambda({
         nodeVersion,
-        handlerFile: join(
-          __dirname,
-          '..',
-          'handlers',
-          'templates',
-          './page-data'
-        ),
+        handlerFile: join(__dirname, 'handlers', 'templates', './page-data'),
       }),
     },
     routes,

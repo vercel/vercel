@@ -19,7 +19,10 @@
     "gatsby": "^4.0.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "node build",
+    "test": "jest --env node --verbose --bail --runInBand",
+    "test-integration-once": "yarn test",
+    "prepublishOnly": "node build"
   },
   "author": "",
   "description": ""
