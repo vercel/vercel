@@ -464,6 +464,15 @@ export async function runNpmInstall(
       commandArgs = args
         .filter(a => a !== '--prefer-offline')
         .concat(['install', '--no-audit', '--unsafe-perm']);
+      if (process.env.VERCEL_NPM_LEGACY_PEER_DEPS === '1') {
+        // Starting in npm@8.6.0, if you ran `npm install --legacy-peer-deps`,
+        // and then later ran `npm install`, it would fail.
+        // So the only way to safely upgrade npm from npm@8.5.0 is to
+        // set this flag. The docs say its not recommended so we need to
+        // put this flag behind a flag :)
+        // See https://docs.npmjs.com/cli/v8/using-npm/config#legacy-peer-deps
+        commandArgs.push('--legacy-peer-deps');
+      }
     } else if (cliType === 'pnpm') {
       // PNPM's install command is similar to NPM's but without the audit nonsense
       // @see options https://pnpm.io/cli/install
