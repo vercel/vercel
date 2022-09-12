@@ -33,6 +33,9 @@ export async function getWorkspacePackagePaths({
     case 'pnpm':
       results = await getPnpmWorkspacePackagePaths({ fs: workspaceFs });
       break;
+    case 'nx':
+      results = await getNxWorkspacePackagePaths({ fs: workspaceFs });
+      break;
     default:
       throw new Error(`Unknown workspace implementation: ${type}`);
   }
@@ -99,6 +102,18 @@ async function getPackageJsonWorkspacePackagePaths({
   } else {
     packages = workspaces?.packages ?? [];
   }
+
+  return getPackagePaths(packages, fs);
+}
+
+async function getNxWorkspacePackagePaths({
+  fs,
+}: GetPackagePathOptions): Promise<string[]> {
+  let packages: string[] = [];
+  const workspaceJsonAsBuffer = await fs.readFile('workspace.json');
+  const { workspaces } = JSON.parse(workspaceJsonAsBuffer.toString());
+
+  packages = Object.values(workspaces?.projects) ?? [];
 
   return getPackagePaths(packages, fs);
 }

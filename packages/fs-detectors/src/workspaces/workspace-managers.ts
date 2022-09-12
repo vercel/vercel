@@ -60,6 +60,17 @@ export const workspaceManagers: Array<
     },
   },
   {
+    name: 'nx',
+    slug: 'nx',
+    detectors: {
+      every: [
+        {
+          path: 'workspace.json',
+        },
+      ],
+    },
+  },
+  {
     name: 'default',
     slug: 'yarn',
     detectors: {
