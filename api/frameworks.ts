@@ -16,12 +16,6 @@ const frameworks = (_frameworks as Framework[])
       defaultRoutes: undefined,
     };
 
-    if (framework.logo) {
-      const prefix = '/packages/frameworks/logos/';
-      const filename = framework.logo.slice(prefix.length);
-      framework.logo = `https://api-frameworks.vercel.sh/framework-logos/${filename}`;
-    }
-
     return framework;
   });
 

@@ -176,7 +176,7 @@ describe('frameworks', () => {
     const missing = frameworkList
       .map(f => f.logo)
       .filter(logo => {
-        const prefix = '/packages/frameworks/logos/';
+        const prefix = 'https://api-frameworks.vercel.sh/';
         const filename = logo.slice(prefix.length);
         return existsSync(join(__dirname, '..', 'logos', filename)) === false;
       });
