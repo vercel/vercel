@@ -3,6 +3,7 @@ import url from 'url';
 import fs from 'fs-extra';
 import { join } from 'path';
 import listen from 'async-listen';
+import stripAnsi from 'strip-ansi';
 import { createServer } from 'http';
 
 const {
@@ -723,9 +724,8 @@ test('[vercel dev] should support custom 404 routes', async () => {
 test('[vercel dev] prints `npm install` errors', async () => {
   const dir = fixture('runtime-not-installed');
   const result = await exec(dir);
-  console.log(result);
   expect(
-    result.stderr.includes(
+    stripAnsi(result.stderr).includes(
       'Error: The package `@vercel/does-not-exist` is not published on the npm registry'
     )
   ).toBeTruthy();
