@@ -176,9 +176,10 @@ describe('frameworks', () => {
     const missing = frameworkList
       .map(f => f.logo)
       .filter(logo => {
-        const prefix = 'https://api-frameworks.vercel.sh/';
+        const prefix = 'https://api-frameworks.vercel.sh/framework-logos/';
         const filename = logo.slice(prefix.length);
-        return existsSync(join(__dirname, '..', 'logos', filename)) === false;
+        const filepath = join(__dirname, '..', 'logos', filename);
+        return existsSync(filepath) === false;
       });
 
     expect(missing).toEqual([]);
