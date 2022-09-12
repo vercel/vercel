@@ -931,7 +931,7 @@ export default class DevServer {
     }
 
     this._address = new URL(
-      address.replace('[::]', 'localhost').replace('127.0.0.1', 'localhost')
+      address.replace('[::]', 'localhost').replace('0.0.0.0', 'localhost')
     );
 
     const vercelConfig = await this.getVercelConfig();
