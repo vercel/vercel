@@ -173,6 +173,24 @@ describe('DetectorFilesystem', () => {
     expect(hasPathSpy).not.toHaveBeenCalled();
   });
 
+  it('should be able to write files', async () => {
+    const files = {};
+    const fs = new VirtualFilesystem(files);
+    const hasPathSpy = jest.spyOn(fs, '_hasPath');
+    const isFileSpy = jest.spyOn(fs, '_isFile');
+    const readFileSpy = jest.spyOn(fs, '_readFile');
+
+    await fs.writeFile('file.txt', 'Hello World');
+
+    expect(await fs.readFile('file.txt')).toEqual(Buffer.from('Hello World'));
+    expect(await fs.hasPath('file.txt')).toBe(true);
+    expect(await fs.isFile('file.txt')).toBe(true);
+    // We expect that the fs returned values from it's caches instead of calling the underlying functions
+    expect(hasPathSpy).not.toHaveBeenCalled();
+    expect(isFileSpy).not.toHaveBeenCalled();
+    expect(readFileSpy).not.toHaveBeenCalled();
+  });
+
   it('should be able to change directories', async () => {
     const nextPackageJson = JSON.stringify({
       dependencies: {
