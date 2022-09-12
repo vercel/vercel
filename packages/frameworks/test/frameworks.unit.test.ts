@@ -176,8 +176,7 @@ describe('frameworks', () => {
     const missing = frameworkList
       .map(f => f.logo)
       .filter(url => {
-        const prefix =
-          'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/';
+        const prefix = '/packages/frameworks/logos/';
         const name = url.replace(prefix, '');
         return existsSync(join(__dirname, '..', 'logos', name)) === false;
       });
