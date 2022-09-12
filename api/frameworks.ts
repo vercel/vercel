@@ -17,7 +17,9 @@ const frameworks = (_frameworks as Framework[])
     };
 
     if (framework.logo) {
-      framework.logo = `https://api-frameworks.vercel.sh/framework-logos/${framework.logo}`;
+      const prefix = '/packages/frameworks/logos/';
+      const filename = framework.logo.replace(prefix, '');
+      framework.logo = `https://api-frameworks.vercel.sh/framework-logos/${filename}`;
     }
 
     return framework;
