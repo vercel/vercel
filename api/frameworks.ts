@@ -18,7 +18,7 @@ const frameworks = (_frameworks as Framework[])
 
     if (framework.logo) {
       const prefix = '/packages/frameworks/logos/';
-      const filename = framework.logo.replace(prefix, '');
+      const filename = framework.logo.slice(prefix.length);
       framework.logo = `https://api-frameworks.vercel.sh/framework-logos/${filename}`;
     }
 

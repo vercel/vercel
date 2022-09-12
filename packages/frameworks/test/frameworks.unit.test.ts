@@ -175,10 +175,10 @@ describe('frameworks', () => {
   it('ensure logo', async () => {
     const missing = frameworkList
       .map(f => f.logo)
-      .filter(url => {
+      .filter(logo => {
         const prefix = '/packages/frameworks/logos/';
-        const name = url.replace(prefix, '');
-        return existsSync(join(__dirname, '..', 'logos', name)) === false;
+        const filename = logo.slice(prefix.length);
+        return existsSync(join(__dirname, '..', 'logos', filename)) === false;
       });
 
     expect(missing).toEqual([]);
