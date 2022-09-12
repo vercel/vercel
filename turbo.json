@@ -20,27 +20,27 @@
       ]
     },
     "test-unit": {
-      "dependsOn": ["build"],
+      "dependsOn": [],
       "outputs": []
     },
     "test-integration-dev": {
-      "dependsOn": ["build"],
+      "dependsOn": [],
       "outputs": []
     },
     "test-integration-cli": {
-      "dependsOn": ["build"],
+      "dependsOn": [],
       "outputs": []
     },
     "test-integration-once": {
-      "dependsOn": ["build"],
+      "dependsOn": [],
       "outputs": []
     },
     "test-next-local": {
-      "dependsOn": ["build"],
+      "dependsOn": [],
       "outputs": []
     },
     "test": {
-      "dependsOn": ["build"],
+      "dependsOn": [],
       "outputs": []
     }
   }

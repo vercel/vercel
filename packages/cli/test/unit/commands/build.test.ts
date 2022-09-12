@@ -47,6 +47,37 @@ describe('build', () => {
     }
   });
 
+  it('should build with `@now/static`', async () => {
+    const cwd = fixture('now-static');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@now/static',
+            apiVersion: 2,
+            src: 'www/index.html',
+            use: '@now/static',
+          },
+        ],
+      });
+
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files).toEqual(['www']);
+      const www = await fs.readdir(join(output, 'static', 'www'));
+      expect(www).toEqual(['index.html']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should build with `@vercel/node`', async () => {
     const cwd = fixture('node');
     const output = join(cwd, '.vercel/output');
@@ -107,6 +138,54 @@ describe('build', () => {
         'typescript.func',
       ]);
     } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should handle symlinked static files', async () => {
+    const cwd = fixture('static-symlink');
+    const output = join(cwd, '.vercel/output');
+
+    // try to create the symlink, if it fails (e.g. Windows), skip the test
+    try {
+      await fs.unlink(join(cwd, 'foo.html'));
+      await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
+    } catch (e) {
+      console.log('Symlinks not available, skipping test');
+      return;
+    }
+
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            src: '**',
+            use: '@vercel/static',
+          },
+        ],
+      });
+
+      // "static" directory contains static files
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['foo.html', 'index.html']);
+      expect(
+        (await fs.lstat(join(output, 'static', 'foo.html'))).isSymbolicLink()
+      ).toEqual(true);
+      expect(
+        (await fs.lstat(join(output, 'static', 'index.html'))).isSymbolicLink()
+      ).toEqual(false);
+    } finally {
+      await fs.unlink(join(cwd, 'foo.html'));
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
@@ -630,6 +709,11 @@ describe('build', () => {
       const exitCode = await build(client);
       expect(exitCode).toEqual(1);
 
+      // Error gets printed to the terminal
+      await expect(client.stderr).toOutput(
+        'Error: Function must contain at least one property.'
+      );
+
       // `builds.json` contains top-level "error" property
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds.builds).toBeUndefined();
@@ -655,6 +739,9 @@ describe('build', () => {
       process.chdir(cwd);
       const exitCode = await build(client);
       expect(exitCode).toEqual(1);
+
+      // Error gets printed to the terminal
+      await expect(client.stderr).toOutput("Duplicate identifier 'res'.");
 
       // `builds.json` contains "error" build
       const builds = await fs.readJSON(join(output, 'builds.json'));
@@ -805,5 +892,146 @@ describe('build', () => {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
+  });
+
+  it('should apply project settings overrides from "vercel.json"', async () => {
+    if (process.platform === 'win32') {
+      // this test runs a build command with `mkdir -p` which is unsupported on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
+    const cwd = fixture('project-settings-override');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // The `buildCommand` override in "vercel.json" outputs "3" to the
+      // index.txt file, so verify that that was produced in the build output
+      const contents = await fs.readFile(
+        join(output, 'static/index.txt'),
+        'utf8'
+      );
+      expect(contents.trim()).toEqual('3');
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  describe('should find packages with different main/module/browser keys', function () {
+    let output: string;
+
+    beforeAll(async function () {
+      const cwd = fixture('import-from-main-keys');
+      output = join(cwd, '.vercel/output');
+
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      const sortedFunctions = functions.sort();
+      expect(sortedFunctions).toEqual([
+        'prefer-browser.func',
+        'prefer-main.func',
+        'prefer-module.func',
+        'use-browser.func',
+        'use-classic.func',
+        'use-main.func',
+        'use-module.func',
+      ]);
+    });
+
+    afterAll(function () {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    });
+
+    it('use-classic', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'use-classic.func',
+        'packages',
+        'only-classic'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('index.js');
+    });
+
+    it('use-main', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'use-main.func',
+        'packages',
+        'only-main'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-main.js');
+    });
+
+    it('use-module', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'use-module.func',
+        'packages',
+        'only-module'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-module.js');
+    });
+
+    it('use-browser', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'use-browser.func',
+        'packages',
+        'only-browser'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-browser.js');
+    });
+
+    it('prefer-browser', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'prefer-browser.func',
+        'packages',
+        'prefer-browser'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-browser.js');
+    });
+
+    it('prefer-main', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'prefer-main.func',
+        'packages',
+        'prefer-main'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-main.js');
+    });
+
+    it('prefer-module', async function () {
+      const packageDir = join(
+        output,
+        'functions/api',
+        'prefer-module.func',
+        'packages',
+        'prefer-module'
+      );
+      const packageDistFiles = await fs.readdir(packageDir);
+      expect(packageDistFiles).toContain('dist-module.js');
+    });
   });
 });

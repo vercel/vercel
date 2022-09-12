@@ -10,6 +10,7 @@ import {
   download,
   getLambdaOptionsFromFunction,
   getNodeVersion,
+  getPrefixedEnvVars,
   getSpawnOptions,
   getScriptName,
   glob,
@@ -35,7 +36,14 @@ import { Sema } from 'async-sema';
 // escape-string-regexp version must match Next.js version
 import escapeStringRegexp from 'escape-string-regexp';
 import findUp from 'find-up';
-import { lstat, pathExists, readFile, remove, writeFile } from 'fs-extra';
+import {
+  lstat,
+  pathExists,
+  readFile,
+  readJSON,
+  remove,
+  writeFile,
+} from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import resolveFrom from 'resolve-from';
@@ -224,14 +232,14 @@ export const build: BuildV2 = async ({
     )
   );
 
-  Object.keys(process.env)
-    .filter(key => key.startsWith('VERCEL_'))
-    .forEach(key => {
-      const newKey = `NEXT_PUBLIC_${key}`;
-      if (!(newKey in process.env)) {
-        process.env[newKey] = process.env[key];
-      }
-    });
+  const prefixedEnvs = getPrefixedEnvVars({
+    envPrefix: 'NEXT_PUBLIC_',
+    envs: process.env,
+  });
+
+  for (const [key, value] of Object.entries(prefixedEnvs)) {
+    process.env[key] = value;
+  }
 
   await download(files, workPath, meta);
 
@@ -474,6 +482,14 @@ export const build: BuildV2 = async ({
         ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
           path.join('/', routesManifest?.i18n!.defaultLocale!, '/404')
         : '/404'
+    ]?.initialRevalidate === 'number';
+
+  const hasIsr500Page =
+    typeof prerenderManifest.staticRoutes[
+      routesManifest?.i18n
+        ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+          path.join('/', routesManifest?.i18n!.defaultLocale!, '/500')
+        : '/500'
     ]?.initialRevalidate === 'number';
 
   const wildcardConfig: BuildResult['wildcard'] =
@@ -995,7 +1011,7 @@ export const build: BuildV2 = async ({
       buildId,
       'pages'
     );
-    const pages = await getServerlessPages({
+    const { pages } = await getServerlessPages({
       pagesDir,
       entryPath,
       outputDirectory,
@@ -1072,10 +1088,15 @@ export const build: BuildV2 = async ({
       'pages'
     );
 
-    const pages = await getServerlessPages({
+    const appPathRoutesManifest = await readJSON(
+      path.join(entryPath, outputDirectory, 'app-path-routes-manifest.json')
+    ).catch(() => null);
+
+    const { pages, appPaths: lambdaAppPaths } = await getServerlessPages({
       pagesDir,
       entryPath,
       outputDirectory,
+      appPathRoutesManifest,
     });
     const isApiPage = (page: string) =>
       page
@@ -1264,10 +1285,12 @@ export const build: BuildV2 = async ({
         config,
         nextVersion,
         trailingSlash,
+        appPathRoutesManifest,
         dynamicPages,
         canUsePreviewMode,
         staticPages,
         lambdaPages: pages,
+        lambdaAppPaths,
         omittedPrerenderRoutes,
         isCorrectLocaleAPIRoutes,
         pagesDir,
@@ -1295,6 +1318,7 @@ export const build: BuildV2 = async ({
         requiredServerFilesManifest,
         privateOutputs,
         hasIsr404Page,
+        hasIsr500Page,
       });
     }
 
@@ -2596,18 +2620,42 @@ async function getServerlessPages(params: {
   pagesDir: string;
   entryPath: string;
   outputDirectory: string;
+  appPathRoutesManifest?: Record<string, string>;
 }) {
-  const [pages, middlewareManifest] = await Promise.all([
+  const [pages, appPaths, middlewareManifest] = await Promise.all([
     glob('**/!(_middleware).js', params.pagesDir),
+    params.appPathRoutesManifest
+      ? glob('**/page.js', path.join(params.pagesDir, '../app'))
+      : Promise.resolve({}),
     getMiddlewareManifest(params.entryPath, params.outputDirectory),
   ]);
+
+  const normalizedAppPaths: typeof appPaths = {};
+
+  if (params.appPathRoutesManifest) {
+    for (const [entry, normalizedEntry] of Object.entries(
+      params.appPathRoutesManifest
+    )) {
+      const normalizedPath = `${path.join(
+        '.',
+        normalizedEntry === '/' ? '/index' : normalizedEntry
+      )}.js`;
+      const globPath = `${path.join('.', entry)}.js`;
+
+      if (appPaths[globPath]) {
+        normalizedAppPaths[normalizedPath] = appPaths[globPath];
+      }
+    }
+  }
 
   // Edge Functions do not consider as Serverless Functions
   for (const edgeFunctionFile of Object.keys(
     middlewareManifest?.functions ?? {}
   )) {
-    delete pages[edgeFunctionFile.slice(1) + '.js'];
+    const edgePath = edgeFunctionFile.slice(1) + '.js';
+    delete normalizedAppPaths[edgePath];
+    delete pages[edgePath];
   }
 
-  return pages;
+  return { pages, appPaths: normalizedAppPaths };
 }

@@ -1,4 +1,4 @@
-import decamelize from 'decamelize';
+import { snakeCase } from 'snake-case';
 import { upper } from '../lib/upper';
 
 export const config = {
@@ -14,8 +14,8 @@ export default async function edge(request, event) {
       url: request.url,
       method: request.method,
       body: requestBody,
-      decamelized: decamelize('someCamelCaseThing'),
-      uppercase: upper('someThing'),
+      snakeCase: snakeCase('someCamelCaseThing'),
+      upperCase: upper('someThing'),
       optionalChaining: request?.doesnotexist ?? 'fallback',
       ENV_VAR_IN_EDGE: process.env.ENV_VAR_IN_EDGE,
     })

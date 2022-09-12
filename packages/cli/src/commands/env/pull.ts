@@ -84,7 +84,7 @@ export default async function pull(
       false
     ))
   ) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 
@@ -117,7 +117,12 @@ export default async function pull(
   if (exists) {
     oldEnv = await createEnvObject(fullPath, output);
     if (oldEnv) {
-      deltaString = buildDeltaString(oldEnv, records);
+      // Removes any double quotes from `records`, if they exist
+      // We need this because double quotes are stripped from the local .env file,
+      // but `records` is already in the form of a JSON object that doesn't filter
+      // double quotes.
+      const newEnv = JSON.parse(JSON.stringify(records).replace(/\\"/g, ''));
+      deltaString = buildDeltaString(oldEnv, newEnv);
     }
   }
 
@@ -130,6 +135,12 @@ export default async function pull(
 
   await outputFile(fullPath, contents, 'utf8');
 
+  if (deltaString) {
+    output.print('\n' + deltaString);
+  } else if (oldEnv && exists) {
+    output.log('No changes found.');
+  }
+
   output.print(
     `${prependEmoji(
       `${exists ? 'Updated' : 'Created'} ${chalk.bold(
@@ -138,13 +149,6 @@ export default async function pull(
       emoji('success')
     )}\n`
   );
-
-  output.print('\n');
-  if (deltaString) {
-    output.print(deltaString);
-  } else if (oldEnv && exists) {
-    output.log('No changes found.');
-  }
 
   return 0;
 }

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-build",
-  "version": "1.0.9",
+  "version": "1.0.23",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
@@ -16,8 +16,7 @@
     "build": "node build",
     "test": "jest --env node --verbose --bail --runInBand",
     "test-unit": "yarn test test/build.test.ts test/prepare-cache.test.ts",
-    "test-integration-once": "yarn test test/integration-*.test.js",
-    "prepublishOnly": "node build"
+    "test-integration-once": "yarn test test/integration-*.test.js"
   },
   "jest": {
     "preset": "ts-jest/presets/default",
@@ -37,10 +36,10 @@
     "@types/ms": "0.7.31",
     "@types/node-fetch": "2.5.4",
     "@types/promise-timeout": "1.3.0",
-    "@vercel/build-utils": "5.0.4",
-    "@vercel/frameworks": "1.1.1",
-    "@vercel/ncc": "0.34.0",
-    "@vercel/routing-utils": "2.0.0",
+    "@vercel/build-utils": "5.4.2",
+    "@vercel/frameworks": "1.1.5",
+    "@vercel/ncc": "0.24.0",
+    "@vercel/routing-utils": "2.0.2",
     "fs-extra": "10.0.0",
     "get-port": "5.0.0",
     "is-port-reachable": "2.0.1",

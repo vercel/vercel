@@ -17,7 +17,7 @@ import printIndications from './print-indications';
 import { GitMetadata, Org } from '../types';
 import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
-import { Dictionary } from '@vercel/client';
+import { ArchiveFormat, Dictionary } from '@vercel/client';
 
 export interface NowOptions {
   client: Client;
@@ -131,6 +131,7 @@ export default class Now extends EventEmitter {
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
+    archive?: ArchiveFormat,
     cwd?: string
   ) {
     let hashes: any = {};
@@ -168,6 +169,7 @@ export default class Now extends EventEmitter {
       org,
       projectName: name,
       isSettingUpProject,
+      archive,
       skipAutoDetectionConfirmation,
       cwd,
       prebuilt,
@@ -330,7 +332,8 @@ export default class Now extends EventEmitter {
 
   async list(
     app?: string,
-    { version = 4, meta = {}, nextTimestamp }: ListOptions = {}
+    { version = 4, meta = {}, nextTimestamp }: ListOptions = {},
+    prod?: boolean
   ) {
     const fetchRetry = async (url: string, options: FetchOptions = {}) => {
       return this.retry(
@@ -392,6 +395,9 @@ export default class Now extends EventEmitter {
 
     if (nextTimestamp) {
       query.set('until', String(nextTimestamp));
+    }
+    if (prod) {
+      query.set('target', 'production');
     }
 
     const response = await fetchRetry(`/v${version}/now/deployments?${query}`);

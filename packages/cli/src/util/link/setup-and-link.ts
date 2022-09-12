@@ -87,7 +87,7 @@ export default async function setupAndLink(
     ));
 
   if (!shouldStartSetup) {
-    output.print(`Aborted. Project not set up.\n`);
+    output.print(`Canceled. Project not set up.\n`);
     return { status: 'not_linked', org: null, project: null };
   }
 
@@ -241,6 +241,7 @@ export default async function setupAndLink(
     }
 
     const project = await createProject(client, newProjectName);
+
     await updateProject(client, project.id, settings);
     Object.assign(project, settings);
 

@@ -3,7 +3,7 @@ import { Org, Project } from '../../types';
 import Client from '../../util/client';
 import confirm from '../../util/input/confirm';
 import { getCommandName } from '../../util/pkg-name';
-import { disconnectGitProvider } from '../../util/projects/connect-git-provider';
+import { disconnectGitProvider } from '../../util/git/connect-git-provider';
 
 export default async function disconnect(
   client: Client,
@@ -43,7 +43,7 @@ export default async function disconnect(
       await disconnectGitProvider(client, org, project.id);
       output.log(`Disconnected ${chalk.cyan(`${linkOrg}/${repo}`)}.`);
     } else {
-      output.log('Aborted.');
+      output.log('Canceled');
     }
   } else {
     output.error(

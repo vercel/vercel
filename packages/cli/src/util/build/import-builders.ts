@@ -81,7 +81,7 @@ export async function resolveBuilders(
       continue;
     }
 
-    if (name === '@vercel/static') {
+    if (name === '@vercel/static' || name === '@now/static') {
       // `@vercel/static` is a special-case built-in builder
       builders.set(name, {
         builder: staticBuilder,

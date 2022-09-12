@@ -99,7 +99,7 @@ export async function detectBuilders(
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
 
-  const apiBuilders: Builder[] = [];
+  let apiBuilders: Builder[] = [];
   let frontendBuilder: Builder | null = null;
 
   const functionError = validateFunctions(options);
@@ -303,6 +303,24 @@ export async function detectBuilders(
       errorRoutes: null,
       limitedRoutes: null,
     };
+  }
+
+  // Exclude the middleware builder for Next.js apps since @vercel/next
+  // will build middlewares.
+  //
+  // While maybeGetApiBuilder() excludes the middleware builder, however,
+  // we need to check if it's a Next.js app here again for the case where
+  // `projectSettings.framework == null`.
+  if (
+    framework === null &&
+    frontendBuilder?.use === '@vercel/next' &&
+    apiBuilders.length > 0
+  ) {
+    apiBuilders = apiBuilders.filter(builder => {
+      const isMiddlewareBuilder =
+        builder.use === '@vercel/node' && builder.config?.middleware;
+      return !isMiddlewareBuilder;
+    });
   }
 
   const builders: Builder[] = [];

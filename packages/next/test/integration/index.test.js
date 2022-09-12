@@ -7,6 +7,45 @@ const runBuildLambda = require('../../../../test/lib/run-build-lambda');
 
 jest.setTimeout(360000);
 
+it('should build with app-dir correctly', async () => {
+  const { buildResult } = await runBuildLambda(
+    path.join(__dirname, '../fixtures/00-app-dir')
+  );
+
+  const lambdas = new Set();
+
+  for (const key of Object.keys(buildResult.output)) {
+    if (buildResult.output[key].type === 'Lambda') {
+      lambdas.add(buildResult.output[key]);
+    }
+  }
+  expect(lambdas.size).toBe(1);
+  expect(buildResult.output['dashboard']).toBeDefined();
+  expect(buildResult.output['dashboard/another']).toBeDefined();
+  expect(buildResult.output['dashboard/changelog']).toBeDefined();
+  expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
+});
+
+it('should build with app-dir in edg runtime correctly', async () => {
+  const { buildResult } = await runBuildLambda(
+    path.join(__dirname, '../fixtures/00-app-dir-edge')
+  );
+
+  console.log('buildResult', buildResult);
+  const edgeFunctions = new Set();
+
+  for (const key of Object.keys(buildResult.output)) {
+    if (buildResult.output[key].type === 'EdgeFunction') {
+      edgeFunctions.add(buildResult.output[key]);
+    }
+  }
+
+  expect(edgeFunctions.size).toBe(3);
+  expect(buildResult.output['edge']).toBeDefined();
+  expect(buildResult.output['index']).toBeDefined();
+  expect(buildResult.output['index/index']).toBeDefined();
+});
+
 it('should show error from basePath with legacy monorepo build', async () => {
   let error;
 

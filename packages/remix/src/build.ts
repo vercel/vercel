@@ -265,10 +265,9 @@ async function createRenderFunction(
   });
 
   for (const warning of trace.warnings) {
-    if (warning.stack) {
-      debug(warning.stack.replace('Error: ', 'Warning: '));
-    }
+    debug(`Warning from trace: ${warning.message}`);
   }
+
   for (const file of trace.fileList) {
     files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
   }

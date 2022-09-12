@@ -9,7 +9,7 @@ const ms = require('ms');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function nowDeploy(bodies, randomness, uploadNowJson) {
+async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
   const files = Object.keys(bodies)
     .filter(n =>
       uploadNowJson
@@ -29,9 +29,13 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
         (path.extname(n) === '.sh' ? 0o100755 : 0o100644),
     }));
 
-  const { FORCE_BUILD_IN_REGION, NOW_DEBUG, VERCEL_DEBUG, VERCEL_CLI_VERSION } =
+  const { FORCE_BUILD_IN_REGION, VERCEL_DEBUG, VERCEL_CLI_VERSION } =
     process.env;
-  const nowJson = JSON.parse(bodies['vercel.json'] || bodies['now.json']);
+  const nowJson = JSON.parse(
+    bodies['vercel.json'] || bodies['now.json'] || '{}'
+  );
+
+  delete nowJson.probes;
 
   const nowDeployPayload = {
     version: 2,
@@ -42,23 +46,16 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
         ...(nowJson.build || {}).env,
         RANDOMNESS_BUILD_ENV_VAR: randomness,
         FORCE_BUILD_IN_REGION,
-        NOW_DEBUG,
         VERCEL_DEBUG,
         VERCEL_CLI_VERSION,
         NEXT_TELEMETRY_DISABLED: '1',
       },
     },
-    name: 'test2020',
+    name: projectName,
     files,
-    builds: nowJson.builds,
     meta: {},
+    ...nowJson,
   };
-
-  for (const field of ['routes', 'rewrites', 'headers', 'redirects']) {
-    if (nowJson[field]) {
-      nowDeployPayload[field] = nowJson[field];
-    }
-  }
 
   logWithinTest(`posting ${files.length} files`);
 
@@ -78,12 +75,6 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
   }
 
   logWithinTest('id', deploymentId);
-  const st = typeof expect !== 'undefined' ? expect.getState() : {};
-  const expectstate = {
-    currentTestName: st.currentTestName,
-    testPath: st.testPath,
-  };
-  logWithinTest('deploymentUrl', `https://${deploymentUrl}`, expectstate);
 
   for (let i = 0; i < 750; i += 1) {
     const deployment = await deploymentGet(deploymentId);
@@ -97,10 +88,10 @@ async function nowDeploy(bodies, randomness, uploadNowJson) {
       throw error;
     }
     if (readyState === 'READY') {
-      logWithinTest('state is READY, moving on');
+      logWithinTest(`State of https://${deploymentUrl} is READY, moving on`);
       break;
     }
-    if (i > 0 && i % 25 === 0) {
+    if (i % 25 === 0) {
       logWithinTest(
         `State of https://${deploymentUrl} is ${readyState}, retry number ${i}`
       );
@@ -146,7 +137,7 @@ async function filePost(body, digest) {
 }
 
 async function deploymentPost(payload) {
-  const url = '/v6/now/deployments?forceNew=1';
+  const url = '/v13/deployments?skipAutoDetectionConfirmation=1&forceNew=1';
   const resp = await fetchWithAuth(url, {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -164,8 +155,7 @@ async function deploymentPost(payload) {
 }
 
 async function deploymentGet(deploymentId) {
-  const url = `/v12/now/deployments/${deploymentId}`;
-  logWithinTest('fetching deployment', url);
+  const url = `/v13/deployments/${deploymentId}`;
   const resp = await fetchWithAuth(url);
   const json = await resp.json();
   if (json.error) {

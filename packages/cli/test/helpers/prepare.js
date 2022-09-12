@@ -76,25 +76,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
-    'build-env-debug': {
-      'now.json': JSON.stringify({
-        builds: [{ src: 'index.js', use: '@vercel/node' }],
-      }),
-      'package.json': JSON.stringify({
-        scripts: {
-          'now-build': 'node now-build.js',
-        },
-      }),
-      'now-build.js': `
-        const fs = require('fs');
-        fs.writeFileSync(
-          'index.js',
-          fs.readFileSync('index.js', 'utf8')
-          .replace('BUILD_ENV_DEBUG', process.env.NOW_BUILDER_DEBUG ? 'on' : 'off'),
-        );
-      `,
-      'index.js': `module.exports = (req, res) => { res.status(200).send('BUILD_ENV_DEBUG'); }`,
-    },
     'now-revert-alias-1': {
       'index.json': JSON.stringify({ name: 'now-revert-alias-1' }),
       'now.json': getRevertAliasConfigFile(),
@@ -342,7 +323,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'lambda-with-php-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
             runtime: 'vercel-php@0.1.0',
@@ -352,7 +333,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'lambda-with-invalid-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
-      'now.json': JSON.stringify({
+      'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
             memory: 128,

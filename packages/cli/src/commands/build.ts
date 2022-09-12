@@ -37,6 +37,7 @@ import cliPkg from '../util/pkg';
 import readJSONFile from '../util/read-json-file';
 import { CantParseJSONFile } from '../util/errors-ts';
 import {
+  pickOverrides,
   ProjectLinkAndSettings,
   readProjectSettings,
 } from '../util/projects/project-settings';
@@ -91,7 +92,7 @@ const help = () => {
       --output [path]                Directory where built assets should be written to
       --prod                         Build a production deployment
       -d, --debug                    Debug mode [off]
-      -y, --yes                      Skip the confirmation prompt
+      -y, --yes                      Skip the confirmation prompt about pulling environment variables and project settings when not found locally
 
     ${chalk.dim('Examples:')}
 
@@ -157,7 +158,7 @@ export default async function main(client: Client): Promise<number> {
         client.output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
             'pull --yes'
-          )} to retreive them.`
+          )} to retrieve them.`
         );
         return 1;
       }
@@ -171,7 +172,7 @@ export default async function main(client: Client): Promise<number> {
       );
     }
     if (!confirmed) {
-      client.output.print(`Aborted. No Project Settings retrieved.\n`);
+      client.output.print(`Canceled. No Project Settings retrieved.\n`);
       return 0;
     }
     const { argv: originalArgv } = client;
@@ -278,6 +279,11 @@ async function doBuild(
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
 
+  const projectSettings = {
+    ...project.settings,
+    ...pickOverrides(vercelConfig || {}),
+  };
+
   // Get a list of source files
   const files = (await getFiles(workPath, client)).map(f =>
     normalizePath(relative(workPath, f))
@@ -313,7 +319,7 @@ async function doBuild(
     // Detect the Vercel Builders that will need to be invoked
     const detectedBuilders = await detectBuilders(files, pkg, {
       ...vercelConfig,
-      projectSettings: project.settings,
+      projectSettings,
       ignoreBuildScript: true,
       featHandleMiss: true,
     });
@@ -425,14 +431,14 @@ async function doBuild(
 
       const buildConfig: Config = isZeroConfig
         ? {
-            outputDirectory: project.settings.outputDirectory ?? undefined,
+            outputDirectory: projectSettings.outputDirectory ?? undefined,
             ...build.config,
-            projectSettings: project.settings,
-            installCommand: project.settings.installCommand ?? undefined,
-            devCommand: project.settings.devCommand ?? undefined,
-            buildCommand: project.settings.buildCommand ?? undefined,
-            framework: project.settings.framework,
-            nodeVersion: project.settings.nodeVersion,
+            projectSettings,
+            installCommand: projectSettings.installCommand ?? undefined,
+            devCommand: projectSettings.devCommand ?? undefined,
+            buildCommand: projectSettings.buildCommand ?? undefined,
+            framework: projectSettings.framework,
+            nodeVersion: projectSettings.nodeVersion,
           }
         : build.config || {};
       const buildOptions: BuildOptions = {
@@ -469,6 +475,8 @@ async function doBuild(
         )
       );
     } catch (err: any) {
+      output.prettyError(err);
+
       const writeConfigJsonPromise = fs.writeJSON(
         join(outputDir, 'config.json'),
         { version: 3 },

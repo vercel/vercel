@@ -13,6 +13,7 @@ const {
 
 jest.setTimeout(6 * 60 * 1000);
 
+const isCI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const isCanary = () => getDistTag(cliVersion) === 'canary';
 
@@ -52,7 +53,7 @@ function fetchWithRetry(url, opts = {}) {
       return res;
     },
     {
-      retries: opts.retries || 3,
+      retries: opts.retries ?? 3,
       factor: 1,
     }
   );
@@ -150,9 +151,9 @@ async function testPath(
   fetchOpts = {}
 ) {
   const opts = {
+    retries: isCI ? 5 : 0,
     ...fetchOpts,
     redirect: 'manual-dont-change',
-    retries: 5,
     status,
   };
   const url = `${origin}${path}`;
@@ -305,7 +306,7 @@ function testFixtureStdio(
               ? ['--scope', process.env.VERCEL_TEAM_ID]
               : []),
             'link',
-            '--confirm',
+            '--yes',
           ],
           { cwd, stdio: 'pipe', reject: false }
         );
@@ -330,7 +331,7 @@ function testFixtureStdio(
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify(projectSettings),
-              retries: 3,
+              retries: isCI ? 3 : 0,
               status: 200,
             }
           );
@@ -347,6 +348,12 @@ function testFixtureStdio(
               ? ['--scope', process.env.VERCEL_TEAM_ID]
               : []),
             'deploy',
+            ...(process.env.VERCEL_CLI_VERSION
+              ? [
+                  '--build-env',
+                  `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`,
+                ]
+              : []),
             '--public',
             '--debug',
           ],
@@ -427,7 +434,7 @@ function testFixtureStdio(
           );
         }
 
-        if (stderr.includes('Command failed') || stderr.includes('Error!')) {
+        if (stderr.includes('Command failed')) {
           dev.kill('SIGTERM');
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }

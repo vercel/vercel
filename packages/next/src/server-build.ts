@@ -41,6 +41,7 @@ import {
   getNextServerPath,
   getMiddlewareBundle,
   getFilesMapFromReasons,
+  UnwrapPromise,
 } from './utils';
 import {
   nodeFileTrace,
@@ -80,21 +81,25 @@ export async function serverBuild({
   headers,
   dataRoutes,
   hasIsr404Page,
+  hasIsr500Page,
   imagesManifest,
   wildcardConfig,
   routesManifest,
   staticPages,
   lambdaPages,
   nextVersion,
+  lambdaAppPaths,
   canUsePreviewMode,
   trailingSlash,
   prerenderManifest,
+  appPathRoutesManifest,
   omittedPrerenderRoutes,
   trailingSlashRedirects,
   isCorrectLocaleAPIRoutes,
   lambdaCompressedByteLimit,
   requiredServerFilesManifest,
 }: {
+  appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
   trailingSlash: boolean;
   config: Config;
@@ -103,6 +108,7 @@ export async function serverBuild({
   canUsePreviewMode: boolean;
   omittedPrerenderRoutes: Set<string>;
   staticPages: { [key: string]: FileFsRef };
+  lambdaAppPaths: { [key: string]: FileFsRef };
   lambdaPages: { [key: string]: FileFsRef };
   privateOutputs: { files: Files; routes: Route[] };
   entryPath: string;
@@ -122,6 +128,7 @@ export async function serverBuild({
   dataRoutes: Route[];
   nextVersion: string;
   hasIsr404Page: boolean;
+  hasIsr500Page: boolean;
   trailingSlashRedirects: Route[];
   routesManifest: RoutesManifest;
   lambdaCompressedByteLimit: number;
@@ -130,6 +137,8 @@ export async function serverBuild({
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
 }): Promise<BuildResult> {
+  lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
+
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
   const lambdaPageKeys = Object.keys(lambdaPages);
@@ -139,6 +148,14 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
+  let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
+  let appDir: string | null = null;
+
+  if (appPathRoutesManifest) {
+    appDir = path.join(pagesDir, '../app');
+    appBuildTraces = await glob('**/*.js.nft.json', appDir);
+  }
+
   const isCorrectNotFoundRoutes = semver.gte(
     nextVersion,
     CORRECT_NOT_FOUND_ROUTES_VERSION
@@ -151,6 +168,7 @@ export async function serverBuild({
     nextVersion,
     CORRECTED_MANIFESTS_VERSION
   );
+
   let hasStatic500 = !!staticPages[path.join(entryDirectory, '500')];
 
   if (lambdaPageKeys.length === 0) {
@@ -530,9 +548,26 @@ export async function serverBuild({
     const mergedPageKeys = [...nonApiPages, ...apiPages, ...internalPages];
     const traceCache = {};
 
+    const getOriginalPagePath = (page: string) => {
+      let originalPagePath = page;
+
+      if (appDir && lambdaAppPaths[page]) {
+        const { fsPath } = lambdaAppPaths[page];
+        originalPagePath = path.relative(appDir, fsPath);
+      }
+      return originalPagePath;
+    };
+
+    const getBuildTraceFile = (page: string) => {
+      return (
+        pageBuildTraces[page + '.nft.json'] ||
+        appBuildTraces[page + '.nft.json']
+      );
+    };
+
     const pathsToTrace: string[] = mergedPageKeys
       .map(page => {
-        if (!pageBuildTraces[page + '.nft.json']) {
+        if (!getBuildTraceFile(page)) {
           return lambdaPages[page].fsPath;
         }
       })
@@ -556,7 +591,8 @@ export async function serverBuild({
 
     for (const page of mergedPageKeys) {
       const tracedFiles: { [key: string]: FileFsRef } = {};
-      const pageBuildTrace = pageBuildTraces[page + '.nft.json'];
+      const originalPagePath = getOriginalPagePath(page);
+      const pageBuildTrace = getBuildTraceFile(originalPagePath);
       let fileList: string[];
       let reasons: NodeFileTraceReasons;
 
@@ -564,8 +600,38 @@ export async function serverBuild({
         const { files } = JSON.parse(
           await fs.readFile(pageBuildTrace.fsPath, 'utf8')
         );
+
+        // TODO: this will be moved to a separate worker in the future
+        // although currently this is needed in the lambda
+        const isAppPath = appDir && lambdaAppPaths[page];
+        const serverComponentFile = isAppPath
+          ? pageBuildTrace.fsPath.replace(
+              /\.js\.nft\.json$/,
+              '.__sc_client__.js'
+            )
+          : null;
+
+        if (serverComponentFile && (await fs.pathExists(serverComponentFile))) {
+          files.push(
+            path.relative(
+              path.dirname(pageBuildTrace.fsPath),
+              serverComponentFile
+            )
+          );
+
+          try {
+            const scTrace = JSON.parse(
+              await fs.readFile(`${serverComponentFile}.nft.json`, 'utf8')
+            );
+            scTrace.files.forEach((file: string) => files.push(file));
+          } catch (err) {
+            /* non-fatal for now */
+          }
+        }
+
         fileList = [];
-        const pageDir = path.dirname(path.join(pagesDir, page));
+        const curPagesDir = isAppPath && appDir ? appDir : pagesDir;
+        const pageDir = path.dirname(path.join(curPagesDir, originalPagePath));
         const normalizedBaseDir = `${baseDir}${
           baseDir.endsWith('/') ? '' : '/'
         }`;
@@ -1209,10 +1275,6 @@ export async function serverBuild({
           ]
         : []),
 
-      // ensure prerender's for notFound: true static routes
-      // have 404 status code when not in preview mode
-      ...notFoundPreviewRoutes,
-
       ...headers,
 
       ...redirects,
@@ -1222,6 +1284,10 @@ export async function serverBuild({
       ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
 
       ...beforeFilesRewrites,
+
+      // ensure prerender's for notFound: true static routes
+      // have 404 status code when not in preview mode
+      ...notFoundPreviewRoutes,
 
       // Make sure to 404 for the /404 path itself
       ...(i18n
@@ -1328,7 +1394,8 @@ export async function serverBuild({
         dest: '$0',
       },
 
-      // remove locale prefixes to check public files
+      // remove locale prefixes to check public files and
+      // to allow checking non-prefixed lambda outputs
       ...(i18n
         ? [
             {
@@ -1341,20 +1408,6 @@ export async function serverBuild({
           ]
         : []),
 
-      // for non-shared lambdas remove locale prefix if present
-      // to allow checking for lambda
-      ...(!i18n
-        ? []
-        : [
-            {
-              src: `${path.join('/', entryDirectory, '/')}(?:${i18n?.locales
-                .map(locale => escapeStringRegexp(locale))
-                .join('|')})/(.*)`,
-              dest: '/$1',
-              check: true,
-            },
-          ]),
-
       // routes that are called after each rewrite or after routes
       // if there no rewrites
       { handle: 'rewrite' },
@@ -1362,8 +1415,59 @@ export async function serverBuild({
       // re-build /_next/data URL after resolving
       ...denormalizeNextDataRoute(),
 
+      ...(isNextDataServerResolving
+        ? dataRoutes.filter(route => {
+            // filter to only static data routes as dynamic routes will be handled
+            // below
+            const { pathname } = new URL(route.dest || '/', 'http://n');
+            return !isDynamicRoute(pathname.replace(/\.json$/, ''));
+          })
+        : []),
+
       // /_next/data routes for getServerProps/getStaticProps pages
-      ...dataRoutes,
+      ...(isNextDataServerResolving
+        ? // when resolving data routes for middleware we need to include
+          // all dynamic routes including non-SSG/SSP so that the priority
+          // is correct
+          dynamicRoutes
+            .map(route => {
+              route = Object.assign({}, route);
+              route.src = path.posix.join(
+                '^/',
+                entryDirectory,
+                '_next/data/',
+                escapedBuildId,
+                route.src.replace(/(^\^|\$$)/g, '') + '.json$'
+              );
+
+              const { pathname, search } = new URL(
+                route.dest || '/',
+                'http://n'
+              );
+              let isPrerender = !!prerenders[path.join('./', pathname)];
+
+              if (routesManifest.i18n) {
+                for (const locale of routesManifest.i18n?.locales || []) {
+                  const prerenderPathname = pathname.replace(
+                    /^\/\$nextLocale/,
+                    `/${locale}`
+                  );
+                  if (prerenders[path.join('./', prerenderPathname)]) {
+                    isPrerender = true;
+                    break;
+                  }
+                }
+              }
+
+              if (isPrerender) {
+                route.dest = `/_next/data/${buildId}${pathname}.json${
+                  search || ''
+                }`;
+              }
+              return route;
+            })
+            .filter(Boolean)
+        : dataRoutes),
 
       ...(!isNextDataServerResolving
         ? [
@@ -1395,6 +1499,7 @@ export async function serverBuild({
                 'x-nextjs-matched-path': '/$1',
               },
               continue: true,
+              override: true,
             },
             // add a catch-all data route so we don't 404 when getting
             // middleware effects
@@ -1494,10 +1599,8 @@ export async function serverBuild({
             },
           ]),
 
-      // static 500 page if present
-      ...(!hasStatic500
-        ? []
-        : i18n
+      // custom 500 page if present
+      ...(i18n && (hasStatic500 || hasIsr500Page || lambdaPages['500.js'])
         ? [
             {
               src: `${path.join(
@@ -1509,6 +1612,7 @@ export async function serverBuild({
                 .join('|')})(/.*|$)`,
               dest: path.join('/', entryDirectory, '/$nextLocale/500'),
               status: 500,
+              caseSensitive: true,
             },
             {
               src: path.join('/', entryDirectory, '.*'),
@@ -1523,7 +1627,15 @@ export async function serverBuild({
         : [
             {
               src: path.join('/', entryDirectory, '.*'),
-              dest: path.join('/', entryDirectory, '/500'),
+              dest: path.join(
+                '/',
+                entryDirectory,
+                hasStatic500 ||
+                  hasIsr500Page ||
+                  lambdas[path.join(entryDirectory, '500')]
+                  ? '/500'
+                  : '/_error'
+              ),
               status: 500,
             },
           ]),

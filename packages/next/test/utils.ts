@@ -1,17 +1,14 @@
 import type { Context, LoggerServer, Dictionary } from './types';
 import type { IncomingMessage } from 'http';
 
-import {
-  packAndDeploy,
-  testDeployment,
-} from '../../../test/lib/deployment/test-deployment';
-import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
+import { testDeployment } from '../../../test/lib/deployment/test-deployment';
 
 import fs from 'fs-extra';
 import http from 'http';
 import listen from 'test-listen';
 import ms from 'ms';
 import ndjson from 'ndjson';
+import os from 'os';
 import path from 'path';
 
 jest.setTimeout(ms('6m'));
@@ -72,56 +69,10 @@ export const createLoggerServer = async (): Promise<LoggerServer> => {
   return { url, close, content };
 };
 
-let builderUrlPromise;
-let builderUrlLastUpdated = 0;
-const buildUtilsUrl = '@canary';
-
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 
 export async function deployAndTest(fixtureDir) {
-  let builderInfo;
-  const builderInfoPath = path.join(__dirname, 'builder-info.json');
-
-  try {
-    builderInfo = await fs.readJSON(builderInfoPath);
-  } catch (_) {
-    /**/
-  }
-  let tempToken;
-
-  if (!builderUrlPromise && builderInfo) {
-    builderUrlPromise = Promise.resolve(builderInfo.builderUrl);
-    builderUrlLastUpdated = builderInfo.lastUpdated;
-    tempToken = builderInfo.tempToken;
-  }
-  const builderUrlIsStale = builderUrlLastUpdated < Date.now() - ms('25min');
-
-  if (!process.env.VERCEL_TOKEN && (builderUrlIsStale || !tempToken)) {
-    tempToken = await fetchTokenWithRetry();
-  }
-  process.env.TEMP_TOKEN = tempToken;
-
-  if (builderUrlIsStale) {
-    const builderPath = path.resolve(__dirname, '..');
-    builderUrlPromise = packAndDeploy(builderPath, false);
-    builderUrlLastUpdated = Date.now();
-  }
-
-  const builderUrl = await builderUrlPromise;
-
-  await fs.writeFile(
-    builderInfoPath,
-    JSON.stringify({
-      tempToken,
-      builderUrl,
-      lastUpdated: builderUrlLastUpdated,
-    })
-  );
-
-  const { deploymentId, deploymentUrl } = await testDeployment(
-    { builderUrl, buildUtilsUrl },
-    fixtureDir
-  );
+  const { deploymentId, deploymentUrl } = await testDeployment(fixtureDir);
 
   return {
     deploymentId,
@@ -162,4 +113,14 @@ export async function check(contentFn, regex, hardError = true) {
     throw new Error('TIMED OUT: ' + regex + '\n\n' + content);
   }
   return false;
+}
+
+export async function genDir(structure: { [path: string]: string }) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'next-test-'));
+  for (const [p, content] of Object.entries(structure)) {
+    const p2 = path.join(dir, p);
+    await fs.mkdirp(path.dirname(p2));
+    await fs.writeFile(p2, content);
+  }
+  return dir;
 }
