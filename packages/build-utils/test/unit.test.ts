@@ -7,6 +7,7 @@ import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import download from '../src/fs/download';
 import {
+  cloneEnv,
   glob,
   spawnAsync,
   getNodeVersion,
@@ -627,4 +628,41 @@ it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)
       path.join(fixture, 'package.json')
     )
   ).toEqual(true);
+});
+
+it('should clone env variables and ensure PATH is set', () => {
+  expect(
+    cloneEnv(
+      new Proxy(
+        {
+          foo: 'bar',
+          Path: 'baz',
+        },
+        {
+          get(target: typeof process.env, prop: string) {
+            if (prop === 'PATH') {
+              return target.PATH ?? target.Path;
+            }
+            return target[prop];
+          },
+        }
+      )
+    )
+  ).toEqual({
+    foo: 'bar',
+    Path: 'baz',
+    PATH: 'baz',
+  });
+
+  expect(
+    cloneEnv({
+      foo: 'bar',
+      PATH: 'baz',
+    })
+  ).toEqual({
+    foo: 'bar',
+    PATH: 'baz',
+  });
+
+  expect(cloneEnv().PATH).toEqual(process.env.PATH);
 });

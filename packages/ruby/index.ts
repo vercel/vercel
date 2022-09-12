@@ -16,6 +16,7 @@ import {
   createLambda,
   debug,
   walkParentDirs,
+  cloneEnv,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -64,7 +65,7 @@ async function bundleInstall(
     {
       stdio: 'pipe',
       env: {
-        ...process.env,
+        ...cloneEnv(),
         BUNDLE_SILENCE_ROOT_WARNING: '1',
         BUNDLE_APP_CONFIG: bundleAppConfig,
         BUNDLE_JOBS: '4',

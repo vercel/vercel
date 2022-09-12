@@ -27,6 +27,7 @@ import {
   getWriteableDirectory,
   shouldServe,
   debug,
+  cloneEnv,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -695,7 +696,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   );
 
   const env: typeof process.env = {
-    ...process.env,
+    ...cloneEnv(),
     ...meta.env,
     VERCEL_DEV_PORT_FILE: portFile,
   };

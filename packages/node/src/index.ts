@@ -36,6 +36,7 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  cloneEnv,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -526,8 +527,7 @@ export const startDevServer: StartDevServer = async opts => {
     cwd: workPath,
     execArgv: [],
     env: {
-      PATH: process.env.PATH,
-      ...process.env,
+      ...cloneEnv(),
       ...meta.env,
       VERCEL_DEV_ENTRYPOINT: entrypoint,
       VERCEL_DEV_TSCONFIG: projectTsConfig || '',

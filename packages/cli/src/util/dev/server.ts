@@ -32,6 +32,7 @@ import {
 } from '@vercel/routing-utils';
 import {
   Builder,
+  cloneEnv,
   Env,
   StartDevServerResult,
   FileFsRef,
@@ -2300,8 +2301,7 @@ export default class DevServer {
       // browser window, since it will not be the port that `vc dev`
       // is listening on and thus will be missing Vercel features.
       BROWSER: 'none',
-      PATH: process.env.PATH,
-      ...process.env,
+      ...cloneEnv(),
       ...this.envConfigs.allEnv,
       PORT: `${port}`,
     };
