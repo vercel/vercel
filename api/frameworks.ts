@@ -17,7 +17,7 @@ const frameworks = (_frameworks as Framework[])
     };
 
     if (framework.logo) {
-      framework.logo = `https://assets.vercel.com/zeit-inc/image/fetch/${framework.logo}`;
+      framework.logo = `https://api-frameworks.vercel.sh/framework-logos/${framework.logo}`;
     }
 
     return framework;
