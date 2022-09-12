@@ -28,6 +28,12 @@ describe('importBuilders()', () => {
   });
 
   it('should import 3rd party Builders', async () => {
+    if (process.platform === 'win32') {
+      // this test creates symlinks which require admin by default on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
     const cwd = await getWriteableDirectory();
     try {
       const spec = 'vercel-deno@2.0.1';
@@ -46,6 +52,12 @@ describe('importBuilders()', () => {
   });
 
   it('should import legacy `@now/build-utils` Builders', async () => {
+    if (process.platform === 'win32') {
+      // this test creates symlinks which require admin by default on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
     const cwd = await getWriteableDirectory();
     try {
       const spec = '@frontity/now@1.2.0';
