@@ -212,20 +212,24 @@ async function installBuilders(
     ).join(', ')}`
   );
   try {
-    await spawnAsync('yarn', ['add', '@vercel/build-utils', ...buildersToAdd], {
-      cwd: buildersDir,
-      stdio: 'pipe',
-    });
+    await spawnAsync(
+      'npm',
+      ['install', '@vercel/build-utils', ...buildersToAdd],
+      {
+        cwd: buildersDir,
+        stdio: 'pipe',
+      }
+    );
   } catch (err: unknown) {
     if (isError(err)) {
+      (err as any).link =
+        'https://vercel.link/builder-dependencies-install-failed';
       if (isErrnoException(err) && err.code === 'ENOENT') {
-        // `yarn` is not installed
-        err.message = `Please install ${cmd('yarn')} before continuing`;
-        (err as any).link = 'https://classic.yarnpkg.com/lang/en/docs/install';
+        // `npm` is not installed
+        err.message = `Please install ${cmd('npm')} before continuing`;
       } else {
         const message = errorToString(err);
-        const notFound = /"(.*): Not found"/.exec(message);
-        (err as any).link = 'https://vercel.link/npm-install-failed-dev';
+        const notFound = /GET (.*) - Not found/.exec(message);
         if (notFound) {
           const url = new URL(notFound[1]);
           const packageName = decodeURIComponent(url.pathname.slice(1));
