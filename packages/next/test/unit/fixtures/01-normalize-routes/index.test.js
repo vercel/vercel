@@ -7,7 +7,7 @@ const { FileFsRef } = require('@vercel/build-utils');
 jest.setTimeout(ms('6m'));
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it('should normalize routes in config', async () => {
+  it('should normalize routes in build results output', async () => {
     const files = [
       'index.test.js',
       'next.config.js',
