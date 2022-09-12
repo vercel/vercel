@@ -53,12 +53,12 @@ export interface Framework {
   slug: string | null;
   /**
    * A URL to the logo of the framework
-   * @example "https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next.svg"
+   * @example "https://api-frameworks.vercel.sh/framework-logos/next.svg"
    */
   logo: string;
   /**
    * An additional URL to the logo of the framework optimized for dark mode
-   * @example "https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/next-dark.svg"
+   * @example "https://api-frameworks.vercel.sh/framework-logos/next-dark.svg"
    */
   darkModeLogo?: string;
   /**
