@@ -54,7 +54,8 @@ export default async function purchaseDomainIfAvailable(
       !(await promptBool(
         `Buy ${chalk.underline(domain)} for ${chalk.bold(
           `$${price}`
-        )} (${plural('yr', period, true)})?`
+        )} (${plural('yr', period, true)})?`,
+        client
       ))
     ) {
       output.print(eraseLines(1));

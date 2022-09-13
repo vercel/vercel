@@ -21,7 +21,7 @@ export type HasField = Array<
     }
 >;
 
-export type Source = {
+export type RouteWithSrc = {
   src: string;
   dest?: string;
   headers?: { [name: string]: string };
@@ -38,17 +38,25 @@ export type Source = {
     redirect?: Record<string, string>;
     cookie?: string;
   };
+  /**
+   * A middleware key within the `output` key under the build result.
+   * Overrides a `middleware` definition.
+   */
+  middlewarePath?: string;
+  /**
+   * A middleware index in the `middleware` key under the build result
+   */
   middleware?: number;
 };
 
-export type Handler = {
+export type RouteWithHandle = {
   handle: HandleValue;
   src?: string;
   dest?: string;
   status?: number;
 };
 
-export type Route = Source | Handler;
+export type Route = RouteWithSrc | RouteWithHandle;
 
 export type NormalizedRoutes = {
   routes: Route[] | null;
@@ -56,7 +64,12 @@ export type NormalizedRoutes = {
 };
 
 export interface GetRoutesProps {
-  nowConfig: VercelConfig;
+  routes?: Route[];
+  cleanUrls?: boolean;
+  rewrites?: Rewrite[];
+  redirects?: Redirect[];
+  headers?: Header[];
+  trailingSlash?: boolean;
 }
 
 export interface MergeRoutesProps {
@@ -68,17 +81,6 @@ export interface Build {
   use: string;
   entrypoint: string;
   routes?: Route[];
-}
-
-export interface VercelConfig {
-  name?: string;
-  version?: number;
-  routes?: Route[];
-  cleanUrls?: boolean;
-  rewrites?: Rewrite[];
-  redirects?: Redirect[];
-  headers?: Header[];
-  trailingSlash?: boolean;
 }
 
 export interface Rewrite {
@@ -123,18 +125,3 @@ export interface AppendRoutesToPhaseProps {
    */
   phase: HandleValue;
 }
-
-/** @deprecated Use VercelConfig instead. */
-export type NowConfig = VercelConfig;
-
-/** @deprecated Use Rewrite instead. */
-export type NowRewrite = Rewrite;
-
-/** @deprecated Use Redirect instead. */
-export type NowRedirect = Redirect;
-
-/** @deprecated Use Header instead. */
-export type NowHeader = Header;
-
-/** @deprecated Use HeaderKeyValue instead. */
-export type NowHeaderKeyValue = HeaderKeyValue;

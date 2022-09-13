@@ -6,15 +6,18 @@ import {
   ProjectEnvVariable,
   Secret,
 } from '../types';
-import getEnvRecords from './env/get-env-records';
+import getEnvRecords, { EnvRecordsSource } from './env/get-env-records';
+import { isAPIError } from './errors-ts';
 
 export default async function getDecryptedEnvRecords(
   output: Output,
   client: Client,
-  projectId: string
+  projectId: string,
+  source: EnvRecordsSource,
+  target?: ProjectEnvTarget
 ): Promise<{ envs: ProjectEnvVariable[] }> {
-  const { envs } = await getEnvRecords(output, client, projectId, {
-    target: ProjectEnvTarget.Development,
+  const { envs } = await getEnvRecords(output, client, projectId, source, {
+    target: target || ProjectEnvTarget.Development,
     decrypt: true,
   });
 
@@ -37,12 +40,12 @@ export default async function getDecryptedEnvRecords(
           );
 
           return { id, type, key, value: secret.value, found: true };
-        } catch (error) {
-          if (error && error.status === 404) {
+        } catch (err: unknown) {
+          if (isAPIError(err) && err.status === 404) {
             return { id, type, key, value: '', found: false };
           }
 
-          throw error;
+          throw err;
         }
       }
 

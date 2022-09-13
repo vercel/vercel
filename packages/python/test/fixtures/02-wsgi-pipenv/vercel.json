@@ -4,8 +4,7 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "wsgi:RANDOMNESS_PLACEHOLDER",
-      "logMustContain": "Warning: Python version \"3.6\" detected in Pipfile.lock will reach End-Of-Life December 2021. Please upgrade."
+      "mustContain": "wsgi:RANDOMNESS_PLACEHOLDER"
     }
   ]
 }

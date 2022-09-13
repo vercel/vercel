@@ -1,14 +1,16 @@
-import { createReadStream } from 'fs';
 import { Agent } from 'https';
+import { Readable } from 'stream';
+import { EventEmitter } from 'events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
+
 import { DeploymentFile } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
 import { VercelClientOptions, DeploymentOptions } from './types';
 
-const isClientNetworkError = (err: Error | DeploymentError) => {
+const isClientNetworkError = (err: Error) => {
   if (err.message) {
     // These are common network errors that may happen occasionally and we should retry if we encounter these
     return (
@@ -38,16 +40,16 @@ export async function* upload(
     return;
   }
 
-  let missingFiles = [];
+  let shas: string[] = [];
 
   debug('Determining necessary files for upload...');
 
   for await (const event of deploy(files, clientOptions, deploymentOptions)) {
     if (event.type === 'error') {
       if (event.payload.code === 'missing_files') {
-        missingFiles = event.payload.missing;
+        shas = event.payload.missing;
 
-        debug(`${missingFiles.length} files are required to upload`);
+        debug(`${shas.length} files are required to upload`);
       } else {
         return yield event;
       }
@@ -63,9 +65,14 @@ export async function* upload(
     }
   }
 
-  const shas = missingFiles;
+  const uploads = shas.map(sha => {
+    return new UploadProgress(sha, files.get(sha)!);
+  });
 
-  yield { type: 'file-count', payload: { total: files, missing: shas } };
+  yield {
+    type: 'file-count',
+    payload: { total: files, missing: shas, uploads },
+  };
 
   const uploadList: { [key: string]: Promise<any> } = {};
   debug('Building an upload list...');
@@ -73,7 +80,9 @@ export async function* upload(
   const semaphore = new Sema(50, { capacity: 50 });
   const agent = new Agent({ keepAlive: true });
 
-  shas.map((sha: string): void => {
+  shas.forEach((sha, index) => {
+    const uploadProgress = uploads[index];
+
     uploadList[sha] = retry(
       async (bail): Promise<any> => {
         const file = files.get(sha);
@@ -85,9 +94,28 @@ export async function* upload(
 
         await semaphore.acquire();
 
-        const fPath = file.names[0];
-        const stream = createReadStream(fPath);
         const { data } = file;
+
+        uploadProgress.bytesUploaded = 0;
+
+        // Split out into chunks
+        const body = new Readable();
+        const originalRead = body.read.bind(body);
+        body.read = function (...args) {
+          const chunk = originalRead(...args);
+          if (chunk) {
+            uploadProgress.bytesUploaded += chunk.length;
+            uploadProgress.emit('progress');
+          }
+          return chunk;
+        };
+
+        const chunkSize = 16384; /* 16kb - default Node.js `highWaterMark` */
+        for (let i = 0; i < data.length; i += chunkSize) {
+          const chunk = data.slice(i, i + chunkSize);
+          body.push(chunk);
+        }
+        body.push(null);
 
         let err;
         let result;
@@ -105,7 +133,7 @@ export async function* upload(
                 'x-now-digest': sha,
                 'x-now-size': data.length,
               },
-              body: stream,
+              body,
               teamId,
               apiUrl,
               userAgent,
@@ -139,12 +167,9 @@ export async function* upload(
 
             throw new DeploymentError(error);
           }
-        } catch (e) {
+        } catch (e: any) {
           debug(`An unexpected error occurred in upload promise:\n${e}`);
           err = new Error(e);
-        } finally {
-          stream.close();
-          stream.destroy();
         }
 
         semaphore.release();
@@ -202,5 +227,17 @@ export async function* upload(
   } catch (e) {
     debug('An unexpected error occurred when starting deployment creation');
     yield { type: 'error', payload: e };
+  }
+}
+
+class UploadProgress extends EventEmitter {
+  sha: string;
+  file: DeploymentFile;
+  bytesUploaded: number;
+  constructor(sha: string, file: DeploymentFile) {
+    super();
+    this.sha = sha;
+    this.file = file;
+    this.bytesUploaded = 0;
   }
 }

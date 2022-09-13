@@ -1,7 +1,9 @@
 # Runtime Developer Reference
 
 The following page is a reference for how to create a Runtime by implementing
-the Runtime API interface.
+the Runtime API interface. It's a way to add support for a new programming language to Vercel.
+
+> Note: If you're the author of a web framework, please use the [Build Output API](https://vercel.com/docs/build-output-api/v3) instead to make your framework compatible with Vercel.
 
 A Runtime is an npm module that implements the following interface:
 
@@ -9,7 +11,6 @@ A Runtime is an npm module that implements the following interface:
 interface Runtime {
   version: number;
   build: (options: BuildOptions) => Promise<BuildResult>;
-  analyze?: (options: AnalyzeOptions) => Promise<string>;
   prepareCache?: (options: PrepareCacheOptions) => Promise<CacheOutputs>;
   shouldServe?: (options: ShouldServeOptions) => Promise<boolean>;
   startDevServer?: (
@@ -62,33 +63,10 @@ export async function build(options: BuildOptions) {
   const lambda = createLambda(/* … */);
   return {
     output: lambda,
-    watch: [
-      // Dependent files to trigger a rebuild in `vercel dev` go here…
-    ],
     routes: [
       // If your Runtime needs to define additional routing, define it here…
     ],
   };
-}
-```
-
-### `analyze()`
-
-An **optional** exported function that returns a unique fingerprint used for the
-purpose of [build
-de-duplication](https://vercel.com/docs/v2/platform/deployments#deduplication).
-If the `analyze()` function is not supplied, then a random fingerprint is
-assigned to each build.
-
-**Example:**
-
-```typescript
-import { AnalyzeOptions } from '@vercel/build-utils';
-
-export async function analyze(options: AnalyzeOptions) {
-  // Do calculations to generate a fingerprint based off the source code here…
-
-  return 'fingerprint goes here';
 }
 ```
 
@@ -134,7 +112,8 @@ export async function shouldServe(options: ShouldServeOptions) {
 }
 ```
 
-If this function is not defined, Vercel CLI will use the [default implementation](https://github.com/vercel/vercel/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
+If this function is not defined, Vercel CLI will use the [default
+implementation](https://github.com/vercel/vercel/blob/52994bfe26c5f4f179bdb49783ee57ce19334631/packages/now-build-utils/src/should-serve.ts).
 
 ### `startDevServer()`
 
@@ -208,13 +187,85 @@ If you need to share state between those steps, use the filesystem.
 
 ### Directory and Cache Lifecycle
 
-When a new build is created, we pre-populate the `workPath` supplied to `analyze` with the results of the `prepareCache` step of the previous build.
+When a new build is created, we pre-populate the `workPath` supplied to `analyze` with the results of the `prepareCache` step of the
+previous build.
 
 The `analyze` step can modify that directory, and it will not be re-created when it's supplied to `build` and `prepareCache`.
 
 ### Accessing Environment and Secrets
 
 The env and secrets specified by the user as `build.env` are passed to the Runtime process. This means you can access user env via `process.env` in Node.js.
+
+### Supporting Large Environment
+
+We provide the ability to support more than 4KB of environment (up to 64KB) by way of
+a Lambda runtime wrapper that is added to every Lambda function we create. These are
+supported by many of the existing Lambda runtimes, but custom runtimes may require
+additional work.
+
+The following Lambda runtime families have built-in support for the runtime wrapper:
+
+- `nodejs`
+- `python` (>= 3.8)
+- `ruby`
+- `java11`
+- `java8.al2` (not `java8`)
+- `dotnetcore`
+
+If a custom runtime is based on one of these Lambda runtimes, large environment
+support will be available without further configuration. Custom runtimes based on
+other Lambda runtimes, including those that provide the runtime via `provided` and
+`provided.al2`, must implement runtime wrapper support and indicate it via the
+`supportsWrapper` flag when calling [`createLambda`](<#createlambda()>).
+
+To add support for runtime wrappers to a custom runtime, first check the value of the
+`AWS_LAMBDA_EXEC_WRAPPER` environment variable in the bootstrap script. Its value is
+the path to the wrapper executable.
+
+The wrapper must be passed the path to the runtime as well as any parameters that the
+runtime requires. This is most easily done in a small `bootstrap` script.
+
+In this simple `bash` example, the runtime is called directly if
+`AWS_LAMBDA_EXEC_WRAPPER` has no value, otherwise the wrapper is called with the
+runtime command as parameters.
+
+```bash
+#!/bin/bash
+
+exec $AWS_LAMBDA_EXEC_WRAPPER path/to/runtime param1 param2
+```
+
+If the `bootstrap` file is not a launcher script, but the entrypoint of the runtime
+itself, replace the bootstrap process with the wrapper. Pass the path and parameters
+of the executing file, ensuring the `AWS_LAMBDA_EXEC_WRAPPER` environment variable is
+set to blank.
+
+This `bash` example uses `exec` to replace the running bootstrap process with the
+wrapper, passing its own path and parameters.
+
+```bash
+#!/bin/bash
+
+if [[ -n $AWS_LAMBDA_EXEC_WRAPPER ]]
+  __WRAPPER=$AWS_LAMBDA_EXEC_WRAPPER
+  AWS_LAMBDA_EXEC_WRAPPER=""
+  exec $__WRAPPER "$0" "${@}"
+fi
+
+# start the actual runtime functionality
+```
+
+Note that unsetting the variable may not have the desired effect due to the way
+Lambda spawns runtime processes. It is better to explicitly set it to blank.
+
+The best way to replace the existing bootstrap process is with the
+[`execve`](https://www.man7.org/linux/man-pages/man2/execve.2.html) syscall.
+This is achieved by using `exec` in `bash` to replace the running process with the wrapper,
+maintaining the same PID and environment.
+
+Once support for runtime wrappers is included, ensure `supportsWrapper` is set to
+`true` in the call to [`createLambda`](<#createlambda()>). This will inform the build
+process to enable large environment support for this runtime.
 
 ### Utilities as peerDependencies
 
@@ -323,20 +374,21 @@ This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 - `handler: String` path to handler file and (optionally) a function name it exports
 - `runtime: LambdaRuntime` the name of the lambda runtime
 - `environment: Object` key-value map of handler-related (aside of those passed by user) environment variables
+- `supportsWrapper: Boolean` set to true to indicate that Lambda runtime wrappers are supported by this runtime
 
 ### `LambdaRuntime`
 
 This is an abstract enumeration type that is implemented by one of the following possible `String` values:
 
+- `nodejs14.x`
 - `nodejs12.x`
-- `nodejs10.x`
 - `go1.x`
 - `java11`
 - `python3.9`
-- `python3.6`
-- `dotnetcore2.1`
-- `ruby2.5`
-- `provided`
+- `dotnet6`
+- `dotnetcore3.1`
+- `ruby2.7`
+- `provided.al2`
 
 ## `@vercel/build-utils` Helper Functions
 

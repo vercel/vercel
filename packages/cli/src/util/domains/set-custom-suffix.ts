@@ -14,25 +14,27 @@ export default async function setCustomSuffix(
         suffix,
       },
     });
-  } catch (error) {
-    if (error.code === 'forbidden') {
-      return new ERRORS.DomainPermissionDenied(domain, contextName);
+  } catch (err: unknown) {
+    if (ERRORS.isAPIError(err)) {
+      if (err.code === 'forbidden') {
+        return new ERRORS.DomainPermissionDenied(domain, contextName);
+      }
+      if (err.code === 'domain_external') {
+        return new ERRORS.DomainExternal(domain);
+      }
+      if (err.code === 'domain_invalid') {
+        return new ERRORS.InvalidDomain(domain);
+      }
+      if (err.code === 'domain_not_found') {
+        return new ERRORS.DomainNotFound(domain);
+      }
+      if (err.code === 'domain_not_verified') {
+        return new ERRORS.DomainNotVerified(domain);
+      }
+      if (err.code === 'domain_permission_denied') {
+        return new ERRORS.DomainPermissionDenied(domain, contextName);
+      }
     }
-    if (error.code === 'domain_external') {
-      return new ERRORS.DomainExternal(domain);
-    }
-    if (error.code === 'domain_invalid') {
-      return new ERRORS.InvalidDomain(domain);
-    }
-    if (error.code === 'domain_not_found') {
-      return new ERRORS.DomainNotFound(domain);
-    }
-    if (error.code === 'domain_not_verified') {
-      return new ERRORS.DomainNotVerified(domain);
-    }
-    if (error.code === 'domain_permission_denied') {
-      return new ERRORS.DomainPermissionDenied(domain, contextName);
-    }
-    throw error;
+    throw err;
   }
 }

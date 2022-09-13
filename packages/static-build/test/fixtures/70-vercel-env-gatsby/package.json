@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p public && node -p \"Object.keys(process.env).filter(e => e.includes('VERCEL') || e.includes('TURBO'))\" > public/index.json"
+  }
+}

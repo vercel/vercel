@@ -1,3 +1,4 @@
+import url from 'url';
 import { fork, spawn } from 'child_process';
 import {
   readFileSync,
@@ -16,24 +17,17 @@ import {
   sep,
   parse as parsePath,
 } from 'path';
-// @ts-ignore - `@types/mkdirp-promise` is broken
-import mkdirp from 'mkdirp-promise';
+import { Project } from 'ts-morph';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
+import nftResolveDependency from '@vercel/nft/out/resolve-dependency';
 import {
-  File,
-  Files,
-  Meta,
-  PrepareCacheOptions,
-  BuildOptions,
-  Config,
-  StartDevServerOptions,
-  StartDevServerResult,
   glob,
   download,
   FileBlob,
   FileFsRef,
-  createLambda,
+  EdgeFunction,
+  NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
   getNodeVersion,
@@ -43,19 +37,24 @@ import {
   isSymbolicLink,
   walkParentDirs,
 } from '@vercel/build-utils';
-
-// @ts-ignore - copied to the `dist` output as-is
-import { makeVercelLauncher, makeAwsLauncher } from './launcher.js';
+import type {
+  File,
+  Files,
+  Meta,
+  Config,
+  StartDevServerOptions,
+  BuildV3,
+  PrepareCache,
+  StartDevServer,
+  NodeVersion,
+  BuildResultV3,
+} from '@vercel/build-utils';
+import { getConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
+import { entrypointToOutputPath, getRegExpFromMatchers } from './utils';
 
 export { shouldServe };
-export {
-  NowRequest,
-  NowResponse,
-  VercelRequest,
-  VercelResponse,
-} from './types';
 
 interface DownloadOptions {
   files: Files;
@@ -73,17 +72,14 @@ function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
 
+const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge'];
+
 const require_ = eval('require');
 
 const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 
 // eslint-disable-next-line no-useless-escape
 const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
-
-const LAUNCHER_FILENAME = '__launcher.js';
-const BRIDGE_FILENAME = '__bridge.js';
-const HELPERS_FILENAME = '__helpers.js';
-const SOURCEMAP_SUPPORT_FILENAME = '__sourcemap_support.js';
 
 async function downloadInstallAndBundle({
   files,
@@ -93,7 +89,6 @@ async function downloadInstallAndBundle({
   meta,
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
-
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
@@ -102,16 +97,7 @@ async function downloadInstallAndBundle({
     meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-
-  if (meta.isDev) {
-    debug('Skipping dependency installation because dev mode is enabled');
-  } else {
-    const installTime = Date.now();
-    console.log('Installing dependencies...');
-    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
-    debug(`Install complete [${Date.now() - installTime}ms]`);
-  }
-
+  await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
 }
@@ -130,12 +116,12 @@ async function compile(
   workPath: string,
   baseDir: string,
   entrypointPath: string,
-  entrypoint: string,
-  config: Config
+  config: Config,
+  nodeVersion: NodeVersion,
+  isEdgeFunction: boolean
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
-  watch: string[];
 }> {
   const inputFiles = new Set<string>([entrypointPath]);
   const preparedFiles: Files = {};
@@ -165,11 +151,6 @@ async function compile(
     }
   }
 
-  debug(
-    'Tracing input files: ' +
-      [...inputFiles].map(p => relative(workPath, p)).join(', ')
-  );
-
   let tsCompile: Register;
   function compileTypeScript(path: string, source: string): string {
     const relPath = relative(baseDir, path);
@@ -178,6 +159,7 @@ async function compile(
         basePath: workPath, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
+        nodeVersionMajor: nodeVersion.major,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -197,30 +179,69 @@ async function compile(
       processCwd: workPath,
       ts: true,
       mixedModules: true,
+      resolve(id, parent, job, cjsResolve) {
+        const normalizedWasmImports = id.replace(/\.wasm\?module$/i, '.wasm');
+        return nftResolveDependency(
+          normalizedWasmImports,
+          parent,
+          job,
+          cjsResolve
+        );
+      },
       ignore: config.excludeFiles,
-      readFile(fsPath: string): Buffer | string | null {
+      async readFile(fsPath: string): Promise<Buffer | string | null> {
         const relPath = relative(baseDir, fsPath);
+
+        // If this file has already been read then return from the cache
         const cached = sourceCache.get(relPath);
-        if (cached) return cached.toString();
-        // null represents a not found
-        if (cached === null) return null;
+        if (typeof cached !== 'undefined') return cached;
+
         try {
+          let entry: File | undefined;
           let source: string | Buffer = readFileSync(fsPath);
-          if (fsPath.endsWith('.ts') || fsPath.endsWith('.tsx')) {
-            source = compileTypeScript(fsPath, source.toString());
-          }
+
           const { mode } = lstatSync(fsPath);
-          let entry: File;
           if (isSymbolicLink(mode)) {
             entry = new FileFsRef({ fsPath, mode });
-          } else {
+          }
+
+          if (isEdgeFunction && basename(fsPath) === 'package.json') {
+            // For Edge Functions, patch "main" field to prefer "browser" or "module"
+            const pkgJson = JSON.parse(source.toString());
+            for (const prop of ['browser', 'module']) {
+              const val = pkgJson[prop];
+              if (typeof val === 'string') {
+                debug(`Using "${prop}" field in ${fsPath}`);
+                pkgJson.main = val;
+
+                // Create the `entry` with the original so that the output is unmodified
+                if (!entry) {
+                  entry = new FileBlob({ data: source, mode });
+                }
+
+                // Return the modified `package.json` to nft
+                source = JSON.stringify(pkgJson);
+                break;
+              }
+            }
+          }
+
+          if (
+            (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
+            fsPath.endsWith('.tsx')
+          ) {
+            source = compileTypeScript(fsPath, source.toString());
+          }
+
+          if (!entry) {
             entry = new FileBlob({ data: source, mode });
           }
           fsCache.set(relPath, entry);
           sourceCache.set(relPath, source);
-          return source.toString();
+          return source;
         } catch (e) {
           if (e.code === 'ENOENT' || e.code === 'EISDIR') {
+            // `null` represents a not found
             sourceCache.set(relPath, null);
             return null;
           }
@@ -231,11 +252,8 @@ async function compile(
   );
 
   for (const warning of warnings) {
-    if (warning && warning.stack) {
-      debug(warning.stack.replace('Error: ', 'Warning: '));
-    }
+    debug(`Warning from trace: ${warning.message}`);
   }
-
   for (const path of fileList) {
     let entry = fsCache.get(path);
     if (!entry) {
@@ -248,7 +266,7 @@ async function compile(
         entry = new FileBlob({ data: source, mode });
       }
     }
-    if (isSymbolicLink(entry.mode) && entry.fsPath) {
+    if (isSymbolicLink(entry.mode) && entry.type === 'FileFsRef') {
       // ensure the symlink target is added to the file list
       const symlinkTarget = relative(
         baseDir,
@@ -256,11 +274,11 @@ async function compile(
       );
       if (
         !symlinkTarget.startsWith('..' + sep) &&
-        fileList.indexOf(symlinkTarget) === -1
+        !fileList.has(symlinkTarget)
       ) {
         const stats = statSync(resolve(baseDir, symlinkTarget));
         if (stats.isFile()) {
-          fileList.push(symlinkTarget);
+          fileList.add(symlinkTarget);
         }
       }
     }
@@ -273,7 +291,7 @@ async function compile(
   }
 
   // Compile ES Modules into CommonJS
-  const esmPaths = esmFileList.filter(
+  const esmPaths = [...esmFileList].filter(
     file =>
       !file.endsWith('.ts') &&
       !file.endsWith('.tsx') &&
@@ -320,7 +338,6 @@ async function compile(
   return {
     preparedFiles,
     shouldAddSourcemapSupport,
-    watch: fileList,
   };
 }
 
@@ -344,18 +361,14 @@ export * from './types';
 
 export const version = 3;
 
-export async function build({
+export const build: BuildV3 = async ({
   files,
   entrypoint,
   workPath,
   repoRootPath,
   config = {},
   meta = {},
-}: BuildOptions) {
-  const shouldAddHelpers = !(
-    config.helpers === false || process.env.NODEJS_HELPERS === '0'
-  );
-
+}) => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
@@ -375,79 +388,124 @@ export async function build({
     spawnOpts
   );
 
+  const isMiddleware = config.middleware === true;
+
+  // Will output an `EdgeFunction` for when `config.middleware = true`
+  // (i.e. for root-level "middleware" file) or if source code contains:
+  // `export const config = { runtime: 'experimental-edge' }`
+  let isEdgeFunction = isMiddleware;
+
+  const project = new Project();
+  const staticConfig = getConfig(project, entrypointPath);
+  if (staticConfig?.runtime) {
+    if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
+      throw new Error(
+        `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
+          staticConfig.runtime
+        )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
+      );
+    }
+    isEdgeFunction = staticConfig.runtime === 'experimental-edge';
+  }
+
   debug('Tracing input files...');
   const traceTime = Date.now();
-  const { preparedFiles, shouldAddSourcemapSupport, watch } = await compile(
+  const { preparedFiles, shouldAddSourcemapSupport } = await compile(
     workPath,
     baseDir,
     entrypointPath,
-    entrypoint,
-    config
+    config,
+    nodeVersion,
+    isEdgeFunction
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
-  const getFileName = (str: string) => `___vc/${str}`;
+  let routes: BuildResultV3['routes'];
+  let output: BuildResultV3['output'] | undefined;
 
-  const launcher = awsLambdaHandler ? makeAwsLauncher : makeVercelLauncher;
+  const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
 
-  const launcherSource = launcher({
-    entrypointPath: `../${renameTStoJS(relative(baseDir, entrypointPath))}`,
-    bridgePath: `./${BRIDGE_FILENAME}`,
-    helpersPath: `./${HELPERS_FILENAME}`,
-    sourcemapSupportPath: `./${SOURCEMAP_SUPPORT_FILENAME}`,
-    shouldAddHelpers,
-    shouldAddSourcemapSupport,
-    awsLambdaHandler,
-  });
+  // Add a `route` for Middleware
+  if (isMiddleware) {
+    if (!isEdgeFunction) {
+      // Root-level middleware file can not have `export const config = { runtime: 'nodejs' }`
+      throw new Error(
+        `Middleware file can not be a Node.js Serverless Function`
+      );
+    }
 
-  const launcherFiles: Files = {
-    [getFileName('package.json')]: new FileBlob({
-      data: JSON.stringify({ type: 'commonjs' }),
-    }),
-    [getFileName(LAUNCHER_FILENAME)]: new FileBlob({
-      data: launcherSource,
-    }),
-    [getFileName(BRIDGE_FILENAME)]: new FileFsRef({
-      fsPath: join(__dirname, 'bridge.js'),
-    }),
-  };
+    // Middleware is a catch-all for all paths unless a `matcher` property is defined
+    const src = getRegExpFromMatchers(staticConfig?.matcher);
 
-  if (shouldAddSourcemapSupport) {
-    launcherFiles[getFileName(SOURCEMAP_SUPPORT_FILENAME)] = new FileFsRef({
-      fsPath: join(__dirname, 'source-map-support.js'),
+    routes = [
+      {
+        src,
+        middlewarePath: outputPath,
+        continue: true,
+        override: true,
+      },
+    ];
+  }
+
+  if (isEdgeFunction) {
+    output = new EdgeFunction({
+      entrypoint: handler,
+      files: preparedFiles,
+
+      // TODO: remove - these two properties should not be required
+      name: outputPath,
+      deploymentTarget: 'v8-worker',
+    });
+  } else {
+    // "nodejs" runtime is the default
+    const shouldAddHelpers = !(
+      config.helpers === false || process.env.NODEJS_HELPERS === '0'
+    );
+
+    output = new NodejsLambda({
+      files: preparedFiles,
+      handler,
+      runtime: nodeVersion.runtime,
+      shouldAddHelpers,
+      shouldAddSourcemapSupport,
+      awsLambdaHandler,
     });
   }
 
-  if (shouldAddHelpers) {
-    launcherFiles[getFileName(HELPERS_FILENAME)] = new FileFsRef({
-      fsPath: join(__dirname, 'helpers.js'),
-    });
-  }
+  return { routes, output };
+};
 
-  const lambda = await createLambda({
-    files: {
-      ...preparedFiles,
-      ...launcherFiles,
-    },
-    handler: `${getFileName(LAUNCHER_FILENAME).slice(0, -3)}.launcher`,
-    runtime: nodeVersion.runtime,
-  });
+export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
+  return glob('**/node_modules/**', repoRootPath || workPath);
+};
 
-  return { output: lambda, watch };
-}
-
-export async function prepareCache({
-  workPath,
-}: PrepareCacheOptions): Promise<Files> {
-  const cache = await glob('node_modules/**', workPath);
-  return cache;
-}
-
-export async function startDevServer(
-  opts: StartDevServerOptions
-): Promise<StartDevServerResult> {
+export const startDevServer: StartDevServer = async opts => {
   const { entrypoint, workPath, config, meta = {} } = opts;
-  const entryDir = join(workPath, dirname(entrypoint));
+  const entrypointPath = join(workPath, entrypoint);
+
+  if (config.middleware === true && typeof meta.requestUrl === 'string') {
+    // TODO: static config is also parsed in `dev-server.ts`.
+    // we should pass in this version as an env var instead.
+    const project = new Project();
+    const staticConfig = getConfig(project, entrypointPath);
+
+    // Middleware is a catch-all for all paths unless a `matcher` property is defined
+    const matchers = new RegExp(getRegExpFromMatchers(staticConfig?.matcher));
+
+    const parsed = url.parse(meta.requestUrl, true);
+    if (
+      typeof parsed.pathname !== 'string' ||
+      !matchers.test(parsed.pathname)
+    ) {
+      // If the "matchers" doesn't say to handle this
+      // path then skip middleware invocation
+      return null;
+    }
+  }
+
+  const entryDir = dirname(entrypointPath);
+
   const projectTsConfig = await walkParentDirs({
     base: workPath,
     start: entryDir,
@@ -479,6 +537,12 @@ export async function startDevServer(
   });
 
   const { pid } = child;
+  if (!pid) {
+    throw new Error(
+      `Child Process has no "pid" when forking: "${devServerPath}"`
+    );
+  }
+
   const onMessage = once<{ port: number }>(child, 'message');
   const onExit = once.spread<[number, string | null]>(child, 'exit');
   const result = await Promise.race([onMessage, onExit]);
@@ -501,15 +565,15 @@ export async function startDevServer(
     // Got "exit" event from child process
     const [exitCode, signal] = result;
     const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
-    throw new Error(`\`node ${entrypoint}\` failed with ${reason}`);
+    throw new Error(`Function \`${entrypoint}\` failed with ${reason}`);
   }
-}
+};
 
 async function doTypeCheck(
   { entrypoint, workPath, meta = {} }: StartDevServerOptions,
   projectTsConfig: string | null
 ): Promise<void> {
-  const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
+  const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
 
   // In order to type-check a single file, a standalone tsconfig
@@ -533,7 +597,7 @@ async function doTypeCheck(
 
   try {
     const json = JSON.stringify(tsconfig, null, '\t');
-    await mkdirp(entrypointCacheDir);
+    await fsp.mkdir(entrypointCacheDir, { recursive: true });
     await fsp.writeFile(tsconfigPath, json, { flag: 'wx' });
   } catch (err) {
     // Don't throw if the file already exists
@@ -551,8 +615,6 @@ async function doTypeCheck(
       '--noEmit',
       '--allowJs',
       '--esModuleInterop',
-      '--jsx',
-      'react',
     ],
     {
       cwd: workPath,

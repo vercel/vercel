@@ -1,4 +1,8 @@
+// Register Jest matcher extensions for CLI unit tests
+import './matchers';
+
 import chalk from 'chalk';
+import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
 import listen from 'async-listen';
@@ -11,23 +15,42 @@ chalk.level = 0;
 
 export type Scenario = Router;
 
+class MockStream extends PassThrough {
+  isTTY: boolean;
+
+  constructor() {
+    super();
+    this.isTTY = true;
+  }
+
+  // These is for the `ora` module
+  clearLine() {}
+  cursorTo() {}
+}
+
 export class MockClient extends Client {
-  mockServer?: Server;
-  mockOutput: jest.Mock<void, Parameters<Output['print']>>;
-  private app: Express;
+  stdin!: MockStream;
+  stdout!: MockStream;
+  stderr!: MockStream;
   scenario: Scenario;
+  mockServer?: Server;
+  private app: Express;
 
   constructor() {
     super({
-      argv: [],
       // Gets populated in `startMockServer()`
       apiUrl: '',
+
+      // Gets re-initialized for every test in `reset()`
+      argv: [],
       authConfig: {},
-      output: new Output(),
       config: {},
       localConfig: {},
+      stdin: new PassThrough(),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+      output: new Output(new PassThrough()),
     });
-    this.mockOutput = jest.fn();
 
     this.app = express();
     this.app.use(express.json());
@@ -53,27 +76,31 @@ export class MockClient extends Client {
   }
 
   reset() {
-    this.output = new Output();
-    this.mockOutput = jest.fn();
-    this.output.print = s => {
-      return this.mockOutput(s);
-    };
+    this.stdin = new MockStream();
+
+    this.stdout = new MockStream();
+    this.stdout.setEncoding('utf8');
+    this.stdout.end = () => {};
+    this.stdout.pause();
+
+    this.stderr = new MockStream();
+    this.stderr.setEncoding('utf8');
+    this.stderr.end = () => {};
+    this.stderr.pause();
+    this.stderr.isTTY = true;
+
+    this._createPromptModule();
+
+    this.output = new Output(this.stderr);
 
     this.argv = [];
-    this.authConfig = {};
+    this.authConfig = {
+      token: 'token_dummy',
+    };
     this.config = {};
     this.localConfig = {};
 
-    // Just make this one silent
-    this.output.spinner = () => {};
-
     this.scenario = Router();
-
-    this.output.isTTY = true;
-  }
-
-  get outputBuffer() {
-    return this.mockOutput.mock.calls.map(c => c[0]).join('');
   }
 
   async startMockServer() {
@@ -87,7 +114,20 @@ export class MockClient extends Client {
   }
 
   stopMockServer() {
-    this.mockServer?.close();
+    return new Promise<void>((resolve, reject) => {
+      if (!this.mockServer?.close) {
+        reject(new Error(`mockServer did not exist when closing`));
+        return;
+      }
+
+      this.mockServer.close(error => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
   }
 
   setArgv(...argv: string[]) {
@@ -109,6 +149,6 @@ beforeEach(() => {
   client.reset();
 });
 
-afterAll(() => {
-  client.stopMockServer();
+afterAll(async () => {
+  await client.stopMockServer();
 });

@@ -46,10 +46,14 @@ export default async function init(
   const exampleList = examples.filter(x => x.visible).map(x => x.name);
 
   if (!name) {
-    const chosen = await chooseFromDropdown('Select example:', exampleList);
+    const chosen = await chooseFromDropdown(
+      client,
+      'Select example:',
+      exampleList
+    );
 
     if (!chosen) {
-      output.log('Aborted');
+      output.log('Canceled');
       return 0;
     }
 
@@ -65,7 +69,7 @@ export default async function init(
     return extractExample(client, name, dir, force, 'v1');
   }
 
-  const found = await guess(exampleList, name);
+  const found = await guess(client, exampleList, name);
 
   if (typeof found === 'string') {
     return extractExample(client, found, dir, force);
@@ -83,20 +87,25 @@ async function fetchExampleList(client: Client) {
   const url = `${EXAMPLE_API}/v2/list.json`;
 
   const body = await client.fetch<Example[]>(url);
+  client.output.stopSpinner();
   return body;
 }
 
 /**
  * Prompt user for choosing which example to init
  */
-async function chooseFromDropdown(message: string, exampleList: string[]) {
+async function chooseFromDropdown(
+  client: Client,
+  message: string,
+  exampleList: string[]
+) {
   const choices = exampleList.map(name => ({
     name,
     value: name,
     short: name,
   }));
 
-  return listInput({
+  return listInput(client, {
     message,
     choices,
   });
@@ -193,7 +202,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
 /**
  * Guess which example user try to init
  */
-async function guess(exampleList: string[], name: string) {
+async function guess(client: Client, exampleList: string[], name: string) {
   const GuessError = new Error(
     `No example found for ${chalk.bold(name)}, run ${getCommandName(
       `init`
@@ -207,7 +216,7 @@ async function guess(exampleList: string[], name: string) {
   const found = didYouMean(name, exampleList, 0.7);
 
   if (typeof found === 'string') {
-    if (await promptBool(`Did you mean ${chalk.bold(found)}?`)) {
+    if (await promptBool(`Did you mean ${chalk.bold(found)}?`, client)) {
       return found;
     }
   } else {

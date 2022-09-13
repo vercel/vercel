@@ -2,8 +2,13 @@ import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
 import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
+import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
-import download, { DownloadedFiles, isSymbolicLink } from './fs/download';
+import download, {
+  downloadFile,
+  DownloadedFiles,
+  isSymbolicLink,
+} from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
 import rename from './fs/rename';
@@ -31,20 +36,22 @@ import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
 } from './fs/node-version';
-import { NowBuildError } from './errors';
 import streamToBuffer from './fs/stream-to-buffer';
-import shouldServe from './should-serve';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
+import { getPlatformEnv } from './get-platform-env';
+import { getPrefixedEnvVars } from './get-prefixed-env-vars';
 
 export {
   FileBlob,
   FileFsRef,
   FileRef,
   Lambda,
+  NodejsLambda,
   createLambda,
   Prerender,
   download,
+  downloadFile,
   DownloadedFiles,
   getWriteableDirectory,
   glob,
@@ -69,8 +76,9 @@ export {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   getSpawnOptions,
+  getPlatformEnv,
+  getPrefixedEnvVars,
   streamToBuffer,
-  shouldServe,
   debug,
   isSymbolicLink,
   getLambdaOptionsFromFunction,
@@ -78,64 +86,11 @@ export {
   getIgnoreFilter,
 };
 
-export {
-  detectBuilders,
-  detectOutputDirectory,
-  detectApiDirectory,
-  detectApiExtensions,
-} from './detect-builders';
-export { detectFileSystemAPI } from './detect-file-system-api';
-export { detectFramework } from './detect-framework';
-export { DetectorFilesystem } from './detectors/filesystem';
+export { EdgeFunction } from './edge-function';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
-export {
-  _experimental_convertRuntimeToPlugin,
-  _experimental_updateFunctionsManifest,
-  _experimental_updateRoutesManifest,
-} from './convert-runtime-to-plugin';
 
+export * from './should-serve';
 export * from './schemas';
 export * from './types';
 export * from './errors';
-
-/**
- * Helper function to support both `@vercel` and legacy `@now` official Runtimes.
- */
-export const isOfficialRuntime = (desired: string, name?: string): boolean => {
-  if (typeof name !== 'string') {
-    return false;
-  }
-  return (
-    name === `@vercel/${desired}` ||
-    name === `@now/${desired}` ||
-    name.startsWith(`@vercel/${desired}@`) ||
-    name.startsWith(`@now/${desired}@`)
-  );
-};
-
-export const isStaticRuntime = (name?: string): boolean => {
-  return isOfficialRuntime('static', name);
-};
-
-/**
- * Helper function to support both `VERCEL_` and legacy `NOW_` env vars.
- * Throws an error if *both* env vars are defined.
- */
-export const getPlatformEnv = (name: string): string | undefined => {
-  const vName = `VERCEL_${name}`;
-  const nName = `NOW_${name}`;
-  const v = process.env[vName];
-  const n = process.env[nName];
-  if (typeof v === 'string') {
-    if (typeof n === 'string') {
-      throw new NowBuildError({
-        code: 'CONFLICTING_ENV_VAR_NAMES',
-        message: `Both "${vName}" and "${nName}" env vars are defined. Please only define the "${vName}" env var.`,
-        link: 'https://vercel.link/combining-old-and-new-config',
-      });
-    }
-    return v;
-  }
-  return n;
-};

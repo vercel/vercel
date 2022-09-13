@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "functions": {
+          "pages/index.js": {
+            "memory": 512,
+            "maxDuration": 5
+          },
+          "pages/another.js": {
+            "memory": 512,
+            "maxDuration": 5
+          },
+          "pages/api/index.js": {
+            "memory": 128,
+            "maxDuration": 5
+          },
+          "**/*.js": {
+            "maxDuration": 5
+          }
+        }
+      }
+    }
+  ]
+}

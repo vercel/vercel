@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "10.2.3-canary.51",
+  "version": "12.2.4",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -15,20 +15,23 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "jest --verbose --runInBand --bail tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
-    "test-unit": "jest --verbose --runInBand --bail tests/unit.*test.*"
+    "test-integration-once": "yarn test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
+    "test": "jest --env node --verbose --runInBand --bail",
+    "test-unit": "yarn test tests/unit.*test.*"
   },
   "engines": {
-    "node": ">= 12"
+    "node": ">= 14"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.1",
     "@types/fs-extra": "7.0.0",
-    "@types/jest": "27.0.1",
+    "@types/jest": "27.4.1",
+    "@types/minimatch": "3.0.5",
     "@types/ms": "0.7.30",
     "@types/node": "12.0.4",
     "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
+    "@types/tar-fs": "1.16.1",
     "typescript": "4.3.4"
   },
   "jest": {
@@ -40,16 +43,18 @@
     ]
   },
   "dependencies": {
-    "@vercel/build-utils": "2.13.1-canary.0",
+    "@vercel/build-utils": "5.4.2",
+    "@vercel/routing-utils": "2.0.2",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",
     "fs-extra": "8.0.1",
     "ignore": "4.0.6",
+    "minimatch": "5.0.1",
     "ms": "2.1.2",
-    "node-fetch": "2.6.1",
+    "node-fetch": "2.6.7",
     "querystring": "^0.2.0",
-    "recursive-readdir": "2.2.2",
-    "sleep-promise": "8.0.1"
+    "sleep-promise": "8.0.1",
+    "tar-fs": "1.16.3"
   }
 }

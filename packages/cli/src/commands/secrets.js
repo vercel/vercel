@@ -15,6 +15,12 @@ import { getPkgName, getCommandName } from '../util/pkg-name.ts';
 
 const help = () => {
   console.log(`
+  ${chalk.yellow(
+    `${chalk.bold('NOTE:')} The ${getCommandName(
+      'env'
+    )} command is recommended instead of ${getCommandName('secrets')}`
+  )}
+
   ${chalk.bold(`${logo} ${getPkgName()} secrets`)} [options] <command>
 
   ${chalk.dim('Commands:')}
@@ -64,7 +70,7 @@ const help = () => {
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
     '`1584722256178`'
-  )} is the time in milliseconds since the UNIX epoch.
+  )} is the time in milliseconds since the UNIX epoch
 
     ${chalk.cyan(`$ ${getPkgName()} secrets ls --next 1584722256178`)}
 `);
@@ -130,8 +136,14 @@ async function run({ output, contextName, currentTeam, client }) {
   const args = argv._.slice(1);
   const start = Date.now();
   const { 'test-warning': testWarningFlag } = argv;
+  const commandName = getCommandName('secret ' + subcommand);
 
   if (subcommand === 'ls' || subcommand === 'list') {
+    output.note(
+      `The ${getCommandName(
+        'env ls'
+      )} command is recommended instead of ${commandName}\n`
+    );
     if (args.length > 1) {
       console.error(
         error(
@@ -194,6 +206,11 @@ async function run({ output, contextName, currentTeam, client }) {
   }
 
   if (subcommand === 'rm' || subcommand === 'remove') {
+    output.note(
+      `The ${getCommandName(
+        'env rm'
+      )} command is recommended instead of ${commandName}\n`
+    );
     if (args.length !== 1) {
       console.error(
         error(
@@ -209,9 +226,10 @@ async function run({ output, contextName, currentTeam, client }) {
 
     if (theSecret) {
       const yes =
-        argv.yes || (await readConfirmation(output, theSecret, contextName));
+        argv.yes ||
+        (await readConfirmation(client, output, theSecret, contextName));
       if (!yes) {
-        output.print(`Aborted. Secret not deleted.\n`);
+        output.print(`Canceled. Secret not deleted.\n`);
         return 0;
       }
     } else {
@@ -236,6 +254,11 @@ async function run({ output, contextName, currentTeam, client }) {
   }
 
   if (subcommand === 'rename') {
+    output.note(
+      `The ${getCommandName('env rm')} and ${getCommandName(
+        'env add'
+      )} commands are recommended instead of ${commandName}\n`
+    );
     if (args.length !== 2) {
       console.error(
         error(
@@ -259,6 +282,11 @@ async function run({ output, contextName, currentTeam, client }) {
   }
 
   if (subcommand === 'add' || subcommand === 'set') {
+    output.note(
+      `The ${getCommandName(
+        'env add'
+      )} command is recommended instead of ${commandName}\n`
+    );
     if (args.length !== 2) {
       console.error(
         error(
@@ -326,7 +354,7 @@ async function run({ output, contextName, currentTeam, client }) {
   return 2;
 }
 
-async function readConfirmation(output, secret, contextName) {
+async function readConfirmation(client, output, secret, contextName) {
   const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
   const tbl = table([[chalk.bold(secret.name), time]], {
     align: ['r', 'l'],
@@ -340,5 +368,5 @@ async function readConfirmation(output, secret, contextName) {
   );
   output.print(`  ${tbl}\n`);
 
-  return confirm(`${chalk.bold.red('Are you sure?')}`, false);
+  return confirm(client, `${chalk.bold.red('Are you sure?')}`, false);
 }

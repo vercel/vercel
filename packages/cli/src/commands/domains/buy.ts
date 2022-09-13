@@ -11,6 +11,7 @@ import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import { errorToString } from '../../util/is-error';
 
 type Options = {};
 
@@ -20,18 +21,7 @@ export default async function buy(
   args: string[]
 ) {
   const { output } = client;
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const [domainName] = args;
   if (!domainName) {
@@ -68,6 +58,11 @@ export default async function buy(
     return 1;
   }
 
+  if (renewalPrice instanceof Error) {
+    output.prettyError(renewalPrice);
+    return 1;
+  }
+
   if (!(await getDomainStatus(client, domainName)).available) {
     output.error(
       `The domain ${param(domainName)} is ${chalk.underline(
@@ -87,7 +82,8 @@ export default async function buy(
     !(await promptBool(
       `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
         period > 1 ? 's' : ''
-      }`})?`
+      }`})?`,
+      client
     ))
   ) {
     return 0;
@@ -99,7 +95,7 @@ export default async function buy(
       : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
           `$${price}`
         )}?`,
-    { defaultValue: true }
+    { ...client, defaultValue: true }
   );
 
   let buyResult;
@@ -108,11 +104,11 @@ export default async function buy(
 
   try {
     buyResult = await purchaseDomain(client, domainName, price, autoRenew);
-  } catch (err) {
+  } catch (err: unknown) {
     output.error(
       'An unexpected error occurred while purchasing your domain. Please try again later.'
     );
-    output.debug(`Server response: ${err.message}`);
+    output.debug(`Server response: ${errorToString(err)}`);
     return 1;
   }
 
@@ -120,9 +116,7 @@ export default async function buy(
 
   if (buyResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method using ${getCommandName(
-        `billing add`
-      )}.`
+      `Could not purchase domain. Please add a payment method using the dashboard.`
     );
     return 1;
   }

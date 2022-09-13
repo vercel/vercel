@@ -1,7 +1,8 @@
 import chalk from 'chalk';
-import { closeSync, openSync, promises, readSync } from 'fs';
+import { outputFile } from 'fs-extra';
+import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
-import { Project } from '../../types';
+import { Project, ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
 import exposeSystemEnvs from '../../util/dev/expose-system-envs';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -12,7 +13,12 @@ import { Output } from '../../util/output';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-const { writeFile } = promises;
+import { EnvRecordsSource } from '../../util/env/get-env-records';
+import {
+  buildDeltaString,
+  createEnvObject,
+} from '../../util/env/diff-env-files';
+import { isErrnoException } from '../../util/is-error';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -35,8 +41,8 @@ function readHeadSync(path: string, length: number) {
 function tryReadHeadSync(path: string, length: number) {
   try {
     return readHeadSync(path, length);
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
+  } catch (err: unknown) {
+    if (!isErrnoException(err) || err.code !== 'ENOENT') {
       throw err;
     }
   }
@@ -45,9 +51,12 @@ function tryReadHeadSync(path: string, length: number) {
 export default async function pull(
   client: Client,
   project: Project,
+  environment: ProjectEnvTarget,
   opts: Partial<Options>,
   args: string[],
-  output: Output
+  output: Output,
+  cwd: string,
+  source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
 ) {
   if (args.length > 1) {
     output.error(
@@ -58,37 +67,38 @@ export default async function pull(
 
   // handle relative or absolute filename
   const [filename = '.env'] = args;
-  const fullPath = resolve(filename);
+  const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
 
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
 
   if (head === CONTENTS_PREFIX) {
-    output.print(`Overwriting existing ${chalk.bold(filename)} file\n`);
+    output.log(`Overwriting existing ${chalk.bold(filename)} file`);
   } else if (
     exists &&
     !skipConfirmation &&
     !(await confirm(
+      client,
       `Found existing file ${param(filename)}. Do you want to overwrite?`,
       false
     ))
   ) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 
-  output.print(
-    `Downloading Development Environment Variables for Project ${chalk.bold(
-      project.name
-    )}\n`
+  output.log(
+    `Downloading \`${chalk.cyan(
+      environment
+    )}\` Environment Variables for Project ${chalk.bold(project.name)}`
   );
 
   const pullStamp = stamp();
   output.spinner('Downloading');
 
   const [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-    getDecryptedEnvRecords(output, client, project.id),
+    getDecryptedEnvRecords(output, client, project.id, source, environment),
     project.autoExposeSystemEnvs
       ? getSystemEnvValues(output, client, project.id)
       : { systemEnvValues: [] },
@@ -97,8 +107,24 @@ export default async function pull(
   const records = exposeSystemEnvs(
     projectEnvs,
     systemEnvValues,
-    project.autoExposeSystemEnvs
+    project.autoExposeSystemEnvs,
+    undefined,
+    environment
   );
+
+  let deltaString = '';
+  let oldEnv;
+  if (exists) {
+    oldEnv = await createEnvObject(fullPath, output);
+    if (oldEnv) {
+      // Removes any double quotes from `records`, if they exist
+      // We need this because double quotes are stripped from the local .env file,
+      // but `records` is already in the form of a JSON object that doesn't filter
+      // double quotes.
+      const newEnv = JSON.parse(JSON.stringify(records).replace(/\\"/g, ''));
+      deltaString = buildDeltaString(oldEnv, newEnv);
+    }
+  }
 
   const contents =
     CONTENTS_PREFIX +
@@ -107,7 +133,13 @@ export default async function pull(
       .join('\n') +
     '\n';
 
-  await writeFile(fullPath, contents, 'utf8');
+  await outputFile(fullPath, contents, 'utf8');
+
+  if (deltaString) {
+    output.print('\n' + deltaString);
+  } else if (oldEnv && exists) {
+    output.log('No changes found.');
+  }
 
   output.print(
     `${prependEmoji(

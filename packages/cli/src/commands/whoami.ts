@@ -41,25 +41,14 @@ export default async (client: Client): Promise<number> => {
     return 2;
   }
 
-  let contextName = null;
+  const { contextName } = await getScope(client, { getTeam: false });
 
-  try {
-    ({ contextName } = await getScope(client, { getTeam: false }));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
-
-  if (output.isTTY) {
+  if (client.stdout.isTTY) {
     output.log(contextName);
   } else {
     // If stdout is not a TTY, then only print the username
     // to support piping the output to another file / exe
-    output.print(`${contextName}\n`, { w: process.stdout });
+    client.stdout.write(`${contextName}\n`);
   }
 
   return 0;

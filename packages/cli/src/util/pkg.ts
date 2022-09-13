@@ -1,6 +1,14 @@
-import _pkg from '../../package.json';
+import fs from 'fs';
+import { join } from 'path';
 import { PackageJson } from '@vercel/build-utils';
 
-const pkg: PackageJson & typeof _pkg = _pkg;
+let rootDir = __dirname;
+while (!fs.existsSync(join(rootDir, 'package.json'))) {
+  rootDir = join(rootDir, '..');
+}
 
+const pkgPath = join(rootDir, 'package.json');
+const pkg: PackageJson & typeof import('../../package.json') = JSON.parse(
+  fs.readFileSync(pkgPath, 'utf8')
+);
 export default pkg;

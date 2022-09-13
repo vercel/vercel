@@ -15,10 +15,9 @@ import { isValidName } from '../../util/is-valid-name';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
-import { User } from '../../types';
 import { getCommandName } from '../../util/pkg-name';
 import toHost from '../../util/to-host';
-import { VercelConfig } from '../../util/dev/types';
+import type { VercelConfig } from '@vercel/client';
 
 type Options = {
   '--debug': boolean;
@@ -30,23 +29,9 @@ export default async function set(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output, localConfig } = client;
-
   const setStamp = stamp();
-
-  let user: User;
-  let contextName: string | null = null;
-
-  try {
-    ({ contextName, user } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { output, localConfig } = client;
+  const { contextName, user } = await getScope(client);
 
   // If there are more than two args we have to error
   if (args.length > 2) {
@@ -73,7 +58,7 @@ export default async function set(
   if (args.length === 0) {
     output.error(
       `To ship to production, optionally configure your domains (${link(
-        'https://vercel.com/docs/v2/custom-domains'
+        'https://vercel.link/domain-configuration'
       )}) and run ${getCommandName(`--prod`)}.`
     );
     return 1;
@@ -235,7 +220,7 @@ function handleSetupDomainError<T>(
   }
 
   if (error instanceof ERRORS.UserAborted) {
-    output.error(`User aborted`);
+    output.error(`User canceled.`);
     return 1;
   }
 

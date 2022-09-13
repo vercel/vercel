@@ -1,0 +1,32 @@
+{
+  "name": "@vercel/redwood",
+  "version": "1.0.23",
+  "main": "./dist/index.js",
+  "license": "MIT",
+  "homepage": "https://vercel.com/docs",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/redwood"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "test-integration-once": "yarn test test/test.js",
+    "test": "jest --env node --verbose --bail --runInBand",
+    "test-unit": "yarn test test/prepare-cache.test.js"
+  },
+  "dependencies": {
+    "@vercel/nft": "0.22.1",
+    "@vercel/routing-utils": "2.0.2",
+    "semver": "6.1.1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.19",
+    "@types/node": "*",
+    "@types/semver": "6.0.0",
+    "@vercel/build-utils": "5.4.2"
+  }
+}

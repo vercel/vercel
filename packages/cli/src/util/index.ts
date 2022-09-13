@@ -14,10 +14,10 @@ import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { Org } from '../types';
+import { GitMetadata, Org } from '../types';
 import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
-import { Dictionary } from '@vercel/client';
+import { ArchiveFormat, Dictionary } from '@vercel/client';
 
 export interface NowOptions {
   client: Client;
@@ -38,6 +38,7 @@ export interface CreateOptions {
   prebuilt?: boolean;
   rootDirectory?: string;
   meta: Dictionary<string>;
+  gitMetadata?: GitMetadata;
   regions?: string[];
   quiet?: boolean;
   env: Dictionary<string>;
@@ -116,6 +117,7 @@ export default class Now extends EventEmitter {
       rootDirectory,
       wantsPublic,
       meta,
+      gitMetadata,
       regions,
       quiet = false,
       env,
@@ -129,6 +131,7 @@ export default class Now extends EventEmitter {
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
+    archive?: ArchiveFormat,
     cwd?: string
   ) {
     let hashes: any = {};
@@ -142,6 +145,7 @@ export default class Now extends EventEmitter {
       name,
       project,
       meta,
+      gitMetadata,
       regions,
       target: target || undefined,
       projectSettings,
@@ -160,12 +164,12 @@ export default class Now extends EventEmitter {
       uploadStamp,
       deployStamp,
       quiet,
-      nowConfig,
       force: forceNew,
       withCache,
       org,
       projectName: name,
       isSettingUpProject,
+      archive,
       skipAutoDetectionConfirmation,
       cwd,
       prebuilt,
@@ -328,7 +332,8 @@ export default class Now extends EventEmitter {
 
   async list(
     app?: string,
-    { version = 4, meta = {}, nextTimestamp }: ListOptions = {}
+    { version = 4, meta = {}, nextTimestamp }: ListOptions = {},
+    prod?: boolean
   ) {
     const fetchRetry = async (url: string, options: FetchOptions = {}) => {
       return this.retry(
@@ -390,6 +395,9 @@ export default class Now extends EventEmitter {
 
     if (nextTimestamp) {
       query.set('until', String(nextTimestamp));
+    }
+    if (prod) {
+      query.set('target', 'production');
     }
 
     const response = await fetchRetry(`/v${version}/now/deployments?${query}`);
@@ -528,7 +536,7 @@ export default class Now extends EventEmitter {
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
       fetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
-    printIndications(res);
+    printIndications(this._client, res);
     return res;
   }
 

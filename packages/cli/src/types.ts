@@ -1,3 +1,5 @@
+import type { Readable, Writable } from 'stream';
+
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
 export type Primitive =
@@ -18,15 +20,16 @@ export interface JSONObject {
 }
 
 export interface AuthConfig {
-  _?: string;
+  '// Note'?: string;
+  '// Docs'?: string;
   token?: string;
   skipWrite?: boolean;
 }
 
 export interface GlobalConfig {
-  _?: string;
+  '// Note'?: string;
+  '// Docs'?: string;
   currentTeam?: string;
-  includeScheme?: string;
   collectMetrics?: boolean;
   api?: string;
 
@@ -128,7 +131,17 @@ export type Deployment = {
   version?: number;
   created: number;
   createdAt: number;
+  ready?: number;
+  buildingAt?: number;
   creator: { uid: string; username: string };
+  target: string | null;
+  ownerId: string;
+  projectId: string;
+  inspectorUrl: string;
+  meta: {
+    [key: string]: any;
+  };
+  alias?: string[];
 };
 
 export type Alias = {
@@ -198,6 +211,7 @@ export interface ProjectAliasTarget {
   configuredBy?: null | 'CNAME' | 'A';
   configuredChangedAt?: null | number;
   configuredChangeAttempts?: [number, number];
+  deployment?: Deployment | undefined;
 }
 
 export interface Secret {
@@ -237,16 +251,41 @@ export interface ProjectEnvVariable {
   gitBranch?: string;
 }
 
+export interface DeployHook {
+  createdAt: number;
+  id: string;
+  name: string;
+  ref: string;
+  url: string;
+}
+
+export interface ProjectLinkData {
+  type: string;
+  repo: string;
+  repoId: number;
+  org?: string;
+  gitCredentialId: string;
+  productionBranch?: string | null;
+  sourceless: boolean;
+  createdAt: number;
+  updatedAt: number;
+  deployHooks?: DeployHook[];
+}
+
 export interface Project extends ProjectSettings {
   id: string;
+  analytics?: {
+    id: string;
+    enabledAt?: number;
+    disabledAt?: number;
+    canceledAt?: number | null;
+  };
   name: string;
   accountId: string;
   updatedAt: number;
   createdAt: number;
+  link?: ProjectLinkData;
   alias?: ProjectAliasTarget[];
-  devCommand?: string | null;
-  framework?: string | null;
-  rootDirectory?: string | null;
   latestDeployments?: Partial<Deployment>[];
 }
 
@@ -270,7 +309,17 @@ export interface PaginationOptions {
 export type ProjectLinkResult =
   | { status: 'linked'; org: Org; project: Project }
   | { status: 'not_linked'; org: null; project: null }
-  | { status: 'error'; exitCode: number };
+  | {
+      status: 'error';
+      exitCode: number;
+      reason?:
+        | 'HEADLESS'
+        | 'NOT_AUTHORIZED'
+        | 'TEAM_DELETED'
+        | 'PATH_IS_FILE'
+        | 'INVALID_ROOT_DIRECTORY'
+        | 'MISSING_PROJECT_SETTINGS';
+    };
 
 export interface Token {
   id: string;
@@ -280,6 +329,15 @@ export interface Token {
   activeAt: number;
   createdAt: number;
   teamId?: string;
+}
+
+export interface GitMetadata {
+  commitAuthorName?: string | undefined;
+  commitMessage?: string | undefined;
+  commitRef?: string | undefined;
+  commitSha?: string | undefined;
+  dirty?: boolean | undefined;
+  remoteUrl: string;
 }
 
 /**
@@ -418,4 +476,20 @@ export interface BuildOutput {
     timeout?: number;
     layers?: string[];
   } | null;
+}
+
+export interface ReadableTTY extends Readable {
+  isTTY?: boolean;
+  isRaw?: boolean;
+  setRawMode?: (mode: boolean) => void;
+}
+
+export interface WritableTTY extends Writable {
+  isTTY?: boolean;
+}
+
+export interface Stdio {
+  stdin: ReadableTTY;
+  stdout: WritableTTY;
+  stderr: WritableTTY;
 }

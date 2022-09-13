@@ -12,10 +12,11 @@ import {
   mkdirp,
   move,
   remove,
+  rmdir,
+  readdir,
 } from 'fs-extra';
 import {
   BuildOptions,
-  Meta,
   Files,
   PrepareCacheOptions,
   StartDevServerOptions,
@@ -72,20 +73,28 @@ async function initPrivateGit(credentials: string) {
  * which works great for this feature. We also need to add a suffix during `vercel dev`
  * since the entrypoint is already stripped of its suffix before build() is called.
  */
-function getRenamedEntrypoint(entrypoint: string, files: Files, meta: Meta) {
+function getRenamedEntrypoint(entrypoint: string): string | undefined {
   const filename = basename(entrypoint);
   if (filename.startsWith('[')) {
-    const suffix = meta.isDev && !entrypoint.endsWith('.go') ? '.go' : '';
-    const newEntrypoint = entrypoint.replace('/[', '/now-bracket[') + suffix;
-    const file = files[entrypoint];
-    delete files[entrypoint];
-    files[newEntrypoint] = file;
+    const newEntrypoint = entrypoint.replace('/[', '/now-bracket[');
+
     debug(`Renamed entrypoint from ${entrypoint} to ${newEntrypoint}`);
-    entrypoint = newEntrypoint;
+    return newEntrypoint;
   }
 
-  return entrypoint;
+  return undefined;
 }
+
+type UndoFileAction = {
+  from: string;
+  to: string | undefined;
+};
+
+type UndoFunctionRename = {
+  fsPath: string;
+  from: string;
+  to: string;
+};
 
 export const version = 3;
 
@@ -96,379 +105,519 @@ export async function build({
   workPath,
   meta = {},
 }: BuildOptions) {
-  if (process.env.GIT_CREDENTIALS && !meta.isDev) {
-    debug('Initialize Git credentials...');
-    await initPrivateGit(process.env.GIT_CREDENTIALS);
-  }
-
-  if (process.env.GO111MODULE) {
-    console.log(`\nManually assigning 'GO111MODULE' is not recommended.
-
-By default:
-  - 'GO111MODULE=on' If entrypoint package name is not 'main'
-  - 'GO111MODULE=off' If entrypoint package name is 'main'
-
-We highly recommend you leverage Go Modules in your project.
-Learn more: https://github.com/golang/go/wiki/Modules
-`);
-  }
-  entrypoint = getRenamedEntrypoint(entrypoint, files, meta);
-  const entrypointArr = entrypoint.split(sep);
-
-  // eslint-disable-next-line prefer-const
-  let [goPath, outDir] = await Promise.all([
-    getWriteableDirectory(),
-    getWriteableDirectory(),
-  ]);
-
-  const forceMove = Boolean(meta.isDev);
+  const goPath = await getWriteableDirectory();
   const srcPath = join(goPath, 'src', 'lambda');
-  let downloadPath = meta.isDev || meta.skipDownload ? workPath : srcPath;
-  let downloadedFiles = await download(files, downloadPath, meta);
+  const downloadPath = meta.skipDownload ? workPath : srcPath;
+  await download(files, downloadPath, meta);
 
-  debug(`Parsing AST for "${entrypoint}"`);
-  let analyzed: string;
+  // keep track of file system actions we need to undo
+  // the keys "from" and "to" refer to what needs to be done
+  // in order to undo the action, not what the original action was
+  const undoFileActions: UndoFileAction[] = [];
+  const undoDirectoryCreation: string[] = [];
+  const undoFunctionRenames: UndoFunctionRename[] = [];
+
   try {
-    let goModAbsPathDir = '';
-    const fileName = 'go.mod';
-    if (fileName in downloadedFiles) {
-      goModAbsPathDir = dirname(downloadedFiles[fileName].fsPath);
-      debug(`Found ${fileName} file in "${goModAbsPathDir}"`);
-    } else if ('api/go.mod' in downloadedFiles) {
-      goModAbsPathDir = dirname(downloadedFiles['api/go.mod'].fsPath);
-      debug(`Found ${fileName} file in "${goModAbsPathDir}"`);
+    if (process.env.GIT_CREDENTIALS) {
+      debug('Initialize Git credentials...');
+      await initPrivateGit(process.env.GIT_CREDENTIALS);
     }
-    analyzed = await getAnalyzedEntrypoint(
-      workPath,
-      downloadedFiles[entrypoint].fsPath,
-      goModAbsPathDir
-    );
-  } catch (err) {
-    console.log(`Failed to parse AST for "${entrypoint}"`);
-    throw err;
-  }
 
-  if (!analyzed) {
-    const err = new Error(
-      `Could not find an exported function in "${entrypoint}"
-Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
-      `
-    );
-    console.log(err.message);
-    throw err;
-  }
+    if (process.env.GO111MODULE) {
+      console.log(`\nManually assigning 'GO111MODULE' is not recommended.
 
-  const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
+  By default:
+    - 'GO111MODULE=on' If entrypoint package name is not 'main'
+    - 'GO111MODULE=off' If entrypoint package name is 'main'
 
-  if (meta.isDev) {
-    // Create cache so Go rebuilds fast with `vercel dev`
-    // Old versions of the CLI don't assign this property
-    const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
-    goPath = join(devCacheDir, 'go', basename(entrypoint, '.go'));
-    const destLambda = join(goPath, 'src', 'lambda');
-    await download(downloadedFiles, destLambda);
-    downloadedFiles = await glob('**', destLambda);
-    downloadPath = destLambda;
-  }
+  We highly recommend you leverage Go Modules in your project.
+  Learn more: https://github.com/golang/go/wiki/Modules
+  `);
+    }
 
-  // find `go.mod` in downloadedFiles
-  const entrypointDirname = dirname(downloadedFiles[entrypoint].fsPath);
-  let isGoModExist = false;
-  let goModPath = '';
-  let isGoModInRootDir = false;
-  for (const file of Object.keys(downloadedFiles)) {
-    const { fsPath } = downloadedFiles[file];
-    const fileDirname = dirname(fsPath);
-    if (file === 'go.mod') {
-      isGoModExist = true;
-      isGoModInRootDir = true;
-      goModPath = fileDirname;
-    } else if (file.endsWith('go.mod')) {
-      if (entrypointDirname === fileDirname) {
-        isGoModExist = true;
-        goModPath = fileDirname;
-        debug(`Found file dirname equals entrypoint dirname: ${fileDirname}`);
-        break;
+    const originalEntrypointAbsolute = join(workPath, entrypoint);
+    const renamedEntrypoint = getRenamedEntrypoint(entrypoint);
+    if (renamedEntrypoint) {
+      await move(join(workPath, entrypoint), join(workPath, renamedEntrypoint));
+      undoFileActions.push({
+        to: join(workPath, entrypoint),
+        from: join(workPath, renamedEntrypoint),
+      });
+      entrypoint = renamedEntrypoint;
+    }
+
+    const entrypointAbsolute = join(workPath, entrypoint);
+    const entrypointArr = entrypoint.split(sep);
+
+    debug(`Parsing AST for "${entrypoint}"`);
+    let analyzed: string;
+    try {
+      const goModAbsPath = await findGoModPath(workPath);
+      if (goModAbsPath) {
+        debug(`Found ${goModAbsPath}"`);
       }
 
-      if (!isGoModInRootDir && config.zeroConfig && file === 'api/go.mod') {
-        // We didn't find `/go.mod` but we found `/api/go.mod` so move it to the root
+      analyzed = await getAnalyzedEntrypoint(
+        workPath,
+        entrypointAbsolute,
+        dirname(goModAbsPath)
+      );
+    } catch (err) {
+      console.log(`Failed to parse AST for "${entrypoint}"`);
+      throw err;
+    }
+
+    if (!analyzed) {
+      const err = new Error(
+        `Could not find an exported function in "${entrypoint}"
+  Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
+        `
+      );
+      console.log(err.message);
+      throw err;
+    }
+
+    const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
+
+    // find `go.mod` in modFiles
+    const entrypointDirname = dirname(entrypointAbsolute);
+    let isGoModExist = false;
+    let goModPath = '';
+    let isGoModInRootDir = false;
+
+    const modFileRefs = await glob('**/*.mod', workPath);
+    const modFiles = Object.keys(modFileRefs);
+
+    for (const file of modFiles) {
+      const fileDirname = dirname(file);
+      if (file === 'go.mod') {
         isGoModExist = true;
         isGoModInRootDir = true;
-        goModPath = join(fileDirname, '..');
-        const pathParts = fsPath.split(sep);
-        pathParts.pop(); // Remove go.mod
-        pathParts.pop(); // Remove api
-        pathParts.push('go.mod');
-        const newFsPath = pathParts.join(sep);
-        debug(`Moving api/go.mod to root: ${fsPath} to ${newFsPath}`);
-        await move(fsPath, newFsPath, { overwrite: forceMove });
-        const oldSumPath = join(dirname(fsPath), 'go.sum');
-        const newSumPath = join(dirname(newFsPath), 'go.sum');
-        if (await pathExists(oldSumPath)) {
-          debug(`Moving api/go.sum to root: ${oldSumPath} to ${newSumPath}`);
-          await move(oldSumPath, newSumPath, { overwrite: forceMove });
+        goModPath = join(workPath, fileDirname);
+      } else if (file.endsWith('go.mod')) {
+        if (entrypointDirname === fileDirname) {
+          isGoModExist = true;
+          goModPath = join(workPath, fileDirname);
+
+          debug(`Found file dirname equals entrypoint dirname: ${fileDirname}`);
+          break;
         }
-        break;
+
+        if (!isGoModInRootDir && config.zeroConfig && file === 'api/go.mod') {
+          // We didn't find `/go.mod` but we found `/api/go.mod` so move it to the root
+          isGoModExist = true;
+          isGoModInRootDir = true;
+          goModPath = join(fileDirname, '..');
+          const pathParts = file.split(sep);
+          pathParts.pop(); // Remove go.mod
+          pathParts.pop(); // Remove api
+          pathParts.push('go.mod');
+
+          const newRoot = pathParts.join(sep);
+          const newFsPath = join(workPath, newRoot);
+
+          debug(`Moving api/go.mod to root: ${file} to ${newFsPath}`);
+          await move(file, newFsPath);
+          undoFileActions.push({
+            to: file,
+            from: newFsPath,
+          });
+
+          const oldSumPath = join(dirname(file), 'go.sum');
+          const newSumPath = join(dirname(newFsPath), 'go.sum');
+          if (await pathExists(oldSumPath)) {
+            debug(`Moving api/go.sum to root: ${oldSumPath} to ${newSumPath}`);
+            await move(oldSumPath, newSumPath);
+            undoFileActions.push({
+              to: oldSumPath,
+              from: newSumPath,
+            });
+          }
+          break;
+        }
       }
     }
-  }
 
-  const input = entrypointDirname;
-  const includedFiles: Files = {};
+    const input = entrypointDirname;
+    const includedFiles: Files = {};
 
-  if (config && config.includeFiles) {
-    const patterns = Array.isArray(config.includeFiles)
-      ? config.includeFiles
-      : [config.includeFiles];
-    for (const pattern of patterns) {
-      const fsFiles = await glob(pattern, input);
-      for (const [assetName, asset] of Object.entries(fsFiles)) {
-        includedFiles[assetName] = asset;
+    if (config && config.includeFiles) {
+      const patterns = Array.isArray(config.includeFiles)
+        ? config.includeFiles
+        : [config.includeFiles];
+      for (const pattern of patterns) {
+        const fsFiles = await glob(pattern, input);
+        for (const [assetName, asset] of Object.entries(fsFiles)) {
+          includedFiles[assetName] = asset;
+        }
       }
     }
-  }
 
-  const handlerFunctionName = parsedAnalyzed.functionName;
-  debug(`Found exported function "${handlerFunctionName}" in "${entrypoint}"`);
-
-  if (!isGoModExist && 'vendor' in downloadedFiles) {
-    throw new Error('`go.mod` is required to use a `vendor` directory.');
-  }
-
-  // check if package name other than main
-  // using `go.mod` way building the handler
-  const packageName = parsedAnalyzed.packageName;
-
-  if (isGoModExist && packageName === 'main') {
-    throw new Error('Please change `package main` to `package handler`');
-  }
-
-  if (packageName !== 'main') {
-    const go = await createGo(
-      workPath,
-      goPath,
-      process.platform,
-      process.arch,
-      {
-        cwd: entrypointDirname,
-      },
-      true
+    const originalFunctionName = parsedAnalyzed.functionName;
+    const handlerFunctionName = getNewHandlerFunctionName(
+      originalFunctionName,
+      entrypoint
     );
-    if (!isGoModExist) {
-      try {
-        const defaultGoModContent = `module ${packageName}`;
-
-        await writeFile(join(entrypointDirname, 'go.mod'), defaultGoModContent);
-      } catch (err) {
-        console.log(`Failed to create default go.mod for ${packageName}`);
-        throw err;
-      }
-    }
-
-    const mainModGoFileName = 'main__mod__.go';
-    const modMainGoContents = await readFile(
-      join(__dirname, mainModGoFileName),
-      'utf8'
-    );
-
-    let goPackageName = `${packageName}/${packageName}`;
-    const goFuncName = `${packageName}.${handlerFunctionName}`;
-
-    if (isGoModExist) {
-      const goModContents = await readFile(join(goModPath, 'go.mod'), 'utf8');
-      const usrModName = goModContents.split('\n')[0].split(' ')[1];
-      if (entrypointArr.length > 1 && isGoModInRootDir) {
-        const cleanPackagePath = [...entrypointArr];
-        cleanPackagePath.pop();
-        goPackageName = `${usrModName}/${cleanPackagePath.join('/')}`;
-      } else {
-        goPackageName = `${usrModName}/${packageName}`;
-      }
-    }
-
-    console.log({ goPackageName, goFuncName });
-
-    const mainModGoContents = modMainGoContents
-      .replace('__VC_HANDLER_PACKAGE_NAME', goPackageName)
-      .replace('__VC_HANDLER_FUNC_NAME', goFuncName);
-
-    console.log(mainModGoContents);
-
-    if (isGoModExist && isGoModInRootDir) {
-      debug('[mod-root] Write main file to ' + downloadPath);
-      await writeFile(join(downloadPath, mainModGoFileName), mainModGoContents);
-    } else if (isGoModExist && !isGoModInRootDir) {
-      debug('[mod-other] Write main file to ' + goModPath);
-      await writeFile(join(goModPath, mainModGoFileName), mainModGoContents);
-    } else {
-      debug('[entrypoint] Write main file to ' + entrypointDirname);
-      await writeFile(
-        join(entrypointDirname, mainModGoFileName),
-        mainModGoContents
-      );
-    }
-
-    // move user go file to folder
-    try {
-      // default path
-      let finalDestination = join(entrypointDirname, packageName, entrypoint);
-
-      // if `entrypoint` include folder, only use filename
-      if (entrypointArr.length > 1) {
-        finalDestination = join(
-          entrypointDirname,
-          packageName,
-          entrypointArr[entrypointArr.length - 1]
-        );
-      }
-
-      if (
-        dirname(downloadedFiles[entrypoint].fsPath) === goModPath ||
-        !isGoModExist
-      ) {
-        await move(downloadedFiles[entrypoint].fsPath, finalDestination, {
-          overwrite: forceMove,
-        });
-      }
-    } catch (err) {
-      console.log('Failed to move entry to package folder');
-      throw err;
-    }
-
-    let baseGoModPath = '';
-    if (isGoModExist && isGoModInRootDir) {
-      baseGoModPath = downloadPath;
-    } else if (isGoModExist && !isGoModInRootDir) {
-      baseGoModPath = goModPath;
-    } else {
-      baseGoModPath = entrypointDirname;
-    }
-
-    if (meta.isDev) {
-      const isGoModBk = await pathExists(join(baseGoModPath, 'go.mod.bk'));
-      if (isGoModBk) {
-        await move(
-          join(baseGoModPath, 'go.mod.bk'),
-          join(baseGoModPath, 'go.mod'),
-          { overwrite: forceMove }
-        );
-        await move(
-          join(baseGoModPath, 'go.sum.bk'),
-          join(baseGoModPath, 'go.sum'),
-          { overwrite: forceMove }
-        );
-      }
-    }
-
-    debug('Tidy `go.mod` file...');
-    try {
-      // ensure go.mod up-to-date
-      await go.mod();
-    } catch (err) {
-      console.log('failed to `go mod tidy`');
-      throw err;
-    }
-
-    debug('Running `go build`...');
-    const destPath = join(outDir, handlerFileName);
-
-    try {
-      const src = [join(baseGoModPath, mainModGoFileName)];
-
-      await go.build(src, destPath);
-    } catch (err) {
-      console.log('failed to `go build`');
-      throw err;
-    }
-    if (meta.isDev) {
-      // caching for `vercel dev`
-      await move(
-        join(baseGoModPath, 'go.mod'),
-        join(baseGoModPath, 'go.mod.bk'),
-        { overwrite: forceMove }
-      );
-      await move(
-        join(baseGoModPath, 'go.sum'),
-        join(baseGoModPath, 'go.sum.bk'),
-        { overwrite: forceMove }
-      );
-    }
-  } else {
-    // legacy mode
-    // we need `main.go` in the same dir as the entrypoint,
-    // otherwise `go build` will refuse to build
-    const go = await createGo(
-      workPath,
-      goPath,
-      process.platform,
-      process.arch,
-      {
-        cwd: entrypointDirname,
-      },
-      false
-    );
-    const origianlMainGoContents = await readFile(
-      join(__dirname, 'main.go'),
-      'utf8'
-    );
-    const mainGoContents = origianlMainGoContents.replace(
-      '__VC_HANDLER_FUNC_NAME',
+    await renameHandlerFunction(
+      entrypointAbsolute,
+      originalFunctionName,
       handlerFunctionName
     );
+    undoFunctionRenames.push({
+      fsPath: originalEntrypointAbsolute,
+      from: handlerFunctionName,
+      to: originalFunctionName,
+    });
+
+    if (!isGoModExist) {
+      if (await pathExists(join(workPath, 'vendor'))) {
+        throw new Error('`go.mod` is required to use a `vendor` directory.');
+      }
+    }
+
+    // check if package name other than main
+    // using `go.mod` way building the handler
+    const packageName = parsedAnalyzed.packageName;
+
+    if (isGoModExist && packageName === 'main') {
+      throw new Error('Please change `package main` to `package handler`');
+    }
+
+    const outDir = await getWriteableDirectory();
 
     // in order to allow the user to have `main.go`,
     // we need our `main.go` to be called something else
     const mainGoFileName = 'main__vc__go__.go';
 
-    // Go doesn't like to build files in different directories,
-    // so now we place `main.go` together with the user code
-    await writeFile(join(entrypointDirname, mainGoFileName), mainGoContents);
+    if (packageName !== 'main') {
+      const go = await createGo(
+        workPath,
+        goPath,
+        process.platform,
+        process.arch,
+        {
+          cwd: entrypointDirname,
+        },
+        true
+      );
+      if (!isGoModExist) {
+        try {
+          const defaultGoModContent = `module ${packageName}`;
 
-    // `go get` will look at `*.go` (note we set `cwd`), parse the `import`s
-    // and download any packages that aren't part of the stdlib
-    debug('Running `go get`...');
-    try {
-      await go.get();
-    } catch (err) {
-      console.log('Failed to `go get`');
-      throw err;
+          await writeFile(
+            join(entrypointDirname, 'go.mod'),
+            defaultGoModContent
+          );
+
+          undoFileActions.push({
+            to: undefined, // delete
+            from: join(entrypointDirname, 'go.mod'),
+          });
+
+          // remove the `go.sum` file that will be generated as well
+          undoFileActions.push({
+            to: undefined, // delete
+            from: join(entrypointDirname, 'go.sum'),
+          });
+        } catch (err) {
+          console.log(`Failed to create default go.mod for ${packageName}`);
+          throw err;
+        }
+      }
+
+      const modMainGoContents = await readFile(
+        join(__dirname, 'main.go'),
+        'utf8'
+      );
+
+      let goPackageName = `${packageName}/${packageName}`;
+      const goFuncName = `${packageName}.${handlerFunctionName}`;
+
+      if (isGoModExist) {
+        const goModContents = await readFile(join(goModPath, 'go.mod'), 'utf8');
+        const usrModName = goModContents.split('\n')[0].split(' ')[1];
+        if (entrypointArr.length > 1 && isGoModInRootDir) {
+          const cleanPackagePath = [...entrypointArr];
+          cleanPackagePath.pop();
+          goPackageName = `${usrModName}/${cleanPackagePath.join('/')}`;
+        } else {
+          goPackageName = `${usrModName}/${packageName}`;
+        }
+      }
+
+      const mainModGoContents = modMainGoContents
+        .replace('__VC_HANDLER_PACKAGE_NAME', goPackageName)
+        .replace('__VC_HANDLER_FUNC_NAME', goFuncName);
+
+      if (isGoModExist && isGoModInRootDir) {
+        debug('[mod-root] Write main file to ' + downloadPath);
+        await writeFile(join(downloadPath, mainGoFileName), mainModGoContents);
+        undoFileActions.push({
+          to: undefined, // delete
+          from: join(downloadPath, mainGoFileName),
+        });
+      } else if (isGoModExist && !isGoModInRootDir) {
+        debug('[mod-other] Write main file to ' + goModPath);
+        await writeFile(join(goModPath, mainGoFileName), mainModGoContents);
+        undoFileActions.push({
+          to: undefined, // delete
+          from: join(goModPath, mainGoFileName),
+        });
+      } else {
+        debug('[entrypoint] Write main file to ' + entrypointDirname);
+        await writeFile(
+          join(entrypointDirname, mainGoFileName),
+          mainModGoContents
+        );
+        undoFileActions.push({
+          to: undefined, // delete
+          from: join(entrypointDirname, mainGoFileName),
+        });
+      }
+
+      // move user go file to folder
+      try {
+        // default path
+        let finalDestination = join(entrypointDirname, packageName, entrypoint);
+
+        // if `entrypoint` include folder, only use filename
+        if (entrypointArr.length > 1) {
+          finalDestination = join(
+            entrypointDirname,
+            packageName,
+            entrypointArr[entrypointArr.length - 1]
+          );
+        }
+
+        if (dirname(entrypointAbsolute) === goModPath || !isGoModExist) {
+          debug(
+            `moving entrypoint "${entrypointAbsolute}" to "${finalDestination}"`
+          );
+
+          await move(entrypointAbsolute, finalDestination);
+          undoFileActions.push({
+            to: entrypointAbsolute,
+            from: finalDestination,
+          });
+          undoDirectoryCreation.push(dirname(finalDestination));
+        }
+      } catch (err) {
+        console.log('Failed to move entry to package folder');
+        throw err;
+      }
+
+      let baseGoModPath = '';
+      if (isGoModExist && isGoModInRootDir) {
+        baseGoModPath = downloadPath;
+      } else if (isGoModExist && !isGoModInRootDir) {
+        baseGoModPath = goModPath;
+      } else {
+        baseGoModPath = entrypointDirname;
+      }
+
+      debug('Tidy `go.mod` file...');
+      try {
+        // ensure go.mod up-to-date
+        await go.mod();
+      } catch (err) {
+        console.log('failed to `go mod tidy`');
+        throw err;
+      }
+
+      debug('Running `go build`...');
+      const destPath = join(outDir, handlerFileName);
+
+      try {
+        const src = [join(baseGoModPath, mainGoFileName)];
+
+        await go.build(src, destPath);
+      } catch (err) {
+        console.log('failed to `go build`');
+        throw err;
+      }
+    } else {
+      // legacy mode
+      // we need `main.go` in the same dir as the entrypoint,
+      // otherwise `go build` will refuse to build
+      const go = await createGo(
+        workPath,
+        goPath,
+        process.platform,
+        process.arch,
+        {
+          cwd: entrypointDirname,
+        },
+        false
+      );
+      const originalMainGoContents = await readFile(
+        join(__dirname, 'main.go'),
+        'utf8'
+      );
+      const mainGoContents = originalMainGoContents
+        .replace('"__VC_HANDLER_PACKAGE_NAME"', '')
+        .replace('__VC_HANDLER_FUNC_NAME', handlerFunctionName);
+
+      // Go doesn't like to build files in different directories,
+      // so now we place `main.go` together with the user code
+      await writeFile(join(entrypointDirname, mainGoFileName), mainGoContents);
+      undoFileActions.push({
+        to: undefined, // delete
+        from: join(entrypointDirname, mainGoFileName),
+      });
+
+      // `go get` will look at `*.go` (note we set `cwd`), parse the `import`s
+      // and download any packages that aren't part of the stdlib
+      debug('Running `go get`...');
+      try {
+        await go.get();
+      } catch (err) {
+        console.log('Failed to `go get`');
+        throw err;
+      }
+
+      debug('Running `go build`...');
+      const destPath = join(outDir, handlerFileName);
+      try {
+        const src = [
+          join(entrypointDirname, mainGoFileName),
+          entrypointAbsolute,
+        ].map(file => normalize(file));
+        await go.build(src, destPath);
+      } catch (err) {
+        console.log('failed to `go build`');
+        throw err;
+      }
     }
 
-    debug('Running `go build`...');
-    const destPath = join(outDir, handlerFileName);
+    const lambda = await createLambda({
+      files: { ...(await glob('**', outDir)), ...includedFiles },
+      handler: handlerFileName,
+      runtime: 'go1.x',
+      supportsWrapper: true,
+      environment: {},
+    });
+
+    const watch = parsedAnalyzed.watch;
+    let watchSub: string[] = [];
+    // if `entrypoint` located in subdirectory
+    // we will need to concat it with return watch array
+    if (entrypointArr.length > 1) {
+      entrypointArr.pop();
+      watchSub = parsedAnalyzed.watch.map(file => join(...entrypointArr, file));
+    }
+
+    return {
+      output: lambda,
+      watch: watch.concat(watchSub),
+    };
+  } catch (error) {
+    debug('Go Builder Error: ' + error);
+
+    throw error;
+  } finally {
     try {
-      const src = [
-        join(entrypointDirname, mainGoFileName),
-        downloadedFiles[entrypoint].fsPath,
-      ].map(file => normalize(file));
-      await go.build(src, destPath);
-    } catch (err) {
-      console.log('failed to `go build`');
-      throw err;
+      await cleanupFileSystem(
+        undoFileActions,
+        undoDirectoryCreation,
+        undoFunctionRenames
+      );
+    } catch (error) {
+      console.log(`Build cleanup failed: ${error.message}`);
+      debug('Cleanup Error: ' + error);
+    }
+  }
+}
+
+async function renameHandlerFunction(fsPath: string, from: string, to: string) {
+  let fileContents = await readFile(fsPath, 'utf8');
+
+  // This regex has to walk a fine line where it replaces the most-likely occurrences
+  // of the handler's identifier without clobbering other syntax.
+  // Left-hand Side: A single space was chosen because it can catch `func Handler`
+  //   as well as `var _ http.HandlerFunc = Index`.
+  // Right-hand Side: a word boundary was chosen because this can be an end of line
+  //   or an open paren (as in `func Handler(`).
+  const fromRegex = new RegExp(String.raw` ${from}\b`, 'g');
+  fileContents = fileContents.replace(fromRegex, ` ${to}`);
+
+  await writeFile(fsPath, fileContents);
+}
+
+export function getNewHandlerFunctionName(
+  originalFunctionName: string,
+  entrypoint: string
+) {
+  if (!originalFunctionName) {
+    throw new Error(
+      'Handler function renaming failed because original function name was empty.'
+    );
+  }
+
+  if (!entrypoint) {
+    throw new Error(
+      'Handler function renaming failed because entrypoint was empty.'
+    );
+  }
+
+  debug(`Found exported function "${originalFunctionName}" in "${entrypoint}"`);
+
+  const pathSlug = entrypoint.replace(/(\s|\\|\/|\]|\[|-|\.)/g, '_');
+
+  const newHandlerName = `${originalFunctionName}_${pathSlug}`;
+  debug(
+    `Renaming handler function temporarily from "${originalFunctionName}" to "${newHandlerName}"`
+  );
+
+  return newHandlerName;
+}
+
+async function cleanupFileSystem(
+  undoFileActions: UndoFileAction[],
+  undoDirectoryCreation: string[],
+  undoFunctionRenames: UndoFunctionRename[]
+) {
+  // we have to undo the actions in reverse order in cases
+  // where one file was moved multiple times, which happens
+  // using files that start with brackets
+  for (const action of undoFileActions.reverse()) {
+    if (action.to) {
+      await move(action.from, action.to);
+    } else {
+      await remove(action.from);
     }
   }
 
-  const lambda = await createLambda({
-    files: { ...(await glob('**', outDir)), ...includedFiles },
-    handler: handlerFileName,
-    runtime: 'go1.x',
-    environment: {},
+  // after files are moved back, we can undo function renames
+  // these reference the original file location
+  for (const rename of undoFunctionRenames) {
+    await renameHandlerFunction(rename.fsPath, rename.from, rename.to);
+  }
+
+  const undoDirectoryPromises = undoDirectoryCreation.map(async directory => {
+    const contents = await readdir(directory);
+    // only delete an empty directory
+    // if it has contents, either something went wrong during cleanup or this
+    // directory contains project source code that should not be deleted
+    if (!contents.length) {
+      return rmdir(directory);
+    }
+    return undefined;
   });
+  await Promise.all(undoDirectoryPromises);
+}
 
-  const watch = parsedAnalyzed.watch;
-  let watchSub: string[] = [];
-  // if `entrypoint` located in subdirectory
-  // we will need to concat it with return watch array
-  if (entrypointArr.length > 1) {
-    entrypointArr.pop();
-    watchSub = parsedAnalyzed.watch.map(file => join(...entrypointArr, file));
+async function findGoModPath(workPath: string): Promise<string> {
+  let checkPath = join(workPath, 'go.mod');
+  if (await pathExists(checkPath)) {
+    return checkPath;
   }
 
-  return {
-    output: lambda,
-    watch: watch.concat(watchSub),
-  };
+  checkPath = join(workPath, 'api/go.mod');
+  if (await pathExists(checkPath)) {
+    return checkPath;
+  }
+
+  return '';
 }
 
 function isPortInfo(v: any): v is PortInfo {
