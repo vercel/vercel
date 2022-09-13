@@ -66,6 +66,7 @@ export const workspaceManagers: Array<
       every: [
         {
           path: 'workspace.json',
+          matchContent: '"projects":\\s*{[^}]}',
         },
       ],
     },
