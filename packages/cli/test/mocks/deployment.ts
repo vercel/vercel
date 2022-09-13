@@ -69,7 +69,7 @@ export function useDeploymentMissingProjectSettings() {
         framework: {
           name: 'Other',
           slug: null,
-          logo: 'https://raw.githubusercontent.com/vercel/vercel/main/packages/frameworks/logos/other.svg',
+          logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
           description: 'No framework or an unoptimized framework.',
           settings: {
             installCommand: {
