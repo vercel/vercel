@@ -1,10 +1,7 @@
 import { parse } from 'url';
 import { ListenSpec } from './types';
 
-export default function parseListen(
-  str: string,
-  defaultPort = 3000
-): ListenSpec {
+export function parseListen(str: string, defaultPort = 3000): ListenSpec {
   let port = Number(str);
 
   if (!isNaN(port)) {
@@ -49,4 +46,8 @@ export default function parseListen(
         `Unknown \`--listen\` scheme (protocol): ${url.protocol}`
       );
   }
+}
+
+export function replaceLocalhost(address: string): string {
+  return address.replace('[::]', 'localhost').replace('0.0.0.0', 'localhost');
 }

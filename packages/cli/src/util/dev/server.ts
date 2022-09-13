@@ -97,6 +97,7 @@ import {
 } from '../is-error';
 import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
+import { replaceLocalhost } from './parse-listen';
 
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
@@ -894,9 +895,7 @@ export default class DevServer {
       }
     }
 
-    this._address = new URL(
-      address.replace('[::]', 'localhost').replace('127.0.0.1', 'localhost')
-    );
+    this._address = new URL(replaceLocalhost(address));
 
     const vercelConfig = await this.getVercelConfig();
     const devCommandPromise = this.runDevCommand();
