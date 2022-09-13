@@ -26,8 +26,6 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
   return typeof scripts[scriptName] === 'string';
 }
 
-export const version = 2;
-
 export const build: BuildV2 = async ({
   entrypoint,
   files,
