@@ -9,7 +9,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
-  BuildV3,
+  BuildV2,
   PackageJson,
   glob,
 } from '@vercel/build-utils';
@@ -26,7 +26,9 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
   return typeof scripts[scriptName] === 'string';
 }
 
-export const build: BuildV3 = async ({
+export const version = 2;
+
+export const build: BuildV2 = async ({
   entrypoint,
   files,
   workPath,
@@ -179,9 +181,9 @@ export const build: BuildV3 = async ({
       })),
       '_page-data': await createFunctionLambda({
         nodeVersion,
-        handlerFile: join(__dirname, 'handlers', 'templates', './page-data'),
+        handlerFile: join(__dirname, 'handlers', 'templates', 'page-data'),
       }),
     },
-    routes,
+    routes: routes || undefined,
   };
 };
