@@ -12,6 +12,8 @@ import vercelNodePkg from '@vercel/node/package.json';
 
 jest.setTimeout(ms('30 seconds'));
 
+const repoRoot = join(__dirname, '../../../../../..');
+
 describe('importBuilders()', () => {
   it('should import built-in Builders', async () => {
     const specs = new Set(['@vercel/node', '@vercel/next']);
@@ -19,6 +21,12 @@ describe('importBuilders()', () => {
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
     expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
+    expect(builders.get('@vercel/node')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/node/package.json')
+    );
+    expect(builders.get('@vercel/next')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/next/package.json')
+    );
     expect(typeof builders.get('@vercel/node')?.builder.build).toEqual(
       'function'
     );
@@ -37,6 +45,12 @@ describe('importBuilders()', () => {
     expect(builders.get('@vercel/next@latest')?.pkg).toMatchObject(
       vercelNextPkg
     );
+    expect(builders.get('@vercel/node@latest')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/node/package.json')
+    );
+    expect(builders.get('@vercel/next@latest')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/next/package.json')
+    );
     expect(typeof builders.get('@vercel/node@latest')?.builder.build).toEqual(
       'function'
     );
@@ -54,6 +68,12 @@ describe('importBuilders()', () => {
     );
     expect(builders.get('@vercel/next@canary')?.pkg).toMatchObject(
       vercelNextPkg
+    );
+    expect(builders.get('@vercel/node@canary')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/node/package.json')
+    );
+    expect(builders.get('@vercel/next@canary')?.pkgPath).toEqual(
+      join(repoRoot, 'packages/next/package.json')
     );
     expect(typeof builders.get('@vercel/node@canary')?.builder.build).toEqual(
       'function'
@@ -78,6 +98,9 @@ describe('importBuilders()', () => {
       expect(builders.size).toEqual(1);
       expect(builders.get(spec)?.pkg.name).toEqual('@vercel/node');
       expect(builders.get(spec)?.pkg.version).toEqual('2.0.0');
+      expect(builders.get(spec)?.pkgPath).toEqual(
+        join(cwd, '.vercel/builders/node_modules/@vercel/node/package.json')
+      );
       expect(typeof builders.get(spec)?.builder.build).toEqual('function');
       await expect(client.stderr).toOutput(
         '> Installing Builder: @vercel/node'
