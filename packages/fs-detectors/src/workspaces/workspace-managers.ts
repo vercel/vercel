@@ -60,6 +60,18 @@ export const workspaceManagers: Array<
     },
   },
   {
+    name: 'rush',
+    slug: 'rush',
+    detectors: {
+      every: [
+        {
+          path: 'rush.json',
+          matchContent: '"useWorkspaces":\\strue',
+        },
+      ],
+    },
+  },
+  {
     name: 'default',
     slug: 'yarn',
     detectors: {

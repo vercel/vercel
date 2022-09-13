@@ -33,6 +33,12 @@ export async function getWorkspacePackagePaths({
     case 'pnpm':
       results = await getPnpmWorkspacePackagePaths({ fs: workspaceFs });
       break;
+    case 'rush':
+      // /common/temp is the location that Rush defaults adding the pnpm workspace file
+      results = await getPnpmWorkspacePackagePaths({
+        fs: fs.chdir('/common/temp'),
+      });
+      break;
     default:
       throw new Error(`Unknown workspace implementation: ${type}`);
   }
