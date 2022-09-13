@@ -64,12 +64,11 @@ async function bundleInstall(
     ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
     {
       stdio: 'pipe',
-      env: {
-        ...cloneEnv(),
+      env: cloneEnv(process.env, {
         BUNDLE_SILENCE_ROOT_WARNING: '1',
         BUNDLE_APP_CONFIG: bundleAppConfig,
         BUNDLE_JOBS: '4',
-      },
+      }),
     }
   );
 }

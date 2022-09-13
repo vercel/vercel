@@ -29,6 +29,7 @@ import {
   debug,
   cloneEnv,
 } from '@vercel/build-utils';
+import type { ProcessEnv } from '@vercel/build-utils';
 
 const TMP = tmpdir();
 
@@ -695,11 +696,9 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     `vercel-dev-port-${Math.random().toString(32).substring(2)}`
   );
 
-  const env: typeof process.env = {
-    ...cloneEnv(),
-    ...meta.env,
+  const env = cloneEnv(process.env, meta.env as ProcessEnv, {
     VERCEL_DEV_PORT_FILE: portFile,
-  };
+  });
 
   const tmpRelative = `.${sep}${entrypointDir}`;
   const child = spawn('go', ['run', tmpRelative], {

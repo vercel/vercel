@@ -592,10 +592,7 @@ export async function runPackageJsonScript(
       cliType,
       lockfileVersion,
       nodeVersion: undefined,
-      env: {
-        ...cloneEnv(),
-        ...spawnOpts?.env,
-      },
+      env: cloneEnv(process.env, spawnOpts?.env),
     }),
   };
 
