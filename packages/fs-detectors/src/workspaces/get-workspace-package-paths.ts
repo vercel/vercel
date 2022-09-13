@@ -111,9 +111,9 @@ async function getNxWorkspacePackagePaths({
 }: GetPackagePathOptions): Promise<string[]> {
   let packages: string[] = [];
   const workspaceJsonAsBuffer = await fs.readFile('workspace.json');
-  const { workspaces } = JSON.parse(workspaceJsonAsBuffer.toString());
+  const { projects } = JSON.parse(workspaceJsonAsBuffer.toString());
 
-  packages = Object.values(workspaces?.projects) ?? [];
+  packages = Object.values(projects) ?? [];
 
   return getPackagePaths(packages, fs);
 }
