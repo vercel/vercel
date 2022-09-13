@@ -57,7 +57,7 @@ async function main() {
     );
     const packageJson = JSON.parse(packageJsonRaw);
     const files = await fs.readdir(fullDir);
-    const tarballName = files.find(f => /^vercel-(.+)\.tgz$/.test(f));
+    const tarballName = files.find(f => /^vercel-.+\.tgz$/.test(f));
     if (!tarballName) {
       throw new Error(
         `Expected vercel-*.tgz in ${fullDir} but found ${JSON.stringify(
