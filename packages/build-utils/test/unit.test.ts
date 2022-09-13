@@ -394,7 +394,7 @@ it('should get latest node version', async () => {
 it('should throw for discontinued versions', async () => {
   // Mock a future date so that Node 8 and 10 become discontinued
   const realDateNow = Date.now.bind(global.Date);
-  global.Date.now = () => new Date('2022-09-01').getTime();
+  global.Date.now = () => new Date('2022-10-15').getTime();
 
   expect(getSupportedNodeVersion('8.10.x', false)).rejects.toThrow();
   expect(getSupportedNodeVersion('8.10.x', true)).rejects.toThrow();
@@ -436,8 +436,8 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
   expect(warningMessages).toStrictEqual([
     'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
     'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.',
-    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-08-09 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
-    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-08-09 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.',
+    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-01 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
+    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-01 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.',
   ]);
 
   global.Date.now = realDateNow;
@@ -501,6 +501,7 @@ it('should return lockfileVersion 2 with npm7', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'package-lock.json'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -509,6 +510,7 @@ it('should not return lockfileVersion with yarn', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
   expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'yarn.lock'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -517,6 +519,7 @@ it('should return lockfileVersion 1 with older versions of npm', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(1);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'package-lock.json'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -525,6 +528,9 @@ it('should detect npm Workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
+  expect(result.lockfilePath).toEqual(
+    path.join(fixture, '..', 'package-lock.json')
+  );
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -533,6 +539,7 @@ it('should detect pnpm without workspace', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'pnpm-lock.yaml'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -541,6 +548,9 @@ it('should detect pnpm with workspaces', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.lockfilePath).toEqual(
+    path.join(fixture, '..', 'pnpm-lock.yaml')
+  );
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -552,6 +562,7 @@ it('should detect package.json in nested backend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
   expect(result.lockfileVersion).toEqual(undefined);
+  // There is no lockfile but this test will pick up vercel/vercel/yarn.lock
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -563,6 +574,7 @@ it('should detect package.json in nested frontend', async () => {
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
   expect(result.lockfileVersion).toEqual(undefined);
+  // There is no lockfile but this test will pick up vercel/vercel/yarn.lock
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 

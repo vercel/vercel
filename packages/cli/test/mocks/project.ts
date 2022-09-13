@@ -1,6 +1,6 @@
 import { client } from './client';
 import { Project } from '../../src/types';
-import { formatProvider } from '../../src/util/projects/connect-git-provider';
+import { formatProvider } from '../../src/util/git/connect-git-provider';
 
 const envs = [
   {
@@ -123,13 +123,87 @@ export const defaultProject = {
       userId: 'K4amb7K9dAt5R2vBJWF32bmY',
     },
   ],
+  alias: [
+    {
+      domain: 'foobar.com',
+      target: 'PRODUCTION' as const,
+    },
+  ],
 };
+
+/**
+ * Responds to any GET for a project with a 404.
+ * `useUnknownProject` should always come after `useProject`, if any,
+ * to allow `useProject` responses to still happen.
+ */
+export function useUnknownProject() {
+  let project: Project;
+  client.scenario.get(`/v8/projects/:projectNameOrId`, (_req, res) => {
+    res.status(404).send();
+  });
+  client.scenario.post(`/:version/projects`, (req, res) => {
+    const { name } = req.body;
+    project = {
+      ...defaultProject,
+      name,
+      id: name,
+    };
+    res.json(project);
+  });
+  client.scenario.post(`/v9/projects/:projectNameOrId/link`, (req, res) => {
+    const { type, repo, org } = req.body;
+    const projName = req.params.projectNameOrId;
+    if (projName !== project.name && projName !== project.id) {
+      return res.status(404).send('Invalid Project name or ID');
+    }
+    if (
+      (type === 'github' || type === 'gitlab' || type === 'bitbucket') &&
+      (repo === 'user/repo' || repo === 'user2/repo2')
+    ) {
+      project.link = {
+        type,
+        repo,
+        repoId: 1010,
+        org,
+        gitCredentialId: '',
+        sourceless: true,
+        createdAt: 1656109539791,
+        updatedAt: 1656109539791,
+      };
+      res.json(project);
+    } else {
+      if (type === 'github') {
+        res.status(400).json({
+          message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
+          action: 'Install GitHub App',
+          link: 'https://github.com/apps/vercel',
+          repo,
+        });
+      } else {
+        res.status(400).json({
+          code: 'repo_not_found',
+          message: `The repository "${repo}" couldn't be found in your linked ${formatProvider(
+            type
+          )} account.`,
+        });
+      }
+    }
+  });
+  client.scenario.patch(`/:version/projects/:projectNameOrId`, (req, res) => {
+    Object.assign(project, req.body);
+    res.json(project);
+  });
+}
 
 export function useProject(project: Partial<Project> = defaultProject) {
   client.scenario.get(`/v8/projects/${project.name}`, (_req, res) => {
     res.json(project);
   });
   client.scenario.get(`/v8/projects/${project.id}`, (_req, res) => {
+    res.json(project);
+  });
+  client.scenario.patch(`/:version/projects/${project.id}`, (req, res) => {
+    Object.assign(project, req.body);
     res.json(project);
   });
   client.scenario.get(
@@ -177,11 +251,11 @@ export function useProject(project: Partial<Project> = defaultProject) {
       res.json(envs);
     }
   );
-  client.scenario.post(`/v4/projects/${project.id}/link`, (req, res) => {
+  client.scenario.post(`/v9/projects/${project.id}/link`, (req, res) => {
     const { type, repo, org } = req.body;
     if (
       (type === 'github' || type === 'gitlab' || type === 'bitbucket') &&
-      (repo === 'user/repo' || repo === 'user2/repo2')
+      (repo === 'user/repo' || repo === 'user2/repo2' || repo === 'user3/repo3')
     ) {
       project.link = {
         type,
@@ -198,11 +272,9 @@ export function useProject(project: Partial<Project> = defaultProject) {
       if (type === 'github') {
         res.status(400).json({
           message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
-          meta: {
-            action: 'Install GitHub App',
-            link: 'https://github.com/apps/vercel',
-            repo,
-          },
+          action: 'Install GitHub App',
+          link: 'https://github.com/apps/vercel',
+          repo,
         });
       } else {
         res.status(400).json({
@@ -214,7 +286,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
       }
     }
   });
-  client.scenario.delete(`/v4/projects/${project.id}/link`, (_req, res) => {
+  client.scenario.delete(`/v9/projects/${project.id}/link`, (_req, res) => {
     if (project.link) {
       project.link = undefined;
     }

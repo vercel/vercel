@@ -31,6 +31,28 @@ export const monorepoManagers: Array<
       ],
     },
   },
+  {
+    name: 'Nx',
+    slug: 'nx',
+    detectors: {
+      every: [
+        {
+          path: 'nx.json',
+        },
+      ],
+    },
+  },
+  {
+    name: 'Rush',
+    slug: 'rush',
+    detectors: {
+      every: [
+        {
+          path: 'rush.json',
+        },
+      ],
+    },
+  },
 ];
 
 export default monorepoManagers;

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fs-detectors",
-  "version": "2.0.3",
+  "version": "3.2.0",
   "description": "Vercel filesystem detectors",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,14 +14,13 @@
   },
   "license": "MIT",
   "scripts": {
-    "prepublishOnly": "tsc",
     "build": "tsc",
-    "test": "yarn jest --env node --verbose --runInBand --bail test/unit.*test.*",
+    "test": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
     "test-unit": "yarn test"
   },
   "dependencies": {
-    "@vercel/frameworks": "1.1.1",
-    "@vercel/routing-utils": "2.0.0",
+    "@vercel/frameworks": "1.1.5",
+    "@vercel/routing-utils": "2.0.2",
     "glob": "8.0.3",
     "js-yaml": "4.1.0",
     "minimatch": "3.0.4",

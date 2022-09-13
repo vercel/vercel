@@ -445,11 +445,7 @@ test(
 test(
   '[vercel dev] Middleware that has no response',
   testFixtureStdio('middleware-no-response', async (testPath: any) => {
-    await testPath(
-      500,
-      '/api/hello',
-      'A server error has occurred\n\nEDGE_FUNCTION_INVOCATION_FAILED'
-    );
+    await testPath(200, '/api/hello', 'hello from a serverless function');
   })
 );
 
@@ -461,8 +457,41 @@ test(
     await testPath(200, '/another', '<h1>Another</h1>');
     await testPath(200, '/another.html', '<h1>Another</h1>');
     await testPath(200, '/foo', '<h1>Another</h1>');
+    // different origin
+    await testPath(200, '?to=http://example.com', /Example Domain/);
   })
 );
+
+test('[vercel dev] Middleware rewrites with same origin', async () => {
+  const directory = fixture('middleware-rewrite');
+  const { dev, port, readyResolver } = await testFixture(directory);
+
+  try {
+    dev.unref();
+    await readyResolver;
+
+    let response = await fetch(
+      `http://localhost:${port}?to=http://localhost:${port}`
+    );
+    validateResponseHeaders(response);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
+
+    response = await fetch(
+      `http://localhost:${port}?to=http://127.0.0.1:${port}`
+    );
+    validateResponseHeaders(response);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
+
+    response = await fetch(`http://localhost:${port}?to=http://[::1]:${port}`);
+    validateResponseHeaders(response);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
 
 test(
   '[vercel dev] Middleware that rewrites with custom query params',
@@ -478,6 +507,14 @@ test(
       '/api/fn?foo=bar',
       '{"url":"/api/fn?from-middleware=true"}'
     );
+  })
+);
+
+test(
+  '[vercel dev] Middleware that rewrites to 404s',
+  testFixtureStdio('middleware-rewrite-404', async (testPath: any) => {
+    await testPath(404, '/api/edge', /NOT_FOUND/);
+    await testPath(404, '/index.html', /NOT_FOUND/);
   })
 );
 
@@ -538,4 +575,41 @@ test(
       '{"pathname":"/dashboard/home","search":"?a=b","fromMiddleware":true}'
     );
   })
+);
+
+test(
+  '[vercel dev] restarts dev process when `devCommand` setting is modified',
+  testFixtureStdio(
+    'project-settings-override',
+    async (_testPath: any, port: any) => {
+      const directory = fixture('project-settings-override');
+      const vercelJsonPath = join(directory, 'vercel.json');
+      const originalVercelJson = await fs.readJSON(vercelJsonPath);
+
+      try {
+        const originalResponse = await fetch(
+          `http://localhost:${port}/index.txt`
+        );
+        validateResponseHeaders(originalResponse);
+        const body = await originalResponse.text();
+        expect(body.trim()).toEqual('This is the original');
+        expect(originalResponse.status).toBe(200);
+
+        await fs.writeJSON(vercelJsonPath, {
+          devCommand: 'serve -p $PORT overridden',
+        });
+
+        const overriddenResponse = await fetch(
+          `http://localhost:${port}/index.txt`
+        );
+        validateResponseHeaders(overriddenResponse);
+        const body2 = await overriddenResponse.text();
+        expect(body2.trim()).toEqual('This is the overridden!');
+        expect(overriddenResponse.status).toBe(200);
+      } finally {
+        await fs.writeJSON(vercelJsonPath, originalVercelJson);
+      }
+    },
+    { skipDeploy: true }
+  )
 );

@@ -38,7 +38,7 @@ const help = () => {
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --environment [environment]    Deployment environment [development]
-    -y, --yes                      Skip the confirmation prompt
+    -y, --yes                      Skip questions when setting up new project using default scope and settings
 
   ${chalk.dim('Examples:')}
 

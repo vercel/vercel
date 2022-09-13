@@ -41,6 +41,7 @@ import {
   getNextServerPath,
   getMiddlewareBundle,
   getFilesMapFromReasons,
+  UnwrapPromise,
 } from './utils';
 import {
   nodeFileTrace,
@@ -58,7 +59,6 @@ const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
 const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
-const NON_NESTED_MIDDLEWARE_VERSION = 'v12.1.7-canary.9';
 
 export async function serverBuild({
   dynamicPages,
@@ -81,21 +81,25 @@ export async function serverBuild({
   headers,
   dataRoutes,
   hasIsr404Page,
+  hasIsr500Page,
   imagesManifest,
   wildcardConfig,
   routesManifest,
   staticPages,
   lambdaPages,
   nextVersion,
+  lambdaAppPaths,
   canUsePreviewMode,
   trailingSlash,
   prerenderManifest,
+  appPathRoutesManifest,
   omittedPrerenderRoutes,
   trailingSlashRedirects,
   isCorrectLocaleAPIRoutes,
   lambdaCompressedByteLimit,
   requiredServerFilesManifest,
 }: {
+  appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
   trailingSlash: boolean;
   config: Config;
@@ -104,6 +108,7 @@ export async function serverBuild({
   canUsePreviewMode: boolean;
   omittedPrerenderRoutes: Set<string>;
   staticPages: { [key: string]: FileFsRef };
+  lambdaAppPaths: { [key: string]: FileFsRef };
   lambdaPages: { [key: string]: FileFsRef };
   privateOutputs: { files: Files; routes: Route[] };
   entryPath: string;
@@ -123,6 +128,7 @@ export async function serverBuild({
   dataRoutes: Route[];
   nextVersion: string;
   hasIsr404Page: boolean;
+  hasIsr500Page: boolean;
   trailingSlashRedirects: Route[];
   routesManifest: RoutesManifest;
   lambdaCompressedByteLimit: number;
@@ -131,6 +137,8 @@ export async function serverBuild({
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
 }): Promise<BuildResult> {
+  lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
+
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
   const lambdaPageKeys = Object.keys(lambdaPages);
@@ -140,6 +148,14 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
+  let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
+  let appDir: string | null = null;
+
+  if (appPathRoutesManifest) {
+    appDir = path.join(pagesDir, '../app');
+    appBuildTraces = await glob('**/*.js.nft.json', appDir);
+  }
+
   const isCorrectNotFoundRoutes = semver.gte(
     nextVersion,
     CORRECT_NOT_FOUND_ROUTES_VERSION
@@ -152,10 +168,7 @@ export async function serverBuild({
     nextVersion,
     CORRECTED_MANIFESTS_VERSION
   );
-  const isNonNestedMiddleware = semver.gte(
-    nextVersion,
-    NON_NESTED_MIDDLEWARE_VERSION
-  );
+
   let hasStatic500 = !!staticPages[path.join(entryDirectory, '500')];
 
   if (lambdaPageKeys.length === 0) {
@@ -535,9 +548,26 @@ export async function serverBuild({
     const mergedPageKeys = [...nonApiPages, ...apiPages, ...internalPages];
     const traceCache = {};
 
+    const getOriginalPagePath = (page: string) => {
+      let originalPagePath = page;
+
+      if (appDir && lambdaAppPaths[page]) {
+        const { fsPath } = lambdaAppPaths[page];
+        originalPagePath = path.relative(appDir, fsPath);
+      }
+      return originalPagePath;
+    };
+
+    const getBuildTraceFile = (page: string) => {
+      return (
+        pageBuildTraces[page + '.nft.json'] ||
+        appBuildTraces[page + '.nft.json']
+      );
+    };
+
     const pathsToTrace: string[] = mergedPageKeys
       .map(page => {
-        if (!pageBuildTraces[page + '.nft.json']) {
+        if (!getBuildTraceFile(page)) {
           return lambdaPages[page].fsPath;
         }
       })
@@ -561,7 +591,8 @@ export async function serverBuild({
 
     for (const page of mergedPageKeys) {
       const tracedFiles: { [key: string]: FileFsRef } = {};
-      const pageBuildTrace = pageBuildTraces[page + '.nft.json'];
+      const originalPagePath = getOriginalPagePath(page);
+      const pageBuildTrace = getBuildTraceFile(originalPagePath);
       let fileList: string[];
       let reasons: NodeFileTraceReasons;
 
@@ -569,8 +600,38 @@ export async function serverBuild({
         const { files } = JSON.parse(
           await fs.readFile(pageBuildTrace.fsPath, 'utf8')
         );
+
+        // TODO: this will be moved to a separate worker in the future
+        // although currently this is needed in the lambda
+        const isAppPath = appDir && lambdaAppPaths[page];
+        const serverComponentFile = isAppPath
+          ? pageBuildTrace.fsPath.replace(
+              /\.js\.nft\.json$/,
+              '.__sc_client__.js'
+            )
+          : null;
+
+        if (serverComponentFile && (await fs.pathExists(serverComponentFile))) {
+          files.push(
+            path.relative(
+              path.dirname(pageBuildTrace.fsPath),
+              serverComponentFile
+            )
+          );
+
+          try {
+            const scTrace = JSON.parse(
+              await fs.readFile(`${serverComponentFile}.nft.json`, 'utf8')
+            );
+            scTrace.files.forEach((file: string) => files.push(file));
+          } catch (err) {
+            /* non-fatal for now */
+          }
+        }
+
         fileList = [];
-        const pageDir = path.dirname(path.join(pagesDir, page));
+        const curPagesDir = isAppPath && appDir ? appDir : pagesDir;
+        const pageDir = path.dirname(path.join(curPagesDir, originalPagePath));
         const normalizedBaseDir = `${baseDir}${
           baseDir.endsWith('/') ? '' : '/'
         }`;
@@ -1059,23 +1120,6 @@ export async function serverBuild({
     });
   }
 
-  // We stopped duplicating matchers for _next/data routes when we added
-  // x-nextjs-data header resolving but we should still resolve middleware
-  // when the header isn't present so we augment the source to include that.
-  // We don't apply this modification for nested middleware > 1 staticRoute
-  if (isNonNestedMiddleware) {
-    middleware.staticRoutes.forEach(route => {
-      if (!route.src?.match(/_next[\\/]{1,}data/)) {
-        route.src =
-          `^(\\/_next\\/data\\/${escapedBuildId})?(` +
-          route.src
-            ?.replace(/\|\^/g, '|')
-            .replace(/\$$/, ')$')
-            .replace(/\$/g, '(\\.json)?$');
-      }
-    });
-  }
-
   return {
     wildcard: wildcardConfig,
     images:
@@ -1396,7 +1440,10 @@ export async function serverBuild({
                 route.src.replace(/(^\^|\$$)/g, '') + '.json$'
               );
 
-              const { pathname } = new URL(route.dest || '/', 'http://n');
+              const { pathname, search } = new URL(
+                route.dest || '/',
+                'http://n'
+              );
               let isPrerender = !!prerenders[path.join('./', pathname)];
 
               if (routesManifest.i18n) {
@@ -1413,7 +1460,9 @@ export async function serverBuild({
               }
 
               if (isPrerender) {
-                route.dest = `/_next/data/${buildId}${pathname}.json`;
+                route.dest = `/_next/data/${buildId}${pathname}.json${
+                  search || ''
+                }`;
               }
               return route;
             })
@@ -1550,10 +1599,8 @@ export async function serverBuild({
             },
           ]),
 
-      // static 500 page if present
-      ...(!hasStatic500
-        ? []
-        : i18n
+      // custom 500 page if present
+      ...(i18n && (hasStatic500 || hasIsr500Page || lambdaPages['500.js'])
         ? [
             {
               src: `${path.join(
@@ -1565,6 +1612,7 @@ export async function serverBuild({
                 .join('|')})(/.*|$)`,
               dest: path.join('/', entryDirectory, '/$nextLocale/500'),
               status: 500,
+              caseSensitive: true,
             },
             {
               src: path.join('/', entryDirectory, '.*'),
@@ -1579,7 +1627,15 @@ export async function serverBuild({
         : [
             {
               src: path.join('/', entryDirectory, '.*'),
-              dest: path.join('/', entryDirectory, '/500'),
+              dest: path.join(
+                '/',
+                entryDirectory,
+                hasStatic500 ||
+                  hasIsr500Page ||
+                  lambdas[path.join(entryDirectory, '500')]
+                  ? '/500'
+                  : '/_error'
+              ),
               status: 500,
             },
           ]),

@@ -3,6 +3,7 @@ import url from 'url';
 import fs from 'fs-extra';
 import { join } from 'path';
 import listen from 'async-listen';
+import stripAnsi from 'strip-ansi';
 import { createServer } from 'http';
 
 const {
@@ -48,6 +49,33 @@ test('[vercel dev] should support edge functions', async () => {
       optionalChaining: 'fallback',
       ENV_VAR_IN_EDGE: '1',
     });
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
+
+test('[vercel dev] edge functions support WebAssembly files', async () => {
+  const dir = fixture('edge-function');
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      ENV_VAR_IN_EDGE: '1',
+    },
+  });
+
+  try {
+    await readyResolver;
+
+    for (const { number, result } of [
+      { number: 1, result: 2 },
+      { number: 2, result: 3 },
+      { number: 12, result: 13 },
+    ]) {
+      let res = await fetch(
+        `http://localhost:${port}/api/webassembly?number=${number}`
+      );
+      validateResponseHeaders(res);
+      await expect(res.text()).resolves.toEqual(`${number} + 1 = ${result}`);
+    }
   } finally {
     await dev.kill('SIGTERM');
   }
@@ -422,11 +450,7 @@ test('[vercel dev] should maintain query when proxy passing', async () => {
 
 test('[vercel dev] should maintain query when dev server defines routes', async () => {
   const dir = fixture('dev-server-query');
-  const { dev, port, readyResolver } = await testFixture(dir, {
-    env: {
-      VERCEL_DEV_COMMAND: 'next dev --port $PORT',
-    },
-  });
+  const { dev, port, readyResolver } = await testFixture(dir);
 
   try {
     await readyResolver;
@@ -489,11 +513,7 @@ test('[vercel dev] should send `etag` header for static files', async () => {
 
 test('[vercel dev] should frontend dev server and routes', async () => {
   const dir = fixture('dev-server-and-routes');
-  const { dev, port, readyResolver } = await testFixture(dir, {
-    env: {
-      VERCEL_DEV_COMMAND: 'next dev --port $PORT',
-    },
-  });
+  const { dev, port, readyResolver } = await testFixture(dir);
 
   try {
     await readyResolver;
@@ -704,12 +724,15 @@ test('[vercel dev] should support custom 404 routes', async () => {
 test('[vercel dev] prints `npm install` errors', async () => {
   const dir = fixture('runtime-not-installed');
   const result = await exec(dir);
-  expect(result.stderr.includes('npm ERR! 404')).toBeTruthy();
   expect(
-    result.stderr.includes('Failed to install `vercel dev` dependencies')
+    stripAnsi(result.stderr).includes(
+      'Error: The package `@vercel/does-not-exist` is not published on the npm registry'
+    )
   ).toBeTruthy();
   expect(
-    result.stderr.includes('https://vercel.link/npm-install-failed-dev')
+    result.stderr.includes(
+      'https://vercel.link/builder-dependencies-install-failed'
+    )
   ).toBeTruthy();
 });
 
@@ -1045,3 +1068,20 @@ test('[vercel dev] validate rewrites', async () => {
     /Invalid vercel\.json - `rewrites\[0\].destination` should be string/m
   );
 });
+
+test(
+  '[vercel dev] should correctly proxy to vite dev',
+  testFixtureStdio(
+    'vite-dev',
+    async (testPath: any) => {
+      const url = '/src/App.vue?vue&type=style&index=0&lang.css';
+      // The first request should return the HTML template
+      await testPath(200, url, /<template>/gm);
+      // The second request should return the HMR JS
+      await testPath(200, url, /__vite__createHotContext/gm);
+      // Home page should always return HTML
+      await testPath(200, '/', /<title>Vite App<\/title>/gm);
+    },
+    { skipDeploy: true }
+  )
+);

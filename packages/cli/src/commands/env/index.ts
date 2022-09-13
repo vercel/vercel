@@ -42,6 +42,7 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
+    -y, --yes                      Skip the confirmation prompt when overwriting env file on pull or removing an env variable
 
   ${chalk.dim('Examples:')}
 

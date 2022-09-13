@@ -711,7 +711,7 @@ describe('build', () => {
 
       // Error gets printed to the terminal
       await expect(client.stderr).toOutput(
-        'Error! Function must contain at least one property.'
+        'Error: Function must contain at least one property.'
       );
 
       // `builds.json` contains top-level "error" property
@@ -894,6 +894,33 @@ describe('build', () => {
     }
   });
 
+  it('should apply project settings overrides from "vercel.json"', async () => {
+    if (process.platform === 'win32') {
+      // this test runs a build command with `mkdir -p` which is unsupported on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
+    const cwd = fixture('project-settings-override');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // The `buildCommand` override in "vercel.json" outputs "3" to the
+      // index.txt file, so verify that that was produced in the build output
+      const contents = await fs.readFile(
+        join(output, 'static/index.txt'),
+        'utf8'
+      );
+      expect(contents.trim()).toEqual('3');
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   describe('should find packages with different main/module/browser keys', function () {
     let output: string;
 
@@ -902,7 +929,6 @@ describe('build', () => {
       output = join(cwd, '.vercel/output');
 
       process.chdir(cwd);
-      client.stderr.pipe(process.stderr);
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 

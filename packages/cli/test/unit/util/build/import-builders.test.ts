@@ -28,24 +28,72 @@ describe('importBuilders()', () => {
   });
 
   it('should import 3rd party Builders', async () => {
+    if (process.platform === 'win32') {
+      // this test creates symlinks which require admin by default on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
     const cwd = await getWriteableDirectory();
     try {
       const spec = 'vercel-deno@2.0.1';
-      const specs = new Set([spec]);
+      const tarballSpec = 'https://test2020-h5hdll5dz-tootallnate.vercel.app';
+      const specs = new Set([spec, tarballSpec]);
       const builders = await importBuilders(specs, cwd, client.output);
-      expect(builders.size).toEqual(1);
+      expect(builders.size).toEqual(2);
       expect(builders.get(spec)?.pkg.name).toEqual('vercel-deno');
       expect(builders.get(spec)?.pkg.version).toEqual('2.0.1');
       expect(builders.get(spec)?.pkgPath).toEqual(
         join(cwd, '.vercel/builders/node_modules/vercel-deno/package.json')
       );
-      expect(typeof builders.get(spec)?.builder.build).toEqual('function');
+      expect(builders.get(tarballSpec)?.pkg.name).toEqual('vercel-bash');
+      expect(builders.get(tarballSpec)?.pkg.version).toEqual('4.1.0');
+      expect(builders.get(tarballSpec)?.pkgPath).toEqual(
+        join(cwd, '.vercel/builders/node_modules/vercel-bash/package.json')
+      );
+      expect(typeof builders.get(tarballSpec)?.builder.build).toEqual(
+        'function'
+      );
+      await expect(client.stderr).toOutput(
+        '> Installing Builders: vercel-deno@2.0.1, https://test2020-h5hdll5dz-tootallnate.vercel.app'
+      );
     } finally {
       await remove(cwd);
     }
   });
 
+  it('should throw when importing a Builder that is not on npm registry', async () => {
+    let err: Error | undefined;
+    const cwd = await getWriteableDirectory();
+    try {
+      const spec = '@vercel/does-not-exist@0.0.1';
+      const specs = new Set([spec]);
+      await importBuilders(specs, cwd, client.output);
+    } catch (_err) {
+      err = _err;
+    } finally {
+      await remove(cwd);
+    }
+
+    if (!err) {
+      throw new Error('Expected `err` to be defined');
+    }
+
+    expect(err.message).toEqual(
+      'The package `@vercel/does-not-exist` is not published on the npm registry'
+    );
+    expect((err as any).link).toEqual(
+      'https://vercel.link/builder-dependencies-install-failed'
+    );
+  });
+
   it('should import legacy `@now/build-utils` Builders', async () => {
+    if (process.platform === 'win32') {
+      // this test creates symlinks which require admin by default on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
     const cwd = await getWriteableDirectory();
     try {
       const spec = '@frontity/now@1.2.0';

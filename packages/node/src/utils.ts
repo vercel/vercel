@@ -8,10 +8,15 @@ export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   const matchers = Array.isArray(matcherOrMatchers)
     ? matcherOrMatchers
     : [matcherOrMatchers];
-  return matchers.map(getRegExpFromMatcher).join('|');
+  const regExps = matchers.flatMap(getRegExpFromMatcher).join('|');
+  return regExps;
 }
 
-function getRegExpFromMatcher(matcher: unknown): string {
+function getRegExpFromMatcher(
+  matcher: unknown,
+  index: number,
+  allMatchers: unknown[]
+): string[] {
   if (typeof matcher !== 'string') {
     throw new Error(
       "Middleware's `config.matcher` must be a path matcher (string) or an array of path matchers (string[])"
@@ -24,8 +29,11 @@ function getRegExpFromMatcher(matcher: unknown): string {
     );
   }
 
-  const re = pathToRegexp(matcher);
-  return re.source;
+  const regExps = [pathToRegexp(matcher).source];
+  if (matcher === '/' && !allMatchers.includes('/index')) {
+    regExps.push(pathToRegexp('/index').source);
+  }
+  return regExps;
 }
 
 /**

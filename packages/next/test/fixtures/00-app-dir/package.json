@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "next": "canary",
+    "react": "experimental",
+    "react-dom": "experimental"
+  }
+}
