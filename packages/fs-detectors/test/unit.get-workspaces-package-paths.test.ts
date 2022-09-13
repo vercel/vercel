@@ -14,7 +14,7 @@ describe.each<[string, string[]]>([
     ['/backend/c', '/backend/d', '/frontend/a', '/frontend/b'],
   ],
   ['22-pnpm', []],
-  ['41-nx-monorepo', ['/apps/app-one', '/apps/app-two']],
+  ['41-nx-workspace', ['/apps/app-one', '/apps/app-two']],
   ['42-npm-workspace-with-nx', ['/apps/app-one', '/apps/app-two']],
 ])('`getWorkspacesPackagePaths()`', (fixturePath, packagePaths) => {
   const testName =
