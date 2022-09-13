@@ -90,41 +90,51 @@ async function getPackagePaths(
 async function getPackageJsonWorkspacePackagePaths({
   fs,
 }: GetPackagePathOptions): Promise<string[]> {
-  const packageJsonAsBuffer = await fs.readFile('package.json');
-  const { workspaces } = JSON.parse(
-    packageJsonAsBuffer.toString()
-  ) as PackageJsonWithWorkspace;
+  try {
+    const packageJsonAsBuffer = await fs.readFile('package.json');
+    const { workspaces } = JSON.parse(
+      packageJsonAsBuffer.toString()
+    ) as PackageJsonWithWorkspace;
 
-  let packages: string[] = [];
+    let packages: string[] = [];
 
-  if (Array.isArray(workspaces)) {
-    packages = workspaces;
-  } else {
-    packages = workspaces?.packages ?? [];
+    if (Array.isArray(workspaces)) {
+      packages = workspaces;
+    } else {
+      packages = workspaces?.packages ?? [];
+    }
+
+    return getPackagePaths(packages, fs);
+  } catch {
+    return getPackagePaths([], fs);
   }
-
-  return getPackagePaths(packages, fs);
 }
 
 async function getNxWorkspacePackagePaths({
   fs,
 }: GetPackagePathOptions): Promise<string[]> {
-  let packages: string[] = [];
-  const workspaceJsonAsBuffer = await fs.readFile('workspace.json');
-  const { projects } = JSON.parse(workspaceJsonAsBuffer.toString());
+  try {
+    const workspaceJsonAsBuffer = await fs.readFile('workspace.json');
+    const { projects } = JSON.parse(workspaceJsonAsBuffer.toString());
 
-  packages = Object.values(projects) ?? [];
-
-  return getPackagePaths(packages, fs);
+    const packages: string[] = Object.values(projects) ?? [];
+    return getPackagePaths(packages, fs);
+  } catch {
+    return getPackagePaths([], fs);
+  }
 }
 
 async function getPnpmWorkspacePackagePaths({
   fs,
 }: GetPackagePathOptions): Promise<string[]> {
-  const pnpmWorkspaceAsBuffer = await fs.readFile('pnpm-workspace.yaml');
-  const { packages = [] } = yaml.load(
-    pnpmWorkspaceAsBuffer.toString()
-  ) as PnpmWorkspaces;
+  try {
+    const pnpmWorkspaceAsBuffer = await fs.readFile('pnpm-workspace.yaml');
+    const { packages = [] } = yaml.load(
+      pnpmWorkspaceAsBuffer.toString()
+    ) as PnpmWorkspaces;
 
-  return getPackagePaths(packages, fs);
+    return getPackagePaths(packages, fs);
+  } catch {
+    return getPackagePaths([], fs);
+  }
 }
