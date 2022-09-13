@@ -13,6 +13,12 @@ async function main() {
   await fs.rm(pubDir, { recursive: true, force: true });
   await fs.mkdir(pubDir);
 
+  await fs.cp(
+    join(repoRoot, 'packages', 'frameworks', 'logos'),
+    join(pubDir, 'framework-logos'),
+    { recursive: true, force: true }
+  );
+
   const examples = await getExampleList();
   const pathListAll = join(pubDir, 'list-all.json');
   await fs.writeFile(pathListAll, JSON.stringify(examples));
