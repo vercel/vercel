@@ -1,1 +1,1 @@
-{ "devCommand": "serve -p $PORT original" }
+{"devCommand":"serve -p $PORT original"}

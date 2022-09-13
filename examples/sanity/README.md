@@ -24,4 +24,6 @@ Pull down environment variables from your Vercel project (requires the [Vercel C
 vercel env pull
 ```
 
+
+
 You can also run `npx @sanity/init` in this repo and agree to reconfigure it. You'll then be able to select from existing projects. The CLI will update `sanity.json` with the project ID and dataset name.

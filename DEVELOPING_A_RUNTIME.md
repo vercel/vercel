@@ -216,7 +216,7 @@ If a custom runtime is based on one of these Lambda runtimes, large environment
 support will be available without further configuration. Custom runtimes based on
 other Lambda runtimes, including those that provide the runtime via `provided` and
 `provided.al2`, must implement runtime wrapper support and indicate it via the
-`supportsWrapper` flag when calling [`createLambda`](<#createlambda()>).
+`supportsWrapper` flag when calling [`createLambda`](#createlambda()).
 
 To add support for runtime wrappers to a custom runtime, first check the value of the
 `AWS_LAMBDA_EXEC_WRAPPER` environment variable in the bootstrap script. Its value is
@@ -264,7 +264,7 @@ This is achieved by using `exec` in `bash` to replace the running process with t
 maintaining the same PID and environment.
 
 Once support for runtime wrappers is included, ensure `supportsWrapper` is set to
-`true` in the call to [`createLambda`](<#createlambda()>). This will inform the build
+`true` in the call to [`createLambda`](#createlambda()). This will inform the build
 process to enable large environment support for this runtime.
 
 ### Utilities as peerDependencies
