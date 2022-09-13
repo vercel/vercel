@@ -521,7 +521,7 @@ export async function build({
         undoDirectoryCreation,
         undoFunctionRenames
       );
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Build cleanup failed: ${error.message}`);
       debug('Cleanup Error: ' + error);
     }

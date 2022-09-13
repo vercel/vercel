@@ -2,7 +2,7 @@ import { getNewHandlerFunctionName } from '../index';
 
 describe('getNewHandlerFunctionName', function () {
   it('does nothing with empty original function name', async () => {
-    let error;
+    let error: any;
     try {
       getNewHandlerFunctionName('', 'some/kind-of-file.js');
     } catch (err) {
@@ -16,7 +16,7 @@ describe('getNewHandlerFunctionName', function () {
   });
 
   it('does nothing with empty original function name', async () => {
-    let error;
+    let error: any;
     try {
       getNewHandlerFunctionName('Handler', '');
     } catch (err) {
