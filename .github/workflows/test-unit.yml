@@ -31,6 +31,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
+          cache: 'yarn'
       - uses: actions/checkout@v3
         with:
           fetch-depth: 100
