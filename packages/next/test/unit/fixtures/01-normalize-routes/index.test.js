@@ -7,6 +7,8 @@ const { FileFsRef } = require('@vercel/build-utils');
 jest.setTimeout(ms('6m'));
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
+  afterEach(() => fs.remove(path.join(__dirname, 'yarn.lock')));
+
   it('should normalize routes in build results output', async () => {
     const files = [
       'index.test.js',
@@ -15,8 +17,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       'pages/foo/bar/index.js',
       'pages/foo/index.js',
       'pages/index.js',
-      'vercel.json',
-      'yarn.lock',
     ].reduce((filesMap, file) => {
       const fsPath = path.join(__dirname, file);
       const { mode } = fs.statSync(fsPath);
