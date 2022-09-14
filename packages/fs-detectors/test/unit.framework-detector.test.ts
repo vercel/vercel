@@ -1,5 +1,6 @@
 import path from 'path';
 import frameworkList from '@vercel/frameworks';
+import workspaceManagers from '../src/workspaces/workspace-managers';
 import { detectFramework, DetectorFilesystem } from '../src';
 import { Stat } from '../src/detectors/filesystem';
 
@@ -269,6 +270,28 @@ describe('DetectorFilesystem', () => {
       });
 
       expect(await detectFramework({ fs, frameworkList })).toBe(null);
+    });
+
+    it('Detect nx', async () => {
+      const fs = new VirtualFilesystem({
+        'workspace.json': JSON.stringify({
+          projects: { 'app-one': 'apps/app-one' },
+        }),
+      });
+
+      expect(
+        await detectFramework({ fs, frameworkList: workspaceManagers })
+      ).toBe('nx');
+    });
+
+    it('Do not detect anything', async () => {
+      const fs = new VirtualFilesystem({
+        'workspace.json': JSON.stringify({ projects: {} }),
+      });
+
+      expect(
+        await detectFramework({ fs, frameworkList: workspaceManagers })
+      ).toBe(null);
     });
 
     it('Detect Next.js', async () => {
