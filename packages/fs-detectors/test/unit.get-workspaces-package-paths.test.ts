@@ -14,6 +14,10 @@ describe.each<[string, string[]]>([
     ['/backend/c', '/backend/d', '/frontend/a', '/frontend/b'],
   ],
   ['22-pnpm', []],
+  ['41-nx-workspace', ['/apps/app-one', '/apps/app-two']],
+  ['42-npm-workspace-with-nx', ['/apps/app-one', '/apps/app-two']],
+  ['43-nx-json-misshaped', []],
+  ['44-nx-json-string', []],
 ])('`getWorkspacesPackagePaths()`', (fixturePath, packagePaths) => {
   const testName =
     packagePaths.length > 0
