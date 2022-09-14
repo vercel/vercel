@@ -106,7 +106,7 @@ async function getPackageJsonWorkspacePackagePaths({
 
     return getPackagePaths(packages, fs);
   } catch {
-    return getPackagePaths([], fs);
+    return [];
   }
 }
 
@@ -120,7 +120,7 @@ async function getNxWorkspacePackagePaths({
     const packages: string[] = Object.values(projects) ?? [];
     return getPackagePaths(packages, fs);
   } catch {
-    return getPackagePaths([], fs);
+    return [];
   }
 }
 
@@ -135,6 +135,6 @@ async function getPnpmWorkspacePackagePaths({
 
     return getPackagePaths(packages, fs);
   } catch {
-    return getPackagePaths([], fs);
+    return [];
   }
 }
