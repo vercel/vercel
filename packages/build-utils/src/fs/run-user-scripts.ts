@@ -11,6 +11,7 @@ import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 import { readConfigFile } from './read-config-file';
+import { cloneEnv } from '../clone-env';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
@@ -217,7 +218,7 @@ export function getSpawnOptions(
   nodeVersion: NodeVersion
 ): SpawnOptions {
   const opts = {
-    env: { ...process.env },
+    env: cloneEnv(process.env),
   };
 
   if (!meta.isDev) {
@@ -449,7 +450,7 @@ export async function runNpmInstall(
     debug(`Installing to ${destPath}`);
 
     const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
-    const env = opts.env ? { ...opts.env } : { ...process.env };
+    const env = cloneEnv(opts.env || process.env);
     delete env.NODE_ENV;
     opts.env = getEnvForPackageManager({
       cliType,
@@ -591,10 +592,7 @@ export async function runPackageJsonScript(
       cliType,
       lockfileVersion,
       nodeVersion: undefined,
-      env: {
-        ...process.env,
-        ...spawnOpts?.env,
-      },
+      env: cloneEnv(process.env, spawnOpts?.env),
     }),
   };
 
