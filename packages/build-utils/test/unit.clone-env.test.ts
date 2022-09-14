@@ -37,11 +37,9 @@ it('should clone env with PATH', () => {
   });
 });
 
-it('should default to process.env when no args', () => {
-  expect(cloneEnv().PATH).toEqual(process.env.PATH);
-});
-
 it('should clone and merge multiple env objects', () => {
+  // note: this also tests the last object doesn't overwrite `PATH` with
+  // `undefined`
   expect(
     cloneEnv(
       {
@@ -58,6 +56,39 @@ it('should clone and merge multiple env objects', () => {
     foo: 'bar',
     PATH: 'baz',
     baz: 'wiz',
+  });
+});
+
+it('should clone the actual process.env object', () => {
+  expect(cloneEnv(process.env).PATH).toEqual(process.env.PATH);
+});
+
+it('should overwrite PATH with last value', () => {
+  expect(
+    cloneEnv(
+      new Proxy(
+        {
+          Path: 'foo',
+        },
+        {
+          get(target: typeof process.env, prop: string) {
+            if (prop === 'PATH') {
+              return target.PATH ?? target.Path;
+            }
+            return target[prop];
+          },
+        }
+      ),
+      {
+        PATH: 'bar',
+      },
+      {
+        PATH: undefined,
+      }
+    )
+  ).toEqual({
+    Path: 'foo',
+    PATH: undefined,
   });
 });
 

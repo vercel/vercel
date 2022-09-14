@@ -1,16 +1,15 @@
 import type { ProcessEnv } from './types';
 
+const { hasOwnProperty } = Object.prototype;
+
 /**
- * Performs a shallow clone on the environment variable object.
+ * Identical to `Object.assign()`, but ensures that the `PATH` environment
+ * variable is defined even when the variable is spelled `Path`.
  *
- * @param {Object} [currentEnv] The environment object to clone
+ * @param {Object} [...envs] Objects and/or `process.env` to merge.
  * @returns {Object}
  */
 export function cloneEnv(...envs: (ProcessEnv | undefined)[]): ProcessEnv {
-  if (!envs.length) {
-    envs.push(process.env);
-  }
-
   return envs.reduce((obj: ProcessEnv, env) => {
     if (env === undefined || env === null) {
       return obj;
@@ -20,7 +19,7 @@ export function cloneEnv(...envs: (ProcessEnv | undefined)[]): ProcessEnv {
     // automatically return the system path when accessing `PATH`,
     // however we lose this proxied value when we destructure and
     // thus we must explicitly copy it
-    if (obj.PATH === undefined) {
+    if (hasOwnProperty.call(env, 'PATH') || hasOwnProperty.call(env, 'Path')) {
       obj.PATH = env.PATH;
     }
 
