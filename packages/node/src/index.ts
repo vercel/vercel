@@ -49,7 +49,6 @@ import type {
   StartDevServer,
   NodeVersion,
   BuildResultV3,
-  ProcessEnv,
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 
@@ -527,7 +526,7 @@ export const startDevServer: StartDevServer = async opts => {
   const child = fork(devServerPath, [], {
     cwd: workPath,
     execArgv: [],
-    env: cloneEnv(process.env, meta.env as ProcessEnv, {
+    env: cloneEnv(process.env, meta.env, {
       VERCEL_DEV_ENTRYPOINT: entrypoint,
       VERCEL_DEV_TSCONFIG: projectTsConfig || '',
       VERCEL_DEV_IS_ESM: isEsm ? '1' : undefined,

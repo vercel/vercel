@@ -444,5 +444,3 @@ export type ShouldServe = (
 export type StartDevServer = (
   options: StartDevServerOptions
 ) => Promise<StartDevServerResult>;
-
-export type ProcessEnv = typeof process.env;

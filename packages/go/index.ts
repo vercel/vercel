@@ -29,7 +29,6 @@ import {
   debug,
   cloneEnv,
 } from '@vercel/build-utils';
-import type { ProcessEnv } from '@vercel/build-utils';
 
 const TMP = tmpdir();
 
@@ -696,7 +695,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     `vercel-dev-port-${Math.random().toString(32).substring(2)}`
   );
 
-  const env = cloneEnv(process.env, meta.env as ProcessEnv, {
+  const env = cloneEnv(process.env, meta.env, {
     VERCEL_DEV_PORT_FILE: portFile,
   });
 

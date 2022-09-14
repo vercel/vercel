@@ -1,4 +1,4 @@
-import type { ProcessEnv } from './types';
+import type { Env } from './types';
 
 const { hasOwnProperty } = Object.prototype;
 
@@ -9,8 +9,8 @@ const { hasOwnProperty } = Object.prototype;
  * @param {Object} [...envs] Objects and/or `process.env` to merge.
  * @returns {Object}
  */
-export function cloneEnv(...envs: (ProcessEnv | undefined)[]): ProcessEnv {
-  return envs.reduce((obj: ProcessEnv, env) => {
+export function cloneEnv(...envs: (Env | undefined)[]): Env {
+  return envs.reduce((obj: Env, env) => {
     if (env === undefined || env === null) {
       return obj;
     }
