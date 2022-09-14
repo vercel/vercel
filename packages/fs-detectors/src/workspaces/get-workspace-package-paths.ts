@@ -36,6 +36,9 @@ export async function getWorkspacePackagePaths({
     case 'nx':
       results = await getNxWorkspacePackagePaths({ fs: workspaceFs });
       break;
+    case 'rush':
+      results = await getRushWorkspacePackagePaths({ fs: workspaceFs });
+      break;
     default:
       throw new Error(`Unknown workspace implementation: ${type}`);
   }
@@ -56,6 +59,14 @@ type PackageJsonWithWorkspace = {
 
 type PnpmWorkspaces = {
   packages?: string[];
+};
+
+type RushWorkspaces = {
+  projects: [
+    {
+      projectFolder: string;
+    }
+  ];
 };
 
 const isWin = process.platform === 'win32';
@@ -124,6 +135,20 @@ async function getPnpmWorkspacePackagePaths({
   const { packages = [] } = yaml.load(
     pnpmWorkspaceAsBuffer.toString()
   ) as PnpmWorkspaces;
+
+  return getPackagePaths(packages, fs);
+}
+
+async function getRushWorkspacePackagePaths({
+  fs,
+}: GetPackagePathOptions): Promise<string[]> {
+  const rushWorkspaceAsBuffer = await fs.readFile('rush.json');
+
+  const { projects = [] } = yaml.load(
+    rushWorkspaceAsBuffer.toString()
+  ) as RushWorkspaces;
+
+  const packages = projects.map(project => project.projectFolder);
 
   return getPackagePaths(packages, fs);
 }
