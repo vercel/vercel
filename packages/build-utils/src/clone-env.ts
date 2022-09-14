@@ -3,11 +3,12 @@ import type { Env } from './types';
 const { hasOwnProperty } = Object.prototype;
 
 /**
- * Identical to `Object.assign()`, but ensures that the `PATH` environment
- * variable is defined even when the variable is spelled `Path`.
+ * Clones zero or more objects into a single new object while ensuring that the
+ * `PATH` environment variable is defined when the `PATH` or `Path` environment
+ * variables are defined.
  *
- * @param {Object} [...envs] Objects and/or `process.env` to merge.
- * @returns {Object}
+ * @param {Object} [...envs] Objects and/or `process.env` to clone and merge
+ * @returns {Object} The new object
  */
 export function cloneEnv(...envs: (Env | undefined)[]): Env {
   return envs.reduce((obj: Env, env) => {
