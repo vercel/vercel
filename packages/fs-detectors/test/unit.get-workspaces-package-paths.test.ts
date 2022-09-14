@@ -19,6 +19,7 @@ describe.each<[string, string[]]>([
   ['43-nx-json-misshaped', []],
   ['44-nx-json-string', []],
   ['40-rush-monorepo', ['/apps/my-app', '/apps/my-second-app']],
+  ['41-rush-monorepo-empty', []],
 ])('`getWorkspacesPackagePaths()`', (fixturePath, packagePaths) => {
   const testName =
     packagePaths.length > 0

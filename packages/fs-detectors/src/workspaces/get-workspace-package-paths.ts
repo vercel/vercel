@@ -148,7 +148,7 @@ async function getRushWorkspacePackagePaths({
     rushWorkspaceAsBuffer.toString()
   ) as RushWorkspaces;
 
-  const packages = projects.map(project => project.projectFolder);
+  const packages = projects.map(project => `/${project.projectFolder}`);
 
   return getPackagePaths(packages, fs);
 }
