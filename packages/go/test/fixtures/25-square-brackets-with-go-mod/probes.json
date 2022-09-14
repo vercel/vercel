@@ -1,9 +1,9 @@
 {
   "probes": [
     {
-      "path": "/api/[hello].go",
+      "path": "/api/a",
       "mustContain": "hello:RANDOMNESS_PLACEHOLDER"
     },
-    { "path": "/api/sub/[hi].go", "mustContain": "hi:RANDOMNESS_PLACEHOLDER" }
+    { "path": "/api/sub/b", "mustContain": "hi:RANDOMNESS_PLACEHOLDER" }
   ]
 }
