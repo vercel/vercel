@@ -1,0 +1,8 @@
+{
+  "name": "42-npm-workspace-with-nx",
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/app-one",
+    "apps/app-two"
+  ]
+}

@@ -1,5 +1,6 @@
 import minimatch from 'minimatch';
-import { BuildV2, Files } from '@vercel/build-utils';
+import { shouldServe as defaultShouldServe } from '@vercel/build-utils';
+import type { BuildV2, Files, ShouldServe } from '@vercel/build-utils';
 
 export const version = 2;
 
@@ -38,4 +39,19 @@ export const build: BuildV2 = async ({ entrypoint, files, config }) => {
   }
 
   return { output };
+};
+
+export const shouldServe: ShouldServe = _opts => {
+  const opts = { ..._opts };
+  const {
+    config: { zeroConfig, outputDirectory },
+  } = opts;
+
+  // Add the output directory prefix
+  if (zeroConfig && outputDirectory) {
+    opts.entrypoint = `${outputDirectory}/${opts.entrypoint}`;
+    opts.requestPath = `${outputDirectory}/${opts.requestPath}`;
+  }
+
+  return defaultShouldServe(opts);
 };

@@ -342,6 +342,7 @@ export interface BuilderV2 {
   version: 2;
   build: BuildV2;
   prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
 }
 
 export interface BuilderV3 {
