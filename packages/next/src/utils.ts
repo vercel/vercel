@@ -16,7 +16,13 @@ import {
   EdgeFunction,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
-import { Header, Rewrite, Route, RouteWithSrc } from '@vercel/routing-utils';
+import type {
+  HasField,
+  Header,
+  Rewrite,
+  Route,
+  RouteWithSrc,
+} from '@vercel/routing-utils';
 import { Sema } from 'async-sema';
 import crc32 from 'buffer-crc32';
 import fs, { lstat, stat } from 'fs-extra';
@@ -2157,21 +2163,42 @@ export {
   getSourceFilePathFromPage,
 };
 
-interface MiddlewareManifest {
+type MiddlewareManifest = MiddlewareManifestV1 | MiddlewareManifestV2;
+
+interface MiddlewareManifestV1 {
   version: 1;
   sortedMiddleware: string[];
-  middleware: { [page: string]: EdgeFunctionInfo };
-  functions?: { [page: string]: EdgeFunctionInfo };
+  middleware: { [page: string]: EdgeFunctionInfoV1 };
+  functions?: { [page: string]: EdgeFunctionInfoV1 };
 }
 
-interface EdgeFunctionInfo {
+interface MiddlewareManifestV2 {
+  version: 2;
+  sortedMiddleware: string[];
+  middleware: { [page: string]: EdgeFunctionInfoV2 };
+  functions?: { [page: string]: EdgeFunctionInfoV2 };
+}
+
+interface BaseEdgeFunctionInfo {
   env: string[];
   files: string[];
   name: string;
   page: string;
-  regexp: string;
   wasm?: { filePath: string; name: string }[];
   assets?: { filePath: string; name: string }[];
+}
+
+interface EdgeFunctionInfoV1 extends BaseEdgeFunctionInfo {
+  regexp: string;
+}
+
+interface EdgeFunctionInfoV2 extends BaseEdgeFunctionInfo {
+  matchers: EdgeFunctionMatcher[];
+}
+
+interface EdgeFunctionMatcher {
+  regexp: string;
+  has?: HasField;
 }
 
 export async function getMiddlewareBundle({
@@ -2304,7 +2331,7 @@ export async function getMiddlewareBundle({
                 }),
               });
             })(),
-            routeSrc: getRouteSrc(edgeFunction, routesManifest),
+            routeMatchers: getRouteMatchers(edgeFunction, routesManifest),
           };
         } catch (e: any) {
           e.message = `Can't build edge function ${key}: ${e.message}`;
@@ -2325,7 +2352,22 @@ export async function getMiddlewareBundle({
 
     for (const worker of workerConfigs.values()) {
       const edgeFile = worker.edgeFunction.name;
-      const shortPath = edgeFile.replace(/^pages\//, '');
+      let shortPath = edgeFile;
+
+      // Replacing the folder prefix for the page
+      //
+      // For `pages/`, use file base name directly:
+      //    pages/index -> index
+      // For `app/`, use folder name, handle the root page as index:
+      //    app/route/page -> route
+      //    app/page -> index
+      //    app/index/page -> index/index
+      if (shortPath.startsWith('pages/')) {
+        shortPath = shortPath.replace(/^pages\//, '');
+      } else if (shortPath.startsWith('app/') && shortPath.endsWith('/page')) {
+        shortPath =
+          shortPath.replace(/^app\//, '').replace(/(^|\/)page$/, '') || 'index';
+      }
 
       worker.edgeFunction.name = shortPath;
       source.edgeFunctions[shortPath] = worker.edgeFunction;
@@ -2336,27 +2378,30 @@ export async function getMiddlewareBundle({
         continue;
       }
 
-      const route: Route = {
-        continue: true,
-        src: worker.routeSrc,
-        missing: [
-          {
-            type: 'header',
-            key: 'x-prerender-revalidate',
-            value: prerenderBypassToken,
-          },
-        ],
-      };
+      for (const matcher of worker.routeMatchers) {
+        const route: Route = {
+          continue: true,
+          src: matcher.regexp,
+          has: matcher.has,
+          missing: [
+            {
+              type: 'header',
+              key: 'x-prerender-revalidate',
+              value: prerenderBypassToken,
+            },
+          ],
+        };
 
-      route.middlewarePath = shortPath;
-      if (isCorrectMiddlewareOrder) {
-        route.override = true;
-      }
+        route.middlewarePath = shortPath;
+        if (isCorrectMiddlewareOrder) {
+          route.override = true;
+        }
 
-      if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
-        source.dynamicRouteMap.set(worker.page, route);
-      } else {
-        source.staticRoutes.push(route);
+        if (routesManifest.version > 3 && isDynamicRoute(worker.page)) {
+          source.dynamicRouteMap.set(worker.page, route);
+        } else {
+          source.staticRoutes.push(route);
+        }
       }
     }
 
@@ -2378,7 +2423,7 @@ export async function getMiddlewareBundle({
 export async function getMiddlewareManifest(
   entryPath: string,
   outputDirectory: string
-): Promise<MiddlewareManifest | undefined> {
+): Promise<MiddlewareManifestV2 | undefined> {
   const middlewareManifestPath = path.join(
     entryPath,
     outputDirectory,
@@ -2394,7 +2439,40 @@ export async function getMiddlewareManifest(
     return;
   }
 
-  return fs.readJSON(middlewareManifestPath);
+  const manifest = (await fs.readJSON(
+    middlewareManifestPath
+  )) as MiddlewareManifest;
+  return manifest.version === 1
+    ? upgradeMiddlewareManifest(manifest)
+    : manifest;
+}
+
+export function upgradeMiddlewareManifest(
+  v1: MiddlewareManifestV1
+): MiddlewareManifestV2 {
+  function updateInfo(v1Info: EdgeFunctionInfoV1): EdgeFunctionInfoV2 {
+    const { regexp, ...rest } = v1Info;
+    return {
+      ...rest,
+      matchers: [{ regexp }],
+    };
+  }
+
+  const middleware = Object.fromEntries(
+    Object.entries(v1.middleware).map(([p, info]) => [p, updateInfo(info)])
+  );
+  const functions = v1.functions
+    ? Object.fromEntries(
+        Object.entries(v1.functions).map(([p, info]) => [p, updateInfo(info)])
+      )
+    : undefined;
+
+  return {
+    ...v1,
+    version: 2,
+    middleware,
+    functions,
+  };
 }
 
 /**
@@ -2402,28 +2480,48 @@ export async function getMiddlewareManifest(
  * generate a string with the route that will activate the middleware on
  * Vercel Proxy.
  *
- * @param param0 The middleware info including regexp and page.
+ * @param param0 The middleware info including matchers and page.
  * @param param1 The routes manifest
- * @returns A regexp string for the middleware route.
+ * @returns matchers for the middleware route.
  */
-function getRouteSrc(
-  { regexp, page }: EdgeFunctionInfo,
+function getRouteMatchers(
+  info: EdgeFunctionInfoV2,
   { basePath = '', i18n }: RoutesManifest
-): string {
-  if (page === '/') {
-    return regexp.replace(
-      '_next',
-      `${basePath?.substring(1) ? `${basePath?.substring(1)}/` : ''}_next`
+): EdgeFunctionMatcher[] {
+  function getRegexp(regexp: string) {
+    if (info.page === '/') {
+      return regexp;
+    }
+
+    const locale = i18n?.locales.length
+      ? `(?:/(${i18n.locales
+          .map(locale => escapeStringRegexp(locale))
+          .join('|')}))?`
+      : '';
+
+    return `(?:^${basePath}${locale}${regexp.substring(1)})`;
+  }
+
+  function normalizeHas(has: HasField): HasField {
+    return has.map(v =>
+      v.type === 'header'
+        ? {
+            ...v,
+            key: v.key.toLowerCase(),
+          }
+        : v
     );
   }
 
-  const locale = i18n?.locales.length
-    ? `(?:/(${i18n.locales
-        .map(locale => escapeStringRegexp(locale))
-        .join('|')}))?`
-    : '';
-
-  return `(?:^${basePath}${locale}${regexp.substring(1)})`;
+  return info.matchers.map(matcher => {
+    const m: EdgeFunctionMatcher = {
+      regexp: getRegexp(matcher.regexp),
+    };
+    if (matcher.has) {
+      m.has = normalizeHas(matcher.has);
+    }
+    return m;
+  });
 }
 
 /**

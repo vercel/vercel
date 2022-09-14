@@ -8,7 +8,10 @@
       "packages/*"
     ],
     "nohoist": [
-      "**/@types/**"
+      "**/@types/**",
+      "**/typedoc",
+      "**/typedoc-plugin-markdown",
+      "**/typedoc-plugin-mdn-links"
     ]
   },
   "dependencies": {

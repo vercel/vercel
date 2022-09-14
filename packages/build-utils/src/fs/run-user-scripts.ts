@@ -11,6 +11,7 @@ import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 import { readConfigFile } from './read-config-file';
+import { cloneEnv } from '../clone-env';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
@@ -23,8 +24,7 @@ export interface ScanParentDirsResult {
    */
   cliType: CliType;
   /**
-   * The file path of found `package.json` file, or `undefined` if none was
-   * found.
+   * The file path of found `package.json` file, or `undefined` if not found.
    */
   packageJsonPath?: string;
   /**
@@ -33,8 +33,13 @@ export interface ScanParentDirsResult {
    */
   packageJson?: PackageJson;
   /**
-   * The `lockfileVersion` number from the `package-lock.json` file,
-   * when present.
+   * The file path of the lockfile (`yarn.lock`, `package-lock.json`, or `pnpm-lock.yaml`)
+   * or `undefined` if not found.
+   */
+  lockfilePath?: string;
+  /**
+   * The `lockfileVersion` number from lockfile (`package-lock.json` or `pnpm-lock.yaml`),
+   * or `undefined` if not found.
    */
   lockfileVersion?: number;
 }
@@ -178,25 +183,9 @@ export async function getNodeBinPath({
 }: {
   cwd: string;
 }): Promise<string> {
-  const { code, stdout, stderr } = await execAsync('npm', ['bin'], {
-    cwd,
-    prettyCommand: 'npm bin',
-
-    // in some rare cases, we saw `npm bin` exit with a non-0 code, but still
-    // output the right bin path, so we ignore the exit code
-    ignoreNon0Exit: true,
-  });
-
-  const nodeBinPath = stdout.trim();
-
-  if (path.isAbsolute(nodeBinPath)) {
-    return nodeBinPath;
-  }
-
-  throw new NowBuildError({
-    code: `BUILD_UTILS_GET_NODE_BIN_PATH`,
-    message: `Running \`npm bin\` failed to return a valid bin path (code=${code}, stdout=${stdout}, stderr=${stderr})`,
-  });
+  const { lockfilePath } = await scanParentDirs(cwd);
+  const dir = path.dirname(lockfilePath || cwd);
+  return path.join(dir, 'node_modules', '.bin');
 }
 
 async function chmodPlusX(fsPath: string) {
@@ -229,7 +218,7 @@ export function getSpawnOptions(
   nodeVersion: NodeVersion
 ): SpawnOptions {
   const opts = {
-    env: { ...process.env },
+    env: cloneEnv(process.env),
   };
 
   if (!meta.isDev) {
@@ -319,6 +308,7 @@ export async function scanParentDirs(
     start: destPath,
     filenames: ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'],
   });
+  let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
   let cliType: CliType = 'yarn';
 
@@ -335,17 +325,25 @@ export async function scanParentDirs(
   // Priority order is Yarn > pnpm > npm
   if (hasYarnLock) {
     cliType = 'yarn';
+    lockfilePath = yarnLockPath;
   } else if (pnpmLockYaml) {
     cliType = 'pnpm';
-    // just ensure that it is read as a number and not a string
+    lockfilePath = pnpmLockPath;
     lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
   } else if (packageLockJson) {
     cliType = 'npm';
+    lockfilePath = npmLockPath;
     lockfileVersion = packageLockJson.lockfileVersion;
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
-  return { cliType, packageJson, lockfileVersion, packageJsonPath };
+  return {
+    cliType,
+    packageJson,
+    lockfilePath,
+    lockfileVersion,
+    packageJsonPath,
+  };
 }
 
 export async function walkParentDirs({
@@ -452,7 +450,7 @@ export async function runNpmInstall(
     debug(`Installing to ${destPath}`);
 
     const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
-    const env = opts.env ? { ...opts.env } : { ...process.env };
+    const env = cloneEnv(opts.env || process.env);
     delete env.NODE_ENV;
     opts.env = getEnvForPackageManager({
       cliType,
@@ -594,10 +592,7 @@ export async function runPackageJsonScript(
       cliType,
       lockfileVersion,
       nodeVersion: undefined,
-      env: {
-        ...process.env,
-        ...spawnOpts?.env,
-      },
+      env: cloneEnv(process.env, spawnOpts?.env),
     }),
   };
 
