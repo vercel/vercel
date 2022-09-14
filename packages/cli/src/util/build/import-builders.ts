@@ -4,6 +4,7 @@ import npa from 'npm-package-arg';
 import { satisfies } from 'semver';
 import { dirname, join } from 'path';
 import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
+import { isStaticRuntime } from '@vercel/fs-detectors';
 import {
   BuilderV2,
   BuilderV3,
@@ -86,7 +87,7 @@ export async function resolveBuilders(
       continue;
     }
 
-    if (name === '@vercel/static' || name === '@now/static') {
+    if (isStaticRuntime(name)) {
       // `@vercel/static` is a special-case built-in builder
       builders.set(name, {
         builder: staticBuilder,
