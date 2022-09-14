@@ -90,51 +90,39 @@ async function getPackagePaths(
 async function getPackageJsonWorkspacePackagePaths({
   fs,
 }: GetPackagePathOptions): Promise<string[]> {
-  try {
-    const packageJsonAsBuffer = await fs.readFile('package.json');
-    const { workspaces } = JSON.parse(
-      packageJsonAsBuffer.toString()
-    ) as PackageJsonWithWorkspace;
+  const packageJsonAsBuffer = await fs.readFile('package.json');
+  const { workspaces } = JSON.parse(
+    packageJsonAsBuffer.toString()
+  ) as PackageJsonWithWorkspace;
 
-    let packages: string[] = [];
+  let packages: string[] = [];
 
-    if (Array.isArray(workspaces)) {
-      packages = workspaces;
-    } else {
-      packages = workspaces?.packages ?? [];
-    }
-
-    return getPackagePaths(packages, fs);
-  } catch {
-    return [];
+  if (Array.isArray(workspaces)) {
+    packages = workspaces;
+  } else {
+    packages = workspaces?.packages ?? [];
   }
+
+  return getPackagePaths(packages, fs);
 }
 
 async function getNxWorkspacePackagePaths({
   fs,
 }: GetPackagePathOptions): Promise<string[]> {
-  try {
-    const workspaceJsonAsBuffer = await fs.readFile('workspace.json');
-    const { projects } = JSON.parse(workspaceJsonAsBuffer.toString());
+  const workspaceJsonAsBuffer = await fs.readFile('workspace.json');
+  const { projects } = JSON.parse(workspaceJsonAsBuffer.toString());
 
-    const packages: string[] = Object.values(projects) ?? [];
-    return getPackagePaths(packages, fs);
-  } catch {
-    return [];
-  }
+  const packages: string[] = Object.values(projects) ?? [];
+  return getPackagePaths(packages, fs);
 }
 
 async function getPnpmWorkspacePackagePaths({
   fs,
 }: GetPackagePathOptions): Promise<string[]> {
-  try {
-    const pnpmWorkspaceAsBuffer = await fs.readFile('pnpm-workspace.yaml');
-    const { packages = [] } = yaml.load(
-      pnpmWorkspaceAsBuffer.toString()
-    ) as PnpmWorkspaces;
+  const pnpmWorkspaceAsBuffer = await fs.readFile('pnpm-workspace.yaml');
+  const { packages = [] } = yaml.load(
+    pnpmWorkspaceAsBuffer.toString()
+  ) as PnpmWorkspaces;
 
-    return getPackagePaths(packages, fs);
-  } catch {
-    return [];
-  }
+  return getPackagePaths(packages, fs);
 }
