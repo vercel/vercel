@@ -84,7 +84,6 @@ export function spawnAsync(
     const stderrLogs: Buffer[] = [];
     opts = { stdio: 'inherit', ...opts };
     const child = spawn(command, args, opts);
-    console.log('child is', child);
 
     if (opts.stdio === 'pipe' && child.stderr) {
       child.stderr.on('data', data => stderrLogs.push(data));
