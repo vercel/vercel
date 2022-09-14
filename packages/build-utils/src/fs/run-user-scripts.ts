@@ -11,6 +11,7 @@ import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 import { readConfigFile } from './read-config-file';
+import { cloneEnv } from '../clone-env';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
@@ -217,7 +218,7 @@ export function getSpawnOptions(
   nodeVersion: NodeVersion
 ): SpawnOptions {
   const opts = {
-    env: { ...process.env },
+    env: cloneEnv(process.env),
   };
 
   if (!meta.isDev) {
@@ -449,7 +450,7 @@ export async function runNpmInstall(
     debug(`Installing to ${destPath}`);
 
     const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
-    const env = opts.env ? { ...opts.env } : { ...process.env };
+    const env = cloneEnv(opts.env || process.env);
     delete env.NODE_ENV;
     opts.env = getEnvForPackageManager({
       cliType,
@@ -464,6 +465,19 @@ export async function runNpmInstall(
       commandArgs = args
         .filter(a => a !== '--prefer-offline')
         .concat(['install', '--no-audit', '--unsafe-perm']);
+      if (
+        nodeVersion?.major === 16 &&
+        spawnOpts?.env?.VERCEL_NPM_LEGACY_PEER_DEPS === '1' &&
+        spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK !== '1'
+      ) {
+        // Starting in npm@8.6.0, if you ran `npm install --legacy-peer-deps`,
+        // and then later ran `npm install`, it would fail. So the only way
+        // to safely upgrade npm from npm@8.5.0 is to set this flag. The docs
+        // say this flag is not recommended so its is behind a feature flag
+        // so we can remove it in node@18, which can introduce breaking changes.
+        // See https://docs.npmjs.com/cli/v8/using-npm/config#legacy-peer-deps
+        commandArgs.push('--legacy-peer-deps');
+      }
     } else if (cliType === 'pnpm') {
       // PNPM's install command is similar to NPM's but without the audit nonsense
       // @see options https://pnpm.io/cli/install
@@ -591,10 +605,7 @@ export async function runPackageJsonScript(
       cliType,
       lockfileVersion,
       nodeVersion: undefined,
-      env: {
-        ...process.env,
-        ...spawnOpts?.env,
-      },
+      env: cloneEnv(process.env, spawnOpts?.env),
     }),
   };
 
