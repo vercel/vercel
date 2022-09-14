@@ -1,6 +1,6 @@
 const spawnMock = jest.fn();
-jest.mock('child_process', () => ({
-  spawn: (...args: any) => {
+jest.mock('cross-spawn', () => {
+  const spawn = (...args: any) => {
     spawnMock(...args);
     const child = {
       on: (type: string, fn: (code: number) => void) => {
@@ -10,8 +10,9 @@ jest.mock('child_process', () => ({
       },
     };
     return child;
-  },
-}));
+  };
+  return spawn;
+});
 
 afterEach(() => {
   spawnMock.mockClear();
