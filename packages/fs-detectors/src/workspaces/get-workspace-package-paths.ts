@@ -113,7 +113,7 @@ async function getNxWorkspacePackagePaths({
 
   const { projects } = JSON.parse(nxWorkspaceJsonAsBuffer.toString());
 
-  const packages: string[] = Object.values(projects) ?? [];
+  const packages: string[] = Object.values(projects);
   return getPackagePaths(packages, fs);
 }
 
