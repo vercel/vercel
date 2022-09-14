@@ -1,10 +1,24 @@
-import path from 'path';
-import { runNpmInstall, cloneEnv } from '../src';
-const spawnMock = jest.spyOn(require('child_process'), 'spawn');
+const spawnMock = jest.fn();
+jest.mock('child_process', () => ({
+  spawn: (...args: any) => {
+    spawnMock(...args);
+    const child = {
+      on: (type: string, fn: (code: number) => void) => {
+        if (type === 'close') {
+          return fn(0);
+        }
+      },
+    };
+    return child;
+  },
+}));
 
 afterEach(() => {
   spawnMock.mockClear();
 });
+
+import path from 'path';
+import { runNpmInstall, cloneEnv } from '../src';
 
 function getTestSpawnOpts(env: Record<string, string>) {
   return { env: cloneEnv(process.env, env) };
