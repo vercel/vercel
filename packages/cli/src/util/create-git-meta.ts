@@ -78,6 +78,9 @@ function getLastCommit(directory: string): Promise<git.Commit> {
 
 export function isDirty(directory: string, output: Output): Promise<boolean> {
   return new Promise(resolve => {
+    // note: we specify the `--no-optional-locks` git flag so that `git status`
+    // does not perform any "optional" operations such as optimizing the index
+    // in the background: https://git-scm.com/docs/git-status#_background_refresh
     exec(
       'git --no-optional-locks status -s',
       { cwd: directory },
