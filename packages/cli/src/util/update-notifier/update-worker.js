@@ -11,60 +11,67 @@
  */
 
 const fetch = require('node-fetch');
+const fs = require('fs-extra');
+const path = require('path');
 const { Agent: HttpsAgent } = require('https');
-const { outputJSON } = require('fs-extra');
 
 process.on('unhandledRejection', err => {
-  console.error('Exiting update worker due to error:');
-  console.error(err);
+  if (process.connected) {
+    console.error('Exiting update worker due to error:');
+    console.error(err);
+  }
   process.exit(1);
 });
+
+const defaultUpdateCheckInterval = 1000 * 60 * 60 * 24 * 7; // 1 week
 
 // this timer will prevent this worker process from running longer than 10s
 const timer = setTimeout(() => process.exit(1), 10000);
 
 // wait for the parent to give us the work payload
 process.once('message', async msg => {
+  process.disconnect();
+
+  const { cacheFile, distTag, name, updateCheckInterval } = msg;
+  const cacheFileParsed = path.parse(cacheFile);
+
+  // check for a lock file and either bail if running or write our pid and continue
+  const lockFile = path.join(
+    cacheFileParsed.dir,
+    `${cacheFileParsed.name}.lock`
+  );
+  if (isRunning(lockFile)) {
+    return;
+  }
+  fs.writeFileSync(lockFile, String(process.pid), 'utf-8');
+
+  // fetch the latest version from npm
   try {
-    const pending = fetchLatest(msg);
-    if (msg.wait) {
-      await pending;
-    }
+    const agent = new HttpsAgent({
+      keepAlive: true,
+      maxSockets: 15, // See: `npm config get maxsockets`
+    });
+    const headers = {
+      accept:
+        'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*',
+    };
+    const url = `https://registry.npmjs.org/${name}`;
+    const res = await fetch(url, { agent, headers });
+    const json = await res.json();
+    const tags = json['dist-tags'];
+    const version = tags[distTag];
+
+    await fs.outputJSON(cacheFile, {
+      expireAt:
+        Date.now() + (updateCheckInterval || defaultUpdateCheckInterval),
+      notified: false,
+      version,
+    });
   } finally {
-    process.disconnect();
+    clearTimeout(timer);
+    fs.removeSync(lockFile);
   }
 });
-
-/**
- * Fetch the latest version from npm. We do this in a separate function so that
- * destructuring our required arguments acts as a validator of sorts.
- */
-async function fetchLatest({ cacheFile, distTag, name, updateCheckInterval }) {
-  // See: `npm config get maxsockets`
-  const agent = new HttpsAgent({
-    keepAlive: true,
-    maxSockets: 15,
-  });
-  const headers = {
-    accept:
-      'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*',
-  };
-
-  const url = `https://registry.npmjs.org/${name}`;
-  const res = await fetch(url, { agent, headers });
-  const json = await res.json();
-  const tags = json['dist-tags'];
-  const version = tags[distTag];
-
-  await outputJSON(cacheFile, {
-    expireAt: Date.now() + updateCheckInterval,
-    notified: false,
-    version,
-  });
-
-  // success, no more need for the timeout
-  clearTimeout(timer);
-}
 
 // signal the parent process we're ready
 if (process.connected && process.send) {
@@ -72,4 +79,16 @@ if (process.connected && process.send) {
 } else {
   console.error('No IPC bridge detected, exiting');
   process.exit(1);
+}
+
+function isRunning(lockFile) {
+  try {
+    const pid = parseInt(fs.readFileSync(lockFile, 'utf-8'));
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    // lock file does not exist or pid is stale
+    fs.removeSync(lockFile);
+    return false;
+  }
 }

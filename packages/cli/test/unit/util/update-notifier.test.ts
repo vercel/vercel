@@ -22,16 +22,16 @@ describe('update notifier', () => {
 
   it('should find newer version async', async () => {
     // 1. first call, no cache file
-    let latest = await updateNotifier({
+    let latest = updateNotifier({
       cacheDir,
       pkg,
     });
     expect(latest).toEqual(undefined);
 
-    let files: string[] = await waitForFiles(cacheDir);
+    let files: string[] = await waitForFiles(join(cacheDir, 'update-notifier'));
 
     expect(files).toHaveLength(1);
-    expect(files[0]).toEqual('update-notifier');
+    expect(files[0]).toEqual('vercel-latest.json');
     const updateDir = join(cacheDir, 'update-notifier');
     files = await fs.readdir(updateDir);
     expect(files).toHaveLength(1);
@@ -46,7 +46,7 @@ describe('update notifier', () => {
     expect(cache.notified).toEqual(false);
 
     // 2. call again and this time it'll return the version from the cache
-    latest = await updateNotifier({
+    latest = updateNotifier({
       cacheDir,
       pkg,
     });
@@ -58,26 +58,16 @@ describe('update notifier', () => {
     expect(cache.notified).toEqual(true);
 
     // 3. notification already done, should skip
-    latest = await updateNotifier({
+    latest = updateNotifier({
       cacheDir,
       pkg,
     });
     expect(latest).toEqual(undefined);
-  });
-
-  it('should find newer version sync', async () => {
-    let latest = await updateNotifier({
-      cacheDir,
-      pkg,
-      wait: true,
-    });
-    expect(typeof latest).toBe('string');
-    expect(latest).toEqual(expect.stringMatching(versionRE));
   });
 
   it('should not find a newer version', async () => {
     // 1. first call, no cache file
-    let latest = await updateNotifier({
+    let latest = updateNotifier({
       cacheDir,
       pkg: {
         ...pkg,
@@ -87,10 +77,10 @@ describe('update notifier', () => {
     });
     expect(latest).toEqual(undefined);
 
-    await waitForFiles(cacheDir);
+    await waitForFiles(join(cacheDir, 'update-notifier'));
 
     // 2. call again and should recheck and still not find a new version
-    latest = await updateNotifier({
+    latest = updateNotifier({
       cacheDir,
       pkg: {
         ...pkg,
@@ -99,6 +89,35 @@ describe('update notifier', () => {
       updateCheckInterval: 1,
     });
     expect(latest).toEqual(undefined);
+  });
+
+  it('should not check twice', async () => {
+    // 1. first call, no cache file
+    let latest = updateNotifier({
+      cacheDir,
+      pkg,
+      updateCheckInterval: 1,
+    });
+    expect(latest).toEqual(undefined);
+
+    // 2. immediately call again, but should hopefully still be undefined
+    latest = updateNotifier({
+      cacheDir,
+      pkg,
+      updateCheckInterval: 1,
+    });
+    expect(latest).toEqual(undefined);
+
+    await waitForFiles(join(cacheDir, 'update-notifier'));
+
+    // 3. immediately call again, but should hopefully still be undefined
+    latest = updateNotifier({
+      cacheDir,
+      pkg,
+      updateCheckInterval: 1,
+    });
+    expect(typeof latest).toBe('string');
+    expect(latest).toEqual(expect.stringMatching(versionRE));
   });
 });
 
