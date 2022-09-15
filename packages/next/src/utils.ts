@@ -290,7 +290,7 @@ export async function getDynamicRoutes(
           .map(({ page, regex }: { page: string; regex: string }) => {
             return {
               src: regex,
-              dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              dest: !isDev ? path.posix.join('/', entryDirectory, page) : page,
               check: true,
               status:
                 canUsePreviewMode && omittedRoutes?.has(page) ? 404 : undefined,
@@ -315,7 +315,9 @@ export async function getDynamicRoutes(
             const { page, namedRegex, regex, routeKeys } = params;
             const route: RouteWithSrc = {
               src: namedRegex || regex,
-              dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
+              dest: `${
+                !isDev ? path.posix.join('/', entryDirectory, page) : page
+              }${
                 routeKeys
                   ? `?${Object.keys(routeKeys)
                       .map(key => `${routeKeys[key]}=$${key}`)
@@ -410,7 +412,7 @@ export async function getDynamicRoutes(
   pageMatchers.forEach(pageMatcher => {
     // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
-      ? path.join('/', entryDirectory, pageMatcher.pageName)
+      ? path.posix.join('/', entryDirectory, pageMatcher.pageName)
       : pageMatcher.pageName;
 
     if (pageMatcher && pageMatcher.matcher) {
@@ -465,8 +467,8 @@ export function localizeDynamicRoutes(
         // ensure destination has locale prefix to match prerender output
         // path so that the prerender object is used
         route.dest = route.dest!.replace(
-          `${path.join('/', entryDirectory, '/')}`,
-          `${path.join('/', entryDirectory, '$nextLocale', '/')}`
+          `${path.posix.join('/', entryDirectory, '/')}`,
+          `${path.posix.join('/', entryDirectory, '$nextLocale', '/')}`
         );
       }
     } else {
@@ -575,7 +577,7 @@ export function filterStaticPages(
       return;
     }
 
-    const staticRoute = path.join(entryDirectory, pathname);
+    const staticRoute = path.posix.join(entryDirectory, pathname);
 
     staticPages[staticRoute] = staticPageFiles[page];
     staticPages[staticRoute].contentType = htmlContentType;
@@ -1616,11 +1618,11 @@ export const onPrerenderRouteInitial = (
   // if the 404 page used getStaticProps we need to update static404Page
   // since it wasn't populated from the staticPages group
   if (routeNoLocale === '/404') {
-    static404Page = path.join(entryDirectory, routeKey);
+    static404Page = path.posix.join(entryDirectory, routeKey);
   }
 
   if (routeNoLocale === '/500') {
-    static500Page = path.join(entryDirectory, routeKey);
+    static500Page = path.posix.join(entryDirectory, routeKey);
   }
 
   if (
@@ -1851,7 +1853,10 @@ export const onPrerenderRoute =
           '/',
           srcRoute == null
             ? outputPathPageOrig
-            : path.join(entryDirectory, srcRoute === '/' ? '/index' : srcRoute)
+            : path.posix.join(
+                entryDirectory,
+                srcRoute === '/' ? '/index' : srcRoute
+              )
         ),
         isServerMode
       );
@@ -2066,17 +2071,17 @@ export async function getStaticFiles(
   const publicDirectoryFiles: Record<string, FileFsRef> = {};
 
   for (const file of Object.keys(nextStaticFiles)) {
-    staticFiles[path.join(entryDirectory, `_next/static/${file}`)] =
+    staticFiles[path.posix.join(entryDirectory, `_next/static/${file}`)] =
       nextStaticFiles[file];
   }
 
   for (const file of Object.keys(staticFolderFiles)) {
-    staticDirectoryFiles[path.join(entryDirectory, 'static', file)] =
+    staticDirectoryFiles[path.posix.join(entryDirectory, 'static', file)] =
       staticFolderFiles[file];
   }
 
   for (const file of Object.keys(publicFolderFiles)) {
-    publicDirectoryFiles[path.join(entryDirectory, file)] =
+    publicDirectoryFiles[path.posix.join(entryDirectory, file)] =
       publicFolderFiles[file];
   }
 
