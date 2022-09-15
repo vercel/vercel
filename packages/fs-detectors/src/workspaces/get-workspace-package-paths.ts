@@ -144,7 +144,7 @@ async function getRushWorkspacePackagePaths({
 }: GetPackagePathOptions): Promise<string[]> {
   const rushWorkspaceAsBuffer = await fs.readFile('rush.json');
 
-  const { projects = [] } = yaml.load(
+  const { projects = [] } = JSON.parse(
     rushWorkspaceAsBuffer.toString()
   ) as RushWorkspaces;
 
