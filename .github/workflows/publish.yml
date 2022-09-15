@@ -34,6 +34,7 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: 14
+        cache: 'yarn'
     - name: Install
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       run: yarn install --check-files --frozen-lockfile --network-timeout 1000000
