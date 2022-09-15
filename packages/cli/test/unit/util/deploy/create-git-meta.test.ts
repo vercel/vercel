@@ -182,12 +182,13 @@ describe('createGitMeta', () => {
   });
   it('detects not dirty commit', async () => {
     const directory = fixture('not-dirty');
+    const dest = join(directory, 'repo', '.git');
     try {
-      await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const dirty = await isDirty(directory, client.output);
+      await fs.copy(join(directory, 'git'), dest);
+      const dirty = await isDirty(join(directory, 'repo'), client.output);
       expect(dirty).toBeFalsy();
     } finally {
-      await fs.rename(join(directory, '.git'), join(directory, 'git'));
+      await fs.remove(dest);
     }
   });
   it('gets git metata from test-github', async () => {
