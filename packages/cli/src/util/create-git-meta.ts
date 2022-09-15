@@ -78,16 +78,20 @@ function getLastCommit(directory: string): Promise<git.Commit> {
 
 export function isDirty(directory: string, output: Output): Promise<boolean> {
   return new Promise(resolve => {
-    exec('git status -s', { cwd: directory }, function (err, stdout, stderr) {
-      let debugMessage = `Failed to determine if Git repo has been modified:`;
-      if (err || stderr) {
-        if (err) debugMessage += `\n${err}`;
-        if (stderr) debugMessage += `\n${stderr.trim()}`;
-        output.debug(debugMessage);
-        return resolve(false);
+    exec(
+      'git --no-optional-locks status -s',
+      { cwd: directory },
+      function (err, stdout, stderr) {
+        let debugMessage = `Failed to determine if Git repo has been modified:`;
+        if (err || stderr) {
+          if (err) debugMessage += `\n${err}`;
+          if (stderr) debugMessage += `\n${stderr.trim()}`;
+          output.debug(debugMessage);
+          return resolve(false);
+        }
+        resolve(stdout.trim().length > 0);
       }
-      resolve(stdout.trim().length > 0);
-    });
+    );
   });
 }
 
