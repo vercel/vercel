@@ -104,7 +104,7 @@ describe('update notifier', () => {
 
     await waitForCacheFile();
 
-    // 3. immediately call again, but should hopefully still be undefined
+    // 3. call again and should recheck and find a new version
     latest = updateNotifier({
       cacheDir,
       pkg,
@@ -118,11 +118,8 @@ describe('update notifier', () => {
 async function waitForCacheFile() {
   for (let i = 0; i < 20; i++) {
     await sleep(100);
-    try {
-      await fs.readFile(cacheFile, 'utf-8');
+    if (await fs.pathExists(cacheFile)) {
       return;
-    } catch (e) {
-      // cache file may not have been created yet
     }
   }
 }

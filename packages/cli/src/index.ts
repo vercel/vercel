@@ -143,7 +143,8 @@ const main = async () => {
 
   // Print update information, if available
   if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
-    // Checks for available update and returns an instance
+    // Check if an update is available. If so, `latest` will contain a string
+    // of the latest version, otherwise `undefined`.
     const latest = updateNotifier({
       distTag: isCanary ? 'canary' : 'latest',
       output,

@@ -85,6 +85,7 @@ if (process.connected && process.send) {
 async function isRunning(lockFile) {
   try {
     const pid = parseInt(await fs.readFile(lockFile, 'utf-8'));
+    // checks for existence of a process; throws if not found
     process.kill(pid, 0);
     return true;
   } catch (e) {
