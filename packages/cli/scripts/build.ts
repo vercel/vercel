@@ -79,7 +79,7 @@ async function main() {
   await cpy(join(dirRoot, 'src/util/projects/VERCEL_DIR_README.txt'), distRoot);
   await cpy(join(dirRoot, 'src/util/dev/builder-worker.js'), distRoot);
   await cpy(
-    join(dirRoot, 'src/util/update-notifier/update-worker.js'),
+    join(dirRoot, 'src/util/get-latest-version/get-latest-worker.js'),
     distRoot
   );
 

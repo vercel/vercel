@@ -18,7 +18,7 @@ import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import updateNotifier from './util/update-notifier';
+import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
@@ -145,7 +145,7 @@ const main = async () => {
   if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
     // Check if an update is available. If so, `latest` will contain a string
     // of the latest version, otherwise `undefined`.
-    const latest = updateNotifier({
+    const latest = getLatestVersion({
       distTag: isCanary ? 'canary' : 'latest',
       output,
       pkg,
