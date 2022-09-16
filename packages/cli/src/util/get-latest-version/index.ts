@@ -107,7 +107,11 @@ function spawnWorker(
 
   // spawn the worker with an IPC channel
   output?.debug(`Spawning ${script}`);
-  const worker = spawn(process.execPath, [script], {
+  const args = [script];
+  if (output?.debugEnabled) {
+    args.push('--debug');
+  }
+  const worker = spawn(process.execPath, args, {
     stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
     windowsHide: true,
   });
