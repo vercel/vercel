@@ -34,16 +34,17 @@ process.once('message', async msg => {
 
   const { cacheFile, distTag, name, updateCheckInterval } = msg;
   const cacheFileParsed = path.parse(cacheFile);
+  await fs.mkdirp(cacheFileParsed.dir);
 
   // check for a lock file and either bail if running or write our pid and continue
   const lockFile = path.join(
     cacheFileParsed.dir,
     `${cacheFileParsed.name}.lock`
   );
-  if (isRunning(lockFile)) {
+  if (await isRunning(lockFile)) {
     return;
   }
-  fs.writeFileSync(lockFile, String(process.pid), 'utf-8');
+  await fs.writeFile(lockFile, String(process.pid), 'utf-8');
 
   // fetch the latest version from npm
   try {
@@ -69,7 +70,7 @@ process.once('message', async msg => {
     });
   } finally {
     clearTimeout(timer);
-    fs.removeSync(lockFile);
+    await fs.remove(lockFile);
   }
 });
 
@@ -81,14 +82,14 @@ if (process.connected && process.send) {
   process.exit(1);
 }
 
-function isRunning(lockFile) {
+async function isRunning(lockFile) {
   try {
-    const pid = parseInt(fs.readFileSync(lockFile, 'utf-8'));
+    const pid = parseInt(await fs.readFile(lockFile, 'utf-8'));
     process.kill(pid, 0);
     return true;
   } catch (e) {
     // lock file does not exist or pid is stale
-    fs.removeSync(lockFile);
+    await fs.remove(lockFile);
     return false;
   }
 }

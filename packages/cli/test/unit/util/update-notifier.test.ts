@@ -10,6 +10,8 @@ const cacheDir = tmp.tmpNameSync({
   prefix: 'test-vercel-cli-update-notifier-',
 });
 
+const cacheFile = join(cacheDir, 'update-notifier', 'vercel-latest.json');
+
 const pkg = {
   name: 'vercel',
   version: '27.3.0',
@@ -28,15 +30,7 @@ describe('update notifier', () => {
     });
     expect(latest).toEqual(undefined);
 
-    let files: string[] = await waitForFiles(join(cacheDir, 'update-notifier'));
-
-    expect(files).toHaveLength(1);
-    expect(files[0]).toEqual('vercel-latest.json');
-    const updateDir = join(cacheDir, 'update-notifier');
-    files = await fs.readdir(updateDir);
-    expect(files).toHaveLength(1);
-    expect(files[0]).toEqual(expect.stringMatching(/\.json$/));
-    const cacheFile = join(cacheDir, 'update-notifier', files[0]);
+    await waitForCacheFile();
 
     let cache = await fs.readJSON(cacheFile);
     expect(typeof cache).toEqual('object');
@@ -77,7 +71,7 @@ describe('update notifier', () => {
     });
     expect(latest).toEqual(undefined);
 
-    await waitForFiles(join(cacheDir, 'update-notifier'));
+    await waitForCacheFile();
 
     // 2. call again and should recheck and still not find a new version
     latest = updateNotifier({
@@ -108,7 +102,7 @@ describe('update notifier', () => {
     });
     expect(latest).toEqual(undefined);
 
-    await waitForFiles(join(cacheDir, 'update-notifier'));
+    await waitForCacheFile();
 
     // 3. immediately call again, but should hopefully still be undefined
     latest = updateNotifier({
@@ -121,15 +115,14 @@ describe('update notifier', () => {
   });
 });
 
-async function waitForFiles(cacheDir: string): Promise<string[]> {
-  let files: string[] = [];
-  while (!files.length) {
+async function waitForCacheFile() {
+  for (let i = 0; i < 20; i++) {
     await sleep(100);
     try {
-      files = await fs.readdir(cacheDir);
+      await fs.readFile(cacheFile, 'utf-8');
+      return;
     } catch (e) {
-      // cacheDir may not have been created yet
+      // cache file may not have been created yet
     }
   }
-  return files;
 }
