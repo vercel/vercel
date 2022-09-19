@@ -25,19 +25,16 @@ jobs:
             echo "TURBO_REMOTE_ONLY=true" >> $GITHUB_ENV
             echo "TURBO_TEAM=vercel" >> $GITHUB_ENV
             echo "TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}" >> $GITHUB_ENV
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
       - uses: actions/setup-go@v3
         with:
           go-version: '1.13.15'
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 100
-      - run: git --version
-      - run: git fetch origin main --depth=100
-      - run: git fetch origin ${{ github.ref }} --depth=100
-      - run: git diff origin/main...HEAD --name-only
+          cache: 'yarn'
       - run: yarn install --network-timeout 1000000 --frozen-lockfile
       - run: yarn run build
       - run: yarn test-integration-cli
