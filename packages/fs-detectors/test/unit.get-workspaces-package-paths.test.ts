@@ -21,7 +21,7 @@ describe.each<[string, string[]]>([
   ['40-rush-monorepo', ['/apps/my-app', '/apps/my-second-app']],
   ['41-rush-monorepo-empty', []],
   ['42-rush-json-invalid', []],
-])('`getWorkspacesPackagePaths()`', (fixturePath, packagePaths) => {
+])('`getWorkspacePackagePaths()`', (fixturePath, packagePaths) => {
   const testName =
     packagePaths.length > 0
       ? `should detect ${packagePaths.join()} package${
