@@ -20,7 +20,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Conditionally set remote env
-        if: github.ref == 'refs/heads/main' || github.event.pull_request.head.repo.full_name == github.repository
+        if: secrets.TURBO_TOKEN
         run: |
             echo "TURBO_REMOTE_ONLY=true" >> $GITHUB_ENV
             echo "TURBO_TEAM=vercel" >> $GITHUB_ENV
