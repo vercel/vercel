@@ -1,4 +1,4 @@
-import { ClientComponent } from './test.client.js';
+import { ClientComponent } from './test.js';
 
 export default function DashboardIndexPage() {
   return (
