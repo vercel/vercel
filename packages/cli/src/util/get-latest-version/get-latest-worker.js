@@ -55,6 +55,7 @@ class WorkerOutput {
   }
 
   setLogFile(file) {
+    // wire up the exit handler the first time the log file is set
     if (this.logFile === null) {
       process.on('exit', () => {
         if (this.debugLog.length) {
@@ -67,11 +68,13 @@ class WorkerOutput {
 }
 
 const output = new WorkerOutput({
+  // enable the debug logging if the `--debug` is set or if this worker script
+  // was directly executed
   debug: process.argv.includes('--debug') || !process.connected,
 });
 
 process.on('unhandledRejection', err => {
-  output.error('Exiting worker due to error:', err);
+  output.error('Exiting worker due to unhandled rejection:', err);
   process.exit(1);
 });
 
@@ -98,21 +101,22 @@ process.once('message', async msg => {
     path.join(cacheFileParsed.dir, `${cacheFileParsed.name}.log`)
   );
 
-  // check for a lock file and either bail if running or write our pid and continue
   const lockFile = path.join(
     cacheFileParsed.dir,
     `${cacheFileParsed.name}.lock`
   );
-  output.debug(`Checking lock file: ${lockFile}`);
-  if (await isRunning(lockFile)) {
-    output.debug('Worker already running, exiting');
-    process.exit(2);
-  }
-  output.debug(`Initializing lock file with pid ${process.pid}`);
-  await fs.writeFile(lockFile, String(process.pid), 'utf-8');
 
-  // fetch the latest version from npm
   try {
+    // check for a lock file and either bail if running or write our pid and continue
+    output.debug(`Checking lock file: ${lockFile}`);
+    if (await isRunning(lockFile)) {
+      output.debug('Worker already running, exiting');
+      process.exit(1);
+    }
+    output.debug(`Initializing lock file with pid ${process.pid}`);
+    await fs.writeFile(lockFile, String(process.pid), 'utf-8');
+
+    // fetch the latest version from npm
     const agent = new HttpsAgent({
       keepAlive: true,
       maxSockets: 15, // See: `npm config get maxsockets`
