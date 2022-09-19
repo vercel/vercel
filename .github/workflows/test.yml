@@ -55,8 +55,7 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.setup.outputs['tests']) }}
     steps:
-      - name: Conditionally set remote env
-        if: secrets.TURBO_TOKEN
+      - name: Set remote env
         run: |
             echo "TURBO_REMOTE_ONLY=true" >> $GITHUB_ENV
             echo "TURBO_TEAM=vercel" >> $GITHUB_ENV
