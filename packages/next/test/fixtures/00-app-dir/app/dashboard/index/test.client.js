@@ -1,3 +1,5 @@
+'client';
+
 import { useState, lazy } from 'react';
 
 const Lazy = lazy(() => import('./lazy.client.js'));
