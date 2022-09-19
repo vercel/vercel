@@ -426,6 +426,10 @@ export const build: BuildV2 = async ({
 
   if (buildCommand) {
     // Add `node_modules/.bin` to PATH
+
+    console.log('!'.repeat(100));
+    console.log({ entryPath });
+
     const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
@@ -433,6 +437,8 @@ export const build: BuildV2 = async ({
     if (!env.YARN_NODE_LINKER) {
       env.YARN_NODE_LINKER = 'node-modules';
     }
+
+    console.log({ nodeBinPath });
 
     debug(
       `Added "${nodeBinPath}" to PATH env because a build command was used.`

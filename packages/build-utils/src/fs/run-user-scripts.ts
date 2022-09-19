@@ -184,6 +184,7 @@ export async function getNodeBinPath({
   cwd: string;
 }): Promise<string> {
   const { lockfilePath } = await scanParentDirs(cwd);
+  console.log({ cwd, lockfilePath });
   const dir = path.dirname(lockfilePath || cwd);
   return path.join(dir, 'node_modules', '.bin');
 }
@@ -429,6 +430,9 @@ export async function runNpmInstall(
     const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
       destPath
     );
+
+    console.log('!'.repeat(100));
+    console.log({ destPath });
 
     // Only allow `runNpmInstall()` to run once per `package.json`
     // when doing a default install (no additional args)
