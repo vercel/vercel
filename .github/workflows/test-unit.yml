@@ -8,6 +8,11 @@ on:
     - '!*'
   pull_request:
 
+env:
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
 jobs:
   test:
     name: Unit
@@ -19,11 +24,6 @@ jobs:
         node: [14]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Set remote env
-        run: |
-            echo "TURBO_REMOTE_ONLY=true" >> $GITHUB_ENV
-            echo "TURBO_TEAM=vercel" >> $GITHUB_ENV
-            echo "TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}" >> $GITHUB_ENV
       - uses: actions/setup-go@v3
         with:
           go-version: '1.13.15'
