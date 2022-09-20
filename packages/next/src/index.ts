@@ -36,7 +36,7 @@ import { Sema } from 'async-sema';
 // escape-string-regexp version must match Next.js version
 import escapeStringRegexp from 'escape-string-regexp';
 import findUp from 'find-up';
-import {
+import fs, {
   lstat,
   pathExists,
   readFile,
@@ -335,6 +335,21 @@ export const build: BuildV2 = async ({
     }
   } else {
     await runNpmInstall(entryPath, [], spawnOpts, meta, nodeVersion);
+    console.log('npm install finished');
+    try {
+      console.log(fs.readdirSync(path.join(entryPath, 'node_modules')));
+    } catch (e) {
+      console.log(
+        `Failed to read dir: ${path.join(entryPath, 'node_modules')}`
+      );
+    }
+    try {
+      console.log(fs.readdirSync(path.join(entryPath, 'node_modules', '.bin')));
+    } catch (e) {
+      console.log(
+        `Failed to read dir: ${path.join(entryPath, 'node_modules', '.bin')}`
+      );
+    }
   }
 
   // Refetch Next version now that dependencies are installed.
@@ -424,11 +439,11 @@ export const build: BuildV2 = async ({
     env.NODE_ENV = 'production';
   }
 
+  console.log('?'.repeat(100));
+  console.log({ buildCommand, entryPath });
+
   if (buildCommand) {
     // Add `node_modules/.bin` to PATH
-
-    console.log('!'.repeat(100));
-    console.log({ entryPath });
 
     const nodeBinPath = await getNodeBinPath({ cwd: entryPath });
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
