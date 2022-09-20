@@ -613,8 +613,6 @@ export async function runPackageJsonScript(
     lockfileVersion,
     scriptName,
   });
-  console.log('process.env PATH:', process.env.PATH);
-  console.log('spawnOpts.env PATH:', spawnOpts?.env?.PATH);
 
   const opts: SpawnOptionsExtended = {
     cwd: destPath,

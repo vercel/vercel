@@ -5,6 +5,6 @@
     "react-dom": "experimental"
   },
   "scripts": {
-    "build": "next build"
+    "vercel-build": "next build"
   }
 }
