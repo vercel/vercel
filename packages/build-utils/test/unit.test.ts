@@ -577,8 +577,13 @@ it('should detect package.json in nested frontend', async () => {
 });
 
 it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {
+  const nodeMajor = Number(process.versions.node.split('.')[0]);
+  if (nodeMajor !== 16) {
+    console.log(`Skipping test on node@${nodeMajor}`);
+    return;
+  }
   const fixture = path.join(__dirname, 'fixtures', '15-npm-8-legacy-peer-deps');
-  const nodeVersion = { major: 16 } as any;
+  const nodeVersion = { major: nodeMajor } as any;
   await runNpmInstall(fixture, [], {}, {}, nodeVersion);
   expect(warningMessages).toStrictEqual([
     'Warning: Retrying "Install Command" with `npm install --legacy-peer-deps` which may accept a potentially broken dependency and slower install times.',
