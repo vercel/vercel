@@ -35,6 +35,8 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: 'yarn'
       - run: yarn install --network-timeout 1000000 --frozen-lockfile
+      - run: echo "${{ env.TURBO_REMOTE_ONLY }}"
+      - run: node -p "process.env.TURBO_REMOTE_ONLY"
       - run: yarn run build
       - run: yarn test-integration-cli
         env:
