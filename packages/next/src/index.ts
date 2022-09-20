@@ -440,7 +440,7 @@ export const build: BuildV2 = async ({
   }
 
   console.log('?'.repeat(100));
-  console.log({ buildCommand, entryPath });
+  console.log({ buildCommand, buildScriptName, entryPath });
 
   if (buildCommand) {
     // Add `node_modules/.bin` to PATH
