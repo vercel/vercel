@@ -1,0 +1,3 @@
+{
+  "probes": [{ "path": "/", "mustContain": "node-env:RANDOMNESS_PLACEHOLDER" }]
+}
