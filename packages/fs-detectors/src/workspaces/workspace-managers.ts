@@ -72,17 +72,6 @@ export const workspaceManagers: Array<
     },
   },
   {
-    name: 'rush',
-    slug: 'rush',
-    detectors: {
-      every: [
-        {
-          path: 'rush.json',
-        },
-      ],
-    },
-  },
-  {
     name: 'default',
     slug: 'yarn',
     detectors: {

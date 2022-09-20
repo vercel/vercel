@@ -18,11 +18,7 @@ describe.each<[string, string[]]>([
   ['42-npm-workspace-with-nx', ['/apps/app-one', '/apps/app-two']],
   ['43-nx-json-misshaped', []],
   ['44-nx-json-string', []],
-  ['40-rush-monorepo', ['/apps/my-app', '/apps/my-second-app']],
-  ['41-rush-monorepo-empty', []],
-  ['42-rush-json-invalid', []],
-  ['45-rush-no-project-folder', ['/apps/my-second-app']],
-])('`getWorkspacePackagePaths()`', (fixturePath, packagePaths) => {
+])('`getWorkspacesPackagePaths()`', (fixturePath, packagePaths) => {
   const testName =
     packagePaths.length > 0
       ? `should detect ${packagePaths.join()} package${
