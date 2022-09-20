@@ -6,12 +6,13 @@ import {
   NowBuildError,
   PackageJson,
   Prerender,
+  cloneEnv,
   debug,
   download,
   getLambdaOptionsFromFunction,
   getNodeVersion,
   getPrefixedEnvVars,
-  getSpawnOptions,
+  // getSpawnOptions,
   getScriptName,
   glob,
   runNpmInstall,
@@ -254,14 +255,16 @@ export const build: BuildV2 = async ({
   let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
+  // const spawnOpts = getSpawnOptions(meta, nodeVersion);
   const { cliType, lockfileVersion } = await scanParentDirs(entryPath);
-  spawnOpts.env = getEnvForPackageManager({
-    cliType,
-    lockfileVersion,
-    nodeVersion,
-    env: spawnOpts.env || {},
-  });
+  const spawnOpts = {
+    env: getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      nodeVersion,
+      env: cloneEnv(process.env),
+    }),
+  };
 
   const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
     cwd: entryPath,

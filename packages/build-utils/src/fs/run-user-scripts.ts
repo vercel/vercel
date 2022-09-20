@@ -222,7 +222,7 @@ export function getSpawnOptions(
     env: cloneEnv(process.env),
   };
 
-  if (process.env.DOES_NOT_EXIST && !meta.isDev) {
+  if (!meta.isDev) {
     let found = false;
     const oldPath = opts.env.PATH || process.env.PATH || '';
 
