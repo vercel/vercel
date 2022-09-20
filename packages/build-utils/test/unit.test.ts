@@ -575,3 +575,12 @@ it('should detect package.json in nested frontend', async () => {
   // There is no lockfile but this test will pick up vercel/vercel/yarn.lock
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
+
+it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '15-npm-8-legacy-peer-deps');
+  const nodeVersion = { major: 16 } as any;
+  await runNpmInstall(fixture, [], {}, {}, nodeVersion);
+  expect(warningMessages).toStrictEqual([
+    'Warning: Retrying "Install Command" with `npm install --legacy-peer-deps` which may accept a potentially broken dependency and slower install times.',
+  ]);
+});

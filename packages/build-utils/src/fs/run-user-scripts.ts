@@ -459,6 +459,11 @@ export async function runNpmInstall(
       env,
     });
     let commandArgs: string[];
+    const isPotentiallyBrokenNpm =
+      cliType === 'npm' &&
+      nodeVersion?.major === 16 &&
+      !args.includes('--legacy-peer-deps') &&
+      spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK !== '1';
 
     if (cliType === 'npm') {
       opts.prettyCommand = 'npm install';
@@ -466,9 +471,8 @@ export async function runNpmInstall(
         .filter(a => a !== '--prefer-offline')
         .concat(['install', '--no-audit', '--unsafe-perm']);
       if (
-        nodeVersion?.major === 16 &&
-        spawnOpts?.env?.VERCEL_NPM_LEGACY_PEER_DEPS === '1' &&
-        spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK !== '1'
+        isPotentiallyBrokenNpm &&
+        spawnOpts?.env?.VERCEL_NPM_LEGACY_PEER_DEPS === '1'
       ) {
         // Starting in npm@8.6.0, if you ran `npm install --legacy-peer-deps`,
         // and then later ran `npm install`, it would fail. So the only way
@@ -496,8 +500,19 @@ export async function runNpmInstall(
 
     try {
       await spawnAsync(cliType, commandArgs, opts);
-    } catch (error) {
-      console.log('Error from spawn', error);
+    } catch (_) {
+      const potentialErrorPath = path.join(
+        process.env.HOME || '/',
+        '.npm',
+        'eresolve-report.txt'
+      );
+      if (isPotentiallyBrokenNpm && fs.existsSync(potentialErrorPath)) {
+        console.warn(
+          'Warning: Retrying "Install Command" with `npm install --legacy-peer-deps` which may accept a potentially broken dependency and slower install times.'
+        );
+        commandArgs.push('--legacy-peer-deps');
+        await spawnAsync(cliType, commandArgs, opts);
+      }
     }
     debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
