@@ -222,7 +222,7 @@ export function getSpawnOptions(
     env: cloneEnv(process.env),
   };
 
-  if (!meta.isDev) {
+  if (!meta.isDev && process.platform !== 'win32') {
     let found = false;
     const oldPath = opts.env.PATH || process.env.PATH || '';
 
