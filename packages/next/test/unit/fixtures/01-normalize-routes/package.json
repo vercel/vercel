@@ -5,6 +5,6 @@
     "react-dom": "experimental"
   },
   "scripts": {
-    "build": "node -e \"console.log(process.version,process.cwd(),require('fs').readdirSync('./node_modules/.bin'))\" && next build"
+    "build": "next build"
   }
 }
