@@ -552,6 +552,8 @@ export function getEnvForPackageManager({
     }
   }
 
+  console.log('getEnvForPackageManager()', newEnv);
+
   return newEnv;
 }
 
@@ -601,6 +603,18 @@ export async function runPackageJsonScript(
 
   debug('Running user script...');
   const runScriptTime = Date.now();
+
+  console.log('runPackageJsonScript()');
+  console.log({
+    destPath,
+    scriptNames,
+    packageJson,
+    cliType,
+    lockfileVersion,
+    scriptName,
+  });
+  console.log('process.env PATH:', process.env.PATH);
+  console.log('spawnOpts.env PATH:', spawnOpts?.env?.PATH);
 
   const opts: SpawnOptionsExtended = {
     cwd: destPath,
