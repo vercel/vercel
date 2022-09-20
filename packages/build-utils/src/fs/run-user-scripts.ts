@@ -494,7 +494,11 @@ export async function runNpmInstall(
       commandArgs.push('--production');
     }
 
-    await spawnAsync(cliType, commandArgs, opts);
+    try {
+      await spawnAsync(cliType, commandArgs, opts);
+    } catch (error) {
+      console.log('Error from spawn', error);
+    }
     debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
   } finally {
