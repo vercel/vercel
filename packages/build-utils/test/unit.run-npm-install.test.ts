@@ -20,6 +20,7 @@ afterEach(() => {
 
 import path from 'path';
 import { runNpmInstall, cloneEnv } from '../src';
+import type { Meta } from '../src/types';
 
 function getTestSpawnOpts(env: Record<string, string>) {
   return { env: cloneEnv(process.env, env) };
@@ -31,7 +32,7 @@ function getNodeVersion(major: number) {
 
 it('should not include peer dependencies when missing VERCEL_NPM_LEGACY_PEER_DEPS on node16', async () => {
   const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
-  const meta = {};
+  const meta: Meta = {};
   const spawnOpts = getTestSpawnOpts({});
   const nodeVersion = { major: 16 } as any;
   await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
@@ -49,7 +50,7 @@ it('should not include peer dependencies when missing VERCEL_NPM_LEGACY_PEER_DEP
 
 it('should include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node16', async () => {
   const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
-  const meta = {};
+  const meta: Meta = {};
   const spawnOpts = getTestSpawnOpts({ VERCEL_NPM_LEGACY_PEER_DEPS: '1' });
   const nodeVersion = getNodeVersion(16);
   await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
@@ -72,7 +73,7 @@ it('should include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node1
 
 it('should not include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node14', async () => {
   const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
-  const meta = {};
+  const meta: Meta = {};
   const spawnOpts = getTestSpawnOpts({ VERCEL_NPM_LEGACY_PEER_DEPS: '1' });
   const nodeVersion = getNodeVersion(14);
   await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
@@ -90,7 +91,7 @@ it('should not include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on n
 
 it('should not include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node16 with corepack enabled', async () => {
   const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
-  const meta = {};
+  const meta: Meta = {};
   const spawnOpts = getTestSpawnOpts({
     VERCEL_NPM_LEGACY_PEER_DEPS: '1',
     ENABLE_EXPERIMENTAL_COREPACK: '1',
@@ -104,6 +105,67 @@ it('should not include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on n
   expect(args[2]).toEqual({
     cwd: fixture,
     prettyCommand: 'npm install',
+    stdio: 'inherit',
+    env: expect.any(Object),
+  });
+});
+
+it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+  const apiDir = path.join(fixture, 'api');
+
+  const run1 = await runNpmInstall(apiDir, [], undefined, meta);
+  expect(run1).toEqual(true);
+  expect(
+    (meta.runNpmInstallSet as Set<string>).has(
+      path.join(fixture, 'package.json')
+    )
+  ).toEqual(true);
+
+  const run2 = await runNpmInstall(apiDir, [], undefined, meta);
+  expect(run2).toEqual(false);
+
+  const run3 = await runNpmInstall(fixture, [], undefined, meta);
+  expect(run3).toEqual(false);
+
+  expect(spawnMock.mock.calls.length).toBe(1);
+  const args = spawnMock.mock.calls[0];
+  expect(args[0]).toEqual('yarn');
+  expect(args[1]).toEqual(['install']);
+  expect(args[2]).toEqual({
+    cwd: apiDir,
+    prettyCommand: 'yarn install',
+    stdio: 'inherit',
+    env: expect.any(Object),
+  });
+});
+
+it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)', async () => {
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
+  const apiDir = path.join(fixture, 'api');
+  const [run1, run2, run3] = await Promise.all([
+    runNpmInstall(apiDir, [], undefined, meta),
+    runNpmInstall(apiDir, [], undefined, meta),
+    runNpmInstall(fixture, [], undefined, meta),
+  ]);
+  expect(run1).toEqual(true);
+  expect(run2).toEqual(false);
+  expect(run3).toEqual(false);
+  expect(
+    (meta.runNpmInstallSet as Set<string>).has(
+      path.join(fixture, 'package.json')
+    )
+  ).toEqual(true);
+
+  expect(spawnMock.mock.calls.length).toBe(1);
+  const args = spawnMock.mock.calls[0];
+  expect(args[0]).toEqual('yarn');
+  expect(args[1]).toEqual(['install']);
+  expect(args[2]).toEqual({
+    cwd: apiDir,
+    prettyCommand: 'yarn install',
     stdio: 'inherit',
     env: expect.any(Object),
   });
