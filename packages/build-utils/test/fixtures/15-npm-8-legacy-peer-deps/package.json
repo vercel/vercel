@@ -1,6 +1,12 @@
 {
   "private": true,
   "scripts": {
-    "build": "node build.js"
+    "dev": "next dev",
+    "build": "next build"
+  },
+  "packageManager": "npm@8.6.0",
+  "dependencies": {
+    "next": "12.3.0",
+    "react": "16.8.0"
   }
 }
