@@ -635,6 +635,7 @@ export async function runPackageJsonScript(
 
   console.log(`Running "${opts.prettyCommand}"`);
   console.log(opts);
+  await new Promise<void>(resolve => setTimeout(() => resolve(), 3000));
   await spawnAsync(cliType, ['run', scriptName], opts);
 
   debug(`Script complete [${Date.now() - runScriptTime}ms]`);
