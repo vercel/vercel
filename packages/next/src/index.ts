@@ -1088,9 +1088,14 @@ export const build: BuildV2 = async ({
       'pages'
     );
 
+    let appDir: string | null = null;
     const appPathRoutesManifest = await readJSON(
       path.join(entryPath, outputDirectory, 'app-path-routes-manifest.json')
     ).catch(() => null);
+
+    if (appPathRoutesManifest) {
+      appDir = path.join(pagesDir, '../app');
+    }
 
     const { pages, appPaths: lambdaAppPaths } = await getServerlessPages({
       pagesDir,
@@ -2032,9 +2037,10 @@ export const build: BuildV2 = async ({
       console.timeEnd(allLambdasLabel);
     }
     const prerenderRoute = onPrerenderRoute({
+      appDir,
+      pagesDir,
       hasPages404,
       static404Page,
-      pagesDir,
       pageLambdaMap,
       lambdas,
       isServerMode,
@@ -2042,6 +2048,7 @@ export const build: BuildV2 = async ({
       entryDirectory,
       routesManifest,
       prerenderManifest,
+      appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
     });

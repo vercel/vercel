@@ -1660,10 +1660,12 @@ export const onPrerenderRouteInitial = (
 };
 
 type OnPrerenderRouteArgs = {
+  appDir: string | null;
   pagesDir: string;
   static404Page?: string;
   hasPages404: boolean;
   entryDirectory: string;
+  appPathRoutesManifest?: Record<string, string>;
   prerenderManifest: NextPrerenderedRoutes;
   isSharedLambdas: boolean;
   isServerMode: boolean;
@@ -1694,6 +1696,7 @@ export const onPrerenderRoute =
     }
   ) => {
     const {
+      appDir,
       pagesDir,
       hasPages404,
       static404Page,
@@ -1760,44 +1763,6 @@ export const onPrerenderRoute =
 
     const isNotFound = prerenderManifest.notFoundRoutes.includes(routeKey);
 
-    const htmlFsRef =
-      isBlocking || (isNotFound && !static404Page)
-        ? // Blocking pages do not have an HTML fallback
-          null
-        : new FileFsRef({
-            fsPath: path.join(
-              pagesDir,
-              isFallback
-                ? // Fallback pages have a special file.
-                  addLocaleOrDefault(
-                    prerenderManifest.fallbackRoutes[routeKey].fallback,
-                    routesManifest,
-                    locale
-                  )
-                : // Otherwise, the route itself should exist as a static HTML
-                  // file.
-                  `${
-                    isOmitted || isNotFound
-                      ? addLocaleOrDefault('/404', routesManifest, locale)
-                      : routeFileNoExt
-                  }.html`
-            ),
-          });
-    const jsonFsRef =
-      // JSON data does not exist for fallback or blocking pages
-      isFallback || isBlocking || (isNotFound && !static404Page)
-        ? null
-        : new FileFsRef({
-            fsPath: path.join(
-              pagesDir,
-              `${
-                isOmitted || isNotFound
-                  ? addLocaleOrDefault('/404.html', routesManifest, locale)
-                  : routeFileNoExt + '.json'
-              }`
-            ),
-          });
-
     let initialRevalidate: false | number;
     let srcRoute: string | null;
     let dataRoute: string;
@@ -1825,6 +1790,52 @@ export const onPrerenderRoute =
       const pr = prerenderManifest.staticRoutes[routeKey];
       ({ initialRevalidate, srcRoute, dataRoute } = pr);
     }
+
+    let isAppPathRoute = false;
+    // TODO: leverage manifest to determine app paths more accurately
+    if (appDir && srcRoute && dataRoute.endsWith('.rsc')) {
+      isAppPathRoute = true;
+    }
+
+    const htmlFsRef =
+      isBlocking || (isNotFound && !static404Page)
+        ? // Blocking pages do not have an HTML fallback
+          null
+        : new FileFsRef({
+            fsPath: path.join(
+              isAppPathRoute && appDir ? appDir : pagesDir,
+              isFallback
+                ? // Fallback pages have a special file.
+                  addLocaleOrDefault(
+                    prerenderManifest.fallbackRoutes[routeKey].fallback,
+                    routesManifest,
+                    locale
+                  )
+                : // Otherwise, the route itself should exist as a static HTML
+                  // file.
+                  `${
+                    isOmitted || isNotFound
+                      ? addLocaleOrDefault('/404', routesManifest, locale)
+                      : routeFileNoExt
+                  }.html`
+            ),
+          });
+    const jsonFsRef =
+      // JSON data does not exist for fallback or blocking pages
+      isFallback || isBlocking || (isNotFound && !static404Page)
+        ? null
+        : new FileFsRef({
+            fsPath: path.join(
+              isAppPathRoute && appDir ? appDir : pagesDir,
+              `${
+                isOmitted || isNotFound
+                  ? addLocaleOrDefault('/404.html', routesManifest, locale)
+                  : isAppPathRoute
+                  ? dataRoute
+                  : routeFileNoExt + '.json'
+              }`
+            ),
+          });
 
     const outputPathPage = normalizeIndexOutput(
       path.posix.join(entryDirectory, routeFileNoExt),

@@ -881,6 +881,7 @@ export async function serverBuild({
   }
 
   const prerenderRoute = onPrerenderRoute({
+    appDir,
     pagesDir,
     pageLambdaMap: {},
     lambdas,
@@ -888,6 +889,7 @@ export async function serverBuild({
     entryDirectory,
     routesManifest,
     prerenderManifest,
+    appPathRoutesManifest,
     isServerMode: true,
     isSharedLambdas: false,
     canUsePreviewMode,
