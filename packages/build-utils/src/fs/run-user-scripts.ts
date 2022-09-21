@@ -506,9 +506,13 @@ export async function runNpmInstall(
         '.npm',
         'eresolve-report.txt'
       );
-      if (isPotentiallyBrokenNpm && fs.existsSync(potentialErrorPath)) {
+      if (
+        isPotentiallyBrokenNpm &&
+        !commandArgs.includes('--legacy-peer-deps') &&
+        fs.existsSync(potentialErrorPath)
+      ) {
         console.warn(
-          'Warning: Retrying "Install Command" with `npm install --legacy-peer-deps` which may accept a potentially broken dependency and slower install times.'
+          'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.'
         );
         commandArgs.push('--legacy-peer-deps');
         await spawnAsync(cliType, commandArgs, opts);

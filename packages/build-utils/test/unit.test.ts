@@ -586,6 +586,6 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
   const nodeVersion = { major: nodeMajor } as any;
   await runNpmInstall(fixture, [], {}, {}, nodeVersion);
   expect(warningMessages).toStrictEqual([
-    'Warning: Retrying "Install Command" with `npm install --legacy-peer-deps` which may accept a potentially broken dependency and slower install times.',
+    'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.',
   ]);
 });
