@@ -7,8 +7,6 @@ const { FileFsRef } = require('@vercel/build-utils');
 jest.setTimeout(ms('6m'));
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  afterEach(() => fs.remove(path.join(__dirname, 'yarn.lock')));
-
   it('should normalize routes in build results output', async () => {
     const files = [
       'index.test.js',
@@ -24,7 +22,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       return filesMap;
     }, {});
 
-    const { output } = await build({
+    const { output, routes } = await build({
       config: {},
       entrypoint: 'package.json',
       files,
@@ -43,6 +41,17 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(path.resolve(output[page].fsPath)).toEqual(
         path.join(pagesDir, `${page}.html`)
       );
+    }
+
+    for (const route of routes) {
+      if (typeof route.src === 'string') {
+        // src must start with a forward slash (or caret if a regex)
+        expect(route.src).toMatch(/^[/^]/);
+      }
+      if (typeof route.dest === 'string') {
+        // dest can be `/400` or `/.*` or `$0`, but not start with \
+        expect(route.dest).not.toMatch(/^\\/);
+      }
     }
   });
 });
