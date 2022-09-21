@@ -1,5 +1,5 @@
 {
-  "name": "app-two",
+  "name": "my-second-app",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,6 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "cowsay": "^1.5.0"
+    "debug": "^4.3.2"
   }
 }
