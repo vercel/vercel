@@ -20,7 +20,6 @@ it('should clone env with Path', () => {
     )
   ).toEqual({
     foo: 'bar',
-    Path: 'baz',
     PATH: 'baz',
   });
 });
@@ -87,7 +86,6 @@ it('should overwrite PATH with last value', () => {
       }
     )
   ).toEqual({
-    Path: 'foo',
     PATH: undefined,
   });
 });
@@ -114,7 +112,6 @@ it('should handle process.env at any argument position', () => {
     )
   ).toEqual({
     foo: 'bar',
-    Path: 'baz',
     PATH: 'baz',
   });
 });

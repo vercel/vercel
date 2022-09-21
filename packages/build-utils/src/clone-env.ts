@@ -16,14 +16,19 @@ export function cloneEnv(...envs: (Env | undefined)[]): Env {
       return obj;
     }
 
-    // the system path is called `Path` on Windows and Node.js will
-    // automatically return the system path when accessing `PATH`,
-    // however we lose this proxied value when we destructure and
-    // thus we must explicitly copy it
-    if (hasOwnProperty.call(env, 'PATH') || hasOwnProperty.call(env, 'Path')) {
-      obj.PATH = env.PATH;
+    // mixin the env first
+    obj = Object.assign(obj, env);
+
+    if (hasOwnProperty.call(env, 'Path')) {
+      // the system path is called `Path` on Windows and Node.js will
+      // automatically return the system path when accessing `PATH`,
+      // however we lose this proxied value when we destructure and
+      // thus we must explicitly copy it, but we must also remove the
+      // `Path` property since we can't have both a `PATH` and `Path`
+      obj.PATH = obj.Path;
+      delete obj.Path;
     }
 
-    return Object.assign(obj, env);
+    return obj;
   }, {});
 }
