@@ -165,7 +165,11 @@ async function compileUserCode(
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
   try {
     const result = await esbuild.build({
+      // bundling behavior: use globals (like "browser") instead
+      // of "require" statements for core libraries (like "node")
       platform: 'browser',
+      // target syntax: only use syntax available on the current
+      // version of node
       target: NODE_VERSION_IDENTIFIER,
       sourcemap: 'inline',
       bundle: true,
