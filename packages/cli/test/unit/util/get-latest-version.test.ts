@@ -63,7 +63,7 @@ describe('get latest version', () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
       cacheDir,
-      getLatestInterval: 1,
+      updateCheckInterval: 1,
       pkg: {
         ...pkg,
         version: '999.0.0',
@@ -76,7 +76,7 @@ describe('get latest version', () => {
     // 2. call again and should recheck and still not find a new version
     latest = getLatestVersion({
       cacheDir,
-      getLatestInterval: 1,
+      updateCheckInterval: 1,
       pkg: {
         ...pkg,
         version: '999.0.0',
@@ -89,7 +89,7 @@ describe('get latest version', () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
       cacheDir,
-      getLatestInterval: 1,
+      updateCheckInterval: 1,
       pkg,
     });
     expect(latest).toEqual(undefined);
@@ -97,7 +97,7 @@ describe('get latest version', () => {
     // 2. immediately call again, but should hopefully still be undefined
     latest = getLatestVersion({
       cacheDir,
-      getLatestInterval: 1,
+      updateCheckInterval: 1,
       pkg,
     });
     expect(latest).toEqual(undefined);
@@ -107,7 +107,7 @@ describe('get latest version', () => {
     // 3. call again and should recheck and find a new version
     latest = getLatestVersion({
       cacheDir,
-      getLatestInterval: 1,
+      updateCheckInterval: 1,
       pkg,
     });
     expect(typeof latest).toBe('string');

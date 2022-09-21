@@ -9,7 +9,7 @@ import { spawn } from 'child_process';
 interface GetLatestVersionOptions {
   cacheDir?: string;
   distTag?: string;
-  getLatestInterval?: number;
+  updateCheckInterval?: number;
   output?: Output;
   pkg: PackageJson;
 }
@@ -23,7 +23,7 @@ interface PackageInfoCache {
 interface GetLatestWorkerPayload {
   cacheFile?: string;
   distTag?: string;
-  getLatestInterval?: number;
+  updateCheckInterval?: number;
   name?: string;
 }
 
@@ -40,7 +40,7 @@ export default function getLatestVersion({
   distTag = 'latest',
   output,
   pkg,
-  getLatestInterval,
+  updateCheckInterval,
 }: GetLatestVersionOptions): string | undefined {
   const cacheFile = resolvePath(
     cacheDir,
@@ -63,7 +63,7 @@ export default function getLatestVersion({
       {
         cacheFile,
         distTag,
-        getLatestInterval,
+        updateCheckInterval,
         name: pkg.name,
       },
       output

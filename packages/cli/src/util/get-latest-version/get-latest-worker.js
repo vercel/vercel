@@ -78,7 +78,7 @@ process.on('unhandledRejection', err => {
   process.exit(1);
 });
 
-const defaultGetLatestInterval = 1000 * 60 * 60 * 24 * 7; // 1 week
+const defaultUpdateCheckInterval = 1000 * 60 * 60 * 24 * 7; // 1 week
 
 // this timer will prevent this worker process from running longer than 10s
 const timer = setTimeout(() => {
@@ -93,7 +93,7 @@ process.once('message', async msg => {
   output.debug('Disconnecting from parent');
   process.disconnect();
 
-  const { cacheFile, distTag, name, getLatestInterval } = msg;
+  const { cacheFile, distTag, name, updateCheckInterval } = msg;
   const cacheFileParsed = path.parse(cacheFile);
   await fs.mkdirp(cacheFileParsed.dir);
 
@@ -141,7 +141,8 @@ process.once('message', async msg => {
 
     output.debug(`Writing cache file: ${cacheFile}`);
     await fs.outputJSON(cacheFile, {
-      expireAt: Date.now() + (getLatestInterval || defaultGetLatestInterval),
+      expireAt:
+        Date.now() + (updateCheckInterval || defaultUpdateCheckInterval),
       notified: false,
       version,
     });

@@ -149,6 +149,7 @@ const main = async () => {
       distTag: isCanary ? 'canary' : 'latest',
       output,
       pkg,
+      updateCheckInterval: 1000 * 60 * 60 * 24 * 7, // 1 week
     });
     if (latest) {
       console.log(
