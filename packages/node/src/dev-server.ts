@@ -84,6 +84,14 @@ import esbuild from 'esbuild';
 import fetch from 'node-fetch';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
 
+const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
+const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
+if (!NODE_VERSION_MAJOR) {
+  throw new Error(
+    `Unable to determine current node version: process.version=${process.version}`
+  );
+}
+
 function logError(error: Error) {
   console.error(error.message);
   if (error.stack) {
@@ -157,8 +165,8 @@ async function compileUserCode(
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
   try {
     const result = await esbuild.build({
-      platform: 'node',
-      target: 'node14',
+      platform: 'browser',
+      target: NODE_VERSION_IDENTIFIER,
       sourcemap: 'inline',
       bundle: true,
       plugins: [edgeWasmPlugin],
