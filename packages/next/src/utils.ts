@@ -1792,7 +1792,7 @@ export const onPrerenderRoute =
     }
 
     let isAppPathRoute = false;
-    // TODO: find another wat to determine if the current route is an app path route
+    // TODO: leverage manifest to determine app paths more accurately
     if (srcRoute && dataRoute.endsWith('.rsc')) {
       isAppPathRoute = true;
     }
@@ -1830,7 +1830,7 @@ export const onPrerenderRoute =
               `${
                 isOmitted || isNotFound
                   ? addLocaleOrDefault('/404.html', routesManifest, locale)
-                  : routeFileNoExt + '.json'
+                  : routeFileNoExt + (isAppPathRoute ? '.json' : '.rsc')
               }`
             ),
           });
