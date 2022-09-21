@@ -1,5 +1,5 @@
 import { parse } from 'url';
-import { ListenSpec } from './types';
+import type { ListenSpec } from './types';
 
 export function parseListen(str: string, defaultPort = 3000): ListenSpec {
   let port = Number(str);
@@ -17,7 +17,7 @@ export function parseListen(str: string, defaultPort = 3000): ListenSpec {
       // some special handling
       const cutStr = str.replace(/^pipe:/, '');
 
-      if (cutStr.slice(0, 4) !== '\\\\.\\') {
+      if (!cutStr.startsWith('\\\\.\\')) {
         throw new Error(`Invalid Windows named pipe endpoint: ${str}`);
       }
 
@@ -43,7 +43,7 @@ export function parseListen(str: string, defaultPort = 3000): ListenSpec {
         }
       }
       throw new Error(
-        `Unknown \`--listen\` scheme (protocol): ${url.protocol}`
+        `Unknown \`--listen\` scheme (protocol): ${url.protocol}`,
       );
   }
 }

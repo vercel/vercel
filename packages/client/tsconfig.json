@@ -1,7 +1,7 @@
 {
+  "extends": "@vercel/style-guide/typescript",
   "compilerOptions": {
     "declaration": true,
-    "esModuleInterop": true,
     "lib": ["ES2020"],
     "module": "commonjs",
     "moduleResolution": "node",
@@ -11,7 +11,6 @@
     "noImplicitAny": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "strict": true,
     "target": "ES2020"
   },
   "include": ["./src"]

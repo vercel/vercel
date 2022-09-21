@@ -1,8 +1,7 @@
-import ms from 'ms';
-import fs from 'fs-extra';
 import { isIP } from 'net';
 import { join } from 'path';
-
+import ms from 'ms';
+import fs from 'fs-extra';
 const {
   fetch,
   sleep,
@@ -42,8 +41,8 @@ test(
         await sleep(ms('1s'));
       }
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', async () => {
@@ -83,7 +82,7 @@ test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', asyn
         expect(body.trim()).toBe(rnd);
       }
     },
-    { skipDeploy: true }
+    { skipDeploy: true },
   );
 
   await tester();
@@ -100,7 +99,7 @@ test('[vercel dev] no build matches warning', async () => {
     dev.unref();
 
     dev.stderr.setEncoding('utf8');
-    await new Promise<void>(resolve => {
+    await new Promise<void>((resolve) => {
       dev.stderr.on('data', (str: string) => {
         if (str.includes('did not match any source files')) {
           resolve();
@@ -117,7 +116,7 @@ test(
   testFixtureStdio('handle-filesystem-missing', async (testPath: any) => {
     await testPath(200, '/', /hello/m);
     await testPath(404, '/favicon.txt');
-  })
+  }),
 );
 
 test('[vercel dev] render warning for empty cwd dir', async () => {
@@ -132,7 +131,7 @@ test('[vercel dev] render warning for empty cwd dir', async () => {
     // Monitor `stderr` for the warning
     dev.stderr.setEncoding('utf8');
     const msg = 'There are no files inside your deployment.';
-    await new Promise<void>(resolve => {
+    await new Promise<void>((resolve) => {
       dev.stderr.on('data', (str: string) => {
         if (str.includes(msg)) {
           resolve();
@@ -160,7 +159,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
   try {
     dev.unref();
 
-    let stderr: any = [];
+    const stderr: any = [];
     const start = Date.now();
 
     dev.stderr.on('data', (str: any) => stderr.push(str));
@@ -194,7 +193,7 @@ test(
   '[vercel dev] 25-nextjs-src-dir',
   testFixtureStdio('25-nextjs-src-dir', async (testPath: any) => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
-  })
+  }),
 );
 
 test(
@@ -205,8 +204,8 @@ test(
       await testPath(200, '/api/print', /build-and-runtime/m);
       await testPath(200, '/', /build-and-runtime/m);
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -215,14 +214,14 @@ test(
     await testPath(200, '/api/one', 'One');
     await testPath(404, '/api/two');
     await testPath(200, '/api/three', 'One');
-  })
+  }),
 );
 
 test(
   '[vercel dev] 30-next-image-optimization',
   testFixtureStdio('30-next-image-optimization', async (testPath: any) => {
     const toUrl = (url: any, w: any, q: any) => {
-      // @ts-ignore
+      // @ts-expect-error
       const query = new URLSearchParams();
       query.append('url', url);
       query.append('w', w);
@@ -241,14 +240,14 @@ test(
       toUrl('/test.jpg', 64, 100),
       null,
       expectHeader('image/webp'),
-      fetchOpts('image/webp')
+      fetchOpts('image/webp'),
     );
     await testPath(
       200,
       toUrl('/test.png', 64, 90),
       null,
       expectHeader('image/webp'),
-      fetchOpts('image/webp')
+      fetchOpts('image/webp'),
     );
     /*
      * Disabled gif in https://github.com/vercel/next.js/pull/22253
@@ -283,9 +282,9 @@ test(
       toUrl('/animated.gif', 64, 60),
       null,
       expectHeader('image/gif'),
-      fetchOpts('image/webp')
+      fetchOpts('image/webp'),
     );
-  })
+  }),
 );
 
 test(
@@ -297,14 +296,14 @@ test(
     await testPath(
       200,
       '/type-module-package-json/auto.js',
-      'mixed-modules:auto'
+      'mixed-modules:auto',
     );
     await testPath(
       200,
       '/type-module-package-json/nested/also.js',
-      'mixed-modules:also'
+      'mixed-modules:also',
     );
-  })
+  }),
 );
 
 test(
@@ -312,7 +311,7 @@ test(
   testFixtureStdio('41-tsconfig-jsx', async (testPath: any) => {
     await testPath(200, '/', /Solid App/m);
     await testPath(200, '/api/test', 'working');
-  })
+  }),
 );
 
 test(
@@ -320,7 +319,7 @@ test(
   testFixtureStdio('42-dynamic-esm-ext', async (testPath: any) => {
     await testPath(200, '/api/cjs/foo', 'found .js');
     await testPath(200, '/api/esm/foo', 'found .mjs');
-  })
+  }),
 );
 
 test(
@@ -332,11 +331,11 @@ test(
     await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
     await testPath(200, `/api/headers`, (body: any, res: any) => {
-      // @ts-ignore
+      // @ts-expect-error
       const { host } = new URL(res.url);
       expect(body).toBe(host);
     });
-  })
+  }),
 );
 
 test(
@@ -344,7 +343,7 @@ test(
   testFixtureStdio('custom-runtime', async (testPath: any) => {
     await testPath(200, `/api/user`, /Hello, from Bash!/m);
     await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
-  })
+  }),
 );
 
 test(
@@ -352,7 +351,7 @@ test(
   testFixtureStdio('nested-tsconfig', async (testPath: any) => {
     await testPath(200, `/`, /Nested tsconfig.json test page/);
     await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
-  })
+  }),
 );
 
 test(
@@ -362,14 +361,14 @@ test(
     await testPath(
       200,
       `/api`,
-      'Force "module: commonjs" JavaScript with ES Modules API endpoint'
+      'Force "module: commonjs" JavaScript with ES Modules API endpoint',
     );
     await testPath(
       200,
       `/api/ts`,
-      'Force "module: commonjs" TypeScript API endpoint'
+      'Force "module: commonjs" TypeScript API endpoint',
     );
-  })
+  }),
 );
 
 test(
@@ -377,7 +376,7 @@ test(
   testFixtureStdio('index-html-priority', async (testPath: any) => {
     await testPath(200, '/', 'This is index.html');
     await testPath(200, '/index.css', 'This is index.css');
-  })
+  }),
 );
 
 test(
@@ -390,7 +389,7 @@ test(
     await testPath(200, '/api/another.go', 'This is another page');
     await testPath(200, `/api/foo`, 'Req Path: /api/foo');
     await testPath(200, `/api/bar`, 'Req Path: /api/bar');
-  })
+  }),
 );
 
 test(
@@ -400,11 +399,11 @@ test(
     await testPath(
       200,
       `/api/array`,
-      '{"months":[1,2,3,4,5,6,7,8,9,10,11,12]}'
+      '{"months":[1,2,3,4,5,6,7,8,9,10,11,12]}',
     );
 
     await testPath(200, `/api/dump`, (body: any, res: any, isDev: any) => {
-      // @ts-ignore
+      // @ts-expect-error
       const { host } = new URL(res.url);
       const { env, headers } = JSON.parse(body);
 
@@ -423,7 +422,7 @@ test(
         expect(env.VERCEL_REGION).toBe('dev1');
       }
     });
-  })
+  }),
 );
 
 test(
@@ -431,7 +430,7 @@ test(
   testFixtureStdio('missing-src-property', async (testPath: any) => {
     await testPath(200, '/', /hello:index.txt/m);
     await testPath(404, '/i-do-not-exist');
-  })
+  }),
 );
 
 test(
@@ -439,14 +438,14 @@ test(
   testFixtureStdio('middleware-response', async (testPath: any) => {
     await testPath(200, '/', 'hi from middleware');
     await testPath(200, '/another', 'hi from middleware');
-  })
+  }),
 );
 
 test(
   '[vercel dev] Middleware that has no response',
   testFixtureStdio('middleware-no-response', async (testPath: any) => {
     await testPath(200, '/api/hello', 'hello from a serverless function');
-  })
+  }),
 );
 
 test(
@@ -459,7 +458,7 @@ test(
     await testPath(200, '/foo', '<h1>Another</h1>');
     // different origin
     await testPath(200, '?to=http://example.com', /Example Domain/);
-  })
+  }),
 );
 
 test('[vercel dev] Middleware rewrites with same origin', async () => {
@@ -471,14 +470,14 @@ test('[vercel dev] Middleware rewrites with same origin', async () => {
     await readyResolver;
 
     let response = await fetch(
-      `http://localhost:${port}?to=http://localhost:${port}`
+      `http://localhost:${port}?to=http://localhost:${port}`,
     );
     validateResponseHeaders(response);
     expect(response.status).toBe(200);
     expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
 
     response = await fetch(
-      `http://localhost:${port}?to=http://127.0.0.1:${port}`
+      `http://localhost:${port}?to=http://127.0.0.1:${port}`,
     );
     validateResponseHeaders(response);
     expect(response.status).toBe(200);
@@ -500,14 +499,14 @@ test(
     await testPath(
       200,
       '/another?foo=bar',
-      '{"url":"/another?from-middleware=true"}'
+      '{"url":"/another?from-middleware=true"}',
     );
     await testPath(
       200,
       '/api/fn?foo=bar',
-      '{"url":"/api/fn?from-middleware=true"}'
+      '{"url":"/api/fn?from-middleware=true"}',
     );
-  })
+  }),
 );
 
 test(
@@ -515,7 +514,7 @@ test(
   testFixtureStdio('middleware-rewrite-404', async (testPath: any) => {
     await testPath(404, '/api/edge', /NOT_FOUND/);
     await testPath(404, '/index.html', /NOT_FOUND/);
-  })
+  }),
 );
 
 test(
@@ -530,28 +529,28 @@ test(
     await testPath(302, '/?foo=bar', null, {
       location: 'https://vercel.com/?foo=bar',
     });
-  })
+  }),
 );
 
 test(
   '[vercel dev] Middleware with error in function handler',
   testFixtureStdio('middleware-error-in-handler', async (testPath: any) => {
     await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
-  })
+  }),
 );
 
 test(
   '[vercel dev] Middleware with error at init',
   testFixtureStdio('middleware-error-at-init', async (testPath: any) => {
     await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
-  })
+  }),
 );
 
 test(
   '[vercel dev] Middleware with an explicit 500 response',
   testFixtureStdio('middleware-500-response', async (testPath: any) => {
     await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
-  })
+  }),
 );
 
 test(
@@ -562,19 +561,19 @@ test(
     await testPath(
       200,
       '/about/page',
-      '{"pathname":"/about/page","search":"","fromMiddleware":true}'
+      '{"pathname":"/about/page","search":"","fromMiddleware":true}',
     );
     await testPath(
       200,
       '/dashboard/home',
-      '{"pathname":"/dashboard/home","search":"","fromMiddleware":true}'
+      '{"pathname":"/dashboard/home","search":"","fromMiddleware":true}',
     );
     await testPath(
       200,
       '/dashboard/home?a=b',
-      '{"pathname":"/dashboard/home","search":"?a=b","fromMiddleware":true}'
+      '{"pathname":"/dashboard/home","search":"?a=b","fromMiddleware":true}',
     );
-  })
+  }),
 );
 
 test(
@@ -588,7 +587,7 @@ test(
 
       try {
         const originalResponse = await fetch(
-          `http://localhost:${port}/index.txt`
+          `http://localhost:${port}/index.txt`,
         );
         validateResponseHeaders(originalResponse);
         const body = await originalResponse.text();
@@ -600,7 +599,7 @@ test(
         });
 
         const overriddenResponse = await fetch(
-          `http://localhost:${port}/index.txt`
+          `http://localhost:${port}/index.txt`,
         );
         validateResponseHeaders(overriddenResponse);
         const body2 = await overriddenResponse.text();
@@ -610,6 +609,6 @@ test(
         await fs.writeJSON(vercelJsonPath, originalVercelJson);
       }
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );

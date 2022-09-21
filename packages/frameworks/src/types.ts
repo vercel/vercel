@@ -1,4 +1,4 @@
-import { Rewrite, Route } from '@vercel/routing-utils';
+import type { Rewrite, Route } from '@vercel/routing-utils';
 
 export interface FrameworkDetectionItem {
   /**

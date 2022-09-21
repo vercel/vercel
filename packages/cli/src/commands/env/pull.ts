@@ -1,31 +1,31 @@
-import chalk from 'chalk';
-import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
-import { Project, ProjectEnvTarget } from '../../types';
-import Client from '../../util/client';
+import { outputFile } from 'fs-extra';
+import chalk from 'chalk';
 import exposeSystemEnvs from '../../util/dev/expose-system-envs';
 import { emoji, prependEmoji } from '../../util/emoji';
 import getSystemEnvValues from '../../util/env/get-system-env-values';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import confirm from '../../util/input/confirm';
-import { Output } from '../../util/output';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { EnvRecordsSource } from '../../util/env/get-env-records';
 import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
 import { isErrnoException } from '../../util/is-error';
+import type { EnvRecordsSource } from '../../util/env/get-env-records';
+import type { Output } from '../../util/output';
+import type { Project, ProjectEnvTarget } from '../../types';
+import type Client from '../../util/client';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
-type Options = {
+interface Options {
   '--debug': boolean;
   '--yes': boolean;
-};
+}
 
 function readHeadSync(path: string, length: number) {
   const buffer = Buffer.alloc(length);
@@ -56,11 +56,13 @@ export default async function pull(
   args: string[],
   output: Output,
   cwd: string,
-  source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
+  source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>,
 ) {
   if (args.length > 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
+      `Invalid number of arguments. Usage: ${getCommandName(
+        `env pull <file>`,
+      )}`,
     );
     return 1;
   }
@@ -81,7 +83,7 @@ export default async function pull(
     !(await confirm(
       client,
       `Found existing file ${param(filename)}. Do you want to overwrite?`,
-      false
+      false,
     ))
   ) {
     output.log('Canceled');
@@ -90,8 +92,8 @@ export default async function pull(
 
   output.log(
     `Downloading \`${chalk.cyan(
-      environment
-    )}\` Environment Variables for Project ${chalk.bold(project.name)}`
+      environment,
+    )}\` Environment Variables for Project ${chalk.bold(project.name)}`,
   );
 
   const pullStamp = stamp();
@@ -109,7 +111,7 @@ export default async function pull(
     systemEnvValues,
     project.autoExposeSystemEnvs,
     undefined,
-    environment
+    environment,
   );
 
   let deltaString = '';
@@ -126,17 +128,17 @@ export default async function pull(
     }
   }
 
-  const contents =
+  const contents = `${
     CONTENTS_PREFIX +
     Object.entries(records)
       .map(([key, value]) => `${key}="${escapeValue(value)}"`)
-      .join('\n') +
-    '\n';
+      .join('\n')
+  }\n`;
 
   await outputFile(fullPath, contents, 'utf8');
 
   if (deltaString) {
-    output.print('\n' + deltaString);
+    output.print(`\n${deltaString}`);
   } else if (oldEnv && exists) {
     output.log('No changes found.');
   }
@@ -144,10 +146,10 @@ export default async function pull(
   output.print(
     `${prependEmoji(
       `${exists ? 'Updated' : 'Created'} ${chalk.bold(
-        filename
+        filename,
       )} file ${chalk.gray(pullStamp())}`,
-      emoji('success')
-    )}\n`
+      emoji('success'),
+    )}\n`,
   );
 
   return 0;

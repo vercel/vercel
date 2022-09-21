@@ -2,7 +2,7 @@ import path from 'path';
 import { existsSync } from 'fs';
 import { InvalidLocalConfig } from '../errors';
 import { ConflictingConfigFiles } from '../errors-ts';
-import getArgs from '../../util/get-args';
+import getArgs from '../get-args';
 
 export default function getLocalPathConfig(prefix: string) {
   let customPath: string | undefined;

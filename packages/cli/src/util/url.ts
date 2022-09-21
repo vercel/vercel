@@ -4,7 +4,7 @@ export const maybeURL = (id: string): boolean =>
 
 export const normalizeURL = (u: string): string => {
   // Normalize URL by removing slash from the end
-  if (u.slice(-1) === '/') {
+  if (u.endsWith('/')) {
     u = u.slice(0, -1);
   }
 

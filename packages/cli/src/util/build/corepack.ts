@@ -1,9 +1,10 @@
 import { delimiter, join } from 'path';
-import { PackageJson, spawnAsync } from '@vercel/build-utils';
+import { spawnAsync } from '@vercel/build-utils';
 import fs from 'fs-extra';
 import { CantParseJSONFile } from '../errors-ts';
 import { VERCEL_DIR } from '../projects/link';
 import readJSONFile from '../read-json-file';
+import type { PackageJson } from '@vercel/build-utils';
 
 export async function initCorepack({
   repoRootPath,
@@ -16,19 +17,19 @@ export async function initCorepack({
     return null;
   }
   const pkg = await readJSONFile<PackageJson>(
-    join(repoRootPath, 'package.json')
+    join(repoRootPath, 'package.json'),
   );
   if (pkg instanceof CantParseJSONFile) {
     console.warn(
-      'Warning: Could not enable corepack because package.json is invalid JSON'
+      'Warning: Could not enable corepack because package.json is invalid JSON',
     );
   } else if (!pkg?.packageManager) {
     console.warn(
-      'Warning: Could not enable corepack because package.json is missing "packageManager" property'
+      'Warning: Could not enable corepack because package.json is missing "packageManager" property',
     );
   } else {
     console.log(
-      `Detected ENABLE_EXPERIMENTAL_COREPACK=1 and "${pkg.packageManager}" in package.json`
+      `Detected ENABLE_EXPERIMENTAL_COREPACK=1 and "${pkg.packageManager}" in package.json`,
     );
     const corepackRootDir = join(repoRootPath, VERCEL_DIR, 'cache', 'corepack');
     const corepackHomeDir = join(corepackRootDir, 'home');
@@ -50,7 +51,7 @@ export async function initCorepack({
       ['enable', pkgManagerName, '--install-directory', corepackShimDir],
       {
         prettyCommand: `corepack enable ${pkgManagerName}`,
-      }
+      },
     );
     return corepackShimDir;
   }
@@ -64,7 +65,7 @@ export function cleanupCorepack(corepackShimDir: string) {
   if (process.env.PATH) {
     process.env.PATH = process.env.PATH.replace(
       `${corepackShimDir}${delimiter}`,
-      ''
+      '',
     );
   }
 }

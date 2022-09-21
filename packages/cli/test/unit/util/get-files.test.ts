@@ -1,5 +1,5 @@
 import { join, sep } from 'path';
-// @ts-ignore - Missing types for "alpha-sort"
+// @ts-expect-error - Missing types for "alpha-sort"
 import { asc as alpha } from 'alpha-sort';
 import { staticFiles as getStaticFiles_ } from '../../../src/util/get-files';
 import { client } from '../../mocks/client';
@@ -19,7 +19,7 @@ const normalizeWindowsPaths = (files: string[]) => {
     // "D:/a/vercel/vercel/packages/cli/test/fixtures/unit/"
     // but other OS's are relative path so we normalize here.
     const prefix = 'packages/cli/test/fixtures/unit/';
-    return files.map(f => {
+    return files.map((f) => {
       const normal = f.replace(/\\/g, '/');
       const i = normal.indexOf(prefix);
       return normal.slice(i + prefix.length);

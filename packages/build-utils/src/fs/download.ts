@@ -1,13 +1,11 @@
 import path from 'path';
+import { remove, mkdirp, readlink, symlink } from 'fs-extra';
 import debug from '../debug';
 import FileFsRef from '../file-fs-ref';
-import { File, Files, Meta } from '../types';
-import { remove, mkdirp, readlink, symlink } from 'fs-extra';
 import streamToBuffer from './stream-to-buffer';
+import type { File, Files, Meta } from '../types';
 
-export interface DownloadedFiles {
-  [filePath: string]: FileFsRef;
-}
+export type DownloadedFiles = Record<string, FileFsRef>;
 
 const S_IFMT = 61440; /* 0170000 type of file */
 const S_IFLNK = 40960; /* 0120000 symbolic link */
@@ -18,7 +16,7 @@ export function isSymbolicLink(mode: number): boolean {
 
 async function prepareSymlinkTarget(
   file: File,
-  fsPath: string
+  fsPath: string,
 ): Promise<string> {
   const mkdirPromise = mkdirp(path.dirname(fsPath));
   if (file.type === 'FileFsRef') {
@@ -36,13 +34,13 @@ async function prepareSymlinkTarget(
   }
 
   throw new Error(
-    `file.type "${(file as any).type}" not supported for symlink`
+    `file.type "${(file as any).type}" not supported for symlink`,
   );
 }
 
 export async function downloadFile(
   file: File,
-  fsPath: string
+  fsPath: string,
 ): Promise<FileFsRef> {
   const { mode } = file;
 
@@ -68,7 +66,7 @@ async function removeFile(basePath: string, fileMatched: string) {
 export default async function download(
   files: Files,
   basePath: string,
-  meta?: Meta
+  meta?: Meta,
 ): Promise<DownloadedFiles> {
   const {
     isDev = false,
@@ -90,7 +88,7 @@ export default async function download(
   const filenames = Object.keys(files);
 
   await Promise.all(
-    filenames.map(async name => {
+    filenames.map(async (name) => {
       // If the file does not exist anymore, remove it.
       if (Array.isArray(filesRemoved) && filesRemoved.includes(name)) {
         await removeFile(basePath, name);
@@ -112,17 +110,19 @@ export default async function download(
         const parent = files[dir];
         if (parent && isSymbolicLink(parent.mode)) {
           console.warn(
-            `Warning: file "${name}" is within a symlinked directory "${dir}" and will be ignored`
+            `Warning: file "${name}" is within a symlinked directory "${dir}" and will be ignored`,
           );
           return;
         }
       }
 
       const file = files[name];
+      if (!file) return;
+
       const fsPath = path.join(basePath, name);
 
       files2[name] = await downloadFile(file, fsPath);
-    })
+    }),
   );
 
   const duration = Date.now() - start;

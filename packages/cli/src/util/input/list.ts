@@ -1,7 +1,7 @@
 import inquirer from 'inquirer';
 import stripAnsi from 'strip-ansi';
-import Client from '../client';
 import eraseLines from '../output/erase-lines';
+import type Client from '../client';
 
 interface ListEntry {
   name: string;
@@ -40,7 +40,7 @@ export default async function list(
   client: Client,
   {
     message = 'the question',
-    // eslint-disable-line no-unused-vars
+
     choices: _choices = [
       {
         name: 'something\ndescription\ndetails\netc',
@@ -52,7 +52,7 @@ export default async function list(
     separator = false, // Puts a blank separator between each choice
     cancel = 'end', // Whether the `cancel` option will be at the `start` or the `end`,
     eraseFinalAnswer = false, // If true, the line with the final answer that inquirer prints will be erased before returning
-  }: ListOptions
+  }: ListOptions,
 ): Promise<string> {
   require('./patch-inquirer-legacy');
 
@@ -69,7 +69,7 @@ export default async function list(
     }
   }
 
-  const choices = _choices.map(choice => {
+  const choices = _choices.map((choice) => {
     if (choice instanceof inquirer.Separator) {
       return choice;
     }
@@ -119,7 +119,7 @@ export default async function list(
     pageSize,
   });
 
-  if (eraseFinalAnswer === true) {
+  if (eraseFinalAnswer) {
     process.stdout.write(eraseLines(2));
   }
 

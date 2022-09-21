@@ -1,17 +1,17 @@
 import { stringify } from 'querystring';
-import { Deployment } from '@vercel/client';
-import Client from './client';
+import type { Deployment } from '@vercel/client';
+import type Client from './client';
 
 export async function getDeployment(
   client: Client,
-  hostOrId: string
+  hostOrId: string,
 ): Promise<Deployment> {
   let url = `/v13/deployments`;
 
   if (hostOrId.includes('.')) {
     let host = hostOrId.replace(/^https:\/\//i, '');
 
-    if (host.slice(-1) === '/') {
+    if (host.endsWith('/')) {
       host = host.slice(0, -1);
     }
 

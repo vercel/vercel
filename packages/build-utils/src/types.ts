@@ -5,9 +5,7 @@ import type { Lambda } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
 
-export interface Env {
-  [name: string]: string | undefined;
-}
+export type Env = Record<string, string | undefined>;
 
 export type File = FileRef | FileFsRef | FileBlob;
 export interface FileBase {
@@ -18,9 +16,7 @@ export interface FileBase {
   toStreamAsync?: () => Promise<NodeJS.ReadableStream>;
 }
 
-export interface Files {
-  [filePath: string]: File;
-}
+export type Files = Record<string, File>;
 
 export interface Config {
   maxLambdaSize?: string;
@@ -32,7 +28,7 @@ export interface Config {
   rust?: string;
   debug?: boolean;
   zeroConfig?: boolean;
-  import?: { [key: string]: string };
+  import?: Record<string, string>;
   functions?: BuilderFunctions;
   projectSettings?: ProjectSettings;
   outputDirectory?: string;
@@ -150,9 +146,7 @@ export interface ShouldServeOptions {
   /**
    * All source files of the project
    */
-  files: {
-    [path: string]: FileFsRef;
-  };
+  files: Record<string, FileFsRef>;
 
   /**
    * A writable temporary directory where you are encouraged to perform your
@@ -210,9 +204,7 @@ export namespace PackageJson {
   /**
    * A map of exposed bin commands
    */
-  export interface BinMap {
-    [commandName: string]: string;
-  }
+  export type BinMap = Record<string, string>;
 
   /**
    * A bugs link
@@ -230,9 +222,7 @@ export namespace PackageJson {
   /**
    * A map of dependencies
    */
-  export interface DependencyMap {
-    [dependencyName: string]: string;
-  }
+  export type DependencyMap = Record<string, string>;
 
   /**
    * CommonJS package structure
@@ -262,9 +252,7 @@ export namespace PackageJson {
     url: string;
   }
 
-  export interface ScriptsMap {
-    [scriptName: string]: string;
-  }
+  export type ScriptsMap = Record<string, string>;
 }
 
 export interface PackageJson {
@@ -312,15 +300,16 @@ export interface Builder {
   config?: Config;
 }
 
-export interface BuilderFunctions {
-  [key: string]: {
+export type BuilderFunctions = Record<
+  string,
+  {
     memory?: number;
     maxDuration?: number;
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
-  };
-}
+  }
+>;
 
 export interface ProjectSettings {
   framework?: string | null;
@@ -355,7 +344,7 @@ export interface BuilderV3 {
 
 type ImageFormat = 'image/avif' | 'image/webp';
 
-export type RemotePattern = {
+export interface RemotePattern {
   /**
    * Must be `http` or `https`.
    */
@@ -380,7 +369,7 @@ export type RemotePattern = {
    * Double `**` matches any number of path segments.
    */
   pathname?: string;
-};
+}
 
 export interface Images {
   domains: string[];
@@ -418,13 +407,11 @@ export interface BuildResultV2Typical {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   images?: Images;
-  output: {
-    [key: string]: File | Lambda | Prerender | EdgeFunction;
-  };
-  wildcard?: Array<{
+  output: Record<string, File | Lambda | Prerender | EdgeFunction>;
+  wildcard?: {
     domain: string;
     value: string;
-  }>;
+  }[];
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
@@ -439,8 +426,8 @@ export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
 export type ShouldServe = (
-  options: ShouldServeOptions
+  options: ShouldServeOptions,
 ) => boolean | Promise<boolean>;
 export type StartDevServer = (
-  options: StartDevServerOptions
+  options: StartDevServerOptions,
 ) => Promise<StartDevServerResult>;

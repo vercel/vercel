@@ -1,23 +1,23 @@
-import { Deployment } from '../../types';
-import { Output } from '../output';
-import Client from '../client';
-import createAlias from './create-alias';
 import isDomainExternal from '../domains/is-domain-external';
 import setupDomain from '../domains/setup-domain';
+import createAlias from './create-alias';
+import type { Deployment } from '../../types';
+import type { Output } from '../output';
+import type Client from '../client';
 
 export default async function assignAlias(
   output: Output,
   client: Client,
   deployment: Deployment,
   alias: string,
-  contextName: string
+  contextName: string,
 ) {
   let externalDomain = false;
 
   // Check if the alias is a custom domain, because then
   // we have to configure the DNS records and certificate
   if (
-    alias.indexOf('.') !== -1 &&
+    alias.includes('.') &&
     !alias.endsWith('.now.sh') &&
     !alias.endsWith('.vercel.app')
   ) {
@@ -38,7 +38,7 @@ export default async function assignAlias(
     contextName,
     deployment,
     alias,
-    externalDomain
+    externalDomain,
   );
 
   return record;

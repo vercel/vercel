@@ -1,15 +1,15 @@
-import { Deployment } from '../../types';
-import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
+import type { Deployment } from '../../types';
+import type { Output } from '../output';
+import type Client from '../client';
 
-export type AliasRecord = {
+export interface AliasRecord {
   uid: string;
   alias: string;
   created?: string;
   oldDeploymentId?: string;
-};
+}
 
 export default async function createAlias(
   output: Output,
@@ -17,14 +17,14 @@ export default async function createAlias(
   contextName: string,
   deployment: Deployment,
   alias: string,
-  externalDomain: boolean
+  externalDomain: boolean,
 ) {
   output.spinner(`Creating alias`);
   const result = await performCreateAlias(
     client,
     contextName,
     deployment,
-    alias
+    alias,
   );
   output.stopSpinner();
 
@@ -34,7 +34,7 @@ export default async function createAlias(
       client,
       contextName,
       alias,
-      !externalDomain
+      !externalDomain,
     );
     if (cert instanceof Error) {
       return cert;
@@ -45,7 +45,7 @@ export default async function createAlias(
       client,
       contextName,
       deployment,
-      alias
+      alias,
     );
     output.stopSpinner();
     return secondTry;
@@ -58,7 +58,7 @@ async function performCreateAlias(
   client: Client,
   contextName: string,
   deployment: Deployment,
-  alias: string
+  alias: string,
 ) {
   try {
     return await client.fetch<AliasRecord>(
@@ -66,7 +66,7 @@ async function performCreateAlias(
       {
         method: 'POST',
         body: { alias },
-      }
+      },
     );
   } catch (err: unknown) {
     if (ERRORS.isAPIError(err)) {

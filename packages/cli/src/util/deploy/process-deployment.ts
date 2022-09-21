@@ -1,29 +1,29 @@
 import bytes from 'bytes';
 import chalk from 'chalk';
-import {
-  ArchiveFormat,
-  createDeployment,
-  DeploymentOptions,
-  VercelClientOptions,
-} from '@vercel/client';
-import { Output } from '../output';
+import { createDeployment } from '@vercel/client';
 import { progress } from '../output/progress';
-import Now from '../../util';
-import { Org } from '../../types';
 import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';
 import { prependEmoji, emoji } from '../emoji';
+import type { Org } from '../../types';
+import type Now from '..';
+import type { Output } from '../output';
+import type {
+  ArchiveFormat,
+  DeploymentOptions,
+  VercelClientOptions,
+} from '@vercel/client';
 
 function printInspectUrl(
   output: Output,
   inspectorUrl: string,
-  deployStamp: () => string
+  deployStamp: () => string,
 ) {
   output.print(
-    prependEmoji(
+    `${prependEmoji(
       `Inspect: ${chalk.bold(inspectorUrl)} ${deployStamp()}`,
-      emoji('inspect')
-    ) + `\n`
+      emoji('inspect'),
+    )}\n`,
   );
 }
 
@@ -54,7 +54,7 @@ export default async function processDeployment({
   cwd?: string;
   rootDirectory?: string;
 }) {
-  let {
+  const {
     now,
     output,
     paths,
@@ -131,20 +131,20 @@ export default async function processDeployment({
               });
               output.spinner(
                 `Uploading ${chalk.reset(
-                  `[${bar}] (${uploadedHuman}/${totalSizeHuman})`
+                  `[${bar}] (${uploadedHuman}/${totalSizeHuman})`,
                 )}`,
-                0
+                0,
               );
             }
-          })
+          }),
         );
       }
 
       if (event.type === 'file-uploaded') {
         debug(
           `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
-            event.payload.file.data.length
-          )})`
+            event.payload.file.data.length,
+          )})`,
         );
       }
 
@@ -157,7 +157,7 @@ export default async function processDeployment({
             projectId: event.payload.projectId,
           },
           projectName,
-          org.slug
+          org.slug,
         );
 
         now.url = event.payload.url;
@@ -172,7 +172,7 @@ export default async function processDeployment({
 
         output.spinner(
           event.payload.readyState === 'QUEUED' ? 'Queued' : 'Building',
-          0
+          0,
         );
       }
 

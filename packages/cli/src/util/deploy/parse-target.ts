@@ -1,6 +1,6 @@
-import { Output } from '../../util/output';
-import param from '../../util/output/param';
-import code from '../../util/output/code';
+import param from '../output/param';
+import code from '../output/code';
+import type { Output } from '../output';
 
 /**
  * Parses the environment target from the `--target` and `--prod` flags.
@@ -8,7 +8,7 @@ import code from '../../util/output/code';
 export default function parseTarget(
   output: Output,
   targetArg?: string,
-  prodArg?: boolean
+  prodArg?: boolean,
 ): string | number | undefined {
   if (targetArg) {
     const deprecatedTarget = targetArg;
@@ -16,15 +16,15 @@ export default function parseTarget(
     if (!['staging', 'production'].includes(deprecatedTarget)) {
       output.error(
         `The specified ${param('--target')} ${code(
-          deprecatedTarget
-        )} is not valid`
+          deprecatedTarget,
+        )} is not valid`,
       );
       return 1;
     }
 
     if (deprecatedTarget === 'production') {
       output.warn(
-        'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
+        'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)',
       );
     }
 

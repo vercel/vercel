@@ -1,8 +1,8 @@
 import { URL } from 'url';
 import chance from 'chance';
-import { Deployment } from '@vercel/client';
 import { client } from './client';
-import { Build, User } from '../../src/types';
+import type { Build, User } from '../../src/types';
+import type { Deployment } from '@vercel/client';
 
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
@@ -42,7 +42,7 @@ export function useDeployment({
       username: creator.username,
     },
     readyState: state,
-    state: state,
+    state,
     ready: createdAt + 30000,
     env: {},
     build: { env: {} },
@@ -109,7 +109,7 @@ beforeEach(() => {
         res.statusCode = 400;
         return res.json({ error: { code: 'bad_request' } });
       }
-      deployment = Array.from(deployments.values()).find(d => {
+      deployment = Array.from(deployments.values()).find((d) => {
         return d.url === url;
       });
     } else {

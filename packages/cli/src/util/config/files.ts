@@ -1,16 +1,16 @@
 import { join, basename } from 'path';
-import loadJSON from 'load-json-file';
-import writeJSON from 'write-json-file';
 import { existsSync } from 'fs';
+import writeJSON from 'write-json-file';
+import loadJSON from 'load-json-file';
 import { fileNameSymbol } from '@vercel/client';
-import getGlobalPathConfig from './global-path';
-import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
 import error from '../output/error';
 import highlight from '../output/highlight';
-import { VercelConfig } from '../dev/types';
-import { AuthConfig, GlobalConfig } from '../../types';
 import { isErrnoException, isError } from '../is-error';
+import getLocalPathConfig from './local-path';
+import getGlobalPathConfig from './global-path';
+import type { AuthConfig, GlobalConfig } from '../../types';
+import type { VercelConfig } from '../dev/types';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
@@ -32,18 +32,18 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
         console.error(
           error(
             `Not able to create ${highlight(
-              CONFIG_FILE_PATH
-            )} (operation not permitted).`
-          )
+              CONFIG_FILE_PATH,
+            )} (operation not permitted).`,
+          ),
         );
         process.exit(1);
       } else if (err.code === 'EBADF') {
         console.error(
           error(
             `Not able to create ${highlight(
-              CONFIG_FILE_PATH
-            )} (bad file descriptor).`
-          )
+              CONFIG_FILE_PATH,
+            )} (bad file descriptor).`,
+          ),
         );
         process.exit(1);
       }
@@ -74,18 +74,18 @@ export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
         console.error(
           error(
             `Not able to create ${highlight(
-              AUTH_CONFIG_FILE_PATH
-            )} (operation not permitted).`
-          )
+              AUTH_CONFIG_FILE_PATH,
+            )} (operation not permitted).`,
+          ),
         );
         process.exit(1);
       } else if (err.code === 'EBADF') {
         console.error(
           error(
             `Not able to create ${highlight(
-              AUTH_CONFIG_FILE_PATH
-            )} (bad file descriptor).`
-          )
+              AUTH_CONFIG_FILE_PATH,
+            )} (bad file descriptor).`,
+          ),
         );
         process.exit(1);
       }
@@ -104,9 +104,9 @@ export function getAuthConfigFilePath() {
 }
 
 export function readLocalConfig(
-  prefix: string = process.cwd()
+  prefix: string = process.cwd(),
 ): VercelConfig | undefined {
-  let config: VercelConfig | undefined = undefined;
+  let config: VercelConfig | undefined;
   let target = '';
 
   try {

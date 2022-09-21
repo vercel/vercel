@@ -2,19 +2,19 @@ import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from 'text-table';
-import { Cert } from '../../types';
 import * as ERRORS from '../../util/errors-ts';
-import { Output } from '../../util/output';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import { getCustomCertsForDomain } from '../../util/certs/get-custom-certs-for-domain';
-import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
+import type Client from '../../util/client';
+import type { Output } from '../../util/output';
+import type { Cert } from '../../types';
 
-type Options = {};
+interface Options {}
 
 async function rm(client: Client, opts: Options, args: string[]) {
   const rmStamp = stamp();
@@ -24,8 +24,8 @@ async function rm(client: Client, opts: Options, args: string[]) {
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('certs rm <id or cn>')}`
-      )}`
+        `${getCommandName('certs rm <id or cn>')}`,
+      )}`,
     );
     return 1;
   }
@@ -34,7 +34,7 @@ async function rm(client: Client, opts: Options, args: string[]) {
   const certs = await getCertsToDelete(output, client, contextName, id);
   if (certs instanceof ERRORS.CertsPermissionDenied) {
     output.error(
-      `You don't have access to ${param(id)}'s certs under ${contextName}.`
+      `You don't have access to ${param(id)}'s certs under ${contextName}.`,
     );
     return 1;
   }
@@ -43,12 +43,12 @@ async function rm(client: Client, opts: Options, args: string[]) {
     if (id.includes('.')) {
       output.error(
         `No custom certificates found for "${id}" under ${chalk.bold(
-          contextName
-        )}`
+          contextName,
+        )}`,
       );
     } else {
       output.error(
-        `No certificates found by id "${id}" under ${chalk.bold(contextName)}`
+        `No certificates found by id "${id}" under ${chalk.bold(contextName)}`,
       );
     }
     return 1;
@@ -57,7 +57,7 @@ async function rm(client: Client, opts: Options, args: string[]) {
   const yes = await readConfirmation(
     output,
     'The following certificates will be removed permanently',
-    certs
+    certs,
   );
 
   if (!yes) {
@@ -65,12 +65,12 @@ async function rm(client: Client, opts: Options, args: string[]) {
   }
 
   await Promise.all(
-    certs.map(cert => deleteCertById(output, client, cert.uid))
+    certs.map((cert) => deleteCertById(output, client, cert.uid)),
   );
   output.success(
     `${chalk.bold(
-      plural('Certificate', certs.length, true)
-    )} removed ${rmStamp()}`
+      plural('Certificate', certs.length, true),
+    )} removed ${rmStamp()}`,
   );
   return 0;
 }
@@ -79,7 +79,7 @@ async function getCertsToDelete(
   output: Output,
   client: Client,
   contextName: string,
-  id: string
+  id: string,
 ) {
   const cert = await getCertById(client, id);
   if (cert instanceof ERRORS.CertNotFound) {
@@ -93,19 +93,19 @@ async function getCertsToDelete(
 }
 
 function readConfirmation(output: Output, msg: string, certs: Cert[]) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     output.log(msg);
     output.print(
       `${table(certs.map(formatCertRow), {
         align: ['l', 'r', 'l'],
         hsep: ' '.repeat(6),
-      }).replace(/^(.*)/gm, '  $1')}\n`
+      }).replace(/^(.*)/gm, '  $1')}\n`,
     );
     output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`,
     );
     process.stdin
-      .on('data', d => {
+      .on('data', (d) => {
         process.stdin.pause();
         resolve(d.toString().trim().toLowerCase() === 'y');
       })

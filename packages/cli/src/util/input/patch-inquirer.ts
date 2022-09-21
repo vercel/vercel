@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import Prompt from 'inquirer/lib/prompts/base';
-import Choice from 'inquirer/lib/objects/choice';
-import Separator from 'inquirer/lib/objects/separator';
+import type Prompt from 'inquirer/lib/prompts/base';
+import type Choice from 'inquirer/lib/objects/choice';
+import type Separator from 'inquirer/lib/objects/separator';
 
 /**
  * Here we patch inquirer with some tweaks:
@@ -46,13 +46,15 @@ inquirer.prompt.prompts.list.prototype.render = function () {
   if (this.status === 'answered') {
     message += this.opt.choices.getChoice(this.selected).short;
   } else {
-    let choicesStr = listRender(this.opt.choices, this.selected);
-    let indexPosition = this.opt.choices.indexOf(
-      this.opt.choices.getChoice(this.selected)
+    const choicesStr = listRender(this.opt.choices, this.selected);
+    const indexPosition = this.opt.choices.indexOf(
+      this.opt.choices.getChoice(this.selected),
     );
-    message +=
-      '\n' +
-      this.paginator.paginate(choicesStr, indexPosition, this.opt.pageSize);
+    message += `\n${this.paginator.paginate(
+      choicesStr,
+      indexPosition,
+      this.opt.pageSize,
+    )}`;
   }
 
   this.firstRender = false;
@@ -67,25 +69,24 @@ function listRender(choices: (Choice | Separator)[], pointer: number) {
   choices.forEach((choice, i) => {
     if (choice.type === 'separator') {
       separatorOffset++;
-      output += '  ' + choice + '\n';
+      output += `  ${choice}\n`;
       return;
     }
 
     if (choice.disabled) {
       separatorOffset++;
-      output += '  - ' + choice.name;
-      output +=
-        ' (' +
-        (typeof choice.disabled === 'string' ? choice.disabled : 'Disabled') +
-        ')';
+      output += `  - ${choice.name}`;
+      output += ` (${
+        typeof choice.disabled === 'string' ? choice.disabled : 'Disabled'
+      })`;
       output += '\n';
       return;
     }
 
-    let isSelected = i - separatorOffset === pointer;
+    const isSelected = i - separatorOffset === pointer;
     let line = (isSelected ? '● ' : '○ ') + choice.name;
     line = chalk.cyan(line);
-    output += line + ' \n';
+    output += `${line} \n`;
   });
 
   return output.replace(/\n$/, '');
@@ -98,27 +99,26 @@ inquirer.prompt.prompts.checkbox.prototype.render = function (error?: string) {
   let bottomContent = '';
 
   if (!this.spaceKeyPressed) {
-    message +=
-      '(Press ' +
-      chalk.cyan.bold('<space>') +
-      ' to select, ' +
-      chalk.cyan.bold('<a>') +
-      ' to toggle all, ' +
-      chalk.cyan.bold('<i>') +
-      ' to invert selection)';
+    message += `(Press ${chalk.cyan.bold(
+      '<space>',
+    )} to select, ${chalk.cyan.bold('<a>')} to toggle all, ${chalk.cyan.bold(
+      '<i>',
+    )} to invert selection)`;
   }
 
   // Render choices or answer depending on the state
   if (this.status === 'answered') {
     message += this.selection.length > 0 ? this.selection.join(', ') : 'None';
   } else {
-    let choicesStr = renderChoices(this.opt.choices, this.pointer);
-    let indexPosition = this.opt.choices.indexOf(
-      this.opt.choices.getChoice(this.pointer)
+    const choicesStr = renderChoices(this.opt.choices, this.pointer);
+    const indexPosition = this.opt.choices.indexOf(
+      this.opt.choices.getChoice(this.pointer),
     );
-    message +=
-      '\n' +
-      this.paginator.paginate(choicesStr, indexPosition, this.opt.pageSize);
+    message += `\n${this.paginator.paginate(
+      choicesStr,
+      indexPosition,
+      this.opt.pageSize,
+    )}`;
   }
 
   if (error) {
@@ -135,27 +135,24 @@ function renderChoices(choices: (Choice | Separator)[], pointer: number) {
   choices.forEach(function (choice, i) {
     if (choice.type === 'separator') {
       separatorOffset++;
-      output += '' + choice + '\n';
+      output += `${String(choice)}\n`;
       return;
     }
 
     if (choice.disabled) {
       separatorOffset++;
-      output += '- ' + choice.name;
-      output +=
-        ' (' +
-        (typeof choice.disabled === 'string' ? choice.disabled : 'Disabled') +
-        ')';
+      output += `- ${choice.name}`;
+      output += ` (${
+        typeof choice.disabled === 'string' ? choice.disabled : 'Disabled'
+      })`;
+    } else if (i - separatorOffset === pointer) {
+      output += chalk.cyan(
+        `${choice.checked ? '› ▪︎' : '› ▫︎'} ${choice.name}`,
+      );
     } else {
-      if (i - separatorOffset === pointer) {
-        output += chalk.cyan(
-          (choice.checked ? '› ▪︎' : '› ▫︎') + ' ' + choice.name
-        );
-      } else {
-        output += chalk.cyan(
-          (choice.checked ? '  ▪︎' : '  ▫︎') + ' ' + choice.name
-        );
-      }
+      output += chalk.cyan(
+        `${choice.checked ? '  ▪︎' : '  ▫︎'} ${choice.name}`,
+      );
     }
 
     output += '\n';
@@ -169,8 +166,8 @@ inquirer.prompt.prompts.input.prototype.render = function (error?: string) {
   let bottomContent = '';
   let appendContent = '';
   let message = this.getQuestion();
-  let transformer = this.opt.transformer;
-  let isFinal = this.status === 'answered';
+  const transformer = this.opt.transformer;
+  const isFinal = this.status === 'answered';
 
   if (isFinal) {
     appendContent = this.answer;

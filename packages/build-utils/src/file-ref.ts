@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 import multiStream from 'multistream';
 import retry from 'async-retry';
 import Sema from 'async-sema';
-import { FileBase } from './types';
+import type { FileBase } from './types';
 
 interface FileRefOptions {
   mode?: number;
@@ -73,14 +73,14 @@ export default class FileRef implements FileBase {
           const resp = await fetch(url);
           if (!resp.ok) {
             const error = new BailableError(
-              `download: ${resp.status} ${resp.statusText} for ${url}`
+              `download: ${resp.status} ${resp.statusText} for ${url}`,
             );
             if (resp.status === 403) error.bail = true;
             throw error;
           }
           return resp.body;
         },
-        { factor: 1, retries: 3 }
+        { factor: 1, retries: 3 },
       );
     } finally {
       // console.timeEnd(`downloading ${url}`);
@@ -91,16 +91,15 @@ export default class FileRef implements FileBase {
   toStream(): NodeJS.ReadableStream {
     let flag = false;
 
-    // eslint-disable-next-line consistent-return
-    return multiStream(cb => {
+    return multiStream((cb) => {
       if (flag) return cb(null, null);
       flag = true;
 
       this.toStreamAsync()
-        .then(stream => {
+        .then((stream) => {
           cb(null, stream);
         })
-        .catch(error => {
+        .catch((error) => {
           cb(error, null);
         });
     });

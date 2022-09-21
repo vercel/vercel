@@ -7,7 +7,7 @@ export default function parseMeta(meta?: string | string[]) {
     meta = [meta];
   }
 
-  const parsed: { [k: string]: string } = {};
+  const parsed: Record<string, string> = {};
 
   for (const item of meta) {
     const [key, ...rest] = item.split('=');

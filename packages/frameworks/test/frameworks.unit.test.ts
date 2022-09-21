@@ -1,10 +1,10 @@
-import Ajv from 'ajv';
 import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
-import fetch from 'node-fetch';
 import { URL, URLSearchParams } from 'url';
+import fetch from 'node-fetch';
+import Ajv from 'ajv';
 import frameworkList from '../src/frameworks';
 
 // bump timeout for Windows as network can be slower
@@ -144,7 +144,7 @@ async function getDeployment(host: string) {
   const query = new URLSearchParams();
   query.set('url', host);
   const res = await fetch(
-    `https://api.vercel.com/v11/deployments/get?${query}`
+    `https://api.vercel.com/v11/deployments/get?${query}`,
   );
   const body = await res.json();
   return body;
@@ -156,9 +156,9 @@ describe('frameworks', () => {
     const getExample = (name: string) => join(root, 'examples', name);
 
     const result = frameworkList
-      .map(f => f.slug)
+      .map((f) => f.slug)
       .filter(isString)
-      .filter(f => existsSync(getExample(f)) === false);
+      .filter((f) => !existsSync(getExample(f)));
 
     expect(result).toEqual([]);
   });
@@ -176,8 +176,8 @@ describe('frameworks', () => {
 
   it('ensure logo starts with url prefix', async () => {
     const invalid = frameworkList
-      .map(f => f.logo)
-      .filter(logo => {
+      .map((f) => f.logo)
+      .filter((logo) => {
         return logo && !logo.startsWith(logoPrefix);
       });
 
@@ -186,8 +186,8 @@ describe('frameworks', () => {
 
   it('ensure darkModeLogo starts with url prefix', async () => {
     const invalid = frameworkList
-      .map(f => f.darkModeLogo)
-      .filter(darkModeLogo => {
+      .map((f) => f.darkModeLogo)
+      .filter((darkModeLogo) => {
         return darkModeLogo && !darkModeLogo.startsWith(logoPrefix);
       });
 
@@ -196,11 +196,11 @@ describe('frameworks', () => {
 
   it('ensure logo file exists in ./packages/frameworks/logos/', async () => {
     const missing = frameworkList
-      .map(f => f.logo)
-      .filter(logo => {
+      .map((f) => f.logo)
+      .filter((logo) => {
         const filename = logo.slice(logoPrefix.length);
         const filepath = join(__dirname, '..', 'logos', filename);
-        return existsSync(filepath) === false;
+        return !existsSync(filepath);
       });
 
     expect(missing).toEqual([]);
@@ -208,7 +208,7 @@ describe('frameworks', () => {
 
   it('ensure unique sort number', async () => {
     const sortNumToSlug = new Map<number, string | null>();
-    frameworkList.forEach(f => {
+    frameworkList.forEach((f) => {
       if (f.sort) {
         const duplicateSlug = sortNumToSlug.get(f.sort);
         expect(duplicateSlug).toStrictEqual(undefined);
@@ -230,16 +230,16 @@ describe('frameworks', () => {
   it('ensure all demo URLs are "public"', async () => {
     await Promise.all(
       frameworkList
-        .filter(f => typeof f.demo === 'string')
-        .map(async f => {
+        .filter((f) => typeof f.demo === 'string')
+        .map(async (f) => {
           const url = new URL(f.demo!);
           const deployment = await getDeployment(url.hostname);
           assert.equal(
             deployment.public,
             true,
-            `Demo URL ${f.demo} is not "public"`
+            `Demo URL ${f.demo} is not "public"`,
           );
-        })
+        }),
     );
   });
 });

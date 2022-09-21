@@ -1,24 +1,24 @@
-import { DNSRecord, PaginationOptions } from '../../types';
 import { DomainNotFound, isAPIError } from '../errors-ts';
-import { Output } from '../output';
-import Client from '../client';
+import type { DNSRecord, PaginationOptions } from '../../types';
+import type { Output } from '../output';
+import type Client from '../client';
 
-type Response = {
+interface Response {
   records: DNSRecord[];
   pagination?: PaginationOptions;
-};
+}
 
 export default async function getDomainDNSRecords(
   output: Output,
   client: Client,
   domain: string,
   nextTimestamp?: number,
-  apiVersion = 3
+  apiVersion = 3,
 ) {
   output.debug(`Fetching for DNS records of domain ${domain}`);
   try {
     let url = `/v${apiVersion}/domains/${encodeURIComponent(
-      domain
+      domain,
     )}/records?limit=20`;
 
     if (nextTimestamp) {

@@ -1,6 +1,6 @@
 import isWildcardAlias from '../alias/is-wildcard-alias';
 import { getCertsForCn } from '../certs/get-certs-for-cn';
-import Client from '../client';
+import type Client from '../client';
 
 /**
  * Tries to find the "best" alias url.
@@ -8,7 +8,7 @@ import Client from '../client';
  */
 export async function getPreferredPreviewURL(
   client: Client,
-  aliasList: string[]
+  aliasList: string[],
 ) {
   if (aliasList.length === 0) {
     return null;
@@ -18,10 +18,10 @@ export async function getPreferredPreviewURL(
    * First checks for non public aliases and non wildcard domains.
    */
   const preferredAliases = aliasList.filter(
-    alias =>
+    (alias) =>
       !alias.endsWith('.now.sh') &&
       !alias.endsWith('.vercel.app') &&
-      !isWildcardAlias(alias)
+      !isWildcardAlias(alias),
   );
   for (const alias of preferredAliases) {
     const certs = await getCertsForCn(client, alias, { limit: 1 }).catch(() => {

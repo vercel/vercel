@@ -1,11 +1,11 @@
-import Client from '../client';
-import { DomainConfig } from '../../types';
 import { isAPIError } from '../errors-ts';
+import type Client from '../client';
+import type { DomainConfig } from '../../types';
 
 export async function getDomainConfig(client: Client, domainName: string) {
   try {
     const config = await client.fetch<DomainConfig>(
-      `/v4/domains/${domainName}/config`
+      `/v4/domains/${domainName}/config`,
     );
 
     return config;

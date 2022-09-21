@@ -12,35 +12,34 @@ import { isValidName } from '../util/is-valid-name';
 import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
-import getDeploymentsByProjectId, {
-  DeploymentPartial,
-} from '../util/deploy/get-deployments-by-project-id';
+import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
-import Client from '../util/client';
-import { Output } from '../util/output';
-import { Alias, Project } from '../types';
 import { NowError } from '../util/now-error';
+import type Client from '../util/client';
+import type { Output } from '../util/output';
+import type { Alias, Project } from '../types';
+import type { DeploymentPartial } from '../util/deploy/get-deployments-by-project-id';
 
 const help = () => {
   console.log(`
   ${chalk.bold(
-    `${logo} ${getPkgName()} remove`
+    `${logo} ${getPkgName()} remove`,
   )} [...deploymentId|deploymentName]
 
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}        Login token
     -y, --yes                      Skip confirmation
     -s, --safe                     Skip deployments with an active alias
@@ -49,7 +48,7 @@ const help = () => {
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Remove a deployment identified by ${chalk.dim(
-    '`deploymentId`'
+    '`deploymentId`',
   )}
 
     ${chalk.cyan(`$ ${getPkgName()} rm deploymentId`)}
@@ -59,7 +58,7 @@ const help = () => {
     ${chalk.cyan(`$ ${getPkgName()} rm my-app`)}
 
   ${chalk.gray('–')} Remove two deployments with IDs ${chalk.dim(
-    '`eyWt6zuSdeus`'
+    '`eyWt6zuSdeus`',
   )} and ${chalk.dim('`uWHoA9RQ1d1o`')}
 
     ${chalk.cyan(`$ ${getPkgName()} rm eyWt6zuSdeus uWHoA9RQ1d1o`)}
@@ -105,11 +104,11 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const invalidName = ids.find(name => !isValidName(name));
+  const invalidName = ids.find((name) => !isValidName(name));
 
   if (invalidName) {
     error(
-      `The provided argument "${invalidName}" is not a valid deployment or project`
+      `The provided argument "${invalidName}" is not a valid deployment or project`,
     );
     return 1;
   }
@@ -118,8 +117,8 @@ export default async function main(client: Client) {
 
   output.spinner(
     `Fetching deployment(s) ${ids
-      .map(id => `"${id}"`)
-      .join(' ')} in ${chalk.bold(contextName)}`
+      .map((id) => `"${id}"`)
+      .join(' ')} in ${chalk.bold(contextName)}`,
   );
 
   let aliases: Alias[][];
@@ -130,23 +129,23 @@ export default async function main(client: Client) {
   try {
     const searchFilter = (d: DeploymentPartial) =>
       ids.some(
-        id =>
+        (id) =>
           d &&
           !(d instanceof NowError) &&
-          (d.uid === id || d.name === id || d.url === normalizeURL(id))
+          (d.uid === id || d.name === id || d.url === normalizeURL(id)),
       );
 
     const [deploymentList, projectList] = await Promise.all<any>([
       Promise.all(
-        ids.map(idOrHost => {
+        ids.map((idOrHost) => {
           if (!contextName) {
             throw new Error('Context name is not defined');
           }
           return getDeploymentByIdOrHost(client, contextName, idOrHost);
-        })
+        }),
       ),
       Promise.all(
-        ids.map(async idOrName => getProjectByIdOrName(client, idOrName))
+        ids.map(async (idOrName) => getProjectByIdOrName(client, idOrName)),
       ),
     ]);
 
@@ -158,31 +157,31 @@ export default async function main(client: Client) {
     // with deployments to verify the aliases
     if (safe) {
       const projectDeployments = await Promise.all(
-        projects.map(project => {
+        projects.map((project) => {
           return getDeploymentsByProjectId(client, project.id, {
             max: 201,
             continue: true,
           });
-        })
+        }),
       );
 
       projectDeployments
         .slice(0, 201)
-        .map(pDeployments => deployments.push(...pDeployments));
+        .map((pDeployments) => deployments.push(...pDeployments));
 
       projects = [];
     } else {
       // Remove all deployments that are included in the projects
       deployments = deployments.filter(
-        d => !projects.some(p => p.name === d.name)
+        (d) => !projects.some((p) => p.name === d.name),
       );
     }
 
     aliases = await Promise.all(
-      deployments.map(async depl => {
+      deployments.map(async (depl) => {
         const { aliases } = await getAliases(client, depl.uid);
         return aliases;
-      })
+      }),
     );
   } finally {
     output.stopSpinner();
@@ -202,21 +201,21 @@ export default async function main(client: Client) {
       `Could not find ${argv['--safe'] ? 'unaliased' : 'any'} deployments ` +
         `or projects matching ` +
         `${ids
-          .map(id => chalk.bold(`"${id}"`))
-          .join(', ')}. Run ${getCommandName('ls')} to list.`
+          .map((id) => chalk.bold(`"${id}"`))
+          .join(', ')}. Run ${getCommandName('ls')} to list.`,
     );
     return 1;
   }
 
   log(
     `Found ${deploymentsAndProjects(deployments, projects)} for removal in ` +
-      `${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`
+      `${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`,
   );
 
   if (deployments.length > 200) {
     output.warn(
       `Only 200 deployments can get deleted at once. ` +
-        `Please continue 10 minutes after deletion to remove the rest.`
+        `Please continue 10 minutes after deletion to remove the rest.`,
     );
   }
 
@@ -238,16 +237,16 @@ export default async function main(client: Client) {
   const start = Date.now();
 
   await Promise.all<any>([
-    ...deployments.map(depl => now.remove(depl.uid, { hard })),
-    ...projects.map(project => removeProject(client, project.id)),
+    ...deployments.map((depl) => now.remove(depl.uid, { hard })),
+    ...projects.map((project) => removeProject(client, project.id)),
   ]);
 
   success(
     `Removed ${deploymentsAndProjects(deployments, projects)} ` +
-      `${elapsed(Date.now() - start)}`
+      `${elapsed(Date.now() - start)}`,
   );
 
-  deployments.forEach(depl => {
+  deployments.forEach((depl) => {
     console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`);
   });
 
@@ -261,25 +260,25 @@ export default async function main(client: Client) {
 function readConfirmation(
   deployments: DeploymentPartial[],
   projects: Project[],
-  output: Output
+  output: Output,
 ): Promise<string> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     if (deployments.length > 0) {
       output.log(
         `The following ${plural(
           'deployment',
           deployments.length,
-          deployments.length > 1
-        )} will be permanently removed:`
+          deployments.length > 1,
+        )} will be permanently removed:`,
       );
 
       const deploymentTable = table(
-        deployments.map(depl => {
+        deployments.map((depl) => {
           const time = chalk.gray(`${ms(Date.now() - depl.created)} ago`);
           const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
           return [`  ${depl.uid}`, url, time];
         }),
-        { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+        { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) },
       );
       output.print(`${deploymentTable}\n`);
     }
@@ -288,7 +287,7 @@ function readConfirmation(
       for (const { alias } of depl.aliases) {
         output.warn(
           `${chalk.underline(`https://${alias}`)} is an alias for ` +
-            `${chalk.bold(depl.url)} and will be removed`
+            `${chalk.bold(depl.url)} and will be removed`,
         );
       }
     }
@@ -298,11 +297,11 @@ function readConfirmation(
         `The following ${plural(
           'project',
           projects.length,
-          projects.length > 1
+          projects.length > 1,
         )} will be permanently removed, ` +
           `including all ${
             projects.length > 1 ? 'their' : 'its'
-          } deployments and aliases:`
+          } deployments and aliases:`,
       );
 
       for (const project of projects) {
@@ -311,11 +310,11 @@ function readConfirmation(
     }
 
     output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`,
     );
 
     process.stdin
-      .on('data', d => {
+      .on('data', (d) => {
         process.stdin.pause();
         resolve(d.toString().trim());
       })
@@ -326,7 +325,7 @@ function readConfirmation(
 function deploymentsAndProjects(
   deployments: DeploymentPartial[],
   projects: Project[],
-  conjunction = 'and'
+  conjunction = 'and',
 ) {
   if (!projects || projects.length === 0) {
     return `${plural('deployment', deployments.length, true)}`;

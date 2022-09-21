@@ -1,15 +1,11 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import ms from 'ms';
-import bytes from 'bytes';
 import { delimiter, dirname, join } from 'path';
-import { fork, ChildProcess } from 'child_process';
+import { fork } from 'child_process';
+import bytes from 'bytes';
+import ms from 'ms';
 import { createFunction } from '@vercel/fun';
 import {
-  Builder,
-  BuildOptions,
-  Env,
-  File,
   Lambda,
   FileBlob,
   FileFsRef,
@@ -18,15 +14,15 @@ import {
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
-
-import { Output } from '../output';
+import { normalizeRoutes } from '@vercel/routing-utils';
 import highlight from '../output/highlight';
 import { treeKill } from '../tree-kill';
 import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
-
-import DevServer from './server';
-import {
+import getUpdateCommand from '../get-update-command';
+import { getTitleName } from '../pkg-name';
+import { importBuilders } from '../build/import-builders';
+import type {
   VercelConfig,
   BuildMatch,
   BuildResult,
@@ -37,10 +33,10 @@ import {
   EnvConfigs,
   BuiltLambda,
 } from './types';
-import { normalizeRoutes } from '@vercel/routing-utils';
-import getUpdateCommand from '../get-update-command';
-import { getTitleName } from '../pkg-name';
-import { importBuilders } from '../build/import-builders';
+import type DevServer from './server';
+import type { ChildProcess } from 'child_process';
+import type { Output } from '../output';
+import type { Builder, BuildOptions, Env, File } from '@vercel/build-utils';
 
 interface BuildMessage {
   type: string;
@@ -56,14 +52,14 @@ async function createBuildProcess(
   match: BuildMatch,
   envConfigs: EnvConfigs,
   workPath: string,
-  output: Output
+  output: Output,
 ): Promise<ChildProcess> {
   output.debug(`Creating build process for "${match.entrypoint}"`);
 
   const builderWorkerPath = join(__dirname, 'builder-worker.js');
 
   // Ensure that `node` is in the builder's `PATH`
-  let PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
+  const PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
 
   const env: Env = {
     ...process.env,
@@ -80,7 +76,7 @@ async function createBuildProcess(
 
   buildProcess.on('exit', (code, signal) => {
     output.debug(
-      `Build process for "${match.entrypoint}" exited with ${signal || code}`
+      `Build process for "${match.entrypoint}" exited with ${signal || code}`,
     );
     match.buildProcess = undefined;
   });
@@ -105,7 +101,7 @@ export async function executeBuild(
   requestPath: string | null,
   isInitialBuild: boolean,
   filesChanged?: string[],
-  filesRemoved?: string[]
+  filesRemoved?: string[],
 ): Promise<void> {
   const {
     builderWithPkg: { path: requirePath, builder, pkg },
@@ -121,7 +117,7 @@ export async function executeBuild(
   if (showBuildTimestamp) {
     devServer.output.log(`Building ${use}:${entrypoint}`);
     devServer.output.debug(
-      `Using \`${pkg.name}${pkg.version ? `@${pkg.version}` : ''}\``
+      `Using \`${pkg.name}${pkg.version ? `@${pkg.version}` : ''}\``,
     );
   }
 
@@ -135,7 +131,7 @@ export async function executeBuild(
       match,
       envConfigs,
       workPath,
-      devServer.output
+      devServer.output,
     );
   }
 
@@ -182,7 +178,7 @@ export async function executeBuild(
       function onExit(code: number | null, signal: string | null) {
         cleanup();
         const err = new Error(
-          `Builder exited with ${signal || code} before sending build result`
+          `Builder exited with ${signal || code} before sending build result`,
         );
         reject(err);
       }
@@ -216,13 +212,13 @@ export async function executeBuild(
 
     if (output.maxDuration) {
       throw new Error(
-        'The result of "builder.build()" must not contain `maxDuration`'
+        'The result of "builder.build()" must not contain `maxDuration`',
       );
     }
 
     if (output.memory) {
       throw new Error(
-        'The result of "builder.build()" must not contain `memory`'
+        'The result of "builder.build()" must not contain `memory`',
       );
     }
 
@@ -250,7 +246,7 @@ export async function executeBuild(
     throw new Error(
       `${getTitleName()} CLI does not support builder version ${
         (builder as any).version
-      }.\nPlease run \`${await getUpdateCommand()}\` to update to the latest CLI.`
+      }.\nPlease run \`${await getUpdateCommand()}\` to update to the latest CLI.`,
     );
   }
 
@@ -343,7 +339,7 @@ export async function executeBuild(
 
   // Create function for all 'Lambda' type output
   await Promise.all(
-    Object.entries(result.output).map(async entry => {
+    Object.entries(result.output).map(async (entry) => {
       const path: string = entry[0];
       const asset: BuilderOutput = entry[1];
 
@@ -370,7 +366,7 @@ export async function executeBuild(
       }
 
       match.buildTimestamp = Date.now();
-    })
+    }),
   );
 
   match.buildResults.set(requestPath, result);
@@ -379,7 +375,7 @@ export async function executeBuild(
   if (showBuildTimestamp) {
     const endTime = Date.now();
     devServer.output.log(
-      `Built ${use}:${entrypoint} [${ms(endTime - startTime)}]`
+      `Built ${use}:${entrypoint} [${ms(endTime - startTime)}]`,
     );
   }
 }
@@ -389,7 +385,7 @@ export async function getBuildMatches(
   cwd: string,
   output: Output,
   devServer: DevServer,
-  fileList: string[]
+  fileList: string[],
 ): Promise<BuildMatch[]> {
   const matches: BuildMatch[] = [];
 
@@ -401,7 +397,7 @@ export async function getBuildMatches(
 
   const noMatches: Builder[] = [];
   const builds = vercelConfig.builds || [{ src: '**', use: '@vercel/static' }];
-  const builderSpecs = new Set(builds.map(b => b.use).filter(Boolean));
+  const builderSpecs = new Set(builds.map((b) => b.use).filter(Boolean));
   const buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
 
   for (const buildConfig of builds) {
@@ -411,7 +407,7 @@ export async function getBuildMatches(
       continue;
     }
 
-    if (src[0] === '/') {
+    if (src.startsWith('/')) {
       // Remove a leading slash so that the globbing is relative to `cwd`
       // instead of the root of the filesystem. This matches the behavior
       // of Vercel deployments.
@@ -427,8 +423,8 @@ export async function getBuildMatches(
     }
 
     const files = fileList
-      .filter(name => name === src || minimatch(name, src, { dot: true }))
-      .map(name => join(cwd, name));
+      .filter((name) => name === src || minimatch(name, src, { dot: true }))
+      .map((name) => join(cwd, name));
 
     if (files.length === 0) {
       noMatches.push(buildConfig);
@@ -441,7 +437,7 @@ export async function getBuildMatches(
 
       // Remove the output directory prefix
       if (config.zeroConfig && config.outputDirectory) {
-        const outputMatch = config.outputDirectory + '/';
+        const outputMatch = `${config.outputDirectory}/`;
         if (src.startsWith(outputMatch)) {
           src = src.slice(outputMatch.length);
         }
@@ -469,10 +465,10 @@ export async function getBuildMatches(
       `You defined ${plural(
         'build',
         noMatches.length,
-        true
+        true,
       )} that did not match any source files (please ensure they are NOT defined in ${highlight(
-        '.vercelignore'
-      )}):`
+        '.vercelignore',
+      )}):`,
     );
     for (const buildConfig of noMatches) {
       output.print(`- ${JSON.stringify(buildConfig)}\n`);
@@ -484,7 +480,7 @@ export async function getBuildMatches(
 
 export async function shutdownBuilder(
   match: BuildMatch,
-  { debug }: Output
+  { debug }: Output,
 ): Promise<void> {
   const ops: Promise<void>[] = [];
 

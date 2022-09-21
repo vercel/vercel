@@ -19,9 +19,9 @@ import strlen from './strlen';
 // ]
 export default function formatTable(
   header: string[],
-  align: Array<'l' | 'r' | 'c' | '.'>,
+  align: ('l' | 'r' | 'c' | '.')[],
   blocks: { name?: string; rows: string[][] }[],
-  hsep = '    '
+  hsep = '    ',
 ) {
   const nrCols = header.length;
   const padding = [];
@@ -29,7 +29,7 @@ export default function formatTable(
 
   for (let i = 0; i < nrCols; i++) {
     padding[i] = blocks.reduce((acc, block) => {
-      const maxLen = Math.max(...block.rows.map(row => strlen(`${row[i]}`)));
+      const maxLen = Math.max(...block.rows.map((row) => strlen(`${row[i]}`)));
       return Math.max(acc, Math.ceil(maxLen / 8));
     }, 1);
   }
@@ -39,7 +39,7 @@ export default function formatTable(
       out += `${block.name}\n`;
     }
 
-    const rows = [header.map(s => chalk.dim(s))].concat(block.rows);
+    const rows = [header.map((s) => chalk.dim(s))].concat(block.rows);
 
     if (rows.length > 0) {
       rows[0][0] = ` ${rows[0][0]}`;

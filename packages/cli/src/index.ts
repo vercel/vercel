@@ -1,26 +1,14 @@
 #!/usr/bin/env node
-import { isErrnoException, isError, errorToString } from './util/is-error';
-
-try {
-  // Test to see if cwd has been deleted before
-  // importing 3rd party packages that might need cwd.
-  process.cwd();
-} catch (err: unknown) {
-  if (isError(err) && err.message.includes('uv_cwd')) {
-    console.error('Error: The current working directory does not exist.');
-    process.exit(1);
-  }
-}
-
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { URL } from 'url';
 import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
 import updateNotifier from 'update-notifier';
-import { URL } from 'url';
 import * as Sentry from '@sentry/node';
+import { isErrnoException, isError, errorToString } from './util/is-error';
 import hp from './util/humanize-path';
 import commands from './commands';
 import pkg from './util/pkg';
@@ -50,8 +38,19 @@ import getUpdateCommand from './util/get-update-command';
 import { metrics, shouldCollectMetrics } from './util/metrics';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
-import { AuthConfig, GlobalConfig } from './types';
-import { VercelConfig } from '@vercel/client';
+import type { AuthConfig, GlobalConfig } from './types';
+import type { VercelConfig } from '@vercel/client';
+
+try {
+  // Test to see if cwd has been deleted before
+  // importing 3rd party packages that might need cwd.
+  process.cwd();
+} catch (err: unknown) {
+  if (isError(err) && err.message.includes('uv_cwd')) {
+    console.error('Error: The current working directory does not exist.');
+    process.exit(1);
+  }
+}
 
 const isCanary = pkg.version.includes('canary');
 
@@ -102,7 +101,7 @@ const main = async () => {
         '--debug': Boolean,
         '-d': '--debug',
       },
-      { permissive: true }
+      { permissive: true },
     );
   } catch (err: unknown) {
     handleError(err);
@@ -117,7 +116,7 @@ const main = async () => {
   const localConfigPath = argv['--local-config'];
   let localConfig: VercelConfig | Error | undefined = await getConfig(
     output,
-    localConfigPath
+    localConfigPath,
   );
 
   if (localConfig instanceof ERRORS.CantParseJSONFile) {
@@ -129,13 +128,12 @@ const main = async () => {
     if (localConfigPath) {
       output.error(
         `Couldn't find a project configuration file at \n    ${localConfig.meta.paths.join(
-          ' or\n    '
-        )}`
+          ' or\n    ',
+        )}`,
       );
       return 1;
-    } else {
-      localConfig = undefined;
     }
+    localConfig = undefined;
   }
 
   if (localConfig instanceof Error) {
@@ -155,15 +153,15 @@ const main = async () => {
       info(
         `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
           `Run ${cmd(
-            await getUpdateCommand()
-          )} to install ${getTitleName()} CLI ${latest}`
-      )
+            await getUpdateCommand(),
+          )} to install ${getTitleName()} CLI ${latest}`,
+      ),
     );
 
     console.log(
       info(
-        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`
-      )
+        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`,
+      ),
     );
   }
 
@@ -175,21 +173,24 @@ const main = async () => {
 
   // Currently no beta commands - add here as needed
   const betaCommands: string[] = [];
-  if (betaCommands.includes(targetOrSubcommand)) {
+  if (
+    typeof targetOrSubcommand === 'string' &&
+    betaCommands.includes(targetOrSubcommand)
+  ) {
     console.log(
       `${chalk.grey(
         `${getTitleName()} CLI ${
           pkg.version
-        } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
-      )}`
+        } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`,
+      )}`,
     );
   } else {
     output.print(
       `${chalk.grey(
         `${getTitleName()} CLI ${pkg.version}${
           isCanary ? ' — https://vercel.com/feedback' : ''
-        }`
-      )}\n`
+        }`,
+      )}\n`,
     );
   }
 
@@ -205,8 +206,8 @@ const main = async () => {
   } catch (err: unknown) {
     output.error(
       `An unexpected error occurred while trying to create the global directory "${hp(
-        VERCEL_DIR
-      )}" ${errorToString(err)}`
+        VERCEL_DIR,
+      )}" ${errorToString(err)}`,
     );
     return 1;
   }
@@ -222,16 +223,16 @@ const main = async () => {
       } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to save the config to "${hp(
-            VERCEL_CONFIG_PATH
-          )}" ${errorToString(err)}`
+            VERCEL_CONFIG_PATH,
+          )}" ${errorToString(err)}`,
         );
         return 1;
       }
     } else {
       output.error(
         `An unexpected error occurred while trying to read the config in "${hp(
-          VERCEL_CONFIG_PATH
-        )}" ${errorToString(err)}`
+          VERCEL_CONFIG_PATH,
+        )}" ${errorToString(err)}`,
       );
       return 1;
     }
@@ -248,16 +249,16 @@ const main = async () => {
       } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to write the auth config to "${hp(
-            VERCEL_AUTH_CONFIG_PATH
-          )}" ${errorToString(err)}`
+            VERCEL_AUTH_CONFIG_PATH,
+          )}" ${errorToString(err)}`,
         );
         return 1;
       }
     } else {
       output.error(
         `An unexpected error occurred while trying to read the auth config in "${hp(
-          VERCEL_AUTH_CONFIG_PATH
-        )}" ${errorToString(err)}`
+          VERCEL_AUTH_CONFIG_PATH,
+        )}" ${errorToString(err)}`,
       );
       return 1;
     }
@@ -302,7 +303,7 @@ const main = async () => {
     if (targetPathExists && subcommandExists && !argv['--cwd']) {
       output.warn(
         `Did you mean to deploy the subdirectory "${targetOrSubcommand}"? ` +
-          `Use \`vc --cwd ${targetOrSubcommand}\` instead.`
+          `Use \`vc --cwd ${targetOrSubcommand}\` instead.`,
       );
     }
 
@@ -371,7 +372,7 @@ const main = async () => {
   if (typeof argv['--token'] === 'string' && subcommand === 'switch') {
     output.prettyError({
       message: `This command doesn't work with ${param(
-        '--token'
+        '--token',
       )}. Please use ${param('--scope')}.`,
       link: 'https://err.sh/vercel/no-token-allowed',
     });
@@ -396,9 +397,9 @@ const main = async () => {
       const notContain = Array.from(new Set(invalid)).sort();
       output.prettyError({
         message: `You defined ${param(
-          '--token'
+          '--token',
         )}, but its contents are invalid. Must not contain: ${notContain
-          .map(c => JSON.stringify(c))
+          .map((c) => JSON.stringify(c))
           .join(', ')}`,
         link: 'https://err.sh/vercel/invalid-token-value',
       });
@@ -417,8 +418,8 @@ const main = async () => {
   if (argv['--team']) {
     output.warn(
       `The ${param('--team')} option is deprecated. Please use ${param(
-        '--scope'
-      )} instead.`
+        '--scope',
+      )} instead.`,
     );
   }
 
@@ -472,7 +473,7 @@ const main = async () => {
       }
 
       const related =
-        teams && teams.find(team => team.id === scope || team.slug === scope);
+        teams && teams.find((team) => team.id === scope || team.slug === scope);
 
       if (!related) {
         output.prettyError({
@@ -600,8 +601,8 @@ const main = async () => {
         const hostname = matches[1];
         output.error(
           `The hostname ${highlight(
-            hostname
-          )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
+            hostname,
+          )} could not be resolved. Please verify your internet connectivity and DNS configuration.`,
         );
       }
       if (typeof err.stack === 'string') {
@@ -618,7 +619,7 @@ const main = async () => {
       return 1;
     }
 
-    if (err instanceof APIError && 400 <= err.status && err.status <= 499) {
+    if (err instanceof APIError && err.status >= 400 && err.status <= 499) {
       err.message = err.serverMessage;
       output.prettyError(err);
       return 1;
@@ -696,7 +697,7 @@ process.on('unhandledRejection', handleRejection);
 process.on('uncaughtException', handleUnexpected);
 
 main()
-  .then(exitCode => {
+  .then((exitCode) => {
     process.exitCode = exitCode;
   })
   .catch(handleUnexpected);

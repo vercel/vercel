@@ -1,9 +1,6 @@
 import { parse } from 'psl';
 import chalk from 'chalk';
-
-import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import dnsTable from '../../util/format-dns-table';
@@ -14,19 +11,21 @@ import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
 import { getCommandName } from '../../util/pkg-name';
+import type Client from '../../util/client';
+import type { Output } from '../../util/output';
 
-type Options = {
+interface Options {
   '--ca': string;
   '--challenge-only': boolean;
   '--crt': string;
   '--key': string;
   '--overwrite': boolean;
-};
+}
 
 export default async function issue(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
 ) {
   let cert;
   const { output } = client;
@@ -49,14 +48,14 @@ export default async function issue(
   if (crtPath || keyPath || caPath) {
     if (args.length !== 0 || !crtPath || !keyPath || !caPath) {
       output.error(
-        `Invalid number of arguments to create a custom certificate entry. Usage:`
+        `Invalid number of arguments to create a custom certificate entry. Usage:`,
       );
       output.print(
         `  ${chalk.cyan(
           getCommandName(
-            'certs issue --crt <domain.crt> --key <domain.key> --ca <ca.crt>'
-          )
-        )}\n`
+            'certs issue --crt <domain.crt> --key <domain.key> --ca <ca.crt>',
+          ),
+        )}\n`,
       );
       return 1;
     }
@@ -72,18 +71,18 @@ export default async function issue(
     // Print success message
     output.success(
       `Certificate entry for ${chalk.bold(
-        cert.cns.join(', ')
-      )} created ${addStamp()}`
+        cert.cns.join(', '),
+      )} created ${addStamp()}`,
     );
     return 0;
   }
 
   if (args.length < 1) {
     output.error(
-      `Invalid number of arguments to create a custom certificate entry. Usage:`
+      `Invalid number of arguments to create a custom certificate entry. Usage:`,
     );
     output.print(
-      `  ${chalk.cyan(getCommandName('certs issue <cn>[, <cn>]'))}\n`
+      `  ${chalk.cyan(getCommandName('certs issue <cn>[, <cn>]'))}\n`,
     );
     return 1;
   }
@@ -120,16 +119,16 @@ export default async function issue(
   if (handledResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You do not have permissions over domain ${chalk.underline(
-        handledResult.meta.domain
-      )} under ${chalk.bold(handledResult.meta.context)}.`
+        handledResult.meta.domain,
+      )} under ${chalk.bold(handledResult.meta.context)}.`,
     );
     return 1;
   }
 
   output.success(
     `Certificate entry for ${chalk.bold(
-      handledResult.cns.join(', ')
-    )} created ${addStamp()}`
+      handledResult.cns.join(', '),
+    )} created ${addStamp()}`,
   );
   return 0;
 }
@@ -140,48 +139,48 @@ async function runStartOrder(
   cns: string[],
   contextName: string,
   stamp: () => string,
-  { fallingBack = false } = {}
+  { fallingBack = false } = {},
 ) {
   const { challengesToResolve } = await startCertOrder(
     client,
     cns,
-    contextName
+    contextName,
   );
   const pendingChallenges = challengesToResolve.filter(
-    challenge => challenge.status === 'pending'
+    (challenge) => challenge.status === 'pending',
   );
 
   if (fallingBack) {
     output.warn(
-      `To generate a wildcard certificate for domain for an external domain you must solve challenges manually.`
+      `To generate a wildcard certificate for domain for an external domain you must solve challenges manually.`,
     );
   }
 
   if (pendingChallenges.length === 0) {
     output.log(
       `A certificate issuance for ${chalk.bold(
-        cns.join(', ')
-      )} has been started ${stamp()}`
+        cns.join(', '),
+      )} has been started ${stamp()}`,
     );
     output.print(
-      `  There are no pending challenges. Finish the issuance by running: \n`
+      `  There are no pending challenges. Finish the issuance by running: \n`,
     );
     output.print(
-      `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`
+      `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`,
     );
     return 0;
   }
 
   output.log(
     `A certificate issuance for ${chalk.bold(
-      cns.join(', ')
-    )} has been started ${stamp()}`
+      cns.join(', '),
+    )} has been started ${stamp()}`,
   );
   output.print(
-    `  Add the following TXT records with your registrar to be able to the solve the DNS challenge:\n\n`
+    `  Add the following TXT records with your registrar to be able to the solve the DNS challenge:\n\n`,
   );
   const [header, ...rows] = dnsTable(
-    pendingChallenges.map(challenge => {
+    pendingChallenges.map((challenge) => {
       const parsedDomain = parse(challenge.domain);
       if (parsedDomain.error) {
         throw new ERRORS.InvalidDomain(challenge.domain);
@@ -193,17 +192,17 @@ async function runStartOrder(
         'TXT',
         challenge.value,
       ];
-    })
+    }),
   ).split('\n');
 
   output.print(`${header}\n`);
   process.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(
-    `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`
+    `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`,
   );
   output.print(
-    '  Read more: https://err.sh/vercel/solve-challenges-manually\n'
+    '  Read more: https://err.sh/vercel/solve-challenges-manually\n',
   );
   return 0;
 }

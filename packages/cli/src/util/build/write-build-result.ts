@@ -1,5 +1,3 @@
-import fs from 'fs-extra';
-import mimeTypes from 'mime-types';
 import {
   basename,
   dirname,
@@ -9,28 +7,32 @@ import {
   resolve,
   posix,
 } from 'path';
+import fs from 'fs-extra';
+import mimeTypes from 'mime-types';
 import {
+  FileFsRef,
+  download,
+  downloadFile,
+  getLambdaOptionsFromFunction,
+  normalizePath,
+} from '@vercel/build-utils';
+import pipe from 'promisepipe';
+import { VERCEL_DIR } from '../projects/link';
+import { unzip } from './unzip';
+import type {
   Builder,
   BuildResultV2,
   BuildResultV3,
   File,
-  FileFsRef,
   BuilderV2,
   BuilderV3,
   Lambda,
   PackageJson,
   Prerender,
-  download,
-  downloadFile,
   EdgeFunction,
   BuildResultBuildOutput,
-  getLambdaOptionsFromFunction,
-  normalizePath,
 } from '@vercel/build-utils';
-import pipe from 'promisepipe';
-import { unzip } from './unzip';
-import { VERCEL_DIR } from '../projects/link';
-import { VercelConfig } from '@vercel/client';
+import type { VercelConfig } from '@vercel/client';
 
 const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
@@ -49,25 +51,25 @@ export async function writeBuildResult(
   build: Builder,
   builder: BuilderV2 | BuilderV3,
   builderPkg: PackageJson,
-  vercelConfig: VercelConfig | null
+  vercelConfig: VercelConfig | null,
 ) {
   const { version } = builder;
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(
       outputDir,
       buildResult as BuildResultV2,
-      vercelConfig
+      vercelConfig,
     );
   } else if (version === 3) {
     return writeBuildResultV3(
       outputDir,
       buildResult as BuildResultV3,
       build,
-      vercelConfig
+      vercelConfig,
     );
   }
   throw new Error(
-    `Unsupported Builder version \`${version}\` from "${builderPkg.name}"`
+    `Unsupported Builder version \`${version}\` from "${builderPkg.name}"`,
   );
 }
 
@@ -107,7 +109,7 @@ function stripDuplicateSlashes(path: string): string {
 async function writeBuildResultV2(
   outputDir: string,
   buildResult: BuildResultV2,
-  vercelConfig: VercelConfig | null
+  vercelConfig: VercelConfig | null,
 ) {
   if ('buildOutputPath' in buildResult) {
     await mergeBuilderOutput(outputDir, buildResult);
@@ -126,7 +128,7 @@ async function writeBuildResultV2(
         output.lambda,
         normalizedPath,
         undefined,
-        lambdas
+        lambdas,
       );
 
       // Write the fallback file alongside the Lambda directory
@@ -138,7 +140,7 @@ async function writeBuildResultV2(
         const stream = fallback.toStream();
         await pipe(
           stream,
-          fs.createWriteStream(fallbackPath, { mode: fallback.mode })
+          fs.createWriteStream(fallbackPath, { mode: fallback.mode }),
         );
         fallback = new FileFsRef({
           ...output.fallback,
@@ -149,7 +151,7 @@ async function writeBuildResultV2(
       const prerenderConfigPath = join(
         outputDir,
         'functions',
-        `${normalizedPath}.prerender-config.json`
+        `${normalizedPath}.prerender-config.json`,
       );
       const prerenderConfig = {
         ...output,
@@ -163,7 +165,7 @@ async function writeBuildResultV2(
         output,
         normalizedPath,
         overrides,
-        vercelConfig?.cleanUrls
+        vercelConfig?.cleanUrls,
       );
     } else if (isEdgeFunction(output)) {
       await writeEdgeFunction(outputDir, output, normalizedPath);
@@ -171,7 +173,7 @@ async function writeBuildResultV2(
       throw new Error(
         `Unsupported output type: "${
           (output as any).type
-        }" for ${normalizedPath}`
+        }" for ${normalizedPath}`,
       );
     }
   }
@@ -186,7 +188,7 @@ async function writeBuildResultV3(
   outputDir: string,
   buildResult: BuildResultV3,
   build: Builder,
-  vercelConfig: VercelConfig | null
+  vercelConfig: VercelConfig | null,
 ) {
   const { output } = buildResult;
   const src = build.src;
@@ -203,7 +205,7 @@ async function writeBuildResultV3(
 
   const ext = extname(src);
   const path = stripDuplicateSlashes(
-    build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
+    build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src,
   );
   if (isLambda(output)) {
     await writeLambda(outputDir, output, path, functionConfiguration);
@@ -211,7 +213,7 @@ async function writeBuildResultV3(
     await writeEdgeFunction(outputDir, output, path);
   } else {
     throw new Error(
-      `Unsupported output type: "${(output as any).type}" for ${build.src}`
+      `Unsupported output type: "${(output as any).type}" for ${build.src}`,
     );
   }
 }
@@ -230,7 +232,7 @@ async function writeStaticFile(
   file: File,
   path: string,
   overrides: Record<string, PathOverride>,
-  cleanUrls = false
+  cleanUrls = false,
 ) {
   let fsPath = path;
   let override: PathOverride | null = null;
@@ -279,7 +281,7 @@ async function writeStaticFile(
 async function writeEdgeFunction(
   outputDir: string,
   edgeFunction: EdgeFunction,
-  path: string
+  path: string,
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
@@ -298,7 +300,7 @@ async function writeEdgeFunction(
   ops.push(
     fs.writeJSON(configPath, config, {
       spaces: 2,
-    })
+    }),
   );
   await Promise.all(ops);
 }
@@ -315,7 +317,7 @@ async function writeLambda(
   lambda: Lambda,
   path: string,
   functionConfiguration?: FunctionConfiguration,
-  lambdas?: Map<Lambda, string>
+  lambdas?: Map<Lambda, string>,
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
@@ -328,7 +330,7 @@ async function writeLambda(
     const targetDest = join(
       outputDir,
       'functions',
-      `${existingLambdaPath}.func`
+      `${existingLambdaPath}.func`,
     );
     const target = relative(destDir, targetDest);
     await fs.mkdirp(destDir);
@@ -365,7 +367,7 @@ async function writeLambda(
   ops.push(
     fs.writeJSON(configPath, config, {
       spaces: 2,
-    })
+    }),
   );
   await Promise.all(ops);
 
@@ -381,8 +383,8 @@ async function writeLambda(
       // Delete everything except for "cache"
       await Promise.all(
         entries
-          .filter(e => e !== 'cache')
-          .map(entry => fs.remove(join(absDir, entry)))
+          .filter((e) => e !== 'cache')
+          .map((entry) => fs.remove(join(absDir, entry))),
       );
     } else {
       // Delete the entire `.vercel` directory
@@ -398,7 +400,7 @@ async function writeLambda(
  */
 async function mergeBuilderOutput(
   outputDir: string,
-  buildResult: BuildResultBuildOutput
+  buildResult: BuildResultBuildOutput,
 ) {
   const absOutputDir = resolve(outputDir);
   if (absOutputDir === buildResult.buildOutputPath) {
@@ -435,7 +437,7 @@ function getFileExtension(file: File): string {
 export async function* findDirs(
   name: string,
   dir: string,
-  root = dir
+  root = dir,
 ): AsyncIterable<string> {
   let paths: string[];
   try {

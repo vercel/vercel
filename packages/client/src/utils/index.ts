@@ -1,15 +1,19 @@
-import { DeploymentFile } from './hashes';
-import { FetchOptions } from '@zeit/fetch';
-import { nodeFetch, zeitFetch } from './fetch';
 import { join, sep, relative } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
-import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
-import { VercelClientOptions, DeploymentOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
+import { pkgVersion } from '../pkg';
+import { nodeFetch, zeitFetch } from './fetch';
 import readdir from './readdir-recursive';
+import type {
+  VercelClientOptions,
+  DeploymentOptions,
+  VercelConfig,
+} from '../types';
+import type { FetchOptions } from '@zeit/fetch';
+import type { DeploymentFile } from './hashes';
 
 type Ignore = ReturnType<typeof ignore>;
 
@@ -47,7 +51,7 @@ export type DeploymentEventType = typeof EVENTS_ARRAY[number];
 export const EVENTS = new Set(EVENTS_ARRAY);
 
 export function getApiDeploymentsUrl(
-  metadata?: Pick<DeploymentOptions, 'builds' | 'functions'>
+  metadata?: Pick<DeploymentOptions, 'builds' | 'functions'>,
 ) {
   if (metadata && metadata.builds && !metadata.functions) {
     return '/v10/deployments';
@@ -57,7 +61,7 @@ export function getApiDeploymentsUrl(
 }
 
 export async function parseVercelConfig(
-  filePath?: string
+  filePath?: string,
 ): Promise<VercelConfig> {
   if (!filePath) {
     return {};
@@ -89,11 +93,11 @@ export async function buildFileTree(
     isDirectory,
     prebuilt,
   }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt'>,
-  debug: Debug
+  debug: Debug,
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
   const ignoreList: string[] = [];
   let fileList: string[];
-  let { ig, ignores } = await getVercelIgnore(path, prebuilt);
+  const { ig, ignores } = await getVercelIgnore(path, prebuilt);
 
   debug(`Found ${ignores.length} rules in .vercelignore`);
   debug('Building file tree...');
@@ -125,7 +129,7 @@ export async function buildFileTree(
 
 export async function getVercelIgnore(
   cwd: string | string[],
-  prebuilt?: boolean
+  prebuilt?: boolean,
 ): Promise<{ ig: Ignore; ignores: string[] }> {
   const ig = ignore();
   let ignores: string[];
@@ -171,7 +175,7 @@ export async function getVercelIgnore(
     const cwds = Array.isArray(cwd) ? cwd : [cwd];
 
     const files = await Promise.all(
-      cwds.map(async cwd => {
+      cwds.map(async (cwd) => {
         const [vercelignore, nowignore] = await Promise.all([
           maybeRead(join(cwd, '.vercelignore'), ''),
           maybeRead(join(cwd, '.nowignore'), ''),
@@ -185,7 +189,7 @@ export async function getVercelIgnore(
           });
         }
         return vercelignore || nowignore;
-      })
+      }),
     );
 
     const ignoreFile = files.join('\n');
@@ -208,7 +212,7 @@ interface FetchOpts extends FetchOptions {
   apiUrl?: string;
   method?: string;
   teamId?: string;
-  headers?: { [key: string]: any };
+  headers?: Record<string, any>;
   userAgent?: string;
 }
 
@@ -217,7 +221,7 @@ export const fetch = async (
   token: string,
   opts: FetchOpts = {},
   debugEnabled?: boolean,
-  useNodeFetch?: boolean
+  useNodeFetch?: boolean,
 ): Promise<any> => {
   semaphore.acquire();
   const debug = createDebug(debugEnabled);
@@ -265,7 +269,7 @@ const isWin = process.platform.includes('win');
 
 export const prepareFiles = (
   files: Map<string, DeploymentFile>,
-  clientOptions: VercelClientOptions
+  clientOptions: VercelClientOptions,
 ): PreparedFile[] => {
   const preparedFiles: PreparedFile[] = [];
   for (const [sha, file] of files) {
@@ -281,7 +285,7 @@ export const prepareFiles = (
       } else {
         // Array of files or single file
         const segments = name.split(sep);
-        fileName = segments[segments.length - 1];
+        fileName = segments[segments.length - 1]!;
       }
 
       preparedFiles.push({
@@ -300,7 +304,9 @@ export function createDebug(debug?: boolean) {
   if (debug) {
     return (...logs: string[]) => {
       process.stderr.write(
-        [`[client-debug] ${new Date().toISOString()}`, ...logs].join(' ') + '\n'
+        `${[`[client-debug] ${new Date().toISOString()}`, ...logs].join(
+          ' ',
+        )}\n`,
       );
     };
   }

@@ -1,2 +1,2 @@
 export { Output } from './create-output';
-export { StopSpinner } from './wait';
+export type { StopSpinner } from './wait';

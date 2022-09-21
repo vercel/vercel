@@ -1,6 +1,6 @@
-import { client } from './client';
-import { Project } from '../../src/types';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
+import { client } from './client';
+import type { Project } from '../../src/types';
 
 const envs = [
   {
@@ -171,22 +171,20 @@ export function useUnknownProject() {
         updatedAt: 1656109539791,
       };
       res.json(project);
+    } else if (type === 'github') {
+      res.status(400).json({
+        message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
+        action: 'Install GitHub App',
+        link: 'https://github.com/apps/vercel',
+        repo,
+      });
     } else {
-      if (type === 'github') {
-        res.status(400).json({
-          message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
-          action: 'Install GitHub App',
-          link: 'https://github.com/apps/vercel',
-          repo,
-        });
-      } else {
-        res.status(400).json({
-          code: 'repo_not_found',
-          message: `The repository "${repo}" couldn't be found in your linked ${formatProvider(
-            type
-          )} account.`,
-        });
-      }
+      res.status(400).json({
+        code: 'repo_not_found',
+        message: `The repository "${repo}" couldn't be found in your linked ${formatProvider(
+          type,
+        )} account.`,
+      });
     }
   });
   client.scenario.patch(`/:version/projects/:projectNameOrId`, (req, res) => {
@@ -212,20 +210,22 @@ export function useProject(project: Partial<Project> = defaultProject) {
       const target = _req.query.target || 'development';
       if (typeof target !== 'string') {
         throw new Error(
-          `/v6/projects/${project.id}/system-env-values was given a query param of "target=${target}", which is not a valid environment.`
+          `/v6/projects/${project.id}/system-env-values was given a query param of "target=${target}", which is not a valid environment.`,
         );
       }
-      const targetEnvs = systemEnvs.filter(env => env.target.includes(target));
+      const targetEnvs = systemEnvs.filter((env) =>
+        env.target.includes(target),
+      );
 
       res.json({
         systemEnvValues: targetEnvs,
       });
-    }
+    },
   );
   client.scenario.get(`/v8/projects/${project.id}/env`, (_req, res) => {
     const target = _req.query.target;
     if (typeof target === 'string') {
-      const targetEnvs = envs.filter(env => env.target.includes(target));
+      const targetEnvs = envs.filter((env) => env.target.includes(target));
       res.json({ envs: targetEnvs });
       return;
     }
@@ -249,7 +249,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
         }
       }
       res.json(envs);
-    }
+    },
   );
   client.scenario.post(`/v9/projects/${project.id}/link`, (req, res) => {
     const { type, repo, org } = req.body;
@@ -268,22 +268,20 @@ export function useProject(project: Partial<Project> = defaultProject) {
         updatedAt: 1656109539791,
       };
       res.json(project);
+    } else if (type === 'github') {
+      res.status(400).json({
+        message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
+        action: 'Install GitHub App',
+        link: 'https://github.com/apps/vercel',
+        repo,
+      });
     } else {
-      if (type === 'github') {
-        res.status(400).json({
-          message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
-          action: 'Install GitHub App',
-          link: 'https://github.com/apps/vercel',
-          repo,
-        });
-      } else {
-        res.status(400).json({
-          code: 'repo_not_found',
-          message: `The repository "${repo}" couldn't be found in your linked ${formatProvider(
-            type
-          )} account.`,
-        });
-      }
+      res.status(400).json({
+        code: 'repo_not_found',
+        message: `The repository "${repo}" couldn't be found in your linked ${formatProvider(
+          type,
+        )} account.`,
+      });
     }
   });
   client.scenario.delete(`/v9/projects/${project.id}/link`, (_req, res) => {

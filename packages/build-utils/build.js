@@ -1,7 +1,7 @@
 #!/usr/bin/env node
+const { join } = require('path');
 const fs = require('fs-extra');
 const execa = require('execa');
-const { join } = require('path');
 
 async function main() {
   const outDir = join(__dirname, 'dist');
@@ -24,7 +24,8 @@ async function main() {
   await fs.remove(mainDir);
 }
 
-main().catch(err => {
+main().catch((err) => {
+  // eslint-disable-next-line no-console
   console.error(err);
   process.exit(1);
 });

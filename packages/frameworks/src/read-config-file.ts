@@ -1,6 +1,6 @@
+import { promises } from 'fs';
 import yaml from 'js-yaml';
 import toml from '@iarna/toml';
-import { promises } from 'fs';
 
 const { readFile } = promises;
 
@@ -18,7 +18,7 @@ async function readFileOrNull(file: string) {
 }
 
 export async function readConfigFile<T>(
-  files: string | string[]
+  files: string | string[],
 ): Promise<T | null> {
   files = Array.isArray(files) ? files : [files];
 
@@ -30,7 +30,7 @@ export async function readConfigFile<T>(
       if (name.endsWith('.json')) {
         return JSON.parse(str) as T;
       } else if (name.endsWith('.toml')) {
-        return (toml.parse(str) as unknown) as T;
+        return toml.parse(str) as unknown as T;
       } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
         return yaml.safeLoad(str, { filename: name }) as T;
       }

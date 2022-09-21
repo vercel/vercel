@@ -1,6 +1,6 @@
+import { join } from 'path';
 import ms from 'ms';
 import fs from 'fs-extra';
-import { join } from 'path';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import build from '../../../src/commands/build';
 import { client } from '../../mocks/client';
@@ -126,7 +126,7 @@ describe('build', () => {
       const hasStaticFiles = await fs.pathExists(join(output, 'static'));
       expect(
         hasStaticFiles,
-        'Expected ".vercel/output/static" to not exist'
+        'Expected ".vercel/output/static" to not exist',
       ).toEqual(false);
 
       // "functions/api" directory has output Functions
@@ -179,10 +179,10 @@ describe('build', () => {
       const files = await fs.readdir(join(output, 'static'));
       expect(files.sort()).toEqual(['foo.html', 'index.html']);
       expect(
-        (await fs.lstat(join(output, 'static', 'foo.html'))).isSymbolicLink()
+        (await fs.lstat(join(output, 'static', 'foo.html'))).isSymbolicLink(),
       ).toEqual(true);
       expect(
-        (await fs.lstat(join(output, 'static', 'index.html'))).isSymbolicLink()
+        (await fs.lstat(join(output, 'static', 'index.html'))).isSymbolicLink(),
       ).toEqual(false);
     } finally {
       await fs.unlink(join(cwd, 'foo.html'));
@@ -229,7 +229,7 @@ describe('build', () => {
       const hasStaticFiles = await fs.pathExists(join(output, 'static'));
       expect(
         hasStaticFiles,
-        'Expected ".vercel/output/static" to not exist'
+        'Expected ".vercel/output/static" to not exist',
       ).toEqual(false);
 
       // "functions" directory has output Function
@@ -284,7 +284,7 @@ describe('build', () => {
       const hasStaticFiles = await fs.pathExists(join(output, 'static'));
       expect(
         hasStaticFiles,
-        'Expected ".vercel/output/static" to not exist'
+        'Expected ".vercel/output/static" to not exist',
       ).toEqual(false);
 
       // "functions/api" directory has output Functions
@@ -292,7 +292,7 @@ describe('build', () => {
       expect(functions.sort()).toEqual(['foo.func']);
 
       const vcConfig = await fs.readJSON(
-        join(output, 'functions/api/foo.func/.vc-config.json')
+        join(output, 'functions/api/foo.func/.vc-config.json'),
       );
       expect(vcConfig).toMatchObject({
         handler: 'api/foo.txt',
@@ -349,7 +349,7 @@ describe('build', () => {
       const hasStaticFiles = await fs.pathExists(join(output, 'static'));
       expect(
         hasStaticFiles,
-        'Expected ".vercel/output/static" to not exist'
+        'Expected ".vercel/output/static" to not exist',
       ).toEqual(false);
 
       // "functions/api" directory has output Functions
@@ -357,7 +357,7 @@ describe('build', () => {
       expect(functions.sort()).toEqual(['edge.func']);
 
       const vcConfig = await fs.readJSON(
-        join(output, 'functions/api/edge.func/.vc-config.json')
+        join(output, 'functions/api/edge.func/.vc-config.json'),
       );
       expect(vcConfig).toMatchObject({
         runtime: 'edge',
@@ -383,7 +383,7 @@ describe('build', () => {
     const envFilePath = join(cwd, '.vercel', '.env.preview.local');
     const projectJsonPath = join(cwd, '.vercel', 'project.json');
     const originalProjectJson = await fs.readJSON(
-      join(cwd, '.vercel/project.json')
+      join(cwd, '.vercel/project.json'),
     );
     try {
       process.chdir(cwd);
@@ -393,7 +393,7 @@ describe('build', () => {
 
       const previewEnv = await fs.readFile(envFilePath, 'utf8');
       const envFileHasPreviewEnv = previewEnv.includes(
-        'REDIS_CONNECTION_STRING'
+        'REDIS_CONNECTION_STRING',
       );
       expect(envFileHasPreviewEnv).toBeTruthy();
     } finally {
@@ -416,7 +416,7 @@ describe('build', () => {
     const envFilePath = join(cwd, '.vercel', '.env.production.local');
     const projectJsonPath = join(cwd, '.vercel', 'project.json');
     const originalProjectJson = await fs.readJSON(
-      join(cwd, '.vercel/project.json')
+      join(cwd, '.vercel/project.json'),
     );
     try {
       process.chdir(cwd);
@@ -426,11 +426,11 @@ describe('build', () => {
 
       const prodEnv = await fs.readFile(envFilePath, 'utf8');
       const envFileHasProductionEnv1 = prodEnv.includes(
-        'REDIS_CONNECTION_STRING'
+        'REDIS_CONNECTION_STRING',
       );
       expect(envFileHasProductionEnv1).toBeTruthy();
       const envFileHasProductionEnv2 = prodEnv.includes(
-        'SQL_CONNECTION_STRING'
+        'SQL_CONNECTION_STRING',
       );
       expect(envFileHasProductionEnv2).toBeTruthy();
     } finally {
@@ -689,7 +689,7 @@ describe('build', () => {
       expect(files.sort()).toEqual(['file']);
 
       expect(await fs.readFile(join(output, 'static/file'), 'utf8')).toEqual(
-        'file contents'
+        'file contents',
       );
 
       // "functions" directory has output Functions
@@ -711,7 +711,7 @@ describe('build', () => {
 
       // Error gets printed to the terminal
       await expect(client.stderr).toOutput(
-        'Error: Function must contain at least one property.'
+        'Error: Function must contain at least one property.',
       );
 
       // `builds.json` contains top-level "error" property
@@ -720,7 +720,7 @@ describe('build', () => {
 
       expect(builds.error.code).toEqual('invalid_function');
       expect(builds.error.message).toEqual(
-        'Function must contain at least one property.'
+        'Function must contain at least one property.',
       );
 
       // `config.json` contains `version`
@@ -876,7 +876,7 @@ describe('build', () => {
       expect(functions.sort()).toEqual(['memory.func']);
 
       const vcConfig = await fs.readJSON(
-        join(output, 'functions/api/memory.func/.vc-config.json')
+        join(output, 'functions/api/memory.func/.vc-config.json'),
       );
       expect(vcConfig).toMatchObject({
         handler: 'api/memory.js',
@@ -912,7 +912,7 @@ describe('build', () => {
       // index.txt file, so verify that that was produced in the build output
       const contents = await fs.readFile(
         join(output, 'static/index.txt'),
-        'utf8'
+        'utf8',
       );
       expect(contents.trim()).toEqual('3');
     } finally {
@@ -920,7 +920,7 @@ describe('build', () => {
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
-  
+
   it('should apply "images" configuration from `vercel.json`', async () => {
     const cwd = fixture('images');
     const output = join(cwd, '.vercel/output');
@@ -980,7 +980,7 @@ describe('build', () => {
         'functions/api',
         'use-classic.func',
         'packages',
-        'only-classic'
+        'only-classic',
       );
       const packageDistFiles = await fs.readdir(packageDir);
       expect(packageDistFiles).toContain('index.js');
@@ -992,7 +992,7 @@ describe('build', () => {
         'functions/api',
         'use-main.func',
         'packages',
-        'only-main'
+        'only-main',
       );
       const packageDistFiles = await fs.readdir(packageDir);
       expect(packageDistFiles).toContain('dist-main.js');
@@ -1004,7 +1004,7 @@ describe('build', () => {
         'functions/api',
         'use-module.func',
         'packages',
-        'only-module'
+        'only-module',
       );
       const packageDistFiles = await fs.readdir(packageDir);
       expect(packageDistFiles).toContain('dist-module.js');
@@ -1016,7 +1016,7 @@ describe('build', () => {
         'functions/api',
         'use-browser.func',
         'packages',
-        'only-browser'
+        'only-browser',
       );
       const packageDistFiles = await fs.readdir(packageDir);
       expect(packageDistFiles).toContain('dist-browser.js');
@@ -1028,7 +1028,7 @@ describe('build', () => {
         'functions/api',
         'prefer-browser.func',
         'packages',
-        'prefer-browser'
+        'prefer-browser',
       );
       const packageDistFiles = await fs.readdir(packageDir);
       expect(packageDistFiles).toContain('dist-browser.js');
@@ -1040,7 +1040,7 @@ describe('build', () => {
         'functions/api',
         'prefer-main.func',
         'packages',
-        'prefer-main'
+        'prefer-main',
       );
       const packageDistFiles = await fs.readdir(packageDir);
       expect(packageDistFiles).toContain('dist-main.js');
@@ -1052,7 +1052,7 @@ describe('build', () => {
         'functions/api',
         'prefer-module.func',
         'packages',
-        'prefer-module'
+        'prefer-module',
       );
       const packageDistFiles = await fs.readdir(packageDir);
       expect(packageDistFiles).toContain('dist-module.js');

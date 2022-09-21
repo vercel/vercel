@@ -1,14 +1,14 @@
-import ms from 'ms';
 import { join } from 'path';
+import ms from 'ms';
 import { remove } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
+import vercelNextPkg from '@vercel/next/package.json';
+import vercelNodePkg from '@vercel/node/package.json';
 import { client } from '../../../mocks/client';
 import {
   importBuilders,
   resolveBuilders,
 } from '../../../../src/util/build/import-builders';
-import vercelNextPkg from '@vercel/next/package.json';
-import vercelNodePkg from '@vercel/node/package.json';
 
 jest.setTimeout(ms('30 seconds'));
 
@@ -22,16 +22,16 @@ describe('importBuilders()', () => {
     expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
     expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
     expect(builders.get('@vercel/node')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/node/package.json')
+      join(repoRoot, 'packages/node/package.json'),
     );
     expect(builders.get('@vercel/next')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/next/package.json')
+      join(repoRoot, 'packages/next/package.json'),
     );
     expect(typeof builders.get('@vercel/node')?.builder.build).toEqual(
-      'function'
+      'function',
     );
     expect(typeof builders.get('@vercel/next')?.builder.build).toEqual(
-      'function'
+      'function',
     );
   });
 
@@ -40,22 +40,22 @@ describe('importBuilders()', () => {
     const builders = await importBuilders(specs, process.cwd(), client.output);
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node@latest')?.pkg).toMatchObject(
-      vercelNodePkg
+      vercelNodePkg,
     );
     expect(builders.get('@vercel/next@latest')?.pkg).toMatchObject(
-      vercelNextPkg
+      vercelNextPkg,
     );
     expect(builders.get('@vercel/node@latest')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/node/package.json')
+      join(repoRoot, 'packages/node/package.json'),
     );
     expect(builders.get('@vercel/next@latest')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/next/package.json')
+      join(repoRoot, 'packages/next/package.json'),
     );
     expect(typeof builders.get('@vercel/node@latest')?.builder.build).toEqual(
-      'function'
+      'function',
     );
     expect(typeof builders.get('@vercel/next@latest')?.builder.build).toEqual(
-      'function'
+      'function',
     );
   });
 
@@ -64,22 +64,22 @@ describe('importBuilders()', () => {
     const builders = await importBuilders(specs, process.cwd(), client.output);
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node@canary')?.pkg).toMatchObject(
-      vercelNodePkg
+      vercelNodePkg,
     );
     expect(builders.get('@vercel/next@canary')?.pkg).toMatchObject(
-      vercelNextPkg
+      vercelNextPkg,
     );
     expect(builders.get('@vercel/node@canary')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/node/package.json')
+      join(repoRoot, 'packages/node/package.json'),
     );
     expect(builders.get('@vercel/next@canary')?.pkgPath).toEqual(
-      join(repoRoot, 'packages/next/package.json')
+      join(repoRoot, 'packages/next/package.json'),
     );
     expect(typeof builders.get('@vercel/node@canary')?.builder.build).toEqual(
-      'function'
+      'function',
     );
     expect(typeof builders.get('@vercel/next@canary')?.builder.build).toEqual(
-      'function'
+      'function',
     );
   });
 
@@ -99,11 +99,11 @@ describe('importBuilders()', () => {
       expect(builders.get(spec)?.pkg.name).toEqual('@vercel/node');
       expect(builders.get(spec)?.pkg.version).toEqual('2.0.0');
       expect(builders.get(spec)?.pkgPath).toEqual(
-        join(cwd, '.vercel/builders/node_modules/@vercel/node/package.json')
+        join(cwd, '.vercel/builders/node_modules/@vercel/node/package.json'),
       );
       expect(typeof builders.get(spec)?.builder.build).toEqual('function');
       await expect(client.stderr).toOutput(
-        '> Installing Builder: @vercel/node'
+        '> Installing Builder: @vercel/node',
       );
     } finally {
       await remove(cwd);
@@ -127,19 +127,19 @@ describe('importBuilders()', () => {
       expect(builders.get(spec)?.pkg.name).toEqual('vercel-deno');
       expect(builders.get(spec)?.pkg.version).toEqual('2.0.1');
       expect(builders.get(spec)?.pkgPath).toEqual(
-        join(cwd, '.vercel/builders/node_modules/vercel-deno/package.json')
+        join(cwd, '.vercel/builders/node_modules/vercel-deno/package.json'),
       );
       expect(typeof builders.get(spec)?.builder.build).toEqual('function');
       expect(builders.get(tarballSpec)?.pkg.name).toEqual('vercel-bash');
       expect(builders.get(tarballSpec)?.pkg.version).toEqual('4.1.0');
       expect(builders.get(tarballSpec)?.pkgPath).toEqual(
-        join(cwd, '.vercel/builders/node_modules/vercel-bash/package.json')
+        join(cwd, '.vercel/builders/node_modules/vercel-bash/package.json'),
       );
       expect(typeof builders.get(tarballSpec)?.builder.build).toEqual(
-        'function'
+        'function',
       );
       await expect(client.stderr).toOutput(
-        '> Installing Builders: vercel-deno@2.0.1, https://test2020-h5hdll5dz-tootallnate.vercel.app'
+        '> Installing Builders: vercel-deno@2.0.1, https://test2020-h5hdll5dz-tootallnate.vercel.app',
       );
     } finally {
       await remove(cwd);
@@ -162,7 +162,7 @@ describe('importBuilders()', () => {
       expect(builders.get(spec)?.pkg.name).toEqual('@frontity/now');
       expect(builders.get(spec)?.pkg.version).toEqual('1.2.0');
       expect(builders.get(spec)?.pkgPath).toEqual(
-        join(cwd, '.vercel/builders/node_modules/@frontity/now/package.json')
+        join(cwd, '.vercel/builders/node_modules/@frontity/now/package.json'),
       );
       expect(typeof builders.get(spec)?.builder.build).toEqual('function');
     } finally {
@@ -188,10 +188,10 @@ describe('importBuilders()', () => {
     }
 
     expect(err.message).toEqual(
-      'The package `@vercel/does-not-exist` is not published on the npm registry'
+      'The package `@vercel/does-not-exist` is not published on the npm registry',
     );
     expect((err as any).link).toEqual(
-      'https://vercel.link/builder-dependencies-install-failed'
+      'https://vercel.link/builder-dependencies-install-failed',
     );
   });
 });
@@ -222,7 +222,7 @@ describe('resolveBuilders()', () => {
     }
 
     expect(
-      err.message.startsWith('Importing "@vercel/does-not-exist": Cannot')
+      err.message.startsWith('Importing "@vercel/does-not-exist": Cannot'),
     ).toEqual(true);
   });
 });

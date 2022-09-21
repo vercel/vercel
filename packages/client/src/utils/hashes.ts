@@ -24,9 +24,9 @@ export function hash(buf: Buffer): string {
  * @return {object}
  */
 export const mapToObject = (
-  map: Map<string, DeploymentFile>
-): { [key: string]: DeploymentFile } => {
-  const obj: { [key: string]: DeploymentFile } = {};
+  map: Map<string, DeploymentFile>,
+): Record<string, DeploymentFile> => {
+  const obj: Record<string, DeploymentFile> = {};
   for (const [key, value] of map) {
     obj[key] = value;
   }
@@ -43,7 +43,7 @@ export const mapToObject = (
  */
 export async function hashes(
   files: string[],
-  map = new Map<string, DeploymentFile>()
+  map = new Map<string, DeploymentFile>(),
 ): Promise<Map<string, DeploymentFile>> {
   const semaphore = new Sema(100);
 
@@ -74,7 +74,7 @@ export async function hashes(
       }
 
       semaphore.release();
-    })
+    }),
   );
   return map;
 }

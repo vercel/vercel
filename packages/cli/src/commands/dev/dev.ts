@@ -1,28 +1,27 @@
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
-
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
-import { ProjectEnvVariable } from '../../types';
-import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
-import { ProjectSettings } from '../../types';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import setupAndLink from '../../util/link/setup-and-link';
 import getSystemEnvValues from '../../util/env/get-system-env-values';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
+import type { ProjectSettings } from '../../types';
+import type Client from '../../util/client';
+import type { ProjectEnvVariable } from '../../types';
 
-type Options = {
+interface Options {
   '--listen': string;
   '--yes': boolean;
-};
+}
 
 export default async function dev(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
 ) {
   const { output } = client;
   const [dir = '.'] = args;
@@ -49,8 +48,8 @@ export default async function dev(
     if (link.reason === 'HEADLESS') {
       client.output.error(
         `Command ${getCommandName(
-          'dev'
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
+          'dev',
+        )} requires confirmation. Use option ${param('--yes')} to confirm.`,
       );
     }
     return link.exitCode;

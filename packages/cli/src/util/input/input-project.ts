@@ -1,16 +1,16 @@
-import Client from '../client';
-import confirm from './confirm';
-import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
-import { ProjectNotFound } from '../../util/errors-ts';
-import { Project, Org } from '../../types';
 import slugify from '@sindresorhus/slugify';
+import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../errors-ts';
+import confirm from './confirm';
+import type Client from '../client';
+import type { Project, Org } from '../../types';
 
 export default async function inputProject(
   client: Client,
   org: Org,
   detectedProjectName: string,
-  autoConfirm = false
+  autoConfirm = false,
 ): Promise<Project | string> {
   const { output } = client;
   const slugifiedName = slugify(detectedProjectName);
@@ -49,7 +49,7 @@ export default async function inputProject(
     shouldLinkProject = await confirm(
       client,
       `Link to existing project?`,
-      false
+      false,
     );
   } else {
     // auto-detected a project to link
@@ -57,9 +57,9 @@ export default async function inputProject(
       await confirm(
         client,
         `Found project ${chalk.cyan(
-          `“${org.slug}/${detectedProject.name}”`
+          `“${org.slug}/${detectedProject.name}”`,
         )}. Link to it?`,
-        true
+        true,
       )
     ) {
       return detectedProject;
@@ -69,7 +69,7 @@ export default async function inputProject(
     shouldLinkProject = await confirm(
       client,
       `Link to different existing project?`,
-      true
+      true,
     );
   }
 
@@ -128,7 +128,7 @@ export default async function inputProject(
       existingProject = await getProjectByIdOrName(
         client,
         newProjectName,
-        org.id
+        org.id,
       );
     } finally {
       output.stopSpinner();

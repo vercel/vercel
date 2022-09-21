@@ -1,11 +1,9 @@
 import chalk from 'chalk';
 import bytes from 'bytes';
 import { isReady, isFailed } from '../build-state';
-import { Build, BuildOutput } from '../../types';
+import type { Build, BuildOutput } from '../../types';
 
-export interface Times {
-  [id: string]: string | null;
-}
+export type Times = Record<string, string | null>;
 
 // That's the spacing between the source, state and time
 const padding = 8;
@@ -19,17 +17,17 @@ const hasOutput = (b: Build) => Array.isArray(b.output) && b.output.length > 0;
 // Get the common path out of multiple builds
 const getCommonPath = (buildGroup: Build[]) => {
   const commonPath = [];
-  const splits = buildGroup.map(build =>
-    getDirPath(build.entrypoint).split('/')
+  const splits = buildGroup.map((build) =>
+    getDirPath(build.entrypoint).split('/'),
   );
   const shortest = splits.reduce(
     (prevValue, currentValue) => Math.min(prevValue, currentValue.length),
-    Infinity
+    Infinity,
   );
 
   for (let i = 0; i <= shortest; i++) {
     const first = splits[0][i];
-    if (splits.every(pathParts => pathParts[i] === first)) {
+    if (splits.every((pathParts) => pathParts[i] === first)) {
       commonPath.push(first);
       continue;
     }
@@ -61,12 +59,12 @@ const styleHiddenBuilds = (
   buildGroup: Build[],
   times: Times,
   longestSource: number,
-  isHidden = false
+  isHidden = false,
 ) => {
   const { id } = buildGroup[0];
   const entry = commonPath.padEnd(longestSource + padding);
   const time = typeof times[id] === 'string' ? times[id] : '';
-  const prefix = isHidden === false && buildGroup.some(hasOutput) ? '┌' : '╶';
+  const prefix = !isHidden && buildGroup.some(hasOutput) ? '┌' : '╶';
 
   let pathColor = chalk.cyan;
 
@@ -84,7 +82,7 @@ const styleHiddenBuilds = (
 const styleOutput = (
   output: BuildOutput,
   readyState: Build['readyState'],
-  isLast: boolean
+  isLast: boolean,
 ) => {
   const { type, path, size, lambda } = output;
   const prefix = type === 'lambda' ? 'λ ' : '';
@@ -116,7 +114,7 @@ const styleOutput = (
 const getDirPath = (
   path: string,
   level = 0,
-  highestLevel: number | null = null
+  highestLevel: number | null = null,
 ) => {
   const parts = path.split('/').slice(0, -1);
 
@@ -154,7 +152,7 @@ const sortByEntrypoint = (a: Build, b: Build) => {
 const groupBuilds = (
   buildList: Build[][],
   highestLevel: number,
-  counter: number
+  counter: number,
 ) => {
   const currentIndex = counter % buildList.length;
   const __level = Math.ceil(counter / buildList.length);
@@ -163,7 +161,7 @@ const groupBuilds = (
   const currentPath = getDirPath(
     buildList[currentIndex][0].entrypoint,
     level,
-    highestLevel
+    highestLevel,
   );
 
   const nextList = [];
@@ -192,7 +190,7 @@ const groupBuilds = (
 export default (builds: Build[], times: Times) => {
   // Sort the builds by path
   // so that the grouping will be easier
-  let path = builds.sort(sortByEntrypoint).map(build => [build]);
+  let path = builds.sort(sortByEntrypoint).map((build) => [build]);
 
   const highestLevel = builds.reduce((prev, curr) => {
     const partCounter = curr.entrypoint.split('/').length - 1;
@@ -219,7 +217,7 @@ export default (builds: Build[], times: Times) => {
   const final = [];
   let finalBuildsLength = path.length;
   let lengthWithoutRootPaths = path.length;
-  let hiddenBuildGroup: Build[] = [];
+  const hiddenBuildGroup: Build[] = [];
 
   // Ungroup the root files
   path = (() => {
@@ -228,14 +226,14 @@ export default (builds: Build[], times: Times) => {
 
     for (const group of path) {
       if (getCommonPath(group) === '/') {
-        group.map(item => rootList.push([item]));
+        group.map((item) => rootList.push([item]));
       } else {
         nextList.push(group);
       }
     }
 
     lengthWithoutRootPaths = nextList.length;
-    rootList.map(group => nextList.push(group));
+    rootList.map((group) => nextList.push(group));
 
     return nextList;
   })();
@@ -266,8 +264,8 @@ export default (builds: Build[], times: Times) => {
           `${commonPath}/*`,
           buildGroup,
           times,
-          longestSource
-        )}\n`
+          longestSource,
+        )}\n`,
       );
       finalBuildsLength++;
     }
@@ -284,15 +282,15 @@ export default (builds: Build[], times: Times) => {
       .slice(0, MAX_OUTPUTS_PER_GROUP)
       .forEach((output, index) =>
         final.push(
-          `${styleOutput(output, 'READY', outputs.length === index + 1)}\n`
-        )
+          `${styleOutput(output, 'READY', outputs.length === index + 1)}\n`,
+        ),
       );
 
     if (outputs.length > MAX_OUTPUTS_PER_GROUP) {
       final.push(
         chalk.grey(
-          `└── ${outputs.length - MAX_OUTPUTS_PER_GROUP} output items hidden\n`
-        )
+          `└── ${outputs.length - MAX_OUTPUTS_PER_GROUP} output items hidden\n`,
+        ),
       );
     }
   }
@@ -304,8 +302,8 @@ export default (builds: Build[], times: Times) => {
         hiddenBuildGroup,
         times,
         longestSource,
-        true
-      )}\n`
+        true,
+      )}\n`,
     );
   }
 

@@ -1,5 +1,5 @@
-import { Response } from 'node-fetch';
 import errorOutput from './output/error';
+import type { Response } from 'node-fetch';
 
 export { default as handleError } from './handle-error';
 export const error = errorOutput;
@@ -14,7 +14,7 @@ export interface ResponseError extends Error {
 export async function responseError(
   res: Response,
   fallbackMessage: string | null = null,
-  parsedBody = {}
+  parsedBody = {},
 ) {
   let message = '';
   let bodyError;
@@ -64,7 +64,7 @@ export async function responseError(
 
 export async function responseErrorMessage(
   res: Response,
-  fallbackMessage: string | null = null
+  fallbackMessage: string | null = null,
 ) {
   let message;
 

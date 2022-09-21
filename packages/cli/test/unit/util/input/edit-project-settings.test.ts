@@ -1,12 +1,13 @@
-import { Framework, frameworks } from '@vercel/frameworks';
+import { frameworks } from '@vercel/frameworks';
 import editProjectSettings from '../../../../src/util/input/edit-project-settings';
 import { client } from '../../../mocks/client';
+import type { Framework } from '@vercel/frameworks';
 
 const otherFramework = frameworks.find(
-  fwk => fwk.name === 'Other'
+  (fwk) => fwk.name === 'Other',
 ) as unknown as Framework;
 const nextJSFramework = frameworks.find(
-  fwk => fwk.slug === 'nextjs'
+  (fwk) => fwk.slug === 'nextjs',
 ) as unknown as Framework;
 
 describe('editProjectSettings', () => {
@@ -17,7 +18,7 @@ describe('editProjectSettings', () => {
         null,
         otherFramework,
         true,
-        null
+        null,
       );
       expect(settings).toStrictEqual({
         buildCommand: null,
@@ -28,7 +29,7 @@ describe('editProjectSettings', () => {
         outputDirectory: null,
       });
       await expect(client.stderr).toOutput(
-        'No framework detected. Default Project Settings:'
+        'No framework detected. Default Project Settings:',
       );
       await expect(client.stderr).toOutput('Build Command');
       await expect(client.stderr).toOutput('Development Command');
@@ -51,11 +52,11 @@ describe('editProjectSettings', () => {
         projectSettings,
         otherFramework,
         true,
-        null
+        null,
       );
       expect(settings).toStrictEqual({ ...projectSettings, framework: null });
       await expect(client.stderr).toOutput(
-        'No framework detected. Default Project Settings:'
+        'No framework detected. Default Project Settings:',
       );
       await expect(client.stderr).toOutput('Build Command');
       await expect(client.stderr).toOutput('Development Command');
@@ -78,7 +79,7 @@ describe('editProjectSettings', () => {
         projectSettings,
         nextJSFramework,
         true,
-        null
+        null,
       );
       expect(settings).toStrictEqual({
         ...projectSettings,
@@ -114,11 +115,11 @@ describe('editProjectSettings', () => {
         projectSettings,
         nextJSFramework,
         true,
-        overrides
+        overrides,
       );
       expect(settings).toStrictEqual(overrides);
       await expect(client.stderr).toOutput(
-        'Local settings detected in vercel.json:'
+        'Local settings detected in vercel.json:',
       );
       await expect(client.stderr).toOutput('Build Command:');
       await expect(client.stderr).toOutput('Ignore Command:');
@@ -127,7 +128,7 @@ describe('editProjectSettings', () => {
       await expect(client.stderr).toOutput('Install Command:');
       await expect(client.stderr).toOutput('Output Directory:');
       await expect(client.stderr).toOutput(
-        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
+        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.',
       );
       await expect(client.stderr).toOutput('Auto-detected Project Settings');
     });
@@ -148,11 +149,11 @@ describe('editProjectSettings', () => {
         null,
         nextJSFramework,
         true,
-        overrides
+        overrides,
       );
       expect(settings).toStrictEqual(overrides);
       await expect(client.stderr).toOutput(
-        'Local settings detected in vercel.json:'
+        'Local settings detected in vercel.json:',
       );
       await expect(client.stderr).toOutput('Build Command:');
       await expect(client.stderr).toOutput('Ignore Command:');
@@ -161,7 +162,7 @@ describe('editProjectSettings', () => {
       await expect(client.stderr).toOutput('Install Command:');
       await expect(client.stderr).toOutput('Output Directory:');
       await expect(client.stderr).toOutput(
-        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
+        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.',
       );
       await expect(client.stderr).toOutput('Auto-detected Project Settings');
     });
@@ -182,11 +183,11 @@ describe('editProjectSettings', () => {
         null,
         null,
         true,
-        overrides
+        overrides,
       );
       expect(settings).toStrictEqual(overrides);
       await expect(client.stderr).toOutput(
-        'Local settings detected in vercel.json:'
+        'Local settings detected in vercel.json:',
       );
       await expect(client.stderr).toOutput('Build Command:');
       await expect(client.stderr).toOutput('Ignore Command:');
@@ -195,7 +196,7 @@ describe('editProjectSettings', () => {
       await expect(client.stderr).toOutput('Install Command:');
       await expect(client.stderr).toOutput('Output Directory:');
       await expect(client.stderr).toOutput(
-        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.'
+        'Merging default Project Settings for Svelte. Previously listed overrides are prioritized.',
       );
       await expect(client.stderr).toOutput('Auto-detected Project Settings');
     });

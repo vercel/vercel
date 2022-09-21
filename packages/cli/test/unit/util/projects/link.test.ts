@@ -1,7 +1,6 @@
 import { join } from 'path';
 import { getLinkedProject } from '../../../../src/util/projects/link';
 import { client } from '../../../mocks/client';
-
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -37,7 +36,7 @@ describe('getLinkedProject', () => {
       throw new Error(`Expected an error to be thrown.`);
     }
     expect(error.message).toBe(
-      'The specified token is not valid. Use `vercel login` to generate a new token.'
+      'The specified token is not valid. Use `vercel login` to generate a new token.',
     );
   });
 
@@ -66,7 +65,7 @@ describe('getLinkedProject', () => {
       throw new Error(`Expected an error to be thrown.`);
     }
     expect(error.message).toBe(
-      'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.'
+      'Could not retrieve Project Settings. To link your Project, remove the `.vercel` directory and deploy again.',
     );
   });
 });

@@ -12,7 +12,7 @@ const { hasOwnProperty } = Object.prototype;
  */
 export function cloneEnv(...envs: (Env | undefined)[]): Env {
   return envs.reduce((obj: Env, env) => {
-    if (env === undefined || env === null) {
+    if (!env) {
       return obj;
     }
 

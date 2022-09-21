@@ -1,4 +1,3 @@
-import Client from '../client';
 import {
   DomainNotFound,
   DNSPermissionDenied,
@@ -7,16 +6,17 @@ import {
   DNSConflictingRecord,
   isAPIError,
 } from '../errors-ts';
-import { DNSRecordData } from '../../types';
+import type Client from '../client';
+import type { DNSRecordData } from '../../types';
 
-type Response = {
+interface Response {
   uid: string;
-};
+}
 
 export default async function addDNSRecord(
   client: Client,
   domain: string,
-  recordData: DNSRecordData
+  recordData: DNSRecordData,
 ) {
   try {
     const record = await client.fetch<Response>(
@@ -24,7 +24,7 @@ export default async function addDNSRecord(
       {
         body: recordData,
         method: 'POST',
-      }
+      },
     );
     return record;
   } catch (err: unknown) {

@@ -1,15 +1,9 @@
 import chalk from 'chalk';
-import { SetDifference } from 'utility-types';
-import { AliasRecord } from '../../util/alias/create-alias';
-import { Domain } from '../../types';
-import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
-import Client from '../../util/client';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
 import getScope from '../../util/get-scope';
-import setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
 import { isValidName } from '../../util/is-valid-name';
 import handleCertError from '../../util/certs/handle-cert-error';
@@ -17,17 +11,23 @@ import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import toHost from '../../util/to-host';
+import type setupDomain from '../../util/domains/setup-domain';
+import type Client from '../../util/client';
+import type { Output } from '../../util/output';
+import type { Domain } from '../../types';
+import type { AliasRecord } from '../../util/alias/create-alias';
+import type { SetDifference } from 'utility-types';
 import type { VercelConfig } from '@vercel/client';
 
-type Options = {
+interface Options {
   '--debug': boolean;
   '--local-config': string;
-};
+}
 
 export default async function set(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
 ) {
   const setStamp = stamp();
   const { output, localConfig } = client;
@@ -37,15 +37,15 @@ export default async function set(
   if (args.length > 2) {
     output.error(
       `${getCommandName(
-        `alias <deployment> <target>`
-      )} accepts at most two arguments`
+        `alias <deployment> <target>`,
+      )} accepts at most two arguments`,
     );
     return 1;
   }
 
   if (args.length >= 1 && !isValidName(args[0])) {
     output.error(
-      `The provided argument "${args[0]}" is not a valid deployment`
+      `The provided argument "${args[0]}" is not a valid deployment`,
     );
     return 1;
   }
@@ -58,8 +58,8 @@ export default async function set(
   if (args.length === 0) {
     output.error(
       `To ship to production, optionally configure your domains (${link(
-        'https://vercel.link/domain-configuration'
-      )}) and run ${getCommandName(`--prod`)}.`
+        'https://vercel.link/domain-configuration',
+      )}) and run ${getCommandName(`--prod`)}.`,
     );
     return 1;
   }
@@ -75,8 +75,8 @@ export default async function set(
         opts['--local-config'],
         user,
         contextName,
-        localConfig
-      )
+        localConfig,
+      ),
     );
 
     if (deployment === 1) {
@@ -90,7 +90,7 @@ export default async function set(
 
     if (!deployment) {
       output.error(
-        `Couldn't find a deployment to alias. Please provide one as an argument.`
+        `Couldn't find a deployment to alias. Please provide one as an argument.`,
       );
       return 1;
     }
@@ -111,12 +111,12 @@ export default async function set(
         client,
         deployment,
         target,
-        contextName
+        contextName,
       );
 
       const handleResult = handleSetupDomainError(
         output,
-        handleCreateAliasError(output, record)
+        handleCreateAliasError(output, record),
       );
 
       if (handleResult === 1) {
@@ -125,8 +125,8 @@ export default async function set(
 
       console.log(
         `${chalk.cyan('> Success!')} ${chalk.bold(
-          `${isWildcardAlias(target) ? '' : 'https://'}${handleResult.alias}`
-        )} now points to https://${deployment.url} ${setStamp()}`
+          `${isWildcardAlias(target) ? '' : 'https://'}${handleResult.alias}`,
+        )} now points to https://${deployment.url} ${setStamp()}`,
       );
     }
 
@@ -136,7 +136,7 @@ export default async function set(
   const [deploymentIdOrHost, aliasTarget] = args;
   const deployment = handleCertError(
     output,
-    await getDeploymentByIdOrHost(client, contextName, deploymentIdOrHost)
+    await getDeploymentByIdOrHost(client, contextName, deploymentIdOrHost),
   );
 
   if (deployment === 1) {
@@ -146,8 +146,8 @@ export default async function set(
   if (deployment instanceof ERRORS.DeploymentNotFound) {
     output.error(
       `Failed to find deployment "${deployment.meta.id}" under ${chalk.bold(
-        contextName
-      )}`
+        contextName,
+      )}`,
     );
     return 1;
   }
@@ -156,7 +156,7 @@ export default async function set(
     output.error(
       `No permission to access deployment "${
         deployment.meta.id
-      }" under ${chalk.bold(deployment.meta.context)}`
+      }" under ${chalk.bold(deployment.meta.context)}`,
     );
     return 1;
   }
@@ -168,7 +168,7 @@ export default async function set(
 
   if (deployment === null) {
     output.error(
-      `Couldn't find a deployment to alias. Please provide one as an argument.`
+      `Couldn't find a deployment to alias. Please provide one as an argument.`,
     );
     return 1;
   }
@@ -181,11 +181,11 @@ export default async function set(
     client,
     deployment,
     aliasTarget,
-    contextName
+    contextName,
   );
   const handleResult = handleSetupDomainError(
     output,
-    handleCreateAliasError(output, record)
+    handleCreateAliasError(output, record),
   );
   if (handleResult === 1) {
     return 1;
@@ -195,8 +195,8 @@ export default async function set(
 
   console.log(
     `${chalk.cyan('> Success!')} ${chalk.bold(
-      `${prefix}${handleResult.alias}`
-    )} now points to https://${deployment.url} ${setStamp()}`
+      `${prefix}${handleResult.alias}`,
+    )} now points to https://${deployment.url} ${setStamp()}`,
   );
 
   return 0;
@@ -208,13 +208,13 @@ type SetupDomainError = Exclude<SetupDomainResolve, Domain>;
 
 function handleSetupDomainError<T>(
   output: Output,
-  error: SetupDomainError | T
+  error: SetupDomainError | T,
 ): T | 1 {
   if (error instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
-        error.meta.domain
-      )} under ${chalk.bold(error.meta.context)}.`
+        error.meta.domain,
+      )} under ${chalk.bold(error.meta.context)}.`,
     );
     return 1;
   }
@@ -231,28 +231,28 @@ function handleSetupDomainError<T>(
 
   if (error instanceof ERRORS.UnsupportedTLD) {
     output.error(
-      `The TLD for domain name ${error.meta.domain} is not supported.`
+      `The TLD for domain name ${error.meta.domain} is not supported.`,
     );
     return 1;
   }
 
   if (error instanceof ERRORS.InvalidDomain) {
     output.error(
-      `The domain ${error.meta.domain} used for the alias is not valid.`
+      `The domain ${error.meta.domain} used for the alias is not valid.`,
     );
     return 1;
   }
 
   if (error instanceof ERRORS.DomainNotAvailable) {
     output.error(
-      `The domain ${error.meta.domain} is not available to be purchased.`
+      `The domain ${error.meta.domain} is not available to be purchased.`,
     );
     return 1;
   }
 
   if (error instanceof ERRORS.DomainServiceNotAvailable) {
     output.error(
-      `The domain purchase service is not available. Try again later.`
+      `The domain purchase service is not available. Try again later.`,
     );
     return 1;
   }
@@ -264,24 +264,24 @@ function handleSetupDomainError<T>(
 
   if (error instanceof ERRORS.DomainAlreadyExists) {
     output.error(
-      `The domain  ${error.meta.domain} exists for a different account.`
+      `The domain  ${error.meta.domain} exists for a different account.`,
     );
     return 1;
   }
 
   if (error instanceof ERRORS.DomainPurchasePending) {
     output.error(
-      `The domain ${error.meta.domain} is processing and will be available once the order is completed.`
+      `The domain ${error.meta.domain} is processing and will be available once the order is completed.`,
     );
     output.print(
-      `  An email will be sent upon completion so you can alias to your new domain.\n`
+      `  An email will be sent upon completion so you can alias to your new domain.\n`,
     );
     return 1;
   }
 
   if (error instanceof ERRORS.SourceNotFound) {
     output.error(
-      `You can't purchase the domain you're aliasing to since you have no valid payment method.`
+      `You can't purchase the domain you're aliasing to since you have no valid payment method.`,
     );
     output.print(`  Please add a valid payment method and retry.\n`);
     return 1;
@@ -289,7 +289,7 @@ function handleSetupDomainError<T>(
 
   if (error instanceof ERRORS.DomainPaymentError) {
     output.error(
-      `You can't purchase the domain you're aliasing to since your card was declined.`
+      `You can't purchase the domain you're aliasing to since your card was declined.`,
     );
     output.print(`  Please add a valid payment method and retry.\n`);
     return 1;
@@ -307,7 +307,7 @@ type RemainingAssignAliasErrors = SetDifference<
 
 function handleCreateAliasError<T>(
   output: Output,
-  errorOrResult: RemainingAssignAliasErrors | T
+  errorOrResult: RemainingAssignAliasErrors | T,
 ): 1 | T {
   const error = handleCertError(output, errorOrResult);
   if (error === 1) {
@@ -317,8 +317,8 @@ function handleCreateAliasError<T>(
   if (error instanceof ERRORS.AliasInUse) {
     output.error(
       `The alias ${chalk.dim(
-        error.meta.alias
-      )} is a deployment URL or it's in use by a different team.`
+        error.meta.alias,
+      )} is a deployment URL or it's in use by a different team.`,
     );
     return 1;
   }
@@ -326,41 +326,41 @@ function handleCreateAliasError<T>(
   if (error instanceof ERRORS.DeploymentNotFound) {
     output.error(
       `Failed to find deployment ${chalk.dim(error.meta.id)} under ${chalk.bold(
-        error.meta.context
-      )}`
+        error.meta.context,
+      )}`,
     );
     return 1;
   }
   if (error instanceof ERRORS.InvalidAlias) {
     output.error(
-      `Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: For \`vercel.app\`, only sub and sub-sub domains are supported.`
+      `Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: For \`vercel.app\`, only sub and sub-sub domains are supported.`,
     );
     return 1;
   }
   if (error instanceof ERRORS.DeploymentPermissionDenied) {
     output.error(
       `No permission to access deployment ${chalk.dim(
-        error.meta.id
-      )} under ${chalk.bold(error.meta.context)}`
+        error.meta.id,
+      )} under ${chalk.bold(error.meta.context)}`,
     );
     return 1;
   }
 
   if (error instanceof ERRORS.CertMissing) {
     output.error(
-      `There is no certificate for the domain ${error.meta.domain} and it could not be created.`
+      `There is no certificate for the domain ${error.meta.domain} and it could not be created.`,
     );
     output.log(
       `Please generate a new certificate manually with ${getCommandName(
-        `certs issue ${error.meta.domain}`
-      )}`
+        `certs issue ${error.meta.domain}`,
+      )}`,
     );
     return 1;
   }
 
   if (error instanceof ERRORS.InvalidDomain) {
     output.error(
-      `The domain ${error.meta.domain} used for the alias is not valid.`
+      `The domain ${error.meta.domain} used for the alias is not valid.`,
     );
     return 1;
   }
@@ -385,8 +385,8 @@ function handleCreateAliasError<T>(
 function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {
   if (args.length) {
     return [args[args.length - 1]]
-      .map(target => (target.indexOf('.') !== -1 ? toHost(target) : target))
-      .filter((x): x is string => !!x && typeof x === 'string');
+      .map((target) => (target.includes('.') ? toHost(target) : target))
+      .filter((x): x is string => Boolean(x) && typeof x === 'string');
   }
 
   if (!alias) {

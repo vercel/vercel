@@ -1,17 +1,17 @@
 import { NowError } from '../now-error';
-import { Output } from '../output';
-import Client from '../client';
-import createCertForCns from './create-cert-for-cns';
-import getWildcardCnsForAlias from './get-wildcard-cns-for-alias';
 import joinWords from '../output/join-words';
 import stamp from '../output/stamp';
+import createCertForCns from './create-cert-for-cns';
+import getWildcardCnsForAlias from './get-wildcard-cns-for-alias';
+import type { Output } from '../output';
+import type Client from '../client';
 
 export default async function createCertificateForAlias(
   output: Output,
   client: Client,
   context: string,
   alias: string,
-  shouldBeWildcard: boolean
+  shouldBeWildcard: boolean,
 ) {
   output.spinner(`Generating a certificate…`);
   const cns = shouldBeWildcard ? getWildcardCnsForAlias(alias) : [alias];
@@ -26,7 +26,7 @@ export default async function createCertificateForAlias(
   output.log(
     `Certificate for ${joinWords(cert.cns)} (${
       cert.uid
-    }) created ${certStamp()}`
+    }) created ${certStamp()}`,
   );
 
   return cert;

@@ -1,19 +1,19 @@
-import Client from '../client';
 import error from '../output/error';
 import listInput from '../input/list';
 import { getCommandName } from '../pkg-name';
-import { LoginResult, SAMLError } from './types';
 import doSamlLogin from './saml';
 import doEmailLogin from './email';
 import doGithubLogin from './github';
 import doGitlabLogin from './gitlab';
 import doBitbucketLogin from './bitbucket';
+import type { LoginResult, SAMLError } from './types';
+import type Client from '../client';
 
 export default async function prompt(
   client: Client,
   error?: Pick<SAMLError, 'teamId'>,
   outOfBand?: boolean,
-  ssoUserId?: string
+  ssoUserId?: string,
 ) {
   let result: LoginResult = 1;
 
@@ -56,7 +56,7 @@ export default async function prompt(
 
 export async function readInput(
   client: Client,
-  message: string
+  message: string,
 ): Promise<string> {
   let input;
 
@@ -75,9 +75,9 @@ export async function readInput(
         throw new Error(
           error(
             `Interactive mode not supported – please run ${getCommandName(
-              `login you@domain.com`
-            )}`
-          )
+              `login you@domain.com`,
+            )}`,
+          ),
         );
       }
     }

@@ -1,4 +1,4 @@
-const ARG_COMMON = {
+export const ARG_COMMON = {
   '--help': Boolean,
   '-h': '--help',
 

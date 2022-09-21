@@ -6,11 +6,9 @@ import type {
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
-export { DeploymentEventType } from './utils';
+export type { DeploymentEventType } from './utils';
 
-export interface Dictionary<T> {
-  [key: string]: T;
-}
+export type Dictionary<T> = Record<string, T>;
 
 export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
 export type ArchiveFormat = typeof VALID_ARCHIVE_FORMATS[number];

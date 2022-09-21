@@ -1,9 +1,9 @@
-import fs from 'fs-extra';
 import { join } from 'path';
-import { BuildsManifest } from '../../commands/build';
+import fs from 'fs-extra';
+import type { BuildsManifest } from '../../commands/build';
 
 export default async function getPrebuiltJson(
-  directory: string
+  directory: string,
 ): Promise<BuildsManifest | null> {
   try {
     return await fs.readJSON(join(directory, '.vercel/output/builds.json'));

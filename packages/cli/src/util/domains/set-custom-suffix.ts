@@ -1,11 +1,11 @@
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 
 export default async function setCustomSuffix(
   client: Client,
   contextName: string,
   domain: string,
-  suffix: string | null
+  suffix: string | null,
 ) {
   try {
     return await client.fetch(`/v1/custom-suffix`, {

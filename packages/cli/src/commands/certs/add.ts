@@ -1,11 +1,11 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { getCommandName } from '../../util/pkg-name';
-import { Cert } from '../../types';
+import type Client from '../../util/client';
+import type { Cert } from '../../types';
 
 interface Options {
   '--overwrite'?: boolean;
@@ -17,7 +17,7 @@ interface Options {
 async function add(
   client: Client,
   opts: Options,
-  args: string[]
+  args: string[],
 ): Promise<number> {
   const { output } = client;
   const addStamp = stamp();
@@ -41,14 +41,14 @@ async function add(
   if (crtPath || keyPath || caPath) {
     if (args.length !== 0 || !crtPath || !keyPath || !caPath) {
       output.error(
-        `Invalid number of arguments to create a custom certificate entry. Usage:`
+        `Invalid number of arguments to create a custom certificate entry. Usage:`,
       );
       output.print(
         `  ${chalk.cyan(
           `${getCommandName(
-            'certs add --crt <domain.crt> --key <domain.key> --ca <ca.crt>'
-          )}`
-        )}\n`
+            'certs add --crt <domain.crt> --key <domain.key> --ca <ca.crt>',
+          )}`,
+        )}\n`,
       );
       return 1;
     }
@@ -58,18 +58,18 @@ async function add(
   } else {
     output.warn(
       `${chalk.cyan(
-        getCommandName('certs add')
+        getCommandName('certs add'),
       )} will be soon deprecated. Please use ${chalk.cyan(
-        getCommandName('certs issue <cn> <cns>')
-      )} instead`
+        getCommandName('certs issue <cn> <cns>'),
+      )} instead`,
     );
 
     if (args.length < 1) {
       output.error(
-        `Invalid number of arguments to create a custom certificate entry. Usage:`
+        `Invalid number of arguments to create a custom certificate entry. Usage:`,
       );
       output.print(
-        `  ${chalk.cyan(getCommandName('certs add <cn>[, <cn>]'))}\n`
+        `  ${chalk.cyan(getCommandName('certs add <cn>[, <cn>]'))}\n`,
       );
       return 1;
     }
@@ -77,10 +77,10 @@ async function add(
     // Create the certificate from the given array of CNs
     const cns = args.reduce<string[]>(
       (res, item) => res.concat(item.split(',')),
-      []
+      [],
     );
     output.spinner(
-      `Generating a certificate for ${chalk.bold(cns.join(', '))}`
+      `Generating a certificate for ${chalk.bold(cns.join(', '))}`,
     );
 
     cert = await createCertForCns(client, cns, contextName);
@@ -90,14 +90,13 @@ async function add(
   if (cert instanceof Error) {
     output.error(cert.message);
     return 1;
-  } else {
-    // Print success message
-    output.success(
-      `Certificate entry for ${chalk.bold(
-        cert.cns.join(', ')
-      )} created ${addStamp()}`
-    );
   }
+  // Print success message
+  output.success(
+    `Certificate entry for ${chalk.bold(
+      cert.cns.join(', '),
+    )} created ${addStamp()}`,
+  );
 
   return 0;
 }

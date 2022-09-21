@@ -1,8 +1,6 @@
 import chalk from 'chalk';
 import psl from 'psl';
-
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';
 import getScope from '../../util/get-scope';
@@ -12,13 +10,14 @@ import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { errorToString } from '../../util/is-error';
+import type Client from '../../util/client';
 
-type Options = {};
+interface Options {}
 
 export default async function buy(
   client: Client,
   opts: Options,
-  args: string[]
+  args: string[],
 ) {
   const { output } = client;
   const { contextName } = await getScope(client);
@@ -26,7 +25,7 @@ export default async function buy(
   const [domainName] = args;
   if (!domainName) {
     output.error(
-      `Missing domain name. Run ${getCommandName(`domains --help`)}`
+      `Missing domain name. Run ${getCommandName(`domains --help`)}`,
     );
     return 1;
   }
@@ -41,8 +40,8 @@ export default async function buy(
   if (subdomain || !rootDomain) {
     output.error(
       `Invalid domain name "${domainName}". Run ${getCommandName(
-        `domains --help`
-      )}`
+        `domains --help`,
+      )}`,
     );
     return 1;
   }
@@ -66,8 +65,8 @@ export default async function buy(
   if (!(await getDomainStatus(client, domainName)).available) {
     output.error(
       `The domain ${param(domainName)} is ${chalk.underline(
-        'unavailable'
-      )}! ${availableStamp()}`
+        'unavailable',
+      )}! ${availableStamp()}`,
     );
     return 1;
   }
@@ -75,15 +74,15 @@ export default async function buy(
   const { period, price } = domainPrice;
   output.log(
     `The domain ${param(domainName)} is ${chalk.underline(
-      'available'
-    )} to buy under ${chalk.bold(contextName)}! ${availableStamp()}`
+      'available',
+    )} to buy under ${chalk.bold(contextName)}! ${availableStamp()}`,
   );
   if (
     !(await promptBool(
       `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
         period > 1 ? 's' : ''
       }`})?`,
-      client
+      client,
     ))
   ) {
     return 0;
@@ -93,9 +92,9 @@ export default async function buy(
     renewalPrice.period === 1
       ? `Auto renew yearly for ${chalk.bold(`$${price}`)}?`
       : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
-          `$${price}`
+          `$${price}`,
         )}?`,
-    { ...client, defaultValue: true }
+    { ...client, defaultValue: true },
   );
 
   let buyResult;
@@ -106,7 +105,7 @@ export default async function buy(
     buyResult = await purchaseDomain(client, domainName, price, autoRenew);
   } catch (err: unknown) {
     output.error(
-      'An unexpected error occurred while purchasing your domain. Please try again later.'
+      'An unexpected error occurred while purchasing your domain. Please try again later.',
     );
     output.debug(`Server response: ${errorToString(err)}`);
     return 1;
@@ -116,14 +115,14 @@ export default async function buy(
 
   if (buyResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method using the dashboard.`
+      `Could not purchase domain. Please add a payment method using the dashboard.`,
     );
     return 1;
   }
 
   if (buyResult instanceof ERRORS.UnsupportedTLD) {
     output.error(
-      `The TLD for domain name ${buyResult.meta.domain} is not supported.`
+      `The TLD for domain name ${buyResult.meta.domain} is not supported.`,
     );
     return 1;
   }
@@ -140,7 +139,7 @@ export default async function buy(
 
   if (buyResult instanceof ERRORS.DomainServiceNotAvailable) {
     output.error(
-      `The domain purchase service is not available. Please try again later.`
+      `The domain purchase service is not available. Please try again later.`,
     );
     return 1;
   }
@@ -158,33 +157,33 @@ export default async function buy(
   if (buyResult.pending) {
     console.log(
       `${chalk.cyan('> Success!')} Domain ${param(
-        domainName
-      )} order was submitted ${purchaseStamp()}`
+        domainName,
+      )} order was submitted ${purchaseStamp()}`,
     );
     output.note(
-      `Your domain is processing and will be available once the order is completed.`
+      `Your domain is processing and will be available once the order is completed.`,
     );
     output.print(
-      `  An email will be sent upon completion for you to start using your new domain.\n`
+      `  An email will be sent upon completion for you to start using your new domain.\n`,
     );
   } else {
     console.log(
       `${chalk.cyan('> Success!')} Domain ${param(
-        domainName
-      )} purchased ${purchaseStamp()}`
+        domainName,
+      )} purchased ${purchaseStamp()}`,
     );
     if (!buyResult.verified) {
       output.note(
-        `Your domain is not fully configured yet so it may appear as not verified.`
+        `Your domain is not fully configured yet so it may appear as not verified.`,
       );
       output.print(
-        `  It might take a few minutes, but you will get an email as soon as it is ready.\n`
+        `  It might take a few minutes, but you will get an email as soon as it is ready.\n`,
       );
     } else {
       output.note(
         `You may now use your domain as an alias to your deployments. Run ${getCommandName(
-          `alias --help`
-        )}`
+          `alias --help`,
+        )}`,
       );
     }
   }

@@ -1,13 +1,13 @@
 import chalk from 'chalk';
 import error from '../../util/output/error';
 import logo from '../../util/output/logo';
+import { getPkgName } from '../../util/pkg-name';
+import getArgs from '../../util/get-args';
 import list from './list';
 import add from './add';
 import change from './switch';
 import invite from './invite';
-import { getPkgName } from '../../util/pkg-name';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 
 const help = () => {
   console.log(`
@@ -24,10 +24,10 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -N, --next                     Show next page of results
@@ -39,12 +39,12 @@ const help = () => {
       ${chalk.cyan(`$ ${getPkgName()} switch <slug>`)}
 
       ${chalk.gray(
-        '–'
+        '–',
       )} If your team's url is 'vercel.com/teams/name', 'name' is the slug
       ${chalk.gray('–')} If the slug is omitted, you can choose interactively
 
       ${chalk.yellow(
-        'NOTE:'
+        'NOTE:',
       )} When you switch, everything you add, list or remove will be scoped that team!
 
   ${chalk.gray('–')} Invite new members (interactively)
@@ -52,7 +52,7 @@ const help = () => {
       ${chalk.cyan(`$ ${getPkgName()} teams invite`)}
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
-    '`1584722256178`'
+    '`1584722256178`',
   )} is the time in milliseconds since the UNIX epoch.
 
       ${chalk.cyan(`$ ${getPkgName()} teams ls --next 1584722256178`)}
@@ -103,7 +103,9 @@ export default async (client: Client) => {
     default: {
       if (subcommand !== 'help') {
         console.error(
-          error('Please specify a valid subcommand: add | ls | switch | invite')
+          error(
+            'Please specify a valid subcommand: add | ls | switch | invite',
+          ),
         );
       }
       exitCode = 2;

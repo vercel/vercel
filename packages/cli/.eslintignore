@@ -1,0 +1,4 @@
+dist
+test/fixtures
+test/dev/fixtures
+src/util/dev/templates/*.ts

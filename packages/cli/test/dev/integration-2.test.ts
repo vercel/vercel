@@ -1,4 +1,3 @@
-// eslint-disable-next-line
 import { join } from 'path';
 import ms from 'ms';
 import fs, { mkdirp } from 'fs-extra';
@@ -19,7 +18,7 @@ test('[vercel dev] validate redirects', async () => {
 
   expect(output.exitCode).toBe(1);
   expect(output.stderr).toMatch(
-    /Invalid vercel\.json - `redirects\[0\].statusCode` should be integer/m
+    /Invalid vercel\.json - `redirects\[0\].statusCode` should be integer/m,
   );
 });
 
@@ -29,7 +28,7 @@ test('[vercel dev] validate headers', async () => {
 
   expect(output.exitCode).toBe(1);
   expect(output.stderr).toMatch(
-    /Invalid vercel\.json - `headers\[0\].headers\[0\].value` should be string/m
+    /Invalid vercel\.json - `headers\[0\].headers\[0\].value` should be string/m,
   );
 });
 
@@ -39,7 +38,7 @@ test('[vercel dev] validate mixed routes and rewrites', async () => {
 
   expect(output.exitCode).toBe(1);
   expect(output.stderr).toMatch(
-    /If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present./m
+    /If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present./m,
   );
   expect(output.stderr).toMatch(/vercel\.link\/mix-routing-props/m);
 });
@@ -60,10 +59,10 @@ test('[vercel dev] validate env var names', async () => {
         if (
           stderr.includes('Ignoring env var "1" because name is invalid') &&
           stderr.includes(
-            'Ignoring build env var "_a" because name is invalid'
+            'Ignoring build env var "_a" because name is invalid',
           ) &&
           stderr.includes(
-            'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
+            'Env var names must start with letters, and can only contain alphanumeric characters and underscores',
           )
         ) {
           resolve();
@@ -86,14 +85,14 @@ test(
     await testPath(200, '/rand', '42');
     await testPath(200, '/api/dynamic', 'dynamic');
     await testPath(404, '/api');
-  })
+  }),
 );
 
 test(
   '[vercel dev] test rewrites serve correct content',
   testFixtureStdio('test-rewrites', async (testPath: any) => {
     await testPath(200, '/hello', 'Hello World');
-  })
+  }),
 );
 
 test(
@@ -109,8 +108,8 @@ test(
       await testPath(307, '/tempRedirect', `Redirecting to ${vcRobots} (307)`, {
         Location: vcRobots,
       });
-    }
-  )
+    },
+  ),
 );
 
 test(
@@ -124,7 +123,7 @@ test(
     await testPath(308, '/goto', 'Redirecting to /lower.html (308)', {
       Location: '/lower.html',
     });
-  })
+  }),
 );
 
 test(
@@ -148,9 +147,9 @@ test(
       308,
       '/sub/another.html',
       'Redirecting to /sub/another (308)',
-      { Location: '/sub/another' }
+      { Location: '/sub/another' },
     );
-  })
+  }),
 );
 
 test(
@@ -176,10 +175,10 @@ test(
         308,
         '/sub/another.html',
         'Redirecting to /sub/another (308)',
-        { Location: '/sub/another' }
+        { Location: '/sub/another' },
       );
-    }
-  )
+    },
+  ),
 );
 
 test(
@@ -190,7 +189,7 @@ test(
     await testPath(200, '/contact/me', 'Contact Me Subdirectory');
     await testPath(404, '/nothing', 'Custom 404 Page');
     await testPath(404, '/nothing/', 'Custom 404 Page');
-  })
+  }),
 );
 
 test(
@@ -215,9 +214,9 @@ test(
       'Redirecting to /sub/another/ (308)',
       {
         Location: '/sub/another/',
-      }
+      },
     );
-  })
+  }),
 );
 
 test(
@@ -240,7 +239,7 @@ test(
     });
     await testPath(204, '/', '', headers, { method: 'OPTIONS' });
     await testPath(204, '/api/status.js', '', headers, { method: 'OPTIONS' });
-  })
+  }),
 );
 
 test(
@@ -262,7 +261,7 @@ test(
     await testPath(308, '/sub', 'Redirecting to /sub/ (308)', {
       Location: '/sub/',
     });
-  })
+  }),
 );
 
 test(
@@ -272,7 +271,7 @@ test(
     await testPath(200, '/about.html', 'The about page');
     await testPath(200, '/contact/', 'Contact Subdirectory');
     await testPath(404, '/nothing/', 'Custom 404 Page');
-  })
+  }),
 );
 
 test(
@@ -297,9 +296,9 @@ test(
       'Redirecting to /sub/another.html (308)',
       {
         Location: '/sub/another.html',
-      }
+      },
     );
-  })
+  }),
 );
 
 test(
@@ -310,18 +309,18 @@ test(
       await testPath(
         500,
         '/',
-        /Route at index 0 has invalid `src` regular expression/m
+        /Route at index 0 has invalid `src` regular expression/m,
       );
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
   '[vercel dev] support legacy `@now` scope runtimes',
   testFixtureStdio('legacy-now-runtime', async (testPath: any) => {
     await testPath(200, '/', /A simple deployment with the Vercel API!/m);
-  })
+  }),
 );
 
 test(
@@ -334,15 +333,15 @@ test(
       await testPath(200, '/', /\.well-known/m);
       await testPath(200, '/.well-known/keybase.txt', 'proof goes here');
     },
-    { projectSettings: { directoryListing: true } }
-  )
+    { projectSettings: { directoryListing: true } },
+  ),
 );
 
 test(
   '[vercel dev] 01-node',
   testFixtureStdio('01-node', async (testPath: any) => {
     await testPath(200, '/', /A simple deployment with the Vercel API!/m);
-  })
+  }),
 );
 
 test(
@@ -383,5 +382,5 @@ test(
     } finally {
       await fs.remove(apiDir);
     }
-  })
+  }),
 );

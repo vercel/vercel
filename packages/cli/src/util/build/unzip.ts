@@ -8,7 +8,8 @@ import path from 'path';
 import pipe from 'promisepipe';
 import * as fs from 'fs-extra';
 import { streamToBuffer } from '@vercel/build-utils';
-import { Entry, ZipFile, fromBuffer as zipFromBuffer } from 'yauzl-promise';
+import { fromBuffer as zipFromBuffer } from 'yauzl-promise';
+import type { Entry, ZipFile } from 'yauzl-promise';
 
 async function* createZipIterator(zipFile: ZipFile) {
   let entry: Entry;
@@ -31,7 +32,7 @@ export async function unzip(buffer: Buffer, dir: string): Promise<void> {
 
       if (relativeDestDir.split(path.sep).includes('..')) {
         throw new Error(
-          `Out of bound path "${canonicalDestDir}" found while processing file ${entry.fileName}`
+          `Out of bound path "${canonicalDestDir}" found while processing file ${entry.fileName}`,
         );
       }
 
@@ -46,7 +47,7 @@ export async function unzip(buffer: Buffer, dir: string): Promise<void> {
 async function extractEntry(
   zipFile: ZipFile,
   entry: Entry,
-  dir: string
+  dir: string,
 ): Promise<void> {
   const dest = path.join(dir, entry.fileName);
 
@@ -76,7 +77,7 @@ async function extractEntry(
 
   const mkdirOptions = { recursive: true };
   if (isDir) {
-    // @ts-ignore
+    // @ts-expect-error
     mkdirOptions.mode = procMode;
   }
   await fs.mkdir(destDir, mkdirOptions);

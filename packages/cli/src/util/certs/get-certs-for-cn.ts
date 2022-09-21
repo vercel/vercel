@@ -1,6 +1,6 @@
 import { stringify } from 'querystring';
-import { Cert } from '../../types';
-import Client from '../client';
+import type { Cert } from '../../types';
+import type Client from '../client';
 
 /**
  * Returns certs that contain @param cn.
@@ -8,7 +8,7 @@ import Client from '../client';
 export async function getCertsForCn(
   client: Client,
   cn: string,
-  { limit }: { limit?: number } = {}
+  { limit }: { limit?: number } = {},
 ) {
   const { certs } = await client.fetch<{
     certs: Cert[];

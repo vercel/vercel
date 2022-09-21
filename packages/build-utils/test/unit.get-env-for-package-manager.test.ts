@@ -3,11 +3,11 @@ import { delimiter } from 'path';
 import { getEnvForPackageManager } from '../src';
 
 describe('Test `getEnvForPackageManager()`', () => {
-  const cases: Array<{
+  const cases: {
     name: string;
     args: Parameters<typeof getEnvForPackageManager>[0];
     want: unknown;
-  }> = [
+  }[] = [
     {
       name: 'should do nothing to env for npm < 6 and node < 16',
       args: {
@@ -190,7 +190,7 @@ describe('Test `getEnvForPackageManager()`', () => {
           nodeVersion: args.nodeVersion,
           env: args.env,
         }),
-        want
+        want,
       );
     });
   }

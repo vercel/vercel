@@ -1,13 +1,12 @@
 import chalk from 'chalk';
-
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import Client from '../../util/client';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
-import init from './init';
 import { getPkgName } from '../../util/pkg-name';
 import { isError } from '../../util/is-error';
+import init from './init';
+import type Client from '../../util/client';
 
 const COMMAND_CONFIG = {
   init: ['init'],

@@ -1,7 +1,5 @@
 import chalk from 'chalk';
-
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';
@@ -12,15 +10,16 @@ import checkTransfer from '../../util/domains/check-transfer';
 import promptBool from '../../util/input/prompt-bool';
 import isRootDomain from '../../util/is-root-domain';
 import { getCommandName } from '../../util/pkg-name';
+import type Client from '../../util/client';
 
-type Options = {
+interface Options {
   '--code': string;
-};
+}
 
 export default async function transferIn(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
 ) {
   const { output } = client;
   const { contextName } = await getScope(client);
@@ -28,7 +27,7 @@ export default async function transferIn(
   const [domainName] = args;
   if (!domainName) {
     output.error(
-      `Missing domain name. Run ${getCommandName(`domains --help`)}`
+      `Missing domain name. Run ${getCommandName(`domains --help`)}`,
     );
     return 1;
   }
@@ -36,8 +35,8 @@ export default async function transferIn(
   if (!isRootDomain(domainName)) {
     output.error(
       `Invalid domain name ${param(domainName)}. Run ${getCommandName(
-        `domains --help`
-      )}`
+        `domains --help`,
+      )}`,
     );
     return 1;
   }
@@ -61,8 +60,8 @@ export default async function transferIn(
   const { price } = domainPrice;
   output.log(
     `The domain ${param(domainName)} is ${chalk.underline(
-      'available'
-    )} to transfer under ${chalk.bold(contextName)}! ${availableStamp()}`
+      'available',
+    )} to transfer under ${chalk.bold(contextName)}! ${availableStamp()}`,
   );
 
   const authCode = await getAuthCode(opts['--code']);
@@ -71,7 +70,7 @@ export default async function transferIn(
     transferPolicy === 'no-change'
       ? `Transfer now for ${chalk.bold(`$${price}`)}?`
       : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`,
-    client
+    client,
   );
   if (!shouldTransfer) {
     return 0;
@@ -84,7 +83,7 @@ export default async function transferIn(
     client,
     domainName,
     authCode,
-    price
+    price,
   );
 
   if (transferInResult instanceof ERRORS.InvalidDomain) {
@@ -97,21 +96,21 @@ export default async function transferIn(
     transferInResult instanceof ERRORS.DomainNotTransferable
   ) {
     output.error(
-      `The domain "${transferInResult.meta.domain}" is not transferable.`
+      `The domain "${transferInResult.meta.domain}" is not transferable.`,
     );
     return 1;
   }
 
   if (transferInResult instanceof ERRORS.InvalidTransferAuthCode) {
     output.error(
-      `The provided auth code does not match with the one expected by the current registar`
+      `The provided auth code does not match with the one expected by the current registar`,
     );
     return 1;
   }
 
   if (transferInResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method using the dashboard.`
+      `Could not purchase domain. Please add a payment method using the dashboard.`,
     );
     return 1;
   }
@@ -123,24 +122,24 @@ export default async function transferIn(
 
   console.log(
     `${chalk.cyan('> Success!')} Domain ${param(
-      domainName
-    )} transfer started ${transferStamp()}`
+      domainName,
+    )} transfer started ${transferStamp()}`,
   );
   output.print(
-    `  To finalize the transfer, we are waiting for approval from your current registrar.\n`
+    `  To finalize the transfer, we are waiting for approval from your current registrar.\n`,
   );
   output.print(`  You will receive an email upon completion.\n`);
   output.warn(
     `Once transferred, your domain ${param(
-      domainName
-    )} will be using Vercel DNS.\n`
+      domainName,
+    )} will be using Vercel DNS.\n`,
   );
   output.print(
-    `  To transfer with previous DNS records, export the zone file from your previous registrar.\n`
+    `  To transfer with previous DNS records, export the zone file from your previous registrar.\n`,
   );
   output.print(`  Then import it to Vercel DNS by using:\n`);
   output.print(
-    `    ${getCommandName(`dns import ${domainName} <zonefile>`)}\n\n`
+    `    ${getCommandName(`dns import ${domainName} <zonefile>`)}\n\n`,
   );
   return 0;
 }

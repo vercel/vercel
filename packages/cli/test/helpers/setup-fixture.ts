@@ -1,6 +1,6 @@
+import path from 'path';
 import findUp from 'find-up';
 import fs from 'fs-extra';
-import path from 'path';
 import tmp from 'tmp-promise';
 
 // tmp is supposed to be able to clean up automatically, but this doesn't always work within jest.
@@ -28,8 +28,8 @@ export function setupFixture(fixtureName: string) {
     throw new Error(
       `Couldn't find fixture "${fixtureName}" under "${path.join(
         fixturesRoot!,
-        'unit'
-      )}"`
+        'unit',
+      )}"`,
     );
   }
 

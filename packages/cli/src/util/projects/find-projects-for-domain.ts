@@ -1,15 +1,15 @@
-import Client from '../client';
-import { Project } from '../../types';
 import { URLSearchParams } from 'url';
 import { isAPIError } from '../errors-ts';
+import type Client from '../client';
+import type { Project } from '../../types';
 
 export async function findProjectsForDomain(
   client: Client,
-  domainName: string
+  domainName: string,
 ): Promise<Project[] | Error> {
   try {
     const limit = 50;
-    let result: Project[] = [];
+    const result: Project[] = [];
 
     const query = new URLSearchParams({
       hasProductionDomains: '1',

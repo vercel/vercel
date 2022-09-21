@@ -17,8 +17,8 @@ const help = () => {
   console.log(`
   ${chalk.yellow(
     `${chalk.bold('NOTE:')} The ${getCommandName(
-      'env'
-    )} command is recommended instead of ${getCommandName('secrets')}`
+      'env',
+    )} command is recommended instead of ${getCommandName('secrets')}`,
   )}
 
   ${chalk.bold(`${logo} ${getPkgName()} secrets`)} [options] <command>
@@ -34,14 +34,14 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}        Login token
     -S, --scope                    Set a custom scope
     -N, --next                     Show next page of results
@@ -53,23 +53,23 @@ const help = () => {
     ${chalk.cyan(`$ ${getPkgName()} secrets add my-secret "my value"`)}
 
     ${chalk.gray(
-      '–'
+      '–',
     )} Once added, a secret's value can't be retrieved in plain text anymore
     ${chalk.gray(
-      '–'
+      '–',
     )} If the secret's value is more than one word, wrap it in quotes
     ${chalk.gray('–')} When in doubt, always wrap your value in quotes
 
   ${chalk.gray(
-    '–'
+    '–',
   )} Expose a secret as an environment variable (notice the ${chalk.cyan.bold(
-    '`@`'
+    '`@`',
   )} symbol)
 
     ${chalk.cyan(`$ ${getPkgName()} -e MY_SECRET=${chalk.bold('@my-secret')}`)}
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
-    '`1584722256178`'
+    '`1584722256178`',
   )} is the time in milliseconds since the UNIX epoch
 
     ${chalk.cyan(`$ ${getPkgName()} secrets ls --next 1584722256178`)}
@@ -81,7 +81,7 @@ let argv;
 let subcommand;
 let nextTimestamp;
 
-const main = async client => {
+const main = async (client) => {
   argv = mri(client.argv.slice(2), {
     boolean: ['help', 'debug', 'yes'],
     alias: {
@@ -122,7 +122,7 @@ const main = async client => {
   return run({ output, contextName, currentTeam, client });
 };
 
-export default async client => {
+export default async (client) => {
   try {
     await main(client);
   } catch (err) {
@@ -136,53 +136,53 @@ async function run({ output, contextName, currentTeam, client }) {
   const args = argv._.slice(1);
   const start = Date.now();
   const { 'test-warning': testWarningFlag } = argv;
-  const commandName = getCommandName('secret ' + subcommand);
+  const commandName = getCommandName(`secret ${subcommand}`);
 
   if (subcommand === 'ls' || subcommand === 'list') {
     output.note(
       `The ${getCommandName(
-        'env ls'
-      )} command is recommended instead of ${commandName}\n`
+        'env ls',
+      )} command is recommended instead of ${commandName}\n`,
     );
     if (args.length > 1) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getCommandName('secret ls')}`
-          )}`
-        )
+            `${getCommandName('secret ls')}`,
+          )}`,
+        ),
       );
       return 1;
     }
 
     const { secrets: list, pagination } = await secrets.ls(
       nextTimestamp,
-      testWarningFlag
+      testWarningFlag,
     );
     const elapsed = ms(Date.now() - start);
 
     console.log(
       `${list.length > 0 ? 'Secrets' : 'No secrets'} found under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(`[${elapsed}]`)}`
+        contextName,
+      )} ${chalk.gray(`[${elapsed}]`)}`,
     );
 
     if (list.length > 0) {
       const cur = Date.now();
-      const header = [['', 'name', 'created'].map(s => chalk.dim(s))];
+      const header = [['', 'name', 'created'].map((s) => chalk.dim(s))];
       const out = table(
         header.concat(
-          list.map(secret => [
+          list.map((secret) => [
             '',
             chalk.bold(secret.name),
             chalk.gray(`${ms(cur - new Date(secret.created))} ago`),
-          ])
+          ]),
         ),
         {
           align: ['l', 'l', 'l'],
           hsep: ' '.repeat(2),
           stringLength: strlen,
-        }
+        },
       );
 
       if (out) {
@@ -208,16 +208,16 @@ async function run({ output, contextName, currentTeam, client }) {
   if (subcommand === 'rm' || subcommand === 'remove') {
     output.note(
       `The ${getCommandName(
-        'env rm'
-      )} command is recommended instead of ${commandName}\n`
+        'env rm',
+      )} command is recommended instead of ${commandName}\n`,
     );
     if (args.length !== 1) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getCommandName('secret rm <name>')}`
-          )}`
-        )
+            `${getCommandName('secret rm <name>')}`,
+          )}`,
+        ),
       );
       return 1;
     }
@@ -236,9 +236,9 @@ async function run({ output, contextName, currentTeam, client }) {
       console.error(
         error(
           `No secret found by name "${args[0]}" under ${chalk.bold(
-            contextName
-          )}`
-        )
+            contextName,
+          )}`,
+        ),
       );
       return 1;
     }
@@ -247,8 +247,10 @@ async function run({ output, contextName, currentTeam, client }) {
     const elapsed = ms(new Date() - start);
     console.log(
       `${chalk.cyan('Success!')} Secret ${chalk.bold(
-        secret.name
-      )} under ${chalk.bold(contextName)} removed ${chalk.gray(`[${elapsed}]`)}`
+        secret.name,
+      )} under ${chalk.bold(contextName)} removed ${chalk.gray(
+        `[${elapsed}]`,
+      )}`,
     );
     return secrets.close();
   }
@@ -256,16 +258,16 @@ async function run({ output, contextName, currentTeam, client }) {
   if (subcommand === 'rename') {
     output.note(
       `The ${getCommandName('env rm')} and ${getCommandName(
-        'env add'
-      )} commands are recommended instead of ${commandName}\n`
+        'env add',
+      )} commands are recommended instead of ${commandName}\n`,
     );
     if (args.length !== 2) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getCommandName('secret rename <old-name> <new-name>')}`
-          )}`
-        )
+            `${getCommandName('secret rename <old-name> <new-name>')}`,
+          )}`,
+        ),
       );
       return 1;
     }
@@ -273,10 +275,10 @@ async function run({ output, contextName, currentTeam, client }) {
     const elapsed = ms(new Date() - start);
     console.log(
       `${chalk.cyan('Success!')} Secret ${chalk.bold(
-        secret.oldName
+        secret.oldName,
       )} renamed to ${chalk.bold(args[1])} under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(`[${elapsed}]`)}`
+        contextName,
+      )} ${chalk.gray(`[${elapsed}]`)}`,
     );
     return secrets.close();
   }
@@ -284,24 +286,24 @@ async function run({ output, contextName, currentTeam, client }) {
   if (subcommand === 'add' || subcommand === 'set') {
     output.note(
       `The ${getCommandName(
-        'env add'
-      )} command is recommended instead of ${commandName}\n`
+        'env add',
+      )} command is recommended instead of ${commandName}\n`,
     );
     if (args.length !== 2) {
       console.error(
         error(
           `Invalid number of arguments. Usage: ${chalk.cyan(
-            `${getCommandName('secret add <name> <value>')}`
-          )}`
-        )
+            `${getCommandName('secret add <name> <value>')}`,
+          )}`,
+        ),
       );
 
       if (args.length > 2) {
         const example = chalk.cyan(
-          `$ ${getCommandName('secret add -- "${args[0]}"')}`
+          `$ ${getCommandName('secret add -- "${args[0]}"')}`,
         );
         console.log(
-          `If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
+          `If your secret has spaces or starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `,
         );
       }
 
@@ -324,10 +326,10 @@ async function run({ output, contextName, currentTeam, client }) {
 
     if (typeof value === 'boolean') {
       const example = chalk.cyan(
-        `$ ${getCommandName('secret add -- "${name}"')}`
+        `$ ${getCommandName('secret add -- "${name}"')}`,
       );
       console.log(
-        `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `
+        `If your secret starts with '-', make sure to terminate command options with double dash and wrap it in quotes. Example: \n  ${example} `,
       );
       return 1;
     }
@@ -341,14 +343,14 @@ async function run({ output, contextName, currentTeam, client }) {
 
     console.log(
       `${chalk.cyan('Success!')} Secret ${chalk.bold(
-        name.toLowerCase()
-      )} added under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
+        name.toLowerCase(),
+      )} added under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`,
     );
     return secrets.close();
   }
 
   console.error(
-    error('Please specify a valid subcommand: ls | add | rename | rm')
+    error('Please specify a valid subcommand: ls | add | rename | rm'),
   );
   help();
   return 2;
@@ -363,8 +365,8 @@ async function readConfirmation(client, output, secret, contextName) {
 
   output.print(
     `The following secret will be removed permanently from ${chalk.bold(
-      contextName
-    )}\n`
+      contextName,
+    )}\n`,
   );
   output.print(`  ${tbl}\n`);
 

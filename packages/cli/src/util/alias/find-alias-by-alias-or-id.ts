@@ -1,15 +1,14 @@
-import { Output } from '../output';
-import { Alias } from '../../types';
-
-import Client from '../client';
+import type { Output } from '../output';
+import type { Alias } from '../../types';
+import type Client from '../client';
 
 export default async function findAliasByAliasOrId(
   output: Output,
   client: Client,
-  aliasOrId: string
+  aliasOrId: string,
 ) {
   return client.fetch<Alias | null>(
-    `/now/aliases/${encodeURIComponent(getSafeAlias(aliasOrId))}`
+    `/now/aliases/${encodeURIComponent(getSafeAlias(aliasOrId))}`,
   );
 }
 function getSafeAlias(alias: string) {

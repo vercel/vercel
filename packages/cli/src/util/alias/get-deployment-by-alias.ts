@@ -1,24 +1,24 @@
 import path from 'path';
 import chalk from 'chalk';
-import Client from '../client';
-import { Output } from '../output';
-import { User } from '../../types';
-import { VercelConfig } from '../dev/types';
 import getDeploymentsByAppName from '../deploy/get-deployments-by-appname';
 import getDeploymentByIdOrHost from '../deploy/get-deployment-by-id-or-host';
+import type Client from '../client';
+import type { Output } from '../output';
+import type { User } from '../../types';
+import type { VercelConfig } from '../dev/types';
 
 async function getAppLastDeployment(
   output: Output,
   client: Client,
   appName: string,
   user: User,
-  contextName: string
+  contextName: string,
 ) {
   output.debug(`Looking for deployments matching app ${appName}`);
   const deployments = await getDeploymentsByAppName(client, appName);
   const deploymentItem = deployments
     .sort((a, b) => b.created - a.created)
-    .filter(dep => dep.state === 'READY' && dep.creator.uid === user.id)[0];
+    .filter((dep) => dep.state === 'READY' && dep.creator.uid === user.id)[0];
 
   // Try to fetch deployment details
   if (deploymentItem) {
@@ -35,7 +35,7 @@ export async function getDeploymentForAlias(
   localConfigPath: string | undefined,
   user: User,
   contextName: string,
-  localConfig?: VercelConfig
+  localConfig?: VercelConfig,
 ) {
   output.spinner(`Fetching deployment to alias in ${chalk.bold(contextName)}`);
 
@@ -45,7 +45,7 @@ export async function getDeploymentForAlias(
     const deployment = await getDeploymentByIdOrHost(
       client,
       contextName,
-      deploymentId
+      deploymentId,
     );
     output.stopSpinner();
     return deployment;
@@ -64,7 +64,7 @@ export async function getDeploymentForAlias(
     client,
     appName,
     user,
-    contextName
+    contextName,
   );
   output.stopSpinner();
   return deployment;

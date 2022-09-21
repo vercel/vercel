@@ -1,8 +1,9 @@
 import chalk from 'chalk';
-import renderLink from './link';
-import wait, { StopSpinner } from './wait';
-import type { WritableTTY } from '../../types';
 import { errorToString } from '../is-error';
+import renderLink from './link';
+import wait from './wait';
+import type { StopSpinner } from './wait';
+import type { WritableTTY } from '../../types';
 
 export interface OutputOptions {
   debug?: boolean;
@@ -20,7 +21,7 @@ export class Output {
 
   constructor(
     stream: WritableTTY,
-    { debug: debugEnabled = false }: OutputOptions = {}
+    { debug: debugEnabled = false }: OutputOptions = {},
   ) {
     this.stream = stream;
     this.debugEnabled = debugEnabled;
@@ -49,7 +50,7 @@ export class Output {
     str: string,
     slug: string | null = null,
     link: string | null = null,
-    action: string | null = 'Learn More'
+    action: string | null = 'Learn More',
   ) => {
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
 
@@ -57,8 +58,8 @@ export class Output {
       chalk.yellow(
         chalk.bold('WARN! ') +
           str +
-          (details ? `\n${action}: ${renderLink(details)}` : '')
-      )
+          (details ? `\n${action}: ${renderLink(details)}` : ''),
+      ),
     );
     this.print('\n');
   };
@@ -71,7 +72,7 @@ export class Output {
     str: string,
     slug?: string,
     link?: string,
-    action = 'Learn More'
+    action = 'Learn More',
   ) => {
     this.print(`${chalk.red(`Error:`)} ${str}\n`);
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
@@ -85,7 +86,7 @@ export class Output {
       errorToString(err),
       undefined,
       (err as any).link,
-      (err as any).action
+      (err as any).action,
     );
   };
 
@@ -101,13 +102,13 @@ export class Output {
     if (this.debugEnabled) {
       this.log(
         `${chalk.bold('[debug]')} ${chalk.gray(
-          `[${new Date().toISOString()}]`
-        )} ${str}`
+          `[${new Date().toISOString()}]`,
+        )} ${str}`,
       );
     }
   };
 
-  spinner = (message: string, delay: number = 300): void => {
+  spinner = (message: string, delay = 300): void => {
     this.spinnerMessage = message;
     if (this.debugEnabled) {
       this.debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
@@ -122,7 +123,7 @@ export class Output {
             text: message,
             stream: this.stream,
           },
-          delay
+          delay,
         );
       }
     } else {
@@ -145,7 +146,7 @@ export class Output {
 
   time = async <T>(
     label: string | ((r?: T) => string),
-    fn: Promise<T> | (() => Promise<T>)
+    fn: Promise<T> | (() => Promise<T>),
   ) => {
     const promise = typeof fn === 'function' ? fn() : fn;
 

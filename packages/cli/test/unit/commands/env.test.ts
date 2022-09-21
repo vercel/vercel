@@ -1,5 +1,5 @@
-import fs from 'fs-extra';
 import path from 'path';
+import fs from 'fs-extra';
 import env from '../../../src/commands/env';
 import { setupFixture } from '../../helpers/setup-fixture';
 import { client } from '../../mocks/client';
@@ -21,7 +21,7 @@ describe('env', () => {
       client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for Project vercel-env-pull'
+        'Downloading `development` Environment Variables for Project vercel-env-pull',
       );
       await expect(client.stderr).toOutput('Created .env file');
       await expect(exitCodePromise).resolves.toEqual(0);
@@ -45,7 +45,7 @@ describe('env', () => {
       client.setArgv('env', 'pull', 'other.env', '--yes', '--cwd', cwd);
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for Project vercel-env-pull'
+        'Downloading `development` Environment Variables for Project vercel-env-pull',
       );
       await expect(client.stderr).toOutput('Created other.env file');
       await expect(exitCodePromise).resolves.toEqual(0);
@@ -73,11 +73,11 @@ describe('env', () => {
         '--environment',
         'production',
         '--cwd',
-        cwd
+        cwd,
       );
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        `Downloading \`production\` Environment Variables for Project vercel-env-pull`
+        `Downloading \`production\` Environment Variables for Project vercel-env-pull`,
       );
       await expect(client.stderr).toOutput('Created .env file');
       await expect(exitCodePromise).resolves.toEqual(0);
@@ -108,12 +108,12 @@ describe('env', () => {
         '--environment',
         'something-invalid',
         '--cwd',
-        cwd
+        cwd,
       );
 
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        `Invalid environment \`something-invalid\`. Valid options: <production | preview | development>`
+        `Invalid environment \`something-invalid\`. Valid options: <production | preview | development>`,
       );
 
       await expect(exitCodePromise).resolves.toEqual(1);
@@ -133,7 +133,7 @@ describe('env', () => {
       client.setArgv('env', 'pull', 'other.env', '--yes', '--cwd', cwd);
       const exitCodePromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for Project vercel-env-pull'
+        'Downloading `development` Environment Variables for Project vercel-env-pull',
       );
       await expect(client.stderr).toOutput('Created other.env file');
       await expect(exitCodePromise).resolves.toEqual(0);
@@ -164,7 +164,7 @@ describe('env', () => {
         client.stdin.write('testvalue\n');
 
         await expect(client.stderr).toOutput(
-          'Add NEW_VAR to which Environments (select multiple)?'
+          'Add NEW_VAR to which Environments (select multiple)?',
         );
         client.stdin.write('\x1B[B'); // Down arrow
         client.stdin.write('\x1B[B');
@@ -176,10 +176,10 @@ describe('env', () => {
         client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
         const pullPromise = env(client);
         await expect(client.stderr).toOutput(
-          'Downloading `development` Environment Variables for Project env-pull-delta'
+          'Downloading `development` Environment Variables for Project env-pull-delta',
         );
         await expect(client.stderr).toOutput(
-          '+ SPECIAL_FLAG (Updated)\n+ NEW_VAR\n- TEST\n'
+          '+ SPECIAL_FLAG (Updated)\n+ NEW_VAR\n- TEST\n',
         );
         await expect(client.stderr).toOutput('Updated .env file');
 
@@ -248,7 +248,7 @@ describe('env', () => {
         client.setArgv('env', 'pull', '--yes', '--cwd', cwd);
         const pullPromise = env(client);
         await expect(client.stderr).toOutput(
-          'Downloading `development` Environment Variables for Project env-pull-delta'
+          'Downloading `development` Environment Variables for Project env-pull-delta',
         );
         await expect(client.stderr).toOutput('No changes found.\n');
         await expect(client.stderr).toOutput('Updated .env file');
@@ -286,7 +286,7 @@ describe('env', () => {
         client.setArgv('env', 'pull', '.env.testquotes', '--yes', '--cwd', cwd);
         const pullPromise = env(client);
         await expect(client.stderr).toOutput(
-          'Downloading `development` Environment Variables for Project env-pull-delta'
+          'Downloading `development` Environment Variables for Project env-pull-delta',
         );
         await expect(client.stderr).toOutput('No changes found.\n');
         await expect(client.stderr).toOutput('Updated .env.testquotes file');

@@ -1,4 +1,6 @@
+import { URL } from 'url';
 import chalk from 'chalk';
+import title from 'title';
 import getArgs from '../util/get-args';
 import buildsList from '../util/output/builds';
 import routesList from '../util/output/routes';
@@ -8,14 +10,12 @@ import elapsed from '../util/output/elapsed';
 import { handleError } from '../util/error';
 import getScope from '../util/get-scope';
 import { getPkgName, getCommandName } from '../util/pkg-name';
-import Client from '../util/client';
 import { getDeployment } from '../util/get-deployment';
-import { Deployment } from '@vercel/client';
-import { Build } from '../types';
-import title from 'title';
 import { isErrnoException } from '../util/is-error';
 import { isAPIError } from '../util/errors-ts';
-import { URL } from 'url';
+import type Client from '../util/client';
+import type { Build } from '../types';
+import type { Deployment } from '@vercel/client';
 
 const help = () => {
   console.log(`
@@ -25,13 +25,13 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}        Login token
     -d, --debug                    Debug mode [off]
     -S, --scope                    Set a custom scope
@@ -97,7 +97,7 @@ export default async function main(client: Client) {
     deploymentIdOrHost = new URL(deploymentIdOrHost).hostname;
   } catch {}
   client.output.spinner(
-    `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
+    `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`,
   );
 
   // resolve the deployment, since we might have been given an alias
@@ -108,16 +108,16 @@ export default async function main(client: Client) {
       if (err.status === 404) {
         error(
           `Failed to find deployment "${deploymentIdOrHost}" in ${chalk.bold(
-            contextName
-          )}`
+            contextName,
+          )}`,
         );
         return 1;
       }
       if (err.status === 403) {
         error(
           `No permission to access deployment "${deploymentIdOrHost}" in ${chalk.bold(
-            contextName
-          )}`
+            contextName,
+          )}`,
         );
         return 1;
       }
@@ -143,8 +143,8 @@ export default async function main(client: Client) {
 
   log(
     `Fetched deployment ${chalk.bold(url)} in ${chalk.bold(
-      contextName
-    )} ${elapsed(Date.now() - depFetchStart)}`
+      contextName,
+    )} ${elapsed(Date.now() - depFetchStart)}`,
   );
 
   print('\n');
@@ -157,8 +157,8 @@ export default async function main(client: Client) {
     print(
       `    ${chalk.cyan('created')}\t${new Date(createdAt)} ${elapsed(
         Date.now() - createdAt,
-        true
-      )}\n`
+        true,
+      )}\n`,
     );
   }
   print('\n\n');
@@ -174,7 +174,7 @@ export default async function main(client: Client) {
   }
 
   if (builds.length > 0) {
-    const times: { [id: string]: string | null } = {};
+    const times: Record<string, string | null> = {};
 
     for (const build of builds) {
       const { id, createdAt, readyStateAt } = build;

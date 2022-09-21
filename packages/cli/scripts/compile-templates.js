@@ -1,5 +1,5 @@
-const execa = require('execa');
 const { join } = require('path');
+const execa = require('execa');
 const { readFile, writeFile, readdir, remove } = require('fs-extra');
 
 async function main() {
@@ -14,7 +14,7 @@ async function main() {
   });
 
   const files = await readdir(templatesDir);
-  const compiledFiles = files.filter(f => f.endsWith('.js'));
+  const compiledFiles = files.filter((f) => f.endsWith('.js'));
 
   // Prettier
   console.log('\nMaking the compiled template functions prettier...');
@@ -25,7 +25,7 @@ async function main() {
     {
       cwd: templatesDir,
       stdio: 'inherit',
-    }
+    },
   );
 
   console.log('\nConverting template functions to TypeScript');
@@ -36,9 +36,7 @@ async function main() {
     const def = await readFile(fnPath.replace(/\.js$/, '.tsdef'), 'utf8');
     const interfaceName = def.match(/interface (\w+)/)[1];
 
-    const lines = require(fnPath)
-      .toString()
-      .split('\n');
+    const lines = require(fnPath).toString().split('\n');
     let errorHtmlStart = -1;
     let errorHtmlEnd = -1;
     for (let i = 0; i < lines.length; i++) {
@@ -56,35 +54,35 @@ async function main() {
 
     lines[0] = `export default ${lines[0].replace(
       '(it)',
-      `(it: ${interfaceName}): string`
+      `(it: ${interfaceName}): string`,
     )}`;
 
     lines.unshift(
       "import encodeHTML from 'escape-html';",
       '',
-      ...def.split('\n')
+      ...def.split('\n'),
     );
 
     await Promise.all([writeFile(tsPath, lines.join('\n')), remove(fnPath)]);
     console.log(
-      `${file} -> ${file.replace(/\.js$/, '.ts')} (${Date.now() - start}ms)`
+      `${file} -> ${file.replace(/\.js$/, '.ts')} (${Date.now() - start}ms)`,
     );
   }
 }
 
-process.on('unhandledRejection', err => {
+process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:');
   console.error(err);
   process.exit(1);
 });
 
-process.on('uncaughtException', err => {
+process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:');
   console.error(err);
   process.exit(1);
 });
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

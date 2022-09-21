@@ -1,15 +1,14 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
-
-import { Output } from '../output';
-import Client from '../client';
 import eraseLines from '../output/erase-lines';
-import getDomainPrice from './get-domain-price';
-import getDomainStatus from './get-domain-status';
 import promptBool from '../input/prompt-bool';
-import purchaseDomain from './purchase-domain';
 import stamp from '../output/stamp';
 import * as ERRORS from '../errors-ts';
+import getDomainPrice from './get-domain-price';
+import getDomainStatus from './get-domain-status';
+import purchaseDomain from './purchase-domain';
+import type Client from '../client';
+import type { Output } from '../output';
 
 const isTTY = process.stdout.isTTY;
 
@@ -17,7 +16,7 @@ export default async function purchaseDomainIfAvailable(
   output: Output,
   client: Client,
   domain: string,
-  contextName: string
+  contextName: string,
 ) {
   output.spinner(`Checking status of ${chalk.bold(domain)}`);
   const buyDomainStamp = stamp();
@@ -46,16 +45,16 @@ export default async function purchaseDomainIfAvailable(
     const { price, period } = domainPrice;
     output.log(
       `Domain not found, but you can buy it under ${chalk.bold(
-        contextName
-      )}! ${buyDomainStamp()}`
+        contextName,
+      )}! ${buyDomainStamp()}`,
     );
 
     if (
       !(await promptBool(
         `Buy ${chalk.underline(domain)} for ${chalk.bold(
-          `$${price}`
+          `$${price}`,
         )} (${plural('yr', period, true)})?`,
-        client
+        client,
       ))
     ) {
       output.print(eraseLines(1));

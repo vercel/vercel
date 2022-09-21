@@ -1,7 +1,5 @@
-import chalk from 'chalk';
 import { join } from 'path';
-import Client from '../util/client';
-import { ProjectEnvTarget } from '../types';
+import chalk from 'chalk';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
 import setupAndLink from '../util/link/setup-and-link';
@@ -14,14 +12,16 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../util/projects/link';
 import { writeProjectSettings } from '../util/projects/project-settings';
-import envPull from './env/pull';
 import { getCommandName } from '../util/pkg-name';
 import param from '../util/output/param';
-import type { Project, Org } from '../types';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
 } from '../util/env/env-target';
+import envPull from './env/pull';
+import type { Project, Org } from '../types';
+import type { ProjectEnvTarget } from '../types';
+import type Client from '../util/client';
 
 const help = () => {
   return console.log(`
@@ -31,10 +31,10 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --environment [environment]    Deployment environment [development]
@@ -43,7 +43,7 @@ const help = () => {
   ${chalk.dim('Examples:')}
 
   ${chalk.gray(
-    '–'
+    '–',
   )} Pull the latest Environment Variables and Project Settings from the cloud
     and stores them in \`.vercel/.env.\${target}.local\` and \`.vercel/project.json\` respectively.
 
@@ -53,11 +53,11 @@ const help = () => {
   ${chalk.gray('–')} Pull for a specific environment
 
     ${chalk.cyan(
-      `$ ${getPkgName()} pull --environment=${getEnvTargetPlaceholder()}`
+      `$ ${getPkgName()} pull --environment=${getEnvTargetPlaceholder()}`,
     )}
 
   ${chalk.gray(
-    'If you want to download environment variables to a specific file, use `vercel env pull` instead.'
+    'If you want to download environment variables to a specific file, use `vercel env pull` instead.',
   )}
 `);
 };
@@ -83,14 +83,14 @@ function parseArgs(client: Client) {
   return argv;
 }
 
-type LinkResult = {
+interface LinkResult {
   org: Org;
   project: Project;
-};
+}
 async function ensureLink(
   client: Client,
   cwd: string,
-  yes: boolean
+  yes: boolean,
 ): Promise<LinkResult | number> {
   let link = await getLinkedProject(client, cwd);
   if (link.status === 'not_linked') {
@@ -110,8 +110,8 @@ async function ensureLink(
     if (link.reason === 'HEADLESS') {
       client.output.error(
         `Command ${getCommandName(
-          'pull'
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
+          'pull',
+        )} requires confirmation. Use option ${param('--yes')} to confirm.`,
       );
     }
     return link.exitCode;
@@ -125,7 +125,7 @@ async function pullAllEnvFiles(
   client: Client,
   project: Project,
   argv: ReturnType<typeof processArgs>,
-  cwd: string
+  cwd: string,
 ): Promise<number> {
   const environmentFile = `.env.${environment}.local`;
   return envPull(
@@ -136,14 +136,14 @@ async function pullAllEnvFiles(
     [join('.vercel', environmentFile)],
     client.output,
     cwd,
-    'vercel-cli:pull'
+    'vercel-cli:pull',
   );
 }
 
 function parseEnvironment(environment = 'development'): ProjectEnvTarget {
   if (!isValidEnvTarget(environment)) {
     throw new Error(
-      `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`
+      `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`,
     );
   }
   return environment;
@@ -173,7 +173,7 @@ export default async function main(client: Client) {
     client,
     project,
     argv,
-    cwd
+    cwd,
   );
   if (pullResultCode !== 0) {
     return pullResultCode;
@@ -187,10 +187,10 @@ export default async function main(client: Client) {
   client.output.print(
     `${prependEmoji(
       `Downloaded project settings to ${chalk.bold(
-        join(VERCEL_DIR, VERCEL_DIR_PROJECT)
+        join(VERCEL_DIR, VERCEL_DIR_PROJECT),
       )} ${chalk.gray(settingsStamp())}`,
-      emoji('success')
-    )}\n`
+      emoji('success'),
+    )}\n`,
   );
 
   return 0;

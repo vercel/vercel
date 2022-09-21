@@ -1,10 +1,10 @@
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 
 export default async function removeDomainByName(
   now: Client,
   contextName: string,
-  domain: string
+  domain: string,
 ) {
   try {
     return await now.fetch(`/v3/domains/${encodeURIComponent(domain)}`, {

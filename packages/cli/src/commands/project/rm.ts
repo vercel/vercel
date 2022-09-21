@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isAPIError } from '../../util/errors-ts';
 import confirm from '../../util/input/confirm';
 import { getCommandName } from '../../util/pkg-name';
+import type Client from '../../util/client';
 
 const e = encodeURIComponent;
 
@@ -12,8 +12,8 @@ export default async function rm(client: Client, args: string[]) {
   if (args.length !== 1) {
     client.output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('project rm <name>')}`
-      )}`
+        `${getCommandName('project rm <name>')}`,
+      )}`,
     );
     return 1;
   }
@@ -42,22 +42,22 @@ export default async function rm(client: Client, args: string[]) {
   const elapsed = ms(Date.now() - start);
   client.output.log(
     `${chalk.cyan('Success!')} Project ${chalk.bold(name)} removed ${chalk.gray(
-      `[${elapsed}]`
-    )}`
+      `[${elapsed}]`,
+    )}`,
   );
   return 0;
 }
 
 async function readConfirmation(
   client: Client,
-  projectName: string
+  projectName: string,
 ): Promise<boolean> {
   client.output.print(
     prependEmoji(
       `The project ${chalk.bold(projectName)} will be removed permanently.\n` +
         `It will also delete everything under the project including deployments.\n`,
-      emoji('warning')
-    )
+      emoji('warning'),
+    ),
   );
 
   return await confirm(client, `${chalk.bold.red('Are you sure?')}`, false);

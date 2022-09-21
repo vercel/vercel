@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
@@ -13,6 +12,7 @@ import getTeams from '../../util/teams/get-teams';
 import inviteUserToTeam from '../../util/teams/invite-user-to-team';
 import { isAPIError } from '../../util/errors-ts';
 import { errorToString, isError } from '../../util/is-error';
+import type Client from '../../util/client';
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -31,7 +31,7 @@ const domains = Array.from(
     'mail.com',
     'gmx.com',
     'icloud.com',
-  ])
+  ]),
 );
 
 const emailAutoComplete = (value: string, teamSlug: string) => {
@@ -59,14 +59,14 @@ const emailAutoComplete = (value: string, teamSlug: string) => {
 export default async function invite(
   client: Client,
   emails: string[] = [],
-  { introMsg = '', noopMsg = 'No changes made' } = {}
+  { introMsg = '', noopMsg = 'No changes made' } = {},
 ): Promise<number> {
   const { config, output } = client;
   const { currentTeam: currentTeamId } = config;
 
   output.spinner('Fetching teams');
   const teams = await getTeams(client);
-  const currentTeam = teams.find(team => team.id === currentTeamId);
+  const currentTeam = teams.find((team) => team.id === currentTeamId);
 
   output.spinner('Fetching user information');
   const user = await getUser(client);
@@ -75,17 +75,17 @@ export default async function invite(
 
   if (!currentTeam) {
     // We specifically need a team scope here
-    let err = `You can't run this command under ${param(
-      user.username || user.email
+    const err = `You can't run this command under ${param(
+      user.username || user.email,
     )}.\nPlease select a team scope using ${getCommandName(
-      `switch`
+      `switch`,
     )} or use ${cmd('--scope')}`;
     output.error(err);
     return 1;
   }
 
   output.log(
-    introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`
+    introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`,
   );
 
   if (emails.length > 0) {
@@ -111,7 +111,7 @@ export default async function invite(
         output.log(
           `${chalk.cyan(chars.tick)} ${email}${
             userInfo ? ` (${userInfo})` : ''
-          } ${elapsed()}`
+          } ${elapsed()}`,
         );
       } else {
         output.log(`${chalk.red(`✖ ${email}`)} ${chalk.gray('[invalid]')}`);
@@ -131,7 +131,7 @@ export default async function invite(
       email = await textInput({
         label: `- ${inviteUserPrefix}`,
         validateValue: validateEmail,
-        autoComplete: value => emailAutoComplete(value, currentTeam.slug),
+        autoComplete: (value) => emailAutoComplete(value, currentTeam.slug),
       });
     } catch (err: unknown) {
       if (!isError(err) || err.message !== 'USER_ABORT') {
@@ -147,7 +147,7 @@ export default async function invite(
         const { username } = await inviteUserToTeam(
           client,
           currentTeam.id,
-          email
+          email,
         );
         email = `${email}${username ? ` (${username})` : ''} ${elapsed()}`;
         emails.push(email);
@@ -157,7 +157,7 @@ export default async function invite(
           process.stderr.write(eraseLines(emails.length + 2));
           output.log(
             introMsg ||
-              `Inviting team members to ${chalk.bold(currentTeam.name)}`
+              `Inviting team members to ${chalk.bold(currentTeam.name)}`,
           );
           for (const email of emails) {
             output.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);

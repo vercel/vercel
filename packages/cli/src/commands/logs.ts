@@ -2,13 +2,14 @@ import chalk from 'chalk';
 import logo from '../util/output/logo';
 import elapsed from '../util/output/elapsed';
 import { maybeURL, normalizeURL } from '../util/url';
-import printEvents, { DeploymentEvent } from '../util/events';
+import printEvents from '../util/events';
 import getScope from '../util/get-scope';
 import { getPkgName } from '../util/pkg-name';
 import getArgs from '../util/get-args';
-import Client from '../util/client';
 import { getDeployment } from '../util/get-deployment';
 import { isAPIError } from '../util/errors-ts';
+import type Client from '../util/client';
+import type { DeploymentEvent } from '../util/events';
 
 const help = () => {
   console.log(`
@@ -18,36 +19,36 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -f, --follow                   Wait for additional data [off]
     -n ${chalk.bold.underline(
-      'NUMBER'
+      'NUMBER',
     )}                      Number of logs [100]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}        Login token
     --since=${chalk.bold.underline(
-      'SINCE'
+      'SINCE',
     )}                  Only return logs after date (ISO 8601)
     --until=${chalk.bold.underline(
-      'UNTIL'
+      'UNTIL',
     )}                  Only return logs before date (ISO 8601), ignored for ${'`-f`'}
     -S, --scope                    Set a custom scope
     -o ${chalk.bold.underline('MODE')}, --output=${chalk.bold.underline(
-    'MODE'
+    'MODE',
   )}         Specify the output format (${Object.keys(logPrinters).join(
-    '|'
+    '|',
   )}) [short]
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray('–')} Print the logs for the deployment ${chalk.dim(
-    '`deploymentId`'
+    '`deploymentId`',
   )}
 
     ${chalk.cyan(`$ ${getPkgName()} logs deploymentId`)}
@@ -102,7 +103,7 @@ export default async function main(client: Client) {
     const normalizedURL = normalizeURL(deploymentIdOrURL);
     if (normalizedURL.includes('/')) {
       output.error(
-        `Invalid deployment url: can't include path (${deploymentIdOrURL})`
+        `Invalid deployment url: can't include path (${deploymentIdOrURL})`,
       );
       return 1;
     }
@@ -132,15 +133,15 @@ export default async function main(client: Client) {
     if (isAPIError(err)) {
       if (err.status === 404) {
         output.error(
-          `Failed to find deployment "${id}" in ${chalk.bold(contextName)}`
+          `Failed to find deployment "${id}" in ${chalk.bold(contextName)}`,
         );
         return 1;
       }
       if (err.status === 403) {
         output.error(
           `No permission to access deployment "${id}" in ${chalk.bold(
-            contextName
-          )}`
+            contextName,
+          )}`,
         );
         return 1;
       }
@@ -151,8 +152,8 @@ export default async function main(client: Client) {
 
   output.log(
     `Fetched deployment "${deployment.url}" in ${chalk.bold(
-      contextName
-    )} ${elapsed(Date.now() - depFetchStart)}`
+      contextName,
+    )} ${elapsed(Date.now() - depFetchStart)}`,
   );
 
   const storage: DeploymentEvent[] = [];
@@ -162,7 +163,7 @@ export default async function main(client: Client) {
 
   await printEvents(client, deployment.id, {
     mode: 'logs',
-    onEvent: event => storage.push(event),
+    onEvent: (event) => storage.push(event),
     quiet: false,
     findOpts: {
       direction,
@@ -246,7 +247,7 @@ function printLogShort(log: any) {
 
   const date = new Date(log.created).toISOString();
 
-  data.split('\n').forEach(line => {
+  data.split('\n').forEach((line) => {
     if (
       line.includes('START RequestId:') ||
       line.includes('END RequestId:') ||
@@ -264,7 +265,7 @@ function printLogShort(log: any) {
     }
 
     console.log(
-      `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}`
+      `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}`,
     );
   });
 
@@ -284,7 +285,7 @@ function printLogRaw(log: any) {
         // eslint-disable-next-line no-control-regex
         .replace(/\x1b\[1000D/g, '')
         .replace(/\x1b\[0K/g, '')
-        .replace(/\x1b\[1A/g, '')
+        .replace(/\x1b\[1A/g, ''),
     );
   }
 
@@ -309,8 +310,8 @@ const getLogPrinter = (mode: string | undefined, def: OutputMode) => {
     }
     throw new TypeError(
       `Invalid output mode "${mode}". Must be one of: ${Object.keys(
-        logPrinters
-      ).join(', ')}`
+        logPrinters,
+      ).join(', ')}`,
     );
   }
   return logPrinters[def];

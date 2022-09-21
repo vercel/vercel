@@ -1,16 +1,16 @@
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 
-type Response = {
+interface Response {
   moved: boolean;
   token?: string;
-};
+}
 
 export default async function moveOutDomain(
   client: Client,
   contextName: string,
   name: string,
-  destination: string
+  destination: string,
 ) {
   try {
     return await client.fetch<Response>(
@@ -18,7 +18,7 @@ export default async function moveOutDomain(
       {
         body: { op: 'move-out', destination },
         method: 'PATCH',
-      }
+      },
     );
   } catch (err: unknown) {
     if (ERRORS.isAPIError(err)) {

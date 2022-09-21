@@ -62,7 +62,7 @@ export function getPrettyError(obj: {
 
     return new NowBuildError({
       code: 'DEV_VALIDATE_CONFIG',
-      message: message,
+      message,
       link: prop ? `${docsUrl}#project/${prop.toLowerCase()}` : docsUrl,
       action: 'View Documentation',
     });
@@ -91,7 +91,7 @@ function getTopLevelPropertyName(dataPath?: string): string {
   return '';
 }
 
-const mapTypoToSuggestion: { [key: string]: { [key: string]: string } } = {
+const mapTypoToSuggestion: Record<string, Record<string, string>> = {
   '': {
     builder: 'builds',
     'build.env': '{ "build": { "env": {"name": "value"} } }',

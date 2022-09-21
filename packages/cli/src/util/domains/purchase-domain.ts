@@ -1,19 +1,19 @@
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 
-type Response = {
+interface Response {
   created: number;
   ns: string[];
   uid: string;
   pending: boolean;
   verified: boolean;
-};
+}
 
 export default async function purchaseDomain(
   client: Client,
   name: string,
   expectedPrice: number,
-  renew: boolean = true
+  renew = true,
 ) {
   try {
     return await client.fetch<Response>(`/v3/domains/buy`, {

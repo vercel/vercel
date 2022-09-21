@@ -1,7 +1,5 @@
 import chalk from 'chalk';
-import { ProjectEnvTarget, Project, ProjectEnvType } from '../../types';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
+import { ProjectEnvTarget, ProjectEnvType } from '../../types';
 import stamp from '../../util/output/stamp';
 import addEnvRecord from '../../util/env/add-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
@@ -16,17 +14,20 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
+import type Client from '../../util/client';
+import type { Output } from '../../util/output';
+import type { Project } from '../../types';
 
-type Options = {
+interface Options {
   '--debug': boolean;
-};
+}
 
 export default async function add(
   client: Client,
   project: Project,
   opts: Partial<Options>,
   args: string[],
-  output: Output
+  output: Output,
 ) {
   // improve the way we show inquirer prompts
   require('../../util/input/patch-inquirer');
@@ -37,8 +38,8 @@ export default async function add(
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> ${getEnvTargetPlaceholder()} <gitbranch>`
-      )}`
+        `env add <name> ${getEnvTargetPlaceholder()} <gitbranch>`,
+      )}`,
     );
     return 1;
   }
@@ -46,8 +47,8 @@ export default async function add(
   if (stdInput && (!envName || !envTargetArg)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> <target> <gitbranch> < <file>`
-      )}`
+        `env add <name> <target> <gitbranch> < <file>`,
+      )}`,
     );
     return 1;
   }
@@ -57,8 +58,8 @@ export default async function add(
     if (!isValidEnvTarget(envTargetArg)) {
       output.error(
         `The Environment ${param(
-          envTargetArg
-        )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
+          envTargetArg,
+        )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`,
       );
       return 1;
     }
@@ -83,20 +84,20 @@ export default async function add(
     output,
     client,
     project.id,
-    'vercel-cli:env:add'
+    'vercel-cli:env:add',
   );
   const existing = new Set(
-    envs.filter(r => r.key === envName).map(r => r.target)
+    envs.filter((r) => r.key === envName).map((r) => r.target),
   );
-  const choices = getEnvTargetChoices().filter(c => !existing.has(c.value));
+  const choices = getEnvTargetChoices().filter((c) => !existing.has(c.value));
 
   if (choices.length === 0) {
     output.error(
       `The variable ${param(
-        envName
+        envName,
       )} has already been added to all Environments. To remove, run ${getCommandName(
-        `env rm ${envName}`
-      )}.`
+        `env rm ${envName}`,
+      )}.`,
     );
     return 1;
   }
@@ -155,7 +156,7 @@ export default async function add(
       envName,
       envValue,
       envTargets,
-      envGitBranch
+      envGitBranch,
     );
   } catch (err: unknown) {
     if (isAPIError(err) && isKnownError(err)) {
@@ -168,10 +169,10 @@ export default async function add(
   output.print(
     `${prependEmoji(
       `Added Environment Variable ${chalk.bold(
-        envName
+        envName,
       )} to Project ${chalk.bold(project.name)} ${chalk.gray(addStamp())}`,
-      emoji('success')
-    )}\n`
+      emoji('success'),
+    )}\n`,
   );
 
   return 0;

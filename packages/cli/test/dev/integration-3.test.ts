@@ -60,15 +60,15 @@ test(
     async (testPath: any) => {
       await testPath(200, '/', /Aurelia Navigation Skeleton/m);
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
   '[vercel dev] 04-create-react-app',
   testFixtureStdio('04-create-react-app', async (testPath: any) => {
     await testPath(200, '/', /React App/m);
-  })
+  }),
 );
 /*
 test(
@@ -89,17 +89,17 @@ test(
     // Bug with gridsome's dev server: https://github.com/gridsome/gridsome/issues/831
     // Works in prod only so leave out for now
     // await testPath(404, '/nothing');
-  })
+  }),
 );
 
 test(
   '[vercel dev] 07-hexo-node',
   testFixtureStdio('07-hexo-node', async (testPath: any) => {
     await testPath(200, '/', /Hexo \+ Node.js API/m);
-    await testPath(200, '/api/date', new RegExp(new Date().getFullYear() + ''));
+    await testPath(200, '/api/date', new RegExp(`${new Date().getFullYear()}`));
     await testPath(200, '/contact.html', /Contact Us/m);
     await testPath(200, '/support', /Contact Us/m);
-  })
+  }),
 );
 
 test('[vercel dev] 08-hugo', async () => {
@@ -121,12 +121,12 @@ test(
   '[vercel dev] 10-nextjs-node',
   testFixtureStdio('10-nextjs-node', async (testPath: any) => {
     await testPath(200, '/', /Next.js \+ Node.js API/m);
-    await testPath(200, '/api/date', new RegExp(new Date().getFullYear() + ''));
+    await testPath(200, '/api/date', new RegExp(`${new Date().getFullYear()}`));
     await testPath(200, '/contact', /Contact Page/);
     await testPath(200, '/support', /Contact Page/);
     // TODO: Fix this test assertion that fails intermittently
     // await testPath(404, '/nothing', /Custom Next 404/);
-  })
+  }),
 );
 
 test(
@@ -134,7 +134,7 @@ test(
   testFixtureStdio('10a-nextjs-routes', async (testPath: any) => {
     await testPath(200, '/', /Next.js with routes/m);
     await testPath(200, '/hello', /Hello Routes/m);
-  })
+  }),
 );
 
 test(
@@ -146,11 +146,11 @@ test(
       await testPath(
         200,
         '/api/date',
-        new RegExp(new Date().getFullYear() + '')
+        new RegExp(`${new Date().getFullYear()}`),
       );
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -162,11 +162,11 @@ test(
       await testPath(
         200,
         '/api/date',
-        new RegExp(new Date().getFullYear() + '')
+        new RegExp(`${new Date().getFullYear()}`),
       );
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -178,11 +178,11 @@ test(
       await testPath(
         200,
         '/api/date',
-        new RegExp(new Date().getFullYear() + '')
+        new RegExp(`${new Date().getFullYear()}`),
       );
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -194,11 +194,11 @@ test(
       await testPath(
         200,
         '/api/date',
-        new RegExp(new Date().getFullYear() + '')
+        new RegExp(`${new Date().getFullYear()}`),
       );
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -210,11 +210,11 @@ test(
       await testPath(
         200,
         '/api/date',
-        new RegExp(new Date().getFullYear() + '')
+        new RegExp(`${new Date().getFullYear()}`),
       );
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -232,7 +232,7 @@ test(
         const body = await res.text();
         expect(res.status).toBe(301);
         expect(res.headers.get('location')).toBe(
-          `http://localhost:${port}/?foo=bar`
+          `http://localhost:${port}/?foo=bar`,
         );
         expect(body).toBe('Redirecting to /?foo=bar (301)\n');
       }
@@ -259,12 +259,12 @@ test(
             body.startsWith('September') ||
             body.startsWith('October') ||
             body.startsWith('November') ||
-            body.startsWith('December')
+            body.startsWith('December'),
         ).toBeTruthy();
       }
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -274,8 +274,8 @@ test(
     async (testPath: any) => {
       await testPath(200, '/', /Marko Starter/m);
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -285,8 +285,8 @@ test(
     async (testPath: any) => {
       await testPath(200, '/', /Mithril on Vercel/m);
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -296,8 +296,8 @@ test(
     async (testPath: any) => {
       await testPath(200, '/', /Riot on Vercel/m);
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -307,8 +307,8 @@ test(
     async (testPath: any) => {
       await testPath(200, '/', /Welcome to my new Charge site/m);
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -318,8 +318,8 @@ test(
     async (testPath: any) => {
       await testPath(200, '/', /Bon Appétit./m);
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test(
@@ -329,8 +329,8 @@ test(
     async (testPath: any) => {
       await testPath(200, '/', /My Site/m);
     },
-    { skipDeploy: true }
-  )
+    { skipDeploy: true },
+  ),
 );
 
 test('[vercel dev] 24-ember', async () => {
@@ -341,7 +341,7 @@ test('[vercel dev] 24-ember', async () => {
     async (testPath: any) => {
       await testPath(200, '/', /HelloWorld/m);
     },
-    { skipDeploy: true }
+    { skipDeploy: true },
   );
 
   await tester();

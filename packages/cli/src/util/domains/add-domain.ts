@@ -1,20 +1,20 @@
 import chalk from 'chalk';
 import retry from 'async-retry';
 import { DomainAlreadyExists, InvalidDomain, isAPIError } from '../errors-ts';
-import { Domain } from '../../types';
-import Client from '../client';
+import type { Domain } from '../../types';
+import type Client from '../client';
 
-type Response = {
+interface Response {
   domain: Domain;
-};
+}
 
 export default async function addDomain(
   client: Client,
   domain: string,
-  contextName: string
+  contextName: string,
 ) {
   client.output.spinner(
-    `Adding domain ${domain} under ${chalk.bold(contextName)}`
+    `Adding domain ${domain} under ${chalk.bold(contextName)}`,
   );
   const addedDomain = await performAddRequest(client, domain);
   return addedDomain;
@@ -43,6 +43,6 @@ async function performAddRequest(client: Client, domainName: string) {
         throw err;
       }
     },
-    { retries: 5, maxTimeout: 8000 }
+    { retries: 5, maxTimeout: 8000 },
   );
 }

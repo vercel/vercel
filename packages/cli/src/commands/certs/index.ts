@@ -1,18 +1,16 @@
 import chalk from 'chalk';
 
-// @ts-ignore
+// @ts-expect-error
 import { handleError } from '../../util/error';
-
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
-
+import { getPkgName } from '../../util/pkg-name';
 import add from './add';
 import issue from './issue';
 import ls from './ls';
 import rm from './rm';
-import Client from '../../util/client';
-import { getPkgName } from '../../util/pkg-name';
+import type Client from '../../util/client';
 
 const help = () => {
   console.log(`
@@ -31,30 +29,30 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}        Login token
     -S, --scope                    Set a custom scope
     --challenge-only               Only show challenges needed to issue a cert
     --crt ${chalk.bold.underline('FILE')}                     Certificate file
     --key ${chalk.bold.underline(
-      'FILE'
+      'FILE',
     )}                     Certificate key file
     --ca ${chalk.bold.underline(
-      'FILE'
+      'FILE',
     )}                      CA certificate chain file
     -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray(
-    '–'
+    '–',
   )} Generate a certificate with the cnames "acme.com" and "www.acme.com"
 
       ${chalk.cyan(`$ ${getPkgName()} certs issue acme.com www.acme.com`)}
@@ -64,7 +62,7 @@ const help = () => {
       ${chalk.cyan(`$ ${getPkgName()} certs rm id`)}
 
   ${chalk.gray('–')} Paginate results, where ${chalk.dim(
-    '`1584722256178`'
+    '`1584722256178`',
   )} is the time in milliseconds since the UNIX epoch.
 
       ${chalk.cyan(`$ ${getPkgName()} certs ls --next 1584722256178`)}

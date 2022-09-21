@@ -6,19 +6,19 @@ import {
   DNSInvalidType,
 } from '../../util/errors-ts';
 import addDNSRecord from '../../util/dns/add-dns-record';
-import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import stamp from '../../util/output/stamp';
 import getDNSData from '../../util/dns/get-dns-data';
 import { getCommandName } from '../../util/pkg-name';
+import type Client from '../../util/client';
 
-type Options = {};
+interface Options {}
 
 export default async function add(
   client: Client,
   opts: Options,
-  args: string[]
+  args: string[],
 ) {
   const { output } = client;
   const { contextName } = await getScope(client);
@@ -27,8 +27,8 @@ export default async function add(
   if (!parsedParams) {
     output.error(
       `Invalid number of arguments. See: ${chalk.cyan(
-        `${getCommandName('dns --help')}`
-      )} for usage.`
+        `${getCommandName('dns --help')}`,
+      )} for usage.`,
     );
     return 1;
   }
@@ -45,8 +45,8 @@ export default async function add(
   if (record instanceof DomainNotFound) {
     output.error(
       `The domain ${domain} can't be found under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(addStamp())}`
+        contextName,
+      )} ${chalk.gray(addStamp())}`,
     );
     return 1;
   }
@@ -54,8 +54,8 @@ export default async function add(
   if (record instanceof DNSPermissionDenied) {
     output.error(
       `You don't have permissions to add records to domain ${domain} under ${chalk.bold(
-        contextName
-      )} ${chalk.gray(addStamp())}`
+        contextName,
+      )} ${chalk.gray(addStamp())}`,
     );
     return 1;
   }
@@ -63,8 +63,8 @@ export default async function add(
   if (record instanceof DNSInvalidPort) {
     output.error(
       `Invalid <port> parameter. A number was expected ${chalk.gray(
-        addStamp()
-      )}`
+        addStamp(),
+      )}`,
     );
     return 1;
   }
@@ -74,8 +74,8 @@ export default async function add(
       `Invalid <type> parameter "${
         record.meta.type
       }". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT ${chalk.gray(
-        addStamp()
-      )}`
+        addStamp(),
+      )}`,
     );
     return 1;
   }
@@ -87,10 +87,10 @@ export default async function add(
 
   console.log(
     `${chalk.cyan('> Success!')} DNS record for domain ${chalk.bold(
-      domain
+      domain,
     )} ${chalk.gray(`(${record.uid})`)} created under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(addStamp())}`
+      contextName,
+    )} ${chalk.gray(addStamp())}`,
   );
 
   return 0;

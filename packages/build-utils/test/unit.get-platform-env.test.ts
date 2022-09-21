@@ -38,8 +38,8 @@ describe('Test `getPlatformEnv()`', () => {
     }
     assert(err);
     assert.equal(
-      err!.message,
-      'Both "VERCEL_FOO" and "NOW_FOO" env vars are defined. Please only define the "VERCEL_FOO" env var.'
+      err.message,
+      'Both "VERCEL_FOO" and "NOW_FOO" env vars are defined. Please only define the "VERCEL_FOO" env var.',
     );
   });
 });

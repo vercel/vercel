@@ -1,35 +1,16 @@
-import fs from 'fs-extra';
-import chalk from 'chalk';
-import dotenv from 'dotenv';
 import { join, normalize, relative, resolve } from 'path';
-import {
-  normalizePath,
-  Files,
-  FileFsRef,
-  PackageJson,
-  BuildOptions,
-  Config,
-  Meta,
-  Builder,
-  BuildResultV2,
-  BuildResultV2Typical,
-  BuildResultV3,
-  NowBuildError,
-} from '@vercel/build-utils';
+import dotenv from 'dotenv';
+import chalk from 'chalk';
+import fs from 'fs-extra';
+import { normalizePath, FileFsRef, NowBuildError } from '@vercel/build-utils';
 import { detectBuilders } from '@vercel/fs-detectors';
 import minimatch from 'minimatch';
 import {
   appendRoutesToPhase,
   getTransformedRoutes,
   mergeRoutes,
-  MergeRoutesProps,
-  Route,
 } from '@vercel/routing-utils';
-import type { VercelConfig } from '@vercel/client';
-
-import pull from './pull';
 import { staticFiles as getFiles } from '../util/get-files';
-import Client from '../util/client';
 import getArgs from '../util/get-args';
 import cmd from '../util/output/cmd';
 import * as cli from '../util/pkg-name';
@@ -38,22 +19,34 @@ import readJSONFile from '../util/read-json-file';
 import { CantParseJSONFile } from '../util/errors-ts';
 import {
   pickOverrides,
-  ProjectLinkAndSettings,
   readProjectSettings,
 } from '../util/projects/project-settings';
 import { VERCEL_DIR } from '../util/projects/link';
 import confirm from '../util/input/confirm';
 import { emoji, prependEmoji } from '../util/emoji';
 import stamp from '../util/output/stamp';
-import {
-  OUTPUT_DIR,
-  PathOverride,
-  writeBuildResult,
-} from '../util/build/write-build-result';
+import { OUTPUT_DIR, writeBuildResult } from '../util/build/write-build-result';
 import { importBuilders } from '../util/build/import-builders';
 import { initCorepack, cleanupCorepack } from '../util/build/corepack';
 import { sortBuilders } from '../util/build/sort-builders';
 import { toEnumerableError } from '../util/error';
+import pull from './pull';
+import type { PathOverride } from '../util/build/write-build-result';
+import type { ProjectLinkAndSettings } from '../util/projects/project-settings';
+import type Client from '../util/client';
+import type {
+  Files,
+  PackageJson,
+  BuildOptions,
+  Config,
+  Meta,
+  Builder,
+  BuildResultV2,
+  BuildResultV2Typical,
+  BuildResultV3,
+} from '@vercel/build-utils';
+import type { MergeRoutesProps, Route } from '@vercel/routing-utils';
+import type { VercelConfig } from '@vercel/client';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -83,10 +76,10 @@ const help = () => {
 
       -h, --help                     Output usage information
       -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
       -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
       --cwd [path]                   The current working directory
       --output [path]                Directory where built assets should be written to
@@ -110,18 +103,17 @@ export default async function main(client: Client): Promise<number> {
   if (process.env.__VERCEL_BUILD_RUNNING) {
     output.error(
       `${cmd(
-        `${cli.name} build`
+        `${cli.name} build`,
       )} must not recursively invoke itself. Check the Build Command in the Project Settings or the ${cmd(
-        'build'
-      )} script in ${cmd('package.json')}`
+        'build',
+      )} script in ${cmd('package.json')}`,
     );
     output.error(
-      `Learn More: https://vercel.link/recursive-invocation-of-commands`
+      `Learn More: https://vercel.link/recursive-invocation-of-commands`,
     );
     return 1;
-  } else {
-    process.env.__VERCEL_BUILD_RUNNING = '1';
   }
+  process.env.__VERCEL_BUILD_RUNNING = '1';
 
   // Parse CLI args
   const argv = getArgs(client.argv.slice(2), {
@@ -157,8 +149,8 @@ export default async function main(client: Client): Promise<number> {
       if (!isTTY) {
         client.output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
-            'pull --yes'
-          )} to retrieve them.`
+            'pull --yes',
+          )} to retrieve them.`,
         );
         return 1;
       }
@@ -166,9 +158,9 @@ export default async function main(client: Client): Promise<number> {
       confirmed = await confirm(
         client,
         `No Project Settings found locally. Run ${cli.getCommandName(
-          'pull'
+          'pull',
         )} for retrieving them?`,
-        true
+        true,
       );
     }
     if (!confirmed) {
@@ -213,7 +205,7 @@ export default async function main(client: Client): Promise<number> {
     });
     if (dotenvResult.error) {
       output.debug(
-        `Failed loading environment variables: ${dotenvResult.error}`
+        `Failed loading environment variables: ${dotenvResult.error}`,
       );
     } else if (dotenvResult.parsed) {
       for (const key of Object.keys(dotenvResult.parsed)) {
@@ -264,7 +256,7 @@ async function doBuild(
   project: ProjectLinkAndSettings,
   buildsJson: BuildsManifest,
   cwd: string,
-  outputDir: string
+  outputDir: string,
 ): Promise<number> {
   const { output } = client;
   const workPath = join(cwd, project.settings.rootDirectory || '.');
@@ -273,7 +265,8 @@ async function doBuild(
   const [pkg, vercelConfig] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
     readJSONFile<VercelConfig>(join(workPath, 'vercel.json')).then(
-      config => config || readJSONFile<VercelConfig>(join(workPath, 'now.json'))
+      (config) =>
+        config || readJSONFile<VercelConfig>(join(workPath, 'now.json')),
     ),
   ]);
   if (pkg instanceof CantParseJSONFile) throw pkg;
@@ -285,8 +278,8 @@ async function doBuild(
   };
 
   // Get a list of source files
-  const files = (await getFiles(workPath, client)).map(f =>
-    normalizePath(relative(workPath, f))
+  const files = (await getFiles(workPath, client)).map((f) =>
+    normalizePath(relative(workPath, f)),
   );
 
   const routesResult = getTransformedRoutes(vercelConfig || {});
@@ -309,9 +302,9 @@ async function doBuild(
 
   if (builds.length > 0) {
     output.warn(
-      'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
+      'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings',
     );
-    builds = builds.map(b => expandBuild(files, b)).flat();
+    builds = builds.map((b) => expandBuild(files, b)).flat();
   } else {
     // Zero config
     isZeroConfig = true;
@@ -330,7 +323,7 @@ async function doBuild(
 
     for (const w of detectedBuilders.warnings) {
       console.log(
-        `Warning: ${w.message} ${w.action || 'Learn More'}: ${w.link}`
+        `Warning: ${w.message} ${w.action || 'Learn More'}: ${w.link}`,
       );
     }
 
@@ -346,7 +339,7 @@ async function doBuild(
         routes: [],
         newRoutes: detectedBuilders.rewriteRoutes,
         phase: 'filesystem',
-      })
+      }),
     );
     zeroConfigRoutes = appendRoutesToPhase({
       routes: zeroConfigRoutes,
@@ -356,7 +349,7 @@ async function doBuild(
     zeroConfigRoutes.push(...(detectedBuilders.defaultRoutes || []));
   }
 
-  const builderSpecs = new Set(builds.map(b => b.use));
+  const builderSpecs = new Set(builds.map((b) => b.use));
 
   const buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
 
@@ -377,7 +370,7 @@ async function doBuild(
 
   // Write the `detectedBuilders` result to output dir
   const buildsJsonBuilds = new Map<Builder, SerializedBuilder>(
-    builds.map(build => {
+    builds.map((build) => {
       const builderWithPkg = buildersWithPkgs.get(build.use);
       if (!builderWithPkg) {
         throw new Error(`Failed to load Builder "${build.use}"`);
@@ -392,7 +385,7 @@ async function doBuild(
           ...build,
         },
       ];
-    })
+    }),
   );
   buildsJson.builds = Array.from(buildsJsonBuilds.values());
   const buildsJsonPath = join(outputDir, 'builds.json');
@@ -450,7 +443,7 @@ async function doBuild(
         meta,
       };
       output.debug(
-        `Building entrypoint "${build.src}" with "${builderPkg.name}"`
+        `Building entrypoint "${build.src}" with "${builderPkg.name}"`,
       );
       const buildResult = await builder.build(buildOptions);
 
@@ -466,13 +459,13 @@ async function doBuild(
           build,
           builder,
           builderPkg,
-          vercelConfig
+          vercelConfig,
         ).then(
-          override => {
+          (override) => {
             if (override) overrides.push(override);
           },
-          err => err
-        )
+          (err) => err,
+        ),
       );
     } catch (err: any) {
       output.prettyError(err);
@@ -480,7 +473,7 @@ async function doBuild(
       const writeConfigJsonPromise = fs.writeJSON(
         join(outputDir, 'config.json'),
         { version: 3 },
-        { spaces: 2 }
+        { spaces: 2 },
       );
 
       await Promise.all([writeBuildsJsonPromise, writeConfigJsonPromise]);
@@ -533,10 +526,10 @@ async function doBuild(
   }
 
   const builderRoutes: MergeRoutesProps['builds'] = Array.from(
-    buildResults.entries()
+    buildResults.entries(),
   )
-    .filter(b => 'routes' in b[1] && Array.isArray(b[1].routes))
-    .map(b => {
+    .filter((b) => 'routes' in b[1] && Array.isArray(b[1].routes))
+    .map((b) => {
       return {
         use: b[0].use,
         entrypoint: b[0].src!,
@@ -555,47 +548,47 @@ async function doBuild(
     builds: builderRoutes,
   });
 
-  const images = vercelConfig?.images
+  const images = vercelConfig?.images;
   if (images) {
     if (typeof images !== 'object') {
       throw new Error(
-        `vercel.json "images" should be an object received ${typeof images}.`
+        `vercel.json "images" should be an object received ${typeof images}.`,
       );
     }
 
     if (!Array.isArray(images.domains)) {
       throw new Error(
-        `vercel.json "images.domains" should be an Array received ${typeof images.domains}.`
+        `vercel.json "images.domains" should be an Array received ${typeof images.domains}.`,
       );
     }
 
     if (images.domains.length > 50) {
       throw new Error(
-        `vercel.json "images.domains" exceeds length of 50 received length (${images.domains.length}).`
+        `vercel.json "images.domains" exceeds length of 50 received length (${images.domains.length}).`,
       );
     }
 
     const invalidImageDomains = images.domains.filter(
-      (d: unknown) => typeof d !== 'string'
+      (d: unknown) => typeof d !== 'string',
     );
     if (invalidImageDomains.length > 0) {
       throw new Error(
         `vercel.json "images.domains" should be an Array of strings received invalid values (${invalidImageDomains.join(
-          ', '
-        )}).`
+          ', ',
+        )}).`,
       );
     }
 
     if (images.remotePatterns) {
       if (!Array.isArray(images.remotePatterns)) {
         throw new Error(
-          `vercel.json "images.remotePatterns" should be an Array received ${typeof images.remotePatterns}.`
+          `vercel.json "images.remotePatterns" should be an Array received ${typeof images.remotePatterns}.`,
         );
       }
 
       if (images.remotePatterns.length > 50) {
         throw new Error(
-          `vercel.json "images.remotePatterns" exceeds length of 50, received length (${images.remotePatterns.length}).`
+          `vercel.json "images.remotePatterns" exceeds length of 50, received length (${images.remotePatterns.length}).`,
         );
       }
 
@@ -606,30 +599,30 @@ async function doBuild(
           !d ||
           typeof d !== 'object' ||
           Object.entries(d).some(
-            ([k, v]) => !validProps.has(k) || typeof v !== 'string'
+            ([k, v]) => !validProps.has(k) || typeof v !== 'string',
           ) ||
-          requiredProps.some(k => !(k in d))
+          requiredProps.some((k) => !(k in d)),
       );
       if (invalidPatterns.length > 0) {
         throw new Error(
           `vercel.json "images.remotePatterns" received invalid values:\n${invalidPatterns
-            .map(item => JSON.stringify(item))
+            .map((item) => JSON.stringify(item))
             .join(
-              '\n'
-            )}\n\nremotePatterns value must follow format { protocol: 'https', hostname: 'example.com', port: '', pathname: '/imgs/**' }.`
+              '\n',
+            )}\n\nremotePatterns value must follow format { protocol: 'https', hostname: 'example.com', port: '', pathname: '/imgs/**' }.`,
         );
       }
     }
 
     if (!Array.isArray(images.sizes)) {
       throw new Error(
-        `vercel.json "images.sizes" should be an Array received ${typeof images.sizes}.`
+        `vercel.json "images.sizes" should be an Array received ${typeof images.sizes}.`,
       );
     }
 
     if (images.sizes.length < 1 || images.sizes.length > 50) {
       throw new Error(
-        `vercel.json "images.sizes" should be an Array of length between 1 to 50 received length (${images.sizes.length}).`
+        `vercel.json "images.sizes" should be an Array of length between 1 to 50 received length (${images.sizes.length}).`,
       );
     }
 
@@ -639,8 +632,8 @@ async function doBuild(
     if (invalidImageSizes.length > 0) {
       throw new Error(
         `vercel.json "images.sizes" should be an Array of numbers that are between 1 and 10000, received invalid values (${invalidImageSizes.join(
-          ', '
-        )}).`
+          ', ',
+        )}).`,
       );
     }
 
@@ -650,7 +643,7 @@ async function doBuild(
         images.minimumCacheTTL < 0
       ) {
         throw new Error(
-          `vercel.json "images.minimumCacheTTL" should be an integer 0 or more received (${images.minimumCacheTTL}).`
+          `vercel.json "images.minimumCacheTTL" should be an integer 0 or more received (${images.minimumCacheTTL}).`,
         );
       }
     }
@@ -658,23 +651,23 @@ async function doBuild(
     if (images.formats) {
       if (!Array.isArray(images.formats)) {
         throw new Error(
-          `vercel.json "images.formats" should be an Array received ${typeof images.formats}.`
+          `vercel.json "images.formats" should be an Array received ${typeof images.formats}.`,
         );
       }
       if (images.formats.length < 1 || images.formats.length > 2) {
         throw new Error(
-          `vercel.json "images.formats" must be length 1 or 2, received length (${images.formats.length}).`
+          `vercel.json "images.formats" must be length 1 or 2, received length (${images.formats.length}).`,
         );
       }
 
-      const invalid = images.formats.filter(f => {
+      const invalid = images.formats.filter((f) => {
         return f !== 'image/avif' && f !== 'image/webp';
       });
       if (invalid.length > 0) {
         throw new Error(
           `vercel.json "images.formats" should be an Array of mime type strings, received invalid values (${invalid.join(
-            ', '
-          )}).`
+            ', ',
+          )}).`,
         );
       }
     }
@@ -684,7 +677,7 @@ async function doBuild(
       typeof images.dangerouslyAllowSVG !== 'boolean'
     ) {
       throw new Error(
-        `vercel.json "images.dangerouslyAllowSVG" should be a boolean received (${images.dangerouslyAllowSVG}).`
+        `vercel.json "images.dangerouslyAllowSVG" should be a boolean received (${images.dangerouslyAllowSVG}).`,
       );
     }
 
@@ -693,7 +686,7 @@ async function doBuild(
       typeof images.contentSecurityPolicy !== 'string'
     ) {
       throw new Error(
-        `vercel.json "images.contentSecurityPolicy" should be a string received ${images.contentSecurityPolicy}`
+        `vercel.json "images.contentSecurityPolicy" should be a string received ${images.contentSecurityPolicy}`,
       );
     }
   }
@@ -719,10 +712,10 @@ async function doBuild(
   output.print(
     `${prependEmoji(
       `Build Completed in ${chalk.bold(
-        relOutputDir.startsWith('..') ? outputDir : relOutputDir
+        relOutputDir.startsWith('..') ? outputDir : relOutputDir,
       )} ${chalk.gray(buildStamp())}`,
-      emoji('success')
-    )}\n`
+      emoji('success'),
+    )}\n`,
   );
 
   return 0;
@@ -748,17 +741,17 @@ function expandBuild(files: string[], build: Builder): Builder[] {
     });
   }
 
-  if (src[0] === '/') {
+  if (src.startsWith('/')) {
     // Remove a leading slash so that the globbing is relative
     // to `cwd` instead of the root of the filesystem.
     src = src.substring(1);
   }
 
   const matches = files.filter(
-    name => name === src || minimatch(name, src, { dot: true })
+    (name) => name === src || minimatch(name, src, { dot: true }),
   );
 
-  return matches.map(m => {
+  return matches.map((m) => {
     return {
       ...build,
       src: m,
@@ -768,20 +761,20 @@ function expandBuild(files: string[], build: Builder): Builder[] {
 
 function mergeImages(
   images: BuildResultV2Typical['images'],
-  buildResults: Iterable<BuildResult>
+  buildResults: Iterable<BuildResult>,
 ): BuildResultV2Typical['images'] {
   for (const result of buildResults) {
     if ('images' in result && result.images) {
-      images = Object.assign({}, images, result.images);
+      images = { ...images, ...result.images };
     }
   }
   return images;
 }
 
 function mergeWildcard(
-  buildResults: Iterable<BuildResult>
+  buildResults: Iterable<BuildResult>,
 ): BuildResultV2Typical['wildcard'] {
-  let wildcard: BuildResultV2Typical['wildcard'] = undefined;
+  let wildcard: BuildResultV2Typical['wildcard'];
   for (const result of buildResults) {
     if ('wildcard' in result && result.wildcard) {
       if (!wildcard) wildcard = [];

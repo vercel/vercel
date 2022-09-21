@@ -1,10 +1,10 @@
 import EventEmitter from 'events';
 import qs from 'querystring';
 import { parse as parseUrl } from 'url';
+import { URLSearchParams } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
 import fetch, { Headers } from 'node-fetch';
-import { URLSearchParams } from 'url';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
@@ -14,10 +14,12 @@ import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { GitMetadata, Org } from '../types';
-import { VercelConfig } from './dev/types';
-import Client, { FetchOptions, isJSONObject } from './client';
-import { ArchiveFormat, Dictionary } from '@vercel/client';
+import { isJSONObject } from './client';
+import type { GitMetadata, Org } from '../types';
+import type { VercelConfig } from './dev/types';
+import type { FetchOptions } from './client';
+import type Client from './client';
+import type { ArchiveFormat, Dictionary } from '@vercel/client';
 
 export interface NowOptions {
   client: Client;
@@ -108,7 +110,7 @@ export default class Now extends EventEmitter {
     paths: string[],
     {
       // Legacy
-      nowConfig: nowConfig = {},
+      nowConfig = {},
 
       // Latest
       name,
@@ -132,12 +134,12 @@ export default class Now extends EventEmitter {
     org: Org,
     isSettingUpProject: boolean,
     archive?: ArchiveFormat,
-    cwd?: string
+    cwd?: string,
   ) {
-    let hashes: any = {};
+    const hashes: any = {};
     const uploadStamp = stamp();
 
-    let requestBody = {
+    const requestBody = {
       ...nowConfig,
       env,
       build,
@@ -197,8 +199,8 @@ export default class Now extends EventEmitter {
         warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
         log(
           `Please upgrade your plan here: ${chalk.cyan(
-            'https://vercel.com/account/plan'
-          )}`
+            'https://vercel.com/account/plan',
+          )}`,
         );
       }
     }
@@ -266,7 +268,7 @@ export default class Now extends EventEmitter {
 
         err.message =
           `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
-            '.vercelignore'
+            '.vercelignore',
           )}):` +
           `\n- ${unreferencedBuildSpecs
             .map((item: any) => JSON.stringify(item))
@@ -302,7 +304,7 @@ export default class Now extends EventEmitter {
   }
 
   async listSecrets(next?: number, testWarningFlag?: boolean) {
-    const payload = await this.retry(async bail => {
+    const payload = await this.retry(async (bail) => {
       let secretsUrl = '/v3/now/secrets?limit=20';
 
       if (next) {
@@ -333,11 +335,11 @@ export default class Now extends EventEmitter {
   async list(
     app?: string,
     { version = 4, meta = {}, nextTimestamp }: ListOptions = {},
-    prod?: boolean
+    prod?: boolean,
   ) {
     const fetchRetry = async (url: string, options: FetchOptions = {}) => {
       return this.retry(
-        async bail => {
+        async (bail) => {
           const res = await this._fetch(url, options);
 
           if (res.status === 200) {
@@ -356,7 +358,7 @@ export default class Now extends EventEmitter {
           retries: 3,
           minTimeout: 2500,
           onRetry: this._onRetry,
-        }
+        },
       );
     };
 
@@ -367,20 +369,20 @@ export default class Now extends EventEmitter {
         query.set('until', String(nextTimestamp));
       }
       const { projects, pagination } = await fetchRetry(
-        `/v4/projects/?${query}`
+        `/v4/projects/?${query}`,
       );
 
       const deployments = await Promise.all(
         projects.map(async ({ id: projectId }: any) => {
           const query = new URLSearchParams({ limit: '1', projectId });
           const { deployments } = await fetchRetry(
-            `/v${version}/now/deployments?${query}`
+            `/v${version}/now/deployments?${query}`,
           );
           return deployments[0];
-        })
+        }),
       );
 
-      return { deployments: deployments.filter(x => x), pagination };
+      return { deployments: deployments.filter((x) => x), pagination };
     }
 
     const query = new URLSearchParams();
@@ -389,7 +391,7 @@ export default class Now extends EventEmitter {
       query.set('app', app);
     }
 
-    Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
+    Object.keys(meta).map((key) => query.set(`meta-${key}`, meta[key]));
 
     query.set('limit', '20');
 
@@ -412,23 +414,23 @@ export default class Now extends EventEmitter {
     if (!id) {
       let host = hostOrId.replace(/^https:\/\//i, '');
 
-      if (host.slice(-1) === '/') {
+      if (host.endsWith('/')) {
         host = host.slice(0, -1);
       }
 
       const url = `/v10/now/deployments/get?url=${encodeURIComponent(
-        host
+        host,
       )}&resolve=1&noState=1`;
 
       const deployment = await this.retry(
-        async bail => {
+        async (bail) => {
           const res = await this._fetch(url);
 
           // No retry on 4xx
           if (res.status >= 400 && res.status < 500) {
             debug(`Bailing on getting a deployment due to ${res.status}`);
             return bail(
-              await responseError(res, `Failed to resolve deployment "${id}"`)
+              await responseError(res, `Failed to resolve deployment "${id}"`),
             );
           }
 
@@ -438,23 +440,23 @@ export default class Now extends EventEmitter {
 
           return res.json();
         },
-        { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+        { retries: 3, minTimeout: 2500, onRetry: this._onRetry },
       );
 
       id = deployment.id;
     }
 
     return this.retry(
-      async bail => {
+      async (bail) => {
         const res = await this._fetch(
-          `/v11/now/deployments/${encodeURIComponent(id)}`
+          `/v11/now/deployments/${encodeURIComponent(id)}`,
         );
 
         // No retry on 4xx
         if (res.status >= 400 && res.status < 500) {
           debug(`Bailing on getting a deployment due to ${res.status}`);
           return bail(
-            await responseError(res, `Failed to resolve deployment "${id}"`)
+            await responseError(res, `Failed to resolve deployment "${id}"`),
           );
         }
 
@@ -464,14 +466,14 @@ export default class Now extends EventEmitter {
 
         return res.json();
       },
-      { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
+      { retries: 3, minTimeout: 2500, onRetry: this._onRetry },
     );
   }
 
   async remove(deploymentId: string, { hard = false }: RemoveOptions) {
     const url = `/now/deployments/${deploymentId}?hard=${hard ? 1 : 0}`;
 
-    await this.retry(async bail => {
+    await this.retry(async (bail) => {
       const res = await this._fetch(url, {
         method: 'DELETE',
       });
@@ -492,7 +494,7 @@ export default class Now extends EventEmitter {
 
   retry<T>(
     fn: retry.RetryFunction<T>,
-    { retries = 3, maxTimeout = Infinity }: retry.Options = {}
+    { retries = 3, maxTimeout = Infinity }: retry.Options = {},
   ) {
     return retry<T>(fn, {
       retries,
@@ -534,7 +536,7 @@ export default class Now extends EventEmitter {
 
     const res = await this._output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      fetch(`${this._apiUrl}${_url}`, { ...opts, body })
+      fetch(`${this._apiUrl}${_url}`, { ...opts, body }),
     );
     printIndications(this._client, res);
     return res;
@@ -549,14 +551,13 @@ export default class Now extends EventEmitter {
   // if the response is ok and content-type json
   // it does the same for JSON` body` in opts
   async fetch(url: string, opts: FetchOptions = {}) {
-    return this.retry(async bail => {
+    return this.retry(async (bail) => {
       if (opts.json !== false && opts.body && typeof opts.body === 'object') {
-        opts = Object.assign({}, opts, {
+        opts = {
+          ...opts,
           body: JSON.stringify(opts.body),
-          headers: Object.assign({}, opts.headers, {
-            'Content-Type': 'application/json',
-          }),
-        });
+          headers: { ...opts.headers, 'Content-Type': 'application/json' },
+        };
       }
       const res = await this._fetch(url, opts);
       if (res.ok) {

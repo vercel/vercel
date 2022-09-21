@@ -1,23 +1,23 @@
 import chalk from 'chalk';
-import Client from '../client';
-import { Domain } from '../../types';
 import { isAPIError } from '../errors-ts';
+import type Client from '../client';
+import type { Domain } from '../../types';
 
-type Response = {
+interface Response {
   domain: Domain;
-};
+}
 
 export async function getDomain(
   client: Client,
   contextName: string,
-  domainName: string
+  domainName: string,
 ) {
   client.output.spinner(
-    `Fetching domain ${domainName} under ${chalk.bold(contextName)}`
+    `Fetching domain ${domainName} under ${chalk.bold(contextName)}`,
   );
   try {
     const { domain } = await client.fetch<Response>(
-      `/v5/domains/${domainName}`
+      `/v5/domains/${domainName}`,
     );
 
     return domain;

@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
 import { ensureLink } from '../../util/ensure-link';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
@@ -9,6 +8,7 @@ import { getPkgName } from '../../util/pkg-name';
 import validatePaths from '../../util/validate-paths';
 import connect from './connect';
 import disconnect from './disconnect';
+import type Client from '../../util/client';
 
 const help = () => {
   console.log(`
@@ -23,24 +23,24 @@ const help = () => {
 
     -h, --help                Output usage information
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}   Login token
     -y, --yes                 Skip confirmation when connecting a Git provider
 
   ${chalk.dim('Examples:')}
 
   ${chalk.gray(
-    '–'
+    '–',
   )} Connect your Vercel Project to your Git repository defined in your local .git config
 
     ${chalk.cyan(`$ ${getPkgName()} git connect`)}
   
   ${chalk.gray(
-    '–'
+    '–',
   )} Connect your Vercel Project to a Git repository using the remote URL
 
     ${chalk.cyan(
-      `$ ${getPkgName()} git connect https://github.com/user/repo.git`
+      `$ ${getPkgName()} git connect https://github.com/user/repo.git`,
     )}
 
   ${chalk.gray('–')} Disconnect the Git provider repository
@@ -83,7 +83,7 @@ export default async function main(client: Client) {
   const confirm = Boolean(argv['--yes']);
   const { output } = client;
 
-  let paths = [process.cwd()];
+  const paths = [process.cwd()];
   const pathValidation = await validatePaths(client, paths);
   if (!pathValidation.valid) {
     return pathValidation.exitCode;

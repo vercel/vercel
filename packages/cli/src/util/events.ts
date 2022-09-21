@@ -5,9 +5,8 @@ import { URLSearchParams } from 'url';
 import retry from 'async-retry';
 import jsonlines from 'jsonlines';
 import { eraseLines } from 'ansi-escapes';
-
-import Client from './client';
 import { getDeployment } from './get-deployment';
+import type Client from './client';
 
 export interface FindOpts {
   direction: 'forward' | 'backward';
@@ -34,7 +33,7 @@ export interface DeploymentEvent {
 async function printEvents(
   client: Client,
   deploymentIdOrURL: string,
-  { mode, onEvent, quiet, findOpts }: PrintEventsOptions
+  { mode, onEvent, quiet, findOpts }: PrintEventsOptions,
 ) {
   const { log, debug } = client.output;
 
@@ -164,7 +163,7 @@ async function printEvents(
     },
     {
       retries: 4,
-      onRetry: err => {
+      onRetry: (err) => {
         // if we are retrying, we clear past logs
         if (!quiet && o) {
           // o + 1 because current line is counted
@@ -174,7 +173,7 @@ async function printEvents(
 
         log(`Deployment state polling error: ${err.message}`);
       },
-    }
+    },
   );
 }
 

@@ -1,9 +1,9 @@
-import { outputJSON } from 'fs-extra';
-import { Org, Project, ProjectLink } from '../../types';
-import { getLinkFromDir, VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 import { join } from 'path';
-import { VercelConfig } from '@vercel/client';
-import { PartialProjectSettings } from '../input/edit-project-settings';
+import { outputJSON } from 'fs-extra';
+import { getLinkFromDir, VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
+import type { Org, Project, ProjectLink } from '../../types';
+import type { VercelConfig } from '@vercel/client';
+import type { PartialProjectSettings } from '../input/edit-project-settings';
 
 export type ProjectLinkAndSettings = ProjectLink & {
   settings: {
@@ -26,7 +26,7 @@ export type ProjectLinkAndSettings = ProjectLink & {
 export async function writeProjectSettings(
   cwd: string,
   project: Project,
-  org: Org
+  org: Org,
 ) {
   const projectLinkAndSettings: ProjectLinkAndSettings = {
     projectId: project.id,
@@ -55,7 +55,7 @@ export async function readProjectSettings(cwd: string) {
 }
 
 export function pickOverrides(
-  vercelConfig: VercelConfig
+  vercelConfig: VercelConfig,
 ): PartialProjectSettings {
   const overrides: PartialProjectSettings = {};
   for (const prop of [

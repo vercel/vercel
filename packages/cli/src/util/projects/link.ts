@@ -1,24 +1,24 @@
 import fs from 'fs';
 import os from 'os';
+import { join } from 'path';
+import { promisify } from 'util';
 import AJV from 'ajv';
 import chalk from 'chalk';
-import { join } from 'path';
 import { ensureDir } from 'fs-extra';
-import { promisify } from 'util';
-
-import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
-import Client from '../client';
+import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../teams/get-team-by-id';
-import { Output } from '../output';
-import { Project, ProjectLinkResult } from '../../types';
-import { Org, ProjectLink } from '../../types';
-import { prependEmoji, emoji, EmojiLabel } from '../emoji';
+import { prependEmoji, emoji } from '../emoji';
 import { isDirectory } from '../config/global-path';
-import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
 import { isErrnoException, isError } from '../is-error';
+import getProjectByIdOrName from './get-project-by-id-or-name';
+import type Client from '../client';
+import type { Output } from '../output';
+import type { Project, ProjectLinkResult } from '../../types';
+import type { Org, ProjectLink } from '../../types';
+import type { EmojiLabel } from '../emoji';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -51,7 +51,7 @@ const linkSchema = {
  */
 export function getVercelDirectory(cwd: string = process.cwd()): string {
   const possibleDirs = [join(cwd, VERCEL_DIR), join(cwd, VERCEL_DIR_FALLBACK)];
-  const existingDirs = possibleDirs.filter(d => isDirectory(d));
+  const existingDirs = possibleDirs.filter((d) => isDirectory(d));
   if (existingDirs.length > 1) {
     throw new NowBuildError({
       code: 'CONFLICTING_CONFIG_DIRECTORIES',
@@ -69,7 +69,7 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
 }
 
 export async function getLinkFromDir<T = ProjectLink>(
-  dir: string
+  dir: string,
 ): Promise<T | null> {
   try {
     const json = await readFile(join(dir, VERCEL_DIR_PROJECT), 'utf8');
@@ -79,7 +79,7 @@ export async function getLinkFromDir<T = ProjectLink>(
 
     if (!ajv.validate(linkSchema, link)) {
       throw new Error(
-        `Project Settings are invalid. To link your project again, remove the ${dir} directory.`
+        `Project Settings are invalid. To link your project again, remove the ${dir} directory.`,
       );
     }
 
@@ -97,7 +97,7 @@ export async function getLinkFromDir<T = ProjectLink>(
     // link file can't be read
     if (isError(err) && err.name === 'SyntaxError') {
       throw new Error(
-        `Project Settings could not be retrieved. To link your project again, remove the ${dir} directory.`
+        `Project Settings could not be retrieved. To link your project again, remove the ${dir} directory.`,
       );
     }
 
@@ -119,7 +119,7 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
 
 export async function getLinkedProject(
   client: Client,
-  path?: string
+  path?: string,
 ): Promise<ProjectLinkResult> {
   const { output } = client;
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
@@ -132,7 +132,7 @@ export async function getLinkedProject(
         VERCEL_ORG_ID ? '`VERCEL_ORG_ID`' : '`VERCEL_PROJECT_ID`'
       } but you forgot to specify ${
         VERCEL_ORG_ID ? '`VERCEL_PROJECT_ID`' : '`VERCEL_ORG_ID`'
-      }. You need to specify both to deploy to a custom project.\n`
+      }. You need to specify both to deploy to a custom project.\n`,
     );
     return { status: 'error', exitCode: 1 };
   }
@@ -163,7 +163,7 @@ export async function getLinkedProject(
       } else {
         throw new NowBuildError({
           message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
-            VERCEL_DIR
+            VERCEL_DIR,
           )} directory and deploy again.`,
           code: 'PROJECT_UNAUTHORIZED',
           link: 'https://vercel.link/cannot-load-project-settings',
@@ -183,17 +183,16 @@ export async function getLinkedProject(
         `Project not found (${JSON.stringify({
           VERCEL_PROJECT_ID,
           VERCEL_ORG_ID,
-        })})\n`
+        })})\n`,
       );
       return { status: 'error', exitCode: 1 };
-    } else {
-      output.print(
-        prependEmoji(
-          'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
-          emoji('warning')
-        )
-      );
     }
+    output.print(
+      prependEmoji(
+        'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
+        emoji('warning'),
+      ),
+    );
 
     return { status: 'not_linked', org: null, project: null };
   }
@@ -207,7 +206,7 @@ export async function linkFolderToProject(
   projectLink: ProjectLink,
   projectName: string,
   orgSlug: string,
-  successEmoji: EmojiLabel = 'link'
+  successEmoji: EmojiLabel = 'link',
 ) {
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
@@ -240,12 +239,12 @@ export async function linkFolderToProject(
 
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_PROJECT),
-    JSON.stringify(projectLink)
+    JSON.stringify(projectLink),
   );
 
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_README),
-    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
+    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8'),
   );
 
   // update .gitignore
@@ -274,13 +273,13 @@ export async function linkFolderToProject(
   }
 
   output.print(
-    prependEmoji(
+    `${prependEmoji(
       `Linked to ${chalk.bold(
-        `${orgSlug}/${projectName}`
+        `${orgSlug}/${projectName}`,
       )} (created ${VERCEL_DIR}${
         isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
       })`,
-      emoji(successEmoji)
-    ) + '\n'
+      emoji(successEmoji),
+    )}\n`,
   );
 }

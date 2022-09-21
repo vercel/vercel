@@ -1,9 +1,9 @@
 import assert from 'assert';
+import path from 'path';
 import fs from 'fs-extra';
 import multiStream from 'multistream';
-import path from 'path';
 import Sema from 'async-sema';
-import { FileBase } from './types';
+import type { FileBase } from './types';
 
 const semaToPreventEMFILE = new Sema(20);
 
@@ -84,16 +84,15 @@ class FileFsRef implements FileBase {
   toStream(): NodeJS.ReadableStream {
     let flag = false;
 
-    // eslint-disable-next-line consistent-return
-    return multiStream(cb => {
+    return multiStream((cb) => {
       if (flag) return cb(null, null);
       flag = true;
 
       this.toStreamAsync()
-        .then(stream => {
+        .then((stream) => {
           cb(null, stream);
         })
-        .catch(error => {
+        .catch((error) => {
           cb(error, null);
         });
     });

@@ -1,21 +1,21 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import { DNSRecord } from '../../types';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import type Client from '../../util/client';
+import type { Output } from '../../util/output';
+import type { DNSRecord } from '../../types';
 
-type Options = {};
+interface Options {}
 
 export default async function rm(
   client: Client,
   _opts: Options,
-  args: string[]
+  args: string[],
 ) {
   const { output } = client;
   await getScope(client);
@@ -24,8 +24,8 @@ export default async function rm(
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('dns rm <id>')}`
-      )}`
+        `${getCommandName('dns rm <id>')}`,
+      )}`,
     );
     return 1;
   }
@@ -42,7 +42,7 @@ export default async function rm(
     output,
     'The following record will be removed permanently',
     domainName,
-    record
+    record,
   );
 
   if (!yes) {
@@ -54,8 +54,8 @@ export default async function rm(
   await deleteDNSRecordById(client, domainName, record.id);
   console.log(
     `${chalk.cyan('> Success!')} Record ${chalk.gray(
-      `${record.id}`
-    )} removed ${chalk.gray(rmStamp())}`
+      `${record.id}`,
+    )} removed ${chalk.gray(rmStamp())}`,
   );
   return 0;
 }
@@ -64,21 +64,21 @@ function readConfirmation(
   output: Output,
   msg: string,
   domainName: string,
-  record: DNSRecord
+  record: DNSRecord,
 ) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     output.log(msg);
     output.print(
       `${table([getDeleteTableRow(domainName, record)], {
         align: ['l', 'r', 'l'],
         hsep: ' '.repeat(6),
-      }).replace(/^(.*)/gm, '  $1')}\n`
+      }).replace(/^(.*)/gm, '  $1')}\n`,
     );
     output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`,
     );
     process.stdin
-      .on('data', d => {
+      .on('data', (d) => {
         process.stdin.pause();
         resolve(d.toString().trim().toLowerCase() === 'y');
       })
@@ -93,10 +93,10 @@ function getDeleteTableRow(domainName: string, record: DNSRecord) {
   return [
     record.id,
     chalk.bold(
-      `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
+      `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`,
     ),
     chalk.gray(
-      `${ms(Date.now() - new Date(Number(record.createdAt)).getTime())} ago`
+      `${ms(Date.now() - new Date(Number(record.createdAt)).getTime())} ago`,
     ),
   ];
 }

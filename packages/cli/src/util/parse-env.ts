@@ -12,7 +12,7 @@ export const parseEnv = (env?: string | string[] | Dictionary<string>) => {
   }
 
   if (Array.isArray(env)) {
-    return env.reduce((o, e) => {
+    return env.reduce<Dictionary<string | undefined>>((o, e) => {
       let key;
       let value;
       const equalsSign = e.indexOf('=');
@@ -26,7 +26,7 @@ export const parseEnv = (env?: string | string[] | Dictionary<string>) => {
 
       o[key] = value;
       return o;
-    }, {} as Dictionary<string | undefined>);
+    }, {});
   }
 
   // assume it's already an Object

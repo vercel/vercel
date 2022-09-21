@@ -8,15 +8,15 @@ import {
 } from './errors-ts';
 import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
-import { VercelConfig } from './dev/types';
-import { Output } from './output';
 import { isErrnoException } from './is-error';
+import type { VercelConfig } from './dev/types';
+import type { Output } from './output';
 
 let config: VercelConfig;
 
 export default async function getConfig(
   output: Output,
-  configFile?: string
+  configFile?: string,
 ): Promise<VercelConfig | Error> {
   // If config was already read, just return it
   if (config) {
@@ -37,7 +37,7 @@ export default async function getConfig(
   if (configFile) {
     const localFilePath = path.resolve(localPath, configFile);
     output.debug(
-      `Found config in provided --local-config path ${localFilePath}`
+      `Found config in provided --local-config path ${localFilePath}`,
     );
     const localConfig = await readJSONFile<VercelConfig>(localFilePath);
     if (localConfig instanceof CantParseJSONFile) {

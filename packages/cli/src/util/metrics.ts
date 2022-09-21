@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import ua from 'universal-analytics';
 import { getPlatformEnv } from '@vercel/build-utils';
-
 import userAgent from './ua-browser';
 import { GA_TRACKING_ID } from './constants';
 import * as configFiles from './config/files';

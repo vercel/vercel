@@ -2,13 +2,13 @@
 import chalk from 'chalk';
 
 // Utilities
-import Client from '../../util/client';
 import { emoji } from '../../util/emoji';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
 import listInput from '../../util/input/list';
-import { Team, GlobalConfig } from '../../types';
 import { writeToConfigFile } from '../../util/config/files';
+import type { Team, GlobalConfig } from '../../types';
+import type Client from '../../util/client';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {
@@ -29,7 +29,7 @@ export default async function main(client: Client, desiredSlug?: string) {
 
   const currentTeam = personalScopeSelected
     ? undefined
-    : teams.find(team => team.id === config.currentTeam);
+    : teams.find((team) => team.id === config.currentTeam);
 
   if (!personalScopeSelected && !currentTeam) {
     output.error(`You are not a member of the current team anymore.`);
@@ -42,7 +42,7 @@ export default async function main(client: Client, desiredSlug?: string) {
       .sort((a, b) => {
         return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
       })
-      .map(team => {
+      .map((team) => {
         let title = `${team.name} (${team.slug})`;
         const selected = team.id === currentTeam?.id;
 
@@ -113,17 +113,17 @@ export default async function main(client: Client, desiredSlug?: string) {
     updateCurrentTeam(config);
 
     output.success(
-      `Your account (${chalk.bold(user.username)}) is now active!`
+      `Your account (${chalk.bold(user.username)}) is now active!`,
     );
     return 0;
   }
 
   // Switch to selected team
-  const newTeam = teams.find(team => team.slug === desiredSlug);
+  const newTeam = teams.find((team) => team.slug === desiredSlug);
 
   if (!newTeam) {
     output.error(
-      `You do not have permission to access scope ${chalk.bold(desiredSlug)}.`
+      `You do not have permission to access scope ${chalk.bold(desiredSlug)}.`,
     );
     return 1;
   }
@@ -145,7 +145,7 @@ export default async function main(client: Client, desiredSlug?: string) {
   updateCurrentTeam(config, newTeam);
 
   output.success(
-    `The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`
+    `The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`,
   );
   return 0;
 }

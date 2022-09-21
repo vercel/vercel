@@ -1,5 +1,5 @@
-const fs = require('fs-extra');
 const { join, resolve } = require('path');
+const fs = require('fs-extra');
 const _execa = require('execa');
 const fetch = require('node-fetch');
 const retry = require('async-retry');
@@ -13,16 +13,16 @@ const {
 
 jest.setTimeout(6 * 60 * 1000);
 
-const isCI = !!process.env.CI;
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const isCI = Boolean(process.env.CI);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const isCanary = () => getDistTag(cliVersion) === 'canary';
 
 let port = 3000;
 
 const binaryPath = resolve(__dirname, `../../scripts/start.js`);
-const fixture = name => join('test', 'dev', 'fixtures', name);
-const fixtureAbsolute = name => join(__dirname, 'fixtures', name);
-const exampleAbsolute = name =>
+const fixture = (name) => join('test', 'dev', 'fixtures', name);
+const fixtureAbsolute = (name) => join(__dirname, 'fixtures', name);
+const exampleAbsolute = (name) =>
   join(__dirname, '..', '..', '..', '..', 'examples', name);
 
 let processCounter = 0;
@@ -46,7 +46,7 @@ function fetchWithRetry(url, opts = {}) {
       if (res.status !== opts.status) {
         const text = await res.text();
         throw new Error(
-          `Failed to fetch ${url} with status ${res.status} (expected ${opts.status}):\n\n${text}\n\n`
+          `Failed to fetch ${url} with status ${res.status} (expected ${opts.status}):\n\n${text}\n\n`,
         );
       }
 
@@ -55,13 +55,13 @@ function fetchWithRetry(url, opts = {}) {
     {
       retries: opts.retries ?? 3,
       factor: 1,
-    }
+    },
   );
 }
 
 function createResolver() {
   let resolver;
-  const p = new Promise(res => (resolver = res));
+  const p = new Promise((res) => (resolver = res));
   p.resolve = resolver;
   return p;
 }
@@ -73,18 +73,15 @@ function formatOutput({ stderr, stdout }) {
 function printOutput(fixture, stdout, stderr) {
   const lines = (
     `\nOutput for "${fixture}"\n` +
-    `\n----- stdout -----\n` +
-    stdout +
-    `\n----- stderr -----\n` +
-    stderr
+    `\n----- stdout -----\n${stdout}\n----- stderr -----\n${stderr}`
   ).split('\n');
 
-  const getPrefix = nr => {
+  const getPrefix = (nr) => {
     return nr === 0 ? '╭' : nr === lines.length - 1 ? '╰' : '│';
   };
 
   console.log(
-    lines.map((line, index) => ` ${getPrefix(index)} ${line}`).join('\n')
+    lines.map((line, index) => ` ${getPrefix(index)} ${line}`).join('\n'),
   );
 }
 
@@ -104,7 +101,7 @@ function validateResponseHeaders(res, podId) {
     expect(res.headers.get('x-vercel-id')).toBeTruthy();
     if (podId) {
       expect(
-        res.headers.get('x-vercel-id').includes(`::${podId}-`)
+        res.headers.get('x-vercel-id').includes(`::${podId}-`),
       ).toBeTruthy();
     }
   }
@@ -128,7 +125,7 @@ async function exec(directory, args = []) {
       reject: false,
       shell: true,
       env: { __VERCEL_SKIP_DEV_CMD: 1 },
-    }
+    },
   );
 }
 
@@ -148,7 +145,7 @@ async function testPath(
   path,
   expectedText,
   expectedHeaders = {},
-  fetchOpts = {}
+  fetchOpts = {},
 ) {
   const opts = {
     retries: isCI ? 5 : 0,
@@ -212,7 +209,7 @@ async function testFixture(directory, opts = {}, args = []) {
       stdio: 'pipe',
       ...opts,
       env: { ...opts.env, __VERCEL_SKIP_DEV_CMD: 1 },
-    }
+    },
   );
 
   let stdout = '';
@@ -223,10 +220,10 @@ async function testFixture(directory, opts = {}, args = []) {
   dev.stdout.setEncoding('utf8');
   dev.stderr.setEncoding('utf8');
 
-  dev.stdout.on('data', data => {
+  dev.stdout.on('data', (data) => {
     stdout += data;
   });
-  dev.stderr.on('data', data => {
+  dev.stderr.on('data', (data) => {
     stderr += data;
 
     if (stripAnsi(stderr).includes('Ready! Available at')) {
@@ -274,7 +271,7 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  { expectedCode = 0, skipDeploy, isExample, projectSettings } = {}
+  { expectedCode = 0, skipDeploy, isExample, projectSettings } = {},
 ) {
   return async () => {
     const nodeMajor = Number(process.versions.node.split('.')[0]);
@@ -308,7 +305,7 @@ function testFixtureStdio(
             'link',
             '--yes',
           ],
-          { cwd, stdio: 'pipe', reject: false }
+          { cwd, stdio: 'pipe', reject: false },
         );
         console.log({
           stderr: linkResult.stderr,
@@ -333,13 +330,13 @@ function testFixtureStdio(
               body: JSON.stringify(projectSettings),
               retries: isCI ? 3 : 0,
               status: 200,
-            }
+            },
           );
           expect(res.status).toBe(200);
         }
 
         // Run `vc deploy`
-        let deployResult = await execa(
+        const deployResult = await execa(
           binaryPath,
           [
             '-t',
@@ -357,7 +354,7 @@ function testFixtureStdio(
             '--public',
             '--debug',
           ],
-          { cwd, stdio: 'pipe', reject: false }
+          { cwd, stdio: 'pipe', reject: false },
         );
         console.log({
           exitCode: deployResult.exitCode,
@@ -407,7 +404,7 @@ function testFixtureStdio(
         {
           cwd,
           env,
-        }
+        },
       );
 
       dev.stdout.setEncoding('utf8');
@@ -416,11 +413,11 @@ function testFixtureStdio(
       dev.stdout.pipe(process.stdout);
       dev.stderr.pipe(process.stderr);
 
-      dev.stdout.on('data', data => {
+      dev.stdout.on('data', (data) => {
         stdout += data;
       });
 
-      dev.stderr.on('data', data => {
+      dev.stderr.on('data', (data) => {
         stderr += data;
 
         if (stripAnsi(data).includes('Ready! Available at')) {
@@ -430,7 +427,7 @@ function testFixtureStdio(
         if (stderr.includes(`Requested port ${port} is already in use`)) {
           dev.kill('SIGTERM');
           throw new Error(
-            `Failed for "${directory}" with port ${port} with stderr "${stderr}".`
+            `Failed for "${directory}" with port ${port} with stderr "${stderr}".`,
           );
         }
 
@@ -478,11 +475,10 @@ beforeEach(() => {
 
 afterEach(async () => {
   await Promise.all(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Array.from(processList).map(([_procId, proc]) => {
       if (proc.killed === false) {
         console.log(
-          `killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`
+          `killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`,
         );
 
         try {
@@ -492,7 +488,7 @@ afterEach(async () => {
           console.error(`Failed to kill process`, proc.pid, err);
         }
       }
-    })
+    }),
   );
 });
 

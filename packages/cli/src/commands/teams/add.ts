@@ -5,13 +5,13 @@ import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
 import note from '../../util/output/note';
 import textInput from '../../util/input/text';
-import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
 import { getPkgName, getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
 import { errorToString, isError } from '../../util/is-error';
+import invite from './invite';
+import type Client from '../../util/client';
 
 const validateSlugKeypress = (data: string, value: string) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -27,8 +27,8 @@ const gracefulExit = () => {
   console.log(); // Blank line
   note(
     `Your team is now active for all ${getPkgName()} commands!\n  Run ${getCommandName(
-      `switch`
-    )} to change it in the future.`
+      `switch`,
+    )} to change it in the future.`,
   );
   return 0;
 };
@@ -44,8 +44,8 @@ export default async function add(client: Client): Promise<number> {
 
   output.log(
     `Pick a team identifier for its URL (e.g.: ${chalk.cyan(
-      '`vercel.com/acme`'
-    )})`
+      '`vercel.com/acme`',
+    )})`,
   );
   do {
     try {
@@ -135,7 +135,7 @@ export default async function add(client: Client): Promise<number> {
   await invite(client, [], {
     introMsg: 'Invite your teammates! When done, press enter on an empty field',
     noopMsg: `You can invite teammates later by running ${getCommandName(
-      `teams invite`
+      `teams invite`,
     )}`,
   });
 

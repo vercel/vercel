@@ -1,12 +1,12 @@
-import { Output } from '../output';
-import { Dictionary } from '@vercel/client';
 import { readFile } from 'fs-extra';
-import { parseEnv } from '../parse-env';
 import chalk from 'chalk';
+import { parseEnv } from '../parse-env';
+import type { Dictionary } from '@vercel/client';
+import type { Output } from '../output';
 
 export async function createEnvObject(
   envPath: string,
-  output: Output
+  output: Output,
 ): Promise<Dictionary<string | undefined> | undefined> {
   // Originally authored by Tyler Waters under MIT License: https://github.com/tswaters/env-file-parser/blob/f17c009b39da599380e069ee72728d1cafdb56b8/lib/parse.js
   // https://github.com/tswaters/env-file-parser/blob/f17c009b39da599380e069ee72728d1cafdb56b8/LICENSE
@@ -16,9 +16,9 @@ export async function createEnvObject(
     // split on new line
     .split(/\r?\n|\r/)
     // filter comments
-    .filter(line => /^[^#]/.test(line))
+    .filter((line) => /^[^#]/.test(line))
     // needs equal sign
-    .filter(line => /=/i.test(line));
+    .filter((line) => /=/i.test(line));
 
   const parsedEnv = parseEnv(envArr);
   if (Object.keys(parsedEnv).length === 0) {
@@ -30,7 +30,7 @@ export async function createEnvObject(
 
 function findChanges(
   oldEnv: Dictionary<string | undefined>,
-  newEnv: Dictionary<string | undefined>
+  newEnv: Dictionary<string | undefined>,
 ): {
   added: string[];
   changed: string[];
@@ -58,7 +58,7 @@ function findChanges(
 
 export function buildDeltaString(
   oldEnv: Dictionary<string | undefined>,
-  newEnv: Dictionary<string | undefined>
+  newEnv: Dictionary<string | undefined>,
 ): string {
   const { added, changed, removed } = findChanges(oldEnv, newEnv);
 
@@ -68,20 +68,18 @@ export function buildDeltaString(
   deltaString += chalk.red(addDeltaSection('-', removed));
 
   return deltaString
-    ? chalk.gray('Changes:\n') + deltaString + '\n'
+    ? `${chalk.gray('Changes:\n') + deltaString}\n`
     : deltaString;
 }
 
 function addDeltaSection(
   prefix: string,
   arr: string[],
-  changed: boolean = false
+  changed = false,
 ): string {
   if (arr.length === 0) return '';
-  return (
-    arr
-      .sort()
-      .map(item => `${prefix} ${item}${changed ? ' (Updated)' : ''}`)
-      .join('\n') + '\n'
-  );
+  return `${arr
+    .sort()
+    .map((item) => `${prefix} ${item}${changed ? ' (Updated)' : ''}`)
+    .join('\n')}\n`;
 }

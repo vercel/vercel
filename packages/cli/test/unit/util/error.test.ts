@@ -1,12 +1,13 @@
+import { createServer } from 'http';
 import fetch from 'node-fetch';
 import listen from 'async-listen';
-import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
-import { JSONValue } from '../../../src/types';
 import {
   responseError,
   responseErrorMessage,
   toEnumerableError,
 } from '../../../src/util/error';
+import type { IncomingMessage, Server, ServerResponse } from 'http';
+import type { JSONValue } from '../../../src/types';
 
 const send = (res: ServerResponse, statusCode: number, body: JSONValue) => {
   res.statusCode = statusCode;
@@ -17,7 +18,7 @@ const send = (res: ServerResponse, statusCode: number, body: JSONValue) => {
 describe('responseError()', () => {
   let url: string;
   let server: Server;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   let handler = (_req: IncomingMessage, _res: ServerResponse) => {};
 
   beforeAll(async () => {
@@ -204,7 +205,7 @@ describe('toEnumerableError()', () => {
     delete enumerable.stack;
 
     expect(JSON.stringify(enumerable)).toEqual(
-      '{"name":"Error","message":"An error"}'
+      '{"name":"Error","message":"An error"}',
     );
   });
 
@@ -227,7 +228,7 @@ describe('toEnumerableError()', () => {
     delete enumerable.stack;
 
     expect(JSON.stringify(enumerable)).toEqual(
-      '{"name":"Error","message":"An error","custom":"value","userError":true}'
+      '{"name":"Error","message":"An error","custom":"value","userError":true}',
     );
   });
 });

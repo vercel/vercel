@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getScope from '../../util/get-scope';
@@ -9,6 +8,7 @@ import { getPkgName } from '../../util/pkg-name';
 import add from './add';
 import list from './list';
 import rm from './rm';
+import type Client from '../../util/client';
 
 const help = () => {
   console.log(`
@@ -24,7 +24,7 @@ const help = () => {
 
     -h, --help                     Output usage information
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}        Login token
     -S, --scope                    Set a custom scope
     -N, --next                     Show next page of results
@@ -36,7 +36,7 @@ const help = () => {
     ${chalk.cyan(`$ ${getPkgName()} project add my-project`)}
 
   ${chalk.gray('–')} Paginate projects, where ${chalk.dim(
-    '`1584722256178`'
+    '`1584722256178`',
   )} is the time in milliseconds since the UNIX epoch.
 
     ${chalk.cyan(`$ ${getPkgName()} project ls --next 1584722256178`)}

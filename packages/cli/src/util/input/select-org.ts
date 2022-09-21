@@ -1,14 +1,17 @@
-import Client from '../client';
 import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
-import { User, Team, Org } from '../../types';
+import type Client from '../client';
+import type { User, Team, Org } from '../../types';
 
-type Choice = { name: string; value: Org };
+interface Choice {
+  name: string;
+  value: Org;
+}
 
 export default async function selectOrg(
   client: Client,
   question: string,
-  autoConfirm?: boolean
+  autoConfirm?: boolean,
 ): Promise<Org> {
   require('./patch-inquirer');
   const {
@@ -30,13 +33,14 @@ export default async function selectOrg(
       name: user.name || user.username,
       value: { type: 'user', id: user.id, slug: user.username },
     },
-    ...teams.map<Choice>(team => ({
+    ...teams.map<Choice>((team) => ({
       name: team.name || team.slug,
       value: { type: 'team', id: team.id, slug: team.slug },
     })),
   ];
 
-  const defaultOrgIndex = teams.findIndex(team => team.id === currentTeam) + 1;
+  const defaultOrgIndex =
+    teams.findIndex((team) => team.id === currentTeam) + 1;
 
   if (autoConfirm) {
     return choices[defaultOrgIndex].value;

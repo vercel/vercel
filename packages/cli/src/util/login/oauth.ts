@@ -1,22 +1,22 @@
 import http from 'http';
-import open from 'open';
 import { URL } from 'url';
+import open from 'open';
 import listen from 'async-listen';
 import isDocker from 'is-docker';
-import Client from '../client';
-import prompt, { readInput } from './prompt';
-import verify from './verify';
 import highlight from '../output/highlight';
 import link from '../output/link';
 import eraseLines from '../output/erase-lines';
-import { LoginResult } from './types';
+import verify from './verify';
+import prompt, { readInput } from './prompt';
+import type Client from '../client';
+import type { LoginResult } from './types';
 
 export default async function doOauthLogin(
   client: Client,
   url: URL,
   provider: string,
   outOfBand = isHeadless(),
-  ssoUserId?: string
+  ssoUserId?: string,
 ): Promise<LoginResult> {
   url.searchParams.set('mode', 'login');
 
@@ -38,10 +38,10 @@ export default async function doOauthLogin(
       result.verificationToken,
       undefined,
       provider,
-      ssoUserId
+      ssoUserId,
     );
     output.success(
-      `${provider} authentication complete for ${highlight(result.email)}`
+      `${provider} authentication complete for ${highlight(result.email)}`,
     );
   }
 
@@ -60,7 +60,7 @@ export default async function doOauthLogin(
 async function getVerificationTokenInBand(
   client: Client,
   url: URL,
-  provider: string
+  provider: string,
 ) {
   const { output } = client;
   const server = http.createServer();
@@ -87,7 +87,7 @@ async function getVerificationTokenInBand(
           // Redirect the user's web browser back to
           // the Vercel CLI login notification page
           const location = new URL(
-            'https://vercel.com/notifications/cli-login-'
+            'https://vercel.com/notifications/cli-login-',
           );
           const loginError = query.get('loginError');
           const ssoEmail = query.get('ssoEmail');
@@ -138,7 +138,7 @@ async function getVerificationTokenInBand(
     const ssoUserIdParam = query.get('ssoUserId');
     if (ssoUserIdParam) {
       output.log(
-        'Please log in to your Vercel account to complete SAML connection.'
+        'Please log in to your Vercel account to complete SAML connection.',
       );
       return prompt(client, undefined, false, ssoUserIdParam);
     }
@@ -146,7 +146,7 @@ async function getVerificationTokenInBand(
     const verificationToken = query.get('token');
     if (!verificationToken) {
       output.error(
-        'Verification token was not provided. Please contact support.'
+        'Verification token was not provided. Please contact support.',
       );
       return 1;
     }
@@ -168,13 +168,13 @@ async function getVerificationTokenOutOfBand(client: Client, url: URL) {
   const { output } = client;
   url.searchParams.set(
     'next',
-    `https://vercel.com/notifications/cli-login-oob`
+    `https://vercel.com/notifications/cli-login-oob`,
   );
   output.log(`Please visit the following URL in your web browser:`);
   output.log(link(url.href));
   output.print('\n');
   output.log(
-    `After login is complete, enter the verification code printed in your browser.`
+    `After login is complete, enter the verification code printed in your browser.`,
   );
   const verificationToken = await readInput(client, 'Verification code:');
   output.print(eraseLines(6));
@@ -184,7 +184,7 @@ async function getVerificationTokenOutOfBand(client: Client, url: URL) {
   // connection to the SAML Profile.
   if (verificationToken.startsWith('saml_')) {
     output.log(
-      'Please log in to your Vercel account to complete SAML connection.'
+      'Please log in to your Vercel account to complete SAML connection.',
     );
     return prompt(client, undefined, true, verificationToken.substring(5));
   }

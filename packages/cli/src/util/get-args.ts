@@ -1,23 +1,17 @@
 import arg from 'arg';
-import getCommonArgs from './arg-common';
+import { ARG_COMMON } from './arg-common';
 
-type ArgOptions = {
+interface ArgOptions {
   permissive?: boolean;
-};
-
-type Handler = (value: string) => any;
-
-interface Spec {
-  [key: string]: string | Handler | [Handler];
 }
 
-export default function getArgs<T extends Spec>(
+export default function getArgs<T extends arg.Spec>(
   argv: string[],
-  argsOptions?: T,
-  argOptions: ArgOptions = {}
+  spec?: T,
+  opts?: ArgOptions,
 ) {
-  return arg(Object.assign({}, getCommonArgs(), argsOptions), {
-    ...argOptions,
+  return arg({ ...ARG_COMMON, ...spec } as const, {
+    ...opts,
     argv,
   });
 }

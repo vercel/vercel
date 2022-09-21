@@ -1,6 +1,6 @@
 import assert from 'assert';
 import intoStream from 'into-stream';
-import { FileBase } from './types';
+import type { FileBase } from './types';
 
 interface FileBlobOptions {
   mode?: number;
@@ -39,8 +39,8 @@ export default class FileBlob implements FileBase {
     const chunks: Buffer[] = [];
 
     await new Promise<void>((resolve, reject) => {
-      stream.on('data', chunk => chunks.push(Buffer.from(chunk)));
-      stream.on('error', error => reject(error));
+      stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      stream.on('error', (error) => reject(error));
       stream.on('end', () => resolve());
     });
 

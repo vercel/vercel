@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 
 type Status =
   | 'pending_owner'
@@ -9,7 +9,7 @@ type Status =
   | 'undef'
   | 'unknown';
 
-type Response = {
+interface Response {
   transferable: boolean;
   status: Status;
   reason: string;
@@ -19,10 +19,10 @@ type Response = {
     | 'no-change'
     | 'new-term'
     | null;
-};
+}
 
 export default async function checkTransfer(client: Client, name: string) {
   return client.fetch<Response>(
-    `/v4/domains/${encodeURIComponent(name)}/registry`
+    `/v4/domains/${encodeURIComponent(name)}/registry`,
   );
 }

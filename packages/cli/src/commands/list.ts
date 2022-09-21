@@ -13,14 +13,14 @@ import parseMeta from '../util/parse-meta';
 import { isValidName } from '../util/is-valid-name';
 import getCommandFlags from '../util/get-command-flags';
 import { getPkgName, getCommandName } from '../util/pkg-name';
-import Client from '../util/client';
-import { Deployment } from '@vercel/client';
 import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
 import { ensureLink } from '../util/ensure-link';
 import getScope from '../util/get-scope';
 import { isAPIError } from '../util/errors-ts';
 import { isErrnoException } from '../util/is-error';
+import type Client from '../util/client';
+import type { Deployment } from '@vercel/client';
 
 const help = () => {
   console.log(`
@@ -30,19 +30,19 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -y, --yes                      Skip questions when setting up new project using default scope and settings
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}        Login token
     -S, --scope                    Set a custom scope
     -m, --meta                     Filter deployments by metadata (e.g.: ${chalk.dim(
-      '`-m KEY=value`'
+      '`-m KEY=value`',
     )}). Can appear many times.
     --prod                         Filter for production URLs
     -N, --next                     Show next page of results
@@ -54,7 +54,7 @@ const help = () => {
     ${chalk.cyan(`$ ${getPkgName()} ls`)}
 
   ${chalk.gray('–')} List all deployments for the project ${chalk.dim(
-    '`my-app`'
+    '`my-app`',
   )} in the team of the currently linked project
   
     ${chalk.cyan(`$ ${getPkgName()} ls my-app`)}
@@ -64,7 +64,7 @@ const help = () => {
     ${chalk.cyan(`$ ${getPkgName()} ls -m key1=value1 -m key2=value2`)}
 
   ${chalk.gray('–')} Paginate deployments for a project, where ${chalk.dim(
-    '`1584722256178`'
+    '`1584722256178`',
   )} is the time in milliseconds since the UNIX epoch.
 
     ${chalk.cyan(`$ ${getPkgName()} ls my-app --next 1584722256178`)}
@@ -112,12 +112,12 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const yes = !!argv['--yes'];
+  const yes = Boolean(argv['--yes']);
   const prod = argv['--prod'] || false;
 
   const meta = parseMeta(argv['--meta']);
 
-  let paths = [process.cwd()];
+  const paths = [process.cwd()];
   const pathValidation = await validatePaths(client, paths);
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
@@ -126,7 +126,7 @@ export default async function main(client: Client) {
   const { path } = pathValidation;
 
   // retrieve `project` and `org` from .vercel
-  let link = await getLinkedProject(client, path);
+  const link = await getLinkedProject(client, path);
 
   if (link.status === 'error') {
     return link.exitCode;
@@ -135,7 +135,7 @@ export default async function main(client: Client) {
   let { org, project, status } = link;
   const appArg: string | undefined = argv._[1];
   let app: string | undefined = appArg || project?.name;
-  let host: string | undefined = undefined;
+  let host: string | undefined;
 
   if (app && !isValidName(app)) {
     error(`The provided argument "${app}" is not a valid project name`);
@@ -208,8 +208,8 @@ export default async function main(client: Client) {
   if (asHost.endsWith('.now.sh') || asHost.endsWith('.vercel.app')) {
     note(
       `We suggest using ${getCommandName(
-        'inspect <deployment>'
-      )} for retrieving details about a single deployment`
+        'inspect <deployment>',
+      )} for retrieving details about a single deployment`,
     );
 
     const hostParts: string[] = asHost.split('-');
@@ -232,7 +232,7 @@ export default async function main(client: Client) {
       meta,
       nextTimestamp,
     },
-    prod
+    prod,
   );
 
   let {
@@ -253,7 +253,7 @@ export default async function main(client: Client) {
 
   if (app && !deployments.length) {
     debug(
-      'No deployments: attempting to find deployment that matches supplied app name'
+      'No deployments: attempting to find deployment that matches supplied app name',
     );
     let match;
 
@@ -276,7 +276,7 @@ export default async function main(client: Client) {
   now.close();
 
   if (host) {
-    deployments = deployments.filter(deployment => deployment.url === host);
+    deployments = deployments.filter((deployment) => deployment.url === host);
   }
 
   // we don't output the table headers if we have no deployments
@@ -287,13 +287,13 @@ export default async function main(client: Client) {
 
   log(
     `${prod ? `Production deployments` : `Deployments`} for ${chalk.bold(
-      app
-    )} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
+      app,
+    )} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`,
   );
 
   // information to help the user find other deployments or instances
   log(
-    `To list deployments for a project, run ${getCommandName('ls [project]')}.`
+    `To list deployments for a project, run ${getCommandName('ls [project]')}.`,
   );
 
   print('\n');
@@ -304,10 +304,10 @@ export default async function main(client: Client) {
   client.output.print(
     `${table(
       [
-        headers.map(header => chalk.bold(chalk.cyan(header))),
+        headers.map((header) => chalk.bold(chalk.cyan(header))),
         ...deployments
           .sort(sortRecent())
-          .map(dep => [
+          .map((dep) => [
             [
               chalk.gray(ms(Date.now() - dep.createdAt)),
               `https://${dep.url}`,
@@ -319,26 +319,26 @@ export default async function main(client: Client) {
           // flatten since the previous step returns a nested
           // array of the deployment and (optionally) its instances
           .flat()
-          .filter(app =>
+          .filter((app) =>
             // if an app wasn't supplied to filter by,
             // we only want to render one deployment per app
-            app === null ? filterUniqueApps() : () => true
+            app === null ? filterUniqueApps() : () => true,
           ),
       ],
       {
         align: ['l', 'l', 'l', 'l', 'l'],
         hsep: ' '.repeat(5),
         stringLength: strlen,
-      }
-    ).replace(/^/gm, '  ')}\n\n`
+      },
+    ).replace(/^/gm, '  ')}\n\n`,
   );
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(argv, ['_', '--next']);
     log(
       `To display the next page, run ${getCommandName(
-        `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
-      )}`
+        `ls${app ? ` ${app}` : ''}${flags} --next ${pagination.next}`,
+      )}`,
     );
   }
 }

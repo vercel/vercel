@@ -1,16 +1,16 @@
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
-import { Domain } from '../../types';
+import type Client from '../client';
+import type { Domain } from '../../types';
 
-type Response = {
+interface Response {
   domain: Domain;
-};
+}
 
 export default async function transferInDomain(
   client: Client,
   name: string,
   authCode: string,
-  expectedPrice: number
+  expectedPrice: number,
 ) {
   try {
     return await client.fetch<Response>(`/v4/domains`, {

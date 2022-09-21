@@ -1,7 +1,7 @@
-import ms from 'ms';
 import path from 'path';
-import fs, { readlink } from 'fs-extra';
 import { strict as assert, strictEqual } from 'assert';
+import ms from 'ms';
+import fs, { readlink } from 'fs-extra';
 import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import download from '../src/fs/download';
@@ -29,11 +29,11 @@ async function expectBuilderError(promise: Promise<any>, pattern: string) {
   assert('message' in result, `Expected error message but found ${result}`);
   assert(
     typeof result.message === 'string',
-    `Expected error to be a string but found ${typeof result.message}`
+    `Expected error to be a string but found ${typeof result.message}`,
   );
   assert(
     result.message.includes(pattern),
-    `Expected ${pattern} but found "${result.message}"`
+    `Expected ${pattern} but found "${result.message}"`,
   );
 }
 
@@ -41,7 +41,7 @@ let warningMessages: string[];
 const originalConsoleWarn = console.warn;
 beforeEach(() => {
   warningMessages = [];
-  console.warn = m => {
+  console.warn = (m) => {
     warningMessages.push(m);
   };
 });
@@ -218,22 +218,22 @@ it('should download symlinks even with incorrect file', async () => {
 it('should only match supported node versions, otherwise throw an error', async () => {
   expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
     'major',
-    12
+    12,
   );
   expect(await getSupportedNodeVersion('14.x', false)).toHaveProperty(
     'major',
-    14
+    14,
   );
   expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
     'major',
-    16
+    16,
   );
 
   const autoMessage =
     'Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', true),
-    autoMessage
+    autoMessage,
   );
   await expectBuilderError(getSupportedNodeVersion('6.x', true), autoMessage);
   await expectBuilderError(getSupportedNodeVersion('999.x', true), autoMessage);
@@ -242,32 +242,32 @@ it('should only match supported node versions, otherwise throw an error', async 
 
   expect(await getSupportedNodeVersion('12.x', true)).toHaveProperty(
     'major',
-    12
+    12,
   );
   expect(await getSupportedNodeVersion('14.x', true)).toHaveProperty(
     'major',
-    14
+    14,
   );
   expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
     'major',
-    16
+    16,
   );
 
   const foundMessage =
     'Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', false),
-    foundMessage
+    foundMessage,
   );
   await expectBuilderError(getSupportedNodeVersion('6.x', false), foundMessage);
   await expectBuilderError(
     getSupportedNodeVersion('999.x', false),
-    foundMessage
+    foundMessage,
   );
   await expectBuilderError(getSupportedNodeVersion('foo', false), foundMessage);
   await expectBuilderError(
     getSupportedNodeVersion('=> 10', false),
-    foundMessage
+    foundMessage,
   );
 });
 
@@ -279,17 +279,17 @@ it('should match all semver ranges', async () => {
   expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 16);
   expect(await getSupportedNodeVersion('11.5.0 - 12.5.0')).toHaveProperty(
     'major',
-    12
+    12,
   );
   expect(await getSupportedNodeVersion('>=9.5.0 <=12.5.0')).toHaveProperty(
     'major',
-    12
+    12,
   );
   expect(await getSupportedNodeVersion('~12.5.0')).toHaveProperty('major', 12);
   expect(await getSupportedNodeVersion('^12.5.0')).toHaveProperty('major', 12);
   expect(await getSupportedNodeVersion('12.5.0 - 14.5.0')).toHaveProperty(
     'major',
-    14
+    14,
   );
 });
 
@@ -299,14 +299,14 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
       '/tmp',
       undefined,
       { nodeVersion: '1' },
-      { isDev: true }
-    )
+      { isDev: true },
+    ),
   ).toHaveProperty('runtime', 'nodejs');
 });
 
 it('should select project setting from config when no package.json is found', async () => {
   expect(
-    await getNodeVersion('/tmp', undefined, { nodeVersion: '16.x' }, {})
+    await getNodeVersion('/tmp', undefined, { nodeVersion: '16.x' }, {}),
   ).toHaveProperty('range', '16.x');
   expect(warningMessages).toStrictEqual([]);
 });
@@ -317,8 +317,8 @@ it('should prefer package.json engines over project setting from config and warn
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '12.x' },
-      {}
-    )
+      {},
+    ),
   ).toHaveProperty('range', '14.x');
   expect(warningMessages).toStrictEqual([
     'Warning: Due to "engines": { "node": "14.x" } in your `package.json` file, the Node.js Version defined in your Project Settings ("12.x") will not apply. Learn More: http://vercel.link/node-version',
@@ -331,8 +331,8 @@ it('should warn when package.json engines is exact version', async () => {
       path.join(__dirname, 'pkg-engine-node-exact'),
       undefined,
       {},
-      {}
-    )
+      {},
+    ),
   ).toHaveProperty('range', '16.x');
   expect(warningMessages).toStrictEqual([
     'Warning: Detected "engines": { "node": "16.14.0" } in your `package.json` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version',
@@ -345,8 +345,8 @@ it('should warn when package.json engines is greater than', async () => {
       path.join(__dirname, 'pkg-engine-node-greaterthan'),
       undefined,
       {},
-      {}
-    )
+      {},
+    ),
   ).toHaveProperty('range', '16.x');
   expect(warningMessages).toStrictEqual([
     'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version',
@@ -359,8 +359,8 @@ it('should not warn when package.json engines matches project setting from confi
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '14' },
-      {}
-    )
+      {},
+    ),
   ).toHaveProperty('range', '14.x');
   expect(warningMessages).toStrictEqual([]);
 
@@ -369,8 +369,8 @@ it('should not warn when package.json engines matches project setting from confi
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '14.x' },
-      {}
-    )
+      {},
+    ),
   ).toHaveProperty('range', '14.x');
   expect(warningMessages).toStrictEqual([]);
 
@@ -379,8 +379,8 @@ it('should not warn when package.json engines matches project setting from confi
       path.join(__dirname, 'pkg-engine-node'),
       undefined,
       { nodeVersion: '<15' },
-      {}
-    )
+      {},
+    ),
   ).toHaveProperty('range', '14.x');
   expect(warningMessages).toStrictEqual([]);
 });
@@ -417,19 +417,19 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
 
   expect(await getSupportedNodeVersion('10.x', false)).toHaveProperty(
     'major',
-    10
+    10,
   );
   expect(await getSupportedNodeVersion('10.x', true)).toHaveProperty(
     'major',
-    10
+    10,
   );
   expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
     'major',
-    12
+    12,
   );
   expect(await getSupportedNodeVersion('12.x', true)).toHaveProperty(
     'major',
-    12
+    12,
   );
   expect(warningMessages).toStrictEqual([
     'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
@@ -491,7 +491,7 @@ it(
     const out = await fs.readFile(path.join(fixture, 'env.txt'), 'utf8');
     expect(out.trim()).toBeTruthy();
   },
-  ms('1m')
+  ms('1m'),
 );
 
 it('should return lockfileVersion 2 with npm7', async () => {
@@ -527,7 +527,7 @@ it('should detect npm Workspaces', async () => {
   expect(result.cliType).toEqual('npm');
   expect(result.lockfileVersion).toEqual(2);
   expect(result.lockfilePath).toEqual(
-    path.join(fixture, '..', 'package-lock.json')
+    path.join(fixture, '..', 'package-lock.json'),
   );
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
@@ -547,7 +547,7 @@ it('should detect pnpm with workspaces', async () => {
   expect(result.cliType).toEqual('pnpm');
   expect(result.lockfileVersion).toEqual(5.3);
   expect(result.lockfilePath).toEqual(
-    path.join(fixture, '..', 'pnpm-lock.yaml')
+    path.join(fixture, '..', 'pnpm-lock.yaml'),
   );
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
@@ -555,7 +555,7 @@ it('should detect pnpm with workspaces', async () => {
 it('should detect package.json in nested backend', async () => {
   const fixture = path.join(
     __dirname,
-    '../../node/test/fixtures/18.1-nested-packagejson/backend'
+    '../../node/test/fixtures/18.1-nested-packagejson/backend',
   );
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
@@ -567,7 +567,7 @@ it('should detect package.json in nested backend', async () => {
 it('should detect package.json in nested frontend', async () => {
   const fixture = path.join(
     __dirname,
-    '../../node/test/fixtures/18.1-nested-packagejson/frontend'
+    '../../node/test/fixtures/18.1-nested-packagejson/frontend',
   );
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');

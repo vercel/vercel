@@ -11,7 +11,6 @@
 
 import * as matchers from './matchers';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type Tail<T extends unknown[]> = T extends [infer _Head, ...infer Tail]
   ? Tail
   : never;
@@ -37,7 +36,7 @@ type OnlyMethodsWhereFirstArgIsOfType<TObject, TWantedFirstArg> = {
       ? TObject[P]
       : [
           `Error: this function is present only when received is:`,
-          FirstParam<TObject[P]>
+          FirstParam<TObject[P]>,
         ]
     : TObject[P];
 };

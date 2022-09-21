@@ -1,17 +1,17 @@
 import assert from 'assert';
-import fs from 'fs-extra';
 import path from 'path';
+import { deprecate } from 'util';
+import fs from 'fs-extra';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
 import { coerce, intersects, validRange } from 'semver';
-import { SpawnOptions } from 'child_process';
-import { deprecate } from 'util';
 import debug from '../debug';
 import { NowBuildError } from '../errors';
-import { Meta, PackageJson, NodeVersion, Config } from '../types';
+import { cloneEnv } from '../clone-env';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 import { readConfigFile } from './read-config-file';
-import { cloneEnv } from '../clone-env';
+import type { Meta, PackageJson, NodeVersion, Config } from '../types';
+import type { SpawnOptions } from 'child_process';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
@@ -78,7 +78,7 @@ export interface SpawnOptionsExtended extends SpawnOptions {
 export function spawnAsync(
   command: string,
   args: string[],
-  opts: SpawnOptionsExtended = {}
+  opts: SpawnOptionsExtended = {},
 ) {
   return new Promise<void>((resolve, reject) => {
     const stderrLogs: Buffer[] = [];
@@ -86,7 +86,7 @@ export function spawnAsync(
     const child = spawn(command, args, opts);
 
     if (opts.stdio === 'pipe' && child.stderr) {
-      child.stderr.on('data', data => stderrLogs.push(data));
+      child.stderr.on('data', (data) => stderrLogs.push(data));
     }
 
     child.on('error', reject);
@@ -104,8 +104,8 @@ export function spawnAsync(
           message:
             opts.stdio === 'inherit'
               ? `${cmd} exited with ${code || signal}`
-              : stderrLogs.map(line => line.toString()).join(''),
-        })
+              : stderrLogs.map((line) => line.toString()).join(''),
+        }),
       );
     });
   });
@@ -114,7 +114,7 @@ export function spawnAsync(
 export function execAsync(
   command: string,
   args: string[],
-  opts: SpawnOptionsExtended = {}
+  opts: SpawnOptionsExtended = {},
 ) {
   return new Promise<{ stdout: string; stderr: string; code: number }>(
     (resolve, reject) => {
@@ -125,11 +125,11 @@ export function execAsync(
 
       const child = spawn(command, args, opts);
 
-      child.stderr!.on('data', data => {
+      child.stderr!.on('data', (data) => {
         stderrList.push(data);
       });
 
-      child.stdout!.on('data', data => {
+      child.stdout!.on('data', (data) => {
         stdoutList.push(data);
       });
 
@@ -151,10 +151,10 @@ export function execAsync(
           new NowBuildError({
             code: `BUILD_UTILS_EXEC_${code || signal}`,
             message: `${cmd} exited with ${code || signal}`,
-          })
+          }),
         );
       });
-    }
+    },
   );
 }
 
@@ -199,7 +199,7 @@ async function chmodPlusX(fsPath: string) {
 export async function runShellScript(
   fsPath: string,
   args: string[] = [],
-  spawnOpts?: SpawnOptions
+  spawnOpts?: SpawnOptions,
 ) {
   assert(path.isAbsolute(fsPath));
   const destPath = path.dirname(fsPath);
@@ -215,7 +215,7 @@ export async function runShellScript(
 
 export function getSpawnOptions(
   meta: Meta,
-  nodeVersion: NodeVersion
+  nodeVersion: NodeVersion,
 ): SpawnOptions {
   const opts = {
     env: cloneEnv(process.env),
@@ -225,7 +225,7 @@ export function getSpawnOptions(
     let found = false;
     const oldPath = opts.env.PATH || process.env.PATH || '';
 
-    const pathSegments = oldPath.split(path.delimiter).map(segment => {
+    const pathSegments = oldPath.split(path.delimiter).map((segment) => {
       if (/^\/node[0-9]+\/bin/.test(segment)) {
         found = true;
         return `/node${nodeVersion.major}/bin`;
@@ -248,7 +248,7 @@ export async function getNodeVersion(
   destPath: string,
   _nodeVersion?: string,
   config: Config = {},
-  meta: Meta = {}
+  meta: Meta = {},
 ): Promise<NodeVersion> {
   const latest = getLatestNodeVersion();
   if (meta && meta.isDev) {
@@ -267,11 +267,11 @@ export async function getNodeVersion(
       !meta.isDev
     ) {
       console.warn(
-        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${nodeVersion}") will not apply. Learn More: http://vercel.link/node-version`
+        `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${nodeVersion}") will not apply. Learn More: http://vercel.link/node-version`,
       );
     } else if (coerce(node)?.raw === node && !meta.isDev) {
       console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`,
       );
     } else if (
       validRange(node) &&
@@ -279,7 +279,7 @@ export async function getNodeVersion(
       !meta.isDev
     ) {
       console.warn(
-        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
+        `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`,
       );
     }
     nodeVersion = node;
@@ -290,7 +290,7 @@ export async function getNodeVersion(
 
 export async function scanParentDirs(
   destPath: string,
-  readPackageJson = false
+  readPackageJson = false,
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
@@ -385,11 +385,11 @@ async function walkParentDirsMulti({
 }): Promise<(string | undefined)[]> {
   let parent = '';
   for (let current = start; base.length <= current.length; current = parent) {
-    const fullPaths = filenames.map(f => path.join(current, f));
+    const fullPaths = filenames.map((f) => path.join(current, f));
     const existResults = await Promise.all(
-      fullPaths.map(f => fs.pathExists(f))
+      fullPaths.map((f) => fs.pathExists(f)),
     );
-    const foundOneOrMore = existResults.some(b => b);
+    const foundOneOrMore = existResults.some((b) => b);
 
     if (foundOneOrMore) {
       return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
@@ -415,7 +415,7 @@ export async function runNpmInstall(
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta,
-  nodeVersion?: NodeVersion
+  nodeVersion?: NodeVersion,
 ): Promise<boolean> {
   if (meta?.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
@@ -427,7 +427,7 @@ export async function runNpmInstall(
   try {
     await runNpmInstallSema.acquire();
     const { cliType, packageJsonPath, lockfileVersion } = await scanParentDirs(
-      destPath
+      destPath,
     );
 
     // Only allow `runNpmInstall()` to run once per `package.json`
@@ -439,9 +439,8 @@ export async function runNpmInstall(
       if (isSet<string>(meta.runNpmInstallSet)) {
         if (meta.runNpmInstallSet.has(packageJsonPath)) {
           return false;
-        } else {
-          meta.runNpmInstallSet.add(packageJsonPath);
         }
+        meta.runNpmInstallSet.add(packageJsonPath);
       }
     }
 
@@ -463,12 +462,12 @@ export async function runNpmInstall(
     if (cliType === 'npm') {
       opts.prettyCommand = 'npm install';
       commandArgs = args
-        .filter(a => a !== '--prefer-offline')
+        .filter((a) => a !== '--prefer-offline')
         .concat(['install', '--no-audit', '--unsafe-perm']);
       if (
         nodeVersion?.major === 16 &&
         spawnOpts?.env?.VERCEL_NPM_LEGACY_PEER_DEPS === '1' &&
-        spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK !== '1'
+        spawnOpts.env.ENABLE_EXPERIMENTAL_COREPACK !== '1'
       ) {
         // Starting in npm@8.6.0, if you ran `npm install --legacy-peer-deps`,
         // and then later ran `npm install`, it would fail. So the only way
@@ -483,7 +482,7 @@ export async function runNpmInstall(
       // @see options https://pnpm.io/cli/install
       opts.prettyCommand = 'pnpm install';
       commandArgs = args
-        .filter(a => a !== '--prefer-offline')
+        .filter((a) => a !== '--prefer-offline')
         .concat(['install', '--unsafe-perm']);
     } else {
       opts.prettyCommand = 'yarn install';
@@ -511,10 +510,10 @@ export function getEnvForPackageManager({
   cliType: CliType;
   lockfileVersion: number | undefined;
   nodeVersion: NodeVersion | undefined;
-  env: { [x: string]: string | undefined };
+  env: Record<string, string | undefined>;
 }) {
-  const newEnv: { [x: string]: string | undefined } = { ...env };
-  const oldPath = env.PATH + '';
+  const newEnv: Record<string, string | undefined> = { ...env };
+  const oldPath = `${env.PATH}`;
   const npm7 = '/node16/bin-npm7';
   const pnpm7 = '/pnpm7/node_modules/.bin';
   const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
@@ -570,7 +569,7 @@ export async function runCustomInstallCommand({
     nodeVersion,
     env: spawnOpts?.env || {},
   });
-  debug(`Running with $PATH:`, env?.PATH || '');
+  debug(`Running with $PATH:`, env.PATH || '');
   await execCommand(installCommand, {
     ...spawnOpts,
     env,
@@ -581,17 +580,17 @@ export async function runCustomInstallCommand({
 export async function runPackageJsonScript(
   destPath: string,
   scriptNames: string | Iterable<string>,
-  spawnOpts?: SpawnOptions
+  spawnOpts?: SpawnOptions,
 ) {
   assert(path.isAbsolute(destPath));
 
   const { packageJson, cliType, lockfileVersion } = await scanParentDirs(
     destPath,
-    true
+    true,
   );
   const scriptName = getScriptName(
     packageJson,
-    typeof scriptNames === 'string' ? [scriptNames] : scriptNames
+    typeof scriptNames === 'string' ? [scriptNames] : scriptNames,
   );
   if (!scriptName) return false;
 
@@ -628,7 +627,7 @@ export async function runBundleInstall(
   destPath: string,
   args: string[] = [],
   spawnOpts?: SpawnOptions,
-  meta?: Meta
+  meta?: Meta,
 ) {
   if (meta && meta.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
@@ -645,7 +644,7 @@ export async function runPipInstall(
   destPath: string,
   args: string[] = [],
   spawnOpts?: SpawnOptions,
-  meta?: Meta
+  meta?: Meta,
 ) {
   if (meta && meta.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
@@ -658,13 +657,13 @@ export async function runPipInstall(
   await spawnAsync(
     'pip3',
     ['install', '--disable-pip-version-check', ...args],
-    opts
+    opts,
   );
 }
 
 export function getScriptName(
   pkg: Pick<PackageJson, 'scripts'> | null | undefined,
-  possibleNames: Iterable<string>
+  possibleNames: Iterable<string>,
 ): string | null {
   if (pkg?.scripts) {
     for (const name of possibleNames) {
@@ -682,5 +681,5 @@ export function getScriptName(
  */
 export const installDependencies = deprecate(
   runNpmInstall,
-  'installDependencies() is deprecated. Please use runNpmInstall() instead.'
+  'installDependencies() is deprecated. Please use runNpmInstall() instead.',
 );

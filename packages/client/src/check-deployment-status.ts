@@ -9,7 +9,7 @@ import {
   isAliasError,
 } from './utils/ready-state';
 import { createDebug } from './utils';
-import {
+import type {
   Deployment,
   VercelClientOptions,
   DeploymentBuild,
@@ -24,7 +24,7 @@ interface DeploymentStatus {
 /* eslint-disable */
 export async function* checkDeploymentStatus(
   deployment: Deployment,
-  clientOptions: VercelClientOptions
+  clientOptions: VercelClientOptions,
 ): AsyncIterableIterator<DeploymentStatus> {
   const { token, teamId, apiUrl, userAgent } = clientOptions;
   const debug = createDebug(clientOptions.debug);
@@ -39,7 +39,7 @@ export async function* checkDeploymentStatus(
   // If the deployment is ready, we don't want any of this to run
   if (isDone(deploymentState) && isAliasAssigned(deploymentState)) {
     debug(
-      `Deployment is already READY and aliases are assigned. Not running status checks`
+      `Deployment is already READY and aliases are assigned. Not running status checks`,
     );
     return;
   }
@@ -55,7 +55,7 @@ export async function* checkDeploymentStatus(
         teamId ? `?teamId=${teamId}` : ''
       }`,
       token,
-      { apiUrl, userAgent }
+      { apiUrl, userAgent },
     );
     const deploymentUpdate = await deploymentData.json();
 

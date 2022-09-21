@@ -1,10 +1,10 @@
-import Client from '../client';
-import { Cert, PaginationOptions } from '../../types';
+import type Client from '../client';
+import type { Cert, PaginationOptions } from '../../types';
 
-type Response = {
+interface Response {
   certs: Cert[];
   pagination: PaginationOptions;
-};
+}
 
 export default async function getCerts(client: Client, next?: number) {
   let certsUrl = `/v4/now/certs?limit=20`;

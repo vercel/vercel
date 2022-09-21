@@ -1,4 +1,5 @@
-import { Deployment, DeploymentBuild } from '../types';
+import type { Deployment, DeploymentBuild } from '../types';
+
 export const isReady = ({
   readyState,
   state,
@@ -12,7 +13,7 @@ export const isFailed = ({
     ? readyState.endsWith('_ERROR') || readyState === 'ERROR'
     : (state && state.endsWith('_ERROR')) || state === 'ERROR';
 export const isDone = (
-  buildOrDeployment: Deployment | DeploymentBuild
+  buildOrDeployment: Deployment | DeploymentBuild,
 ): boolean => isReady(buildOrDeployment) || isFailed(buildOrDeployment);
 export const isAliasAssigned = (deployment: Deployment): boolean =>
   Boolean(deployment.aliasAssigned);

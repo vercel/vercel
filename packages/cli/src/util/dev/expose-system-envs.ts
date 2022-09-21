@@ -1,13 +1,10 @@
-import {
-  ProjectEnvType,
-  ProjectEnvVariable,
-  ProjectEnvTarget,
-} from '../../types';
-import { Env } from '@vercel/build-utils';
+import { ProjectEnvType } from '../../types';
+import type { ProjectEnvVariable, ProjectEnvTarget } from '../../types';
+import type { Env } from '@vercel/build-utils';
 
 function getSystemEnvValue(
   systemEnvRef: string,
-  { vercelUrl }: { vercelUrl?: string }
+  { vercelUrl }: { vercelUrl?: string },
 ) {
   if (systemEnvRef === 'VERCEL_URL') {
     return vercelUrl || '';
@@ -21,7 +18,7 @@ export default function exposeSystemEnvs(
   systemEnvValues: string[],
   autoExposeSystemEnvs: boolean | undefined,
   vercelUrl?: string,
-  target?: ProjectEnvTarget
+  target?: ProjectEnvTarget,
 ) {
   const envs: Env = {};
 
@@ -34,7 +31,7 @@ export default function exposeSystemEnvs(
     }
   }
 
-  for (let env of projectEnvs) {
+  for (const env of projectEnvs) {
     if (env.type === ProjectEnvType.System) {
       envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
     } else {

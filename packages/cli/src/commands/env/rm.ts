@@ -1,6 +1,4 @@
 import chalk from 'chalk';
-import { Project } from '../../types';
-import { Output } from '../../util/output';
 import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
@@ -9,25 +7,27 @@ import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
 } from '../../util/env/env-target';
-import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
+import type Client from '../../util/client';
+import type { Output } from '../../util/output';
+import type { Project } from '../../types';
 
-type Options = {
+interface Options {
   '--debug': boolean;
   '--yes': boolean;
-};
+}
 
 export default async function rm(
   client: Client,
   project: Project,
   opts: Partial<Options>,
   args: string[],
-  output: Output
+  output: Output,
 ) {
   // improve the way we show inquirer prompts
   require('../../util/input/patch-inquirer');
@@ -35,8 +35,8 @@ export default async function rm(
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env rm <name> ${getEnvTargetPlaceholder()} <gitbranch>`
-      )}`
+        `env rm <name> ${getEnvTargetPlaceholder()} <gitbranch>`,
+      )}`,
     );
     return 1;
   }
@@ -61,8 +61,8 @@ export default async function rm(
   if (!isValidEnvTarget(envTarget)) {
     output.error(
       `The Environment ${param(
-        envTarget
-      )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
+        envTarget,
+      )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`,
     );
     return 1;
   }
@@ -75,10 +75,10 @@ export default async function rm(
     {
       target: envTarget,
       gitBranch: envGitBranch,
-    }
+    },
   );
 
-  let envs = result.envs.filter(env => env.key === envName);
+  let envs = result.envs.filter((env) => env.key === envName);
 
   if (envs.length === 0) {
     output.error(`Environment Variable was not found.\n`);
@@ -90,13 +90,16 @@ export default async function rm(
       name: 'id',
       type: 'list',
       message: `Remove ${envName} from which Environments?`,
-      choices: envs.map(env => ({ value: env.id, name: formatEnvTarget(env) })),
+      choices: envs.map((env) => ({
+        value: env.id,
+        name: formatEnvTarget(env),
+      })),
     });
 
     if (!id) {
       output.error('Please select at least one Environment Variable to remove');
     }
-    envs = envs.filter(env => env.id === id);
+    envs = envs.filter((env) => env.id === id);
   }
   const env = envs[0];
 
@@ -106,9 +109,9 @@ export default async function rm(
     !(await confirm(
       client,
       `Removing Environment Variable ${param(env.key)} from ${formatEnvTarget(
-        env
+        env,
       )} in Project ${chalk.bold(project.name)}. Are you sure?`,
-      false
+      false,
     ))
   ) {
     output.log('Canceled');
@@ -131,8 +134,8 @@ export default async function rm(
   output.print(
     `${prependEmoji(
       `Removed Environment Variable ${chalk.gray(rmStamp())}`,
-      emoji('success')
-    )}\n`
+      emoji('success'),
+    )}\n`,
   );
 
   return 0;

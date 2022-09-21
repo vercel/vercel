@@ -1,6 +1,4 @@
-import Client from '../client';
 import toHost from '../to-host';
-import { Deployment } from '../../types';
 import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
@@ -8,6 +6,8 @@ import {
   isAPIError,
 } from '../errors-ts';
 import mapCertError from '../certs/map-cert-error';
+import type { Deployment } from '../../types';
+import type Client from '../client';
 
 type APIVersion = 'v5' | 'v10';
 
@@ -15,17 +15,12 @@ export default async function getDeploymentByIdOrHost(
   client: Client,
   contextName: string,
   idOrHost: string,
-  apiVersion: APIVersion = 'v5'
+  apiVersion: APIVersion = 'v5',
 ) {
   try {
-    const { deployment } =
-      idOrHost.indexOf('.') !== -1
-        ? await getDeploymentByHost(
-            client,
-            toHost(idOrHost) as string,
-            apiVersion
-          )
-        : await getDeploymentById(client, idOrHost, apiVersion);
+    const { deployment } = idOrHost.includes('.')
+      ? await getDeploymentByHost(client, toHost(idOrHost), apiVersion)
+      : await getDeploymentById(client, idOrHost, apiVersion);
     return deployment;
   } catch (err: unknown) {
     if (isAPIError(err)) {
@@ -52,27 +47,27 @@ export default async function getDeploymentByIdOrHost(
 async function getDeploymentById(
   client: Client,
   id: string,
-  apiVersion: APIVersion
+  apiVersion: APIVersion,
 ) {
   const deployment = await client.fetch<Deployment>(
-    `/${apiVersion}/now/deployments/${encodeURIComponent(id)}`
+    `/${apiVersion}/now/deployments/${encodeURIComponent(id)}`,
   );
   return { deployment };
 }
 
-type Response = {
+interface Response {
   id: string;
-};
+}
 
 async function getDeploymentByHost(
   client: Client,
   host: string,
-  apiVersion: APIVersion
+  apiVersion: APIVersion,
 ) {
   const response = await client.fetch<Response>(
     `/v10/now/deployments/get?url=${encodeURIComponent(
-      host
-    )}&resolve=1&noState=1`
+      host,
+    )}&resolve=1&noState=1`,
   );
   return getDeploymentById(client, response.id, apiVersion);
 }

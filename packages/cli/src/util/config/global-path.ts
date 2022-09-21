@@ -2,7 +2,7 @@ import { homedir } from 'os';
 import fs from 'fs';
 import path from 'path';
 import XDGAppPaths from 'xdg-app-paths';
-import getArgs from '../../util/get-args';
+import getArgs from '../get-args';
 
 // Returns whether a directory exists
 export const isDirectory = (path: string): boolean => {
@@ -35,7 +35,7 @@ const getGlobalPathConfig = (): string => {
   // If none of those exist, use the vercel directory.
   return (
     (customPath && path.resolve(customPath)) ||
-    possibleConfigPaths.find(configPath => isDirectory(configPath)) ||
+    possibleConfigPaths.find((configPath) => isDirectory(configPath)) ||
     vercelDirectories[0]
   );
 };

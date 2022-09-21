@@ -1,11 +1,11 @@
-import Client from '../client';
 import { InvalidEmail, AccountNotFound, isAPIError } from '../errors-ts';
 import { errorToString } from '../is-error';
-import { LoginData } from './types';
+import type Client from '../client';
+import type { LoginData } from './types';
 
 export default async function login(
   client: Client,
-  email: string
+  email: string,
 ): Promise<LoginData> {
   try {
     return await client.fetch<LoginData>(`/registration?mode=login`, {
@@ -17,7 +17,7 @@ export default async function login(
       if (err.code === 'not_exists') {
         throw new AccountNotFound(
           email,
-          `Please sign up: https://vercel.com/signup`
+          `Please sign up: https://vercel.com/signup`,
         );
       }
 

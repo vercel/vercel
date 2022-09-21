@@ -3,7 +3,7 @@ import logo from '../util/output/logo';
 import getScope from '../util/get-scope';
 import { getPkgName } from '../util/pkg-name';
 import getArgs from '../util/get-args';
-import Client from '../util/client';
+import type Client from '../util/client';
 
 const help = () => {
   console.log(`
@@ -13,14 +13,14 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}        Login token
 
   ${chalk.dim('Examples:')}

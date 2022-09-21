@@ -1,8 +1,8 @@
 import { URLSearchParams } from 'url';
-import { VercelClientOptions } from '../types';
+import type { VercelClientOptions } from '../types';
 
 export function generateQueryString(
-  clientOptions: VercelClientOptions
+  clientOptions: VercelClientOptions,
 ): string {
   const options = new URLSearchParams();
 

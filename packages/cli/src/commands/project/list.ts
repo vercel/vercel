@@ -1,24 +1,24 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import { Project } from '../../types';
-import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import strlen from '../../util/strlen';
+import type Client from '../../util/client';
+import type { Project } from '../../types';
 
 export default async function list(
   client: Client,
   argv: any,
   args: string[],
-  contextName: string
+  contextName: string,
 ) {
   const { output } = client;
   if (args.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('project ls')}`
-      )}`
+        `${getCommandName('project ls')}`,
+      )}`,
     );
     return 2;
   }
@@ -51,17 +51,17 @@ export default async function list(
   output.log(
     `${
       projectList.length > 0 ? 'Projects' : 'No projects'
-    } found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`
+    } found under ${chalk.bold(contextName)} ${chalk.gray(`[${elapsed}]`)}`,
   );
 
   if (projectList.length > 0) {
     const tablePrint = table(
       [
-        ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
-          chalk.bold(chalk.cyan(header))
+        ['Project Name', 'Latest Production URL', 'Updated'].map((header) =>
+          chalk.bold(chalk.cyan(header)),
         ),
         ...projectList
-          .map(project => [
+          .map((project) => [
             [
               chalk.bold(project.name),
               getLatestProdUrl(project),
@@ -74,7 +74,7 @@ export default async function list(
         align: ['l', 'l', 'l'],
         hsep: ' '.repeat(3),
         stringLength: strlen,
-      }
+      },
     ).replace(/^/gm, '  ');
     output.print(`\n${tablePrint}\n\n`);
 
@@ -89,8 +89,8 @@ export default async function list(
 
 function getLatestProdUrl(project: Project): string {
   const alias =
-    project.alias?.filter(al => al.deployment)?.[0]?.domain ||
+    project.alias?.filter((al) => al.deployment)?.[0]?.domain ||
     project.alias?.[0]?.domain;
-  if (alias) return 'https://' + alias;
+  if (alias) return `https://${alias}`;
   return '--';
 }

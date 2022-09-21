@@ -3,12 +3,11 @@ import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
-
-import { DeploymentFile } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
-import { VercelClientOptions, DeploymentOptions } from './types';
+import type { DeploymentFile } from './utils/hashes';
+import type { VercelClientOptions, DeploymentOptions } from './types';
 
 const isClientNetworkError = (err: Error) => {
   if (err.message) {
@@ -30,7 +29,7 @@ const isClientNetworkError = (err: Error) => {
 export async function* upload(
   files: Map<string, DeploymentFile>,
   clientOptions: VercelClientOptions,
-  deploymentOptions: DeploymentOptions
+  deploymentOptions: DeploymentOptions,
 ): AsyncIterableIterator<any> {
   const { token, teamId, apiUrl, userAgent } = clientOptions;
   const debug = createDebug(clientOptions.debug);
@@ -65,7 +64,7 @@ export async function* upload(
     }
   }
 
-  const uploads = shas.map(sha => {
+  const uploads = shas.map((sha) => {
     return new UploadProgress(sha, files.get(sha)!);
   });
 
@@ -74,7 +73,7 @@ export async function* upload(
     payload: { total: files, missing: shas, uploads },
   };
 
-  const uploadList: { [key: string]: Promise<any> } = {};
+  const uploadList: Record<string, Promise<any>> = {};
   debug('Building an upload list...');
 
   const semaphore = new Sema(50, { capacity: 50 });
@@ -96,14 +95,16 @@ export async function* upload(
 
         const { data } = file;
 
-        uploadProgress.bytesUploaded = 0;
+        if (uploadProgress) {
+          uploadProgress.bytesUploaded = 0;
+        }
 
         // Split out into chunks
         const body = new Readable();
         const originalRead = body.read.bind(body);
         body.read = function (...args) {
           const chunk = originalRead(...args);
-          if (chunk) {
+          if (chunk && uploadProgress) {
             uploadProgress.bytesUploaded += chunk.length;
             uploadProgress.emit('progress');
           }
@@ -139,14 +140,14 @@ export async function* upload(
               userAgent,
             },
             clientOptions.debug,
-            true
+            true,
           );
 
           if (res.status === 200) {
             debug(
               `File ${sha} (${file.names[0]}${
                 file.names.length > 1 ? ` +${file.names.length}` : ''
-              }) uploaded`
+              }) uploaded`,
             );
             result = {
               type: 'file-uploaded',
@@ -155,7 +156,7 @@ export async function* upload(
           } else if (res.status > 200 && res.status < 500) {
             // If something is wrong with our request, we don't retry
             debug(
-              `An internal error occurred in upload request. Not retrying...`
+              `An internal error occurred in upload request. Not retrying...`,
             );
             const { error } = await res.json();
 
@@ -176,11 +177,11 @@ export async function* upload(
 
         if (err) {
           if (isClientNetworkError(err)) {
-            debug('Network error, retrying: ' + err.message);
+            debug(`Network error, retrying: ${err.message}`);
             // If it's a network error, we retry
             throw err;
           } else {
-            debug('Other error, bailing: ' + err.message);
+            debug(`Other error, bailing: ${err.message}`);
             // Otherwise we bail
             return bail(err);
           }
@@ -192,7 +193,7 @@ export async function* upload(
         retries: 5,
         factor: 6,
         minTimeout: 10,
-      }
+      },
     );
   });
 
@@ -201,7 +202,9 @@ export async function* upload(
   while (Object.keys(uploadList).length > 0) {
     try {
       const event = await Promise.race(
-        Object.keys(uploadList).map((key): Promise<any> => uploadList[key])
+        Object.keys(uploadList).map(
+          (key): Promise<any> => Promise.resolve(uploadList[key]),
+        ),
       );
 
       delete uploadList[event.payload.sha];

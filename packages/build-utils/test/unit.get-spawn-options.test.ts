@@ -12,12 +12,12 @@ describe('Test `getSpawnOptions()`', () => {
     process.env.PATH = origProcessEnvPath;
   });
 
-  const cases: Array<{
+  const cases: {
     name: string;
     args: Parameters<typeof getSpawnOptions>;
     envPath: string | undefined;
     want: string | undefined;
-  }> = [
+  }[] = [
     {
       name: 'should do nothing when isDev and node14',
       args: [

@@ -1,17 +1,16 @@
 import chalk from 'chalk';
-
-import { Cert } from '../../types';
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
 import mapCertError from './map-cert-error';
+import type { Cert } from '../../types';
+import type Client from '../client';
 
 export default async function startCertOrder(
   client: Client,
   cns: string[],
-  context: string // eslint-disable-line
+  context: string, // eslint-disable-line
 ) {
   client.output.spinner(
-    `Issuing a certificate for ${chalk.bold(cns.join(', '))}`
+    `Issuing a certificate for ${chalk.bold(cns.join(', '))}`,
   );
   try {
     const cert = await client.fetch<Cert>('/v3/now/certs', {

@@ -1,19 +1,19 @@
 import psl from 'psl';
 import { NowError } from '../now-error';
-import { Domain } from '../../types';
-import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
+import extractDomain from '../alias/extract-domain';
 import addDomain from './add-domain';
-import Client from '../client';
 import maybeGetDomainByName from './maybe-get-domain-by-name';
 import purchaseDomainIfAvailable from './purchase-domain-if-available';
-import extractDomain from '../alias/extract-domain';
+import type Client from '../client';
+import type { Output } from '../output';
+import type { Domain } from '../../types';
 
 export default async function setupDomain(
   output: Output,
   client: Client,
   alias: string,
-  contextName: string
+  contextName: string,
 ) {
   const aliasDomain = extractDomain(alias);
   output.debug(`Trying to fetch domain ${aliasDomain} by name`);
@@ -29,13 +29,13 @@ export default async function setupDomain(
   }
 
   output.debug(
-    `The domain ${aliasDomain} was not found, trying to purchase it`
+    `The domain ${aliasDomain} was not found, trying to purchase it`,
   );
   const purchased = await purchaseDomainIfAvailable(
     output,
     client,
     aliasDomain,
-    contextName
+    contextName,
   );
   if (purchased instanceof NowError) {
     return purchased;
@@ -43,7 +43,7 @@ export default async function setupDomain(
 
   if (!purchased) {
     output.debug(
-      `Domain ${aliasDomain} is not available to be purchased. Trying to add it`
+      `Domain ${aliasDomain} is not available to be purchased. Trying to add it`,
     );
     const parsedDomain = psl.parse(aliasDomain);
     if (parsedDomain.error) {
@@ -61,7 +61,7 @@ export default async function setupDomain(
     }
 
     output.debug(
-      `Domain ${domain} successfuly added and automatically verified`
+      `Domain ${domain} successfuly added and automatically verified`,
     );
     return addResult;
   }
@@ -70,12 +70,12 @@ export default async function setupDomain(
   const purchasedDomain = (await maybeGetDomainByName(
     client,
     contextName,
-    aliasDomain
+    aliasDomain,
   )) as Domain;
   const { name: domain } = purchasedDomain;
 
   output.debug(
-    `Domain ${domain} was purchased and it is automatically verified`
+    `Domain ${domain} was purchased and it is automatically verified`,
   );
   return maybeGetDomainByName(client, contextName, domain) as Promise<Domain>;
 }

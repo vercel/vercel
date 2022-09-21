@@ -1,16 +1,16 @@
-import fs from 'fs-extra';
 import { join } from 'path';
+import { exec } from 'child_process';
+import fs from 'fs-extra';
 import ini from 'ini';
 import git from 'git-last-commit';
-import { exec } from 'child_process';
-import { GitMetadata, Project } from '../types';
-import { Output } from './output';
 import { errorToString } from './is-error';
+import type { GitMetadata, Project } from '../types';
+import type { Output } from './output';
 
 export async function createGitMeta(
   directory: string,
   output: Output,
-  project?: Project | null
+  project?: Project | null,
 ): Promise<GitMetadata | undefined> {
   // If a Git repository is already connected via `vc git`, use that remote url
   let remoteUrl;
@@ -20,7 +20,7 @@ export async function createGitMeta(
 
     const remoteUrls = await getRemoteUrls(
       join(directory, '.git/config'),
-      output
+      output,
     );
     if (remoteUrls) {
       for (const urlValue of Object.values(remoteUrls)) {
@@ -41,11 +41,10 @@ export async function createGitMeta(
   }
 
   const [commit, dirty] = await Promise.all([
-    getLastCommit(directory).catch(err => {
+    getLastCommit(directory).catch((err) => {
       output.debug(
-        `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.\n${err}`
+        `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.\n${err}`,
       );
-      return;
     }),
     isDirty(directory, output),
   ]);
@@ -71,13 +70,13 @@ function getLastCommit(directory: string): Promise<git.Commit> {
         if (err) return reject(err);
         resolve(commit);
       },
-      { dst: directory }
+      { dst: directory },
     );
   });
 }
 
 export function isDirty(directory: string, output: Output): Promise<boolean> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     exec('git status -s', { cwd: directory }, function (err, stdout, stderr) {
       let debugMessage = `Failed to determine if Git repo has been modified:`;
       if (err || stderr) {
@@ -99,10 +98,10 @@ export async function parseGitConfig(configPath: string, output: Output) {
   }
 }
 
-export function pluckRemoteUrls(gitConfig: {
-  [key: string]: any;
-}): { [key: string]: string } | undefined {
-  let remoteUrls: { [key: string]: string } = {};
+export function pluckRemoteUrls(
+  gitConfig: Record<string, any>,
+): Record<string, string> | undefined {
+  const remoteUrls: Record<string, string> = {};
 
   for (const key of Object.keys(gitConfig)) {
     if (key.includes('remote')) {
@@ -124,8 +123,8 @@ export function pluckRemoteUrls(gitConfig: {
 
 export async function getRemoteUrls(
   configPath: string,
-  output: Output
-): Promise<{ [key: string]: string } | undefined> {
+  output: Output,
+): Promise<Record<string, string> | undefined> {
   const config = await parseGitConfig(configPath, output);
   if (!config) {
     return;
@@ -135,18 +134,18 @@ export async function getRemoteUrls(
   return remoteUrls;
 }
 
-export function pluckOriginUrl(gitConfig: {
-  [key: string]: any;
-}): string | undefined {
+export function pluckOriginUrl(
+  gitConfig: Record<string, any>,
+): string | undefined {
   // Assuming "origin" is the remote url that the user would want to use
   return gitConfig['remote "origin"']?.url;
 }
 
 export async function getOriginUrl(
   configPath: string,
-  output: Output
+  output: Output,
 ): Promise<string | null> {
-  let gitConfig = await parseGitConfig(configPath, output);
+  const gitConfig = await parseGitConfig(configPath, output);
   if (!gitConfig) {
     return null;
   }

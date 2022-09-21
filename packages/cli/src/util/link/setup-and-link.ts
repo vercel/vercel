@@ -1,7 +1,6 @@
 import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
-import { ProjectLinkResult, ProjectSettings } from '../../types';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -11,7 +10,6 @@ import {
 } from '../projects/link';
 import createProject from '../projects/create-project';
 import updateProject from '../projects/update-project';
-import Client from '../client';
 import handleError from '../handle-error';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
@@ -20,14 +18,16 @@ import selectOrg from '../input/select-org';
 import inputProject from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
-import editProjectSettings, {
-  PartialProjectSettings,
-} from '../input/edit-project-settings';
+import editProjectSettings from '../input/edit-project-settings';
 import stamp from '../output/stamp';
-import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
-import Now, { CreateOptions } from '../index';
+import Now from '../index';
 import { isAPIError } from '../errors-ts';
+import type { CreateOptions } from '../index';
+import type { EmojiLabel } from '../emoji';
+import type { PartialProjectSettings } from '../input/edit-project-settings';
+import type Client from '../client';
+import type { ProjectLinkResult, ProjectSettings } from '../../types';
 
 export interface SetupAndLinkOptions {
   forceDelete?: boolean;
@@ -46,7 +46,7 @@ export default async function setupAndLink(
     successEmoji,
     setupMsg,
     projectName,
-  }: SetupAndLinkOptions
+  }: SetupAndLinkOptions,
 ): Promise<ProjectLinkResult> {
   const { localConfig, output, config } = client;
   const debug = output.isDebugEnabled();
@@ -60,7 +60,7 @@ export default async function setupAndLink(
   const isTTY = client.stdin.isTTY;
   const quiet = !isTTY;
   let rootDirectory: string | null = null;
-  let sourceFilesOutsideRootDirectory = true;
+  const sourceFilesOutsideRootDirectory = true;
   let newProjectName: string;
   let org;
 
@@ -83,7 +83,7 @@ export default async function setupAndLink(
     (await confirm(
       client,
       `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-      true
+      true,
     ));
 
   if (!shouldStartSetup) {
@@ -95,7 +95,7 @@ export default async function setupAndLink(
     org = await selectOrg(
       client,
       'Which scope should contain your project?',
-      autoConfirm
+      autoConfirm,
     );
   } catch (err: unknown) {
     if (isAPIError(err)) {
@@ -119,7 +119,7 @@ export default async function setupAndLink(
     client,
     org,
     detectedProjectName,
-    autoConfirm
+    autoConfirm,
   );
 
   if (typeof projectOrNewProjectName === 'string') {
@@ -137,7 +137,7 @@ export default async function setupAndLink(
       },
       project.name,
       org.slug,
-      successEmoji
+      successEmoji,
     );
     return { status: 'linked', org, project };
   }
@@ -206,7 +206,7 @@ export default async function setupAndLink(
         createArgs,
         org,
         true,
-        path
+        path,
       );
 
       if (
@@ -232,7 +232,7 @@ export default async function setupAndLink(
         projectSettings,
         framework,
         autoConfirm,
-        localConfigurationOverrides
+        localConfigurationOverrides,
       );
     }
 
@@ -254,7 +254,7 @@ export default async function setupAndLink(
       },
       project.name,
       org.slug,
-      successEmoji
+      successEmoji,
     );
 
     return { status: 'linked', org, project };

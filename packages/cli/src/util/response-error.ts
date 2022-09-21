@@ -1,10 +1,10 @@
-import { Response } from 'node-fetch';
 import { APIError } from './errors-ts';
+import type { Response } from 'node-fetch';
 
 export default async function responseError(
   res: Response,
   fallbackMessage = null,
-  parsedBody = {}
+  parsedBody = {},
 ) {
   let bodyError;
 

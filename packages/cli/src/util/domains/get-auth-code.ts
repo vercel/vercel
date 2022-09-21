@@ -6,10 +6,10 @@ export default async function getAuthCode(code?: string) {
   }
   return textInput({
     label: `- Transfer auth code: `,
-    validateValue: isValidAuthCode
+    validateValue: isValidAuthCode,
   });
 }
 
 function isValidAuthCode(code?: string): code is string {
-  return !!(code && code.length > 0);
+  return Boolean(code && code.length > 0);
 }

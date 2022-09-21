@@ -1,6 +1,6 @@
 import { join } from 'path';
-import fs from 'fs-extra';
 import os from 'os';
+import fs from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
@@ -13,7 +13,7 @@ import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 import { readOutputStream } from '../../../helpers/read-output-stream';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { Project } from '../../../../src/types';
+import type { Project } from '../../../../src/types';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
@@ -110,7 +110,7 @@ describe('parseRepoUrl', () => {
 
   it('should parse gitlab https url', () => {
     const repoInfo = parseRepoUrl(
-      'https://gitlab.com/gitlab-examples/knative-kotlin-app.git'
+      'https://gitlab.com/gitlab-examples/knative-kotlin-app.git',
     );
     expect(repoInfo).toBeDefined();
     expect(repoInfo?.provider).toEqual('gitlab');
@@ -119,7 +119,7 @@ describe('parseRepoUrl', () => {
   });
   it('should parse gitlab ssh url', () => {
     const repoInfo = parseRepoUrl(
-      'git@gitlab.com:gitlab-examples/knative-kotlin-app.git'
+      'git@gitlab.com:gitlab-examples/knative-kotlin-app.git',
     );
     expect(repoInfo).toBeDefined();
     expect(repoInfo?.provider).toEqual('gitlab');
@@ -129,7 +129,7 @@ describe('parseRepoUrl', () => {
 
   it('should parse bitbucket https url', () => {
     const repoInfo = parseRepoUrl(
-      'https://bitbucket.org/atlassianlabs/maven-project-example.git'
+      'https://bitbucket.org/atlassianlabs/maven-project-example.git',
     );
     expect(repoInfo).toBeDefined();
     expect(repoInfo?.provider).toEqual('bitbucket');
@@ -138,7 +138,7 @@ describe('parseRepoUrl', () => {
   });
   it('should parse bitbucket ssh url', () => {
     const repoInfo = parseRepoUrl(
-      'git@bitbucket.org:atlassianlabs/maven-project-example.git'
+      'git@bitbucket.org:atlassianlabs/maven-project-example.git',
     );
     expect(repoInfo).toBeDefined();
     expect(repoInfo?.provider).toEqual('bitbucket');
@@ -273,10 +273,10 @@ describe('createGitMeta', () => {
       const output = await readOutputStream(client, 2);
 
       expect(output).toContain(
-        `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
+        `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`,
       );
       expect(output).toContain(
-        `Failed to determine if Git repo has been modified:`
+        `Failed to determine if Git repo has been modified:`,
       );
       expect(data).toBeUndefined();
     } finally {
@@ -309,7 +309,7 @@ describe('createGitMeta', () => {
       const data = await createGitMeta(
         directory,
         client.output,
-        project.project as Project
+        project.project as Project,
       );
       expect(data).toMatchObject({
         remoteUrl: 'https://github.com/user/repo2',

@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 import type { JSONObject, ProjectSettings } from '../../types';
 
 interface ProjectSettingsResponse extends ProjectSettings {
@@ -11,7 +11,7 @@ interface ProjectSettingsResponse extends ProjectSettings {
 export default async function updateProject(
   client: Client,
   prjNameOrId: string,
-  settings: ProjectSettings
+  settings: ProjectSettings,
 ) {
   // `ProjectSettings` is technically compatible with JSONObject
   const body = settings as JSONObject;
@@ -21,7 +21,7 @@ export default async function updateProject(
     {
       method: 'PATCH',
       body,
-    }
+    },
   );
   return res;
 }

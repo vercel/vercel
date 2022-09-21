@@ -1,13 +1,15 @@
 // Register Jest matcher extensions for CLI unit tests
 import './matchers';
 
-import chalk from 'chalk';
 import { PassThrough } from 'stream';
-import { createServer, Server } from 'http';
-import express, { Express, Router } from 'express';
+import { createServer } from 'http';
+import chalk from 'chalk';
+import express, { Router } from 'express';
 import listen from 'async-listen';
 import Client from '../../src/util/client';
 import { Output } from '../../src/util/output';
+import type { Express } from 'express';
+import type { Server } from 'http';
 
 // Disable colors in `chalk` so that tests don't need
 // to worry about ANSI codes
@@ -120,7 +122,7 @@ export class MockClient extends Client {
         return;
       }
 
-      this.mockServer.close(error => {
+      this.mockServer.close((error) => {
         if (error) {
           reject(error);
           return;

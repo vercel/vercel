@@ -1,15 +1,15 @@
 import chalk from 'chalk';
-import Client from '../client';
-import { ProjectAliasTarget } from '../../types';
 import { isAPIError } from '../errors-ts';
+import type Client from '../client';
+import type { ProjectAliasTarget } from '../../types';
 
 export async function addDomainToProject(
   client: Client,
   projectNameOrId: string,
-  domain: string
+  domain: string,
 ) {
   client.output.spinner(
-    `Adding domain ${domain} to project ${chalk.bold(projectNameOrId)}`
+    `Adding domain ${domain} to project ${chalk.bold(projectNameOrId)}`,
   );
   try {
     const response = await client.fetch<ProjectAliasTarget[]>(
@@ -20,16 +20,16 @@ export async function addDomainToProject(
           target: 'PRODUCTION',
           domain,
         }),
-      }
+      },
     );
 
     const aliasTarget: ProjectAliasTarget | undefined = response.find(
-      aliasTarget => aliasTarget.domain === domain
+      (aliasTarget) => aliasTarget.domain === domain,
     );
 
     if (!aliasTarget) {
       throw new Error(
-        `Unexpected error when adding the domain "${domain}" to project "${projectNameOrId}".`
+        `Unexpected error when adding the domain "${domain}" to project "${projectNameOrId}".`,
       );
     }
 

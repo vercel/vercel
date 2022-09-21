@@ -1,21 +1,21 @@
+import { resolve } from 'path';
+import { URLSearchParams, parse } from 'url';
 import open from 'open';
 import boxen from 'boxen';
 import execa from 'execa';
 import plural from 'pluralize';
 import inquirer from 'inquirer';
-import { resolve } from 'path';
-import chalk, { Chalk } from 'chalk';
-import { URLSearchParams, parse } from 'url';
-
+import chalk from 'chalk';
 import sleep from '../../util/sleep';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
 import logo from '../../util/output/logo';
 import getArgs from '../../util/get-args';
-import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
-import { Deployment, PaginationOptions } from '../../types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
+import type { Chalk } from 'chalk';
+import type Client from '../../util/client';
+import type { Deployment, PaginationOptions } from '../../types';
 
 interface DeploymentV6
   extends Pick<
@@ -108,8 +108,8 @@ export default async function main(client: Client): Promise<number> {
     if (subpath && subpath !== parsed.path) {
       output.note(
         `Ignoring subpath ${chalk.bold(
-          parsed.path
-        )} in favor of \`--path\` argument ${chalk.bold(subpath)}`
+          parsed.path,
+        )} in favor of \`--path\` argument ${chalk.bold(subpath)}`,
       );
     } else {
       subpath = parsed.path;
@@ -131,22 +131,22 @@ export default async function main(client: Client): Promise<number> {
   ) {
     output.note(
       `Ignoring subpath ${chalk.bold(
-        parsed.path
-      )} which does not match ${chalk.bold(subpath)}`
+        parsed.path,
+      )} which does not match ${chalk.bold(subpath)}`,
     );
   }
 
   if (!subpath) {
     subpath = await prompt(
       client,
-      `Specify the URL subpath where the bug occurs:`
+      `Specify the URL subpath where the bug occurs:`,
     );
   }
 
   output.spinner('Retrieving deployments…');
 
   // `getDeployment` cannot be parallelized because it might prompt for login
-  const badDeployment = await getDeployment(client, bad).catch(err => err);
+  const badDeployment = await getDeployment(client, bad).catch((err) => err);
 
   if (badDeployment) {
     if (badDeployment instanceof Error) {
@@ -161,7 +161,7 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // `getDeployment` cannot be parallelized because it might prompt for login
-  const goodDeployment = await getDeployment(client, good).catch(err => err);
+  const goodDeployment = await getDeployment(client, good).catch((err) => err);
 
   if (goodDeployment) {
     if (goodDeployment instanceof Error) {
@@ -172,7 +172,7 @@ export default async function main(client: Client): Promise<number> {
     good = goodDeployment.url;
   } else {
     output.error(
-      `Failed to retrieve ${chalk.bold('good')} Deployment: ${good}`
+      `Failed to retrieve ${chalk.bold('good')} Deployment: ${good}`,
     );
     return 1;
   }
@@ -195,7 +195,7 @@ export default async function main(client: Client): Promise<number> {
         badDeployment.target || 'preview'
       }" does not match good deployment target "${
         goodDeployment.target || 'preview'
-      }"`
+      }"`,
     );
     return 1;
   }
@@ -242,7 +242,7 @@ export default async function main(client: Client): Promise<number> {
 
   if (!deployments.length) {
     output.error(
-      'Cannot bisect because this project does not have any deployments'
+      'Cannot bisect because this project does not have any deployments',
     );
     return 1;
   }
@@ -262,10 +262,10 @@ export default async function main(client: Client): Promise<number> {
     output.log(
       chalk.magenta(
         `${chalk.bold(
-          'Bisecting:'
-        )} ${rem} left to test after this (roughly ${pSteps})`
+          'Bisecting:',
+        )} ${rem} left to test after this (roughly ${pSteps})`,
       ),
-      chalk.magenta
+      chalk.magenta,
     );
     const testUrl = `https://${deployment.url}${subpath}`;
     output.log(`${chalk.bold('Deployment URL:')} ${link(testUrl)}`);
@@ -309,8 +309,8 @@ export default async function main(client: Client): Promise<number> {
       }
       output.log(
         `Run script returned exit code ${chalk.bold(String(exitCode))}: ${color(
-          action
-        )}`
+          action,
+        )}`,
       );
     } else {
       if (openEnabled) {
@@ -341,9 +341,9 @@ export default async function main(client: Client): Promise<number> {
 
   output.print('\n');
 
-  let result = [
+  const result = [
     chalk.bold(
-      `The first bad deployment is: ${link(`https://${lastBad.url}`)}`
+      `The first bad deployment is: ${link(`https://${lastBad.url}`)}`,
     ),
     '',
     `   ${chalk.bold('Date:')} ${formatDate(lastBad.createdAt)}`,
@@ -366,7 +366,7 @@ export default async function main(client: Client): Promise<number> {
 
 function getDeployment(
   client: Client,
-  hostname: string
+  hostname: string,
 ): Promise<DeploymentV6> {
   const query = new URLSearchParams();
   query.set('url', hostname);
@@ -377,14 +377,14 @@ function getDeployment(
 
 function getCommit(deployment: DeploymentV6) {
   const sha =
-    deployment.meta?.githubCommitSha ||
-    deployment.meta?.gitlabCommitSha ||
-    deployment.meta?.bitbucketCommitSha;
+    deployment.meta.githubCommitSha ||
+    deployment.meta.gitlabCommitSha ||
+    deployment.meta.bitbucketCommitSha;
   if (!sha) return null;
   const message =
-    deployment.meta?.githubCommitMessage ||
-    deployment.meta?.gitlabCommitMessage ||
-    deployment.meta?.bitbucketCommitMessage;
+    deployment.meta.githubCommitMessage ||
+    deployment.meta.gitlabCommitMessage ||
+    deployment.meta.bitbucketCommitMessage;
   return { sha, message };
 }
 
@@ -398,8 +398,7 @@ async function prompt(client: Client, message: string): Promise<string> {
     });
     if (val) {
       return val;
-    } else {
-      client.output.error('A value must be specified');
     }
+    client.output.error('A value must be specified');
   }
 }

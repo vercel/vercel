@@ -1,22 +1,22 @@
-import { lstatSync } from 'fs-extra';
 import { isAbsolute, join, relative } from 'path';
+import { createGzip } from 'zlib';
+import { lstatSync } from 'fs-extra';
+import { streamToBuffer } from '@vercel/build-utils';
+import tar from 'tar-fs';
 import { hash, hashes, mapToObject } from './utils/hashes';
 import { upload } from './upload';
 import { buildFileTree, createDebug } from './utils';
 import { DeploymentError } from './errors';
-import {
+import type {
   VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
-import { streamToBuffer } from '@vercel/build-utils';
-import tar from 'tar-fs';
-import { createGzip } from 'zlib';
 
 export default function buildCreateDeployment() {
   return async function* createDeployment(
     clientOptions: VercelClientOptions,
-    deploymentOptions: DeploymentOptions = {}
+    deploymentOptions: DeploymentOptions = {},
   ): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
     const { path } = clientOptions;
 
@@ -26,7 +26,7 @@ export default function buildCreateDeployment() {
 
     if (typeof path !== 'string' && !Array.isArray(path)) {
       debug(
-        `Error: 'path' is expected to be a string or an array. Received ${typeof path}`
+        `Error: 'path' is expected to be a string or an array. Received ${typeof path}`,
       );
 
       throw new DeploymentError({
@@ -37,7 +37,7 @@ export default function buildCreateDeployment() {
 
     if (typeof clientOptions.token !== 'string') {
       debug(
-        `Error: 'token' is expected to be a string. Received ${typeof clientOptions.token}`
+        `Error: 'token' is expected to be a string. Received ${typeof clientOptions.token}`,
       );
 
       throw new DeploymentError({
@@ -73,7 +73,7 @@ export default function buildCreateDeployment() {
       debug(`Provided 'path' is a single file`);
     }
 
-    let { fileList } = await buildFileTree(path, clientOptions, debug);
+    const { fileList } = await buildFileTree(path, clientOptions, debug);
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
@@ -87,6 +87,12 @@ export default function buildCreateDeployment() {
 
     // Populate Files -> FileFsRef mapping
     const workPath = typeof path === 'string' ? path : path[0];
+    if (typeof workPath !== 'string') {
+      throw new DeploymentError({
+        code: 'invalid_path',
+        message: `Path not provided`,
+      });
+    }
 
     let files;
 
@@ -94,7 +100,7 @@ export default function buildCreateDeployment() {
       debug('Packing tarball');
       const tarStream = tar
         .pack(workPath, {
-          entries: fileList.map(file => relative(workPath, file)),
+          entries: fileList.map((file) => relative(workPath, file)),
         })
         .pipe(createGzip());
       const tarBuffer = await streamToBuffer(tarStream);

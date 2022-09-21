@@ -1,15 +1,15 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import Client from '../client';
-import { Cert } from '../../types';
 import { isErrnoException } from '../is-error';
 import { isAPIError } from '../errors-ts';
+import type Client from '../client';
+import type { Cert } from '../../types';
 
 export default async function createCertFromFile(
   client: Client,
   keyPath: string,
   certPath: string,
-  caPath: string
+  caPath: string,
 ) {
   client.output.spinner('Adding your custom certificate');
 

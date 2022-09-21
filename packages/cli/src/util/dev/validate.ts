@@ -7,7 +7,6 @@ import {
   rewritesSchema,
   trailingSlashSchema,
 } from '@vercel/routing-utils';
-import { VercelConfig } from './types';
 import {
   functionsSchema,
   buildsSchema,
@@ -15,6 +14,7 @@ import {
   getPrettyError,
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
+import type { VercelConfig } from './types';
 
 const vercelConfigSchema = {
   type: 'object',

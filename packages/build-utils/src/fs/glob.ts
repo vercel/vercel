@@ -1,10 +1,11 @@
 import path from 'path';
 import assert from 'assert';
-import vanillaGlob_ from 'glob';
 import { promisify } from 'util';
-import { lstat, Stats } from 'fs-extra';
-import { normalizePath } from './normalize-path';
+import vanillaGlob_ from 'glob';
+import { lstat } from 'fs-extra';
 import FileFsRef from '../file-fs-ref';
+import { normalizePath } from './normalize-path';
+import type { Stats } from 'fs-extra';
 
 export type GlobOptions = vanillaGlob_.IOptions;
 
@@ -13,7 +14,7 @@ const vanillaGlob = promisify(vanillaGlob_);
 export default async function glob(
   pattern: string,
   opts: GlobOptions | string,
-  mountpoint?: string
+  mountpoint?: string,
 ): Promise<Record<string, FileFsRef>> {
   let options: GlobOptions;
   if (typeof opts === 'string') {
@@ -24,7 +25,7 @@ export default async function glob(
 
   if (!options.cwd) {
     throw new Error(
-      'Second argument (basePath) must be specified for names of resulting files'
+      'Second argument (basePath) must be specified for names of resulting files',
     );
   }
 
@@ -47,9 +48,9 @@ export default async function glob(
     let stat = statCache[fsPath];
     assert(
       stat,
-      `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`
+      `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`,
     );
-    const isSymlink = options.symlinks![fsPath];
+    const isSymlink = options.symlinks[fsPath];
     if (isSymlink || stat.isFile()) {
       if (isSymlink) {
         stat = await lstat(fsPath);

@@ -1,9 +1,9 @@
-import Client from '../client';
 import { isAPIError, ProjectNotFound } from '../errors-ts';
+import type Client from '../client';
 
 export default async function removeProject(
   client: Client,
-  projectNameOrId: string
+  projectNameOrId: string,
 ) {
   try {
     await client.fetch<{}>(`/projects/${encodeURIComponent(projectNameOrId)}`, {

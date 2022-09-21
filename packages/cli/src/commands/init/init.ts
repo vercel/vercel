@@ -3,35 +3,35 @@ import path from 'path';
 import tar from 'tar-fs';
 import chalk from 'chalk';
 
-// @ts-ignore
+// @ts-expect-error
 import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
 import promptBool from '../../util/input/prompt-bool';
 import toHumanPath from '../../util/humanize-path';
-import Client from '../../util/client';
 import info from '../../util/output/info';
 import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
 import { getCommandName } from '../../util/pkg-name';
+import type Client from '../../util/client';
 
-type Options = {
+interface Options {
   '--debug': boolean;
   '--force': boolean;
   '-f': boolean;
-};
+}
 
-type Example = {
+interface Example {
   name: string;
   visible: boolean;
   suggestions: string[];
-};
+}
 
 const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 
 export default async function init(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
 ) {
   const { output } = client;
   const [name, dir] = args;
@@ -43,13 +43,13 @@ export default async function init(
     throw new Error(`Could not fetch example list.`);
   }
 
-  const exampleList = examples.filter(x => x.visible).map(x => x.name);
+  const exampleList = examples.filter((x) => x.visible).map((x) => x.name);
 
   if (!name) {
     const chosen = await chooseFromDropdown(
       client,
       'Select example:',
-      exampleList
+      exampleList,
     );
 
     if (!chosen) {
@@ -64,7 +64,7 @@ export default async function init(
     return extractExample(client, name, dir, force);
   }
 
-  const oldExample = examples.find(x => !x.visible && x.name === name);
+  const oldExample = examples.find((x) => !x.visible && x.name === name);
   if (oldExample) {
     return extractExample(client, name, dir, force, 'v1');
   }
@@ -97,9 +97,9 @@ async function fetchExampleList(client: Client) {
 async function chooseFromDropdown(
   client: Client,
   message: string,
-  exampleList: string[]
+  exampleList: string[],
 ) {
-  const choices = exampleList.map(name => ({
+  const choices = exampleList.map((name) => ({
     name,
     value: name,
     short: name,
@@ -119,7 +119,7 @@ async function extractExample(
   name: string,
   dir: string,
   force?: boolean,
-  ver: string = 'v2'
+  ver = 'v2',
 ) {
   const { output } = client;
   const folder = prepareFolder(process.cwd(), dir || name, force);
@@ -129,7 +129,7 @@ async function extractExample(
 
   return client
     .fetch(url, { json: false })
-    .then(async res => {
+    .then(async (res) => {
       output.stopSpinner();
 
       if (res.status !== 200) {
@@ -145,7 +145,7 @@ async function extractExample(
       });
 
       const successLog = `Initialized "${chalk.bold(
-        name
+        name,
       )}" example in ${chalk.bold(toHumanPath(folder))}.`;
       const folderRel = path.relative(process.cwd(), folder);
       const deployHint =
@@ -153,13 +153,13 @@ async function extractExample(
           ? listItem(`To deploy, run ${getCommandName()}.`)
           : listItem(
               `To deploy, ${cmd(
-                `cd ${folderRel}`
-              )} and run ${getCommandName()}.`
+                `cd ${folderRel}`,
+              )} and run ${getCommandName()}.`,
             );
       output.success(`${successLog}\n${deployHint}`);
       return 0;
     })
-    .catch(e => {
+    .catch((e) => {
       output.stopSpinner();
       throw e;
     });
@@ -175,17 +175,17 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
     if (!fs.lstatSync(dest).isDirectory()) {
       throw new Error(
         `Destination path "${chalk.bold(
-          folder
-        )}" already exists and is not a directory.`
+          folder,
+        )}" already exists and is not a directory.`,
       );
     }
     if (!force && fs.readdirSync(dest).length !== 0) {
       throw new Error(
         `Destination path "${chalk.bold(
-          folder
+          folder,
         )}" already exists and is not an empty directory. You may use ${cmd(
-          '--force'
-        )} or ${cmd('-f')} to override it.`
+          '--force',
+        )} or ${cmd('-f')} to override it.`,
       );
     }
   } else if (dest !== cwd) {
@@ -205,8 +205,8 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
 async function guess(client: Client, exampleList: string[], name: string) {
   const GuessError = new Error(
     `No example found for ${chalk.bold(name)}, run ${getCommandName(
-      `init`
-    )} to see the list of available examples.`
+      `init`,
+    )} to see the list of available examples.`,
   );
 
   if (process.stdout.isTTY !== true) {

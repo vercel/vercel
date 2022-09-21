@@ -1,5 +1,5 @@
 declare module 'jsonlines' {
-  import { Transform } from 'stream';
+  import type { Transform } from 'stream';
 
   function parse(): Transform;
 }

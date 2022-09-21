@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type { ReadableTTY, WritableTTY } from '../../types';
 
-type Options = {
+interface Options {
   abortSequences?: Set<string>;
   defaultValue?: boolean;
   noChar?: string;
@@ -10,7 +10,7 @@ type Options = {
   stdout: WritableTTY;
   trailing?: string;
   yesChar?: string;
-};
+}
 
 export default async function promptBool(label: string, options: Options) {
   const {
@@ -24,7 +24,7 @@ export default async function promptBool(label: string, options: Options) {
     trailing = '',
   } = options;
 
-  return new Promise<boolean>(resolve => {
+  return new Promise<boolean>((resolve) => {
     const isRaw = Boolean(stdin && stdin.isRaw);
 
     if (stdin) {

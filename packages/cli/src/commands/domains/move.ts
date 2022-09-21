@@ -1,9 +1,6 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
-
-import { User, Team } from '../../types';
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import moveOutDomain from '../../util/domains/move-out-domain';
 import isRootDomain from '../../util/is-root-domain';
@@ -14,15 +11,17 @@ import getDomainByName from '../../util/domains/get-domain-by-name';
 import promptBool from '../../util/input/prompt-bool';
 import getTeams from '../../util/teams/get-teams';
 import { getCommandName } from '../../util/pkg-name';
+import type Client from '../../util/client';
+import type { User, Team } from '../../types';
 
-type Options = {
+interface Options {
   '--yes': boolean;
-};
+}
 
 export default async function move(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
 ) {
   const { output } = client;
   const { contextName, user } = await getScope(client);
@@ -30,8 +29,8 @@ export default async function move(
   if (!isRootDomain(domainName)) {
     output.error(
       `Invalid domain name "${domainName}". Run ${getCommandName(
-        `domains --help`
-      )}`
+        `domains --help`,
+      )}`,
     );
     return 1;
   }
@@ -45,8 +44,8 @@ export default async function move(
   if (domain instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
-        domain.meta.domain
-      )} under ${chalk.bold(domain.meta.context)}.`
+        domain.meta.domain,
+      )} under ${chalk.bold(domain.meta.context)}.`,
     );
     return 1;
   }
@@ -57,15 +56,15 @@ export default async function move(
     output.warn(
       `You're not a member of ${param(destination)}. ` +
         `${param(
-          destination
-        )} will have 24 hours to accept your move request before it expires.`
+          destination,
+        )} will have 24 hours to accept your move request before it expires.`,
     );
     if (
       !(await promptBool(
         `Are you sure you want to move ${param(domainName)} to ${param(
-          destination
+          destination,
         )}?`,
-        client
+        client,
       ))
     ) {
       output.log('Canceled');
@@ -78,13 +77,13 @@ export default async function move(
     if (aliases.length > 0) {
       output.warn(
         `This domain's ${chalk.bold(
-          plural('alias', aliases.length, true)
-        )} will be removed. Run ${getCommandName(`alias ls`)} to list them.`
+          plural('alias', aliases.length, true),
+        )} will be removed. Run ${getCommandName(`alias ls`)} to list them.`,
       );
       if (
         !(await promptBool(
           `Are you sure you want to move ${param(domainName)}?`,
-          client
+          client,
         ))
       ) {
         output.log('Canceled');
@@ -99,14 +98,16 @@ export default async function move(
     client,
     context,
     domainName,
-    matchId || destination
+    matchId || destination,
   );
 
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
     const { suffix, pendingAsyncPurchase } = moveTokenResult.meta;
     if (suffix) {
       output.error(
-        `Please remove custom suffix for ${param(domainName)} before moving out`
+        `Please remove custom suffix for ${param(
+          domainName,
+        )} before moving out`,
       );
       return 1;
     }
@@ -114,8 +115,8 @@ export default async function move(
     if (pendingAsyncPurchase) {
       output.error(
         `Cannot remove ${param(
-          domain.name
-        )} because it is still in the process of being purchased.`
+          domain.name,
+        )} because it is still in the process of being purchased.`,
       );
       return 1;
     }
@@ -131,16 +132,16 @@ export default async function move(
   if (moveTokenResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
-        moveTokenResult.meta.domain
-      )} under ${chalk.bold(moveTokenResult.meta.context)}.`
+        moveTokenResult.meta.domain,
+      )} under ${chalk.bold(moveTokenResult.meta.context)}.`,
     );
     return 1;
   }
   if (moveTokenResult instanceof ERRORS.InvalidMoveDestination) {
     output.error(
       `Destination ${chalk.bold(
-        destination
-      )} is invalid. Please supply a valid username, email, team slug, user id, or team id.`
+        destination,
+      )} is invalid. Please supply a valid username, email, team slug, user id, or team id.`,
     );
     return 1;
   }
@@ -151,8 +152,8 @@ export default async function move(
   } else {
     output.success(
       `Sent ${param(destination)} an email to approve the ${param(
-        domainName
-      )} move request.`
+        domainName,
+      )} move request.`,
     );
   }
   return 0;
@@ -181,7 +182,7 @@ async function getArgs(args: string[]) {
 async function findDestinationMatch(
   destination: string,
   user: User,
-  teams: Team[]
+  teams: Team[],
 ) {
   if (user.id === destination || user.username === destination) {
     return user.id;

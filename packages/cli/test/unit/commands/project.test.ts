@@ -3,12 +3,12 @@ import { useUser } from '../../mocks/user';
 import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { client } from '../../mocks/client';
-import { Project } from '../../../src/types';
 import { readOutputStream } from '../../helpers/read-output-stream';
 import {
   pluckIdentifiersFromDeploymentList,
   parseSpacedTableRow,
 } from '../../helpers/parse-table';
+import type { Project } from '../../../src/types';
 
 describe('project', () => {
   describe('list', () => {
@@ -78,7 +78,7 @@ describe('project', () => {
       expect(project).toBeDefined();
 
       expect(client.stderr).toOutput(
-        `Success! Project test-project added (${user.username})`
+        `Success! Project test-project added (${user.username})`,
       );
     });
   });
@@ -95,7 +95,7 @@ describe('project', () => {
       const projectsPromise = projects(client);
 
       await expect(client.stderr).toOutput(
-        `The project test-project will be removed permanently.`
+        `The project test-project will be removed permanently.`,
       );
       client.stdin.write('y\n');
 

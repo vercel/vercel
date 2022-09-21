@@ -1,3 +1,7 @@
+import path from 'path';
+import { runNpmInstall, cloneEnv } from '../src';
+import type { Meta } from '../src/types';
+
 const spawnMock = jest.fn();
 jest.mock('cross-spawn', () => {
   const spawn = (...args: any) => {
@@ -17,10 +21,6 @@ jest.mock('cross-spawn', () => {
 afterEach(() => {
   spawnMock.mockClear();
 });
-
-import path from 'path';
-import { runNpmInstall, cloneEnv } from '../src';
-import type { Meta } from '../src/types';
 
 function getTestSpawnOpts(env: Record<string, string>) {
   return { env: cloneEnv(process.env, env) };
@@ -119,8 +119,8 @@ it('should only invoke `runNpmInstall()` once per `package.json` file (serial)',
   expect(run1).toEqual(true);
   expect(
     (meta.runNpmInstallSet as Set<string>).has(
-      path.join(fixture, 'package.json')
-    )
+      path.join(fixture, 'package.json'),
+    ),
   ).toEqual(true);
 
   const run2 = await runNpmInstall(apiDir, [], undefined, meta);
@@ -155,8 +155,8 @@ it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)
   expect(run3).toEqual(false);
   expect(
     (meta.runNpmInstallSet as Set<string>).has(
-      path.join(fixture, 'package.json')
-    )
+      path.join(fixture, 'package.json'),
+    ),
   ).toEqual(true);
 
   expect(spawnMock.mock.calls.length).toBe(1);

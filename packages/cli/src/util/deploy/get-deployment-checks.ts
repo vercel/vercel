@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 
 type CheckStatus = 'registered' | 'running' | 'completed';
 type CheckConclusion =
@@ -28,10 +28,10 @@ export interface DeploymentChecksResponse {
 
 export async function getDeploymentChecks(
   client: Client,
-  deploymentId: string
+  deploymentId: string,
 ) {
   const checksResponse = await client.fetch<DeploymentChecksResponse>(
-    `/v1/deployments/${encodeURIComponent(deploymentId)}/checks`
+    `/v1/deployments/${encodeURIComponent(deploymentId)}/checks`,
   );
   return checksResponse;
 }

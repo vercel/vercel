@@ -8,7 +8,6 @@ packages/*/test/fixtures
 
 # cli
 packages/cli/@types
-packages/cli/download
 packages/cli/dist
 packages/cli/test/dev/fixtures
 packages/cli/bin

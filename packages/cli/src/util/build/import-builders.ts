@@ -1,24 +1,20 @@
 import { URL } from 'url';
-import plural from 'pluralize';
-import npa from 'npm-package-arg';
-import { satisfies } from 'semver';
 import { dirname, join } from 'path';
+import { satisfies } from 'semver';
+import npa from 'npm-package-arg';
+import plural from 'pluralize';
 import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
-import {
-  BuilderV2,
-  BuilderV3,
-  PackageJson,
-  spawnAsync,
-} from '@vercel/build-utils';
-import * as staticBuilder from './static-builder';
+import { spawnAsync } from '@vercel/build-utils';
 import { VERCEL_DIR } from '../projects/link';
-import { Output } from '../output';
 import readJSONFile from '../read-json-file';
 import { CantParseJSONFile } from '../errors-ts';
 import { errorToString, isErrnoException, isError } from '../is-error';
 import cmd from '../output/cmd';
 import code from '../output/code';
+import * as staticBuilder from './static-builder';
+import type { Output } from '../output';
+import type { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
 
 export interface BuilderWithPkg {
   path: string;
@@ -38,7 +34,7 @@ type ResolveBuildersResult =
 export async function importBuilders(
   builderSpecs: Set<string>,
   cwd: string,
-  output: Output
+  output: Output,
 ): Promise<Map<string, BuilderWithPkg>> {
   const buildersDir = join(cwd, VERCEL_DIR, 'builders');
 
@@ -48,14 +44,14 @@ export async function importBuilders(
     const installResult = await installBuilders(
       buildersDir,
       importResult.buildersToAdd,
-      output
+      output,
     );
 
     importResult = await resolveBuilders(
       buildersDir,
       builderSpecs,
       output,
-      installResult.resolvedSpecs
+      installResult.resolvedSpecs,
     );
 
     if ('buildersToAdd' in importResult) {
@@ -70,7 +66,7 @@ export async function resolveBuilders(
   buildersDir: string,
   builderSpecs: Set<string>,
   output: Output,
-  resolvedSpecs?: Map<string, string>
+  resolvedSpecs?: Map<string, string>,
 ): Promise<ResolveBuildersResult> {
   const builders = new Map<string, BuilderWithPkg>();
   const buildersToAdd = new Set<string>();
@@ -79,7 +75,7 @@ export async function resolveBuilders(
     const resolvedSpec = resolvedSpecs?.get(spec) || spec;
     const parsed = npa(resolvedSpec);
 
-    let { name } = parsed;
+    const { name } = parsed;
     if (!name) {
       // A URL was specified - will need to install it and resolve the
       // proper package name from the written `package.json` file
@@ -125,7 +121,7 @@ export async function resolveBuilders(
 
       if (typeof builderPkg.version !== 'string') {
         throw new Error(
-          `\`package.json\` for "${name}" does not contain a "version" field`
+          `\`package.json\` for "${name}" does not contain a "version" field`,
         );
       }
 
@@ -133,7 +129,7 @@ export async function resolveBuilders(
         // An explicit Builder version was specified but it does
         // not match the version that is currently installed
         output.debug(
-          `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`
+          `Installed version "${name}@${builderPkg.version}" does not match "${parsed.rawSpec}"`,
         );
         buildersToAdd.add(spec);
         continue;
@@ -146,7 +142,7 @@ export async function resolveBuilders(
         // An explicit Builder range was specified but it is not
         // compatible with the version that is currently installed
         output.debug(
-          `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`
+          `Installed version "${name}@${builderPkg.version}" is not compatible with "${parsed.rawSpec}"`,
         );
         buildersToAdd.add(spec);
         continue;
@@ -191,7 +187,7 @@ export async function resolveBuilders(
 async function installBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>,
-  output: Output
+  output: Output,
 ) {
   const resolvedSpecs = new Map<string, string>();
   const buildersPkgPath = join(buildersDir, 'package.json');
@@ -209,8 +205,8 @@ async function installBuilders(
 
   output.log(
     `Installing ${plural('Builder', buildersToAdd.size)}: ${Array.from(
-      buildersToAdd
-    ).join(', ')}`
+      buildersToAdd,
+    ).join(', ')}`,
   );
   try {
     await spawnAsync(
@@ -219,7 +215,7 @@ async function installBuilders(
       {
         cwd: buildersDir,
         stdio: 'pipe',
-      }
+      },
     );
   } catch (err: unknown) {
     if (isError(err)) {
@@ -235,7 +231,7 @@ async function installBuilders(
           const url = new URL(notFound[1]);
           const packageName = decodeURIComponent(url.pathname.slice(1));
           err.message = `The package ${code(
-            packageName
+            packageName,
           )} is not published on the npm registry`;
         }
       }
@@ -265,7 +261,7 @@ async function installBuilders(
   }
   for (const spec of buildersToAdd) {
     for (const [name, version] of Object.entries(
-      buildersPkg.dependencies || {}
+      buildersPkg.dependencies || {},
     )) {
       if (version === spec) {
         output.debug(`Resolved Builder spec "${spec}" to name "${name}"`);

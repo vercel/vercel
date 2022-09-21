@@ -1,5 +1,5 @@
-import { File } from './types';
-import { Lambda } from './lambda';
+import type { File } from './types';
+import type { Lambda } from './lambda';
 
 interface PrerenderOptions {
   expiration: number | false;
@@ -36,30 +36,30 @@ export class Prerender {
       (group <= 0 || !Number.isInteger(group))
     ) {
       throw new Error(
-        'The `group` argument for `Prerender` needs to be a natural number.'
+        'The `group` argument for `Prerender` needs to be a natural number.',
       );
     }
     this.group = group;
 
-    if (bypassToken == null) {
+    if (typeof bypassToken === 'undefined' || bypassToken === null) {
       this.bypassToken = null;
     } else if (typeof bypassToken === 'string') {
       if (bypassToken.length < 32) {
         // Enforce 128 bits of entropy for safety reasons (UUIDv4 size)
         throw new Error(
-          'The `bypassToken` argument for `Prerender` must be 32 characters or more.'
+          'The `bypassToken` argument for `Prerender` must be 32 characters or more.',
         );
       }
       this.bypassToken = bypassToken;
     } else {
       throw new Error(
-        'The `bypassToken` argument for `Prerender` must be a `string`.'
+        'The `bypassToken` argument for `Prerender` must be a `string`.',
       );
     }
 
     if (typeof fallback === 'undefined') {
       throw new Error(
-        'The `fallback` argument for `Prerender` needs to be a `FileBlob`, `FileFsRef`, `FileRef`, or null.'
+        'The `fallback` argument for `Prerender` needs to be a `FileBlob`, `FileFsRef`, `FileRef`, or null.',
       );
     }
     this.fallback = fallback;
@@ -67,12 +67,12 @@ export class Prerender {
     if (allowQuery !== undefined) {
       if (!Array.isArray(allowQuery)) {
         throw new Error(
-          'The `allowQuery` argument for `Prerender` must be Array.'
+          'The `allowQuery` argument for `Prerender` must be Array.',
         );
       }
-      if (!allowQuery.every(q => typeof q === 'string')) {
+      if (!allowQuery.every((q) => typeof q === 'string')) {
         throw new Error(
-          'The `allowQuery` argument for `Prerender` must be Array of strings.'
+          'The `allowQuery` argument for `Prerender` must be Array of strings.',
         );
       }
       this.allowQuery = allowQuery;

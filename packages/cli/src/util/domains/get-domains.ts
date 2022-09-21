@@ -1,10 +1,10 @@
-import { Domain, PaginationOptions } from '../../types';
-import Client from '../client';
+import type { Domain, PaginationOptions } from '../../types';
+import type Client from '../client';
 
-type Response = {
+interface Response {
   domains: Domain[];
   pagination: PaginationOptions;
-};
+}
 
 export default async function getDomains(client: Client, next?: number) {
   let domainUrl = `/v5/domains?limit=20`;

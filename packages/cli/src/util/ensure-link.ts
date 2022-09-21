@@ -1,20 +1,20 @@
-import { Org, Project } from '../types';
-import Client from './client';
 import setupAndLink from './link/setup-and-link';
 import param from './output/param';
 import { getCommandName } from './pkg-name';
 import { getLinkedProject } from './projects/link';
+import type Client from './client';
+import type { Org, Project } from '../types';
 
-type LinkResult = {
+interface LinkResult {
   org: Org;
   project: Project;
-};
+}
 
 export async function ensureLink(
   commandName: string,
   client: Client,
   cwd: string,
-  yes: boolean
+  yes: boolean,
 ): Promise<LinkResult | number> {
   let link = await getLinkedProject(client, cwd);
   if (link.status === 'not_linked') {
@@ -34,8 +34,8 @@ export async function ensureLink(
     if (link.reason === 'HEADLESS') {
       client.output.error(
         `Command ${getCommandName(
-          commandName
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
+          commandName,
+        )} requires confirmation. Use option ${param('--yes')} to confirm.`,
       );
     }
     return link.exitCode;

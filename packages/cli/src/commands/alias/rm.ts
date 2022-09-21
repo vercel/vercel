@@ -1,26 +1,25 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import confirm from '../../util/input/confirm';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
-
-import { Alias } from '../../types';
 import { isValidName } from '../../util/is-valid-name';
 import { getCommandName } from '../../util/pkg-name';
+import type { Alias } from '../../types';
+import type Client from '../../util/client';
 
-type Options = {
+interface Options {
   '--yes': boolean;
-};
+}
 
 export default async function rm(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
 ) {
   const { output } = client;
   const { contextName } = await getScope(client);
@@ -30,8 +29,8 @@ export default async function rm(
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('alias rm <alias>')}`
-      )}`
+        `${getCommandName('alias rm <alias>')}`,
+      )}`,
     );
     return 1;
   }
@@ -51,7 +50,7 @@ export default async function rm(
 
   if (!alias) {
     output.error(
-      `Alias not found by "${aliasOrId}" under ${chalk.bold(contextName)}`
+      `Alias not found by "${aliasOrId}" under ${chalk.bold(contextName)}`,
     );
     output.log(`Run ${getCommandName('alias ls')} to see your aliases.`);
     return 1;
@@ -66,8 +65,8 @@ export default async function rm(
   await removeAliasById(client, alias.uid);
   console.log(
     `${chalk.cyan('> Success!')} Alias ${chalk.bold(
-      alias.alias
-    )} removed ${removeStamp()}`
+      alias.alias,
+    )} removed ${removeStamp()}`,
   );
   return 0;
 }
@@ -88,7 +87,7 @@ async function confirmAliasRemove(client: Client, alias: Alias) {
       align: ['l', 'l', 'r'],
       hsep: ' '.repeat(4),
       stringLength: strlen,
-    }
+    },
   );
 
   client.output.log(`The following alias will be removed permanently`);

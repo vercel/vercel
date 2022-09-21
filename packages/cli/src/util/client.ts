@@ -1,18 +1,22 @@
-import { bold } from 'chalk';
-import inquirer from 'inquirer';
 import { EventEmitter } from 'events';
 import { URLSearchParams } from 'url';
 import { parse as parseUrl } from 'url';
-import { VercelConfig } from '@vercel/client';
-import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
-import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
+import inquirer from 'inquirer';
+import { bold } from 'chalk';
+import retry from 'async-retry';
+import fetch, { Headers } from 'node-fetch';
 import ua from './ua';
-import { Output } from './output/create-output';
 import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
-import { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
+import { sharedPromise } from './promise';
+import { APIError } from './errors-ts';
+import type { SAMLError } from './login/types';
+import type { Output } from './output/create-output';
+import type { BodyInit, RequestInit, Response } from 'node-fetch';
+import type { RetryFunction, Options as RetryOptions } from 'async-retry';
+import type { VercelConfig } from '@vercel/client';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -21,8 +25,6 @@ import type {
   ReadableTTY,
   WritableTTY,
 } from '../types';
-import { sharedPromise } from './promise';
-import { APIError } from './errors-ts';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -46,7 +48,7 @@ export interface ClientOptions extends Stdio {
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
-  return v && typeof v == 'object' && v.constructor === Object;
+  return v && typeof v === 'object' && v.constructor === Object;
 };
 
 export default class Client extends EventEmitter implements Stdio {
@@ -123,21 +125,20 @@ export default class Client extends EventEmitter implements Stdio {
 
     const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
     const requestId = this.requestIdCounter++;
-    return this.output.time(res => {
+    return this.output.time((res) => {
       if (res) {
         return `#${requestId} ← ${res.status} ${
           res.statusText
         }: ${res.headers.get('x-vercel-id')}`;
-      } else {
-        return `#${requestId} → ${opts.method || 'GET'} ${url}`;
       }
+      return `#${requestId} → ${opts.method || 'GET'} ${url}`;
     }, fetch(url, { ...opts, headers, body }));
   }
 
   fetch(url: string, opts: { json: false }): Promise<Response>;
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
-    return this.retry(async bail => {
+    return this.retry(async (bail) => {
       const res = await this._fetch(url, opts);
 
       printIndications(this, res);
@@ -174,7 +175,7 @@ export default class Client extends EventEmitter implements Stdio {
 
   reauthenticate = sharedPromise(async function (
     this: Client,
-    error: SAMLError
+    error: SAMLError,
   ) {
     const result = await reauthenticate(this, error);
 
@@ -183,7 +184,7 @@ export default class Client extends EventEmitter implements Stdio {
         this.output.prettyError(error);
       } else {
         this.output.error(
-          `Failed to re-authenticate for ${bold(error.scope)} scope`
+          `Failed to re-authenticate for ${bold(error.scope)} scope`,
         );
       }
       process.exit(1);

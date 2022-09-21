@@ -1,15 +1,15 @@
 import { URL } from 'url';
-import Client from '../client';
 import { hostname } from 'os';
 import { getTitleName } from '../pkg-name';
-import { LoginResultSuccess } from './types';
+import type Client from '../client';
+import type { LoginResultSuccess } from './types';
 
 export default function verify(
   client: Client,
   verificationToken: string,
   email: string | undefined,
   provider: string,
-  ssoUserId?: string
+  ssoUserId?: string,
 ) {
   const url = new URL('/registration/verify', client.apiUrl);
   url.searchParams.set('token', verificationToken);

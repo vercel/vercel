@@ -1,8 +1,7 @@
 import { join } from 'path';
 import { promises } from 'fs';
-
-import { Framework } from './types';
 import { readConfigFile } from './read-config-file';
+import type { Framework } from './types';
 
 export * from './types';
 
@@ -148,7 +147,7 @@ export const frameworks = [
         const nowRoutesPath = join(
           dirPrefix,
           'public',
-          '__now_routes_g4t5bY.json'
+          '__now_routes_g4t5bY.json',
         );
         const content = await readFile(nowRoutesPath, 'utf8');
         const nowRoutes = JSON.parse(content);
@@ -400,8 +399,9 @@ export const frameworks = [
         const content = await readdir(location, { withFileTypes: true });
 
         // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && content[0].isDirectory()) {
-          return join(base, content[0].name);
+        const file = content[0];
+        if (file?.isDirectory()) {
+          return join(base, file.name);
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
@@ -488,8 +488,9 @@ export const frameworks = [
         const content = await readdir(location, { withFileTypes: true });
 
         // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && content[0].isDirectory()) {
-          return join(base, content[0].name);
+        const file = content[0];
+        if (file?.isDirectory()) {
+          return join(base, file.name);
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
@@ -871,8 +872,9 @@ export const frameworks = [
         const content = await readdir(location, { withFileTypes: true });
 
         // If there is only one file in it that is a dir we'll use it as dist dir
-        if (content.length === 1 && content[0].isDirectory()) {
-          return join(base, content[0].name);
+        const file = content[0];
+        if (file?.isDirectory()) {
+          return join(base, file.name);
         }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
@@ -929,8 +931,11 @@ export const frameworks = [
       try {
         const location = join(dirPrefix, base);
         const content = await readdir(location);
-        const paths = content.filter(item => !item.includes('.'));
-        return join(base, paths[0]);
+        const paths = content.filter((item) => !item.includes('.'));
+        const path = paths[0];
+        if (path) {
+          return join(base, path);
+        }
       } catch (error) {
         console.error(`Error detecting output directory: `, error);
       }
@@ -1535,11 +1540,13 @@ export const frameworks = [
       },
     },
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
-      type HugoConfig = { publishDir?: string };
+      interface HugoConfig {
+        publishDir?: string;
+      }
       const config = await readConfigFile<HugoConfig>(
-        ['config.json', 'config.yaml', 'config.toml'].map(fileName => {
+        ['config.json', 'config.yaml', 'config.toml'].map((fileName) => {
           return join(dirPrefix, fileName);
-        })
+        }),
       );
 
       return (config && config.publishDir) || 'public';
@@ -1579,9 +1586,11 @@ export const frameworks = [
       },
     },
     getOutputDirName: async (dirPrefix: string): Promise<string> => {
-      type JekyllConfig = { destination?: string };
+      interface JekyllConfig {
+        destination?: string;
+      }
       const config = await readConfigFile<JekyllConfig>(
-        join(dirPrefix, '_config.yml')
+        join(dirPrefix, '_config.yml'),
       );
       return (config && config.destination) || '_site';
     },

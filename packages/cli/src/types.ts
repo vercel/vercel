@@ -15,9 +15,7 @@ export type JSONArray = JSONValue[];
 
 export type JSONValue = Primitive | JSONObject | JSONArray;
 
-export interface JSONObject {
-  [key: string]: JSONValue;
-}
+export type JSONObject = Record<string, JSONValue>;
 
 export interface AuthConfig {
   '// Note'?: string;
@@ -40,16 +38,16 @@ export interface GlobalConfig {
   };
 }
 
-type Billing = {
+interface Billing {
   addons: string[];
   cancelation?: number;
   period: { start: number; end: number };
   plan: string;
   platform: string;
   trial: { start: number; end: number };
-};
+}
 
-export type User = {
+export interface User {
   id: string;
   avatar: string;
   createdAt: number;
@@ -58,7 +56,7 @@ export type User = {
   billing: Billing;
   name?: string;
   limited?: boolean;
-};
+}
 
 export interface Team {
   id: string;
@@ -78,7 +76,7 @@ export interface Team {
   };
 }
 
-export type Domain = {
+export interface Domain {
   id: string;
   name: string;
   boughtAt: number;
@@ -95,9 +93,9 @@ export type Domain = {
     username: string;
     email: string;
   };
-};
+}
 
-export type DomainConfig = {
+export interface DomainConfig {
   configuredBy: null | 'CNAME' | 'A' | 'http';
   misconfigured: boolean;
   serviceType: 'zeit.world' | 'external' | 'na';
@@ -105,18 +103,18 @@ export type DomainConfig = {
   cnames: string[] & { traceString?: string };
   aValues: string[] & { traceString?: string };
   dnssecEnabled?: boolean;
-};
+}
 
-export type Cert = {
+export interface Cert {
   uid: string;
   autoRenew: boolean;
   cns: string[];
   created: string;
   creator: string;
   expiration: string;
-};
+}
 
-export type Deployment = {
+export interface Deployment {
   uid: string;
   url: string;
   name: string;
@@ -138,13 +136,11 @@ export type Deployment = {
   ownerId: string;
   projectId: string;
   inspectorUrl: string;
-  meta: {
-    [key: string]: any;
-  };
+  meta: Record<string, any>;
   alias?: string[];
-};
+}
 
-export type Alias = {
+export interface Alias {
   uid: string;
   alias: string;
   createdAt: number;
@@ -158,9 +154,9 @@ export type Alias = {
     email: string;
   };
   deploymentId?: string;
-};
+}
 
-export type DNSRecord = {
+export interface DNSRecord {
   id: string;
   creator: string;
   mxPriority?: number;
@@ -174,9 +170,9 @@ export type DNSRecord = {
   createdAt: number;
   updatedAt: number;
   domain: string;
-};
+}
 
-type SRVRecordData = {
+interface SRVRecordData {
   name: string;
   type: 'SRV';
   srv: {
@@ -185,14 +181,14 @@ type SRVRecordData = {
     target: string;
     weight: number;
   };
-};
+}
 
-type MXRecordData = {
+interface MXRecordData {
   name: string;
   type: 'MX';
   value: string;
   mxPriority: number;
-};
+}
 
 export type DNSRecordData =
   | {

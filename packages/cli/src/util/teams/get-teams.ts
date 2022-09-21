@@ -1,7 +1,7 @@
 import { URLSearchParams } from 'url';
-import Client from '../client';
-import { Team } from '../../types';
 import { APIError, InvalidToken } from '../errors-ts';
+import type Client from '../client';
+import type { Team } from '../../types';
 
 export interface GetTeamsV1Options {
   apiVersion?: 1;
@@ -24,15 +24,15 @@ export interface GetTeamsV2Response {
 
 export default function getTeams(
   client: Client,
-  opts?: GetTeamsV1Options
+  opts?: GetTeamsV1Options,
 ): Promise<Team[]>;
 export default function getTeams(
   client: Client,
-  opts: GetTeamsV2Options
+  opts: GetTeamsV2Options,
 ): Promise<GetTeamsV2Response>;
 export default async function getTeams(
   client: Client,
-  opts: GetTeamsV1Options | GetTeamsV2Options = {}
+  opts: GetTeamsV1Options | GetTeamsV2Options = {},
 ): Promise<Team[] | GetTeamsV2Response> {
   const { apiVersion = 1 } = opts;
 
@@ -54,7 +54,7 @@ export default async function getTeams(
       `/v${apiVersion}/teams${query}`,
       {
         useCurrentTeam: false,
-      }
+      },
     );
     if (apiVersion === 1) {
       return body.teams || [];

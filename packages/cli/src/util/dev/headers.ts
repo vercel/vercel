@@ -1,8 +1,8 @@
 import { Headers } from 'node-fetch';
-import { IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
+import type { IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
 
 export function nodeHeadersToFetchHeaders(
-  nodeHeaders: IncomingHttpHeaders | OutgoingHttpHeaders
+  nodeHeaders: IncomingHttpHeaders | OutgoingHttpHeaders,
 ): Headers {
   const headers = new Headers();
   for (const [name, value] of Object.entries(nodeHeaders)) {

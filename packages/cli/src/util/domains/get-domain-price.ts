@@ -1,16 +1,16 @@
 import { stringify } from 'querystring';
 import { isAPIError, UnsupportedTLD } from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 
-type Response = {
+interface Response {
   price: number;
   period: number;
-};
+}
 
 export default async function getDomainPrice(
   client: Client,
   name: string,
-  type?: 'new' | 'renewal'
+  type?: 'new' | 'renewal',
 ) {
   try {
     const querystr = type ? stringify({ name, type }) : stringify({ name });

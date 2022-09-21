@@ -9,7 +9,7 @@
 export default (arr: string[]): string[] => {
   const len = arr.length;
   const res: string[] = [];
-  const o: { [key: string]: string | number } = {};
+  const o: Record<string, string | number> = {};
 
   let i: number;
 

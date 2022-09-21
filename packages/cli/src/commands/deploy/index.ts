@@ -1,20 +1,20 @@
+import { join, resolve, basename } from 'path';
 import ms from 'ms';
 import fs from 'fs-extra';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import { join, resolve, basename } from 'path';
 import {
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
   VercelConfig,
 } from '@vercel/client';
+import { getPrettyError } from '@vercel/build-utils';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import { readLocalConfig } from '../../util/config/files';
 import getArgs from '../../util/get-args';
 import { handleError } from '../../util/error';
 import Client from '../../util/client';
-import { getPrettyError } from '@vercel/build-utils';
 import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
@@ -62,9 +62,9 @@ import validatePaths, {
 } from '../../util/validate-paths';
 import { getCommandName } from '../../util/pkg-name';
 import { getPreferredPreviewURL } from '../../util/deploy/get-preferred-preview-url';
-import { Output } from '../../util/output';
-import { help } from './args';
+import type { Output } from '../../util/output';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
+import { help } from './args';
 import parseTarget from '../../util/deploy/parse-target';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { createGitMeta } from '../../util/create-git-meta';
@@ -377,14 +377,14 @@ export default async (client: Client): Promise<number> => {
 
   if (
     rootDirectory &&
-    (await validateRootDirectory(
+    !(await validateRootDirectory(
       output,
       path,
       sourcePath,
       project
         ? `To change your Project Settings, go to https://vercel.com/${org?.slug}/${project.name}/settings`
         : ''
-    )) === false
+    ))
   ) {
     return 1;
   }
@@ -462,27 +462,27 @@ export default async (client: Client): Promise<number> => {
   }
 
   // build `meta`
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(argv['--meta'])
-  );
+  const meta = {
+    
+    ...parseMeta(localConfig.meta),
+    ...parseMeta(argv['--meta'])
+  };
 
   const gitMetadata = await createGitMeta(path, output, project);
 
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
-  const deploymentEnv = Object.assign(
-    {},
-    parseEnv(localConfig.env),
-    parseEnv(argv['--env'])
-  );
+  const deploymentEnv = {
+    
+    ...parseEnv(localConfig.env),
+    ...parseEnv(argv['--env'])
+  };
 
   // Merge build env out of  `build.env` from vercel.json, and `--build-env` args
-  const deploymentBuildEnv = Object.assign(
-    {},
-    parseEnv(localConfig.build && localConfig.build.env),
-    parseEnv(argv['--build-env'])
-  );
+  const deploymentBuildEnv = {
+    
+    ...parseEnv(localConfig.build && localConfig.build.env),
+    ...parseEnv(argv['--build-env'])
+  };
 
   // If there's any undefined values, then inherit them from this process
   try {
@@ -500,7 +500,7 @@ export default async (client: Client): Promise<number> => {
     .filter(Boolean);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
 
-  const currentTeam = org?.type === 'team' ? org.id : undefined;
+  const currentTeam = org.type === 'team' ? org.id : undefined;
   const now = new Now({
     client,
     currentTeam,
@@ -559,7 +559,7 @@ export default async (client: Client): Promise<number> => {
     );
 
     if (deployment.code === 'missing_project_settings') {
-      let { projectSettings, framework } = deployment;
+      const { projectSettings, framework } = deployment;
       if (rootDirectory) {
         projectSettings.rootDirectory = rootDirectory;
       }
@@ -897,12 +897,12 @@ const printDeploymentStatus = async (
     }
 
     output.print(
-      prependEmoji(
+      `${prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
           previewUrl
         )} ${deployStamp()}`,
         emoji('success')
-      ) + `\n`
+      )  }\n`
     );
   }
 
@@ -916,7 +916,7 @@ const printDeploymentStatus = async (
   }
 
   const newline = '\n';
-  for (let indication of indications) {
+  for (const indication of indications) {
     const message =
       prependEmoji(chalk.dim(indication.payload), emoji(indication.type)) +
       newline;

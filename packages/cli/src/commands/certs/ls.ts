@@ -1,14 +1,14 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from 'text-table';
-import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
-import { Cert } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import type { Cert } from '../../types';
+import type Client from '../../util/client';
 
 interface Options {
   '--next'?: number;
@@ -17,7 +17,7 @@ interface Options {
 async function ls(
   client: Client,
   opts: Options,
-  args: string[]
+  args: string[],
 ): Promise<number> {
   const { output } = client;
   const { '--next': nextTimestamp } = opts;
@@ -32,21 +32,21 @@ async function ls(
   if (args.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('certs ls')}`
-      )}`
+        `${getCommandName('certs ls')}`,
+      )}`,
     );
     return 1;
   }
 
   // Get the list of certificates
   const { certs, pagination } = await getCerts(client, nextTimestamp).catch(
-    err => err
+    (err) => err,
   );
 
   output.log(
     `${
       certs.length > 0 ? 'Certificates' : 'No certificates'
-    } found under ${chalk.bold(contextName)} ${lsStamp()}`
+    } found under ${chalk.bold(contextName)} ${lsStamp()}`,
   );
 
   if (certs.length > 0) {
@@ -57,8 +57,8 @@ async function ls(
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${getCommandName(
-        `certs ls${flags} --next ${pagination.next}`
-      )}`
+        `certs ls${flags} --next ${pagination.next}`,
+      )}`,
     );
   }
 
@@ -72,7 +72,7 @@ function formatCertsTable(certsList: Cert[]) {
       align: ['l', 'l', 'r', 'c', 'r'],
       hsep: ' '.repeat(2),
       stringLength: strlen,
-    }
+    },
   ).replace(/^(.*)/gm, '  $1')}\n`;
 }
 
@@ -90,7 +90,7 @@ function formatCertsTableBody(certsList: Cert[]) {
   const now = new Date();
   return certsList.reduce<string[][]>(
     (result, cert) => result.concat(formatCert(now, cert)),
-    []
+    [],
   );
 }
 
@@ -98,7 +98,7 @@ function formatCert(time: Date, cert: Cert) {
   return cert.cns.map((cn, idx) =>
     idx === 0
       ? formatCertFirstCn(time, cert, cn, cert.cns.length > 1)
-      : formatCertNonFirstCn(cn, cert.cns.length > 1)
+      : formatCertNonFirstCn(cn, cert.cns.length > 1),
   );
 }
 
@@ -114,7 +114,7 @@ function formatCertFirstCn(
   time: Date,
   cert: Cert,
   cn: string,
-  multiple: boolean
+  multiple: boolean,
 ): string[] {
   return [
     cert.uid,

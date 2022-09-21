@@ -1,11 +1,11 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
+import type Client from '../../util/client';
 
 const help = () => {
   console.log(`
@@ -15,17 +15,17 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}        Login token
     -p ${chalk.bold.underline('NAME')}, --project=${chalk.bold.underline(
-    'NAME'
+    'NAME',
   )}        Project name
     -y, --yes                      Skip questions when setting up new project using default scope and settings
 
@@ -36,7 +36,7 @@ const help = () => {
       ${chalk.cyan(`$ ${getPkgName()} link`)}
 
   ${chalk.gray(
-    '–'
+    '–',
   )} Link current directory with default options and skip questions
 
       ${chalk.cyan(`$ ${getPkgName()} link --yes`)}
@@ -82,8 +82,8 @@ export default async function main(client: Client) {
     if (link.reason === 'HEADLESS') {
       client.output.error(
         `Command ${getCommandName(
-          'link'
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
+          'link',
+        )} requires confirmation. Use option ${param('--yes')} to confirm.`,
       );
     }
     return link.exitCode;
@@ -93,8 +93,7 @@ export default async function main(client: Client) {
   } else if (link.status === 'linked') {
     // Successfully linked
     return 0;
-  } else {
-    const err: never = link;
-    throw new Error('Unknown link status: ' + err);
   }
+  const err: never = link;
+  throw new Error(`Unknown link status: ${err}`);
 }

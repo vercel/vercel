@@ -1,12 +1,12 @@
 import { URL } from 'url';
-import Client from '../client';
 import doOauthLogin from './oauth';
+import type Client from '../client';
 
 export default function doSamlLogin(
   client: Client,
   teamIdOrSlug: string,
   outOfBand?: boolean,
-  ssoUserId?: string
+  ssoUserId?: string,
 ) {
   const url = new URL('/auth/sso', client.apiUrl);
   url.searchParams.set('teamId', teamIdOrSlug);

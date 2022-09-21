@@ -1,14 +1,14 @@
-import fs from 'fs-extra';
 import { resolve } from 'path';
+import fs from 'fs-extra';
 import { getVercelIgnore } from '@vercel/client';
 import uniqueStrings from './unique-strings';
-import { Output } from './output/create-output';
+import type { Output } from './output/create-output';
 
 type NullableString = string | null;
 
 function flatten(
   arr: NullableString[] | NullableString[][],
-  res: NullableString[] = []
+  res: NullableString[] = [],
 ): NullableString[] {
   for (const cur of arr) {
     if (Array.isArray(cur)) {
@@ -29,7 +29,7 @@ function flatten(
  */
 
 const asAbsolute = function (path: string, parent: string) {
-  if (path[0] === '/') {
+  if (path.startsWith('/')) {
     return path;
   }
 
@@ -55,7 +55,7 @@ interface StaticFilesOptions {
 
 export async function staticFiles(
   path: string,
-  { output, src }: StaticFilesOptions
+  { output, src }: StaticFilesOptions,
 ): Promise<string[]> {
   const { debug, time } = output;
   let files: string[] = [];
@@ -99,7 +99,7 @@ export async function staticFiles(
     explode([search], {
       accepts,
       output,
-    })
+    }),
   );
 
   // Get files
@@ -126,7 +126,7 @@ interface ExplodeOptions {
  */
 async function explode(
   paths: string[],
-  { accepts, output }: ExplodeOptions
+  { accepts, output }: ExplodeOptions,
 ): Promise<string[]> {
   const { debug } = output;
   const list = async (file: string): Promise<string | null> => {
@@ -154,8 +154,8 @@ async function explode(
 
     if (s.isDirectory()) {
       const all = await fs.readdir(file);
-      /* eslint-disable no-use-before-define */
-      const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
+
+      const recursive = many(all.map((subdir) => asAbsolute(subdir, file)));
       return recursive as any as Promise<string | null>;
       /* eslint-enable no-use-before-define */
     }
@@ -167,7 +167,7 @@ async function explode(
     return path;
   };
 
-  const many = (all: string[]) => Promise.all(all.map(file => list(file)));
+  const many = (all: string[]) => Promise.all(all.map((file) => list(file)));
   const arrayOfArrays = await many(paths);
   return flatten(arrayOfArrays).filter(notNull);
 }

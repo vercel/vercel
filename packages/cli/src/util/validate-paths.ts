@@ -1,11 +1,11 @@
 import { lstat as lstatRaw } from 'fs';
 import { promisify } from 'util';
-import { Output } from './output';
-import chalk from 'chalk';
 import { homedir } from 'os';
+import chalk from 'chalk';
 import confirm from './input/confirm';
 import toHumanPath from './humanize-path';
-import Client from './client';
+import type { Output } from './output';
+import type Client from './client';
 
 const stat = promisify(lstatRaw);
 
@@ -16,7 +16,7 @@ export async function validateRootDirectory(
   output: Output,
   cwd: string,
   path: string,
-  errorSuffix: string
+  errorSuffix: string,
 ) {
   const pathStat = await stat(path).catch(() => null);
   const suffix = errorSuffix ? ` ${errorSuffix}` : '';
@@ -24,8 +24,8 @@ export async function validateRootDirectory(
   if (!pathStat) {
     output.error(
       `The provided path ${chalk.cyan(
-        `“${toHumanPath(path)}”`
-      )} does not exist.${suffix}`
+        `“${toHumanPath(path)}”`,
+      )} does not exist.${suffix}`,
     );
     return false;
   }
@@ -33,8 +33,8 @@ export async function validateRootDirectory(
   if (!pathStat.isDirectory()) {
     output.error(
       `The provided path ${chalk.cyan(
-        `“${toHumanPath(path)}”`
-      )} is a file, but expected a directory.${suffix}`
+        `“${toHumanPath(path)}”`,
+      )} is a file, but expected a directory.${suffix}`,
     );
     return false;
   }
@@ -42,8 +42,8 @@ export async function validateRootDirectory(
   if (!path.startsWith(cwd)) {
     output.error(
       `The provided path ${chalk.cyan(
-        `“${toHumanPath(path)}”`
-      )} is outside of the project.${suffix}`
+        `“${toHumanPath(path)}”`,
+      )} is outside of the project.${suffix}`,
     );
     return false;
   }
@@ -53,7 +53,7 @@ export async function validateRootDirectory(
 
 export default async function validatePaths(
   client: Client,
-  paths: string[]
+  paths: string[],
 ): Promise<{ valid: true; path: string } | { valid: false; exitCode: number }> {
   const { output } = client;
 
@@ -86,7 +86,7 @@ export default async function validatePaths(
     const shouldDeployHomeDirectory = await confirm(
       client,
       `You are deploying your home directory. Do you want to continue?`,
-      false
+      false,
     );
 
     if (!shouldDeployHomeDirectory) {

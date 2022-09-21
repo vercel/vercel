@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 
 interface InviteResponse {
   uid: string;
@@ -10,14 +10,14 @@ interface InviteResponse {
 export default async function inviteUserToTeam(
   client: Client,
   teamId: string,
-  email: string
+  email: string,
 ) {
   const body = await client.fetch<InviteResponse>(
     `/teams/${encodeURIComponent(teamId)}/members`,
     {
       method: 'POST',
       body: { email },
-    }
+    },
   );
   return body;
 }

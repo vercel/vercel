@@ -6,8 +6,8 @@ import getPrefixedFlags from '../../util/get-prefixed-flags';
 import { getPkgName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
-import Client from '../../util/client';
 import getArgs from '../../util/get-args';
+import type Client from '../../util/client';
 
 export default async function list(client: Client): Promise<number> {
   const { config, output } = client;
@@ -65,7 +65,7 @@ export default async function list(client: Client): Promise<number> {
 
   // Bring the current Team to the beginning of the list
   if (!accountIsCurrent) {
-    const index = teamList.findIndex(choice => choice.id === currentTeam);
+    const index = teamList.findIndex((choice) => choice.id === currentTeam);
     const choice = teamList.splice(index, 1)[0];
     teamList.unshift(choice);
   }
@@ -76,11 +76,11 @@ export default async function list(client: Client): Promise<number> {
 
   table(
     ['', 'id', 'email / name'],
-    teamList.map(team => [team.current, team.value, team.name]),
-    [1, 5]
+    teamList.map((team) => [team.current, team.value, team.name]),
+    [1, 5],
   );
 
-  if (pagination?.count === 20) {
+  if (pagination.count === 20) {
     const prefixedArgs = getPrefixedFlags(argv);
     const flags = getCommandFlags(prefixedArgs, ['_', '--next', '-N', '-d']);
     const nextCmd = `${getPkgName()} teams ls${flags} --next ${

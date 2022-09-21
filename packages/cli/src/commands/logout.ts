@@ -3,10 +3,10 @@ import logo from '../util/output/logo';
 import { handleError } from '../util/error';
 import { writeToConfigFile, writeToAuthConfigFile } from '../util/config/files';
 import getArgs from '../util/get-args';
-import Client from '../util/client';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import { isAPIError } from '../util/errors-ts';
 import { errorToString } from '../util/is-error';
+import type Client from '../util/client';
 
 const help = () => {
   console.log(`
@@ -16,10 +16,10 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
 
   ${chalk.dim('Examples:')}
@@ -52,7 +52,7 @@ export default async function main(client: Client): Promise<number> {
 
   if (!authConfig.token) {
     output.note(
-      `Not currently logged in, so ${getCommandName('logout')} did nothing`
+      `Not currently logged in, so ${getCommandName('logout')} did nothing`,
     );
     return 0;
   }
@@ -70,7 +70,7 @@ export default async function main(client: Client): Promise<number> {
       if (err.status === 403) {
         output.debug('Token is invalid so it cannot be revoked');
       } else if (err.status !== 200) {
-        output.debug(err?.message ?? '');
+        output.debug(err.message ?? '');
         exitCode = 1;
       }
     }

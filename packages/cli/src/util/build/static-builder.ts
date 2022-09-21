@@ -28,7 +28,7 @@ export const build: BuildV2 = async ({ entrypoint, files, config }) => {
     }
 
     if (outputDirectory) {
-      const outputMatch = outputDirectory + '/';
+      const outputMatch = `${outputDirectory}/`;
       if (filename.startsWith(outputMatch)) {
         // static output files are moved to the root directory
         filename = filename.slice(outputMatch.length);
@@ -41,7 +41,7 @@ export const build: BuildV2 = async ({ entrypoint, files, config }) => {
   return { output };
 };
 
-export const shouldServe: ShouldServe = _opts => {
+export const shouldServe: ShouldServe = (_opts) => {
   const opts = { ..._opts };
   const {
     config: { zeroConfig, outputDirectory },

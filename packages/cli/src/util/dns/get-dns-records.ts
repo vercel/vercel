@@ -1,33 +1,33 @@
-import { DNSRecord } from '../../types';
-import { DomainNotFound } from '../errors-ts';
-import { Output } from '../output';
-import Client from '../client';
-import getDomainDNSRecords from './get-domain-dns-records';
-import getDomains from '../domains/get-domains';
 import chalk from 'chalk';
+import { DomainNotFound } from '../errors-ts';
+import getDomains from '../domains/get-domains';
+import getDomainDNSRecords from './get-domain-dns-records';
+import type { DNSRecord } from '../../types';
+import type { Output } from '../output';
+import type Client from '../client';
 
-export type DomainRecordsItem = {
+export interface DomainRecordsItem {
   domainName: string;
   records: DNSRecord[];
-};
+}
 
 export default async function getDNSRecords(
   output: Output,
   client: Client,
   contextName: string,
-  next?: number
+  next?: number,
 ) {
   const { domainNames, pagination } = await getDomainNames(
     client,
     contextName,
-    next
+    next,
   );
   const domainsRecords = await Promise.all(
-    domainNames.map(createGetDomainRecords(output, client))
+    domainNames.map(createGetDomainRecords(output, client)),
   );
-  const onlyRecords = domainsRecords.map(item =>
-    item instanceof DomainNotFound ? [] : item
-  ) as DNSRecord[][];
+  const onlyRecords = domainsRecords.map((item) =>
+    item instanceof DomainNotFound ? [] : item,
+  );
   return {
     records: onlyRecords.reduce(getAddDomainName(domainNames), []),
     pagination,
@@ -57,9 +57,9 @@ function getAddDomainName(domainNames: string[]) {
 async function getDomainNames(
   client: Client,
   contextName: string,
-  next?: number
+  next?: number,
 ) {
   client.output.spinner(`Fetching domains under ${chalk.bold(contextName)}`);
   const { domains, pagination } = await getDomains(client, next);
-  return { domainNames: domains.map(domain => domain.name), pagination };
+  return { domainNames: domains.map((domain) => domain.name), pagination };
 }

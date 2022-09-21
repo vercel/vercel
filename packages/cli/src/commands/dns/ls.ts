@@ -1,26 +1,25 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import { DomainNotFound } from '../../util/errors-ts';
-import { DNSRecord } from '../../types';
-import Client from '../../util/client';
 import formatTable from '../../util/format-table';
-import getDNSRecords, {
-  DomainRecordsItem,
-} from '../../util/dns/get-dns-records';
+import getDNSRecords from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import type { DomainRecordsItem } from '../../util/dns/get-dns-records';
+import type Client from '../../util/client';
+import type { DNSRecord } from '../../types';
 
-type Options = {
+interface Options {
   '--next'?: number;
-};
+}
 
 export default async function ls(
   client: Client,
   opts: Options,
-  args: string[]
+  args: string[],
 ) {
   const { output } = client;
   const { '--next': nextTimestamp } = opts;
@@ -32,8 +31,8 @@ export default async function ls(
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('dns ls [domain]')}`
-      )}`
+        `${getCommandName('dns ls [domain]')}`,
+      )}`,
     );
     return 1;
   }
@@ -49,13 +48,13 @@ export default async function ls(
       client,
       domainName,
       nextTimestamp,
-      4
+      4,
     );
     if (data instanceof DomainNotFound) {
       output.error(
         `The domain ${domainName} can't be found under ${chalk.bold(
-          contextName
-        )} ${chalk.gray(lsStamp())}`
+          contextName,
+        )} ${chalk.gray(lsStamp())}`,
       );
       return 1;
     }
@@ -65,7 +64,7 @@ export default async function ls(
     output.log(
       `${
         records.length > 0 ? 'Records' : 'No records'
-      } found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
+      } found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`,
     );
     console.log(getDNSRecordsTable([{ domainName, records }]));
 
@@ -73,8 +72,8 @@ export default async function ls(
       const flags = getCommandFlags(opts, ['_', '--next']);
       output.log(
         `To display the next page run ${getCommandName(
-          `dns ls ${domainName}${flags} --next ${pagination.next}`
-        )}`
+          `dns ls ${domainName}${flags} --next ${pagination.next}`,
+        )}`,
       );
     }
 
@@ -85,21 +84,21 @@ export default async function ls(
     output,
     client,
     contextName,
-    nextTimestamp
+    nextTimestamp,
   );
   const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
   output.log(
     `${nRecords > 0 ? 'Records' : 'No records'} found under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(lsStamp())}`
+      contextName,
+    )} ${chalk.gray(lsStamp())}`,
   );
   console.log(getDNSRecordsTable(dnsRecords));
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${getCommandName(
-        `dns ls${flags} --next ${pagination.next}`
-      )}`
+        `dns ls${flags} --next ${pagination.next}`,
+      )}`,
     );
   }
   return 0;
@@ -112,14 +111,14 @@ function getDNSRecordsTable(dnsRecords: DomainRecordsItem[]) {
     dnsRecords.map(({ domainName, records }) => ({
       name: chalk.bold(domainName),
       rows: records.map(getDNSRecordRow),
-    }))
+    })),
   );
 }
 
 function getDNSRecordRow(record: DNSRecord) {
   const isSystemRecord = record.creator === 'system';
   const createdAt = `${ms(
-    Date.now() - new Date(Number(record.createdAt)).getTime()
+    Date.now() - new Date(Number(record.createdAt)).getTime(),
   )} ago`;
   const priority = record.mxPriority || record.priority || null;
   return [

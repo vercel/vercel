@@ -11,7 +11,7 @@ describe('parseTarget', () => {
   });
 
   it('defaults to `undefined`', () => {
-    let result = parseTarget(output);
+    const result = parseTarget(output);
     expect(result).toEqual(undefined);
   });
 
@@ -19,37 +19,37 @@ describe('parseTarget', () => {
     const result = parseTarget(output, 'not-a-real-environment');
     expect(result).toEqual(1);
 
-    const errorMock = (output.error as jest.Mock<any, any>).mock;
+    const errorMock = (output.error as jest.Mock).mock;
     expect(errorMock.calls[0][0]).toMatch(
-      /not-a-real-environment.+is not valid/g
+      /not-a-real-environment.+is not valid/g,
     );
   });
 
   it('parses "production" target', () => {
-    let result = parseTarget(output, 'production');
+    const result = parseTarget(output, 'production');
     expect(result).toEqual('production');
     expect(output.warn).toHaveBeenCalledWith(
-      'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)'
+      'We recommend using the much shorter `--prod` option instead of `--target production` (deprecated)',
     );
   });
 
   it('parses "staging" target', () => {
-    let result = parseTarget(output, 'staging');
+    const result = parseTarget(output, 'staging');
     expect(result).toEqual('staging');
   });
 
   it('prefers target over production argument', () => {
-    let result = parseTarget(output, 'staging', true);
+    const result = parseTarget(output, 'staging', true);
     expect(result).toEqual('staging');
   });
 
   it('parses production argument when `true`', () => {
-    let result = parseTarget(output, undefined, true);
+    const result = parseTarget(output, undefined, true);
     expect(result).toEqual('production');
   });
 
   it('parses production argument when `false`', () => {
-    let result = parseTarget(output, undefined, false);
+    const result = parseTarget(output, undefined, false);
     expect(result).toEqual(undefined);
   });
 });

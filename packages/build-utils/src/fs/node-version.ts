@@ -1,7 +1,7 @@
 import { intersects, validRange } from 'semver';
-import { NodeVersion } from '../types';
 import { NowBuildError } from '../errors';
 import debug from '../debug';
+import type { NodeVersion } from '../types';
 
 const allOptions = [
   { major: 16, range: '16.x', runtime: 'nodejs16.x' },
@@ -43,14 +43,14 @@ export function getDiscontinuedNodeVersions(): NodeVersion[] {
 
 export async function getSupportedNodeVersion(
   engineRange: string | undefined,
-  isAuto = false
+  isAuto = false,
 ): Promise<NodeVersion> {
   let selection: NodeVersion = getLatestNodeVersion();
 
   if (engineRange) {
     const found =
       validRange(engineRange) &&
-      allOptions.some(o => {
+      allOptions.some((o) => {
         // the array is already in order so return the first
         // match which will be the newest version of node
         selection = o;
@@ -61,7 +61,7 @@ export async function getSupportedNodeVersion(
         code: 'BUILD_UTILS_NODE_VERSION_INVALID',
         link: 'http://vercel.link/node-version',
         message: `Found invalid Node.js Version: "${engineRange}". ${getHint(
-          isAuto
+          isAuto,
         )}`,
       });
     }
@@ -84,8 +84,8 @@ export async function getSupportedNodeVersion(
       `Error: Node.js version ${
         selection.range
       } has reached End-of-Life. Deployments created on or after ${d} will fail to build. ${getHint(
-        isAuto
-      )}`
+        isAuto,
+      )}`,
     );
   }
 

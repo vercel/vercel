@@ -9,7 +9,7 @@ export function useTeams(
   } = {
     failMissingToken: false,
     failNoAccess: false,
-  }
+  },
 ) {
   const id = teamId || chance().guid();
   const teams = [
@@ -23,7 +23,7 @@ export function useTeams(
     },
   ];
 
-  for (let team of teams) {
+  for (const team of teams) {
     client.scenario.get(`/teams/${team.id}`, (_req, res) => {
       if (options.failMissingToken) {
         res.statusCode = 403;

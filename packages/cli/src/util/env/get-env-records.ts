@@ -1,7 +1,7 @@
-import { Output } from '../output';
-import Client from '../client';
-import { ProjectEnvVariable, ProjectEnvTarget } from '../../types';
 import { URLSearchParams } from 'url';
+import type { Output } from '../output';
+import type Client from '../client';
+import type { ProjectEnvVariable, ProjectEnvTarget } from '../../types';
 
 /** The CLI command that was used that needs the environment variables. */
 export type EnvRecordsSource =
@@ -25,10 +25,10 @@ export default async function getEnvRecords(
     target?: ProjectEnvTarget | string;
     gitBranch?: string;
     decrypt?: boolean;
-  } = {}
+  } = {},
 ) {
   output.debug(
-    `Fetching Environment Variables of project ${projectId} and target ${target}`
+    `Fetching Environment Variables of project ${projectId} and target ${target}`,
   );
   const query = new URLSearchParams();
 

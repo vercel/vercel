@@ -1,7 +1,7 @@
-import Client from '../client';
+import type Client from '../client';
 
-type Response = {
-  deployments: Array<{
+interface Response {
+  deployments: {
     uid: string;
     name: string;
     url: string;
@@ -9,18 +9,16 @@ type Response = {
     state: 'INITIALIZING' | 'FROZEN' | 'READY' | 'ERROR';
     creator: { uid: string };
     instanceCount: number;
-    scale: {
-      [key: string]: number;
-    };
-  }>;
-};
+    scale: Record<string, number>;
+  }[];
+}
 
 export default async function fetchDeploymentsByAppName(
   client: Client,
-  appName: string
+  appName: string,
 ) {
   const { deployments } = await client.fetch<Response>(
-    `/v3/now/deployments?app=${encodeURIComponent(appName)}`
+    `/v3/now/deployments?app=${encodeURIComponent(appName)}`,
   );
   return deployments;
 }

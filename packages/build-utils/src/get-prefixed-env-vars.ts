@@ -1,4 +1,4 @@
-type Envs = { [key: string]: string | undefined };
+type Envs = Record<string, string | undefined>;
 
 /**
  * Get the framework-specific prefixed System Environment Variables.
@@ -17,8 +17,8 @@ export function getPrefixedEnvVars({
   const newEnvs: Envs = {};
   if (envPrefix && envs.VERCEL_URL) {
     Object.keys(envs)
-      .filter(key => key.startsWith(vercelSystemEnvPrefix))
-      .forEach(key => {
+      .filter((key) => key.startsWith(vercelSystemEnvPrefix))
+      .forEach((key) => {
         const newKey = `${envPrefix}${key}`;
         if (!(newKey in envs)) {
           newEnvs[newKey] = envs[key];

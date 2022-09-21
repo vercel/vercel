@@ -1,10 +1,10 @@
 import { URLSearchParams } from 'url';
-import { Alias } from '../../types';
-import Client from '../client';
+import type { Alias } from '../../types';
+import type Client from '../client';
 
-type Response = {
+interface Response {
   deployments: DeploymentPartial[];
-};
+}
 export interface DeploymentPartial {
   uid: string;
   name: string;
@@ -33,7 +33,7 @@ export default async function getDeploymentsByProjectId(
   client: Client,
   projectId: string,
   options: Options = { from: null, limit: 100, continue: false },
-  total: number = 0
+  total = 0,
 ): Promise<DeploymentPartial[]> {
   const limit = options.limit || 100;
 
@@ -46,7 +46,7 @@ export default async function getDeploymentsByProjectId(
   }
 
   const { deployments } = await client.fetch<Response>(
-    `/v4/now/deployments?${query}`
+    `/v4/now/deployments?${query}`,
   );
   total += deployments.length;
 
@@ -56,14 +56,14 @@ export default async function getDeploymentsByProjectId(
 
   if (options.continue && deployments.length === limit) {
     const nextFrom = deployments[deployments.length - 1].created;
-    const nextOptions = Object.assign({}, options, { from: nextFrom });
+    const nextOptions = { ...options, from: nextFrom };
     deployments.push(
       ...(await getDeploymentsByProjectId(
         client,
         projectId,
         nextOptions,
-        total
-      ))
+        total,
+      )),
     );
   }
 

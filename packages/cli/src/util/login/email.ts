@@ -2,17 +2,17 @@ import ms from 'ms';
 import sleep from '../sleep';
 import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';
-import verify from './verify';
-import executeLogin from './login';
-import Client from '../client';
-import { LoginResult } from './types';
 import { isAPIError } from '../errors-ts';
 import { errorToString } from '../is-error';
+import verify from './verify';
+import executeLogin from './login';
+import type Client from '../client';
+import type { LoginResult } from './types';
 
 export default async function doEmailLogin(
   client: Client,
   email: string,
-  ssoUserId?: string
+  ssoUserId?: string,
 ): Promise<LoginResult> {
   let securityCode;
   let verificationToken;
@@ -34,10 +34,10 @@ export default async function doEmailLogin(
 
   output.print(
     `We sent an email to ${highlight(
-      email
+      email,
     )}. Please follow the steps provided inside it and make sure the security code matches ${highlight(
-      securityCode
-    )}.\n`
+      securityCode,
+    )}.\n`,
   );
 
   output.spinner('Waiting for your confirmation');
@@ -51,7 +51,7 @@ export default async function doEmailLogin(
         verificationToken,
         email,
         'Email',
-        ssoUserId
+        ssoUserId,
       );
     } catch (err: unknown) {
       if (!isAPIError(err) || err.serverMessage !== 'Confirmation incomplete') {

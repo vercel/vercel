@@ -1,6 +1,6 @@
-import { Output } from '../output';
-import Client from '../client';
-import {
+import type { Output } from '../output';
+import type Client from '../client';
+import type {
   ProjectEnvTarget,
   ProjectEnvVariable,
   ProjectEnvType,
@@ -14,10 +14,10 @@ export default async function addEnvRecord(
   key: string,
   value: string,
   targets: ProjectEnvTarget[],
-  gitBranch: string
+  gitBranch: string,
 ): Promise<void> {
   output.debug(
-    `Adding ${type} Environment Variable ${key} to ${targets.length} targets`
+    `Adding ${type} Environment Variable ${key} to ${targets.length} targets`,
   );
   const body: Omit<ProjectEnvVariable, 'id'> = {
     type,

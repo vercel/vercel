@@ -1,21 +1,20 @@
 import path from 'path';
 import chalk from 'chalk';
-import { PackageJson } from '@vercel/build-utils';
-
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import Client from '../../util/client';
 import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
-import dev from './dev';
 import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
 import { getPkgName, getCommandName } from '../../util/pkg-name';
 import { CantParseJSONFile } from '../../util/errors-ts';
 import { isErrnoException } from '../../util/is-error';
+import dev from './dev';
+import type Client from '../../util/client';
+import type { PackageJson } from '@vercel/build-utils';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -42,7 +41,7 @@ const help = () => {
       ${chalk.cyan(`$ ${getPkgName()} dev --listen 8080`)}
 
   ${chalk.gray(
-    '–'
+    '–',
   )} Make the \`vercel dev\` server bind to localhost on port 5000
 
       ${chalk.cyan(`$ ${getPkgName()} dev --listen 127.0.0.1:5000`)}
@@ -53,18 +52,17 @@ export default async function main(client: Client) {
   if (process.env.__VERCEL_DEV_RUNNING) {
     client.output.error(
       `${cmd(
-        `${getPkgName()} dev`
+        `${getPkgName()} dev`,
       )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
-        'dev'
-      )} script in ${cmd('package.json')}`
+        'dev',
+      )} script in ${cmd('package.json')}`,
     );
     client.output.error(
-      `Learn More: https://vercel.link/recursive-invocation-of-commands`
+      `Learn More: https://vercel.link/recursive-invocation-of-commands`,
     );
     return 1;
-  } else {
-    process.env.__VERCEL_DEV_RUNNING = '1';
   }
+  process.env.__VERCEL_DEV_RUNNING = '1';
 
   let argv;
   let args;
@@ -125,13 +123,13 @@ export default async function main(client: Client) {
     if (/\b(now|vercel)\b\W+\bdev\b/.test(pkg?.scripts?.dev || '')) {
       client.output.error(
         `${cmd(
-          `${getPkgName()} dev`
+          `${getPkgName()} dev`,
         )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
-          'dev'
-        )} script in ${cmd('package.json')}`
+          'dev',
+        )} script in ${cmd('package.json')}`,
       );
       client.output.error(
-        `Learn More: https://vercel.link/recursive-invocation-of-commands`
+        `Learn More: https://vercel.link/recursive-invocation-of-commands`,
       );
       return 1;
     }
@@ -153,8 +151,8 @@ export default async function main(client: Client) {
         const hostname = matches[1];
         output.error(
           `The hostname ${highlight(
-            hostname
-          )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
+            hostname,
+          )} could not be resolved. Please verify your internet connectivity and DNS configuration.`,
         );
       }
       if (typeof err.stack === 'string') {

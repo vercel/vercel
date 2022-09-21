@@ -1,12 +1,13 @@
-import generateCertForDeploy from './generate-cert-for-deploy';
 import * as ERRORS_TS from '../errors-ts';
 import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
 import mapCertError from '../certs/map-cert-error';
-import { Org } from '../../types';
-import Now, { CreateOptions } from '..';
-import Client from '../client';
-import { ArchiveFormat, DeploymentError } from '@vercel/client';
+import generateCertForDeploy from './generate-cert-for-deploy';
+import type { Org } from '../../types';
+import type { CreateOptions } from '..';
+import type Now from '..';
+import type Client from '../client';
+import type { ArchiveFormat, DeploymentError } from '@vercel/client';
 
 export default async function createDeploy(
   client: Client,
@@ -17,7 +18,7 @@ export default async function createDeploy(
   org: Org,
   isSettingUpProject: boolean,
   cwd?: string,
-  archive?: ArchiveFormat
+  archive?: ArchiveFormat,
 ): Promise<any | DeploymentError> {
   try {
     return await now.create(
@@ -26,7 +27,7 @@ export default async function createDeploy(
       org,
       isSettingUpProject,
       archive,
-      cwd
+      cwd,
     );
   } catch (err: unknown) {
     if (ERRORS_TS.isAPIError(err)) {
@@ -73,7 +74,7 @@ export default async function createDeploy(
           err.message,
           err.keyword,
           err.dataPath,
-          err.params
+          err.params,
         );
       }
 
@@ -98,7 +99,7 @@ export default async function createDeploy(
         const result = await generateCertForDeploy(
           client,
           contextName,
-          err.value
+          err.value,
         );
 
         if (result instanceof NowError) {
@@ -112,7 +113,7 @@ export default async function createDeploy(
           paths,
           createArgs,
           org,
-          isSettingUpProject
+          isSettingUpProject,
         );
       }
 

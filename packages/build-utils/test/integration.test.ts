@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import {
   testDeployment,
-  // @ts-ignore
+  // @ts-expect-error
 } from '../../../test/lib/deployment/test-deployment';
 
 jest.setTimeout(4 * 60 * 1000);
@@ -25,16 +25,14 @@ const skipFixtures: string[] = [
   '42-npm-workspace-with-nx',
 ];
 
-// eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
   if (skipFixtures.includes(fixture)) {
-    continue; // eslint-disable-line no-continue
+    continue;
   }
 
-  // eslint-disable-next-line no-loop-func
   it(`Should build "${fixture}"`, async () => {
     await expect(
-      testDeployment(path.join(fixturesPath, fixture))
+      testDeployment(path.join(fixturesPath, fixture)),
     ).resolves.toBeDefined();
   });
 }
@@ -43,21 +41,18 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
 
 const buildersToTestWith = ['node'];
 
-// eslint-disable-next-line no-restricted-syntax
 for (const builder of buildersToTestWith) {
   const fixturesPath2 = path.resolve(
     __dirname,
-    `../../${builder}/test/fixtures`
+    `../../${builder}/test/fixtures`,
   );
 
-  // eslint-disable-next-line no-restricted-syntax
   for (const fixture of fs.readdirSync(fixturesPath2)) {
     // don't run all foreign fixtures, just some
     if (['01-cowsay', '01-cache-headers', '03-env-vars'].includes(fixture)) {
-      // eslint-disable-next-line no-loop-func
       it(`Should build "${builder}/${fixture}"`, async () => {
         await expect(
-          testDeployment(path.join(fixturesPath2, fixture))
+          testDeployment(path.join(fixturesPath2, fixture)),
         ).resolves.toBeDefined();
       });
     }

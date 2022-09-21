@@ -1,20 +1,17 @@
-import Client from './client';
-import { Output } from './output/create-output';
-import {
-  ProjectEnvTarget,
-  ProjectEnvType,
-  ProjectEnvVariable,
-  Secret,
-} from '../types';
-import getEnvRecords, { EnvRecordsSource } from './env/get-env-records';
+import { ProjectEnvTarget, ProjectEnvType } from '../types';
+import getEnvRecords from './env/get-env-records';
 import { isAPIError } from './errors-ts';
+import type { ProjectEnvVariable, Secret } from '../types';
+import type Client from './client';
+import type { Output } from './output/create-output';
+import type { EnvRecordsSource } from './env/get-env-records';
 
 export default async function getDecryptedEnvRecords(
   output: Output,
   client: Client,
   projectId: string,
   source: EnvRecordsSource,
-  target?: ProjectEnvTarget
+  target?: ProjectEnvTarget,
 ): Promise<{ envs: ProjectEnvVariable[] }> {
   const { envs } = await getEnvRecords(output, client, projectId, source, {
     target: target || ProjectEnvTarget.Development,
@@ -36,7 +33,7 @@ export default async function getDecryptedEnvRecords(
 
           output.debug(`Fetching decrypted secret ${secretIdOrName}`);
           const secret = await client.fetch<Secret>(
-            `/v2/now/secrets/${secretIdOrName}?decrypt=true`
+            `/v2/now/secrets/${secretIdOrName}?decrypt=true`,
           );
 
           return { id, type, key, value: secret.value, found: true };
@@ -50,14 +47,14 @@ export default async function getDecryptedEnvRecords(
       }
 
       return { id, type, key, value, found: true };
-    })
+    }),
   );
 
-  for (let env of envsWithDecryptedSecrets) {
+  for (const env of envsWithDecryptedSecrets) {
     if (!env.found) {
       output.print('');
       output.warn(
-        `Unable to download variable ${env.key} because associated secret was deleted`
+        `Unable to download variable ${env.key} because associated secret was deleted`,
       );
     }
   }

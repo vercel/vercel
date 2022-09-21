@@ -1,4 +1,5 @@
-import { Files } from '../types';
+import type { Files } from '../types';
+
 type Delegate = (name: string) => string;
 
 export default function rename(files: Files, delegate: Delegate): Files {
@@ -7,6 +8,6 @@ export default function rename(files: Files, delegate: Delegate): Files {
       ...newFiles,
       [delegate(name)]: files[name],
     }),
-    {}
+    {},
   );
 }

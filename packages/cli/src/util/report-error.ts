@@ -1,13 +1,13 @@
-import Client from './client';
 import getScope from './get-scope';
 import getArgs from './get-args';
 import { isError } from './is-error';
+import type Client from './client';
 import type { Team, User } from '../types';
 
 export default async function reportError(
   sentry: typeof import('@sentry/node'),
   client: Client,
-  error: unknown
+  error: unknown,
 ) {
   if (ignoreError(error)) {
     return;
@@ -26,7 +26,7 @@ export default async function reportError(
     }
   }
 
-  sentry.withScope(scope => {
+  sentry.withScope((scope) => {
     if (user) {
       const spec = {
         email: user.email,

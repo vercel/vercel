@@ -1,17 +1,16 @@
 import url from 'url';
 import PCRE from 'pcre-to-regexp';
-
+import { isHandler } from '@vercel/routing-utils';
 import isURL from './is-url';
-import DevServer from './server';
-
-import { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
-import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
 import { parseQueryString } from './parse-query-string';
+import type DevServer from './server';
+import type { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
+import type { Route, HandleValue } from '@vercel/routing-utils';
 
 export function resolveRouteParameters(
   str: string,
   match: string[],
-  keys: string[]
+  keys: string[],
 ): string {
   return str.replace(/\$([1-9a-zA-Z]+)/g, (_, param) => {
     let matchIndex: number = keys.indexOf(param);
@@ -30,7 +29,7 @@ export function resolveRouteParameters(
 export function getRoutesTypes(routes: Route[] = []) {
   const handleMap = new Map<HandleValue | null, Route[]>();
   let prevHandle: HandleValue | null = null;
-  routes.forEach(route => {
+  routes.forEach((route) => {
     if (isHandler(route)) {
       prevHandle = route.handle;
     } else {
@@ -47,14 +46,14 @@ export function getRoutesTypes(routes: Route[] = []) {
 }
 
 export async function devRouter(
-  reqUrl: string = '/',
+  reqUrl = '/',
   reqMethod?: string,
   routes?: Route[],
   devServer?: DevServer,
   vercelConfig?: VercelConfig,
   previousHeaders?: HttpHeadersConfig,
   missRoutes?: Route[],
-  phase?: HandleValue | null
+  phase?: HandleValue | null,
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;
   let { pathname: reqPathname = '/', search: reqSearch } = url.parse(reqUrl);
@@ -75,7 +74,7 @@ export async function devRouter(
         continue;
       }
 
-      let { src, headers, methods } = routeConfig;
+      const { src, headers, methods } = routeConfig;
 
       if (Array.isArray(methods) && reqMethod && !methods.includes(reqMethod)) {
         continue;
@@ -133,7 +132,7 @@ export async function devRouter(
           const { pathname = '/' } = url.parse(destPath);
           const hasDestFile = await devServer.hasFilesystem(
             pathname,
-            vercelConfig
+            vercelConfig,
           );
 
           if (!hasDestFile) {
@@ -149,14 +148,13 @@ export async function devRouter(
                 vercelConfig,
                 combinedHeaders,
                 [],
-                'miss'
+                'miss',
               );
               if (missResult.found) {
                 return missResult;
-              } else {
-                reqPathname = destPath;
-                continue;
               }
+              reqPathname = destPath;
+              continue;
             } else {
               if (routeConfig.status && phase === 'miss') {
                 status = routeConfig.status;

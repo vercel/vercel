@@ -1,4 +1,3 @@
-import { DeploymentFile } from './utils/hashes';
 import { generateQueryString } from './utils/query-string';
 import { isReady, isAliasAssigned } from './utils/ready-state';
 import { checkDeploymentStatus } from './check-deployment-status';
@@ -8,7 +7,8 @@ import {
   createDebug,
   getApiDeploymentsUrl,
 } from './utils';
-import {
+import type { DeploymentFile } from './utils/hashes';
+import type {
   Deployment,
   DeploymentOptions,
   VercelClientOptions,
@@ -18,7 +18,7 @@ import {
 async function* postDeployment(
   files: Map<string, DeploymentFile>,
   clientOptions: VercelClientOptions,
-  deploymentOptions: DeploymentOptions
+  deploymentOptions: DeploymentOptions,
 ): AsyncIterableIterator<{
   type: DeploymentEventType;
   payload: any;
@@ -46,7 +46,7 @@ async function* postDeployment(
         }),
         apiUrl: clientOptions.apiUrl,
         userAgent: clientOptions.userAgent,
-      }
+      },
     );
 
     const deployment = await response.json();
@@ -91,7 +91,7 @@ async function* postDeployment(
 
 function getDefaultName(
   files: Map<string, DeploymentFile>,
-  clientOptions: VercelClientOptions
+  clientOptions: VercelClientOptions,
 ): string {
   const debug = createDebug(clientOptions.debug);
   const { isDirectory, path } = clientOptions;
@@ -99,19 +99,26 @@ function getDefaultName(
   if (isDirectory && typeof path === 'string') {
     debug('Provided path is a directory. Using last segment as default name');
     return path.split('/').pop() || path;
-  } else {
-    debug(
-      'Provided path is not a directory. Using last segment of the first file as default name'
-    );
-    const filePath = Array.from(files.values())[0].names[0];
-    return filePath.split('/').pop() || filePath;
   }
+  debug(
+    'Provided path is not a directory. Using last segment of the first file as default name',
+  );
+  const filesArray = Array.from(files.values());
+  const firstFile = filesArray[0];
+  if (!firstFile) {
+    throw new Error(`No files provided`);
+  }
+  const filePath = firstFile.names[0];
+  if (!filePath) {
+    throw new Error(`No file names`);
+  }
+  return filePath.split('/').pop() || filePath;
 }
 
 export async function* deploy(
   files: Map<string, DeploymentFile>,
   clientOptions: VercelClientOptions,
-  deploymentOptions: DeploymentOptions
+  deploymentOptions: DeploymentOptions,
 ): AsyncIterableIterator<{ type: string; payload: any }> {
   const debug = createDebug(clientOptions.debug);
 
@@ -134,7 +141,7 @@ export async function* deploy(
 
   if (clientOptions.withCache) {
     debug(
-      `'withCache' is provided. Force deploy will be performed with cache retention`
+      `'withCache' is provided. Force deploy will be performed with cache retention`,
     );
   }
 
@@ -145,7 +152,7 @@ export async function* deploy(
     for await (const event of postDeployment(
       files,
       clientOptions,
-      deploymentOptions
+      deploymentOptions,
     )) {
       if (event.type === 'created') {
         debug('Deployment created');
@@ -172,13 +179,13 @@ export async function* deploy(
       debug('Waiting for deployment to be ready...');
       for await (const event of checkDeploymentStatus(
         deployment,
-        clientOptions
+        clientOptions,
       )) {
         yield event;
       }
     } catch (e) {
       debug(
-        'An unexpected error occurred while waiting for deployment to be ready'
+        'An unexpected error occurred while waiting for deployment to be ready',
       );
       return yield { type: 'error', payload: e };
     }

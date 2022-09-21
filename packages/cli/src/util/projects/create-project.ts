@@ -1,9 +1,9 @@
-import Client from '../client';
-import { Project } from '../../types';
+import type Client from '../client';
+import type { Project } from '../../types';
 
 export default async function createProject(
   client: Client,
-  projectName: string
+  projectName: string,
 ) {
   const project = await client.fetch<Project>('/v1/projects', {
     method: 'POST',

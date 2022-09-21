@@ -44,14 +44,13 @@ type Ignoreable = (path: string, stats: fs.Stats) => boolean;
 function toMatcherFunction(ignoreEntry: string | Ignoreable) {
   if (typeof ignoreEntry === 'function') {
     return ignoreEntry;
-  } else {
-    return patternMatcher(ignoreEntry);
   }
+  return patternMatcher(ignoreEntry);
 }
 
 export default function readdir(
   path: string,
-  ignores: Ignoreable[]
+  ignores: Ignoreable[],
 ): Promise<string[]> {
   ignores = ignores.map(toMatcherFunction);
 
@@ -75,7 +74,7 @@ export default function readdir(
             return reject(_err);
           }
 
-          const matches = ignores.some(matcher => matcher(filePath, stats));
+          const matches = ignores.some((matcher) => matcher(filePath, stats));
           if (matches) {
             pending -= 1;
             if (!pending) {

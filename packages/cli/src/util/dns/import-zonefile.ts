@@ -1,22 +1,22 @@
-import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { Response } from 'node-fetch';
+import chalk from 'chalk';
 import { DomainNotFound, InvalidDomain, isAPIError } from '../errors-ts';
-import Client from '../client';
+import type { Response } from 'node-fetch';
+import type Client from '../client';
 
-type JSONResponse = {
+interface JSONResponse {
   recordIds: string[];
-};
+}
 
 export default async function importZonefile(
   client: Client,
   contextName: string,
   domain: string,
-  zonefilePath: string
+  zonefilePath: string,
 ) {
   client.output.spinner(
-    `Importing Zone file for domain ${domain} under ${chalk.bold(contextName)}`
+    `Importing Zone file for domain ${domain} under ${chalk.bold(contextName)}`,
   );
   const zonefile = readFileSync(resolve(zonefilePath), 'utf8');
 
@@ -28,7 +28,7 @@ export default async function importZonefile(
         body: zonefile,
         method: 'PUT',
         json: false,
-      }
+      },
     );
 
     const { recordIds } = (await res.json()) as JSONResponse;

@@ -1,14 +1,14 @@
 import chalk from 'chalk';
-import { DNSRecordData } from '../../types';
 import textInput from '../input/text';
 import promptBool from '../input/prompt-bool';
-import Client from '../client';
+import type { DNSRecordData } from '../../types';
+import type Client from '../client';
 
 const RECORD_TYPES = ['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'MX', 'SRV', 'TXT'];
 
 export default async function getDNSData(
   client: Client,
-  data: null | DNSRecordData
+  data: null | DNSRecordData,
 ): Promise<DNSRecordData | null> {
   if (data) {
     return data;
@@ -37,10 +37,10 @@ export default async function getDNSData(
       const target = await getTrimmedString(`- ${type} target: `);
       output.log(
         `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
-          `${priority}`
+          `${priority}`,
         )} ${chalk.cyan(`${weight}`)} ${chalk.cyan(`${port}`)} ${chalk.cyan(
-          target
-        )}.`
+          target,
+        )}.`,
       );
       return (await verifyData(client))
         ? {
@@ -61,8 +61,8 @@ export default async function getDNSData(
       const value = await getTrimmedString(`- ${type} host: `);
       output.log(
         `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
-          `${mxPriority}`
-        )} ${chalk.cyan(value)}`
+          `${mxPriority}`,
+        )} ${chalk.cyan(value)}`,
       );
       return (await verifyData(client))
         ? {
@@ -103,14 +103,14 @@ async function getNumber(label: string) {
   return Number(
     await textInput({
       label,
-      validateValue: v => Boolean(v && Number(v)),
-    })
+      validateValue: (v) => Boolean(v && Number(v)),
+    }),
   );
 }
 async function getTrimmedString(label: string) {
   const res = await textInput({
     label,
-    validateValue: v => Boolean(v && v.trim().length > 0),
+    validateValue: (v) => Boolean(v && v.trim().length > 0),
   });
   return res.trim();
 }

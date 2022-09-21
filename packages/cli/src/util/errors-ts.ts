@@ -1,11 +1,11 @@
 import bytes from 'bytes';
-import { Response } from 'node-fetch';
 import { NowBuildError } from '@vercel/build-utils';
+import chalk from 'chalk';
 import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
-import chalk from 'chalk';
 import { isError } from './is-error';
+import type { Response } from 'node-fetch';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -31,7 +31,7 @@ export class APIError extends Error {
     if (body) {
       for (const field of Object.keys(body)) {
         if (field !== 'message') {
-          // @ts-ignore
+          // @ts-expect-error
           this[field] = body[field];
         }
       }
@@ -60,7 +60,7 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
     super({
       code: 'TEAM_DELETED',
       message: `Your team was deleted. You can switch to a different one using ${getCommandName(
-        `switch`
+        `switch`,
       )}.`,
       meta: {},
     });
@@ -76,7 +76,7 @@ export class InvalidToken extends NowError<'NOT_AUTHORIZED', {}> {
     super({
       code: `NOT_AUTHORIZED`,
       message: `The specified token is not valid. Use ${getCommandName(
-        `login`
+        `login`,
       )} to generate a new token.`,
       meta: {},
     });
@@ -250,18 +250,18 @@ export class DomainVerificationFailed extends NowError<
 /**
  * Helper type for DomainVerificationFailed
  */
-export type NSVerificationError = {
+export interface NSVerificationError {
   intendedNameservers: string[];
   nameservers: string[];
-};
+}
 
 /**
  * Helper type for DomainVerificationFailed
  */
-export type TXTVerificationError = {
+export interface TXTVerificationError {
   verificationRecord: string;
   values: string[];
-};
+}
 
 /**
  * Used when a domain is validated because we tried to add it to an account
@@ -882,7 +882,7 @@ export class DomainMoveConflict extends NowError<
 }
 
 export class InvalidEmail extends NowError<'INVALID_EMAIL', { email: string }> {
-  constructor(email: string, message: string = 'Invalid Email') {
+  constructor(email: string, message = 'Invalid Email') {
     super({
       code: 'INVALID_EMAIL',
       message,
@@ -897,7 +897,7 @@ export class AccountNotFound extends NowError<
 > {
   constructor(
     email: string,
-    message: string = `Please sign up: https://vercel.com/signup`
+    message = `Please sign up: https://vercel.com/signup`,
   ) {
     super({
       code: 'ACCOUNT_NOT_FOUND',
@@ -951,9 +951,9 @@ export class LambdaSizeExceededError extends NowError<
     super({
       code: 'MAX_LAMBDA_SIZE_EXCEEDED',
       message: `The lambda function size (${bytes(
-        size
+        size,
       ).toLowerCase()}) exceeds the maximum size limit (${bytes(
-        maxLambdaSize
+        maxLambdaSize,
       ).toLowerCase()}).`,
       meta: { size, maxLambdaSize },
     });
@@ -969,12 +969,12 @@ export class MissingDotenvVarsError extends NowError<
 
     if (missing.length === 1) {
       message = `Env var ${JSON.stringify(missing[0])} is not defined in ${code(
-        type
+        type,
       )} file`;
     } else {
       message = [
         `The following env vars are not defined in ${code(type)} file:`,
-        ...missing.map(name => `  - ${JSON.stringify(name)}`),
+        ...missing.map((name) => `  - ${JSON.stringify(name)}`),
       ].join('\n');
     }
 

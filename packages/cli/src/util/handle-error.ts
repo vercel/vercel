@@ -1,8 +1,8 @@
 import bytes from 'bytes';
 import info from './output/info';
 import errorOutput from './output/error';
-import { APIError } from './errors-ts';
 import { getCommandName } from './pkg-name';
+import type { APIError } from './errors-ts';
 
 export default function handleError(error: unknown, { debug = false } = {}) {
   // Coerce Strings to Error instances
@@ -22,9 +22,9 @@ export default function handleError(error: unknown, { debug = false } = {}) {
       errorOutput(
         message ||
           `Authentication error. Run ${getCommandName(
-            'login'
-          )} to log-in again.`
-      )
+            'login',
+          )} to log-in again.`,
+      ),
     );
   } else if (status === 429) {
     // Rate limited: display the message from the server-side,
@@ -32,7 +32,7 @@ export default function handleError(error: unknown, { debug = false } = {}) {
     console.error(errorOutput(message));
   } else if (code === 'size_limit_exceeded') {
     console.error(
-      errorOutput(`File size limit exceeded (${bytes(sizeLimit)})`)
+      errorOutput(`File size limit exceeded (${bytes(sizeLimit)})`),
     );
   } else if (message) {
     console.error(errorOutput(apiError));
@@ -42,7 +42,7 @@ export default function handleError(error: unknown, { debug = false } = {}) {
     info('Canceled');
   } else {
     console.error(
-      errorOutput(`Unexpected error. Please try again later. (${message})`)
+      errorOutput(`Unexpected error. Please try again later. (${message})`),
     );
   }
 }

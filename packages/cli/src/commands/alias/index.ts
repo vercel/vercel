@@ -1,16 +1,13 @@
 import chalk from 'chalk';
-
 import { handleError } from '../../util/error';
-
-import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
-
 import ls from './ls';
 import rm from './rm';
 import set from './set';
+import type Client from '../../util/client';
 
 const help = () => {
   console.log(`
@@ -26,14 +23,14 @@ const help = () => {
 
     -h, --help                          Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}        Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}         Path to the global ${'`.vercel`'} directory
     -d, --debug                         Debug mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
-    'TOKEN'
+    'TOKEN',
   )}             Login token
     -S, --scope                         Set a custom scope
     -N, --next                          Show next page of results
@@ -45,23 +42,23 @@ const help = () => {
 
       ${chalk.cyan(
         `$ ${getPkgName()} alias set ${chalk.underline(
-          'api-ownv3nc9f8.vercel.app'
-        )} ${chalk.underline('my-api.vercel.app')}`
+          'api-ownv3nc9f8.vercel.app',
+        )} ${chalk.underline('my-api.vercel.app')}`,
       )}
 
       Custom domains work as alias targets
 
       ${chalk.cyan(
         `$ ${getPkgName()} alias set ${chalk.underline(
-          'api-ownv3nc9f8.vercel.app'
-        )} ${chalk.underline('my-api.com')}`
+          'api-ownv3nc9f8.vercel.app',
+        )} ${chalk.underline('my-api.com')}`,
       )}
 
       ${chalk.dim('–')} The subcommand ${chalk.dim(
-    '`set`'
+    '`set`',
   )} is the default and can be skipped.
       ${chalk.dim('–')} ${chalk.dim(
-    'Protocols'
+    'Protocols',
   )} in the URLs are unneeded and ignored.
 `);
 };

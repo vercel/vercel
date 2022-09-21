@@ -1,11 +1,11 @@
 import { getPrefixedEnvVars } from '../src';
 
 describe('Test `getPrefixedEnvVars()`', () => {
-  const cases: Array<{
+  const cases: {
     name: string;
     args: Parameters<typeof getPrefixedEnvVars>[0];
     want: ReturnType<typeof getPrefixedEnvVars>;
-  }> = [
+  }[] = [
     {
       name: 'should work with NEXT_PUBLIC_',
       args: {

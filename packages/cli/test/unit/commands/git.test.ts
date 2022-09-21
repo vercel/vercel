@@ -5,7 +5,7 @@ import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { client } from '../../mocks/client';
 import git from '../../../src/commands/git';
-import { Project } from '../../../src/types';
+import type { Project } from '../../../src/types';
 
 describe('git', () => {
   describe('connect', () => {
@@ -32,7 +32,7 @@ describe('git', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          'Which scope should contain your project?'
+          'Which scope should contain your project?',
         );
         client.stdin.write('\r');
 
@@ -40,12 +40,12 @@ describe('git', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: https://github.com/user/repo.git`
+          `Connecting Git remote: https://github.com/user/repo.git`,
         );
 
         const exitCode = await gitPromise;
         await expect(client.stderr).toOutput(
-          'Connected GitHub repository user/repo!'
+          'Connected GitHub repository user/repo!',
         );
 
         expect(exitCode).toEqual(0);
@@ -80,7 +80,7 @@ describe('git', () => {
         const exitCode = await git(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
-          `Error: No local Git repository found. Run \`git clone <url>\` to clone a remote Git repository first.\n`
+          `Error: No local Git repository found. Run \`git clone <url>\` to clone a remote Git repository first.\n`,
         );
       } finally {
         process.chdir(originalCwd);
@@ -102,7 +102,7 @@ describe('git', () => {
         const exitCode = await git(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
-          `Error: No remote URLs found in your Git config. Make sure you've configured a remote repo in your local Git config. Run \`git remote --help\` for more details.`
+          `Error: No remote URLs found in your Git config. Make sure you've configured a remote repo in your local Git config. Run \`git remote --help\` for more details.`,
         );
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
@@ -126,10 +126,10 @@ describe('git', () => {
         expect(exitCode).toEqual(1);
 
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: bababooey`
+          `Connecting Git remote: bababooey`,
         );
         await expect(client.stderr).toOutput(
-          `Error: Failed to parse Git repo data from the following remote URL: bababooey\n`
+          `Error: Failed to parse Git repo data from the following remote URL: bababooey\n`,
         );
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
@@ -152,17 +152,17 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: https://github.com/user/repo`
+          `Connecting Git remote: https://github.com/user/repo`,
         );
         await expect(client.stderr).toOutput(
-          `> Connected GitHub repository user/repo!\n`
+          `> Connected GitHub repository user/repo!\n`,
         );
 
         const exitCode = await gitPromise;
         expect(exitCode).toEqual(0);
 
         const project: Project = await client.fetch(
-          `/v8/projects/new-connection`
+          `/v8/projects/new-connection`,
         );
         expect(project.link).toMatchObject({
           type: 'github',
@@ -205,17 +205,17 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: https://github.com/user2/repo2`
+          `Connecting Git remote: https://github.com/user2/repo2`,
         );
         await expect(client.stderr).toOutput(
-          `> Connected GitHub repository user2/repo2!\n`
+          `> Connected GitHub repository user2/repo2!\n`,
         );
 
         const exitCode = await gitPromise;
         expect(exitCode).toEqual(0);
 
         const newProjectData: Project = await client.fetch(
-          `/v8/projects/existing-connection`
+          `/v8/projects/existing-connection`,
         );
         expect(newProjectData.link).toMatchObject({
           type: 'github',
@@ -257,10 +257,10 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: https://github.com/user/repo`
+          `Connecting Git remote: https://github.com/user/repo`,
         );
         await expect(client.stderr).toOutput(
-          `> user/repo is already connected to your project.\n`
+          `> user/repo is already connected to your project.\n`,
         );
 
         const exitCode = await gitPromise;
@@ -287,10 +287,10 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: https://github.com/laksfj/asdgklsadkl`
+          `Connecting Git remote: https://github.com/laksfj/asdgklsadkl`,
         );
         await expect(client.stderr).toOutput(
-          `Failed to connect laksfj/asdgklsadkl to project. Make sure there aren't any typos and that you have access to the repository if it's private.`
+          `Failed to connect laksfj/asdgklsadkl to project. Make sure there aren't any typos and that you have access to the repository if it's private.`,
         );
 
         const exitCode = await gitPromise;
@@ -318,23 +318,23 @@ describe('git', () => {
 
         await expect(client.stderr).toOutput('Found multiple remote URLs.');
         await expect(client.stderr).toOutput(
-          'Which remote do you want to connect?'
+          'Which remote do you want to connect?',
         );
 
         client.stdin.write('\r');
 
         await expect(client.stderr).toOutput(
-          'Connecting Git remote: https://github.com/user/repo.git'
+          'Connecting Git remote: https://github.com/user/repo.git',
         );
         await expect(client.stderr).toOutput(
-          'Connected GitHub repository user/repo!'
+          'Connected GitHub repository user/repo!',
         );
 
         const exitCode = await gitPromise;
         expect(exitCode).toEqual(0);
 
         const project: Project = await client.fetch(
-          `/v8/projects/multiple-remotes`
+          `/v8/projects/multiple-remotes`,
         );
         expect(project.link).toMatchObject({
           type: 'github',
@@ -382,13 +382,13 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
-          `Are you sure you want to disconnect user/repo from your project?`
+          `Are you sure you want to disconnect user/repo from your project?`,
         );
         client.stdin.write('y\n');
         await expect(client.stderr).toOutput('Disconnected user/repo.');
 
         const newProjectData: Project = await client.fetch(
-          `/v8/projects/new-connection`
+          `/v8/projects/new-connection`,
         );
         expect(newProjectData.link).toBeUndefined();
 
@@ -416,7 +416,7 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
-          'No Git repository connected. Run `vercel project connect` to connect one.'
+          'No Git repository connected. Run `vercel project connect` to connect one.',
         );
 
         const exitCode = await gitPromise;
@@ -443,14 +443,14 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: https://github.com/user2/repo2`
+          `Connecting Git remote: https://github.com/user2/repo2`,
         );
         await expect(client.stderr).toOutput(
-          `Connected GitHub repository user2/repo2!`
+          `Connected GitHub repository user2/repo2!`,
         );
 
         const newProjectData: Project = await client.fetch(
-          `/v8/projects/no-remote-url`
+          `/v8/projects/no-remote-url`,
         );
         expect(newProjectData.link).toMatchObject({
           type: 'github',
@@ -485,21 +485,21 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
-          `Found a repository in your local Git Config: https://github.com/user/repo`
+          `Found a repository in your local Git Config: https://github.com/user/repo`,
         );
         await expect(client.stderr).toOutput(
-          `Do you still want to connect https://github.com/user2/repo2? [y/N]`
+          `Do you still want to connect https://github.com/user2/repo2? [y/N]`,
         );
         client.stdin.write('y\n');
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: https://github.com/user2/repo2`
+          `Connecting Git remote: https://github.com/user2/repo2`,
         );
         await expect(client.stderr).toOutput(
-          `Connected GitHub repository user2/repo2!`
+          `Connected GitHub repository user2/repo2!`,
         );
 
         const newProjectData: Project = await client.fetch(
-          `/v8/projects/new-connection`
+          `/v8/projects/new-connection`,
         );
         expect(newProjectData.link).toMatchObject({
           type: 'github',
@@ -534,22 +534,22 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
-          `Found multiple Git repositories in your local Git config:\n  • origin: https://github.com/user/repo.git\n  • secondary: https://github.com/user/repo2.git`
+          `Found multiple Git repositories in your local Git config:\n  • origin: https://github.com/user/repo.git\n  • secondary: https://github.com/user/repo2.git`,
         );
         await expect(client.stderr).toOutput(
-          `Do you still want to connect https://github.com/user3/repo3? [y/N]`
+          `Do you still want to connect https://github.com/user3/repo3? [y/N]`,
         );
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: https://github.com/user3/repo3`
+          `Connecting Git remote: https://github.com/user3/repo3`,
         );
         await expect(client.stderr).toOutput(
-          `Connected GitHub repository user3/repo3!`
+          `Connected GitHub repository user3/repo3!`,
         );
 
         const newProjectData: Project = await client.fetch(
-          `/v8/projects/multiple-remotes`
+          `/v8/projects/multiple-remotes`,
         );
         expect(newProjectData.link).toMatchObject({
           type: 'github',
@@ -584,14 +584,14 @@ describe('git', () => {
         const gitPromise = git(client);
 
         await expect(client.stderr).toOutput(
-          `Connecting Git remote: https://github.com/user/repo`
+          `Connecting Git remote: https://github.com/user/repo`,
         );
         await expect(client.stderr).toOutput(
-          `Connected GitHub repository user/repo!`
+          `Connected GitHub repository user/repo!`,
         );
 
         const newProjectData: Project = await client.fetch(
-          `/v8/projects/new-connection`
+          `/v8/projects/new-connection`,
         );
         expect(newProjectData.link).toMatchObject({
           type: 'github',

@@ -1,6 +1,6 @@
-import Client from '../client';
 import getAliases from './get-aliases';
-import { Alias } from '../../types';
+import type { Alias } from '../../types';
+import type Client from '../client';
 
 export default async function getDomainAliases(client: Client, domain: string) {
   const { aliases } = await getAliases(client);

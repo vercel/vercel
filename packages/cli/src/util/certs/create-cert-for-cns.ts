@@ -1,14 +1,13 @@
 import chalk from 'chalk';
-
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
 import issueCert from './issue-cert';
 import mapCertError from './map-cert-error';
+import type Client from '../client';
 
 export default async function createCertForCns(
   client: Client,
   cns: string[],
-  context: string
+  context: string,
 ) {
   const { output } = client;
   output.spinner(`Issuing a certificate for ${chalk.bold(cns.join(', '))}`);

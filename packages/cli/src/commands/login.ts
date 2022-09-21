@@ -13,8 +13,8 @@ import { prependEmoji, emoji } from '../util/emoji';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import getGlobalPathConfig from '../util/config/global-path';
 import { writeToAuthConfigFile, writeToConfigFile } from '../util/config/files';
-import Client from '../util/client';
-import { LoginResult } from '../util/login/types';
+import type Client from '../util/client';
+import type { LoginResult } from '../util/login/types';
 
 const help = () => {
   console.log(`
@@ -24,10 +24,10 @@ const help = () => {
 
     -h, --help                     Output usage information
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-    'FILE'
+    'FILE',
   )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-    'DIR'
+    'DIR',
   )}    Path to the global ${'`.vercel`'} directory
 
   ${chalk.dim('Examples:')}
@@ -118,14 +118,14 @@ export default async function login(client: Client): Promise<number> {
 
   output.print(
     `${chalk.cyan('Congratulations!')} ` +
-      `You are now logged in. In order to deploy something, run ${getCommandName()}.\n`
+      `You are now logged in. In order to deploy something, run ${getCommandName()}.\n`,
   );
 
   output.print(
     `${prependEmoji(
       `Connect your Git Repositories to deploy every branch push automatically (https://vercel.link/git).`,
-      emoji('tip')
-    )}\n`
+      emoji('tip'),
+    )}\n`,
   );
 
   return 0;

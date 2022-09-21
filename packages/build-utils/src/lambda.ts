@@ -7,9 +7,7 @@ import { isSymbolicLink } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
 import type { Files, Config } from './types';
 
-interface Environment {
-  [key: string]: string;
-}
+type Environment = Record<string, string>;
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
@@ -94,30 +92,30 @@ export class Lambda {
     if (allowQuery !== undefined) {
       assert(Array.isArray(allowQuery), '"allowQuery" is not an Array');
       assert(
-        allowQuery.every(q => typeof q === 'string'),
-        '"allowQuery" is not a string Array'
+        allowQuery.every((q) => typeof q === 'string'),
+        '"allowQuery" is not a string Array',
       );
     }
 
     if (supportsMultiPayloads !== undefined) {
       assert(
         typeof supportsMultiPayloads === 'boolean',
-        '"supportsMultiPayloads" is not a boolean'
+        '"supportsMultiPayloads" is not a boolean',
       );
     }
 
     if (supportsWrapper !== undefined) {
       assert(
         typeof supportsWrapper === 'boolean',
-        '"supportsWrapper" is not a boolean'
+        '"supportsWrapper" is not a boolean',
       );
     }
 
     if (regions !== undefined) {
       assert(Array.isArray(regions), '"regions" is not an Array');
       assert(
-        regions.every(r => typeof r === 'string'),
-        '"regions" is not a string Array'
+        regions.every((r) => typeof r === 'string'),
+        '"regions" is not a string Array',
       );
     }
     this.type = 'Lambda';
@@ -172,6 +170,7 @@ export async function createZip(files: Files): Promise<Buffer> {
   const symlinkTargets = new Map<string, string>();
   for (const name of names) {
     const file = files[name];
+    if (!file) continue;
     if (file.mode && isSymbolicLink(file.mode) && file.type === 'FileFsRef') {
       const symlinkTarget = await readlink(file.fsPath);
       symlinkTargets.set(name, symlinkTarget);
@@ -182,6 +181,7 @@ export async function createZip(files: Files): Promise<Buffer> {
   const zipBuffer = await new Promise<Buffer>((resolve, reject) => {
     for (const name of names) {
       const file = files[name];
+      if (!file) continue;
       const opts = { mode: file.mode, mtime };
       const symlinkTarget = symlinkTargets.get(name);
       if (typeof symlinkTarget === 'string') {

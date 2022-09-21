@@ -1,10 +1,6 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
-
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import { Domain } from '../../types';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
@@ -17,15 +13,18 @@ import promptBool from '../../util/input/prompt-bool';
 import setCustomSuffix from '../../util/domains/set-custom-suffix';
 import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import { getCommandName } from '../../util/pkg-name';
+import type Client from '../../util/client';
+import type { Output } from '../../util/output';
+import type { Domain } from '../../types';
 
-type Options = {
+interface Options {
   '--yes': boolean;
-};
+}
 
 export default async function rm(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
 ) {
   const { output } = client;
   const [domainName] = args;
@@ -33,7 +32,7 @@ export default async function rm(
 
   if (!domainName) {
     output.error(
-      `${getCommandName(`domains rm <domain>`)} expects one argument`
+      `${getCommandName(`domains rm <domain>`)} expects one argument`,
     );
     return 1;
   }
@@ -41,8 +40,8 @@ export default async function rm(
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('domains rm <domain>')}`
-      )}`
+        `${getCommandName('domains rm <domain>')}`,
+      )}`,
     );
     return 1;
   }
@@ -50,7 +49,7 @@ export default async function rm(
   const domain = await getDomainByName(client, contextName, domainName);
   if (domain instanceof DomainNotFound || domain.name !== domainName) {
     output.error(
-      `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
+      `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`,
     );
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
@@ -59,8 +58,8 @@ export default async function rm(
   if (domain instanceof DomainPermissionDenied) {
     output.error(
       `You don't have access to the domain ${domainName} under ${chalk.bold(
-        contextName
-      )}`
+        contextName,
+      )}`,
     );
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
@@ -73,8 +72,8 @@ export default async function rm(
       `The domain is currently used by ${plural(
         'project',
         projects.length,
-        true
-      )}.`
+        true,
+      )}.`,
     );
   }
 
@@ -83,7 +82,7 @@ export default async function rm(
     !skipConfirmation &&
     !(await promptBool(
       `Are you sure you want to remove ${param(domainName)}?`,
-      client
+      client,
     ))
   ) {
     output.log('Canceled');
@@ -101,8 +100,8 @@ async function removeDomain(
   domain: Domain,
   aliasIds: string[] = [],
   certIds: string[] = [],
-  suffix: boolean = false,
-  attempt: number = 1
+  suffix = false,
+  attempt = 1,
 ): Promise<number> {
   const removeStamp = stamp();
   output.debug(`Removing domain`);
@@ -139,7 +138,7 @@ async function removeDomain(
   const removeResult = await removeDomainByName(
     client,
     contextName,
-    domain.name
+    domain.name,
   );
 
   if (removeResult instanceof ERRORS.DomainNotFound) {
@@ -151,8 +150,8 @@ async function removeDomain(
   if (removeResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
-        removeResult.meta.domain
-      )} under ${chalk.bold(removeResult.meta.context)}.`
+        removeResult.meta.domain,
+      )} under ${chalk.bold(removeResult.meta.context)}.`,
     );
     return 1;
   }
@@ -174,8 +173,8 @@ async function removeDomain(
     if (transferring) {
       output.error(
         `${param(
-          domain.name
-        )} transfer should be declined or approved before removing.`
+          domain.name,
+        )} transfer should be declined or approved before removing.`,
       );
       return 1;
     }
@@ -183,8 +182,8 @@ async function removeDomain(
     if (pendingAsyncPurchase) {
       output.error(
         `Cannot remove ${param(
-          domain.name
-        )} because it is still in the process of being purchased.`
+          domain.name,
+        )} because it is still in the process of being purchased.`,
       );
       return 1;
     }
@@ -195,28 +194,28 @@ async function removeDomain(
     }
 
     output.log(
-      `We found conflicts when attempting to remove ${param(domain.name)}.`
+      `We found conflicts when attempting to remove ${param(domain.name)}.`,
     );
 
     if (aliases.length > 0) {
       output.warn(
         `This domain's ${chalk.bold(
-          plural('alias', aliases.length, true)
-        )} will be removed. Run ${getCommandName(`alias ls`)} to list them.`
+          plural('alias', aliases.length, true),
+        )} will be removed. Run ${getCommandName(`alias ls`)} to list them.`,
       );
     }
 
     if (certs.length > 0) {
       output.warn(
         `This domain's ${chalk.bold(
-          plural('certificate', certs.length, true)
-        )} will be removed. Run ${getCommandName(`cert ls`)} to list them.`
+          plural('certificate', certs.length, true),
+        )} will be removed. Run ${getCommandName(`cert ls`)} to list them.`,
       );
     }
 
     if (suffix) {
       output.warn(
-        `The ${chalk.bold(`custom suffix`)} associated with this domain.`
+        `The ${chalk.bold(`custom suffix`)} associated with this domain.`,
       );
     }
 
@@ -237,7 +236,7 @@ async function removeDomain(
       aliases,
       certs,
       suffix,
-      attempt + 1
+      attempt + 1,
     );
   }
 

@@ -1,5 +1,5 @@
-import { Framework } from '@vercel/frameworks';
-import Client from './client';
+import type { Framework } from '@vercel/frameworks';
+import type Client from './client';
 
 export async function getFrameworks(client: Client) {
   return await client.fetch<Framework[]>('/v1/frameworks', {

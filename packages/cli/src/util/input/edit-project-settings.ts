@@ -1,10 +1,11 @@
 import inquirer from 'inquirer';
-import confirm from './confirm';
 import chalk from 'chalk';
-import frameworkList, { Framework } from '@vercel/frameworks';
-import Client from '../client';
+import frameworkList from '@vercel/frameworks';
 import { isSettingValue } from '../is-setting-value';
-import { ProjectSettings } from '../../types';
+import confirm from './confirm';
+import type { Framework } from '@vercel/frameworks';
+import type Client from '../client';
+import type { ProjectSettings } from '../../types';
 
 const settingMap = {
   buildCommand: 'Build Command',
@@ -16,7 +17,7 @@ const settingMap = {
 } as const;
 type ConfigKeys = keyof typeof settingMap;
 const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
-  ConfigKeys
+  ConfigKeys,
 ];
 
 export type PartialProjectSettings = Pick<ProjectSettings, ConfigKeys>;
@@ -26,22 +27,20 @@ export default async function editProjectSettings(
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
   autoConfirm: boolean,
-  localConfigurationOverrides: PartialProjectSettings | null
+  localConfigurationOverrides: PartialProjectSettings | null,
 ): Promise<ProjectSettings> {
   const { output } = client;
 
   // Create initial settings object defaulting everything to `null` and assigning what may exist in `projectSettings`
-  const settings: ProjectSettings = Object.assign(
-    {
-      buildCommand: null,
-      devCommand: null,
-      framework: null,
-      commandForIgnoringBuildStep: null,
-      installCommand: null,
-      outputDirectory: null,
-    },
-    projectSettings
-  );
+  const settings: ProjectSettings = {
+    buildCommand: null,
+    devCommand: null,
+    framework: null,
+    commandForIgnoringBuildStep: null,
+    installCommand: null,
+    outputDirectory: null,
+    ...projectSettings,
+  };
 
   // Start UX by displaying (and applying) overrides. They will be referenced throughout remainder of CLI.
   if (localConfigurationOverrides) {
@@ -59,8 +58,8 @@ export default async function editProjectSettings(
       if (override) {
         output.print(
           `${chalk.dim(
-            `- ${chalk.bold(`${settingMap[setting]}:`)} ${override}`
-          )}\n`
+            `- ${chalk.bold(`${settingMap[setting]}:`)} ${override}`,
+          )}\n`,
         );
       }
     }
@@ -68,13 +67,13 @@ export default async function editProjectSettings(
     // If framework is overridden, set it to the `framework` parameter and let the normal framework-flow occur
     if (localConfigurationOverrides.framework) {
       const overrideFramework = frameworkList.find(
-        f => f.slug === localConfigurationOverrides.framework
+        (f) => f.slug === localConfigurationOverrides.framework,
       );
 
       if (overrideFramework) {
         framework = overrideFramework;
         output.print(
-          `Merging default Project Settings for ${framework.name}. Previously listed overrides are prioritized.\n`
+          `Merging default Project Settings for ${framework.name}. Previously listed overrides are prioritized.\n`,
         );
       }
     }
@@ -90,7 +89,7 @@ export default async function editProjectSettings(
   output.print(
     !framework.slug
       ? `No framework detected. Default Project Settings:\n`
-      : `Auto-detected Project Settings (${chalk.bold(framework.name)}):\n`
+      : `Auto-detected Project Settings (${chalk.bold(framework.name)}):\n`,
   );
 
   settings.framework = framework.slug;
@@ -111,8 +110,8 @@ export default async function editProjectSettings(
             isSettingValue(defaultSetting)
               ? defaultSetting.value
               : chalk.italic(`${defaultSetting.placeholder}`)
-          }`
-        )}\n`
+          }`,
+        )}\n`,
       );
     }
   }
@@ -125,7 +124,7 @@ export default async function editProjectSettings(
     return settings;
   }
 
-  const choices = settingKeys.reduce<Array<{ name: string; value: string }>>(
+  const choices = settingKeys.reduce<{ name: string; value: string }[]>(
     (acc, setting) => {
       const skip =
         setting === 'framework' ||
@@ -137,16 +136,14 @@ export default async function editProjectSettings(
       }
       return acc;
     },
-    []
+    [],
   );
 
   const { settingFields } = await inquirer.prompt<{
-    settingFields: Array<
-      Exclude<
-        ConfigKeys,
-        'framework' | 'commandForIgnoringBuildStep' | 'installCommand'
-      >
-    >;
+    settingFields: Exclude<
+      ConfigKeys,
+      'framework' | 'commandForIgnoringBuildStep' | 'installCommand'
+    >[];
   }>({
     name: 'settingFields',
     type: 'checkbox',
@@ -154,7 +151,7 @@ export default async function editProjectSettings(
     choices,
   });
 
-  for (let setting of settingFields) {
+  for (const setting of settingFields) {
     const field = settingMap[setting];
     const answers = await inquirer.prompt<{
       [k in Exclude<

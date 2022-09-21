@@ -1,8 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import { Output } from '../../util/output';
-import { Project, ProjectEnvVariable, ProjectEnvType } from '../../types';
-import Client from '../../util/client';
+import { ProjectEnvType } from '../../types';
 import formatTable from '../../util/format-table';
 import getEnvRecords from '../../util/env/get-env-records';
 import formatEnvTarget from '../../util/env/format-env-target';
@@ -14,23 +12,26 @@ import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
+import type Client from '../../util/client';
+import type { Project, ProjectEnvVariable } from '../../types';
+import type { Output } from '../../util/output';
 
-type Options = {
+interface Options {
   '--debug': boolean;
-};
+}
 
 export default async function ls(
   client: Client,
   project: Project,
   opts: Partial<Options>,
   args: string[],
-  output: Output
+  output: Output,
 ) {
   if (args.length > 2) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env ls ${getEnvTargetPlaceholder()} <gitbranch>`
-      )}`
+        `env ls ${getEnvTargetPlaceholder()} <gitbranch>`,
+      )}`,
     );
     return 1;
   }
@@ -40,8 +41,8 @@ export default async function ls(
   if (!isValidEnvTarget(envTarget)) {
     output.error(
       `The Environment ${param(
-        envTarget
-      )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
+        envTarget,
+      )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`,
     );
     return 1;
   }
@@ -56,20 +57,20 @@ export default async function ls(
     {
       target: envTarget,
       gitBranch: envGitBranch,
-    }
+    },
   );
 
   if (envs.length === 0) {
     output.log(
       `No Environment Variables found in Project ${chalk.bold(
-        project.name
-      )} ${chalk.gray(lsStamp())}`
+        project.name,
+      )} ${chalk.gray(lsStamp())}`,
     );
   } else {
     output.log(
       `Environment Variables found in Project ${chalk.bold(
-        project.name
-      )} ${chalk.gray(lsStamp())}`
+        project.name,
+      )} ${chalk.gray(lsStamp())}`,
     );
     console.log(getTable(envs));
   }
@@ -78,7 +79,7 @@ export default async function ls(
 }
 
 function getTable(records: ProjectEnvVariable[]) {
-  const label = records.some(env => env.gitBranch)
+  const label = records.some((env) => env.gitBranch)
     ? 'environments (git branch)'
     : 'environments';
   return formatTable(
@@ -89,7 +90,7 @@ function getTable(records: ProjectEnvVariable[]) {
         name: '',
         rows: records.map(getRow),
       },
-    ]
+    ],
   );
 }
 

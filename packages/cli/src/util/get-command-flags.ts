@@ -7,13 +7,13 @@
     Flags can be excluded using the `excludeFlags` param.
 */
 export default function getCommandFlags(
-  argv: { [key: string]: any },
-  excludeFlags: string[] = []
+  argv: Record<string, any>,
+  excludeFlags: string[] = [],
 ) {
   const flags = Object.keys(argv)
-    .filter(key => !excludeFlags.includes(key))
+    .filter((key) => !excludeFlags.includes(key))
     .map(
-      key => `${key}${typeof argv[key] !== 'boolean' ? ' ' + argv[key] : ''}`
+      (key) => `${key}${typeof argv[key] !== 'boolean' ? ` ${argv[key]}` : ''}`,
     );
 
   return flags.length > 0 ? ` ${flags.join(' ')}` : '';

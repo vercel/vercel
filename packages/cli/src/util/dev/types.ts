@@ -1,7 +1,8 @@
-import http from 'http';
-import { ChildProcess } from 'child_process';
-import { Lambda as FunLambda } from '@vercel/fun';
-import {
+import type { VercelConfig } from '@vercel/client';
+import type http from 'http';
+import type { ChildProcess } from 'child_process';
+import type { Lambda as FunLambda } from '@vercel/fun';
+import type {
   Builder as BuildConfig,
   BuildOptions,
   PrepareCacheOptions,
@@ -13,13 +14,12 @@ import {
   FileFsRef,
   Lambda,
 } from '@vercel/build-utils';
-import { VercelConfig } from '@vercel/client';
-import { HandleValue, Route } from '@vercel/routing-utils';
-import { Output } from '../output';
-import { ProjectEnvVariable, ProjectSettings } from '../../types';
-import { BuilderWithPkg } from '../build/import-builders';
+import type { HandleValue, Route } from '@vercel/routing-utils';
+import type { Output } from '../output';
+import type { ProjectEnvVariable, ProjectSettings } from '../../types';
+import type { BuilderWithPkg } from '../build/import-builders';
 
-export { VercelConfig };
+export type { VercelConfig };
 
 export interface DevServerOptions {
   output: Output;
@@ -59,9 +59,7 @@ export interface HttpHandler {
   (req: http.IncomingMessage, res: http.ServerResponse): void;
 }
 
-export interface BuilderInputs {
-  [path: string]: FileFsRef;
-}
+export type BuilderInputs = Record<string, FileFsRef>;
 
 export interface BuiltLambda extends Lambda {
   zipBuffer: Buffer;
@@ -70,15 +68,11 @@ export interface BuiltLambda extends Lambda {
 
 export type BuilderOutput = BuiltLambda | FileFsRef | FileBlob;
 
-export interface BuilderOutputs {
-  [path: string]: BuilderOutput;
-}
+export type BuilderOutputs = Record<string, BuilderOutput>;
 
 export type CacheOutput = FileFsRef | FileBlob;
 
-export interface CacheOutputs {
-  [path: string]: CacheOutput;
-}
+export type CacheOutputs = Record<string, CacheOutput>;
 
 export interface BuilderConfigAttr {
   maxLambdaSize?: string | number;
@@ -87,18 +81,20 @@ export interface BuilderConfigAttr {
 export interface Builder {
   version?: 1 | 2 | 3 | 4;
   config?: BuilderConfigAttr;
-  build(
-    opts: BuildOptions
-  ):
+  build: (
+    opts: BuildOptions,
+  ) =>
     | BuilderOutputs
     | BuildResult
     | Promise<BuilderOutputs>
     | Promise<BuildResult>;
-  prepareCache?(
-    opts: PrepareCacheOptions
-  ): CacheOutputs | Promise<CacheOutputs>;
-  shouldServe?(params: ShouldServeOptions): boolean | Promise<boolean>;
-  startDevServer?(opts: StartDevServerOptions): Promise<StartDevServerResult>;
+  prepareCache?: (
+    opts: PrepareCacheOptions,
+  ) => CacheOutputs | Promise<CacheOutputs>;
+  shouldServe?: (params: ShouldServeOptions) => boolean | Promise<boolean>;
+  startDevServer?: (
+    opts: StartDevServerOptions,
+  ) => Promise<StartDevServerResult>;
 }
 
 export interface BuildResult {
@@ -116,15 +112,13 @@ export interface BuildResultV3 {
 }
 
 export interface BuildResultV4 {
-  output: { [filePath: string]: Lambda };
+  output: Record<string, Lambda>;
   routes: Route[];
   watch: string[];
   distPath?: string;
 }
 
-export interface HttpHeadersConfig {
-  [name: string]: string;
-}
+export type HttpHeadersConfig = Record<string, string>;
 
 export interface RouteResult {
   // `true` if a route was matched, `false` otherwise

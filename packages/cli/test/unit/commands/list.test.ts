@@ -1,10 +1,10 @@
+import { join } from 'path';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import list, {
   getDeploymentDuration,
   stateString,
 } from '../../../src/commands/list';
-import { join } from 'path';
 import { useTeams } from '../../mocks/team';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useDeployment } from '../../mocks/deployment';
@@ -91,7 +91,7 @@ describe('list', () => {
       expect(org).toEqual(user.username);
       expect(header).toEqual(['Age', 'Deployment', 'Status', 'Duration']);
       expect(data).toEqual([
-        'https://' + deployment.url,
+        `https://${deployment.url}`,
         stateString(deployment.state || ''),
         getDeploymentDuration(deployment),
       ]);

@@ -1,11 +1,11 @@
-import Client from '../client';
-import { Team } from '../../types';
+import type Client from '../client';
+import type { Team } from '../../types';
 
 const teamCache = new Map<string, Team>();
 
 export default async function getTeamById(
   client: Client,
-  teamId: string
+  teamId: string,
 ): Promise<Team> {
   let team = teamCache.get(teamId);
 
