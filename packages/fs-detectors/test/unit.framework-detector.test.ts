@@ -172,6 +172,20 @@ describe('DetectorFilesystem', () => {
     hasPathSpy.mock.calls.length = 0;
     expect(await fs.hasPath('packages/app1/package.json')).toBe(true);
     expect(hasPathSpy).not.toHaveBeenCalled();
+
+    expect(
+      await fs.readdir('packages/app1', { potentialFiles: ['vercel.json'] })
+    ).toEqual([
+      {
+        name: 'package.json',
+        path: 'packages/app1/package.json',
+        type: 'file',
+      },
+    ]);
+
+    hasPathSpy.mock.calls.length = 0;
+    expect(await fs.hasPath('packages/app1/vercel.json')).toBe(false);
+    expect(hasPathSpy).not.toHaveBeenCalled();
   });
 
   it('should be able to write files', async () => {

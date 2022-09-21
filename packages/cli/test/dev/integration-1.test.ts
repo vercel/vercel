@@ -86,6 +86,7 @@ test(
   testFixtureStdio('edge-function', async (testPath: any) => {
     await testPath(500, '/api/edge-500-response');
     await testPath(200, '/api/edge-success');
+    await testPath(200, '/api/edge-import-browser');
   })
 );
 
