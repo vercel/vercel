@@ -48,6 +48,8 @@ test('[vercel dev] should support edge functions', async () => {
       upperCase: 'SOMETHING',
       optionalChaining: 'fallback',
       ENV_VAR_IN_EDGE: '1',
+      EdgeRuntime: 'vercel',
+      globalThisEdgeRuntime: 'vercel',
     });
   } finally {
     await dev.kill('SIGTERM');

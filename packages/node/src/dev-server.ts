@@ -177,6 +177,11 @@ async function compileUserCode(
       entryPoints: [entrypointPath],
       write: false, // operate in memory
       format: 'cjs',
+      legalComments: 'none',
+      define: {
+        // replaces `EdgeRuntime` with `"vercel"`, allowing for dead code elimination
+        EdgeRuntime: JSON.stringify('vercel'),
+      },
     });
 
     const compiledFile = result.outputFiles?.[0];
@@ -280,6 +285,9 @@ async function createEdgeRuntime(params?: {
           process: {
             env: process.env,
           },
+
+          // sets `globalThis.EdgeRuntime` to `vercel`, allowing for runtime detection
+          EdgeRuntime: 'vercel',
 
           // These are the global bindings for WebAssembly module
           ...wasmBindings,

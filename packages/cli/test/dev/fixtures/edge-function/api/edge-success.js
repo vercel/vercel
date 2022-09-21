@@ -18,6 +18,8 @@ export default async function edge(request, event) {
       upperCase: upper('someThing'),
       optionalChaining: request?.doesnotexist ?? 'fallback',
       ENV_VAR_IN_EDGE: process.env.ENV_VAR_IN_EDGE,
+      EdgeRuntime: EdgeRuntime,
+      globalThisEdgeRuntime: globalThis.EdgeRuntime,
     })
   );
 }
