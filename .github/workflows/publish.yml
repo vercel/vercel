@@ -7,6 +7,11 @@ on:
     tags:
     - '!*'
 
+env:
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
 jobs:
   publish:
     name: Publish
