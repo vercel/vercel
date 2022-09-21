@@ -35,6 +35,7 @@ describe('get latest version', () => {
     let cache = await fs.readJSON(cacheFile);
     expect(typeof cache).toEqual('object');
     expect(typeof cache.expireAt).toEqual('number');
+    expect(cache.expireAt).toBeGreaterThan(Date.now());
     expect(typeof cache.version).toEqual('string');
     expect(cache.version).toEqual(expect.stringMatching(versionRE));
     expect(cache.notified).toEqual(false);
@@ -112,6 +113,20 @@ describe('get latest version', () => {
     });
     expect(typeof latest).toBe('string');
     expect(latest).toEqual(expect.stringMatching(versionRE));
+  });
+
+  it('should error if no arguments are passed in', () => {
+    expect(() => getLatestVersion(undefined as any)).toThrow(TypeError);
+  });
+
+  it('should error package is invalid', () => {
+    expect(() => getLatestVersion({} as any)).toThrow(TypeError);
+    expect(() => getLatestVersion({ pkg: null as any })).toThrow(TypeError);
+    expect(() => getLatestVersion({ pkg: {} })).toThrow(TypeError);
+    expect(() => getLatestVersion({ pkg: { name: null as any } })).toThrow(
+      TypeError
+    );
+    expect(() => getLatestVersion({ pkg: { name: '' } })).toThrow(TypeError);
   });
 });
 

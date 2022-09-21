@@ -78,8 +78,6 @@ process.on('unhandledRejection', err => {
   process.exit(1);
 });
 
-const defaultUpdateCheckInterval = 1000 * 60 * 60 * 24 * 7; // 1 week
-
 // this timer will prevent this worker process from running longer than 10s
 const timer = setTimeout(() => {
   output.error('Worker timed out after 10 seconds');
@@ -141,8 +139,7 @@ process.once('message', async msg => {
 
     output.debug(`Writing cache file: ${cacheFile}`);
     await fs.outputJSON(cacheFile, {
-      expireAt:
-        Date.now() + (updateCheckInterval || defaultUpdateCheckInterval),
+      expireAt: Date.now() + updateCheckInterval,
       notified: false,
       version,
     });

@@ -9,9 +9,9 @@ import { spawn } from 'child_process';
 interface GetLatestVersionOptions {
   cacheDir?: string;
   distTag?: string;
-  updateCheckInterval?: number;
   output?: Output;
   pkg: PackageJson;
+  updateCheckInterval?: number;
 }
 
 interface PackageInfoCache {
@@ -40,8 +40,17 @@ export default function getLatestVersion({
   distTag = 'latest',
   output,
   pkg,
-  updateCheckInterval,
+  updateCheckInterval = 1000 * 60 * 60 * 24 * 7, // 1 week
 }: GetLatestVersionOptions): string | undefined {
+  if (
+    !pkg ||
+    typeof pkg !== 'object' ||
+    !pkg.name ||
+    typeof pkg.name !== 'string'
+  ) {
+    throw new TypeError('Expected package to be an object with a package name');
+  }
+
   const cacheFile = resolvePath(
     cacheDir,
     'package-updates',
