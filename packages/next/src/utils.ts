@@ -1792,8 +1792,8 @@ export const onPrerenderRoute =
     }
 
     let isAppPathRoute = false;
-    // TODO: find another wat to determine if the current route is an app path route
-    if (srcRoute && dataRoute.endsWith('.rsc')) {
+    // TODO: leverage manifest to determine app paths more accurately
+    if (appDir && srcRoute && dataRoute.endsWith('.rsc')) {
       isAppPathRoute = true;
     }
 
@@ -1803,7 +1803,7 @@ export const onPrerenderRoute =
           null
         : new FileFsRef({
             fsPath: path.join(
-              isAppPathRoute ? appDir! : pagesDir,
+              isAppPathRoute && appDir ? appDir : pagesDir,
               isFallback
                 ? // Fallback pages have a special file.
                   addLocaleOrDefault(
@@ -1826,10 +1826,12 @@ export const onPrerenderRoute =
         ? null
         : new FileFsRef({
             fsPath: path.join(
-              isAppPathRoute ? appDir! : pagesDir,
+              isAppPathRoute && appDir ? appDir : pagesDir,
               `${
                 isOmitted || isNotFound
                   ? addLocaleOrDefault('/404.html', routesManifest, locale)
+                  : isAppPathRoute
+                  ? dataRoute
                   : routeFileNoExt + '.json'
               }`
             ),
