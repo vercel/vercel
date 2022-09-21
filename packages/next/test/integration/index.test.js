@@ -24,6 +24,11 @@ it('should build with app-dir correctly', async () => {
   expect(buildResult.output['dashboard/another']).toBeDefined();
   expect(buildResult.output['dashboard/changelog']).toBeDefined();
   expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
+
+  // prefixed static generation output with `/app` under dist server files
+  expect(buildResult.output['dashboard'].fsPath).toMatch(
+    /server\/app\/dashboard\.html$/
+  );
 });
 
 it('should build with app-dir in edg runtime correctly', async () => {
