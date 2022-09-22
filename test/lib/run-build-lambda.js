@@ -1,6 +1,7 @@
 const os = require('os');
 const path = require('path');
 const fs = require('fs-extra');
+const json5 = require('json5');
 const { glob } = require('@vercel/build-utils');
 
 function runAnalyze(wrapper, context) {
@@ -18,7 +19,7 @@ async function runBuildLambda(inputPath) {
   if (typeof expect !== 'undefined') {
     expect(nowJsonRef).toBeDefined();
   }
-  const nowJson = require(nowJsonRef.fsPath);
+  const nowJson = json5.parse(await fs.readFile(nowJsonRef.fsPath, 'utf8'));
   const build = nowJson.builds[0];
 
   if (typeof expect !== 'undefined') {
