@@ -1,13 +1,24 @@
 {
   "name": "@vercel/gatsby",
   "version": "0.1.0",
+  "license": "MIT",
   "main": "dist/index.js",
+  "homepage": "https://vercel.com/docs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/hydrogen"
+  },
+  "scripts": {
+    "build": "node build",
+    "test": "jest --env node --verbose --bail --runInBand",
+    "test-integration-once": "yarn test",
+    "prepublishOnly": "node build"
+  },
   "files": [
     "dist"
   ],
-  "license": "MIT",
   "dependencies": {
-    "@vercel/build-utils": "5.4.2",
     "@vercel/routing-utils": "2.0.2",
     "esbuild": "^0.14.49",
     "etag": "^1.8.1",
@@ -16,14 +27,7 @@
   "devDependencies": {
     "@types/etag": "^1.8.1",
     "@types/fs-extra": "^9.0.13",
+    "@vercel/build-utils": "5.4.4",
     "gatsby": "^4.0.0"
-  },
-  "scripts": {
-    "build": "node build",
-    "test": "jest --env node --verbose --bail --runInBand",
-    "test-integration-once": "yarn test",
-    "prepublishOnly": "node build"
-  },
-  "author": "",
-  "description": ""
+  }
 }
