@@ -48,6 +48,7 @@ async function compileUserCode(
       // version of node
       target: NODE_VERSION_IDENTIFIER,
       sourcemap: 'inline',
+      legalComments: 'none',
       bundle: true,
       plugins: [edgeWasmPlugin],
       entryPoints: [entrypointPath],
@@ -63,6 +64,9 @@ async function compileUserCode(
     }
 
     const userCode = `
+      // strict mode
+      "use strict";var regeneratorRuntime;
+
       // user code
       ${compiledFile.text};
 
