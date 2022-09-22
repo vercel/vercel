@@ -1131,6 +1131,23 @@ export async function serverBuild({
     });
   }
 
+  if (appPathRoutesManifest) {
+    // create .rsc variant for app lambdas and edge functions
+    // to match prerenders so we can route the same when the
+    // __flight__ header is present
+    const edgeFunctions = middleware.edgeFunctions;
+
+    for (let route of Object.values(appPathRoutesManifest)) {
+      route = path.posix.join('./', route === '/' ? '/index' : route);
+
+      if (lambdas[route]) {
+        lambdas[`${route}.rsc`] = lambdas[route];
+      } else if (edgeFunctions[route]) {
+        edgeFunctions[`${route}.rsc`] = edgeFunctions[route];
+      }
+    }
+  }
+
   return {
     wildcard: wildcardConfig,
     images:
@@ -1368,6 +1385,22 @@ export async function serverBuild({
       // handle: 'filesystem' we maintain this for older versions
       // to prevent a local/deploy mismatch
       ...(!isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
+
+      ...(appDir
+        ? [
+            {
+              src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
+              has: [
+                {
+                  type: 'header',
+                  key: '__flight__',
+                },
+              ],
+              dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
+              check: true,
+            },
+          ]
+        : []),
 
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
