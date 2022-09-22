@@ -24,6 +24,16 @@ it('should build with app-dir correctly', async () => {
   expect(buildResult.output['dashboard/another']).toBeDefined();
   expect(buildResult.output['dashboard/changelog']).toBeDefined();
   expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
+
+  // prefixed static generation output with `/app` under dist server files
+  expect(buildResult.output['dashboard'].type).toBe('FileFsRef');
+  expect(buildResult.output['dashboard'].fsPath).toMatch(
+    /server\/app\/dashboard\.html$/
+  );
+  expect(buildResult.output['dashboard.rsc'].type).toBe('FileFsRef');
+  expect(buildResult.output['dashboard.rsc'].fsPath).toMatch(
+    /server\/app\/dashboard\.rsc$/
+  );
 });
 
 it('should build with app-dir in edg runtime correctly', async () => {
@@ -31,7 +41,6 @@ it('should build with app-dir in edg runtime correctly', async () => {
     path.join(__dirname, '../fixtures/00-app-dir-edge')
   );
 
-  console.log('buildResult', buildResult);
   const edgeFunctions = new Set();
 
   for (const key of Object.keys(buildResult.output)) {

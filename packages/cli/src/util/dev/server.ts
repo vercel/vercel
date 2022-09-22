@@ -31,6 +31,7 @@ import {
 } from '@vercel/routing-utils';
 import {
   Builder,
+  cloneEnv,
   Env,
   StartDevServerResult,
   FileFsRef,
@@ -2222,18 +2223,22 @@ export default class DevServer {
 
     const port = await getPort();
 
-    const env: Env = {
-      // Because of child process 'pipe' below, isTTY will be false.
-      // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
-      FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
-      // Prevent framework dev servers from automatically opening a web
-      // browser window, since it will not be the port that `vc dev`
-      // is listening on and thus will be missing Vercel features.
-      BROWSER: 'none',
-      ...process.env,
-      ...this.envConfigs.allEnv,
-      PORT: `${port}`,
-    };
+    const env: Env = cloneEnv(
+      {
+        // Because of child process 'pipe' below, isTTY will be false.
+        // Most frameworks use `chalk`/`supports-color` so we enable it anyway.
+        FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
+        // Prevent framework dev servers from automatically opening a web
+        // browser window, since it will not be the port that `vc dev`
+        // is listening on and thus will be missing Vercel features.
+        BROWSER: 'none',
+      },
+      process.env,
+      this.envConfigs.allEnv,
+      {
+        PORT: `${port}`,
+      }
+    );
 
     // This is necesary so that the dev command in the Project
     // will work cross-platform (especially Windows).
