@@ -34,6 +34,8 @@ export const build: BuildV2 = async ({
   config,
   meta = {},
 }) => {
+  console.log('@vercel/gatsby!');
+
   await download(files, workPath, meta);
 
   const { installCommand, buildCommand } = config;

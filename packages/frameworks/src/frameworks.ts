@@ -114,6 +114,7 @@ export const frameworks = [
     description: 'A Gatsby starter app with an API Route.',
     website: 'https://gatsbyjs.org',
     sort: 5,
+    useRuntime: { src: 'package.json', use: '@vercel/gatsby' },
     envPrefix: 'GATSBY_',
     detectors: {
       every: [
