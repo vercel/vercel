@@ -88,7 +88,7 @@ jobs:
         shell: bash
         env:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
-          VERCEL_TEAM_TOKEN: ${{ secrets.VERCEL_TEAM_TOKEN }}
+          VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}
           FORCE_COLOR: '1'
 
