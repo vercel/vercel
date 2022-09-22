@@ -8,6 +8,7 @@ import esbuild from 'esbuild';
 import fetch from 'node-fetch';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
 import { logError } from '../utils';
+import { readFileSync } from 'fs';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -16,6 +17,10 @@ if (!NODE_VERSION_MAJOR) {
     `Unable to determine current node version: process.version=${process.version}`
   );
 }
+
+const edgeHandlerTemplate = readFileSync(
+  `${__dirname}/edge-handler-template.js`
+);
 
 async function serializeRequest(message: IncomingMessage) {
   const bodyBuffer = await streamToBuffer(message);
@@ -58,66 +63,17 @@ async function compileUserCode(
     }
 
     const userCode = `
+      // user code
       ${compiledFile.text};
 
-      const isMiddleware = ${isMiddleware};
+      // request metadata
+      const IS_MIDDLEWARE = ${isMiddleware};
+      const ENTRYPOINT_LABEL = '${entrypointLabel}';
 
-      addEventListener('fetch', async (event) => {
-        try {
-          let serializedRequest = await event.request.text();
-          let requestDetails = JSON.parse(serializedRequest);
+      // edge handler
+      ${edgeHandlerTemplate}
+    `;
 
-          let body;
-
-          if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
-            body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
-          }
-
-          let requestUrl = requestDetails.headers['x-forwarded-proto'] + '://' + requestDetails.headers['x-forwarded-host'] + requestDetails.url;
-
-          let request = new Request(requestUrl, {
-            headers: requestDetails.headers,
-            method: requestDetails.method,
-            body: body
-          });
-
-          event.request = request;
-
-          let edgeHandler = module.exports.default;
-          if (!edgeHandler) {
-            throw new Error('No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware');
-          }
-
-          let response = await edgeHandler(event.request, event);
-
-          if (!response) {
-            if (isMiddleware) {
-              // allow empty responses to pass through
-              response = new Response(null, {
-                headers: {
-                  'x-middleware-next': '1',
-                },
-              });
-            } else {
-              throw new Error('Edge Function "${entrypointLabel}" did not return a response.');
-            }
-          }
-
-          return event.respondWith(response);
-        } catch (error) {
-          // we can't easily show a meaningful stack trace
-          // so, stick to just the error message for now
-          const msg = error.cause
-            ? (error.message + ': ' + (error.cause.message || error.cause))
-            : error.message;
-          event.respondWith(new Response(msg, {
-            status: 500,
-            headers: {
-              'x-vercel-failed': 'edge-wrapper'
-            }
-          }));
-        }
-      })`;
     return { userCode, wasmAssets };
   } catch (error) {
     // We can't easily show a meaningful stack trace from ncc -> edge-runtime.
