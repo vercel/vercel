@@ -2424,6 +2424,7 @@ export async function getMiddlewareBundle({
         }
       }
     }
+    return source;
   }
 
   return {
