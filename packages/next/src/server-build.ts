@@ -1131,21 +1131,21 @@ export async function serverBuild({
     });
   }
 
-  if (appDir) {
+  if (appPathRoutesManifest) {
     // create .rsc variant for app lambdas and edge functions
     // to match prerenders so we can route the same when the
     // __flight__ header is present
-    Object.values(appPathRoutesManifest || {}).forEach(route => {
-      route = path.posix.join('./', route === '/' ? '/index' : route);
+    const edgeFunctions = middleware.edgeFunctions as Record<string, any>;
 
-      const edgeFunctions = middleware.edgeFunctions as Record<string, any>;
+    for (let route of Object.values(appPathRoutesManifest)) {
+      route = path.posix.join('./', route === '/' ? '/index' : route);
 
       if (lambdas[route]) {
         lambdas[`${route}.rsc`] = lambdas[route];
       } else if (edgeFunctions[route]) {
         edgeFunctions[`${route}.rsc`] = edgeFunctions[route];
       }
-    });
+    }
   }
 
   return {
