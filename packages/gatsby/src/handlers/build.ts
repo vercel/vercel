@@ -3,6 +3,8 @@ import { build } from 'esbuild';
 import { FileFsRef, NodeVersion, glob } from '@vercel/build-utils';
 import { pathExists } from 'fs-extra';
 
+type FileFsRefs = Record<string, FileFsRef>;
+
 export const getHandler = async ({
   nodeVersion,
   handlerFile,
@@ -27,11 +29,11 @@ export const getHandler = async ({
   return res.outputFiles[0].text;
 };
 
-export async function getFunctionLibsFiles(): Promise<
-  Record<string, FileFsRef>
-> {
+export async function getFunctionLibsFiles(): Promise<FileFsRefs> {
+  const files: FileFsRefs = {};
+
   /* Copies the required libs for Serverless Functions from .cache to the <name>.func folder */
-  return [
+  for (const cur of [
     {
       name: 'lib/query-engine',
       src: join('.cache', 'query-engine'),
@@ -48,18 +50,14 @@ export async function getFunctionLibsFiles(): Promise<
       name: 'cache/caches',
       src: join('.cache', 'caches'),
     },
-  ].reduce(async (acc, cur) => {
-    const staticFiles = await glob('**', join(process.cwd(), cur.src));
+  ]) {
+    Object.assign(files, await glob('**', join(process.cwd(), cur.src)));
+  }
 
-    for (const [fileName, fileFsRef] of Object.entries(staticFiles)) {
-      acc[fileName] = fileFsRef;
-    }
-
-    return acc;
-  }, {});
+  return files;
 }
 
-export async function getFunctionHTMLFiles() {
+export async function getFunctionHTMLFiles(): Promise<FileFsRefs | undefined> {
   /* If available, copies the 404.html and 500.html files to the <name>.func/lib folder */
   for (const htmlFile of ['404', '500']) {
     if (await pathExists(join('public', `${htmlFile}.html`))) {
@@ -70,4 +68,5 @@ export async function getFunctionHTMLFiles() {
       };
     }
   }
+  return undefined;
 }

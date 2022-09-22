@@ -12,7 +12,16 @@ import {
   Prerender,
 } from '@vercel/build-utils/dist';
 
-export async function createFunctionLambda({ nodeVersion, handlerFile }) {
+const getFunctionName = (route: string) =>
+  route.replace(/\/$/, '').split(sep).pop()!;
+
+export async function createFunctionLambda({
+  nodeVersion,
+  handlerFile,
+}: {
+  nodeVersion: NodeVersion;
+  handlerFile: string;
+}) {
   return new NodejsLambda({
     handler: 'index.js',
     runtime: nodeVersion.runtime,
@@ -39,7 +48,9 @@ export async function createServerlessFunction({
   dsgRoutes: string[];
   ssrRoutes: string[];
   nodeVersion: NodeVersion;
-}): Promise<Record<string, NodejsLambda>> {
+}): Promise<Record<string, NodejsLambda | Prerender>> {
+  const functions: Record<string, NodejsLambda | Prerender> = {};
+
   const lambda = await createFunctionLambda({
     nodeVersion,
     handlerFile: join(
@@ -51,27 +62,23 @@ export async function createServerlessFunction({
     ),
   });
 
-  const prerenderLambda =
-    dsgRoutes?.length &&
-    new Prerender({
+  for (const ssrRoute of ssrRoutes) {
+    functions[getFunctionName(ssrRoute)] = lambda;
+  }
+
+  if (dsgRoutes?.length > 0) {
+    const prerenderLambda = new Prerender({
       lambda,
       expiration: false,
       fallback: null,
     });
 
-  const getFunctionName = route =>
-    route.replace(/\/$/, '').split(sep).pop() as string;
+    for (const dsgRoute of dsgRoutes) {
+      functions[getFunctionName(dsgRoute)] = prerenderLambda;
+    }
+  }
 
-  return {
-    ...ssrRoutes.reduce((acc, ssrRoute) => {
-      acc[getFunctionName(ssrRoute)] = lambda;
-      return acc;
-    }, {}),
-    ...dsgRoutes?.reduce((acc, dsgRoute) => {
-      acc[getFunctionName(dsgRoute)] = prerenderLambda;
-      return acc;
-    }, {}),
-  };
+  return functions;
 }
 
 export async function createAPIRoutes({
@@ -81,14 +88,16 @@ export async function createAPIRoutes({
   functions: Record<string, FileFsRef>;
   nodeVersion: NodeVersion;
 }): Promise<Record<string, FileBlob>> {
-  return Object.entries(functions).reduce(async (acc, [key, { fsPath }]) => {
-    acc[key] = new FileBlob({
+  const blobs: Record<string, FileBlob> = {};
+
+  for (const [key, { fsPath }] of Object.entries(functions)) {
+    blobs[key] = new FileBlob({
       data: await getHandler({
         nodeVersion,
         handlerFile: fsPath,
       }),
     });
+  }
 
-    return acc;
-  }, {});
+  return blobs;
 }
