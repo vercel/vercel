@@ -37,6 +37,8 @@ jobs:
     - name: Setup Node
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       uses: actions/setup-node@v3
+      env:
+        SEGMENT_DOWNLOAD_TIMEOUT_MIN: 5 # https://github.com/actions/cache/issues/810
       with:
         node-version: 14
         cache: 'yarn'
