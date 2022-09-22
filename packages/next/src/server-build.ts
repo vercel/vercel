@@ -1135,7 +1135,7 @@ export async function serverBuild({
     // create .rsc variant for app lambdas and edge functions
     // to match prerenders so we can route the same when the
     // __flight__ header is present
-    const edgeFunctions = middleware.edgeFunctions as Record<string, any>;
+    const edgeFunctions = middleware.edgeFunctions;
 
     for (let route of Object.values(appPathRoutesManifest)) {
       route = path.posix.join('./', route === '/' ? '/index' : route);

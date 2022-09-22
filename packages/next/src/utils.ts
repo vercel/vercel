@@ -2230,6 +2230,15 @@ export async function getMiddlewareBundle({
   routesManifest: RoutesManifest;
   isCorrectMiddlewareOrder: boolean;
 }) {
+  const source: {
+    staticRoutes: Route[];
+    dynamicRouteMap: Map<string, RouteWithSrc>;
+    edgeFunctions: Record<string, EdgeFunction>;
+  } = {
+    staticRoutes: [],
+    dynamicRouteMap: new Map(),
+    edgeFunctions: {},
+  };
   const middlewareManifest = await getMiddlewareManifest(
     entryPath,
     outputDirectory
@@ -2356,16 +2365,6 @@ export async function getMiddlewareBundle({
       })
     );
 
-    const source: {
-      staticRoutes: Route[];
-      dynamicRouteMap: Map<string, RouteWithSrc>;
-      edgeFunctions: Record<string, EdgeFunction>;
-    } = {
-      staticRoutes: [],
-      dynamicRouteMap: new Map(),
-      edgeFunctions: {},
-    };
-
     for (const worker of workerConfigs.values()) {
       const edgeFile = worker.edgeFunction.name;
       let shortPath = edgeFile;
@@ -2420,15 +2419,9 @@ export async function getMiddlewareBundle({
         }
       }
     }
-
-    return source;
   }
 
-  return {
-    staticRoutes: [],
-    dynamicRouteMap: new Map(),
-    edgeFunctions: {},
-  };
+  return source;
 }
 
 /**
