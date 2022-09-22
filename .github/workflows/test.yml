@@ -89,7 +89,7 @@ jobs:
         env:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
-          VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}
+          VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
           FORCE_COLOR: '1'
 
   conclusion:

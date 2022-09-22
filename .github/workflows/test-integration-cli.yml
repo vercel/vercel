@@ -41,4 +41,4 @@ jobs:
       - run: yarn test-integration-cli
         env:
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
-          VERCEL_REGISTRATION_URL: ${{ secrets.VERCEL_REGISTRATION_URL }}
+          VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}
