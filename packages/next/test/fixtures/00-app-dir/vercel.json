@@ -12,6 +12,15 @@
       "mustContain": "hello from app/dashboard"
     },
     {
+      "path": "/dashboard",
+      "status": 200,
+      "headers": {
+        "__flight__": "1"
+      },
+      "mustContain": "M1:{",
+      "mustNotContain": "<html"
+    },
+    {
       "path": "/dashboard/another",
       "status": 200,
       "mustContain": "hello from newroot/dashboard/another"
