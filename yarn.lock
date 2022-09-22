@@ -4360,7 +4360,7 @@
   dependencies:
     "@types/node" "*"
 
-"@types/etag@^1.8.1":
+"@types/etag@1.8.1":
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/@types/etag/-/etag-1.8.1.tgz#593ca8ddb43acb3db049bd0955fd64d281ab58b9"
   integrity sha512-bsKkeSqN7HYyYntFRAmzcwx/dKW4Wa+KVMTInANlI72PWLQmOpZu96j0OqHZGArW4VQwCmJPteQlXaUDeOB0WQ==
@@ -4419,7 +4419,7 @@
   dependencies:
     "@types/node" "*"
 
-"@types/fs-extra@9.0.13", "@types/fs-extra@^9.0.13":
+"@types/fs-extra@9.0.13":
   version "9.0.13"
   resolved "https://registry.yarnpkg.com/@types/fs-extra/-/fs-extra-9.0.13.tgz#7594fbae04fe7f1918ce8b3d213f74ff44ac1f45"
   integrity sha512-nEnwB++1u5lVDM2UI4c1+5R+FYaKfaAzS4OococimjVm3nQw3TuzH5UNsocrcTBbhnerblyHj4A49qXbIiZdpA==
@@ -9226,12 +9226,7 @@ esbuild@0.14.47, esbuild@^0.14.25:
     esbuild-windows-64 "0.14.47"
     esbuild-windows-arm64 "0.14.47"
 
-esbuild@^0.11.20:
-  version "0.11.23"
-  resolved "https://registry.yarnpkg.com/esbuild/-/esbuild-0.11.23.tgz#c42534f632e165120671d64db67883634333b4b8"
-  integrity sha512-iaiZZ9vUF5wJV8ob1tl+5aJTrwDczlvGP0JoMmnpC2B0ppiMCu8n8gmy5ZTGl5bcG081XBVn+U+jP+mPFm5T5Q==
-
-esbuild@^0.14.49:
+esbuild@0.14.50:
   version "0.14.50"
   resolved "https://registry.yarnpkg.com/esbuild/-/esbuild-0.14.50.tgz#7a665392c8df94bf6e1ae1e999966a5ee62c6cbc"
   integrity sha512-SbC3k35Ih2IC6trhbMYW7hYeGdjPKf9atTKwBUHqMCYFZZ9z8zhuvfnZihsnJypl74FjiAKjBRqFkBkAd0rS/w==
@@ -9256,6 +9251,11 @@ esbuild@^0.14.49:
     esbuild-windows-32 "0.14.50"
     esbuild-windows-64 "0.14.50"
     esbuild-windows-arm64 "0.14.50"
+
+esbuild@^0.11.20:
+  version "0.11.23"
+  resolved "https://registry.yarnpkg.com/esbuild/-/esbuild-0.11.23.tgz#c42534f632e165120671d64db67883634333b4b8"
+  integrity sha512-iaiZZ9vUF5wJV8ob1tl+5aJTrwDczlvGP0JoMmnpC2B0ppiMCu8n8gmy5ZTGl5bcG081XBVn+U+jP+mPFm5T5Q==
 
 escalade@^3.1.1:
   version "3.1.1"
@@ -9635,7 +9635,7 @@ esutils@^2.0.2:
   resolved "https://registry.yarnpkg.com/esutils/-/esutils-2.0.3.tgz#74d2eb4de0b8da1293711910d50775b9b710ef64"
   integrity sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==
 
-etag@1.8.1, etag@^1.8.1, etag@~1.8.1:
+etag@1.8.1, etag@~1.8.1:
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/etag/-/etag-1.8.1.tgz#41ae2eeb65efa62268aebfea83ac7d79299b0887"
   integrity sha1-Qa4u62XvpiJorr/qg6x9eSmbCIc=
@@ -10391,6 +10391,15 @@ fs-extra@10.0.0:
     jsonfile "^6.0.1"
     universalify "^2.0.0"
 
+fs-extra@10.1.0, fs-extra@^10.1.0:
+  version "10.1.0"
+  resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-10.1.0.tgz#02873cfbc4084dde127eaa5f9905eef2325d1abf"
+  integrity sha512-oRXApq54ETRj4eMiFzGnHWGy+zo5raudjuxN0b8H7s/RU2oW0Wvsx9O0ACRN/kRq9E8Vu/ReskGB5o3ji+FzHQ==
+  dependencies:
+    graceful-fs "^4.2.0"
+    jsonfile "^6.0.1"
+    universalify "^2.0.0"
+
 fs-extra@7.0.0:
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-7.0.0.tgz#8cc3f47ce07ef7b3593a11b9fb245f7e34c041d6"
@@ -10417,15 +10426,6 @@ fs-extra@8.1.0, fs-extra@^8.1.0:
     graceful-fs "^4.2.0"
     jsonfile "^4.0.0"
     universalify "^0.1.0"
-
-fs-extra@^10.1.0:
-  version "10.1.0"
-  resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-10.1.0.tgz#02873cfbc4084dde127eaa5f9905eef2325d1abf"
-  integrity sha512-oRXApq54ETRj4eMiFzGnHWGy+zo5raudjuxN0b8H7s/RU2oW0Wvsx9O0ACRN/kRq9E8Vu/ReskGB5o3ji+FzHQ==
-  dependencies:
-    graceful-fs "^4.2.0"
-    jsonfile "^6.0.1"
-    universalify "^2.0.0"
 
 fs-extra@^7.0.0, fs-extra@^7.0.1:
   version "7.0.1"
@@ -10741,7 +10741,7 @@ gatsby-worker@^1.23.0:
     "@babel/core" "^7.15.5"
     "@babel/runtime" "^7.15.4"
 
-gatsby@^4.0.0:
+gatsby@4.23.0:
   version "4.23.0"
   resolved "https://registry.yarnpkg.com/gatsby/-/gatsby-4.23.0.tgz#cd9982c12a09a05e31126291003b43526660833a"
   integrity sha512-5hP8tw2LYhdSOuR0iFDQtUwGfcT5R3nwAdCOaglQy7X4DjnRsfxgbjw/EB7d2EXUgCLrhUEV5Lt9JxCQJilDFA==
