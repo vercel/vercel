@@ -3,7 +3,7 @@ export const config = {
 };
 
 export default async function edge(request, event) {
-  // TODO: fails in dev
+  // TODO: fails in dev and prod
   const importMeta = import.meta;
   const url6 = new URL('file6.png', importMeta.url);
 
