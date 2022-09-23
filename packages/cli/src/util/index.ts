@@ -15,8 +15,9 @@ import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
 import { GitMetadata, Org } from '../types';
+import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
-import type { ArchiveFormat, Dictionary, VercelConfig } from '@vercel/client';
+import { ArchiveFormat, Dictionary } from '@vercel/client';
 
 export interface NowOptions {
   client: Client;

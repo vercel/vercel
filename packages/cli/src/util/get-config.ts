@@ -8,7 +8,7 @@ import {
 } from './errors-ts';
 import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
-import type { VercelConfig } from '@vercel/client';
+import { VercelConfig } from './dev/types';
 import { Output } from './output';
 import { isErrnoException } from './is-error';
 
