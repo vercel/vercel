@@ -411,12 +411,9 @@ async function doBuild(
     })
   );
   buildsJson.builds = Array.from(buildsJsonBuilds.values());
-  const buildsJsonPath = join(outputDir, 'builds.json');
-  const writeBuildsJsonPromise = fs.writeJSON(buildsJsonPath, buildsJson, {
+  await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, {
     spaces: 2,
   });
-
-  ops.push(writeBuildsJsonPromise);
 
   // The `meta` config property is re-used for each Builder
   // invocation so that Builders can share state between
