@@ -54,6 +54,36 @@ test('[vercel dev] should support edge functions', async () => {
   }
 });
 
+test(
+  '[vercel dev] edge functions respond properly the same as production',
+  testFixtureStdio('edge-function-assets', async (testPath: any) => {
+    // WORKS
+    await testPath(
+      200,
+      '/api/edge-import-asset-0',
+      /blob:d6138b0f7d71ff633901d0652dcf6e035890d1a4/
+    );
+    await testPath(
+      200,
+      '/api/edge-import-asset-1',
+      /blob:a1360e3c869d5b82e52ca11ccfa19d609619fe03/
+    );
+    await testPath(
+      200,
+      '/api/edge-import-asset-4',
+      /https:\/\/example.com\/file4.png/
+    );
+
+    // FAILS: to build in prod, but works in `vc dev`
+    // await testPath(200, '/api/edge-import-asset-2', /blob:4f49b3dcb572a84deb0c99d541a6c20fccce5bef/);
+
+    // FAILS to execute in prod or `vc dev`
+    // await testPath(200, '/api/edge-import-asset-3', /blob:XXXX/);
+    // await testPath(200, '/api/edge-import-asset-5', /blob:YYYY/);
+    // await testPath(200, '/api/edge-import-asset-6', /blob:ZZZZ/);
+  })
+);
+
 test('[vercel dev] edge functions support WebAssembly files', async () => {
   const dir = fixture('edge-function');
   const { dev, port, readyResolver } = await testFixture(dir, {
