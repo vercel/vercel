@@ -8,7 +8,13 @@ import esbuild from 'esbuild';
 import fetch from 'node-fetch';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
 import { logError } from '../utils';
-import { readFileSync } from 'fs';
+import { stat, readFile, readFileSync } from 'fs-extra';
+import path from 'path';
+import { createAssetFilePlugin } from './esbuild-plugin-asset-file-import';
+import {
+  createFileSystemPlugin,
+  FileSystem,
+} from './esbuild-file-system-plugin';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
 const NODE_VERSION_IDENTIFIER = `node${NODE_VERSION_MAJOR}`;
@@ -38,8 +44,22 @@ async function compileUserCode(
   entrypointLabel: string,
   isMiddleware: boolean
 ): Promise<undefined | { userCode: string; wasmAssets: WasmAssets }> {
-  const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
   try {
+    const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
+
+    const fileSystem: FileSystem = {
+      async resolveImportPath(importer, importee) {
+        const resolvedPath = path.resolve(path.dirname(importer), importee);
+
+        // We only want to read files
+        const fileStat = await stat(resolvedPath).catch(() => null);
+        if (fileStat?.isFile()) {
+          return resolvedPath;
+        }
+      },
+      readFile,
+    };
+
     const result = await esbuild.build({
       // bundling behavior: use globals (like "browser") instead
       // of "require" statements for core libraries (like "node")
@@ -49,7 +69,11 @@ async function compileUserCode(
       target: NODE_VERSION_IDENTIFIER,
       sourcemap: 'inline',
       bundle: true,
-      plugins: [edgeWasmPlugin],
+      plugins: [
+        edgeWasmPlugin,
+        createAssetFilePlugin(fileSystem).plugin,
+        createFileSystemPlugin(fileSystem),
+      ],
       entryPoints: [entrypointPath],
       write: false, // operate in memory
       format: 'cjs',
