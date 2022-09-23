@@ -57,7 +57,7 @@ import { MissingDotenvVarsError } from '../errors-ts';
 import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles } from '../get-files';
-import { validateConfig } from './validate';
+import { validateConfig } from '../validate-config';
 import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';

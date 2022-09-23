@@ -920,7 +920,7 @@ describe('build', () => {
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
   });
-  
+
   it('should apply "images" configuration from `vercel.json`', async () => {
     const cwd = fixture('images');
     const output = join(cwd, '.vercel/output');
@@ -936,9 +936,26 @@ describe('build', () => {
           sizes: [256, 384, 600, 1000],
           domains: [],
           minimumCacheTTL: 60,
-          formats: ['image/webp', 'image/avif'],
+          formats: ['image/avif', 'image/webp'],
         },
       });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should fail with invalid "rewrites" configuration from `vercel.json`', async () => {
+    const cwd = fixture('invalid-rewrites');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?' +
+          '\n' +
+          'View Documentation: https://vercel.com/docs/configuration#project/rewrites'
+      );
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
