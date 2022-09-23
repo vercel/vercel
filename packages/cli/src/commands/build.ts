@@ -55,7 +55,7 @@ import { importBuilders } from '../util/build/import-builders';
 import { initCorepack, cleanupCorepack } from '../util/build/corepack';
 import { sortBuilders } from '../util/build/sort-builders';
 import { toEnumerableError } from '../util/error';
-import { validateConfig } from '../util/dev/validate';
+import { validateConfig } from '../util/validate-config';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 

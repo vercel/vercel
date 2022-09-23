@@ -7,7 +7,7 @@ import {
   rewritesSchema,
   trailingSlashSchema,
 } from '@vercel/routing-utils';
-import { VercelConfig } from './types';
+import { VercelConfig } from './dev/types';
 import {
   functionsSchema,
   buildsSchema,
