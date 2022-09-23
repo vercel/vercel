@@ -16,6 +16,83 @@ import {
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
 
+const imagesSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['sizes'],
+  properties: {
+    contentSecurityPolicy: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+    dangerouslyAllowSVG: {
+      type: 'boolean',
+    },
+    domains: {
+      type: 'array',
+      minItems: 0,
+      maxItems: 50,
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 256,
+      },
+    },
+    formats: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 4,
+      items: {
+        enum: ['image/avif', 'image/webp', 'image/jpeg', 'image/png'],
+      },
+    },
+    minimumCacheTTL: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 315360000,
+    },
+    remotePatterns: {
+      type: 'array',
+      minItems: 0,
+      maxItems: 50,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['hostname'],
+        properties: {
+          protocol: {
+            enum: ['http', 'https'],
+          },
+          hostname: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 256,
+          },
+          port: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 5,
+          },
+          pathname: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 256,
+          },
+        },
+      },
+    },
+    sizes: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 50,
+      items: {
+        type: 'number',
+      },
+    },
+  },
+};
+
 const vercelConfigSchema = {
   type: 'object',
   // These are not all possibilities because `vc dev`
@@ -30,6 +107,7 @@ const vercelConfigSchema = {
     rewrites: rewritesSchema,
     trailingSlash: trailingSlashSchema,
     functions: functionsSchema,
+    images: imagesSchema,
   },
 };
 
