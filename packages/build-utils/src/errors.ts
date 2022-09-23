@@ -61,14 +61,14 @@ export function getPrettyError(obj: {
     }
 
     return new NowBuildError({
-      code: 'invalid_vercel_config',
+      code: 'INVALID_VERCEL_CONFIG',
       message: message,
       link: prop ? `${docsUrl}#project/${prop.toLowerCase()}` : docsUrl,
       action: 'View Documentation',
     });
   } catch (e) {
     return new NowBuildError({
-      code: 'invalid_vercel_config',
+      code: 'INVALID_VERCEL_CONFIG',
       message: `Failed to validate configuration.`,
       link: docsUrl,
       action: 'View Documentation',

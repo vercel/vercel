@@ -965,7 +965,7 @@ describe('build', () => {
           'Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?',
         stack: expect.stringContaining('at validateConfig'),
         hideStackTrace: true,
-        code: 'invalid_vercel_config',
+        code: 'INVALID_VERCEL_CONFIG',
         link: 'https://vercel.com/docs/configuration#project/rewrites',
         action: 'View Documentation',
       });
