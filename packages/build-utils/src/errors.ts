@@ -61,14 +61,14 @@ export function getPrettyError(obj: {
     }
 
     return new NowBuildError({
-      code: 'INVALID_LOCAL_CONFIG',
+      code: 'invalid_vercel_config',
       message: message,
       link: prop ? `${docsUrl}#project/${prop.toLowerCase()}` : docsUrl,
       action: 'View Documentation',
     });
   } catch (e) {
     return new NowBuildError({
-      code: 'INVALID_LOCAL_CONFIG',
+      code: 'invalid_vercel_config',
       message: `Failed to validate configuration.`,
       link: docsUrl,
       action: 'View Documentation',
