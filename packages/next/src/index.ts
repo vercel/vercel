@@ -877,7 +877,7 @@ export const build: BuildV2 = async ({
           src: path.posix.join(
             '/',
             entryDirectory,
-            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
+            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|fonts)/.+'
           ),
           status: 404,
           check: true,
@@ -897,7 +897,7 @@ export const build: BuildV2 = async ({
           src: path.posix.join(
             '/',
             entryDirectory,
-            `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
+            `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|fonts|${escapedBuildId})/.+`
           ),
           // Next.js assets contain a hash or entropy in their filenames, so they
           // are guaranteed to be unique and cacheable indefinitely.
@@ -2405,7 +2405,7 @@ export const build: BuildV2 = async ({
         src: path.join(
           '/',
           entryDirectory,
-          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
+          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|fonts)/.+'
         ),
         status: 404,
         check: true,
@@ -2471,7 +2471,7 @@ export const build: BuildV2 = async ({
         src: path.join(
           '/',
           entryDirectory,
-          `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
+          `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|fonts|${escapedBuildId})/.+`
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.

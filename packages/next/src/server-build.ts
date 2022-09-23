@@ -1452,7 +1452,7 @@ export async function serverBuild({
         src: path.posix.join(
           '/',
           entryDirectory,
-          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
+          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|fonts)/.+'
         ),
         status: 404,
         check: true,
@@ -1590,7 +1590,7 @@ export async function serverBuild({
         src: path.posix.join(
           '/',
           entryDirectory,
-          `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
+          `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|fonts|${escapedBuildId})/.+`
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.
