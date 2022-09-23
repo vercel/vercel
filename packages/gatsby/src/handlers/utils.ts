@@ -15,6 +15,7 @@ export async function getPageSSRHelpers() {
   const { getData, renderPageData, renderHTML } = (await import(
     join(__dirname, './lib/page-ssr/index.js')
   )) as typeof import('gatsby/dist/utils/page-ssr-module/entry');
+  console.log({ getData, renderHTML, renderPageData });
 
   return { getData, renderPageData, renderHTML };
 }

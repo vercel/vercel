@@ -25,17 +25,17 @@ export async function createFunctionLambda({
   return new NodejsLambda({
     handler: 'index.js',
     runtime: nodeVersion.runtime,
-    shouldAddHelpers: false,
+    shouldAddHelpers: true,
     shouldAddSourcemapSupport: false,
     files: {
+      ...(await getFunctionLibsFiles()),
+      ...(await getFunctionHTMLFiles()),
       'index.js': new FileBlob({
         data: await getHandler({
           nodeVersion,
           handlerFile,
         }),
       }),
-      ...(await getFunctionLibsFiles()),
-      ...(await getFunctionHTMLFiles()),
     },
   });
 }

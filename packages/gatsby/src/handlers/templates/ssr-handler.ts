@@ -53,7 +53,7 @@ export default async function handler(
         .status(500)
         .send(readFileSync(join(__dirname, './500.html'), 'utf-8'));
     }
-    res.setHeader('Content-Type', 'text/plain');
-    return res.status(500).send('Internal server error.');
+
+    throw e;
   }
 }

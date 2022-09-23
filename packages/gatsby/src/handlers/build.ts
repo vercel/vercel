@@ -51,8 +51,12 @@ export async function getFunctionLibsFiles(): Promise<FileFsRefs> {
       src: join('.cache', 'caches'),
     },
   ]) {
-    Object.assign(files, await glob('**', join(process.cwd(), cur.src)));
+    const matches = await glob('**', join(process.cwd(), cur.src));
+    for (const [path, file] of Object.entries(matches)) {
+      files[join(cur.name, path)] = file;
+    }
   }
+  console.log(files);
 
   return files;
 }
