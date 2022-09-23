@@ -25,6 +25,7 @@ import {
   MergeRoutesProps,
   Route,
 } from '@vercel/routing-utils';
+import { fileNameSymbol } from '@vercel/client';
 import type { VercelConfig } from '@vercel/client';
 
 import pull from './pull';
@@ -54,6 +55,7 @@ import { importBuilders } from '../util/build/import-builders';
 import { initCorepack, cleanupCorepack } from '../util/build/corepack';
 import { sortBuilders } from '../util/build/sort-builders';
 import { toEnumerableError } from '../util/error';
+import { validateConfig } from '../util/dev/validate';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -269,19 +271,33 @@ async function doBuild(
   const { output } = client;
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
-  // Load `package.json` and `vercel.json` files
-  const [pkg, vercelConfig] = await Promise.all([
+  const [pkg, vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(join(workPath, 'vercel.json')).then(
-      config => config || readJSONFile<VercelConfig>(join(workPath, 'now.json'))
-    ),
+    readJSONFile<VercelConfig>(join(workPath, 'vercel.json')),
+    readJSONFile<VercelConfig>(join(workPath, 'now.json')),
   ]);
+
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
+  if (nowConfig instanceof CantParseJSONFile) throw nowConfig;
+
+  if (vercelConfig) {
+    vercelConfig[fileNameSymbol] = 'vercel.json';
+  } else if (nowConfig) {
+    nowConfig[fileNameSymbol] = 'now.json';
+  }
+
+  const localConfig = vercelConfig || nowConfig || {};
+  const validateError = validateConfig(localConfig);
+
+  if (validateError) {
+    output.prettyError(validateError);
+    return 1;
+  }
 
   const projectSettings = {
     ...project.settings,
-    ...pickOverrides(vercelConfig || {}),
+    ...pickOverrides(localConfig),
   };
 
   // Get a list of source files
@@ -289,12 +305,12 @@ async function doBuild(
     normalizePath(relative(workPath, f))
   );
 
-  const routesResult = getTransformedRoutes(vercelConfig || {});
+  const routesResult = getTransformedRoutes(localConfig);
   if (routesResult.error) {
     throw routesResult.error;
   }
 
-  if (vercelConfig?.builds && vercelConfig.functions) {
+  if (localConfig.builds && localConfig.functions) {
     throw new NowBuildError({
       code: 'bad_request',
       message:
@@ -303,7 +319,7 @@ async function doBuild(
     });
   }
 
-  let builds = vercelConfig?.builds || [];
+  let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
   let isZeroConfig = false;
 
@@ -318,7 +334,7 @@ async function doBuild(
 
     // Detect the Vercel Builders that will need to be invoked
     const detectedBuilders = await detectBuilders(files, pkg, {
-      ...vercelConfig,
+      ...localConfig,
       projectSettings,
       ignoreBuildScript: true,
       featHandleMiss: true,
@@ -466,7 +482,7 @@ async function doBuild(
           build,
           builder,
           builderPkg,
-          vercelConfig
+          localConfig
         ).then(
           override => {
             if (override) overrides.push(override);
@@ -555,7 +571,7 @@ async function doBuild(
     builds: builderRoutes,
   });
 
-  const images = vercelConfig?.images
+  const images = localConfig.images;
   if (images) {
     if (typeof images !== 'object') {
       throw new Error(
