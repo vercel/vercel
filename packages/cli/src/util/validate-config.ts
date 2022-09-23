@@ -7,14 +7,13 @@ import {
   rewritesSchema,
   trailingSlashSchema,
 } from '@vercel/routing-utils';
-import { VercelConfig } from './dev/types';
 import {
   functionsSchema,
   buildsSchema,
   NowBuildError,
   getPrettyError,
 } from '@vercel/build-utils';
-import { fileNameSymbol } from '@vercel/client';
+import { fileNameSymbol, VercelConfig } from '@vercel/client';
 
 const imagesSchema = {
   type: 'object',

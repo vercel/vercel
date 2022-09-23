@@ -13,13 +13,10 @@ import {
   FileFsRef,
   Lambda,
 } from '@vercel/build-utils';
-import { VercelConfig } from '@vercel/client';
 import { HandleValue, Route } from '@vercel/routing-utils';
 import { Output } from '../output';
 import { ProjectEnvVariable, ProjectSettings } from '../../types';
 import { BuilderWithPkg } from '../build/import-builders';
-
-export { VercelConfig };
 
 export interface DevServerOptions {
   output: Output;
