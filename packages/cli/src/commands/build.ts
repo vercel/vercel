@@ -411,6 +411,12 @@ async function doBuild(
     })
   );
   buildsJson.builds = Array.from(buildsJsonBuilds.values());
+  const buildsJsonPath = join(outputDir, 'builds.json');
+  const writeBuildsJsonPromise = fs.writeJSON(buildsJsonPath, buildsJson, {
+    spaces: 2,
+  });
+
+  ops.push(writeBuildsJsonPromise);
 
   // The `meta` config property is re-used for each Builder
   // invocation so that Builders can share state between
@@ -427,7 +433,6 @@ async function doBuild(
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
   const corepackShimDir = await initCorepack({ repoRootPath });
-  let builderError: Error | undefined;
 
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
@@ -489,8 +494,8 @@ async function doBuild(
       const buildJsonBuild = buildsJsonBuilds.get(build);
       if (buildJsonBuild) {
         buildJsonBuild.error = toEnumerableError(err);
-        builderError = err;
       }
+      throw err;
     }
   }
 
@@ -505,11 +510,6 @@ async function doBuild(
     if (error) {
       throw error;
     }
-  }
-
-  // One or more builders threw an error
-  if (builderError) {
-    throw builderError;
   }
 
   // Merge existing `config.json` file into the one that will be produced
