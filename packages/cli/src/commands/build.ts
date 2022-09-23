@@ -234,7 +234,8 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
-    return await doBuild(client, project, buildsJson, cwd, outputDir);
+    await doBuild(client, project, buildsJson, cwd, outputDir);
+    return 0;
   } catch (err: any) {
     output.prettyError(err);
 
@@ -267,7 +268,7 @@ async function doBuild(
   buildsJson: BuildsManifest,
   cwd: string,
   outputDir: string
-): Promise<number> {
+): Promise<void> {
   const { output } = client;
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
@@ -490,26 +491,11 @@ async function doBuild(
         )
       );
     } catch (err: any) {
-      output.prettyError(err);
-
-      const writeConfigJsonPromise = fs.writeJSON(
-        join(outputDir, 'config.json'),
-        { version: 3 },
-        { spaces: 2 }
-      );
-
-      await Promise.all([writeBuildsJsonPromise, writeConfigJsonPromise]);
-
       const buildJsonBuild = buildsJsonBuilds.get(build);
       if (buildJsonBuild) {
         buildJsonBuild.error = toEnumerableError(err);
-
-        await fs.writeJSON(buildsJsonPath, buildsJson, {
-          spaces: 2,
-        });
       }
-
-      return 1;
+      throw err;
     }
   }
 
@@ -596,8 +582,6 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
-
-  return 0;
 }
 
 function expandBuild(files: string[], build: Builder): Builder[] {
