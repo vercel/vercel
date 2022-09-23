@@ -2229,7 +2229,11 @@ export async function getMiddlewareBundle({
   prerenderBypassToken: string;
   routesManifest: RoutesManifest;
   isCorrectMiddlewareOrder: boolean;
-}) {
+}): Promise<{
+  staticRoutes: Route[];
+  dynamicRouteMap: Map<string, RouteWithSrc>;
+  edgeFunctions: Record<string, EdgeFunction>;
+}> {
   const middlewareManifest = await getMiddlewareManifest(
     entryPath,
     outputDirectory
@@ -2420,7 +2424,6 @@ export async function getMiddlewareBundle({
         }
       }
     }
-
     return source;
   }
 
