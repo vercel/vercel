@@ -291,8 +291,7 @@ async function doBuild(
   const validateError = validateConfig(localConfig);
 
   if (validateError) {
-    output.prettyError(validateError);
-    return 1;
+    throw validateError;
   }
 
   const projectSettings = {
