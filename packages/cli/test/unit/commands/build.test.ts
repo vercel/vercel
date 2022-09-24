@@ -750,11 +750,22 @@ describe('build', () => {
       const errorBuilds = builds.builds.filter((b: any) => 'error' in b);
       expect(errorBuilds).toHaveLength(1);
 
-      expect(errorBuilds[0].error.name).toEqual('Error');
-      expect(errorBuilds[0].error.message).toMatch(`TS1005`);
-      expect(errorBuilds[0].error.message).toMatch(`',' expected.`);
-      expect(errorBuilds[0].error.hideStackTrace).toEqual(true);
-      expect(errorBuilds[0].error.code).toEqual('NODE_TYPESCRIPT_ERROR');
+      expect(errorBuilds[0].error).toEqual({
+        name: 'Error',
+        message: expect.stringContaining('TS1005'),
+        stack: expect.stringContaining('api/typescript.ts'),
+        hideStackTrace: true,
+        code: 'NODE_TYPESCRIPT_ERROR',
+      });
+
+      // top level "error" also contains the same error
+      expect(builds.error).toEqual({
+        name: 'Error',
+        message: expect.stringContaining('TS1005'),
+        stack: expect.stringContaining('api/typescript.ts'),
+        hideStackTrace: true,
+        code: 'NODE_TYPESCRIPT_ERROR',
+      });
 
       // `config.json` contains `version`
       const configJson = await fs.readJSON(join(output, 'config.json'));
