@@ -1,7 +1,20 @@
 {
-  "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
   "probes": [
+    {
+      "path": "/ssg/first/",
+      "status": 404,
+      "mustContain": "This page could not be found"
+    },
+    {
+      "path": "/ssg/second/",
+      "status": 404,
+      "mustContain": "This page could not be found"
+    },
+    {
+      "path": "/ssg/third/",
+      "status": 404,
+      "mustContain": "This page could not be found"
+    },
     { "path": "/foo/", "status": 200, "mustContain": "foo page" },
     {
       "fetchOptions": { "redirect": "manual" },
