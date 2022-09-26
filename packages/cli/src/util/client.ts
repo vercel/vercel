@@ -153,7 +153,7 @@ export default class Client extends EventEmitter implements Stdio {
             await this.reauthenticate(error);
           } catch (reauthError) {
             // there's no sense in retrying
-            return bail(reauthError as Error);
+            return bail(normalizeError(reauthError));
           }
         } else if (res.status >= 400 && res.status < 500) {
           // Any other 4xx should bail without retrying
