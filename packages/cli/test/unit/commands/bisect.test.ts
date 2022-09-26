@@ -18,6 +18,13 @@ describe('bisect', () => {
       createdAt: now + 20000,
     });
 
+    // also create an extra deployment before the known good deployment
+    // to make sure the bisect pool doesn't include it
+    useDeployment({
+      creator: user,
+      createdAt: now - 30000,
+    });
+
     const bisectPromise = bisect(client);
 
     await expect(client.stderr).toOutput('Specify a URL where the bug occurs:');
