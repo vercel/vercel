@@ -87,8 +87,6 @@ describe('bisect', () => {
       'Response Error (403) when requesting "https://some-9s8df0.vercel.sh"'
     );
 
-    expect(bisectPromise).resolves.toBe(1);
-
-    console.log('TEST OVER');
+    await expect(bisectPromise).resolves.toBe(1);
   });
 });
