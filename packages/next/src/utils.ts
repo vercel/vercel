@@ -2202,7 +2202,10 @@ interface BaseEdgeFunctionInfo {
   page: string;
   wasm?: { filePath: string; name: string }[];
   assets?: { filePath: string; name: string }[];
-  userConfig?: Record<string, unknown>;
+  userConfig?: {
+    regions?: 'auto' | string[] | 'all' | 'default';
+    [key: string]: unknown;
+  };
 }
 
 interface EdgeFunctionInfoV1 extends BaseEdgeFunctionInfo {
