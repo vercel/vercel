@@ -20,6 +20,7 @@ import {
 import { Project } from 'ts-morph';
 import once from '@tootallnate/once';
 import { nodeFileTrace } from '@vercel/nft';
+import nftResolveDependency from '@vercel/nft/out/resolve-dependency';
 import {
   glob,
   download,
@@ -35,6 +36,7 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  cloneEnv,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -51,7 +53,7 @@ import type {
 import { getConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
-import { getRegExpFromMatchers } from './utils';
+import { entrypointToOutputPath, getRegExpFromMatchers } from './utils';
 
 export { shouldServe };
 
@@ -116,7 +118,8 @@ async function compile(
   baseDir: string,
   entrypointPath: string,
   config: Config,
-  nodeVersion: NodeVersion
+  nodeVersion: NodeVersion,
+  isEdgeFunction: boolean
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -149,11 +152,6 @@ async function compile(
     }
   }
 
-  debug(
-    'Tracing input files: ' +
-      [...inputFiles].map(p => relative(workPath, p)).join(', ')
-  );
-
   let tsCompile: Register;
   function compileTypeScript(path: string, source: string): string {
     const relPath = relative(baseDir, path);
@@ -182,33 +180,69 @@ async function compile(
       processCwd: workPath,
       ts: true,
       mixedModules: true,
+      resolve(id, parent, job, cjsResolve) {
+        const normalizedWasmImports = id.replace(/\.wasm\?module$/i, '.wasm');
+        return nftResolveDependency(
+          normalizedWasmImports,
+          parent,
+          job,
+          cjsResolve
+        );
+      },
       ignore: config.excludeFiles,
       async readFile(fsPath: string): Promise<Buffer | string | null> {
         const relPath = relative(baseDir, fsPath);
+
+        // If this file has already been read then return from the cache
         const cached = sourceCache.get(relPath);
-        if (cached) return cached.toString();
-        // null represents a not found
-        if (cached === null) return null;
+        if (typeof cached !== 'undefined') return cached;
+
         try {
+          let entry: File | undefined;
           let source: string | Buffer = readFileSync(fsPath);
+
+          const { mode } = lstatSync(fsPath);
+          if (isSymbolicLink(mode)) {
+            entry = new FileFsRef({ fsPath, mode });
+          }
+
+          if (isEdgeFunction && basename(fsPath) === 'package.json') {
+            // For Edge Functions, patch "main" field to prefer "browser" or "module"
+            const pkgJson = JSON.parse(source.toString());
+            for (const prop of ['browser', 'module']) {
+              const val = pkgJson[prop];
+              if (typeof val === 'string') {
+                debug(`Using "${prop}" field in ${fsPath}`);
+                pkgJson.main = val;
+
+                // Create the `entry` with the original so that the output is unmodified
+                if (!entry) {
+                  entry = new FileBlob({ data: source, mode });
+                }
+
+                // Return the modified `package.json` to nft
+                source = JSON.stringify(pkgJson);
+                break;
+              }
+            }
+          }
+
           if (
             (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
             fsPath.endsWith('.tsx')
           ) {
             source = compileTypeScript(fsPath, source.toString());
           }
-          const { mode } = lstatSync(fsPath);
-          let entry: File;
-          if (isSymbolicLink(mode)) {
-            entry = new FileFsRef({ fsPath, mode });
-          } else {
+
+          if (!entry) {
             entry = new FileBlob({ data: source, mode });
           }
           fsCache.set(relPath, entry);
           sourceCache.set(relPath, source);
-          return source.toString();
+          return source;
         } catch (e) {
           if (e.code === 'ENOENT' || e.code === 'EISDIR') {
+            // `null` represents a not found
             sourceCache.set(relPath, null);
             return null;
           }
@@ -219,11 +253,8 @@ async function compile(
   );
 
   for (const warning of warnings) {
-    if (warning?.stack) {
-      debug(warning.stack.replace('Error: ', 'Warning: '));
-    }
+    debug(`Warning from trace: ${warning.message}`);
   }
-
   for (const path of fileList) {
     let entry = fsCache.get(path);
     if (!entry) {
@@ -358,25 +389,6 @@ export const build: BuildV3 = async ({
     spawnOpts
   );
 
-  debug('Tracing input files...');
-  const traceTime = Date.now();
-  const { preparedFiles, shouldAddSourcemapSupport } = await compile(
-    workPath,
-    baseDir,
-    entrypointPath,
-    config,
-    nodeVersion
-  );
-  debug(`Trace complete [${Date.now() - traceTime}ms]`);
-
-  let routes: BuildResultV3['routes'];
-  let output: BuildResultV3['output'] | undefined;
-
-  const handler = renameTStoJS(relative(baseDir, entrypointPath));
-  const outputName = config.zeroConfig
-    ? handler.substring(0, handler.length - 3)
-    : handler;
-
   const isMiddleware = config.middleware === true;
 
   // Will output an `EdgeFunction` for when `config.middleware = true`
@@ -397,6 +409,24 @@ export const build: BuildV3 = async ({
     isEdgeFunction = staticConfig.runtime === 'experimental-edge';
   }
 
+  debug('Tracing input files...');
+  const traceTime = Date.now();
+  const { preparedFiles, shouldAddSourcemapSupport } = await compile(
+    workPath,
+    baseDir,
+    entrypointPath,
+    config,
+    nodeVersion,
+    isEdgeFunction
+  );
+  debug(`Trace complete [${Date.now() - traceTime}ms]`);
+
+  let routes: BuildResultV3['routes'];
+  let output: BuildResultV3['output'] | undefined;
+
+  const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
+
   // Add a `route` for Middleware
   if (isMiddleware) {
     if (!isEdgeFunction) {
@@ -412,9 +442,7 @@ export const build: BuildV3 = async ({
     routes = [
       {
         src,
-        middlewarePath: config.zeroConfig
-          ? outputName
-          : relative(baseDir, entrypointPath),
+        middlewarePath: outputPath,
         continue: true,
         override: true,
       },
@@ -427,7 +455,7 @@ export const build: BuildV3 = async ({
       files: preparedFiles,
 
       // TODO: remove - these two properties should not be required
-      name: outputName,
+      name: outputPath,
       deploymentTarget: 'v8-worker',
     });
   } else {
@@ -498,15 +526,13 @@ export const startDevServer: StartDevServer = async opts => {
   const child = fork(devServerPath, [], {
     cwd: workPath,
     execArgv: [],
-    env: {
-      ...process.env,
-      ...meta.env,
+    env: cloneEnv(process.env, meta.env, {
       VERCEL_DEV_ENTRYPOINT: entrypoint,
       VERCEL_DEV_TSCONFIG: projectTsConfig || '',
       VERCEL_DEV_IS_ESM: isEsm ? '1' : undefined,
       VERCEL_DEV_CONFIG: JSON.stringify(config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(meta.buildEnv || {}),
-    },
+    }),
   });
 
   const { pid } = child;

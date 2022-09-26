@@ -226,9 +226,10 @@ async function run({ output, contextName, currentTeam, client }) {
 
     if (theSecret) {
       const yes =
-        argv.yes || (await readConfirmation(output, theSecret, contextName));
+        argv.yes ||
+        (await readConfirmation(client, output, theSecret, contextName));
       if (!yes) {
-        output.print(`Aborted. Secret not deleted.\n`);
+        output.print(`Canceled. Secret not deleted.\n`);
         return 0;
       }
     } else {
@@ -353,7 +354,7 @@ async function run({ output, contextName, currentTeam, client }) {
   return 2;
 }
 
-async function readConfirmation(output, secret, contextName) {
+async function readConfirmation(client, output, secret, contextName) {
   const time = chalk.gray(`${ms(new Date() - new Date(secret.created))} ago`);
   const tbl = table([[chalk.bold(secret.name), time]], {
     align: ['r', 'l'],
@@ -367,5 +368,5 @@ async function readConfirmation(output, secret, contextName) {
   );
   output.print(`  ${tbl}\n`);
 
-  return confirm(`${chalk.bold.red('Are you sure?')}`, false);
+  return confirm(client, `${chalk.bold.red('Are you sure?')}`, false);
 }

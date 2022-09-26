@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -104,84 +103,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	se := string(rf)
-
-	var files []string
-	var relatedFiles []string
-
-	// Add entrypoint to watchlist
-	relFileName, err := filepath.Rel(filepath.Dir(fileName), fileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	relatedFiles = append(relatedFiles, relFileName)
-
-	// looking for all go files that have export func
-	// using in entrypoint
-	err = filepath.Walk(filepath.Dir(fileName), visit(&files))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// looking related packages
-	var modPath string
-	flag.StringVar(&modPath, "modpath", "", "module path")
-	flag.Parse()
-	if len(modPath) > 1 {
-		err = filepath.Walk(modPath, visit(&files))
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	for _, file := range files {
-		absFileName, _ := filepath.Abs(fileName)
-		absFile, _ := filepath.Abs(file)
-		// if it isn't entrypoint
-		if absFileName != absFile {
-			// find all export structs and functions
-			pf := parse(file)
-			var exportedDecl []string
-
-			ast.Inspect(pf, func(n ast.Node) bool {
-				switch t := n.(type) {
-				case *ast.FuncDecl:
-					if t.Name.IsExported() {
-						exportedDecl = append(exportedDecl, t.Name.Name)
-					}
-				// find variable declarations
-				case *ast.TypeSpec:
-					// which are public
-					if t.Name.IsExported() {
-						switch t.Type.(type) {
-						// and are interfaces
-						case *ast.StructType:
-							exportedDecl = append(exportedDecl, t.Name.Name)
-						}
-					}
-				}
-				return true
-			})
-
-			for _, ed := range exportedDecl {
-				if strings.Contains(se, ed) {
-					// find relative path of related file
-					var basePath string
-					if modPath == "" {
-						basePath = filepath.Dir(fileName)
-					} else {
-						basePath = modPath
-					}
-
-					rel, err := filepath.Rel(basePath, file)
-					if err != nil {
-						log.Fatal(err)
-					}
-					relatedFiles = append(relatedFiles, rel)
-				}
-			}
-		}
-	}
 
 	parsed := parse(fileName)
 	offset := parsed.Pos()
@@ -197,7 +118,9 @@ func main() {
 			// find a valid `http.HandlerFunc` handler function
 			params := rf[fn.Type.Params.Pos()-offset : fn.Type.Params.End()-offset]
 			validHandlerFunc := (strings.Contains(string(params), "http.ResponseWriter") &&
-				strings.Contains(string(params), "*http.Request") && len(fn.Type.Params.List) == 2)
+				strings.Contains(string(params), "*http.Request") &&
+				len(fn.Type.Params.List) == 2 &&
+				(fn.Recv == nil || len(fn.Recv.List) == 0))
 
 			if validHandlerFunc {
 				// we found the first exported function with `http.HandlerFunc`
@@ -205,7 +128,6 @@ func main() {
 				analyzed := analyze{
 					PackageName: parsed.Name.Name,
 					FuncName:    fn.Name.Name,
-					Watch:       unique(relatedFiles),
 				}
 				analyzedJSON, _ := json.Marshal(analyzed)
 				fmt.Print(string(analyzedJSON))
@@ -223,11 +145,10 @@ func main() {
 		if fn.Name.IsExported() == true {
 			for _, param := range fn.Type.Params.List {
 				paramStr := fmt.Sprintf("%s", param.Type)
-				if strings.Contains(string(paramStr), "http ResponseWriter") && len(fn.Type.Params.List) == 2 {
+				if strings.Contains(string(paramStr), "http ResponseWriter") && len(fn.Type.Params.List) == 2 && (fn.Recv == nil || len(fn.Recv.List) == 0) {
 					analyzed := analyze{
 						PackageName: parsed.Name.Name,
 						FuncName:    fn.Name.Name,
-						Watch:       unique(relatedFiles),
 					}
 					analyzedJSON, _ := json.Marshal(analyzed)
 					fmt.Print(string(analyzedJSON))

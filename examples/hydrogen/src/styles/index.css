@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens */
+:root {
+  --color-primary: 20 20 20; /* Text, buttons, etc. */
+  --color-contrast: 250 250 249; /* Backgrounds, borders, etc. */
+  --color-accent: 191 72 0; /* Labels like "On sale" */
+  --font-size-fine: 0.75rem; /* text-xs */
+  --font-size-copy: 1rem; /* text-base */
+  --font-size-lead: 1.125rem; /* text-lg */
+  --font-size-heading: 2rem; /* text-2xl */
+  --font-size-display: 3rem; /* text-4xl */
+  --color-shop-pay: #5a31f4;
+  --shop-pay-button--width: 100%; /* Sets the width for the shop-pay-button web component */
+  --height-nav: 3rem;
+  --screen-height: 100vh;
+
+  @media (min-width: 32em) {
+    --height-nav: 4rem;
+  }
+  @media (min-width: 48em) {
+    --height-nav: 6rem;
+    --font-size-heading: 2.25rem; /* text-4xl */
+    --font-size-display: 3.75rem; /* text-6xl */
+  }
+  @supports (height: 100lvh) {
+    --screen-height: 100lvh;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: 250 250 250;
+    --color-contrast: 32 33 36;
+    --color-accent: 235 86 40;
+  }
+}
+
+@keyframes fadeInAnimation {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+shop-pay-button {
+  width: 100%;
+  height: 3rem;
+  display: table;
+}
+
+@layer base {
+  * {
+    font-variant-ligatures: none;
+  }
+
+  body {
+    @apply antialiased text-primary/90 bg-contrast border-primary/10;
+  }
+
+  html {
+    scroll-padding-top: 10rem;
+  }
+
+  model-viewer::part(default-progress-mask) {
+    display: none;
+  }
+
+  model-viewer::part(default-progress-bar) {
+    display: none;
+  }
+
+  input[type='search']::-webkit-search-decoration,
+  input[type='search']::-webkit-search-cancel-button,
+  input[type='search']::-webkit-search-results-button,
+  input[type='search']::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+  }
+
+  .prose {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      &:first-child {
+        @apply mt-0;
+      }
+    }
+  }
+}
+
+@layer components {
+  .article {
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      @apply font-sans text-primary;
+    }
+    @apply mb-12 font-serif prose mx-auto grid justify-center text-primary;
+    p,
+    ul,
+    li {
+      @apply mb-4 text-lg;
+    }
+    img {
+      @apply md:-mx-8 lg:-mx-16;
+
+      @media (min-width: 48em) {
+        width: calc(100% + 4rem);
+        max-width: 100vw;
+      }
+      @media (min-width: 64em) {
+        width: calc(100% + 8rem);
+      }
+    }
+  }
+
+  .swimlane {
+    @apply grid snap-mandatory grid-flow-col snap-x w-full gap-4 scroll-px-6 px-6 pb-4 overflow-x-scroll justify-start;
+  }
+}
+
+@layer utilities {
+  .fadeIn {
+    opacity: 0;
+    animation: fadeInAnimation ease 500ms forwards;
+  }
+
+  .hiddenScroll {
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .absolute-center {
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2;
+  }
+
+  .strike {
+    position: relative;
+    &::before {
+      content: '';
+      display: block;
+      position: absolute;
+      width: 108%;
+      height: 1.5px;
+      left: -4%;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgb(var(--color-primary));
+      box-shadow: 0.5px 0.5px 0px 0.5px rgb(var(--color-contrast));
+    }
+  }
+
+  .card-image {
+    @apply relative rounded overflow-clip flex justify-center items-center;
+    &::before {
+      content: ' ';
+      @apply z-10 absolute block top-0 left-0 w-full h-full shadow-border rounded;
+    }
+    img {
+      @apply object-cover w-full aspect-[inherit];
+    }
+  }
+}

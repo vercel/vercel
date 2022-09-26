@@ -70,29 +70,13 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
 }
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
-import { Readable } from 'stream';
-import type { Bridge } from '@vercel/node-bridge/bridge';
-import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
-import { Config, streamToBuffer, debug } from '@vercel/build-utils';
-import exitHook from 'exit-hook';
-import { EdgeRuntime, Primitives, runServer } from 'edge-runtime';
+import { Config } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import esbuild from 'esbuild';
-import fetch from 'node-fetch';
-import { TextDecoder } from 'util';
-
-function logError(error: Error) {
-  console.error(error.message);
-  if (error.stack) {
-    // only show the stack trace if debug is enabled
-    // because it points to internals, not user code
-    const errorPrefixLength = 'Error: '.length;
-    const errorMessageLength = errorPrefixLength + error.message.length;
-    debug(error.stack.substring(errorMessageLength + 1));
-  }
-}
+import { logError } from './utils';
+import { createEdgeEventHandler } from './edge-functions/edge-handler';
+import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -311,7 +295,7 @@ function parseRuntime(
     throw new Error(
       `Invalid function runtime "${runtime}" for "${entrypoint}". Valid runtimes are: ${JSON.stringify(
         validRuntimes
-      )}`
+      )}. Learn more: https://vercel.link/creating-edge-functions`
     );
   }
 
@@ -323,17 +307,24 @@ async function createEventHandler(
   config: Config,
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
-  const entryPointPath = join(process.cwd(), entrypoint!);
-  const runtime = parseRuntime(entrypoint, entryPointPath);
+  const entrypointPath = join(process.cwd(), entrypoint!);
+  const runtime = parseRuntime(entrypoint, entrypointPath);
 
   // `middleware.js`/`middleware.ts` file is always run as
   // an Edge Function, otherwise needs to be opted-in via
   // `export const config = { runtime: 'experimental-edge' }`
   if (config.middleware === true || runtime === 'experimental-edge') {
-    return createEdgeEventHandler(entryPointPath);
+    return createEdgeEventHandler(
+      entrypointPath,
+      entrypoint,
+      config.middleware || false
+    );
   }
 
-  return createServerlessEventHandler(entryPointPath, options);
+  return createServerlessEventHandler(entrypointPath, {
+    shouldAddHelpers: options.shouldAddHelpers,
+    useRequire,
+  });
 }
 
 let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;
@@ -368,21 +359,6 @@ async function main() {
   } else {
     console.log('Dev server listening:', address);
   }
-}
-
-export function rawBody(readable: Readable): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    let bytes = 0;
-    const chunks: Buffer[] = [];
-    readable.on('error', reject);
-    readable.on('data', chunk => {
-      chunks.push(chunk);
-      bytes += chunk.length;
-    });
-    readable.on('end', () => {
-      resolve(Buffer.concat(chunks, bytes));
-    });
-  });
 }
 
 export async function onDevRequest(

@@ -8,8 +8,8 @@ const {
 const { FileRef } = require('@vercel/build-utils');
 
 describe('getNextConfig', () => {
-  const workPath = path.join(__dirname, 'fixtures');
-  const entryPath = path.join(__dirname, 'fixtures', 'entry');
+  const workPath = path.join(__dirname, 'fixtures', '00-config');
+  const entryPath = path.join(workPath, 'entry');
 
   it('should find entry file', async () => {
     const file = await getNextConfig(workPath, entryPath);

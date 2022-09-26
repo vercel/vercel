@@ -23,19 +23,7 @@ export default async function rm(
   args: string[]
 ) {
   const { output } = client;
-
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const [aliasOrId] = args;
 
@@ -71,7 +59,7 @@ export default async function rm(
 
   const removeStamp = stamp();
   if (!opts['--yes'] && !(await confirmAliasRemove(client, alias))) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 

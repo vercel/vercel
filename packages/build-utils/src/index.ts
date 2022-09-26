@@ -4,7 +4,11 @@ import FileRef from './file-ref';
 import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
 import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
-import download, { DownloadedFiles, isSymbolicLink } from './fs/download';
+import download, {
+  downloadFile,
+  DownloadedFiles,
+  isSymbolicLink,
+} from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
 import rename from './fs/rename';
@@ -36,6 +40,8 @@ import streamToBuffer from './fs/stream-to-buffer';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
+import { getPrefixedEnvVars } from './get-prefixed-env-vars';
+import { cloneEnv } from './clone-env';
 
 export {
   FileBlob,
@@ -46,6 +52,7 @@ export {
   createLambda,
   Prerender,
   download,
+  downloadFile,
   DownloadedFiles,
   getWriteableDirectory,
   glob,
@@ -71,12 +78,14 @@ export {
   getDiscontinuedNodeVersions,
   getSpawnOptions,
   getPlatformEnv,
+  getPrefixedEnvVars,
   streamToBuffer,
   debug,
   isSymbolicLink,
   getLambdaOptionsFromFunction,
   scanParentDirs,
   getIgnoreFilter,
+  cloneEnv,
 };
 
 export { EdgeFunction } from './edge-function';

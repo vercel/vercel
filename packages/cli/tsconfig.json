@@ -14,5 +14,8 @@
     "outDir": "./dist",
     "typeRoots": ["./types", "./node_modules/@types"]
   },
-  "include": ["./types", "src/**/*"]
+  "include": ["./types", "src/**/*"],
+  "ts-node": {
+    "swc": true // https://typestrong.org/ts-node/docs/swc/
+  }
 }

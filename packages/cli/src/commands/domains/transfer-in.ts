@@ -23,18 +23,7 @@ export default async function transferIn(
   args: string[]
 ) {
   const { output } = client;
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const [domainName] = args;
   if (!domainName) {
@@ -122,9 +111,7 @@ export default async function transferIn(
 
   if (transferInResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method using ${getCommandName(
-        `billing add`
-      )}.`
+      `Could not purchase domain. Please add a payment method using the dashboard.`
     );
     return 1;
   }

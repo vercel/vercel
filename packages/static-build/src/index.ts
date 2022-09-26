@@ -20,6 +20,7 @@ import {
   spawnCommand,
   runNpmInstall,
   getEnvForPackageManager,
+  getPrefixedEnvVars,
   getNodeBinPath,
   runBundleInstall,
   runPipInstall,
@@ -30,8 +31,9 @@ import {
   debug,
   NowBuildError,
   scanParentDirs,
+  cloneEnv,
 } from '@vercel/build-utils';
-import type { Route, Source } from '@vercel/routing-utils';
+import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
 import * as BuildOutputV2 from './utils/build-output-v2';
 import * as BuildOutputV3 from './utils/build-output-v3';
@@ -173,8 +175,8 @@ const nowDevChildProcesses = new Set<ChildProcess>();
   });
 });
 
-const getDevRoute = (srcBase: string, devPort: number, route: Source) => {
-  const basic: Source = {
+const getDevRoute = (srcBase: string, devPort: number, route: RouteWithSrc) => {
+  const basic: RouteWithSrc = {
     src: `${srcBase}${route.src}`,
     dest: `http://localhost:${devPort}${route.dest}`,
   };
@@ -366,18 +368,13 @@ export const build: BuildV2 = async ({
         `Detected ${framework.name} framework. Optimizing your deployment...`
       );
 
-      if (process.env.VERCEL_URL) {
-        const { envPrefix } = framework;
-        if (envPrefix) {
-          Object.keys(process.env)
-            .filter(key => key.startsWith('VERCEL_'))
-            .forEach(key => {
-              const newKey = `${envPrefix}${key}`;
-              if (!(newKey in process.env)) {
-                process.env[newKey] = process.env[key];
-              }
-            });
-        }
+      const prefixedEnvs = getPrefixedEnvVars({
+        envPrefix: framework.envPrefix,
+        envs: process.env,
+      });
+
+      for (const [key, value] of Object.entries(prefixedEnvs)) {
+        process.env[key] = value;
       }
 
       if (process.env.VERCEL_ANALYTICS_ID) {
@@ -469,8 +466,7 @@ export const build: BuildV2 = async ({
           debug('Detected Gemfile');
           printInstall();
           const opts = {
-            env: {
-              ...process.env,
+            env: cloneEnv(process.env, {
               // See more: https://github.com/rubygems/rubygems/blob/a82d04856deba58be6b90f681a5e42a7c0f2baa7/bundler/lib/bundler/man/bundle-config.1.ronn
               BUNDLE_BIN: 'vendor/bin',
               BUNDLE_CACHE_PATH: 'vendor/cache',
@@ -480,7 +476,7 @@ export const build: BuildV2 = async ({
               BUNDLE_SILENCE_ROOT_WARNING: '1',
               BUNDLE_DISABLE_SHARED_GEMS: '1',
               BUNDLE_DISABLE_VERSION_CHECK: '1',
-            },
+            }),
           };
           await runBundleInstall(workPath, [], opts, meta);
           isBundleInstall = true;
@@ -708,7 +704,7 @@ export const build: BuildV2 = async ({
         }
 
         let ignore: string[] = [];
-        if (config.zeroConfig && config.outputDirectory === '.') {
+        if (config.outputDirectory === '.' || config.distDir === '.') {
           ignore = [
             '.env',
             '.env.*',

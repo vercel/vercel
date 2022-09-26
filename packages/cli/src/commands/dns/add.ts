@@ -21,18 +21,7 @@ export default async function add(
   args: string[]
 ) {
   const { output } = client;
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const parsedParams = parseAddDNSRecordArgs(args);
   if (!parsedParams) {
@@ -48,7 +37,7 @@ export default async function add(
   const { domain, data: argData } = parsedParams;
   const data = await getDNSData(client, argData);
   if (!data) {
-    output.log(`Aborted`);
+    output.log(`Canceled`);
     return 1;
   }
 

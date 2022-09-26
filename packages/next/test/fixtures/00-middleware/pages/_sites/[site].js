@@ -2,7 +2,7 @@ export default function Page(props) {
   return (
     <>
       <p>/_sites/[site]</p>
-      <p>{JSON.stringify(props)}</p>
+      <p id="props">{JSON.stringify(props)}</p>
     </>
   );
 }

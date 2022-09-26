@@ -20,15 +20,16 @@ export interface JSONObject {
 }
 
 export interface AuthConfig {
-  _?: string;
+  '// Note'?: string;
+  '// Docs'?: string;
   token?: string;
   skipWrite?: boolean;
 }
 
 export interface GlobalConfig {
-  _?: string;
+  '// Note'?: string;
+  '// Docs'?: string;
   currentTeam?: string;
-  includeScheme?: string;
   collectMetrics?: boolean;
   api?: string;
 
@@ -130,6 +131,8 @@ export type Deployment = {
   version?: number;
   created: number;
   createdAt: number;
+  ready?: number;
+  buildingAt?: number;
   creator: { uid: string; username: string };
   target: string | null;
   ownerId: string;
@@ -138,6 +141,7 @@ export type Deployment = {
   meta: {
     [key: string]: any;
   };
+  alias?: string[];
 };
 
 export type Alias = {
@@ -207,6 +211,7 @@ export interface ProjectAliasTarget {
   configuredBy?: null | 'CNAME' | 'A';
   configuredChangedAt?: null | number;
   configuredChangeAttempts?: [number, number];
+  deployment?: Deployment | undefined;
 }
 
 export interface Secret {
@@ -246,12 +251,40 @@ export interface ProjectEnvVariable {
   gitBranch?: string;
 }
 
+export interface DeployHook {
+  createdAt: number;
+  id: string;
+  name: string;
+  ref: string;
+  url: string;
+}
+
+export interface ProjectLinkData {
+  type: string;
+  repo: string;
+  repoId: number;
+  org?: string;
+  gitCredentialId: string;
+  productionBranch?: string | null;
+  sourceless: boolean;
+  createdAt: number;
+  updatedAt: number;
+  deployHooks?: DeployHook[];
+}
+
 export interface Project extends ProjectSettings {
   id: string;
+  analytics?: {
+    id: string;
+    enabledAt?: number;
+    disabledAt?: number;
+    canceledAt?: number | null;
+  };
   name: string;
   accountId: string;
   updatedAt: number;
   createdAt: number;
+  link?: ProjectLinkData;
   alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
 }

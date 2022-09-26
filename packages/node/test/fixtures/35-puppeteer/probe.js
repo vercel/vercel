@@ -9,7 +9,7 @@ async function tryTest({
   retries = 4,
 }) {
   try {
-    const res = await fetch(`https://${deploymentUrl}/${testName}`);
+    const res = await fetch(`https://${deploymentUrl}${testName}`);
     assert.equal(res.status, 200);
     const text = await res.text();
     assert.equal(text.trim(), `${testName}:${randomness}`);
@@ -32,6 +32,10 @@ async function tryTest({
 }
 
 module.exports = async ({ deploymentUrl, fetch, randomness }) => {
-  await tryTest({ testName: 'lighthouse', deploymentUrl, fetch, randomness });
-  await tryTest({ testName: 'screenshot', deploymentUrl, fetch, randomness });
+  await tryTest({
+    testName: '/api/screenshot',
+    deploymentUrl,
+    fetch,
+    randomness,
+  });
 };

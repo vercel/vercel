@@ -7,6 +7,54 @@ const runBuildLambda = require('../../../../test/lib/run-build-lambda');
 
 jest.setTimeout(360000);
 
+it('should build with app-dir correctly', async () => {
+  const { buildResult } = await runBuildLambda(
+    path.join(__dirname, '../fixtures/00-app-dir')
+  );
+
+  const lambdas = new Set();
+
+  for (const key of Object.keys(buildResult.output)) {
+    if (buildResult.output[key].type === 'Lambda') {
+      lambdas.add(buildResult.output[key]);
+    }
+  }
+  expect(lambdas.size).toBe(1);
+  expect(buildResult.output['dashboard']).toBeDefined();
+  expect(buildResult.output['dashboard/another']).toBeDefined();
+  expect(buildResult.output['dashboard/changelog']).toBeDefined();
+  expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
+
+  // prefixed static generation output with `/app` under dist server files
+  expect(buildResult.output['dashboard'].type).toBe('FileFsRef');
+  expect(buildResult.output['dashboard'].fsPath).toMatch(
+    /server\/app\/dashboard\.html$/
+  );
+  expect(buildResult.output['dashboard.rsc'].type).toBe('FileFsRef');
+  expect(buildResult.output['dashboard.rsc'].fsPath).toMatch(
+    /server\/app\/dashboard\.rsc$/
+  );
+});
+
+it('should build with app-dir in edg runtime correctly', async () => {
+  const { buildResult } = await runBuildLambda(
+    path.join(__dirname, '../fixtures/00-app-dir-edge')
+  );
+
+  const edgeFunctions = new Set();
+
+  for (const key of Object.keys(buildResult.output)) {
+    if (buildResult.output[key].type === 'EdgeFunction') {
+      edgeFunctions.add(buildResult.output[key]);
+    }
+  }
+
+  expect(edgeFunctions.size).toBe(3);
+  expect(buildResult.output['edge']).toBeDefined();
+  expect(buildResult.output['index']).toBeDefined();
+  expect(buildResult.output['index/index']).toBeDefined();
+});
+
 it('should show error from basePath with legacy monorepo build', async () => {
   let error;
 
@@ -78,8 +126,20 @@ it('should build using server build', async () => {
   expect(output['dynamic/[slug]'].maxDuration).toBe(5);
   expect(output['fallback/[slug]'].type).toBe('Prerender');
   expect(output['fallback/[slug]'].allowQuery).toEqual(['slug']);
+  expect(output['_next/data/testing-build-id/fallback/[slug].json'].type).toBe(
+    'Prerender'
+  );
+  expect(
+    output['_next/data/testing-build-id/fallback/[slug].json'].allowQuery
+  ).toEqual(['slug']);
   expect(output['fallback/first'].type).toBe('Prerender');
-  expect(output['fallback/first'].allowQuery).toEqual(['slug']);
+  expect(output['fallback/first'].allowQuery).toEqual([]);
+  expect(output['_next/data/testing-build-id/fallback/first.json'].type).toBe(
+    'Prerender'
+  );
+  expect(
+    output['_next/data/testing-build-id/fallback/first.json'].allowQuery
+  ).toEqual([]);
   expect(output['api'].type).toBe('Lambda');
   expect(output['api'].allowQuery).toBe(undefined);
   expect(output['api'].memory).toBe(128);

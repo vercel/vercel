@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '../../types';
+import { errorToString } from '../is-error';
 
 export interface OutputOptions {
   debug?: boolean;
@@ -72,17 +73,20 @@ export class Output {
     link?: string,
     action = 'Learn More'
   ) => {
-    this.print(`${chalk.red(`Error!`)} ${str}\n`);
+    this.print(`${chalk.red(`Error:`)} ${str}\n`);
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
       this.print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
     }
   };
 
-  prettyError = (
-    err: Pick<Error, 'message'> & { link?: string; action?: string }
-  ) => {
-    return this.error(err.message, undefined, err.link, err.action);
+  prettyError = (err: unknown) => {
+    return this.error(
+      errorToString(err),
+      undefined,
+      (err as any).link,
+      (err as any).action
+    );
   };
 
   ready = (str: string) => {
