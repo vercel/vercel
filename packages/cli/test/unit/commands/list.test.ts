@@ -38,11 +38,11 @@ describe('list', () => {
 
       await list(client);
 
-      const output = await readOutputStream(client, 4);
+      const output = await readOutputStream(client, 6);
 
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[2]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[5]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[6]);
       data.shift();
 
       expect(org).toEqual(team[0].slug);
@@ -81,11 +81,11 @@ describe('list', () => {
       client.setArgv('-S', user.username);
       await list(client);
 
-      const output = await readOutputStream(client, 4);
+      const output = await readOutputStream(client, 6);
 
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[2]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[5]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[6]);
       data.shift();
 
       expect(org).toEqual(user.username);
@@ -116,11 +116,11 @@ describe('list', () => {
       client.setArgv(deployment.name);
       await list(client);
 
-      const output = await readOutputStream(client, 4);
+      const output = await readOutputStream(client, 6);
 
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[2]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[5]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[6]);
       data.shift();
 
       expect(org).toEqual(teamSlug || team[0].slug);

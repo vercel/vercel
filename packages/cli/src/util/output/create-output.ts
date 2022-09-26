@@ -110,7 +110,6 @@ export class Output {
   };
 
   spinner = (message: string, delay: number = 300): void => {
-    this.spinnerMessage = message;
     if (this.debugEnabled) {
       this.debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       return;
@@ -118,6 +117,8 @@ export class Output {
     if (IS_TEST || !this.stream.isTTY) {
       this.print(`${message}\n`);
     } else {
+      this.spinnerMessage = message;
+
       if (this._spinner) {
         this._spinner.text = message;
       } else {
