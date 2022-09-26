@@ -12,7 +12,7 @@ export interface GetWorkspaceOptions {
   cwd?: string;
 }
 
-export type WorkspaceType = 'yarn' | 'pnpm' | 'npm';
+export type WorkspaceType = 'yarn' | 'pnpm' | 'npm' | 'nx' | 'rush';
 
 export type Workspace = {
   type: WorkspaceType;

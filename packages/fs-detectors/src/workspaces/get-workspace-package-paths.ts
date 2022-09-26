@@ -33,6 +33,12 @@ export async function getWorkspacePackagePaths({
     case 'pnpm':
       results = await getPnpmWorkspacePackagePaths({ fs: workspaceFs });
       break;
+    case 'nx':
+      results = await getNxWorkspacePackagePaths({ fs: workspaceFs });
+      break;
+    case 'rush':
+      results = await getRushWorkspacePackagePaths({ fs: workspaceFs });
+      break;
     default:
       throw new Error(`Unknown workspace implementation: ${type}`);
   }
@@ -53,6 +59,14 @@ type PackageJsonWithWorkspace = {
 
 type PnpmWorkspaces = {
   packages?: string[];
+};
+
+type RushWorkspaces = {
+  projects: [
+    {
+      projectFolder: string;
+    }
+  ];
 };
 
 const isWin = process.platform === 'win32';
@@ -103,6 +117,17 @@ async function getPackageJsonWorkspacePackagePaths({
   return getPackagePaths(packages, fs);
 }
 
+async function getNxWorkspacePackagePaths({
+  fs,
+}: GetPackagePathOptions): Promise<string[]> {
+  const nxWorkspaceJsonAsBuffer = await fs.readFile('workspace.json');
+
+  const { projects } = JSON.parse(nxWorkspaceJsonAsBuffer.toString());
+
+  const packages: string[] = Object.values(projects);
+  return getPackagePaths(packages, fs);
+}
+
 async function getPnpmWorkspacePackagePaths({
   fs,
 }: GetPackagePathOptions): Promise<string[]> {
@@ -112,4 +137,24 @@ async function getPnpmWorkspacePackagePaths({
   ) as PnpmWorkspaces;
 
   return getPackagePaths(packages, fs);
+}
+
+async function getRushWorkspacePackagePaths({
+  fs,
+}: GetPackagePathOptions): Promise<string[]> {
+  const rushWorkspaceAsBuffer = await fs.readFile('rush.json');
+
+  const { projects = [] } = JSON.parse(
+    rushWorkspaceAsBuffer.toString()
+  ) as RushWorkspaces;
+
+  if (Array.isArray(projects)) {
+    const packages = projects
+      .filter(proj => proj.projectFolder)
+      .map(project => project.projectFolder);
+
+    return getPackagePaths(packages, fs);
+  } else {
+    return [];
+  }
 }

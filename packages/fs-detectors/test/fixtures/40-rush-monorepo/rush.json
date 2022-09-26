@@ -23,5 +23,14 @@
     "postRushBuild": []
   },
   "variants": [],
-  "projects": []
+  "projects": [
+    {
+      "packageName": "my-app",
+      "projectFolder": "apps/my-app"
+    },
+    {
+      "packageName": "my-second-app",
+      "projectFolder": "apps/my-second-app"
+    }
+  ]
 }

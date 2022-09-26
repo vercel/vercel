@@ -1,7 +1,6 @@
 import ms from 'ms';
 import path from 'path';
 import fs, { readlink } from 'fs-extra';
-import retry from 'async-retry';
 import { strict as assert, strictEqual } from 'assert';
 import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
@@ -16,7 +15,6 @@ import {
   runPackageJsonScript,
   scanParentDirs,
   FileBlob,
-  Meta,
 } from '../src';
 
 jest.setTimeout(10 * 1000);
@@ -578,53 +576,16 @@ it('should detect package.json in nested frontend', async () => {
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
-it('should only invoke `runNpmInstall()` once per `package.json` file (serial)', async () => {
-  const meta: Meta = {};
-  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
-  const apiDir = path.join(fixture, 'api');
-  const retryOpts = { maxRetryTime: 1000 };
-  let run1, run2, run3;
-  await retry(async () => {
-    run1 = await runNpmInstall(apiDir, [], undefined, meta);
-    expect(run1).toEqual(true);
-    expect(
-      (meta.runNpmInstallSet as Set<string>).has(
-        path.join(fixture, 'package.json')
-      )
-    ).toEqual(true);
-  }, retryOpts);
-  await retry(async () => {
-    run2 = await runNpmInstall(apiDir, [], undefined, meta);
-    expect(run2).toEqual(false);
-  }, retryOpts);
-  await retry(async () => {
-    run3 = await runNpmInstall(fixture, [], undefined, meta);
-    expect(run3).toEqual(false);
-  }, retryOpts);
-});
-
-it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)', async () => {
-  const meta: Meta = {};
-  const fixture = path.join(__dirname, 'fixtures', '02-zero-config-api');
-  const apiDir = path.join(fixture, 'api');
-  let results: [boolean, boolean, boolean] | undefined;
-  await retry(
-    async () => {
-      results = await Promise.all([
-        runNpmInstall(apiDir, [], undefined, meta),
-        runNpmInstall(apiDir, [], undefined, meta),
-        runNpmInstall(fixture, [], undefined, meta),
-      ]);
-    },
-    { maxRetryTime: 3000 }
-  );
-  const [run1, run2, run3] = results || [];
-  expect(run1).toEqual(true);
-  expect(run2).toEqual(false);
-  expect(run3).toEqual(false);
-  expect(
-    (meta.runNpmInstallSet as Set<string>).has(
-      path.join(fixture, 'package.json')
-    )
-  ).toEqual(true);
+it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {
+  const nodeMajor = Number(process.versions.node.split('.')[0]);
+  if (nodeMajor !== 16) {
+    console.log(`Skipping test on node@${nodeMajor}`);
+    return;
+  }
+  const fixture = path.join(__dirname, 'fixtures', '15-npm-8-legacy-peer-deps');
+  const nodeVersion = { major: nodeMajor } as any;
+  await runNpmInstall(fixture, [], {}, {}, nodeVersion);
+  expect(warningMessages).toStrictEqual([
+    'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.',
+  ]);
 });
