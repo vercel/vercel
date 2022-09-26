@@ -4,6 +4,8 @@ import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '../../types';
 import { errorToString } from '../is-error';
 
+const IS_TEST = process.env.NODE_ENV === 'test';
+
 export interface OutputOptions {
   debug?: boolean;
 }
@@ -113,7 +115,9 @@ export class Output {
       this.debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       return;
     }
-    if (this.stream.isTTY) {
+    if (IS_TEST || !this.stream.isTTY) {
+      this.print(`${message}\n`);
+    } else {
       if (this._spinner) {
         this._spinner.text = message;
       } else {
@@ -125,8 +129,6 @@ export class Output {
           delay
         );
       }
-    } else {
-      this.print(`${message}\n`);
     }
   };
 
