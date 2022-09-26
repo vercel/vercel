@@ -2345,7 +2345,7 @@ export async function getMiddlewareBundle({
                   ...wasmFiles,
                   ...assetFiles,
                 },
-                regions: (edgeFunction.userConfig?.regions ?? 'auto') as any,
+                regions: edgeFunction.userConfig?.regions ?? 'auto',
                 entrypoint: 'index.js',
                 envVarsInUse: edgeFunction.env,
                 assets: (edgeFunction.assets ?? []).map(({ name }) => {
