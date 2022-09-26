@@ -54,6 +54,13 @@ addEventListener('fetch', async event => {
       }
     }
 
+    response.waitUntil = () => Promise.all(event.awaiting);
+
+    // remove unstable headers from user code
+    response.headers.delete('content-encoding');
+    response.headers.delete('transform-encoding');
+    response.headers.delete('content-length');
+
     return event.respondWith(response);
   } catch (error) {
     // we can't easily show a meaningful stack trace
