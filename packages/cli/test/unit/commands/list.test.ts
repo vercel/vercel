@@ -40,6 +40,10 @@ describe('list', () => {
 
       const output = await readOutputStream(client, 6);
 
+      console.log('>>>>>>>>>>>>>>>');
+      console.log(output);
+      console.log('<<<<<<<<<<<<<<<');
+
       const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[2]);
       const header: string[] = parseSpacedTableRow(output.split('\n')[5]);
       const data: string[] = parseSpacedTableRow(output.split('\n')[6]);
@@ -83,6 +87,10 @@ describe('list', () => {
 
       const output = await readOutputStream(client, 6);
 
+      console.log('>>>>>>>>>>>>>>>');
+      console.log(output);
+      console.log('<<<<<<<<<<<<<<<');
+
       const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[2]);
       const header: string[] = parseSpacedTableRow(output.split('\n')[5]);
       const data: string[] = parseSpacedTableRow(output.split('\n')[6]);
@@ -117,6 +125,10 @@ describe('list', () => {
       await list(client);
 
       const output = await readOutputStream(client, 6);
+
+      console.log('>>>>>>>>>>>>>>>');
+      console.log(output);
+      console.log('<<<<<<<<<<<<<<<');
 
       const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[2]);
       const header: string[] = parseSpacedTableRow(output.split('\n')[5]);
