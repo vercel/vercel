@@ -149,7 +149,9 @@ export default async function main(client: Client): Promise<number> {
 
   if (badDeployment) {
     if (badDeployment instanceof Error) {
-      badDeployment.message += ` when requesting "${normalizeURL(bad)}"`;
+      badDeployment.message += ` when requesting bad deployment "${normalizeURL(
+        bad
+      )}"`;
       output.prettyError(badDeployment);
       return 1;
     }
@@ -164,7 +166,9 @@ export default async function main(client: Client): Promise<number> {
 
   if (goodDeployment) {
     if (goodDeployment instanceof Error) {
-      goodDeployment.message += ` "${good}"`;
+      goodDeployment.message += ` when requesting good deployment "${normalizeURL(
+        good
+      )}"`;
       output.prettyError(goodDeployment);
       return 1;
     }

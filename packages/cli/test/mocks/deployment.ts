@@ -65,19 +65,6 @@ export function useDeployment({
   return deployment;
 }
 
-export function useDeploymentWithSamlError() {
-  client.scenario.get(`/:version/deployments/:id`, (req, res) => {
-    res.statusCode = 403;
-    res.json({
-      code: 'forbidden',
-      scope: 'vercel',
-      teamId: 'dummy_team',
-      enforced: true,
-      saml: true,
-    });
-  });
-}
-
 export function useDeploymentMissingProjectSettings() {
   client.scenario.post('/:version/deployments', (_req, res) => {
     res.status(400).json({
