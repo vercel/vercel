@@ -434,8 +434,8 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
   expect(warningMessages).toStrictEqual([
     'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
     'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.',
-    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-01 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
-    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-01 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.',
+    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
+    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.',
   ]);
 
   global.Date.now = realDateNow;
