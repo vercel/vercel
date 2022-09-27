@@ -1007,7 +1007,7 @@ export async function serverBuild({
           currentRouteSrc.length - 1
         )}${
           currentRouteSrc[currentRouteSrc.length - 2] === '(' ? '' : '|'
-        }${route})`;
+        }${route}/?)`;
 
         if (isLastRoute) {
           pushRoute(currentRouteSrc);
