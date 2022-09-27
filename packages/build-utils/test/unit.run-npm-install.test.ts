@@ -77,7 +77,6 @@ it('should include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node1
   const spawnOpts = getTestSpawnOpts({ VERCEL_NPM_LEGACY_PEER_DEPS: '1' });
 
   const nodeVersion = getNodeVersion(14);
-  console.log({ nodeVersion, path: spawnOpts.env.PATH });
   await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
   expect(spawnMock.mock.calls.length).toBe(1);
   const args = spawnMock.mock.calls[0];
@@ -102,7 +101,6 @@ it('should not include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on n
   const spawnOpts = getTestSpawnOpts({ VERCEL_NPM_LEGACY_PEER_DEPS: '1' });
 
   const nodeVersion = getNodeVersion(14);
-  console.log({ nodeVersion, path: spawnOpts.env.PATH });
   await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
   expect(spawnMock.mock.calls.length).toBe(1);
   const args = spawnMock.mock.calls[0];
