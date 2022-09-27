@@ -90,8 +90,7 @@ function getRegionFromRequestId(requestId?: string): string | undefined {
   }
 
   // The request ID is in the format of `region::id` or `region1:region2:...::id`.
-  const match = requestId.match(/^(?<region>[a-z0-9]+):/);
-  return match?.groups?.region;
+  return requestId.split(':')[0];
 }
 
 /**
