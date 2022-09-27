@@ -7,6 +7,11 @@ on:
     tags:
     - '!*'
 
+env:
+  TURBO_REMOTE_ONLY: 'true'
+  TURBO_TEAM: 'vercel'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
 jobs:
   publish:
     name: Publish
@@ -32,8 +37,10 @@ jobs:
     - name: Setup Node
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       uses: actions/setup-node@v3
+      timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
       with:
         node-version: 14
+        cache: 'yarn'
     - name: Install
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       run: yarn install --check-files --frozen-lockfile --network-timeout 1000000

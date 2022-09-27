@@ -17,7 +17,6 @@ it('should build with app-dir correctly', async () => {
   for (const key of Object.keys(buildResult.output)) {
     if (buildResult.output[key].type === 'Lambda') {
       lambdas.add(buildResult.output[key]);
-      console.log('found lambda', key);
     }
   }
   expect(lambdas.size).toBe(1);
@@ -25,6 +24,35 @@ it('should build with app-dir correctly', async () => {
   expect(buildResult.output['dashboard/another']).toBeDefined();
   expect(buildResult.output['dashboard/changelog']).toBeDefined();
   expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
+
+  // prefixed static generation output with `/app` under dist server files
+  expect(buildResult.output['dashboard'].type).toBe('FileFsRef');
+  expect(buildResult.output['dashboard'].fsPath).toMatch(
+    /server\/app\/dashboard\.html$/
+  );
+  expect(buildResult.output['dashboard.rsc'].type).toBe('FileFsRef');
+  expect(buildResult.output['dashboard.rsc'].fsPath).toMatch(
+    /server\/app\/dashboard\.rsc$/
+  );
+});
+
+it('should build with app-dir in edg runtime correctly', async () => {
+  const { buildResult } = await runBuildLambda(
+    path.join(__dirname, '../fixtures/00-app-dir-edge')
+  );
+
+  const edgeFunctions = new Set();
+
+  for (const key of Object.keys(buildResult.output)) {
+    if (buildResult.output[key].type === 'EdgeFunction') {
+      edgeFunctions.add(buildResult.output[key]);
+    }
+  }
+
+  expect(edgeFunctions.size).toBe(3);
+  expect(buildResult.output['edge']).toBeDefined();
+  expect(buildResult.output['index']).toBeDefined();
+  expect(buildResult.output['index/index']).toBeDefined();
 });
 
 it('should show error from basePath with legacy monorepo build', async () => {

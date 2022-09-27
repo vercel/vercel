@@ -675,7 +675,7 @@ export const build: BuildV2 = async ({
     }
   }
 
-  let dynamicPrefix = path.join('/', entryDirectory);
+  let dynamicPrefix = path.posix.join('/', entryDirectory);
   dynamicPrefix = dynamicPrefix === '/' ? '' : dynamicPrefix;
 
   if (imagesManifest) {
@@ -824,7 +824,7 @@ export const build: BuildV2 = async ({
 
         // Make sure to 404 for the /404 path itself
         {
-          src: path.join('/', entryDirectory, '404/?'),
+          src: path.posix.join('/', entryDirectory, '404/?'),
           status: 404,
           continue: true,
         },
@@ -838,7 +838,7 @@ export const build: BuildV2 = async ({
         ...(routesManifest?.basePath
           ? [
               {
-                src: path.join('/', entryDirectory, '_next/image/?'),
+                src: path.posix.join('/', entryDirectory, '_next/image/?'),
                 dest: '/_next/image',
                 check: true,
               },
@@ -848,12 +848,12 @@ export const build: BuildV2 = async ({
         // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
         // if no match to prevent rewriting _next/data unexpectedly
         {
-          src: path.join('/', entryDirectory, '_next/data/(.*)'),
-          dest: path.join('/', entryDirectory, '_next/data/$1'),
+          src: path.posix.join('/', entryDirectory, '_next/data/(.*)'),
+          dest: path.posix.join('/', entryDirectory, '_next/data/$1'),
           check: true,
         },
         {
-          src: path.join('/', entryDirectory, '_next/data/(.*)'),
+          src: path.posix.join('/', entryDirectory, '_next/data/(.*)'),
           status: 404,
         },
 
@@ -867,14 +867,14 @@ export const build: BuildV2 = async ({
 
         ...fallbackRewrites,
 
-        { src: path.join('/', entryDirectory, '.*'), status: 404 },
+        { src: path.posix.join('/', entryDirectory, '.*'), status: 404 },
 
         // We need to make sure to 404 for /_next after handle: miss since
         // handle: miss is called before rewrites and to prevent rewriting
         // /_next
         { handle: 'miss' },
         {
-          src: path.join(
+          src: path.posix.join(
             '/',
             entryDirectory,
             '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
@@ -894,7 +894,7 @@ export const build: BuildV2 = async ({
         {
           // This ensures we only match known emitted-by-Next.js files and not
           // user-emitted files which may be missing a hash in their filename.
-          src: path.join(
+          src: path.posix.join(
             '/',
             entryDirectory,
             `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
@@ -909,15 +909,15 @@ export const build: BuildV2 = async ({
         },
 
         // error handling
-        ...(output[path.join('./', entryDirectory, '404')] ||
-        output[path.join('./', entryDirectory, '404/index')]
+        ...(output[path.posix.join('./', entryDirectory, '404')] ||
+        output[path.posix.join('./', entryDirectory, '404/index')]
           ? [
               { handle: 'error' } as RouteWithHandle,
 
               {
                 status: 404,
-                src: path.join(entryDirectory, '.*'),
-                dest: path.join('/', entryDirectory, '404'),
+                src: path.posix.join(entryDirectory, '.*'),
+                dest: path.posix.join('/', entryDirectory, '404'),
               },
             ]
           : []),
@@ -1063,7 +1063,7 @@ export const build: BuildV2 = async ({
         }
 
         debug(`Creating serverless function for page: "${page}"...`);
-        lambdas[path.join(entryDirectory, pathname)] = new NodejsLambda({
+        lambdas[path.posix.join(entryDirectory, pathname)] = new NodejsLambda({
           files: {
             ...nextFiles,
             ...pageFiles,
@@ -1088,9 +1088,14 @@ export const build: BuildV2 = async ({
       'pages'
     );
 
+    let appDir: string | null = null;
     const appPathRoutesManifest = await readJSON(
       path.join(entryPath, outputDirectory, 'app-path-routes-manifest.json')
     ).catch(() => null);
+
+    if (appPathRoutesManifest) {
+      appDir = path.join(pagesDir, '../app');
+    }
 
     const { pages, appPaths: lambdaAppPaths } = await getServerlessPages({
       pagesDir,
@@ -1114,30 +1119,32 @@ export const build: BuildV2 = async ({
       prerenderManifest,
       routesManifest
     );
-    hasStatic500 = !!staticPages[path.join(entryDirectory, '500')];
+    hasStatic500 = !!staticPages[path.posix.join(entryDirectory, '500')];
 
     // this can be either 404.html in latest versions
     // or _errors/404.html versions while this was experimental
     static404Page =
-      staticPages[path.join(entryDirectory, '404')] && hasPages404
-        ? path.join(entryDirectory, '404')
-        : staticPages[path.join(entryDirectory, '_errors/404')]
-        ? path.join(entryDirectory, '_errors/404')
+      staticPages[path.posix.join(entryDirectory, '404')] && hasPages404
+        ? path.posix.join(entryDirectory, '404')
+        : staticPages[path.posix.join(entryDirectory, '_errors/404')]
+        ? path.posix.join(entryDirectory, '_errors/404')
         : undefined;
 
     const { i18n } = routesManifest || {};
 
     if (!static404Page && i18n) {
       static404Page = staticPages[
-        path.join(entryDirectory, i18n.defaultLocale, '404')
+        path.posix.join(entryDirectory, i18n.defaultLocale, '404')
       ]
-        ? path.join(entryDirectory, i18n.defaultLocale, '404')
+        ? path.posix.join(entryDirectory, i18n.defaultLocale, '404')
         : undefined;
     }
 
     if (!hasStatic500 && i18n) {
       hasStatic500 =
-        !!staticPages[path.join(entryDirectory, i18n.defaultLocale, '500')];
+        !!staticPages[
+          path.posix.join(entryDirectory, i18n.defaultLocale, '500')
+        ];
     }
 
     if (routesManifest) {
@@ -1171,7 +1178,7 @@ export const build: BuildV2 = async ({
                 src: (
                   dataRoute.namedDataRouteRegex || dataRoute.dataRouteRegex
                 ).replace(/^\^/, `^${appMountPrefixNoTrailingSlash}`),
-                dest: path.join(
+                dest: path.posix.join(
                   '/',
                   entryDirectory,
                   // make sure to route SSG data route to the data prerender
@@ -2030,9 +2037,10 @@ export const build: BuildV2 = async ({
       console.timeEnd(allLambdasLabel);
     }
     const prerenderRoute = onPrerenderRoute({
+      appDir,
+      pagesDir,
       hasPages404,
       static404Page,
-      pagesDir,
       pageLambdaMap,
       lambdas,
       isServerMode,
@@ -2040,6 +2048,7 @@ export const build: BuildV2 = async ({
       entryDirectory,
       routesManifest,
       prerenderManifest,
+      appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
     });

@@ -1,4 +1,4 @@
-import { validateConfig } from '../../../../src/util/dev/validate';
+import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
   it('should not error with empty config', async () => {
