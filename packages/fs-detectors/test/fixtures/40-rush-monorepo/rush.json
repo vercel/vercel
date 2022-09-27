@@ -2,7 +2,6 @@
   "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/rush.schema.json",
 
   "rushVersion": "5.76.1",
-
   "pnpmVersion": "6.7.1",
 
   "pnpmOptions": {
@@ -22,6 +21,7 @@
 
     "postRushBuild": []
   },
+  // comment
   "variants": [],
   "projects": [
     {
