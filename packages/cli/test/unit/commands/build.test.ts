@@ -750,11 +750,22 @@ describe('build', () => {
       const errorBuilds = builds.builds.filter((b: any) => 'error' in b);
       expect(errorBuilds).toHaveLength(1);
 
-      expect(errorBuilds[0].error.name).toEqual('Error');
-      expect(errorBuilds[0].error.message).toMatch(`TS1005`);
-      expect(errorBuilds[0].error.message).toMatch(`',' expected.`);
-      expect(errorBuilds[0].error.hideStackTrace).toEqual(true);
-      expect(errorBuilds[0].error.code).toEqual('NODE_TYPESCRIPT_ERROR');
+      expect(errorBuilds[0].error).toEqual({
+        name: 'Error',
+        message: expect.stringContaining('TS1005'),
+        stack: expect.stringContaining('api/typescript.ts'),
+        hideStackTrace: true,
+        code: 'NODE_TYPESCRIPT_ERROR',
+      });
+
+      // top level "error" also contains the same error
+      expect(builds.error).toEqual({
+        name: 'Error',
+        message: expect.stringContaining('TS1005'),
+        stack: expect.stringContaining('api/typescript.ts'),
+        hideStackTrace: true,
+        code: 'NODE_TYPESCRIPT_ERROR',
+      });
 
       // `config.json` contains `version`
       const configJson = await fs.readJSON(join(output, 'config.json'));
@@ -947,6 +958,7 @@ describe('build', () => {
 
   it('should fail with invalid "rewrites" configuration from `vercel.json`', async () => {
     const cwd = fixture('invalid-rewrites');
+    const output = join(cwd, '.vercel/output');
     try {
       process.chdir(cwd);
       const exitCode = await build(client);
@@ -956,6 +968,20 @@ describe('build', () => {
           '\n' +
           'View Documentation: https://vercel.com/docs/configuration#project/rewrites'
       );
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.builds).toBeUndefined();
+      expect(builds.error).toEqual({
+        name: 'Error',
+        message:
+          'Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?',
+        stack: expect.stringContaining('at validateConfig'),
+        hideStackTrace: true,
+        code: 'INVALID_VERCEL_CONFIG',
+        link: 'https://vercel.com/docs/configuration#project/rewrites',
+        action: 'View Documentation',
+      });
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.version).toBe(3);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
