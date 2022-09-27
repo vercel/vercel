@@ -2202,10 +2202,7 @@ interface BaseEdgeFunctionInfo {
   page: string;
   wasm?: { filePath: string; name: string }[];
   assets?: { filePath: string; name: string }[];
-  userConfig?: {
-    regions?: 'auto' | string[] | 'all' | 'default';
-    [key: string]: unknown;
-  };
+  regions?: 'auto' | string[] | 'all' | 'default';
 }
 
 interface EdgeFunctionInfoV1 extends BaseEdgeFunctionInfo {
@@ -2345,7 +2342,7 @@ export async function getMiddlewareBundle({
                   ...wasmFiles,
                   ...assetFiles,
                 },
-                regions: edgeFunction.userConfig?.regions ?? 'auto',
+                regions: edgeFunction.regions ?? 'auto',
                 entrypoint: 'index.js',
                 envVarsInUse: edgeFunction.env,
                 assets: (edgeFunction.assets ?? []).map(({ name }) => {
