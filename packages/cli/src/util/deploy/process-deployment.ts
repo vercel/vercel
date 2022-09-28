@@ -115,29 +115,39 @@ export default async function processDeployment({
           .reduce((a: number, b: number) => a + b, 0);
         const totalSizeHuman = bytes.format(missingSize, { decimalPlaces: 1 });
 
-        uploads.forEach((e: any) =>
-          e.on('progress', () => {
-            const uploadedBytes = uploads.reduce((acc: number, e: any) => {
-              return acc + e.bytesUploaded;
-            }, 0);
+        // When stderr is not a TTY then we only want to
+        // print upload progress in 25% increments
+        let nextStep = 0;
+        const stepSize = now._client.stderr.isTTY ? 0 : 0.25;
 
-            const bar = progress(uploadedBytes, missingSize);
-            if (!bar || uploadedBytes === missingSize) {
-              output.spinner(deployingSpinnerVal, 0);
-            } else {
-              const uploadedHuman = bytes.format(uploadedBytes, {
-                decimalPlaces: 1,
-                fixedDecimals: true,
-              });
+        const updateProgress = () => {
+          const uploadedBytes = uploads.reduce((acc: number, e: any) => {
+            return acc + e.bytesUploaded;
+          }, 0);
+
+          const bar = progress(uploadedBytes, missingSize);
+          if (!bar) {
+            output.spinner(deployingSpinnerVal, 0);
+          } else {
+            const uploadedHuman = bytes.format(uploadedBytes, {
+              decimalPlaces: 1,
+              fixedDecimals: true,
+            });
+            const percent = uploadedBytes / missingSize;
+            if (percent >= nextStep) {
               output.spinner(
                 `Uploading ${chalk.reset(
                   `[${bar}] (${uploadedHuman}/${totalSizeHuman})`
                 )}`,
                 0
               );
+              nextStep += stepSize;
             }
-          })
-        );
+          }
+        };
+
+        uploads.forEach((e: any) => e.on('progress', updateProgress));
+        updateProgress();
       }
 
       if (event.type === 'file-uploaded') {
