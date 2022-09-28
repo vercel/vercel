@@ -15,7 +15,7 @@
       "path": "/dashboard",
       "status": 200,
       "headers": {
-        "__flight__": "1"
+        "__rsc__": "1"
       },
       "mustContain": "M1:{",
       "mustNotContain": "<html"
