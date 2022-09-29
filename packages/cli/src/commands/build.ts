@@ -25,6 +25,7 @@ import {
   MergeRoutesProps,
   Route,
 } from '@vercel/routing-utils';
+import { fileNameSymbol } from '@vercel/client';
 import type { VercelConfig } from '@vercel/client';
 
 import pull from './pull';
@@ -54,6 +55,7 @@ import { importBuilders } from '../util/build/import-builders';
 import { initCorepack, cleanupCorepack } from '../util/build/corepack';
 import { sortBuilders } from '../util/build/sort-builders';
 import { toEnumerableError } from '../util/error';
+import { validateConfig } from '../util/validate-config';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -232,7 +234,8 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
-    return await doBuild(client, project, buildsJson, cwd, outputDir);
+    await doBuild(client, project, buildsJson, cwd, outputDir);
+    return 0;
   } catch (err: any) {
     output.prettyError(err);
 
@@ -265,23 +268,36 @@ async function doBuild(
   buildsJson: BuildsManifest,
   cwd: string,
   outputDir: string
-): Promise<number> {
+): Promise<void> {
   const { output } = client;
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
-  // Load `package.json` and `vercel.json` files
-  const [pkg, vercelConfig] = await Promise.all([
+  const [pkg, vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
-    readJSONFile<VercelConfig>(join(workPath, 'vercel.json')).then(
-      config => config || readJSONFile<VercelConfig>(join(workPath, 'now.json'))
-    ),
+    readJSONFile<VercelConfig>(join(workPath, 'vercel.json')),
+    readJSONFile<VercelConfig>(join(workPath, 'now.json')),
   ]);
+
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
+  if (nowConfig instanceof CantParseJSONFile) throw nowConfig;
+
+  if (vercelConfig) {
+    vercelConfig[fileNameSymbol] = 'vercel.json';
+  } else if (nowConfig) {
+    nowConfig[fileNameSymbol] = 'now.json';
+  }
+
+  const localConfig = vercelConfig || nowConfig || {};
+  const validateError = validateConfig(localConfig);
+
+  if (validateError) {
+    throw validateError;
+  }
 
   const projectSettings = {
     ...project.settings,
-    ...pickOverrides(vercelConfig || {}),
+    ...pickOverrides(localConfig),
   };
 
   // Get a list of source files
@@ -289,12 +305,12 @@ async function doBuild(
     normalizePath(relative(workPath, f))
   );
 
-  const routesResult = getTransformedRoutes(vercelConfig || {});
+  const routesResult = getTransformedRoutes(localConfig);
   if (routesResult.error) {
     throw routesResult.error;
   }
 
-  if (vercelConfig?.builds && vercelConfig.functions) {
+  if (localConfig.builds && localConfig.functions) {
     throw new NowBuildError({
       code: 'bad_request',
       message:
@@ -303,7 +319,7 @@ async function doBuild(
     });
   }
 
-  let builds = vercelConfig?.builds || [];
+  let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
   let isZeroConfig = false;
 
@@ -318,7 +334,7 @@ async function doBuild(
 
     // Detect the Vercel Builders that will need to be invoked
     const detectedBuilders = await detectBuilders(files, pkg, {
-      ...vercelConfig,
+      ...localConfig,
       projectSettings,
       ignoreBuildScript: true,
       featHandleMiss: true,
@@ -395,12 +411,9 @@ async function doBuild(
     })
   );
   buildsJson.builds = Array.from(buildsJsonBuilds.values());
-  const buildsJsonPath = join(outputDir, 'builds.json');
-  const writeBuildsJsonPromise = fs.writeJSON(buildsJsonPath, buildsJson, {
+  await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, {
     spaces: 2,
   });
-
-  ops.push(writeBuildsJsonPromise);
 
   // The `meta` config property is re-used for each Builder
   // invocation so that Builders can share state between
@@ -466,7 +479,7 @@ async function doBuild(
           build,
           builder,
           builderPkg,
-          vercelConfig
+          localConfig
         ).then(
           override => {
             if (override) overrides.push(override);
@@ -475,26 +488,11 @@ async function doBuild(
         )
       );
     } catch (err: any) {
-      output.prettyError(err);
-
-      const writeConfigJsonPromise = fs.writeJSON(
-        join(outputDir, 'config.json'),
-        { version: 3 },
-        { spaces: 2 }
-      );
-
-      await Promise.all([writeBuildsJsonPromise, writeConfigJsonPromise]);
-
       const buildJsonBuild = buildsJsonBuilds.get(build);
       if (buildJsonBuild) {
         buildJsonBuild.error = toEnumerableError(err);
-
-        await fs.writeJSON(buildsJsonPath, buildsJson, {
-          spaces: 2,
-        });
       }
-
-      return 1;
+      throw err;
     }
   }
 
@@ -555,150 +553,7 @@ async function doBuild(
     builds: builderRoutes,
   });
 
-  const images = vercelConfig?.images
-  if (images) {
-    if (typeof images !== 'object') {
-      throw new Error(
-        `vercel.json "images" should be an object received ${typeof images}.`
-      );
-    }
-
-    if (!Array.isArray(images.domains)) {
-      throw new Error(
-        `vercel.json "images.domains" should be an Array received ${typeof images.domains}.`
-      );
-    }
-
-    if (images.domains.length > 50) {
-      throw new Error(
-        `vercel.json "images.domains" exceeds length of 50 received length (${images.domains.length}).`
-      );
-    }
-
-    const invalidImageDomains = images.domains.filter(
-      (d: unknown) => typeof d !== 'string'
-    );
-    if (invalidImageDomains.length > 0) {
-      throw new Error(
-        `vercel.json "images.domains" should be an Array of strings received invalid values (${invalidImageDomains.join(
-          ', '
-        )}).`
-      );
-    }
-
-    if (images.remotePatterns) {
-      if (!Array.isArray(images.remotePatterns)) {
-        throw new Error(
-          `vercel.json "images.remotePatterns" should be an Array received ${typeof images.remotePatterns}.`
-        );
-      }
-
-      if (images.remotePatterns.length > 50) {
-        throw new Error(
-          `vercel.json "images.remotePatterns" exceeds length of 50, received length (${images.remotePatterns.length}).`
-        );
-      }
-
-      const validProps = new Set(['protocol', 'hostname', 'pathname', 'port']);
-      const requiredProps = ['hostname'];
-      const invalidPatterns = images.remotePatterns.filter(
-        (d: unknown) =>
-          !d ||
-          typeof d !== 'object' ||
-          Object.entries(d).some(
-            ([k, v]) => !validProps.has(k) || typeof v !== 'string'
-          ) ||
-          requiredProps.some(k => !(k in d))
-      );
-      if (invalidPatterns.length > 0) {
-        throw new Error(
-          `vercel.json "images.remotePatterns" received invalid values:\n${invalidPatterns
-            .map(item => JSON.stringify(item))
-            .join(
-              '\n'
-            )}\n\nremotePatterns value must follow format { protocol: 'https', hostname: 'example.com', port: '', pathname: '/imgs/**' }.`
-        );
-      }
-    }
-
-    if (!Array.isArray(images.sizes)) {
-      throw new Error(
-        `vercel.json "images.sizes" should be an Array received ${typeof images.sizes}.`
-      );
-    }
-
-    if (images.sizes.length < 1 || images.sizes.length > 50) {
-      throw new Error(
-        `vercel.json "images.sizes" should be an Array of length between 1 to 50 received length (${images.sizes.length}).`
-      );
-    }
-
-    const invalidImageSizes = images.sizes.filter((d: unknown) => {
-      return typeof d !== 'number' || d < 1 || d > 10000;
-    });
-    if (invalidImageSizes.length > 0) {
-      throw new Error(
-        `vercel.json "images.sizes" should be an Array of numbers that are between 1 and 10000, received invalid values (${invalidImageSizes.join(
-          ', '
-        )}).`
-      );
-    }
-
-    if (images.minimumCacheTTL) {
-      if (
-        !Number.isInteger(images.minimumCacheTTL) ||
-        images.minimumCacheTTL < 0
-      ) {
-        throw new Error(
-          `vercel.json "images.minimumCacheTTL" should be an integer 0 or more received (${images.minimumCacheTTL}).`
-        );
-      }
-    }
-
-    if (images.formats) {
-      if (!Array.isArray(images.formats)) {
-        throw new Error(
-          `vercel.json "images.formats" should be an Array received ${typeof images.formats}.`
-        );
-      }
-      if (images.formats.length < 1 || images.formats.length > 2) {
-        throw new Error(
-          `vercel.json "images.formats" must be length 1 or 2, received length (${images.formats.length}).`
-        );
-      }
-
-      const invalid = images.formats.filter(f => {
-        return f !== 'image/avif' && f !== 'image/webp';
-      });
-      if (invalid.length > 0) {
-        throw new Error(
-          `vercel.json "images.formats" should be an Array of mime type strings, received invalid values (${invalid.join(
-            ', '
-          )}).`
-        );
-      }
-    }
-
-    if (
-      typeof images.dangerouslyAllowSVG !== 'undefined' &&
-      typeof images.dangerouslyAllowSVG !== 'boolean'
-    ) {
-      throw new Error(
-        `vercel.json "images.dangerouslyAllowSVG" should be a boolean received (${images.dangerouslyAllowSVG}).`
-      );
-    }
-
-    if (
-      typeof images.contentSecurityPolicy !== 'undefined' &&
-      typeof images.contentSecurityPolicy !== 'string'
-    ) {
-      throw new Error(
-        `vercel.json "images.contentSecurityPolicy" should be a string received ${images.contentSecurityPolicy}`
-      );
-    }
-  }
-
-  const mergedImages = mergeImages(images, buildResults.values());
+  const mergedImages = mergeImages(localConfig.images, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
@@ -724,8 +579,6 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
-
-  return 0;
 }
 
 function expandBuild(files: string[], build: Builder): Builder[] {

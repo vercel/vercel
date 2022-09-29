@@ -1007,7 +1007,7 @@ export async function serverBuild({
           currentRouteSrc.length - 1
         )}${
           currentRouteSrc[currentRouteSrc.length - 2] === '(' ? '' : '|'
-        }${route})`;
+        }${route}/?)`;
 
         if (isLastRoute) {
           pushRoute(currentRouteSrc);
@@ -1134,7 +1134,7 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     // create .rsc variant for app lambdas and edge functions
     // to match prerenders so we can route the same when the
-    // __flight__ header is present
+    // __rsc__ header is present
     const edgeFunctions = middleware.edgeFunctions;
 
     for (let route of Object.values(appPathRoutesManifest)) {
@@ -1393,7 +1393,7 @@ export async function serverBuild({
               has: [
                 {
                   type: 'header',
-                  key: '__flight__',
+                  key: '__rsc__',
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),

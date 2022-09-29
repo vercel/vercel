@@ -461,7 +461,8 @@ export async function runNpmInstall(
     let commandArgs: string[];
     const isPotentiallyBrokenNpm =
       cliType === 'npm' &&
-      nodeVersion?.major === 16 &&
+      (nodeVersion?.major === 16 ||
+        opts.env.PATH?.includes('/node16/bin-npm7')) &&
       !args.includes('--legacy-peer-deps') &&
       spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK !== '1';
 
