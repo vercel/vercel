@@ -30,7 +30,7 @@
   "devDependencies": {
     "@types/etag": "1.8.1",
     "@types/fs-extra": "9.0.13",
-    "@vercel/build-utils": "5.4.4",
+    "@vercel/build-utils": "5.5.3",
     "gatsby": "4.23.0"
   }
 }
