@@ -633,7 +633,7 @@ export async function serverBuild({
         const curPagesDir = isAppPath && appDir ? appDir : pagesDir;
         const pageDir = path.dirname(path.join(curPagesDir, originalPagePath));
         const normalizedBaseDir = `${baseDir}${
-          baseDir.endsWith('/') ? '' : '/'
+          baseDir.endsWith(path.sep) ? '' : path.sep
         }`;
         files.forEach((file: string) => {
           const absolutePath = path.join(pageDir, file);
