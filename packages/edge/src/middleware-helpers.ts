@@ -1,9 +1,36 @@
+export interface ModifiedRequest {
+  /**
+   * If this is set, the request headers will be overridden with this value.
+   */
+  headers?: Headers;
+}
+
 export interface ExtraResponseInit extends Omit<ResponseInit, 'headers'> {
   /**
    * These headers will be sent to the user response
    * along with the response headers from the origin.
    */
   headers?: HeadersInit;
+  /**
+   * These fields will override the request from clients.
+   */
+  request?: ModifiedRequest;
+}
+
+function handleRequestField(request: ModifiedRequest, headers: Headers) {
+  if (request.headers) {
+    if (!(request.headers instanceof Headers)) {
+      throw new Error('request.headers must be an instance of Headers');
+    }
+
+    const keys = [];
+    for (const [key, value] of request.headers) {
+      headers.set('x-middleware-request-' + key, value);
+      keys.push(key);
+    }
+
+    headers.set('x-middleware-override-headers', keys.join(','));
+  }
 }
 
 /**
@@ -56,6 +83,11 @@ export function rewrite(
 ): Response {
   const headers = new Headers(init?.headers ?? {});
   headers.set('x-middleware-rewrite', String(destination));
+
+  if (init?.request) {
+    handleRequestField(init?.request, headers);
+  }
+
   return new Response(null, {
     ...init,
     headers,
@@ -94,6 +126,11 @@ export function rewrite(
 export function next(init?: ExtraResponseInit): Response {
   const headers = new Headers(init?.headers ?? {});
   headers.set('x-middleware-next', '1');
+
+  if (init?.request) {
+    handleRequestField(init?.request, headers);
+  }
+
   return new Response(null, {
     ...init,
     headers,
