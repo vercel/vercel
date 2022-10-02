@@ -8,11 +8,11 @@ export default function Page(props) {
 }
 
 export function getStaticProps() {
+  console.log('pages/404 getStaticProps');
   return {
     props: {
       is404: true,
       time: Date.now(),
     },
-    revalidate: 3600,
   };
 }

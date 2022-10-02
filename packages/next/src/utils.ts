@@ -1698,7 +1698,6 @@ export const onPrerenderRoute =
     const {
       appDir,
       pagesDir,
-      hasPages404,
       static404Page,
       entryDirectory,
       prerenderManifest,
@@ -1896,11 +1895,9 @@ export const onPrerenderRoute =
         });
       }
 
-      // If revalidate isn't enabled we force the /404 route to be static
-      // to match next start behavior otherwise getStaticProps would be
-      // recalled for each 404 URL path since Prerender is cached based
-      // on the URL path
-      if (!canUsePreviewMode || (hasPages404 && routeKey === '/404')) {
+      // if preview mode/On-Demand ISR can't be leveraged
+      // we can output pure static outputs instead of prerenders
+      if (!canUsePreviewMode) {
         htmlFsRef.contentType = htmlContentType;
         prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
