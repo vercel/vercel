@@ -1343,6 +1343,12 @@ export async function serverBuild({
                 .join('|')})?[/]?404/?`,
               status: 404,
               continue: true,
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-prerender-revalidate',
+                },
+              ],
             },
           ]
         : [
@@ -1350,6 +1356,12 @@ export async function serverBuild({
               src: path.posix.join('/', entryDirectory, '404/?'),
               status: 404,
               continue: true,
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-prerender-revalidate',
+                },
+              ],
             },
           ]),
 
