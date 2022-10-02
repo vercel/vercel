@@ -318,9 +318,9 @@ it('Should build the gip-gsp-404 example', async () => {
   expect(routes[handleErrorIdx + 1].dest).toBe('/404');
   expect(routes[handleErrorIdx + 1].headers).toBe(undefined);
   expect(output['404']).toBeDefined();
-  expect(output['404'].type).toBe('FileFsRef');
+  expect(output['404'].type).toBe('Prerender');
   expect(output['_next/data/testing-build-id/404.json']).toBeDefined();
-  expect(output['_next/data/testing-build-id/404.json'].type).toBe('FileFsRef');
+  expect(output['_next/data/testing-build-id/404.json'].type).toBe('Prerender');
   const filePaths = Object.keys(output);
   const serverlessError = filePaths.some(filePath => filePath.match(/_error/));
   const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
