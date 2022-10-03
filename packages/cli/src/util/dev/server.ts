@@ -501,9 +501,7 @@ export default class DevServer {
       }
     }
     try {
-      return {
-        ...this.validateEnvConfig(fileName, base || {}, env),
-      };
+      return this.validateEnvConfig(fileName, base || {}, env);
     } catch (err) {
       if (err instanceof MissingDotenvVarsError) {
         this.output.error(err.message);
@@ -526,8 +524,7 @@ export default class DevServer {
     this.getVercelConfigPromise = this._getVercelConfig();
 
     // Clean up the promise once it has resolved
-    const clear = this.clearVercelConfigPromise;
-    this.getVercelConfigPromise.finally(clear);
+    this.getVercelConfigPromise.finally(this.clearVercelConfigPromise);
 
     return this.getVercelConfigPromise;
   }
@@ -675,14 +672,17 @@ export default class DevServer {
     this.apiExtensions = detectApiExtensions(vercelConfig.builds || []);
 
     // Update the env vars configuration
-    let [runEnv, buildEnv] = await Promise.all([
+    const [localDotEnv, localDotEnvBuild, pullEnv] = await Promise.all([
       this.getLocalEnv('.env', vercelConfig.env),
       this.getLocalEnv('.env.build', vercelConfig.build?.env),
+      this.getLocalEnv('.vercel/.env.development.local'),
     ]);
+    let runEnv: Env = { ...pullEnv, ...localDotEnv };
+    let buildEnv: Env = { ...pullEnv, ...localDotEnvBuild };
+    let allEnv: Env = { ...buildEnv, ...runEnv };
 
-    let allEnv = { ...buildEnv, ...runEnv };
-
-    // If no .env/.build.env is present, use cloud environment variables
+    // If no `.env` / `.env.build` files are present,
+    // then fetch environment variables from the API
     if (Object.keys(allEnv).length === 0) {
       const cloudEnv = exposeSystemEnvs(
         this.projectEnvs || [],
@@ -779,7 +779,7 @@ export default class DevServer {
 
   validateEnvConfig(type: string, env: Env = {}, localEnv: Env = {}): Env {
     // Validate if there are any missing env vars defined in `vercel.json`,
-    // but not in the `.env` / `.build.env` file
+    // but not in the `.env` / `.env.build` file
     const missing: string[] = Object.entries(env)
       .filter(
         ([name, value]) =>
