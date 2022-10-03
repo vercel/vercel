@@ -3,9 +3,7 @@ import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
-import setupAndLink from '../../util/link/setup-and-link';
-import { getCommandName } from '../../util/pkg-name';
-import param from '../../util/output/param';
+import { ensureLink } from '../../util/ensure-link';
 
 const help = () => {
   console.log(`
@@ -70,31 +68,14 @@ export default async function main(client: Client) {
   }
 
   const cwd = argv._[1] || process.cwd();
-  const link = await setupAndLink(client, cwd, {
+
+  const link = await ensureLink('link', client, cwd, !!argv['--yes'], {
     forceDelete: true,
-    autoConfirm: argv['--yes'],
     projectName: argv['--project'],
-    successEmoji: 'success',
-    setupMsg: 'Set up',
   });
 
-  if (link.status === 'error') {
-    if (link.reason === 'HEADLESS') {
-      client.output.error(
-        `Command ${getCommandName(
-          'link'
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
-      );
-    }
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    // User aborted project linking questions
-    return 0;
-  } else if (link.status === 'linked') {
-    // Successfully linked
-    return 0;
-  } else {
-    const err: never = link;
-    throw new Error('Unknown link status: ' + err);
+  if (typeof link === 'number') {
+    return link;
   }
+  return 0;
 }
