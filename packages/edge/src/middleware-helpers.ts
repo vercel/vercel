@@ -17,14 +17,17 @@ export interface ExtraResponseInit extends Omit<ResponseInit, 'headers'> {
   request?: ModifiedRequest;
 }
 
-function handleRequestField(request: ModifiedRequest, headers: Headers) {
-  if (request.headers) {
-    if (!(request.headers instanceof Headers)) {
+function handleMiddlewareField(
+  init: ExtraResponseInit | undefined,
+  headers: Headers
+) {
+  if (init?.request?.headers) {
+    if (!(init.request.headers instanceof Headers)) {
       throw new Error('request.headers must be an instance of Headers');
     }
 
     const keys = [];
-    for (const [key, value] of request.headers) {
+    for (const [key, value] of init.request.headers) {
       headers.set('x-middleware-request-' + key, value);
       keys.push(key);
     }
@@ -84,9 +87,7 @@ export function rewrite(
   const headers = new Headers(init?.headers ?? {});
   headers.set('x-middleware-rewrite', String(destination));
 
-  if (init?.request) {
-    handleRequestField(init?.request, headers);
-  }
+  handleMiddlewareField(init, headers);
 
   return new Response(null, {
     ...init,
@@ -127,9 +128,7 @@ export function next(init?: ExtraResponseInit): Response {
   const headers = new Headers(init?.headers ?? {});
   headers.set('x-middleware-next', '1');
 
-  if (init?.request) {
-    handleRequestField(init?.request, headers);
-  }
+  handleMiddlewareField(init, headers);
 
   return new Response(null, {
     ...init,
