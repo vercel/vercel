@@ -4,7 +4,7 @@ import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
 import { Project, ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
-import exposeSystemEnvs from '../../util/dev/expose-system-envs';
+import exposeSystemEnvs from '../../util/env/expose-system-envs';
 import { emoji, prependEmoji } from '../../util/emoji';
 import getSystemEnvValues from '../../util/env/get-system-env-values';
 import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
