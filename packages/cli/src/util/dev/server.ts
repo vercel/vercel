@@ -85,8 +85,7 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
-import { ProjectEnvVariable, ProjectSettings } from '../../types';
-import exposeSystemEnvs from './expose-system-envs';
+import { ProjectSettings } from '../../types';
 import { treeKill } from '../tree-kill';
 import { nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
@@ -97,7 +96,7 @@ import {
   isSpawnError,
 } from '../is-error';
 import isURL from './is-url';
-import { pickOverrides } from '../projects/project-settings';
+import { pickOverrides } from '../pull/project-settings';
 import { replaceLocalhost } from './parse-listen';
 
 const frontendRuntimeSet = new Set(
@@ -168,15 +167,10 @@ export default class DevServer {
   private blockingBuildsPromise: Promise<void> | null;
   private startPromise: Promise<void> | null;
 
-  private systemEnvValues: string[];
-  private projectEnvs: ProjectEnvVariable[];
-
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
-    this.systemEnvValues = options.systemEnvValues || [];
-    this.projectEnvs = options.projectEnvs || [];
     this.files = {};
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
@@ -677,24 +671,9 @@ export default class DevServer {
       this.getLocalEnv('.env.build', vercelConfig.build?.env),
       this.getLocalEnv('.vercel/.env.development.local'),
     ]);
-    let runEnv: Env = { ...pullEnv, ...localDotEnv };
-    let buildEnv: Env = { ...pullEnv, ...localDotEnvBuild };
-    let allEnv: Env = { ...buildEnv, ...runEnv };
-
-    // If no `.env` / `.env.build` files are present,
-    // then fetch environment variables from the API
-    if (Object.keys(allEnv).length === 0) {
-      const cloudEnv = exposeSystemEnvs(
-        this.projectEnvs || [],
-        this.systemEnvValues || [],
-        this.projectSettings?.autoExposeSystemEnvs,
-        this.address.host
-      );
-
-      allEnv = { ...cloudEnv };
-      runEnv = { ...cloudEnv };
-      buildEnv = { ...cloudEnv };
-    }
+    const runEnv: Env = { ...pullEnv, ...localDotEnv };
+    const buildEnv: Env = { ...pullEnv, ...localDotEnvBuild };
+    const allEnv: Env = { ...buildEnv, ...runEnv };
 
     // legacy NOW_REGION env variable
     runEnv['NOW_REGION'] = 'dev1';

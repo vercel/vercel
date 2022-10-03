@@ -28,7 +28,6 @@ import {
 import { fileNameSymbol } from '@vercel/client';
 import type { VercelConfig } from '@vercel/client';
 
-import pull from './pull';
 import { staticFiles as getFiles } from '../util/get-files';
 import Client from '../util/client';
 import getArgs from '../util/get-args';
@@ -38,12 +37,12 @@ import cliPkg from '../util/pkg';
 import readJSONFile from '../util/read-json-file';
 import { CantParseJSONFile } from '../util/errors-ts';
 import {
+  ensureProjectSettings,
   pickOverrides,
   ProjectLinkAndSettings,
-  readProjectSettings,
-} from '../util/projects/project-settings';
+} from '../util/pull/project-settings';
 import { VERCEL_DIR } from '../util/projects/link';
-import confirm from '../util/input/confirm';
+
 import { emoji, prependEmoji } from '../util/emoji';
 import stamp from '../util/output/stamp';
 import {
@@ -151,45 +150,9 @@ export default async function main(client: Client): Promise<number> {
   // TODO: read project settings from the API, fall back to local `project.json` if that fails
 
   // Read project settings, and pull them from Vercel if necessary
-  let project = await readProjectSettings(join(cwd, VERCEL_DIR));
-  const isTTY = process.stdin.isTTY;
-  while (!project?.settings) {
-    let confirmed = yes;
-    if (!confirmed) {
-      if (!isTTY) {
-        client.output.print(
-          `No Project Settings found locally. Run ${cli.getCommandName(
-            'pull --yes'
-          )} to retrieve them.`
-        );
-        return 1;
-      }
-
-      confirmed = await confirm(
-        client,
-        `No Project Settings found locally. Run ${cli.getCommandName(
-          'pull'
-        )} for retrieving them?`,
-        true
-      );
-    }
-    if (!confirmed) {
-      client.output.print(`Canceled. No Project Settings retrieved.\n`);
-      return 0;
-    }
-    const { argv: originalArgv } = client;
-    client.argv = [
-      ...originalArgv.slice(0, 2),
-      'pull',
-      `--environment`,
-      target,
-    ];
-    const result = await pull(client);
-    if (result !== 0) {
-      return result;
-    }
-    client.argv = originalArgv;
-    project = await readProjectSettings(join(cwd, VERCEL_DIR));
+  const project = await ensureProjectSettings(client, cwd, target, yes);
+  if (typeof project === 'number') {
+    return project;
   }
 
   // Delete output directory from potential previous build

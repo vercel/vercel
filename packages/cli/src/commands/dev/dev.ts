@@ -3,16 +3,9 @@ import fs from 'fs-extra';
 
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
-import { ProjectEnvVariable } from '../../types';
 import Client from '../../util/client';
-import { getLinkedProject } from '../../util/projects/link';
-import { ProjectSettings } from '../../types';
-import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
-import setupAndLink from '../../util/link/setup-and-link';
-import getSystemEnvValues from '../../util/env/get-system-env-values';
-import { getCommandName } from '../../util/pkg-name';
-import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
+import { ensureProjectSettings } from '../../util/pull/project-settings';
 
 type Options = {
   '--listen': string;
@@ -30,58 +23,26 @@ export default async function dev(
   const listen = parseListen(opts['--listen'] || '3000');
 
   // retrieve dev command
-  let link = await getLinkedProject(client, cwd);
-
-  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    link = await setupAndLink(client, cwd, {
-      autoConfirm: opts['--yes'],
-      successEmoji: 'link',
-      setupMsg: 'Set up and develop',
-    });
-
-    if (link.status === 'not_linked') {
-      // User aborted project linking questions
-      return 0;
-    }
+  const project = await ensureProjectSettings(
+    client,
+    cwd,
+    'development',
+    opts['--yes']
+  );
+  if (typeof project === 'number') {
+    return project;
   }
+  const { settings, orgId } = project;
 
-  if (link.status === 'error') {
-    if (link.reason === 'HEADLESS') {
-      client.output.error(
-        `Command ${getCommandName(
-          'dev'
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
-      );
-    }
-    return link.exitCode;
-  }
+  client.config.currentTeam = orgId.startsWith('team_') ? orgId : undefined;
 
-  let projectSettings: ProjectSettings | undefined;
-  let projectEnvs: ProjectEnvVariable[] = [];
-  let systemEnvValues: string[] = [];
-  if (link.status === 'linked') {
-    const { project, org } = link;
-    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
-
-    projectSettings = project;
-
-    if (project.rootDirectory) {
-      cwd = join(cwd, project.rootDirectory);
-    }
-
-    [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-      getDecryptedEnvRecords(output, client, project.id, 'vercel-cli:dev'),
-      project.autoExposeSystemEnvs
-        ? getSystemEnvValues(output, client, project.id)
-        : { systemEnvValues: [] },
-    ]);
+  if (settings.rootDirectory) {
+    cwd = join(cwd, settings.rootDirectory);
   }
 
   const devServer = new DevServer(cwd, {
     output,
-    projectSettings,
-    projectEnvs,
-    systemEnvValues,
+    projectSettings: settings,
   });
 
   // If there is no Development Command, we must delete the

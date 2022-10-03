@@ -13,7 +13,7 @@ import {
   VERCEL_DIR,
   VERCEL_DIR_PROJECT,
 } from '../util/projects/link';
-import { writeProjectSettings } from '../util/projects/project-settings';
+import { writeProjectSettings } from '../util/pull/project-settings';
 import envPull from './env/pull';
 import { getCommandName } from '../util/pkg-name';
 import param from '../util/output/param';

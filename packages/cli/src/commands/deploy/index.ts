@@ -71,7 +71,7 @@ import { createGitMeta } from '../../util/create-git-meta';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '../../util/is-error';
-import { pickOverrides } from '../../util/projects/project-settings';
+import { pickOverrides } from '../../util/pull/project-settings';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;

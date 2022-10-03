@@ -1,9 +1,17 @@
 import { outputJSON } from 'fs-extra';
 import { Org, Project, ProjectLink } from '../../types';
-import { getLinkFromDir, VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
+import {
+  getLinkFromDir,
+  VERCEL_DIR,
+  VERCEL_DIR_PROJECT,
+} from '../projects/link';
 import { join } from 'path';
 import { VercelConfig } from '@vercel/client';
 import { PartialProjectSettings } from '../input/edit-project-settings';
+import * as cli from '../pkg-name';
+import pull from '../../commands/pull';
+import confirm from '../input/confirm';
+import Client from '../client';
 
 export type ProjectLinkAndSettings = ProjectLink & {
   settings: {
@@ -62,6 +70,55 @@ export async function writeProjectSettings(
 
 export async function readProjectSettings(cwd: string) {
   return await getLinkFromDir<ProjectLinkAndSettings>(cwd);
+}
+
+export async function ensureProjectSettings(
+  client: Client,
+  cwd: string,
+  target: string,
+  yes = false
+) {
+  let project = await readProjectSettings(join(cwd, VERCEL_DIR));
+  const isTTY = client.stdin.isTTY;
+  while (!project?.settings) {
+    let confirmed = yes;
+    if (!confirmed) {
+      if (!isTTY) {
+        client.output.print(
+          `No Project Settings found locally. Run ${cli.getCommandName(
+            'pull --yes'
+          )} to retrieve them.`
+        );
+        return 1;
+      }
+
+      confirmed = await confirm(
+        client,
+        `No Project Settings found locally. Run ${cli.getCommandName(
+          'pull'
+        )} for retrieving them?`,
+        true
+      );
+    }
+    if (!confirmed) {
+      client.output.print(`Canceled. No Project Settings retrieved.\n`);
+      return 0;
+    }
+    const { argv: originalArgv } = client;
+    client.argv = [
+      ...originalArgv.slice(0, 2),
+      'pull',
+      `--environment`,
+      target,
+    ];
+    const result = await pull(client);
+    if (result !== 0) {
+      return result;
+    }
+    client.argv = originalArgv;
+    project = await readProjectSettings(join(cwd, VERCEL_DIR));
+  }
+  return project;
 }
 
 export function pickOverrides(
