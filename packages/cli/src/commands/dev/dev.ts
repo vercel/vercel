@@ -22,27 +22,28 @@ export default async function dev(
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
 
-  // retrieve dev command
-  const project = await ensureProjectSettings(
-    client,
-    cwd,
-    'development',
-    opts['--yes']
-  );
+  // Retrieve local Project Settings from `vc pull`
+  const project =
+    process.env.__VERCEL_SKIP_DEV_CMD !== '1'
+      ? await ensureProjectSettings(client, cwd, 'development', opts['--yes'])
+      : undefined;
+
   if (typeof project === 'number') {
     return project;
   }
-  const { settings, orgId } = project;
 
-  client.config.currentTeam = orgId.startsWith('team_') ? orgId : undefined;
-
-  if (settings.rootDirectory) {
-    cwd = join(cwd, settings.rootDirectory);
+  if (project) {
+    client.config.currentTeam = project.orgId.startsWith('team_')
+      ? project.orgId
+      : undefined;
+    if (project.settings.rootDirectory) {
+      cwd = join(cwd, project.settings.rootDirectory);
+    }
   }
 
   const devServer = new DevServer(cwd, {
     output,
-    projectSettings: settings,
+    projectSettings: project?.settings,
   });
 
   // If there is no Development Command, we must delete the
