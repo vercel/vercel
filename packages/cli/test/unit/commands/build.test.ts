@@ -776,6 +776,51 @@ describe('build', () => {
     }
   });
 
+  it('should fail when "functions" defined that emits discontinued "nodejs12.x" runtime', async () => {
+    const cwd = fixture('discontinued-nodejs12.x');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      // Error gets printed to the terminal
+      await expect(client.stderr).toOutput(
+        'The Runtime "vercel-php@0.1.0" is using "nodejs12.x", which is discontinued. Please upgrade your Runtime to a more recent version or consult the author for more details.'
+      );
+
+      // `builds.json` contains "error" build
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      const errorBuilds = builds.builds.filter((b: any) => 'error' in b);
+      expect(errorBuilds).toHaveLength(1);
+      expect(errorBuilds[0].error).toEqual({
+        name: 'Error',
+        message: expect.stringContaining('Please upgrade your Runtime'),
+        stack: expect.stringContaining('Please upgrade your Runtime'),
+        hideStackTrace: true,
+        code: 'NODEJS_DISCONTINUED_VERSION',
+        link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      });
+
+      // top level "error" also contains the same error
+      expect(builds.error).toEqual({
+        name: 'Error',
+        message: expect.stringContaining('Please upgrade your Runtime'),
+        stack: expect.stringContaining('Please upgrade your Runtime'),
+        hideStackTrace: true,
+        code: 'NODEJS_DISCONTINUED_VERSION',
+        link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      });
+
+      // `config.json` contains `version`
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.version).toBe(3);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should allow for missing "build" script', async () => {
     const cwd = fixture('static-with-pkg');
     const output = join(cwd, '.vercel/output');
