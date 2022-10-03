@@ -776,7 +776,11 @@ describe('build', () => {
     }
   });
 
-  it('should fail when "functions" defined that emits discontinued "nodejs12.x" runtime', async () => {
+  it('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on Windows');
+      return;
+    }
     const cwd = fixture('discontinued-nodejs12.x');
     const output = join(cwd, '.vercel/output');
     try {
