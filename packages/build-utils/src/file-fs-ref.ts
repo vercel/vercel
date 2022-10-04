@@ -5,7 +5,9 @@ import path from 'path';
 import Sema from 'async-sema';
 import { FileBase } from './types';
 
-const semaToPreventEMFILE = new Sema(20);
+const semaToPreventEMFILE = new Sema(
+  parseInt(process.env.VERCEL_INTERNAL_FILE_FS_REF_SEMA, 10) || 20
+);
 
 interface FileFsRefOptions {
   mode?: number;
