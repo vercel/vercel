@@ -877,7 +877,7 @@ describe('build', () => {
       });
 
       const functions = await fs.readdir(join(output, 'functions'));
-      expect(functions.sort()).toStrictEqual(['server.js.func']);
+      expect(functions.sort()).toEqual(['server.js.func']);
 
       const vcConfig = await fs.readJSON(
         join(output, 'functions/server.js.func/.vc-config.json')
