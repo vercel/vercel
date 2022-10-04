@@ -856,6 +856,43 @@ describe('build', () => {
     }
   });
 
+  it('should allow v1 build result missing "output" prop', async () => {
+    const cwd = fixture('now-node-server');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@now/node-server',
+            src: 'server.js',
+            use: '@now/node-server',
+          },
+        ],
+      });
+
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toStrictEqual(['server.js.func']);
+
+      const vcConfig = await fs.readJSON(
+        join(output, 'functions/server.js.func/.vc-config.json')
+      );
+      expect(vcConfig).toStrictEqual({
+        handler: 'launcher.launcher',
+        runtime: 'nodejs16.x',
+        environment: {},
+      });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should set `VERCEL_ANALYTICS_ID` environment variable', async () => {
     const cwd = fixture('vercel-analytics');
     const output = join(cwd, '.vercel/output');

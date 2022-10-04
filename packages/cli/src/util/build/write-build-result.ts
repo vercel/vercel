@@ -116,7 +116,9 @@ async function writeBuildResultV2(
 
   const lambdas = new Map<Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
-  for (const [path, output] of Object.entries(buildResult.output)) {
+  for (const [path, output] of Object.entries(
+    buildResult.output || buildResult
+  )) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
       await writeLambda(outputDir, output, normalizedPath, undefined, lambdas);
