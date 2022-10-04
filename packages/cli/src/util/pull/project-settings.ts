@@ -111,6 +111,9 @@ export async function ensureProjectSettings(
       `--environment`,
       target,
     ];
+    if (yes) {
+      client.argv.push('--yes');
+    }
     const result = await pull(client);
     if (result !== 0) {
       return result;

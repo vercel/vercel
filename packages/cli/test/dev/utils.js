@@ -403,6 +403,7 @@ function testFixtureStdio(
             ? ['--scope', process.env.VERCEL_TEAM_ID]
             : []),
           '--debug',
+          '--yes',
         ],
         {
           cwd,
