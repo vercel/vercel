@@ -34,6 +34,16 @@ export const monorepoManagers: Array<
     settings: {
       buildCommand: {
         placeholder: 'Turborepo default',
+        value: null,
+      },
+      outputDirectory: {
+        value: null,
+      },
+      installCommand: {
+        value: null,
+      },
+      devCommand: {
+        value: null,
       },
     },
   },
@@ -51,9 +61,16 @@ export const monorepoManagers: Array<
     settings: {
       buildCommand: {
         placeholder: 'Nx default',
+        value: null,
       },
       outputDirectory: {
         placeholder: 'Nx default',
+      },
+      installCommand: {
+        value: null,
+      },
+      devCommand: {
+        value: null,
       },
     },
   },
@@ -69,14 +86,18 @@ export const monorepoManagers: Array<
       ],
     },
     settings: {
-      installCommand: {
-        placeholder: 'Rush default',
-      },
       buildCommand: {
         placeholder: 'Rush default',
+        value: null,
       },
       outputDirectory: {
         placeholder: 'Rush default',
+      },
+      installCommand: {
+        placeholder: 'Rush default',
+      },
+      devCommand: {
+        value: null,
       },
     },
   },
