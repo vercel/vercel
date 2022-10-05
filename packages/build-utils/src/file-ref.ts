@@ -12,7 +12,13 @@ interface FileRefOptions {
   mutable?: boolean;
 }
 
-const semaToDownloadFromS3 = new Sema(5);
+const DEFAULT_SEMA = 5;
+const semaToDownloadFromS3 = new Sema(
+  parseInt(
+    process.env.VERCEL_INTERNAL_FILE_REF_SEMA || String(DEFAULT_SEMA),
+    10
+  ) || DEFAULT_SEMA
+);
 
 class BailableError extends Error {
   public bail: boolean;
