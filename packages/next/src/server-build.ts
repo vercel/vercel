@@ -997,7 +997,7 @@ export async function serverBuild({
       const isLastRoute = i === prerenderManifest.notFoundRoutes.length - 1;
 
       if (prerenderManifest.staticRoutes[route]?.initialRevalidate === false) {
-        if (currentRouteSrc.length + route.length + 1 >= 4096) {
+        if (currentRouteSrc.length + route.length + 1 >= 4000) {
           pushRoute(currentRouteSrc);
           currentRouteSrc = starterRouteSrc;
         }
