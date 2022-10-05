@@ -17,8 +17,7 @@ const semaToDownloadFromS3 = new Sema(
   parseInt(
     process.env.VERCEL_INTERNAL_FILE_REF_SEMA || String(DEFAULT_SEMA),
     10
-  ),
-  DEFAULT_SEMA
+  ) || DEFAULT_SEMA
 );
 
 class BailableError extends Error {
