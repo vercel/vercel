@@ -825,6 +825,37 @@ describe('build', () => {
     }
   });
 
+  it('should error when builder returns result without "output" such as @now/node-server', async () => {
+    const cwd = fixture('now-node-server');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      // Error gets printed to the terminal
+      const message =
+        'The build result from "@now/node-server" is missing the "output" property. Please update from "@now" to "@vercel" in your `vercel.json` file.';
+      await expect(client.stderr).toOutput(message);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+
+      // top level "error" also contains the same error
+      expect(builds.error).toEqual({
+        name: 'Error',
+        message,
+        stack: expect.stringContaining(message),
+      });
+
+      // `config.json` contains `version`
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.version).toBe(3);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should allow for missing "build" script', async () => {
     const cwd = fixture('static-with-pkg');
     const output = join(cwd, '.vercel/output');
@@ -850,43 +881,6 @@ describe('build', () => {
       // "static" directory contains static files
       const files = await fs.readdir(join(output, 'static'));
       expect(files.sort()).toEqual(['index.html', 'package.json']);
-    } finally {
-      process.chdir(originalCwd);
-      delete process.env.__VERCEL_BUILD_RUNNING;
-    }
-  });
-
-  it('should allow v1 build result missing "output" prop', async () => {
-    const cwd = fixture('now-node-server');
-    const output = join(cwd, '.vercel/output');
-    try {
-      process.chdir(cwd);
-      const exitCode = await build(client);
-      expect(exitCode).toEqual(0);
-
-      const builds = await fs.readJSON(join(output, 'builds.json'));
-      expect(builds).toMatchObject({
-        target: 'preview',
-        builds: [
-          {
-            require: '@now/node-server',
-            src: 'server.js',
-            use: '@now/node-server',
-          },
-        ],
-      });
-
-      const functions = await fs.readdir(join(output, 'functions'));
-      expect(functions.sort()).toEqual(['server.js.func']);
-
-      const vcConfig = await fs.readJSON(
-        join(output, 'functions/server.js.func/.vc-config.json')
-      );
-      expect(vcConfig).toStrictEqual({
-        handler: 'launcher.launcher',
-        runtime: 'nodejs16.x',
-        environment: {},
-      });
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
