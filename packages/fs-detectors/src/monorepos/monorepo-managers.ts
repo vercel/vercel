@@ -14,11 +14,12 @@ import type { Framework } from '@vercel/frameworks';
  *
  */
 export const monorepoManagers: Array<
-  Omit<Framework, 'description' | 'logo' | 'settings' | 'getOutputDirName'>
+  Omit<Framework, 'description' | 'getOutputDirName'>
 > = [
   {
     name: 'Turborepo',
     slug: 'turbo',
+    logo: 'https://api-frameworks.vercel.sh/monorepo-logos/turborepo.svg',
     detectors: {
       some: [
         {
@@ -30,10 +31,26 @@ export const monorepoManagers: Array<
         },
       ],
     },
+    settings: {
+      buildCommand: {
+        placeholder: 'Turborepo default',
+        value: null,
+      },
+      outputDirectory: {
+        value: null,
+      },
+      installCommand: {
+        value: null,
+      },
+      devCommand: {
+        value: null,
+      },
+    },
   },
   {
     name: 'Nx',
     slug: 'nx',
+    logo: 'https://api-frameworks.vercel.sh/monorepo-logos/nx.svg',
     detectors: {
       every: [
         {
@@ -41,16 +58,47 @@ export const monorepoManagers: Array<
         },
       ],
     },
+    settings: {
+      buildCommand: {
+        placeholder: 'Nx default',
+        value: null,
+      },
+      outputDirectory: {
+        placeholder: 'Nx default',
+      },
+      installCommand: {
+        value: null,
+      },
+      devCommand: {
+        value: null,
+      },
+    },
   },
   {
     name: 'Rush',
     slug: 'rush',
+    logo: 'https://api-frameworks.vercel.sh/monorepo-logos/rush.svg',
     detectors: {
       every: [
         {
           path: 'rush.json',
         },
       ],
+    },
+    settings: {
+      buildCommand: {
+        placeholder: 'Rush default',
+        value: null,
+      },
+      outputDirectory: {
+        placeholder: 'Rush default',
+      },
+      installCommand: {
+        placeholder: 'Rush default',
+      },
+      devCommand: {
+        value: null,
+      },
     },
   },
 ];
