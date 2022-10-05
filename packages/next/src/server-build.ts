@@ -633,7 +633,7 @@ export async function serverBuild({
         const curPagesDir = isAppPath && appDir ? appDir : pagesDir;
         const pageDir = path.dirname(path.join(curPagesDir, originalPagePath));
         const normalizedBaseDir = `${baseDir}${
-          baseDir.endsWith('/') ? '' : '/'
+          baseDir.endsWith(path.sep) ? '' : path.sep
         }`;
         files.forEach((file: string) => {
           const absolutePath = path.join(pageDir, file);
@@ -997,7 +997,7 @@ export async function serverBuild({
       const isLastRoute = i === prerenderManifest.notFoundRoutes.length - 1;
 
       if (prerenderManifest.staticRoutes[route]?.initialRevalidate === false) {
-        if (currentRouteSrc.length + route.length + 1 >= 4096) {
+        if (currentRouteSrc.length + route.length + 1 >= 4000) {
           pushRoute(currentRouteSrc);
           currentRouteSrc = starterRouteSrc;
         }
@@ -1134,7 +1134,7 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     // create .rsc variant for app lambdas and edge functions
     // to match prerenders so we can route the same when the
-    // __flight__ header is present
+    // __rsc__ header is present
     const edgeFunctions = middleware.edgeFunctions;
 
     for (let route of Object.values(appPathRoutesManifest)) {
@@ -1343,6 +1343,12 @@ export async function serverBuild({
                 .join('|')})?[/]?404/?`,
               status: 404,
               continue: true,
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-prerender-revalidate',
+                },
+              ],
             },
           ]
         : [
@@ -1350,6 +1356,12 @@ export async function serverBuild({
               src: path.posix.join('/', entryDirectory, '404/?'),
               status: 404,
               continue: true,
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-prerender-revalidate',
+                },
+              ],
             },
           ]),
 
@@ -1393,7 +1405,7 @@ export async function serverBuild({
               has: [
                 {
                   type: 'header',
-                  key: '__flight__',
+                  key: '__rsc__',
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
