@@ -14,7 +14,7 @@ import type { Framework } from '@vercel/frameworks';
  *
  */
 export const monorepoManagers: Array<
-  Omit<Framework, 'description' | 'logo' | 'settings' | 'getOutputDirName'>
+  Omit<Framework, 'description' | 'logo' | 'getOutputDirName'>
 > = [
   {
     name: 'Turborepo',
@@ -30,6 +30,11 @@ export const monorepoManagers: Array<
         },
       ],
     },
+    settings: {
+      buildCommand: {
+        placeholder: 'Turborepo default',
+      },
+    },
   },
   {
     name: 'Nx',
@@ -41,6 +46,14 @@ export const monorepoManagers: Array<
         },
       ],
     },
+    settings: {
+      buildCommand: {
+        placeholder: 'Nx default',
+      },
+      outputDirectory: {
+        placeholder: 'Nx default',
+      },
+    },
   },
   {
     name: 'Rush',
@@ -51,6 +64,17 @@ export const monorepoManagers: Array<
           path: 'rush.json',
         },
       ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'Rush default',
+      },
+      buildCommand: {
+        placeholder: 'Rush default',
+      },
+      outputDirectory: {
+        placeholder: 'Rush default',
+      },
     },
   },
 ];

@@ -135,11 +135,11 @@ export interface Framework {
     /**
      * Default Build Command or a placeholder
      */
-    buildCommand: SettingValue;
+    buildCommand: Setting;
     /**
      * Default Development Command or a placeholder
      */
-    devCommand: SettingValue;
+    devCommand: Setting;
     /**
      * Default Output Directory
      */
