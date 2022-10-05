@@ -19,7 +19,7 @@ async function main() {
   );
 
   await fs.cp(
-    join(repoRoot, 'packages', 'fs-detectors', 'src', 'monorepos', 'logos'),
+    join(repoRoot, 'packages', 'fs-detectors', 'logos'),
     join(pubDir, 'monorepo-logos'),
     { recursive: true, force: true }
   );
