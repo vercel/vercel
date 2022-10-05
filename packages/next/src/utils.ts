@@ -1897,7 +1897,11 @@ export const onPrerenderRoute =
 
       // if preview mode/On-Demand ISR can't be leveraged
       // we can output pure static outputs instead of prerenders
-      if (!canUsePreviewMode) {
+      if (
+        !canUsePreviewMode ||
+        (routeKey === '/404' &&
+          (initialRevalidate === false || !lambdas[outputPathPage]))
+      ) {
         htmlFsRef.contentType = htmlContentType;
         prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
