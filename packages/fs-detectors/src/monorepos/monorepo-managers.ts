@@ -14,11 +14,12 @@ import type { Framework } from '@vercel/frameworks';
  *
  */
 export const monorepoManagers: Array<
-  Omit<Framework, 'description' | 'logo' | 'getOutputDirName'>
+  Omit<Framework, 'description' | 'getOutputDirName'>
 > = [
   {
     name: 'Turborepo',
     slug: 'turbo',
+    logo: 'https://api-frameworks.vercel.sh/monorepo-logos/turborepo.svg',
     detectors: {
       some: [
         {
@@ -39,6 +40,7 @@ export const monorepoManagers: Array<
   {
     name: 'Nx',
     slug: 'nx',
+    logo: 'https://api-frameworks.vercel.sh/monorepo-logos/nx.svg',
     detectors: {
       every: [
         {
@@ -58,6 +60,7 @@ export const monorepoManagers: Array<
   {
     name: 'Rush',
     slug: 'rush',
+    logo: 'https://api-frameworks.vercel.sh/monorepo-logos/rush.svg',
     detectors: {
       every: [
         {
