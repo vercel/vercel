@@ -13,16 +13,14 @@ import type { Framework } from '@vercel/frameworks';
  *   detectFramwork({ fs, frameworkList }) // returns the 'slug' field if detected, otherwise null
  *
  */
-export type MonorepoManager = Omit<
-  Framework,
-  'description' | 'getOutputDirName'
-> & { darkLogo?: string };
-export const monorepoManagers: Array<MonorepoManager> = [
+export const monorepoManagers: Array<
+  Omit<Framework, 'description' | 'getOutputDirName'>
+> = [
   {
     name: 'Turborepo',
     slug: 'turbo',
     logo: 'https://api-frameworks.vercel.sh/monorepo-logos/turborepo.svg',
-    darkLogo:
+    darkModeLogo:
       'https://api-frameworks.vercel.sh/monorepo-logos/turborepo-dark.svg',
     detectors: {
       some: [
