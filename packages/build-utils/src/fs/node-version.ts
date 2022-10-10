@@ -10,7 +10,7 @@ const allOptions = [
     major: 12,
     range: '12.x',
     runtime: 'nodejs12.x',
-    discontinueDate: new Date('2022-10-01'),
+    discontinueDate: new Date('2022-10-03'),
   },
   {
     major: 10,

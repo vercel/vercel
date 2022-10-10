@@ -41,6 +41,7 @@ import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
 import { getPrefixedEnvVars } from './get-prefixed-env-vars';
+import { cloneEnv } from './clone-env';
 
 export {
   FileBlob,
@@ -84,6 +85,7 @@ export {
   getLambdaOptionsFromFunction,
   scanParentDirs,
   getIgnoreFilter,
+  cloneEnv,
 };
 
 export { EdgeFunction } from './edge-function';

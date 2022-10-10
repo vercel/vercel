@@ -3,6 +3,13 @@ const fs = require('fs-extra');
 const execa = require('execa');
 const { join } = require('path');
 
+async function copyToDist(sourcePath, outDir) {
+  return fs.copyFile(
+    join(__dirname, sourcePath),
+    join(outDir, 'edge-functions/edge-handler-template.js')
+  );
+}
+
 async function main() {
   const srcDir = join(__dirname, 'src');
   const outDir = join(__dirname, 'dist');
@@ -50,6 +57,8 @@ async function main() {
     join(outDir, 'index.d.ts'),
     join(__dirname, 'test/fixtures/15-helpers/ts/types.d.ts')
   );
+
+  await copyToDist('src/edge-functions/edge-handler-template.js', outDir);
 }
 
 main().catch(err => {

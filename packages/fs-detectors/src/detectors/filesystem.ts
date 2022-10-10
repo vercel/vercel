@@ -89,33 +89,34 @@ export abstract class DetectorFilesystem {
     if (!p) {
       p = this._readdir(dirPath);
       this.readdirCache.set(dirPath, p);
+    }
 
-      const directoryContent = await p;
-      const directoryFiles = new Set<string>();
+    const directoryContent = await p;
+    const directoryFiles = new Set<string>();
 
-      for (const file of directoryContent) {
-        if (file.type === 'file') {
-          // we know this file exists, mark it as so on the filesystem
-          this.fileCache.set(file.path, Promise.resolve(true));
-          this.pathCache.set(file.path, Promise.resolve(true));
-          directoryFiles.add(file.name);
-        }
-      }
-
-      if (options?.potentialFiles) {
-        // calculate the set of paths that truly do not exist
-        const filesThatDoNotExist = options.potentialFiles.filter(
-          path => !directoryFiles.has(path)
-        );
-        for (const filePath of filesThatDoNotExist) {
-          const fullFilePath =
-            dirPath === '/' ? filePath : posixPath.join(dirPath, filePath);
-          // we know this file does not exist, mark it as so on the filesystem
-          this.fileCache.set(fullFilePath, Promise.resolve(false));
-          this.pathCache.set(fullFilePath, Promise.resolve(false));
-        }
+    for (const file of directoryContent) {
+      if (file.type === 'file') {
+        // we know this file exists, mark it as so on the filesystem
+        this.fileCache.set(file.path, Promise.resolve(true));
+        this.pathCache.set(file.path, Promise.resolve(true));
+        directoryFiles.add(file.name);
       }
     }
+
+    if (options?.potentialFiles) {
+      // calculate the set of paths that truly do not exist
+      const filesThatDoNotExist = options.potentialFiles.filter(
+        path => !directoryFiles.has(path)
+      );
+      for (const filePath of filesThatDoNotExist) {
+        const fullFilePath =
+          dirPath === '/' ? filePath : posixPath.join(dirPath, filePath);
+        // we know this file does not exist, mark it as so on the filesystem
+        this.fileCache.set(fullFilePath, Promise.resolve(false));
+        this.pathCache.set(fullFilePath, Promise.resolve(false));
+      }
+    }
+
     return p;
   };
 
@@ -124,5 +125,16 @@ export abstract class DetectorFilesystem {
    */
   public chdir = (name: string): DetectorFilesystem => {
     return this._chdir(name);
+  };
+
+  /**
+   * Writes a file to the filesystem cache.
+   * @param name the name of the file to write
+   * @param content The content of the file
+   */
+  public writeFile = async (name: string, content: string): Promise<void> => {
+    this.readFileCache.set(name, Promise.resolve(Buffer.from(content)));
+    this.fileCache.set(name, Promise.resolve(true));
+    this.pathCache.set(name, Promise.resolve(true));
   };
 }

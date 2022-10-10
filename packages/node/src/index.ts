@@ -36,6 +36,7 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  cloneEnv,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -525,15 +526,13 @@ export const startDevServer: StartDevServer = async opts => {
   const child = fork(devServerPath, [], {
     cwd: workPath,
     execArgv: [],
-    env: {
-      ...process.env,
-      ...meta.env,
+    env: cloneEnv(process.env, meta.env, {
       VERCEL_DEV_ENTRYPOINT: entrypoint,
       VERCEL_DEV_TSCONFIG: projectTsConfig || '',
       VERCEL_DEV_IS_ESM: isEsm ? '1' : undefined,
       VERCEL_DEV_CONFIG: JSON.stringify(config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(meta.buildEnv || {}),
-    },
+    }),
   });
 
   const { pid } = child;

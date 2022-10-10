@@ -23,6 +23,7 @@ import type {
 } from '../types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
+import { normalizeError } from './is-error';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -146,10 +147,15 @@ export default class Client extends EventEmitter implements Stdio {
         const error = await responseError(res);
 
         if (isSAMLError(error)) {
-          // A SAML error means the token is expired, or is not
-          // designated for the requested team, so the user needs
-          // to re-authenticate
-          await this.reauthenticate(error);
+          try {
+            // A SAML error means the token is expired, or is not
+            // designated for the requested team, so the user needs
+            // to re-authenticate
+            await this.reauthenticate(error);
+          } catch (reauthError) {
+            // there's no sense in retrying
+            return bail(normalizeError(reauthError));
+          }
         } else if (res.status >= 400 && res.status < 500) {
           // Any other 4xx should bail without retrying
           return bail(error);
@@ -186,7 +192,7 @@ export default class Client extends EventEmitter implements Stdio {
           `Failed to re-authenticate for ${bold(error.scope)} scope`
         );
       }
-      process.exit(1);
+      throw error;
     }
 
     this.authConfig.token = result.token;

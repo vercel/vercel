@@ -1,5 +1,6 @@
 import path from 'path';
 import frameworkList from '@vercel/frameworks';
+import workspaceManagers from '../src/workspaces/workspace-managers';
 import { detectFramework, DetectorFilesystem } from '../src';
 import { Stat } from '../src/detectors/filesystem';
 
@@ -171,6 +172,38 @@ describe('DetectorFilesystem', () => {
     hasPathSpy.mock.calls.length = 0;
     expect(await fs.hasPath('packages/app1/package.json')).toBe(true);
     expect(hasPathSpy).not.toHaveBeenCalled();
+
+    expect(
+      await fs.readdir('packages/app1', { potentialFiles: ['vercel.json'] })
+    ).toEqual([
+      {
+        name: 'package.json',
+        path: 'packages/app1/package.json',
+        type: 'file',
+      },
+    ]);
+
+    hasPathSpy.mock.calls.length = 0;
+    expect(await fs.hasPath('packages/app1/vercel.json')).toBe(false);
+    expect(hasPathSpy).not.toHaveBeenCalled();
+  });
+
+  it('should be able to write files', async () => {
+    const files = {};
+    const fs = new VirtualFilesystem(files);
+    const hasPathSpy = jest.spyOn(fs, '_hasPath');
+    const isFileSpy = jest.spyOn(fs, '_isFile');
+    const readFileSpy = jest.spyOn(fs, '_readFile');
+
+    await fs.writeFile('file.txt', 'Hello World');
+
+    expect(await fs.readFile('file.txt')).toEqual(Buffer.from('Hello World'));
+    expect(await fs.hasPath('file.txt')).toBe(true);
+    expect(await fs.isFile('file.txt')).toBe(true);
+    // We expect that the fs returned values from it's caches instead of calling the underlying functions
+    expect(hasPathSpy).not.toHaveBeenCalled();
+    expect(isFileSpy).not.toHaveBeenCalled();
+    expect(readFileSpy).not.toHaveBeenCalled();
   });
 
   it('should be able to change directories', async () => {
@@ -251,6 +284,28 @@ describe('DetectorFilesystem', () => {
       });
 
       expect(await detectFramework({ fs, frameworkList })).toBe(null);
+    });
+
+    it('Detect nx', async () => {
+      const fs = new VirtualFilesystem({
+        'workspace.json': JSON.stringify({
+          projects: { 'app-one': 'apps/app-one' },
+        }),
+      });
+
+      expect(
+        await detectFramework({ fs, frameworkList: workspaceManagers })
+      ).toBe('nx');
+    });
+
+    it('Do not detect anything', async () => {
+      const fs = new VirtualFilesystem({
+        'workspace.json': JSON.stringify({ projects: {} }),
+      });
+
+      expect(
+        await detectFramework({ fs, frameworkList: workspaceManagers })
+      ).toBe(null);
     });
 
     it('Detect Next.js', async () => {

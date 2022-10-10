@@ -522,7 +522,12 @@ export default async (client: Client): Promise<number> => {
       quiet,
       wantsPublic: argv['--public'] || localConfig.public,
       type: null,
-      nowConfig: localConfig,
+      nowConfig: {
+        ...localConfig,
+        // `images` is allowed in "vercel.json" and processed
+        // by `vc build`, but don't send it to the API endpoint
+        images: undefined,
+      },
       regions,
       meta,
       gitMetadata,
