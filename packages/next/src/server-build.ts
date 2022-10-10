@@ -1514,7 +1514,9 @@ export async function serverBuild({
                 entryDirectory,
                 '_next/data/',
                 escapedBuildId,
-                route.src.replace(/(^\^|\$$)/g, '') + '.json$'
+                route.src
+                  .replace(/\^\(\?:\/\(\?</, '(?:(?<')
+                  .replace(/(^\^|\$$)/g, '') + '.json$'
               );
 
               const { pathname, search } = new URL(
