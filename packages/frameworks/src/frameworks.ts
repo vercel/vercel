@@ -1793,7 +1793,13 @@ export const frameworks = [
           path: 'sanity.config.js',
         },
         {
+          path: 'sanity.config.jsx',
+        },
+        {
           path: 'sanity.config.ts',
+        },
+        {
+          path: 'sanity.config.tsx',
         },
       ],
     },
