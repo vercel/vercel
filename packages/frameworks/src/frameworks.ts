@@ -1834,9 +1834,12 @@ export const frameworks = [
     website: 'https://hydrogen.shopify.dev',
     useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
     detectors: {
-      every: [
+      some: [
         {
           path: 'hydrogen.config.js',
+        },
+        {
+          path: 'hydrogen.config.ts',
         },
       ],
     },
