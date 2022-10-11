@@ -5429,10 +5429,10 @@ ecc-jsbn@~0.1.1:
     jsbn "~0.1.0"
     safer-buffer "^2.1.0"
 
-edge-runtime@1.1.0-beta.37:
-  version "1.1.0-beta.37"
-  resolved "https://registry.yarnpkg.com/edge-runtime/-/edge-runtime-1.1.0-beta.37.tgz#e88eafba4f3630990468bb53efca6f48d76063c4"
-  integrity sha512-IP0xYNmp0XXoXVnrAf/e67224ZkMUUBMyUUohVxWWI5XdyetIGRNWp3GifDy3LpbuE02yv42rgtoE+tm+whcLA==
+edge-runtime@1.1.0-beta.38:
+  version "1.1.0-beta.38"
+  resolved "https://registry.yarnpkg.com/edge-runtime/-/edge-runtime-1.1.0-beta.38.tgz#f15f136a553e342744aae1a345368bc2c6298a4e"
+  integrity sha512-MY6/XcnGGuvLmwAR6PQizjhW/ABjVnmpJQmhJRacmo7K7LhuevszrPFVf0GmwVrr9PUahrvgmZYydQLSTpS5AA==
   dependencies:
     "@edge-runtime/format" "1.1.0-beta.33"
     "@edge-runtime/vm" "1.1.0-beta.36"

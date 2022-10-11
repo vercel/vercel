@@ -970,7 +970,9 @@ export async function serverBuild({
     // routes since only the status is being modified and we don't want
     // to exceed the routes limit
     const starterRouteSrc = `^${
-      entryDirectory !== '.' ? path.posix.join('/', entryDirectory, '()') : '()'
+      entryDirectory !== '.'
+        ? `${path.posix.join('/', entryDirectory)}()`
+        : '()'
     }`;
     let currentRouteSrc = starterRouteSrc;
 
@@ -1509,18 +1511,31 @@ export async function serverBuild({
           dynamicRoutes
             .map(route => {
               route = Object.assign({}, route);
+              let normalizedSrc = route.src;
+
+              if (routesManifest.basePath) {
+                normalizedSrc = normalizedSrc.replace(
+                  new RegExp(
+                    `\\^${escapeStringRegexp(routesManifest.basePath)}`
+                  ),
+                  '^'
+                );
+              }
+
               route.src = path.posix.join(
                 '^/',
                 entryDirectory,
                 '_next/data/',
                 escapedBuildId,
-                route.src.replace(/(^\^|\$$)/g, '') + '.json$'
+                normalizedSrc
+                  .replace(/\^\(\?:\/\(\?</, '(?:(?<')
+                  .replace(/(^\^|\$$)/g, '') + '.json$'
               );
 
-              const { pathname, search } = new URL(
-                route.dest || '/',
-                'http://n'
-              );
+              const parsedDestination = new URL(route.dest || '/', 'http://n');
+              let pathname = parsedDestination.pathname;
+              const search = parsedDestination.search;
+
               let isPrerender = !!prerenders[path.join('./', pathname)];
 
               if (routesManifest.i18n) {
@@ -1537,9 +1552,17 @@ export async function serverBuild({
               }
 
               if (isPrerender) {
-                route.dest = `/_next/data/${buildId}${pathname}.json${
-                  search || ''
-                }`;
+                if (routesManifest.basePath) {
+                  pathname = pathname.replace(
+                    new RegExp(
+                      `^${escapeStringRegexp(routesManifest.basePath)}`
+                    ),
+                    ''
+                  );
+                }
+                route.dest = `${
+                  routesManifest.basePath || ''
+                }/_next/data/${buildId}${pathname}.json${search || ''}`;
               }
               return route;
             })

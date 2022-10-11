@@ -20,6 +20,8 @@ export const monorepoManagers: Array<
     name: 'Turborepo',
     slug: 'turbo',
     logo: 'https://api-frameworks.vercel.sh/monorepo-logos/turborepo.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/monorepo-logos/turborepo-dark.svg',
     detectors: {
       some: [
         {
