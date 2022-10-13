@@ -38,6 +38,9 @@ export class EdgeFunction {
    */
   assets?: { name: string; path: string }[];
 
+  /** The regions where the edge function will be executed on */
+  regions?: 'auto' | string[] | 'all' | 'default';
+
   constructor(params: Omit<EdgeFunction, 'type'>) {
     this.type = 'EdgeFunction';
     this.name = params.name;
@@ -46,5 +49,6 @@ export class EdgeFunction {
     this.files = params.files;
     this.envVarsInUse = params.envVarsInUse;
     this.assets = params.assets;
+    this.regions = params.regions;
   }
 }
