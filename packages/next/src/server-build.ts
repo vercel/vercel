@@ -1403,6 +1403,17 @@ export async function serverBuild({
       ...(appDir
         ? [
             {
+              src: `^${path.posix.join('/', entryDirectory, '/')}`,
+              has: [
+                {
+                  type: 'header',
+                  key: '__rsc__',
+                },
+              ],
+              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              check: true,
+            },
+            {
               src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
               has: [
                 {
