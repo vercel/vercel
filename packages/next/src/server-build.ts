@@ -1144,7 +1144,8 @@ export async function serverBuild({
 
       if (lambdas[route]) {
         lambdas[`${route}.rsc`] = lambdas[route];
-      } else if (edgeFunctions[route]) {
+      }
+      if (edgeFunctions[route]) {
         edgeFunctions[`${route}.rsc`] = edgeFunctions[route];
       }
     }
@@ -1403,6 +1404,17 @@ export async function serverBuild({
       ...(appDir
         ? [
             {
+              src: `^${path.posix.join('/', entryDirectory, '/')}`,
+              has: [
+                {
+                  type: 'header',
+                  key: '__rsc__',
+                },
+              ],
+              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              check: true,
+            },
+            {
               src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
               has: [
                 {
@@ -1635,6 +1647,18 @@ export async function serverBuild({
         continue: true,
         important: true,
       },
+      ...(appDir
+        ? [
+            {
+              src: path.posix.join('/', entryDirectory, '/(.*).rsc$'),
+              headers: {
+                'content-type': 'application/octet-stream',
+              },
+              continue: true,
+              important: true,
+            },
+          ]
+        : []),
 
       // TODO: remove below workaround when `/` is allowed to be output
       // different than `/index`
