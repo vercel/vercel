@@ -6,6 +6,7 @@
 
 - [ExtraResponseInit](interfaces/ExtraResponseInit.md)
 - [Geo](interfaces/Geo.md)
+- [ModifiedRequest](interfaces/ModifiedRequest.md)
 
 ### Variables
 
@@ -197,7 +198,7 @@ export default function middleware(_req: Request) {
 
 #### Defined in
 
-[src/middleware-helpers.ts:94](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L94)
+[src/middleware-helpers.ts:127](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L127)
 
 ---
 
@@ -259,4 +260,4 @@ export const config = { matcher: '/api/users/:path*' };
 
 #### Defined in
 
-[src/middleware-helpers.ts:53](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L53)
+[src/middleware-helpers.ts:83](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L83)
