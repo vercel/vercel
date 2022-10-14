@@ -10,6 +10,49 @@
       "path": "/edge",
       "status": 200,
       "mustContain": "edge"
+    },
+    {
+      "path": "/edge",
+      "status": 200,
+      "headers": {
+        "__rsc__": "1"
+      },
+      "mustContain": "M1:{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/edge",
+      "status": 200,
+      "headers": {
+        "__rsc__": "1"
+      },
+      "responseHeaders": {
+        "content-type": "application/octet-stream"
+      }
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "page"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "__rsc__": "1"
+      },
+      "mustContain": "M1:{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "__rsc__": "1"
+      },
+      "responseHeaders": {
+        "content-type": "application/octet-stream"
+      }
     }
   ]
 }

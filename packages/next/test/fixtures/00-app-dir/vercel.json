@@ -21,6 +21,16 @@
       "mustNotContain": "<html"
     },
     {
+      "path": "/dashboard",
+      "status": 200,
+      "headers": {
+        "__rsc__": "1"
+      },
+      "responseHeaders": {
+        "content-type": "application/octet-stream"
+      }
+    },
+    {
       "path": "/dashboard/another",
       "status": 200,
       "mustContain": "hello from newroot/dashboard/another"
