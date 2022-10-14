@@ -33,7 +33,7 @@ function execa(...args) {
   const child = _execa(...args);
 
   processList.set(procId, child);
-  child.on('exit', () => processList.delete(procId));
+  child.on('close', () => processList.delete(procId));
 
   return child;
 }
@@ -236,7 +236,7 @@ async function testFixture(directory, opts = {}, args = []) {
 
   let printedOutput = false;
 
-  dev.on('exit', () => {
+  dev.on('close', () => {
     if (!printedOutput) {
       printOutput(directory, stdout, stderr);
       printedOutput = true;
@@ -440,7 +440,7 @@ function testFixtureStdio(
         }
       });
 
-      dev.on('exit', () => {
+      dev.on('close', () => {
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;

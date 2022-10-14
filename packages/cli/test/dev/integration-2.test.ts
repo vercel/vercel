@@ -74,7 +74,7 @@ test('[vercel dev] validate env var names', async () => {
       dev.on('exit', resolve);
     });
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 

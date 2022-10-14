@@ -41,7 +41,7 @@ test('[vercel dev] 02-angular-node', async () => {
     const body = await response.text();
     expect(body).toMatch(/Angular \+ Node.js API/m);
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 
   await sleep(5000);

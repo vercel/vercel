@@ -394,7 +394,7 @@ test('[vercel dev] should support request body', async () => {
       body: JSON.stringify(body),
     });
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -414,7 +414,7 @@ test('[vercel dev] should maintain query when invoking serverless function', asy
     expect(parsed.query['url-param']).toEqual('a');
     expect(parsed.query['route-param']).toEqual('b');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -445,7 +445,7 @@ test('[vercel dev] should maintain query when proxy passing', async () => {
     expect(parsed.query['route-param']).toEqual('b');
   } finally {
     dest.close();
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -475,7 +475,7 @@ test('[vercel dev] should maintain query when dev server defines routes', async 
     expect(query['url-param']).toEqual('a');
     expect(query['route-param']).toEqual('b');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -491,7 +491,7 @@ test('[vercel dev] should allow `cache-control` to be overwritten', async () => 
     );
     expect(res.headers.get('cache-control')).toEqual('immutable');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -508,7 +508,7 @@ test('[vercel dev] should send `etag` header for static files', async () => {
     const body = await res.text();
     expect(body.trim()).toEqual('hi');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -542,7 +542,7 @@ test('[vercel dev] should frontend dev server and routes', async () => {
     body = await res.text();
     expect(body).toEqual('hello and welcome');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -558,7 +558,7 @@ test('[vercel dev] should support `@vercel/static` routing', async () => {
     const body = await res.text();
     expect(body.trim()).toEqual('<body>Hello!</body>');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -574,7 +574,7 @@ test('[vercel dev] should support `@vercel/static-build` routing', async () => {
     const body = await res.text();
     expect(body.startsWith('The current date:')).toBeTruthy();
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -607,7 +607,7 @@ test('[vercel dev] should support directory listing', async () => {
     res = await fetch(`http://localhost:${port}/does-not-exist`);
     expect(res.status).toEqual(404);
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -651,7 +651,7 @@ test('[vercel dev] should respond with 404 listing with Accept header support', 
     );
     expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -670,7 +670,7 @@ test('[vercel dev] should support `public` directory with zero config', async ()
     body = await res.text();
     expect(body.startsWith('<h1>hello world</h1>')).toBeTruthy();
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -689,7 +689,7 @@ test('[vercel dev] should support static files with zero config', async () => {
     body = await res.text();
     expect(body.startsWith('<h1>goodbye world</h1>')).toBeTruthy();
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -718,7 +718,7 @@ test('[vercel dev] should support custom 404 routes', async () => {
     body = await res.text();
     expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
   }
 });
 
@@ -762,7 +762,7 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async () => 
       expect(body.FOO).toBe(undefined);
     }
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
     await fs.writeJSON(configPath, originalConfig);
   }
 });
@@ -862,7 +862,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
       expect(body.query.foo).toBe('boo');
     }
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
     await fs.writeJSON(configPath, originalConfig);
   }
 });
@@ -891,7 +891,7 @@ test('[vercel dev] `@vercel/node` TypeScript should be resolved by default', asy
     const body = await res.text();
     expect(body).toBe('world');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill('SIGTERM');
     await fs.remove(dir);
   }
 });
