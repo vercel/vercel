@@ -142,7 +142,7 @@ export function register(opts: Options = {}): Register {
   const ts: typeof _ts = require_(compiler);
   if (compiler.startsWith(nowNodeBase)) {
     console.log(
-      `Using TypeScript ${ts.version} (no local "typescript" package detected)`
+      `Using built-in TypeScript ${ts.version} since "typescript" missing from "devDependencies"`
     );
   } else {
     console.log(`Using TypeScript ${ts.version} (local user-provided)`);
