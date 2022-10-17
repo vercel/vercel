@@ -23,7 +23,7 @@ type LinkResult = {
  * directory
  * @param opts.projectName - The project name to use when linking, otherwise
  * the current directory
- * @returns {LinkResult|number} Returns a numeric exit code when aborted or
+ * @returns {Promise<LinkResult|number>} Returns a numeric exit code when aborted or
  * error, otherwise an object containing the org an project
  */
 export async function ensureLink(
