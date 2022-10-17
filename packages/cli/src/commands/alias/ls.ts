@@ -13,6 +13,7 @@ import { Alias } from '../../types';
 
 interface Options {
   '--next'?: number;
+  '--limit'?: number;
 }
 
 export default async function ls(
@@ -22,10 +23,21 @@ export default async function ls(
 ) {
   const { output } = client;
   const { '--next': nextTimestamp } = opts;
+  const { '--limit': limit } = opts;
   const { contextName } = await getScope(client);
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
     output.error('Please provide a number for flag --next');
+    return 1;
+  }
+
+  if (typeof nextTimestamp !== undefined && Number.isNaN(limit)) {
+    output.error('Please provide a number for flag --limit');
+    return 1;
+  }
+
+  if (limit && (limit > 100 || !Number.isInteger(limit))) {
+    output.error('Please provide a number up to 100 for flag --limit');
     return 1;
   }
 
@@ -46,7 +58,8 @@ export default async function ls(
   const { aliases, pagination } = await getAliases(
     client,
     undefined,
-    nextTimestamp
+    nextTimestamp,
+    limit
   );
   output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
   console.log(printAliasTable(aliases));

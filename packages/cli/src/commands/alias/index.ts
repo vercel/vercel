@@ -81,6 +81,7 @@ export default async function main(client: Client) {
       '--json': Boolean,
       '--yes': Boolean,
       '--next': Number,
+      '--limit': Number,
       '-y': '--yes',
       '-N': '--next',
     });

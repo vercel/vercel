@@ -9,12 +9,15 @@ type Response = {
 export default async function getAliases(
   client: Client,
   deploymentId?: string,
-  next?: number
+  next?: number,
+  limit?: number
 ) {
-  let aliasUrl = `/v3/now/aliases?limit=20`;
+  limit = limit || 20;
+  let aliasUrl = `/v3/now/aliases?limit=${limit}`;
   if (next) {
     aliasUrl += `&until=${next}`;
   }
+
   const to = deploymentId
     ? `/now/deployments/${deploymentId}/aliases`
     : aliasUrl;
