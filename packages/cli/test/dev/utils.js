@@ -11,7 +11,7 @@ const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
 const { promisify } = require('util');
-const kill = promisify(require('tree-kill'));
+const treeKill = promisify(require('tree-kill'));
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -260,7 +260,7 @@ async function testFixture(directory, opts = {}, args = []) {
   dev.kill = async (...args) => {
     // kill the entire process tree for the child as some tests
     // spawn child processes that we don't have the pid for
-    kill(dev.pid, ...args);
+    await treeKill(dev.pid, ...args);
 
     await exitResolver;
     return {
