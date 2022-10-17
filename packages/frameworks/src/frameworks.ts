@@ -1793,7 +1793,13 @@ export const frameworks = [
           path: 'sanity.config.js',
         },
         {
+          path: 'sanity.config.jsx',
+        },
+        {
           path: 'sanity.config.ts',
+        },
+        {
+          path: 'sanity.config.tsx',
         },
       ],
     },
@@ -1834,9 +1840,12 @@ export const frameworks = [
     website: 'https://hydrogen.shopify.dev',
     useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
     detectors: {
-      every: [
+      some: [
         {
           path: 'hydrogen.config.js',
+        },
+        {
+          path: 'hydrogen.config.ts',
         },
       ],
     },

@@ -970,7 +970,9 @@ export async function serverBuild({
     // routes since only the status is being modified and we don't want
     // to exceed the routes limit
     const starterRouteSrc = `^${
-      entryDirectory !== '.' ? path.posix.join('/', entryDirectory, '()') : '()'
+      entryDirectory !== '.'
+        ? `${path.posix.join('/', entryDirectory)}()`
+        : '()'
     }`;
     let currentRouteSrc = starterRouteSrc;
 
@@ -997,7 +999,7 @@ export async function serverBuild({
       const isLastRoute = i === prerenderManifest.notFoundRoutes.length - 1;
 
       if (prerenderManifest.staticRoutes[route]?.initialRevalidate === false) {
-        if (currentRouteSrc.length + route.length + 1 >= 4096) {
+        if (currentRouteSrc.length + route.length + 1 >= 4000) {
           pushRoute(currentRouteSrc);
           currentRouteSrc = starterRouteSrc;
         }
@@ -1142,7 +1144,8 @@ export async function serverBuild({
 
       if (lambdas[route]) {
         lambdas[`${route}.rsc`] = lambdas[route];
-      } else if (edgeFunctions[route]) {
+      }
+      if (edgeFunctions[route]) {
         edgeFunctions[`${route}.rsc`] = edgeFunctions[route];
       }
     }
@@ -1401,6 +1404,17 @@ export async function serverBuild({
       ...(appDir
         ? [
             {
+              src: `^${path.posix.join('/', entryDirectory, '/')}`,
+              has: [
+                {
+                  type: 'header',
+                  key: '__rsc__',
+                },
+              ],
+              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              check: true,
+            },
+            {
               src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
               has: [
                 {
@@ -1509,18 +1523,31 @@ export async function serverBuild({
           dynamicRoutes
             .map(route => {
               route = Object.assign({}, route);
+              let normalizedSrc = route.src;
+
+              if (routesManifest.basePath) {
+                normalizedSrc = normalizedSrc.replace(
+                  new RegExp(
+                    `\\^${escapeStringRegexp(routesManifest.basePath)}`
+                  ),
+                  '^'
+                );
+              }
+
               route.src = path.posix.join(
                 '^/',
                 entryDirectory,
                 '_next/data/',
                 escapedBuildId,
-                route.src.replace(/(^\^|\$$)/g, '') + '.json$'
+                normalizedSrc
+                  .replace(/\^\(\?:\/\(\?</, '(?:(?<')
+                  .replace(/(^\^|\$$)/g, '') + '.json$'
               );
 
-              const { pathname, search } = new URL(
-                route.dest || '/',
-                'http://n'
-              );
+              const parsedDestination = new URL(route.dest || '/', 'http://n');
+              let pathname = parsedDestination.pathname;
+              const search = parsedDestination.search;
+
               let isPrerender = !!prerenders[path.join('./', pathname)];
 
               if (routesManifest.i18n) {
@@ -1537,9 +1564,17 @@ export async function serverBuild({
               }
 
               if (isPrerender) {
-                route.dest = `/_next/data/${buildId}${pathname}.json${
-                  search || ''
-                }`;
+                if (routesManifest.basePath) {
+                  pathname = pathname.replace(
+                    new RegExp(
+                      `^${escapeStringRegexp(routesManifest.basePath)}`
+                    ),
+                    ''
+                  );
+                }
+                route.dest = `${
+                  routesManifest.basePath || ''
+                }/_next/data/${buildId}${pathname}.json${search || ''}`;
               }
               return route;
             })
@@ -1612,6 +1647,18 @@ export async function serverBuild({
         continue: true,
         important: true,
       },
+      ...(appDir
+        ? [
+            {
+              src: path.posix.join('/', entryDirectory, '/(.*).rsc$'),
+              headers: {
+                'content-type': 'application/octet-stream',
+              },
+              continue: true,
+              important: true,
+            },
+          ]
+        : []),
 
       // TODO: remove below workaround when `/` is allowed to be output
       // different than `/index`
