@@ -38,6 +38,7 @@ const help = () => {
   )}        Login token
     -S, --scope                    Set a custom scope
     -N, --next                     Show next page of results
+    --limit                        Number of results to return per page
 
   ${chalk.dim('Examples:')}
 
@@ -100,7 +101,11 @@ export default async function main(client: Client) {
   let argv;
 
   try {
-    argv = getArgs(client.argv.slice(2), { '--next': Number, '-N': '--next' });
+    argv = getArgs(client.argv.slice(2), {
+      '--next': Number,
+      '-N': '--next',
+      '--limit': Number,
+    });
   } catch (error) {
     handleError(error);
     return 1;

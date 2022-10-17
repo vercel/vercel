@@ -16,6 +16,7 @@ import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 
 type Options = {
   '--next': number;
+  '--limit': number;
 };
 
 export default async function ls(
@@ -25,9 +26,18 @@ export default async function ls(
 ) {
   const { output } = client;
   const { '--next': nextTimestamp } = opts;
+  const { '--limit': limit } = opts;
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
     output.error('Please provide a number for flag --next');
+    return 1;
+  }
+
+  if (
+    limit &&
+    (Number.isNaN(limit) || !Number.isInteger(limit) || limit > 100)
+  ) {
+    output.error('Please provide a number up to 100 for flag --limit');
     return 1;
   }
 
@@ -46,7 +56,11 @@ export default async function ls(
 
   output.spinner(`Fetching Domains under ${chalk.bold(contextName)}`);
 
-  const { domains, pagination } = await getDomains(client, nextTimestamp);
+  const { domains, pagination } = await getDomains(
+    client,
+    nextTimestamp,
+    limit
+  );
 
   output.log(
     `${plural('Domain', domains.length, true)} found under ${chalk.bold(

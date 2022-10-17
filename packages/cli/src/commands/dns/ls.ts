@@ -15,6 +15,7 @@ import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
   '--next'?: number;
+  '--limit'?: number;
 };
 
 export default async function ls(
@@ -24,6 +25,7 @@ export default async function ls(
 ) {
   const { output } = client;
   const { '--next': nextTimestamp } = opts;
+  const { '--limit': limit } = opts;
   const { contextName } = await getScope(client);
 
   const [domainName] = args;
@@ -43,13 +45,22 @@ export default async function ls(
     return 1;
   }
 
+  if (
+    limit &&
+    (Number.isNaN(limit) || !Number.isInteger(limit) || limit > 100)
+  ) {
+    output.error('Please provide a number up to 100 for flag --limit');
+    return 1;
+  }
+
   if (domainName) {
     const data = await getDomainDNSRecords(
       output,
       client,
       domainName,
       nextTimestamp,
-      4
+      4,
+      limit
     );
     if (data instanceof DomainNotFound) {
       output.error(

@@ -10,9 +10,8 @@ export default async function getAliases(
   client: Client,
   deploymentId?: string,
   next?: number,
-  limit?: number
+  limit = 20
 ) {
-  limit = limit || 20;
   let aliasUrl = `/v3/now/aliases?limit=${limit}`;
   if (next) {
     aliasUrl += `&until=${next}`;

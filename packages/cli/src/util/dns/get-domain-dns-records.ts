@@ -13,13 +13,14 @@ export default async function getDomainDNSRecords(
   client: Client,
   domain: string,
   nextTimestamp?: number,
-  apiVersion = 3
+  apiVersion = 3,
+  limit = 20
 ) {
   output.debug(`Fetching for DNS records of domain ${domain}`);
   try {
     let url = `/v${apiVersion}/domains/${encodeURIComponent(
       domain
-    )}/records?limit=20`;
+    )}/records?limit=${limit}`;
 
     if (nextTimestamp) {
       url += `&until=${nextTimestamp}`;

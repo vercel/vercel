@@ -12,6 +12,7 @@ import { getCommandName } from '../../util/pkg-name';
 
 interface Options {
   '--next'?: number;
+  '--limit'?: number;
 }
 
 async function ls(
@@ -21,6 +22,7 @@ async function ls(
 ): Promise<number> {
   const { output } = client;
   const { '--next': nextTimestamp } = opts;
+  const { '--limit': limit } = opts;
   const { contextName } = await getScope(client);
 
   if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
@@ -35,6 +37,14 @@ async function ls(
         `${getCommandName('certs ls')}`
       )}`
     );
+    return 1;
+  }
+
+  if (
+    limit &&
+    (Number.isNaN(limit) || !Number.isInteger(limit) || limit > 100)
+  ) {
+    output.error('Please provide a number up to 100 for flag --limit');
     return 1;
   }
 

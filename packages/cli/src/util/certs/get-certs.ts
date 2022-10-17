@@ -6,8 +6,12 @@ type Response = {
   pagination: PaginationOptions;
 };
 
-export default async function getCerts(client: Client, next?: number) {
-  let certsUrl = `/v4/now/certs?limit=20`;
+export default async function getCerts(
+  client: Client,
+  next?: number,
+  limit = 20
+) {
+  let certsUrl = `/v4/now/certs?limit=${limit}`;
 
   if (next) {
     certsUrl += `&until=${next}`;
