@@ -1,14 +1,10 @@
-import { Org, Project } from '../types';
-import Client from './client';
-import setupAndLink from './link/setup-and-link';
-import param from './output/param';
-import { getCommandName } from './pkg-name';
-import { getLinkedProject } from './projects/link';
-
-type LinkOpts = {
-  forceDelete?: boolean;
-  projectName?: string;
-};
+import { Org, Project } from '../../types';
+import Client from '../client';
+import setupAndLink from '../link/setup-and-link';
+import param from '../output/param';
+import { getCommandName } from '../pkg-name';
+import { getLinkedProject } from '../projects/link';
+import type { SetupAndLinkOptions } from '../link/setup-and-link';
 
 type LinkResult = {
   org: Org;
@@ -23,7 +19,6 @@ type LinkResult = {
  * event of an error
  * @param client - The Vercel Node.js client instance
  * @param cwd - The current working directory
- * @param yes - When `true`, skips questions when setting up new project
  * @param opts.forceDelete - When `true`, deletes the project's `.vercel`
  * directory
  * @param opts.projectName - The project name to use when linking, otherwise
@@ -35,17 +30,12 @@ export async function ensureLink(
   commandName: string,
   client: Client,
   cwd: string,
-  yes: boolean,
-  opts?: LinkOpts
+  opts: SetupAndLinkOptions
 ): Promise<LinkResult | number> {
   let link = await getLinkedProject(client, cwd);
+
   if (link.status === 'not_linked') {
-    link = await setupAndLink(client, cwd, {
-      autoConfirm: yes,
-      successEmoji: 'link',
-      setupMsg: 'Set up',
-      ...opts,
-    });
+    link = await setupAndLink(client, cwd, opts);
 
     if (link.status === 'not_linked') {
       // User aborted project linking questions

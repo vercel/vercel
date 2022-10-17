@@ -3,7 +3,7 @@ import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
-import { ensureLink } from '../../util/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 
 const help = () => {
   console.log(`
@@ -69,9 +69,11 @@ export default async function main(client: Client) {
 
   const cwd = argv._[1] || process.cwd();
 
-  const link = await ensureLink('link', client, cwd, !!argv['--yes'], {
+  const link = await ensureLink('link', client, cwd, {
+    autoConfirm: !!argv['--yes'],
     forceDelete: true,
     projectName: argv['--project'],
+    successEmoji: 'success',
   });
 
   if (typeof link === 'number') {

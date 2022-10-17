@@ -15,7 +15,7 @@ import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
 } from '../util/env/env-target';
-import { ensureLink } from '../util/ensure-link';
+import { ensureLink } from '../util/link/ensure-link';
 
 const help = () => {
   return console.log(`
@@ -113,10 +113,10 @@ export default async function main(client: Client) {
   }
 
   const cwd = argv._[1] || process.cwd();
-  const yes = Boolean(argv['--yes']);
+  const autoConfirm = Boolean(argv['--yes']);
   const environment = parseEnvironment(argv['--environment'] || undefined);
 
-  const link = await ensureLink('pull', client, cwd, yes);
+  const link = await ensureLink('pull', client, cwd, { autoConfirm });
   if (typeof link === 'number') {
     return link;
   }
