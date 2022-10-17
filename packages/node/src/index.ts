@@ -454,6 +454,8 @@ export const build: BuildV3 = async ({
       entrypoint: handler,
       files: preparedFiles,
 
+      ...(staticConfig?.regions && { regions: staticConfig?.regions }),
+
       // TODO: remove - these two properties should not be required
       name: outputPath,
       deploymentTarget: 'v8-worker',
