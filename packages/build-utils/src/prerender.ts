@@ -74,9 +74,9 @@ export class Prerender {
       if (
         !initialHeaders ||
         typeof initialHeaders !== 'object' ||
-        !Object.keys(initialHeaders).every(
-          key =>
-            typeof key !== 'string' || typeof initialHeaders[key] !== 'string'
+        Object.entries(initialHeaders).some(
+          ([key, value]) =>
+            typeof key !== 'string' || value !== 'string'
         )
       ) {
         throw new Error(
@@ -89,7 +89,7 @@ export class Prerender {
     if (initialStatus !== undefined) {
       if (initialStatus <= 0 || !Number.isInteger(initialStatus)) {
         throw new Error(
-          `The \`initialStatus\` argument for \`Prerender\` musta a natural number.`
+          `The \`initialStatus\` argument for \`Prerender\` must be a natural number.`
         );
       }
       this.initialStatus = initialStatus;
