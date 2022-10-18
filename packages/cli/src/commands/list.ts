@@ -17,7 +17,7 @@ import Client from '../util/client';
 import { Deployment } from '@vercel/client';
 import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
-import { ensureLink } from '../util/ensure-link';
+import { ensureLink } from '../util/link/ensure-link';
 import getScope from '../util/get-scope';
 import { isAPIError } from '../util/errors-ts';
 import { isErrnoException } from '../util/is-error';
@@ -112,7 +112,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const yes = !!argv['--yes'];
+  const autoConfirm = !!argv['--yes'];
   const prod = argv['--prod'] || false;
 
   const meta = parseMeta(argv['--meta']);
@@ -145,7 +145,9 @@ export default async function main(client: Client) {
   // If there's no linked project and user doesn't pass `app` arg,
   // prompt to link their current directory.
   if (status === 'not_linked' && !app) {
-    const linkedProject = await ensureLink('list', client, path, yes);
+    const linkedProject = await ensureLink('list', client, path, {
+      autoConfirm,
+    });
     if (typeof linkedProject === 'number') {
       return linkedProject;
     }
