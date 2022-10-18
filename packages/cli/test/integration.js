@@ -3963,7 +3963,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   t.regex(text, /Next\.js Test/);
 });
 
-test('should detect monorepo manager', async t => {
+test('should detect and use correct defaults for monorepo manager: turbo', async t => {
   const directory = fixture('monorepo-detection-turbo');
   const output = await execute(['build'], { cwd: directory });
   t.is(output.exitCode, 0);
@@ -3972,4 +3972,34 @@ test('should detect monorepo manager', async t => {
     'utf8'
   );
   t.assert(result, 'Hello, World');
+});
+
+test('should throw errors when project does not satisfy requirements for turbo', async t => {
+  const directory = fixture('monorepo-detection-turbo');
+  const pkgJSONPath = path.join(directory, 'package.json');
+  const turboJSONPath = path.join(directory, 'turbo.json');
+  const pkgJSON = JSON.parse(fs.readFileSync(pkgJSONPath, 'utf-8'));
+  const turboJSON = JSON.parse(fs.readFileSync(turboJSONPath, 'utf-8'));
+
+  const currentTurboVersion = pkgJSON.dependencies.turbo;
+  pkgJSON.dependencies.turbo = '1.1.0';
+  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
+
+  let output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 1);
+  t.regex(output.stderr, /turbo must be version 1\.2\.0 or greater/);
+
+  pkgJSON.dependencies.turbo = currentTurboVersion;
+  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
+
+  const currentTurboBuildPipeline = turboJSON.pipeline.build;
+  delete turboJSON.pipeline.build;
+  fs.writeFileSync(turboJSONPath, JSON.stringify(turboJSON));
+
+  output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 1);
+  t.regex(output.stderr, /Missing required `build` pipeline in turbo\.json/);
+
+  turboJSON.pipeline.build = currentTurboBuildPipeline;
+  fs.writeFileSync(turboJSONPath, JSON.stringify(turboJSON));
 });

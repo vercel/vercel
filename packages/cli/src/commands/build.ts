@@ -33,6 +33,7 @@ import {
 } from '@vercel/routing-utils';
 import { fileNameSymbol } from '@vercel/client';
 import type { VercelConfig } from '@vercel/client';
+import semver from 'semver';
 
 import pull from './pull';
 import { staticFiles as getFiles } from '../util/get-files';
@@ -277,11 +278,6 @@ async function doBuild(
 ): Promise<void> {
   const { output } = client;
 
-  const framework = await detectFramework({
-    fs: new LocalFileSystemDetector(cwd),
-    frameworkList: monorepoManagers,
-  });
-
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const [pkg, vercelConfig, nowConfig] = await Promise.all([
@@ -311,6 +307,45 @@ async function doBuild(
     ...project.settings,
     ...pickOverrides(localConfig),
   };
+
+  const framework = await detectFramework({
+    fs: new LocalFileSystemDetector(cwd),
+    frameworkList: monorepoManagers,
+  });
+
+  if (!projectSettings.buildCommand) {
+    if (framework === 'turbo') {
+      const monorepoPkg = JSON.parse(
+        fs.readFileSync(join(cwd, 'package.json'), 'utf-8')
+      );
+      if (
+        (monorepoPkg?.devDependencies?.turbo &&
+          semver.lt(monorepoPkg.devDependencies.turbo, '1.2.0')) ||
+        (monorepoPkg?.dependencies?.turbo &&
+          semver.lt(monorepoPkg.dependencies.turbo, '1.2.0'))
+      ) {
+        output.error('turbo must be version 1.2.0 or greater');
+        process.exit(1);
+      }
+
+      const turboJSON = JSON.parse(
+        fs.readFileSync(join(cwd, 'turbo.json'), 'utf-8')
+      );
+
+      if (!turboJSON.pipeline.build) {
+        output.error('Missing required `build` pipeline in turbo.json');
+        process.exit(1);
+      }
+
+      projectSettings.buildCommand = `cd ${relative(
+        workPath,
+        cwd
+      )} && turbo run build --filter=${basename(workPath)}...`;
+    } else if (framework === 'nx') {
+    } else if (framework === 'rush') {
+    } else {
+    }
+  }
 
   // Get a list of source files
   const files = (await getFiles(workPath, client)).map(f =>
@@ -443,28 +478,6 @@ async function doBuild(
   const repoRootPath = cwd;
   const corepackShimDir = await initCorepack({ repoRootPath });
 
-  const getBuildCommand = () => {
-    const projectDirectory = projectSettings.rootDirectory;
-    if (!projectDirectory) {
-      return undefined;
-    }
-    console.log('cwd', cwd);
-    console.log('projectDirectory', projectDirectory);
-    const monorepoDefaults = {
-      turbo: {
-        buildCommand: `cd ${relative(
-          join(cwd, projectDirectory),
-          cwd
-        )} && turbo run build --filter=${basename(projectDirectory)}...`,
-      },
-    };
-    if (framework === 'turbo') {
-      return monorepoDefaults.turbo.buildCommand;
-    }
-
-    return undefined;
-  };
-
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
 
@@ -483,7 +496,7 @@ async function doBuild(
             projectSettings,
             installCommand: projectSettings.installCommand ?? undefined,
             devCommand: projectSettings.devCommand ?? undefined,
-            buildCommand: projectSettings.buildCommand ?? getBuildCommand(),
+            buildCommand: projectSettings.buildCommand ?? undefined,
             framework: projectSettings.framework,
             nodeVersion: projectSettings.nodeVersion,
           }

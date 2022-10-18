@@ -571,7 +571,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
           build: 'turbo run build',
         },
         dependencies: {
-          turbo: '^1.5.6',
+          turbo: '1.5.6',
         },
       }),
       'turbo.json': JSON.stringify({
