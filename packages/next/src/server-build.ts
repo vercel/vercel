@@ -964,6 +964,43 @@ export async function serverBuild({
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
   const notFoundPreviewRoutes: RouteWithSrc[] = [];
+  const appDirVaryRoutes: RouteWithSrc[] = [];
+
+  // ensure Vary header is set for static app paths
+  // TODO: remove when we are able to set initial headers on Prerender
+  if (appPathRoutesManifest) {
+    for (const route of Object.values(appPathRoutesManifest)) {
+      if (!prerenders[path.posix.join('.', entryDirectory, route)]) {
+        continue;
+      }
+      let src = path.posix.join('/', entryDirectory, route);
+
+      if (isDynamicRoute(route)) {
+        const dynamicRoute = routesManifest.dynamicRoutes.find(r => {
+          return r.page === route;
+        });
+
+        if (
+          dynamicRoute &&
+          'namedRegex' in dynamicRoute &&
+          dynamicRoute.namedRegex
+        ) {
+          src = src.replace(
+            new RegExp(`${escapeStringRegexp(route)}$`),
+            dynamicRoute.namedRegex.replace(/^\^/, '')
+          );
+        }
+      }
+
+      appDirVaryRoutes.push({
+        src,
+        headers: {
+          vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+        },
+        continue: true,
+      });
+    }
+  }
 
   if (prerenderManifest.notFoundRoutes?.length > 0 && canUsePreviewMode) {
     // we combine routes into one src here to reduce the number of needed
@@ -1653,10 +1690,12 @@ export async function serverBuild({
               src: path.posix.join('/', entryDirectory, '/(.*).rsc$'),
               headers: {
                 'content-type': 'application/octet-stream',
+                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
               },
               continue: true,
               important: true,
             },
+            ...appDirVaryRoutes,
           ]
         : []),
 
