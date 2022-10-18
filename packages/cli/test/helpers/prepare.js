@@ -534,6 +534,55 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
+    'monorepo-detection-turbo': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          outputDirectory: 'dist',
+          rootDirectory: 'packages/app-1',
+        },
+      }),
+      'packages/app-1/package.json': JSON.stringify({
+        name: 'app-1',
+        version: '0.0.1',
+        scripts: {
+          build:
+            'mkdir -p dist && node -e \'const world = require("app-2"); console.log(`Hello, ${world}`);\' > dist/index.txt',
+        },
+        dependencies: {
+          'app-2': '*',
+        },
+      }),
+      'packages/app-2/package.json': JSON.stringify({
+        name: 'app-2',
+        version: '0.0.1',
+        main: 'dist/index.js',
+        files: ['dist'],
+        scripts: {
+          build:
+            'mkdir -p dist && echo \'module.exports = "world"\' > dist/index.js',
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        workspaces: ['packages/*'],
+        scripts: {
+          build: 'turbo run build',
+        },
+        dependencies: {
+          turbo: '^1.5.6',
+        },
+      }),
+      'turbo.json': JSON.stringify({
+        pipeline: {
+          build: {
+            dependsOn: ['^build'],
+            outputs: ['dist/**'],
+          },
+        },
+      }),
+    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {

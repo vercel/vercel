@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { join, normalize, relative, resolve } from 'path';
+import { join, normalize, relative, resolve, basename } from 'path';
 import {
   getDiscontinuedNodeVersions,
   normalizePath,
@@ -17,7 +17,12 @@ import {
   BuildResultV3,
   NowBuildError,
 } from '@vercel/build-utils';
-import { detectBuilders } from '@vercel/fs-detectors';
+import {
+  detectBuilders,
+  detectFramework,
+  monorepoManagers,
+  LocalFileSystemDetector,
+} from '@vercel/fs-detectors';
 import minimatch from 'minimatch';
 import {
   appendRoutesToPhase,
@@ -99,7 +104,7 @@ const help = () => {
 
     ${chalk.dim('Examples:')}
 
-    ${chalk.gray('–')} Build the project
+    ${chalk.gray('-')} Build the project
 
       ${chalk.cyan(`$ ${cli.name} build`)}
       ${chalk.cyan(`$ ${cli.name} build --cwd ./path-to-project`)}
@@ -271,6 +276,12 @@ async function doBuild(
   outputDir: string
 ): Promise<void> {
   const { output } = client;
+
+  const framework = await detectFramework({
+    fs: new LocalFileSystemDetector(cwd),
+    frameworkList: monorepoManagers,
+  });
+
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const [pkg, vercelConfig, nowConfig] = await Promise.all([
@@ -432,6 +443,28 @@ async function doBuild(
   const repoRootPath = cwd;
   const corepackShimDir = await initCorepack({ repoRootPath });
 
+  const getBuildCommand = () => {
+    const projectDirectory = projectSettings.rootDirectory;
+    if (!projectDirectory) {
+      return undefined;
+    }
+    console.log('cwd', cwd);
+    console.log('projectDirectory', projectDirectory);
+    const monorepoDefaults = {
+      turbo: {
+        buildCommand: `cd ${relative(
+          join(cwd, projectDirectory),
+          cwd
+        )} && turbo run build --filter=${basename(projectDirectory)}...`,
+      },
+    };
+    if (framework === 'turbo') {
+      return monorepoDefaults.turbo.buildCommand;
+    }
+
+    return undefined;
+  };
+
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
 
@@ -450,7 +483,7 @@ async function doBuild(
             projectSettings,
             installCommand: projectSettings.installCommand ?? undefined,
             devCommand: projectSettings.devCommand ?? undefined,
-            buildCommand: projectSettings.buildCommand ?? undefined,
+            buildCommand: projectSettings.buildCommand ?? getBuildCommand(),
             framework: projectSettings.framework,
             nodeVersion: projectSettings.nodeVersion,
           }

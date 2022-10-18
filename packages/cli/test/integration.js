@@ -3962,3 +3962,14 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   text = await page.text();
   t.regex(text, /Next\.js Test/);
 });
+
+test('should detect monorepo manager', async t => {
+  const directory = fixture('monorepo-detection-turbo');
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  const result = await fs.readFile(
+    path.join(directory, '.vercel/output/static/index.txt'),
+    'utf8'
+  );
+  t.assert(result, 'Hello, World');
+});

@@ -8,6 +8,7 @@ export { detectFileSystemAPI } from './detect-file-system-api';
 export { detectFramework } from './detect-framework';
 export { getProjectPaths } from './get-project-paths';
 export { DetectorFilesystem } from './detectors/filesystem';
+export { LocalFileSystemDetector } from './detectors/localFileSystemDetector';
 export { workspaceManagers } from './workspaces/workspace-managers';
 export {
   getWorkspaces,
