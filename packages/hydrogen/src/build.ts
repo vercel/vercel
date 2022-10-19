@@ -125,10 +125,7 @@ export const build: BuildV2 = async ({
         const project = new Project();
         const config = getConfig(project, edgeFunctionFiles['index.js'].fsPath);
         return config?.regions;
-      } catch (err) {
-        console.warn(
-          `Could not parse the entrypoint file to get the regions: ${err}`
-        );
+      } catch {
         return undefined;
       }
     })(),
