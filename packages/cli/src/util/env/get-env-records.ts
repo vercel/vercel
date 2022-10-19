@@ -49,3 +49,40 @@ export default async function getEnvRecords(
 
   return client.fetch<{ envs: ProjectEnvVariable[] }>(url);
 }
+
+export async function pullEnvRecords(
+  output: Output,
+  client: Client,
+  projectId: string,
+  source: EnvRecordsSource,
+  {
+    target = ProjectEnvTarget.Preview,
+    gitBranch,
+  }: {
+    target?: ProjectEnvTarget | string;
+    gitBranch?: string;
+  } = {}
+) {
+  output.debug(
+    `Fetching Environment Variables of project ${projectId} and target ${target}`
+  );
+  const query = new URLSearchParams();
+
+  let url = `/v1/env/pull/${projectId}`;
+
+  if (target) {
+    const gitBranchPath = gitBranch ? `/${gitBranch}` : '';
+    url += `/${target}${gitBranchPath}`;
+  }
+
+  if (source) {
+    query.set('source', source);
+  }
+
+  url += `?${query}`;
+
+  return client.fetch<{
+    env: Record<string, string>;
+    buildEnv: Record<string, string>;
+  }>(url);
+}

@@ -1,42 +1,49 @@
 import { client } from './client';
-import { Project } from '../../src/types';
+import {
+  Project,
+  ProjectEnvTarget,
+  ProjectEnvType,
+  ProjectEnvVariable,
+} from '../../src/types';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
+import { parseEnvironment } from '../../src/commands/pull';
+import { Env } from '@vercel/build-utils/dist';
 
 const envs = [
   {
-    type: 'encrypted',
+    type: ProjectEnvType.Encrypted,
     id: '781dt89g8r2h789g',
     key: 'REDIS_CONNECTION_STRING',
     value: 'redis://abc123@redis.example.com:6379',
-    target: ['production', 'preview'],
-    gitBranch: null,
+    target: [ProjectEnvTarget.Production, ProjectEnvTarget.Preview],
+    gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361455,
     createdAt: 1557241361455,
   },
   {
-    type: 'encrypted',
+    type: ProjectEnvType.Encrypted,
     id: 'r124t6frtu25df16',
     key: 'SQL_CONNECTION_STRING',
     value: 'Server=sql.example.com;Database=app;Uid=root;Pwd=P455W0RD;',
-    target: ['production'],
-    gitBranch: null,
+    target: [ProjectEnvTarget.Production],
+    gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361445,
     createdAt: 1557241361445,
   },
   {
-    type: 'encrypted',
+    type: ProjectEnvType.Encrypted,
     id: 'a235l6frtu25df32',
     key: 'SPECIAL_FLAG',
     value: '1',
-    target: ['development'],
-    gitBranch: null,
+    target: [ProjectEnvTarget.Development],
+    gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361445,
     createdAt: 1557241361445,
   },
-];
+] as ProjectEnvVariable[];
 
 const systemEnvs = [
   {
@@ -207,6 +214,35 @@ export function useProject(project: Partial<Project> = defaultProject) {
     res.json(project);
   });
   client.scenario.get(
+    `/v1/env/pull/${project.id}/:target?/:gitBranch?`,
+    (req, res) => {
+      const target: ProjectEnvTarget | undefined =
+        typeof req.params.target === 'string'
+          ? parseEnvironment(req.params.target)
+          : undefined;
+      const allEnvs = Object.entries(
+        exposeSystemEnvs(
+          target
+            ? envs.filter(env =>
+                (env.target as ProjectEnvTarget[]).includes(target)
+              )
+            : envs,
+          systemEnvs.map(env => env.key),
+          project.autoExposeSystemEnvs,
+          undefined,
+          target
+        )
+      );
+
+      const env: Record<string, string> = {};
+
+      allEnvs.forEach(([k, v]) => {
+        env[k] = v ?? '';
+      });
+      res.json({ env: env });
+    }
+  );
+  client.scenario.get(
     `/v6/projects/${project.id}/system-env-values`,
     (_req, res) => {
       const target = _req.query.target || 'development';
@@ -223,9 +259,14 @@ export function useProject(project: Partial<Project> = defaultProject) {
     }
   );
   client.scenario.get(`/v8/projects/${project.id}/env`, (_req, res) => {
-    const target = _req.query.target;
+    const target: ProjectEnvTarget | undefined =
+      typeof _req.query.target === 'string'
+        ? parseEnvironment(_req.query.target)
+        : undefined;
     if (typeof target === 'string') {
-      const targetEnvs = envs.filter(env => env.target.includes(target));
+      const targetEnvs = envs.filter(env =>
+        (env.target as ProjectEnvTarget[]).includes(target)
+      );
       res.json({ envs: targetEnvs });
       return;
     }
@@ -309,4 +350,44 @@ export function useProject(project: Partial<Project> = defaultProject) {
   });
 
   return { project, envs };
+}
+
+function getSystemEnvValue(
+  systemEnvRef: string,
+  { vercelUrl }: { vercelUrl?: string }
+) {
+  if (systemEnvRef === 'VERCEL_URL') {
+    return vercelUrl || '';
+  }
+
+  return '';
+}
+
+function exposeSystemEnvs(
+  projectEnvs: ProjectEnvVariable[],
+  systemEnvValues: string[],
+  autoExposeSystemEnvs: boolean | undefined,
+  vercelUrl?: string,
+  target?: ProjectEnvTarget
+) {
+  const envs: Env = {};
+
+  if (autoExposeSystemEnvs) {
+    envs['VERCEL'] = '1';
+    envs['VERCEL_ENV'] = target || 'development';
+
+    for (const key of systemEnvValues) {
+      envs[key] = getSystemEnvValue(key, { vercelUrl });
+    }
+  }
+
+  for (let env of projectEnvs) {
+    if (env.type === ProjectEnvType.System) {
+      envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
+    } else {
+      envs[env.key] = env.value;
+    }
+  }
+
+  return envs;
 }

@@ -16,7 +16,7 @@ import {
 import { VercelConfig } from '@vercel/client';
 import { HandleValue, Route } from '@vercel/routing-utils';
 import { Output } from '../output';
-import { ProjectEnvVariable, ProjectSettings } from '../../types';
+import { ProjectSettings } from '../../types';
 import { BuilderWithPkg } from '../build/import-builders';
 
 export { VercelConfig };
@@ -24,8 +24,7 @@ export { VercelConfig };
 export interface DevServerOptions {
   output: Output;
   projectSettings?: ProjectSettings;
-  systemEnvValues?: string[];
-  projectEnvs?: ProjectEnvVariable[];
+  envValues?: Record<string, string>;
 }
 
 export interface EnvConfigs {

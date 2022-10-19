@@ -97,7 +97,9 @@ async function pullAllEnvFiles(
   );
 }
 
-function parseEnvironment(environment = 'development'): ProjectEnvTarget {
+export function parseEnvironment(
+  environment = 'development'
+): ProjectEnvTarget {
   if (!isValidEnvTarget(environment)) {
     throw new Error(
       `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`
