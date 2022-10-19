@@ -10,6 +10,8 @@ import {
   BuildResultV2,
 } from '@vercel/build-utils';
 import { isObjectEmpty } from './_shared';
+import { Project } from 'ts-morph';
+import { getConfig } from '@vercel/static-config';
 
 const BUILD_OUTPUT_DIR = '.output';
 const BRIDGE_MIDDLEWARE_V2_TO_V3 = `
@@ -78,6 +80,15 @@ export async function readBuildOutputDirectory({
         '_middleware.js': middleware.file,
       },
       name: 'middleware',
+      regions: (() => {
+        try {
+          const project = new Project();
+          const config = getConfig(project, middleware.file.fsPath);
+          return config?.regions;
+        } catch (err) {
+          return undefined;
+        }
+      })(),
     });
   }
 
