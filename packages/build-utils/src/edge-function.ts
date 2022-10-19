@@ -39,12 +39,7 @@ export class EdgeFunction {
   assets?: { name: string; path: string }[];
 
   /** The regions where the edge function will be executed on */
-  regions?:
-    | 'auto'
-    | string[]
-    | 'all'
-    | 'default'
-    | (string & Record<never, unknown>);
+  regions?: string | string[];
 
   constructor(params: Omit<EdgeFunction, 'type'>) {
     this.type = 'EdgeFunction';
