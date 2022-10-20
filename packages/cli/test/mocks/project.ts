@@ -9,7 +9,7 @@ import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
 import { Env } from '@vercel/build-utils/dist';
 
-const envs = [
+const envs: ProjectEnvVariable[] = [
   {
     type: ProjectEnvType.Encrypted,
     id: '781dt89g8r2h789g',
@@ -43,7 +43,7 @@ const envs = [
     updatedAt: 1557241361445,
     createdAt: 1557241361445,
   },
-] as ProjectEnvVariable[];
+];
 
 const systemEnvs = [
   {
@@ -220,13 +220,21 @@ export function useProject(project: Partial<Project> = defaultProject) {
         typeof req.params.target === 'string'
           ? parseEnvironment(req.params.target)
           : undefined;
+      let projectEnvs = envs;
+      if (target) {
+        projectEnvs = projectEnvs.filter(env => {
+          if (typeof env.target === 'string') {
+            return env.target === target;
+          }
+          if (Array.isArray(env.target)) {
+            return env.target.includes(target);
+          }
+          return false;
+        });
+      }
       const allEnvs = Object.entries(
         exposeSystemEnvs(
-          target
-            ? envs.filter(env =>
-                (env.target as ProjectEnvTarget[]).includes(target)
-              )
-            : envs,
+          projectEnvs,
           systemEnvs.map(env => env.key),
           project.autoExposeSystemEnvs,
           undefined,
@@ -263,15 +271,21 @@ export function useProject(project: Partial<Project> = defaultProject) {
       typeof _req.query.target === 'string'
         ? parseEnvironment(_req.query.target)
         : undefined;
-    if (typeof target === 'string') {
-      const targetEnvs = envs.filter(env =>
-        (env.target as ProjectEnvTarget[]).includes(target)
-      );
-      res.json({ envs: targetEnvs });
-      return;
+
+    let targetEnvs = envs;
+    if (target) {
+      targetEnvs = targetEnvs.filter(env => {
+        if (typeof env.target === 'string') {
+          return env.target === target;
+        }
+        if (Array.isArray(env.target)) {
+          return env.target.includes(target);
+        }
+        return false;
+      });
     }
 
-    res.json({ envs });
+    res.json({ envs: targetEnvs });
   });
   client.scenario.post(`/v8/projects/${project.id}/env`, (req, res) => {
     const envObj = req.body;

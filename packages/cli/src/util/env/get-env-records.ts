@@ -78,8 +78,9 @@ export async function pullEnvRecords(
   if (source) {
     query.set('source', source);
   }
-
-  url += `?${query}`;
+  if (Array.from(query).length) {
+    url += `?${query}`;
+  }
 
   return client.fetch<{
     env: Record<string, string>;
