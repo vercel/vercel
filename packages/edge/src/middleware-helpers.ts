@@ -30,7 +30,7 @@ export interface ExtraResponseInit extends Omit<ResponseInit, 'headers'> {
    */
   headers?: HeadersInit;
   /**
-   * These fields will override the request from clients.
+   * Fields to rewrite for the upstream request
    */
   request?: ModifiedRequest;
 }
