@@ -26,7 +26,7 @@ along with the response headers from the origin.
 
 #### Defined in
 
-[src/middleware-helpers.ts:13](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L13)
+[src/middleware-helpers.ts:31](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L31)
 
 ---
 
@@ -38,7 +38,7 @@ These fields will override the request from clients.
 
 #### Defined in
 
-[src/middleware-helpers.ts:17](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L17)
+[src/middleware-helpers.ts:35](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L35)
 
 ---
 
