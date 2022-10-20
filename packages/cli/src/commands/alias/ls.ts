@@ -32,8 +32,8 @@ export default async function ls(
   }
 
   if (
-    limit &&
-    (Number.isNaN(limit) || !Number.isInteger(limit) || limit > 100)
+    typeof nextTimestamp !== undefined &&
+    (Number.isNaN(limit) || limit! > 100)
   ) {
     output.error('Please provide a number up to 100 for flag --limit');
     return 1;
@@ -60,7 +60,7 @@ export default async function ls(
     limit
   );
   output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
-  console.log(printAliasTable(aliases));
+  output.log(printAliasTable(aliases));
 
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
