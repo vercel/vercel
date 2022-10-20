@@ -1,4 +1,5 @@
-import { Agent } from 'https';
+import http from 'http';
+import https from 'https';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import retry from 'async-retry';
@@ -78,7 +79,9 @@ export async function* upload(
   debug('Building an upload list...');
 
   const semaphore = new Sema(50, { capacity: 50 });
-  const agent = new Agent({ keepAlive: true });
+  const agent = apiUrl?.startsWith('https://')
+    ? new https.Agent({ keepAlive: true })
+    : new http.Agent({ keepAlive: true });
 
   shas.forEach((sha, index) => {
     const uploadProgress = uploads[index];

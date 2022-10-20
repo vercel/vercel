@@ -11,6 +11,7 @@ import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 import { readConfigFile } from './read-config-file';
+import { cloneEnv } from '../clone-env';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
@@ -217,7 +218,7 @@ export function getSpawnOptions(
   nodeVersion: NodeVersion
 ): SpawnOptions {
   const opts = {
-    env: { ...process.env },
+    env: cloneEnv(process.env),
   };
 
   if (!meta.isDev) {
@@ -250,33 +251,24 @@ export async function getNodeVersion(
   meta: Meta = {}
 ): Promise<NodeVersion> {
   const latest = getLatestNodeVersion();
-  if (meta && meta.isDev) {
+  if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
   let { nodeVersion } = config;
   let isAuto = true;
-  if (packageJson && packageJson.engines && packageJson.engines.node) {
+  if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;
-    if (
-      nodeVersion &&
-      validRange(node) &&
-      !intersects(nodeVersion, node) &&
-      !meta.isDev
-    ) {
+    if (nodeVersion && validRange(node) && !intersects(nodeVersion, node)) {
       console.warn(
         `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${nodeVersion}") will not apply. Learn More: http://vercel.link/node-version`
       );
-    } else if (coerce(node)?.raw === node && !meta.isDev) {
+    } else if (coerce(node)?.raw === node) {
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
       );
-    } else if (
-      validRange(node) &&
-      intersects(`${latest.major + 1}.x`, node) &&
-      !meta.isDev
-    ) {
+    } else if (validRange(node) && intersects(`${latest.major + 1}.x`, node)) {
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
       );
@@ -449,7 +441,7 @@ export async function runNpmInstall(
     debug(`Installing to ${destPath}`);
 
     const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
-    const env = opts.env ? { ...opts.env } : { ...process.env };
+    const env = cloneEnv(opts.env || process.env);
     delete env.NODE_ENV;
     opts.env = getEnvForPackageManager({
       cliType,
@@ -458,12 +450,30 @@ export async function runNpmInstall(
       env,
     });
     let commandArgs: string[];
+    const isPotentiallyBrokenNpm =
+      cliType === 'npm' &&
+      (nodeVersion?.major === 16 ||
+        opts.env.PATH?.includes('/node16/bin-npm7')) &&
+      !args.includes('--legacy-peer-deps') &&
+      spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK !== '1';
 
     if (cliType === 'npm') {
       opts.prettyCommand = 'npm install';
       commandArgs = args
         .filter(a => a !== '--prefer-offline')
         .concat(['install', '--no-audit', '--unsafe-perm']);
+      if (
+        isPotentiallyBrokenNpm &&
+        spawnOpts?.env?.VERCEL_NPM_LEGACY_PEER_DEPS === '1'
+      ) {
+        // Starting in npm@8.6.0, if you ran `npm install --legacy-peer-deps`,
+        // and then later ran `npm install`, it would fail. So the only way
+        // to safely upgrade npm from npm@8.5.0 is to set this flag. The docs
+        // say this flag is not recommended so its is behind a feature flag
+        // so we can remove it in node@18, which can introduce breaking changes.
+        // See https://docs.npmjs.com/cli/v8/using-npm/config#legacy-peer-deps
+        commandArgs.push('--legacy-peer-deps');
+      }
     } else if (cliType === 'pnpm') {
       // PNPM's install command is similar to NPM's but without the audit nonsense
       // @see options https://pnpm.io/cli/install
@@ -480,7 +490,26 @@ export async function runNpmInstall(
       commandArgs.push('--production');
     }
 
-    await spawnAsync(cliType, commandArgs, opts);
+    try {
+      await spawnAsync(cliType, commandArgs, opts);
+    } catch (_) {
+      const potentialErrorPath = path.join(
+        process.env.HOME || '/',
+        '.npm',
+        'eresolve-report.txt'
+      );
+      if (
+        isPotentiallyBrokenNpm &&
+        !commandArgs.includes('--legacy-peer-deps') &&
+        fs.existsSync(potentialErrorPath)
+      ) {
+        console.warn(
+          'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.'
+        );
+        commandArgs.push('--legacy-peer-deps');
+        await spawnAsync(cliType, commandArgs, opts);
+      }
+    }
     debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
   } finally {
@@ -591,10 +620,7 @@ export async function runPackageJsonScript(
       cliType,
       lockfileVersion,
       nodeVersion: undefined,
-      env: {
-        ...process.env,
-        ...spawnOpts?.env,
-      },
+      env: cloneEnv(process.env, spawnOpts?.env),
     }),
   };
 

@@ -1,7 +1,7 @@
 /* eslint-env jest */
 const path = require('path');
 const cheerio = require('cheerio');
-const { deployAndTest, check, waitFor } = require('../../utils');
+const { deployAndTest, check } = require('../../utils');
 const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 
 async function checkForChange(url, initialValue, getNewValue) {
@@ -140,5 +140,31 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     expect(preRevalidateRandom).toBeDefined();
     expect(preRevalidateRandomData).toBeDefined();
+  });
+
+  it('should revalidate 404 page itself correctly', async () => {
+    const initial404 = await fetch(`${ctx.deploymentUrl}/404`);
+    const initial404Html = await initial404.text();
+    const initial404Props = JSON.parse(
+      cheerio.load(initial404Html)('#props').text()
+    );
+    expect(initial404.status).toBe(404);
+    expect(initial404Props.is404).toBe(true);
+
+    const revalidateRes = await fetch(
+      `${ctx.deploymentUrl}/api/revalidate?urlPath=/404`
+    );
+    expect(revalidateRes.status).toBe(200);
+    expect(await revalidateRes.json()).toEqual({ revalidated: true });
+
+    await check(async () => {
+      const res = await fetch(`${ctx.deploymentUrl}/404`);
+      const resHtml = await res.text();
+      const resProps = JSON.parse(cheerio.load(resHtml)('#props').text());
+      expect(res.status).toBe(404);
+      expect(resProps.is404).toBe(true);
+      expect(resProps.time).not.toEqual(initial404Props.time);
+      return 'success';
+    }, 'success');
   });
 });

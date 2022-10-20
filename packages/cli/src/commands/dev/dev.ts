@@ -2,7 +2,7 @@ import { resolve, join } from 'path';
 import fs from 'fs-extra';
 
 import DevServer from '../../util/dev/server';
-import parseListen from '../../util/dev/parse-listen';
+import { parseListen } from '../../util/dev/parse-listen';
 import { ProjectEnvVariable } from '../../types';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';

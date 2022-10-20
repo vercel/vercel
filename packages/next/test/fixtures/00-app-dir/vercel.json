@@ -9,7 +9,30 @@
     {
       "path": "/dashboard",
       "status": 200,
-      "mustContain": "hello from app/dashboard"
+      "mustContain": "hello from app/dashboard",
+      "responseHeaders": {
+        "vary": "__rsc__, __next_router_state_tree__, __next_router_prefetch__"
+      }
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "headers": {
+        "__rsc__": "1"
+      },
+      "mustContain": "M1:{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "headers": {
+        "__rsc__": "1"
+      },
+      "responseHeaders": {
+        "content-type": "application/octet-stream",
+        "vary": "__rsc__, __next_router_state_tree__, __next_router_prefetch__"
+      }
     },
     {
       "path": "/dashboard/another",
@@ -40,6 +63,15 @@
       "path": "/dashboard/changelog",
       "status": 200,
       "mustContain": "hello from app/dashboard/changelog"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "__rsc__": "1"
+      },
+      "mustContain": "M1:{",
+      "mustNotContain": "<html"
     }
   ]
 }

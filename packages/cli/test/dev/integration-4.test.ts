@@ -458,8 +458,41 @@ test(
     await testPath(200, '/another', '<h1>Another</h1>');
     await testPath(200, '/another.html', '<h1>Another</h1>');
     await testPath(200, '/foo', '<h1>Another</h1>');
+    // different origin
+    await testPath(200, '?to=http://example.com', /Example Domain/);
   })
 );
+
+test('[vercel dev] Middleware rewrites with same origin', async () => {
+  const directory = fixture('middleware-rewrite');
+  const { dev, port, readyResolver } = await testFixture(directory);
+
+  try {
+    dev.unref();
+    await readyResolver;
+
+    let response = await fetch(
+      `http://localhost:${port}?to=http://localhost:${port}`
+    );
+    validateResponseHeaders(response);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
+
+    response = await fetch(
+      `http://localhost:${port}?to=http://127.0.0.1:${port}`
+    );
+    validateResponseHeaders(response);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
+
+    response = await fetch(`http://localhost:${port}?to=http://[::1]:${port}`);
+    validateResponseHeaders(response);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
 
 test(
   '[vercel dev] Middleware that rewrites with custom query params',
@@ -475,6 +508,14 @@ test(
       '/api/fn?foo=bar',
       '{"url":"/api/fn?from-middleware=true"}'
     );
+  })
+);
+
+test(
+  '[vercel dev] Middleware that rewrites to 404s',
+  testFixtureStdio('middleware-rewrite-404', async (testPath: any) => {
+    await testPath(404, '/api/edge', /NOT_FOUND/);
+    await testPath(404, '/index.html', /NOT_FOUND/);
   })
 );
 
