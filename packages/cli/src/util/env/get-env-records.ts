@@ -56,7 +56,7 @@ export async function pullEnvRecords(
   projectId: string,
   source: EnvRecordsSource,
   {
-    target = ProjectEnvTarget.Preview,
+    target,
     gitBranch,
   }: {
     target?: ProjectEnvTarget | string;
