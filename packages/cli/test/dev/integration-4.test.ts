@@ -2,6 +2,7 @@ import ms from 'ms';
 import fs from 'fs-extra';
 import { isIP } from 'net';
 import { join } from 'path';
+import { Response } from 'node-fetch';
 
 const {
   fetch,
@@ -568,6 +569,73 @@ test(
       } finally {
         await fs.writeJSON(vercelJsonPath, originalVercelJson);
       }
+    },
+    { skipDeploy: true }
+  )
+);
+
+test(
+  '[vercel dev] Middleware can override request headers',
+  testFixtureStdio(
+    'middleware-request-headers-override',
+    async (testPath: any) => {
+      await testPath(
+        200,
+        '/api/dump-headers',
+        (actual: string, res: Response) => {
+          // Headers sent to the API route.
+          const headers = JSON.parse(actual);
+
+          // Headers added/modified by the middleware.
+          expect(headers).toHaveProperty(
+            'x-from-client-b',
+            'hello from middleware'
+          );
+          expect(headers).toHaveProperty(
+            'x-from-client-c',
+            'hello from client'
+          );
+          expect(headers).toHaveProperty('x-from-middleware-a', 'hello a!');
+          expect(headers).toHaveProperty('x-from-middleware-b', 'hello b!');
+
+          // Headers deleted by the middleware.
+          expect(headers).not.toHaveProperty('x-from-client-a');
+
+          // Internal headers should not be visible from API routes.
+          expect(headers).not.toHaveProperty('x-middleware-override-headers');
+          expect(headers).not.toHaveProperty(
+            'x-middleware-request-from-middleware-a'
+          );
+          expect(headers).not.toHaveProperty(
+            'x-middleware-request-from-middleware-b'
+          );
+
+          // Request headers should not be visible from clients.
+          const respHeaders = Object.fromEntries(res.headers.entries());
+          expect(respHeaders).not.toHaveProperty(
+            'x-middleware-override-headers'
+          );
+          expect(respHeaders).not.toHaveProperty(
+            'x-middleware-request-from-middleware-a'
+          );
+          expect(respHeaders).not.toHaveProperty(
+            'x-middleware-request-from-middleware-b'
+          );
+          expect(respHeaders).not.toHaveProperty('from-middleware-a');
+          expect(respHeaders).not.toHaveProperty('from-middleware-b');
+          expect(respHeaders).not.toHaveProperty('x-from-client-a');
+          expect(respHeaders).not.toHaveProperty('x-from-client-b');
+          expect(respHeaders).not.toHaveProperty('x-from-client-c');
+        },
+        /*expectedHeaders=*/ {},
+        {
+          headers: {
+            'x-from-client-a': 'hello from client',
+            'x-from-client-b': 'hello from client',
+            'x-from-client-c': 'hello from client',
+          },
+        }
+      );
     },
     { skipDeploy: true }
   )

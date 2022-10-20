@@ -1527,6 +1527,29 @@ export default class DevServer {
             'content-length',
             'transfer-encoding',
           ]);
+
+          const overriddenHeaders = middlewareRes.headers.get(
+            'x-middleware-override-headers'
+          );
+          if (overriddenHeaders) {
+            for (const name of overriddenHeaders.split(',')) {
+              if (skipMiddlewareHeaders.has(name)) {
+                continue;
+              }
+
+              const valueKey = `x-middleware-request-${name}`;
+              const newValue = middlewareRes.headers.get(valueKey);
+              if (newValue) {
+                req.headers[name] = newValue;
+              } else {
+                delete req.headers[name];
+              }
+
+              middlewareRes.headers.delete(valueKey);
+            }
+            middlewareRes.headers.delete('x-middleware-override-headers');
+          }
+
           for (const [name, value] of middlewareRes.headers) {
             if (name === 'x-middleware-next') {
               shouldContinue = value === '1';
