@@ -34,7 +34,7 @@ along with the response headers from the origin.
 
 • `Optional` **request**: [`ModifiedRequest`](ModifiedRequest.md)
 
-These fields will override the request from clients.
+Fields to rewrite for the upstream request.
 
 #### Defined in
 
