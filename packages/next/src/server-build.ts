@@ -633,7 +633,7 @@ export async function serverBuild({
         const curPagesDir = isAppPath && appDir ? appDir : pagesDir;
         const pageDir = path.dirname(path.join(curPagesDir, originalPagePath));
         const normalizedBaseDir = `${baseDir}${
-          baseDir.endsWith('/') ? '' : '/'
+          baseDir.endsWith(path.sep) ? '' : path.sep
         }`;
         files.forEach((file: string) => {
           const absolutePath = path.join(pageDir, file);
@@ -964,13 +964,52 @@ export async function serverBuild({
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
   const notFoundPreviewRoutes: RouteWithSrc[] = [];
+  const appDirVaryRoutes: RouteWithSrc[] = [];
+
+  // ensure Vary header is set for static app paths
+  // TODO: remove when we are able to set initial headers on Prerender
+  if (appPathRoutesManifest) {
+    for (const route of Object.values(appPathRoutesManifest)) {
+      if (!prerenders[path.posix.join('.', entryDirectory, route)]) {
+        continue;
+      }
+      let src = path.posix.join('/', entryDirectory, route);
+
+      if (isDynamicRoute(route)) {
+        const dynamicRoute = routesManifest.dynamicRoutes.find(r => {
+          return r.page === route;
+        });
+
+        if (
+          dynamicRoute &&
+          'namedRegex' in dynamicRoute &&
+          dynamicRoute.namedRegex
+        ) {
+          src = src.replace(
+            new RegExp(`${escapeStringRegexp(route)}$`),
+            dynamicRoute.namedRegex.replace(/^\^/, '')
+          );
+        }
+      }
+
+      appDirVaryRoutes.push({
+        src,
+        headers: {
+          vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+        },
+        continue: true,
+      });
+    }
+  }
 
   if (prerenderManifest.notFoundRoutes?.length > 0 && canUsePreviewMode) {
     // we combine routes into one src here to reduce the number of needed
     // routes since only the status is being modified and we don't want
     // to exceed the routes limit
     const starterRouteSrc = `^${
-      entryDirectory !== '.' ? path.posix.join('/', entryDirectory, '()') : '()'
+      entryDirectory !== '.'
+        ? `${path.posix.join('/', entryDirectory)}()`
+        : '()'
     }`;
     let currentRouteSrc = starterRouteSrc;
 
@@ -997,7 +1036,7 @@ export async function serverBuild({
       const isLastRoute = i === prerenderManifest.notFoundRoutes.length - 1;
 
       if (prerenderManifest.staticRoutes[route]?.initialRevalidate === false) {
-        if (currentRouteSrc.length + route.length + 1 >= 4096) {
+        if (currentRouteSrc.length + route.length + 1 >= 4000) {
           pushRoute(currentRouteSrc);
           currentRouteSrc = starterRouteSrc;
         }
@@ -1007,7 +1046,7 @@ export async function serverBuild({
           currentRouteSrc.length - 1
         )}${
           currentRouteSrc[currentRouteSrc.length - 2] === '(' ? '' : '|'
-        }${route})`;
+        }${route}/?)`;
 
         if (isLastRoute) {
           pushRoute(currentRouteSrc);
@@ -1134,7 +1173,7 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     // create .rsc variant for app lambdas and edge functions
     // to match prerenders so we can route the same when the
-    // __flight__ header is present
+    // __rsc__ header is present
     const edgeFunctions = middleware.edgeFunctions;
 
     for (let route of Object.values(appPathRoutesManifest)) {
@@ -1142,7 +1181,8 @@ export async function serverBuild({
 
       if (lambdas[route]) {
         lambdas[`${route}.rsc`] = lambdas[route];
-      } else if (edgeFunctions[route]) {
+      }
+      if (edgeFunctions[route]) {
         edgeFunctions[`${route}.rsc`] = edgeFunctions[route];
       }
     }
@@ -1343,6 +1383,12 @@ export async function serverBuild({
                 .join('|')})?[/]?404/?`,
               status: 404,
               continue: true,
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-prerender-revalidate',
+                },
+              ],
             },
           ]
         : [
@@ -1350,6 +1396,12 @@ export async function serverBuild({
               src: path.posix.join('/', entryDirectory, '404/?'),
               status: 404,
               continue: true,
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-prerender-revalidate',
+                },
+              ],
             },
           ]),
 
@@ -1389,11 +1441,22 @@ export async function serverBuild({
       ...(appDir
         ? [
             {
+              src: `^${path.posix.join('/', entryDirectory, '/')}`,
+              has: [
+                {
+                  type: 'header',
+                  key: '__rsc__',
+                },
+              ],
+              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              check: true,
+            },
+            {
               src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
               has: [
                 {
                   type: 'header',
-                  key: '__flight__',
+                  key: '__rsc__',
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
@@ -1497,18 +1560,31 @@ export async function serverBuild({
           dynamicRoutes
             .map(route => {
               route = Object.assign({}, route);
+              let normalizedSrc = route.src;
+
+              if (routesManifest.basePath) {
+                normalizedSrc = normalizedSrc.replace(
+                  new RegExp(
+                    `\\^${escapeStringRegexp(routesManifest.basePath)}`
+                  ),
+                  '^'
+                );
+              }
+
               route.src = path.posix.join(
                 '^/',
                 entryDirectory,
                 '_next/data/',
                 escapedBuildId,
-                route.src.replace(/(^\^|\$$)/g, '') + '.json$'
+                normalizedSrc
+                  .replace(/\^\(\?:\/\(\?</, '(?:(?<')
+                  .replace(/(^\^|\$$)/g, '') + '.json$'
               );
 
-              const { pathname, search } = new URL(
-                route.dest || '/',
-                'http://n'
-              );
+              const parsedDestination = new URL(route.dest || '/', 'http://n');
+              let pathname = parsedDestination.pathname;
+              const search = parsedDestination.search;
+
               let isPrerender = !!prerenders[path.join('./', pathname)];
 
               if (routesManifest.i18n) {
@@ -1525,9 +1601,17 @@ export async function serverBuild({
               }
 
               if (isPrerender) {
-                route.dest = `/_next/data/${buildId}${pathname}.json${
-                  search || ''
-                }`;
+                if (routesManifest.basePath) {
+                  pathname = pathname.replace(
+                    new RegExp(
+                      `^${escapeStringRegexp(routesManifest.basePath)}`
+                    ),
+                    ''
+                  );
+                }
+                route.dest = `${
+                  routesManifest.basePath || ''
+                }/_next/data/${buildId}${pathname}.json${search || ''}`;
               }
               return route;
             })
@@ -1600,6 +1684,20 @@ export async function serverBuild({
         continue: true,
         important: true,
       },
+      ...(appDir
+        ? [
+            {
+              src: path.posix.join('/', entryDirectory, '/(.*).rsc$'),
+              headers: {
+                'content-type': 'application/octet-stream',
+                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+              },
+              continue: true,
+              important: true,
+            },
+            ...appDirVaryRoutes,
+          ]
+        : []),
 
       // TODO: remove below workaround when `/` is allowed to be output
       // different than `/index`

@@ -4,24 +4,18 @@ import Client from '../util/client';
 import { ProjectEnvTarget } from '../types';
 import { emoji, prependEmoji } from '../util/emoji';
 import getArgs from '../util/get-args';
-import setupAndLink from '../util/link/setup-and-link';
 import logo from '../util/output/logo';
 import stamp from '../util/output/stamp';
 import { getPkgName } from '../util/pkg-name';
-import {
-  getLinkedProject,
-  VERCEL_DIR,
-  VERCEL_DIR_PROJECT,
-} from '../util/projects/link';
+import { VERCEL_DIR, VERCEL_DIR_PROJECT } from '../util/projects/link';
 import { writeProjectSettings } from '../util/projects/project-settings';
 import envPull from './env/pull';
-import { getCommandName } from '../util/pkg-name';
-import param from '../util/output/param';
-import type { Project, Org } from '../types';
+import type { Project } from '../types';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
 } from '../util/env/env-target';
+import { ensureLink } from '../util/link/ensure-link';
 
 const help = () => {
   return console.log(`
@@ -83,43 +77,6 @@ function parseArgs(client: Client) {
   return argv;
 }
 
-type LinkResult = {
-  org: Org;
-  project: Project;
-};
-async function ensureLink(
-  client: Client,
-  cwd: string,
-  yes: boolean
-): Promise<LinkResult | number> {
-  let link = await getLinkedProject(client, cwd);
-  if (link.status === 'not_linked') {
-    link = await setupAndLink(client, cwd, {
-      autoConfirm: yes,
-      successEmoji: 'link',
-      setupMsg: 'Set up',
-    });
-
-    if (link.status === 'not_linked') {
-      // User aborted project linking questions
-      return 0;
-    }
-  }
-
-  if (link.status === 'error') {
-    if (link.reason === 'HEADLESS') {
-      client.output.error(
-        `Command ${getCommandName(
-          'pull'
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
-      );
-    }
-    return link.exitCode;
-  }
-
-  return { org: link.org, project: link.project };
-}
-
 async function pullAllEnvFiles(
   environment: ProjectEnvTarget,
   client: Client,
@@ -156,10 +113,10 @@ export default async function main(client: Client) {
   }
 
   const cwd = argv._[1] || process.cwd();
-  const yes = Boolean(argv['--yes']);
+  const autoConfirm = Boolean(argv['--yes']);
   const environment = parseEnvironment(argv['--environment'] || undefined);
 
-  const link = await ensureLink(client, cwd, yes);
+  const link = await ensureLink('pull', client, cwd, { autoConfirm });
   if (typeof link === 'number') {
     return link;
   }

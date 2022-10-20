@@ -1,11 +1,11 @@
-'client';
+'use client';
 
 import { useState, lazy } from 'react';
 
 const Lazy = lazy(() => import('./lazy.js'));
 
 export function ClientComponent() {
-  let [state] = useState('client');
+  let [state] = useState('use client');
   return (
     <>
       <Lazy />
