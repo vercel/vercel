@@ -681,9 +681,13 @@ export default class DevServer {
 
     // If no .env/.build.env is present, use cloud environment variables
     if (Object.keys(allEnv).length === 0) {
-      allEnv = { ...this.envValues };
-      runEnv = { ...this.envValues };
-      buildEnv = { ...this.envValues };
+      const envValues = { ...this.envValues };
+      if (this.address.host) {
+        envValues['VERCEL_URL'] = this.address.host;
+      }
+      allEnv = { ...envValues };
+      runEnv = { ...envValues };
+      buildEnv = { ...envValues };
     }
 
     // legacy NOW_REGION env variable
