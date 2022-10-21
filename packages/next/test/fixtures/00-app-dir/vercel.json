@@ -9,7 +9,10 @@
     {
       "path": "/dashboard",
       "status": 200,
-      "mustContain": "hello from app/dashboard"
+      "mustContain": "hello from app/dashboard",
+      "responseHeaders": {
+        "vary": "__rsc__, __next_router_state_tree__, __next_router_prefetch__"
+      }
     },
     {
       "path": "/dashboard",
@@ -27,7 +30,8 @@
         "__rsc__": "1"
       },
       "responseHeaders": {
-        "content-type": "application/octet-stream"
+        "content-type": "application/octet-stream",
+        "vary": "__rsc__, __next_router_state_tree__, __next_router_prefetch__"
       }
     },
     {
