@@ -42,7 +42,8 @@ async function ls(
 
   if (
     typeof nextTimestamp !== undefined &&
-    (Number.isNaN(limit) || limit! > 100)
+    typeof limit === 'number' &&
+    (Number.isNaN(limit) || limit > 100)
   ) {
     output.error('Please provide a number up to 100 for flag --limit');
     return 1;
