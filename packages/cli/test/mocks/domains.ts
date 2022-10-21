@@ -29,8 +29,8 @@ export function createDomain(k: string) {
 }
 
 export function useDomains() {
-  client.scenario.get('/v5/domains', (_req, res) => {
-    const limit = parseInt(_req.query.limit);
+  client.scenario.get('/v5/domains', (req, res) => {
+    const limit = parseInt(req.query.limit);
     const domains = Array.from({ length: limit }, (v, i) =>
       createDomain(`${i}`)
     );
