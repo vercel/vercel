@@ -15,6 +15,7 @@ import { pullEnvRecords } from '../../util/env/get-env-records';
 type Options = {
   '--listen': string;
   '--yes': boolean;
+  '--offline': boolean;
 };
 
 export default async function dev(
@@ -30,7 +31,11 @@ export default async function dev(
   // retrieve dev command
   let link = await getLinkedProject(client, cwd);
 
-  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
+  if (
+    link.status === 'not_linked' &&
+    !process.env.__VERCEL_SKIP_DEV_CMD &&
+    !opts['--offline']
+  ) {
     link = await setupAndLink(client, cwd, {
       autoConfirm: opts['--yes'],
       successEmoji: 'link',
@@ -43,7 +48,7 @@ export default async function dev(
     }
   }
 
-  if (link.status === 'error') {
+  if (link.status === 'error' && !opts['--offline']) {
     if (link.reason === 'HEADLESS') {
       client.output.error(
         `Command ${getCommandName(
@@ -56,7 +61,7 @@ export default async function dev(
 
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
-  if (link.status === 'linked') {
+  if (link.status === 'linked' && !opts['--offline']) {
     const { project, org } = link;
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 

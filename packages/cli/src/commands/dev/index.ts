@@ -34,6 +34,7 @@ const help = () => {
     -l, --listen  [uri]    Specify a URI endpoint on which to listen [0.0.0.0:3000]
     -t, --token   [token]  Specify an Authorization Token
     -y, --yes              Skip questions when setting up new project using default scope and settings
+    -o, --offline          Don't connect to the Vercel API
 
   ${chalk.dim('Examples:')}
 
@@ -76,6 +77,8 @@ export default async function main(client: Client) {
       '-l': '--listen',
       '--yes': Boolean,
       '-y': '--yes',
+      '--offline': Boolean,
+      '-o': '--offline',
 
       // Deprecated
       '--port': Number,
