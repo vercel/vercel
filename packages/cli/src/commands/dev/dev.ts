@@ -5,7 +5,7 @@ import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
-import { ProjectSettings } from '../../types';
+import { ProjectLinkResult, ProjectSettings } from '../../types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
@@ -29,7 +29,9 @@ export default async function dev(
   const listen = parseListen(opts['--listen'] || '3000');
 
   // retrieve dev command
-  let link = await getLinkedProject(client, cwd);
+  let link: ProjectLinkResult = opts['--offline']
+    ? { status: 'not_linked', org: null, project: null }
+    : await getLinkedProject(client, cwd);
 
   if (
     link.status === 'not_linked' &&
@@ -48,7 +50,7 @@ export default async function dev(
     }
   }
 
-  if (link.status === 'error' && !opts['--offline']) {
+  if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
       client.output.error(
         `Command ${getCommandName(
@@ -61,7 +63,7 @@ export default async function dev(
 
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
-  if (link.status === 'linked' && !opts['--offline']) {
+  if (link.status === 'linked') {
     const { project, org } = link;
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
