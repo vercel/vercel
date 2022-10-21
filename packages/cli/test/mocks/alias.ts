@@ -22,7 +22,7 @@ export function useAlias() {
   }
 
   client.scenario.get('/v3/now/aliases', (_req, res) => {
-    let limit = parseInt(_req.query.limit);
+    const limit = parseInt(_req.query.limit);
     const aliases = Array.from({ length: limit }, (v, i) => create(`${i}`));
     res.json({
       aliases: aliases,

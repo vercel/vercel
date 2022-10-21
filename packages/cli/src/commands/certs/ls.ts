@@ -41,17 +41,19 @@ async function ls(
   }
 
   if (
-    limit &&
-    (Number.isNaN(limit) || !Number.isInteger(limit) || limit > 100)
+    typeof nextTimestamp !== undefined &&
+    (Number.isNaN(limit) || limit! > 100)
   ) {
     output.error('Please provide a number up to 100 for flag --limit');
     return 1;
   }
 
   // Get the list of certificates
-  const { certs, pagination } = await getCerts(client, nextTimestamp).catch(
-    err => err
-  );
+  const { certs, pagination } = await getCerts(
+    client,
+    nextTimestamp,
+    limit
+  ).catch(err => err);
 
   output.log(
     `${
@@ -60,7 +62,7 @@ async function ls(
   );
 
   if (certs.length > 0) {
-    console.log(formatCertsTable(certs));
+    output.log(formatCertsTable(certs));
   }
 
   if (pagination && pagination.count === 20) {

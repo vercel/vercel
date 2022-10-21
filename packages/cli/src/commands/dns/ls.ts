@@ -46,8 +46,8 @@ export default async function ls(
   }
 
   if (
-    limit &&
-    (Number.isNaN(limit) || !Number.isInteger(limit) || limit > 100)
+    typeof nextTimestamp !== undefined &&
+    (Number.isNaN(limit) || limit! > 100)
   ) {
     output.error('Please provide a number up to 100 for flag --limit');
     return 1;
@@ -78,7 +78,7 @@ export default async function ls(
         records.length > 0 ? 'Records' : 'No records'
       } found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
     );
-    console.log(getDNSRecordsTable([{ domainName, records }]));
+    output.log(getDNSRecordsTable([{ domainName, records }]));
 
     if (pagination && pagination.count === 20) {
       const flags = getCommandFlags(opts, ['_', '--next']);
@@ -104,7 +104,7 @@ export default async function ls(
       contextName
     )} ${chalk.gray(lsStamp())}`
   );
-  console.log(getDNSRecordsTable(dnsRecords));
+  output.log(getDNSRecordsTable(dnsRecords));
   if (pagination && pagination.count === 20) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
