@@ -1,9 +1,57 @@
+export interface ModifiedRequest {
+  /**
+   * If set, overwrites the incoming headers to the origin request.
+   *
+   * This is useful when you want to pass data between a Middleware and a
+   * Serverless or Edge Function.
+   *
+   * @example
+   * <caption>Add a `x-user-id` header and remove the `Authorization` header</caption>
+   *
+   * ```ts
+   * import { rewrite } from '@vercel/edge';
+   * export default async function middleware(request: Request): Promise<Response> {
+   *   const newHeaders = new Headers(request.headers);
+   *   newHeaders.set('x-user-id', 'user_123');
+   *   newHeaders.delete('authorization');
+   *   return rewrite(request.url, {
+   *     request: { headers: newHeaders }
+   *   })
+   * }
+   * ```
+   */
+  headers?: Headers;
+}
+
 export interface ExtraResponseInit extends Omit<ResponseInit, 'headers'> {
   /**
    * These headers will be sent to the user response
    * along with the response headers from the origin.
    */
   headers?: HeadersInit;
+  /**
+   * Fields to rewrite for the upstream request.
+   */
+  request?: ModifiedRequest;
+}
+
+function handleMiddlewareField(
+  init: ExtraResponseInit | undefined,
+  headers: Headers
+) {
+  if (init?.request?.headers) {
+    if (!(init.request.headers instanceof Headers)) {
+      throw new Error('request.headers must be an instance of Headers');
+    }
+
+    const keys = [];
+    for (const [key, value] of init.request.headers) {
+      headers.set('x-middleware-request-' + key, value);
+      keys.push(key);
+    }
+
+    headers.set('x-middleware-override-headers', keys.join(','));
+  }
 }
 
 /**
@@ -56,6 +104,9 @@ export function rewrite(
 ): Response {
   const headers = new Headers(init?.headers ?? {});
   headers.set('x-middleware-rewrite', String(destination));
+
+  handleMiddlewareField(init, headers);
+
   return new Response(null, {
     ...init,
     headers,
@@ -94,6 +145,9 @@ export function rewrite(
 export function next(init?: ExtraResponseInit): Response {
   const headers = new Headers(init?.headers ?? {});
   headers.set('x-middleware-next', '1');
+
+  handleMiddlewareField(init, headers);
+
   return new Response(null, {
     ...init,
     headers,
