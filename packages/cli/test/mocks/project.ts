@@ -266,10 +266,10 @@ export function useProject(project: Partial<Project> = defaultProject) {
       });
     }
   );
-  client.scenario.get(`/v8/projects/${project.id}/env`, (_req, res) => {
+  client.scenario.get(`/v8/projects/${project.id}/env`, (req, res) => {
     const target: ProjectEnvTarget | undefined =
-      typeof _req.query.target === 'string'
-        ? parseEnvironment(_req.query.target)
+      typeof req.query.target === 'string'
+        ? parseEnvironment(req.query.target)
         : undefined;
 
     let targetEnvs = envs;
