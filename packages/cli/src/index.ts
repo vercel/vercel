@@ -614,8 +614,8 @@ const main = async () => {
       // Error message will look like the following:
       // request to https://api.vercel.com/v2/user failed, reason: socket hang up
       const matches = /request to https:\/\/(.*?)\//.exec(err.message || '');
-      if (matches && matches[1]) {
-        const hostname = matches[1];
+      const hostname = matches?.[1];
+      if (hostname) {
         output.error(
           `Connection to ${highlight(
             hostname
