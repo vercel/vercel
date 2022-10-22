@@ -1973,6 +1973,19 @@ export const onPrerenderRoute =
         fallback: htmlFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
+        ...(isNotFound
+          ? {
+              initialStatus: 404,
+            }
+          : {}),
+
+        ...(isAppPathRoute
+          ? {
+              initialHeaders: {
+                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+              },
+            }
+          : {}),
       });
       prerenders[outputPathData] = new Prerender({
         expiration: initialRevalidate,
@@ -1981,6 +1994,21 @@ export const onPrerenderRoute =
         fallback: jsonFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
+
+        ...(isNotFound
+          ? {
+              initialStatus: 404,
+            }
+          : {}),
+
+        ...(isAppPathRoute
+          ? {
+              initialHeaders: {
+                'content-type': 'application/octet-stream',
+                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+              },
+            }
+          : {}),
       });
 
       ++prerenderGroup;
