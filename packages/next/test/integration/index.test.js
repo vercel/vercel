@@ -19,7 +19,7 @@ it('should build with app-dir correctly', async () => {
       lambdas.add(buildResult.output[key]);
     }
   }
-  expect(lambdas.size).toBe(1);
+  expect(lambdas.size).toBe(2);
   expect(buildResult.output['dashboard']).toBeDefined();
   expect(buildResult.output['dashboard/another']).toBeDefined();
   expect(buildResult.output['dashboard/changelog']).toBeDefined();
