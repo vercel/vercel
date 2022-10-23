@@ -14,7 +14,7 @@ import {
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
+import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
@@ -963,98 +963,6 @@ export async function serverBuild({
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
-  const notFoundPreviewRoutes: RouteWithSrc[] = [];
-  const appDirVaryRoutes: RouteWithSrc[] = [];
-
-  // ensure Vary header is set for static app paths
-  // TODO: remove when we are able to set initial headers on Prerender
-  if (appPathRoutesManifest) {
-    for (const route of Object.values(appPathRoutesManifest)) {
-      if (!prerenders[path.posix.join('.', entryDirectory, route)]) {
-        continue;
-      }
-      let src = path.posix.join('/', entryDirectory, route);
-
-      if (isDynamicRoute(route)) {
-        const dynamicRoute = routesManifest.dynamicRoutes.find(r => {
-          return r.page === route;
-        });
-
-        if (
-          dynamicRoute &&
-          'namedRegex' in dynamicRoute &&
-          dynamicRoute.namedRegex
-        ) {
-          src = src.replace(
-            new RegExp(`${escapeStringRegexp(route)}$`),
-            dynamicRoute.namedRegex.replace(/^\^/, '')
-          );
-        }
-      }
-
-      appDirVaryRoutes.push({
-        src,
-        headers: {
-          vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
-        },
-        continue: true,
-      });
-    }
-  }
-
-  if (prerenderManifest.notFoundRoutes?.length > 0 && canUsePreviewMode) {
-    // we combine routes into one src here to reduce the number of needed
-    // routes since only the status is being modified and we don't want
-    // to exceed the routes limit
-    const starterRouteSrc = `^${
-      entryDirectory !== '.'
-        ? `${path.posix.join('/', entryDirectory)}()`
-        : '()'
-    }`;
-    let currentRouteSrc = starterRouteSrc;
-
-    const pushRoute = (src: string) => {
-      notFoundPreviewRoutes.push({
-        src,
-        missing: [
-          {
-            type: 'cookie',
-            key: '__prerender_bypass',
-            value: prerenderManifest.bypassToken || undefined,
-          },
-          {
-            type: 'cookie',
-            key: '__next_preview_data',
-          },
-        ],
-        status: 404,
-      });
-    };
-
-    for (let i = 0; i < prerenderManifest.notFoundRoutes.length; i++) {
-      const route = prerenderManifest.notFoundRoutes[i];
-      const isLastRoute = i === prerenderManifest.notFoundRoutes.length - 1;
-
-      if (prerenderManifest.staticRoutes[route]?.initialRevalidate === false) {
-        if (currentRouteSrc.length + route.length + 1 >= 4000) {
-          pushRoute(currentRouteSrc);
-          currentRouteSrc = starterRouteSrc;
-        }
-        // add to existing route src if src length limit isn't reached
-        currentRouteSrc = `${currentRouteSrc.substring(
-          0,
-          currentRouteSrc.length - 1
-        )}${
-          currentRouteSrc[currentRouteSrc.length - 2] === '(' ? '' : '|'
-        }${route}/?)`;
-
-        if (isLastRoute) {
-          pushRoute(currentRouteSrc);
-        }
-      }
-    }
-  }
-
   const normalizeNextDataRoute = (isOverride = false) => {
     return isNextDataServerResolving
       ? [
@@ -1365,10 +1273,6 @@ export async function serverBuild({
       ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
 
       ...beforeFilesRewrites,
-
-      // ensure prerender's for notFound: true static routes
-      // have 404 status code when not in preview mode
-      ...notFoundPreviewRoutes,
 
       // Make sure to 404 for the /404 path itself
       ...(i18n
@@ -1684,20 +1588,6 @@ export async function serverBuild({
         continue: true,
         important: true,
       },
-      ...(appDir
-        ? [
-            {
-              src: path.posix.join('/', entryDirectory, '/(.*).rsc$'),
-              headers: {
-                'content-type': 'application/octet-stream',
-                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
-              },
-              continue: true,
-              important: true,
-            },
-            ...appDirVaryRoutes,
-          ]
-        : []),
 
       // TODO: remove below workaround when `/` is allowed to be output
       // different than `/index`

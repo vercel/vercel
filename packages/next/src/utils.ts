@@ -1836,14 +1836,26 @@ export const onPrerenderRoute =
             ),
           });
 
-    const outputPathPage = normalizeIndexOutput(
-      path.posix.join(entryDirectory, routeFileNoExt),
-      isServerMode
-    );
+    if (isAppPathRoute) {
+      // for literal index routes we need to append an additional /index
+      // due to the proxy's normalizing for /index routes
+      if (routeKey !== '/index' && routeKey.endsWith('/index')) {
+        routeKey = `${routeKey}/index`;
+        routeFileNoExt = routeKey;
+        origRouteFileNoExt = routeKey;
+      }
+    }
+
+    let outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
+
+    if (!isAppPathRoute) {
+      outputPathPage = normalizeIndexOutput(outputPathPage, isServerMode);
+    }
     const outputPathPageOrig = path.posix.join(
       entryDirectory,
       origRouteFileNoExt
     );
+
     let lambda: undefined | Lambda;
     let outputPathData = path.posix.join(entryDirectory, dataRoute);
 
@@ -1973,6 +1985,19 @@ export const onPrerenderRoute =
         fallback: htmlFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
+        ...(isNotFound
+          ? {
+              initialStatus: 404,
+            }
+          : {}),
+
+        ...(isAppPathRoute
+          ? {
+              initialHeaders: {
+                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+              },
+            }
+          : {}),
       });
       prerenders[outputPathData] = new Prerender({
         expiration: initialRevalidate,
@@ -1981,6 +2006,21 @@ export const onPrerenderRoute =
         fallback: jsonFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
+
+        ...(isNotFound
+          ? {
+              initialStatus: 404,
+            }
+          : {}),
+
+        ...(isAppPathRoute
+          ? {
+              initialHeaders: {
+                'content-type': 'application/octet-stream',
+                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+              },
+            }
+          : {}),
       });
 
       ++prerenderGroup;
