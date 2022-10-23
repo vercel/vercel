@@ -1836,14 +1836,26 @@ export const onPrerenderRoute =
             ),
           });
 
-    const outputPathPage = normalizeIndexOutput(
-      path.posix.join(entryDirectory, routeFileNoExt),
-      isServerMode
-    );
+    if (isAppPathRoute) {
+      // for literal index routes we need to append an additional /index
+      // due to the proxy's normalizing for /index routes
+      if (routeKey !== '/index' && routeKey.endsWith('/index')) {
+        routeKey = `${routeKey}/index`;
+        routeFileNoExt = routeKey;
+        origRouteFileNoExt = routeKey;
+      }
+    }
+
+    let outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
+
+    if (!isAppPathRoute) {
+      outputPathPage = normalizeIndexOutput(outputPathPage, isServerMode);
+    }
     const outputPathPageOrig = path.posix.join(
       entryDirectory,
       origRouteFileNoExt
     );
+
     let lambda: undefined | Lambda;
     let outputPathData = path.posix.join(entryDirectory, dataRoute);
 
