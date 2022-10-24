@@ -23,7 +23,7 @@ describe('applyOverriddenHeaders', () => {
     expect(reqHeaders).toStrictEqual({ a: '1', b: '2' });
   });
 
-  it('adds a header but undefined in the x-middleware-request-*', async () => {
+  it('delete the header if x-middleware-request-* is undefined', async () => {
     const reqHeaders = { a: '1', b: '2' };
     const respHeaders = new Headers({
       // Deletes a new header 'c' and keep the existing headers `a` and `b`
@@ -33,7 +33,7 @@ describe('applyOverriddenHeaders', () => {
     });
 
     applyOverriddenHeaders(reqHeaders, respHeaders, new Set());
-    expect(reqHeaders).toStrictEqual({ a: '1', b: '2', c: undefined });
+    expect(reqHeaders).toStrictEqual({ a: '1', b: '2' });
   });
 
   it('updates an existing header', async () => {

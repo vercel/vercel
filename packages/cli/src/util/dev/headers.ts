@@ -67,7 +67,11 @@ export function applyOverriddenHeaders(
     const oldValue = reqHeaders[key];
 
     if (oldValue !== newValue) {
-      reqHeaders[key] = newValue === null ? undefined : newValue;
+      if (newValue) {
+        reqHeaders[key] = newValue;
+      } else {
+        delete reqHeaders[key];
+      }
     }
 
     respHeaders.delete(valueKey);
