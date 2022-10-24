@@ -75,8 +75,7 @@ export class Prerender {
         !initialHeaders ||
         typeof initialHeaders !== 'object' ||
         Object.entries(initialHeaders).some(
-          ([key, value]) =>
-            typeof key !== 'string' || value !== 'string'
+          ([key, value]) => typeof key !== 'string' || typeof value !== 'string'
         )
       ) {
         throw new Error(

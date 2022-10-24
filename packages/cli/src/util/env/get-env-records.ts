@@ -2,6 +2,7 @@ import { Output } from '../output';
 import Client from '../client';
 import { ProjectEnvVariable, ProjectEnvTarget } from '../../types';
 import { URLSearchParams } from 'url';
+import * as path from 'path';
 
 /** The CLI command that was used that needs the environment variables. */
 export type EnvRecordsSource =
@@ -48,4 +49,41 @@ export default async function getEnvRecords(
   const url = `/v8/projects/${projectId}/env?${query}`;
 
   return client.fetch<{ envs: ProjectEnvVariable[] }>(url);
+}
+
+interface PullEnvOptions {
+  target?: ProjectEnvTarget | string;
+  gitBranch?: string;
+}
+
+export async function pullEnvRecords(
+  output: Output,
+  client: Client,
+  projectId: string,
+  source: EnvRecordsSource,
+  { target, gitBranch }: PullEnvOptions = {}
+) {
+  output.debug(
+    `Fetching Environment Variables of project ${projectId} and target ${target}`
+  );
+  const query = new URLSearchParams();
+
+  let url = `/v1/env/pull/${projectId}`;
+
+  if (target) {
+    url = path.join(url, target, gitBranch ?? '');
+  }
+
+  if (source) {
+    query.set('source', source);
+  }
+
+  if (Array.from(query).length > 0) {
+    url += `?${query}`;
+  }
+
+  return client.fetch<{
+    env: Record<string, string>;
+    buildEnv: Record<string, string>;
+  }>(url);
 }
