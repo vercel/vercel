@@ -433,6 +433,38 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
   global.Date.now = realDateNow;
 });
 
+it('should support initialHeaders and initialStatus correctly', async () => {
+  const { Prerender } = require('@vercel/build-utils/dist/prerender.js');
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    initialHeaders: {
+      'content-type': 'application/json',
+      'x-initial': 'true',
+    },
+    initialStatus: 308,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    initialStatus: 308,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    initialHeaders: {
+      'content-type': 'application/json',
+      'x-initial': 'true',
+    },
+  });
+});
+
 it('should support require by path for legacy builders', () => {
   const index = require('@vercel/build-utils');
 

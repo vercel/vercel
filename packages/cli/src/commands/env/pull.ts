@@ -4,16 +4,16 @@ import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
 import { Project, ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
-import exposeSystemEnvs from '../../util/dev/expose-system-envs';
 import { emoji, prependEmoji } from '../../util/emoji';
-import getSystemEnvValues from '../../util/env/get-system-env-values';
-import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import confirm from '../../util/input/confirm';
 import { Output } from '../../util/output';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { EnvRecordsSource } from '../../util/env/get-env-records';
+import {
+  EnvRecordsSource,
+  pullEnvRecords,
+} from '../../util/env/get-env-records';
 import {
   buildDeltaString,
   createEnvObject,
@@ -97,20 +97,11 @@ export default async function pull(
   const pullStamp = stamp();
   output.spinner('Downloading');
 
-  const [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-    getDecryptedEnvRecords(output, client, project.id, source, environment),
-    project.autoExposeSystemEnvs
-      ? getSystemEnvValues(output, client, project.id)
-      : { systemEnvValues: [] },
-  ]);
-
-  const records = exposeSystemEnvs(
-    projectEnvs,
-    systemEnvValues,
-    project.autoExposeSystemEnvs,
-    undefined,
-    environment
-  );
+  const records = (
+    await pullEnvRecords(output, client, project.id, source, {
+      target: environment || ProjectEnvTarget.Development,
+    })
+  ).env;
 
   let deltaString = '';
   let oldEnv;
