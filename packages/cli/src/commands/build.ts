@@ -313,11 +313,13 @@ async function doBuild(
     frameworkList: monorepoManagers,
   });
 
+  const monorepoPkg = JSON.parse(
+    fs.readFileSync(join(cwd, 'package.json'), 'utf-8')
+  );
+  const projectName = basename(workPath);
+  const relativeToRoot = relative(workPath, cwd);
   if (!projectSettings.buildCommand) {
     if (framework === 'turbo') {
-      const monorepoPkg = JSON.parse(
-        fs.readFileSync(join(cwd, 'package.json'), 'utf-8')
-      );
       if (
         (monorepoPkg?.devDependencies?.turbo &&
           semver.lt(monorepoPkg.devDependencies.turbo, '1.2.0')) ||
@@ -332,17 +334,57 @@ async function doBuild(
         fs.readFileSync(join(cwd, 'turbo.json'), 'utf-8')
       );
 
-      if (!turboJSON.pipeline.build) {
+      if (!turboJSON?.pipeline?.build) {
         output.error('Missing required `build` pipeline in turbo.json');
         process.exit(1);
       }
 
-      projectSettings.buildCommand = `cd ${relative(
-        workPath,
-        cwd
-      )} && turbo run build --filter=${basename(workPath)}...`;
+      projectSettings.buildCommand = `cd ${relativeToRoot} && turbo run build --filter=${projectName}...`;
     } else if (framework === 'nx') {
+      if (
+        (monorepoPkg?.devDependencies?.nx &&
+          semver.lt(monorepoPkg.devDependencies.nx, '15.0.0')) ||
+        (monorepoPkg?.dependencies?.nx &&
+          semver.lt(monorepoPkg.dependencies.nx, '15.0.0'))
+      ) {
+        output.error('nx must be version 15.0.0 or greater');
+        process.exit(1);
+      }
+
+      const nxJSON = JSON.parse(fs.readFileSync(join(cwd, 'nx.json'), 'utf-8'));
+
+      if (!nxJSON?.targetDefaults?.build) {
+        output.error('Missing required `build` target default in nx.json');
+        process.exit(1);
+      }
+
+      projectSettings.buildCommand = `cd ${relativeToRoot} && nx build ${projectName}`;
     } else if (framework === 'rush') {
+      if (
+        !monorepoPkg?.devDependencies?.rush &&
+        !monorepoPkg?.dependencies?.rush
+      ) {
+        output.error(
+          'rush must be a dependency or devDependency in the root package.json'
+        );
+      }
+
+      const rushJSON = JSON.parse(
+        fs.readFileSync(join(cwd, 'rush.json'), 'utf-8')
+      );
+
+      const rushProject = rushJSON?.projects.find(
+        ({ packageName }: { packageName: string }) =>
+          packageName === projectName
+      );
+
+      if (!rushProject) {
+        output.error(`Cannot find ${projectName} in rush.json`);
+        process.exit(1);
+      }
+
+      projectSettings.buildCommand = `node ${relativeToRoot}/common/scripts/install-run-rush.js build --to ${projectName}`;
+      projectSettings.installCommand = `node ${relativeToRoot}/common/scripts/install-run-rush.js install`;
     } else {
     }
   }

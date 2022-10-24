@@ -583,6 +583,115 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
+    'monorepo-detection-nx': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          outputDirectory: 'dist',
+          rootDirectory: 'packages/app-1',
+        },
+      }),
+      'packages/app-1/package.json': JSON.stringify({
+        name: 'app-1',
+        version: '0.0.1',
+        scripts: {
+          build:
+            'mkdir -p dist && node -e \'const world = require("app-2"); console.log(`Hello, ${world}`);\' > dist/index.txt',
+        },
+        dependencies: {
+          'app-2': '*',
+        },
+      }),
+      'packages/app-2/package.json': JSON.stringify({
+        name: 'app-2',
+        version: '0.0.1',
+        main: 'dist/index.js',
+        files: ['dist'],
+        scripts: {
+          build:
+            'mkdir -p dist && echo \'module.exports = "world"\' > dist/index.js',
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        workspaces: ['packages/*'],
+        scripts: {
+          build: 'nx run-many --target=build',
+        },
+        dependencies: {
+          nx: '15.0.1',
+        },
+      }),
+      'nx.json': JSON.stringify({
+        extends: 'nx/presets/npm.json',
+        tasksRunnerOptions: {
+          default: {
+            runner: 'nx/tasks-runners/default',
+          },
+        },
+        targetDefaults: {
+          build: {
+            dependsOn: ['^build'],
+          },
+        },
+      }),
+    },
+    'monorepo-detection-rush': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          outputDirectory: 'dist',
+          rootDirectory: 'packages/app-1',
+        },
+      }),
+      'packages/app-1/package.json': JSON.stringify({
+        name: 'app-1',
+        version: '0.0.1',
+        scripts: {
+          build:
+            'mkdir -p dist && node -e \'const world = require("app-2"); console.log(`Hello, ${world}`);\' > dist/index.txt',
+        },
+        dependencies: {
+          'app-2': '*',
+        },
+      }),
+      'packages/app-2/package.json': JSON.stringify({
+        name: 'app-2',
+        version: '0.0.1',
+        main: 'dist/index.js',
+        files: ['dist'],
+        scripts: {
+          build:
+            'mkdir -p dist && echo \'module.exports = "world"\' > dist/index.js',
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        workspaces: ['packages/*'],
+        scripts: {
+          build: 'rush build',
+        },
+        dependencies: {
+          rush: '5.82.1',
+        },
+      }),
+      'rush.json': JSON.stringify({
+        rushVersion: '5.82.1',
+        npmVersion: '8.19.2',
+        projects: [
+          {
+            packageName: 'app-1',
+            projectFolder: 'packages/app-1',
+          },
+          {
+            packageName: 'app-2',
+            projectFolder: 'packages/app-2',
+          },
+        ],
+      }),
+    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {
