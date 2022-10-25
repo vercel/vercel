@@ -1473,11 +1473,7 @@ export default class DevServer {
             'transfer-encoding',
           ]);
 
-          applyOverriddenHeaders(
-            req.headers,
-            middlewareRes.headers,
-            skipMiddlewareHeaders
-          );
+          applyOverriddenHeaders(req.headers, middlewareRes.headers);
 
           for (const [name, value] of middlewareRes.headers) {
             if (name === 'x-middleware-next') {

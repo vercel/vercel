@@ -6,7 +6,7 @@ describe('applyOverriddenHeaders', () => {
     const reqHeaders = { a: '1' };
     const respHeaders = new Headers();
 
-    applyOverriddenHeaders(reqHeaders, respHeaders, new Set());
+    applyOverriddenHeaders(reqHeaders, respHeaders);
     expect(reqHeaders).toStrictEqual({ a: '1' });
   });
 
@@ -19,7 +19,7 @@ describe('applyOverriddenHeaders', () => {
       'x-middleware-request-b': '2',
     });
 
-    applyOverriddenHeaders(reqHeaders, respHeaders, new Set());
+    applyOverriddenHeaders(reqHeaders, respHeaders);
     expect(reqHeaders).toStrictEqual({ a: '1', b: '2' });
   });
 
@@ -32,7 +32,7 @@ describe('applyOverriddenHeaders', () => {
       'x-middleware-request-b': '2',
     });
 
-    applyOverriddenHeaders(reqHeaders, respHeaders, new Set());
+    applyOverriddenHeaders(reqHeaders, respHeaders);
     expect(reqHeaders).toStrictEqual({ a: '1', b: '2' });
   });
 
@@ -45,12 +45,12 @@ describe('applyOverriddenHeaders', () => {
       'x-middleware-request-b': 'modified',
     });
 
-    applyOverriddenHeaders(reqHeaders, respHeaders, new Set());
+    applyOverriddenHeaders(reqHeaders, respHeaders);
     expect(reqHeaders).toStrictEqual({ a: '1', b: 'modified' });
   });
 
-  it('ignores headers specified in skippedHeaders', async () => {
-    const reqHeaders = { a: '1' };
+  it('ignores headers listed in NONOVERRIDABLE_HEADERS', async () => {
+    const reqHeaders = { a: '1', host: 'example.com' };
     const respHeaders = new Headers({
       // Define a new header 'b' and 'content-length'
       'x-middleware-override-headers': 'a,b,content-length',
@@ -59,12 +59,8 @@ describe('applyOverriddenHeaders', () => {
       'x-middleware-request-content-length': '128',
     });
 
-    applyOverriddenHeaders(
-      reqHeaders,
-      respHeaders,
-      new Set(['content-length'])
-    );
-    expect(reqHeaders).toStrictEqual({ a: '1', b: '2' });
+    applyOverriddenHeaders(reqHeaders, respHeaders);
+    expect(reqHeaders).toStrictEqual({ a: '1', b: '2', host: 'example.com' });
   });
 
   it('deletes an existing header', async () => {
@@ -75,7 +71,7 @@ describe('applyOverriddenHeaders', () => {
       'x-middleware-request-b': '2',
     });
 
-    applyOverriddenHeaders(reqHeaders, respHeaders, new Set());
+    applyOverriddenHeaders(reqHeaders, respHeaders);
     expect(reqHeaders).toStrictEqual({ b: '2' });
   });
 });

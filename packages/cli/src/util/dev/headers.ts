@@ -18,6 +18,21 @@ export function nodeHeadersToFetchHeaders(
 }
 
 /**
+ * Request headers that are not allowed to be overridden by a middleware.
+ */
+const NONOVERRIDABLE_HEADERS: Set<string> = new Set([
+  'host',
+  'connection',
+  'content-length',
+  'transfer-encoding',
+  'keep-alive',
+  'transfer-encoding',
+  'te',
+  'upgrade',
+  'trailer',
+]);
+
+/**
  * Adds/Updates/Deletes headers in `reqHeaders` based on the response headers
  * from a middleware (`respHeaders`).
  *
@@ -28,13 +43,10 @@ export function nodeHeadersToFetchHeaders(
  * `x-middleware-request-*` is the new value for each header. This can't be
  * omitted, even if the header is not being modified.
  *
- * Headers listed in `skippedHeaders` will be ignored.
- *
  */
 export function applyOverriddenHeaders(
   reqHeaders: { [k: string]: string | string[] | undefined },
-  respHeaders: Headers,
-  skippedHeaders: Set<string>
+  respHeaders: Headers
 ) {
   const overriddenHeaders = respHeaders.get('x-middleware-override-headers');
   if (!overriddenHeaders) {
@@ -50,14 +62,14 @@ export function applyOverriddenHeaders(
 
   // Delete headers.
   for (const key of Object.keys(reqHeaders)) {
-    if (!overriddenKeys.has(key)) {
+    if (!NONOVERRIDABLE_HEADERS.has(key) && !overriddenKeys.has(key)) {
       delete reqHeaders[key];
     }
   }
 
   // Update or add headers.
   for (const key of overriddenKeys.keys()) {
-    if (skippedHeaders.has(key)) {
+    if (NONOVERRIDABLE_HEADERS.has(key)) {
       continue;
     }
 
