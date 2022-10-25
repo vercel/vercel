@@ -3963,10 +3963,16 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   t.regex(text, /Next\.js Test/);
 });
 
+// Monorepo Detecetion Tests
+
 test('should detect and use correct defaults for monorepo manager: turbo', async t => {
   const directory = fixture('monorepo-detection-turbo');
   const output = await execute(['build'], { cwd: directory });
   t.is(output.exitCode, 0);
+  t.regex(
+    output.stderr,
+    /Automatically detected Turbo monorepo manager\. Attempting to assign default `buildCommand` and `installCommand` settings\./
+  );
   const result = await fs.readFile(
     path.join(directory, '.vercel/output/static/index.txt'),
     'utf8'
@@ -3974,87 +3980,230 @@ test('should detect and use correct defaults for monorepo manager: turbo', async
   t.assert(result, 'Hello, World');
 });
 
-test('should throw errors when project does not satisfy requirements for turbo', async t => {
+test('should warn and not configure settings when project does not satisfy requirements for turbo', async t => {
   const directory = fixture('monorepo-detection-turbo');
-  const pkgJSONPath = path.join(directory, 'package.json');
   const turboJSONPath = path.join(directory, 'turbo.json');
-  const pkgJSON = JSON.parse(fs.readFileSync(pkgJSONPath, 'utf-8'));
   const turboJSON = JSON.parse(fs.readFileSync(turboJSONPath, 'utf-8'));
-
-  const currentTurboVersion = pkgJSON.dependencies.turbo;
-  pkgJSON.dependencies.turbo = '1.1.0';
-  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
-
-  let output = await execute(['build'], { cwd: directory });
-  t.is(output.exitCode, 1);
-  t.regex(output.stderr, /turbo must be version 1\.2\.0 or greater/);
-
-  pkgJSON.dependencies.turbo = currentTurboVersion;
-  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
 
   const currentTurboBuildPipeline = turboJSON.pipeline.build;
   delete turboJSON.pipeline.build;
   fs.writeFileSync(turboJSONPath, JSON.stringify(turboJSON));
 
-  output = await execute(['build'], { cwd: directory });
+  const output = await execute(['build'], { cwd: directory });
   t.is(output.exitCode, 1);
-  t.regex(output.stderr, /Missing required `build` pipeline in turbo\.json/);
+  t.regex(
+    output.stderr,
+    /Missing required `build` pipeline in turbo\.json\. Skipping automatic setting assignment\./
+  );
 
   turboJSON.pipeline.build = currentTurboBuildPipeline;
   fs.writeFileSync(turboJSONPath, JSON.stringify(turboJSON));
 });
 
-test('should detect and use correct defaults for monorepo manager: nx', async t => {
-  const directory = fixture('monorepo-detection-nx');
-  const output = await execute(['build'], { cwd: directory });
-  t.is(output.exitCode, 0);
-  const result = await fs.readFile(
-    path.join(directory, '.vercel/output/static/index.txt'),
-    'utf8'
-  );
-  t.assert(result, 'Hello, World');
-});
+test('should not override preconfigured settings for turbo', async t => {
+  const directory = fixture('monorepo-detection-turbo');
 
-test('should throw errors when project does not satisfy requirements for nx', async t => {
-  const directory = fixture('monorepo-detection-nx');
-  const pkgJSONPath = path.join(directory, 'package.json');
-  const nxJSONPath = path.join(directory, 'nx.json');
-  const pkgJSON = JSON.parse(fs.readFileSync(pkgJSONPath, 'utf-8'));
-  const nxJSON = JSON.parse(fs.readFileSync(nxJSONPath, 'utf-8'));
+  const projectJSONPath = path.join(directory, '.vercel/project.json');
+  const projectJSON = JSON.parse(fs.readFileSync(projectJSONPath, 'utf-8'));
 
-  const currentNxVersion = pkgJSON.dependencies.nx;
-  pkgJSON.dependencies.nx = '14.0.0';
-  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
+  const currentProjectSettings = projectJSON.settings;
+  projectJSON.settings.buildCommand =
+    'cd ../.. && npx turbo run build --filter=app-1...';
+  projectJSON.settings.installCommand = 'cd ../.. && npm install';
+  fs.writeFileSync(projectJSONPath, JSON.stringify(projectJSON));
 
   let output = await execute(['build'], { cwd: directory });
-  t.is(output.exitCode, 1);
-  t.regex(output.stderr, /nx must be version 14\.6\.2 or greater/);
+  t.is(output.exitCode, 0);
+  t.regex(
+    output.stderr,
+    /Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides\./
+  );
+  t.regex(
+    output.stderr,
+    /Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides\./
+  );
 
-  pkgJSON.dependencies.nx = currentNxVersion;
-  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
+  projectJSON.settings = currentProjectSettings;
+  fs.writeFileSync(projectJSONPath, JSON.stringify(projectJSON));
 
-  const currentNxBuildTargetDefault = nxJSON.targetDefaults.build;
+  const vercelJSONPath = path.join(directory, 'packages/app-1/vercel.json');
+  fs.writeFileSync(
+    vercelJSONPath,
+    JSON.stringify({
+      buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
+      installCommand: 'cd ../.. && npm install',
+    })
+  );
+
+  output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 0);
+  t.regex(
+    output.stderr,
+    /Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides\./
+  );
+  t.regex(
+    output.stderr,
+    /Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides\./
+  );
+
+  fs.rmSync(vercelJSONPath);
+});
+
+[
+  'monorepo-detection-nx',
+  'monorepo-detection-nx-project-config',
+  'monorepo-detection-nx-package-config',
+].forEach(fixturePath => {
+  test(`should detect and use correct defaults for monorepo manager: ${fixturePath}`, async t => {
+    const directory = fixture(fixturePath);
+    const output = await execute(['build'], { cwd: directory });
+    t.is(output.exitCode, 0);
+    t.regex(
+      output.stderr,
+      /Automatically detected Nx monorepo manager\. Attempting to assign default `buildCommand` and `installCommand` settings\./
+    );
+    const result = await fs.readFile(
+      path.join(directory, '.vercel/output/static/index.txt'),
+      'utf8'
+    );
+    t.assert(result, 'Hello, World');
+  });
+
+  test(`should not override preconfigured settings for ${fixturePath}`, async t => {
+    const directory = fixture(fixturePath);
+
+    const projectJSONPath = path.join(directory, '.vercel/project.json');
+    const projectJSON = JSON.parse(fs.readFileSync(projectJSONPath, 'utf-8'));
+
+    const currentProjectSettings = projectJSON.settings;
+    projectJSON.settings.buildCommand = 'cd ../.. && npx nx build app-1';
+    projectJSON.settings.installCommand = 'cd ../.. && npm install';
+    fs.writeFileSync(projectJSONPath, JSON.stringify(projectJSON));
+
+    let output = await execute(['build'], { cwd: directory });
+    t.is(output.exitCode, 0);
+    t.regex(
+      output.stderr,
+      /Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides\./
+    );
+    t.regex(
+      output.stderr,
+      /Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides\./
+    );
+
+    projectJSON.settings = currentProjectSettings;
+    fs.writeFileSync(projectJSONPath, JSON.stringify(projectJSON));
+
+    const vercelJSONPath = path.join(directory, 'packages/app-1/vercel.json');
+    fs.writeFileSync(
+      vercelJSONPath,
+      JSON.stringify({
+        buildCommand: 'cd ../.. && npx nx build app-1',
+        installCommand: 'cd ../.. && npm install',
+      })
+    );
+
+    output = await execute(['build'], { cwd: directory });
+    t.is(output.exitCode, 0);
+    t.regex(
+      output.stderr,
+      /Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides\./
+    );
+    t.regex(
+      output.stderr,
+      /Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides\./
+    );
+
+    fs.rmSync(vercelJSONPath);
+  });
+});
+
+test('should warn and not configure settings when project does not satisfy requirements for nx - nx.json configuration', async t => {
+  const directory = fixture('monorepo-detection-nx');
+  const nxJSONPath = path.join(directory, 'nx.json');
+  const nxJSON = JSON.parse(fs.readFileSync(nxJSONPath, 'utf-8'));
+
+  const currentNxBuildTarget = nxJSON.targetDefaults.build;
   delete nxJSON.targetDefaults.build;
   fs.writeFileSync(nxJSONPath, JSON.stringify(nxJSON));
 
-  output = await execute(['build'], { cwd: directory });
+  const output = await execute(['build'], { cwd: directory });
   t.is(output.exitCode, 1);
-  t.regex(output.stderr, /Missing required `build` target default in nx\.json/);
+  t.regex(
+    output.stderr,
+    /Missing default `build` target in nx\.json\. Checking for project level Nx configuration\.\.\./
+  );
+  t.regex(
+    output.stderr,
+    /Missing project level Nx configuration\. Skipping automatic setting assignment\./
+  );
 
-  nxJSON.targetDefaults.build = currentNxBuildTargetDefault;
+  nxJSON.targetDefaults.build = currentNxBuildTarget;
   fs.writeFileSync(nxJSONPath, JSON.stringify(nxJSON));
+});
+
+test('should warn and not configure settings when project does not satisfy requirements for nx - project.json configuration', async t => {
+  const directory = fixture('monorepo-detection-nx-project-config');
+  const projectJSONPath = path.join(directory, 'packages/app-1/project.json');
+  const projectJSON = JSON.parse(fs.readFileSync(projectJSONPath, 'utf-8'));
+
+  const currentProjectBuildTarget = projectJSON.targets.build;
+  delete projectJSON.targets.build;
+  fs.writeFileSync(projectJSONPath, JSON.stringify(projectJSON));
+
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 1);
+  t.regex(
+    output.stderr,
+    /Missing default `build` target in nx\.json\. Checking for project level Nx configuration\.\.\./
+  );
+  t.regex(output.stderr, /Found project\.json Nx configuration\./);
+  t.regex(
+    output.stderr,
+    /Missing required `build` target in project\.json\. Skipping automatic setting assignment\./
+  );
+
+  projectJSON.targets.build = currentProjectBuildTarget;
+  fs.writeFileSync(projectJSONPath, JSON.stringify(projectJSON));
+});
+
+test('should warn and not configure settings when project does not satisfy requirements for nx - package.json configuration', async t => {
+  const directory = fixture('monorepo-detection-nx-package-config');
+  const packageJSONPath = path.join(directory, 'packages/app-1/package.json');
+  const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, 'utf-8'));
+
+  const currentProjectBuildTarget = packageJSON.nx.targets.build;
+  delete packageJSON.nx.targets.build;
+  fs.writeFileSync(packageJSONPath, JSON.stringify(packageJSON));
+
+  const output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 1);
+  t.regex(
+    output.stderr,
+    /Missing default `build` target in nx\.json\. Checking for project level Nx configuration\.\.\./
+  );
+  t.regex(output.stderr, /Found package\.json Nx configuration\./);
+  t.regex(
+    output.stderr,
+    /Missing required `build` target in package\.json Nx configuration\. Skipping automatic setting assignment\./
+  );
+
+  packageJSON.nx.targets.build = currentProjectBuildTarget;
+  fs.writeFileSync(packageJSONPath, JSON.stringify(packageJSON));
 });
 
 test('should detect and use correct defaults for monorepo manager: rush', async t => {
   const directory = fixture('monorepo-detection-rush');
-  const update = await _execa('npx', ['@microsoft/rush', 'update'], {
+  await _execa('npx', ['@microsoft/rush', 'update'], {
     cwd: directory,
     reject: false,
   });
-  console.log(update);
   const output = await execute(['build'], { cwd: directory });
-  console.log(output);
   t.is(output.exitCode, 0);
+  t.regex(
+    output.stderr,
+    /Automatically detected Rush monorepo manager\. Assigning default `buildCommand` and `installCommand` settings\./
+  );
   const result = await fs.readFile(
     path.join(directory, '.vercel/output/static/index.txt'),
     'utf8'
@@ -4062,35 +4211,53 @@ test('should detect and use correct defaults for monorepo manager: rush', async 
   t.assert(result, 'Hello, World');
 });
 
-test('should throw errors when project does not satisfy requirements for rush', async t => {
-  const directory = fixture('monorepo-detection-nx');
-  const pkgJSONPath = path.join(directory, 'package.json');
-  const rushJSONPath = path.join(directory, 'rush.json');
-  const pkgJSON = JSON.parse(fs.readFileSync(pkgJSONPath, 'utf-8'));
-  const rushJSON = JSON.parse(fs.readFileSync(rushJSONPath, 'utf-8'));
+test('should not override preconfigured settings for rush', async t => {
+  const directory = fixture('monorepo-detection-rush');
 
-  const currentRushVersion = pkgJSON.dependencies.rush;
-  delete pkgJSON.dependencies.rush;
-  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
+  const projectJSONPath = path.join(directory, '.vercel/project.json');
+  const projectJSON = JSON.parse(fs.readFileSync(projectJSONPath, 'utf-8'));
+
+  const currentProjectSettings = projectJSON.settings;
+  projectJSON.settings.buildCommand =
+    'node ../../common/scripts/install-run-rush.js build --to app-1';
+  projectJSON.settings.installCommand =
+    'node ../../common/scripts/install-run-rush.js install';
+  fs.writeFileSync(projectJSONPath, JSON.stringify(projectJSON));
 
   let output = await execute(['build'], { cwd: directory });
-  t.is(output.exitCode, 1);
+  t.is(output.exitCode, 0);
   t.regex(
     output.stderr,
-    /rush must be a dependency or devDependency in the root package.json/
+    /Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides\./
+  );
+  t.regex(
+    output.stderr,
+    /Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides\./
   );
 
-  pkgJSON.dependencies.rush = currentRushVersion;
-  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
+  projectJSON.settings = currentProjectSettings;
+  fs.writeFileSync(projectJSONPath, JSON.stringify(projectJSON));
 
-  const currentRushProjects = rushJSON.projects;
-  delete rushJSON.projects;
-  fs.writeFileSync(rushJSONPath, JSON.stringify(rushJSON));
+  const vercelJSONPath = path.join(directory, 'packages/app-1/vercel.json');
+  fs.writeFileSync(
+    vercelJSONPath,
+    JSON.stringify({
+      buildCommand:
+        'node ../../common/scripts/install-run-rush.js build --to app-1',
+      installCommand: 'node ../../common/scripts/install-run-rush.js install',
+    })
+  );
 
   output = await execute(['build'], { cwd: directory });
-  t.is(output.exitCode, 1);
-  t.regex(output.stderr, /annot find app-1 in rush.json/);
+  t.is(output.exitCode, 0);
+  t.regex(
+    output.stderr,
+    /Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides\./
+  );
+  t.regex(
+    output.stderr,
+    /Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides\./
+  );
 
-  rushJSON.projects = currentRushProjects;
-  fs.writeFileSync(rushJSONPath, JSON.stringify(rushJSON));
+  fs.rmSync(vercelJSONPath);
 });

@@ -567,12 +567,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'package.json': JSON.stringify({
         private: true,
         workspaces: ['packages/*'],
-        scripts: {
-          build: 'turbo run build',
-        },
-        dependencies: {
-          turbo: '1.5.6',
-        },
       }),
       'turbo.json': JSON.stringify({
         pipeline: {
@@ -616,10 +610,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'package.json': JSON.stringify({
         private: true,
         workspaces: ['packages/*'],
-        scripts: {
-          build: 'nx run-many --target=build',
-        },
-        dependencies: {
+        devDependencies: {
           nx: '15.0.1',
         },
       }),
@@ -633,6 +624,142 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         targetDefaults: {
           build: {
             dependsOn: ['^build'],
+          },
+        },
+      }),
+    },
+    'monorepo-detection-nx-project-config': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          outputDirectory: 'dist',
+          rootDirectory: 'packages/app-1',
+        },
+      }),
+      'packages/app-1/package.json': JSON.stringify({
+        name: 'app-1',
+        version: '0.0.1',
+        scripts: {
+          build:
+            'mkdir -p dist && node -e \'const world = require("app-2"); console.log(`Hello, ${world}`);\' > dist/index.txt',
+        },
+        dependencies: {
+          'app-2': '*',
+        },
+      }),
+      'packages/app-1/project.json': JSON.stringify({
+        targets: {
+          build: {
+            executor: 'nx:run-script',
+            options: {
+              script: 'build',
+            },
+            dependsOn: ['^build'],
+          },
+        },
+      }),
+      'packages/app-2/package.json': JSON.stringify({
+        name: 'app-2',
+        version: '0.0.1',
+        main: 'dist/index.js',
+        files: ['dist'],
+        scripts: {
+          build:
+            'mkdir -p dist && echo \'module.exports = "world"\' > dist/index.js',
+        },
+      }),
+      'packages/app-2/project.json': JSON.stringify({
+        targets: {
+          build: {
+            executor: 'nx:run-script',
+            options: {
+              script: 'build',
+            },
+            dependsOn: ['^build'],
+          },
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        workspaces: ['packages/*'],
+        devDependencies: {
+          nx: '15.0.1',
+        },
+      }),
+      'nx.json': JSON.stringify({
+        extends: 'nx/presets/npm.json',
+        tasksRunnerOptions: {
+          default: {
+            runner: 'nx/tasks-runners/default',
+          },
+        },
+      }),
+    },
+    'monorepo-detection-nx-package-config': {
+      '.vercel/project.json': JSON.stringify({
+        orgId: '.',
+        projectId: '.',
+        settings: {
+          outputDirectory: 'dist',
+          rootDirectory: 'packages/app-1',
+        },
+      }),
+      'packages/app-1/package.json': JSON.stringify({
+        name: 'app-1',
+        version: '0.0.1',
+        scripts: {
+          build:
+            'mkdir -p dist && node -e \'const world = require("app-2"); console.log(`Hello, ${world}`);\' > dist/index.txt',
+        },
+        dependencies: {
+          'app-2': '*',
+        },
+        nx: {
+          targets: {
+            build: {
+              executor: 'nx:run-script',
+              options: {
+                script: 'build',
+              },
+              dependsOn: ['^build'],
+            },
+          },
+        },
+      }),
+      'packages/app-2/package.json': JSON.stringify({
+        name: 'app-2',
+        version: '0.0.1',
+        main: 'dist/index.js',
+        files: ['dist'],
+        scripts: {
+          build:
+            'mkdir -p dist && echo \'module.exports = "world"\' > dist/index.js',
+        },
+        nx: {
+          targets: {
+            build: {
+              executor: 'nx:run-script',
+              options: {
+                script: 'build',
+              },
+              dependsOn: ['^build'],
+            },
+          },
+        },
+      }),
+      'package.json': JSON.stringify({
+        private: true,
+        workspaces: ['packages/*'],
+        devDependencies: {
+          nx: '15.0.1',
+        },
+      }),
+      'nx.json': JSON.stringify({
+        extends: 'nx/presets/npm.json',
+        tasksRunnerOptions: {
+          default: {
+            runner: 'nx/tasks-runners/default',
           },
         },
       }),
@@ -670,9 +797,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'package.json': JSON.stringify({
         private: true,
         workspaces: ['packages/*'],
-        scripts: {
-          build: 'rush build',
-        },
         dependencies: {
           rush: '5.82.1',
         },

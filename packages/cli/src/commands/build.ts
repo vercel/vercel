@@ -22,6 +22,7 @@ import {
   detectFramework,
   monorepoManagers,
   LocalFileSystemDetector,
+  packageManagers,
 } from '@vercel/fs-detectors';
 import minimatch from 'minimatch';
 import {
@@ -33,7 +34,6 @@ import {
 } from '@vercel/routing-utils';
 import { fileNameSymbol } from '@vercel/client';
 import type { VercelConfig } from '@vercel/client';
-import semver from 'semver';
 
 import pull from './pull';
 import { staticFiles as getFiles } from '../util/get-files';
@@ -308,85 +308,143 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
+  const localFileSystem = new LocalFileSystemDetector(cwd);
+
   const framework = await detectFramework({
-    fs: new LocalFileSystemDetector(cwd),
+    fs: localFileSystem,
     frameworkList: monorepoManagers,
   });
 
-  const monorepoPkg = JSON.parse(
-    fs.readFileSync(join(cwd, 'package.json'), 'utf-8')
-  );
+  const packageManager =
+    (await detectFramework({
+      fs: localFileSystem,
+      frameworkList: packageManagers,
+    })) ?? 'npm';
+
   const projectName = basename(workPath);
   const relativeToRoot = relative(workPath, cwd);
-  if (!projectSettings.buildCommand) {
-    if (framework === 'turbo') {
-      if (
-        (monorepoPkg?.devDependencies?.turbo &&
-          semver.lt(monorepoPkg.devDependencies.turbo, '1.2.0')) ||
-        (monorepoPkg?.dependencies?.turbo &&
-          semver.lt(monorepoPkg.dependencies.turbo, '1.2.0'))
-      ) {
-        output.error('turbo must be version 1.2.0 or greater');
-        process.exit(1);
-      }
 
-      const turboJSON = JSON.parse(
-        fs.readFileSync(join(cwd, 'turbo.json'), 'utf-8')
+  const setCommand = (
+    command: 'buildCommand' | 'installCommand',
+    value: string
+  ) => {
+    if (projectSettings[command]) {
+      output.warn(
+        `Cannot automatically assign ${command} as it is already set via project settings or configuarion overrides.`
       );
+    } else {
+      projectSettings[command] = value;
+    }
+  };
 
-      if (!turboJSON?.pipeline?.build) {
-        output.error('Missing required `build` pipeline in turbo.json');
-        process.exit(1);
-      }
+  if (framework === 'turbo') {
+    output.log(
+      `Automatically detected Turbo monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
+    );
 
-      projectSettings.buildCommand = `cd ${relativeToRoot} && turbo run build --filter=${projectName}...`;
-    } else if (framework === 'nx') {
-      if (
-        (monorepoPkg?.devDependencies?.nx &&
-          semver.lt(monorepoPkg.devDependencies.nx, '14.6.2')) ||
-        (monorepoPkg?.dependencies?.nx &&
-          semver.lt(monorepoPkg.dependencies.nx, '14.6.2'))
-      ) {
-        output.error('nx must be version 14.6.2 or greater');
-        process.exit(1);
-      }
+    // No ENOENT handling required here since conditional wouldn't be `true` unless `turbo.json` was found.
+    const turboJSON = JSON.parse(
+      fs.readFileSync(join(cwd, 'turbo.json'), 'utf-8')
+    );
 
-      const nxJSON = JSON.parse(fs.readFileSync(join(cwd, 'nx.json'), 'utf-8'));
+    if (!turboJSON?.pipeline?.build) {
+      output.warn(
+        'Missing required `build` pipeline in turbo.json. Skipping automatic setting assignment.'
+      );
+    } else {
+      setCommand(
+        'buildCommand',
+        `cd ${relativeToRoot} && npx turbo run build --filter=${projectName}...`
+      );
+      setCommand(
+        'installCommand',
+        `cd ${relativeToRoot} && ${packageManager} install`
+      );
+    }
+  } else if (framework === 'nx') {
+    output.log(
+      `Automatically detected Nx monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
+    );
 
-      if (!nxJSON?.targetDefaults?.build) {
-        output.error('Missing required `build` target default in nx.json');
-        process.exit(1);
-      }
+    // No ENOENT handling required here since conditional wouldn't be `true` unless `nx.json` was found.
+    const nxJSON = JSON.parse(fs.readFileSync(join(cwd, 'nx.json'), 'utf-8'));
 
-      projectSettings.buildCommand = `cd ${relativeToRoot} && nx build ${projectName}`;
-    } else if (framework === 'rush') {
-      if (
-        !monorepoPkg?.devDependencies?.rush &&
-        !monorepoPkg?.dependencies?.rush
-      ) {
-        output.error(
-          'rush must be a dependency or devDependency in the root package.json'
+    if (!nxJSON?.targetDefaults?.build) {
+      output.log(
+        'Missing default `build` target in nx.json. Checking for project level Nx configuration...'
+      );
+      const [projectJSONBuf, packageJsonBuf] = await Promise.all([
+        fs.readFile(join(workPath, 'project.json')).catch(() => null),
+        fs.readFile(join(workPath, 'package.json')).catch(() => null),
+      ]);
+
+      if (projectJSONBuf) {
+        output.log('Found project.json Nx configuration.');
+        const projectJSON = JSON.parse(projectJSONBuf.toString('utf-8'));
+        if (!projectJSON?.targets?.build) {
+          output.warn(
+            'Missing required `build` target in project.json. Skipping automatic setting assignment.'
+          );
+        } else {
+          setCommand(
+            'buildCommand',
+            `cd ${relativeToRoot} && npx nx build ${projectName}`
+          );
+          setCommand(
+            'installCommand',
+            `cd ${relativeToRoot} && ${packageManager} install`
+          );
+        }
+      } else if (packageJsonBuf) {
+        const packageJSON = JSON.parse(packageJsonBuf.toString('utf-8'));
+        if (packageJSON?.nx) {
+          output.log('Found package.json Nx configuration.');
+          if (!packageJSON.nx.targets?.build) {
+            output.warn(
+              'Missing required `build` target in package.json Nx configuration. Skipping automatic setting assignment.'
+            );
+          } else {
+            setCommand(
+              'buildCommand',
+              `cd ${relativeToRoot} && npx nx build ${projectName}`
+            );
+            setCommand(
+              'installCommand',
+              `cd ${relativeToRoot} && ${packageManager} install`
+            );
+          }
+        } else {
+          output.warn(
+            'Missing project level Nx configuration. Skipping automatic setting assignment.'
+          );
+        }
+      } else {
+        output.warn(
+          'Missing project level Nx configuration. Skipping automatic setting assignment.'
         );
       }
-
-      const rushJSON = JSON.parse(
-        fs.readFileSync(join(cwd, 'rush.json'), 'utf-8')
-      );
-
-      const rushProject = rushJSON?.projects.find(
-        ({ packageName }: { packageName: string }) =>
-          packageName === projectName
-      );
-
-      if (!rushProject) {
-        output.error(`Cannot find ${projectName} in rush.json`);
-        process.exit(1);
-      }
-
-      projectSettings.buildCommand = `node ${relativeToRoot}/common/scripts/install-run-rush.js build --to ${projectName}`;
-      projectSettings.installCommand = `node ${relativeToRoot}/common/scripts/install-run-rush.js install`;
     } else {
+      setCommand(
+        'buildCommand',
+        `cd ${relativeToRoot} && npx nx build ${projectName}`
+      );
+      setCommand(
+        'installCommand',
+        `cd ${relativeToRoot} && ${packageManager} install`
+      );
     }
+  } else if (framework === 'rush') {
+    output.log(
+      `Automatically detected Rush monorepo manager. Assigning default \`buildCommand\` and \`installCommand\` settings.`
+    );
+    setCommand(
+      'buildCommand',
+      `node ${relativeToRoot}/common/scripts/install-run-rush.js build --to ${projectName}`
+    );
+    setCommand(
+      'installCommand',
+      `node ${relativeToRoot}/common/scripts/install-run-rush.js install`
+    );
   }
 
   // Get a list of source files
