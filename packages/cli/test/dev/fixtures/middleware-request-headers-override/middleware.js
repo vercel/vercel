@@ -4,6 +4,8 @@ export default () => {
       'x-middleware-next': '1',
       'x-middleware-override-headers':
         'x-from-client-a,x-from-client-b,x-from-middleware-a,x-from-middleware-b,transfer-encoding',
+      // Headers to be preserved.
+      'x-middleware-request-x-from-client-a': 'hello from client',
       // Headers to be modified by the middleware.
       'x-middleware-request-x-from-client-b': 'hello from middleware',
       // Headers to be added by the middleware.

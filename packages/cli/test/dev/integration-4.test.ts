@@ -627,20 +627,22 @@ test(
           // Headers sent to the API route.
           const headers = JSON.parse(actual);
 
+          // Preserved headers.
+          expect(headers).toHaveProperty(
+            'x-from-client-a',
+            'hello from client'
+          );
+
           // Headers added/modified by the middleware.
           expect(headers).toHaveProperty(
             'x-from-client-b',
             'hello from middleware'
           );
-          expect(headers).toHaveProperty(
-            'x-from-client-c',
-            'hello from client'
-          );
           expect(headers).toHaveProperty('x-from-middleware-a', 'hello a!');
           expect(headers).toHaveProperty('x-from-middleware-b', 'hello b!');
 
           // Headers deleted by the middleware.
-          expect(headers).not.toHaveProperty('x-from-client-a');
+          expect(headers).not.toHaveProperty('x-from-client-c');
 
           // Internal headers should not be visible from API routes.
           expect(headers).not.toHaveProperty('x-middleware-override-headers');
