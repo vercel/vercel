@@ -36,28 +36,27 @@ export function applyOverriddenHeaders(
   respHeaders: Headers,
   skippedHeaders: Set<string>
 ) {
-  if (!respHeaders.has('x-middleware-override-headers')) {
+  const overriddenHeaders = respHeaders.get('x-middleware-override-headers');
+  if (!overriddenHeaders) {
     return;
   }
 
-  const overriddenHeaders: Set<string> = new Set();
-  for (const key of respHeaders
-    .get('x-middleware-override-headers')!
-    .split(',')) {
-    overriddenHeaders.add(key.trim());
+  const overriddenKeys: Set<string> = new Set();
+  for (const key of overriddenHeaders.split(',')) {
+    overriddenKeys.add(key.trim());
   }
 
   respHeaders.delete('x-middleware-override-headers');
 
   // Delete headers.
   for (const key of Object.keys(reqHeaders)) {
-    if (!overriddenHeaders.has(key)) {
+    if (!overriddenKeys.has(key)) {
       delete reqHeaders[key];
     }
   }
 
   // Update or add headers.
-  for (const key of overriddenHeaders.keys()) {
+  for (const key of overriddenKeys.keys()) {
     if (skippedHeaders.has(key)) {
       continue;
     }
