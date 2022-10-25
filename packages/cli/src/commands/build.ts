@@ -343,11 +343,11 @@ async function doBuild(
     } else if (framework === 'nx') {
       if (
         (monorepoPkg?.devDependencies?.nx &&
-          semver.lt(monorepoPkg.devDependencies.nx, '15.0.0')) ||
+          semver.lt(monorepoPkg.devDependencies.nx, '14.6.2')) ||
         (monorepoPkg?.dependencies?.nx &&
-          semver.lt(monorepoPkg.dependencies.nx, '15.0.0'))
+          semver.lt(monorepoPkg.dependencies.nx, '14.6.2'))
       ) {
-        output.error('nx must be version 15.0.0 or greater');
+        output.error('nx must be version 14.6.2 or greater');
         process.exit(1);
       }
 

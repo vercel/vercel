@@ -4028,12 +4028,12 @@ test('should throw errors when project does not satisfy requirements for nx', as
 
   let output = await execute(['build'], { cwd: directory });
   t.is(output.exitCode, 1);
-  t.regex(output.stderr, /nx must be version 15\.0\.0 or greater/);
+  t.regex(output.stderr, /nx must be version 14\.6\.2 or greater/);
 
   pkgJSON.dependencies.nx = currentNxVersion;
   fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
 
-  const currentNxBuildPipeline = nxJSON.targetDefaults.build;
+  const currentNxBuildTargetDefault = nxJSON.targetDefaults.build;
   delete nxJSON.targetDefaults.build;
   fs.writeFileSync(nxJSONPath, JSON.stringify(nxJSON));
 
@@ -4041,14 +4041,17 @@ test('should throw errors when project does not satisfy requirements for nx', as
   t.is(output.exitCode, 1);
   t.regex(output.stderr, /Missing required `build` target default in nx\.json/);
 
-  nxJSON.targetDefaults.build = currentNxBuildPipeline;
+  nxJSON.targetDefaults.build = currentNxBuildTargetDefault;
   fs.writeFileSync(nxJSONPath, JSON.stringify(nxJSON));
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip('should detect and use correct defaults for monorepo manager: rush', async t => {
+test('should detect and use correct defaults for monorepo manager: rush', async t => {
   const directory = fixture('monorepo-detection-rush');
-  // TODO figure out how to run rush update here
+  const update = await _execa('npx', ['@microsoft/rush', 'update'], {
+    cwd: directory,
+    reject: false,
+  });
+  console.log(update);
   const output = await execute(['build'], { cwd: directory });
   console.log(output);
   t.is(output.exitCode, 0);
@@ -4057,4 +4060,37 @@ test.skip('should detect and use correct defaults for monorepo manager: rush', a
     'utf8'
   );
   t.assert(result, 'Hello, World');
+});
+
+test('should throw errors when project does not satisfy requirements for rush', async t => {
+  const directory = fixture('monorepo-detection-nx');
+  const pkgJSONPath = path.join(directory, 'package.json');
+  const rushJSONPath = path.join(directory, 'rush.json');
+  const pkgJSON = JSON.parse(fs.readFileSync(pkgJSONPath, 'utf-8'));
+  const rushJSON = JSON.parse(fs.readFileSync(rushJSONPath, 'utf-8'));
+
+  const currentRushVersion = pkgJSON.dependencies.rush;
+  delete pkgJSON.dependencies.rush;
+  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
+
+  let output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 1);
+  t.regex(
+    output.stderr,
+    /rush must be a dependency or devDependency in the root package.json/
+  );
+
+  pkgJSON.dependencies.rush = currentRushVersion;
+  fs.writeFileSync(pkgJSONPath, JSON.stringify(pkgJSON));
+
+  const currentRushProjects = rushJSON.projects;
+  delete rushJSON.projects;
+  fs.writeFileSync(rushJSONPath, JSON.stringify(rushJSON));
+
+  output = await execute(['build'], { cwd: directory });
+  t.is(output.exitCode, 1);
+  t.regex(output.stderr, /annot find app-1 in rush.json/);
+
+  rushJSON.projects = currentRushProjects;
+  fs.writeFileSync(rushJSONPath, JSON.stringify(rushJSON));
 });
