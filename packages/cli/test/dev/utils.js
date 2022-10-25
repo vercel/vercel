@@ -425,7 +425,7 @@ function testFixtureStdio(
         stdout += data;
       });
 
-      dev.stderr.on('data', data => {
+      dev.stderr.on('data', async data => {
         stderr += data;
 
         if (stripAnsi(data).includes('Ready! Available at')) {
@@ -433,14 +433,14 @@ function testFixtureStdio(
         }
 
         if (stderr.includes(`Requested port ${port} is already in use`)) {
-          dev.kill('SIGTERM');
+          await treeKill(dev.pid, 'SIGTERM');
           throw new Error(
             `Failed for "${directory}" with port ${port} with stderr "${stderr}".`
           );
         }
 
         if (stderr.includes('Command failed')) {
-          dev.kill('SIGTERM');
+          await treeKill(dev.pid, 'SIGTERM');
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
       });
@@ -471,7 +471,7 @@ function testFixtureStdio(
       };
       await fn(helperTestPath, port);
     } finally {
-      dev.kill('SIGTERM');
+      await treeKill(dev.pid, 'SIGTERM');
       await exitResolver;
     }
   };
@@ -484,14 +484,14 @@ beforeEach(() => {
 afterEach(async () => {
   await Promise.all(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    Array.from(processList).map(([_procId, proc]) => {
+    Array.from(processList).map(async ([_procId, proc]) => {
       if (proc.killed === false) {
         console.log(
           `killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`
         );
 
         try {
-          process.kill(proc.pid, 'SIGTERM');
+          await treeKill(proc.pid, 'SIGTERM');
         } catch (err) {
           // Was already killed
           console.error(`Failed to kill process`, proc.pid, err);
