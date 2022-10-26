@@ -490,7 +490,7 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
     const buf = execSync(
       process.platform === 'darwin'
         ? `pgrep -P ${parentPid}`
-        : `ps -o pid --no-headers, --ppid ${parentPid}`
+        : `ps -o pid --no-headers --ppid ${parentPid}`
     );
     for (let pid of buf.match(/\d+/g)) {
       pid = parseInt(pid);
