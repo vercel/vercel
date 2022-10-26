@@ -446,6 +446,9 @@ function testFixtureStdio(
       });
 
       dev.on('close', () => {
+        if (directory === 'python-flask') {
+          console.log("testFixtureStdio('python-flask') CHILD PROCESS CLOSE");
+        }
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;
@@ -453,7 +456,16 @@ function testFixtureStdio(
         exitResolver.resolve();
       });
 
+      if (directory === 'python-flask') {
+        dev.on('exit', () => {
+          console.log("testFixtureStdio('python-flask') CHILD PROCESS EXIT");
+        });
+      }
+
       dev.on('error', () => {
+        if (directory === 'python-flask') {
+          console.log("testFixtureStdio('python-flask') CHILD PROCESS ERROR");
+        }
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;
