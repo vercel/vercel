@@ -610,6 +610,21 @@ const main = async () => {
       return 1;
     }
 
+    if (isErrnoException(err) && err.code === 'ECONNRESET') {
+      // Error message will look like the following:
+      // request to https://api.vercel.com/v2/user failed, reason: socket hang up
+      const matches = /request to https:\/\/(.*?)\//.exec(err.message || '');
+      const hostname = matches?.[1];
+      if (hostname) {
+        output.error(
+          `Connection to ${highlight(
+            hostname
+          )} interrupted. Please verify your internet connectivity and DNS configuration.`
+        );
+      }
+      return 1;
+    }
+
     if (
       isErrnoException(err) &&
       (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
