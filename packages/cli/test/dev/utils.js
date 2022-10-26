@@ -504,7 +504,7 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
         }
       }
     } catch (e) {
-      console.error(`Command failed: ${cmd}`);
+      // squelch
     }
   }
 
@@ -514,28 +514,32 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
       process.kill(pid, signal);
     } catch (e) {
       // process does not exist
+      console.log(`pid ${pid} killed`);
       return;
     }
 
     // try up to
-    for (let i = 11; i; i--) {
+    for (let i = 2; i < 12; i++) {
       try {
         await new Promise(resolve => setTimeout(resolve, 250));
 
         // check if killed
         process.kill(pid, 0);
 
-        if (i === 1) {
+        if (i === 11) {
           console.log(`Hmm, pid ${pid} just won't exit, giving up`);
           return;
         }
 
-        console.log(`Hmm, pid ${pid} didn't exit, sending SIGKILL`);
+        console.log(
+          `Hmm, pid ${pid} didn't exit, sending SIGKILL (attempt ${i})`
+        );
 
         // process didn't exit, force kill
         process.kill(pid, 'SIGKILL');
       } catch (e) {
         // dead
+        console.log(`pid ${pid} killed`);
         return;
       }
     }
