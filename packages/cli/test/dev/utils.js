@@ -487,20 +487,24 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
   };
 
   async function ps(parentPid) {
-    const buf = execSync(
+    const cmd =
       process.platform === 'darwin'
         ? `pgrep -P ${parentPid}`
-        : `ps -o pid --no-headers --ppid ${parentPid}`,
-      { encoding: 'utf-8' }
-    );
-    for (let pid of buf.match(/\d+/g)) {
-      pid = parseInt(pid);
-      const recurse = Object.prototype.hasOwnProperty.call(pids, pid);
-      pids[parentPid].push(pid);
-      pids[pid] = [];
-      if (recurse) {
-        await ps(pid);
+        : `ps -o pid --no-headers --ppid ${parentPid}`;
+
+    try {
+      const buf = execSync(cmd, { encoding: 'utf-8' });
+      for (let pid of buf.match(/\d+/g)) {
+        pid = parseInt(pid);
+        const recurse = Object.prototype.hasOwnProperty.call(pids, pid);
+        pids[parentPid].push(pid);
+        pids[pid] = [];
+        if (recurse) {
+          await ps(pid);
+        }
       }
+    } catch (e) {
+      console.error(`Command failed: ${cmd}`);
     }
   }
 
@@ -514,12 +518,19 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
     }
 
     // try up to
-    for (let i = 0; i < 10; i++) {
+    for (let i = 11; i; i--) {
       try {
         await new Promise(resolve => setTimeout(resolve, 250));
 
         // check if killed
         process.kill(pid, 0);
+
+        if (i === 1) {
+          console.log(`Hmm, pid ${pid} just won't exit, giving up`);
+          return;
+        }
+
+        console.log(`Hmm, pid ${pid} didn't exit, sending SIGKILL`);
 
         // process didn't exit, force kill
         process.kill(pid, 'SIGKILL');
@@ -531,6 +542,9 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
   }
 
   await ps(pid);
+
+  console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
+
   await Promise.all(Object.keys(pids).map(pid => nuke(pid, signal)));
 }
 
