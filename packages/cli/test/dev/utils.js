@@ -469,10 +469,34 @@ function testFixtureStdio(
         }
         await testPath(true, `http://localhost:${port}`, ...args);
       };
+      if (directory === 'python-flask') {
+        console.log("testFixtureStdio('python-flask') CALLING FN");
+      }
       await fn(helperTestPath, port);
+      if (directory === 'python-flask') {
+        console.log("testFixtureStdio('python-flask') FN DONE");
+      }
     } finally {
-      await treeKill(dev.pid, 'SIGTERM');
+      if (directory === 'python-flask') {
+        console.log(
+          "testFixtureStdio('python-flask') CALLING TREE KILL",
+          dev.pid
+        );
+      }
+      try {
+        await treeKill(dev.pid, 'SIGTERM');
+        if (directory === 'python-flask') {
+          console.log("testFixtureStdio('python-flask') TREE KILL DONE");
+        }
+      } catch (tke) {
+        if (directory === 'python-flask') {
+          console.log("testFixtureStdio('python-flask') TREE KILL ERROR", tke);
+        }
+      }
       await exitResolver;
+      if (directory === 'python-flask') {
+        console.log("testFixtureStdio('python-flask') FINISHED");
+      }
     }
   };
 }
