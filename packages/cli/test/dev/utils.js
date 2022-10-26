@@ -10,9 +10,7 @@ const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
-const { promisify } = require('util');
-const treeKill = promisify(require('tree-kill'));
-const { execSync, spawn } = require('child_process');
+const { execSync } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -261,7 +259,7 @@ async function testFixture(directory, opts = {}, args = []) {
   dev.kill = async (...args) => {
     // kill the entire process tree for the child as some tests
     // spawn child processes that we don't have the pid for
-    await treeKill(dev.pid, ...args);
+    await nukeProcess(dev.pid, ...args);
 
     await exitResolver;
     return {
@@ -434,14 +432,14 @@ function testFixtureStdio(
         }
 
         if (stderr.includes(`Requested port ${port} is already in use`)) {
-          await treeKill(dev.pid, 'SIGTERM');
+          await nukeProcess(dev.pid, 'SIGTERM');
           throw new Error(
             `Failed for "${directory}" with port ${port} with stderr "${stderr}".`
           );
         }
 
         if (stderr.includes('Command failed')) {
-          await treeKill(dev.pid, 'SIGTERM');
+          await nukeProcess(dev.pid, 'SIGTERM');
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
       });
@@ -472,81 +470,73 @@ function testFixtureStdio(
       };
       await fn(helperTestPath, port);
     } finally {
-      let pids = [];
-      if (directory === 'go') {
-        pids = await printProcessTree(dev.pid);
-      }
-
-      // we have to send SIGKILL because some tests spawn non-Node.js processes
-      // that won't SIGTERM
-      await treeKill(dev.pid, 'SIGKILL');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      if (directory === 'go') {
-        await printProcessTree(dev.pid);
-
-        for (const p of pids) {
-          try {
-            process.kill(p, 0);
-            console.log(`pid ${p} still running!`);
-          } catch (e) {
-            console.log(`pid ${p} was killed`);
-          }
-        }
-      }
-
+      await nukeProcess(dev.pid);
       await exitResolver;
     }
   };
 }
 
-function buildProcessTree(parentPid, tree, pidsToProcess) {
-  return new Promise(resolve => {
-    const ps = spawn('ps', ['-o', 'pid', '--no-headers', '--ppid', parentPid]);
+async function nukeProcess(pid, signal = 'SIGTERM') {
+  if (process.platform === 'win32') {
+    execSync(`taskkill /pid ${pid} /T /F`);
+    return;
+  }
 
-    let allData = '';
-    ps.stdout.on('data', data => {
-      allData += data.toString('ascii');
-    });
+  const pids = {
+    [pid]: [],
+  };
 
-    ps.on('close', async code => {
-      delete pidsToProcess[parentPid];
-
-      if (code === 0) {
-        for (let pid of allData.match(/\d+/g)) {
-          pid = parseInt(pid, 10);
-          tree[parentPid].push(pid);
-          tree[pid] = [];
-          pidsToProcess[pid] = 1;
-          await buildProcessTree(pid, tree, pidsToProcess);
-        }
+  async function ps(parentPid) {
+    const buf = execSync(
+      process.platform === 'darwin'
+        ? `pgrep -P ${parentPid}`
+        : `ps -o pid --no-headers, --ppid ${parentPid}`
+    );
+    for (let pid of buf.match(/\d+/g)) {
+      pid = parseInt(pid);
+      const recurse = Object.prototype.hasOwnProperty.call(pids, pid);
+      pids[parentPid].push(pid);
+      pids[pid] = [];
+      if (recurse) {
+        await ps(pid);
       }
-
-      resolve();
-    });
-  });
-}
-
-async function printProcessTree(pid) {
-  var tree = {};
-  var pidsToProcess = {};
-  tree[pid] = [];
-  pidsToProcess[pid] = 1;
-
-  await buildProcessTree(pid, tree, pidsToProcess);
-
-  console.log(`PROCESS TREE: ${pid}`);
-  console.log(JSON.stringify(tree, null, 2));
-
-  for (const p of Object.keys(tree)) {
-    try {
-      execSync(`ps ${p}`, { stdio: 'inherit' });
-    } catch (e) {
-      // silence
     }
   }
 
-  return Object.keys(tree);
+  async function wait(ms) {
+    await new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function nuke(pid, signal) {
+    // kill the process
+    try {
+      process.kill(pid, signal);
+    } catch (e) {
+      // process does not exist
+      return;
+    }
+
+    await wait(250);
+
+    // try up to
+    for (let i = 0; i < 10; i++) {
+      // check if killed
+      try {
+        process.kill(pid, 0);
+
+        // process didn't exit, force kill
+        process.kill(pid, 'SIGKILL');
+
+        await wait(250);
+      } catch (e) {
+        // dead
+        return;
+      }
+    }
+  }
+
+  await ps(pid);
+  await Promise.all(Object.keys(pids).map(pid => nuke(pid, signal)));
 }
 
 beforeEach(() => {
@@ -560,7 +550,7 @@ afterEach(async () => {
       console.log(`killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`);
 
       try {
-        await treeKill(proc.pid, 'SIGTERM');
+        await nukeProcess(proc.pid, 'SIGTERM');
       } catch (err) {
         // Was already killed
         if (err.code !== 'ESRCH') {
