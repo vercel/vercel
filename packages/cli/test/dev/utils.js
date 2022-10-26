@@ -415,11 +415,11 @@ function testFixtureStdio(
         }
       );
 
-      dev.stdout.setEncoding('utf8');
-      dev.stderr.setEncoding('utf8');
+      // dev.stdout.setEncoding('utf8');
+      // dev.stderr.setEncoding('utf8');
 
-      dev.stdout.pipe(process.stdout);
-      dev.stderr.pipe(process.stderr);
+      // dev.stdout.pipe(process.stdout);
+      // dev.stderr.pipe(process.stderr);
 
       dev.stdout.on('data', data => {
         stdout += data;
