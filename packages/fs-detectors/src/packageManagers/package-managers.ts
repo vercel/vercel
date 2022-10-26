@@ -21,6 +21,23 @@ export const packageManagers: Array<
     },
   },
   {
+    name: 'pnpm',
+    slug: 'pnpm',
+    logo: '',
+    darkModeLogo: '',
+    detectors: {
+      some: [
+        {
+          path: 'pnpm-lock.yaml',
+        },
+        {
+          path: 'package.json',
+          matchContent: '"packageManager":\\s*"pnpm@.*"',
+        },
+      ],
+    },
+  },
+  {
     name: 'yarn',
     slug: 'yarn',
     logo: '',
@@ -36,23 +53,6 @@ export const packageManagers: Array<
         },
         {
           path: 'package.json',
-        },
-      ],
-    },
-  },
-  {
-    name: 'pnpm',
-    slug: 'pnpm',
-    logo: '',
-    darkModeLogo: '',
-    detectors: {
-      some: [
-        {
-          path: 'pnpm-lock.yaml',
-        },
-        {
-          path: 'package.json',
-          matchContent: '"packageManager":\\s*"pnpm@.*"',
         },
       ],
     },
