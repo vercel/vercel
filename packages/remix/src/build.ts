@@ -3,6 +3,7 @@ import { dirname, join, relative } from 'path';
 import {
   debug,
   download,
+  EdgeFunction,
   execCommand,
   FileFsRef,
   getEnvForPackageManager,
@@ -162,6 +163,7 @@ export const build: BuildV2 = async ({
 
   let serverBuildPath = 'build/index.js';
   let needsHandler = true;
+  let isEdge = false;
   try {
     const remixConfig: AppConfig = require(join(
       entrypointFsDirname,
@@ -171,14 +173,19 @@ export const build: BuildV2 = async ({
     // If `serverBuildTarget === 'vercel'` then Remix will output a handler
     // that is already in Vercel (req, res) format, so don't inject the handler
     if (remixConfig.serverBuildTarget) {
-      if (remixConfig.serverBuildTarget !== 'vercel') {
+      if (remixConfig.serverBuildTarget !== 'vercel' && remixConfig.serverBuildTarget !== 'cloudflare-workers') {
         throw new Error(
-          `\`serverBuildTarget\` in Remix config must be "vercel" (got "${remixConfig.serverBuildTarget}")`
+          `\`serverBuildTarget\` in Remix config must be "vercel" or "cloudflare-workers" (got "${remixConfig.serverBuildTarget}")`
         );
       }
       serverBuildPath = 'api/index.js';
       needsHandler = false;
+
+      if (remixConfig.serverBuildTarget === 'cloudflare-workers') {
+        isEdge = true
+      }
     }
+
 
     if (remixConfig.serverBuildPath) {
       // Explicit file path where the server output file will be
@@ -203,7 +210,12 @@ export const build: BuildV2 = async ({
 
   const [staticFiles, renderFunction] = await Promise.all([
     glob('**', join(entrypointFsDirname, 'public')),
-    createRenderFunction(
+    isEdge ? createRenderEdgeFunction(
+      entrypointFsDirname,
+      repoRootPath,
+      serverBuildPath,
+      needsHandler,
+    ) : createRenderFunction(
       entrypointFsDirname,
       repoRootPath,
       serverBuildPath,
@@ -281,4 +293,46 @@ async function createRenderFunction(
   });
 
   return lambda;
+}
+
+async function createRenderEdgeFunction(
+  entrypointDir: string,
+  rootDir: string,
+  serverBuildPath: string,
+  needsHandler: boolean,
+): Promise<EdgeFunction> {
+  const files: Files = {};
+  const handler = needsHandler
+    ? join(dirname(serverBuildPath), '__vc_handler.js')
+    : serverBuildPath;
+  const handlerPath = join(rootDir, handler);
+
+  if (needsHandler) {
+    // Copy the `default-server.js` file into the "build" directory
+    const sourceHandlerPath = join(__dirname, '../default-server.js');
+    await fs.copyFile(sourceHandlerPath, handlerPath);
+  }
+
+  // Trace the handler with `@vercel/nft`
+  const trace = await nodeFileTrace([handlerPath], {
+    base: rootDir,
+    processCwd: entrypointDir,
+  });
+
+  for (const warning of trace.warnings) {
+    debug(`Warning from trace: ${warning.message}`);
+  }
+
+  for (const file of trace.fileList) {
+    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
+  }
+
+  const edgeFunction = new EdgeFunction({
+    name: 'render',
+    deploymentTarget: 'v8-worker',
+    entrypoint: handler,
+    files,
+  });
+
+  return edgeFunction;
 }
