@@ -500,7 +500,7 @@ function testFixtureStdio(
         if (directory === 'python-flask') {
           await printProcessTree(dev.pid);
         }
-        await treeKill(dev.pid, 'SIGTERM');
+        await treeKill(dev.pid, 'SIGKILL');
         if (directory === 'python-flask') {
           console.log("testFixtureStdio('python-flask') TREE KILL DONE");
           await printProcessTree(dev.pid);
