@@ -494,6 +494,11 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
 
     try {
       const buf = execSync(cmd, { encoding: 'utf-8' });
+      console.log({
+        cmd,
+        buf,
+        pids,
+      });
       for (let pid of buf.match(/\d+/g)) {
         pid = parseInt(pid);
         const recurse = Object.prototype.hasOwnProperty.call(pids, pid);
