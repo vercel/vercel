@@ -12,6 +12,7 @@ const {
 } = require('../../../../test/lib/deployment/now-deploy');
 const { promisify } = require('util');
 const treeKill = promisify(require('tree-kill'));
+const { execSync, spawn } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -471,13 +472,80 @@ function testFixtureStdio(
       };
       await fn(helperTestPath, port);
     } finally {
+      let pids = [];
+      if (directory === 'go') {
+        pids = await printProcessTree(dev.pid);
+      }
+
       // we have to send SIGKILL because some tests spawn non-Node.js processes
       // that won't SIGTERM
       await treeKill(dev.pid, 'SIGKILL');
 
+      if (directory === 'go') {
+        await printProcessTree(dev.pid);
+
+        for (const p of pids) {
+          try {
+            process.kill(p, 0);
+            console.log(`pid ${p} still running!`);
+          } catch (e) {
+            console.log(`pid ${p} was killed`);
+          }
+        }
+      }
+
       await exitResolver;
     }
   };
+}
+
+function buildProcessTree(parentPid, tree, pidsToProcess) {
+  return new Promise(resolve => {
+    const ps = spawn('ps', ['-o', 'pid', '--no-headers', '--ppid', parentPid]);
+
+    let allData = '';
+    ps.stdout.on('data', data => {
+      allData += data.toString('ascii');
+    });
+
+    ps.on('close', async code => {
+      delete pidsToProcess[parentPid];
+
+      if (code === 0) {
+        for (let pid of allData.match(/\d+/g)) {
+          pid = parseInt(pid, 10);
+          tree[parentPid].push(pid);
+          tree[pid] = [];
+          pidsToProcess[pid] = 1;
+          await buildProcessTree(pid, tree, pidsToProcess);
+        }
+      }
+
+      resolve();
+    });
+  });
+}
+
+async function printProcessTree(pid) {
+  var tree = {};
+  var pidsToProcess = {};
+  tree[pid] = [];
+  pidsToProcess[pid] = 1;
+
+  await buildProcessTree(pid, tree, pidsToProcess);
+
+  console.log(`PROCESS TREE: ${pid}`);
+  console.log(JSON.stringify(tree, null, 2));
+
+  for (const p of Object.keys(tree)) {
+    try {
+      execSync(`ps ${p}`, { stdio: 'inherit' });
+    } catch (e) {
+      // silence
+    }
+  }
+
+  return Object.keys(tree);
 }
 
 beforeEach(() => {
