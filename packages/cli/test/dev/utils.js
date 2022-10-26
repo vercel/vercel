@@ -12,7 +12,7 @@ const {
 } = require('../../../../test/lib/deployment/now-deploy');
 const { promisify } = require('util');
 const treeKill = promisify(require('tree-kill'));
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -555,6 +555,10 @@ async function printProcessTree(pid) {
 
   console.log(`PROCESS TREE: ${pid}`);
   console.log(JSON.stringify(tree, null, 2));
+
+  for (const p of Object.keys(tree)) {
+    execSync(`ps ${p}`, { stdio: 'inherit' });
+  }
 }
 
 beforeEach(() => {
