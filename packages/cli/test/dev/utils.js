@@ -480,6 +480,7 @@ function testFixtureStdio(
       // we have to send SIGKILL because some tests spawn non-Node.js processes
       // that won't SIGTERM
       await treeKill(dev.pid, 'SIGKILL');
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       if (directory === 'go') {
         await printProcessTree(dev.pid);
