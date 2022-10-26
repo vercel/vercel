@@ -12,7 +12,6 @@ const {
 } = require('../../../../test/lib/deployment/now-deploy');
 const { promisify } = require('util');
 const treeKill = promisify(require('tree-kill'));
-const { spawn, execSync } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -447,9 +446,6 @@ function testFixtureStdio(
       });
 
       dev.on('close', () => {
-        if (directory === 'python-flask') {
-          console.log("testFixtureStdio('python-flask') CHILD PROCESS CLOSE");
-        }
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;
@@ -457,16 +453,7 @@ function testFixtureStdio(
         exitResolver.resolve();
       });
 
-      if (directory === 'python-flask') {
-        dev.on('exit', () => {
-          console.log("testFixtureStdio('python-flask') CHILD PROCESS EXIT");
-        });
-      }
-
       dev.on('error', () => {
-        if (directory === 'python-flask') {
-          console.log("testFixtureStdio('python-flask') CHILD PROCESS ERROR");
-        }
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;
@@ -482,87 +469,15 @@ function testFixtureStdio(
         }
         await testPath(true, `http://localhost:${port}`, ...args);
       };
-      if (directory === 'python-flask') {
-        console.log("testFixtureStdio('python-flask') CALLING FN");
-      }
       await fn(helperTestPath, port);
-      if (directory === 'python-flask') {
-        console.log("testFixtureStdio('python-flask') FN DONE");
-      }
     } finally {
-      if (directory === 'python-flask') {
-        console.log(
-          "testFixtureStdio('python-flask') CALLING TREE KILL",
-          dev.pid
-        );
-      }
-      try {
-        if (directory === 'python-flask') {
-          await printProcessTree(dev.pid);
-        }
-        await treeKill(dev.pid, 'SIGKILL');
-        if (directory === 'python-flask') {
-          console.log("testFixtureStdio('python-flask') TREE KILL DONE");
-          await printProcessTree(dev.pid);
-        }
-      } catch (tke) {
-        if (directory === 'python-flask') {
-          console.log("testFixtureStdio('python-flask') TREE KILL ERROR", tke);
-        }
-      }
+      // we have to send SIGKILL because some tests spawn non-Node.js processes
+      // that won't SIGTERM
+      await treeKill(dev.pid, 'SIGKILL');
+
       await exitResolver;
-      if (directory === 'python-flask') {
-        console.log("testFixtureStdio('python-flask') FINISHED");
-      }
     }
   };
-}
-
-function buildProcessTree(parentPid, tree, pidsToProcess) {
-  return new Promise(resolve => {
-    const ps = spawn('ps', ['-o', 'pid', '--no-headers', '--ppid', parentPid]);
-
-    let allData = '';
-    ps.stdout.on('data', data => {
-      allData += data.toString('ascii');
-    });
-
-    ps.on('close', async code => {
-      delete pidsToProcess[parentPid];
-
-      if (code === 0) {
-        for (let pid of allData.match(/\d+/g)) {
-          pid = parseInt(pid, 10);
-          tree[parentPid].push(pid);
-          tree[pid] = [];
-          pidsToProcess[pid] = 1;
-          await buildProcessTree(pid, tree, pidsToProcess);
-        }
-      }
-
-      resolve();
-    });
-  });
-}
-
-async function printProcessTree(pid) {
-  var tree = {};
-  var pidsToProcess = {};
-  tree[pid] = [];
-  pidsToProcess[pid] = 1;
-
-  await buildProcessTree(pid, tree, pidsToProcess);
-
-  console.log(`PROCESS TREE: ${pid}`);
-  console.log(JSON.stringify(tree, null, 2));
-
-  for (const p of Object.keys(tree)) {
-    try {
-      execSync(`ps ${p}`, { stdio: 'inherit' });
-    } catch (e) {
-      // silence
-    }
-  }
 }
 
 beforeEach(() => {
