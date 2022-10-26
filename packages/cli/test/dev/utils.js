@@ -530,21 +530,17 @@ function buildProcessTree(parentPid, tree, pidsToProcess) {
     ps.on('close', async code => {
       delete pidsToProcess[parentPid];
 
-      if (code != 0) {
-        // no more parent processes
-        if (Object.keys(pidsToProcess).length == 0) {
-          resolve();
+      if (code === 0) {
+        for (let pid of allData.match(/\d+/g)) {
+          pid = parseInt(pid, 10);
+          tree[parentPid].push(pid);
+          tree[pid] = [];
+          pidsToProcess[pid] = 1;
+          await buildProcessTree(pid, tree, pidsToProcess);
         }
-        return;
       }
 
-      for (let pid of allData.match(/\d+/g)) {
-        pid = parseInt(pid, 10);
-        tree[parentPid].push(pid);
-        tree[pid] = [];
-        pidsToProcess[pid] = 1;
-        await buildProcessTree(pid, tree, pidsToProcess);
-      }
+      resolve();
     });
   });
 }
@@ -558,7 +554,7 @@ async function printProcessTree(pid) {
   await buildProcessTree(pid, tree, pidsToProcess);
 
   console.log(`PROCESS TREE: ${pid}`);
-  console.log(JSON.stringify(tree));
+  console.log(JSON.stringify(tree, null, 2));
 }
 
 beforeEach(() => {
