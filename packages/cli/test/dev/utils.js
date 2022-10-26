@@ -546,6 +546,7 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
       } catch (e) {
         // dead
         console.log(`pid ${pid} killed`);
+        execSync(`ps ${pid}`, { stdio: 'inherit' });
         return;
       }
     }
