@@ -557,7 +557,11 @@ async function printProcessTree(pid) {
   console.log(JSON.stringify(tree, null, 2));
 
   for (const p of Object.keys(tree)) {
-    execSync(`ps ${p}`, { stdio: 'inherit' });
+    try {
+      execSync(`ps ${p}`, { stdio: 'inherit' });
+    } catch (e) {
+      // silence
+    }
   }
 }
 
