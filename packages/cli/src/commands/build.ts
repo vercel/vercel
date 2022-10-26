@@ -310,7 +310,7 @@ async function doBuild(
 
   const localFileSystem = new LocalFileSystemDetector(cwd);
 
-  const framework = await detectFramework({
+  const monorepoManager = await detectFramework({
     fs: localFileSystem,
     frameworkList: monorepoManagers,
   });
@@ -319,7 +319,7 @@ async function doBuild(
     (await detectFramework({
       fs: localFileSystem,
       frameworkList: packageManagers,
-    })) ?? 'npm';
+    })) ?? 'yarn';
 
   const projectName = basename(workPath);
   const relativeToRoot = relative(workPath, cwd);
@@ -337,7 +337,7 @@ async function doBuild(
     }
   };
 
-  if (framework === 'turbo') {
+  if (monorepoManager === 'turbo') {
     output.log(
       `Automatically detected Turbo monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
     );
@@ -361,7 +361,7 @@ async function doBuild(
         `cd ${relativeToRoot} && ${packageManager} install`
       );
     }
-  } else if (framework === 'nx') {
+  } else if (monorepoManager === 'nx') {
     output.log(
       `Automatically detected Nx monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
     );
@@ -433,7 +433,7 @@ async function doBuild(
         `cd ${relativeToRoot} && ${packageManager} install`
       );
     }
-  } else if (framework === 'rush') {
+  } else if (monorepoManager === 'rush') {
     output.log(
       `Automatically detected Rush monorepo manager. Assigning default \`buildCommand\` and \`installCommand\` settings.`
     );

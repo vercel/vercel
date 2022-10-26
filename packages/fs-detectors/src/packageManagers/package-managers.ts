@@ -34,6 +34,9 @@ export const packageManagers: Array<
           path: 'package.json',
           matchContent: '"packageManager":\\s*"yarn@.*"',
         },
+        {
+          path: 'package.json',
+        },
       ],
     },
   },

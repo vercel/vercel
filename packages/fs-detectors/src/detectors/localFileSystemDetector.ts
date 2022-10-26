@@ -10,7 +10,7 @@ export class LocalFileSystemDetector extends DetectorFilesystem {
     super();
     this.rootPath = rootPath;
   }
-  protected async _hasPath(name: string): Promise<boolean> {
+  async _hasPath(name: string): Promise<boolean> {
     try {
       await fs.stat(this.getFilePath(name));
       return true;
@@ -21,15 +21,16 @@ export class LocalFileSystemDetector extends DetectorFilesystem {
       throw err;
     }
   }
-  protected _readFile(name: string): Promise<Buffer> {
+  _readFile(name: string): Promise<Buffer> {
     return fs.readFile(this.getFilePath(name));
   }
-  protected async _isFile(name: string): Promise<boolean> {
+  async _isFile(name: string): Promise<boolean> {
     const stat = await fs.stat(this.getFilePath(name));
     return stat.isFile();
   }
-  protected async _readdir(name: string): Promise<DetectorFilesystemStat[]> {
-    const dir = await fs.readdir(this.getFilePath(name), {
+  async _readdir(name: string): Promise<DetectorFilesystemStat[]> {
+    const dirPath = this.getFilePath(name);
+    const dir = await fs.readdir(dirPath, {
       withFileTypes: true,
     });
     const getType = (dirent: Dirent) => {
@@ -43,11 +44,11 @@ export class LocalFileSystemDetector extends DetectorFilesystem {
     };
     return dir.map(dirent => ({
       name: dirent.name,
-      path: this.getFilePath(dirent.name),
+      path: path.join(dirPath, dirent.name),
       type: getType(dirent),
     }));
   }
-  protected _chdir(name: string): DetectorFilesystem {
+  _chdir(name: string): DetectorFilesystem {
     return new LocalFileSystemDetector(this.getFilePath(name));
   }
   private getFilePath(name: string) {
