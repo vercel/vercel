@@ -12,6 +12,7 @@ const {
 } = require('../../../../test/lib/deployment/now-deploy');
 const { promisify } = require('util');
 const treeKill = promisify(require('tree-kill'));
+const { spawn } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -415,11 +416,11 @@ function testFixtureStdio(
         }
       );
 
-      // dev.stdout.setEncoding('utf8');
-      // dev.stderr.setEncoding('utf8');
+      dev.stdout.setEncoding('utf8');
+      dev.stderr.setEncoding('utf8');
 
-      // dev.stdout.pipe(process.stdout);
-      // dev.stderr.pipe(process.stderr);
+      dev.stdout.pipe(process.stdout);
+      dev.stderr.pipe(process.stderr);
 
       dev.stdout.on('data', data => {
         stdout += data;
@@ -496,9 +497,13 @@ function testFixtureStdio(
         );
       }
       try {
+        if (directory === 'python-flask') {
+          await printProcessTree(dev.pid);
+        }
         await treeKill(dev.pid, 'SIGTERM');
         if (directory === 'python-flask') {
           console.log("testFixtureStdio('python-flask') TREE KILL DONE");
+          await printProcessTree(dev.pid);
         }
       } catch (tke) {
         if (directory === 'python-flask') {
@@ -511,6 +516,49 @@ function testFixtureStdio(
       }
     }
   };
+}
+
+function buildProcessTree(parentPid, tree, pidsToProcess) {
+  return new Promise(resolve => {
+    const ps = spawn('ps', ['-o', 'pid', '--no-headers', '--ppid', parentPid]);
+
+    let allData = '';
+    ps.stdout.on('data', data => {
+      allData += data.toString('ascii');
+    });
+
+    ps.on('close', async code => {
+      delete pidsToProcess[parentPid];
+
+      if (code != 0) {
+        // no more parent processes
+        if (Object.keys(pidsToProcess).length == 0) {
+          resolve();
+        }
+        return;
+      }
+
+      for (let pid of allData.match(/\d+/g)) {
+        pid = parseInt(pid, 10);
+        tree[parentPid].push(pid);
+        tree[pid] = [];
+        pidsToProcess[pid] = 1;
+        await buildProcessTree(pid, tree, pidsToProcess);
+      }
+    });
+  });
+}
+
+async function printProcessTree(pid) {
+  var tree = {};
+  var pidsToProcess = {};
+  tree[pid] = [];
+  pidsToProcess[pid] = 1;
+
+  await buildProcessTree(pid, tree, pidsToProcess);
+
+  console.log(`PROCESS TREE: ${pid}`);
+  console.log(JSON.stringify(tree));
 }
 
 beforeEach(() => {
