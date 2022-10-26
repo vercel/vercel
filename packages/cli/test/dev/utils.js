@@ -490,7 +490,8 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
     const buf = execSync(
       process.platform === 'darwin'
         ? `pgrep -P ${parentPid}`
-        : `ps -o pid --no-headers --ppid ${parentPid}`
+        : `ps -o pid --no-headers --ppid ${parentPid}`,
+      { encoding: 'utf-8' }
     );
     for (let pid of buf.match(/\d+/g)) {
       pid = parseInt(pid);
@@ -503,10 +504,6 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
     }
   }
 
-  async function wait(ms) {
-    await new Promise(resolve => setTimeout(resolve, ms));
-  }
-
   async function nuke(pid, signal) {
     // kill the process
     try {
@@ -516,18 +513,16 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
       return;
     }
 
-    await wait(250);
-
     // try up to
     for (let i = 0; i < 10; i++) {
-      // check if killed
       try {
+        await new Promise(resolve => setTimeout(resolve, 250));
+
+        // check if killed
         process.kill(pid, 0);
 
         // process didn't exit, force kill
         process.kill(pid, 'SIGKILL');
-
-        await wait(250);
       } catch (e) {
         // dead
         return;
