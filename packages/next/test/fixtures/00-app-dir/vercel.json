@@ -39,13 +39,11 @@
       "status": 200,
       "mustContain": "hello from newroot/dashboard/another"
     },
-    // TODO: re-enable after react bundle has been updated in
-    // Next.js itself
-    // {
-    //   "path": "/dashboard/deployments/123",
-    //   "status": 200,
-    //   "mustContain": "hello from app/dashboard/deployments/[id]. ID is: <!-- -->123"
-    // },
+    {
+      "path": "/dashboard/deployments/123",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/deployments/[id]. ID is: <!-- -->123"
+    },
     {
       "path": "/",
       "status": 200,
@@ -56,13 +54,11 @@
       "status": 200,
       "mustContain": "hello from pages/blog/[slug]"
     },
-    // TODO: re-enable after react bundle has been updated in
-    // Next.js itself
-    // {
-    //   "path": "/dynamic/category-1/id-1",
-    //   "status": 200,
-    //   "mustContain": "{&quot;category&quot;:&quot;category-1&quot;,&quot;id&quot;:&quot;id-1&quot;}"
-    // },
+    {
+      "path": "/dynamic/category-1/id-1",
+      "status": 200,
+      "mustContain": "{&quot;category&quot;:&quot;category-1&quot;,&quot;id&quot;:&quot;id-1&quot;}"
+    },
     {
       "path": "/dashboard/changelog",
       "status": 200,

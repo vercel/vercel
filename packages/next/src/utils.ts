@@ -1601,15 +1601,18 @@ export const onPrerenderRouteInitial = (
   nonLambdaSsgPages: Set<string>,
   routeKey: string,
   hasPages404: boolean,
-  routesManifest?: RoutesManifest
+  routesManifest?: RoutesManifest,
+  appDir?: string | null
 ) => {
   let static404Page: string | undefined;
   let static500Page: string | undefined;
 
   // Get the route file as it'd be mounted in the builder output
   const pr = prerenderManifest.staticRoutes[routeKey];
-  const { initialRevalidate, srcRoute } = pr;
+  const { initialRevalidate, srcRoute, dataRoute } = pr;
   const route = srcRoute || routeKey;
+
+  const isAppPathRoute = appDir && dataRoute?.endsWith('.rsc');
 
   const routeNoLocale = routesManifest?.i18n
     ? normalizeLocalePath(routeKey, routesManifest.i18n.locales).pathname
@@ -1626,6 +1629,9 @@ export const onPrerenderRouteInitial = (
   }
 
   if (
+    // App paths must be Prerenders to ensure Vary header is
+    // correctly added
+    !isAppPathRoute &&
     initialRevalidate === false &&
     (!canUsePreviewMode || (hasPages404 && routeNoLocale === '/404')) &&
     !prerenderManifest.fallbackRoutes[route] &&
@@ -1899,7 +1905,7 @@ export const onPrerenderRoute =
       lambda = lambdas[outputSrcPathPage];
     }
 
-    if (!isNotFound && initialRevalidate === false) {
+    if (!isAppPathRoute && !isNotFound && initialRevalidate === false) {
       if (htmlFsRef == null || jsonFsRef == null) {
         throw new NowBuildError({
           code: 'NEXT_HTMLFSREF_JSONFSREF',
