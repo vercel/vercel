@@ -444,7 +444,12 @@ function testFixtureStdio(
         }
       });
 
+      dev.on('exit', () => {
+        console.log(`PID ${dev.pid} EXIT`);
+      });
+
       dev.on('close', () => {
+        console.log(`PID ${dev.pid} CLOSE`);
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;
@@ -475,7 +480,6 @@ function testFixtureStdio(
       console.log('AWAITING EXIT RESOLVER');
       await exitResolver;
       console.log('FINISHED');
-      console.log(process._getActiveHandles());
     }
   };
 }
