@@ -10,7 +10,7 @@ const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -478,7 +478,7 @@ function testFixtureStdio(
 
 async function nukeProcess(pid, signal = 'SIGTERM') {
   if (process.platform === 'win32') {
-    execSync(`taskkill /pid ${pid} /T /F`);
+    spawnSync('taskkill', ['/pid', pid, '/T', '/F'], { stdio: 'inherit' });
     return;
   }
 
@@ -489,15 +489,12 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
   async function ps(parentPid) {
     const cmd =
       process.platform === 'darwin'
-        ? `pgrep -P ${parentPid}`
-        : `ps -o pid --no-headers --ppid ${parentPid}`;
+        ? ['pgrep', '-P', parentPid]
+        : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
 
     try {
-      const buf = execSync(cmd, { encoding: 'utf-8' });
-      console.log({
-        cmd,
-        buf,
-        pids,
+      const { stdout: buf } = spawnSync(cmd[0], cmd.slice(1), {
+        encoding: 'utf-8',
       });
       for (let pid of buf.match(/\d+/g)) {
         pid = parseInt(pid);
@@ -520,7 +517,7 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
     } catch (e) {
       // process does not exist
       console.log(`pid ${pid} killed`);
-      execSync(`ps ${pid}`, { stdio: 'inherit' });
+      spawnSync('ps', [pid], { stdio: 'inherit' });
       return;
     }
 
@@ -546,7 +543,7 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
       } catch (e) {
         // dead
         console.log(`pid ${pid} killed`);
-        execSync(`ps ${pid}`, { stdio: 'inherit' });
+        spawnSync('ps', [pid], { stdio: 'inherit' });
         return;
       }
     }
