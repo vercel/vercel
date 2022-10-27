@@ -474,6 +474,7 @@ function testFixtureStdio(
         await testPath(true, `http://localhost:${port}`, ...args);
       };
       await fn(helperTestPath, port);
+      spawnSync('ps', ['axo', 'user,pid,ppid,command'], { stdio: 'inherit' });
     } finally {
       console.log('NUKING');
       await nukeProcess(dev.pid);
@@ -533,6 +534,7 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
   async function nuke(pid, signal) {
     // kill the process
     try {
+      console.log(`Killing pid ${pid} ${signal}`);
       process.kill(pid, signal);
     } catch (e) {
       // process does not exist
@@ -559,6 +561,7 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
         );
 
         // process didn't exit, force kill
+        console.log(`Force killing pid ${pid} SIGKILL`);
         process.kill(pid, 'SIGKILL');
       } catch (e) {
         // dead
