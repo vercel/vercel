@@ -86,10 +86,11 @@ export async function devRouter(
       const flags = devServer && devServer.isCaseSensitive() ? '' : 'i';
       const matcher = PCRE(`%${src}%${flags}`, keys);
       const match =
-        matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
+        matcher.exec(reqPathname as string) ||
+        matcher.exec((reqPathname as string).substring(1));
 
       if (match) {
-        let destPath: string = reqPathname;
+        let destPath: string = reqPathname as string;
 
         if (routeConfig.dest) {
           destPath = resolveRouteParameters(routeConfig.dest, match, keys);
@@ -134,7 +135,7 @@ export async function devRouter(
           let { pathname } = url.parse(destPath);
           pathname ??= '/';
           const hasDestFile = await devServer.hasFilesystem(
-            pathname,
+            pathname as string,
             vercelConfig
           );
 
@@ -195,7 +196,7 @@ export async function devRouter(
           Object.assign(destQuery, reqQuery);
           result = {
             found: true,
-            dest: destPathname,
+            dest: destPathname as string,
             continue: isContinue,
             userDest: Boolean(routeConfig.dest),
             isDestUrl,
@@ -215,7 +216,7 @@ export async function devRouter(
   if (!result) {
     result = {
       found: false,
-      dest: reqPathname,
+      dest: reqPathname as string,
       continue: isContinue,
       status,
       isDestUrl: false,
