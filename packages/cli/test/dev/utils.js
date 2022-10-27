@@ -470,8 +470,12 @@ function testFixtureStdio(
       };
       await fn(helperTestPath, port);
     } finally {
+      console.log('NUKING');
       await nukeProcess(dev.pid);
+      console.log('AWAITING EXIT RESOLVER');
       await exitResolver;
+      console.log('FINISHED');
+      console.log(process._getActiveHandles());
     }
   };
 }
