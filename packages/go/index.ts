@@ -697,8 +697,8 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   });
   console.log(`!!!!! SPAWNED go pid ${child.pid}`);
 
-  child.stdout?.on('data', data => console.log(data));
-  child.stderr?.on('data', data => console.error(data));
+  child.stdout?.on('data', data => console.log(data.toString()));
+  child.stderr?.on('data', data => console.error(data.toString()));
 
   child.once('exit', () => {
     console.log(`!!!!! EXIT go pid ${child.pid}`);
