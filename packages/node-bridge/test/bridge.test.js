@@ -1,6 +1,10 @@
 const assert = require('assert');
+const crypto = require('crypto');
+const jsonlines = require('jsonlines');
 const { Server } = require('http');
 const { Bridge } = require('../bridge');
+const { runServer } = require('./run-test-server');
+const { runTcpServer } = require('./run-test-server');
 
 test('port binding', async () => {
   const server = new Server();
@@ -184,7 +188,7 @@ test('multi-payload handling', async () => {
 });
 
 test('consumeEvent', async () => {
-  const mockListener = jest.fn((req, res) => {
+  const mockListener = jest.fn((_, res) => {
     res.end('hello');
   });
 
@@ -222,7 +226,7 @@ test('consumeEvent', async () => {
 });
 
 test('consumeEvent and handle decoded path', async () => {
-  const mockListener = jest.fn((req, res) => {
+  const mockListener = jest.fn((_, res) => {
     res.end('hello');
   });
 
@@ -295,3 +299,180 @@ test('invalid request headers', async () => {
 
   server.close();
 });
+
+test('`NowProxyEvent` proxy streaming with a sync handler', async () => {
+  const cipherParams = {
+    cipher: 'aes-256-ctr',
+    cipherIV: crypto.randomBytes(16),
+    cipherKey: crypto.randomBytes(32),
+  };
+
+  const effects = {
+    callbackPayload: undefined,
+    callbackStream: undefined,
+  };
+
+  const { deferred, resolve } = createDeferred();
+
+  const httpServer = await runServer({
+    handler: (req, res) => {
+      const chunks = [];
+      req.on('data', chunk => {
+        chunks.push(chunk.toString());
+      });
+      req.on('close', () => {
+        effects.callbackPayload = chunks;
+        res.writeHead(200, 'OK', { 'content-type': 'application/json' });
+        res.end();
+        resolve();
+      });
+    },
+  });
+
+  const tcpServerCallback = await runTcpServer({
+    cipherParams,
+    effects,
+    httpServer,
+  });
+
+  const server = new Server((req, res) => {
+    res.setHeader('content-type', 'text/html');
+    res.end('hello');
+  });
+
+  const bridge = new Bridge(server);
+  bridge.listen();
+  const context = { callbackWaitsForEmptyEventLoop: true };
+  const result = await bridge.launcher(
+    {
+      Action: 'Invoke',
+      body: JSON.stringify({
+        method: 'POST',
+        responseCallbackCipher: cipherParams.cipher,
+        responseCallbackCipherIV: cipherParams.cipherIV.toString('base64'),
+        responseCallbackCipherKey: cipherParams.cipherKey.toString('base64'),
+        responseCallbackStream: 'abc',
+        responseCallbackUrl: String(tcpServerCallback.url),
+        headers: { foo: 'bar' },
+        path: '/nowproxy',
+        body: 'body=1',
+      }),
+    },
+    context
+  );
+
+  await deferred;
+
+  expect(result).toEqual({});
+  expect(context.callbackWaitsForEmptyEventLoop).toEqual(false);
+  expect(effects.callbackStream).toEqual('abc');
+  expect(effects.callbackPayload).toEqual(['hello']);
+
+  server.close();
+  await httpServer.close();
+  await tcpServerCallback.close();
+});
+
+test('`NowProxyEvent` proxy streaming with an async handler', async () => {
+  const effects = {
+    callbackHeaders: undefined,
+    callbackMethod: undefined,
+    callbackPayload: undefined,
+    callbackStream: undefined,
+  };
+
+  const cipherParams = {
+    cipher: 'aes-256-ctr',
+    cipherIV: crypto.randomBytes(16),
+    cipherKey: crypto.randomBytes(32),
+  };
+
+  const { deferred, resolve } = createDeferred();
+  const jsonParser = jsonlines.parse();
+  const httpServer = await runServer({
+    handler: (req, res) => {
+      const chunks = [];
+      req.pipe(jsonParser);
+      jsonParser.on('data', chunk => {
+        chunks.push(chunk);
+      });
+      req.on('close', () => {
+        effects.callbackMethod = req.method;
+        effects.callbackHeaders = req.headers;
+        effects.callbackPayload = chunks;
+        res.writeHead(200, 'OK', { 'content-type': 'application/json' });
+        res.end();
+        resolve();
+      });
+    },
+  });
+
+  const tcpServerCallback = await runTcpServer({
+    cipherParams,
+    httpServer,
+    effects,
+  });
+
+  const jsonStringifier = jsonlines.stringify();
+  const server = new Server((req, res) => {
+    res.setHeader('x-test', 'hello');
+    res.setHeader('content-type', 'text/html');
+    jsonStringifier.pipe(res);
+    jsonStringifier.write({ method: req.method });
+    jsonStringifier.write({ path: req.url });
+    setTimeout(() => {
+      jsonStringifier.write({ headers: req.headers });
+      res.end();
+    }, 100);
+  });
+
+  const bridge = new Bridge(server);
+  bridge.listen();
+  const context = { callbackWaitsForEmptyEventLoop: true };
+  const result = await bridge.launcher(
+    {
+      Action: 'Invoke',
+      body: JSON.stringify({
+        method: 'POST',
+        responseCallbackCipher: cipherParams.cipher,
+        responseCallbackCipherIV: cipherParams.cipherIV.toString('base64'),
+        responseCallbackCipherKey: cipherParams.cipherKey.toString('base64'),
+        responseCallbackStream: 'abc',
+        responseCallbackUrl: String(tcpServerCallback.url),
+        headers: { foo: 'bar' },
+        path: '/nowproxy',
+        body: 'body=1',
+      }),
+    },
+    context
+  );
+
+  await deferred;
+
+  expect(result).toEqual({});
+  expect(context.callbackWaitsForEmptyEventLoop).toEqual(false);
+  expect(effects.callbackStream).toEqual('abc');
+  expect(effects.callbackMethod).toEqual('POST');
+  expect(effects.callbackHeaders).toMatchObject({
+    'x-vercel-status-code': '200',
+    'x-vercel-header-x-test': 'hello',
+    'x-vercel-header-content-type': 'text/html',
+  });
+  expect(effects.callbackPayload).toMatchObject([
+    { method: 'POST' },
+    { path: '/nowproxy' },
+    { headers: { foo: 'bar' } },
+  ]);
+
+  server.close();
+  httpServer.close();
+  tcpServerCallback.close();
+});
+
+function createDeferred() {
+  let resolve;
+  const deferred = new Promise(_resolve => {
+    resolve = _resolve;
+  });
+  return { deferred, resolve };
+}
