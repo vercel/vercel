@@ -1,4 +1,6 @@
-import { dirname, join, relative } from 'path';
+import { existsSync } from 'fs';
+import { dirname, join, relative, resolve } from 'path';
+import { pathToFileURL } from 'url';
 import { glob } from '@vercel/build-utils';
 import type { PrepareCache } from '@vercel/build-utils';
 import type { AppConfig } from './types';
@@ -12,12 +14,15 @@ export const prepareCache: PrepareCache = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
   try {
-    const remixConfig: AppConfig = require(join(
-      entrypointFsDirname,
-      'remix.config'
-    ));
-    if (remixConfig.cacheDirectory) {
-      cacheDirectory = remixConfig.cacheDirectory;
+    const remixConfigFile = findConfig(entrypointFsDirname, 'remix.config');
+    if (remixConfigFile) {
+      const remixConfigModule = await import(
+        pathToFileURL(remixConfigFile).href
+      );
+      const remixConfig: AppConfig = remixConfigModule?.default || {};
+      if (remixConfig.cacheDirectory) {
+        cacheDirectory = remixConfig.cacheDirectory;
+      }
     }
   } catch (err: any) {
     // Ignore error if `remix.config.js` does not exist
@@ -36,3 +41,14 @@ export const prepareCache: PrepareCache = async ({
 
   return { ...nodeModulesFiles, ...cacheDirFiles };
 };
+
+const configExts = ['.js', '.cjs', '.mjs'];
+
+function findConfig(dir: string, basename: string): string | undefined {
+  for (const ext of configExts) {
+    const file = resolve(dir, basename + ext);
+    if (existsSync(file)) return relative(dir, file);
+  }
+
+  return undefined;
+}
