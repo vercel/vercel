@@ -474,13 +474,9 @@ function testFixtureStdio(
         await testPath(true, `http://localhost:${port}`, ...args);
       };
       await fn(helperTestPath, port);
-      spawnSync('ps', ['axo', 'user,pid,ppid,command'], { stdio: 'inherit' });
     } finally {
-      console.log('NUKING');
       await nukeProcess(dev.pid);
-      console.log('AWAITING EXIT RESOLVER');
       await exitResolver;
-      console.log('FINISHED');
     }
   };
 }
@@ -495,27 +491,15 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
     [pid]: [],
   };
 
-  async function ps(parentPid) {
+  const ps = async parentPid => {
     const cmd =
       process.platform === 'darwin'
         ? ['pgrep', '-P', parentPid]
         : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
 
     try {
-      const {
-        stdout: buf,
-        status,
-        stderr,
-      } = spawnSync(cmd[0], cmd.slice(1), {
+      const { stdout: buf } = spawnSync(cmd[0], cmd.slice(1), {
         encoding: 'utf-8',
-      });
-      console.log({
-        cmd: cmd.join(' '),
-        pid,
-        buf,
-        pids,
-        status,
-        stderr,
       });
       for (let pid of buf.match(/\d+/g)) {
         pid = parseInt(pid);
@@ -529,9 +513,14 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
     } catch (e) {
       // squelch
     }
-  }
+  };
 
-  async function nuke(pid, signal) {
+  async function nuke(pid, signal = 'SIGTERM', retries = 10) {
+    if (retries === 0) {
+      console.log(`pid ${pid} won't die, giving up`);
+      return;
+    }
+
     // kill the process
     try {
       console.log(`Killing pid ${pid} ${signal}`);
@@ -539,37 +528,20 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
     } catch (e) {
       // process does not exist
       console.log(`pid ${pid} killed`);
-      spawnSync('ps', [pid], { stdio: 'inherit' });
       return;
     }
 
-    // try up to
-    for (let i = 2; i < 12; i++) {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 250));
+    await new Promise(resolve => setTimeout(resolve, 250));
 
-        // check if killed
-        process.kill(pid, 0);
-
-        if (i === 11) {
-          console.log(`Hmm, pid ${pid} just won't exit, giving up`);
-          return;
-        }
-
-        console.log(
-          `Hmm, pid ${pid} didn't exit, sending SIGKILL (attempt ${i})`
-        );
-
-        // process didn't exit, force kill
-        console.log(`Force killing pid ${pid} SIGKILL`);
-        process.kill(pid, 'SIGKILL');
-      } catch (e) {
-        // dead
-        console.log(`pid ${pid} killed`);
-        spawnSync('ps', [pid], { stdio: 'inherit' });
-        return;
-      }
+    try {
+      // check if killed
+      process.kill(pid, 0);
+    } catch (e) {
+      return;
     }
+
+    console.log(`pid ${pid} didn't exit, sending SIGKILL (retries ${retries})`);
+    await nuke(pid, 'SIGKILL', retries - 1);
   }
 
   await ps(pid);
