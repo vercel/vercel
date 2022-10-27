@@ -11,24 +11,43 @@ function buildUrl(requestDetails) {
   return `${proto}://${host}${path}`;
 }
 
+// https://stackoverflow.com/a/33369954
+function isJson(item) {
+  item = typeof item !== 'string' ? JSON.stringify(item) : item;
+
+  try {
+    item = JSON.parse(item);
+  } catch (e) {
+    return false;
+  }
+
+  if (typeof item === 'object' && item !== null) {
+    return true;
+  }
+
+  return false;
+}
+
 addEventListener('fetch', async event => {
   try {
-    let serializedRequest = await event.request.text();
-    let requestDetails = JSON.parse(serializedRequest);
+    let serializedRequest = await event.request.clone().text();
+    if (serializedRequest && isJson(serializedRequest)) {
+      let requestDetails = JSON.parse(serializedRequest);
 
-    let body;
+      let body;
 
-    if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
-      body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
+      if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
+        body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
+      }
+
+      let request = new Request(buildUrl(requestDetails), {
+        headers: requestDetails.headers,
+        method: requestDetails.method,
+        body: body,
+      });
+
+      event.request = request;
     }
-
-    let request = new Request(buildUrl(requestDetails), {
-      headers: requestDetails.headers,
-      method: requestDetails.method,
-      body: body,
-    });
-
-    event.request = request;
 
     let edgeHandler = module.exports.default;
     if (!edgeHandler) {
