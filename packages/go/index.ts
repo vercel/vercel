@@ -1,7 +1,7 @@
 import execa from 'execa';
 import retry from 'async-retry';
 import { homedir, tmpdir } from 'os';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
 import { join, dirname, basename, normalize, sep } from 'path';
@@ -683,22 +683,30 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     TMP,
     `vercel-dev-port-${Math.random().toString(32).substring(2)}`
   );
-
   const env = cloneEnv(process.env, meta.env, {
     VERCEL_DEV_PORT_FILE: portFile,
   });
+  const executable = `./vercel-dev-server-go${
+    process.platform === 'win32' ? '.exe' : ''
+  }`;
 
-  const tmpRelative = `.${sep}${entrypointDir}`;
-  const child = spawn('go', ['run', tmpRelative], {
+  spawnSync('go', ['build', '-o', executable, './...'], {
+    cwd: tmp,
+    env,
+  });
+
+  const child = spawn(executable, [], {
     cwd: tmp,
     env,
     stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
   });
 
-  child.once('exit', () => {
-    retry(() => remove(tmp)).catch((err: Error) => {
+  child.on('close', async () => {
+    try {
+      await retry(() => remove(tmp));
+    } catch (err: any) {
       console.error('Could not delete tmp directory: %j: %s', tmp, err);
-    });
+    }
   });
 
   const portPipe = child.stdio[3];

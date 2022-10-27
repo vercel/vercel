@@ -444,12 +444,7 @@ function testFixtureStdio(
         }
       });
 
-      dev.on('exit', () => {
-        console.log(`PID ${dev.pid} EXIT`);
-      });
-
       dev.on('close', () => {
-        console.log(`PID ${dev.pid} CLOSE`);
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;
@@ -522,7 +517,7 @@ async function nukePID(pid, signal = 'SIGTERM', retries = 10) {
     return;
   }
 
-  await new Promise(resolve => setTimeout(resolve, 250));
+  await sleep(250);
 
   try {
     // check if killed
