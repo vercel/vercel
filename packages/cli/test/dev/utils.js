@@ -256,10 +256,10 @@ async function testFixture(directory, opts = {}, args = []) {
   });
 
   dev._kill = dev.kill;
-  dev.kill = async (...args) => {
+  dev.kill = async () => {
     // kill the entire process tree for the child as some tests
     // spawn child processes that we don't have the pid for
-    await nukeProcess(dev.pid, ...args);
+    await nukeProcessTree(dev.pid);
 
     await exitResolver;
     return {
@@ -432,14 +432,14 @@ function testFixtureStdio(
         }
 
         if (stderr.includes(`Requested port ${port} is already in use`)) {
-          await nukeProcess(dev.pid, 'SIGTERM');
+          await nukeProcessTree(dev.pid);
           throw new Error(
             `Failed for "${directory}" with port ${port} with stderr "${stderr}".`
           );
         }
 
         if (stderr.includes('Command failed')) {
-          await nukeProcess(dev.pid, 'SIGTERM');
+          await nukeProcessTree(dev.pid);
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
       });
@@ -475,80 +475,82 @@ function testFixtureStdio(
       };
       await fn(helperTestPath, port);
     } finally {
-      await nukeProcess(dev.pid);
+      await nukeProcessTree(dev.pid);
       await exitResolver;
     }
   };
 }
 
-async function nukeProcess(pid, signal = 'SIGTERM') {
+async function ps(pids, parentPid) {
+  const cmd =
+    process.platform === 'darwin'
+      ? ['pgrep', '-P', parentPid]
+      : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
+
+  try {
+    const { stdout: buf } = spawnSync(cmd[0], cmd.slice(1), {
+      encoding: 'utf-8',
+    });
+    for (let pid of buf.match(/\d+/g)) {
+      pid = parseInt(pid);
+      const recurse = Object.prototype.hasOwnProperty.call(pids, pid);
+      pids[parentPid].push(pid);
+      pids[pid] = [];
+      if (recurse) {
+        await ps(pids, pid);
+      }
+    }
+  } catch (e) {
+    // squelch
+  }
+  return pids;
+}
+
+async function nukePID(pid, signal = 'SIGTERM', retries = 10) {
+  if (retries === 0) {
+    console.log(`pid ${pid} won't die, giving up`);
+    return;
+  }
+
+  // kill the process
+  try {
+    console.log(`Killing pid ${pid} ${signal}`);
+    process.kill(pid, signal);
+  } catch (e) {
+    // process does not exist
+    console.log(`pid ${pid} killed`);
+    return;
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 250));
+
+  try {
+    // check if killed
+    process.kill(pid, 0);
+  } catch (e) {
+    return;
+  }
+
+  console.log(`pid ${pid} didn't exit, sending SIGKILL (retries ${retries})`);
+  await nukePID(pid, 'SIGKILL', retries - 1);
+}
+
+async function nukeProcessTree(pid, signal) {
   if (process.platform === 'win32') {
     spawnSync('taskkill', ['/pid', pid, '/T', '/F'], { stdio: 'inherit' });
     return;
   }
 
-  const pids = {
-    [pid]: [],
-  };
-
-  const ps = async parentPid => {
-    const cmd =
-      process.platform === 'darwin'
-        ? ['pgrep', '-P', parentPid]
-        : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
-
-    try {
-      const { stdout: buf } = spawnSync(cmd[0], cmd.slice(1), {
-        encoding: 'utf-8',
-      });
-      for (let pid of buf.match(/\d+/g)) {
-        pid = parseInt(pid);
-        const recurse = Object.prototype.hasOwnProperty.call(pids, pid);
-        pids[parentPid].push(pid);
-        pids[pid] = [];
-        if (recurse) {
-          await ps(pid);
-        }
-      }
-    } catch (e) {
-      // squelch
-    }
-  };
-
-  async function nuke(pid, signal = 'SIGTERM', retries = 10) {
-    if (retries === 0) {
-      console.log(`pid ${pid} won't die, giving up`);
-      return;
-    }
-
-    // kill the process
-    try {
-      console.log(`Killing pid ${pid} ${signal}`);
-      process.kill(pid, signal);
-    } catch (e) {
-      // process does not exist
-      console.log(`pid ${pid} killed`);
-      return;
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 250));
-
-    try {
-      // check if killed
-      process.kill(pid, 0);
-    } catch (e) {
-      return;
-    }
-
-    console.log(`pid ${pid} didn't exit, sending SIGKILL (retries ${retries})`);
-    await nuke(pid, 'SIGKILL', retries - 1);
-  }
-
-  await ps(pid);
+  const pids = await ps(
+    {
+      [pid]: [],
+    },
+    pid
+  );
 
   console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
 
-  await Promise.all(Object.keys(pids).map(pid => nuke(pid, signal)));
+  await Promise.all(Object.keys(pids).map(pid => nukePID(pid, signal)));
 }
 
 beforeEach(() => {
@@ -562,7 +564,7 @@ afterEach(async () => {
       console.log(`killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`);
 
       try {
-        await nukeProcess(proc.pid, 'SIGTERM');
+        await nukeProcessTree(proc.pid);
       } catch (err) {
         // Was already killed
         if (err.code !== 'ESRCH') {
