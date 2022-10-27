@@ -493,13 +493,20 @@ async function nukeProcess(pid, signal = 'SIGTERM') {
         : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
 
     try {
-      const { stdout: buf } = spawnSync(cmd[0], cmd.slice(1), {
+      const {
+        stdout: buf,
+        status,
+        stderr,
+      } = spawnSync(cmd[0], cmd.slice(1), {
         encoding: 'utf-8',
       });
       console.log({
+        cmd: cmd.join(' '),
         pid,
         buf,
         pids,
+        status,
+        stderr,
       });
       for (let pid of buf.match(/\d+/g)) {
         pid = parseInt(pid);
