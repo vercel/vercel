@@ -45,7 +45,9 @@ const help = () => {
   )}        Login token
     -S, --scope                    Set a custom scope
     -N, --next                     Show next page of results
-    --limit                        Number of results to return per page (default: 20, max: 100)
+    --limit=${chalk.bold.underline(
+      'VALUE'
+    )}                       Number of results to return per page (default: 20, max: 100)
     -y, --yes                      Skip the confirmation prompt when removing a domain
 
   ${chalk.dim('Examples:')}
