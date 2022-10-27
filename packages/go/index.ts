@@ -693,7 +693,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   const child = spawn('go', ['run', tmpRelative], {
     cwd: tmp,
     env,
-    stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
+    stdio: ['inherit', 'inherit', 'inherit', 'pipe'],
   });
   console.log(`!!!!! SPAWNED go pid ${child.pid}`);
 
