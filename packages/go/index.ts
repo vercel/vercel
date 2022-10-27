@@ -693,22 +693,22 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   const child = spawn('go', ['run', tmpRelative], {
     cwd: tmp,
     env,
-    stdio: ['pipe', 'pipe', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
   });
   console.log(`!!!!! SPAWNED go pid ${child.pid}`);
 
-  child.stdout.on('data', data => console.log(data.toString()));
-  child.stderr.on('data', data => console.error(data.toString()));
+  child.stdout?.on('data', data => console.log(data.toString()));
+  child.stderr?.on('data', data => console.error(data.toString()));
 
   child.once('exit', () => {
     console.log(`!!!!! EXIT go pid ${child.pid}`);
+    retry(() => remove(tmp)).catch((err: Error) => {
+      console.error('Could not delete tmp directory: %j: %s', tmp, err);
+    });
   });
 
   child.once('close', () => {
     console.log(`!!!!! CLOSE go pid ${child.pid}`);
-    retry(() => remove(tmp)).catch((err: Error) => {
-      console.error('Could not delete tmp directory: %j: %s', tmp, err);
-    });
   });
 
   const portPipe = child.stdio[3];
