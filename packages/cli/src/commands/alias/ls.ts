@@ -4,17 +4,12 @@ import table from 'text-table';
 import Client from '../../util/client';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
+import { Options, getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-
 import { Alias } from '../../types';
-
-interface Options {
-  '--next'?: number;
-  '--limit'?: number;
-}
 
 export default async function ls(
   client: Client,
@@ -22,17 +17,14 @@ export default async function ls(
   args: string[]
 ) {
   const { output } = client;
-  const { '--next': nextTimestamp } = opts;
-  const { '--limit': limit } = opts;
   const { contextName } = await getScope(client);
 
-  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
-    output.error('Please provide a number for flag --next');
-    return 1;
-  }
+  let validated;
 
-  if (typeof limit === 'number' && (Number.isNaN(limit) || limit > 100)) {
-    output.error('Please provide a number up to 100 for flag --limit');
+  try {
+    validated = getPaginationOpts(opts);
+  } catch (err: unknown) {
+    output.prettyError(err);
     return 1;
   }
 
@@ -53,8 +45,8 @@ export default async function ls(
   const { aliases, pagination } = await getAliases(
     client,
     undefined,
-    nextTimestamp,
-    limit
+    validated.nextTimestamp,
+    validated.limit
   );
   output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
   output.log(printAliasTable(aliases));

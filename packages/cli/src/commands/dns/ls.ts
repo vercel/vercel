@@ -9,14 +9,10 @@ import getDNSRecords, {
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
+import { Options, getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-
-type Options = {
-  '--next'?: number;
-  '--limit'?: number;
-};
 
 export default async function ls(
   client: Client,
@@ -24,8 +20,6 @@ export default async function ls(
   args: string[]
 ) {
   const { output } = client;
-  const { '--next': nextTimestamp } = opts;
-  const { '--limit': limit } = opts;
   const { contextName } = await getScope(client);
 
   const [domainName] = args;
@@ -40,13 +34,12 @@ export default async function ls(
     return 1;
   }
 
-  if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
-    output.error('Please provide a number for flag --next');
-    return 1;
-  }
+  let validated;
 
-  if (typeof limit === 'number' && (Number.isNaN(limit) || limit > 100)) {
-    output.error('Please provide a number up to 100 for flag --limit');
+  try {
+    validated = getPaginationOpts(opts);
+  } catch (err: unknown) {
+    output.prettyError(err);
     return 1;
   }
 
@@ -55,9 +48,9 @@ export default async function ls(
       output,
       client,
       domainName,
-      nextTimestamp,
+      validated.nextTimestamp,
       4,
-      limit
+      validated.limit
     );
     if (data instanceof DomainNotFound) {
       output.error(
@@ -93,7 +86,7 @@ export default async function ls(
     output,
     client,
     contextName,
-    nextTimestamp
+    validated.nextTimestamp
   );
   const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
   output.log(

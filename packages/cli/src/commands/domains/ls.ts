@@ -10,14 +10,10 @@ import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
 import { Domain } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
+import { Options, getPaginationOpts } from '../../util/get-pagination-opts';
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
-
-type Options = {
-  '--next': number;
-  '--limit': number;
-};
 
 export default async function ls(
   client: Client,
@@ -25,16 +21,13 @@ export default async function ls(
   args: string[]
 ) {
   const { output } = client;
-  const { '--next': nextTimestamp } = opts;
-  const { '--limit': limit } = opts;
 
-  if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
-    output.error('Please provide a number for flag --next');
-    return 1;
-  }
+  let validated;
 
-  if (typeof limit === 'number' && (Number.isNaN(limit) || limit > 100)) {
-    output.error('Please provide a number up to 100 for flag --limit');
+  try {
+    validated = getPaginationOpts(opts);
+  } catch (err: unknown) {
+    output.prettyError(err);
     return 1;
   }
 
@@ -55,8 +48,8 @@ export default async function ls(
 
   const { domains, pagination } = await getDomains(
     client,
-    nextTimestamp,
-    limit
+    validated.nextTimestamp,
+    validated.limit
   );
 
   output.log(

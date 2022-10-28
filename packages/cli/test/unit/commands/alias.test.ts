@@ -21,20 +21,4 @@ describe('alias', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
     await expect(client.stderr).toOutput('dummy-1.app');
   });
-
-  it('should throw an error if limit not valid', async () => {
-    useUser();
-    for (let limit of ['abc', '101']) {
-      client.setArgv('alias', 'ls', '--limit', limit);
-      const exitCodePromise = alias(client);
-      await expect(exitCodePromise).resolves.toEqual(1);
-    }
-  });
-
-  it('should throw an error if next not a number', async () => {
-    useUser();
-    client.setArgv('alias', 'ls', '--next', 'abc');
-    const exitCodePromise = alias(client);
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
 });

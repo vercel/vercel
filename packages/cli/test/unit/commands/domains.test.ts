@@ -21,20 +21,4 @@ describe('domains', () => {
     await expect(client.stderr).toOutput('example-1.com');
     await expect(exitCodePromise).resolves.toEqual(0);
   });
-
-  it('should throw an error if limit not valid', async () => {
-    useUser();
-    for (let limit of ['abc', '101']) {
-      client.setArgv('domains', 'ls', '--limit', limit);
-      let exitCodePromise = domains(client);
-      await expect(exitCodePromise).resolves.toEqual(1);
-    }
-  });
-
-  it('should throw an error if next not a number', async () => {
-    useUser();
-    client.setArgv('domains', 'ls', '--next', 'abc');
-    let exitCodePromise = domains(client);
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
 });

@@ -21,20 +21,4 @@ describe('certs', () => {
     await expect(client.stderr).toOutput('dummy-1.cert');
     await expect(exitCodePromise).resolves.toEqual(0);
   });
-
-  it('should throw an error if limit not valid', async () => {
-    useUser();
-    for (let limit of ['abc', '101']) {
-      client.setArgv('certs', 'ls', '--limit', limit);
-      const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(1);
-    }
-  });
-
-  it('should throw an error if next not a number', async () => {
-    useUser();
-    client.setArgv('certs', 'ls', '--next', 'abc');
-    const exitCodePromise = certs(client);
-    await expect(exitCodePromise).resolves.toEqual(1);
-  });
 });

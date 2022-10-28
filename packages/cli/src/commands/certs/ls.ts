@@ -3,6 +3,7 @@ import ms from 'ms';
 import table from 'text-table';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
+import { Options, getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
@@ -10,25 +11,23 @@ import { Cert } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 
-interface Options {
-  '--next'?: number;
-  '--limit'?: number;
-}
-
 async function ls(
   client: Client,
   opts: Options,
   args: string[]
 ): Promise<number> {
   const { output } = client;
-  const { '--next': nextTimestamp } = opts;
-  const { '--limit': limit } = opts;
   const { contextName } = await getScope(client);
 
-  if (typeof nextTimestamp !== 'undefined' && Number.isNaN(nextTimestamp)) {
-    output.error('Please provide a number for flag --next');
+  let validated;
+
+  try {
+    validated = getPaginationOpts(opts);
+  } catch (err: unknown) {
+    output.prettyError(err);
     return 1;
   }
+
   const lsStamp = stamp();
 
   if (args.length !== 0) {
@@ -40,15 +39,11 @@ async function ls(
     return 1;
   }
 
-  if (typeof limit === 'number' && (Number.isNaN(limit) || limit > 100)) {
-    output.error('Please provide a number up to 100 for flag --limit');
-    return 1;
-  }
   // Get the list of certificates
   const { certs, pagination } = await getCerts(
     client,
-    nextTimestamp,
-    limit
+    validated.nextTimestamp,
+    validated.limit
   ).catch(err => err);
 
   output.log(
