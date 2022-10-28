@@ -35,4 +35,4 @@ For details on how to use Vercel, check out our [documentation](https://vercel.c
 
 - [Code of Conduct](./.github/CODE_OF_CONDUCT.md)
 - [Contributing Guidelines](./.github/CONTRIBUTING.md)
-- [MIT License](./LICENSE)
+- [Apache 2.0 License](./LICENSE)

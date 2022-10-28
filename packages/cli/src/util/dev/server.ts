@@ -87,7 +87,7 @@ import {
 } from './types';
 import { ProjectSettings } from '../../types';
 import { treeKill } from '../tree-kill';
-import { nodeHeadersToFetchHeaders } from './headers';
+import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
   errorToString,
@@ -1472,6 +1472,9 @@ export default class DevServer {
             'content-length',
             'transfer-encoding',
           ]);
+
+          applyOverriddenHeaders(req.headers, middlewareRes.headers);
+
           for (const [name, value] of middlewareRes.headers) {
             if (name === 'x-middleware-next') {
               shouldContinue = value === '1';
