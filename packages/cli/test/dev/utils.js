@@ -489,17 +489,11 @@ function testFixtureStdio(
   };
 }
 
-async function ps(parentPid, pids) {
+async function ps(parentPid, pids = {}) {
   const cmd =
     process.platform === 'darwin'
       ? ['pgrep', '-P', parentPid]
       : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
-
-  if (pids === undefined) {
-    pids = {
-      [parentPid]: [],
-    };
-  }
 
   try {
     const { stdout: buf } = spawnSync(cmd[0], cmd.slice(1), {
@@ -553,7 +547,9 @@ async function nukeProcessTree(pid, signal) {
     return;
   }
 
-  const pids = await ps(pid);
+  const pids = await ps(pid, {
+    [pid]: [],
+  });
 
   console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
   await Promise.all(Object.keys(pids).map(pid => nukePID(pid, signal)));
