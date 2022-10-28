@@ -241,10 +241,10 @@ async function testFixture(directory, opts = {}, args = []) {
   dev.on('exit', code => {
     devTimer = setTimeout(async () => {
       console.error(
-        `Test ${directory} exited with code ${code}, but has timed out closing stdio`
-      );
-      console.error(
-        `Hanging child processes: ${Object.keys(await ps(dev.pid)).join(', ')}`
+        `Test ${directory} exited with code ${code}, but has timed out closing stdio\n` +
+          `Hanging child processes: ${Object.keys(await ps(dev.pid)).join(
+            ', '
+          )}`
       );
     }, 5000);
   });
