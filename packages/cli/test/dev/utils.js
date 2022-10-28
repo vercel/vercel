@@ -236,8 +236,21 @@ async function testFixture(directory, opts = {}, args = []) {
   });
 
   let printedOutput = false;
+  let devTimer = null;
+
+  dev.on('exit', code => {
+    devTimer = setTimeout(async () => {
+      console.error(
+        `Test ${directory} exited with code ${code}, but has timed out closing stdio`
+      );
+      console.error(
+        `Hanging child processes: ${Object.keys(await ps(dev.pid)).join(', ')}`
+      );
+    }, 5000);
+  });
 
   dev.on('close', () => {
+    clearTimeout(devTimer);
     if (!printedOutput) {
       printOutput(directory, stdout, stderr);
       printedOutput = true;
@@ -476,11 +489,17 @@ function testFixtureStdio(
   };
 }
 
-async function ps(pids, parentPid) {
+async function ps(parentPid, pids) {
   const cmd =
     process.platform === 'darwin'
       ? ['pgrep', '-P', parentPid]
       : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
+
+  if (pids === undefined) {
+    pids = {
+      [parentPid]: [],
+    };
+  }
 
   try {
     const { stdout: buf } = spawnSync(cmd[0], cmd.slice(1), {
@@ -492,7 +511,7 @@ async function ps(pids, parentPid) {
       pids[parentPid].push(pid);
       pids[pid] = [];
       if (recurse) {
-        await ps(pids, pid);
+        await ps(pid, pids);
       }
     }
   } catch (e) {
@@ -509,11 +528,9 @@ async function nukePID(pid, signal = 'SIGTERM', retries = 10) {
 
   // kill the process
   try {
-    console.log(`Killing pid ${pid} ${signal}`);
     process.kill(pid, signal);
   } catch (e) {
     // process does not exist
-    console.log(`pid ${pid} killed`);
     return;
   }
 
@@ -536,14 +553,9 @@ async function nukeProcessTree(pid, signal) {
     return;
   }
 
-  const pids = await ps(
-    {
-      [pid]: [],
-    },
-    pid
-  );
+  const pids = await ps(pid);
 
-  console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
+  console.log(`Nuking pids: ${Object.keys(pids).join(', ')} with ${signal}`);
 
   await Promise.all(Object.keys(pids).map(pid => nukePID(pid, signal)));
 }
