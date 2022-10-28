@@ -555,8 +555,7 @@ async function nukeProcessTree(pid, signal) {
 
   const pids = await ps(pid);
 
-  console.log(`Nuking pids: ${Object.keys(pids).join(', ')} with ${signal}`);
-
+  console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
   await Promise.all(Object.keys(pids).map(pid => nukePID(pid, signal)));
 }
 
