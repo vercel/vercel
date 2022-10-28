@@ -19,27 +19,33 @@ it('should build with app-dir correctly', async () => {
       lambdas.add(buildResult.output[key]);
     }
   }
-  expect(lambdas.size).toBe(1);
+
+  expect(lambdas.size).toBe(2);
   expect(buildResult.output['dashboard']).toBeDefined();
   expect(buildResult.output['dashboard/another']).toBeDefined();
   expect(buildResult.output['dashboard/changelog']).toBeDefined();
   expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
 
   // prefixed static generation output with `/app` under dist server files
-  expect(buildResult.output['dashboard'].type).toBe('FileFsRef');
-  expect(buildResult.output['dashboard'].fsPath).toMatch(
+  expect(buildResult.output['dashboard'].type).toBe('Prerender');
+  expect(buildResult.output['dashboard'].fallback.fsPath).toMatch(
     /server\/app\/dashboard\.html$/
   );
-  expect(buildResult.output['dashboard.rsc'].type).toBe('FileFsRef');
-  expect(buildResult.output['dashboard.rsc'].fsPath).toMatch(
+  expect(buildResult.output['dashboard.rsc'].type).toBe('Prerender');
+  expect(buildResult.output['dashboard.rsc'].fallback.fsPath).toMatch(
     /server\/app\/dashboard\.rsc$/
+  );
+  expect(buildResult.output['dashboard/index/index'].type).toBe('Prerender');
+  expect(buildResult.output['dashboard/index/index'].fallback.fsPath).toMatch(
+    /server\/app\/dashboard\/index\.html$/
+  );
+  expect(buildResult.output['dashboard/index.rsc'].type).toBe('Prerender');
+  expect(buildResult.output['dashboard/index.rsc'].fallback.fsPath).toMatch(
+    /server\/app\/dashboard\/index\.rsc$/
   );
 });
 
-// TODO: re-enable after edge build failure is fixed in Next.js
-// Disabled Oct, 1st 2022
-// eslint-disable-next-line jest/no-disabled-tests
-it.skip('should build with app-dir in edge runtime correctly', async () => {
+it('should build with app-dir in edge runtime correctly', async () => {
   const { buildResult } = await runBuildLambda(
     path.join(__dirname, '../fixtures/00-app-dir-edge')
   );
