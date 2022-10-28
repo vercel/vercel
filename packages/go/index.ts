@@ -297,6 +297,7 @@ export async function build({
         process.arch,
         {
           cwd: entrypointDirname,
+          stdio: 'inherit',
         },
         true
       );
@@ -690,11 +691,13 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     process.platform === 'win32' ? '.exe' : ''
   }`;
 
+  console.log(`SPAWNING go build -o ${executable} ./... CWD=${tmp}`);
   spawnSync('go', ['build', '-o', executable, './...'], {
     cwd: tmp,
     env,
   });
 
+  console.log(`SPAWNING ${executable} CWD=${tmp}`);
   const child = spawn(executable, [], {
     cwd: tmp,
     env,
@@ -705,7 +708,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     try {
       await retry(() => remove(tmp));
     } catch (err: any) {
-      console.error('Could not delete tmp directory: %j: %s', tmp, err);
+      console.error(`Could not delete tmp directory: ${tmp}: ${err}`);
     }
   });
 
