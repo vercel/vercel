@@ -684,20 +684,22 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     TMP,
     `vercel-dev-port-${Math.random().toString(32).substring(2)}`
   );
+
   const env = cloneEnv(process.env, meta.env, {
     VERCEL_DEV_PORT_FILE: portFile,
   });
+
   const executable = `./vercel-dev-server-go${
     process.platform === 'win32' ? '.exe' : ''
   }`;
 
-  console.log(`SPAWNING go build -o ${executable} ./... CWD=${tmp}`);
+  debug(`SPAWNING go build -o ${executable} ./... CWD=${tmp}`);
   spawnSync('go', ['build', '-o', executable, './...'], {
     cwd: tmp,
     env,
   });
 
-  console.log(`SPAWNING ${executable} CWD=${tmp}`);
+  debug(`SPAWNING ${executable} CWD=${tmp}`);
   const child = spawn(executable, [], {
     cwd: tmp,
     env,
