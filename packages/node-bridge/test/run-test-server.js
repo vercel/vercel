@@ -5,7 +5,7 @@ const { URL } = require('url');
 const crypto = require('crypto');
 const listen = require('test-listen');
 
-module.exports.runServer = async function runServer({ handler }) {
+exports.runServer = async function runServer({ handler }) {
   const server = new Server(handler);
   const url = await listen(server);
   return { url: new URL(url), close: getKillServer(server) };
@@ -39,7 +39,7 @@ function getKillServer(server) {
   };
 }
 
-module.exports.runTcpServer = async function runTcpServer({
+exports.runTcpServer = async function runTcpServer({
   effects,
   httpServer,
   cipherParams,
