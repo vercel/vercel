@@ -113,19 +113,19 @@ test(
   )
 );
 
-// test(
-//   '[vercel dev] test rewrites and redirects is case sensitive',
-//   testFixtureStdio('test-routing-case-sensitive', async (testPath: any) => {
-//     await testPath(200, '/Path', 'UPPERCASE');
-//     await testPath(200, '/path', 'lowercase');
-//     await testPath(308, '/GoTo', 'Redirecting to /upper.html (308)', {
-//       Location: '/upper.html',
-//     });
-//     await testPath(308, '/goto', 'Redirecting to /lower.html (308)', {
-//       Location: '/lower.html',
-//     });
-//   })
-// );
+test(
+  '[vercel dev] test rewrites and redirects is case sensitive',
+  testFixtureStdio('test-routing-case-sensitive', async (testPath: any) => {
+    await testPath(200, '/Path', 'UPPERCASE');
+    await testPath(200, '/path', 'lowercase');
+    await testPath(308, '/GoTo', 'Redirecting to /upper.html (308)', {
+      Location: '/upper.html',
+    });
+    await testPath(308, '/goto', 'Redirecting to /lower.html (308)', {
+      Location: '/lower.html',
+    });
+  })
+);
 
 // test(
 //   '[vercel dev] test cleanUrls serve correct content',

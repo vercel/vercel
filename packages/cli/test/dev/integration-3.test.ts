@@ -72,12 +72,12 @@ test(
 //   })
 // );
 
-// test(
-//   '[vercel dev] 05-gatsby',
-//   testFixtureStdio('05-gatsby', async (testPath: any) => {
-//     await testPath(200, '/', /Gatsby Default Starter/m);
-//   })
-// );
+test(
+  '[vercel dev] 05-gatsby',
+  testFixtureStdio('05-gatsby', async (testPath: any) => {
+    await testPath(200, '/', /Gatsby Default Starter/m);
+  })
+);
 
 // test(
 //   '[vercel dev] 06-gridsome',
