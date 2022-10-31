@@ -23,15 +23,15 @@ test('[vercel dev] validate redirects', async () => {
   );
 });
 
-// test('[vercel dev] validate headers', async () => {
-//   const directory = fixture('invalid-headers');
-//   const output = await exec(directory);
+test('[vercel dev] validate headers', async () => {
+  const directory = fixture('invalid-headers');
+  const output = await exec(directory);
 
-//   expect(output.exitCode).toBe(1);
-//   expect(output.stderr).toMatch(
-//     /Invalid vercel\.json - `headers\[0\].headers\[0\].value` should be string/m
-//   );
-// });
+  expect(output.exitCode).toBe(1);
+  expect(output.stderr).toMatch(
+    /Invalid vercel\.json - `headers\[0\].headers\[0\].value` should be string/m
+  );
+});
 
 // test('[vercel dev] validate mixed routes and rewrites', async () => {
 //   const directory = fixture('invalid-mixed-routes-rewrites');
