@@ -90,28 +90,28 @@ test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', asyn
   await tester();
 });
 
-// test('[vercel dev] no build matches warning', async () => {
-//   const directory = fixture('no-build-matches');
-//   const { dev } = await testFixture(directory, {
-//     stdio: ['ignore', 'pipe', 'pipe'],
-//   });
+test('[vercel dev] no build matches warning', async () => {
+  const directory = fixture('no-build-matches');
+  const { dev } = await testFixture(directory, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
-//   try {
-//     // start `vercel dev` detached in child_process
-//     dev.unref();
+  try {
+    // start `vercel dev` detached in child_process
+    dev.unref();
 
-//     dev.stderr.setEncoding('utf8');
-//     await new Promise<void>(resolve => {
-//       dev.stderr.on('data', (str: string) => {
-//         if (str.includes('did not match any source files')) {
-//           resolve();
-//         }
-//       });
-//     });
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    dev.stderr.setEncoding('utf8');
+    await new Promise<void>(resolve => {
+      dev.stderr.on('data', (str: string) => {
+        if (str.includes('did not match any source files')) {
+          resolve();
+        }
+      });
+    });
+  } finally {
+    await dev.kill();
+  }
+});
 
 // test(
 //   '[vercel dev] do not recursivly check the path',
