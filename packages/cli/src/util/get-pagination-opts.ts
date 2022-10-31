@@ -17,7 +17,7 @@ function getPaginationOpts(opts: Options) {
     throw new Error('Please provide a number up to 100 for flag --limit');
   }
 
-  return { nextTimestamp: nextTimestamp, limit: limit };
+  return { nextTimestamp, limit };
 }
 
 export { Options, getPaginationOpts };
