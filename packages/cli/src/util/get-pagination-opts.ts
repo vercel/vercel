@@ -1,9 +1,9 @@
-interface Options {
+export interface Options {
   '--next'?: number;
   '--limit'?: number;
 }
 
-function getPaginationOpts(opts: Options) {
+export function getPaginationOpts(opts: Options) {
   const { '--next': nextTimestamp, '--limit': limit } = opts;
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
@@ -19,5 +19,3 @@ function getPaginationOpts(opts: Options) {
 
   return { nextTimestamp, limit };
 }
-
-export { Options, getPaginationOpts };
