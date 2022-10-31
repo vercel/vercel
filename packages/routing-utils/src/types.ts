@@ -123,5 +123,5 @@ export interface AppendRoutesToPhaseProps {
   /**
    * The phase to append the routes such as `filesystem`.
    */
-  phase: HandleValue;
+  phase: HandleValue | null;
 }
