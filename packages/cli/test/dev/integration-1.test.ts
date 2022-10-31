@@ -8,78 +8,78 @@
 
 const {
   // exec,
-  fetch,
-  fixture,
-  testFixture,
+  // fetch,
+  // fixture,
+  // testFixture,
   testFixtureStdio,
-  validateResponseHeaders,
+  // validateResponseHeaders,
 } = require('./utils.js');
 
-test('[vercel dev] should support edge functions', async () => {
-  const dir = fixture('edge-function');
-  const { dev, port, readyResolver } = await testFixture(dir, {
-    env: {
-      ENV_VAR_IN_EDGE: '1',
-    },
-  });
+// test('[vercel dev] should support edge functions', async () => {
+//   const dir = fixture('edge-function');
+//   const { dev, port, readyResolver } = await testFixture(dir, {
+//     env: {
+//       ENV_VAR_IN_EDGE: '1',
+//     },
+//   });
 
-  try {
-    await readyResolver;
+//   try {
+//     await readyResolver;
 
-    const body = { hello: 'world' };
+//     const body = { hello: 'world' };
 
-    let res = await fetch(`http://localhost:${port}/api/edge-success`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    validateResponseHeaders(res);
+//     let res = await fetch(`http://localhost:${port}/api/edge-success`, {
+//       method: 'POST',
+//       headers: {
+//         'content-type': 'application/json',
+//       },
+//       body: JSON.stringify(body),
+//     });
+//     validateResponseHeaders(res);
 
-    // support for edge functions has to manually ensure that these properties
-    // are set up; so, we test that they are all passed through properly
-    expect(await res.json()).toMatchObject({
-      headerContentType: 'application/json',
-      url: `http://localhost:${port}/api/edge-success`,
-      method: 'POST',
-      body: '{"hello":"world"}',
-      snakeCase: 'some_camel_case_thing',
-      upperCase: 'SOMETHING',
-      optionalChaining: 'fallback',
-      ENV_VAR_IN_EDGE: '1',
-    });
-  } finally {
-    await dev.kill();
-  }
-});
+//     // support for edge functions has to manually ensure that these properties
+//     // are set up; so, we test that they are all passed through properly
+//     expect(await res.json()).toMatchObject({
+//       headerContentType: 'application/json',
+//       url: `http://localhost:${port}/api/edge-success`,
+//       method: 'POST',
+//       body: '{"hello":"world"}',
+//       snakeCase: 'some_camel_case_thing',
+//       upperCase: 'SOMETHING',
+//       optionalChaining: 'fallback',
+//       ENV_VAR_IN_EDGE: '1',
+//     });
+//   } finally {
+//     await dev.kill();
+//   }
+// });
 
-test('[vercel dev] edge functions support WebAssembly files', async () => {
-  const dir = fixture('edge-function');
-  const { dev, port, readyResolver } = await testFixture(dir, {
-    env: {
-      ENV_VAR_IN_EDGE: '1',
-    },
-  });
+// test('[vercel dev] edge functions support WebAssembly files', async () => {
+//   const dir = fixture('edge-function');
+//   const { dev, port, readyResolver } = await testFixture(dir, {
+//     env: {
+//       ENV_VAR_IN_EDGE: '1',
+//     },
+//   });
 
-  try {
-    await readyResolver;
+//   try {
+//     await readyResolver;
 
-    for (const { number, result } of [
-      { number: 1, result: 2 },
-      { number: 2, result: 3 },
-      { number: 12, result: 13 },
-    ]) {
-      let res = await fetch(
-        `http://localhost:${port}/api/webassembly?number=${number}`
-      );
-      validateResponseHeaders(res);
-      await expect(res.text()).resolves.toEqual(`${number} + 1 = ${result}`);
-    }
-  } finally {
-    await dev.kill();
-  }
-});
+//     for (const { number, result } of [
+//       { number: 1, result: 2 },
+//       { number: 2, result: 3 },
+//       { number: 12, result: 13 },
+//     ]) {
+//       let res = await fetch(
+//         `http://localhost:${port}/api/webassembly?number=${number}`
+//       );
+//       validateResponseHeaders(res);
+//       await expect(res.text()).resolves.toEqual(`${number} + 1 = ${result}`);
+//     }
+//   } finally {
+//     await dev.kill();
+//   }
+// });
 
 test(
   '[vercel dev] edge functions respond properly the same as production',
@@ -90,87 +90,89 @@ test(
   })
 );
 
-test('[vercel dev] throws an error when an edge function has no response', async () => {
-  const dir = fixture('edge-function-error');
-  const { dev, port, readyResolver } = await testFixture(dir);
+// test('[vercel dev] throws an error when an edge function has no response', async () => {
+//   const dir = fixture('edge-function-error');
+//   const { dev, port, readyResolver } = await testFixture(dir);
 
-  try {
-    await readyResolver;
+//   try {
+//     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/edge-no-response`);
-    validateResponseHeaders(res);
+//     let res = await fetch(`http://localhost:${port}/api/edge-no-response`);
+//     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill();
+//     const { stdout, stderr } = await dev.kill();
 
-    expect(await res.status).toBe(500);
-    expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
-    expect(stdout).toMatch(
-      /Unhandled rejection: Edge Function "api\/edge-no-response.js" did not return a response./g
-    );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-no-response: Error: socket hang up/g
-    );
-  } finally {
-    await dev.kill();
-  }
-});
+//     expect(await res.status).toBe(500);
+//     expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
+//     expect(stdout).toMatch(
+//       /Unhandled rejection: Edge Function "api\/edge-no-response.js" did not return a response./g
+//     );
+//     expect(stderr).toMatch(
+//       /Failed to complete request to \/api\/edge-no-response: Error: socket hang up/g
+//     );
+//   } finally {
+//     await dev.kill();
+//   }
+// });
 
-test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
-  const dir = fixture('edge-function');
-  const { dev, port, readyResolver } = await testFixture(dir);
+// test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
+//   const dir = fixture('edge-function');
+//   const { dev, port, readyResolver } = await testFixture(dir);
 
-  try {
-    await readyResolver;
+//   try {
+//     await readyResolver;
 
-    const body = { hello: 'world' };
+//     const body = { hello: 'world' };
 
-    let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    validateResponseHeaders(res);
+//     let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
+//       method: 'POST',
+//       headers: {
+//         'content-type': 'application/json',
+//       },
+//       body: JSON.stringify(body),
+//     });
+//     validateResponseHeaders(res);
 
-    expect(await res.status).toBe(500);
-    expect(await res.text()).toBe(
-      'responding with intentional 500 from user code'
-    );
-  } finally {
-    await dev.kill();
-  }
-});
+//     expect(await res.status).toBe(500);
+//     expect(await res.text()).toBe(
+//       'responding with intentional 500 from user code'
+//     );
+//   } finally {
+//     await dev.kill();
+//   }
+// });
 
-test('[vercel dev] should handle runtime errors thrown in edge functions', async () => {
-  const dir = fixture('edge-function-error');
-  const { dev, port, readyResolver } = await testFixture(dir);
+// test('[vercel dev] should handle runtime errors thrown in edge functions', async () => {
+//   const dir = fixture('edge-function-error');
+//   const { dev, port, readyResolver } = await testFixture(dir);
 
-  try {
-    await readyResolver;
+//   try {
+//     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/edge-error-runtime`, {
-      method: 'GET',
-      headers: {
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
-    });
-    validateResponseHeaders(res);
+//     let res = await fetch(`http://localhost:${port}/api/edge-error-runtime`, {
+//       method: 'GET',
+//       headers: {
+//         Accept:
+//           'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+//       },
+//     });
+//     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill();
+//     const { stdout, stderr } = await dev.kill();
 
-    expect(await res.text()).toMatch(
-      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
-    );
-    expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
-    );
-  } finally {
-    await dev.kill();
-  }
-});
+//     expect(await res.text()).toMatch(
+//       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+//     );
+//     expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
+//     expect(stderr).toMatch(
+//       /Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
+//     );
+//   } finally {
+//     await dev.kill();
+//   }
+// });
+
+////////////////
 
 // test('[vercel dev] should handle config errors thrown in edge functions', async () => {
 //   const dir = fixture('edge-function-error');

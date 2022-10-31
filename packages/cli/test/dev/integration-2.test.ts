@@ -4,79 +4,79 @@
 // import fs, { mkdirp } from 'fs-extra';
 
 const {
-  exec,
+  // exec,
   // fetch,
-  fixture,
+  // fixture,
   // sleep,
-  testFixture,
+  // testFixture,
   testFixtureStdio,
   // validateResponseHeaders,
 } = require('./utils.js');
 
-test('[vercel dev] validate redirects', async () => {
-  const directory = fixture('invalid-redirects');
-  const output = await exec(directory);
+// test('[vercel dev] validate redirects', async () => {
+//   const directory = fixture('invalid-redirects');
+//   const output = await exec(directory);
 
-  expect(output.exitCode).toBe(1);
-  expect(output.stderr).toMatch(
-    /Invalid vercel\.json - `redirects\[0\].statusCode` should be integer/m
-  );
-});
+//   expect(output.exitCode).toBe(1);
+//   expect(output.stderr).toMatch(
+//     /Invalid vercel\.json - `redirects\[0\].statusCode` should be integer/m
+//   );
+// });
 
-test('[vercel dev] validate headers', async () => {
-  const directory = fixture('invalid-headers');
-  const output = await exec(directory);
+// test('[vercel dev] validate headers', async () => {
+//   const directory = fixture('invalid-headers');
+//   const output = await exec(directory);
 
-  expect(output.exitCode).toBe(1);
-  expect(output.stderr).toMatch(
-    /Invalid vercel\.json - `headers\[0\].headers\[0\].value` should be string/m
-  );
-});
+//   expect(output.exitCode).toBe(1);
+//   expect(output.stderr).toMatch(
+//     /Invalid vercel\.json - `headers\[0\].headers\[0\].value` should be string/m
+//   );
+// });
 
-test('[vercel dev] validate mixed routes and rewrites', async () => {
-  const directory = fixture('invalid-mixed-routes-rewrites');
-  const output = await exec(directory);
+// test('[vercel dev] validate mixed routes and rewrites', async () => {
+//   const directory = fixture('invalid-mixed-routes-rewrites');
+//   const output = await exec(directory);
 
-  expect(output.exitCode).toBe(1);
-  expect(output.stderr).toMatch(
-    /If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present./m
-  );
-  expect(output.stderr).toMatch(/vercel\.link\/mix-routing-props/m);
-});
+//   expect(output.exitCode).toBe(1);
+//   expect(output.stderr).toMatch(
+//     /If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present./m
+//   );
+//   expect(output.stderr).toMatch(/vercel\.link\/mix-routing-props/m);
+// });
 
-// Test seems unstable: It won't return sometimes.
-test('[vercel dev] validate env var names', async () => {
-  const directory = fixture('invalid-env-var-name');
-  const { dev } = await testFixture(directory, { stdio: 'pipe' });
+// // Test seems unstable: It won't return sometimes.
+// test('[vercel dev] validate env var names', async () => {
+//   const directory = fixture('invalid-env-var-name');
+//   const { dev } = await testFixture(directory, { stdio: 'pipe' });
 
-  try {
-    let stderr = '';
-    dev.stderr.setEncoding('utf8');
+//   try {
+//     let stderr = '';
+//     dev.stderr.setEncoding('utf8');
 
-    await new Promise<void>((resolve, reject) => {
-      dev.stderr.on('data', (b: any) => {
-        stderr += b.toString();
+//     await new Promise<void>((resolve, reject) => {
+//       dev.stderr.on('data', (b: any) => {
+//         stderr += b.toString();
 
-        if (
-          stderr.includes('Ignoring env var "1" because name is invalid') &&
-          stderr.includes(
-            'Ignoring build env var "_a" because name is invalid'
-          ) &&
-          stderr.includes(
-            'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
-          )
-        ) {
-          resolve();
-        }
-      });
+//         if (
+//           stderr.includes('Ignoring env var "1" because name is invalid') &&
+//           stderr.includes(
+//             'Ignoring build env var "_a" because name is invalid'
+//           ) &&
+//           stderr.includes(
+//             'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
+//           )
+//         ) {
+//           resolve();
+//         }
+//       });
 
-      dev.on('error', reject);
-      dev.on('exit', resolve);
-    });
-  } finally {
-    await dev.kill();
-  }
-});
+//       dev.on('error', reject);
+//       dev.on('exit', resolve);
+//     });
+//   } finally {
+//     await dev.kill();
+//   }
+// });
 
 test(
   '[vercel dev] test rewrites with segments serve correct content',

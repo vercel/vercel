@@ -1,117 +1,117 @@
-import ms from 'ms';
-import fs from 'fs-extra';
+// import ms from 'ms';
+// import fs from 'fs-extra';
 // import { isIP } from 'net';
-import { join } from 'path';
+// import { join } from 'path';
 // import { Response } from 'node-fetch';
 
 const {
-  fetch,
-  sleep,
-  fixture,
-  testFixture,
+  // fetch,
+  // sleep,
+  // fixture,
+  // testFixture,
   testFixtureStdio,
-  validateResponseHeaders,
+  // validateResponseHeaders,
 } = require('./utils.js');
 
-test(
-  '[vercel dev] temporary directory listing',
-  testFixtureStdio(
-    'temporary-directory-listing',
-    async (_testPath: any, port: any) => {
-      const directory = fixture('temporary-directory-listing');
-      await fs.unlink(join(directory, 'index.txt')).catch(() => null);
+// test(
+//   '[vercel dev] temporary directory listing',
+//   testFixtureStdio(
+//     'temporary-directory-listing',
+//     async (_testPath: any, port: any) => {
+//       const directory = fixture('temporary-directory-listing');
+//       await fs.unlink(join(directory, 'index.txt')).catch(() => null);
 
-      await sleep(ms('20s'));
+//       await sleep(ms('20s'));
 
-      const firstResponse = await fetch(`http://localhost:${port}`);
-      validateResponseHeaders(firstResponse);
-      const body = await firstResponse.text();
-      console.log(body);
-      expect(firstResponse.status).toBe(404);
+//       const firstResponse = await fetch(`http://localhost:${port}`);
+//       validateResponseHeaders(firstResponse);
+//       const body = await firstResponse.text();
+//       console.log(body);
+//       expect(firstResponse.status).toBe(404);
 
-      await fs.writeFile(join(directory, 'index.txt'), 'hello');
+//       await fs.writeFile(join(directory, 'index.txt'), 'hello');
 
-      for (let i = 0; i < 20; i++) {
-        const response = await fetch(`http://localhost:${port}`);
-        validateResponseHeaders(response);
+//       for (let i = 0; i < 20; i++) {
+//         const response = await fetch(`http://localhost:${port}`);
+//         validateResponseHeaders(response);
 
-        if (response.status === 200) {
-          const body = await response.text();
-          expect(body).toBe('hello');
-        }
+//         if (response.status === 200) {
+//           const body = await response.text();
+//           expect(body).toBe('hello');
+//         }
 
-        await sleep(ms('1s'));
-      }
-    },
-    { skipDeploy: true }
-  )
-);
+//         await sleep(ms('1s'));
+//       }
+//     },
+//     { skipDeploy: true }
+//   )
+// );
 
-test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', async () => {
-  const directory = fixture('trigger-static-build');
+// test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', async () => {
+//   const directory = fixture('trigger-static-build');
 
-  await fs.unlink(join(directory, 'package.json')).catch(() => null);
+//   await fs.unlink(join(directory, 'package.json')).catch(() => null);
 
-  await fs.unlink(join(directory, 'public', 'index.txt')).catch(() => null);
+//   await fs.unlink(join(directory, 'public', 'index.txt')).catch(() => null);
 
-  await fs.rmdir(join(directory, 'public')).catch(() => null);
+//   await fs.rmdir(join(directory, 'public')).catch(() => null);
 
-  const tester = testFixtureStdio(
-    'trigger-static-build',
-    async (_testPath: any, port: any) => {
-      {
-        const response = await fetch(`http://localhost:${port}`);
-        validateResponseHeaders(response);
-        const body = await response.text();
-        expect(body.trim()).toBe('hello:index.txt');
-      }
+//   const tester = testFixtureStdio(
+//     'trigger-static-build',
+//     async (_testPath: any, port: any) => {
+//       {
+//         const response = await fetch(`http://localhost:${port}`);
+//         validateResponseHeaders(response);
+//         const body = await response.text();
+//         expect(body.trim()).toBe('hello:index.txt');
+//       }
 
-      const rnd = Math.random().toString();
-      const pkg = {
-        private: true,
-        scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` },
-      };
+//       const rnd = Math.random().toString();
+//       const pkg = {
+//         private: true,
+//         scripts: { build: `mkdir -p public && echo ${rnd} > public/index.txt` },
+//       };
 
-      await fs.writeFile(join(directory, 'package.json'), JSON.stringify(pkg));
+//       await fs.writeFile(join(directory, 'package.json'), JSON.stringify(pkg));
 
-      // Wait until file events have been processed
-      await sleep(ms('2s'));
+//       // Wait until file events have been processed
+//       await sleep(ms('2s'));
 
-      {
-        const response = await fetch(`http://localhost:${port}`);
-        validateResponseHeaders(response);
-        const body = await response.text();
-        expect(body.trim()).toBe(rnd);
-      }
-    },
-    { skipDeploy: true }
-  );
+//       {
+//         const response = await fetch(`http://localhost:${port}`);
+//         validateResponseHeaders(response);
+//         const body = await response.text();
+//         expect(body.trim()).toBe(rnd);
+//       }
+//     },
+//     { skipDeploy: true }
+//   );
 
-  await tester();
-});
+//   await tester();
+// });
 
-test('[vercel dev] no build matches warning', async () => {
-  const directory = fixture('no-build-matches');
-  const { dev } = await testFixture(directory, {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+// test('[vercel dev] no build matches warning', async () => {
+//   const directory = fixture('no-build-matches');
+//   const { dev } = await testFixture(directory, {
+//     stdio: ['ignore', 'pipe', 'pipe'],
+//   });
 
-  try {
-    // start `vercel dev` detached in child_process
-    dev.unref();
+//   try {
+//     // start `vercel dev` detached in child_process
+//     dev.unref();
 
-    dev.stderr.setEncoding('utf8');
-    await new Promise<void>(resolve => {
-      dev.stderr.on('data', (str: string) => {
-        if (str.includes('did not match any source files')) {
-          resolve();
-        }
-      });
-    });
-  } finally {
-    await dev.kill();
-  }
-});
+//     dev.stderr.setEncoding('utf8');
+//     await new Promise<void>(resolve => {
+//       dev.stderr.on('data', (str: string) => {
+//         if (str.includes('did not match any source files')) {
+//           resolve();
+//         }
+//       });
+//     });
+//   } finally {
+//     await dev.kill();
+//   }
+// });
 
 test(
   '[vercel dev] do not recursivly check the path',
@@ -121,75 +121,77 @@ test(
   })
 );
 
-test('[vercel dev] render warning for empty cwd dir', async () => {
-  const directory = fixture('empty');
-  const { dev, port } = await testFixture(directory, {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+// test('[vercel dev] render warning for empty cwd dir', async () => {
+//   const directory = fixture('empty');
+//   const { dev, port } = await testFixture(directory, {
+//     stdio: ['ignore', 'pipe', 'pipe'],
+//   });
 
-  try {
-    dev.unref();
+//   try {
+//     dev.unref();
 
-    // Monitor `stderr` for the warning
-    dev.stderr.setEncoding('utf8');
-    const msg = 'There are no files inside your deployment.';
-    await new Promise<void>(resolve => {
-      dev.stderr.on('data', (str: string) => {
-        if (str.includes(msg)) {
-          resolve();
-        }
-      });
-    });
+//     // Monitor `stderr` for the warning
+//     dev.stderr.setEncoding('utf8');
+//     const msg = 'There are no files inside your deployment.';
+//     await new Promise<void>(resolve => {
+//       dev.stderr.on('data', (str: string) => {
+//         if (str.includes(msg)) {
+//           resolve();
+//         }
+//       });
+//     });
 
-    // Issue a request to ensure a 404 response
-    await sleep(ms('3s'));
-    const response = await fetch(`http://localhost:${port}`);
-    validateResponseHeaders(response);
-    expect(response.status).toBe(404);
-  } finally {
-    await dev.kill();
-  }
-});
+//     // Issue a request to ensure a 404 response
+//     await sleep(ms('3s'));
+//     const response = await fetch(`http://localhost:${port}`);
+//     validateResponseHeaders(response);
+//     expect(response.status).toBe(404);
+//   } finally {
+//     await dev.kill();
+//   }
+// });
 
-test('[vercel dev] do not rebuild for changes in the output directory', async () => {
-  const directory = fixture('output-is-source');
+// test('[vercel dev] do not rebuild for changes in the output directory', async () => {
+//   const directory = fixture('output-is-source');
 
-  const { dev, port } = await testFixture(directory, {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+//   const { dev, port } = await testFixture(directory, {
+//     stdio: ['ignore', 'pipe', 'pipe'],
+//   });
 
-  try {
-    dev.unref();
+//   try {
+//     dev.unref();
 
-    let stderr: any = [];
-    const start = Date.now();
+//     let stderr: any = [];
+//     const start = Date.now();
 
-    dev.stderr.on('data', (str: any) => stderr.push(str));
+//     dev.stderr.on('data', (str: any) => stderr.push(str));
 
-    while (stderr.join('').includes('Ready') === false) {
-      await sleep(ms('3s'));
+//     while (stderr.join('').includes('Ready') === false) {
+//       await sleep(ms('3s'));
 
-      if (Date.now() - start > ms('30s')) {
-        console.log('stderr:', stderr.join(''));
-        break;
-      }
-    }
+//       if (Date.now() - start > ms('30s')) {
+//         console.log('stderr:', stderr.join(''));
+//         break;
+//       }
+//     }
 
-    const resp1 = await fetch(`http://localhost:${port}`);
-    const text1 = await resp1.text();
-    expect(text1.trim()).toBe('hello first');
+//     const resp1 = await fetch(`http://localhost:${port}`);
+//     const text1 = await resp1.text();
+//     expect(text1.trim()).toBe('hello first');
 
-    await fs.writeFile(join(directory, 'public', 'index.html'), 'hello second');
+//     await fs.writeFile(join(directory, 'public', 'index.html'), 'hello second');
 
-    await sleep(ms('3s'));
+//     await sleep(ms('3s'));
 
-    const resp2 = await fetch(`http://localhost:${port}`);
-    const text2 = await resp2.text();
-    expect(text2.trim()).toBe('hello second');
-  } finally {
-    await dev.kill();
-  }
-});
+//     const resp2 = await fetch(`http://localhost:${port}`);
+//     const text2 = await resp2.text();
+//     expect(text2.trim()).toBe('hello second');
+//   } finally {
+//     await dev.kill();
+//   }
+// });
+
+///////////////
 
 // test(
 //   '[vercel dev] 25-nextjs-src-dir',

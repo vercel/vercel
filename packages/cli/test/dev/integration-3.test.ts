@@ -2,67 +2,67 @@
 
 const {
   // fetch,
-  sleep,
-  fixture,
-  isCanary,
-  shouldSkip,
-  testFixture,
-  fetchWithRetry,
+  // sleep,
+  // fixture,
+  // isCanary,
+  // shouldSkip,
+  // testFixture,
+  // fetchWithRetry,
   testFixtureStdio,
-  validateResponseHeaders,
+  // validateResponseHeaders,
 } = require('./utils.js');
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
-test('[vercel dev] 02-angular-node', async () => {
-  if (shouldSkip('02-angular-node', '10.x')) return;
+// test('[vercel dev] 02-angular-node', async () => {
+//   if (shouldSkip('02-angular-node', '10.x')) return;
 
-  const directory = fixture('02-angular-node');
-  const { dev, port } = await testFixture(directory, { stdio: 'pipe' }, [
-    '--debug',
-  ]);
+//   const directory = fixture('02-angular-node');
+//   const { dev, port } = await testFixture(directory, { stdio: 'pipe' }, [
+//     '--debug',
+//   ]);
 
-  let stderr = '';
+//   let stderr = '';
 
-  try {
-    dev.stderr.on('data', async (data: any) => {
-      stderr += data.toString();
-    });
+//   try {
+//     dev.stderr.on('data', async (data: any) => {
+//       stderr += data.toString();
+//     });
 
-    // start `vercel dev` detached in child_process
-    dev.unref();
+//     // start `vercel dev` detached in child_process
+//     dev.unref();
 
-    const response = await fetchWithRetry(`http://localhost:${port}`, {
-      retries: 180,
-      status: 200,
-    });
+//     const response = await fetchWithRetry(`http://localhost:${port}`, {
+//       retries: 180,
+//       status: 200,
+//     });
 
-    validateResponseHeaders(response);
+//     validateResponseHeaders(response);
 
-    const body = await response.text();
-    expect(body).toMatch(/Angular \+ Node.js API/m);
-  } finally {
-    await dev.kill();
-  }
+//     const body = await response.text();
+//     expect(body).toMatch(/Angular \+ Node.js API/m);
+//   } finally {
+//     await dev.kill();
+//   }
 
-  await sleep(5000);
+//   await sleep(5000);
 
-  if (isCanary()) {
-    stderr.includes('@now/build-utils@canary');
-  } else {
-    stderr.includes('@now/build-utils@latest');
-  }
-});
+//   if (isCanary()) {
+//     stderr.includes('@now/build-utils@canary');
+//   } else {
+//     stderr.includes('@now/build-utils@latest');
+//   }
+// });
 
-test(
-  '[vercel dev] 03-aurelia',
-  testFixtureStdio(
-    '03-aurelia',
-    async (testPath: any) => {
-      await testPath(200, '/', /Aurelia Navigation Skeleton/m);
-    },
-    { skipDeploy: true }
-  )
-);
+// test(
+//   '[vercel dev] 03-aurelia',
+//   testFixtureStdio(
+//     '03-aurelia',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /Aurelia Navigation Skeleton/m);
+//     },
+//     { skipDeploy: true }
+//   )
+// );
 
 // FIXME: 2 orphan node processes
 test(
