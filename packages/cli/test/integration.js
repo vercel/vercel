@@ -2924,7 +2924,7 @@ test('should show prompts to set up project during first deploy', async t => {
     dev.stdout.pipe(process.stdout);
     dev.stderr.pipe(process.stderr);
     await new Promise((resolve, reject) => {
-      dev.once('exit', (code, signal) => {
+      dev.once('close', (code, signal) => {
         reject(`"vc dev" failed with ${signal || code}`);
       });
       dev.stderr.on('data', data => {

@@ -568,7 +568,7 @@ export const build: BuildV2 = async ({
         const cmd = devCommand || `yarn run ${devScript}`;
         const child: ChildProcess = spawnCommand(cmd, opts);
 
-        child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
+        child.on('close', () => nowDevScriptPorts.delete(entrypoint));
         nowDevChildProcesses.add(child);
 
         // Wait for the server to have listened on `$PORT`, after which we
