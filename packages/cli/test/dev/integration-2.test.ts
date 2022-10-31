@@ -6,7 +6,7 @@
 const {
   exec,
   // fetch,
-  // fixture,
+  fixture,
   // sleep,
   // testFixture,
   // testFixtureStdio,
