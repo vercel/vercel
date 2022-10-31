@@ -96,22 +96,22 @@ test(
   })
 );
 
-// test(
-//   '[vercel dev] test rewrites and redirects serve correct external content',
-//   testFixtureStdio(
-//     'test-external-rewrites-and-redirects',
-//     async (testPath: any) => {
-//       const vcRobots = `https://vercel.com/robots.txt`;
-//       await testPath(200, '/rewrite', /User-Agent: \*/m);
-//       await testPath(308, '/redirect', `Redirecting to ${vcRobots} (308)`, {
-//         Location: vcRobots,
-//       });
-//       await testPath(307, '/tempRedirect', `Redirecting to ${vcRobots} (307)`, {
-//         Location: vcRobots,
-//       });
-//     }
-//   )
-// );
+test(
+  '[vercel dev] test rewrites and redirects serve correct external content',
+  testFixtureStdio(
+    'test-external-rewrites-and-redirects',
+    async (testPath: any) => {
+      const vcRobots = `https://vercel.com/robots.txt`;
+      await testPath(200, '/rewrite', /User-Agent: \*/m);
+      await testPath(308, '/redirect', `Redirecting to ${vcRobots} (308)`, {
+        Location: vcRobots,
+      });
+      await testPath(307, '/tempRedirect', `Redirecting to ${vcRobots} (307)`, {
+        Location: vcRobots,
+      });
+    }
+  )
+);
 
 // test(
 //   '[vercel dev] test rewrites and redirects is case sensitive',
