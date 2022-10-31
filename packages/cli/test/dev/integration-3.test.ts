@@ -64,12 +64,13 @@ test(
   )
 );
 
-test(
-  '[vercel dev] 04-create-react-app',
-  testFixtureStdio('04-create-react-app', async (testPath: any) => {
-    await testPath(200, '/', /React App/m);
-  })
-);
+// 2 orphan node processes
+// test(
+//   '[vercel dev] 04-create-react-app',
+//   testFixtureStdio('04-create-react-app', async (testPath: any) => {
+//     await testPath(200, '/', /React App/m);
+//   })
+// );
 /*
 test(
   '[vercel dev] 05-gatsby',

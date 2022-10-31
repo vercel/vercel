@@ -8,7 +8,7 @@ const {
   // fetch,
   fixture,
   // sleep,
-  // testFixture,
+  testFixture,
   // testFixtureStdio,
   // validateResponseHeaders,
 } = require('./utils.js');
