@@ -465,6 +465,56 @@ it('should support initialHeaders and initialStatus correctly', async () => {
   });
 });
 
+it('should error for invalid expiration on Prerender', async () => {
+  const { Prerender } = require('@vercel/build-utils/dist/prerender.js');
+  expect(() => {
+    new Prerender({
+      expiration: 0,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      initialHeaders: {
+        'content-type': 'application/json',
+        'x-initial': 'true',
+      },
+      initialStatus: 308,
+    });
+  }).toThrow(
+    'The `expiration` argument for `Prerender` needs to be a natural number or false. Received: "0"'
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: -1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      initialHeaders: {
+        'content-type': 'application/json',
+        'x-initial': 'true',
+      },
+      initialStatus: 308,
+    });
+  }).toThrow(
+    'The `expiration` argument for `Prerender` needs to be a natural number or false. Received: "-1"'
+  );
+  expect(() => {
+    new Prerender({
+      expiration: null,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      initialHeaders: {
+        'content-type': 'application/json',
+        'x-initial': 'true',
+      },
+      initialStatus: 308,
+    });
+  }).toThrow(
+    'The `expiration` argument for `Prerender` needs to be a natural number or false. Received: "null"'
+  );
+});
+
 it('should support require by path for legacy builders', () => {
   const index = require('@vercel/build-utils');
 

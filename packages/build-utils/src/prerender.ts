@@ -34,8 +34,17 @@ export class Prerender {
     initialStatus,
   }: PrerenderOptions) {
     this.type = 'Prerender';
-    this.expiration = expiration;
     this.lambda = lambda;
+
+    if (
+      expiration !== false &&
+      (expiration <= 0 || !Number.isInteger(expiration))
+    ) {
+      throw new Error(
+        `The \`expiration\` argument for \`Prerender\` needs to be a natural number or false. Received: "${expiration}"`
+      );
+    }
+    this.expiration = expiration;
 
     if (
       typeof group !== 'undefined' &&
