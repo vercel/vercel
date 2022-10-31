@@ -1,4 +1,4 @@
-import { resolve, delimiter } from 'path';
+// import { resolve, delimiter } from 'path';
 
 const {
   fetch,
@@ -102,20 +102,20 @@ test(
   })
 );
 
-test('[vercel dev] 08-hugo', async () => {
-  if (process.platform === 'darwin') {
-    // Update PATH to find the Hugo executable installed via GH Actions
-    process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
-      process.env.PATH
-    }`;
-    const tester = testFixtureStdio('08-hugo', async (testPath: any) => {
-      await testPath(200, '/', /Hugo/m);
-    });
-    await tester();
-  } else {
-    console.log(`Skipping 08-hugo on platform ${process.platform}`);
-  }
-});
+// test('[vercel dev] 08-hugo', async () => {
+//   if (process.platform === 'darwin') {
+//     // Update PATH to find the Hugo executable installed via GH Actions
+//     process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
+//       process.env.PATH
+//     }`;
+//     const tester = testFixtureStdio('08-hugo', async (testPath: any) => {
+//       await testPath(200, '/', /Hugo/m);
+//     });
+//     await tester();
+//   } else {
+//     console.log(`Skipping 08-hugo on platform ${process.platform}`);
+//   }
+// });
 
 test(
   '[vercel dev] 10-nextjs-node',
@@ -137,85 +137,85 @@ test(
   })
 );
 
-test(
-  '[vercel dev] 12-polymer-node',
-  testFixtureStdio(
-    '12-polymer-node',
-    async (testPath: any) => {
-      await testPath(200, '/', /Polymer \+ Node.js API/m);
-      await testPath(
-        200,
-        '/api/date',
-        new RegExp(new Date().getFullYear() + '')
-      );
-    },
-    { skipDeploy: true }
-  )
-);
+// test(
+//   '[vercel dev] 12-polymer-node',
+//   testFixtureStdio(
+//     '12-polymer-node',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /Polymer \+ Node.js API/m);
+//       await testPath(
+//         200,
+//         '/api/date',
+//         new RegExp(new Date().getFullYear() + '')
+//       );
+//     },
+//     { skipDeploy: true }
+//   )
+// );
 
-test(
-  '[vercel dev] 13-preact-node',
-  testFixtureStdio(
-    '13-preact-node',
-    async (testPath: any) => {
-      await testPath(200, '/', /Preact/m);
-      await testPath(
-        200,
-        '/api/date',
-        new RegExp(new Date().getFullYear() + '')
-      );
-    },
-    { skipDeploy: true }
-  )
-);
+// test(
+//   '[vercel dev] 13-preact-node',
+//   testFixtureStdio(
+//     '13-preact-node',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /Preact/m);
+//       await testPath(
+//         200,
+//         '/api/date',
+//         new RegExp(new Date().getFullYear() + '')
+//       );
+//     },
+//     { skipDeploy: true }
+//   )
+// );
 
-test(
-  '[vercel dev] 14-svelte-node',
-  testFixtureStdio(
-    '14-svelte-node',
-    async (testPath: any) => {
-      await testPath(200, '/', /Svelte/m);
-      await testPath(
-        200,
-        '/api/date',
-        new RegExp(new Date().getFullYear() + '')
-      );
-    },
-    { skipDeploy: true }
-  )
-);
+// test(
+//   '[vercel dev] 14-svelte-node',
+//   testFixtureStdio(
+//     '14-svelte-node',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /Svelte/m);
+//       await testPath(
+//         200,
+//         '/api/date',
+//         new RegExp(new Date().getFullYear() + '')
+//       );
+//     },
+//     { skipDeploy: true }
+//   )
+// );
 
-test(
-  '[vercel dev] 16-vue-node',
-  testFixtureStdio(
-    '16-vue-node',
-    async (testPath: any) => {
-      await testPath(200, '/', /Vue.js \+ Node.js API/m);
-      await testPath(
-        200,
-        '/api/date',
-        new RegExp(new Date().getFullYear() + '')
-      );
-    },
-    { skipDeploy: true }
-  )
-);
+// test(
+//   '[vercel dev] 16-vue-node',
+//   testFixtureStdio(
+//     '16-vue-node',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /Vue.js \+ Node.js API/m);
+//       await testPath(
+//         200,
+//         '/api/date',
+//         new RegExp(new Date().getFullYear() + '')
+//       );
+//     },
+//     { skipDeploy: true }
+//   )
+// );
 
-test(
-  '[vercel dev] 17-vuepress-node',
-  testFixtureStdio(
-    '17-vuepress-node',
-    async (testPath: any) => {
-      await testPath(200, '/', /VuePress \+ Node.js API/m);
-      await testPath(
-        200,
-        '/api/date',
-        new RegExp(new Date().getFullYear() + '')
-      );
-    },
-    { skipDeploy: true }
-  )
-);
+// test(
+//   '[vercel dev] 17-vuepress-node',
+//   testFixtureStdio(
+//     '17-vuepress-node',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /VuePress \+ Node.js API/m);
+//       await testPath(
+//         200,
+//         '/api/date',
+//         new RegExp(new Date().getFullYear() + '')
+//       );
+//     },
+//     { skipDeploy: true }
+//   )
+// );
 
 test(
   '[vercel dev] double slashes redirect',
@@ -322,16 +322,16 @@ test(
   )
 );
 
-test(
-  '[vercel dev] 23-docusaurus',
-  testFixtureStdio(
-    '23-docusaurus',
-    async (testPath: any) => {
-      await testPath(200, '/', /My Site/m);
-    },
-    { skipDeploy: true }
-  )
-);
+// test(
+//   '[vercel dev] 23-docusaurus',
+//   testFixtureStdio(
+//     '23-docusaurus',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /My Site/m);
+//     },
+//     { skipDeploy: true }
+//   )
+// );
 
 test('[vercel dev] 24-ember', async () => {
   if (shouldSkip('24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
