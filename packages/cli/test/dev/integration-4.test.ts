@@ -151,45 +151,45 @@ test('[vercel dev] render warning for empty cwd dir', async () => {
   }
 });
 
-// test('[vercel dev] do not rebuild for changes in the output directory', async () => {
-//   const directory = fixture('output-is-source');
+test('[vercel dev] do not rebuild for changes in the output directory', async () => {
+  const directory = fixture('output-is-source');
 
-//   const { dev, port } = await testFixture(directory, {
-//     stdio: ['ignore', 'pipe', 'pipe'],
-//   });
+  const { dev, port } = await testFixture(directory, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
-//   try {
-//     dev.unref();
+  try {
+    dev.unref();
 
-//     let stderr: any = [];
-//     const start = Date.now();
+    let stderr: any = [];
+    const start = Date.now();
 
-//     dev.stderr.on('data', (str: any) => stderr.push(str));
+    dev.stderr.on('data', (str: any) => stderr.push(str));
 
-//     while (stderr.join('').includes('Ready') === false) {
-//       await sleep(ms('3s'));
+    while (stderr.join('').includes('Ready') === false) {
+      await sleep(ms('3s'));
 
-//       if (Date.now() - start > ms('30s')) {
-//         console.log('stderr:', stderr.join(''));
-//         break;
-//       }
-//     }
+      if (Date.now() - start > ms('30s')) {
+        console.log('stderr:', stderr.join(''));
+        break;
+      }
+    }
 
-//     const resp1 = await fetch(`http://localhost:${port}`);
-//     const text1 = await resp1.text();
-//     expect(text1.trim()).toBe('hello first');
+    const resp1 = await fetch(`http://localhost:${port}`);
+    const text1 = await resp1.text();
+    expect(text1.trim()).toBe('hello first');
 
-//     await fs.writeFile(join(directory, 'public', 'index.html'), 'hello second');
+    await fs.writeFile(join(directory, 'public', 'index.html'), 'hello second');
 
-//     await sleep(ms('3s'));
+    await sleep(ms('3s'));
 
-//     const resp2 = await fetch(`http://localhost:${port}`);
-//     const text2 = await resp2.text();
-//     expect(text2.trim()).toBe('hello second');
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    const resp2 = await fetch(`http://localhost:${port}`);
+    const text2 = await resp2.text();
+    expect(text2.trim()).toBe('hello second');
+  } finally {
+    await dev.kill();
+  }
+});
 
 // test(
 //   '[vercel dev] 25-nextjs-src-dir',

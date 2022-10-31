@@ -78,16 +78,16 @@ test('[vercel dev] validate env var names', async () => {
   }
 });
 
-// test(
-//   '[vercel dev] test rewrites with segments serve correct content',
-//   testFixtureStdio('test-rewrites-with-segments', async (testPath: any) => {
-//     await testPath(200, '/api/users/first', 'first');
-//     await testPath(200, '/api/fourty-two', '42');
-//     await testPath(200, '/rand', '42');
-//     await testPath(200, '/api/dynamic', 'dynamic');
-//     await testPath(404, '/api');
-//   })
-// );
+test(
+  '[vercel dev] test rewrites with segments serve correct content',
+  testFixtureStdio('test-rewrites-with-segments', async (testPath: any) => {
+    await testPath(200, '/api/users/first', 'first');
+    await testPath(200, '/api/fourty-two', '42');
+    await testPath(200, '/rand', '42');
+    await testPath(200, '/api/dynamic', 'dynamic');
+    await testPath(404, '/api');
+  })
+);
 
 // test(
 //   '[vercel dev] test rewrites serve correct content',
