@@ -44,39 +44,39 @@ test('[vercel dev] validate mixed routes and rewrites', async () => {
   expect(output.stderr).toMatch(/vercel\.link\/mix-routing-props/m);
 });
 
-// // Test seems unstable: It won't return sometimes.
-// test('[vercel dev] validate env var names', async () => {
-//   const directory = fixture('invalid-env-var-name');
-//   const { dev } = await testFixture(directory, { stdio: 'pipe' });
+// Test seems unstable: It won't return sometimes.
+test('[vercel dev] validate env var names', async () => {
+  const directory = fixture('invalid-env-var-name');
+  const { dev } = await testFixture(directory, { stdio: 'pipe' });
 
-//   try {
-//     let stderr = '';
-//     dev.stderr.setEncoding('utf8');
+  try {
+    let stderr = '';
+    dev.stderr.setEncoding('utf8');
 
-//     await new Promise<void>((resolve, reject) => {
-//       dev.stderr.on('data', (b: any) => {
-//         stderr += b.toString();
+    await new Promise<void>((resolve, reject) => {
+      dev.stderr.on('data', (b: any) => {
+        stderr += b.toString();
 
-//         if (
-//           stderr.includes('Ignoring env var "1" because name is invalid') &&
-//           stderr.includes(
-//             'Ignoring build env var "_a" because name is invalid'
-//           ) &&
-//           stderr.includes(
-//             'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
-//           )
-//         ) {
-//           resolve();
-//         }
-//       });
+        if (
+          stderr.includes('Ignoring env var "1" because name is invalid') &&
+          stderr.includes(
+            'Ignoring build env var "_a" because name is invalid'
+          ) &&
+          stderr.includes(
+            'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
+          )
+        ) {
+          resolve();
+        }
+      });
 
-//       dev.on('error', reject);
-//       dev.on('exit', resolve);
-//     });
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+      dev.on('error', reject);
+      dev.on('exit', resolve);
+    });
+  } finally {
+    await dev.kill();
+  }
+});
 
 // test(
 //   '[vercel dev] test rewrites with segments serve correct content',

@@ -113,13 +113,13 @@ test('[vercel dev] no build matches warning', async () => {
   }
 });
 
-// test(
-//   '[vercel dev] do not recursivly check the path',
-//   testFixtureStdio('handle-filesystem-missing', async (testPath: any) => {
-//     await testPath(200, '/', /hello/m);
-//     await testPath(404, '/favicon.txt');
-//   })
-// );
+test(
+  '[vercel dev] do not recursivly check the path',
+  testFixtureStdio('handle-filesystem-missing', async (testPath: any) => {
+    await testPath(200, '/', /hello/m);
+    await testPath(404, '/favicon.txt');
+  })
+);
 
 // test('[vercel dev] render warning for empty cwd dir', async () => {
 //   const directory = fixture('empty');
