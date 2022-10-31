@@ -8,7 +8,7 @@ const {
   shouldSkip,
   testFixture,
   fetchWithRetry,
-  // testFixtureStdio,
+  testFixtureStdio,
   validateResponseHeaders,
 } = require('./utils.js');
 
