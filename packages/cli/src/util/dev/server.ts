@@ -1026,7 +1026,8 @@ export default class DevServer {
     debug(`Killing builder dev server with PID ${pid}`);
     this.devServerPids.delete(pid);
     try {
-      process.kill(pid, 'SIGTERM');
+      await treeKill(pid);
+      // process.kill(pid, 'SIGTERM');
       debug(`Killed builder dev server with PID ${pid}`);
     } catch (err) {
       debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
@@ -2288,7 +2289,7 @@ export default class DevServer {
       process.stdout.write(data.replace(proxyPort, this.address.port));
     });
 
-    p.on('exit', (code, signal) => {
+    p.on('close', (code, signal) => {
       this.output.debug(`Dev command exited with "${signal || code}"`);
       this.devProcessOrigin = undefined;
     });
