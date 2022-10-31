@@ -9,7 +9,7 @@ const {
   fixture,
   // sleep,
   testFixture,
-  // testFixtureStdio,
+  testFixtureStdio,
   // validateResponseHeaders,
 } = require('./utils.js');
 
