@@ -9,7 +9,7 @@
 const {
   // exec,
   fetch,
-  // fixture,
+  fixture,
   testFixture,
   // testFixtureStdio,
   validateResponseHeaders,
