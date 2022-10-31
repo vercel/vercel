@@ -121,35 +121,35 @@ test(
   })
 );
 
-// test('[vercel dev] render warning for empty cwd dir', async () => {
-//   const directory = fixture('empty');
-//   const { dev, port } = await testFixture(directory, {
-//     stdio: ['ignore', 'pipe', 'pipe'],
-//   });
+test('[vercel dev] render warning for empty cwd dir', async () => {
+  const directory = fixture('empty');
+  const { dev, port } = await testFixture(directory, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
-//   try {
-//     dev.unref();
+  try {
+    dev.unref();
 
-//     // Monitor `stderr` for the warning
-//     dev.stderr.setEncoding('utf8');
-//     const msg = 'There are no files inside your deployment.';
-//     await new Promise<void>(resolve => {
-//       dev.stderr.on('data', (str: string) => {
-//         if (str.includes(msg)) {
-//           resolve();
-//         }
-//       });
-//     });
+    // Monitor `stderr` for the warning
+    dev.stderr.setEncoding('utf8');
+    const msg = 'There are no files inside your deployment.';
+    await new Promise<void>(resolve => {
+      dev.stderr.on('data', (str: string) => {
+        if (str.includes(msg)) {
+          resolve();
+        }
+      });
+    });
 
-//     // Issue a request to ensure a 404 response
-//     await sleep(ms('3s'));
-//     const response = await fetch(`http://localhost:${port}`);
-//     validateResponseHeaders(response);
-//     expect(response.status).toBe(404);
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    // Issue a request to ensure a 404 response
+    await sleep(ms('3s'));
+    const response = await fetch(`http://localhost:${port}`);
+    validateResponseHeaders(response);
+    expect(response.status).toBe(404);
+  } finally {
+    await dev.kill();
+  }
+});
 
 // test('[vercel dev] do not rebuild for changes in the output directory', async () => {
 //   const directory = fixture('output-is-source');
