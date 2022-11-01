@@ -243,27 +243,27 @@ test(
   })
 );
 
-// test(
-//   '[vercel dev] test trailingSlash true serve correct content',
-//   testFixtureStdio('test-trailing-slash', async (testPath: any) => {
-//     await testPath(200, '/', 'Index Page');
-//     await testPath(200, '/index.html', 'Index Page');
-//     await testPath(200, '/about.html', 'About Page');
-//     await testPath(200, '/sub/', 'Sub Index Page');
-//     await testPath(200, '/sub/index.html', 'Sub Index Page');
-//     await testPath(200, '/sub/another.html', 'Sub Another Page');
-//     await testPath(200, '/style.css', 'body { color: green }');
-//     await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
-//       Location: '/about.html',
-//     });
-//     await testPath(308, '/style.css/', 'Redirecting to /style.css (308)', {
-//       Location: '/style.css',
-//     });
-//     await testPath(308, '/sub', 'Redirecting to /sub/ (308)', {
-//       Location: '/sub/',
-//     });
-//   })
-// );
+test(
+  '[vercel dev] test trailingSlash true serve correct content',
+  testFixtureStdio('test-trailing-slash', async (testPath: any) => {
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/index.html', 'Index Page');
+    await testPath(200, '/about.html', 'About Page');
+    await testPath(200, '/sub/', 'Sub Index Page');
+    await testPath(200, '/sub/index.html', 'Sub Index Page');
+    await testPath(200, '/sub/another.html', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
+      Location: '/about.html',
+    });
+    await testPath(308, '/style.css/', 'Redirecting to /style.css (308)', {
+      Location: '/style.css',
+    });
+    await testPath(308, '/sub', 'Redirecting to /sub/ (308)', {
+      Location: '/sub/',
+    });
+  })
+);
 
 // test(
 //   '[vercel dev] should serve custom 404 when `trailingSlash: true`',

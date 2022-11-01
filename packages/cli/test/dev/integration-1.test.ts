@@ -11,7 +11,7 @@ const {
   fetch,
   fixture,
   testFixture,
-  // testFixtureStdio,
+  testFixtureStdio,
   validateResponseHeaders,
 } = require('./utils.js');
 
