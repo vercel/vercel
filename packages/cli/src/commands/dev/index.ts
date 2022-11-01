@@ -15,7 +15,7 @@ import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
 import { getPkgName, getCommandName } from '../../util/pkg-name';
 import { CantParseJSONFile } from '../../util/errors-ts';
-import { isErrnoException } from '@vercel/errors';
+import { isErrnoException } from '../../../../error-utils/dist';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],

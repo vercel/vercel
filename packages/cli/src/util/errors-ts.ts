@@ -5,7 +5,7 @@ import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
 import chalk from 'chalk';
-import { isError } from '@vercel/errors';
+import { isError } from '../../../error-utils/dist';
 
 /**
  * This error is thrown when there is an API error with a payload. The error

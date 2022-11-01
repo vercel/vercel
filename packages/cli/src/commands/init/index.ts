@@ -7,7 +7,7 @@ import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import init from './init';
 import { getPkgName } from '../../util/pkg-name';
-import { isError } from '@vercel/errors';
+import { isError } from '../../../../error-utils/dist';
 
 const COMMAND_CONFIG = {
   init: ['init'],

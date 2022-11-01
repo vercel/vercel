@@ -23,7 +23,7 @@ import type {
 } from '../types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
-import { normalizeError } from '@vercel/errors';
+import { normalizeError } from '../../../error-utils/dist';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;

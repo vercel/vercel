@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '../../types';
-import { errorToString } from '@vercel/errors';
+import { errorToString } from '../../../../error-utils/dist';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 

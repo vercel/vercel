@@ -94,7 +94,7 @@ import {
   isErrnoException,
   isError,
   isSpawnError,
-} from '@vercel/errors';
+} from '../../../../error-utils/dist';
 import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
 import { replaceLocalhost } from './parse-listen';

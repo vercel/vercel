@@ -12,7 +12,7 @@ import { email as regexEmail } from '../../util/input/regexes';
 import getTeams from '../../util/teams/get-teams';
 import inviteUserToTeam from '../../util/teams/invite-user-to-team';
 import { isAPIError } from '../../util/errors-ts';
-import { errorToString, isError } from '@vercel/errors';
+import { errorToString, isError } from '../../../../error-utils/dist';
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;

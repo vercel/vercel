@@ -18,7 +18,7 @@ import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
-import { isErrnoException } from '@vercel/errors';
+import { isErrnoException } from '../../../../error-utils/dist';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 

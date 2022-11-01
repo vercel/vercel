@@ -7,7 +7,7 @@ import executeLogin from './login';
 import Client from '../client';
 import { LoginResult } from './types';
 import { isAPIError } from '../errors-ts';
-import { errorToString } from '@vercel/errors';
+import { errorToString } from '../../../../error-utils/dist';
 
 export default async function doEmailLogin(
   client: Client,

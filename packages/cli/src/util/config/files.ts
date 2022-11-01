@@ -10,7 +10,7 @@ import error from '../output/error';
 import highlight from '../output/highlight';
 import { VercelConfig } from '../dev/types';
 import { AuthConfig, GlobalConfig } from '../../types';
-import { isErrnoException, isError } from '@vercel/errors';
+import { isErrnoException, isError } from '../../../../error-utils/dist';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
