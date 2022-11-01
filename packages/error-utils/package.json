@@ -12,7 +12,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest --coverage --env node --verbose"
+    "test": "jest --coverage --env node --verbose",
+    "test-unit": "yarn test"
   },
   "author": "Ethan Arrowood <ethan.arrowood@vercel.com>",
   "license": "MIT",
