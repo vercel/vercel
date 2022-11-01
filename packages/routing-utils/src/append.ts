@@ -36,7 +36,7 @@ export function appendRoutesToPhase({
     }
   } else if (insertIndex > -1) {
     routes.splice(insertIndex, 0, ...newRoutes);
-  } else if (phase !== null) {
+  } else {
     routes.push({ handle: phase });
     routes.push(...newRoutes);
   }
