@@ -18,7 +18,7 @@ import { prependEmoji, emoji, EmojiLabel } from '../emoji';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
-import { isErrnoException, isError } from '../../../../error-utils/dist';
+import { isErrnoException, isError } from '@vercel/error-utils';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);

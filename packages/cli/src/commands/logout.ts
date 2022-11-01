@@ -6,7 +6,7 @@ import getArgs from '../util/get-args';
 import Client from '../util/client';
 import { getCommandName, getPkgName } from '../util/pkg-name';
 import { isAPIError } from '../util/errors-ts';
-import { errorToString } from '../../../error-utils/dist';
+import { errorToString } from '@vercel/error-utils';
 
 const help = () => {
   console.log(`

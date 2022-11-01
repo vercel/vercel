@@ -20,7 +20,7 @@ import { getLinkedProject } from '../util/projects/link';
 import { ensureLink } from '../util/link/ensure-link';
 import getScope from '../util/get-scope';
 import { isAPIError } from '../util/errors-ts';
-import { isErrnoException } from '../../../error-utils/dist';
+import { isErrnoException } from '@vercel/error-utils';
 
 const help = () => {
   console.log(`

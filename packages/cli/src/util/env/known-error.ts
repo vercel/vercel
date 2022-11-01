@@ -1,4 +1,4 @@
-import { isErrnoException } from '../../../../error-utils/dist';
+import { isErrnoException } from '@vercel/error-utils';
 
 const knownErrorsCodes = new Set([
   'PAYMENT_REQUIRED',

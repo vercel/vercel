@@ -10,7 +10,7 @@ import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
 import { VercelConfig } from './dev/types';
 import { Output } from './output';
-import { isErrnoException } from '../../../error-utils/dist';
+import { isErrnoException } from '@vercel/error-utils';
 
 let config: VercelConfig;
 

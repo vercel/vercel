@@ -1,9 +1,5 @@
 #!/usr/bin/env node
-import {
-  isErrnoException,
-  isError,
-  errorToString,
-} from '../../error-utils/dist';
+import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
 
 try {
   // Test to see if cwd has been deleted before
