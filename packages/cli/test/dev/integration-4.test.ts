@@ -192,12 +192,12 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
 });
 
 // FIXME: 2 hanging node processes
-// test(
-//   '[vercel dev] 25-nextjs-src-dir',
-//   testFixtureStdio('25-nextjs-src-dir', async (testPath: any) => {
-//     await testPath(200, '/', /Next.js \+ Node.js API/m);
-//   })
-// );
+test(
+  '[vercel dev] 25-nextjs-src-dir',
+  testFixtureStdio('25-nextjs-src-dir', async (testPath: any) => {
+    await testPath(200, '/', /Next.js \+ Node.js API/m);
+  })
+);
 
 // test(
 //   '[vercel dev] 27-zero-config-env',

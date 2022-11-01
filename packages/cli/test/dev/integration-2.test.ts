@@ -182,16 +182,16 @@ test(
   )
 );
 
-// test(
-//   '[vercel dev] should serve custom 404 when `cleanUrls: true`',
-//   testFixtureStdio('test-clean-urls-custom-404', async (testPath: any) => {
-//     await testPath(200, '/', 'This is the home page');
-//     await testPath(200, '/about', 'The about page');
-//     await testPath(200, '/contact/me', 'Contact Me Subdirectory');
-//     await testPath(404, '/nothing', 'Custom 404 Page');
-//     await testPath(404, '/nothing/', 'Custom 404 Page');
-//   })
-// );
+test(
+  '[vercel dev] should serve custom 404 when `cleanUrls: true`',
+  testFixtureStdio('test-clean-urls-custom-404', async (testPath: any) => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about', 'The about page');
+    await testPath(200, '/contact/me', 'Contact Me Subdirectory');
+    await testPath(404, '/nothing', 'Custom 404 Page');
+    await testPath(404, '/nothing/', 'Custom 404 Page');
+  })
+);
 
 // test(
 //   '[vercel dev] test cleanUrls and trailingSlash serve correct content',
