@@ -220,28 +220,28 @@ test(
   })
 );
 
-// test(
-//   '[vercel dev] test cors headers work with OPTIONS',
-//   testFixtureStdio('test-cors-routes', async (testPath: any) => {
-//     const headers = {
-//       'Access-Control-Allow-Origin': '*',
-//       'Access-Control-Allow-Headers':
-//         'Content-Type, Authorization, Accept, Content-Length, Origin, User-Agent',
-//       'Access-Control-Allow-Methods':
-//         'GET, POST, OPTIONS, HEAD, PATCH, PUT, DELETE',
-//     };
-//     await testPath(200, '/', 'status api', headers, { method: 'GET' });
-//     await testPath(200, '/', 'status api', headers, { method: 'POST' });
-//     await testPath(200, '/api/status.js', 'status api', headers, {
-//       method: 'GET',
-//     });
-//     await testPath(200, '/api/status.js', 'status api', headers, {
-//       method: 'POST',
-//     });
-//     await testPath(204, '/', '', headers, { method: 'OPTIONS' });
-//     await testPath(204, '/api/status.js', '', headers, { method: 'OPTIONS' });
-//   })
-// );
+test(
+  '[vercel dev] test cors headers work with OPTIONS',
+  testFixtureStdio('test-cors-routes', async (testPath: any) => {
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers':
+        'Content-Type, Authorization, Accept, Content-Length, Origin, User-Agent',
+      'Access-Control-Allow-Methods':
+        'GET, POST, OPTIONS, HEAD, PATCH, PUT, DELETE',
+    };
+    await testPath(200, '/', 'status api', headers, { method: 'GET' });
+    await testPath(200, '/', 'status api', headers, { method: 'POST' });
+    await testPath(200, '/api/status.js', 'status api', headers, {
+      method: 'GET',
+    });
+    await testPath(200, '/api/status.js', 'status api', headers, {
+      method: 'POST',
+    });
+    await testPath(204, '/', '', headers, { method: 'OPTIONS' });
+    await testPath(204, '/api/status.js', '', headers, { method: 'OPTIONS' });
+  })
+);
 
 // test(
 //   '[vercel dev] test trailingSlash true serve correct content',

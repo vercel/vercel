@@ -81,14 +81,14 @@ test('[vercel dev] edge functions support WebAssembly files', async () => {
   }
 });
 
-// test(
-//   '[vercel dev] edge functions respond properly the same as production',
-//   testFixtureStdio('edge-function', async (testPath: any) => {
-//     await testPath(500, '/api/edge-500-response');
-//     await testPath(200, '/api/edge-success');
-//     await testPath(200, '/api/edge-import-browser');
-//   })
-// );
+test(
+  '[vercel dev] edge functions respond properly the same as production',
+  testFixtureStdio('edge-function', async (testPath: any) => {
+    await testPath(500, '/api/edge-500-response');
+    await testPath(200, '/api/edge-success');
+    await testPath(200, '/api/edge-import-browser');
+  })
+);
 
 // test('[vercel dev] throws an error when an edge function has no response', async () => {
 //   const dir = fixture('edge-function-error');
