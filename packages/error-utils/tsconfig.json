@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "declaration": true,
+    "declarationMap": true,
     "esModuleInterop": true,
     "lib": ["ES2020"],
     "module": "commonjs",
@@ -11,10 +12,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "outDir": "./dist",
-    "types": ["node", "jest"],
+    "types": ["node"],
     "strict": true,
+    "sourceMap": true,
     "target": "ES2020"
   },
-  "include": ["src/**/*", "test/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules"]
 }
