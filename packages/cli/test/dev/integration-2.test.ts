@@ -265,15 +265,15 @@ test(
   })
 );
 
-// test(
-//   '[vercel dev] should serve custom 404 when `trailingSlash: true`',
-//   testFixtureStdio('test-trailing-slash-custom-404', async (testPath: any) => {
-//     await testPath(200, '/', 'This is the home page');
-//     await testPath(200, '/about.html', 'The about page');
-//     await testPath(200, '/contact/', 'Contact Subdirectory');
-//     await testPath(404, '/nothing/', 'Custom 404 Page');
-//   })
-// );
+test(
+  '[vercel dev] should serve custom 404 when `trailingSlash: true`',
+  testFixtureStdio('test-trailing-slash-custom-404', async (testPath: any) => {
+    await testPath(200, '/', 'This is the home page');
+    await testPath(200, '/about.html', 'The about page');
+    await testPath(200, '/contact/', 'Contact Subdirectory');
+    await testPath(404, '/nothing/', 'Custom 404 Page');
+  })
+);
 
 // test(
 //   '[vercel dev] test trailingSlash false serve correct content',
