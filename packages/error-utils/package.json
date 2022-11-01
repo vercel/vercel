@@ -1,6 +1,6 @@
 {
   "name": "@vercel/error-utils",
-  "private": "true",
+  "private": true,
   "version": "1.0.0",
   "description": "A collection of error utilities for vercel/vercel",
   "main": "dist/index.js",
