@@ -74,12 +74,14 @@ tap.test('isError returns true for Error instances only', t => {
   t.end();
 });
 
-tap.test('isError returns true for objects with an Error prototype', t => {
-  class Derived extends Error {}
-  const err = new Derived();
-  t.ok(isError(err));
-  t.end();
-});
+tap.test(
+  'isError returns true for objects with a nested Error prototype',
+  t => {
+    const err = Object.assign(new Error(), {});
+    t.ok(isError(err));
+    t.end();
+  }
+);
 
 tap.test('isErrnoException returns true for NodeJS.ErrnoException only', t => {
   try {
