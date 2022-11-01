@@ -166,3 +166,38 @@ test('appendRoutesToPhase to null phase with no handle', () => {
 
   deepEqual(actual, expected);
 });
+
+test('appendRoutesToPhase to null phase with two new routes ', () => {
+  const routes: Route[] = [
+    { src: '/first', dest: '/one' },
+    { src: '/second', dest: '/two' },
+    { handle: 'filesystem' },
+    { src: '/third', dest: '/three' },
+  ];
+  const newRoutes = [
+    { src: '/new1', dest: '/to1' },
+    { src: '/new2', dest: '/to2' },
+  ];
+  const phase = null;
+  const actual = appendRoutesToPhase({ routes, newRoutes, phase });
+  const expected = [
+    { src: '/first', dest: '/one' },
+    { src: '/second', dest: '/two' },
+    { src: '/new1', dest: '/to1' },
+    { src: '/new2', dest: '/to2' },
+    { handle: 'filesystem' },
+    { src: '/third', dest: '/three' },
+  ];
+
+  deepEqual(actual, expected);
+});
+
+test('appendRoutesToPhase to null phase `routes=[]`', () => {
+  const routes: Route[] = [];
+  const newRoutes = [{ src: '/new', dest: '/to' }];
+  const phase = null;
+  const actual = appendRoutesToPhase({ routes, newRoutes, phase });
+  const expected = [{ src: '/new', dest: '/to' }];
+
+  deepEqual(actual, expected);
+});
