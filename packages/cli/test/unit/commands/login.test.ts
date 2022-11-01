@@ -1,4 +1,5 @@
 import login from '../../../src/commands/login';
+import { emoji } from '../../../src/util/emoji';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 
@@ -42,6 +43,31 @@ describe('login', () => {
       await expect(client.stderr).toOutput(
         `Success! Email authentication complete for ${user.email}`
       );
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should allow the `--text-only` flag', async () => {
+      const user = useUser();
+      client.setArgv('login', '--text-only');
+      const exitCodePromise = login(client);
+      await expect(client.stderr).toOutput(`> Log in to Vercel`);
+
+      // Move down to "Email" option
+      client.stdin.write('\x1B[B'); // Down arrow
+      client.stdin.write('\x1B[B'); // Down arrow
+      client.stdin.write('\x1B[B'); // Down arrow
+      client.stdin.write('\r'); // Return key
+
+      await expect(client.stderr).toOutput('> Enter your email address:');
+
+      client.stdin.write(`${user.email}\n`);
+
+      await expect(client.stderr).toOutput(
+        `Success! Email authentication complete for ${user.email}`
+      );
+
+      await expect(client.stderr).not.toOutput(emoji('tip'));
 
       await expect(exitCodePromise).resolves.toEqual(0);
     });
