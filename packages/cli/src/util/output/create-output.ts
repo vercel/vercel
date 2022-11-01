@@ -3,11 +3,13 @@ import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '../../types';
 import { errorToString } from '../is-error';
+import { emojiLabels } from '../emoji';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 
 export interface OutputOptions {
   debug?: boolean;
+  textOnly?: boolean;
 }
 
 export interface LogOptions {
@@ -17,15 +19,17 @@ export interface LogOptions {
 export class Output {
   stream: WritableTTY;
   debugEnabled: boolean;
+  textOnly: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
   constructor(
     stream: WritableTTY,
-    { debug: debugEnabled = false }: OutputOptions = {}
+    { debug: debugEnabled = false, textOnly = false }: OutputOptions = {}
   ) {
     this.stream = stream;
     this.debugEnabled = debugEnabled;
+    this.textOnly = textOnly;
     this.spinnerMessage = '';
     this._spinner = null;
   }
@@ -35,6 +39,16 @@ export class Output {
   };
 
   print = (str: string) => {
+    if (this.textOnly) {
+      const emojis = Object.values(emojiLabels).map(emoji => `${emoji}  `);
+      const regExp = new RegExp(emojis.join('|'), 'gi');
+      const textOnlyStr = str.replace(regExp, '');
+
+      this.stopSpinner();
+      this.stream.write(textOnlyStr);
+      return;
+    }
+
     this.stopSpinner();
     this.stream.write(str);
   };

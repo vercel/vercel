@@ -101,6 +101,7 @@ const main = async () => {
         '-v': '--version',
         '--debug': Boolean,
         '-d': '--debug',
+        '--text-only': Boolean,
       },
       { permissive: true }
     );
@@ -110,7 +111,11 @@ const main = async () => {
   }
 
   const isDebugging = argv['--debug'];
-  const output = new Output(process.stderr, { debug: isDebugging });
+  const isTextOnly = argv['--text-only'];
+  const output = new Output(process.stderr, {
+    debug: isDebugging,
+    textOnly: isTextOnly,
+  });
 
   debug = output.debug;
 

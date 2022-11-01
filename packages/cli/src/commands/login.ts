@@ -23,6 +23,7 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
+    --text-only                    Text only mode [off]
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
