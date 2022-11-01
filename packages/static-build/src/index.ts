@@ -40,6 +40,7 @@ import * as BuildOutputV3 from './utils/build-output-v3';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
+import treeKill from 'tree-kill';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -164,12 +165,13 @@ const nowDevScriptPorts = new Map<string, number>();
 const nowDevChildProcesses = new Set<ChildProcess>();
 
 ['SIGINT', 'SIGTERM'].forEach(signal => {
-  process.once(signal as NodeJS.Signals, () => {
+  process.once(signal as NodeJS.Signals, async () => {
     for (const child of nowDevChildProcesses) {
       debug(
         `Got ${signal}, killing dev server child process (pid=${child.pid})`
       );
-      process.kill(child.pid!, signal);
+      await new Promise(resolve => treeKill(child.pid!, signal, resolve));
+      // process.kill(child.pid!, signal);
     }
     process.exit(0);
   });

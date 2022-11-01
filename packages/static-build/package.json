@@ -48,5 +48,8 @@
     "node-fetch": "2.6.7",
     "rc9": "1.2.0",
     "typescript": "4.3.4"
+  },
+  "dependencies": {
+    "tree-kill": "1.2.2"
   }
 }
