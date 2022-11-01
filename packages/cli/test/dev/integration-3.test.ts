@@ -64,7 +64,6 @@ test(
   )
 );
 
-// FIXME: 2 orphan node processes
 test(
   '[vercel dev] 04-create-react-app',
   testFixtureStdio('04-create-react-app', async (testPath: any) => {
@@ -72,13 +71,12 @@ test(
   })
 );
 
-// FIXME: broken
-// test(
-//   '[vercel dev] 05-gatsby',
-//   testFixtureStdio('05-gatsby', async (testPath: any) => {
-//     await testPath(200, '/', /Gatsby Default Starter/m);
-//   })
-// );
+test(
+  '[vercel dev] 05-gatsby',
+  testFixtureStdio('05-gatsby', async (testPath: any) => {
+    await testPath(200, '/', /Gatsby Default Starter/m);
+  })
+);
 
 // test(
 //   '[vercel dev] 06-gridsome',

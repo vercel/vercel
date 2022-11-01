@@ -15,44 +15,44 @@ const {
   validateResponseHeaders,
 } = require('./utils.js');
 
-// test('[vercel dev] should support edge functions', async () => {
-//   const dir = fixture('edge-function');
-//   const { dev, port, readyResolver } = await testFixture(dir, {
-//     env: {
-//       ENV_VAR_IN_EDGE: '1',
-//     },
-//   });
+test('[vercel dev] should support edge functions', async () => {
+  const dir = fixture('edge-function');
+  const { dev, port, readyResolver } = await testFixture(dir, {
+    env: {
+      ENV_VAR_IN_EDGE: '1',
+    },
+  });
 
-//   try {
-//     await readyResolver;
+  try {
+    await readyResolver;
 
-//     const body = { hello: 'world' };
+    const body = { hello: 'world' };
 
-//     let res = await fetch(`http://localhost:${port}/api/edge-success`, {
-//       method: 'POST',
-//       headers: {
-//         'content-type': 'application/json',
-//       },
-//       body: JSON.stringify(body),
-//     });
-//     validateResponseHeaders(res);
+    let res = await fetch(`http://localhost:${port}/api/edge-success`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    validateResponseHeaders(res);
 
-//     // support for edge functions has to manually ensure that these properties
-//     // are set up; so, we test that they are all passed through properly
-//     expect(await res.json()).toMatchObject({
-//       headerContentType: 'application/json',
-//       url: `http://localhost:${port}/api/edge-success`,
-//       method: 'POST',
-//       body: '{"hello":"world"}',
-//       snakeCase: 'some_camel_case_thing',
-//       upperCase: 'SOMETHING',
-//       optionalChaining: 'fallback',
-//       ENV_VAR_IN_EDGE: '1',
-//     });
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    // support for edge functions has to manually ensure that these properties
+    // are set up; so, we test that they are all passed through properly
+    expect(await res.json()).toMatchObject({
+      headerContentType: 'application/json',
+      url: `http://localhost:${port}/api/edge-success`,
+      method: 'POST',
+      body: '{"hello":"world"}',
+      snakeCase: 'some_camel_case_thing',
+      upperCase: 'SOMETHING',
+      optionalChaining: 'fallback',
+      ENV_VAR_IN_EDGE: '1',
+    });
+  } finally {
+    await dev.kill();
+  }
+});
 
 test('[vercel dev] edge functions support WebAssembly files', async () => {
   const dir = fixture('edge-function');
