@@ -12,7 +12,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "outDir": "./dist",
-    "types": ["node"],
+    "types": ["node", "jest"],
     "strict": true,
     "sourceMap": true,
     "target": "ES2020"
