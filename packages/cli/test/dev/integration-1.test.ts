@@ -236,36 +236,36 @@ test('[vercel dev] should handle startup errors thrown in edge functions', async
   }
 });
 
-// test('[vercel dev] should handle syntax errors thrown in edge functions', async () => {
-//   const dir = fixture('edge-function-error');
-//   const { dev, port, readyResolver } = await testFixture(dir);
+test('[vercel dev] should handle syntax errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
 
-//   try {
-//     await readyResolver;
+  try {
+    await readyResolver;
 
-//     let res = await fetch(`http://localhost:${port}/api/edge-error-syntax`, {
-//       method: 'GET',
-//       headers: {
-//         Accept:
-//           'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-//       },
-//     });
-//     validateResponseHeaders(res);
+    let res = await fetch(`http://localhost:${port}/api/edge-error-syntax`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
 
-//     const { stderr } = await dev.kill();
+    const { stderr } = await dev.kill();
 
-//     expect(await res.text()).toMatch(
-//       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
-//     );
-//     expect(stderr).toMatch(/Failed to compile user code for edge runtime./g);
-//     expect(stderr).toMatch(/Unexpected end of file/g);
-//     expect(stderr).toMatch(
-//       /Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
-//     );
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stderr).toMatch(/Failed to compile user code for edge runtime./g);
+    expect(stderr).toMatch(/Unexpected end of file/g);
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill();
+  }
+});
 
 // test('[vercel dev] should handle import errors thrown in edge functions', async () => {
 //   const dir = fixture('edge-function-error');

@@ -211,14 +211,14 @@ test(
   )
 );
 
-// test(
-//   '[vercel dev] 28-vercel-json-and-ignore',
-//   testFixtureStdio('28-vercel-json-and-ignore', async (testPath: any) => {
-//     await testPath(200, '/api/one', 'One');
-//     await testPath(404, '/api/two');
-//     await testPath(200, '/api/three', 'One');
-//   })
-// );
+test(
+  '[vercel dev] 28-vercel-json-and-ignore',
+  testFixtureStdio('28-vercel-json-and-ignore', async (testPath: any) => {
+    await testPath(200, '/api/one', 'One');
+    await testPath(404, '/api/two');
+    await testPath(200, '/api/three', 'One');
+  })
+);
 
 // test(
 //   '[vercel dev] 30-next-image-optimization',

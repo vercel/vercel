@@ -64,12 +64,13 @@ test(
   )
 );
 
-test(
-  '[vercel dev] 04-create-react-app',
-  testFixtureStdio('04-create-react-app', async (testPath: any) => {
-    await testPath(200, '/', /React App/m);
-  })
-);
+// FIXME: 2 orphan processes
+// test(
+//   '[vercel dev] 04-create-react-app',
+//   testFixtureStdio('04-create-react-app', async (testPath: any) => {
+//     await testPath(200, '/', /React App/m);
+//   })
+// );
 
 // test(
 //   '[vercel dev] 05-gatsby',
@@ -334,16 +335,16 @@ test(
 // //   )
 // // );
 
-// test('[vercel dev] 24-ember', async () => {
-//   if (shouldSkip('24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
+test('[vercel dev] 24-ember', async () => {
+  if (shouldSkip('24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
 
-//   const tester = testFixtureStdio(
-//     '24-ember',
-//     async (testPath: any) => {
-//       await testPath(200, '/', /HelloWorld/m);
-//     },
-//     { skipDeploy: true }
-//   );
+  const tester = testFixtureStdio(
+    '24-ember',
+    async (testPath: any) => {
+      await testPath(200, '/', /HelloWorld/m);
+    },
+    { skipDeploy: true }
+  );
 
-//   await tester();
-// });
+  await tester();
+});
