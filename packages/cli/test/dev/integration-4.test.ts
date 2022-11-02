@@ -198,17 +198,17 @@ test(
   })
 );
 
-test(
-  '[vercel dev] 27-zero-config-env',
-  testFixtureStdio(
-    '27-zero-config-env',
-    async (testPath: any) => {
-      await testPath(200, '/api/print', /build-and-runtime/m);
-      await testPath(200, '/', /build-and-runtime/m);
-    },
-    { skipDeploy: true }
-  )
-);
+// test(
+//   '[vercel dev] 27-zero-config-env',
+//   testFixtureStdio(
+//     '27-zero-config-env',
+//     async (testPath: any) => {
+//       await testPath(200, '/api/print', /build-and-runtime/m);
+//       await testPath(200, '/', /build-and-runtime/m);
+//     },
+//     { skipDeploy: true }
+//   )
+// );
 
 // test(
 //   '[vercel dev] 28-vercel-json-and-ignore',
@@ -490,7 +490,7 @@ test(
 //     expect(response.status).toBe(200);
 //     expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
 //   } finally {
-//     await dev.kill();
+//     await await dev.kill();
 //   }
 // });
 
@@ -551,7 +551,7 @@ test(
 // test(
 //   '[vercel dev] Middleware with an explicit 500 response',
 //   testFixtureStdio('middleware-500-response', async (testPath: any) => {
-//     await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+//     await testPath(500, '/', 'Example Error');
 //   })
 // );
 

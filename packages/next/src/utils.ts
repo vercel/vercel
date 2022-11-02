@@ -748,6 +748,7 @@ export async function createPseudoLayer(files: {
 
 interface CreateLambdaFromPseudoLayersOptions extends LambdaOptionsWithFiles {
   layers: PseudoLayer[];
+  isStreaming?: boolean;
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -757,6 +758,7 @@ const createLambdaSema = new Sema(1);
 export async function createLambdaFromPseudoLayers({
   files: baseFiles,
   layers,
+  isStreaming,
   ...lambdaOptions
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -791,6 +793,11 @@ export async function createLambdaFromPseudoLayers({
 
   return new NodejsLambda({
     ...lambdaOptions,
+    ...(isStreaming
+      ? {
+          experimentalResponseStreaming: true,
+        }
+      : {}),
     files,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
@@ -1273,6 +1280,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  isStreaming?: boolean;
   isPrerenders?: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
