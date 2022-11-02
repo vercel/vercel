@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "1.0.31",
+  "version": "1.0.32",
   "main": "./dist/index.js",
   "license": "MIT",
   "homepage": "https://vercel.com/docs",
@@ -20,13 +20,13 @@
   },
   "dependencies": {
     "@vercel/nft": "0.22.1",
-    "@vercel/routing-utils": "2.0.2",
+    "@vercel/routing-utils": "2.1.0",
     "semver": "6.1.1"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
     "@types/node": "*",
     "@types/semver": "6.0.0",
-    "@vercel/build-utils": "5.5.5"
+    "@vercel/build-utils": "5.5.6"
   }
 }
