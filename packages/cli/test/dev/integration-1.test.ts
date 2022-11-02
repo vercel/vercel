@@ -337,67 +337,67 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
   }
 });
 
-// test('[vercel dev] should handle invalid middleware config', async () => {
-//   const dir = fixture('middleware-matchers-invalid');
-//   const { dev, port, readyResolver } = await testFixture(dir);
+test('[vercel dev] should handle invalid middleware config', async () => {
+  const dir = fixture('middleware-matchers-invalid');
+  const { dev, port, readyResolver } = await testFixture(dir);
 
-//   try {
-//     await readyResolver;
+  try {
+    await readyResolver;
 
-//     let res = await fetch(`http://localhost:${port}/api/whatever`, {
-//       method: 'GET',
-//       headers: {
-//         Accept:
-//           'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-//       },
-//     });
-//     validateResponseHeaders(res);
+    let res = await fetch(`http://localhost:${port}/api/whatever`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
 
-//     const { stderr } = await dev.kill();
+    const { stderr } = await dev.kill();
 
-//     expect(await res.text()).toMatch(
-//       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
-//     );
-//     expect(stderr).toMatch(
-//       /Middleware's `config.matcher` .+ Received: not-a-valid-matcher/g
-//     );
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stderr).toMatch(
+      /Middleware's `config.matcher` .+ Received: not-a-valid-matcher/g
+    );
+  } finally {
+    await dev.kill();
+  }
+});
 
-// test('[vercel dev] should support request body', async () => {
-//   const dir = fixture('node-request-body');
-//   const { dev, port, readyResolver } = await testFixture(dir);
+test('[vercel dev] should support request body', async () => {
+  const dir = fixture('node-request-body');
+  const { dev, port, readyResolver } = await testFixture(dir);
 
-//   try {
-//     await readyResolver;
+  try {
+    await readyResolver;
 
-//     const body = { hello: 'world' };
+    const body = { hello: 'world' };
 
-//     // Test that `req.body` works in dev
-//     let res = await fetch(`http://localhost:${port}/api/req-body`, {
-//       method: 'POST',
-//       headers: {
-//         'content-type': 'application/json',
-//       },
-//       body: JSON.stringify(body),
-//     });
-//     validateResponseHeaders(res);
-//     expect(await res.json()).toMatchObject(body);
+    // Test that `req.body` works in dev
+    let res = await fetch(`http://localhost:${port}/api/req-body`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    validateResponseHeaders(res);
+    expect(await res.json()).toMatchObject(body);
 
-//     // Test that `req` "data" events work in dev
-//     res = await fetch(`http://localhost:${port}/api/data-events`, {
-//       method: 'POST',
-//       headers: {
-//         'content-type': 'application/json',
-//       },
-//       body: JSON.stringify(body),
-//     });
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    // Test that `req` "data" events work in dev
+    res = await fetch(`http://localhost:${port}/api/data-events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } finally {
+    await dev.kill();
+  }
+});
 
 // test('[vercel dev] should maintain query when invoking serverless function', async () => {
 //   const dir = fixture('node-query-invoke');

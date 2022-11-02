@@ -290,6 +290,7 @@ test(
   })
 );
 
+// FIXME: Possible orphan process on linux
 test(
   '[vercel dev] 40-mixed-modules',
   testFixtureStdio('40-mixed-modules', async (testPath: any) => {
@@ -309,21 +310,21 @@ test(
   })
 );
 
-// test(
-//   '[vercel dev] 41-tsconfig-jsx',
-//   testFixtureStdio('41-tsconfig-jsx', async (testPath: any) => {
-//     await testPath(200, '/', /Solid App/m);
-//     await testPath(200, '/api/test', 'working');
-//   })
-// );
+test(
+  '[vercel dev] 41-tsconfig-jsx',
+  testFixtureStdio('41-tsconfig-jsx', async (testPath: any) => {
+    await testPath(200, '/', /Solid App/m);
+    await testPath(200, '/api/test', 'working');
+  })
+);
 
-// test(
-//   '[vercel dev] 42-dynamic-esm-ext',
-//   testFixtureStdio('42-dynamic-esm-ext', async (testPath: any) => {
-//     await testPath(200, '/api/cjs/foo', 'found .js');
-//     await testPath(200, '/api/esm/foo', 'found .mjs');
-//   })
-// );
+test(
+  '[vercel dev] 42-dynamic-esm-ext',
+  testFixtureStdio('42-dynamic-esm-ext', async (testPath: any) => {
+    await testPath(200, '/api/cjs/foo', 'found .js');
+    await testPath(200, '/api/esm/foo', 'found .mjs');
+  })
+);
 
 // test(
 //   '[vercel dev] Use `@vercel/python` with Flask requirements.txt',

@@ -291,27 +291,27 @@ test(
 //   )
 // );
 
-// test(
-//   '[vercel dev] 20-riot',
-//   testFixtureStdio(
-//     '20-riot',
-//     async (testPath: any) => {
-//       await testPath(200, '/', /Riot on Vercel/m);
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] 20-riot',
+  testFixtureStdio(
+    '20-riot',
+    async (testPath: any) => {
+      await testPath(200, '/', /Riot on Vercel/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
-// test(
-//   '[vercel dev] 21-charge',
-//   testFixtureStdio(
-//     '21-charge',
-//     async (testPath: any) => {
-//       await testPath(200, '/', /Welcome to my new Charge site/m);
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] 21-charge',
+  testFixtureStdio(
+    '21-charge',
+    async (testPath: any) => {
+      await testPath(200, '/', /Welcome to my new Charge site/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
 test(
   '[vercel dev] 22-brunch',
