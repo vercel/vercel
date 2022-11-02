@@ -1448,7 +1448,9 @@ export default class DevServer {
             }
           );
 
-          if (middlewareRes.status === 500) {
+          const middlewareBody = await middlewareRes.buffer();
+
+          if (middlewareRes.status === 500 && middlewareBody.byteLength === 0) {
             await this.sendError(
               req,
               res,
@@ -1493,7 +1495,6 @@ export default class DevServer {
           }
 
           if (!shouldContinue) {
-            const middlewareBody = await middlewareRes.buffer();
             this.setResponseHeaders(res, requestId);
             if (middlewareBody.length > 0) {
               res.setHeader('content-length', middlewareBody.length);
