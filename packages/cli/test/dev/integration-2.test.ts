@@ -275,32 +275,32 @@ test(
   })
 );
 
-// test(
-//   '[vercel dev] test trailingSlash false serve correct content',
-//   testFixtureStdio('test-trailing-slash-false', async (testPath: any) => {
-//     await testPath(200, '/', 'Index Page');
-//     await testPath(200, '/index.html', 'Index Page');
-//     await testPath(200, '/about.html', 'About Page');
-//     await testPath(200, '/sub', 'Sub Index Page');
-//     await testPath(200, '/sub/index.html', 'Sub Index Page');
-//     await testPath(200, '/sub/another.html', 'Sub Another Page');
-//     await testPath(200, '/style.css', 'body { color: green }');
-//     await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
-//       Location: '/about.html',
-//     });
-//     await testPath(308, '/sub/', 'Redirecting to /sub (308)', {
-//       Location: '/sub',
-//     });
-//     await testPath(
-//       308,
-//       '/sub/another.html/',
-//       'Redirecting to /sub/another.html (308)',
-//       {
-//         Location: '/sub/another.html',
-//       }
-//     );
-//   })
-// );
+test(
+  '[vercel dev] test trailingSlash false serve correct content',
+  testFixtureStdio('test-trailing-slash-false', async (testPath: any) => {
+    await testPath(200, '/', 'Index Page');
+    await testPath(200, '/index.html', 'Index Page');
+    await testPath(200, '/about.html', 'About Page');
+    await testPath(200, '/sub', 'Sub Index Page');
+    await testPath(200, '/sub/index.html', 'Sub Index Page');
+    await testPath(200, '/sub/another.html', 'Sub Another Page');
+    await testPath(200, '/style.css', 'body { color: green }');
+    await testPath(308, '/about.html/', 'Redirecting to /about.html (308)', {
+      Location: '/about.html',
+    });
+    await testPath(308, '/sub/', 'Redirecting to /sub (308)', {
+      Location: '/sub',
+    });
+    await testPath(
+      308,
+      '/sub/another.html/',
+      'Redirecting to /sub/another.html (308)',
+      {
+        Location: '/sub/another.html',
+      }
+    );
+  })
+);
 
 // test(
 //   '[vercel dev] throw when invalid builder routes detected',

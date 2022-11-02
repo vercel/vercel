@@ -8,7 +8,7 @@ const {
   shouldSkip,
   testFixture,
   fetchWithRetry,
-  testFixtureStdio,
+  // testFixtureStdio,
   validateResponseHeaders,
 } = require('./utils.js');
 
@@ -53,16 +53,17 @@ test('[vercel dev] 02-angular-node', async () => {
   }
 });
 
-test(
-  '[vercel dev] 03-aurelia',
-  testFixtureStdio(
-    '03-aurelia',
-    async (testPath: any) => {
-      await testPath(200, '/', /Aurelia Navigation Skeleton/m);
-    },
-    { skipDeploy: true }
-  )
-);
+// FIXME: 2 orphan processes
+// test(
+//   '[vercel dev] 03-aurelia',
+//   testFixtureStdio(
+//     '03-aurelia',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /Aurelia Navigation Skeleton/m);
+//     },
+//     { skipDeploy: true }
+//   )
+// );
 
 // test(
 //   '[vercel dev] 04-create-react-app',
