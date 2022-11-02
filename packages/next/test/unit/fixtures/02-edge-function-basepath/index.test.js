@@ -14,7 +14,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       'package.json',
       'tsconfig.json',
       'pages/api/hello.ts',
-      'pages/_app.tsx',
       'pages/index.tsx',
     ].reduce((filesMap, file) => {
       const fsPath = path.join(__dirname, file);
