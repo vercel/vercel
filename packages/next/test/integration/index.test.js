@@ -7,77 +7,80 @@ const runBuildLambda = require('../../../../test/lib/run-build-lambda');
 
 jest.setTimeout(360000);
 
-it('should build with app-dir correctly', async () => {
-  const { buildResult } = await runBuildLambda(
-    path.join(__dirname, '../fixtures/00-app-dir')
-  );
+// experimental appDir currently requires Node.js >= 16
+if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
+  it('should build with app-dir correctly', async () => {
+    const { buildResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir')
+    );
 
-  const lambdas = new Set();
+    const lambdas = new Set();
 
-  for (const key of Object.keys(buildResult.output)) {
-    if (buildResult.output[key].type === 'Lambda') {
-      lambdas.add(buildResult.output[key]);
+    for (const key of Object.keys(buildResult.output)) {
+      if (buildResult.output[key].type === 'Lambda') {
+        lambdas.add(buildResult.output[key]);
+      }
     }
-  }
 
-  expect(lambdas.size).toBe(2);
-  expect(buildResult.output['dashboard']).toBeDefined();
-  expect(buildResult.output['dashboard/another']).toBeDefined();
-  expect(buildResult.output['dashboard/changelog']).toBeDefined();
-  expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
+    expect(lambdas.size).toBe(2);
+    expect(buildResult.output['dashboard']).toBeDefined();
+    expect(buildResult.output['dashboard/another']).toBeDefined();
+    expect(buildResult.output['dashboard/changelog']).toBeDefined();
+    expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
 
-  // prefixed static generation output with `/app` under dist server files
-  expect(buildResult.output['dashboard'].type).toBe('Prerender');
-  expect(buildResult.output['dashboard'].fallback.fsPath).toMatch(
-    /server\/app\/dashboard\.html$/
-  );
-  expect(buildResult.output['dashboard.rsc'].type).toBe('Prerender');
-  expect(buildResult.output['dashboard.rsc'].fallback.fsPath).toMatch(
-    /server\/app\/dashboard\.rsc$/
-  );
-  expect(buildResult.output['dashboard/index/index'].type).toBe('Prerender');
-  expect(buildResult.output['dashboard/index/index'].fallback.fsPath).toMatch(
-    /server\/app\/dashboard\/index\.html$/
-  );
-  expect(buildResult.output['dashboard/index.rsc'].type).toBe('Prerender');
-  expect(buildResult.output['dashboard/index.rsc'].fallback.fsPath).toMatch(
-    /server\/app\/dashboard\/index\.rsc$/
-  );
-});
+    // prefixed static generation output with `/app` under dist server files
+    expect(buildResult.output['dashboard'].type).toBe('Prerender');
+    expect(buildResult.output['dashboard'].fallback.fsPath).toMatch(
+      /server\/app\/dashboard\.html$/
+    );
+    expect(buildResult.output['dashboard.rsc'].type).toBe('Prerender');
+    expect(buildResult.output['dashboard.rsc'].fallback.fsPath).toMatch(
+      /server\/app\/dashboard\.rsc$/
+    );
+    expect(buildResult.output['dashboard/index/index'].type).toBe('Prerender');
+    expect(buildResult.output['dashboard/index/index'].fallback.fsPath).toMatch(
+      /server\/app\/dashboard\/index\.html$/
+    );
+    expect(buildResult.output['dashboard/index.rsc'].type).toBe('Prerender');
+    expect(buildResult.output['dashboard/index.rsc'].fallback.fsPath).toMatch(
+      /server\/app\/dashboard\/index\.rsc$/
+    );
+  });
 
-it('should build with app-dir in edge runtime correctly', async () => {
-  const { buildResult } = await runBuildLambda(
-    path.join(__dirname, '../fixtures/00-app-dir-edge')
-  );
+  it('should build with app-dir in edge runtime correctly', async () => {
+    const { buildResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-edge')
+    );
 
-  const edgeFunctions = new Set();
+    const edgeFunctions = new Set();
 
-  for (const key of Object.keys(buildResult.output)) {
-    if (buildResult.output[key].type === 'EdgeFunction') {
-      edgeFunctions.add(buildResult.output[key]);
+    for (const key of Object.keys(buildResult.output)) {
+      if (buildResult.output[key].type === 'EdgeFunction') {
+        edgeFunctions.add(buildResult.output[key]);
+      }
     }
-  }
 
-  expect(edgeFunctions.size).toBe(3);
-  expect(buildResult.output['edge']).toBeDefined();
-  expect(buildResult.output['index']).toBeDefined();
-  expect(buildResult.output['index/index']).toBeDefined();
-});
+    expect(edgeFunctions.size).toBe(3);
+    expect(buildResult.output['edge']).toBeDefined();
+    expect(buildResult.output['index']).toBeDefined();
+    expect(buildResult.output['index/index']).toBeDefined();
+  });
 
-it('should show error from basePath with legacy monorepo build', async () => {
-  let error;
+  it('should show error from basePath with legacy monorepo build', async () => {
+    let error;
 
-  try {
-    await runBuildLambda(path.join(__dirname, 'legacy-monorepo-basepath'));
-  } catch (err) {
-    error = err;
-  }
-  console.error(error);
+    try {
+      await runBuildLambda(path.join(__dirname, 'legacy-monorepo-basepath'));
+    } catch (err) {
+      error = err;
+    }
+    console.error(error);
 
-  expect(error.message).toBe(
-    'basePath can not be used with `builds` in vercel.json, use Project Settings to configure your monorepo instead'
-  );
-});
+    expect(error.message).toBe(
+      'basePath can not be used with `builds` in vercel.json, use Project Settings to configure your monorepo instead'
+    );
+  });
+}
 
 it('should build using server build', async () => {
   const origLog = console.log;
