@@ -53,7 +53,6 @@ test('[vercel dev] 02-angular-node', async () => {
   }
 });
 
-// FIXME: 2 orphan processes
 test(
   '[vercel dev] 03-aurelia',
   testFixtureStdio(
