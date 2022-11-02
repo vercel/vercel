@@ -2445,6 +2445,12 @@ export async function getMiddlewareBundle({
           shortPath.replace(/^app\//, '').replace(/(^|\/)page$/, '') || 'index';
       }
 
+      if (routesManifest?.basePath) {
+        shortPath = path.posix
+          .join(routesManifest.basePath, shortPath)
+          .replace(/^\//, '');
+      }
+
       worker.edgeFunction.name = shortPath;
       source.edgeFunctions[shortPath] = worker.edgeFunction;
 
