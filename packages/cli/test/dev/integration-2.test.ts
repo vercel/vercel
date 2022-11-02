@@ -302,20 +302,20 @@ test(
   })
 );
 
-// test(
-//   '[vercel dev] throw when invalid builder routes detected',
-//   testFixtureStdio(
-//     'invalid-builder-routes',
-//     async (testPath: any) => {
-//       await testPath(
-//         500,
-//         '/',
-//         /Route at index 0 has invalid `src` regular expression/m
-//       );
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] throw when invalid builder routes detected',
+  testFixtureStdio(
+    'invalid-builder-routes',
+    async (testPath: any) => {
+      await testPath(
+        500,
+        '/',
+        /Route at index 0 has invalid `src` regular expression/m
+      );
+    },
+    { skipDeploy: true }
+  )
+);
 
 // test(
 //   '[vercel dev] support legacy `@now` scope runtimes',

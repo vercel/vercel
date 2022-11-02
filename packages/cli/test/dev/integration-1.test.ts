@@ -115,32 +115,32 @@ test('[vercel dev] throws an error when an edge function has no response', async
   }
 });
 
-// test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
-//   const dir = fixture('edge-function');
-//   const { dev, port, readyResolver } = await testFixture(dir);
+test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
+  const dir = fixture('edge-function');
+  const { dev, port, readyResolver } = await testFixture(dir);
 
-//   try {
-//     await readyResolver;
+  try {
+    await readyResolver;
 
-//     const body = { hello: 'world' };
+    const body = { hello: 'world' };
 
-//     let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
-//       method: 'POST',
-//       headers: {
-//         'content-type': 'application/json',
-//       },
-//       body: JSON.stringify(body),
-//     });
-//     validateResponseHeaders(res);
+    let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    validateResponseHeaders(res);
 
-//     expect(await res.status).toBe(500);
-//     expect(await res.text()).toBe(
-//       'responding with intentional 500 from user code'
-//     );
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    expect(await res.status).toBe(500);
+    expect(await res.text()).toBe(
+      'responding with intentional 500 from user code'
+    );
+  } finally {
+    await dev.kill();
+  }
+});
 
 // test('[vercel dev] should handle runtime errors thrown in edge functions', async () => {
 //   const dir = fixture('edge-function-error');
