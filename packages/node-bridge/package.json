@@ -23,6 +23,8 @@
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
     "@types/node": "*",
+    "jsonlines": "0.1.1",
+    "test-listen": "1.1.0",
     "typescript": "4.3.4"
   }
 }

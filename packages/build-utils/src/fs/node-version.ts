@@ -3,28 +3,37 @@ import { NodeVersion } from '../types';
 import { NowBuildError } from '../errors';
 import debug from '../debug';
 
-const allOptions = [
-  { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-  { major: 14, range: '14.x', runtime: 'nodejs14.x' },
-  {
-    major: 12,
-    range: '12.x',
-    runtime: 'nodejs12.x',
-    discontinueDate: new Date('2022-10-03'),
-  },
-  {
-    major: 10,
-    range: '10.x',
-    runtime: 'nodejs10.x',
-    discontinueDate: new Date('2021-04-20'),
-  },
-  {
-    major: 8,
-    range: '8.10.x',
-    runtime: 'nodejs8.10',
-    discontinueDate: new Date('2020-01-06'),
-  },
-] as const;
+function getOptions() {
+  const options = [
+    { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+    { major: 14, range: '14.x', runtime: 'nodejs14.x' },
+    {
+      major: 12,
+      range: '12.x',
+      runtime: 'nodejs12.x',
+      discontinueDate: new Date('2022-10-03'),
+    },
+    {
+      major: 10,
+      range: '10.x',
+      runtime: 'nodejs10.x',
+      discontinueDate: new Date('2021-04-20'),
+    },
+    {
+      major: 8,
+      range: '8.10.x',
+      runtime: 'nodejs8.10',
+      discontinueDate: new Date('2020-01-06'),
+    },
+  ] as const;
+  if (process.env.VERCEL_ALLOW_NODEJS18 === '1') {
+    return [
+      { major: 18, range: '18.x', runtime: 'nodejs18.x' },
+      ...options,
+    ] as const;
+  }
+  return options;
+}
 
 function getHint(isAuto = false) {
   const { major, range } = getLatestNodeVersion();
@@ -34,11 +43,11 @@ function getHint(isAuto = false) {
 }
 
 export function getLatestNodeVersion() {
-  return allOptions[0];
+  return getOptions()[0];
 }
 
 export function getDiscontinuedNodeVersions(): NodeVersion[] {
-  return allOptions.filter(isDiscontinued);
+  return getOptions().filter(isDiscontinued);
 }
 
 export async function getSupportedNodeVersion(
@@ -50,7 +59,7 @@ export async function getSupportedNodeVersion(
   if (engineRange) {
     const found =
       validRange(engineRange) &&
-      allOptions.some(o => {
+      getOptions().some(o => {
         // the array is already in order so return the first
         // match which will be the newest version of node
         selection = o;
