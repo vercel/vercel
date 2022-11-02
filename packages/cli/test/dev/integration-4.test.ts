@@ -220,75 +220,75 @@ test(
   })
 );
 
-// test(
-//   '[vercel dev] 30-next-image-optimization',
-//   testFixtureStdio('30-next-image-optimization', async (testPath: any) => {
-//     const toUrl = (url: any, w: any, q: any) => {
-//       // @ts-ignore
-//       const query = new URLSearchParams();
-//       query.append('url', url);
-//       query.append('w', w);
-//       query.append('q', q);
-//       return `/_next/image?${query}`;
-//     };
+test(
+  '[vercel dev] 30-next-image-optimization',
+  testFixtureStdio('30-next-image-optimization', async (testPath: any) => {
+    const toUrl = (url: any, w: any, q: any) => {
+      // @ts-ignore
+      const query = new URLSearchParams();
+      query.append('url', url);
+      query.append('w', w);
+      query.append('q', q);
+      return `/_next/image?${query}`;
+    };
 
-//     const expectHeader = (accept: any) => ({
-//       'content-type': accept,
-//       'cache-control': 'public, max-age=0, must-revalidate',
-//     });
-//     const fetchOpts = (accept: any) => ({ method: 'GET', headers: { accept } });
-//     await testPath(200, '/', /Home Page/m);
-//     await testPath(
-//       200,
-//       toUrl('/test.jpg', 64, 100),
-//       null,
-//       expectHeader('image/webp'),
-//       fetchOpts('image/webp')
-//     );
-//     await testPath(
-//       200,
-//       toUrl('/test.png', 64, 90),
-//       null,
-//       expectHeader('image/webp'),
-//       fetchOpts('image/webp')
-//     );
-//     /*
-//      * Disabled gif in https://github.com/vercel/next.js/pull/22253
-//      * Eventually we should enable again when `next dev` supports it
-//     await testPath(
-//       200,
-//       toUrl('/test.gif', 64, 80),
-//       null,
-//       expectHeader('image/webp'),
-//       fetchOpts('image/webp')
-//     );
-//     */
-//     /*
-//      * Disabled svg in https://github.com/vercel/next.js/pull/34431
-//      * We can test for 400 status since config option is not enabled.
-//      */
-//     await testPath(400, toUrl('/test.svg', 64, 70));
-//     /* Disabled bmp because `next dev` bypasses
-//      * and production will convert. Eventually
-//      * we can enable once `next dev` supports it.
-//     await testPath(
-//       200,
-//       toUrl('/test.bmp', 64, 50),
-//       null,
-//       expectHeader('image/bmp'),
-//       fetchOpts('image/webp')
-//     );
-//     */
-//     // animated gif should bypass: serve as-is
-//     await testPath(
-//       200,
-//       toUrl('/animated.gif', 64, 60),
-//       null,
-//       expectHeader('image/gif'),
-//       fetchOpts('image/webp')
-//     );
-//   })
-// );
+    const expectHeader = (accept: any) => ({
+      'content-type': accept,
+      'cache-control': 'public, max-age=0, must-revalidate',
+    });
+    const fetchOpts = (accept: any) => ({ method: 'GET', headers: { accept } });
+    await testPath(200, '/', /Home Page/m);
+    await testPath(
+      200,
+      toUrl('/test.jpg', 64, 100),
+      null,
+      expectHeader('image/webp'),
+      fetchOpts('image/webp')
+    );
+    await testPath(
+      200,
+      toUrl('/test.png', 64, 90),
+      null,
+      expectHeader('image/webp'),
+      fetchOpts('image/webp')
+    );
+    /*
+     * Disabled gif in https://github.com/vercel/next.js/pull/22253
+     * Eventually we should enable again when `next dev` supports it
+    await testPath(
+      200,
+      toUrl('/test.gif', 64, 80),
+      null,
+      expectHeader('image/webp'),
+      fetchOpts('image/webp')
+    );
+    */
+    /*
+     * Disabled svg in https://github.com/vercel/next.js/pull/34431
+     * We can test for 400 status since config option is not enabled.
+     */
+    await testPath(400, toUrl('/test.svg', 64, 70));
+    /* Disabled bmp because `next dev` bypasses
+     * and production will convert. Eventually
+     * we can enable once `next dev` supports it.
+    await testPath(
+      200,
+      toUrl('/test.bmp', 64, 50),
+      null,
+      expectHeader('image/bmp'),
+      fetchOpts('image/webp')
+    );
+    */
+    // animated gif should bypass: serve as-is
+    await testPath(
+      200,
+      toUrl('/animated.gif', 64, 60),
+      null,
+      expectHeader('image/gif'),
+      fetchOpts('image/webp')
+    );
+  })
+);
 
 // test(
 //   '[vercel dev] 40-mixed-modules',
