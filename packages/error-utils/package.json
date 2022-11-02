@@ -1,6 +1,5 @@
 {
   "name": "@vercel/error-utils",
-  "private": true,
   "version": "1.0.0",
   "description": "A collection of error utilities for vercel/vercel",
   "main": "dist/index.js",
@@ -15,7 +14,6 @@
     "test": "jest --coverage --env node --verbose",
     "test-unit": "yarn test"
   },
-  "author": "Ethan Arrowood <ethan.arrowood@vercel.com>",
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "29.2.1",
