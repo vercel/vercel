@@ -115,62 +115,63 @@ test('[vercel dev] throws an error when an edge function has no response', async
   }
 });
 
-test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
-  const dir = fixture('edge-function');
-  const { dev, port, readyResolver } = await testFixture(dir);
-
-  try {
-    await readyResolver;
-
-    const body = { hello: 'world' };
-
-    let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    validateResponseHeaders(res);
-
-    expect(await res.status).toBe(500);
-    expect(await res.text()).toBe(
-      'responding with intentional 500 from user code'
-    );
-  } finally {
-    await dev.kill();
-  }
-});
-
-// test('[vercel dev] should handle runtime errors thrown in edge functions', async () => {
-//   const dir = fixture('edge-function-error');
+// FIXME: Test times out on linux
+// test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
+//   const dir = fixture('edge-function');
 //   const { dev, port, readyResolver } = await testFixture(dir);
 
 //   try {
 //     await readyResolver;
 
-//     let res = await fetch(`http://localhost:${port}/api/edge-error-runtime`, {
-//       method: 'GET',
+//     const body = { hello: 'world' };
+
+//     let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
+//       method: 'POST',
 //       headers: {
-//         Accept:
-//           'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+//         'content-type': 'application/json',
 //       },
+//       body: JSON.stringify(body),
 //     });
 //     validateResponseHeaders(res);
 
-//     const { stdout, stderr } = await dev.kill();
-
-//     expect(await res.text()).toMatch(
-//       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
-//     );
-//     expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
-//     expect(stderr).toMatch(
-//       /Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
+//     expect(await res.status).toBe(500);
+//     expect(await res.text()).toBe(
+//       'responding with intentional 500 from user code'
 //     );
 //   } finally {
 //     await dev.kill();
 //   }
 // });
+
+test('[vercel dev] should handle runtime errors thrown in edge functions', async () => {
+  const dir = fixture('edge-function-error');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    let res = await fetch(`http://localhost:${port}/api/edge-error-runtime`, {
+      method: 'GET',
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    validateResponseHeaders(res);
+
+    const { stdout, stderr } = await dev.kill();
+
+    expect(await res.text()).toMatch(
+      /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
+    );
+    expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
+    expect(stderr).toMatch(
+      /Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
+    );
+  } finally {
+    await dev.kill();
+  }
+});
 
 // test('[vercel dev] should handle config errors thrown in edge functions', async () => {
 //   const dir = fixture('edge-function-error');

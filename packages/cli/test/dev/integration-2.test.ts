@@ -317,12 +317,12 @@ test(
   )
 );
 
-// test(
-//   '[vercel dev] support legacy `@now` scope runtimes',
-//   testFixtureStdio('legacy-now-runtime', async (testPath: any) => {
-//     await testPath(200, '/', /A simple deployment with the Vercel API!/m);
-//   })
-// );
+test(
+  '[vercel dev] support legacy `@now` scope runtimes',
+  testFixtureStdio('legacy-now-runtime', async (testPath: any) => {
+    await testPath(200, '/', /A simple deployment with the Vercel API!/m);
+  })
+);
 
 // test(
 //   '[vercel dev] 00-list-directory',
