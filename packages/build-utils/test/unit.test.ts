@@ -285,6 +285,23 @@ it('should match all semver ranges', async () => {
   );
 });
 
+it('should only allow nodejs18.x when env var is set', async () => {
+  try {
+    expect(getLatestNodeVersion()).toHaveProperty('major', 16);
+    expect(getSupportedNodeVersion('18.x')).rejects.toThrow();
+
+    process.env.VERCEL_ALLOW_NODEJS18 = '1';
+
+    expect(getLatestNodeVersion()).toHaveProperty('major', 18);
+    expect(await getSupportedNodeVersion('18.x')).toHaveProperty('major', 18);
+    expect(await getSupportedNodeVersion('18')).toHaveProperty('major', 18);
+    expect(await getSupportedNodeVersion('18.1.0')).toHaveProperty('major', 18);
+    expect(await getSupportedNodeVersion('>=16')).toHaveProperty('major', 18);
+  } finally {
+    delete process.env.VERCEL_ALLOW_NODEJS18;
+  }
+});
+
 it('should ignore node version in vercel dev getNodeVersion()', async () => {
   expect(
     await getNodeVersion(

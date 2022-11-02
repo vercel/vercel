@@ -25,7 +25,6 @@ export const isError = (error: unknown): error is Error => {
   // Walk the prototype tree until we find a matching object.
   while (error) {
     if (Object.prototype.toString.call(error) === '[object Error]') return true;
-    // eslint-disable-next-line no-param-reassign -- TODO: Fix eslint error following @vercel/style-guide migration
     error = Object.getPrototypeOf(error);
   }
 

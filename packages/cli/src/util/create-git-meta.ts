@@ -5,7 +5,7 @@ import git from 'git-last-commit';
 import { exec } from 'child_process';
 import { GitMetadata, Project } from '../types';
 import { Output } from './output';
-import { errorToString } from './is-error';
+import { errorToString } from '@vercel/error-utils';
 
 export async function createGitMeta(
   directory: string,
