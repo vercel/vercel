@@ -1,16 +1,15 @@
-// eslint-disable-next-line
-// import { join } from 'path';
-// import ms from 'ms';
-// import fs, { mkdirp } from 'fs-extra';
+import { join } from 'path';
+import ms from 'ms';
+import fs, { mkdirp } from 'fs-extra';
 
 const {
   exec,
-  // fetch,
+  fetch,
   fixture,
-  // sleep,
+  sleep,
   testFixture,
   testFixtureStdio,
-  // validateResponseHeaders,
+  validateResponseHeaders,
 } = require('./utils.js');
 
 test('[vercel dev] validate redirects', async () => {
@@ -338,50 +337,50 @@ test(
   )
 );
 
-// test(
-//   '[vercel dev] 01-node',
-//   testFixtureStdio('01-node', async (testPath: any) => {
-//     await testPath(200, '/', /A simple deployment with the Vercel API!/m);
-//   })
-// );
+test(
+  '[vercel dev] 01-node',
+  testFixtureStdio('01-node', async (testPath: any) => {
+    await testPath(200, '/', /A simple deployment with the Vercel API!/m);
+  })
+);
 
-// test(
-//   '[vercel dev] add a `api/fn.ts` when `api` does not exist at startup`',
-//   testFixtureStdio('no-api', async (_testPath: any, port: any) => {
-//     const directory = fixture('no-api');
-//     const apiDir = join(directory, 'api');
+test(
+  '[vercel dev] add a `api/fn.ts` when `api` does not exist at startup`',
+  testFixtureStdio('no-api', async (_testPath: any, port: any) => {
+    const directory = fixture('no-api');
+    const apiDir = join(directory, 'api');
 
-//     try {
-//       {
-//         const response = await fetch(`http://localhost:${port}/api/new-file`);
-//         validateResponseHeaders(response);
-//         expect(response.status).toBe(404);
-//       }
+    try {
+      {
+        const response = await fetch(`http://localhost:${port}/api/new-file`);
+        validateResponseHeaders(response);
+        expect(response.status).toBe(404);
+      }
 
-//       const fileContents = `
-//           export const config = {
-//             runtime: 'experimental-edge'
-//           }
+      const fileContents = `
+          export const config = {
+            runtime: 'experimental-edge'
+          }
 
-//           export default async function edge(request, event) {
-//             return new Response('from new file');
-//           }
-//         `;
+          export default async function edge(request, event) {
+            return new Response('from new file');
+          }
+        `;
 
-//       await mkdirp(apiDir);
-//       await fs.writeFile(join(apiDir, 'new-file.js'), fileContents);
+      await mkdirp(apiDir);
+      await fs.writeFile(join(apiDir, 'new-file.js'), fileContents);
 
-//       // Wait until file events have been processed
-//       await sleep(ms('1s'));
+      // Wait until file events have been processed
+      await sleep(ms('1s'));
 
-//       {
-//         const response = await fetch(`http://localhost:${port}/api/new-file`);
-//         validateResponseHeaders(response);
-//         const body = await response.text();
-//         expect(body.trim()).toBe('from new file');
-//       }
-//     } finally {
-//       await fs.remove(apiDir);
-//     }
-//   })
-// );
+      {
+        const response = await fetch(`http://localhost:${port}/api/new-file`);
+        validateResponseHeaders(response);
+        const body = await response.text();
+        expect(body.trim()).toBe('from new file');
+      }
+    } finally {
+      await fs.remove(apiDir);
+    }
+  })
+);

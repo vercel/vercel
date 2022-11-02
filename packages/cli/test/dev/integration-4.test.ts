@@ -199,17 +199,17 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
 //   })
 // );
 
-// test(
-//   '[vercel dev] 27-zero-config-env',
-//   testFixtureStdio(
-//     '27-zero-config-env',
-//     async (testPath: any) => {
-//       await testPath(200, '/api/print', /build-and-runtime/m);
-//       await testPath(200, '/', /build-and-runtime/m);
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] 27-zero-config-env',
+  testFixtureStdio(
+    '27-zero-config-env',
+    async (testPath: any) => {
+      await testPath(200, '/api/print', /build-and-runtime/m);
+      await testPath(200, '/', /build-and-runtime/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
 // test(
 //   '[vercel dev] 28-vercel-json-and-ignore',
