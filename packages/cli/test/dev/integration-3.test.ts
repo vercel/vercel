@@ -324,16 +324,16 @@ test(
   )
 );
 
-// test(
-//   '[vercel dev] 23-docusaurus',
-//   testFixtureStdio(
-//     '23-docusaurus',
-//     async (testPath: any) => {
-//       await testPath(200, '/', /My Site/m);
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] 23-docusaurus',
+  testFixtureStdio(
+    '23-docusaurus',
+    async (testPath: any) => {
+      await testPath(200, '/', /My Site/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
 test('[vercel dev] 24-ember', async () => {
   if (shouldSkip('24-ember', '>^6.14.0 || ^8.10.0 || >=9.10.0')) return;
