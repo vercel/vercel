@@ -96,6 +96,7 @@
     "@types/write-json-file": "2.2.1",
     "@types/yauzl-promise": "2.1.0",
     "@vercel/client": "12.2.13",
+    "@vercel/error-utils": "1.0.0",
     "@vercel/frameworks": "1.1.8",
     "@vercel/fs-detectors": "3.4.5",
     "@vercel/fun": "1.0.4",
