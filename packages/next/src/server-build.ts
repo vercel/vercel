@@ -338,6 +338,7 @@ export async function serverBuild({
 
     const apiPages: string[] = [];
     const nonApiPages: string[] = [];
+    const streamingPages: string[] = [];
 
     lambdaPageKeys.forEach(page => {
       if (
@@ -359,6 +360,8 @@ export async function serverBuild({
 
       if (pageMatchesApi(page)) {
         apiPages.push(page);
+      } else if (appDir && lambdaAppPaths[page]) {
+        streamingPages.push(page);
       } else {
         nonApiPages.push(page);
       }
@@ -546,7 +549,12 @@ export async function serverBuild({
     const compressedPages: {
       [page: string]: PseudoFile;
     } = {};
-    const mergedPageKeys = [...nonApiPages, ...apiPages, ...internalPages];
+    const mergedPageKeys = [
+      ...nonApiPages,
+      ...streamingPages,
+      ...apiPages,
+      ...internalPages,
+    ];
     const traceCache = {};
 
     const getOriginalPagePath = (page: string) => {
@@ -704,6 +712,27 @@ export async function serverBuild({
       pageExtensions,
     });
 
+    const streamingPageLambdaGroups = await getPageLambdaGroups({
+      entryPath: requiredServerFilesManifest.appDir || entryPath,
+      config,
+      pages: streamingPages,
+      prerenderRoutes,
+      pageTraces,
+      compressedPages,
+      tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
+      initialPseudoLayer,
+      lambdaCompressedByteLimit,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
+      internalPages,
+      pageExtensions,
+    });
+
+    for (const group of streamingPageLambdaGroups) {
+      if (!group.isPrerenders) {
+        group.isStreaming = true;
+      }
+    }
+
     const apiLambdaGroups = await getPageLambdaGroups({
       entryPath: requiredServerFilesManifest.appDir || entryPath,
       config,
@@ -733,13 +762,23 @@ export async function serverBuild({
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
+          streamingPageLambdaGroups: streamingPageLambdaGroups.map(group => ({
+            pages: group.pages,
+            isPrerender: group.isPrerenders,
+            pseudoLayerBytes: group.pseudoLayerBytes,
+            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
+          })),
           nextServerLayerSize: initialPseudoLayer.pseudoLayerBytes,
         },
         null,
         2
       )
     );
-    const combinedGroups = [...pageLambdaGroups, ...apiLambdaGroups];
+    const combinedGroups = [
+      ...pageLambdaGroups,
+      ...streamingPageLambdaGroups,
+      ...apiLambdaGroups,
+    ];
 
     await detectLambdaLimitExceeding(
       combinedGroups,
@@ -832,6 +871,7 @@ export async function serverBuild({
         memory: group.memory,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
+        isStreaming: group.isStreaming,
       });
 
       for (const page of group.pages) {
