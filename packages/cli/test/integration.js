@@ -3455,7 +3455,7 @@ test('deploy pnpm twice using pnp and symlink=false', async t => {
 
   let { stdout: logsOutput } = await logs(stdout);
 
-  t.regex(logsOutput, /Build Cache not found/m);
+  t.regex(logsOutput, /Not using Build Cache/m);
 
   ({ exitCode, stderr, stdout } = await deploy());
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
