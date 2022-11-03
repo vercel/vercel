@@ -34,7 +34,7 @@ export async function ensureLink(
 ): Promise<LinkResult | number> {
   let link = await getLinkedProject(client, cwd);
 
-  if (link.status === 'not_linked') {
+  if (opts.forceDelete || link.status === 'not_linked') {
     link = await setupAndLink(client, cwd, opts);
 
     if (link.status === 'not_linked') {
