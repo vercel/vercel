@@ -1,4 +1,4 @@
-// import { resolve, delimiter } from 'path';
+import { resolve, delimiter } from 'path';
 
 const {
   fetch,
@@ -64,60 +64,58 @@ test(
   )
 );
 
-// FIXME: 2 orphan processes
-// test(
-//   '[vercel dev] 04-create-react-app',
-//   testFixtureStdio('04-create-react-app', async (testPath: any) => {
-//     await testPath(200, '/', /React App/m);
-//   })
-// );
+test(
+  '[vercel dev] 04-create-react-app',
+  testFixtureStdio('04-create-react-app', async (testPath: any) => {
+    await testPath(200, '/', /React App/m);
+  })
+);
 
-// test(
-//   '[vercel dev] 05-gatsby',
-//   testFixtureStdio('05-gatsby', async (testPath: any) => {
-//     await testPath(200, '/', /Gatsby Default Starter/m);
-//   })
-// );
+test(
+  '[vercel dev] 05-gatsby',
+  testFixtureStdio('05-gatsby', async (testPath: any) => {
+    await testPath(200, '/', /Gatsby Default Starter/m);
+  })
+);
 
-// 5 orphan processes?
-// test(
-//   '[vercel dev] 06-gridsome',
-//   testFixtureStdio('06-gridsome', async (testPath: any) => {
-//     await testPath(200, '/');
-//     await testPath(200, '/about');
-//     await testPath(308, '/support', 'Redirecting to /about?ref=support (308)', {
-//       Location: '/about?ref=support',
-//     });
-//     // Bug with gridsome's dev server: https://github.com/gridsome/gridsome/issues/831
-//     // Works in prod only so leave out for now
-//     // await testPath(404, '/nothing');
-//   })
-// );
+test(
+  '[vercel dev] 06-gridsome',
+  testFixtureStdio('06-gridsome', async (testPath: any) => {
+    await testPath(200, '/');
+    await testPath(200, '/about');
+    await testPath(308, '/support', 'Redirecting to /about?ref=support (308)', {
+      Location: '/about?ref=support',
+    });
+    // Bug with gridsome's dev server: https://github.com/gridsome/gridsome/issues/831
+    // Works in prod only so leave out for now
+    // await testPath(404, '/nothing');
+  })
+);
 
-// test(
-//   '[vercel dev] 07-hexo-node',
-//   testFixtureStdio('07-hexo-node', async (testPath: any) => {
-//     await testPath(200, '/', /Hexo \+ Node.js API/m);
-//     await testPath(200, '/api/date', new RegExp(new Date().getFullYear() + ''));
-//     await testPath(200, '/contact.html', /Contact Us/m);
-//     await testPath(200, '/support', /Contact Us/m);
-//   })
-// );
+test(
+  '[vercel dev] 07-hexo-node',
+  testFixtureStdio('07-hexo-node', async (testPath: any) => {
+    await testPath(200, '/', /Hexo \+ Node.js API/m);
+    await testPath(200, '/api/date', new RegExp(new Date().getFullYear() + ''));
+    await testPath(200, '/contact.html', /Contact Us/m);
+    await testPath(200, '/support', /Contact Us/m);
+  })
+);
 
-// test('[vercel dev] 08-hugo', async () => {
-//   if (process.platform === 'darwin') {
-//     // Update PATH to find the Hugo executable installed via GH Actions
-//     process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
-//       process.env.PATH
-//     }`;
-//     const tester = testFixtureStdio('08-hugo', async (testPath: any) => {
-//       await testPath(200, '/', /Hugo/m);
-//     });
-//     await tester();
-//   } else {
-//     console.log(`Skipping 08-hugo on platform ${process.platform}`);
-//   }
-// });
+test('[vercel dev] 08-hugo', async () => {
+  if (process.platform === 'darwin') {
+    // Update PATH to find the Hugo executable installed via GH Actions
+    process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
+      process.env.PATH
+    }`;
+    const tester = testFixtureStdio('08-hugo', async (testPath: any) => {
+      await testPath(200, '/', /Hugo/m);
+    });
+    await tester();
+  } else {
+    console.log(`Skipping 08-hugo on platform ${process.platform}`);
+  }
+});
 
 test(
   '[vercel dev] 10-nextjs-node',

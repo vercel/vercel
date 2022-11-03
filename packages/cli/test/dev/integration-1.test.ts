@@ -115,33 +115,32 @@ test('[vercel dev] throws an error when an edge function has no response', async
   }
 });
 
-// FIXME: Test times out on linux
-// test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
-//   const dir = fixture('edge-function');
-//   const { dev, port, readyResolver } = await testFixture(dir);
+test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
+  const dir = fixture('edge-function');
+  const { dev, port, readyResolver } = await testFixture(dir);
 
-//   try {
-//     await readyResolver;
+  try {
+    await readyResolver;
 
-//     const body = { hello: 'world' };
+    const body = { hello: 'world' };
 
-//     let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
-//       method: 'POST',
-//       headers: {
-//         'content-type': 'application/json',
-//       },
-//       body: JSON.stringify(body),
-//     });
-//     validateResponseHeaders(res);
+    let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    validateResponseHeaders(res);
 
-//     expect(await res.status).toBe(500);
-//     expect(await res.text()).toBe(
-//       'responding with intentional 500 from user code'
-//     );
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    expect(await res.status).toBe(500);
+    expect(await res.text()).toBe(
+      'responding with intentional 500 from user code'
+    );
+  } finally {
+    await dev.kill();
+  }
+});
 
 test('[vercel dev] should handle runtime errors thrown in edge functions', async () => {
   const dir = fixture('edge-function-error');
@@ -563,21 +562,21 @@ test('[vercel dev] should support `@vercel/static` routing', async () => {
   }
 });
 
-// test('[vercel dev] should support `@vercel/static-build` routing', async () => {
-//   const dir = fixture('static-build-routing');
-//   const { dev, port, readyResolver } = await testFixture(dir);
+test('[vercel dev] should support `@vercel/static-build` routing', async () => {
+  const dir = fixture('static-build-routing');
+  const { dev, port, readyResolver } = await testFixture(dir);
 
-//   try {
-//     await readyResolver;
+  try {
+    await readyResolver;
 
-//     const res = await fetch(`http://localhost:${port}/api/date`);
-//     expect(res.status).toEqual(200);
-//     const body = await res.text();
-//     expect(body.startsWith('The current date:')).toBeTruthy();
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    const res = await fetch(`http://localhost:${port}/api/date`);
+    expect(res.status).toEqual(200);
+    const body = await res.text();
+    expect(body.startsWith('The current date:')).toBeTruthy();
+  } finally {
+    await dev.kill();
+  }
+});
 
 test('[vercel dev] should support directory listing', async () => {
   const dir = fixture('directory-listing');

@@ -171,7 +171,6 @@ const nowDevChildProcesses = new Set<ChildProcess>();
         `Got ${signal}, killing dev server child process (pid=${child.pid})`
       );
       await new Promise(resolve => treeKill(child.pid!, signal, resolve));
-      // process.kill(child.pid!, signal);
     }
     process.exit(0);
   });
