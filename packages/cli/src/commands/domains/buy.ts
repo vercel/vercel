@@ -11,7 +11,7 @@ import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { errorToString } from '../../util/is-error';
+import { errorToString } from '@vercel/error-utils';
 
 type Options = {};
 
