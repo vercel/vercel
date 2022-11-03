@@ -104,20 +104,20 @@ test(
 //   })
 // );
 
-// // test('[vercel dev] 08-hugo', async () => {
-// //   if (process.platform === 'darwin') {
-// //     // Update PATH to find the Hugo executable installed via GH Actions
-// //     process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
-// //       process.env.PATH
-// //     }`;
-// //     const tester = testFixtureStdio('08-hugo', async (testPath: any) => {
-// //       await testPath(200, '/', /Hugo/m);
-// //     });
-// //     await tester();
-// //   } else {
-// //     console.log(`Skipping 08-hugo on platform ${process.platform}`);
-// //   }
-// // });
+// test('[vercel dev] 08-hugo', async () => {
+//   if (process.platform === 'darwin') {
+//     // Update PATH to find the Hugo executable installed via GH Actions
+//     process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
+//       process.env.PATH
+//     }`;
+//     const tester = testFixtureStdio('08-hugo', async (testPath: any) => {
+//       await testPath(200, '/', /Hugo/m);
+//     });
+//     await tester();
+//   } else {
+//     console.log(`Skipping 08-hugo on platform ${process.platform}`);
+//   }
+// });
 
 // test(
 //   '[vercel dev] 10-nextjs-node',
@@ -139,146 +139,146 @@ test(
 //   })
 // );
 
-// // test(
-// //   '[vercel dev] 12-polymer-node',
-// //   testFixtureStdio(
-// //     '12-polymer-node',
-// //     async (testPath: any) => {
-// //       await testPath(200, '/', /Polymer \+ Node.js API/m);
-// //       await testPath(
-// //         200,
-// //         '/api/date',
-// //         new RegExp(new Date().getFullYear() + '')
-// //       );
-// //     },
-// //     { skipDeploy: true }
-// //   )
-// // );
-
-// // test(
-// //   '[vercel dev] 13-preact-node',
-// //   testFixtureStdio(
-// //     '13-preact-node',
-// //     async (testPath: any) => {
-// //       await testPath(200, '/', /Preact/m);
-// //       await testPath(
-// //         200,
-// //         '/api/date',
-// //         new RegExp(new Date().getFullYear() + '')
-// //       );
-// //     },
-// //     { skipDeploy: true }
-// //   )
-// // );
-
-// // test(
-// //   '[vercel dev] 14-svelte-node',
-// //   testFixtureStdio(
-// //     '14-svelte-node',
-// //     async (testPath: any) => {
-// //       await testPath(200, '/', /Svelte/m);
-// //       await testPath(
-// //         200,
-// //         '/api/date',
-// //         new RegExp(new Date().getFullYear() + '')
-// //       );
-// //     },
-// //     { skipDeploy: true }
-// //   )
-// // );
-
-// // test(
-// //   '[vercel dev] 16-vue-node',
-// //   testFixtureStdio(
-// //     '16-vue-node',
-// //     async (testPath: any) => {
-// //       await testPath(200, '/', /Vue.js \+ Node.js API/m);
-// //       await testPath(
-// //         200,
-// //         '/api/date',
-// //         new RegExp(new Date().getFullYear() + '')
-// //       );
-// //     },
-// //     { skipDeploy: true }
-// //   )
-// // );
-
-// // test(
-// //   '[vercel dev] 17-vuepress-node',
-// //   testFixtureStdio(
-// //     '17-vuepress-node',
-// //     async (testPath: any) => {
-// //       await testPath(200, '/', /VuePress \+ Node.js API/m);
-// //       await testPath(
-// //         200,
-// //         '/api/date',
-// //         new RegExp(new Date().getFullYear() + '')
-// //       );
-// //     },
-// //     { skipDeploy: true }
-// //   )
-// // );
-
 // test(
-//   '[vercel dev] double slashes redirect',
+//   '[vercel dev] 12-polymer-node',
 //   testFixtureStdio(
-//     '01-node',
-//     async (_testPath: any, port: any) => {
-//       {
-//         const res = await fetch(`http://localhost:${port}////?foo=bar`, {
-//           redirect: 'manual',
-//         });
-
-//         validateResponseHeaders(res);
-
-//         const body = await res.text();
-//         expect(res.status).toBe(301);
-//         expect(res.headers.get('location')).toBe(
-//           `http://localhost:${port}/?foo=bar`
-//         );
-//         expect(body).toBe('Redirecting to /?foo=bar (301)\n');
-//       }
-
-//       {
-//         const res = await fetch(`http://localhost:${port}///api////date.js`, {
-//           method: 'POST',
-//           redirect: 'manual',
-//         });
-
-//         validateResponseHeaders(res);
-
-//         const body = await res.text();
-//         expect(res.status).toBe(200);
-//         expect(
-//           body.startsWith('January') ||
-//             body.startsWith('February') ||
-//             body.startsWith('March') ||
-//             body.startsWith('April') ||
-//             body.startsWith('May') ||
-//             body.startsWith('June') ||
-//             body.startsWith('July') ||
-//             body.startsWith('August') ||
-//             body.startsWith('September') ||
-//             body.startsWith('October') ||
-//             body.startsWith('November') ||
-//             body.startsWith('December')
-//         ).toBeTruthy();
-//       }
-//     },
-//     { skipDeploy: true }
-//   )
-// );
-
-// test(
-//   '[vercel dev] 18-marko',
-//   testFixtureStdio(
-//     '18-marko',
+//     '12-polymer-node',
 //     async (testPath: any) => {
-//       await testPath(200, '/', /Marko Starter/m);
+//       await testPath(200, '/', /Polymer \+ Node.js API/m);
+//       await testPath(
+//         200,
+//         '/api/date',
+//         new RegExp(new Date().getFullYear() + '')
+//       );
 //     },
 //     { skipDeploy: true }
 //   )
 // );
+
+// test(
+//   '[vercel dev] 13-preact-node',
+//   testFixtureStdio(
+//     '13-preact-node',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /Preact/m);
+//       await testPath(
+//         200,
+//         '/api/date',
+//         new RegExp(new Date().getFullYear() + '')
+//       );
+//     },
+//     { skipDeploy: true }
+//   )
+// );
+
+// test(
+//   '[vercel dev] 14-svelte-node',
+//   testFixtureStdio(
+//     '14-svelte-node',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /Svelte/m);
+//       await testPath(
+//         200,
+//         '/api/date',
+//         new RegExp(new Date().getFullYear() + '')
+//       );
+//     },
+//     { skipDeploy: true }
+//   )
+// );
+
+// test(
+//   '[vercel dev] 16-vue-node',
+//   testFixtureStdio(
+//     '16-vue-node',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /Vue.js \+ Node.js API/m);
+//       await testPath(
+//         200,
+//         '/api/date',
+//         new RegExp(new Date().getFullYear() + '')
+//       );
+//     },
+//     { skipDeploy: true }
+//   )
+// );
+
+// test(
+//   '[vercel dev] 17-vuepress-node',
+//   testFixtureStdio(
+//     '17-vuepress-node',
+//     async (testPath: any) => {
+//       await testPath(200, '/', /VuePress \+ Node.js API/m);
+//       await testPath(
+//         200,
+//         '/api/date',
+//         new RegExp(new Date().getFullYear() + '')
+//       );
+//     },
+//     { skipDeploy: true }
+//   )
+// );
+
+test(
+  '[vercel dev] double slashes redirect',
+  testFixtureStdio(
+    '01-node',
+    async (_testPath: any, port: any) => {
+      {
+        const res = await fetch(`http://localhost:${port}////?foo=bar`, {
+          redirect: 'manual',
+        });
+
+        validateResponseHeaders(res);
+
+        const body = await res.text();
+        expect(res.status).toBe(301);
+        expect(res.headers.get('location')).toBe(
+          `http://localhost:${port}/?foo=bar`
+        );
+        expect(body).toBe('Redirecting to /?foo=bar (301)\n');
+      }
+
+      {
+        const res = await fetch(`http://localhost:${port}///api////date.js`, {
+          method: 'POST',
+          redirect: 'manual',
+        });
+
+        validateResponseHeaders(res);
+
+        const body = await res.text();
+        expect(res.status).toBe(200);
+        expect(
+          body.startsWith('January') ||
+            body.startsWith('February') ||
+            body.startsWith('March') ||
+            body.startsWith('April') ||
+            body.startsWith('May') ||
+            body.startsWith('June') ||
+            body.startsWith('July') ||
+            body.startsWith('August') ||
+            body.startsWith('September') ||
+            body.startsWith('October') ||
+            body.startsWith('November') ||
+            body.startsWith('December')
+        ).toBeTruthy();
+      }
+    },
+    { skipDeploy: true }
+  )
+);
+
+test(
+  '[vercel dev] 18-marko',
+  testFixtureStdio(
+    '18-marko',
+    async (testPath: any) => {
+      await testPath(200, '/', /Marko Starter/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
 test(
   '[vercel dev] 19-mithril',
