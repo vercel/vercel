@@ -12,6 +12,8 @@ import {
 import { tmpdir } from 'os';
 
 describe('link', () => {
+  const origCwd = process.cwd();
+
   it('should prompt for link', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'cli-'));
     try {
@@ -48,6 +50,7 @@ describe('link', () => {
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
     } finally {
+      process.chdir(origCwd);
       await remove(cwd);
     }
   });
@@ -78,6 +81,7 @@ describe('link', () => {
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
     } finally {
+      process.chdir(origCwd);
       await remove(cwd);
     }
   });
@@ -114,6 +118,7 @@ describe('link', () => {
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(proj2.id);
     } finally {
+      process.chdir(origCwd);
       await remove(cwd);
     }
   });
