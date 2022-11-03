@@ -399,25 +399,25 @@ test('[vercel dev] should support request body', async () => {
   }
 });
 
-// test('[vercel dev] should maintain query when invoking serverless function', async () => {
-//   const dir = fixture('node-query-invoke');
-//   const { dev, port, readyResolver } = await testFixture(dir);
+test('[vercel dev] should maintain query when invoking serverless function', async () => {
+  const dir = fixture('node-query-invoke');
+  const { dev, port, readyResolver } = await testFixture(dir);
 
-//   try {
-//     await readyResolver;
+  try {
+    await readyResolver;
 
-//     const res = await fetch(`http://localhost:${port}/something?url-param=a`);
-//     validateResponseHeaders(res);
+    const res = await fetch(`http://localhost:${port}/something?url-param=a`);
+    validateResponseHeaders(res);
 
-//     const text = await res.text();
-//     const parsed = url.parse(text, true);
-//     expect(parsed.pathname).toEqual('/something');
-//     expect(parsed.query['url-param']).toEqual('a');
-//     expect(parsed.query['route-param']).toEqual('b');
-//   } finally {
-//     await dev.kill();
-//   }
-// });
+    const text = await res.text();
+    const parsed = url.parse(text, true);
+    expect(parsed.pathname).toEqual('/something');
+    expect(parsed.query['url-param']).toEqual('a');
+    expect(parsed.query['route-param']).toEqual('b');
+  } finally {
+    await dev.kill();
+  }
+});
 
 // test('[vercel dev] should maintain query when proxy passing', async () => {
 //   const dir = fixture('query-proxy');

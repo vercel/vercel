@@ -280,16 +280,16 @@ test(
 //   )
 // );
 
-// test(
-//   '[vercel dev] 19-mithril',
-//   testFixtureStdio(
-//     '19-mithril',
-//     async (testPath: any) => {
-//       await testPath(200, '/', /Mithril on Vercel/m);
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] 19-mithril',
+  testFixtureStdio(
+    '19-mithril',
+    async (testPath: any) => {
+      await testPath(200, '/', /Mithril on Vercel/m);
+    },
+    { skipDeploy: true }
+  )
+);
 
 test(
   '[vercel dev] 20-riot',

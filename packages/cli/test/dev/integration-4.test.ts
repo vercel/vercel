@@ -326,62 +326,62 @@ test(
   })
 );
 
-// test(
-//   '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
-//   testFixtureStdio('python-flask', async (testPath: any) => {
-//     const name = 'Alice';
-//     const year = new Date().getFullYear();
-//     await testPath(200, `/api/user?name=${name}`, new RegExp(`Hello ${name}`));
-//     await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
-//     await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
-//     await testPath(200, `/api/headers`, (body: any, res: any) => {
-//       // @ts-ignore
-//       const { host } = new URL(res.url);
-//       expect(body).toBe(host);
-//     });
-//   })
-// );
+test(
+  '[vercel dev] Use `@vercel/python` with Flask requirements.txt',
+  testFixtureStdio('python-flask', async (testPath: any) => {
+    const name = 'Alice';
+    const year = new Date().getFullYear();
+    await testPath(200, `/api/user?name=${name}`, new RegExp(`Hello ${name}`));
+    await testPath(200, `/api/date`, new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/date.py`, new RegExp(`Current date is ${year}`));
+    await testPath(200, `/api/headers`, (body: any, res: any) => {
+      // @ts-ignore
+      const { host } = new URL(res.url);
+      expect(body).toBe(host);
+    });
+  })
+);
 
-// test(
-//   '[vercel dev] Use custom runtime from the "functions" property',
-//   testFixtureStdio('custom-runtime', async (testPath: any) => {
-//     await testPath(200, `/api/user`, /Hello, from Bash!/m);
-//     await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
-//   })
-// );
+test(
+  '[vercel dev] Use custom runtime from the "functions" property',
+  testFixtureStdio('custom-runtime', async (testPath: any) => {
+    await testPath(200, `/api/user`, /Hello, from Bash!/m);
+    await testPath(200, `/api/user.sh`, /Hello, from Bash!/m);
+  })
+);
 
-// test(
-//   '[vercel dev] Should work with nested `tsconfig.json` files',
-//   testFixtureStdio('nested-tsconfig', async (testPath: any) => {
-//     await testPath(200, `/`, /Nested tsconfig.json test page/);
-//     await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
-//   })
-// );
+test(
+  '[vercel dev] Should work with nested `tsconfig.json` files',
+  testFixtureStdio('nested-tsconfig', async (testPath: any) => {
+    await testPath(200, `/`, /Nested tsconfig.json test page/);
+    await testPath(200, `/api`, 'Nested `tsconfig.json` API endpoint');
+  })
+);
 
-// test(
-//   '[vercel dev] Should force `tsc` option "module: commonjs" for `startDevServer()`',
-//   testFixtureStdio('force-module-commonjs', async (testPath: any) => {
-//     await testPath(200, `/`, /Force &quot;module: commonjs&quot; test page/);
-//     await testPath(
-//       200,
-//       `/api`,
-//       'Force "module: commonjs" JavaScript with ES Modules API endpoint'
-//     );
-//     await testPath(
-//       200,
-//       `/api/ts`,
-//       'Force "module: commonjs" TypeScript API endpoint'
-//     );
-//   })
-// );
+test(
+  '[vercel dev] Should force `tsc` option "module: commonjs" for `startDevServer()`',
+  testFixtureStdio('force-module-commonjs', async (testPath: any) => {
+    await testPath(200, `/`, /Force &quot;module: commonjs&quot; test page/);
+    await testPath(
+      200,
+      `/api`,
+      'Force "module: commonjs" JavaScript with ES Modules API endpoint'
+    );
+    await testPath(
+      200,
+      `/api/ts`,
+      'Force "module: commonjs" TypeScript API endpoint'
+    );
+  })
+);
 
-// test(
-//   '[vercel dev] should prioritize index.html over other file named index.*',
-//   testFixtureStdio('index-html-priority', async (testPath: any) => {
-//     await testPath(200, '/', 'This is index.html');
-//     await testPath(200, '/index.css', 'This is index.css');
-//   })
-// );
+test(
+  '[vercel dev] should prioritize index.html over other file named index.*',
+  testFixtureStdio('index-html-priority', async (testPath: any) => {
+    await testPath(200, '/', 'This is index.html');
+    await testPath(200, '/index.css', 'This is index.css');
+  })
+);
 
 // test(
 //   '[vercel dev] Should support `*.go` API serverless functions',
