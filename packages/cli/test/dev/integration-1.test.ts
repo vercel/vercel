@@ -563,21 +563,21 @@ test('[vercel dev] should support `@vercel/static` routing', async () => {
   }
 });
 
-test('[vercel dev] should support `@vercel/static-build` routing', async () => {
-  const dir = fixture('static-build-routing');
-  const { dev, port, readyResolver } = await testFixture(dir);
+// test('[vercel dev] should support `@vercel/static-build` routing', async () => {
+//   const dir = fixture('static-build-routing');
+//   const { dev, port, readyResolver } = await testFixture(dir);
 
-  try {
-    await readyResolver;
+//   try {
+//     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/api/date`);
-    expect(res.status).toEqual(200);
-    const body = await res.text();
-    expect(body.startsWith('The current date:')).toBeTruthy();
-  } finally {
-    await dev.kill();
-  }
-});
+//     const res = await fetch(`http://localhost:${port}/api/date`);
+//     expect(res.status).toEqual(200);
+//     const body = await res.text();
+//     expect(body.startsWith('The current date:')).toBeTruthy();
+//   } finally {
+//     await dev.kill();
+//   }
+// });
 
 test('[vercel dev] should support directory listing', async () => {
   const dir = fixture('directory-listing');

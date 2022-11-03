@@ -1,7 +1,7 @@
 // import { resolve, delimiter } from 'path';
 
 const {
-  // fetch,
+  fetch,
   sleep,
   fixture,
   isCanary,
@@ -155,69 +155,69 @@ test(
 //   )
 // );
 
-// test(
-//   '[vercel dev] 13-preact-node',
-//   testFixtureStdio(
-//     '13-preact-node',
-//     async (testPath: any) => {
-//       await testPath(200, '/', /Preact/m);
-//       await testPath(
-//         200,
-//         '/api/date',
-//         new RegExp(new Date().getFullYear() + '')
-//       );
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] 13-preact-node',
+  testFixtureStdio(
+    '13-preact-node',
+    async (testPath: any) => {
+      await testPath(200, '/', /Preact/m);
+      await testPath(
+        200,
+        '/api/date',
+        new RegExp(new Date().getFullYear() + '')
+      );
+    },
+    { skipDeploy: true }
+  )
+);
 
-// test(
-//   '[vercel dev] 14-svelte-node',
-//   testFixtureStdio(
-//     '14-svelte-node',
-//     async (testPath: any) => {
-//       await testPath(200, '/', /Svelte/m);
-//       await testPath(
-//         200,
-//         '/api/date',
-//         new RegExp(new Date().getFullYear() + '')
-//       );
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] 14-svelte-node',
+  testFixtureStdio(
+    '14-svelte-node',
+    async (testPath: any) => {
+      await testPath(200, '/', /Svelte/m);
+      await testPath(
+        200,
+        '/api/date',
+        new RegExp(new Date().getFullYear() + '')
+      );
+    },
+    { skipDeploy: true }
+  )
+);
 
-// test(
-//   '[vercel dev] 16-vue-node',
-//   testFixtureStdio(
-//     '16-vue-node',
-//     async (testPath: any) => {
-//       await testPath(200, '/', /Vue.js \+ Node.js API/m);
-//       await testPath(
-//         200,
-//         '/api/date',
-//         new RegExp(new Date().getFullYear() + '')
-//       );
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] 16-vue-node',
+  testFixtureStdio(
+    '16-vue-node',
+    async (testPath: any) => {
+      await testPath(200, '/', /Vue.js \+ Node.js API/m);
+      await testPath(
+        200,
+        '/api/date',
+        new RegExp(new Date().getFullYear() + '')
+      );
+    },
+    { skipDeploy: true }
+  )
+);
 
-// test(
-//   '[vercel dev] 17-vuepress-node',
-//   testFixtureStdio(
-//     '17-vuepress-node',
-//     async (testPath: any) => {
-//       await testPath(200, '/', /VuePress \+ Node.js API/m);
-//       await testPath(
-//         200,
-//         '/api/date',
-//         new RegExp(new Date().getFullYear() + '')
-//       );
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] 17-vuepress-node',
+  testFixtureStdio(
+    '17-vuepress-node',
+    async (testPath: any) => {
+      await testPath(200, '/', /VuePress \+ Node.js API/m);
+      await testPath(
+        200,
+        '/api/date',
+        new RegExp(new Date().getFullYear() + '')
+      );
+    },
+    { skipDeploy: true }
+  )
+);
 
 test(
   '[vercel dev] double slashes redirect',
