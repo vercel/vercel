@@ -93,7 +93,8 @@ export default class Client extends EventEmitter implements Stdio {
       : '';
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
-      const query = new URLSearchParams(parsedUrl.query);
+      // TODO - not sure what the correct TypeScript fix is here
+      const query = new URLSearchParams(parsedUrl.query as any);
 
       if (opts.accountId) {
         if (opts.accountId.startsWith('team_')) {
