@@ -24,7 +24,7 @@
   "devDependencies": {
     "@swc/core": "1.2.182",
     "@types/jest": "27.4.1",
-    "@types/node": "*"
+    "@types/node": "16.11.7"
   },
   "jest": {
     "preset": "ts-jest",

@@ -31,11 +31,11 @@ export function parseListen(str: string, defaultPort = 3000): ListenSpec {
       return [url.pathname];
     case 'tcp:':
       url.port = url.port || String(defaultPort);
-      return [parseInt(url.port, 10), url.hostname];
+      return [parseInt(url.port, 10), url.hostname ?? undefined];
     default:
       if (!url.slashes) {
         if (url.protocol === null) {
-          return [defaultPort, url.pathname];
+          return [defaultPort, url.pathname ?? undefined];
         }
         port = Number(url.hostname);
         if (url.protocol && !isNaN(port)) {

@@ -57,8 +57,9 @@ export async function devRouter(
   phase?: HandleValue | null
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;
-  let { pathname: reqPathname = '/', search: reqSearch } = url.parse(reqUrl);
-  const reqQuery = parseQueryString(reqSearch);
+  let { pathname: reqPathname, search: reqSearch } = url.parse(reqUrl);
+  reqPathname ??= '/';
+  const reqQuery = parseQueryString(reqSearch ?? undefined);
   const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
   let status: number | undefined;
   let isContinue = false;
@@ -130,7 +131,8 @@ export async function devRouter(
           phase !== 'hit' &&
           !isDestUrl
         ) {
-          const { pathname = '/' } = url.parse(destPath);
+          let { pathname } = url.parse(destPath);
+          pathname ??= '/';
           const hasDestFile = await devServer.hasFilesystem(
             pathname,
             vercelConfig
@@ -186,8 +188,9 @@ export async function devRouter(
           if (!destPath.startsWith('/')) {
             destPath = `/${destPath}`;
           }
-          const { pathname: destPathname = '/', search: destSearch } =
+          let { pathname: destPathname, search: destSearch } =
             url.parse(destPath);
+          destPathname ??= '/';
           const destQuery = parseQueryString(destSearch);
           Object.assign(destQuery, reqQuery);
           result = {
