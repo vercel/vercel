@@ -119,41 +119,41 @@ test(
 //   }
 // });
 
-// test(
-//   '[vercel dev] 10-nextjs-node',
-//   testFixtureStdio('10-nextjs-node', async (testPath: any) => {
-//     await testPath(200, '/', /Next.js \+ Node.js API/m);
-//     await testPath(200, '/api/date', new RegExp(new Date().getFullYear() + ''));
-//     await testPath(200, '/contact', /Contact Page/);
-//     await testPath(200, '/support', /Contact Page/);
-//     // TODO: Fix this test assertion that fails intermittently
-//     // await testPath(404, '/nothing', /Custom Next 404/);
-//   })
-// );
+test(
+  '[vercel dev] 10-nextjs-node',
+  testFixtureStdio('10-nextjs-node', async (testPath: any) => {
+    await testPath(200, '/', /Next.js \+ Node.js API/m);
+    await testPath(200, '/api/date', new RegExp(new Date().getFullYear() + ''));
+    await testPath(200, '/contact', /Contact Page/);
+    await testPath(200, '/support', /Contact Page/);
+    // TODO: Fix this test assertion that fails intermittently
+    // await testPath(404, '/nothing', /Custom Next 404/);
+  })
+);
 
-// test(
-//   '[vercel dev] 10a-nextjs-routes',
-//   testFixtureStdio('10a-nextjs-routes', async (testPath: any) => {
-//     await testPath(200, '/', /Next.js with routes/m);
-//     await testPath(200, '/hello', /Hello Routes/m);
-//   })
-// );
+test(
+  '[vercel dev] 10a-nextjs-routes',
+  testFixtureStdio('10a-nextjs-routes', async (testPath: any) => {
+    await testPath(200, '/', /Next.js with routes/m);
+    await testPath(200, '/hello', /Hello Routes/m);
+  })
+);
 
-// test(
-//   '[vercel dev] 12-polymer-node',
-//   testFixtureStdio(
-//     '12-polymer-node',
-//     async (testPath: any) => {
-//       await testPath(200, '/', /Polymer \+ Node.js API/m);
-//       await testPath(
-//         200,
-//         '/api/date',
-//         new RegExp(new Date().getFullYear() + '')
-//       );
-//     },
-//     { skipDeploy: true }
-//   )
-// );
+test(
+  '[vercel dev] 12-polymer-node',
+  testFixtureStdio(
+    '12-polymer-node',
+    async (testPath: any) => {
+      await testPath(200, '/', /Polymer \+ Node.js API/m);
+      await testPath(
+        200,
+        '/api/date',
+        new RegExp(new Date().getFullYear() + '')
+      );
+    },
+    { skipDeploy: true }
+  )
+);
 
 test(
   '[vercel dev] 13-preact-node',
