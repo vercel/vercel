@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import type { Dirent } from 'fs';
 import path from 'path';
 import { DetectorFilesystem, DetectorFilesystemStat } from './filesystem';
-import { isErrnoException } from '../isError';
+import { isErrnoException } from '@vercel/error-utils';
 
 export class LocalFileSystemDetector extends DetectorFilesystem {
   private rootPath: string;
