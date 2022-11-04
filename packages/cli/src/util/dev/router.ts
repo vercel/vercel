@@ -59,7 +59,7 @@ export async function devRouter(
   let result: RouteResult | undefined;
   let { pathname: reqPathname, search: reqSearch } = url.parse(reqUrl);
   reqPathname ??= '/';
-  const reqQuery = parseQueryString(reqSearch ?? undefined);
+  const reqQuery = parseQueryString(reqSearch);
   const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
   let status: number | undefined;
   let isContinue = false;

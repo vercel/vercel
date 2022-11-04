@@ -1,8 +1,7 @@
 import { bold } from 'chalk';
 import inquirer from 'inquirer';
 import { EventEmitter } from 'events';
-import { URLSearchParams } from 'url';
-import { parse as parseUrl } from 'url';
+import { URL, URLSearchParams } from 'url';
 import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
@@ -87,14 +86,14 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   private _fetch(_url: string, opts: FetchOptions = {}) {
-    const parsedUrl = parseUrl(_url, true);
+    const parsedUrl = new URL(_url);
     const apiUrl = parsedUrl.host
       ? `${parsedUrl.protocol}//${parsedUrl.host}`
       : '';
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
       // TODO - not sure what the correct TypeScript fix is here
-      const query = new URLSearchParams(parsedUrl.query as any);
+      const query = new URLSearchParams(parsedUrl.searchParams);
 
       if (opts.accountId) {
         if (opts.accountId.startsWith('team_')) {
