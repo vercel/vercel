@@ -4,7 +4,7 @@
  * @param querystring - The querystring to parse, also known as the "search" string.
  */
 export function parseQueryString(
-  querystring?: string
+  querystring?: string | null
 ): Record<string, string[]> {
   const query: Record<string, string[]> = Object.create(null);
   if (!querystring || !querystring.startsWith('?') || querystring === '?') {
@@ -38,9 +38,9 @@ export function parseQueryString(
  */
 export function formatQueryString(
   query: Record<string, string[]> | undefined
-): string | undefined {
+): string | null {
   if (!query) {
-    return undefined;
+    return null;
   }
   let s = '';
   let prefix = '?';
@@ -55,5 +55,5 @@ export function formatQueryString(
       prefix = '&';
     }
   }
-  return s || undefined;
+  return s || null;
 }

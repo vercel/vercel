@@ -1,8 +1,7 @@
 import { bold } from 'chalk';
 import inquirer from 'inquirer';
 import { EventEmitter } from 'events';
-import { URLSearchParams } from 'url';
-import { parse as parseUrl } from 'url';
+import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
@@ -87,25 +86,18 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   private _fetch(_url: string, opts: FetchOptions = {}) {
-    const parsedUrl = parseUrl(_url, true);
-    const apiUrl = parsedUrl.host
-      ? `${parsedUrl.protocol}//${parsedUrl.host}`
-      : '';
+    const url = new URL(_url, this.apiUrl);
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
-      const query = new URLSearchParams(parsedUrl.query);
-
       if (opts.accountId) {
         if (opts.accountId.startsWith('team_')) {
-          query.set('teamId', opts.accountId);
+          url.searchParams.set('teamId', opts.accountId);
         } else {
-          query.delete('teamId');
+          url.searchParams.delete('teamId');
         }
       } else if (opts.useCurrentTeam !== false && this.config.currentTeam) {
-        query.set('teamId', this.config.currentTeam);
+        url.searchParams.set('teamId', this.config.currentTeam);
       }
-
-      _url = `${apiUrl}${parsedUrl.pathname}?${query}`;
     }
 
     const headers = new Headers(opts.headers);
@@ -122,7 +114,6 @@ export default class Client extends EventEmitter implements Stdio {
       body = opts.body;
     }
 
-    const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
     const requestId = this.requestIdCounter++;
     return this.output.time(res => {
       if (res) {
@@ -130,7 +121,7 @@ export default class Client extends EventEmitter implements Stdio {
           res.statusText
         }: ${res.headers.get('x-vercel-id')}`;
       } else {
-        return `#${requestId} → ${opts.method || 'GET'} ${url}`;
+        return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
       }
     }, fetch(url, { ...opts, headers, body }));
   }
