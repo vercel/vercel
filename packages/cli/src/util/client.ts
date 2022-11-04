@@ -1,7 +1,7 @@
 import { bold } from 'chalk';
 import inquirer from 'inquirer';
 import { EventEmitter } from 'events';
-import { URL, URLSearchParams } from 'url';
+import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
@@ -49,12 +49,6 @@ export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
 
-// https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-const ABSOLUTE_URL_SCHEME = /^[a-zA-z][a-zA-Z0-9+\-.]*?:/;
-
-// https://www.rfc-editor.org/rfc/rfc3986#section-4.3
-const isAbsoluteURI = (url: string) => ABSOLUTE_URL_SCHEME.test(url);
-
 export default class Client extends EventEmitter implements Stdio {
   argv: string[];
   apiUrl: string;
@@ -91,29 +85,19 @@ export default class Client extends EventEmitter implements Stdio {
     });
   }
 
-  private _fetch(urlOrPath: string, opts: FetchOptions = {}) {
-    const parsedUrl = isAbsoluteURI(urlOrPath)
-      ? new URL(urlOrPath)
-      : new URL(urlOrPath, this.apiUrl);
-    const apiUrl = parsedUrl.host
-      ? `${parsedUrl.protocol}//${parsedUrl.host}`
-      : '';
+  private _fetch(_url: string, opts: FetchOptions = {}) {
+    const url = new URL(_url, this.apiUrl);
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
-      // TODO - not sure what the correct TypeScript fix is here
-      const query = new URLSearchParams(parsedUrl.searchParams);
-
       if (opts.accountId) {
         if (opts.accountId.startsWith('team_')) {
-          query.set('teamId', opts.accountId);
+          url.searchParams.set('teamId', opts.accountId);
         } else {
-          query.delete('teamId');
+          url.searchParams.delete('teamId');
         }
       } else if (opts.useCurrentTeam !== false && this.config.currentTeam) {
-        query.set('teamId', this.config.currentTeam);
+        url.searchParams.set('teamId', this.config.currentTeam);
       }
-
-      urlOrPath = `${apiUrl}${parsedUrl.pathname}?${query}`;
     }
 
     const headers = new Headers(opts.headers);
@@ -130,7 +114,6 @@ export default class Client extends EventEmitter implements Stdio {
       body = opts.body;
     }
 
-    const url = `${apiUrl ? '' : this.apiUrl}${urlOrPath}`;
     const requestId = this.requestIdCounter++;
     return this.output.time(res => {
       if (res) {
@@ -138,7 +121,7 @@ export default class Client extends EventEmitter implements Stdio {
           res.statusText
         }: ${res.headers.get('x-vercel-id')}`;
       } else {
-        return `#${requestId} → ${opts.method || 'GET'} ${url}`;
+        return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
       }
     }, fetch(url, { ...opts, headers, body }));
   }
