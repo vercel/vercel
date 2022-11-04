@@ -49,6 +49,12 @@ export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
 
+// https://www.rfc-editor.org/rfc/rfc3986#section-3.1
+const ABSOLUTE_URL_SCHEME = /^[a-zA-z][a-zA-Z0-9+\-.]*?:/;
+
+// https://www.rfc-editor.org/rfc/rfc3986#section-4.3
+const isAbsoluteURI = (url: string) => ABSOLUTE_URL_SCHEME.test(url);
+
 export default class Client extends EventEmitter implements Stdio {
   argv: string[];
   apiUrl: string;
@@ -85,8 +91,10 @@ export default class Client extends EventEmitter implements Stdio {
     });
   }
 
-  private _fetch(_url: string, opts: FetchOptions = {}) {
-    const parsedUrl = new URL(_url);
+  private _fetch(urlOrPath: string, opts: FetchOptions = {}) {
+    const parsedUrl = isAbsoluteURI(urlOrPath)
+      ? new URL(urlOrPath)
+      : new URL(urlOrPath, this.apiUrl);
     const apiUrl = parsedUrl.host
       ? `${parsedUrl.protocol}//${parsedUrl.host}`
       : '';
@@ -105,7 +113,7 @@ export default class Client extends EventEmitter implements Stdio {
         query.set('teamId', this.config.currentTeam);
       }
 
-      _url = `${apiUrl}${parsedUrl.pathname}?${query}`;
+      urlOrPath = `${apiUrl}${parsedUrl.pathname}?${query}`;
     }
 
     const headers = new Headers(opts.headers);
@@ -122,7 +130,7 @@ export default class Client extends EventEmitter implements Stdio {
       body = opts.body;
     }
 
-    const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
+    const url = `${apiUrl ? '' : this.apiUrl}${urlOrPath}`;
     const requestId = this.requestIdCounter++;
     return this.output.time(res => {
       if (res) {
