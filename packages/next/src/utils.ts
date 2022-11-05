@@ -748,6 +748,7 @@ export async function createPseudoLayer(files: {
 
 interface CreateLambdaFromPseudoLayersOptions extends LambdaOptionsWithFiles {
   layers: PseudoLayer[];
+  isStreaming?: boolean;
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -757,6 +758,7 @@ const createLambdaSema = new Sema(1);
 export async function createLambdaFromPseudoLayers({
   files: baseFiles,
   layers,
+  isStreaming,
   ...lambdaOptions
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -791,6 +793,11 @@ export async function createLambdaFromPseudoLayers({
 
   return new NodejsLambda({
     ...lambdaOptions,
+    ...(isStreaming
+      ? {
+          experimentalResponseStreaming: true,
+        }
+      : {}),
     files,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
@@ -1273,6 +1280,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  isStreaming?: boolean;
   isPrerenders?: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
@@ -1601,15 +1609,18 @@ export const onPrerenderRouteInitial = (
   nonLambdaSsgPages: Set<string>,
   routeKey: string,
   hasPages404: boolean,
-  routesManifest?: RoutesManifest
+  routesManifest?: RoutesManifest,
+  appDir?: string | null
 ) => {
   let static404Page: string | undefined;
   let static500Page: string | undefined;
 
   // Get the route file as it'd be mounted in the builder output
   const pr = prerenderManifest.staticRoutes[routeKey];
-  const { initialRevalidate, srcRoute } = pr;
+  const { initialRevalidate, srcRoute, dataRoute } = pr;
   const route = srcRoute || routeKey;
+
+  const isAppPathRoute = appDir && dataRoute?.endsWith('.rsc');
 
   const routeNoLocale = routesManifest?.i18n
     ? normalizeLocalePath(routeKey, routesManifest.i18n.locales).pathname
@@ -1626,6 +1637,9 @@ export const onPrerenderRouteInitial = (
   }
 
   if (
+    // App paths must be Prerenders to ensure Vary header is
+    // correctly added
+    !isAppPathRoute &&
     initialRevalidate === false &&
     (!canUsePreviewMode || (hasPages404 && routeNoLocale === '/404')) &&
     !prerenderManifest.fallbackRoutes[route] &&
@@ -1836,14 +1850,26 @@ export const onPrerenderRoute =
             ),
           });
 
-    const outputPathPage = normalizeIndexOutput(
-      path.posix.join(entryDirectory, routeFileNoExt),
-      isServerMode
-    );
+    if (isAppPathRoute) {
+      // for literal index routes we need to append an additional /index
+      // due to the proxy's normalizing for /index routes
+      if (routeKey !== '/index' && routeKey.endsWith('/index')) {
+        routeKey = `${routeKey}/index`;
+        routeFileNoExt = routeKey;
+        origRouteFileNoExt = routeKey;
+      }
+    }
+
+    let outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
+
+    if (!isAppPathRoute) {
+      outputPathPage = normalizeIndexOutput(outputPathPage, isServerMode);
+    }
     const outputPathPageOrig = path.posix.join(
       entryDirectory,
       origRouteFileNoExt
     );
+
     let lambda: undefined | Lambda;
     let outputPathData = path.posix.join(entryDirectory, dataRoute);
 
@@ -1887,7 +1913,7 @@ export const onPrerenderRoute =
       lambda = lambdas[outputSrcPathPage];
     }
 
-    if (!isNotFound && initialRevalidate === false) {
+    if (!isAppPathRoute && !isNotFound && initialRevalidate === false) {
       if (htmlFsRef == null || jsonFsRef == null) {
         throw new NowBuildError({
           code: 'NEXT_HTMLFSREF_JSONFSREF',
@@ -1973,6 +1999,19 @@ export const onPrerenderRoute =
         fallback: htmlFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
+        ...(isNotFound
+          ? {
+              initialStatus: 404,
+            }
+          : {}),
+
+        ...(isAppPathRoute
+          ? {
+              initialHeaders: {
+                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+              },
+            }
+          : {}),
       });
       prerenders[outputPathData] = new Prerender({
         expiration: initialRevalidate,
@@ -1981,6 +2020,21 @@ export const onPrerenderRoute =
         fallback: jsonFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
+
+        ...(isNotFound
+          ? {
+              initialStatus: 404,
+            }
+          : {}),
+
+        ...(isAppPathRoute
+          ? {
+              initialHeaders: {
+                'content-type': 'application/octet-stream',
+                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+              },
+            }
+          : {}),
       });
 
       ++prerenderGroup;
@@ -2389,6 +2443,12 @@ export async function getMiddlewareBundle({
       } else if (shortPath.startsWith('app/') && shortPath.endsWith('/page')) {
         shortPath =
           shortPath.replace(/^app\//, '').replace(/(^|\/)page$/, '') || 'index';
+      }
+
+      if (routesManifest?.basePath) {
+        shortPath = path.posix
+          .join(routesManifest.basePath, shortPath)
+          .replace(/^\//, '');
       }
 
       worker.edgeFunction.name = shortPath;

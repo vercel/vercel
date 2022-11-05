@@ -453,6 +453,7 @@ export const build: BuildV3 = async ({
     output = new EdgeFunction({
       entrypoint: handler,
       files: preparedFiles,
+      regions: staticConfig?.regions,
 
       // TODO: remove - these two properties should not be required
       name: outputPath,
@@ -464,6 +465,9 @@ export const build: BuildV3 = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
+    const experimentalResponseStreaming =
+      staticConfig?.experimentalResponseStreaming === true ? true : undefined;
+
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
@@ -471,6 +475,7 @@ export const build: BuildV3 = async ({
       shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
+      experimentalResponseStreaming,
     });
   }
 

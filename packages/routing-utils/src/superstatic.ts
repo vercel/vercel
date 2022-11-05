@@ -297,7 +297,12 @@ function replaceSegments(
         safelyCompile(unescapeSegments(str), indexes, true)
       );
     } else {
-      query[key] = safelyCompile(unescapeSegments(strOrArray), indexes, true);
+      // TODO: handle strOrArray is undefined
+      query[key] = safelyCompile(
+        unescapeSegments(strOrArray as string),
+        indexes,
+        true
+      );
     }
   }
 

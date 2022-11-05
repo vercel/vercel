@@ -32,8 +32,8 @@ import { isAPIError } from '../errors-ts';
 export interface SetupAndLinkOptions {
   forceDelete?: boolean;
   autoConfirm?: boolean;
-  successEmoji: EmojiLabel;
-  setupMsg: string;
+  successEmoji?: EmojiLabel;
+  setupMsg?: string;
   projectName?: string;
 }
 
@@ -43,8 +43,8 @@ export default async function setupAndLink(
   {
     forceDelete = false,
     autoConfirm = false,
-    successEmoji,
-    setupMsg,
+    successEmoji = 'link',
+    setupMsg = 'Set up',
     projectName,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {

@@ -85,17 +85,16 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
-import { ProjectEnvVariable, ProjectSettings } from '../../types';
-import exposeSystemEnvs from './expose-system-envs';
+import { ProjectSettings } from '../../types';
 import { treeKill } from '../tree-kill';
-import { nodeHeadersToFetchHeaders } from './headers';
+import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
   errorToString,
   isErrnoException,
   isError,
   isSpawnError,
-} from '../is-error';
+} from '@vercel/error-utils';
 import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
 import { replaceLocalhost } from './parse-listen';
@@ -168,15 +167,13 @@ export default class DevServer {
   private blockingBuildsPromise: Promise<void> | null;
   private startPromise: Promise<void> | null;
 
-  private systemEnvValues: string[];
-  private projectEnvs: ProjectEnvVariable[];
+  private envValues: Record<string, string>;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
-    this.systemEnvValues = options.systemEnvValues || [];
-    this.projectEnvs = options.projectEnvs || [];
+    this.envValues = options.envValues || {};
     this.files = {};
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
@@ -684,16 +681,13 @@ export default class DevServer {
 
     // If no .env/.build.env is present, use cloud environment variables
     if (Object.keys(allEnv).length === 0) {
-      const cloudEnv = exposeSystemEnvs(
-        this.projectEnvs || [],
-        this.systemEnvValues || [],
-        this.projectSettings?.autoExposeSystemEnvs,
-        this.address.host
-      );
-
-      allEnv = { ...cloudEnv };
-      runEnv = { ...cloudEnv };
-      buildEnv = { ...cloudEnv };
+      const envValues = { ...this.envValues };
+      if (this.address.host) {
+        envValues['VERCEL_URL'] = this.address.host;
+      }
+      allEnv = { ...envValues };
+      runEnv = { ...envValues };
+      buildEnv = { ...envValues };
     }
 
     // legacy NOW_REGION env variable
@@ -1454,7 +1448,9 @@ export default class DevServer {
             }
           );
 
-          if (middlewareRes.status === 500) {
+          const middlewareBody = await middlewareRes.buffer();
+
+          if (middlewareRes.status === 500 && middlewareBody.byteLength === 0) {
             await this.sendError(
               req,
               res,
@@ -1478,6 +1474,9 @@ export default class DevServer {
             'content-length',
             'transfer-encoding',
           ]);
+
+          applyOverriddenHeaders(req.headers, middlewareRes.headers);
+
           for (const [name, value] of middlewareRes.headers) {
             if (name === 'x-middleware-next') {
               shouldContinue = value === '1';
@@ -1496,7 +1495,6 @@ export default class DevServer {
           }
 
           if (!shouldContinue) {
-            const middlewareBody = await middlewareRes.buffer();
             this.setResponseHeaders(res, requestId);
             if (middlewareBody.length > 0) {
               res.setHeader('content-length', middlewareBody.length);

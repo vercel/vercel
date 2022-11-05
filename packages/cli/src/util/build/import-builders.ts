@@ -16,7 +16,7 @@ import { VERCEL_DIR } from '../projects/link';
 import { Output } from '../output';
 import readJSONFile from '../read-json-file';
 import { CantParseJSONFile } from '../errors-ts';
-import { errorToString, isErrnoException, isError } from '../is-error';
+import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import cmd from '../output/cmd';
 import code from '../output/code';
 

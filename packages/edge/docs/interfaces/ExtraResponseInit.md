@@ -11,6 +11,7 @@
 ### Properties
 
 - [headers](ExtraResponseInit.md#headers)
+- [request](ExtraResponseInit.md#request)
 - [status](ExtraResponseInit.md#status)
 - [statusText](ExtraResponseInit.md#statustext)
 
@@ -25,7 +26,19 @@ along with the response headers from the origin.
 
 #### Defined in
 
-[src/middleware-helpers.ts:6](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L6)
+[src/middleware-helpers.ts:31](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L31)
+
+---
+
+### request
+
+• `Optional` **request**: [`ModifiedRequest`](ModifiedRequest.md)
+
+Fields to rewrite for the upstream request.
+
+#### Defined in
+
+[src/middleware-helpers.ts:35](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L35)
 
 ---
 
