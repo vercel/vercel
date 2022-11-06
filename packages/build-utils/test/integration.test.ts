@@ -21,6 +21,8 @@ const skipFixtures: string[] = [
   '08-zero-config-middleman',
   '21-npm-workspaces',
   '23-pnpm-workspaces',
+  '41-nx-monorepo',
+  '42-npm-workspace-with-nx',
 ];
 
 // eslint-disable-next-line no-restricted-syntax

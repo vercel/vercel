@@ -8,21 +8,9 @@ Everything you need to build a Svelte project, powered by [`create-svelte`](http
 
 _Live Example: https://sveltekit-template.vercel.app_
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```bash
-# create a new project in the current directory
-npm init svelte
-
-# create a new project in my-app
-npm init svelte my-app
-```
-
 ## Developing
 
-Once you've created a project and installed dependencies with `pnpm install`, start a development server:
+Once you've installed dependencies with `pnpm install`, start a development server:
 
 ```bash
 pnpm run dev

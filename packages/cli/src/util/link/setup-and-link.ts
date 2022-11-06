@@ -28,14 +28,12 @@ import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';
-import { getRemoteUrls } from '../create-git-meta';
-import { addGitConnection } from './add-git-connection';
 
 export interface SetupAndLinkOptions {
   forceDelete?: boolean;
   autoConfirm?: boolean;
-  successEmoji: EmojiLabel;
-  setupMsg: string;
+  successEmoji?: EmojiLabel;
+  setupMsg?: string;
   projectName?: string;
 }
 
@@ -45,8 +43,8 @@ export default async function setupAndLink(
   {
     forceDelete = false,
     autoConfirm = false,
-    successEmoji,
-    setupMsg,
+    successEmoji = 'link',
+    setupMsg = 'Set up',
     projectName,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
@@ -129,20 +127,6 @@ export default async function setupAndLink(
     rootDirectory = await inputRootDirectory(client, path, autoConfirm);
   } else {
     const project = projectOrNewProjectName;
-
-    const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
-    if (remoteUrls && !project.skipGitConnectDuringLink) {
-      const connectGit = await addGitConnection(
-        client,
-        org,
-        project,
-        remoteUrls,
-        autoConfirm
-      );
-      if (typeof connectGit === 'number') {
-        return { status: 'error', exitCode: connectGit };
-      }
-    }
 
     await linkFolderToProject(
       output,
@@ -257,21 +241,6 @@ export default async function setupAndLink(
     }
 
     const project = await createProject(client, newProjectName);
-
-    const remoteUrls = await getRemoteUrls(join(path, '.git/config'), output);
-    if (remoteUrls) {
-      const connectGit = await addGitConnection(
-        client,
-        org,
-        project,
-        remoteUrls,
-        autoConfirm,
-        settings
-      );
-      if (typeof connectGit === 'number') {
-        return { status: 'error', exitCode: connectGit };
-      }
-    }
 
     await updateProject(client, project.id, settings);
     Object.assign(project, settings);

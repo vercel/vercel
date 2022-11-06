@@ -13,6 +13,7 @@ const {
 
 jest.setTimeout(6 * 60 * 1000);
 
+const isCI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const isCanary = () => getDistTag(cliVersion) === 'canary';
 
@@ -52,7 +53,7 @@ function fetchWithRetry(url, opts = {}) {
       return res;
     },
     {
-      retries: opts.retries || 3,
+      retries: opts.retries ?? 3,
       factor: 1,
     }
   );
@@ -150,9 +151,9 @@ async function testPath(
   fetchOpts = {}
 ) {
   const opts = {
+    retries: isCI ? 5 : 0,
     ...fetchOpts,
     redirect: 'manual-dont-change',
-    retries: 5,
     status,
   };
   const url = `${origin}${path}`;
@@ -330,7 +331,7 @@ function testFixtureStdio(
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify(projectSettings),
-              retries: 3,
+              retries: isCI ? 3 : 0,
               status: 200,
             }
           );

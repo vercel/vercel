@@ -23,7 +23,7 @@ class MockStream extends PassThrough {
     this.isTTY = true;
   }
 
-  // These is for the `ora` module
+  // These are for the `ora` module
   clearLine() {}
   cursorTo() {}
 }

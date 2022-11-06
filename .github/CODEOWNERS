@@ -1,23 +1,17 @@
 # Documentation
 # https://help.github.com/en/articles/about-code-owners
 
-*                                        @TooTallNate @EndangeredMassa @styfle
-/.github/workflows                       @TooTallNate @EndangeredMassa @styfle @ijjk
-/packages/frameworks                     @TooTallNate @EndangeredMassa @styfle @AndyBitz
-/packages/cli/src/commands/domains       @javivelasco @mglagola @anatrajkovska
-/packages/cli/src/commands/certs         @javivelasco @mglagola @anatrajkovska
-/packages/cli/src/commands/env           @styfle @lucleray
-/packages/client                         @TooTallNate @EndangeredMassa @styfle
-/packages/build-utils                    @TooTallNate @EndangeredMassa @styfle @AndyBitz
-/packages/middleware                     @gdborton @javivelasco
-/packages/node                           @TooTallNate @EndangeredMassa @styfle
-/packages/node-bridge                    @TooTallNate @EndangeredMassa @styfle @ijjk
-/packages/next                           @TooTallNate @ijjk
-/packages/go                             @TooTallNate @EndangeredMassa @styfle
-/packages/python                         @TooTallNate @EndangeredMassa @styfle
-/packages/ruby                           @TooTallNate @EndangeredMassa @styfle
-/packages/static-build                   @TooTallNate @EndangeredMassa @styfle @AndyBitz
-/packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @ijjk
+*                                        @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood
+/.github/workflows                       @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
+/packages/cli/src/commands/domains       @mglagola @anatrajkovska
+/packages/cli/src/commands/certs         @mglagola @anatrajkovska
+/packages/cli/src/commands/env           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood
+/packages/fs-detectors                   @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @agadzik @chloetedder
+/packages/middleware                     @gdborton @vercel/edge-function
+/packages/node-bridge                    @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
+/packages/next                           @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
+/packages/routing-utils                  @TooTallNate @EndangeredMassa @styfle @cb1kenobi @Ethan-Arrowood @ijjk
+/packages/edge                           @vercel/edge-function
 /examples                                @leerob
 /examples/create-react-app               @Timer
 /examples/nextjs                         @timneutkens @ijjk @styfle

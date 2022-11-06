@@ -40,11 +40,6 @@ describe('git', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          'Do you want to connect "origin" to your Vercel project?'
-        );
-        client.stdin.write('n\n');
-
-        await expect(client.stderr).toOutput(
           `Connecting Git remote: https://github.com/user/repo.git`
         );
 
@@ -85,7 +80,7 @@ describe('git', () => {
         const exitCode = await git(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
-          `Error! No local Git repository found. Run \`git clone <url>\` to clone a remote Git repository first.\n`
+          `Error: No local Git repository found. Run \`git clone <url>\` to clone a remote Git repository first.\n`
         );
       } finally {
         process.chdir(originalCwd);
@@ -107,7 +102,7 @@ describe('git', () => {
         const exitCode = await git(client);
         expect(exitCode).toEqual(1);
         await expect(client.stderr).toOutput(
-          `Error! No remote URLs found in your Git config. Make sure you've configured a remote repo in your local Git config. Run \`git remote --help\` for more details.`
+          `Error: No remote URLs found in your Git config. Make sure you've configured a remote repo in your local Git config. Run \`git remote --help\` for more details.`
         );
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
@@ -134,7 +129,7 @@ describe('git', () => {
           `Connecting Git remote: bababooey`
         );
         await expect(client.stderr).toOutput(
-          `Error! Failed to parse Git repo data from the following remote URL: bababooey\n`
+          `Error: Failed to parse Git repo data from the following remote URL: bababooey\n`
         );
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
@@ -295,7 +290,7 @@ describe('git', () => {
           `Connecting Git remote: https://github.com/laksfj/asdgklsadkl`
         );
         await expect(client.stderr).toOutput(
-          `Failed to link laksfj/asdgklsadkl. Make sure there aren't any typos and that you have access to the repository if it's private.`
+          `Failed to connect laksfj/asdgklsadkl to project. Make sure there aren't any typos and that you have access to the repository if it's private.`
         );
 
         const exitCode = await gitPromise;

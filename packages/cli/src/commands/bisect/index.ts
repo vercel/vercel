@@ -2,7 +2,6 @@ import open from 'open';
 import boxen from 'boxen';
 import execa from 'execa';
 import plural from 'pluralize';
-import inquirer from 'inquirer';
 import { resolve } from 'path';
 import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
@@ -150,7 +149,9 @@ export default async function main(client: Client): Promise<number> {
 
   if (badDeployment) {
     if (badDeployment instanceof Error) {
-      badDeployment.message += ` "${bad}"`;
+      badDeployment.message += ` when requesting bad deployment "${normalizeURL(
+        bad
+      )}"`;
       output.prettyError(badDeployment);
       return 1;
     }
@@ -165,7 +166,9 @@ export default async function main(client: Client): Promise<number> {
 
   if (goodDeployment) {
     if (goodDeployment instanceof Error) {
-      goodDeployment.message += ` "${good}"`;
+      goodDeployment.message += ` when requesting good deployment "${normalizeURL(
+        good
+      )}"`;
       output.prettyError(goodDeployment);
       return 1;
     }
@@ -226,7 +229,8 @@ export default async function main(client: Client): Promise<number> {
     // If we have the "good" deployment in this chunk, then we're done
     for (let i = 0; i < newDeployments.length; i++) {
       if (newDeployments[i].url === good) {
-        newDeployments = newDeployments.slice(0, i + 1);
+        // grab all deployments up until the good one
+        newDeployments = newDeployments.slice(0, i);
         next = undefined;
         break;
       }
@@ -316,7 +320,7 @@ export default async function main(client: Client): Promise<number> {
       if (openEnabled) {
         await open(testUrl);
       }
-      const answer = await inquirer.prompt({
+      const answer = await client.prompt({
         type: 'expand',
         name: 'action',
         message: 'Select an action:',

@@ -20,7 +20,7 @@ export type VercelResponse = ServerResponse & {
 export type VercelApiHandler = (
   req: VercelRequest,
   res: VercelResponse
-) => void;
+) => void | Promise<void>;
 
 /** @deprecated Use VercelRequestCookies instead. */
 export type NowRequestCookies = VercelRequestCookies;

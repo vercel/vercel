@@ -8,6 +8,8 @@ describe('monorepo-managers', () => {
     ['28-turborepo-with-yarn-workspaces', 'turbo'],
     ['31-turborepo-in-package-json', 'turbo'],
     ['22-pnpm', null],
+    ['39-nx-monorepo', 'nx'],
+    ['40-rush-monorepo', 'rush'],
   ])('with detectFramework', (fixturePath, frameworkSlug) => {
     const testName = frameworkSlug
       ? `should detect a ${frameworkSlug} workspace for ${fixturePath}`
