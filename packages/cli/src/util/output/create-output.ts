@@ -40,9 +40,8 @@ export class Output {
 
   print = (str: string) => {
     if (this.textOnly) {
-      const emojis = Object.values(emojiLabels).map(emoji => `${emoji}  `);
-      const regExp = new RegExp(emojis.join('|'), 'gi');
-      const textOnlyStr = str.replace(regExp, '');
+      const regExp = new RegExp(Object.values(emojiLabels).join('|'), 'gi');
+      const textOnlyStr = str.replace(regExp, '').trimStart();
 
       this.stopSpinner();
       this.stream.write(textOnlyStr);
