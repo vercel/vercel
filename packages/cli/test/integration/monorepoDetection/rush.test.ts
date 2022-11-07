@@ -7,17 +7,24 @@ import { executeVercelCLI } from './util';
 
 const tmpdir = path.join(os.tmpdir(), 'monorepo-detection-rush');
 
-jest.setTimeout(10000);
+jest.setTimeout(30000);
+
+let testCount = 0;
 
 describe('rush', () => {
   let directoryPath: string;
 
   beforeEach(async () => {
     directoryPath = await prepare(
-      tmpdir,
+      path.join(tmpdir, testCount.toString()),
       'monorepo-detection-rush',
       fixtures['monorepo-detection-rush']
     );
+    await execa('npx', ['@microsoft/rush', 'update', '--bypass-policy'], {
+      cwd: directoryPath,
+      reject: false,
+    });
+    testCount++;
   });
 
   afterEach(async () => {
@@ -28,10 +35,6 @@ describe('rush', () => {
   });
 
   test('should detect and use correct defaults', async () => {
-    await execa('npx', ['@microsoft/rush', 'update'], {
-      cwd: directoryPath,
-      reject: false,
-    });
     const output = await executeVercelCLI(['build'], { cwd: directoryPath });
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toMatch(

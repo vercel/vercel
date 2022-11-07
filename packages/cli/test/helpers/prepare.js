@@ -576,6 +576,9 @@ const fixtures = {
     'package.json': JSON.stringify({
       private: true,
       workspaces: ['packages/*'],
+      devDependencies: {
+        turbo: '1.6.3',
+      },
     }),
     'turbo.json': JSON.stringify({
       pipeline: {

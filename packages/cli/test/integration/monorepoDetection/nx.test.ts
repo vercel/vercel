@@ -55,7 +55,7 @@ describe('nx', () => {
           settings: {
             ...projectJSON.settings,
             buildCommand: 'cd ../.. && npx nx build app-1',
-            installCommand: 'cd ../.. && npm install',
+            installCommand: 'cd ../.. && yarn install',
           },
         })
       );
@@ -75,7 +75,7 @@ describe('nx', () => {
         path.join(directoryPath, 'packages/app-1/vercel.json'),
         JSON.stringify({
           buildCommand: 'cd ../.. && npx nx build app-1',
-          installCommand: 'cd ../.. && npm install',
+          installCommand: 'cd ../.. && yarn install',
         })
       );
 

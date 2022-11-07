@@ -68,7 +68,7 @@ describe('turbo', () => {
         settings: {
           ...projectJSON.settings,
           buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
-          installCommand: 'cd ../.. && npm install',
+          installCommand: 'cd ../.. && yarn install',
         },
       })
     );
@@ -89,7 +89,7 @@ describe('turbo', () => {
       path.join(directoryPath, 'packages/app-1/vercel.json'),
       JSON.stringify({
         buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
-        installCommand: 'cd ../.. && npm install',
+        installCommand: 'cd ../.. && yarn install',
       })
     );
 
