@@ -3446,23 +3446,20 @@ test('deploy pnpm twice using pnp and symlink=false', async t => {
     ]);
   }
 
-  function logs(deploymentUrl) {
-    return execa(binaryPath, ['logs', deploymentUrl, ...defaultArgs]);
-  }
-
   let { exitCode, stderr, stdout } = await deploy();
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  let { stdout: logsOutput } = await logs(stdout);
-
-  t.regex(logsOutput, /Build Cache not found/m);
+  let page = await fetch(stdout);
+  let text = await page.text();
+  t.is(text, 'no cache\n');
 
   ({ exitCode, stderr, stdout } = await deploy());
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  ({ stdout: logsOutput } = await logs(stdout));
+  page = await fetch(stdout);
+  text = await page.text();
 
-  t.regex(logsOutput, /Build cache downloaded/m);
+  t.is(text, 'cache exists\n');
 });
 
 test('reject deploying with wrong team .vercel config', async t => {
