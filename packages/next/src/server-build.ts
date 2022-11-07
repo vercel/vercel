@@ -1137,6 +1137,8 @@ export async function serverBuild({
     }
   }
 
+  const rscHeader = routesManifest.rsc?.header || '__rsc__';
+
   return {
     wildcard: wildcardConfig,
     images:
@@ -1390,7 +1392,7 @@ export async function serverBuild({
               has: [
                 {
                   type: 'header',
-                  key: '__rsc__',
+                  key: rscHeader,
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
@@ -1401,7 +1403,7 @@ export async function serverBuild({
               has: [
                 {
                   type: 'header',
-                  key: '__rsc__',
+                  key: rscHeader,
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
