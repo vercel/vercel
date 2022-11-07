@@ -70,14 +70,14 @@ test(
     await testPath(200, '/', /React App/m);
   })
 );
-
+/*
 test(
   '[vercel dev] 05-gatsby',
   testFixtureStdio('05-gatsby', async (testPath: any) => {
     await testPath(200, '/', /Gatsby Default Starter/m);
   })
 );
-
+*/
 test(
   '[vercel dev] 06-gridsome',
   testFixtureStdio('06-gridsome', async (testPath: any) => {
