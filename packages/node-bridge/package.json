@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node-bridge",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "license": "MIT",
   "main": "./index.js",
   "repository": {
