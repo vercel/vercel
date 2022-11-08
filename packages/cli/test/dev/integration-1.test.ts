@@ -115,7 +115,8 @@ test('[vercel dev] throws an error when an edge function has no response', async
   }
 });
 
-test('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
+/* eslint-disable jest/no-focused-tests */
+test.only('[vercel dev] should support edge functions returning intentional 500 responses', async () => {
   const dir = fixture('edge-function');
   const { dev, port, readyResolver } = await testFixture(dir);
 
