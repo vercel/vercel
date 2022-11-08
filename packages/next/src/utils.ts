@@ -2278,6 +2278,7 @@ interface EdgeFunctionInfoV2 extends BaseEdgeFunctionInfo {
 interface EdgeFunctionMatcher {
   regexp: string;
   has?: HasField;
+  missing?: HasField;
 }
 
 export async function getMiddlewareBundle({
@@ -2479,6 +2480,7 @@ export async function getMiddlewareBundle({
               key: 'x-prerender-revalidate',
               value: prerenderBypassToken,
             },
+            ...(matcher.missing || []),
           ],
         };
 
@@ -2608,6 +2610,9 @@ function getRouteMatchers(
     };
     if (matcher.has) {
       m.has = normalizeHas(matcher.has);
+    }
+    if (matcher.missing) {
+      m.missing = normalizeHas(matcher.missing);
     }
     return m;
   });

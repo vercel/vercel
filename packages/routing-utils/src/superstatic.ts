@@ -70,6 +70,9 @@ export function convertRedirects(
       if (r.has) {
         route.has = r.has;
       }
+      if (r.missing) {
+        route.missing = r.missing;
+      }
       return route;
     } catch (e) {
       throw new Error(`Failed to parse redirect: ${JSON.stringify(r)}`);
@@ -96,6 +99,9 @@ export function convertRewrites(
 
       if (r.has) {
         route.has = r.has;
+      }
+      if (r.missing) {
+        route.missing = r.missing;
       }
       return route;
     } catch (e) {
@@ -139,6 +145,9 @@ export function convertHeaders(headers: Header[]): Route[] {
 
     if (h.has) {
       route.has = h.has;
+    }
+    if (h.missing) {
+      route.missing = h.missing;
     }
     return route;
   });
