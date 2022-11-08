@@ -1330,7 +1330,15 @@ export async function serverBuild({
 
       // middleware comes directly after redirects but before
       // beforeFiles rewrites as middleware is not a "file" route
+      ...(routesManifest?.skipMiddlewareUrlNormalize
+        ? denormalizeNextDataRoute(true)
+        : []),
+
       ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
+
+      ...(routesManifest?.skipMiddlewareUrlNormalize
+        ? normalizeNextDataRoute(true)
+        : []),
 
       ...beforeFilesRewrites,
 

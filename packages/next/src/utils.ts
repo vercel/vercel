@@ -213,6 +213,7 @@ type RoutesManifestOld = {
     header: string;
     varyHeader: string;
   };
+  skipMiddlewareUrlNormalize?: boolean;
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
