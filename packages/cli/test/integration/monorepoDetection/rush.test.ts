@@ -7,7 +7,7 @@ import { executeVercelCLI } from './util';
 
 const tmpdir = path.join(os.tmpdir(), 'monorepo-detection-rush');
 
-jest.setTimeout(30000);
+jest.setTimeout(50000);
 
 let testCount = 0;
 
