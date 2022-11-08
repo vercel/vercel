@@ -1137,7 +1137,24 @@ export async function serverBuild({
     }
   }
 
-  const rscHeader = routesManifest.rsc?.header || '__rsc__';
+  const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
+  const completeDynamicRoutes: typeof dynamicRoutes = [];
+
+  if (appDir) {
+    for (const route of dynamicRoutes) {
+      completeDynamicRoutes.push(route);
+      completeDynamicRoutes.push({
+        ...route,
+        src: route.src.replace(
+          new RegExp(escapeStringRegexp('(?:/)?$')),
+          '(?:\\.rsc)?(?:/)?$'
+        ),
+        dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
+      });
+    }
+  } else {
+    completeDynamicRoutes.push(...dynamicRoutes);
+  }
 
   return {
     wildcard: wildcardConfig,
@@ -1504,7 +1521,7 @@ export async function serverBuild({
         ? // when resolving data routes for middleware we need to include
           // all dynamic routes including non-SSG/SSP so that the priority
           // is correct
-          dynamicRoutes
+          completeDynamicRoutes
             .map(route => {
               route = Object.assign({}, route);
               let normalizedSrc = route.src;
@@ -1579,7 +1596,7 @@ export async function serverBuild({
 
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
-      ...dynamicRoutes,
+      ...completeDynamicRoutes,
 
       ...(isNextDataServerResolving
         ? [
