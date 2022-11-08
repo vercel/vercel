@@ -209,6 +209,10 @@ type RoutesManifestOld = {
       defaultLocale: string;
     }>;
   };
+  rsc?: {
+    header: string;
+    varyHeader: string;
+  };
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
@@ -1991,6 +1995,9 @@ export const onPrerenderRoute =
           allowQuery = [];
         }
       }
+      const rscVaryHeader =
+        routesManifest?.rsc?.varyHeader ||
+        '__rsc__, __next_router_state_tree__, __next_router_prefetch__';
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
@@ -2008,7 +2015,7 @@ export const onPrerenderRoute =
         ...(isAppPathRoute
           ? {
               initialHeaders: {
-                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+                vary: rscVaryHeader,
               },
             }
           : {}),
@@ -2031,7 +2038,7 @@ export const onPrerenderRoute =
           ? {
               initialHeaders: {
                 'content-type': 'application/octet-stream',
-                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+                vary: rscVaryHeader,
               },
             }
           : {}),
