@@ -1,5 +1,6 @@
 import { resolve, delimiter } from 'path';
 
+const { AbortController } = require('abort-controller');
 const {
   fetch,
   sleep,
@@ -102,14 +103,14 @@ test(
   })
 );
 
-/* eslint-disable jest/no-focused-tests */
-test.only('[vercel dev] 08-hugo', async () => {
+test('[vercel dev] 08-hugo', async () => {
   if (process.platform === 'darwin') {
-    // we run this test twice: once with Hugo not in the path and again with
-    // Hugo in the path
+    // 1. run the test without Hugo in the PATH
     let tester = await testFixtureStdio(
       '08-hugo',
       async (testPath: any, port: number) => {
+        // since Hugo is not found, the server won't be running so we just make
+        // sure it's not running
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 250);
         try {
@@ -129,11 +130,12 @@ test.only('[vercel dev] 08-hugo', async () => {
     );
     await tester();
 
-    // Update PATH to find the Hugo executable installed via GH Actions
+    // 2. Update PATH to find the Hugo executable installed via GH Actions
     process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
       process.env.PATH
     }`;
 
+    // 3. Rerun the test now that Hugo is in the PATH
     tester = testFixtureStdio('08-hugo', async (testPath: any) => {
       await testPath(200, '/', /Hugo/m);
     });

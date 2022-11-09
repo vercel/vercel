@@ -507,5 +507,6 @@ module.exports = {
   shouldSkip,
   fixture,
   fetch,
+  fetchWithRetry,
   validateResponseHeaders,
 };
