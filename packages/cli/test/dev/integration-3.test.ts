@@ -118,7 +118,7 @@ test('[vercel dev] 08-hugo', async () => {
             signal: controller.signal,
           });
         } catch (err: any) {
-          if (err.type === 'aborted') {
+          if (err.name === 'AbortError') {
             return;
           }
         } finally {
