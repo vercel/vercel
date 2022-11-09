@@ -114,9 +114,12 @@ test('[vercel dev] 08-hugo', async () => {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 250);
         try {
-          await fetch(`http://localhost:${port}`, {
+          console.log('^'.repeat(100));
+          const res = await fetch(`http://localhost:${port}`, {
             signal: controller.signal,
           });
+          console.log('*'.repeat(100));
+          console.log(res);
         } catch (err: any) {
           console.log('!'.repeat(100));
           console.log(err);
