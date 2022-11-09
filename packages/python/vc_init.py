@@ -38,7 +38,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
     import http
     import _thread
 
-    server = HTTPServer(('localhost', 0), base)
+    server = HTTPServer(('127.0.0.1', 0), base)
     port = server.server_address[1]
 
     def vc_handler(event, context):
@@ -58,7 +58,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
             body = base64.b64decode(body)
 
         request_body = body.encode('utf-8') if isinstance(body, str) else body
-        conn = http.client.HTTPConnection('localhost', port)
+        conn = http.client.HTTPConnection('127.0.0.1', port)
         try:
             conn.request(method, path, headers=headers, body=request_body)
         except (http.client.HTTPException, socket.error) as ex:
