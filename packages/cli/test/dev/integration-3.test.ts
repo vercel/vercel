@@ -107,10 +107,26 @@ test.only('[vercel dev] 08-hugo', async () => {
   if (process.platform === 'darwin') {
     // we run this test twice: once with Hugo not in the path and again with
     // Hugo in the path
-    let tester = await testFixtureStdio('08-hugo', async (testPath: any) => {
-      const promise = testPath(200, '/', /Hugo/m);
-      await expect(promise).rejects.toEqual({});
-    });
+    let tester = await testFixtureStdio(
+      '08-hugo',
+      async (testPath: any, port: number) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 250);
+        try {
+          await fetch(`http://localhost:${port}`, {
+            signal: controller.signal,
+          });
+        } catch (err: any) {
+          if (err.type === 'aborted') {
+            return;
+          }
+        } finally {
+          clearTimeout(timer);
+        }
+        throw new Error('Expected connection to time out');
+      },
+      { skipDeploy: true }
+    );
     await tester();
 
     // Update PATH to find the Hugo executable installed via GH Actions
