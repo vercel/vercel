@@ -6,6 +6,7 @@ import { errorToString } from '@vercel/error-utils';
 import { emojiLabels } from '../emoji';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
+const IS_TEXT_ONLY_MODE = process.env.TEXT_ONLY_MODE === 'on';
 
 export interface OutputOptions {
   debug?: boolean;
@@ -25,7 +26,10 @@ export class Output {
 
   constructor(
     stream: WritableTTY,
-    { debug: debugEnabled = false, textOnly = false }: OutputOptions = {}
+    {
+      debug: debugEnabled = false,
+      textOnly = IS_TEXT_ONLY_MODE,
+    }: OutputOptions = {}
   ) {
     this.stream = stream;
     this.debugEnabled = debugEnabled;
