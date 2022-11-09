@@ -106,6 +106,10 @@ test(
 test('[vercel dev] 08-hugo', async () => {
   if (process.platform === 'darwin') {
     // 1. run the test without Hugo in the PATH
+    console.log('%'.repeat(100));
+    console.log(process.env.PATH);
+    const which = require('which');
+    console.log(await which('hugo'));
     let tester = await testFixtureStdio(
       '08-hugo',
       async (testPath: any, port: number) => {
