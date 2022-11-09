@@ -22,7 +22,7 @@ import fs, {
 import logo from '../src/util/output/logo';
 import sleep from '../src/util/sleep';
 import pkg from '../package';
-import { prepareFixtures } from './helpers/prepare';
+import prepare from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
 // log command when running `execa`
@@ -321,7 +321,7 @@ async function setupProject(process, projectName, overrides) {
 test.before(async () => {
   try {
     await createUser();
-    await prepareFixtures(contextName, binaryPath, tmpFixturesDir);
+    await prepare(contextName, binaryPath, tmpFixturesDir);
   } catch (err) {
     console.log('Failed `test.before`');
     console.log(err);

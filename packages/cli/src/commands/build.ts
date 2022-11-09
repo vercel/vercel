@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { join, normalize, relative, resolve, basename } from 'path';
+import { join, normalize, relative, resolve } from 'path';
 import {
   getDiscontinuedNodeVersions,
   normalizePath,
@@ -17,13 +17,7 @@ import {
   BuildResultV3,
   NowBuildError,
 } from '@vercel/build-utils';
-import {
-  detectBuilders,
-  detectFramework,
-  monorepoManagers,
-  LocalFileSystemDetector,
-  packageManagers,
-} from '@vercel/fs-detectors';
+import { detectBuilders } from '@vercel/fs-detectors';
 import minimatch from 'minimatch';
 import {
   appendRoutesToPhase,
@@ -63,7 +57,8 @@ import { initCorepack, cleanupCorepack } from '../util/build/corepack';
 import { sortBuilders } from '../util/build/sort-builders';
 import { toEnumerableError } from '../util/error';
 import { validateConfig } from '../util/validate-config';
-import { Output } from '../util/output';
+
+import { setMonorepoDefaultSettings } from '../util/build/monorepo';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -609,134 +604,6 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
-}
-
-async function setMonorepoDefaultSettings(
-  cwd: string,
-  workPath: string,
-  projectSettings: ProjectLinkAndSettings['settings'],
-  output: Output
-) {
-  const localFileSystem = new LocalFileSystemDetector(cwd);
-
-  const [monorepoManager, packageManager] = await Promise.all([
-    detectFramework({
-      fs: localFileSystem,
-      frameworkList: monorepoManagers,
-    }),
-    detectFramework({
-      fs: localFileSystem,
-      frameworkList: packageManagers,
-    }),
-  ]);
-
-  const projectName = basename(workPath);
-  const relativeToRoot = relative(workPath, cwd);
-
-  const setCommand = (
-    command: 'buildCommand' | 'installCommand',
-    value: string
-  ) => {
-    if (projectSettings[command]) {
-      output.warn(
-        `Cannot automatically assign ${command} as it is already set via project settings or configuarion overrides.`
-      );
-    } else {
-      projectSettings[command] = value;
-    }
-  };
-
-  if (monorepoManager === 'turbo') {
-    output.log(
-      `Automatically detected Turbo monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
-    );
-
-    // No ENOENT handling required here since conditional wouldn't be `true` unless `turbo.json` was found.
-    const turboJSON = JSON.parse(
-      fs.readFileSync(join(cwd, 'turbo.json'), 'utf-8')
-    );
-
-    if (!turboJSON?.pipeline?.build) {
-      output.warn(
-        'Missing required `build` pipeline in turbo.json. Skipping automatic setting assignment.'
-      );
-      return;
-    }
-
-    setCommand(
-      'buildCommand',
-      `cd ${relativeToRoot} && npx turbo run build --filter=${projectName}...`
-    );
-    setCommand(
-      'installCommand',
-      `cd ${relativeToRoot} && ${packageManager} install`
-    );
-  } else if (monorepoManager === 'nx') {
-    output.log(
-      `Automatically detected Nx monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
-    );
-
-    // No ENOENT handling required here since conditional wouldn't be `true` unless `nx.json` was found.
-    const nxJSON = JSON.parse(fs.readFileSync(join(cwd, 'nx.json'), 'utf-8'));
-
-    if (!nxJSON?.targetDefaults?.build) {
-      output.log(
-        'Missing default `build` target in nx.json. Checking for project level Nx configuration...'
-      );
-      const [projectJSONBuf, packageJsonBuf] = await Promise.all([
-        fs.readFile(join(workPath, 'project.json')).catch(() => null),
-        fs.readFile(join(workPath, 'package.json')).catch(() => null),
-      ]);
-
-      let hasBuildTarget = false;
-
-      if (projectJSONBuf) {
-        output.log('Found project.json Nx configuration.');
-        const projectJSON = JSON.parse(projectJSONBuf.toString('utf-8'));
-        if (projectJSON?.targets?.build) {
-          hasBuildTarget = true;
-        }
-      }
-
-      if (packageJsonBuf) {
-        const packageJSON = JSON.parse(packageJsonBuf.toString('utf-8'));
-        if (packageJSON?.nx) {
-          output.log('Found package.json Nx configuration.');
-          if (packageJSON.nx.targets?.build) {
-            hasBuildTarget = true;
-          }
-        }
-      }
-
-      if (!hasBuildTarget) {
-        output.warn(
-          'Missing required `build` target in either project.json or package.json Nx configuration. Skipping automatic setting assignment.'
-        );
-        return;
-      }
-    }
-
-    setCommand(
-      'buildCommand',
-      `cd ${relativeToRoot} && npx nx build ${projectName}`
-    );
-    setCommand(
-      'installCommand',
-      `cd ${relativeToRoot} && ${packageManager} install`
-    );
-  } else if (monorepoManager === 'rush') {
-    output.log(
-      `Automatically detected Rush monorepo manager. Assigning default \`buildCommand\` and \`installCommand\` settings.`
-    );
-    setCommand(
-      'buildCommand',
-      `node ${relativeToRoot}/common/scripts/install-run-rush.js build --to ${projectName}`
-    );
-    setCommand(
-      'installCommand',
-      `node ${relativeToRoot}/common/scripts/install-run-rush.js install`
-    );
-  }
 }
 
 function expandBuild(files: string[], build: Builder): Builder[] {

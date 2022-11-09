@@ -1,0 +1,13 @@
+{
+  "name": "app-1",
+  "version": "0.0.1",
+  "scripts": {
+    "build": "mkdir -p dist && node -e 'const world = require(\"app-2\"); console.log(`Hello, ${world}`);' > dist/index.txt"
+  },
+  "dependencies": {
+    "app-2": "*"
+  },
+  "nx": {
+    "targets": {}
+  }
+}
