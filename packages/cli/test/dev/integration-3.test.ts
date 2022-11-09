@@ -102,13 +102,23 @@ test(
   })
 );
 
-test('[vercel dev] 08-hugo', async () => {
+/* eslint-disable jest/no-focused-tests */
+test.only('[vercel dev] 08-hugo', async () => {
   if (process.platform === 'darwin') {
+    // we run this test twice: once with Hugo not in the path and again with
+    // Hugo in the path
+    let tester = await testFixtureStdio('08-hugo', async (testPath: any) => {
+      const promise = testPath(200, '/', /Hugo/m);
+      await expect(promise).rejects.toEqual({});
+    });
+    await tester();
+
     // Update PATH to find the Hugo executable installed via GH Actions
     process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
       process.env.PATH
     }`;
-    const tester = testFixtureStdio('08-hugo', async (testPath: any) => {
+
+    tester = testFixtureStdio('08-hugo', async (testPath: any) => {
       await testPath(200, '/', /Hugo/m);
     });
     await tester();
