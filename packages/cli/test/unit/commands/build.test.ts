@@ -10,7 +10,7 @@ import { useUser } from '../../mocks/user';
 import { setupFixture } from '../../helpers/setup-fixture';
 import execa from 'execa';
 
-jest.setTimeout(ms('1 minute'));
+jest.setTimeout(ms('2 minute'));
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/build', name);
