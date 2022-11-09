@@ -22,4 +22,4 @@ export {
 } from './workspaces/get-workspace-package-paths';
 export { monorepoManagers } from './monorepos/monorepo-managers';
 export { isOfficialRuntime, isStaticRuntime } from './is-official-runtime';
-export { packageManagers } from './packageManagers/package-managers';
+export { packageManagers } from './package-managers/package-managers';
