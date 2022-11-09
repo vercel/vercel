@@ -19,8 +19,7 @@ const getRevertAliasConfigFile = () => {
     ],
   });
 };
-
-async function prepare(session, binaryPath, tmpFixturesDir) {
+module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
   const spec = {
     'static-single-file': {
       'first.png': getImageFile(session, { size: 30 }),
@@ -537,19 +536,15 @@ async function prepare(session, binaryPath, tmpFixturesDir) {
     },
   };
 
-  for (const [fixtureName, fixtureContents] of Object.entries(spec)) {
-    const directory = join(tmpFixturesDir, fixtureName);
+  for (const [typeName, needed] of Object.entries(spec)) {
+    const directory = join(tmpFixturesDir, typeName);
 
     await mkdirp(directory);
 
-    for (const [name, content] of Object.entries(fixtureContents)) {
+    for (const [name, content] of Object.entries(needed)) {
       const file = join(directory, name);
       await mkdirp(dirname(file));
       await writeFile(file, content);
     }
-
-    return directory;
   }
-}
-
-module.exports = prepare;
+};
