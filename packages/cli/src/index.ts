@@ -555,6 +555,9 @@ const main = async () => {
       case 'remove':
         func = require('./commands/remove').default;
         break;
+      case 'rollback':
+        func = require('./commands/rollback').default;
+        break;
       case 'secrets':
         func = require('./commands/secrets').default;
         break;

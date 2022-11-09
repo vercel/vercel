@@ -18,7 +18,7 @@ import getDeploymentsByProjectId, {
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
-import Client from '../util/client';
+import type Client from '../util/client';
 import { Output } from '../util/output';
 import { Alias, Project } from '../types';
 import { NowError } from '../util/now-error';
