@@ -1,0 +1,43 @@
+0 verbose cli /Users/ethanarrowood/.nvm/versions/node/v16.18.0/bin/node /Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/npm-local/node_modules/.bin/npm
+1 info using npm@8.19.2
+2 info using node@v16.18.0
+3 timing npm:load:whichnode Completed in 0ms
+4 timing config:load:defaults Completed in 0ms
+5 timing config:load:file:/Users/ethanarrowood/.rush/node-v16.18.0/npm-8.19.2/node_modules/npm/npmrc Completed in 1ms
+6 timing config:load:builtin Completed in 1ms
+7 warn config tmp This setting is no longer used.  npm stores temporary files in a special
+7 warn config location in the cache, and they are managed by
+7 warn config     [`cacache`](http://npm.im/cacache).
+8 timing config:load:cli Completed in 1ms
+9 timing config:load:env Completed in 0ms
+10 timing config:load:file:/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/.npmrc Completed in 0ms
+11 timing config:load:project Completed in 11ms
+12 timing config:load:file:/Users/ethanarrowood/.npmrc Completed in 1ms
+13 timing config:load:user Completed in 1ms
+14 timing config:load:file:/Users/ethanarrowood/.nvm/versions/node/v16.18.0/etc/npmrc Completed in 0ms
+15 timing config:load:global Completed in 0ms
+16 timing config:load:validate Completed in 0ms
+17 timing config:load:credentials Completed in 0ms
+18 timing config:load:setEnvs Completed in 1ms
+19 timing config:load Completed in 15ms
+20 timing npm:load:configload Completed in 15ms
+21 timing npm:load:mkdirpcache Completed in 0ms
+22 timing npm:load:mkdirplogs Completed in 0ms
+23 verbose title npm shrinkwrap
+24 verbose argv "shrinkwrap" "--cache" "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/npm-cache" "--tmp" "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/npm-tmp"
+25 timing npm:load:setTitle Completed in 6ms
+26 timing config:load:flatten Completed in 1ms
+27 timing npm:load:display Completed in 3ms
+28 verbose logfile logs-max:10 dir:/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/npm-cache/_logs
+29 verbose logfile /Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/npm-cache/_logs/2022-11-10T21_50_36_371Z-debug-0.log
+30 timing npm:load:logFile Completed in 1ms
+31 timing npm:load:timers Completed in 0ms
+32 timing npm:load:configScope Completed in 0ms
+33 timing npm:load Completed in 27ms
+34 timing arborist:ctor Completed in 1ms
+35 silly logfile done cleaning log files
+36 notice package-lock.json has been renamed to npm-shrinkwrap.json
+37 timing command:shrinkwrap Completed in 7ms
+38 verbose exit 0
+39 timing npm Completed in 66ms
+40 info ok

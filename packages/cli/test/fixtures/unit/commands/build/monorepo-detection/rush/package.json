@@ -4,6 +4,6 @@
     "packages/*"
   ],
   "dependencies": {
-    "rush": "5.82.1"
+    "@microsoft/rush": "5.82.1"
   }
 }

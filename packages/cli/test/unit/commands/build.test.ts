@@ -8,7 +8,6 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import { setupFixture } from '../../helpers/setup-fixture';
-import execa from 'execa';
 
 jest.setTimeout(ms('1 minute'));
 
@@ -1200,13 +1199,6 @@ describe('build', () => {
           try {
             const cwd = setupMonorepoDetectionFixture(fixture);
 
-            if (fixture === 'rush') {
-              await execa('npx', ['@microsoft/rush', 'update'], {
-                cwd,
-                reject: false,
-              });
-            }
-
             const exitCode = await build(client);
             expect(exitCode).toBe(0);
             await expect(client.stderr).toOutput(
@@ -1230,13 +1222,6 @@ describe('build', () => {
         async () => {
           try {
             const cwd = setupMonorepoDetectionFixture(fixture);
-
-            if (fixture === 'rush') {
-              await execa('npx', ['@microsoft/rush', 'update'], {
-                cwd,
-                reject: false,
-              });
-            }
 
             const projectJSONPath = join(cwd, '.vercel/project.json');
             const projectJSON = JSON.parse(
@@ -1276,13 +1261,6 @@ describe('build', () => {
         async () => {
           try {
             const cwd = setupMonorepoDetectionFixture(fixture);
-
-            if (fixture === 'rush') {
-              await execa('npx', ['@microsoft/rush', 'update'], {
-                cwd,
-                reject: false,
-              });
-            }
 
             await fs.writeFile(
               join(cwd, 'packages/app-1/vercel.json'),

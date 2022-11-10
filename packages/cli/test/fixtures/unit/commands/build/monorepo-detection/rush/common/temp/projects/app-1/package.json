@@ -1,0 +1,9 @@
+{
+  "name": "@rush-temp/app-1",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {},
+  "rushDependencies": {
+    "app-2": "*"
+  }
+}

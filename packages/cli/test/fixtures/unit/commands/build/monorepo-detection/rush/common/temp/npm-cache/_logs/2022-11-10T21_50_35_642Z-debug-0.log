@@ -1,0 +1,87 @@
+0 verbose cli /Users/ethanarrowood/.nvm/versions/node/v16.18.0/bin/node /Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/npm-local/node_modules/.bin/npm
+1 info using npm@8.19.2
+2 info using node@v16.18.0
+3 timing npm:load:whichnode Completed in 0ms
+4 timing config:load:defaults Completed in 1ms
+5 timing config:load:file:/Users/ethanarrowood/.rush/node-v16.18.0/npm-8.19.2/node_modules/npm/npmrc Completed in 0ms
+6 timing config:load:builtin Completed in 0ms
+7 warn config tmp This setting is no longer used.  npm stores temporary files in a special
+7 warn config location in the cache, and they are managed by
+7 warn config     [`cacache`](http://npm.im/cacache).
+8 timing config:load:cli Completed in 1ms
+9 timing config:load:env Completed in 1ms
+10 timing config:load:file:/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/.npmrc Completed in 0ms
+11 timing config:load:project Completed in 10ms
+12 timing config:load:file:/Users/ethanarrowood/.npmrc Completed in 0ms
+13 timing config:load:user Completed in 1ms
+14 timing config:load:file:/Users/ethanarrowood/.nvm/versions/node/v16.18.0/etc/npmrc Completed in 0ms
+15 timing config:load:global Completed in 0ms
+16 timing config:load:validate Completed in 0ms
+17 timing config:load:credentials Completed in 0ms
+18 timing config:load:setEnvs Completed in 1ms
+19 timing config:load Completed in 15ms
+20 timing npm:load:configload Completed in 15ms
+21 timing npm:load:mkdirpcache Completed in 0ms
+22 timing npm:load:mkdirplogs Completed in 0ms
+23 verbose title npm install
+24 verbose argv "install" "--cache" "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/npm-cache" "--tmp" "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/npm-tmp"
+25 timing npm:load:setTitle Completed in 6ms
+26 timing config:load:flatten Completed in 1ms
+27 timing npm:load:display Completed in 2ms
+28 verbose logfile logs-max:10 dir:/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/npm-cache/_logs
+29 verbose logfile /Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush/common/temp/npm-cache/_logs/2022-11-10T21_50_35_642Z-debug-0.log
+30 timing npm:load:logFile Completed in 2ms
+31 timing npm:load:timers Completed in 0ms
+32 timing npm:load:configScope Completed in 0ms
+33 timing npm:load Completed in 26ms
+34 timing arborist:ctor Completed in 0ms
+35 silly logfile done cleaning log files
+36 timing arborist:ctor Completed in 0ms
+37 timing idealTree:init Completed in 5ms
+38 timing idealTree:userRequests Completed in 0ms
+39 silly idealTree buildDeps
+40 silly fetch manifest @rush-temp/app-1@file:./projects/app-1.tgz
+41 silly fetch manifest @rush-temp/app-2@file:./projects/app-2.tgz
+42 silly placeDep ROOT @rush-temp/app-1@0.0.0 OK for: rush-common@0.0.0 want: file:./projects/app-1.tgz
+43 silly placeDep ROOT @rush-temp/app-2@0.0.0 OK for: rush-common@0.0.0 want: file:./projects/app-2.tgz
+44 timing idealTree:#root Completed in 27ms
+45 timing idealTree:node_modules/@rush-temp/app-1 Completed in 0ms
+46 timing idealTree:node_modules/@rush-temp/app-2 Completed in 0ms
+47 timing idealTree:buildDeps Completed in 28ms
+48 timing idealTree:fixDepFlags Completed in 0ms
+49 timing idealTree Completed in 34ms
+50 timing reify:loadTrees Completed in 34ms
+51 timing reify:diffTrees Completed in 0ms
+52 silly reify moves {}
+53 timing reify:retireShallow Completed in 0ms
+54 timing reify:createSparse Completed in 2ms
+55 timing reify:loadBundles Completed in 0ms
+56 silly audit bulk request { '@rush-temp/app-1': [ '0.0.0' ], '@rush-temp/app-2': [ '0.0.0' ] }
+57 timing reifyNode:node_modules/@rush-temp/app-2 Completed in 6ms
+58 timing reifyNode:node_modules/@rush-temp/app-1 Completed in 6ms
+59 timing reify:unpack Completed in 6ms
+60 timing reify:unretire Completed in 0ms
+61 timing build:queue Completed in 0ms
+62 timing build:deps Completed in 0ms
+63 timing build Completed in 1ms
+64 timing reify:build Completed in 1ms
+65 timing reify:trash Completed in 0ms
+66 timing reify:save Completed in 1ms
+67 http fetch GET 200 https://registry.npmjs.org/npm 279ms (cache miss)
+68 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 407ms
+69 timing auditReport:getReport Completed in 408ms
+70 silly audit report {}
+71 timing auditReport:init Completed in 0ms
+72 timing reify:audit Completed in 408ms
+73 timing reify Completed in 463ms
+74 silly ADD node_modules/@rush-temp/app-2
+75 silly ADD node_modules/@rush-temp/app-1
+76 timing command:install Completed in 468ms
+77 notice
+77 notice New [31mmajor[39m version of npm available! [31m8.19.2[39m -> [32m9.1.1[39m
+77 notice Changelog: [36mhttps://github.com/npm/cli/releases/tag/v9.1.1[39m
+77 notice Run [32mnpm install -g npm@9.1.1[39m to update!
+77 notice
+78 verbose exit 0
+79 timing npm Completed in 561ms
+80 info ok

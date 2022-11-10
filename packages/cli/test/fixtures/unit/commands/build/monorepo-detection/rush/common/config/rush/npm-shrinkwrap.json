@@ -1,0 +1,36 @@
+{
+  "name": "rush-common",
+  "version": "0.0.0",
+  "lockfileVersion": 2,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "rush-common",
+      "version": "0.0.0",
+      "dependencies": {
+        "@rush-temp/app-1": "file:./projects/app-1.tgz",
+        "@rush-temp/app-2": "file:./projects/app-2.tgz"
+      }
+    },
+    "node_modules/@rush-temp/app-1": {
+      "version": "0.0.0",
+      "resolved": "file:projects/app-1.tgz",
+      "integrity": "sha512-c9wqiVBSd+oX6cpXCx3//LuM9kWHwtJdSzjUUtZHnt3X23lpfa+W6xEwwxc3T5v9qvO7reCr1LLDGRTtljfgoQ=="
+    },
+    "node_modules/@rush-temp/app-2": {
+      "version": "0.0.0",
+      "resolved": "file:projects/app-2.tgz",
+      "integrity": "sha512-uE7Q0H++QqZEvtlXKffo36/bPW6EctE9uFkF3NwH05IcitwQh5MPc3TV1uAtSrKQVAo59aIcCXwSxzUl1r3Mvw=="
+    }
+  },
+  "dependencies": {
+    "@rush-temp/app-1": {
+      "version": "file:projects/app-1.tgz",
+      "integrity": "sha512-c9wqiVBSd+oX6cpXCx3//LuM9kWHwtJdSzjUUtZHnt3X23lpfa+W6xEwwxc3T5v9qvO7reCr1LLDGRTtljfgoQ=="
+    },
+    "@rush-temp/app-2": {
+      "version": "file:projects/app-2.tgz",
+      "integrity": "sha512-uE7Q0H++QqZEvtlXKffo36/bPW6EctE9uFkF3NwH05IcitwQh5MPc3TV1uAtSrKQVAo59aIcCXwSxzUl1r3Mvw=="
+    }
+  }
+}
