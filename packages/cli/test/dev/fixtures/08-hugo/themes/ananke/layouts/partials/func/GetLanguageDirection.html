@@ -1,7 +1,0 @@
-{{ $dir := "" }}
-{{ if ge hugo.Version "0.67.1" }}
-  {{ with  site.Language.LanguageDirection }}
-     {{ $dir = . }}
-  {{ end }}
-{{ end }}
-{{ return $dir }}
