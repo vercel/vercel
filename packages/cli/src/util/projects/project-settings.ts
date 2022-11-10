@@ -28,6 +28,16 @@ export async function writeProjectSettings(
   project: Project,
   org: Org
 ) {
+  let analyticsId: string | undefined;
+  if (
+    project.analytics?.id &&
+    (!project.analytics.disabledAt ||
+      (project.analytics.enabledAt &&
+        project.analytics.enabledAt > project.analytics.disabledAt))
+  ) {
+    analyticsId = project.analytics.id;
+  }
+
   const projectLinkAndSettings: ProjectLinkAndSettings = {
     projectId: project.id,
     orgId: org.id,
@@ -41,7 +51,7 @@ export async function writeProjectSettings(
       rootDirectory: project.rootDirectory,
       directoryListing: project.directoryListing,
       nodeVersion: project.nodeVersion,
-      analyticsId: project.analytics?.id,
+      analyticsId,
     },
   };
   const path = join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT);

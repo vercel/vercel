@@ -2,6 +2,7 @@ import ms from 'ms';
 import fs from 'fs-extra';
 import { isIP } from 'net';
 import { join } from 'path';
+import { Response } from 'node-fetch';
 
 const {
   fetch,
@@ -445,11 +446,7 @@ test(
 test(
   '[vercel dev] Middleware that has no response',
   testFixtureStdio('middleware-no-response', async (testPath: any) => {
-    await testPath(
-      500,
-      '/api/hello',
-      'A server error has occurred\n\nEDGE_FUNCTION_INVOCATION_FAILED'
-    );
+    await testPath(200, '/api/hello', 'hello from a serverless function');
   })
 );
 
@@ -461,8 +458,41 @@ test(
     await testPath(200, '/another', '<h1>Another</h1>');
     await testPath(200, '/another.html', '<h1>Another</h1>');
     await testPath(200, '/foo', '<h1>Another</h1>');
+    // different origin
+    await testPath(200, '?to=http://example.com', /Example Domain/);
   })
 );
+
+test('[vercel dev] Middleware rewrites with same origin', async () => {
+  const directory = fixture('middleware-rewrite');
+  const { dev, port, readyResolver } = await testFixture(directory);
+
+  try {
+    dev.unref();
+    await readyResolver;
+
+    let response = await fetch(
+      `http://localhost:${port}?to=http://localhost:${port}`
+    );
+    validateResponseHeaders(response);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
+
+    response = await fetch(
+      `http://localhost:${port}?to=http://127.0.0.1:${port}`
+    );
+    validateResponseHeaders(response);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
+
+    response = await fetch(`http://localhost:${port}?to=http://[::1]:${port}`);
+    validateResponseHeaders(response);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
+  } finally {
+    await dev.kill('SIGTERM');
+  }
+});
 
 test(
   '[vercel dev] Middleware that rewrites with custom query params',
@@ -478,6 +508,14 @@ test(
       '/api/fn?foo=bar',
       '{"url":"/api/fn?from-middleware=true"}'
     );
+  })
+);
+
+test(
+  '[vercel dev] Middleware that rewrites to 404s',
+  testFixtureStdio('middleware-rewrite-404', async (testPath: any) => {
+    await testPath(404, '/api/edge', /NOT_FOUND/);
+    await testPath(404, '/index.html', /NOT_FOUND/);
   })
 );
 
@@ -513,7 +551,7 @@ test(
 test(
   '[vercel dev] Middleware with an explicit 500 response',
   testFixtureStdio('middleware-500-response', async (testPath: any) => {
-    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+    await testPath(500, '/', 'Example Error');
   })
 );
 
@@ -572,6 +610,75 @@ test(
       } finally {
         await fs.writeJSON(vercelJsonPath, originalVercelJson);
       }
+    },
+    { skipDeploy: true }
+  )
+);
+
+test(
+  '[vercel dev] Middleware can override request headers',
+  testFixtureStdio(
+    'middleware-request-headers-override',
+    async (testPath: any) => {
+      await testPath(
+        200,
+        '/api/dump-headers',
+        (actual: string, res: Response) => {
+          // Headers sent to the API route.
+          const headers = JSON.parse(actual);
+
+          // Preserved headers.
+          expect(headers).toHaveProperty(
+            'x-from-client-a',
+            'hello from client'
+          );
+
+          // Headers added/modified by the middleware.
+          expect(headers).toHaveProperty(
+            'x-from-client-b',
+            'hello from middleware'
+          );
+          expect(headers).toHaveProperty('x-from-middleware-a', 'hello a!');
+          expect(headers).toHaveProperty('x-from-middleware-b', 'hello b!');
+
+          // Headers deleted by the middleware.
+          expect(headers).not.toHaveProperty('x-from-client-c');
+
+          // Internal headers should not be visible from API routes.
+          expect(headers).not.toHaveProperty('x-middleware-override-headers');
+          expect(headers).not.toHaveProperty(
+            'x-middleware-request-from-middleware-a'
+          );
+          expect(headers).not.toHaveProperty(
+            'x-middleware-request-from-middleware-b'
+          );
+
+          // Request headers should not be visible from clients.
+          const respHeaders = Object.fromEntries(res.headers.entries());
+          expect(respHeaders).not.toHaveProperty(
+            'x-middleware-override-headers'
+          );
+          expect(respHeaders).not.toHaveProperty(
+            'x-middleware-request-from-middleware-a'
+          );
+          expect(respHeaders).not.toHaveProperty(
+            'x-middleware-request-from-middleware-b'
+          );
+          expect(respHeaders).not.toHaveProperty('from-middleware-a');
+          expect(respHeaders).not.toHaveProperty('from-middleware-b');
+          expect(respHeaders).not.toHaveProperty('x-from-client-a');
+          expect(respHeaders).not.toHaveProperty('x-from-client-b');
+          expect(respHeaders).not.toHaveProperty('x-from-client-c');
+        },
+        /*expectedHeaders=*/ {},
+        {
+          headers: {
+            'x-from-client-a': 'hello from client',
+            'x-from-client-b': 'hello from client',
+            'x-from-client-c': 'hello from client',
+          },
+        }
+      );
     },
     { skipDeploy: true }
   )

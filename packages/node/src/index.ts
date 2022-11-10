@@ -36,6 +36,7 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  cloneEnv,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -452,6 +453,7 @@ export const build: BuildV3 = async ({
     output = new EdgeFunction({
       entrypoint: handler,
       files: preparedFiles,
+      regions: staticConfig?.regions,
 
       // TODO: remove - these two properties should not be required
       name: outputPath,
@@ -463,6 +465,9 @@ export const build: BuildV3 = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
+    const experimentalResponseStreaming =
+      staticConfig?.experimentalResponseStreaming === true ? true : undefined;
+
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
@@ -470,6 +475,7 @@ export const build: BuildV3 = async ({
       shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
+      experimentalResponseStreaming,
     });
   }
 
@@ -525,15 +531,13 @@ export const startDevServer: StartDevServer = async opts => {
   const child = fork(devServerPath, [], {
     cwd: workPath,
     execArgv: [],
-    env: {
-      ...process.env,
-      ...meta.env,
+    env: cloneEnv(process.env, meta.env, {
       VERCEL_DEV_ENTRYPOINT: entrypoint,
       VERCEL_DEV_TSCONFIG: projectTsConfig || '',
       VERCEL_DEV_IS_ESM: isEsm ? '1' : undefined,
       VERCEL_DEV_CONFIG: JSON.stringify(config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(meta.buildEnv || {}),
-    },
+    }),
   });
 
   const { pid } = child;

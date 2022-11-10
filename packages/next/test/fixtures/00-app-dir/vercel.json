@@ -7,9 +7,72 @@
   ],
   "probes": [
     {
+      "path": "/dashboard/deployments/123/settings",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/deployments/[id]/settings",
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+      }
+    },
+    {
+      "path": "/dashboard/deployments/123/settings",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+      },
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": "M1:{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/dashboard/deployments/catchall/something",
+      "status": 200,
+      "mustContain": "catchall",
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+      }
+    },
+    {
+      "path": "/dashboard/deployments/catchall/something",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+      },
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": "M1:{",
+      "mustNotContain": "<html"
+    },
+    {
       "path": "/dashboard",
       "status": 200,
-      "mustContain": "hello from app/dashboard"
+      "mustContain": "hello from app/dashboard",
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+      }
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": "M1:{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "responseHeaders": {
+        "content-type": "application/octet-stream",
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+      }
     },
     {
       "path": "/dashboard/another",
@@ -24,7 +87,7 @@
     {
       "path": "/",
       "status": 200,
-      "mustContain": "hello from pages/index"
+      "mustContain": "index app page"
     },
     {
       "path": "/blog/123",
@@ -40,6 +103,15 @@
       "path": "/dashboard/changelog",
       "status": 200,
       "mustContain": "hello from app/dashboard/changelog"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": "M1:{",
+      "mustNotContain": "<html"
     }
   ]
 }

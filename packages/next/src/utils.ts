@@ -209,6 +209,11 @@ type RoutesManifestOld = {
       defaultLocale: string;
     }>;
   };
+  rsc?: {
+    header: string;
+    varyHeader: string;
+  };
+  skipMiddlewareUrlNormalize?: boolean;
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
@@ -290,7 +295,7 @@ export async function getDynamicRoutes(
           .map(({ page, regex }: { page: string; regex: string }) => {
             return {
               src: regex,
-              dest: !isDev ? path.join('/', entryDirectory, page) : page,
+              dest: !isDev ? path.posix.join('/', entryDirectory, page) : page,
               check: true,
               status:
                 canUsePreviewMode && omittedRoutes?.has(page) ? 404 : undefined,
@@ -315,7 +320,9 @@ export async function getDynamicRoutes(
             const { page, namedRegex, regex, routeKeys } = params;
             const route: RouteWithSrc = {
               src: namedRegex || regex,
-              dest: `${!isDev ? path.join('/', entryDirectory, page) : page}${
+              dest: `${
+                !isDev ? path.posix.join('/', entryDirectory, page) : page
+              }${
                 routeKeys
                   ? `?${Object.keys(routeKeys)
                       .map(key => `${routeKeys[key]}=$${key}`)
@@ -410,7 +417,7 @@ export async function getDynamicRoutes(
   pageMatchers.forEach(pageMatcher => {
     // in `vercel dev` we don't need to prefix the destination
     const dest = !isDev
-      ? path.join('/', entryDirectory, pageMatcher.pageName)
+      ? path.posix.join('/', entryDirectory, pageMatcher.pageName)
       : pageMatcher.pageName;
 
     if (pageMatcher && pageMatcher.matcher) {
@@ -465,8 +472,8 @@ export function localizeDynamicRoutes(
         // ensure destination has locale prefix to match prerender output
         // path so that the prerender object is used
         route.dest = route.dest!.replace(
-          `${path.join('/', entryDirectory, '/')}`,
-          `${path.join('/', entryDirectory, '$nextLocale', '/')}`
+          `${path.posix.join('/', entryDirectory, '/')}`,
+          `${path.posix.join('/', entryDirectory, '$nextLocale', '/')}`
         );
       }
     } else {
@@ -575,7 +582,7 @@ export function filterStaticPages(
       return;
     }
 
-    const staticRoute = path.join(entryDirectory, pathname);
+    const staticRoute = path.posix.join(entryDirectory, pathname);
 
     staticPages[staticRoute] = staticPageFiles[page];
     staticPages[staticRoute].contentType = htmlContentType;
@@ -746,6 +753,7 @@ export async function createPseudoLayer(files: {
 
 interface CreateLambdaFromPseudoLayersOptions extends LambdaOptionsWithFiles {
   layers: PseudoLayer[];
+  isStreaming?: boolean;
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -755,6 +763,7 @@ const createLambdaSema = new Sema(1);
 export async function createLambdaFromPseudoLayers({
   files: baseFiles,
   layers,
+  isStreaming,
   ...lambdaOptions
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -789,6 +798,11 @@ export async function createLambdaFromPseudoLayers({
 
   return new NodejsLambda({
     ...lambdaOptions,
+    ...(isStreaming
+      ? {
+          experimentalResponseStreaming: true,
+        }
+      : {}),
     files,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
@@ -1271,6 +1285,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  isStreaming?: boolean;
   isPrerenders?: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
@@ -1599,15 +1614,18 @@ export const onPrerenderRouteInitial = (
   nonLambdaSsgPages: Set<string>,
   routeKey: string,
   hasPages404: boolean,
-  routesManifest?: RoutesManifest
+  routesManifest?: RoutesManifest,
+  appDir?: string | null
 ) => {
   let static404Page: string | undefined;
   let static500Page: string | undefined;
 
   // Get the route file as it'd be mounted in the builder output
   const pr = prerenderManifest.staticRoutes[routeKey];
-  const { initialRevalidate, srcRoute } = pr;
+  const { initialRevalidate, srcRoute, dataRoute } = pr;
   const route = srcRoute || routeKey;
+
+  const isAppPathRoute = appDir && dataRoute?.endsWith('.rsc');
 
   const routeNoLocale = routesManifest?.i18n
     ? normalizeLocalePath(routeKey, routesManifest.i18n.locales).pathname
@@ -1616,14 +1634,17 @@ export const onPrerenderRouteInitial = (
   // if the 404 page used getStaticProps we need to update static404Page
   // since it wasn't populated from the staticPages group
   if (routeNoLocale === '/404') {
-    static404Page = path.join(entryDirectory, routeKey);
+    static404Page = path.posix.join(entryDirectory, routeKey);
   }
 
   if (routeNoLocale === '/500') {
-    static500Page = path.join(entryDirectory, routeKey);
+    static500Page = path.posix.join(entryDirectory, routeKey);
   }
 
   if (
+    // App paths must be Prerenders to ensure Vary header is
+    // correctly added
+    !isAppPathRoute &&
     initialRevalidate === false &&
     (!canUsePreviewMode || (hasPages404 && routeNoLocale === '/404')) &&
     !prerenderManifest.fallbackRoutes[route] &&
@@ -1658,10 +1679,12 @@ export const onPrerenderRouteInitial = (
 };
 
 type OnPrerenderRouteArgs = {
+  appDir: string | null;
   pagesDir: string;
   static404Page?: string;
   hasPages404: boolean;
   entryDirectory: string;
+  appPathRoutesManifest?: Record<string, string>;
   prerenderManifest: NextPrerenderedRoutes;
   isSharedLambdas: boolean;
   isServerMode: boolean;
@@ -1692,8 +1715,8 @@ export const onPrerenderRoute =
     }
   ) => {
     const {
+      appDir,
       pagesDir,
-      hasPages404,
       static404Page,
       entryDirectory,
       prerenderManifest,
@@ -1758,44 +1781,6 @@ export const onPrerenderRoute =
 
     const isNotFound = prerenderManifest.notFoundRoutes.includes(routeKey);
 
-    const htmlFsRef =
-      isBlocking || (isNotFound && !static404Page)
-        ? // Blocking pages do not have an HTML fallback
-          null
-        : new FileFsRef({
-            fsPath: path.join(
-              pagesDir,
-              isFallback
-                ? // Fallback pages have a special file.
-                  addLocaleOrDefault(
-                    prerenderManifest.fallbackRoutes[routeKey].fallback,
-                    routesManifest,
-                    locale
-                  )
-                : // Otherwise, the route itself should exist as a static HTML
-                  // file.
-                  `${
-                    isOmitted || isNotFound
-                      ? addLocaleOrDefault('/404', routesManifest, locale)
-                      : routeFileNoExt
-                  }.html`
-            ),
-          });
-    const jsonFsRef =
-      // JSON data does not exist for fallback or blocking pages
-      isFallback || isBlocking || (isNotFound && !static404Page)
-        ? null
-        : new FileFsRef({
-            fsPath: path.join(
-              pagesDir,
-              `${
-                isOmitted || isNotFound
-                  ? addLocaleOrDefault('/404.html', routesManifest, locale)
-                  : routeFileNoExt + '.json'
-              }`
-            ),
-          });
-
     let initialRevalidate: false | number;
     let srcRoute: string | null;
     let dataRoute: string;
@@ -1824,14 +1809,72 @@ export const onPrerenderRoute =
       ({ initialRevalidate, srcRoute, dataRoute } = pr);
     }
 
-    const outputPathPage = normalizeIndexOutput(
-      path.posix.join(entryDirectory, routeFileNoExt),
-      isServerMode
-    );
+    let isAppPathRoute = false;
+    // TODO: leverage manifest to determine app paths more accurately
+    if (appDir && srcRoute && dataRoute.endsWith('.rsc')) {
+      isAppPathRoute = true;
+    }
+
+    const htmlFsRef =
+      isBlocking || (isNotFound && !static404Page)
+        ? // Blocking pages do not have an HTML fallback
+          null
+        : new FileFsRef({
+            fsPath: path.join(
+              isAppPathRoute && appDir ? appDir : pagesDir,
+              isFallback
+                ? // Fallback pages have a special file.
+                  addLocaleOrDefault(
+                    prerenderManifest.fallbackRoutes[routeKey].fallback,
+                    routesManifest,
+                    locale
+                  )
+                : // Otherwise, the route itself should exist as a static HTML
+                  // file.
+                  `${
+                    isOmitted || isNotFound
+                      ? addLocaleOrDefault('/404', routesManifest, locale)
+                      : routeFileNoExt
+                  }.html`
+            ),
+          });
+    const jsonFsRef =
+      // JSON data does not exist for fallback or blocking pages
+      isFallback || isBlocking || (isNotFound && !static404Page)
+        ? null
+        : new FileFsRef({
+            fsPath: path.join(
+              isAppPathRoute && appDir ? appDir : pagesDir,
+              `${
+                isOmitted || isNotFound
+                  ? addLocaleOrDefault('/404.html', routesManifest, locale)
+                  : isAppPathRoute
+                  ? dataRoute
+                  : routeFileNoExt + '.json'
+              }`
+            ),
+          });
+
+    if (isAppPathRoute) {
+      // for literal index routes we need to append an additional /index
+      // due to the proxy's normalizing for /index routes
+      if (routeKey !== '/index' && routeKey.endsWith('/index')) {
+        routeKey = `${routeKey}/index`;
+        routeFileNoExt = routeKey;
+        origRouteFileNoExt = routeKey;
+      }
+    }
+
+    let outputPathPage = path.posix.join(entryDirectory, routeFileNoExt);
+
+    if (!isAppPathRoute) {
+      outputPathPage = normalizeIndexOutput(outputPathPage, isServerMode);
+    }
     const outputPathPageOrig = path.posix.join(
       entryDirectory,
       origRouteFileNoExt
     );
+
     let lambda: undefined | Lambda;
     let outputPathData = path.posix.join(entryDirectory, dataRoute);
 
@@ -1851,7 +1894,10 @@ export const onPrerenderRoute =
           '/',
           srcRoute == null
             ? outputPathPageOrig
-            : path.join(entryDirectory, srcRoute === '/' ? '/index' : srcRoute)
+            : path.posix.join(
+                entryDirectory,
+                srcRoute === '/' ? '/index' : srcRoute
+              )
         ),
         isServerMode
       );
@@ -1872,7 +1918,7 @@ export const onPrerenderRoute =
       lambda = lambdas[outputSrcPathPage];
     }
 
-    if (!isNotFound && initialRevalidate === false) {
+    if (!isAppPathRoute && !isNotFound && initialRevalidate === false) {
       if (htmlFsRef == null || jsonFsRef == null) {
         throw new NowBuildError({
           code: 'NEXT_HTMLFSREF_JSONFSREF',
@@ -1880,11 +1926,12 @@ export const onPrerenderRoute =
         });
       }
 
-      // If revalidate isn't enabled we force the /404 route to be static
-      // to match next start behavior otherwise getStaticProps would be
-      // recalled for each 404 URL path since Prerender is cached based
-      // on the URL path
-      if (!canUsePreviewMode || (hasPages404 && routeKey === '/404')) {
+      // if preview mode/On-Demand ISR can't be leveraged
+      // we can output pure static outputs instead of prerenders
+      if (
+        !canUsePreviewMode ||
+        (routeKey === '/404' && !lambdas[outputPathPage])
+      ) {
         htmlFsRef.contentType = htmlContentType;
         prerenders[outputPathPage] = htmlFsRef;
         prerenders[outputPathData] = jsonFsRef;
@@ -1949,6 +1996,9 @@ export const onPrerenderRoute =
           allowQuery = [];
         }
       }
+      const rscVaryHeader =
+        routesManifest?.rsc?.varyHeader ||
+        '__rsc__, __next_router_state_tree__, __next_router_prefetch__';
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
@@ -1957,6 +2007,19 @@ export const onPrerenderRoute =
         fallback: htmlFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
+        ...(isNotFound
+          ? {
+              initialStatus: 404,
+            }
+          : {}),
+
+        ...(isAppPathRoute
+          ? {
+              initialHeaders: {
+                vary: rscVaryHeader,
+              },
+            }
+          : {}),
       });
       prerenders[outputPathData] = new Prerender({
         expiration: initialRevalidate,
@@ -1965,6 +2028,21 @@ export const onPrerenderRoute =
         fallback: jsonFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
+
+        ...(isNotFound
+          ? {
+              initialStatus: 404,
+            }
+          : {}),
+
+        ...(isAppPathRoute
+          ? {
+              initialHeaders: {
+                'content-type': 'application/octet-stream',
+                vary: rscVaryHeader,
+              },
+            }
+          : {}),
       });
 
       ++prerenderGroup;
@@ -2066,17 +2144,17 @@ export async function getStaticFiles(
   const publicDirectoryFiles: Record<string, FileFsRef> = {};
 
   for (const file of Object.keys(nextStaticFiles)) {
-    staticFiles[path.join(entryDirectory, `_next/static/${file}`)] =
+    staticFiles[path.posix.join(entryDirectory, `_next/static/${file}`)] =
       nextStaticFiles[file];
   }
 
   for (const file of Object.keys(staticFolderFiles)) {
-    staticDirectoryFiles[path.join(entryDirectory, 'static', file)] =
+    staticDirectoryFiles[path.posix.join(entryDirectory, 'static', file)] =
       staticFolderFiles[file];
   }
 
   for (const file of Object.keys(publicFolderFiles)) {
-    publicDirectoryFiles[path.join(entryDirectory, file)] =
+    publicDirectoryFiles[path.posix.join(entryDirectory, file)] =
       publicFolderFiles[file];
   }
 
@@ -2186,6 +2264,7 @@ interface BaseEdgeFunctionInfo {
   page: string;
   wasm?: { filePath: string; name: string }[];
   assets?: { filePath: string; name: string }[];
+  regions?: 'auto' | string[] | 'all' | 'default';
 }
 
 interface EdgeFunctionInfoV1 extends BaseEdgeFunctionInfo {
@@ -2199,6 +2278,7 @@ interface EdgeFunctionInfoV2 extends BaseEdgeFunctionInfo {
 interface EdgeFunctionMatcher {
   regexp: string;
   has?: HasField;
+  missing?: HasField;
 }
 
 export async function getMiddlewareBundle({
@@ -2213,7 +2293,11 @@ export async function getMiddlewareBundle({
   prerenderBypassToken: string;
   routesManifest: RoutesManifest;
   isCorrectMiddlewareOrder: boolean;
-}) {
+}): Promise<{
+  staticRoutes: Route[];
+  dynamicRouteMap: Map<string, RouteWithSrc>;
+  edgeFunctions: Record<string, EdgeFunction>;
+}> {
   const middlewareManifest = await getMiddlewareManifest(
     entryPath,
     outputDirectory
@@ -2321,6 +2405,7 @@ export async function getMiddlewareBundle({
                   ...wasmFiles,
                   ...assetFiles,
                 },
+                regions: edgeFunction.regions,
                 entrypoint: 'index.js',
                 envVarsInUse: edgeFunction.env,
                 assets: (edgeFunction.assets ?? []).map(({ name }) => {
@@ -2352,7 +2437,28 @@ export async function getMiddlewareBundle({
 
     for (const worker of workerConfigs.values()) {
       const edgeFile = worker.edgeFunction.name;
-      const shortPath = edgeFile.replace(/^pages\//, '');
+      let shortPath = edgeFile;
+
+      // Replacing the folder prefix for the page
+      //
+      // For `pages/`, use file base name directly:
+      //    pages/index -> index
+      // For `app/`, use folder name, handle the root page as index:
+      //    app/route/page -> route
+      //    app/page -> index
+      //    app/index/page -> index/index
+      if (shortPath.startsWith('pages/')) {
+        shortPath = shortPath.replace(/^pages\//, '');
+      } else if (shortPath.startsWith('app/') && shortPath.endsWith('/page')) {
+        shortPath =
+          shortPath.replace(/^app\//, '').replace(/(^|\/)page$/, '') || 'index';
+      }
+
+      if (routesManifest?.basePath) {
+        shortPath = path.posix
+          .join(routesManifest.basePath, shortPath)
+          .replace(/^\//, '');
+      }
 
       worker.edgeFunction.name = shortPath;
       source.edgeFunctions[shortPath] = worker.edgeFunction;
@@ -2374,6 +2480,7 @@ export async function getMiddlewareBundle({
               key: 'x-prerender-revalidate',
               value: prerenderBypassToken,
             },
+            ...(matcher.missing || []),
           ],
         };
 
@@ -2389,7 +2496,6 @@ export async function getMiddlewareBundle({
         }
       }
     }
-
     return source;
   }
 
@@ -2504,6 +2610,9 @@ function getRouteMatchers(
     };
     if (matcher.has) {
       m.has = normalizeHas(matcher.has);
+    }
+    if (matcher.missing) {
+      m.missing = normalizeHas(matcher.missing);
     }
     return m;
   });
