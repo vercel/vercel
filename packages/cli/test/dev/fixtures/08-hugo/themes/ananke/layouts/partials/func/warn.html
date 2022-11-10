@@ -1,0 +1,15 @@
+{{/*
+  warn
+  Emits a warning using the theme's Header.
+
+  @author @regisphilibert
+
+  @context String
+
+  @access private
+
+  @example - Go Template
+  {{ partial "func/warn" $message }}
+*/}}
+{{ $header := "Ananke Theme Warning" }}
+{{ warnf "\n%s:\n%s" $header . }}

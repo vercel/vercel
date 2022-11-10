@@ -1,0 +1,41 @@
+[more]
+other = "Altro"
+
+[allTitle]
+other = "Tutti {{.Title }}"
+
+[recentTitle]
+other = "Recenti {{.Title }}"
+
+[readMore]
+other = "leggi di più"
+
+[by]
+other = "Da"
+
+[whatsInThis]
+other = "Cosa c'è in {{ .Type }}"
+
+[related]
+other = "Correlati"
+
+[yourName]
+other = "Il tuo nome"
+
+[emailAddress]
+other = "Indirizzo email"
+
+[message]
+other = "Messaggio"
+
+[emailRequiredNote]
+other = "Indirizzo email obbligatorio."
+
+[send]
+other = "Invia"
+
+[taxonomyPageList]
+other = "Below you will find pages that utilize the taxonomy term “{{ .Title }}”"
+
+[pageTitle]
+other = "{{ .Name }} pagina"

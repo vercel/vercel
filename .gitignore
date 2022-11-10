@@ -15,6 +15,7 @@ packages/cli/test/**/yarn.lock
 !packages/cli/test/dev/**/yarn.lock
 packages/cli/test/**/node_modules
 packages/cli/test/dev/fixtures/08-hugo/hugo
+packages/cli/test/dev/fixtures/08-hugo/.hugo_build.lock
 packages/cli/test/dev/fixtures/**/dist
 packages/cli/test/dev/fixtures/**/public
 packages/cli/test/dev/fixtures/**/.now

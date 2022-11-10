@@ -1,8 +1,8 @@
 <ul class="pa0">
-  {{ range .Params.tags }}
-   <li class="list">
-     <a href="{{ "/tags/" | relLangURL }}{{ . | urlize }}" class="link f5 grow no-underline br-pill ba ph3 pv2 mb2 dib black sans-serif">
-       {{- . -}}
+  {{ range .GetTerms "tags" }}
+   <li class="list di">
+     <a href="{{ .RelPermalink }}" class="link f5 grow no-underline br-pill ba ph3 pv2 mb2 dib black sans-serif">
+       {{- .LinkTitle -}}
      </a>
    </li>
   {{ end }}

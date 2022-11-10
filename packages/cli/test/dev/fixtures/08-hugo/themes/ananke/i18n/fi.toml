@@ -1,0 +1,46 @@
+[more]
+other = "Lisää"
+
+[allTitle]
+other = "Kaikki kirjoitukset"
+
+[recentTitle]
+other = "Viimeisimmät kirjoitukset" 
+
+[readMore]
+other = "lue lisää"
+
+[whatsInThis]
+other = "Sisältö"
+
+[related]
+other = "Samankaltaisia kirjoituksia"
+
+[yourName]
+other = "sinun nimesi"
+
+[emailAddress]
+other = "sähköpostiosoite"
+
+[message]
+other = "viesti"
+
+[emailRequiredNote]
+other = "Sähköpostiosoite on pakollinen tieto."
+
+[send]
+other = "Lähetä"
+
+[taxonomyPageList]
+other = "Alla ovat sivut, jotka liittyvät hakusanaasi: “{{ .Title }}”"
+
+[readingTime]
+one = "Minuutin lukuaika"
+other = "{{ .Count }} minuutin lukuaika"
+
+[wordCount]
+one = "Yksi sana"
+other = "{{ .Count }} sanaa"
+
+[pageTitle]
+other = "{{ .Name }} sivu"

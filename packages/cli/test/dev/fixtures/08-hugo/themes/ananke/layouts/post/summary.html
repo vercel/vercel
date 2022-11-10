@@ -1,11 +1,11 @@
-  <div class="mb3 pa4 mid-gray overflow-hidden">
+  <div class="mb3 pa4 {{ $.Param "text_color" | default "mid-gray" }} overflow-hidden">
     {{ if .Date }}
       <div class="f6">
-        {{ .Date.Format "January 2, 2006" }}
+        {{ .Date | time.Format (default "January 2, 2006" .Site.Params.date_format) }}
       </div>
     {{ end }}
     <h1 class="f3 near-black">
-      <a href="{{ .URL }}" class="link black dim">
+      <a href="{{ .RelPermalink }}" class="link black dim">
         {{ .Title }}
       </a>
     </h1>

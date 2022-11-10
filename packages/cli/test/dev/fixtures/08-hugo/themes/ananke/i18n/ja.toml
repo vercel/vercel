@@ -1,0 +1,46 @@
+[more]
+other = "他の記事も確認する"
+
+[allTitle]
+other = "全ての {{.Title }}"
+
+[recentTitle]
+other = "最近の {{.Title }}"
+
+[readMore]
+other = "もっと読む"
+
+[whatsInThis]
+other = "この記事の概要"
+
+[related]
+other = "関連"
+
+[yourName]
+other = "あなたの名前"
+
+[emailAddress]
+other = "Eメール"
+
+[message]
+other = "内容"
+
+[emailRequiredNote]
+other = "メールアドレスは必須です"
+
+[send]
+other = "送信する"
+
+[taxonomyPageList]
+other = "以下に、次の分類用語を使用するページがあります “{{ .Title }}”"
+
+[readingTime]
+one = "1 分で読めます"
+other = "{{ .Count }} 分で読めます"
+
+[wordCount]
+one = "1 文字"
+other = "{{ .Count }} 文字"
+
+[pageTitle]
+other = "{{ .Name }} ページ"

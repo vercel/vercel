@@ -1,5 +1,5 @@
 {{ define "main" }}
-  <article class="cf ph3 ph5-l pv3 pv4-l f4 tc-l center measure-wide lh-copy mid-gray">
+ <article class="cf ph3 ph5-l pv3 pv4-l f4 tc-l center measure-wide lh-copy {{ $.Param "text_color" | default "mid-gray" }}">
     {{ .Content }}
   </article>
   {{/* Define a section to pull recent posts from. For Hugo 0.20 this will default to the section with the most number of pages. */}}
@@ -26,7 +26,7 @@
         {{/* Range through the first $n_posts items of the section */}}
         {{ range (first $n_posts $section) }}
           <div class="relative w-100 mb4">
-            {{ partial "summary-with-image.html" . }}
+            {{ .Render "summary-with-image" }}
           </div>
         {{ end }}
       </section>
@@ -36,8 +36,8 @@
         <h1 class="f3">{{ i18n "more" }}</h1>
         {{/* Now, range through the next four after the initial $n_posts items. Nest the requirements, "after" then "first" on the outside */}}
         {{ range (first 4 (after $n_posts $section))  }}
-          <h2 class="f5 fw4 mb4 dib mr3">
-            <a href="{{ .URL }}" class="link black dim">
+          <h2 class="f5 fw4 mb4 dib {{ cond (eq $.Site.Language.LanguageDirection "rtl") "ml3" "mr3" }}">
+            <a href="{{ .RelPermalink }}" class="link black dim">
               {{ .Title }}
             </a>
           </h2>
@@ -45,7 +45,7 @@
 
         {{/* As above, Use $section_name to get the section title, and URL. Use "with" to only show it if it exists */}}
         {{ with .Site.GetPage "section" $section_name }}
-          <a href="{{ .URL }}" class="link db f6 pa2 br3 bg-mid-gray white dim w4 tc">{{ i18n "allTitle" . }}</a>
+          <a href="{{ .RelPermalink }}" class="link db f6 pa2 br3 bg-mid-gray white dim w4 tc">{{ i18n "allTitle" . }}</a>
         {{ end }}
         </section>
       {{ end }}
