@@ -274,7 +274,13 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  { expectedCode = 0, skipDeploy, isExample, projectSettings } = {}
+  {
+    expectedCode = 0,
+    skipDeploy,
+    isExample,
+    projectSettings,
+    readyTimeout = 0,
+  } = {}
 ) {
   return async () => {
     const nodeMajor = Number(process.versions.node.split('.')[0]);
@@ -385,18 +391,23 @@ function testFixtureStdio(
     const readyResolver = createResolver();
     const exitResolver = createResolver();
 
+    let readyTimer = null;
+    if (readyTimeout > 0) {
+      readyTimer = setTimeout(() => {
+        readyResolver.reject(
+          new Error(
+            `Dev server timed out while waiting to be ready for test "${directory}"`
+          )
+        );
+      }, readyTimeout);
+    }
+
     try {
       let printedOutput = false;
 
       const env = skipDeploy
         ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
         : process.env;
-      if (directory === '08-hugo') {
-        console.log(
-          `SPAWNING ${binaryPath} dev -l ${port} -t <TOKEN> --debug`,
-          { cwd, env }
-        );
-      }
       dev = execa(
         binaryPath,
         [
@@ -430,6 +441,7 @@ function testFixtureStdio(
         stderr += data;
 
         if (stripAnsi(data).includes('Ready! Available at')) {
+          clearTimeout(readyTimer);
           readyResolver.resolve();
         }
 

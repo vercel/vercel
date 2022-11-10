@@ -107,21 +107,6 @@ test(
 test.only('[vercel dev] 08-hugo', async () => {
   if (process.platform === 'darwin') {
     // 1. run the test without Hugo in the PATH
-
-    console.log('%'.repeat(100));
-    const which = require('which');
-    let hugo = 'not found';
-    try {
-      hugo = which.sync('hugo');
-    } catch (e) {
-      //
-    }
-    console.log({
-      hugo,
-      PATH: process.env.PATH,
-    });
-    console.log('%'.repeat(100));
-
     let tester = await testFixtureStdio(
       '08-hugo',
       async (testPath: any, port: number) => {
@@ -151,6 +136,14 @@ test.only('[vercel dev] 08-hugo', async () => {
           clearTimeout(timer);
         }
         throw new Error('Expected connection to time out');
+      },
+      {
+        readyTimeout: 2000,
+
+        // Important: for the first test, we MUST deploy this app so that the
+        // framework (e.g. Hugo) will be detected by the server and associated
+        // with the project since `vc dev` doesn't do framework detection
+        skipDeploy: false,
       }
     );
     await tester();
