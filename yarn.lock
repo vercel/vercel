@@ -9235,6 +9235,11 @@ lilconfig@^2.0.5:
   resolved "https://registry.yarnpkg.com/lilconfig/-/lilconfig-2.0.5.tgz#19e57fd06ccc3848fd1891655b5a447092225b25"
   integrity sha512-xaYmXZtTHPAw5m+xLN8ab9C+3a8YmV3asNSPOATITbtwrfbwaLJj8h66H1WMIpALCkqsIzK3h7oQ+PdX+LQ9Eg==
 
+line-async-iterator@3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/line-async-iterator/-/line-async-iterator-3.0.0.tgz#e8fef6b72fa1710d971fb70a4d59a4b6daf4c17d"
+  integrity sha512-IJwnVaX14dtWL2Za0B/qpuettNO3wtO2tb3NT37ffrz3ZOOkAFOpty5vysg7eLJ+QodMLRSROjR2csFB8ozYJg==
+
 lines-and-columns@^1.1.6:
   version "1.1.6"
   resolved "https://registry.yarnpkg.com/lines-and-columns/-/lines-and-columns-1.1.6.tgz#1c00c743b433cd0a4e80758f7b64a57440d9ff00"
