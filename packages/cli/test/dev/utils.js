@@ -391,6 +391,12 @@ function testFixtureStdio(
       const env = skipDeploy
         ? { ...process.env, __VERCEL_SKIP_DEV_CMD: 1 }
         : process.env;
+      if (directory === '08-hugo') {
+        console.log(
+          `SPAWNING ${binaryPath} dev -l ${port} -t <TOKEN> --debug`,
+          { cwd, env }
+        );
+      }
       dev = execa(
         binaryPath,
         [

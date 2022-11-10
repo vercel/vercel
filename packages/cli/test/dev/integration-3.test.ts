@@ -131,11 +131,13 @@ test.only('[vercel dev] 08-hugo', async () => {
         const timer = setTimeout(() => controller.abort(), 2000);
         try {
           console.log('^'.repeat(100));
+          console.log(`FETCHING http://localhost:${port}`);
           const res = await fetch(`http://localhost:${port}`, {
             signal: controller.signal,
           });
           console.log('*'.repeat(100));
           console.log(res.status);
+          console.log(res.headers);
           const body = await res.text();
           console.log(body);
           console.log('*'.repeat(100));
@@ -160,9 +162,13 @@ test.only('[vercel dev] 08-hugo', async () => {
     }`;
 
     // 3. Rerun the test now that Hugo is in the PATH
-    tester = testFixtureStdio('08-hugo', async (testPath: any) => {
-      await testPath(200, '/', /Hugo/m);
-    });
+    tester = testFixtureStdio(
+      '08-hugo',
+      async (testPath: any) => {
+        await testPath(200, '/', /Hugo/m);
+      },
+      { skipDeploy: true }
+    );
     await tester();
   } else {
     console.log(`Skipping 08-hugo on platform ${process.platform}`);
