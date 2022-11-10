@@ -161,9 +161,13 @@ test.only('[vercel dev] 08-hugo', async () => {
     }`;
 
     // 3. Rerun the test now that Hugo is in the PATH
-    tester = testFixtureStdio('08-hugo', async (testPath: any) => {
-      await testPath(200, '/', /Hugo/m);
-    });
+    tester = testFixtureStdio(
+      '08-hugo',
+      async (testPath: any) => {
+        await testPath(200, '/', /Hugo/m);
+      },
+      { skipDeploy: true }
+    );
     await tester();
   } else {
     console.log(`Skipping 08-hugo on platform ${process.platform}`);
