@@ -61,8 +61,13 @@ function fetchWithRetry(url, opts = {}) {
 
 function createResolver() {
   let resolver;
-  const p = new Promise(res => (resolver = res));
+  let rejector;
+  const p = new Promise((resolve, reject) => {
+    resolver = resolve;
+    rejector = reject;
+  });
   p.resolve = resolver;
+  p.reject = rejector;
   return p;
 }
 
@@ -391,6 +396,9 @@ function testFixtureStdio(
     const readyResolver = createResolver();
     const exitResolver = createResolver();
 
+    // By default, tests will wait 6 minutes for the dev server to be ready and
+    // perform the tests, however a `readyTimeout` can be used to reduce the
+    // wait time if the dev server is expected to fail to start or hang.
     let readyTimer = null;
     if (readyTimeout > 0) {
       readyTimer = setTimeout(() => {

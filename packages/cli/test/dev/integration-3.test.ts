@@ -1,6 +1,5 @@
 import { resolve, delimiter } from 'path';
 
-const { AbortController } = require('abort-controller');
 const {
   fetch,
   sleep,
@@ -105,66 +104,44 @@ test(
 
 /* eslint-disable jest/no-focused-tests */
 test.only('[vercel dev] 08-hugo', async () => {
-  if (process.platform === 'darwin') {
-    // 1. run the test without Hugo in the PATH
-    let tester = await testFixtureStdio(
-      '08-hugo',
-      async (testPath: any, port: number) => {
-        // since Hugo is not found, the server won't be running so we just make
-        // sure it's not running
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 2000);
-        try {
-          console.log('^'.repeat(100));
-          console.log(`FETCHING http://localhost:${port}`);
-          const res = await fetch(`http://localhost:${port}`, {
-            signal: controller.signal,
-          });
-          console.log('*'.repeat(100));
-          console.log(res.status);
-          console.log(res.headers);
-          const body = await res.text();
-          console.log(body);
-          console.log('*'.repeat(100));
-        } catch (err: any) {
-          console.log('!'.repeat(100));
-          console.log(err);
-          if (err.name === 'AbortError' || err.type === 'aborted') {
-            return;
-          }
-        } finally {
-          clearTimeout(timer);
-        }
-        throw new Error('Expected connection to time out');
-      },
-      {
-        readyTimeout: 2000,
-
-        // Important: for the first test, we MUST deploy this app so that the
-        // framework (e.g. Hugo) will be detected by the server and associated
-        // with the project since `vc dev` doesn't do framework detection
-        skipDeploy: false,
-      }
-    );
-    await tester();
-
-    // 2. Update PATH to find the Hugo executable installed via GH Actions
-    process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
-      process.env.PATH
-    }`;
-
-    // 3. Rerun the test now that Hugo is in the PATH
-    tester = testFixtureStdio(
-      '08-hugo',
-      async (testPath: any) => {
-        await testPath(200, '/', /Hugo/m);
-      },
-      { skipDeploy: true }
-    );
-    await tester();
-  } else {
+  if (process.platform === 'win32') {
     console.log(`Skipping 08-hugo on platform ${process.platform}`);
+    return;
   }
+
+  // 1. run the test without Hugo in the PATH
+  let tester = await testFixtureStdio(
+    '08-hugo',
+    async () => {
+      throw new Error('Expected dev server to fail to be ready');
+    },
+    {
+      readyTimeout: 2000,
+
+      // Important: for the first test, we MUST deploy this app so that the
+      // framework (e.g. Hugo) will be detected by the server and associated
+      // with the project since `vc dev` doesn't do framework detection
+      skipDeploy: false,
+    }
+  );
+  await expect(tester()).rejects.toMatch(
+    'Dev server timed out while waiting to be ready'
+  );
+
+  // 2. Update PATH to find the Hugo executable installed via GH Actions
+  process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
+    process.env.PATH
+  }`;
+
+  // 3. Rerun the test now that Hugo is in the PATH
+  tester = testFixtureStdio(
+    '08-hugo',
+    async (testPath: any) => {
+      await testPath(200, '/', /Hugo/m);
+    },
+    { skipDeploy: true }
+  );
+  await tester();
 });
 
 test(

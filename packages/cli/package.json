@@ -102,7 +102,6 @@
     "@vercel/fun": "1.0.4",
     "@vercel/ncc": "0.24.0",
     "@zeit/source-map-support": "0.6.2",
-    "abort-controller": "3.0.0",
     "ajv": "6.12.2",
     "alpha-sort": "2.0.1",
     "ansi-escapes": "3.0.0",
