@@ -6,7 +6,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "mkdir -p dist && echo 'module.exports = \"world\"' > dist/index.js"
+    "build": "node script.js"
   },
   "nx": {
     "targets": {
