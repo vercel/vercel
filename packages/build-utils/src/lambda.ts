@@ -11,6 +11,8 @@ interface Environment {
   [key: string]: string;
 }
 
+type OperationType = 'API' | 'Page' /* SSR */ | 'ISR';
+
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
 export interface LambdaOptionsBase {
@@ -24,6 +26,7 @@ export interface LambdaOptionsBase {
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
   experimentalResponseStreaming?: boolean;
+  operationType?: OperationType;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -47,6 +50,7 @@ interface GetLambdaOptionsFromFunctionOptions {
 
 export class Lambda {
   type: 'Lambda';
+  operationType?: OperationType;
   files?: Files;
   handler: string;
   runtime: string;
@@ -75,6 +79,7 @@ export class Lambda {
       supportsMultiPayloads,
       supportsWrapper,
       experimentalResponseStreaming,
+      operationType,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -123,7 +128,9 @@ export class Lambda {
         '"regions" is not a string Array'
       );
     }
+
     this.type = 'Lambda';
+    this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
