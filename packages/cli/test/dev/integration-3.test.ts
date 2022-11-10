@@ -135,7 +135,10 @@ test.only('[vercel dev] 08-hugo', async () => {
             signal: controller.signal,
           });
           console.log('*'.repeat(100));
-          console.log(res);
+          console.log(res.status);
+          const body = await res.text();
+          console.log(body);
+          console.log('*'.repeat(100));
         } catch (err: any) {
           console.log('!'.repeat(100));
           console.log(err);
