@@ -1222,7 +1222,7 @@ describe('build', () => {
             delete process.env.__VERCEL_BUILD_RUNNING;
           }
         },
-        ms('3 minutes')
+        ms('5 minutes')
       );
 
       test(
@@ -1268,7 +1268,7 @@ describe('build', () => {
             delete process.env.__VERCEL_BUILD_RUNNING;
           }
         },
-        ms('3 minutes')
+        ms('5 minutes')
       );
 
       test(
@@ -1305,7 +1305,7 @@ describe('build', () => {
             delete process.env.__VERCEL_BUILD_RUNNING;
           }
         },
-        ms('3 minutes')
+        ms('5 minutes')
       );
     });
 
