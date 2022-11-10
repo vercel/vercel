@@ -1,6 +1,0 @@
-{
-  "node": "16.18.0",
-  "packageManager": "npm",
-  "packageManagerVersion": "8.19.2",
-  "rushJsonFolder": "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/cli/test/fixtures/unit/commands/build/monorepo-detection/rush"
-}
