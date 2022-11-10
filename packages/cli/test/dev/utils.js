@@ -398,7 +398,7 @@ function testFixtureStdio(
 
     // By default, tests will wait 6 minutes for the dev server to be ready and
     // perform the tests, however a `readyTimeout` can be used to reduce the
-    // wait time if the dev server is expected to fail to start or hang.
+    // wait time if the dev server is expected to fail to start or hang
     let readyTimer = null;
     if (readyTimeout > 0) {
       readyTimer = setTimeout(() => {
