@@ -3418,7 +3418,8 @@ test('deploy gatsby twice and print cached directories', async t => {
 
   // Wait because the cache is not available right away
   // See https://codeburst.io/quick-explanation-of-the-s3-consistency-model-6c9f325e3f82
-  await sleep(60000);
+  console.log('Waiting 90 seconds for Gatsby cache to be populated...');
+  await sleep(90000);
 
   // Update build script to ensure cached files were restored in the next deploy
   pkg.scripts.build = `ls -lA && ls .cache && ls public && ${pkg.scripts.build}`;
