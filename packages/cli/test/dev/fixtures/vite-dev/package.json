@@ -1,7 +1,6 @@
 {
   "private": true,
   "scripts": {
-    "dev": "vite --port $PORT",
     "build": "vite build",
     "serve": "vite preview"
   },

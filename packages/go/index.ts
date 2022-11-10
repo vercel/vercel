@@ -27,6 +27,7 @@ import {
   getWriteableDirectory,
   shouldServe,
   debug,
+  cloneEnv,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -45,7 +46,6 @@ interface Analyzed {
   found?: boolean;
   packageName: string;
   functionName: string;
-  watch: string[];
 }
 
 interface PortInfo {
@@ -351,10 +351,7 @@ export async function build({
 
       if (isGoModExist && isGoModInRootDir) {
         debug('[mod-root] Write main file to ' + downloadPath);
-        await writeFile(
-          join(downloadPath, mainGoFileName),
-          mainModGoContents
-        );
+        await writeFile(join(downloadPath, mainGoFileName), mainModGoContents);
         undoFileActions.push({
           to: undefined, // delete
           from: join(downloadPath, mainGoFileName),
@@ -500,18 +497,8 @@ export async function build({
       environment: {},
     });
 
-    const watch = parsedAnalyzed.watch;
-    let watchSub: string[] = [];
-    // if `entrypoint` located in subdirectory
-    // we will need to concat it with return watch array
-    if (entrypointArr.length > 1) {
-      entrypointArr.pop();
-      watchSub = parsedAnalyzed.watch.map(file => join(...entrypointArr, file));
-    }
-
     return {
       output: lambda,
-      watch: watch.concat(watchSub),
     };
   } catch (error) {
     debug('Go Builder Error: ' + error);
@@ -534,8 +521,14 @@ export async function build({
 async function renameHandlerFunction(fsPath: string, from: string, to: string) {
   let fileContents = await readFile(fsPath, 'utf8');
 
-  const fromRegex = new RegExp(`\\b${from}\\b`, 'g');
-  fileContents = fileContents.replace(fromRegex, to);
+  // This regex has to walk a fine line where it replaces the most-likely occurrences
+  // of the handler's identifier without clobbering other syntax.
+  // Left-hand Side: A single space was chosen because it can catch `func Handler`
+  //   as well as `var _ http.HandlerFunc = Index`.
+  // Right-hand Side: a word boundary was chosen because this can be an end of line
+  //   or an open paren (as in `func Handler(`).
+  const fromRegex = new RegExp(String.raw` ${from}\b`, 'g');
+  fileContents = fileContents.replace(fromRegex, ` ${to}`);
 
   await writeFile(fsPath, fileContents);
 }
@@ -691,11 +684,9 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     `vercel-dev-port-${Math.random().toString(32).substring(2)}`
   );
 
-  const env: typeof process.env = {
-    ...process.env,
-    ...meta.env,
+  const env = cloneEnv(process.env, meta.env, {
     VERCEL_DEV_PORT_FILE: portFile,
-  };
+  });
 
   const tmpRelative = `.${sep}${entrypointDir}`;
   const child = spawn('go', ['run', tmpRelative], {

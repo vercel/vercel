@@ -22,10 +22,10 @@ describe('project', () => {
       client.setArgv('project', 'ls');
       await projects(client);
 
-      const output = await readOutputStream(client, 2);
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const output = await readOutputStream(client, 3);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[1]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
       data.pop();
 
       expect(org).toEqual(user.username);
@@ -47,10 +47,10 @@ describe('project', () => {
       client.setArgv('project', 'ls');
       await projects(client);
 
-      const output = await readOutputStream(client, 2);
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const output = await readOutputStream(client, 3);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[1]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
       data.pop();
 
       expect(org).toEqual(user.username);

@@ -41,6 +41,7 @@ export interface Config {
   devCommand?: string;
   framework?: string | null;
   nodeVersion?: string;
+  middleware?: boolean;
   [key: string]: unknown;
 }
 
@@ -335,13 +336,13 @@ export interface ProjectSettings {
   directoryListing?: boolean;
   gitForkProtection?: boolean;
   commandForIgnoringBuildStep?: string | null;
-  skipGitConnectDuringLink?: boolean;
 }
 
 export interface BuilderV2 {
   version: 2;
   build: BuildV2;
   prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
 }
 
 export interface BuilderV3 {

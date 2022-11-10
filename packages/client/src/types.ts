@@ -1,6 +1,7 @@
 import type {
   Builder,
   BuilderFunctions,
+  Images,
   ProjectSettings,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
@@ -152,6 +153,7 @@ export interface VercelConfig {
   installCommand?: string | null;
   framework?: string | null;
   outputDirectory?: string | null;
+  images?: Images;
 }
 
 export interface GitMetadata {
