@@ -403,9 +403,7 @@ function testFixtureStdio(
     if (readyTimeout > 0) {
       readyTimer = setTimeout(() => {
         readyResolver.reject(
-          new Error(
-            `Dev server timed out while waiting to be ready for test "${directory}"`
-          )
+          new Error('Dev server timed out while waiting to be ready')
         );
       }, readyTimeout);
     }

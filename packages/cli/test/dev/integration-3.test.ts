@@ -124,8 +124,8 @@ test.only('[vercel dev] 08-hugo', async () => {
       skipDeploy: false,
     }
   );
-  await expect(tester()).rejects.toMatch(
-    'Dev server timed out while waiting to be ready'
+  await expect(tester()).rejects.toThrow(
+    new Error('Dev server timed out while waiting to be ready')
   );
 
   // 2. Update PATH to find the Hugo executable installed via GH Actions
