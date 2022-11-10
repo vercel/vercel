@@ -10,7 +10,7 @@ import { useUser } from '../../mocks/user';
 import { setupFixture } from '../../helpers/setup-fixture';
 import execa from 'execa';
 
-jest.setTimeout(ms('2 minute'));
+jest.setTimeout(ms('1 minute'));
 
 const fixture = (name: string) =>
   join(__dirname, '../../fixtures/unit/commands/build', name);
@@ -1194,107 +1194,119 @@ describe('build', () => {
 
       const { name, buildCommand, installCommand } =
         monorepoManagerMap[fixture.split('-')[0]];
-      test('should detect and use correct defaults', async () => {
-        try {
-          const cwd = setupMonorepoDetectionFixture(fixture);
+      test(
+        'should detect and use correct defaults',
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
 
-          if (fixture === 'rush') {
-            await execa('npx', ['@microsoft/rush', 'update'], {
-              cwd,
-              reject: false,
-            });
+            if (fixture === 'rush') {
+              await execa('npx', ['@microsoft/rush', 'update'], {
+                cwd,
+                reject: false,
+              });
+            }
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            await expect(client.stderr).toOutput(
+              `Automatically detected ${name} monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
+            );
+            const result = await fs.readFile(
+              join(cwd, '.vercel/output/static/index.txt'),
+              'utf8'
+            );
+            expect(result).toMatch(/Hello, world/);
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
           }
+        },
+        ms('3 minutes')
+      );
 
-          const exitCode = await build(client);
-          expect(exitCode).toBe(0);
-          await expect(client.stderr).toOutput(
-            `Automatically detected ${name} monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
-          );
-          const result = await fs.readFile(
-            join(cwd, '.vercel/output/static/index.txt'),
-            'utf8'
-          );
-          expect(result).toMatch(/Hello, world/);
-        } finally {
-          process.chdir(originalCwd);
-          delete process.env.__VERCEL_BUILD_RUNNING;
-        }
-      });
+      test(
+        'should not override preconfigured project settings',
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
 
-      test('should not override preconfigured project settings', async () => {
-        try {
-          const cwd = setupMonorepoDetectionFixture(fixture);
+            if (fixture === 'rush') {
+              await execa('npx', ['@microsoft/rush', 'update'], {
+                cwd,
+                reject: false,
+              });
+            }
 
-          if (fixture === 'rush') {
-            await execa('npx', ['@microsoft/rush', 'update'], {
-              cwd,
-              reject: false,
-            });
+            const projectJSONPath = join(cwd, '.vercel/project.json');
+            const projectJSON = JSON.parse(
+              await fs.readFile(projectJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              projectJSONPath,
+              JSON.stringify({
+                ...projectJSON,
+                settings: {
+                  ...projectJSON.settings,
+                  buildCommand,
+                  installCommand,
+                },
+              })
+            );
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            await expect(client.stderr).toOutput(
+              'Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides.'
+            );
+            await expect(client.stderr).toOutput(
+              'Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides.'
+            );
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
           }
+        },
+        ms('3 minutes')
+      );
 
-          const projectJSONPath = join(cwd, '.vercel/project.json');
-          const projectJSON = JSON.parse(
-            await fs.readFile(projectJSONPath, 'utf-8')
-          );
+      test(
+        'should not override configuration overrides',
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
 
-          await fs.writeFile(
-            projectJSONPath,
-            JSON.stringify({
-              ...projectJSON,
-              settings: {
-                ...projectJSON.settings,
+            if (fixture === 'rush') {
+              await execa('npx', ['@microsoft/rush', 'update'], {
+                cwd,
+                reject: false,
+              });
+            }
+
+            await fs.writeFile(
+              join(cwd, 'packages/app-1/vercel.json'),
+              JSON.stringify({
                 buildCommand,
                 installCommand,
-              },
-            })
-          );
+              })
+            );
 
-          const exitCode = await build(client);
-          expect(exitCode).toBe(0);
-          await expect(client.stderr).toOutput(
-            'Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides.'
-          );
-          await expect(client.stderr).toOutput(
-            'Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides.'
-          );
-        } finally {
-          process.chdir(originalCwd);
-          delete process.env.__VERCEL_BUILD_RUNNING;
-        }
-      });
-
-      test('should not override configuration overrides', async () => {
-        try {
-          const cwd = setupMonorepoDetectionFixture(fixture);
-
-          if (fixture === 'rush') {
-            await execa('npx', ['@microsoft/rush', 'update'], {
-              cwd,
-              reject: false,
-            });
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            await expect(client.stderr).toOutput(
+              'Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides.'
+            );
+            await expect(client.stderr).toOutput(
+              'Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides.'
+            );
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
           }
-
-          await fs.writeFile(
-            join(cwd, 'packages/app-1/vercel.json'),
-            JSON.stringify({
-              buildCommand,
-              installCommand,
-            })
-          );
-
-          const exitCode = await build(client);
-          expect(exitCode).toBe(0);
-          await expect(client.stderr).toOutput(
-            'Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides.'
-          );
-          await expect(client.stderr).toOutput(
-            'Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides.'
-          );
-        } finally {
-          process.chdir(originalCwd);
-          delete process.env.__VERCEL_BUILD_RUNNING;
-        }
-      });
+        },
+        ms('3 minutes')
+      );
     });
 
     describe.each([
@@ -1349,27 +1361,31 @@ describe('build', () => {
         delete obj[lastAccessor as string];
       }
 
-      test('should warn and not configure settings when project does not satisfy requirements', async () => {
-        try {
-          const cwd = setupMonorepoDetectionFixture(fixture);
+      test(
+        'should warn and not configure settings when project does not satisfy requirements',
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
 
-          const configPath = join(cwd, configFile);
-          const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+            const configPath = join(cwd, configFile);
+            const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
 
-          deleteSubProperty(config, propertyAccessor);
-          await fs.writeFile(configPath, JSON.stringify(config));
+            deleteSubProperty(config, propertyAccessor);
+            await fs.writeFile(configPath, JSON.stringify(config));
 
-          const exitCode = await build(client);
+            const exitCode = await build(client);
 
-          expect(exitCode).toBe(1);
-          for (const log of expectedLogs) {
-            await expect(client.stderr).toOutput(log);
+            expect(exitCode).toBe(1);
+            for (const log of expectedLogs) {
+              await expect(client.stderr).toOutput(log);
+            }
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
           }
-        } finally {
-          process.chdir(originalCwd);
-          delete process.env.__VERCEL_BUILD_RUNNING;
-        }
-      });
+        },
+        ms('3 minutes')
+      );
     });
   });
 });
