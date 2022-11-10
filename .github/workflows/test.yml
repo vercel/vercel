@@ -75,13 +75,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
 
-      - name: Install Hugo (macOS)
+      - name: Install Hugo
         if: matrix.runner == 'macos-latest'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.105.0/hugo_0.105.0_darwin-universal.tar.gz && tar -xzf hugo_0.105.0_darwin-universal.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
-
-      - name: Install Hugo (linux)
-        if: matrix.runner == 'ubuntu-latest'
-        run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.105.0/hugo_extended_0.105.0_linux-amd64.tar.gz && tar -xzf hugo_extended_0.105.0_linux-amd64.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
 
       - run: yarn install --network-timeout 1000000
 
