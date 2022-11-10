@@ -128,7 +128,7 @@ test.only('[vercel dev] 08-hugo', async () => {
         // since Hugo is not found, the server won't be running so we just make
         // sure it's not running
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 250);
+        const timer = setTimeout(() => controller.abort(), 2000);
         try {
           console.log('^'.repeat(100));
           const res = await fetch(`http://localhost:${port}`, {
