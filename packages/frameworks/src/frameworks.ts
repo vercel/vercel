@@ -18,7 +18,7 @@ const { readdir, readFile, unlink } = promises;
 
 export const frameworks = [
   {
-    name: 'Blitz.js',
+    name: 'Blitz.js (Legacy)',
     slug: 'blitzjs',
     demo: 'https://blitz-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/blitz.svg',
