@@ -209,6 +209,11 @@ type RoutesManifestOld = {
       defaultLocale: string;
     }>;
   };
+  rsc?: {
+    header: string;
+    varyHeader: string;
+  };
+  skipMiddlewareUrlNormalize?: boolean;
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
@@ -1991,6 +1996,9 @@ export const onPrerenderRoute =
           allowQuery = [];
         }
       }
+      const rscVaryHeader =
+        routesManifest?.rsc?.varyHeader ||
+        '__rsc__, __next_router_state_tree__, __next_router_prefetch__';
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
@@ -2008,7 +2016,7 @@ export const onPrerenderRoute =
         ...(isAppPathRoute
           ? {
               initialHeaders: {
-                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+                vary: rscVaryHeader,
               },
             }
           : {}),
@@ -2031,7 +2039,7 @@ export const onPrerenderRoute =
           ? {
               initialHeaders: {
                 'content-type': 'application/octet-stream',
-                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+                vary: rscVaryHeader,
               },
             }
           : {}),
@@ -2270,6 +2278,7 @@ interface EdgeFunctionInfoV2 extends BaseEdgeFunctionInfo {
 interface EdgeFunctionMatcher {
   regexp: string;
   has?: HasField;
+  missing?: HasField;
 }
 
 export async function getMiddlewareBundle({
@@ -2471,6 +2480,7 @@ export async function getMiddlewareBundle({
               key: 'x-prerender-revalidate',
               value: prerenderBypassToken,
             },
+            ...(matcher.missing || []),
           ],
         };
 
@@ -2600,6 +2610,9 @@ function getRouteMatchers(
     };
     if (matcher.has) {
       m.has = normalizeHas(matcher.has);
+    }
+    if (matcher.missing) {
+      m.missing = normalizeHas(matcher.missing);
     }
     return m;
   });
