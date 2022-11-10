@@ -102,8 +102,7 @@ test(
   })
 );
 
-/* eslint-disable jest/no-focused-tests */
-test.only('[vercel dev] 08-hugo', async () => {
+test('[vercel dev] 08-hugo', async () => {
   if (process.platform === 'darwin') {
     // 1. run the test without Hugo in the PATH
     let tester = await testFixtureStdio(
