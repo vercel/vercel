@@ -41,10 +41,10 @@ describe('list', () => {
       const lines = createLineIterator(client.stderr);
 
       let line = await lines.next();
-      expect(line.value).toContain('Retrieving project…');
+      expect(line.value).toEqual('Retrieving project…');
 
       line = await lines.next();
-      expect(line.value).toContain(`Fetching deployments in ${team[0].slug}`);
+      expect(line.value).toEqual(`Fetching deployments in ${team[0].slug}`);
 
       line = await lines.next();
       const { org } = pluckIdentifiersFromDeploymentList(line.value!);
@@ -100,10 +100,10 @@ describe('list', () => {
       const lines = createLineIterator(client.stderr);
 
       let line = await lines.next();
-      expect(line.value).toContain('Retrieving project…');
+      expect(line.value).toEqual('Retrieving project…');
 
       line = await lines.next();
-      expect(line.value).toContain(`Fetching deployments in ${user.username}`);
+      expect(line.value).toEqual(`Fetching deployments in ${user.username}`);
 
       line = await lines.next();
       const { org } = pluckIdentifiersFromDeploymentList(line.value!);
@@ -153,10 +153,10 @@ describe('list', () => {
       const lines = createLineIterator(client.stderr);
 
       let line = await lines.next();
-      expect(line.value).toContain('Retrieving project…');
+      expect(line.value).toEqual('Retrieving project…');
 
       line = await lines.next();
-      expect(line.value).toContain(
+      expect(line.value).toEqual(
         `Fetching deployments in ${teamSlug || team[0].slug}`
       );
 

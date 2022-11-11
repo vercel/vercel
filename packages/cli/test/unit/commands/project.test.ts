@@ -25,6 +25,9 @@ describe('project', () => {
       const lines = createLineIterator(client.stderr);
 
       let line = await lines.next();
+      expect(line.value).toEqual(`Fetching projects in ${user.username}`);
+
+      line = await lines.next();
       const { org } = pluckIdentifiersFromDeploymentList(line.value!);
       expect(org).toEqual(user.username);
 
@@ -60,6 +63,9 @@ describe('project', () => {
       const lines = createLineIterator(client.stderr);
 
       let line = await lines.next();
+      expect(line.value).toEqual(`Fetching projects in ${user.username}`);
+
+      line = await lines.next();
       const { org } = pluckIdentifiersFromDeploymentList(line.value!);
       expect(org).toEqual(user.username);
 
