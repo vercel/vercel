@@ -73,16 +73,21 @@ export default async (client: Client): Promise<number> => {
     return 2;
   }
 
-  let paths = [process.cwd()];
-  const pathValidation = await validatePaths(client, paths);
+  // ensure the current directory is good
+  const pathValidation = await validatePaths(client, [process.cwd()]);
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
   }
-  const { path } = pathValidation;
 
-  const linkedProject = await ensureLink('rollback', client, path, {
-    autoConfirm: Boolean(argv['--yes']),
-  });
+  // ensure the current directory is a linked project
+  const linkedProject = await ensureLink(
+    'rollback',
+    client,
+    pathValidation.path,
+    {
+      autoConfirm: Boolean(argv['--yes']),
+    }
+  );
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
@@ -105,11 +110,10 @@ export default async (client: Client): Promise<number> => {
 };
 
 /**
- * TODO
- * @param {Client} client - ?
- * @param {string} contextName - ?
- * @param {Project} project - ?
- * @param {string} deployId - ?
+ * Requests a rollback and waits for it complete.
+ * @param {Client} client - The Vercel client instance
+ * @param {Project} project - Project info instance
+ * @param {string} deployId - The deployment name or id to rollback
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 async function rollback({
@@ -135,95 +139,62 @@ async function rollback({
     `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}`
   );
 
+  let deployment;
   try {
-    const deployment = await getDeploymentInfo(client, contextName, deployId);
-    if (typeof deployment === 'number') {
-      return deployment;
-    }
-    deployId = deployment.uid;
+    deployment = await getDeploymentInfo(client, contextName, deployId);
+  } catch (e) {
+    return 1;
   } finally {
     output.stopSpinner();
   }
 
   // create the rollback
-  await client.fetch<any>(`/v1/projects/${project.id}/rollback/${deployId}`, {
-    body: {}, // required
-    method: 'POST',
-  });
+  await client.fetch<any>(
+    `/v1/projects/${project.id}/rollback/${deployment.uid}`,
+    {
+      body: {}, // required
+      method: 'POST',
+    }
+  );
 
   // check the status
   return await status({
     client,
     contextName,
-    isRollingBack: true,
+    deployment,
     project,
   });
 }
 
 /**
- * TODO
- * @param client
- * @param contextName
- * @param deployId
- * @returns
- */
-async function getDeploymentInfo(
-  client: Client,
-  contextName: string,
-  deployId: string
-): Promise<number | Deployment> {
-  try {
-    const { output } = client;
-
-    const deployment = handleCertError(
-      output,
-      await getDeploymentByIdOrHost(client, contextName, deployId)
-    );
-
-    if (deployment === 1) {
-      return deployment;
-    }
-
-    if (deployment instanceof Error) {
-      output.error(deployment.message);
-      return 1;
-    }
-
-    if (!deployment) {
-      output.error(
-        `Couldn't find a deployment to alias. Please provide one as an argument.`
-      );
-      return 1;
-    }
-
-    return deployment;
-  } catch (e) {
-    return 1;
-  }
-}
-
-/**
- * TODO
- * @param {Client} client - ?
- * @param {Project} project - ?
+ * Continuously checks a deployment status until it has succeeded, failed, or
+ * taken longer than 3 minutes.
+ * @param {Client} client - The Vercel client instance
+ * @param {string} [contextName] - The scope name; if not specified, it will be
+ * extracted from the `client`
+ * @param {Deployment} [deployment] - Info about the deployment which is used
+ * to display different output following a rollback request
+ * @param {Project} project - Project info instance
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 async function status({
   client,
   contextName,
-  isRollingBack,
+  deployment,
   project,
 }: {
   client: Client;
   contextName?: string;
-  isRollingBack?: boolean;
+  deployment?: Deployment;
   project: Project;
 }): Promise<number> {
   const { output } = client;
-
-  if (!contextName) {
-    ({ contextName } = await getScope(client));
-  }
+  const recentThreshold = Date.now() - 3 * 60 * 1000; // 3 minutes
+  const timeout = Date.now() + 3 * 60 * 1000;
+  let counter = 0;
+  let msg = deployment
+    ? 'Rollback in progress'
+    : `Checking rollback status of ${project.name}`;
 
   const check = async () => {
     const { lastRollbackTarget } = await client.fetch<any>(
@@ -232,38 +203,37 @@ async function status({
     return lastRollbackTarget;
   };
 
-  try {
-    const recentThreshold = Date.now() + 3 * 60 * 1000; // 3 minutes
-    let msg = isRollingBack
-      ? 'Rollback in progress'
-      : `Checking rollback status of ${project.name}`;
+  if (!contextName) {
+    ({ contextName } = await getScope(client));
+  }
 
+  try {
     output.spinner(msg);
 
-    for (let i = 0; ; i++) {
+    for (;;) {
       const { jobStatus, requestedAt, toDeploymentId }: RollbackTarget =
         (await check()) ?? {};
+
       output.stopSpinner();
 
-      if (
-        !jobStatus ||
-        (requestedAt < Date.now() && requestedAt > recentThreshold)
-      ) {
+      if (!jobStatus || requestedAt < recentThreshold) {
         output.log('No deployment rollback in progress');
         return 0;
       }
 
       if (jobStatus === 'succeeded') {
-        const deployment = await getDeploymentInfo(
-          client,
-          contextName,
-          toDeploymentId
-        );
         let deploymentName = '';
-        if (typeof deployment === 'object' && deployment !== null) {
-          deploymentName = chalk.bold(`to ${deployment.name} `);
+        try {
+          const deployment = await getDeploymentInfo(
+            client,
+            contextName,
+            toDeploymentId
+          );
+          deploymentName = `to ${chalk.bold(deployment.url)} `;
+        } catch (e) {
+          // squelch
         }
-        const duration = isRollingBack ? elapsed(Date.now() - requestedAt) : '';
+        const duration = deployment ? elapsed(Date.now() - requestedAt) : '';
         output.log(
           `Success! ${chalk.bold(
             project.name
@@ -273,7 +243,23 @@ async function status({
       }
 
       if (jobStatus === 'failed') {
-        output.log('Rollback failed, please check the logs');
+        try {
+          const name = (
+            deployment ||
+            (await getDeploymentInfo(client, contextName, toDeploymentId))
+          )?.url;
+          output.log(
+            `Failed to remap all aliases to the requested deployment ${name} (${toDeploymentId})`
+          );
+        } catch (e) {
+          output.log(
+            `Failed to remap all aliases to the requested deployment ${toDeploymentId}`
+          );
+        }
+
+        // GET /api/v9/projects/:projectId/rollback/aliases?failedOnly=true
+        // show a list per alias with the  alias.name  and alias.deploymentId
+
         return 1;
       }
 
@@ -282,21 +268,67 @@ async function status({
         return 0;
       }
 
+      // lastly, if we're not pending/in-progress, then we don't know what
+      // the status is, so bail
       if (jobStatus !== 'pending' && jobStatus !== 'in-progress') {
         output.log(`Unknown rollback status "${jobStatus}"`);
         return 1;
       }
 
-      if (i === 0 && !isRollingBack) {
+      // check if we have been running for too long
+      if (requestedAt < recentThreshold || Date.now() >= timeout) {
+        output.log(
+          `The rollback exceeded its deadline - rerun ${chalk.bold(
+            `vercel rollback ${toDeploymentId}`
+          )} to try again`
+        );
+        return 1;
+      }
+
+      // if we've done our first poll and not rolling back, then print the
+      // requested at date/time
+      if (counter++ === 0 && !deployment) {
         msg += ` requested at ${formatDate(requestedAt)}`;
       }
       output.spinner(msg);
 
-      await sleep(1000);
+      await sleep(500);
     }
   } finally {
     output.stopSpinner();
   }
+}
+
+/**
+ * Attempts to find the deployment by name or id.
+ * @param {Client} client - The Vercel client instance
+ * @param {string} contextName - The scope name
+ * @param {string} deployId - The deployment name or id to rollback
+ * @returns {Promise<Deployment>} Resolves an exit code or deployment info
+ */
+async function getDeploymentInfo(
+  client: Client,
+  contextName: string,
+  deployId: string
+): Promise<Deployment> {
+  const deployment = handleCertError(
+    client.output,
+    await getDeploymentByIdOrHost(client, contextName, deployId)
+  );
+
+  if (deployment === 1) {
+    throw new Error('Failed to get deployment');
+  }
+
+  if (deployment instanceof Error) {
+    throw deployment;
+  }
+
+  if (!deployment) {
+    throw new Error(`Couldn't find the deployment "${deployId}"`);
+  }
+
+  return deployment;
 }
 
 interface RollbackTarget {
