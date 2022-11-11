@@ -3,7 +3,7 @@ import { update } from 'rc9';
 import { PackageJson } from '@vercel/build-utils';
 import { DeepWriteable, readPackageJson, writePackageJson } from './_shared';
 
-// https://github.com/nuxt-community/web-vitals-module
+// https://github.com/nuxt-modules/web-vitals
 const ANALYTICS_PLUGIN_PACKAGE = '@nuxtjs/web-vitals';
 
 export async function injectVercelAnalyticsPlugin(dir: string) {
