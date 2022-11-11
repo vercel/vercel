@@ -38,6 +38,7 @@ export async function ensureLink(
     (link.status === 'linked' && opts.forceDelete) ||
     link.status === 'not_linked'
   ) {
+    opts.link = link;
     link = await setupAndLink(client, cwd, opts);
 
     if (link.status === 'not_linked') {
