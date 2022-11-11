@@ -41,6 +41,12 @@ describe('list', () => {
       const lines = createLineIterator(client.stderr);
 
       let line = await lines.next();
+      expect(line.value).toContain('Retrieving project…');
+
+      line = await lines.next();
+      expect(line.value).toContain(`Fetching deployments in ${team[0].slug}`);
+
+      line = await lines.next();
       const { org } = pluckIdentifiersFromDeploymentList(line.value!);
       expect(org).toEqual(team[0].slug);
 
@@ -94,6 +100,12 @@ describe('list', () => {
       const lines = createLineIterator(client.stderr);
 
       let line = await lines.next();
+      expect(line.value).toContain('Retrieving project…');
+
+      line = await lines.next();
+      expect(line.value).toContain(`Fetching deployments in ${user.username}`);
+
+      line = await lines.next();
       const { org } = pluckIdentifiersFromDeploymentList(line.value!);
       expect(org).toEqual(user.username);
 
@@ -141,6 +153,14 @@ describe('list', () => {
       const lines = createLineIterator(client.stderr);
 
       let line = await lines.next();
+      expect(line.value).toContain('Retrieving project…');
+
+      line = await lines.next();
+      expect(line.value).toContain(
+        `Fetching deployments in ${teamSlug || team[0].slug}`
+      );
+
+      line = await lines.next();
       const { org } = pluckIdentifiersFromDeploymentList(line.value!);
       expect(org).toEqual(teamSlug || team[0].slug);
 
