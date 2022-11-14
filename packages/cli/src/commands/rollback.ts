@@ -1,3 +1,4 @@
+import { PaginationOptions } from '../types';
 import chalk from 'chalk';
 import type Client from '../util/client';
 import type { Deployment, Project } from '../types';
@@ -257,8 +258,30 @@ async function status({
           );
         }
 
-        // GET /api/v9/projects/:projectId/rollback/aliases?failedOnly=true
-        // show a list per alias with the  alias.name  and alias.deploymentId
+        let nextTimestamp;
+        for (;;) {
+          let url = `/api/v9/projects/${project.id}/rollback/aliases?failedOnly=true&limit=20`;
+          if (nextTimestamp) {
+            url += `&until=${nextTimestamp}`;
+          }
+
+          const { aliases, pagination } =
+            await client.fetch<RollbackAliasesResponse>(url);
+
+          for (const { alias, status } of aliases) {
+            output.log(
+              `  ${renderAliasStatus(status).padEnd(11)}  ${alias.alias} (${
+                alias.deploymentId
+              })`
+            );
+          }
+
+          if (pagination?.next) {
+            nextTimestamp = pagination.next;
+          } else {
+            break;
+          }
+        }
 
         return 1;
       }
@@ -331,9 +354,48 @@ async function getDeploymentInfo(
   return deployment;
 }
 
+/**
+ * Stylize the alias status label.
+ * @param {AliasStatus} status - The status label
+ * @returns {string}
+ */
+function renderAliasStatus(status: string): string {
+  if (status === 'completed') {
+    return chalk.green(status);
+  }
+  if (status === 'failed') {
+    return chalk.red(status);
+  }
+  if (status === 'skipped') {
+    return chalk.gray(status);
+  }
+  return chalk.yellow(status);
+}
+
+type AliasStatus =
+  | 'pending'
+  | 'in-progress'
+  | 'succeeded'
+  | 'failed'
+  | 'skipped';
+
 interface RollbackTarget {
   fromDeploymentId: string;
-  jobStatus: 'pending' | 'in-progress' | 'succeeded' | 'failed' | 'skipped';
+  jobStatus: AliasStatus;
   requestedAt: number;
   toDeploymentId: string;
+}
+
+interface RollbackAlias {
+  alias: {
+    alias: string;
+    deploymentId: string;
+  };
+  id: string;
+  status: 'completed' | 'in-progress' | 'pending' | 'failed';
+}
+
+interface RollbackAliasesResponse {
+  aliases: RollbackAlias[];
+  pagination: PaginationOptions;
 }
