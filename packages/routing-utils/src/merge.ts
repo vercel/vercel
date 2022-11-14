@@ -37,7 +37,7 @@ function getCheckAndContinue(
           route
         )}`
       );
-    } else if (route.check) {
+    } else if (route.check && !route.override) {
       checks.push(route);
     } else if (route.continue && !route.override) {
       continues.push(route);

@@ -1,0 +1,138 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/static",
+      "status": 200,
+      "mustContain": "static page"
+    },
+    {
+      "path": "/dynamic/first",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/_next/data/testing-build-id/dynamic/first.json",
+      "status": 200,
+      "mustContain": "hello\":\"world\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/dynamic/first.json",
+      "status": 200,
+      "mustContain": "slug\":\"first\""
+    },
+    {
+      "path": "/fallback/first",
+      "status": 200,
+      "mustContain": "fallback page"
+    },
+    {
+      "path": "/fallback/first",
+      "status": 200,
+      "mustContain": "first"
+    },
+    {
+      "path": "/_next/data/testing-build-id/fallback/first.json",
+      "status": 200,
+      "mustContain": "hello\":\"world\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/fallback/first.json",
+      "status": 200,
+      "mustContain": "slug\":\"first\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/fallback/second.json",
+      "status": 200,
+      "mustContain": "hello\":\"world\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/fallback/second.json",
+      "status": 200,
+      "mustContain": "slug\":\"second\""
+    },
+    {
+      "delay": 2000
+    },
+    {
+      "path": "/fallback/second",
+      "status": 200,
+      "mustContain": "second",
+      "retries": 3,
+      "retryDelay": 2000
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "page\":\"api/index.js\""
+    },
+    {
+      "path": "/api/another",
+      "status": 200,
+      "mustContain": "page\":\"api/another.js\""
+    },
+    {
+      "path": "/api/blog/first",
+      "status": 200,
+      "mustContain": "page\":\"api/blog/[slug].js\""
+    },
+    {
+      "path": "/api/blog/second",
+      "status": 200,
+      "mustContain": "slug\":\"second\""
+    },
+
+    {
+      "path": "/errors/gip?crash=1",
+      "status": 500,
+      "mustContain": "500: Internal Server Error"
+    },
+    {
+      "path": "/errors/gip?crash=1",
+      "status": 500,
+      "mustContain": "<html"
+    },
+    {
+      "path": "/errors/gssp?crash=1",
+      "status": 500,
+      "mustContain": "500: Internal Server Error"
+    },
+    {
+      "path": "/errors/gssp?crash=1",
+      "status": 500,
+      "mustContain": "<html"
+    },
+    {
+      "path": "/_next/data/testing-build-id/errors/gsp/crash.json",
+      "status": 500,
+      "mustContain": "500: Internal Server Error"
+    },
+    {
+      "path": "/_next/data/testing-build-id/errors/gsp/crash.json",
+      "status": 500,
+      "mustContain": "<html"
+    },
+
+    {
+      "path": "/fallback-blocking/idk",
+      "status": 404,
+      "mustContain": "custom 404"
+    },
+    {
+      "path": "/some-non-found",
+      "status": 404,
+      "mustContain": "custom 404"
+    }
+  ]
+}

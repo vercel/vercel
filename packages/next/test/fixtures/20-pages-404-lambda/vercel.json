@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Hi"
+    },
+    {
+      "path": "/non-existent",
+      "mustContain": "custom 404!!"
+    },
+    {
+      "path": "/non-existent",
+      "mustContain": "__next"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "probes": [
+    {
+      "path": "/_next/__NEXT_SCRIPT__(/)",
+      "responseHeaders": {
+        "cache-control": "public,max-age=31536000,immutable"
+      }
+    },
+    {
+      "path": "/_next/static/testing-build-id/_buildManifest.js",
+      "responseHeaders": {
+        "cache-control": "public,max-age=31536000,immutable"
+      }
+    },
+    {
+      "path": "/_next/static/invalid-build-id/pages/non-existent.js",
+      "notResponseHeaders": {
+        "cache-control": "public,max-age=31536000,immutable"
+      }
+    },
+    {
+      "path": "/_next/static/invalid-build-id/pages/non-existent.js",
+      "mustNotContain": "final route"
+    },
+    {
+      "path": "/_next/data/invalid-build-id/hello.json",
+      "status": 404
+    },
+    {
+      "path": "/_next/data/invalid-build-id/hello.json",
+      "mustNotContain": "another route"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "hi from index"
+    },
+    {
+      "path": "/team-1",
+      "status": 200,
+      "mustContain": "hi from team route"
+    },
+    {
+      "path": "/team-1/project-1",
+      "status": 200,
+      "mustContain": "hi from project route"
+    },
+    {
+      "path": "/team-1/project-1/deploment-1",
+      "status": 200,
+      "mustContain": "hi from deployment route"
+    },
+    {
+      "path": "/team-1/project-1/deploment-1/another",
+      "status": 200,
+      "mustContain": "hi from another route"
+    },
+    {
+      "path": "/team-1/project-1/deploment-1/another/final",
+      "status": 200,
+      "mustContain": "hi from final route"
+    }
+  ]
+}

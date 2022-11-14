@@ -1,0 +1,359 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "sharedLambdas": false
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "headers": {
+        "accept-language": "en;q=0.9"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "location": "//en/"
+      }
+    },
+    {
+      "path": "/",
+      "headers": {
+        "accept-language": "nl;q=0.9"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "location": "//nl/"
+      }
+    },
+    {
+      "path": "/",
+      "headers": {
+        "accept-language": "nl-NL;q=0.9"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "location": "//nl-NL/"
+      }
+    },
+    {
+      "path": "/",
+      "headers": {
+        "accept-language": "fr;q=0.9"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "location": "//fr/"
+      }
+    },
+    {
+      "path": "/",
+      "headers": {
+        "accept-language": "en-US;q=0.9"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/en-US",
+      "headers": {
+        "accept-language": "nl;q=0.9"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "status": 200,
+      "mustContain": "index page"
+    },
+
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": ">en-US<"
+    },
+    {
+      "path": "/en",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/en",
+      "status": 200,
+      "mustContain": ">en<"
+    },
+    {
+      "path": "/fr",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/fr",
+      "status": 200,
+      "mustContain": ">fr<"
+    },
+    {
+      "path": "/nl",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/nl",
+      "status": 200,
+      "mustContain": ">nl<"
+    },
+    {
+      "path": "/nl-NL",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/nl-NL",
+      "status": 200,
+      "mustContain": ">nl-NL<"
+    },
+
+    {
+      "path": "/non-existent",
+      "status": 404
+    },
+    {
+      "path": "/fr/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"fr\""
+    },
+    {
+      "path": "/en/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"en\""
+    },
+    {
+      "path": "/en-US/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"en-US\""
+    },
+    {
+      "path": "/nl/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"nl\""
+    },
+    {
+      "path": "/nl-NL/non-existent",
+      "status": 404,
+      "mustContain": "lang=\"nl-NL\""
+    },
+
+    {
+      "path": "/hello.txt",
+      "status": 200,
+      "mustContain": "hello world!"
+    },
+
+    {
+      "path": "/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"en-US\""
+    },
+    {
+      "path": "/en/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/en/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"en\""
+    },
+    {
+      "path": "/nl/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/nl/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"nl\""
+    },
+    {
+      "path": "/fr/dynamic/hello",
+      "status": 200,
+      "mustContain": "dynamic page"
+    },
+    {
+      "path": "/fr/dynamic/hello",
+      "status": 200,
+      "mustContain": "\"fr\""
+    },
+
+    {
+      "path": "/gsp",
+      "status": 200,
+      "mustContain": "gsp page"
+    },
+    {
+      "path": "/gsp",
+      "status": 200,
+      "mustContain": ">en-US<"
+    },
+    {
+      "path": "/en/gsp",
+      "status": 200,
+      "mustContain": "gsp page"
+    },
+    {
+      "path": "/en/gsp",
+      "status": 200,
+      "mustContain": ">en<"
+    },
+    {
+      "path": "/nl/gsp",
+      "status": 200,
+      "mustContain": "gsp page"
+    },
+    {
+      "path": "/nl/gsp",
+      "status": 200,
+      "mustContain": ">nl<"
+    },
+    {
+      "path": "/fr/gsp",
+      "status": 200,
+      "mustContain": "gsp page"
+    },
+    {
+      "path": "/fr/gsp",
+      "status": 200,
+      "mustContain": ">fr<"
+    },
+
+    {
+      "path": "/gssp",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/gssp",
+      "status": 200,
+      "mustContain": ">en-US<"
+    },
+    {
+      "path": "/en/gssp",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/en/gssp",
+      "status": 200,
+      "mustContain": ">en<"
+    },
+    {
+      "path": "/nl/gssp",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/nl/gssp",
+      "status": 200,
+      "mustContain": ">nl<"
+    },
+    {
+      "path": "/fr/gssp",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/fr/gssp",
+      "status": 200,
+      "mustContain": ">fr<"
+    },
+
+    {
+      "path": "/gssp/first",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/gssp/first",
+      "status": 200,
+      "mustContain": ">en-US<"
+    },
+    {
+      "path": "/gssp/first",
+      "status": 200,
+      "mustContain": "slug\":\"first\""
+    },
+    {
+      "path": "/en/gssp/first",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/en/gssp/first",
+      "status": 200,
+      "mustContain": ">en<"
+    },
+    {
+      "path": "/en/gssp/first",
+      "status": 200,
+      "mustContain": "slug\":\"first\""
+    },
+    {
+      "path": "/nl/gssp/first",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/nl/gssp/first",
+      "status": 200,
+      "mustContain": ">nl<"
+    },
+    {
+      "path": "/nl/gssp/first",
+      "status": 200,
+      "mustContain": "slug\":\"first\""
+    },
+    {
+      "path": "/fr/gssp/first",
+      "status": 200,
+      "mustContain": "gssp page"
+    },
+    {
+      "path": "/fr/gssp/first",
+      "status": 200,
+      "mustContain": ">fr<"
+    },
+    {
+      "path": "/fr/gssp/first",
+      "status": 200,
+      "mustContain": "slug\":\"first\""
+    }
+  ]
+}

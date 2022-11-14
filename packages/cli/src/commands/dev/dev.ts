@@ -1,21 +1,20 @@
 import { resolve, join } from 'path';
+import fs from 'fs-extra';
 
 import DevServer from '../../util/dev/server';
-import parseListen from '../../util/dev/parse-listen';
-import { ProjectEnvVariable } from '../../types';
+import { parseListen } from '../../util/dev/parse-listen';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
-import { getFrameworks } from '../../util/get-frameworks';
-import { isSettingValue } from '../../util/is-setting-value';
 import { ProjectSettings } from '../../types';
-import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import setupAndLink from '../../util/link/setup-and-link';
-import getSystemEnvValues from '../../util/env/get-system-env-values';
+import { getCommandName } from '../../util/pkg-name';
+import param from '../../util/output/param';
+import { OUTPUT_DIR } from '../../util/build/write-build-result';
+import { pullEnvRecords } from '../../util/env/get-env-records';
 
 type Options = {
-  '--debug'?: boolean;
-  '--listen'?: string;
-  '--confirm': boolean;
+  '--listen': string;
+  '--yes': boolean;
 };
 
 export default async function dev(
@@ -27,26 +26,16 @@ export default async function dev(
   const [dir = '.'] = args;
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
-  const debug = opts['--debug'] || false;
 
   // retrieve dev command
-  let [link, frameworks] = await Promise.all([
-    getLinkedProject(client, cwd),
-    getFrameworks(client),
-  ]);
+  let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    const autoConfirm = opts['--confirm'] || false;
-    const forceDelete = false;
-
-    link = await setupAndLink(
-      client,
-      cwd,
-      forceDelete,
-      autoConfirm,
-      'link',
-      'Set up and develop'
-    );
+    link = await setupAndLink(client, cwd, {
+      autoConfirm: opts['--yes'],
+      successEmoji: 'link',
+      setupMsg: 'Set up and develop',
+    });
 
     if (link.status === 'not_linked') {
       // User aborted project linking questions
@@ -55,61 +44,49 @@ export default async function dev(
   }
 
   if (link.status === 'error') {
+    if (link.reason === 'HEADLESS') {
+      client.output.error(
+        `Command ${getCommandName(
+          'dev'
+        )} requires confirmation. Use option ${param('--yes')} to confirm.`
+      );
+    }
     return link.exitCode;
   }
 
-  let devCommand: string | undefined;
-  let frameworkSlug: string | undefined;
   let projectSettings: ProjectSettings | undefined;
-  let projectEnvs: ProjectEnvVariable[] = [];
-  let systemEnvValues: string[] = [];
+  let envValues: Record<string, string> = {};
   if (link.status === 'linked') {
     const { project, org } = link;
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
 
-    if (project.devCommand) {
-      devCommand = project.devCommand;
-    } else if (project.framework) {
-      const framework = frameworks.find(f => f.slug === project.framework);
-
-      if (framework) {
-        if (framework.slug) {
-          frameworkSlug = framework.slug;
-        }
-
-        const defaults = framework.settings.devCommand;
-        if (isSettingValue(defaults)) {
-          devCommand = defaults.value;
-        }
-      }
-    }
-
     if (project.rootDirectory) {
       cwd = join(cwd, project.rootDirectory);
     }
 
-    [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-      getDecryptedEnvRecords(output, client, project.id),
-      project.autoExposeSystemEnvs
-        ? getSystemEnvValues(output, client, project.id)
-        : { systemEnvValues: [] },
-    ]);
+    envValues = (
+      await pullEnvRecords(output, client, project.id, 'vercel-cli:dev')
+    ).env;
   }
 
   const devServer = new DevServer(cwd, {
     output,
-    debug,
-    devCommand,
-    frameworkSlug,
     projectSettings,
-    projectEnvs,
-    systemEnvValues,
+    envValues,
   });
 
-  process.once('SIGINT', () => devServer.stop());
-  process.once('SIGTERM', () => devServer.stop());
+  // If there is no Development Command, we must delete the
+  // v3 Build Output because it will incorrectly be detected by
+  // @vercel/static-build in BuildOutputV3.getBuildOutputDirectory()
+  if (!devServer.devCommand) {
+    const outputDir = join(cwd, OUTPUT_DIR);
+    if (await fs.pathExists(outputDir)) {
+      output.log(`Removing ${OUTPUT_DIR}`);
+      await fs.remove(outputDir);
+    }
+  }
 
   await devServer.start(...listen);
 }

@@ -1,19 +1,24 @@
 import chalk from 'chalk';
-import { Project } from '../../types';
-import { Output } from '../../util/output';
-import confirm from '../../util/input/confirm';
+import { outputFile } from 'fs-extra';
+import { closeSync, openSync, readSync } from 'fs';
+import { resolve } from 'path';
+import { Project, ProjectEnvTarget } from '../../types';
 import Client from '../../util/client';
-import stamp from '../../util/output/stamp';
-import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
-import param from '../../util/output/param';
-import withSpinner from '../../util/with-spinner';
-import { join } from 'path';
-import { promises, openSync, closeSync, readSync } from 'fs';
 import { emoji, prependEmoji } from '../../util/emoji';
+import confirm from '../../util/input/confirm';
+import { Output } from '../../util/output';
+import param from '../../util/output/param';
+import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-const { writeFile } = promises;
-import exposeSystemEnvs from '../../util/dev/expose-system-envs';
-import getSystemEnvValues from '../../util/env/get-system-env-values';
+import {
+  EnvRecordsSource,
+  pullEnvRecords,
+} from '../../util/env/get-env-records';
+import {
+  buildDeltaString,
+  createEnvObject,
+} from '../../util/env/diff-env-files';
+import { isErrnoException } from '@vercel/error-utils';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -36,8 +41,8 @@ function readHeadSync(path: string, length: number) {
 function tryReadHeadSync(path: string, length: number) {
   try {
     return readHeadSync(path, length);
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
+  } catch (err: unknown) {
+    if (!isErrnoException(err) || err.code !== 'ENOENT') {
       throw err;
     }
   }
@@ -46,9 +51,12 @@ function tryReadHeadSync(path: string, length: number) {
 export default async function pull(
   client: Client,
   project: Project,
+  environment: ProjectEnvTarget,
   opts: Partial<Options>,
   args: string[],
-  output: Output
+  output: Output,
+  cwd: string,
+  source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
 ) {
   if (args.length > 1) {
     output.error(
@@ -57,51 +65,57 @@ export default async function pull(
     return 1;
   }
 
+  // handle relative or absolute filename
   const [filename = '.env'] = args;
-  const fullPath = join(process.cwd(), filename);
+  const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
 
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
 
   if (head === CONTENTS_PREFIX) {
-    output.print(`Overwriting existing ${chalk.bold(filename)} file\n`);
+    output.log(`Overwriting existing ${chalk.bold(filename)} file`);
   } else if (
     exists &&
     !skipConfirmation &&
     !(await confirm(
+      client,
       `Found existing file ${param(filename)}. Do you want to overwrite?`,
       false
     ))
   ) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 
-  output.print(
-    `Downloading Development Environment Variables for Project ${chalk.bold(
-      project.name
-    )}\n`
+  output.log(
+    `Downloading \`${chalk.cyan(
+      environment
+    )}\` Environment Variables for Project ${chalk.bold(project.name)}`
   );
+
   const pullStamp = stamp();
+  output.spinner('Downloading');
 
-  const [
-    { envs: projectEnvs },
-    { systemEnvValues },
-  ] = await withSpinner('Downloading', () =>
-    Promise.all([
-      getDecryptedEnvRecords(output, client, project.id),
-      project.autoExposeSystemEnvs
-        ? getSystemEnvValues(output, client, project.id)
-        : { systemEnvValues: [] },
-    ])
-  );
+  const records = (
+    await pullEnvRecords(output, client, project.id, source, {
+      target: environment || ProjectEnvTarget.Development,
+    })
+  ).env;
 
-  const records = exposeSystemEnvs(
-    projectEnvs,
-    systemEnvValues,
-    project.autoExposeSystemEnvs
-  );
+  let deltaString = '';
+  let oldEnv;
+  if (exists) {
+    oldEnv = await createEnvObject(fullPath, output);
+    if (oldEnv) {
+      // Removes any double quotes from `records`, if they exist
+      // We need this because double quotes are stripped from the local .env file,
+      // but `records` is already in the form of a JSON object that doesn't filter
+      // double quotes.
+      const newEnv = JSON.parse(JSON.stringify(records).replace(/\\"/g, ''));
+      deltaString = buildDeltaString(oldEnv, newEnv);
+    }
+  }
 
   const contents =
     CONTENTS_PREFIX +
@@ -110,7 +124,13 @@ export default async function pull(
       .join('\n') +
     '\n';
 
-  await writeFile(fullPath, contents, 'utf8');
+  await outputFile(fullPath, contents, 'utf8');
+
+  if (deltaString) {
+    output.print('\n' + deltaString);
+  } else if (oldEnv && exists) {
+    output.log('No changes found.');
+  }
 
   output.print(
     `${prependEmoji(
@@ -120,6 +140,7 @@ export default async function pull(
       emoji('success')
     )}\n`
   );
+
   return 0;
 }
 

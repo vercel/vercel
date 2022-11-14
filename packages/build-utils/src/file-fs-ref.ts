@@ -3,9 +3,15 @@ import fs from 'fs-extra';
 import multiStream from 'multistream';
 import path from 'path';
 import Sema from 'async-sema';
-import { File } from './types';
+import { FileBase } from './types';
 
-const semaToPreventEMFILE = new Sema(20);
+const DEFAULT_SEMA = 20;
+const semaToPreventEMFILE = new Sema(
+  parseInt(
+    process.env.VERCEL_INTERNAL_FILE_FS_REF_SEMA || String(DEFAULT_SEMA),
+    10
+  ) || DEFAULT_SEMA
+);
 
 interface FileFsRefOptions {
   mode?: number;
@@ -20,7 +26,7 @@ interface FromStreamOptions {
   fsPath: string;
 }
 
-class FileFsRef implements File {
+class FileFsRef implements FileBase {
   public type: 'FileFsRef';
   public mode: number;
   public fsPath: string;
@@ -100,4 +106,4 @@ class FileFsRef implements File {
   }
 }
 
-export = FileFsRef;
+export default FileFsRef;

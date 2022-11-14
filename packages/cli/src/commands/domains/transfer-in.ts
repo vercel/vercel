@@ -7,7 +7,6 @@ import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
 import getAuthCode from '../../util/domains/get-auth-code';
-import withSpinner from '../../util/with-spinner';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import checkTransfer from '../../util/domains/check-transfer';
 import promptBool from '../../util/input/prompt-bool';
@@ -24,18 +23,7 @@ export default async function transferIn(
   args: string[]
 ) {
   const { output } = client;
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const [domainName] = args;
   if (!domainName) {
@@ -82,16 +70,21 @@ export default async function transferIn(
   const shouldTransfer = await promptBool(
     transferPolicy === 'no-change'
       ? `Transfer now for ${chalk.bold(`$${price}`)}?`
-      : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`
+      : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`,
+    client
   );
   if (!shouldTransfer) {
     return 0;
   }
 
   const transferStamp = stamp();
-  const transferInResult = await withSpinner(
-    `Initiating transfer for domain ${domainName}`,
-    () => transferInDomain(client, domainName, authCode, price)
+  output.spinner(`Initiating transfer for domain ${domainName}`);
+
+  const transferInResult = await transferInDomain(
+    client,
+    domainName,
+    authCode,
+    price
   );
 
   if (transferInResult instanceof ERRORS.InvalidDomain) {
@@ -118,9 +111,7 @@ export default async function transferIn(
 
   if (transferInResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method using ${getCommandName(
-        `billing add`
-      )}.`
+      `Could not purchase domain. Please add a payment method using the dashboard.`
     );
     return 1;
   }

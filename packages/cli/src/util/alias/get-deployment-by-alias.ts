@@ -18,7 +18,7 @@ async function getAppLastDeployment(
   const deployments = await getDeploymentsByAppName(client, appName);
   const deploymentItem = deployments
     .sort((a, b) => b.created - a.created)
-    .filter(dep => dep.state === 'READY' && dep.creator.uid === user.uid)[0];
+    .filter(dep => dep.state === 'READY' && dep.creator.uid === user.id)[0];
 
   // Try to fetch deployment details
   if (deploymentItem) {
@@ -35,7 +35,7 @@ export async function getDeploymentForAlias(
   localConfigPath: string | undefined,
   user: User,
   contextName: string,
-  localConfig: VercelConfig
+  localConfig?: VercelConfig
 ) {
   output.spinner(`Fetching deployment to alias in ${chalk.bold(contextName)}`);
 
@@ -52,7 +52,7 @@ export async function getDeploymentForAlias(
   }
 
   const appName =
-    (localConfig && localConfig.name) ||
+    localConfig?.name ||
     path.basename(path.resolve(process.cwd(), localConfigPath || ''));
 
   if (!appName) {

@@ -1,26 +1,27 @@
 import { parse as parseUrl } from 'url';
-export * from './schemas';
-export * from './types';
 import {
-  Route,
-  Handler,
-  NormalizedRoutes,
-  GetRoutesProps,
-  RouteApiError,
-  Redirect,
-} from './types';
-import {
+  collectHasSegments,
   convertCleanUrls,
-  convertRewrites,
-  convertRedirects,
   convertHeaders,
+  convertRedirects,
+  convertRewrites,
   convertTrailingSlash,
   sourceToRegex,
 } from './superstatic';
-
-export { getCleanUrls } from './superstatic';
-export { mergeRoutes } from './merge';
+import {
+  GetRoutesProps,
+  HasField,
+  NormalizedRoutes,
+  Redirect,
+  Route,
+  RouteApiError,
+  RouteWithHandle,
+} from './types';
 export { appendRoutesToPhase } from './append';
+export { mergeRoutes } from './merge';
+export * from './schemas';
+export { getCleanUrls } from './superstatic';
+export * from './types';
 
 const VALID_HANDLE_VALUES = [
   'filesystem',
@@ -33,8 +34,8 @@ const VALID_HANDLE_VALUES = [
 const validHandleValues = new Set<string>(VALID_HANDLE_VALUES);
 export type HandleValue = typeof VALID_HANDLE_VALUES[number];
 
-export function isHandler(route: Route): route is Handler {
-  return typeof (route as Handler).handle !== 'undefined';
+export function isHandler(route: Route): route is RouteWithHandle {
+  return typeof (route as RouteWithHandle).handle !== 'undefined';
 }
 
 export function isValidHandleValue(handle: string): handle is HandleValue {
@@ -161,8 +162,10 @@ function checkPatternSyntax(
   {
     source,
     destination,
+    has,
   }: {
     source: string;
+    has?: HasField;
     destination?: string;
   }
 ): { message: string; link: string } | null {
@@ -197,11 +200,12 @@ function checkPatternSyntax(
       // replicate all possible URL parsing here so we consume the error.
       // If this really is an error, we'll throw later in convertRedirects().
     }
+    const hasSegments = collectHasSegments(has);
 
     for (const segment of destinationSegments) {
-      if (!sourceSegments.has(segment)) {
+      if (!sourceSegments.has(segment) && !hasSegments.includes(segment)) {
         return {
-          message: `${type} at index ${index} has segment ":${segment}" in \`destination\` property but not in \`source\` property.`,
+          message: `${type} at index ${index} has segment ":${segment}" in \`destination\` property but not in \`source\` or \`has\` property.`,
           link: 'https://vercel.link/invalid-route-destination-segment',
         };
       }
@@ -244,11 +248,12 @@ function notEmpty<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
 
-export function getTransformedRoutes({
-  nowConfig,
-}: GetRoutesProps): NormalizedRoutes {
-  const { cleanUrls, rewrites, redirects, headers, trailingSlash } = nowConfig;
-  let { routes = null } = nowConfig;
+export function getTransformedRoutes(
+  vercelConfig: GetRoutesProps
+): NormalizedRoutes {
+  const { cleanUrls, rewrites, redirects, headers, trailingSlash } =
+    vercelConfig;
+  let { routes = null } = vercelConfig;
   if (routes) {
     const hasNewProperties =
       typeof cleanUrls !== 'undefined' ||

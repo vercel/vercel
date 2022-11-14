@@ -1,13 +1,22 @@
 const fetch = require('node-fetch');
 const retryBailByDefault = require('./retry-bail-by-default.js');
 
-async function fetchRetry(...args) {
+const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
+
+async function fetchRetry(url, ...rest) {
+  if (!ABSOLUTE_URL_PATTERN.test(url)) {
+    throw new Error(`fetch url must be absolute: "${url}"`);
+  }
+
   return await retryBailByDefault(
     async canRetry => {
       try {
-        return await fetch(...args);
+        return await fetch(url, ...rest);
       } catch (error) {
-        if (error.code === 'ENOTFOUND') {
+        if (error.type === 'request-timeout') {
+          // FetchError: network timeout at: ...
+          throw canRetry(error);
+        } else if (error.code === 'ENOTFOUND') {
           // getaddrinfo ENOTFOUND api.vercel.com like some transient dns issue
           throw canRetry(error);
         } else if (error.code === 'ETIMEDOUT') {
@@ -24,7 +33,7 @@ async function fetchRetry(...args) {
         throw error;
       }
     },
-    { factor: 1, retries: 3 }
+    { factor: 2, retries: 3 }
   );
 }
 

@@ -16,7 +16,7 @@ const init = async () => {
   console.log('Hapi server running on %s', server.info.uri);
 };
 
-process.on('unhandledRejection', (err) => {
+process.on('unhandledRejection', err => {
   console.log('Hapi failed in an unexpected way');
   console.log(err);
   process.exit(1);

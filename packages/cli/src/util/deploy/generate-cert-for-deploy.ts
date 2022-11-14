@@ -1,17 +1,16 @@
 import psl from 'psl';
 import { NowError } from '../now-error';
-import { Output } from '../output';
 import Client from '../client';
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../domains/setup-domain';
 import { InvalidDomain } from '../errors-ts';
 
 export default async function generateCertForDeploy(
-  output: Output,
   client: Client,
   contextName: string,
   deployURL: string
 ) {
+  const { output } = client;
   const parsedDomain = psl.parse(deployURL);
   if (parsedDomain.error) {
     return new InvalidDomain(deployURL, parsedDomain.error.message);

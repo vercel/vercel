@@ -14,14 +14,7 @@ const frameworks = (_frameworks as Framework[])
       sort: undefined,
       dependency: undefined,
       defaultRoutes: undefined,
-      cachePattern: undefined,
-      devCommand: undefined,
-      buildCommand: undefined,
     };
-
-    if (framework.logo) {
-      framework.logo = `https://res.cloudinary.com/zeit-inc/image/fetch/${framework.logo}`;
-    }
 
     return framework;
   });

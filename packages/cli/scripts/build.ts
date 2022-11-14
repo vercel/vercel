@@ -4,6 +4,7 @@ import { join } from 'path';
 import { remove, writeFile } from 'fs-extra';
 
 const dirRoot = join(__dirname, '..');
+const distRoot = join(dirRoot, 'dist');
 
 async function createConstants() {
   console.log('Creating constants.ts');
@@ -12,7 +13,7 @@ async function createConstants() {
 export const GA_TRACKING_ID: string | undefined = ${envToString(
     'GA_TRACKING_ID'
   )};
-export const SENTRY_DSN: string | undefined =  ${envToString('SENTRY_DSN')};
+export const SENTRY_DSN: string | undefined = ${envToString('SENTRY_DSN')};
 `;
   await writeFile(filename, contents, 'utf8');
 }
@@ -26,41 +27,38 @@ function envToString(key: string) {
 }
 
 async function main() {
-  const isDev = process.argv[2] === '--dev';
+  // Read the secrets from GitHub Actions and generate a file.
+  // During local development, these secrets will be empty.
+  await createConstants();
 
-  if (!isDev) {
-    // Read the secrets from GitHub Actions and generate a file.
-    // During local development, these secrets will be empty.
-    await createConstants();
+  // `vercel dev` uses chokidar to watch the filesystem, but opts-out of the
+  // `fsevents` feature using `useFsEvents: false`, so delete the module here so
+  // that it is not compiled by ncc, which makes the npm package size larger
+  // than necessary.
+  await remove(join(dirRoot, '../../node_modules/fsevents'));
 
-    // `vercel dev` uses chokidar to watch the filesystem, but opts-out of the
-    // `fsevents` feature using `useFsEvents: false`, so delete the module here so
-    // that it is not compiled by ncc, which makes the npm package size larger
-    // than necessary.
-    await remove(join(dirRoot, '../../node_modules/fsevents'));
-
-    // Compile the `doT.js` template files for `vercel dev`
-    console.log();
-    await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
-      stdio: 'inherit',
-    });
-  }
+  // Compile the `doT.js` template files for `vercel dev`
+  console.log();
+  await execa(process.execPath, [join(__dirname, 'compile-templates.js')], {
+    stdio: 'inherit',
+  });
 
   // Do the initial `ncc` build
   console.log();
-  const src = join(dirRoot, 'src');
-  const args = ['ncc', 'build', '--external', 'update-notifier'];
-  if (isDev) {
-    args.push('--source-map');
-  }
-  args.push(src);
-  await execa('yarn', args, { stdio: 'inherit' });
+  const args = [
+    'ncc',
+    'build',
+    '--external',
+    'update-notifier',
+    'src/index.ts',
+  ];
+  await execa('yarn', args, { stdio: 'inherit', cwd: dirRoot });
 
-  // `ncc` has some issues with `@zeit/fun`'s runtime files:
+  // `ncc` has some issues with `@vercel/fun`'s runtime files:
   //   - Executable bits on the `bootstrap` files appear to be lost:
-  //       https://github.com/zeit/ncc/pull/182
+  //       https://github.com/vercel/ncc/pull/182
   //   - The `bootstrap.js` asset does not get copied into the output dir:
-  //       https://github.com/zeit/ncc/issues/278
+  //       https://github.com/vercel/ncc/issues/278
   //
   // Aside from those issues, all the same files from the `runtimes` directory
   // should be copied into the output runtimes dir, specifically the `index.js`
@@ -70,21 +68,16 @@ async function main() {
   // with `fun`'s cache invalidation mechanism and they need to be shasum'd.
   const runtimes = join(
     dirRoot,
-    '../../node_modules/@zeit/fun/dist/src/runtimes'
+    '../../node_modules/@vercel/fun/dist/src/runtimes'
   );
-  const dest = join(dirRoot, 'dist/runtimes');
-  await cpy('**/*', dest, { parents: true, cwd: runtimes });
+  await cpy('**/*', join(distRoot, 'runtimes'), {
+    parents: true,
+    cwd: runtimes,
+  });
 
-  // Band-aid to delete stuff that `ncc` bundles, but it shouldn't:
-
-  // TypeScript definition files from `@vercel/build-utils`
-  await remove(join(dirRoot, 'dist', 'dist'));
-
-  // The Readme and `package.json` from "config-chain" module
-  await remove(join(dirRoot, 'dist', 'config-chain'));
-
-  // A bunch of source `.ts` files from CLI's `util` directory
-  await remove(join(dirRoot, 'dist', 'util'));
+  // Band-aid to bundle stuff that `ncc` neglects to bundle
+  await cpy(join(dirRoot, 'src/util/projects/VERCEL_DIR_README.txt'), distRoot);
+  await cpy(join(dirRoot, 'src/util/dev/builder-worker.js'), distRoot);
 
   console.log('Finished building Vercel CLI');
 }

@@ -11,9 +11,11 @@ import logo from '../../util/output/logo';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
 import dev from './dev';
-import readPackage from '../../util/read-package';
 import readConfig from '../../util/config/read-config';
+import readJSONFile from '../../util/read-json-file';
 import { getPkgName, getCommandName } from '../../util/pkg-name';
+import { CantParseJSONFile } from '../../util/errors-ts';
+import { isErrnoException } from '@vercel/error-utils';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -31,7 +33,7 @@ const help = () => {
     -d, --debug            Debug mode [off]
     -l, --listen  [uri]    Specify a URI endpoint on which to listen [0.0.0.0:3000]
     -t, --token   [token]  Specify an Authorization Token
-    --confirm              Skip questions and use defaults when setting up a new project
+    -y, --yes              Skip questions when setting up new project using default scope and settings
 
   ${chalk.dim('Examples:')}
 
@@ -48,6 +50,22 @@ const help = () => {
 };
 
 export default async function main(client: Client) {
+  if (process.env.__VERCEL_DEV_RUNNING) {
+    client.output.error(
+      `${cmd(
+        `${getPkgName()} dev`
+      )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
+        'dev'
+      )} script in ${cmd('package.json')}`
+    );
+    client.output.error(
+      `Learn More: https://vercel.link/recursive-invocation-of-commands`
+    );
+    return 1;
+  } else {
+    process.env.__VERCEL_DEV_RUNNING = '1';
+  }
+
   let argv;
   let args;
   const { output } = client;
@@ -56,13 +74,21 @@ export default async function main(client: Client) {
     argv = getArgs(client.argv.slice(2), {
       '--listen': String,
       '-l': '--listen',
-      '--confirm': Boolean,
+      '--yes': Boolean,
+      '-y': '--yes',
 
       // Deprecated
       '--port': Number,
       '-p': '--port',
+      '--confirm': Boolean,
+      '-c': '--confirm',
     });
     args = getSubcommand(argv._.slice(1), COMMAND_CONFIG).args;
+
+    if ('--confirm' in argv) {
+      output.warn('`--confirm` is deprecated, please use `--yes` instead');
+      argv['--yes'] = argv['--confirm'];
+    }
 
     if ('--port' in argv) {
       output.warn('`--port` is deprecated, please use `--listen` instead');
@@ -80,34 +106,34 @@ export default async function main(client: Client) {
 
   const [dir = '.'] = args;
 
-  const nowJson = await readConfig(dir);
-  // @ts-ignore: Because `nowJson` could be one of three different types
-  const hasBuilds = nowJson && nowJson.builds && nowJson.builds.length > 0;
+  const vercelConfig = await readConfig(dir);
 
-  if (!nowJson || !hasBuilds) {
-    const pkg = await readPackage(path.join(dir, 'package.json'));
+  const hasBuilds =
+    vercelConfig &&
+    'builds' in vercelConfig &&
+    vercelConfig.builds &&
+    vercelConfig.builds.length > 0;
 
-    if (pkg) {
-      const { scripts } = pkg as PackageJson;
+  if (!vercelConfig || !hasBuilds) {
+    const pkg = await readJSONFile<PackageJson>(path.join(dir, 'package.json'));
 
-      if (scripts && scripts.dev && /\bnow\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(
-          `The ${cmd('dev')} script in ${cmd(
-            'package.json'
-          )} must not contain ${cmd('now dev')}`
-        );
-        output.error(`Learn More: http://err.sh/vercel/now-dev-as-dev-script`);
-        return 1;
-      }
-      if (scripts && scripts.dev && /\bvercel\b\W+\bdev\b/.test(scripts.dev)) {
-        output.error(
-          `The ${cmd('dev')} script in ${cmd(
-            'package.json'
-          )} must not contain ${cmd('vercel dev')}`
-        );
-        output.error(`Learn More: http://err.sh/vercel/now-dev-as-dev-script`);
-        return 1;
-      }
+    if (pkg instanceof CantParseJSONFile) {
+      client.output.error('Could not parse package.json');
+      return 1;
+    }
+
+    if (/\b(now|vercel)\b\W+\bdev\b/.test(pkg?.scripts?.dev || '')) {
+      client.output.error(
+        `${cmd(
+          `${getPkgName()} dev`
+        )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
+          'dev'
+        )} script in ${cmd('package.json')}`
+      );
+      client.output.error(
+        `Learn More: https://vercel.link/recursive-invocation-of-commands`
+      );
+      return 1;
     }
   }
 
@@ -119,9 +145,9 @@ export default async function main(client: Client) {
   try {
     return await dev(client, argv, args);
   } catch (err) {
-    if (err.code === 'ENOTFOUND') {
+    if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
-      // "request to https://api.vercel.com/www/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
+      // "request to https://api.vercel.com/v2/user failed, reason: getaddrinfo ENOTFOUND api.vercel.com"
       const matches = /getaddrinfo ENOTFOUND (.*)$/.exec(err.message || '');
       if (matches && matches[1]) {
         const hostname = matches[1];
@@ -131,7 +157,9 @@ export default async function main(client: Client) {
           )} could not be resolved. Please verify your internet connectivity and DNS configuration.`
         );
       }
-      output.debug(err.stack);
+      if (typeof err.stack === 'string') {
+        output.debug(err.stack);
+      }
       return 1;
     }
     output.prettyError(err);

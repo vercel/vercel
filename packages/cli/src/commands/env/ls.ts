@@ -48,10 +48,16 @@ export default async function ls(
 
   const lsStamp = stamp();
 
-  const { envs } = await getEnvRecords(output, client, project.id, {
-    target: envTarget,
-    gitBranch: envGitBranch,
-  });
+  const { envs } = await getEnvRecords(
+    output,
+    client,
+    project.id,
+    'vercel-cli:env:ls',
+    {
+      target: envTarget,
+      gitBranch: envGitBranch,
+    }
+  );
 
   if (envs.length === 0) {
     output.log(

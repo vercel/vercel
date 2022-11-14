@@ -8,6 +8,7 @@ import { getPkgName } from '../util/pkg-name';
 import getArgs from '../util/get-args';
 import Client from '../util/client';
 import { getDeployment } from '../util/get-deployment';
+import { isAPIError } from '../util/errors-ts';
 
 const help = () => {
   console.log(`
@@ -125,22 +126,24 @@ export default async function main(client: Client) {
   let deployment;
   try {
     deployment = await getDeployment(client, id);
-  } catch (err) {
+  } catch (err: unknown) {
     output.stopSpinner();
 
-    if (err.status === 404) {
-      output.error(
-        `Failed to find deployment "${id}" in ${chalk.bold(contextName)}`
-      );
-      return 1;
-    }
-    if (err.status === 403) {
-      output.error(
-        `No permission to access deployment "${id}" in ${chalk.bold(
-          contextName
-        )}`
-      );
-      return 1;
+    if (isAPIError(err)) {
+      if (err.status === 404) {
+        output.error(
+          `Failed to find deployment "${id}" in ${chalk.bold(contextName)}`
+        );
+        return 1;
+      }
+      if (err.status === 403) {
+        output.error(
+          `No permission to access deployment "${id}" in ${chalk.bold(
+            contextName
+          )}`
+        );
+        return 1;
+      }
     }
     // unexpected
     throw err;
@@ -243,7 +246,7 @@ function printLogShort(log: any) {
 
   const date = new Date(log.created).toISOString();
 
-  data.split('\n').forEach((line, i) => {
+  data.split('\n').forEach(line => {
     if (
       line.includes('START RequestId:') ||
       line.includes('END RequestId:') ||
@@ -260,18 +263,9 @@ function printLogShort(log: any) {
       }
     }
 
-    if (i === 0) {
-      console.log(
-        `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}`
-      );
-    } else {
-      console.log(
-        `${' '.repeat(date.length)}  ${line.replace(
-          '[now-builder-debug] ',
-          ''
-        )}`
-      );
-    }
+    console.log(
+      `${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}`
+    );
   });
 
   return 0;

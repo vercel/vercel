@@ -1,14 +1,14 @@
 # Ionic Angular Example
 
-This directory is a brief example of an [Ionic Angular](https://ionicframework.com/docs/angular/overview) app that can be deployed with Vercel and zero configuration
+This directory is a brief example of an [Ionic Angular](https://ionicframework.com/docs/angular/overview) app that can be deployed to Vercel with zero configuration
 
 ## Deploy Your Own
 
 Deploy your own Ionic Angular project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vercel/vercel/tree/main/examples/ionic-angular)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/ionic-angular&template=ionic-angular)
 
-_Live Example: https://ionic-angular.now-examples.now.sh_
+_Live Example: https://ionic-angular-template.vercel.app_
 
 ### How We Created This Example
 

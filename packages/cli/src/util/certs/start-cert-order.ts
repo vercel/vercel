@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import wait from '../output/wait';
 import Client from '../client';
 
 export type CertificateChallenge = {
@@ -24,23 +23,17 @@ export default async function startCertOrder(
   cns: string[],
   contextName: string
 ) {
-  const cancelWait = wait(
+  client.output.spinner(
     `Starting certificate issuance for ${chalk.bold(
       cns.join(', ')
     )} under ${chalk.bold(contextName)}`
   );
-  try {
-    const order = await client.fetch<CertificateOrder>('/v3/now/certs', {
-      method: 'PATCH',
-      body: {
-        op: 'startOrder',
-        domains: cns
-      }
-    });
-    cancelWait();
-    return order;
-  } catch (error) {
-    cancelWait();
-    throw error;
-  }
+  const order = await client.fetch<CertificateOrder>('/v3/now/certs', {
+    method: 'PATCH',
+    body: {
+      op: 'startOrder',
+      domains: cns,
+    },
+  });
+  return order;
 }

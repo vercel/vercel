@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "index.html",
-      "use": "https://files-1bsmqkkol.now.sh"
+      "use": "https://files-17f5npcdc-testuser.vercel.app"
     }
   ]
 }

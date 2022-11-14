@@ -17,5 +17,13 @@ checkPkgOrThrow('exeggcute');
 
 // This is to satisfy `@vercel/static-build` which needs a `dist` directory.
 const { exec } = require('exeggcute');
-exec('mkdir dist', __dirname);
-exec('echo "node-env:RANDOMNESS_PLACEHOLDER" > dist/index.html', __dirname);
+exec('mkdir dist', __dirname)
+  .then(() => {
+    exec(
+      'echo "node-env:RANDOMNESS_PLACEHOLDER" > dist/index.html',
+      __dirname
+    ).then(() => {
+      console.log('Success');
+    });
+  })
+  .catch(console.error);

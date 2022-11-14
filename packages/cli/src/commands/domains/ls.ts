@@ -2,7 +2,6 @@ import ms from 'ms';
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import wait from '../../util/output/wait';
 import Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
@@ -26,23 +25,13 @@ export default async function ls(
 ) {
   const { output } = client;
   const { '--next': nextTimestamp } = opts;
-  let contextName = null;
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
     output.error('Please provide a number for flag --next');
     return 1;
   }
 
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const lsStamp = stamp();
 
@@ -55,14 +44,9 @@ export default async function ls(
     return 1;
   }
 
-  const cancelWait = wait(`Fetching Domains under ${chalk.bold(contextName)}`);
+  output.spinner(`Fetching Domains under ${chalk.bold(contextName)}`);
 
-  const { domains, pagination } = await getDomains(
-    client,
-    nextTimestamp
-  ).finally(() => {
-    cancelWait();
-  });
+  const { domains, pagination } = await getDomains(client, nextTimestamp);
 
   output.log(
     `${plural('Domain', domains.length, true)} found under ${chalk.bold(

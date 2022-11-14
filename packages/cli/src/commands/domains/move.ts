@@ -5,7 +5,6 @@ import { User, Team } from '../../types';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import withSpinner from '../../util/with-spinner';
 import moveOutDomain from '../../util/domains/move-out-domain';
 import isRootDomain from '../../util/is-root-domain';
 import textInput from '../../util/input/text';
@@ -13,7 +12,7 @@ import param from '../../util/output/param';
 import getDomainAliases from '../../util/alias/get-domain-aliases';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import promptBool from '../../util/input/prompt-bool';
-import getTeams from '../../util/get-teams';
+import getTeams from '../../util/teams/get-teams';
 import { getCommandName } from '../../util/pkg-name';
 
 type Options = {
@@ -26,20 +25,7 @@ export default async function move(
   args: string[]
 ) {
   const { output } = client;
-  let contextName = null;
-  let user = null;
-
-  try {
-    ({ contextName, user } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
-
+  const { contextName, user } = await getScope(client);
   const { domainName, destination } = await getArgs(args);
   if (!isRootDomain(domainName)) {
     output.error(
@@ -78,10 +64,11 @@ export default async function move(
       !(await promptBool(
         `Are you sure you want to move ${param(domainName)} to ${param(
           destination
-        )}?`
+        )}?`,
+        client
       ))
     ) {
-      output.log('Aborted');
+      output.log('Canceled');
       return 0;
     }
   }
@@ -96,19 +83,25 @@ export default async function move(
       );
       if (
         !(await promptBool(
-          `Are you sure you want to move ${param(domainName)}?`
+          `Are you sure you want to move ${param(domainName)}?`,
+          client
         ))
       ) {
-        output.log('Aborted');
+        output.log('Canceled');
         return 0;
       }
     }
   }
 
   const context = contextName;
-  const moveTokenResult = await withSpinner('Moving', () => {
-    return moveOutDomain(client, context, domainName, matchId || destination);
-  });
+  output.spinner('Moving');
+  const moveTokenResult = await moveOutDomain(
+    client,
+    context,
+    domainName,
+    matchId || destination
+  );
+
   if (moveTokenResult instanceof ERRORS.DomainMoveConflict) {
     const { suffix, pendingAsyncPurchase } = moveTokenResult.meta;
     if (suffix) {
@@ -190,8 +183,8 @@ async function findDestinationMatch(
   user: User,
   teams: Team[]
 ) {
-  if (user.uid === destination || user.username === destination) {
-    return user.uid;
+  if (user.id === destination || user.username === destination) {
+    return user.id;
   }
 
   for (const team of teams) {

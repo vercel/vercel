@@ -8,8 +8,8 @@ const typeDefs = `
 
 const resolvers = {
   Query: {
-    hello: (_, { name }) => `Hello ${name || "world"}`
-  }
+    hello: (_, { name }) => `Hello ${name || 'world'}`,
+  },
 };
 
 const lambda = new GraphQLServerLambda({

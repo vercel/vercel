@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "React App" },
+    { "path": "/testing-output-dir.txt", "mustContain": "This is some content" }
+  ]
+}

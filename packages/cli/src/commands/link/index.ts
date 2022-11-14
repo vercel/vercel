@@ -1,11 +1,9 @@
 import chalk from 'chalk';
 import Client from '../../util/client';
 import getArgs from '../../util/get-args';
-import getSubcommand from '../../util/get-subcommand';
-import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
-import setupAndLink from '../../util/link/setup-and-link';
+import { ensureLink } from '../../util/link/ensure-link';
 
 const help = () => {
   console.log(`
@@ -24,7 +22,10 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
-    --confirm                      Confirm default options and skip questions
+    -p ${chalk.bold.underline('NAME')}, --project=${chalk.bold.underline(
+    'NAME'
+  )}        Project name
+    -y, --yes                      Skip questions when setting up new project using default scope and settings
 
   ${chalk.dim('Examples:')}
 
@@ -36,7 +37,7 @@ const help = () => {
     '–'
   )} Link current directory with default options and skip questions
 
-      ${chalk.cyan(`$ ${getPkgName()} link --confirm`)}
+      ${chalk.cyan(`$ ${getPkgName()} link --yes`)}
 
   ${chalk.gray('–')} Link a specific directory to a Vercel Project
 
@@ -44,51 +45,39 @@ const help = () => {
 `);
 };
 
-const COMMAND_CONFIG = {
-  // No subcommands yet
-};
-
 export default async function main(client: Client) {
-  let argv;
+  const argv = getArgs(client.argv.slice(2), {
+    '--yes': Boolean,
+    '-y': '--yes',
+    '--project': String,
+    '-p': '--project',
 
-  try {
-    argv = getArgs(client.argv.slice(2), {
-      '--confirm': Boolean,
-    });
-  } catch (error) {
-    handleError(error);
-    return 1;
-  }
+    // deprecated
+    '--confirm': Boolean,
+    '-c': '--confirm',
+  });
 
   if (argv['--help']) {
     help();
     return 2;
   }
 
-  const { args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
-  const path = args[0] || process.cwd();
-  const autoConfirm = argv['--confirm'] || false;
-  const forceDelete = true;
-
-  const link = await setupAndLink(
-    client,
-    path,
-    forceDelete,
-    autoConfirm,
-    'success',
-    'Set up'
-  );
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    // User aborted project linking questions
-    return 0;
-  } else if (link.status === 'linked') {
-    // Successfully linked
-    return 0;
-  } else {
-    const err: never = link;
-    throw new Error('Unknown link status: ' + err);
+  if ('--confirm' in argv) {
+    client.output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    argv['--yes'] = argv['--confirm'];
   }
+
+  const cwd = argv._[1] || process.cwd();
+
+  const link = await ensureLink('link', client, cwd, {
+    autoConfirm: !!argv['--yes'],
+    forceDelete: true,
+    projectName: argv['--project'],
+    successEmoji: 'success',
+  });
+
+  if (typeof link === 'number') {
+    return link;
+  }
+  return 0;
 }

@@ -13,7 +13,6 @@ import getDomainPrice from '../../util/domains/get-domain-price';
 import { getCommandName } from '../../util/pkg-name';
 import { getDomainConfig } from '../../util/domains/get-domain-config';
 import code from '../../util/output/code';
-import wait from '../../util/output/wait';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 
 type Options = {};
@@ -24,19 +23,7 @@ export default async function inspect(
   args: string[]
 ) {
   const { output } = client;
-
-  let contextName = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { contextName } = await getScope(client);
 
   const [domainName] = args;
   const inspectStamp = stamp();
@@ -59,7 +46,7 @@ export default async function inspect(
 
   output.debug(`Fetching domain info`);
 
-  const cancelWait = wait(
+  output.spinner(
     `Fetching Domain ${domainName} under ${chalk.bold(contextName)}`
   );
 
@@ -68,9 +55,6 @@ export default async function inspect(
     client,
     contextName,
     domainName,
-    cancelWait,
-  }).finally(() => {
-    cancelWait();
   });
 
   if (typeof information === 'number') {
@@ -154,17 +138,7 @@ export default async function inspect(
       `This Domain is not configured properly. To configure it you should either:`,
       null,
       null,
-      null,
-      {
-        boxen: {
-          margin: {
-            left: 2,
-            right: 0,
-            bottom: 0,
-            top: 0,
-          },
-        },
-      }
+      null
     );
     output.print(
       `  ${chalk.grey('a)')} ` +
@@ -207,13 +181,11 @@ async function fetchInformation({
   client,
   contextName,
   domainName,
-  cancelWait,
 }: {
   output: Output;
   client: Client;
   contextName: string;
   domainName: string;
-  cancelWait: () => void;
 }) {
   const [domain, renewalPrice] = await Promise.all([
     getDomainByName(client, contextName, domainName, { ignoreWait: true }),
@@ -223,13 +195,11 @@ async function fetchInformation({
   ]);
 
   if (domain instanceof DomainNotFound) {
-    cancelWait();
     output.prettyError(domain);
     return 1;
   }
 
   if (domain instanceof DomainPermissionDenied) {
-    cancelWait();
     output.prettyError(domain);
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
@@ -238,7 +208,6 @@ async function fetchInformation({
   const projects = await findProjectsForDomain(client, domainName);
 
   if (projects instanceof Error) {
-    cancelWait();
     output.prettyError(projects);
     return 1;
   }

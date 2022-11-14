@@ -1,47 +1,31 @@
-import fetch from 'node-fetch';
-import { hostname } from 'os';
-import { InvalidEmail, AccountNotFound } from '../errors-ts';
-import ua from '../ua';
-import { getTitleName } from '../pkg-name';
+import Client from '../client';
+import { InvalidEmail, AccountNotFound, isAPIError } from '../errors-ts';
+import { errorToString } from '@vercel/error-utils';
 import { LoginData } from './types';
 
 export default async function login(
-  apiUrl: string,
-  email: string,
-  mode: 'login' | 'signup' = 'login'
+  client: Client,
+  email: string
 ): Promise<LoginData> {
-  const hyphens = new RegExp('-', 'g');
-  const host = hostname().replace(hyphens, ' ').replace('.local', '');
-  const tokenName = `${getTitleName()} CLI on ${host}`;
+  try {
+    return await client.fetch<LoginData>(`/registration?mode=login`, {
+      method: 'POST',
+      body: { email },
+    });
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.code === 'not_exists') {
+        throw new AccountNotFound(
+          email,
+          `Please sign up: https://vercel.com/signup`
+        );
+      }
 
-  const response = await fetch(`${apiUrl}/now/registration?mode=${mode}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': ua,
-    },
-    body: JSON.stringify({
-      tokenName,
-      email,
-    }),
-  });
-
-  const body = await response.json();
-  if (!response.ok) {
-    const { error = {} } = body;
-    if (error.code === 'not_exists') {
-      throw new AccountNotFound(
-        email,
-        `Please sign up: https://vercel.com/signup`
-      );
+      if (err.code === 'invalid_email') {
+        throw new InvalidEmail(email, err.message);
+      }
     }
 
-    if (error.code === 'invalid_email') {
-      throw new InvalidEmail(email, error.message);
-    }
-
-    throw new Error(`Unexpected error: ${error.message}`);
+    throw new Error(`Unexpected error: ${errorToString(err)}`);
   }
-
-  return body as LoginData;
 }

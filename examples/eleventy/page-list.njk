@@ -8,8 +8,10 @@ permalink: /page-list/{% if pagination.pageNumber > 0 %}{{ pagination.pageNumber
 ---
 <table>
   <thead>
-    <th>URL</th>
-    <th>Page Title</th>
+    <tr>
+      <th>URL</th>
+      <th>Page Title</th>
+    </tr>
   </thead>
   <tbody>
 {%- for entry in entries %}

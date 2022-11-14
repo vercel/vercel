@@ -1,22 +1,24 @@
-import { join } from 'path';
 import fs from 'fs';
 import os from 'os';
+import AJV from 'ajv';
+import chalk from 'chalk';
+import { join } from 'path';
 import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
+
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import Client from '../client';
-import { ProjectNotFound } from '../errors-ts';
+import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
-import getTeamById from '../get-team-by-id';
+import getTeamById from '../teams/get-team-by-id';
 import { Output } from '../output';
 import { Project, ProjectLinkResult } from '../../types';
 import { Org, ProjectLink } from '../../types';
-import chalk from 'chalk';
 import { prependEmoji, emoji, EmojiLabel } from '../emoji';
-import AJV from 'ajv';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
+import { isErrnoException, isError } from '@vercel/error-utils';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -66,12 +68,14 @@ async function getLink(path?: string): Promise<ProjectLink | null> {
   return getLinkFromDir(dir);
 }
 
-async function getLinkFromDir(dir: string): Promise<ProjectLink | null> {
+export async function getLinkFromDir<T = ProjectLink>(
+  dir: string
+): Promise<T | null> {
   try {
     const json = await readFile(join(dir, VERCEL_DIR_PROJECT), 'utf8');
 
     const ajv = new AJV();
-    const link: ProjectLink = JSON.parse(json);
+    const link: T = JSON.parse(json);
 
     if (!ajv.validate(linkSchema, link)) {
       throw new Error(
@@ -80,20 +84,24 @@ async function getLinkFromDir(dir: string): Promise<ProjectLink | null> {
     }
 
     return link;
-  } catch (error) {
+  } catch (err: unknown) {
     // link file does not exists, project is not linked
-    if (['ENOENT', 'ENOTDIR'].includes(error.code)) {
+    if (
+      isErrnoException(err) &&
+      err.code &&
+      ['ENOENT', 'ENOTDIR'].includes(err.code)
+    ) {
       return null;
     }
 
     // link file can't be read
-    if (error.name === 'SyntaxError') {
+    if (isError(err) && err.name === 'SyntaxError') {
       throw new Error(
         `Project Settings could not be retrieved. To link your project again, remove the ${dir} directory.`
       );
     }
 
-    throw error;
+    throw err;
   }
 }
 
@@ -105,7 +113,7 @@ async function getOrgById(client: Client, orgId: string): Promise<Org | null> {
   }
 
   const user = await getUser(client);
-  if (user.uid !== orgId) return null;
+  if (user.id !== orgId) return null;
   return { type: 'user', id: orgId, slug: user.username };
 }
 
@@ -146,16 +154,21 @@ export async function getLinkedProject(
       getOrgById(client, link.orgId),
       getProjectByIdOrName(client, link.projectId, link.orgId),
     ]);
-  } catch (err) {
-    if (err?.status === 403) {
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.status === 403) {
       output.stopSpinner();
-      throw new NowBuildError({
-        message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
-          VERCEL_DIR
-        )} directory and deploy again.`,
-        code: 'PROJECT_UNAUTHORIZED',
-        link: 'https://vercel.link/cannot-load-project-settings',
-      });
+
+      if (err.missingToken) {
+        throw new InvalidToken();
+      } else {
+        throw new NowBuildError({
+          message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
+            VERCEL_DIR
+          )} directory and deploy again.`,
+          code: 'PROJECT_UNAUTHORIZED',
+          link: 'https://vercel.link/cannot-load-project-settings',
+        });
+      }
     }
 
     // Not a special case 403, we should still throw it
@@ -216,13 +229,13 @@ export async function linkFolderToProject(
 
   try {
     await ensureDir(join(path, VERCEL_DIR));
-  } catch (error) {
-    if (error.code === 'ENOTDIR') {
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOTDIR') {
       // folder couldn't be created because
       // we're deploying a static file
       return;
     }
-    throw error;
+    throw err;
   }
 
   await writeFile(
@@ -240,16 +253,20 @@ export async function linkFolderToProject(
   try {
     const gitIgnorePath = join(path, '.gitignore');
 
-    const gitIgnore = await readFile(gitIgnorePath, 'utf8').catch(() => null);
-    const EOL = gitIgnore && gitIgnore.includes('\r\n') ? '\r\n' : os.EOL;
+    let gitIgnore =
+      (await readFile(gitIgnorePath, 'utf8').catch(() => null)) ?? '';
+    const EOL = gitIgnore.includes('\r\n') ? '\r\n' : os.EOL;
+    let contentModified = false;
 
-    if (!gitIgnore || !gitIgnore.split(EOL).includes(VERCEL_DIR)) {
-      await writeFile(
-        gitIgnorePath,
-        gitIgnore
-          ? `${gitIgnore}${EOL}${VERCEL_DIR}${EOL}`
-          : `${VERCEL_DIR}${EOL}`
-      );
+    if (!gitIgnore.split(EOL).includes(VERCEL_DIR)) {
+      gitIgnore += `${
+        gitIgnore.endsWith(EOL) || gitIgnore.length === 0 ? '' : EOL
+      }${VERCEL_DIR}${EOL}`;
+      contentModified = true;
+    }
+
+    if (contentModified) {
+      await writeFile(gitIgnorePath, gitIgnore);
       isGitIgnoreUpdated = true;
     }
   } catch (error) {

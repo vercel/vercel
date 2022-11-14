@@ -1,9 +1,8 @@
 import chalk from 'chalk';
 import retry from 'async-retry';
-import { DomainAlreadyExists, InvalidDomain } from '../errors-ts';
+import { DomainAlreadyExists, InvalidDomain, isAPIError } from '../errors-ts';
 import { Domain } from '../../types';
 import Client from '../client';
-import wait from '../output/wait';
 
 type Response = {
   domain: Domain;
@@ -14,17 +13,11 @@ export default async function addDomain(
   domain: string,
   contextName: string
 ) {
-  const cancelWait = wait(
+  client.output.spinner(
     `Adding domain ${domain} under ${chalk.bold(contextName)}`
   );
-  try {
-    const addedDomain = await performAddRequest(client, domain);
-    cancelWait();
-    return addedDomain;
-  } catch (error) {
-    cancelWait();
-    throw error;
-  }
+  const addedDomain = await performAddRequest(client, domain);
+  return addedDomain;
 }
 
 async function performAddRequest(client: Client, domainName: string) {
@@ -36,16 +29,18 @@ async function performAddRequest(client: Client, domainName: string) {
           method: 'POST',
         });
         return domain;
-      } catch (error) {
-        if (error.code === 'invalid_name') {
-          return new InvalidDomain(domainName);
+      } catch (err: unknown) {
+        if (isAPIError(err)) {
+          if (err.code === 'invalid_name') {
+            return new InvalidDomain(domainName);
+          }
+
+          if (err.code === 'domain_already_exists') {
+            return new DomainAlreadyExists(domainName);
+          }
         }
 
-        if (error.code === 'domain_already_exists') {
-          return new DomainAlreadyExists(domainName);
-        }
-
-        throw error;
+        throw err;
       }
     },
     { retries: 5, maxTimeout: 8000 }

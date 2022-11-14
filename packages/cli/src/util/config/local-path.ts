@@ -7,12 +7,8 @@ import getArgs from '../../util/get-args';
 export default function getLocalPathConfig(prefix: string) {
   let customPath: string | undefined;
 
-  try {
-    const argv = getArgs(process.argv.slice(2), {});
-    customPath = argv['--local-config'];
-  } catch (_error) {
-    // args are optional so consume error
-  }
+  const argv = getArgs(process.argv.slice(2), {}, { permissive: true });
+  customPath = argv['--local-config'];
 
   // If `--local-config` flag was specified, then that takes priority
   if (customPath) {

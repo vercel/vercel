@@ -3,7 +3,6 @@ import chalk from 'chalk';
 import { Cert } from '../../types';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
-import wait from '../output/wait';
 import mapCertError from './map-cert-error';
 
 export default async function startCertOrder(
@@ -11,7 +10,7 @@ export default async function startCertOrder(
   cns: string[],
   context: string // eslint-disable-line
 ) {
-  const cancelWait = wait(
+  client.output.spinner(
     `Issuing a certificate for ${chalk.bold(cns.join(', '))}`
   );
   try {
@@ -22,19 +21,19 @@ export default async function startCertOrder(
         domains: cns,
       },
     });
-    cancelWait();
     return cert;
-  } catch (error) {
-    cancelWait();
-    if (error.code === 'cert_order_not_found') {
-      return new ERRORS.CertOrderNotFound(cns);
+  } catch (err: unknown) {
+    if (ERRORS.isAPIError(err)) {
+      if (err.code === 'cert_order_not_found') {
+        return new ERRORS.CertOrderNotFound(cns);
+      }
+
+      const mappedError = mapCertError(err, cns);
+      if (mappedError) {
+        return mappedError;
+      }
     }
 
-    const mappedError = mapCertError(error, cns);
-    if (mappedError) {
-      return mappedError;
-    }
-
-    throw error;
+    throw err;
   }
 }

@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import Client from '../../util/client';
 import { emoji } from '../../util/emoji';
 import getUser from '../../util/get-user';
-import getTeams from '../../util/get-teams';
+import getTeams from '../../util/teams/get-teams';
 import listInput from '../../util/input/list';
 import { Team, GlobalConfig } from '../../types';
 import { writeToConfigFile } from '../../util/config/files';
@@ -83,7 +83,7 @@ export default async function main(client: Client, desiredSlug?: string) {
     ];
 
     output.stopSpinner();
-    desiredSlug = await listInput({
+    desiredSlug = await listInput(client, {
       message: 'Switch to:',
       choices,
       eraseFinalAnswer: true,

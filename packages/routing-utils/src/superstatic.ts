@@ -51,6 +51,9 @@ export function convertRedirects(
   return redirects.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const hasSegments = collectHasSegments(r.has);
+    normalizeHasKeys(r.has);
+    normalizeHasKeys(r.missing);
+
     try {
       const loc = replaceSegments(segments, hasSegments, r.destination, true);
       let status: number;
@@ -70,6 +73,9 @@ export function convertRedirects(
       if (r.has) {
         route.has = r.has;
       }
+      if (r.missing) {
+        route.missing = r.missing;
+      }
       return route;
     } catch (e) {
       throw new Error(`Failed to parse redirect: ${JSON.stringify(r)}`);
@@ -77,16 +83,31 @@ export function convertRedirects(
   });
 }
 
-export function convertRewrites(rewrites: Rewrite[]): Route[] {
+export function convertRewrites(
+  rewrites: Rewrite[],
+  internalParamNames?: string[]
+): Route[] {
   return rewrites.map(r => {
     const { src, segments } = sourceToRegex(r.source);
     const hasSegments = collectHasSegments(r.has);
+    normalizeHasKeys(r.has);
+    normalizeHasKeys(r.missing);
+
     try {
-      const dest = replaceSegments(segments, hasSegments, r.destination);
+      const dest = replaceSegments(
+        segments,
+        hasSegments,
+        r.destination,
+        false,
+        internalParamNames
+      );
       const route: Route = { src, dest, check: true };
 
       if (r.has) {
         route.has = r.has;
+      }
+      if (r.missing) {
+        route.missing = r.missing;
       }
       return route;
     } catch (e) {
@@ -100,6 +121,9 @@ export function convertHeaders(headers: Header[]): Route[] {
     const obj: { [key: string]: string } = {};
     const { src, segments } = sourceToRegex(h.source);
     const hasSegments = collectHasSegments(h.has);
+    normalizeHasKeys(h.has);
+    normalizeHasKeys(h.missing);
+
     const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
     const indexes: { [k: string]: string } = {};
 
@@ -112,7 +136,7 @@ export function convertHeaders(headers: Header[]): Route[] {
     });
 
     h.headers.forEach(({ key, value }) => {
-      if (namedSegments.length > 0) {
+      if (namedSegments.length > 0 || hasSegments.length > 0) {
         if (key.includes(':')) {
           key = safelyCompile(key, indexes);
         }
@@ -130,6 +154,9 @@ export function convertHeaders(headers: Header[]): Route[] {
 
     if (h.has) {
       route.has = h.has;
+    }
+    if (h.missing) {
+      route.missing = h.missing;
     }
     return route;
   });
@@ -161,9 +188,10 @@ export function convertTrailingSlash(enable: boolean, status = 308): Route[] {
   return routes;
 }
 
-export function sourceToRegex(
-  source: string
-): { src: string; segments: string[] } {
+export function sourceToRegex(source: string): {
+  src: string;
+  segments: string[];
+} {
   const keys: Key[] = [];
   const r = pathToRegexp(source, keys, {
     strict: true,
@@ -183,14 +211,19 @@ export function sourceToRegex(
 
 const namedGroupsRegex = /\(\?<([a-zA-Z][a-zA-Z0-9]*)>/g;
 
-function collectHasSegments(has?: HasField) {
-  const hasSegments = new Set<string>();
-
-  for (const hasItem of has || []) {
+const normalizeHasKeys = (hasItems: HasField = []) => {
+  for (const hasItem of hasItems) {
     if ('key' in hasItem && hasItem.type === 'header') {
       hasItem.key = hasItem.key.toLowerCase();
     }
+  }
+  return hasItems;
+};
 
+export function collectHasSegments(has?: HasField) {
+  const hasSegments = new Set<string>();
+
+  for (const hasItem of has || []) {
     if (!hasItem.value && 'key' in hasItem) {
       hasSegments.add(hasItem.key);
     }
@@ -210,91 +243,123 @@ function collectHasSegments(has?: HasField) {
   return [...hasSegments];
 }
 
+const escapeSegment = (str: string, segmentName: string) =>
+  str.replace(new RegExp(`:${segmentName}`, 'g'), `__ESC_COLON_${segmentName}`);
+
+const unescapeSegments = (str: string) => str.replace(/__ESC_COLON_/gi, ':');
+
 function replaceSegments(
   segments: string[],
   hasItemSegments: string[],
   destination: string,
-  isRedirect?: boolean
+  isRedirect?: boolean,
+  internalParamNames?: string[]
 ): string {
-  const parsedDestination = parseUrl(destination, true);
+  const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
+  const canNeedReplacing =
+    (destination.includes(':') && namedSegments.length > 0) ||
+    hasItemSegments.length > 0 ||
+    !isRedirect;
+
+  if (!canNeedReplacing) {
+    return destination;
+  }
+  let escapedDestination = destination;
+
+  const indexes: { [k: string]: string } = {};
+  segments.forEach((name, index) => {
+    indexes[name] = toSegmentDest(index);
+    escapedDestination = escapeSegment(escapedDestination, name);
+  });
+
+  // 'has' matches override 'source' matches
+  hasItemSegments.forEach(name => {
+    indexes[name] = '$' + name;
+    escapedDestination = escapeSegment(escapedDestination, name);
+  });
+
+  const parsedDestination = parseUrl(escapedDestination, true);
   delete (parsedDestination as any).href;
   delete (parsedDestination as any).path;
   delete (parsedDestination as any).search;
+  delete (parsedDestination as any).host;
   // eslint-disable-next-line prefer-const
-  let { pathname, hash, query, ...rest } = parsedDestination;
-  pathname = pathname || '';
-  hash = hash || '';
+  let { pathname, hash, query, hostname, ...rest } = parsedDestination;
+  pathname = unescapeSegments(pathname || '');
+  hash = unescapeSegments(hash || '');
+  hostname = unescapeSegments(hostname || '');
 
-  const namedSegments = segments.filter(name => name !== UN_NAMED_SEGMENT);
+  let destParams = new Set<string>();
 
-  if (namedSegments.length > 0 || hasItemSegments.length > 0) {
-    const indexes: { [k: string]: string } = {};
-    segments.forEach((name, index) => {
-      indexes[name] = toSegmentDest(index);
-    });
+  const pathnameKeys: Key[] = [];
+  const hashKeys: Key[] = [];
+  const hostnameKeys: Key[] = [];
 
-    // 'has' matches override 'source' matches
-    hasItemSegments.forEach(name => {
-      indexes[name] = '$' + name;
-    });
-
-    let destParams = new Set<string>();
-
-    if (destination.includes(':')) {
-      const pathnameKeys: Key[] = [];
-      const hashKeys: Key[] = [];
-
-      try {
-        pathToRegexp(pathname, pathnameKeys);
-        pathToRegexp(hash || '', hashKeys);
-      } catch (_) {
-        // this is not fatal so don't error when failing to parse the
-        // params from the destination
-      }
-
-      destParams = new Set(
-        [...pathnameKeys, ...hashKeys]
-          .map(key => key.name)
-          .filter(val => typeof val === 'string') as string[]
-      );
-
-      pathname = safelyCompile(pathname, indexes, true);
-      hash = hash ? safelyCompile(hash, indexes, true) : null;
-
-      for (const [key, strOrArray] of Object.entries(query)) {
-        let value = Array.isArray(strOrArray) ? strOrArray[0] : strOrArray;
-        if (value) {
-          value = safelyCompile(value, indexes, true);
-        }
-        query[key] = value;
-      }
-    }
-
-    // We only add path segments to redirect queries if manually
-    // specified and only automatically add them for rewrites if one
-    // or more params aren't already used in the destination's path
-    const paramKeys = Object.keys(indexes);
-
-    if (!isRedirect && !paramKeys.some(param => destParams.has(param))) {
-      for (const param of paramKeys) {
-        if (!(param in query) && param !== UN_NAMED_SEGMENT) {
-          query[param] = indexes[param];
-        }
-      }
-    }
-
-    destination = formatUrl({
-      ...rest,
-      pathname,
-      query,
-      hash,
-    });
-
-    // url.format() escapes the dollar sign but it must be preserved for now-proxy
-    destination = destination.replace(/%24/g, '$');
+  try {
+    pathToRegexp(pathname, pathnameKeys);
+    pathToRegexp(hash || '', hashKeys);
+    pathToRegexp(hostname || '', hostnameKeys);
+  } catch (_) {
+    // this is not fatal so don't error when failing to parse the
+    // params from the destination
   }
 
-  return destination;
+  destParams = new Set(
+    [...pathnameKeys, ...hashKeys, ...hostnameKeys]
+      .map(key => key.name)
+      .filter(val => typeof val === 'string') as string[]
+  );
+
+  pathname = safelyCompile(pathname, indexes, true);
+  hash = hash ? safelyCompile(hash, indexes, true) : null;
+  hostname = hostname ? safelyCompile(hostname, indexes, true) : null;
+
+  for (const [key, strOrArray] of Object.entries(query)) {
+    if (Array.isArray(strOrArray)) {
+      query[key] = strOrArray.map(str =>
+        safelyCompile(unescapeSegments(str), indexes, true)
+      );
+    } else {
+      // TODO: handle strOrArray is undefined
+      query[key] = safelyCompile(
+        unescapeSegments(strOrArray as string),
+        indexes,
+        true
+      );
+    }
+  }
+
+  // We only add path segments to redirect queries if manually
+  // specified and only automatically add them for rewrites if one
+  // or more params aren't already used in the destination's path
+  const paramKeys = Object.keys(indexes);
+  const needsQueryUpdating =
+    // we do not consider an internal param since it is added automatically
+    !isRedirect &&
+    !paramKeys.some(
+      param =>
+        !(internalParamNames && internalParamNames.includes(param)) &&
+        destParams.has(param)
+    );
+
+  if (needsQueryUpdating) {
+    for (const param of paramKeys) {
+      if (!(param in query) && param !== UN_NAMED_SEGMENT) {
+        query[param] = indexes[param];
+      }
+    }
+  }
+
+  destination = formatUrl({
+    ...rest,
+    hostname,
+    pathname,
+    query,
+    hash,
+  });
+
+  // url.format() escapes the dollar sign but it must be preserved for now-proxy
+  return destination.replace(/%24/g, '$');
 }
 
 function safelyCompile(
@@ -344,7 +409,7 @@ function safelyCompile(
 
   // the value needs to start with a forward-slash to be compiled
   // correctly
-  return compile(`/${value}`, { validate: false })(indexes).substr(1);
+  return compile(`/${value}`, { validate: false })(indexes).slice(1);
 }
 
 function toSegmentDest(index: number): string {

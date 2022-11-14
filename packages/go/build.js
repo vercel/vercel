@@ -12,16 +12,7 @@ async function main() {
   // Build with `ncc`
   await execa(
     'ncc',
-    [
-      'build',
-      'index.ts',
-      '-e',
-      '@vercel/build-utils',
-      '-e',
-      '@now/build-utils',
-      '-o',
-      outDir,
-    ],
+    ['build', 'index.ts', '-e', '@vercel/build-utils', '-o', outDir],
     {
       stdio: 'inherit',
     }

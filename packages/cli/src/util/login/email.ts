@@ -4,24 +4,28 @@ import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';
 import verify from './verify';
 import executeLogin from './login';
-import { LoginParams } from './types';
+import Client from '../client';
+import { LoginResult } from './types';
+import { isAPIError } from '../errors-ts';
+import { errorToString } from '@vercel/error-utils';
 
 export default async function doEmailLogin(
-  params: LoginParams,
-  email: string
-): Promise<number | string> {
+  client: Client,
+  email: string,
+  ssoUserId?: string
+): Promise<LoginResult> {
   let securityCode;
   let verificationToken;
-  const { apiUrl, output } = params;
+  const { output } = client;
 
   output.spinner('Sending you an email');
 
   try {
-    const data = await executeLogin(apiUrl, email);
+    const data = await executeLogin(client, email);
     verificationToken = data.token;
     securityCode = data.securityCode;
-  } catch (err) {
-    output.error(err.message);
+  } catch (err: unknown) {
+    output.error(errorToString(err));
     return 1;
   }
 
@@ -38,19 +42,25 @@ export default async function doEmailLogin(
 
   output.spinner('Waiting for your confirmation');
 
-  let token = '';
-  while (!token) {
+  let result;
+  while (!result) {
     try {
       await sleep(ms('1s'));
-      token = await verify(email, verificationToken, params);
-    } catch (err) {
-      if (err.message !== 'Confirmation incomplete') {
-        output.error(err.message);
+      result = await verify(
+        client,
+        verificationToken,
+        email,
+        'Email',
+        ssoUserId
+      );
+    } catch (err: unknown) {
+      if (!isAPIError(err) || err.serverMessage !== 'Confirmation incomplete') {
+        output.error(errorToString(err));
         return 1;
       }
     }
   }
 
   output.success(`Email authentication complete for ${email}`);
-  return token;
+  return result;
 }

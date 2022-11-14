@@ -1,0 +1,86 @@
+.session-track-ionic {
+  color: var(--ion-color-primary);
+}
+
+.session-track-angular {
+  color: var(--ion-color-angular);
+}
+
+.session-track-communication {
+  color: var(--ion-color-communication);
+}
+
+.session-track-tooling {
+  color: var(--ion-color-tooling);
+}
+
+.session-track-services {
+  color: var(--ion-color-services);
+}
+
+.session-track-design {
+  color: var(--ion-color-design);
+}
+
+.session-track-workshop {
+  color: var(--ion-color-workshop);
+}
+
+.session-track-food {
+  color: var(--ion-color-food);
+}
+
+.session-track-documentation {
+  color: var(--ion-color-documentation);
+}
+
+.session-track-navigation {
+  color: var(--ion-color-navigation);
+}
+
+/* Favorite Icon
+ * --------------------------------------------------------
+ */
+
+.show-favorite {
+  position: relative;
+}
+
+.icon-heart-empty,
+.icon-heart {
+  --border-radius: 50%;
+  --padding-start: 0;
+  --padding-end: 0;
+
+  position: absolute;
+
+  top: 5px;
+  right: 5px;
+
+  width: 48px;
+  height: 48px;
+
+  font-size: 16px;
+
+  transition: transform 300ms ease;
+}
+
+.icon-heart-empty {
+  transform: scale(1);
+}
+
+.icon-heart {
+  transform: scale(0);
+}
+
+.show-favorite .icon-heart {
+  transform: scale(1);
+}
+
+.show-favorite .icon-heart-empty {
+  transform: scale(0);
+}
+
+h1 {
+  margin: 0;
+}

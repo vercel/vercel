@@ -1,0 +1,9 @@
+{
+  "name": "30-double-nested-workspaces-packages-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "a",
+    "b"
+  ]
+}

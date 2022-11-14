@@ -1,5 +1,6 @@
 import { Output } from '../output';
 import { Alias } from '../../types';
+
 import Client from '../client';
 
 export default async function findAliasByAliasOrId(
@@ -11,7 +12,6 @@ export default async function findAliasByAliasOrId(
     `/now/aliases/${encodeURIComponent(getSafeAlias(aliasOrId))}`
   );
 }
-
 function getSafeAlias(alias: string) {
   return alias
     .replace(/^https:\/\//i, '')

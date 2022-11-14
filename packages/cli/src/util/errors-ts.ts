@@ -5,6 +5,7 @@ import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
 import chalk from 'chalk';
+import { isError } from '@vercel/error-utils';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -15,6 +16,7 @@ export class APIError extends Error {
   status: number;
   serverMessage: string;
   link?: string;
+  slug?: string;
   action?: string;
   retryAfter: number | null | 'never';
   [key: string]: any;
@@ -42,6 +44,10 @@ export class APIError extends Error {
       }
     }
   }
+}
+
+export function isAPIError(v: unknown): v is APIError {
+  return isError(v) && 'status' in v;
 }
 
 /**
@@ -146,9 +152,7 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
     super({
       code: 'SOURCE_NOT_FOUND',
       meta: {},
-      message: `Not able to purchase. Please add a payment method using ${getCommandName(
-        `billing add`
-      )}.`,
+      message: `Not able to purchase. Please add a payment method using the dashboard.`,
     });
   }
 }
@@ -258,31 +262,6 @@ export type TXTVerificationError = {
   verificationRecord: string;
   values: string[];
 };
-
-/**
- * This error is returned when the domain is not verified by nameservers for wildcard alias.
- */
-export class DomainNsNotVerifiedForWildcard extends NowError<
-  'DOMAIN_NS_NOT_VERIFIED_FOR_WILDCARD',
-  {
-    domain: string;
-    nsVerification: NSVerificationError;
-  }
-> {
-  constructor({
-    domain,
-    nsVerification,
-  }: {
-    domain: string;
-    nsVerification: NSVerificationError;
-  }) {
-    super({
-      code: 'DOMAIN_NS_NOT_VERIFIED_FOR_WILDCARD',
-      meta: { domain, nsVerification },
-      message: `The domain ${domain} is not verified by nameservers for wildcard alias.`,
-    });
-  }
-}
 
 /**
  * Used when a domain is validated because we tried to add it to an account
@@ -447,7 +426,7 @@ export class UserAborted extends NowError<'USER_ABORTED', {}> {
     super({
       code: 'USER_ABORTED',
       meta: {},
-      message: `The user aborted the operation.`,
+      message: `The user canceled the operation.`,
     });
   }
 }
@@ -588,7 +567,7 @@ export class DeploymentNotFound extends NowError<
   'DEPLOYMENT_NOT_FOUND',
   { id: string; context: string }
 > {
-  constructor({ context, id = '' }: { context: string; id: string }) {
+  constructor({ context, id = '' }: { context: string; id?: string }) {
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
       meta: { id, context },

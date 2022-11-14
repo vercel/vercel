@@ -1,12 +1,5 @@
 {
-  "name": "eleventy-base-blog",
-  "version": "5.0.0",
-  "description": "A starter repository for a blog web site using the Eleventy static site generator.",
-  "scripts": {
-    "build": "eleventy",
-    "watch": "eleventy --watch",
-    "debug": "DEBUG=* eleventy"
-  },
+  "private": true,
   "repository": {
     "type": "git",
     "url": "git://github.com/11ty/eleventy-base-blog.git"
@@ -21,12 +14,20 @@
     "url": "https://github.com/11ty/eleventy-base-blog/issues"
   },
   "homepage": "https://github.com/11ty/eleventy-base-blog#readme",
+  "scripts": {
+    "build": "eleventy",
+    "watch": "eleventy --watch",
+    "serve": "eleventy --serve",
+    "start": "eleventy --serve",
+    "debug": "DEBUG=* eleventy"
+  },
   "devDependencies": {
-    "@11ty/eleventy": "^0.9.0",
-    "@11ty/eleventy-plugin-rss": "^1.0.7",
-    "@11ty/eleventy-plugin-syntaxhighlight": "^2.0.3",
-    "luxon": "^1.12.0",
-    "markdown-it": "^8.4.2",
-    "markdown-it-anchor": "^5.0.2"
+    "@11ty/eleventy": "^1.0.0",
+    "@11ty/eleventy-navigation": "^0.3.2",
+    "@11ty/eleventy-plugin-rss": "^1.1.2",
+    "@11ty/eleventy-plugin-syntaxhighlight": "^3.1.3",
+    "luxon": "^2.3.0",
+    "markdown-it": "^12.3.2",
+    "markdown-it-anchor": "^8.4.1"
   }
 }

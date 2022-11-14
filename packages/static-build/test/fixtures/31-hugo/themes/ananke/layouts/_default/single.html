@@ -1,0 +1,55 @@
+{{ define "header" }}
+   {{/* We can override any block in the baseof file be defining it in the template */}}
+  {{ partial "page-header.html" . }}
+{{ end }}
+
+{{ define "main" }}
+  {{ $section := .Site.GetPage "section" .Section }}
+  <article class="flex-l flex-wrap justify-between mw8 center ph3">
+
+    <header class="mt4 w-100">
+      <p class="f6 b helvetica tracked">
+          {{/*
+          CurrentSection allows us to use the section title instead of inferring from the folder.
+          https://gohugo.io/variables/page/#section-variables-and-methods
+          */}}
+        {{with .CurrentSection.Title }}{{. | upper }}{{end}}
+      </p>
+      <h1 class="f1 athelas mb1">
+        {{- .Title -}}
+      </h1>
+      {{/* Hugo uses Go's date formatting is set by example. Here are two formats */}}
+      <time class="f6 mv4 dib tracked" datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+        {{- .Date.Format "January 2, 2006" -}}
+      </time>
+      {{/*
+          Show "reading time" and "word count" but only if one of the following are true:
+          1) A global config `params` value is set `show_reading_time = true`
+          2) A section front matter value is set `show_reading_time = true`
+          3) A page front matter value is set `show_reading_time = true`
+        */}}
+      {{ if (or (eq (.Param "show_reading_time") true) (eq $section.Params.show_reading_time true) )}}
+        <span class="f6 mv4 dib tracked"> - {{ .ReadingTime}} minutes read</span>
+        <span class="f6 mv4 dib tracked"> - {{ .WordCount}} words</span>
+      {{ end }}
+    </header>
+
+    <section class="nested-copy-line-height lh-copy serif f4 nested-links nested-img mid-gray pr4-l w-two-thirds-l">
+      {{- .Content -}}
+      {{- partial "tags.html" . -}}
+      <div class="mt6">
+      {{ if .Site.DisqusShortname }}
+        {{ template "_internal/disqus.html" . }}
+      {{ end }}
+      {{ if .Site.Params.commentoEnable }}
+        {{- partial "commento.html" . -}}
+      {{ end }}
+      </div>
+    </section>
+
+    <aside class="w-30-l mt6-l">
+      {{- partial "menu-contextual.html" . -}}
+    </aside>
+
+  </article>
+{{ end }}

@@ -1,15 +1,14 @@
 import bytes from 'bytes';
-import Progress from 'progress';
 import chalk from 'chalk';
 import {
+  ArchiveFormat,
   createDeployment,
   DeploymentOptions,
   VercelClientOptions,
 } from '@vercel/client';
 import { Output } from '../output';
-// @ts-ignore
+import { progress } from '../output/progress';
 import Now from '../../util';
-import { VercelConfig } from '../dev/types';
 import { Org } from '../../types';
 import ua from '../ua';
 import { linkFolderToProject } from '../projects/link';
@@ -33,6 +32,7 @@ export default async function processDeployment({
   cwd,
   projectName,
   isSettingUpProject,
+  archive,
   skipAutoDetectionConfirmation,
   ...args
 }: {
@@ -43,14 +43,16 @@ export default async function processDeployment({
   uploadStamp: () => string;
   deployStamp: () => string;
   quiet: boolean;
-  nowConfig?: VercelConfig;
   force?: boolean;
   withCache?: boolean;
   org: Org;
+  prebuilt: boolean;
   projectName: string;
   isSettingUpProject: boolean;
+  archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
   cwd?: string;
+  rootDirectory?: string;
 }) {
   let {
     now,
@@ -60,65 +62,92 @@ export default async function processDeployment({
     deployStamp,
     force,
     withCache,
-    nowConfig,
     quiet,
+    prebuilt,
+    rootDirectory,
   } = args;
 
   const { debug } = output;
-  let bar: Progress | null = null;
 
   const { env = {} } = requestBody;
+
+  const token = now._token;
+  if (!token) {
+    throw new Error('Missing authentication token');
+  }
 
   const clientOptions: VercelClientOptions = {
     teamId: org.type === 'team' ? org.id : undefined,
     apiUrl: now._apiUrl,
-    token: now._token,
+    token,
     debug: now._debug,
     userAgent: ua,
     path: paths[0],
     force,
     withCache,
+    prebuilt,
+    rootDirectory,
     skipAutoDetectionConfirmation,
+    archive,
   };
 
-  output.spinner(
-    isSettingUpProject
-      ? 'Setting up project'
-      : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`,
-    0
-  );
+  const deployingSpinnerVal = isSettingUpProject
+    ? 'Setting up project'
+    : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`;
+  output.spinner(deployingSpinnerVal, 0);
 
   // collect indications to show the user once
   // the deployment is done
   const indications = [];
 
   try {
-    for await (const event of createDeployment(
-      clientOptions,
-      requestBody,
-      nowConfig
-    )) {
+    for await (const event of createDeployment(clientOptions, requestBody)) {
       if (['tip', 'notice', 'warning'].includes(event.type)) {
         indications.push(event);
       }
 
       if (event.type === 'file-count') {
-        debug(
-          `Total files ${event.payload.total.size}, ${event.payload.missing.length} changed`
-        );
+        const { total, missing, uploads } = event.payload;
+        debug(`Total files ${total.size}, ${missing.length} changed`);
 
-        const missingSize = event.payload.missing
-          .map((sha: string) => event.payload.total.get(sha).data.length)
+        const missingSize = missing
+          .map((sha: string) => total.get(sha).data.length)
           .reduce((a: number, b: number) => a + b, 0);
+        const totalSizeHuman = bytes.format(missingSize, { decimalPlaces: 1 });
 
-        output.stopSpinner();
-        bar = new Progress(`${chalk.gray('>')} Upload [:bar] :percent :etas`, {
-          width: 20,
-          complete: '=',
-          incomplete: '',
-          total: missingSize,
-          clear: true,
-        });
+        // When stderr is not a TTY then we only want to
+        // print upload progress in 25% increments
+        let nextStep = 0;
+        const stepSize = now._client.stderr.isTTY ? 0 : 0.25;
+
+        const updateProgress = () => {
+          const uploadedBytes = uploads.reduce((acc: number, e: any) => {
+            return acc + e.bytesUploaded;
+          }, 0);
+
+          const bar = progress(uploadedBytes, missingSize);
+          if (!bar) {
+            output.spinner(deployingSpinnerVal, 0);
+          } else {
+            const uploadedHuman = bytes.format(uploadedBytes, {
+              decimalPlaces: 1,
+              fixedDecimals: true,
+            });
+            const percent = uploadedBytes / missingSize;
+            if (percent >= nextStep) {
+              output.spinner(
+                `Uploading ${chalk.reset(
+                  `[${bar}] (${uploadedHuman}/${totalSizeHuman})`
+                )}`,
+                0
+              );
+              nextStep += stepSize;
+            }
+          }
+        };
+
+        uploads.forEach((e: any) => e.on('progress', updateProgress));
+        updateProgress();
       }
 
       if (event.type === 'file-uploaded') {
@@ -127,17 +156,9 @@ export default async function processDeployment({
             event.payload.file.data.length
           )})`
         );
-
-        if (bar) {
-          bar.tick(event.payload.file.data.length);
-        }
       }
 
       if (event.type === 'created') {
-        if (bar && !bar.complete) {
-          bar.tick(bar.total + 1);
-        }
-
         await linkFolderToProject(
           output,
           cwd || paths[0],
@@ -149,7 +170,6 @@ export default async function processDeployment({
           org.slug
         );
 
-        // @ts-ignore
         now.url = event.payload.url;
 
         output.stopSpinner();
@@ -175,8 +195,24 @@ export default async function processDeployment({
         return event.payload;
       }
 
-      if (event.type === 'ready') {
+      // If `checksState` is present, we can only continue to "Completing" if the checks finished,
+      // otherwise we might show "Completing" before "Running Checks".
+      if (
+        event.type === 'ready' &&
+        (event.payload.checksState
+          ? event.payload.checksState === 'completed'
+          : true)
+      ) {
         output.spinner('Completing', 0);
+      }
+
+      if (event.type === 'checks-running') {
+        output.spinner('Running Checks', 0);
+      }
+
+      if (event.type === 'checks-conclusion-failed') {
+        output.stopSpinner();
+        return event.payload;
       }
 
       // Handle error events

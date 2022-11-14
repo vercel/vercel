@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/redwood",
+      "config": {
+        "zeroConfig": true,
+        "installCommand": "node install.js && yarn"
+      }
+    }
+  ],
+  "probes": [
+    { "path": "/", "mustContain": "<div id=\"redwood-app\">" },
+    {
+      "path": "/.redwood/functions/graphql",
+      "headers": { "Accept": "text/html" },
+      "mustContain": "<title>GraphQL Playground</title>"
+    },
+    {
+      "path": "/.redwood/functions/graphql",
+      "method": "POST",
+      "headers": { "Accept": "application/json" },
+      "body": { "query": "{ redwood { version } }" },
+      "mustContain": "0.16.0"
+    },
+    { "path": "/install.txt", "mustContain": "installCommand." }
+  ]
+}

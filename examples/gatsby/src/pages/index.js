@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet';
 import '../styles/index.css';
 
 function Index() {
@@ -12,12 +11,10 @@ function Index() {
     }
     getDate();
   }, []);
+
   return (
     <main>
-      <Helmet>
-        <title>Gatsby + Node.js (TypeScript) API</title>
-      </Helmet>
-      <h1>Gatsby + Node.js (TypeScript) API</h1>
+      <h1>Gatsby + API Route</h1>
       <h2>
         Deployed with{' '}
         <a
@@ -40,14 +37,14 @@ function Index() {
         is a <a href="https://www.gatsbyjs.org/">Gatsby</a> app with two
         directories, <code>/src</code> for static content and <code>/api</code>{' '}
         which contains a serverless{' '}
-        <a href="https://nodejs.org/en/">Node.js (TypeScript)</a> function. See{' '}
+        <a href="https://nodejs.org/en/">Node.js</a> function. See{' '}
         <a href="/api/date">
-          <code>api/date</code> for the Date API with Node.js (TypeScript)
+          <code>api/date</code> for the Date API with Node.js
         </a>
         .
       </p>
       <br />
-      <h2>The date according to Node.js (TypeScript) is:</h2>
+      <h2>The date according to Node.js is:</h2>
       <p>{date ? date : 'Loading date...'}</p>
     </main>
   );

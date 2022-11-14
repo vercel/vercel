@@ -1,6 +1,7 @@
+import { bold } from 'chalk';
+import inquirer from 'inquirer';
 import { EventEmitter } from 'events';
-import { URLSearchParams } from 'url';
-import { parse as parseUrl } from 'url';
+import { URL } from 'url';
 import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
@@ -11,10 +12,17 @@ import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
 import { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
-import { AuthConfig, GlobalConfig, JSONObject } from '../types';
+import type {
+  AuthConfig,
+  GlobalConfig,
+  JSONObject,
+  Stdio,
+  ReadableTTY,
+  WritableTTY,
+} from '../types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
-import { bold } from 'chalk';
+import { normalizeError } from '@vercel/error-utils';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -28,35 +36,45 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
   accountId?: string;
 }
 
-export interface ClientOptions {
+export interface ClientOptions extends Stdio {
   argv: string[];
   apiUrl: string;
   authConfig: AuthConfig;
   output: Output;
   config: GlobalConfig;
-  localConfig: VercelConfig;
+  localConfig?: VercelConfig;
 }
 
-const isJSONObject = (v: any): v is JSONObject => {
+export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
 
-export default class Client extends EventEmitter {
+export default class Client extends EventEmitter implements Stdio {
   argv: string[];
   apiUrl: string;
   authConfig: AuthConfig;
+  stdin: ReadableTTY;
+  stdout: WritableTTY;
+  stderr: WritableTTY;
   output: Output;
   config: GlobalConfig;
-  localConfig: VercelConfig;
+  localConfig?: VercelConfig;
+  prompt!: inquirer.PromptModule;
+  private requestIdCounter: number;
 
   constructor(opts: ClientOptions) {
     super();
     this.argv = opts.argv;
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
+    this.stdin = opts.stdin;
+    this.stdout = opts.stdout;
+    this.stderr = opts.stderr;
     this.output = opts.output;
     this.config = opts.config;
     this.localConfig = opts.localConfig;
+    this.requestIdCounter = 1;
+    this._createPromptModule();
   }
 
   retry<T>(fn: RetryFunction<T>, { retries = 3, maxTimeout = Infinity } = {}) {
@@ -67,45 +85,45 @@ export default class Client extends EventEmitter {
     });
   }
 
-  _fetch(_url: string, opts: FetchOptions = {}) {
-    const parsedUrl = parseUrl(_url, true);
-    const apiUrl = parsedUrl.host
-      ? `${parsedUrl.protocol}//${parsedUrl.host}`
-      : '';
+  private _fetch(_url: string, opts: FetchOptions = {}) {
+    const url = new URL(_url, this.apiUrl);
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
-      const query = new URLSearchParams(parsedUrl.query);
-
       if (opts.accountId) {
         if (opts.accountId.startsWith('team_')) {
-          query.set('teamId', opts.accountId);
+          url.searchParams.set('teamId', opts.accountId);
         } else {
-          query.delete('teamId');
+          url.searchParams.delete('teamId');
         }
       } else if (opts.useCurrentTeam !== false && this.config.currentTeam) {
-        query.set('teamId', this.config.currentTeam);
+        url.searchParams.set('teamId', this.config.currentTeam);
       }
-
-      _url = `${apiUrl}${parsedUrl.pathname}?${query}`;
     }
 
     const headers = new Headers(opts.headers);
-    headers.set('authorization', `Bearer ${this.authConfig.token}`);
     headers.set('user-agent', ua);
+    if (this.authConfig.token) {
+      headers.set('authorization', `Bearer ${this.authConfig.token}`);
+    }
 
     let body;
     if (isJSONObject(opts.body)) {
       body = JSON.stringify(opts.body);
-      headers.set('content-type', 'application/json; charset=utf8');
+      headers.set('content-type', 'application/json; charset=utf-8');
     } else {
       body = opts.body;
     }
 
-    const url = `${apiUrl ? '' : this.apiUrl}${_url}`;
-    return this.output.time(
-      `${opts.method || 'GET'} ${url} ${JSON.stringify(opts.body) || ''}`,
-      fetch(url, { ...opts, headers, body })
-    );
+    const requestId = this.requestIdCounter++;
+    return this.output.time(res => {
+      if (res) {
+        return `#${requestId} ← ${res.status} ${
+          res.statusText
+        }: ${res.headers.get('x-vercel-id')}`;
+      } else {
+        return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
+      }
+    }, fetch(url, { ...opts, headers, body }));
   }
 
   fetch(url: string, opts: { json: false }): Promise<Response>;
@@ -114,16 +132,21 @@ export default class Client extends EventEmitter {
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
 
-      printIndications(res);
+      printIndications(this, res);
 
       if (!res.ok) {
         const error = await responseError(res);
 
         if (isSAMLError(error)) {
-          // A SAML error means the token is expired, or is not
-          // designated for the requested team, so the user needs
-          // to re-authenticate
-          await this.reauthenticate(error);
+          try {
+            // A SAML error means the token is expired, or is not
+            // designated for the requested team, so the user needs
+            // to re-authenticate
+            await this.reauthenticate(error);
+          } catch (reauthError) {
+            // there's no sense in retrying
+            return bail(normalizeError(reauthError));
+          }
         } else if (res.status >= 400 && res.status < 500) {
           // Any other 4xx should bail without retrying
           return bail(error);
@@ -160,14 +183,21 @@ export default class Client extends EventEmitter {
           `Failed to re-authenticate for ${bold(error.scope)} scope`
         );
       }
-      process.exit(1);
+      throw error;
     }
 
-    this.authConfig.token = result;
+    this.authConfig.token = result.token;
     writeToAuthConfigFile(this.authConfig);
   });
 
   _onRetry = (error: Error) => {
     this.output.debug(`Retrying: ${error}\n${error.stack}`);
   };
+
+  _createPromptModule() {
+    this.prompt = inquirer.createPromptModule({
+      input: this.stdin as NodeJS.ReadStream,
+      output: this.stderr as NodeJS.WriteStream,
+    });
+  }
 }

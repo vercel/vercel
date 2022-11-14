@@ -1,4 +1,4 @@
-import { join, dirname } from 'path';
+import { join, dirname, relative } from 'path';
 import execa from 'execa';
 import {
   ensureDir,
@@ -8,16 +8,16 @@ import {
   readFile,
   writeFile,
 } from 'fs-extra';
-import buildUtils from './build-utils';
-import { BuildOptions } from '@vercel/build-utils';
-const {
+import {
+  BuildOptions,
   download,
   getWriteableDirectory,
   glob,
   createLambda,
   debug,
   walkParentDirs,
-} = buildUtils;
+  cloneEnv,
+} from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
 async function matchPaths(
@@ -48,31 +48,29 @@ async function bundleInstall(
 ) {
   debug(`running "bundle install --deployment"...`);
   const bundleAppConfig = await getWriteableDirectory();
-
-  try {
-    await execa(
-      bundlePath,
-      [
-        'install',
-        '--deployment',
-        '--gemfile',
-        gemfilePath,
-        '--path',
-        bundleDir,
-      ],
-      {
-        stdio: 'pipe',
-        env: {
-          BUNDLE_SILENCE_ROOT_WARNING: '1',
-          BUNDLE_APP_CONFIG: bundleAppConfig,
-          BUNDLE_JOBS: '4',
-        },
-      }
+  const gemfileContent = await readFile(gemfilePath, 'utf8');
+  if (gemfileContent.includes('ruby "~> 2.7.x"')) {
+    // Gemfile contains "2.7.x" which will cause an error message:
+    // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
+    // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
+    // We must correct to the actual version in the build container.
+    await writeFile(
+      gemfilePath,
+      gemfileContent.replace('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"')
     );
-  } catch (err) {
-    debug(`failed to run "bundle install --deployment"...`);
-    throw err;
   }
+  await execa(
+    bundlePath,
+    ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
+    {
+      stdio: 'pipe',
+      env: cloneEnv(process.env, {
+        BUNDLE_SILENCE_ROOT_WARNING: '1',
+        BUNDLE_APP_CONFIG: bundleAppConfig,
+        BUNDLE_JOBS: '4',
+      }),
+    }
+  );
 }
 
 export const version = 3;
@@ -86,10 +84,12 @@ export async function build({
 }: BuildOptions) {
   await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
+  const gemfileName = 'Gemfile';
+
   const gemfilePath = await walkParentDirs({
     base: workPath,
     start: entrypointFsDirname,
-    filename: 'Gemfile',
+    filename: gemfileName,
   });
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
@@ -131,15 +131,17 @@ export async function build({
         'did not find a vendor directory but found a Gemfile, bundling gems...'
       );
 
-      // try installing. this won't work if native extesions are required.
-      // if that's the case, gems should be vendored locally before deploying.
-      try {
+      const fileAtRoot = relative(workPath, gemfilePath) === gemfileName;
+
+      // If the `Gemfile` is located in the Root Directory of the project and
+      // the new File System API is used (`avoidTopLevelInstall`), the Install Command
+      // will have already installed its dependencies, so we don't need to do it again.
+      if (meta.avoidTopLevelInstall && fileAtRoot) {
+        debug('Skipping `bundle install` — already handled by Install Command');
+      } else {
+        // try installing. this won't work if native extesions are required.
+        // if that's the case, gems should be vendored locally before deploying.
         await bundleInstall(bundlerPath, bundleDir, gemfilePath);
-      } catch (err) {
-        debug(
-          'unable to build gems from Gemfile. vendor the gems locally with "bundle install --deployment" and retry.'
-        );
-        throw err;
       }
     }
   } else {
