@@ -54,10 +54,10 @@ export async function downloadFile(
 
     await symlink(target, fsPath);
     return FileFsRef.fromFsPath({ mode, fsPath });
-  } else {
-    const stream = file instanceof FileFsRef ? await file.toStreamAsync() : file.toStream();
-    return FileFsRef.fromStream({ mode, stream, fsPath });
   }
+
+  const stream = file instanceof FileFsRef ? await file.toStreamAsync() : file.toStream();
+  return FileFsRef.fromStream({ mode, stream, fsPath });
 }
 
 async function removeFile(basePath: string, fileMatched: string) {
