@@ -124,7 +124,9 @@ export async function setMonorepoDefaultSettings(
       'installCommand',
       `cd ${relativeToRoot} && ${packageManager} install`
     );
-  } else if (monorepoManager === 'rush') {
+  }
+  // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better
+  /* else if (monorepoManager === 'rush') {
     setCommand(
       'buildCommand',
       `node ${relativeToRoot}/common/scripts/install-run-rush.js build --to ${projectName}`
@@ -133,5 +135,5 @@ export async function setMonorepoDefaultSettings(
       'installCommand',
       `node ${relativeToRoot}/common/scripts/install-run-rush.js install`
     );
-  }
+  } */
 }

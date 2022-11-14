@@ -8,7 +8,7 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import { setupFixture } from '../../helpers/setup-fixture';
-import execa from 'execa';
+// import execa from 'execa';
 
 jest.setTimeout(ms('1 minute'));
 
@@ -1153,6 +1153,11 @@ describe('build', () => {
     });
   });
 
+  /**
+   * TODO (@Ethan-Arrowood) - After shipping support for turbo and nx, revisit rush support
+   * Previously, rush tests were too flaky and consistently would timeout beyone the excessive
+   * timeout window granted for these tests. Maybe we are doing something wrong.
+   */
   describe('monorepo-detection', () => {
     const setupMonorepoDetectionFixture = (fixture: string) => {
       const cwd = setupFixture(`commands/build/monorepo-detection/${fixture}`);
@@ -1167,7 +1172,7 @@ describe('build', () => {
       'nx-package-config',
       'nx-project-and-package-config-1',
       'nx-project-and-package-config-2',
-      'rush',
+      // 'rush',
     ])('fixture: %s', fixture => {
       const monorepoManagerMap: Record<
         string,
@@ -1183,13 +1188,13 @@ describe('build', () => {
           buildCommand: 'cd ../.. && npx nx build app-1',
           installCommand: 'cd ../.. && yarn install',
         },
-        rush: {
-          name: 'Rush',
-          buildCommand:
-            'node ../../common/scripts/install-run-rush.js build --to app-1',
-          installCommand:
-            'node ../../common/scripts/install-run-rush.js install',
-        },
+        // rush: {
+        //   name: 'Rush',
+        //   buildCommand:
+        //     'node ../../common/scripts/install-run-rush.js build --to app-1',
+        //   installCommand:
+        //     'node ../../common/scripts/install-run-rush.js install',
+        // },
       };
 
       const { name, buildCommand, installCommand } =
@@ -1200,12 +1205,12 @@ describe('build', () => {
           try {
             const cwd = setupMonorepoDetectionFixture(fixture);
 
-            if (fixture === 'rush') {
-              await execa('npx', ['@microsoft/rush', 'update'], {
-                cwd,
-                reject: false,
-              });
-            }
+            // if (fixture === 'rush') {
+            //   await execa('npx', ['@microsoft/rush', 'update'], {
+            //     cwd,
+            //     reject: false,
+            //   });
+            // }
 
             const exitCode = await build(client);
             expect(exitCode).toBe(0);
@@ -1231,12 +1236,12 @@ describe('build', () => {
           try {
             const cwd = setupMonorepoDetectionFixture(fixture);
 
-            if (fixture === 'rush') {
-              await execa('npx', ['@microsoft/rush', 'update'], {
-                cwd,
-                reject: false,
-              });
-            }
+            // if (fixture === 'rush') {
+            //   await execa('npx', ['@microsoft/rush', 'update'], {
+            //     cwd,
+            //     reject: false,
+            //   });
+            // }
 
             const projectJSONPath = join(cwd, '.vercel/project.json');
             const projectJSON = JSON.parse(
@@ -1277,12 +1282,12 @@ describe('build', () => {
           try {
             const cwd = setupMonorepoDetectionFixture(fixture);
 
-            if (fixture === 'rush') {
-              await execa('npx', ['@microsoft/rush', 'update'], {
-                cwd,
-                reject: false,
-              });
-            }
+            // if (fixture === 'rush') {
+            //   await execa('npx', ['@microsoft/rush', 'update'], {
+            //     cwd,
+            //     reject: false,
+            //   });
+            // }
 
             await fs.writeFile(
               join(cwd, 'packages/app-1/vercel.json'),
