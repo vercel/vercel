@@ -58,6 +58,8 @@ import { sortBuilders } from '../util/build/sort-builders';
 import { toEnumerableError } from '../util/error';
 import { validateConfig } from '../util/validate-config';
 
+import { setMonorepoDefaultSettings } from '../util/build/monorepo';
+
 type BuildResult = BuildResultV2 | BuildResultV3;
 
 interface SerializedBuilder extends Builder {
@@ -99,7 +101,7 @@ const help = () => {
 
     ${chalk.dim('Examples:')}
 
-    ${chalk.gray('–')} Build the project
+    ${chalk.gray('-')} Build the project
 
       ${chalk.cyan(`$ ${cli.name} build`)}
       ${chalk.cyan(`$ ${cli.name} build --cwd ./path-to-project`)}
@@ -271,6 +273,7 @@ async function doBuild(
   outputDir: string
 ): Promise<void> {
   const { output } = client;
+
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const [pkg, vercelConfig, nowConfig] = await Promise.all([
@@ -300,6 +303,8 @@ async function doBuild(
     ...project.settings,
     ...pickOverrides(localConfig),
   };
+
+  await setMonorepoDefaultSettings(cwd, workPath, projectSettings, output);
 
   // Get a list of source files
   const files = (await getFiles(workPath, client)).map(f =>

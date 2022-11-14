@@ -19,6 +19,7 @@
     "test-unit": "yarn test"
   },
   "dependencies": {
+    "@vercel/error-utils": "1.0.2",
     "@vercel/frameworks": "1.1.12",
     "@vercel/routing-utils": "2.1.3",
     "glob": "8.0.3",
