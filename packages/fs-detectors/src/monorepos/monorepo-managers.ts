@@ -76,8 +76,7 @@ export const monorepoManagers: Array<
       },
     },
   },
-  // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better
-  /* {
+  {
     name: 'Rush',
     slug: 'rush',
     logo: 'https://api-frameworks.vercel.sh/monorepo-logos/rush.svg',
@@ -103,7 +102,7 @@ export const monorepoManagers: Array<
         value: null,
       },
     },
-  }, */
+  },
 ];
 
 export default monorepoManagers;
