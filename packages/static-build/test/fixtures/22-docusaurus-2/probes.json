@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "My Site" },
+    { "path": "/docs/doc1", "mustContain": "Style Guide" }
+  ]
+}

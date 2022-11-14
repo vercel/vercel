@@ -1,0 +1,13 @@
+{
+  "name": "nextjs-src-dir",
+  "license": "MIT",
+  "scripts": {
+    "dev": "next",
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "^9.1.1",
+    "react": "^16.7.0",
+    "react-dom": "^16.7.0"
+  }
+}

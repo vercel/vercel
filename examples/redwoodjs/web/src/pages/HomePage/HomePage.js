@@ -1,4 +1,6 @@
-export default () => (
+import { Link, routes } from '@redwoodjs/router'
+
+const HomePage = () => (
   <main>
     <style
       dangerouslySetInnerHTML={{
@@ -36,9 +38,16 @@ export default () => (
       }}
     />
     <section>
-      <h1>
-        <span>Welcome to RedwoodJS!</span>
-      </h1>
+      <h1>Welcome to RedwoodJS!</h1>
+      <p>
+        Find me in <code>./web/src/pages/HomePage/HomePage.js</code>
+      </p>
+      <p>
+        My default route is named <code>home</code>, link to me with `
+        <Link to={routes.home()}>Home</Link>`
+      </p>
     </section>
   </main>
 )
+
+export default HomePage

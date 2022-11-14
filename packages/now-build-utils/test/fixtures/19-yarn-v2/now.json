@@ -1,5 +1,0 @@
-{
-  "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/static-build" }],
-  "probes": [{ "path": "/", "mustContain": "Svelte app" }]
-}

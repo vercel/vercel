@@ -1,0 +1,10 @@
+[
+  {
+    "src": "/sleeper",
+    "dest": "/.vercel/functions/sleeper"
+  },
+  {
+    "src": "/go-site",
+    "dest": "/.vercel/functions/go-site"
+  }
+]

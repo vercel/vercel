@@ -1,8 +1,0 @@
-{
-  "name": "15-yarn-ignore-engines",
-  "version": "1.0.0",
-  "main": "index.js",
-  "dependencies": {
-    "@google-cloud/scheduler": "0.3.0"
-  }
-}

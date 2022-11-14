@@ -1,0 +1,5 @@
+README.md
+.nuxt
+node_modules
+*.log
+.output

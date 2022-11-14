@@ -1,0 +1,7 @@
+{
+  "name": "09-build-output-v3",
+  "private": true,
+  "scripts": {
+    "build": "node build.js"
+  }
+}

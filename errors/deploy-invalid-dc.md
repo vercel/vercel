@@ -2,8 +2,8 @@
 
 #### Why This Error Occurred
 
-When supplying `regions` or `scale` settings, you
-used an unknown or invalid dc identifier.
+When supplying `regions` configuration, you
+used an unknown or invalid DC identifier.
 
 #### Possible Ways to Fix It
 
@@ -19,7 +19,7 @@ and DCs have to be in _lowercase_.
 - `gru`
 - `iad`
 
-In `now-cli`, they currently are transformed to
+In Vercel CLI, they currently are transformed to
 DC identifiers before being sent to our APIs.
 
 **Valid DC identifiers**:

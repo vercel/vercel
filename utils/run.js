@@ -3,20 +3,22 @@ const { join, relative, sep } = require('path');
 
 // The order matters because we must build dependencies first
 const allPackages = [
+  'routing-utils',
   'frameworks',
-  'now-routing-utils',
-  'now-build-utils',
-  'now-cgi',
-  'now-client',
-  'now-node-bridge',
-  'now-next',
-  'now-node',
+  'fs-detectors',
+  'build-utils',
+  'static-config',
+  'client',
+  'next',
+  'node-bridge',
+  'node',
+  'go',
+  'python',
+  'ruby',
   'redwood',
-  'now-static-build',
-  'now-go',
-  'now-python',
-  'now-ruby',
-  'now-cli',
+  'remix',
+  'static-build',
+  'cli',
 ];
 
 process.chdir(join(__dirname, '..'));
@@ -36,18 +38,16 @@ async function main() {
   } else {
     const branch =
       process.env.GITHUB_HEAD_REF ||
-      execSync('git branch --show-current')
-        .toString()
-        .trim();
+      execSync('git branch --show-current').toString().trim();
 
-    const gitPath = branch === 'master' ? 'HEAD~1' : 'origin/master...HEAD';
+    const gitPath = branch === 'main' ? 'HEAD~1' : 'origin/main...HEAD';
     const diff = execSync(`git diff ${gitPath} --name-only`).toString();
 
     const changed = diff
       .split('\n')
       .filter(item => Boolean(item) && item.startsWith('packages'))
       .map(item => relative('packages', item).split(sep)[0])
-      .concat('now-cli'); // Always run tests for Now CLI
+      .concat('cli'); // Always run tests for Vercel CLI
 
     modifiedPackages = new Set(changed);
 
@@ -84,6 +84,15 @@ function runScript(pkgName, script) {
         cwd,
         stdio: 'inherit',
         shell: true,
+        env: {
+          // Only add this for unit tests, as it's not relevant to others.
+          ...(script === 'test-unit'
+            ? {
+                NODE_OPTIONS: '--max-old-space-size=4096',
+              }
+            : null),
+          ...process.env,
+        },
       });
       child.on('error', reject);
       child.on('close', (code, signal) => {
@@ -92,8 +101,9 @@ function runScript(pkgName, script) {
         }
         reject(
           new Error(
-            `[${pkgName}] Exited script "${script}" with code ${code ||
-              signal}.`
+            `[${pkgName}] Exited script "${script}" with code ${
+              code || signal
+            }.`
           )
         );
       });

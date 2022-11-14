@@ -2,7 +2,7 @@
 
 #### Why This Error Occurred
 
-This error occurs when you have your application is not configured for Serverless Next.js build output.
+This error occurs when your application is not configured for Serverless Next.js build output.
 
 #### Possible Ways to Fix It
 

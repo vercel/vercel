@@ -39,6 +39,7 @@ export default () => (
       <h1>
         <span>About RedwoodJS</span>
       </h1>
+      <p>{process.env.REDWOOD_ENV_VERCEL_URL}</p>
     </section>
   </main>
 )

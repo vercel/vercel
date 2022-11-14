@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "15-preact" },
+    { "path": "/iudieufwunifiwwnuwfuw", "mustContain": "15-preact" }
+  ]
+}

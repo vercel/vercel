@@ -29,7 +29,7 @@ if (!packageDir) {
 
 const pkgJsonPath = join(packagesDir, packageDir, 'package.json');
 const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
-const oldName = pkg.name;
+const vcName = pkg.name;
 const version = pkg.version;
 
 if (pkg.name === '@vercel/client') {
@@ -43,12 +43,12 @@ if (pkg.name === '@vercel/client') {
   }
 }
 
-const newName = pkg.name;
-console.error(`Updated package name: "${oldName}" -> "${newName}"`);
+const nowName = pkg.name;
+console.error(`Updated package name: "${vcName}" -> "${nowName}"`);
 
 fs.writeFileSync(pkgJsonPath, `${JSON.stringify(pkg, null, 2)}\n`);
 
 // Log the directory name to stdout for the `publish-legacy.sh`
 // script to consume for the `npm publish` that happens next.
 const IFS = '|';
-console.log([packageDir, oldName, newName, version].join(IFS));
+console.log([packageDir, vcName, nowName, version].join(IFS));

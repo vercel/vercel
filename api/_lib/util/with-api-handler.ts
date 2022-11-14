@@ -1,10 +1,10 @@
-import { NowRequest, NowResponse } from '@vercel/node';
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import { errorHandler } from './error-handler';
 
-type Handler = (req: NowRequest, res: NowResponse) => Promise<any>;
+type Handler = (req: VercelRequest, res: VercelResponse) => Promise<any>;
 
 export function withApiHandler(handler: Handler): Handler {
-  return async (req: NowRequest, res: NowResponse) => {
+  return async (req: VercelRequest, res: VercelResponse) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
     res.setHeader(

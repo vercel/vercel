@@ -1,6 +1,6 @@
 {
-  "name": "preact",
-  "short_name": "preact",
+  "name": "my-project",
+  "short_name": "my-project",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "next": "canary",
-    "next-offline": "4.0.6",
-    "react": "^16.8.6",
-    "react-dom": "^16.8.6"
-  }
-}

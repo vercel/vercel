@@ -1,0 +1,8 @@
+{
+  "name": "d",
+  "license": "MIT",
+  "version": "0.1.0",
+  "devDependencies": {
+    "once": "1.4.0"
+  }
+}

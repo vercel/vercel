@@ -1,3 +1,1 @@
-/dist
-/src/bridge.ts
-/src/launcher.ts
+!test/cache-fixtures/**

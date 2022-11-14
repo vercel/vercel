@@ -1,5 +1,0 @@
-dist/
-
-# bypass all ignored files for the cache fixtures
-# because they contain node_modules and package-lock.json files
-!test/cache-fixtures/**

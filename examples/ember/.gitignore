@@ -27,3 +27,6 @@
 # Environment Variables
 .env
 .env.build
+
+# Vercel
+.vercel

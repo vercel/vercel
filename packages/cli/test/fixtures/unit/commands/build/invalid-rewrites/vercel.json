@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/one",
+      "destination": "/api/one"
+    },
+    {
+      "source": "/two",
+      "destination": "/api/two"
+    },
+    {
+      "src": "/three",
+      "dest": "/api/three"
+    }
+  ]
+}
