@@ -1,7 +1,0 @@
-.now
-.vercel
-.next
-.idea
-node_modules
-!.env
-!.env.build

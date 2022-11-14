@@ -1,0 +1,30 @@
+{
+  "name": "verceltemplateblogstudio",
+  "private": true,
+  "version": "1.0.0",
+  "description": "This is the public list of examples for **Vercel**",
+  "main": "package.json",
+  "author": "Knut Melvær <knut@sanity.io>",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "sanity start",
+    "build": "sanity build"
+  },
+  "keywords": [
+    "sanity"
+  ],
+  "dependencies": {
+    "@sanity/core": "^2.26",
+    "@sanity/default-layout": "^2.26",
+    "@sanity/default-login": "^2.26",
+    "@sanity/desk-tool": "^2.26",
+    "@sanity/vision": "^2.26",
+    "prop-types": "^15.7",
+    "react": "^17.0",
+    "react-dom": "^17.0",
+    "styled-components": "^5.2"
+  },
+  "devDependencies": {
+    "@sanity/cli": "^2.26"
+  }
+}

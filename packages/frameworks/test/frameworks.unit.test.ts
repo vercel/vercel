@@ -3,7 +3,14 @@ import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
+import fetch from 'node-fetch';
+import { URL, URLSearchParams } from 'url';
 import frameworkList from '../src/frameworks';
+
+// bump timeout for Windows as network can be slower
+jest.setTimeout(15 * 1000);
+
+const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
@@ -32,6 +39,9 @@ const SchemaSettings = {
       additionalProperties: false,
       properties: {
         value: {
+          type: ['string', 'null'],
+        },
+        placeholder: {
           type: 'string',
         },
       },
@@ -53,15 +63,7 @@ const Schema = {
   type: 'array',
   items: {
     type: 'object',
-    required: [
-      'name',
-      'slug',
-      'logo',
-      'description',
-      'settings',
-      'buildCommand',
-      'devCommand',
-    ],
+    required: ['name', 'slug', 'logo', 'description', 'settings'],
     properties: {
       name: { type: 'string' },
       slug: { type: ['string', 'null'] },
@@ -71,6 +73,7 @@ const Schema = {
       tagline: { type: 'string' },
       website: { type: 'string' },
       description: { type: 'string' },
+      envPrefix: { type: 'string' },
       useRuntime: {
         type: 'object',
         required: ['src', 'use'],
@@ -132,11 +135,20 @@ const Schema = {
 
       dependency: { type: 'string' },
       cachePattern: { type: 'string' },
-      buildCommand: { type: ['string', 'null'] },
-      devCommand: { type: ['string', 'null'] },
+      defaultVersion: { type: 'string' },
     },
   },
 };
+
+async function getDeployment(host: string) {
+  const query = new URLSearchParams();
+  query.set('url', host);
+  const res = await fetch(
+    `https://api.vercel.com/v11/deployments/get?${query}`
+  );
+  const body = await res.json();
+  return body;
+}
 
 describe('frameworks', () => {
   it('ensure there is an example for every framework', async () => {
@@ -162,14 +174,33 @@ describe('frameworks', () => {
     expect(result).toBe(true);
   });
 
-  it('ensure logo', async () => {
+  it('ensure logo starts with url prefix', async () => {
+    const invalid = frameworkList
+      .map(f => f.logo)
+      .filter(logo => {
+        return logo && !logo.startsWith(logoPrefix);
+      });
+
+    expect(invalid).toEqual([]);
+  });
+
+  it('ensure darkModeLogo starts with url prefix', async () => {
+    const invalid = frameworkList
+      .map(f => f.darkModeLogo)
+      .filter(darkModeLogo => {
+        return darkModeLogo && !darkModeLogo.startsWith(logoPrefix);
+      });
+
+    expect(invalid).toEqual([]);
+  });
+
+  it('ensure logo file exists in ./packages/frameworks/logos/', async () => {
     const missing = frameworkList
       .map(f => f.logo)
-      .filter(url => {
-        const prefix =
-          'https://raw.githubusercontent.com/vercel/vercel/master/packages/frameworks/logos/';
-        const name = url.replace(prefix, '');
-        return existsSync(join(__dirname, '..', 'logos', name)) === false;
+      .filter(logo => {
+        const filename = logo.slice(logoPrefix.length);
+        const filepath = join(__dirname, '..', 'logos', filename);
+        return existsSync(filepath) === false;
       });
 
     expect(missing).toEqual([]);
@@ -194,5 +225,21 @@ describe('frameworks', () => {
         slugs.add(slug);
       }
     }
+  });
+
+  it('ensure all demo URLs are "public"', async () => {
+    await Promise.all(
+      frameworkList
+        .filter(f => typeof f.demo === 'string')
+        .map(async f => {
+          const url = new URL(f.demo!);
+          const deployment = await getDeployment(url.hostname);
+          assert.equal(
+            deployment.public,
+            true,
+            `Demo URL ${f.demo} is not "public"`
+          );
+        })
+    );
   });
 });

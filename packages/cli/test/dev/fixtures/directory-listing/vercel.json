@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "*.js", "use": "@vercel/node" },
+    { "src": "*.txt", "use": "@vercel/static" }
+  ]
+}

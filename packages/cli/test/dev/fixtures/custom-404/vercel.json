@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "*.js", "use": "@vercel/node" },
+    { "src": "*.html", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/error.js", "dest": "/error.js", "status": 404 },
+    { "src": "/error.html", "dest": "/error.html", "status": 404 }
+  ]
+}

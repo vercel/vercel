@@ -1,5 +1,8 @@
+const os = require('os');
+const path = require('path');
 const fs = require('fs-extra');
-const { glob, getWriteableDirectory } = require('@vercel/build-utils');
+const json5 = require('json5');
+const { glob } = require('@vercel/build-utils');
 
 function runAnalyze(wrapper, context) {
   if (wrapper.analyze) {
@@ -16,7 +19,7 @@ async function runBuildLambda(inputPath) {
   if (typeof expect !== 'undefined') {
     expect(nowJsonRef).toBeDefined();
   }
-  const nowJson = require(nowJsonRef.fsPath);
+  const nowJson = json5.parse(await fs.readFile(nowJsonRef.fsPath, 'utf8'));
   const build = nowJson.builds[0];
 
   if (typeof expect !== 'undefined') {
@@ -37,7 +40,15 @@ async function runBuildLambda(inputPath) {
     config: build.config,
   });
 
-  const workPath = await fs.realpath(await getWriteableDirectory());
+  let workPath = path.join(
+    os.tmpdir(),
+    `vercel-${Date.now()}-${Math.floor(Math.random() * 100)}`
+  );
+  await fs.ensureDir(workPath);
+
+  workPath = await fs.realpath(workPath);
+  console.log('building in', workPath);
+
   const buildResult = await wrapper.build({
     files: inputFiles,
     entrypoint,

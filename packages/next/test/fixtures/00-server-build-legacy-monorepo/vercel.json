@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "builds": [{ "src": "packages/nextjs/package.json", "use": "@vercel/next" }],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/packages/nextjs/$1"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/another",
+      "status": 200,
+      "mustContain": "another page"
+    },
+    {
+      "path": "/api/hello",
+      "status": 200,
+      "mustContain": "hello api"
+    }
+  ]
+}

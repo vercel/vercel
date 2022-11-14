@@ -1,0 +1,14 @@
+{
+  "private": "true",
+  "name": "26-multiple-lock-files-pnpm",
+  "workspaces": [
+    "a",
+    "b"
+  ],
+  "scripts": {
+    "build": "mkdir -p public && (printf \"pnpm version: \" && pnpm -v) > public/index.txt"
+  },
+  "dependencies": {
+    "once": "^1.4.0"
+  }
+}

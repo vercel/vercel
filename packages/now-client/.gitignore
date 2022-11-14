@@ -1,8 +1,0 @@
-lib
-*.html
-node_modules
-*.log
-
-!tests/fixtures/nowignore/node_modules
-!tests/fixtures/vercelignore-allow-nodemodules/node_modules
-!tests/fixtures/vercelignore-allow-nodemodules/sub/node_modules

@@ -1,0 +1,16 @@
+{{ define "main" }}
+  <article class="cf pa3 pa4-m pa4-l">
+    <div class="measure-wide-l center f4 lh-copy nested-copy-line-height nested-links nested-img mid-gray">
+      <p>Below you will find pages that utilize the taxonomy term “{{ .Title }}”</p>
+    </div>
+  </article>
+  <div class="mw8 center">    
+    <section class="flex-ns flex-wrap justify-around mt5">
+      {{ range  .Pages }}
+        <div class="relative w-100  mb4 bg-white">
+          {{ partial "summary.html" . }}
+        </div>
+      {{ end }}
+    </section>
+  </div>
+{{ end }}

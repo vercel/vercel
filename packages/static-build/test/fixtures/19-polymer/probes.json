@@ -1,0 +1,7 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "My App" },
+    { "path": "/iudieufwunifiwwnuwfuw", "mustContain": "My App" },
+    { "path": "/e21212121212112", "mustContain": "My App" }
+  ]
+}

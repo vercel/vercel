@@ -1,9 +1,0 @@
-{
-  "version": 2,
-  "env": {
-    "APP_ID": "@pusher-whiteboard-app-id",
-    "KEY": "@pusher-whiteboard-key",
-    "SECRET": "@pusher-whiteboard-secret",
-    "CLUSTER": "us2"
-  }
-}

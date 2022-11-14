@@ -2,7 +2,7 @@
 
 #### Why This Error Occurred
 
-You ran `vercel dev` inside a project that contains a `vercel.json` file with `env` or `build.env` properties that use [Vercel Secrets](https://vercel.com/docs/v2/build-step#environment-variables).
+You ran `vercel dev` inside a project that contains a `vercel.json` file with `env` or `build.env` properties that use [Vercel Secrets](https://vercel.com/docs/concepts/projects/environment-variables).
 
 In order to use environment variables in your project locally that have values defined using the Vercel Secrets format (e.g. `@my-secret-value`), you will need to provide the value as an environment variable using a `.env`.
 
@@ -24,4 +24,4 @@ TEST=value
 
 In the above example, `TEST` represents the name of the environment variable and `value` its value.
 
-For more information on Environment Variables in development, [see the documentation](https://vercel.com/docs/v2/build-step#environment-variables).
+For more information on Environment Variables in development, [see the documentation](https://vercel.com/docs/concepts/projects/environment-variables).

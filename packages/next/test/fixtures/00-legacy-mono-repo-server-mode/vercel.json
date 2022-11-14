@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "builds": [{ "src": "packages/nextjs/package.json", "use": "@vercel/next" }],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/packages/nextjs/$1"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/articles",
+      "status": 200,
+      "mustContain": "Loading..."
+    },
+    {
+      "path": "/articles/one",
+      "status": 200,
+      "mustContain": "article 1"
+    },
+    {
+      "path": "/articles/one",
+      "status": 200,
+      "mustContain": "article 1"
+    },
+    {
+      "path": "/articles/two",
+      "status": 200,
+      "mustContain": "article 2"
+    },
+    {
+      "path": "/_next/data/testing-build-id/articles/one.json",
+      "status": 200,
+      "mustContain": "\"slug\":\"one\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/articles/one.json",
+      "status": 200,
+      "mustContain": "\"slug\":\"one\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/articles/two.json",
+      "status": 200,
+      "mustContain": "\"slug\":\"two\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/articles/two.json",
+      "status": 200,
+      "mustContain": "\"slug\":\"two\""
+    }
+  ]
+}

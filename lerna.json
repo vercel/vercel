@@ -5,7 +5,7 @@
   "command": {
     "publish": {
       "npmClient": "npm",
-      "allowBranch": ["master"],
+      "allowBranch": ["main"],
       "registry": "https://registry.npmjs.org/"
     }
   },
