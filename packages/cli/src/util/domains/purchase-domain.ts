@@ -20,28 +20,30 @@ export default async function purchaseDomain(
       body: { name, expectedPrice, renew },
       method: 'POST',
     });
-  } catch (error) {
-    if (error.code === 'invalid_domain') {
-      return new ERRORS.InvalidDomain(name);
+  } catch (err: unknown) {
+    if (ERRORS.isAPIError(err)) {
+      if (err.code === 'invalid_domain') {
+        return new ERRORS.InvalidDomain(name);
+      }
+      if (err.code === 'not_available') {
+        return new ERRORS.DomainNotAvailable(name);
+      }
+      if (err.code === 'service_unavailabe') {
+        return new ERRORS.DomainServiceNotAvailable(name);
+      }
+      if (err.code === 'unexpected_error') {
+        return new ERRORS.UnexpectedDomainPurchaseError(name);
+      }
+      if (err.code === 'source_not_found') {
+        return new ERRORS.SourceNotFound();
+      }
+      if (err.code === 'payment_error') {
+        return new ERRORS.DomainPaymentError();
+      }
+      if (err.code === 'unsupported_tld') {
+        return new ERRORS.UnsupportedTLD(name);
+      }
     }
-    if (error.code === 'not_available') {
-      return new ERRORS.DomainNotAvailable(name);
-    }
-    if (error.code === 'service_unavailabe') {
-      return new ERRORS.DomainServiceNotAvailable(name);
-    }
-    if (error.code === 'unexpected_error') {
-      return new ERRORS.UnexpectedDomainPurchaseError(name);
-    }
-    if (error.code === 'source_not_found') {
-      return new ERRORS.SourceNotFound();
-    }
-    if (error.code === 'payment_error') {
-      return new ERRORS.DomainPaymentError();
-    }
-    if (error.code === 'unsupported_tld') {
-      return new ERRORS.UnsupportedTLD(name);
-    }
-    throw error;
+    throw err;
   }
 }

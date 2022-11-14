@@ -1,0 +1,16 @@
+{
+  "go-site": {
+    "memory": 128,
+    "maxDuration": 5,
+    "runtime": "go1.x",
+    "handler": "index",
+    "regions": ["syd1", "gru1"]
+  },
+  "sleeper": {
+    "memory": 128,
+    "maxDuration": 2,
+    "runtime": "nodejs14.x",
+    "handler": "index.handler",
+    "regions": ["hkg1"]
+  }
+}

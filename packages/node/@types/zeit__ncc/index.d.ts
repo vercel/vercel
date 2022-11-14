@@ -1,13 +1,14 @@
 declare function ncc(
   entrypoint: string,
   options?: ncc.NccOptions
-): ncc.NccResult;
+): ncc.NccResult & Promise<ncc.BuildResult>;
 
 declare namespace ncc {
   export interface NccOptions {
     watch?: any;
     sourceMap?: boolean;
     sourceMapRegister?: boolean;
+    target: string;
   }
 
   export interface Asset {

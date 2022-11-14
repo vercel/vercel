@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": false,
+    "jsx": "react",
+    "target": "esnext",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "removeComments": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "rootDir": ".",
+    "baseUrl": "."
+  },
+  "include": ["packages"],
+  "exclude": ["node_modules"]
+}

@@ -4,6 +4,7 @@ import json
 import inspect
 from importlib import util
 from http.server import BaseHTTPRequestHandler
+import socket
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 __vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", "./__VC_HANDLER_ENTRYPOINT")
@@ -16,7 +17,7 @@ __vc_variables = dir(__vc_module)
 def format_headers(headers, decode=False):
     keyToList = {}
     for key, value in headers.items():
-        if decode:
+        if decode and 'decode' in dir(key) and 'decode' in dir(value):
             key = key.decode()
             value = value.decode()
         if key not in keyToList:
@@ -37,7 +38,7 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
     import http
     import _thread
 
-    server = HTTPServer(('', 0), base)
+    server = HTTPServer(('127.0.0.1', 0), base)
     port = server.server_address[1]
 
     def vc_handler(event, context):
@@ -57,8 +58,11 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
             body = base64.b64decode(body)
 
         request_body = body.encode('utf-8') if isinstance(body, str) else body
-        conn = http.client.HTTPConnection('0.0.0.0', port)
-        conn.request(method, path, headers=headers, body=request_body)
+        conn = http.client.HTTPConnection('127.0.0.1', port)
+        try:
+            conn.request(method, path, headers=headers, body=request_body)
+        except (http.client.HTTPException, socket.error) as ex:
+            print ("Request Error: %s" % ex)
         res = conn.getresponse()
 
         return_dict = {
@@ -102,7 +106,7 @@ elif 'app' in __vc_variables:
             if isinstance(s, str):
                 s = s.encode(charset)
             return s.decode("latin1", errors)
-        
+
         def vc_handler(event, context):
             payload = json.loads(event['body'])
 

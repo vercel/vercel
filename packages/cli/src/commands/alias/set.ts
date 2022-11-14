@@ -6,7 +6,6 @@ import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
-import formatNSTable from '../../util/format-ns-table';
 import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
 import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
 import getScope from '../../util/get-scope';
@@ -16,10 +15,9 @@ import { isValidName } from '../../util/is-valid-name';
 import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
-import { User } from '../../types';
 import { getCommandName } from '../../util/pkg-name';
 import toHost from '../../util/to-host';
-import { VercelConfig } from '../../util/dev/types';
+import type { VercelConfig } from '@vercel/client';
 
 type Options = {
   '--debug': boolean;
@@ -31,23 +29,9 @@ export default async function set(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output, localConfig } = client;
-
   const setStamp = stamp();
-
-  let user: User;
-  let contextName: string | null = null;
-
-  try {
-    ({ contextName, user } = await getScope(client));
-  } catch (err) {
-    if (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED') {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
+  const { output, localConfig } = client;
+  const { contextName, user } = await getScope(client);
 
   // If there are more than two args we have to error
   if (args.length > 2) {
@@ -74,7 +58,7 @@ export default async function set(
   if (args.length === 0) {
     output.error(
       `To ship to production, optionally configure your domains (${link(
-        'https://vercel.com/docs/v2/custom-domains'
+        'https://vercel.link/domain-configuration'
       )}) and run ${getCommandName(`--prod`)}.`
     );
     return 1;
@@ -226,29 +210,6 @@ function handleSetupDomainError<T>(
   output: Output,
   error: SetupDomainError | T
 ): T | 1 {
-  if (
-    error instanceof ERRORS.DomainVerificationFailed ||
-    error instanceof ERRORS.DomainNsNotVerifiedForWildcard
-  ) {
-    const { nsVerification, domain } = error.meta;
-
-    output.error(
-      `We could not alias since the domain ${domain} could not be verified due to the following reasons:\n`
-    );
-    output.print(
-      `Nameservers verification failed since we see a different set than the intended set:`
-    );
-    output.print(
-      `\n${formatNSTable(
-        nsVerification.intendedNameservers,
-        nsVerification.nameservers,
-        { extraSpace: '     ' }
-      )}\n\n`
-    );
-    output.print('  Read more: https://err.sh/vercel/domain-verification\n');
-    return 1;
-  }
-
   if (error instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
@@ -259,7 +220,7 @@ function handleSetupDomainError<T>(
   }
 
   if (error instanceof ERRORS.UserAborted) {
-    output.error(`User aborted`);
+    output.error(`User canceled.`);
     return 1;
   }
 

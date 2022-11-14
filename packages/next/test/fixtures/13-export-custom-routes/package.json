@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "build": "next build && next export"
+  },
+  "dependencies": {
+    "next": "canary",
+    "react": "latest",
+    "react-dom": "latest"
+  }
+}

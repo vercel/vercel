@@ -10,6 +10,7 @@ if (!entrypoint) {
 
 import { join } from 'path';
 import { register } from 'ts-node';
+import { fixConfig } from './typescript';
 
 type TypescriptModule = typeof import('typescript');
 
@@ -33,20 +34,10 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
 
   let ts: TypescriptModule | null = null;
 
-  // Assume Node.js 12 as the lowest common denominator
-  let target = 'ES2019';
-  const nodeMajor = Number(process.versions.node.split('.')[0]);
-  if (nodeMajor >= 14) {
-    target = 'ES2020';
-  }
-
   // Use the project's version of Typescript if available and supports `target`
   let compiler = resolveTypescript(process.cwd());
   if (compiler) {
     ts = requireTypescript(compiler);
-    if (!(target in ts.ScriptTarget)) {
-      ts = null;
-    }
   }
 
   // Otherwise fall back to using the copy that `@vercel/node` uses
@@ -55,12 +46,10 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
     ts = requireTypescript(compiler);
   }
 
+  let config: any = {};
   if (tsconfig) {
     try {
-      const { config } = ts.readConfigFile(tsconfig, ts.sys.readFile);
-      if (config?.compilerOptions?.target) {
-        target = config.compilerOptions.target;
-      }
+      config = ts.readConfigFile(tsconfig, ts.sys.readFile).config;
     } catch (err) {
       if (err.code !== 'ENOENT') {
         console.error(`Error while parsing "${tsconfig}"`);
@@ -69,16 +58,11 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
     }
   }
 
+  fixConfigDev(config);
+
   register({
     compiler,
-    compilerOptions: {
-      allowJs: true,
-      esModuleInterop: true,
-      jsx: 'react',
-      module: 'commonjs',
-      target,
-    },
-    project: tsconfig || undefined, // Resolve `tsconfig.json` from entrypoint dir
+    compilerOptions: config.compilerOptions,
     transpileOnly: true,
   });
 
@@ -86,10 +70,13 @@ if (!process.env.VERCEL_DEV_IS_ESM) {
 }
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
-import { Readable } from 'stream';
-import type { Bridge } from '@vercel/node-bridge/bridge';
-// @ts-ignore - copied to the `dist` output as-is
-import { getVercelLauncher } from './launcher.js';
+import { VercelProxyResponse } from '@vercel/node-bridge/types';
+import { Config } from '@vercel/build-utils';
+import { getConfig } from '@vercel/static-config';
+import { Project } from 'ts-morph';
+import { logError } from './utils';
+import { createEdgeEventHandler } from './edge-functions/edge-handler';
+import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
 
 function listen(server: Server, port: number, host: string): Promise<void> {
   return new Promise(resolve => {
@@ -99,7 +86,52 @@ function listen(server: Server, port: number, host: string): Promise<void> {
   });
 }
 
-let bridge: Bridge | undefined = undefined;
+const validRuntimes = ['experimental-edge'];
+function parseRuntime(
+  entrypoint: string,
+  entryPointPath: string
+): string | undefined {
+  const project = new Project();
+  const staticConfig = getConfig(project, entryPointPath);
+  const runtime = staticConfig?.runtime;
+  if (runtime && !validRuntimes.includes(runtime)) {
+    throw new Error(
+      `Invalid function runtime "${runtime}" for "${entrypoint}". Valid runtimes are: ${JSON.stringify(
+        validRuntimes
+      )}. Learn more: https://vercel.link/creating-edge-functions`
+    );
+  }
+
+  return runtime;
+}
+
+async function createEventHandler(
+  entrypoint: string,
+  config: Config,
+  options: { shouldAddHelpers: boolean }
+): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
+  const entrypointPath = join(process.cwd(), entrypoint!);
+  const runtime = parseRuntime(entrypoint, entrypointPath);
+
+  // `middleware.js`/`middleware.ts` file is always run as
+  // an Edge Function, otherwise needs to be opted-in via
+  // `export const config = { runtime: 'experimental-edge' }`
+  if (config.middleware === true || runtime === 'experimental-edge') {
+    return createEdgeEventHandler(
+      entrypointPath,
+      entrypoint,
+      config.middleware || false
+    );
+  }
+
+  return createServerlessEventHandler(entrypointPath, {
+    shouldAddHelpers: options.shouldAddHelpers,
+    useRequire,
+  });
+}
+
+let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;
+let handlerEventError: Error;
 
 async function main() {
   const config = JSON.parse(process.env.VERCEL_DEV_CONFIG || '{}');
@@ -115,13 +147,14 @@ async function main() {
   const proxyServer = createServer(onDevRequest);
   await listen(proxyServer, 0, '127.0.0.1');
 
-  const launcher = getVercelLauncher({
-    entrypointPath: join(process.cwd(), entrypoint!),
-    helpersPath: './helpers.js',
-    shouldAddHelpers,
-    useRequire,
-  });
-  bridge = launcher();
+  try {
+    handleEvent = await createEventHandler(entrypoint!, config, {
+      shouldAddHelpers,
+    });
+  } catch (error) {
+    logError(error);
+    handlerEventError = error;
+  }
 
   const address = proxyServer.address();
   if (typeof process.send === 'function') {
@@ -131,54 +164,54 @@ async function main() {
   }
 }
 
-export function rawBody(readable: Readable): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    let bytes = 0;
-    const chunks: Buffer[] = [];
-    readable.on('error', reject);
-    readable.on('data', chunk => {
-      chunks.push(chunk);
-      bytes += chunk.length;
-    });
-    readable.on('end', () => {
-      resolve(Buffer.concat(chunks, bytes));
-    });
-  });
-}
-
 export async function onDevRequest(
   req: IncomingMessage,
   res: ServerResponse
 ): Promise<void> {
-  const body = await rawBody(req);
-  const event = {
-    Action: 'Invoke',
-    body: JSON.stringify({
-      method: req.method,
-      path: req.url,
-      headers: req.headers,
-      encoding: 'base64',
-      body: body.toString('base64'),
-    }),
-  };
-  if (!bridge) {
+  if (handlerEventError) {
+    // this error state is already logged, but we have to wait until here to exit the process
+    // this matches the serverless function bridge launcher's behavior when
+    // an error is thrown in the function
+    process.exit(1);
+  }
+
+  if (!handleEvent) {
     res.statusCode = 500;
     res.end('Bridge is not ready, please try again');
     return;
   }
-  const result = await bridge.launcher(event, {
-    callbackWaitsForEmptyEventLoop: false,
-  });
-  res.statusCode = result.statusCode;
-  for (const [key, value] of Object.entries(result.headers)) {
-    if (typeof value !== 'undefined') {
-      res.setHeader(key, value);
+
+  try {
+    const result = await handleEvent(req);
+    res.statusCode = result.statusCode;
+    for (const [key, value] of Object.entries(result.headers)) {
+      if (typeof value !== 'undefined') {
+        res.setHeader(key, value);
+      }
     }
+    res.end(Buffer.from(result.body, result.encoding));
+  } catch (error) {
+    res.statusCode = 500;
+    res.end(error.stack);
   }
-  res.end(Buffer.from(result.body, result.encoding));
+}
+
+export function fixConfigDev(config: { compilerOptions: any }): void {
+  const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
+  fixConfig(config, nodeVersionMajor);
+
+  // In prod, `.ts` inputs use TypeScript and
+  // `.js` inputs use Babel to convert ESM to CJS.
+  // In dev, both `.ts` and `.js` inputs use ts-node
+  // without Babel so we must enable `allowJs`.
+  config.compilerOptions.allowJs = true;
+
+  // In prod, we emit outputs to the filesystem.
+  // In dev, we don't emit because we use ts-node.
+  config.compilerOptions.noEmit = true;
 }
 
 main().catch(err => {
-  console.error(err);
+  logError(err);
   process.exit(1);
 });

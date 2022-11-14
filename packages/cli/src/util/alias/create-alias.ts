@@ -68,37 +68,39 @@ async function performCreateAlias(
         body: { alias },
       }
     );
-  } catch (error) {
-    if (error.code === 'cert_missing' || error.code === 'cert_expired') {
-      return new ERRORS.CertMissing(alias);
-    }
-    if (error.status === 409) {
-      return { uid: error.uid, alias: error.alias } as AliasRecord;
-    }
-    if (error.code === 'deployment_not_found') {
-      return new ERRORS.DeploymentNotFound({
-        context: contextName,
-        id: deployment.uid,
-      });
-    }
-    if (error.code === 'gone') {
-      return new ERRORS.DeploymentFailedAliasImpossible();
-    }
-    if (error.code === 'invalid_alias') {
-      return new ERRORS.InvalidAlias(alias);
-    }
-    if (error.status === 403) {
-      if (error.code === 'alias_in_use') {
-        return new ERRORS.AliasInUse(alias);
+  } catch (err: unknown) {
+    if (ERRORS.isAPIError(err)) {
+      if (err.code === 'cert_missing' || err.code === 'cert_expired') {
+        return new ERRORS.CertMissing(alias);
       }
-      if (error.code === 'forbidden') {
-        return new ERRORS.DomainPermissionDenied(alias, contextName);
+      if (err.status === 409) {
+        return { uid: err.uid, alias: err.alias } as AliasRecord;
       }
-    }
-    if (error.status === 400) {
-      return new ERRORS.DeploymentNotReady({ url: deployment.url });
+      if (err.code === 'deployment_not_found') {
+        return new ERRORS.DeploymentNotFound({
+          context: contextName,
+          id: deployment.uid,
+        });
+      }
+      if (err.code === 'gone') {
+        return new ERRORS.DeploymentFailedAliasImpossible();
+      }
+      if (err.code === 'invalid_alias') {
+        return new ERRORS.InvalidAlias(alias);
+      }
+      if (err.status === 403) {
+        if (err.code === 'alias_in_use') {
+          return new ERRORS.AliasInUse(alias);
+        }
+        if (err.code === 'forbidden') {
+          return new ERRORS.DomainPermissionDenied(alias, contextName);
+        }
+      }
+      if (err.status === 400) {
+        return new ERRORS.DeploymentNotReady({ url: deployment.url });
+      }
     }
 
-    throw error;
+    throw err;
   }
 }

@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/redwood" }],
+  "probes": [
+    { "path": "/", "mustContain": "<div id=\"redwood-app\">" },
+    { "path": "/about", "mustContain": "<div id=\"redwood-app\">" },
+    {
+      "path": "/api/graphql",
+      "headers": { "Accept": "text/html" },
+      "mustContain": "<title>GraphQL Playground</title>"
+    },
+    {
+      "path": "/api/graphql",
+      "method": "POST",
+      "headers": { "Accept": "application/json" },
+      "body": { "query": "{ redwood { version } }" },
+      "mustContain": "0.15.3"
+    }
+  ]
+}

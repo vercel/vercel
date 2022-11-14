@@ -3,6 +3,16 @@ import pkg from './pkg';
 import cmd from './output/cmd';
 
 /**
+ * The package name defined in the CLI's `package.json` file (`vercel`).
+ */
+export const name = pkg.name;
+
+/**
+ * Unicode symbol used to represent the CLI.
+ */
+export const logo = '▲';
+
+/**
  * Returns the package name such as `vercel` or `now`.
  */
 export function getPkgName(): string {

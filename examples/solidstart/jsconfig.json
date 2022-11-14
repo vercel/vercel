@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "jsx": "preserve",
-    "jsxImportSource": "solid-js",
-    "paths": {
-      "~/*": ["./src/*"]
-    }
-  }
-}

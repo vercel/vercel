@@ -83,7 +83,7 @@ export default async function main(client: Client, desiredSlug?: string) {
     ];
 
     output.stopSpinner();
-    desiredSlug = await listInput({
+    desiredSlug = await listInput(client, {
       message: 'Switch to:',
       choices,
       eraseFinalAnswer: true,

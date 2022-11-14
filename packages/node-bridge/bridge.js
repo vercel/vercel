@@ -1,4 +1,10 @@
+const { URL } = require('url');
 const { request } = require('http');
+const { Socket } = require('net');
+const { createCipheriv } = require('crypto');
+const { pipeline, Transform } = require('stream');
+
+const CRLF = `\r\n`;
 
 /**
  * If the `http.Server` handler function throws an error asynchronously,
@@ -17,21 +23,64 @@ process.on('unhandledRejection', err => {
  */
 function normalizeProxyEvent(event) {
   let bodyBuffer;
-  const { method, path, headers, encoding, body } = JSON.parse(event.body);
+  /**
+   * @type {import('./types').VercelProxyRequest}
+   */
+  const payload = JSON.parse(event.body);
+  const {
+    method,
+    path,
+    headers,
+    encoding,
+    body,
+    payloads,
+    responseCallbackCipher,
+    responseCallbackCipherIV,
+    responseCallbackCipherKey,
+    responseCallbackStream,
+    responseCallbackUrl,
+  } = payload;
 
-  if (body) {
-    if (encoding === 'base64') {
-      bodyBuffer = Buffer.from(body, encoding);
-    } else if (encoding === undefined) {
-      bodyBuffer = Buffer.from(body);
+  /**
+   *
+   * @param {string | Buffer} b
+   * @returns Buffer
+   */
+  const normalizeBody = b => {
+    if (b) {
+      if (typeof b === 'string' && encoding === 'base64') {
+        bodyBuffer = Buffer.from(b, encoding);
+      } else if (encoding === undefined) {
+        bodyBuffer = Buffer.from(b);
+      } else {
+        throw new Error(`Unsupported encoding: ${encoding}`);
+      }
     } else {
-      throw new Error(`Unsupported encoding: ${encoding}`);
+      bodyBuffer = Buffer.alloc(0);
     }
-  } else {
-    bodyBuffer = Buffer.alloc(0);
-  }
+    return bodyBuffer;
+  };
 
-  return { isApiGateway: false, method, path, headers, body: bodyBuffer };
+  if (payloads) {
+    for (const p of payloads) {
+      p.body = normalizeBody(payload.body);
+    }
+  }
+  bodyBuffer = normalizeBody(body);
+
+  return {
+    isApiGateway: false,
+    method,
+    path,
+    headers,
+    body: bodyBuffer,
+    payloads,
+    responseCallbackCipher,
+    responseCallbackCipherIV,
+    responseCallbackCipherKey,
+    responseCallbackStream,
+    responseCallbackUrl,
+  };
 }
 
 /**
@@ -51,11 +100,23 @@ function normalizeAPIGatewayProxyEvent(event) {
     bodyBuffer = Buffer.alloc(0);
   }
 
-  return { isApiGateway: true, method, path, headers, body: bodyBuffer };
+  return {
+    body: bodyBuffer,
+    headers,
+    isApiGateway: true,
+    method,
+    path,
+    responseCallbackCipher: undefined,
+    responseCallbackCipherIV: undefined,
+    responseCallbackCipherKey: undefined,
+    responseCallbackStream: undefined,
+    responseCallbackUrl: undefined,
+  };
 }
 
 /**
  * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
+ * @return {import('./types').VercelProxyRequest}
  */
 function normalizeEvent(event) {
   if ('Action' in event) {
@@ -148,14 +209,124 @@ class Bridge {
    *
    * @param {import('./types').VercelProxyEvent | import('aws-lambda').APIGatewayProxyEvent} event
    * @param {import('aws-lambda').Context} context
-   * @return {Promise<{statusCode: number, headers: import('http').IncomingHttpHeaders,  body: string, encoding: 'base64'}>}
+   * @return {Promise<import('./types').VercelProxyResponse>}
    */
   async launcher(event, context) {
     context.callbackWaitsForEmptyEventLoop = false;
-    const { port } = await this.listening;
-
     const normalizedEvent = normalizeEvent(event);
-    const { isApiGateway, method, headers, body } = normalizedEvent;
+
+    if (
+      'payloads' in normalizedEvent &&
+      Array.isArray(normalizedEvent.payloads)
+    ) {
+      let statusCode = 200;
+      /**
+       * @type {import('http').IncomingHttpHeaders}
+       */
+      let headers = {};
+      /**
+       * @type {string}
+       */
+      let combinedBody = '';
+      const multipartBoundary = 'payload-separator';
+      const CLRF = '\r\n';
+      /**
+       * @type {Record<string, any>[]}
+       */
+      const separateHeaders = [];
+      /**
+       * @type {Set<string>}
+       */
+      const allHeaderKeys = new Set();
+
+      // we execute the payloads one at a time to ensure
+      // lambda semantics
+      for (let i = 0; i < normalizedEvent.payloads.length; i++) {
+        const currentPayload = normalizedEvent.payloads[i];
+        const response = await this.handleEvent(currentPayload);
+        // build a combined body using multipart
+        // https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html
+        combinedBody += `--${multipartBoundary}${CLRF}`;
+        combinedBody += `content-type: ${
+          response.headers['content-type'] || 'text/plain'
+        }${CLRF}${CLRF}`;
+        combinedBody += response.body || '';
+        combinedBody += CLRF;
+
+        if (i === normalizedEvent.payloads.length - 1) {
+          combinedBody += `--${multipartBoundary}--${CLRF}`;
+        }
+        // pass non-200 status code in header so it can be handled
+        // separately from other payloads e.g. HTML payload redirects
+        // (307) but data payload does not (200)
+        if (response.statusCode !== 200) {
+          headers[`x-vercel-payload-${i + 1}-status`] =
+            response.statusCode + '';
+        }
+        separateHeaders.push(response.headers);
+        Object.keys(response.headers).forEach(key => allHeaderKeys.add(key));
+      }
+
+      allHeaderKeys.forEach(curKey => {
+        /**
+         * @type string | string[] | undefined
+         */
+        const curValue = separateHeaders[0] && separateHeaders[0][curKey];
+        const canDedupe = separateHeaders.every(
+          headers => headers[curKey] === curValue
+        );
+
+        if (canDedupe) {
+          headers[curKey] = curValue;
+        } else {
+          // if a header is unique per payload ensure it is prefixed
+          // so it can be parsed and provided separately
+          separateHeaders.forEach((curHeaders, idx) => {
+            if (curHeaders[curKey]) {
+              headers[`x-vercel-payload-${idx + 1}-${curKey}`] =
+                curHeaders[curKey];
+            }
+          });
+        }
+      });
+
+      headers[
+        'content-type'
+      ] = `multipart/mixed; boundary="${multipartBoundary}"`;
+
+      return {
+        headers,
+        statusCode,
+        body: combinedBody,
+        encoding: 'base64',
+      };
+    } else {
+      // TODO We expect this to error as it is possible to resolve to empty.
+      // For now it is not very important as we will only pass
+      // `responseCallbackUrl` in production.
+      // @ts-ignore
+      return this.handleEvent(normalizedEvent);
+    }
+  }
+
+  /**
+   *
+   * @param {ReturnType<typeof normalizeEvent>} normalizedEvent
+   * @return {Promise<import('./types').VercelProxyResponse | import('./types').VercelStreamProxyResponse>}
+   */
+  async handleEvent(normalizedEvent) {
+    const { port } = await this.listening;
+    const {
+      body,
+      headers,
+      isApiGateway,
+      method,
+      responseCallbackCipher,
+      responseCallbackCipherIV,
+      responseCallbackCipherKey,
+      responseCallbackStream,
+      responseCallbackUrl,
+    } = normalizedEvent;
     let { path } = normalizedEvent;
 
     if (this.shouldStoreEvents) {
@@ -164,41 +335,42 @@ class Bridge {
       headers['x-now-bridge-request-id'] = reqId;
     }
 
-    // eslint-disable-next-line consistent-return
     return new Promise((resolve, reject) => {
+      let socket;
+      let cipher;
+      let url;
+
+      if (responseCallbackUrl) {
+        socket = new Socket();
+        url = new URL(responseCallbackUrl);
+        socket.connect(parseInt(url.port, 10), url.hostname);
+        socket.write(`${responseCallbackStream}${CRLF}`);
+      }
+
+      if (
+        responseCallbackCipher &&
+        responseCallbackCipherKey &&
+        responseCallbackCipherIV
+      ) {
+        cipher = createCipheriv(
+          responseCallbackCipher,
+          Buffer.from(responseCallbackCipherKey, 'base64'),
+          Buffer.from(responseCallbackCipherIV, 'base64')
+        );
+      }
+
       // if the path is improperly encoded we need to encode it or
       // http.request will throw an error (related check: https://github.com/nodejs/node/blob/4ece669c6205ec78abfdadfe78869bbb8411463e/lib/_http_client.js#L84)
       if (path && /[^\u0021-\u00ff]/.test(path)) {
         path = encodeURI(path);
       }
 
-      const opts = { hostname: '127.0.0.1', port, path, method };
-      const req = request(opts, res => {
-        const response = res;
-        /**
-         * @type {Buffer[]}
-         */
-        const respBodyChunks = [];
-        response.on('data', chunk => respBodyChunks.push(Buffer.from(chunk)));
-        response.on('error', reject);
-        response.on('end', () => {
-          const bodyBuffer = Buffer.concat(respBodyChunks);
-          delete response.headers.connection;
-
-          if (isApiGateway) {
-            delete response.headers['content-length'];
-          } else if (response.headers['content-length']) {
-            response.headers['content-length'] = String(bodyBuffer.length);
-          }
-
-          resolve({
-            statusCode: response.statusCode || 200,
-            headers: response.headers,
-            body: bodyBuffer.toString('base64'),
-            encoding: 'base64',
-          });
-        });
-      });
+      const req = request(
+        { hostname: '127.0.0.1', port, path, method },
+        socket && url && cipher
+          ? getStreamResponseCallback({ url, socket, cipher, resolve, reject })
+          : getResponseCallback({ isApiGateway, resolve, reject })
+      );
 
       req.on('error', error => {
         setTimeout(() => {
@@ -208,16 +380,10 @@ class Bridge {
         }, 2);
       });
 
-      for (const [name, value] of Object.entries(headers)) {
-        if (value === undefined) {
-          console.error(
-            `Skipping HTTP request header "${name}" because value is undefined`
-          );
-          continue;
-        }
+      for (const [name, value] of getHeadersIterator(headers)) {
         try {
           req.setHeader(name, value);
-        } catch (err) {
+        } catch (/** @type any */ err) {
           console.error(`Skipping HTTP request header: "${name}: ${value}"`);
           console.error(err.message);
         }
@@ -236,6 +402,108 @@ class Bridge {
     const event = this.events[reqId];
     delete this.events[reqId];
     return event;
+  }
+}
+
+/**
+ * Generates the streaming response callback which writes in the given socket client a raw
+ * HTTP Request message to later pipe the response body into the socket. It will pass request
+ * headers namespace and an additional header with the status code. Once everything is
+ * written it will destroy the socket and resolve to an empty object. If a cipher is given
+ * it will be used to pipe bytes.
+ *
+ * @type {(params: {
+ *  url: import('url').URL,
+ *  socket: import('net').Socket,
+ *  cipher: import('crypto').Cipher
+ *  resolve: (result: (Record<string, never>)) => void,
+ *  reject: (err: Error) => void
+ * }) => (response: import("http").IncomingMessage) => void}
+ */
+function getStreamResponseCallback({ url, socket, cipher, resolve, reject }) {
+  return response => {
+    const chunked = new Transform();
+    chunked._transform = function (chunk, _, callback) {
+      this.push(Buffer.byteLength(chunk).toString(16) + CRLF);
+      this.push(chunk);
+      this.push(CRLF);
+      callback();
+    };
+
+    let headers = `Host: ${url.host}${CRLF}`;
+    headers += `transfer-encoding: chunked${CRLF}`;
+    headers += `x-vercel-status-code: ${response.statusCode || 200}${CRLF}`;
+    for (const [name, value] of getHeadersIterator(response.headers)) {
+      if (!['connection', 'transfer-encoding'].includes(name)) {
+        headers += `x-vercel-header-${name}: ${value}${CRLF}`;
+      }
+    }
+
+    cipher.write(`POST ${url.pathname} HTTP/1.1${CRLF}${headers}${CRLF}`);
+
+    pipeline(response, chunked, cipher, socket, err => {
+      if (err) return reject(err);
+      resolve({});
+    });
+  };
+}
+
+/**
+ * Generates the normal response callback which waits until the body is fully
+ * received before resolving the promise. It caches the entire body and resolve
+ * with an object that describes the response.
+ *
+ * @type {(params: {
+ *  isApiGateway: boolean,
+ *  resolve: (result: (import('./types').VercelProxyResponse)) => void,
+ *  reject: (err: Error) => void
+ * }) => (response: import("http").IncomingMessage) => void}
+ */
+function getResponseCallback({ isApiGateway, resolve, reject }) {
+  return response => {
+    /**
+     * @type {Buffer[]}
+     */
+    const respBodyChunks = [];
+    response.on('data', chunk => respBodyChunks.push(Buffer.from(chunk)));
+    response.on('error', reject);
+    response.on('end', () => {
+      const bodyBuffer = Buffer.concat(respBodyChunks);
+      delete response.headers.connection;
+
+      if (isApiGateway) {
+        delete response.headers['content-length'];
+      } else if (response.headers['content-length']) {
+        response.headers['content-length'] = String(bodyBuffer.length);
+      }
+
+      resolve({
+        statusCode: response.statusCode || 200,
+        headers: response.headers,
+        body: bodyBuffer.toString('base64'),
+        encoding: 'base64',
+      });
+    });
+  };
+}
+
+/**
+ * Get an iterator for the headers object and yield the name and value when
+ * the value is not undefined only.
+ *
+ * @type {(headers: import('http').IncomingHttpHeaders) =>
+ *  Generator<[string, string | string[]], void, unknown>}
+ */
+function* getHeadersIterator(headers) {
+  for (const [name, value] of Object.entries(headers)) {
+    if (value === undefined) {
+      console.error(
+        `Skipping HTTP request header "${name}" because value is undefined`
+      );
+      continue;
+    }
+
+    yield [name, value];
   }
 }
 

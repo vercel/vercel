@@ -1,0 +1,40 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "13-vue"
+    },
+    {
+      "path": "/js/app.js",
+      "headers": {
+        "cache-control": "max-age=31536000, immutable"
+      },
+      "mustContain": "function"
+    },
+    {
+      "path": "/css/app.css",
+      "headers": {
+        "cache-control": "max-age=31536000, immutable"
+      },
+      "mustContain": "font-family"
+    },
+    {
+      "path": "/robots.txt",
+      "headers": {
+        "cache-control": "max-age=300"
+      },
+      "mustContain": "Disallow"
+    },
+    {
+      "path": "/manifest.json",
+      "headers": {
+        "cache-control": "max-age=300"
+      },
+      "mustContain": "13-vue-manifest"
+    },
+    {
+      "path": "/923h3223329ddas",
+      "mustContain": "13-vue"
+    }
+  ]
+}

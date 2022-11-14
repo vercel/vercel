@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "dependencies": {
+    "snake-case": "3.0.4"
+  }
+}

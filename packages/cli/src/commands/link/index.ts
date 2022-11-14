@@ -3,7 +3,7 @@ import Client from '../../util/client';
 import getArgs from '../../util/get-args';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
-import setupAndLink from '../../util/link/setup-and-link';
+import { ensureLink } from '../../util/link/ensure-link';
 
 const help = () => {
   console.log(`
@@ -25,7 +25,7 @@ const help = () => {
     -p ${chalk.bold.underline('NAME')}, --project=${chalk.bold.underline(
     'NAME'
   )}        Project name
-    --confirm                      Confirm default options and skip questions
+    -y, --yes                      Skip questions when setting up new project using default scope and settings
 
   ${chalk.dim('Examples:')}
 
@@ -37,7 +37,7 @@ const help = () => {
     '–'
   )} Link current directory with default options and skip questions
 
-      ${chalk.cyan(`$ ${getPkgName()} link --confirm`)}
+      ${chalk.cyan(`$ ${getPkgName()} link --yes`)}
 
   ${chalk.gray('–')} Link a specific directory to a Vercel Project
 
@@ -47,9 +47,14 @@ const help = () => {
 
 export default async function main(client: Client) {
   const argv = getArgs(client.argv.slice(2), {
-    '--confirm': Boolean,
+    '--yes': Boolean,
+    '-y': '--yes',
     '--project': String,
     '-p': '--project',
+
+    // deprecated
+    '--confirm': Boolean,
+    '-c': '--confirm',
   });
 
   if (argv['--help']) {
@@ -57,25 +62,22 @@ export default async function main(client: Client) {
     return 2;
   }
 
+  if ('--confirm' in argv) {
+    client.output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    argv['--yes'] = argv['--confirm'];
+  }
+
   const cwd = argv._[1] || process.cwd();
-  const link = await setupAndLink(client, cwd, {
+
+  const link = await ensureLink('link', client, cwd, {
+    autoConfirm: !!argv['--yes'],
     forceDelete: true,
-    autoConfirm: argv['--confirm'],
     projectName: argv['--project'],
     successEmoji: 'success',
-    setupMsg: 'Set up',
   });
 
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    // User aborted project linking questions
-    return 0;
-  } else if (link.status === 'linked') {
-    // Successfully linked
-    return 0;
-  } else {
-    const err: never = link;
-    throw new Error('Unknown link status: ' + err);
+  if (typeof link === 'number') {
+    return link;
   }
+  return 0;
 }

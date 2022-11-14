@@ -2,12 +2,13 @@
   "compilerOptions": {
     "strict": true,
     "esModuleInterop": true,
-    "lib": ["esnext"],
-    "target": "es2018",
+    "lib": ["ES2020", "DOM"],
+    "target": "ES2020",
     "module": "commonjs",
     "outDir": "dist",
     "sourceMap": false,
     "declaration": true,
+    "skipLibCheck": true,
     "moduleResolution": "node",
     "typeRoots": ["./@types", "./node_modules/@types"]
   },

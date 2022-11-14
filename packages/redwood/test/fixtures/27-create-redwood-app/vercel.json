@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/redwood" }],
+  "probes": [
+    { "path": "/", "mustContain": "Deployment URL is" },
+    { "path": "/", "mustContain": ".vercel.app" },
+    { "path": "/api/hello", "mustContain": "{\"data\":\"hi\"}" },
+    {
+      "path": "/api/graphql",
+      "method": "POST",
+      "headers": { "Accept": "application/json" },
+      "body": { "query": "{ redwood { version } }" },
+      "mustContain": "0.27.1"
+    }
+  ]
+}

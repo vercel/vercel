@@ -1,7 +1,0 @@
-{
-  "name": "@builders-test/api",
-  "dependencies": {
-    "@builders-test/lib": "*"
-  },
-  "version": "1.0.0"
-}

@@ -56,12 +56,10 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
         const latest = getLatestRubyVersion();
         const intro = `Found \`Gemfile\` with discontinued Ruby version: \`${line}.\``;
         const hint = `Please set \`ruby "~> ${latest.range}"\` in your \`Gemfile\` to use Ruby ${latest.range}.`;
-        const upstream =
-          'This change is the result of a decision made by an upstream infrastructure provider (AWS).';
         throw new NowBuildError({
           code: 'RUBY_DISCONTINUED_VERSION',
           link: 'http://vercel.link/ruby-version',
-          message: `${intro} ${hint} ${upstream}`,
+          message: `${intro} ${hint}`,
         });
       }
     }

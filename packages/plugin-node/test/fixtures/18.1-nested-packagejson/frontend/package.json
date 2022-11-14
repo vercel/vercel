@@ -1,8 +1,0 @@
-{
-  "private": true,
-  "name": "nested-frontend",
-  "devDependencies": {
-    "@types/node": "*",
-    "typescript": "3.0.1"
-  }
-}

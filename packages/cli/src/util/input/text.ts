@@ -180,22 +180,22 @@ export default function text({
             }
             char = placeholder[value.length + caretOffset];
             value =
-              value.substr(0, value.length + caretOffset - 2) +
+              value.substring(0, value.length + caretOffset - 2) +
               char +
-              value.substr(value.length + caretOffset - 1);
+              value.slice(value.length + caretOffset - 1);
             caretOffset--;
           } else {
             char = placeholder[value.length + caretOffset - 1];
             value =
-              value.substr(0, value.length + caretOffset - 1) +
+              value.substring(0, value.length + caretOffset - 1) +
               char +
-              value.substr(value.length + caretOffset);
+              value.slice(value.length + caretOffset);
           }
           caretOffset--;
         } else {
           value =
-            value.substr(0, value.length + caretOffset - 1) +
-            value.substr(value.length + caretOffset);
+            value.substring(0, value.length + caretOffset - 1) +
+            value.slice(value.length + caretOffset);
         }
         suggestion = '';
       } else if (resolveChars.has(data)) {
@@ -222,9 +222,9 @@ export default function text({
         return;
       } else if (!ansiRegex().test(data)) {
         let tmp =
-          value.substr(0, value.length + caretOffset) +
+          value.substring(0, value.length + caretOffset) +
           data +
-          value.substr(value.length + caretOffset);
+          value.slice(value.length + caretOffset);
 
         if (mask) {
           if (/\d/.test(data) && caretOffset !== 0) {
@@ -236,9 +236,9 @@ export default function text({
 
             if (value[value.length + caretOffset + 1] === ' ') {
               tmp =
-                value.substr(0, value.length + caretOffset) +
+                value.substring(0, value.length + caretOffset) +
                 formattedData +
-                value.substr(value.length + caretOffset + formattedData.length);
+                value.slice(value.length + caretOffset + formattedData.length);
 
               caretOffset += formattedData.length + 1;
 
@@ -247,9 +247,9 @@ export default function text({
               }
             } else {
               tmp =
-                value.substr(0, value.length + caretOffset) +
+                value.substring(0, value.length + caretOffset) +
                 formattedData +
-                value.substr(value.length + caretOffset + formattedData.length);
+                value.slice(value.length + caretOffset + formattedData.length);
 
               caretOffset += formattedData.length;
             }

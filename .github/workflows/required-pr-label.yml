@@ -1,0 +1,26 @@
+name: Required PR Label
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR Labels
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let missing = false;
+            const labels = context.payload.pull_request.labels.map(l => l.name);
+            if (labels.filter(l => l.startsWith('area:')).length === 0) {
+              console.error('::error::Missing label: Please add at least one "area" label.');
+              missing = true;
+            }
+            if (labels.filter(l => l.startsWith('semver:')).length !== 1) {
+              console.error('::error::Missing label: Please add exactly one "semver" label.');
+              missing = true;
+            }
+            if (missing) {
+              process.exit(1);
+            }
+            console.log('::notice::Success: This pull request has correct labels, thanks!');

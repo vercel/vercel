@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 import multiStream from 'multistream';
 import retry from 'async-retry';
 import Sema from 'async-sema';
-import { File } from './types';
+import { FileBase } from './types';
 
 interface FileRefOptions {
   mode?: number;
@@ -12,7 +12,13 @@ interface FileRefOptions {
   mutable?: boolean;
 }
 
-const semaToDownloadFromS3 = new Sema(5);
+const DEFAULT_SEMA = 5;
+const semaToDownloadFromS3 = new Sema(
+  parseInt(
+    process.env.VERCEL_INTERNAL_FILE_REF_SEMA || String(DEFAULT_SEMA),
+    10
+  ) || DEFAULT_SEMA
+);
 
 class BailableError extends Error {
   public bail: boolean;
@@ -23,7 +29,7 @@ class BailableError extends Error {
   }
 }
 
-export default class FileRef implements File {
+export default class FileRef implements FileBase {
   public type: 'FileRef';
   public mode: number;
   public digest: string;

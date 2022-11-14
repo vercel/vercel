@@ -1,0 +1,25 @@
+name: Cron Update Next
+
+on:
+  # Run every 4 hours https://crontab.guru/every-4-hours
+  schedule:
+    - cron: '0 */4 * * *'
+
+jobs:
+  create-pull-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        # 0 means fetch all commits so we can commit and push in the script below
+        with:
+          fetch-depth: 0
+      - name: Create Pull Request
+        uses: actions/github-script@v6
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # See https://github.com/actions/github-script#run-a-separate-file-with-an-async-function
+        with:
+          script: |
+            const script = require('./utils/update-next.js')
+            await script({ github, context })

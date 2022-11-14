@@ -1,6 +1,9 @@
 import chalk from 'chalk';
 import Client from '../../util/client';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import {
+  getEnvTargetPlaceholder,
+  isValidEnvTarget,
+} from '../../util/env/env-target';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
@@ -28,6 +31,7 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
+    --environment                  Set the Environment (development, preview, production) when pulling Environment Variables
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
@@ -38,8 +42,16 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
+    -y, --yes                      Skip the confirmation prompt when overwriting env file on pull or removing an env variable
 
   ${chalk.dim('Examples:')}
+
+  ${chalk.gray(
+    '–'
+  )} Pull all Development Environment Variables down from the cloud
+
+      ${chalk.cyan(`$ ${getPkgName()} env pull <file>`)}
+      ${chalk.cyan(`$ ${getPkgName()} env pull .env.development.local`)}
 
   ${chalk.gray('–')} Add a new variable to multiple Environments
 
@@ -103,6 +115,7 @@ export default async function main(client: Client) {
     argv = getArgs(client.argv.slice(2), {
       '--yes': Boolean,
       '-y': '--yes',
+      '--environment': String,
     });
   } catch (error) {
     handleError(error);
@@ -114,9 +127,22 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const { subcommand, args } = getSubcommand(argv._.slice(1), COMMAND_CONFIG);
+  const cwd = argv['--cwd'] || process.cwd();
+  const subArgs = argv._.slice(1);
+  const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
   const { output, config } = client;
-  const link = await getLinkedProject(client);
+
+  const target = argv['--environment']?.toLowerCase() || 'development';
+  if (!isValidEnvTarget(target)) {
+    output.error(
+      `Invalid environment \`${chalk.cyan(
+        target
+      )}\`. Valid options: ${getEnvTargetPlaceholder()}`
+    );
+    return 1;
+  }
+
+  const link = await getLinkedProject(client, cwd);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -137,14 +163,16 @@ export default async function main(client: Client) {
       case 'rm':
         return rm(client, project, argv, args, output);
       case 'pull':
-        output.warn(
-          `${getCommandName(
-            'env pull'
-          )} is deprecated and will be removed in future releases. Run ${getCommandName(
-            'pull'
-          )} instead.`
+        return pull(
+          client,
+          project,
+          target,
+          argv,
+          args,
+          output,
+          cwd,
+          'vercel-cli:env:pull'
         );
-        return pull(client, project, argv, args, output);
       default:
         output.error(getInvalidSubcommand(COMMAND_CONFIG));
         help();

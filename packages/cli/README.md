@@ -10,11 +10,9 @@
 
 ## Usage
 
-Vercel is a platform for **static sites and frontend frameworks**, built to integrate with your headless content, commerce, or database.
+Vercel is the platform for frontend developers, providing the speed and reliability innovators need to create at the moment of inspiration.
 
-We provide a **frictionless developer experience** to take care of the hard things: deploy instantly, scale automatically, and serve personalized content around the globe.
-
-We make it easy for frontend teams to **develop, preview, and ship** delightful user experiences, where performance is the default.
+We enable teams to iterate quickly and develop, preview, and ship delightful user experiences. Vercel has zero-configuration support for 35+ frontend frameworks and integrates with your headless content, commerce, or database of choice.
 
 To install the latest version of Vercel CLI, run this command:
 
@@ -53,13 +51,13 @@ At this point you can make modifications to the CLI source code and test them ou
 cd packages/cli
 ```
 
-From within the `packages/cli` directory, you can use the `ts-eager` command line tool to quickly excute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
+From within the `packages/cli` directory, you can use the "dev" script to quickly execute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
 
 ```bash
-npx ts-eager src
-npx ts-eager src login
-npx ts-eager src switch --debug
-npx ts-eager src dev
+yarn dev deploy
+yarn dev whoami
+yarn dev login
+yarn dev switch --debug
 ```
 
 When you are satisfied with your changes, make a commit and create a pull request!

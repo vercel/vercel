@@ -11,6 +11,7 @@ import { getPkgName, getCommandName } from '../../util/pkg-name';
 import Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
+import { errorToString, isError } from '@vercel/error-utils';
 
 const validateSlugKeypress = (data: string, value: string) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -56,9 +57,9 @@ export default async function add(client: Client): Promise<number> {
         valid: team,
         forceLowerCase: true,
       });
-    } catch (err) {
-      if (err.message === 'USER_ABORT') {
-        output.log('Aborted');
+    } catch (err: unknown) {
+      if (isError(err) && err.message === 'USER_ABORT') {
+        output.log('Canceled');
         return 0;
       }
 
@@ -71,10 +72,10 @@ export default async function add(client: Client): Promise<number> {
     try {
       // eslint-disable-next-line no-await-in-loop
       team = await createTeam(client, { slug });
-    } catch (err) {
+    } catch (err: unknown) {
       output.stopSpinner();
       output.print(eraseLines(2));
-      output.error(err.message);
+      output.error(errorToString(err));
     }
   } while (!team);
 
@@ -92,8 +93,8 @@ export default async function add(client: Client): Promise<number> {
       label: `- ${teamNamePrefix}`,
       validateKeypress: validateNameKeypress,
     });
-  } catch (err) {
-    if (err.message === 'USER_ABORT') {
+  } catch (err: unknown) {
+    if (isError(err) && err.message === 'USER_ABORT') {
       console.log(info('No name specified'));
       return gracefulExit();
     }

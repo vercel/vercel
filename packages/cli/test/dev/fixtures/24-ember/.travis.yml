@@ -15,7 +15,7 @@ cache:
 
 env:
   global:
-    # See https://git.io/vdao3 for details.
+    # See https://github.com/ember-cli/ember-cli/blob/master/docs/build-concurrency.md
     - JOBS=1
 
 script:

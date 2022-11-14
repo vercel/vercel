@@ -1,0 +1,12 @@
+{
+  "name": "vc-dev-static-build-routing",
+  "private": true,
+  "scripts": {
+    "now-dev": "serve -l $PORT src",
+    "now-build": "rm -Rf public && cp -r src public",
+    "start": "serve public"
+  },
+  "dependencies": {
+    "serve": "11.0.2"
+  }
+}

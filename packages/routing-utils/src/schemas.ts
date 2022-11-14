@@ -153,9 +153,8 @@ export const routesSchema = {
               },
             },
           },
-          middleware: {
-            type: 'number',
-          },
+          middleware: { type: 'number' },
+          middlewarePath: { type: 'string' },
           has: hasSchema,
           missing: hasSchema,
         },
