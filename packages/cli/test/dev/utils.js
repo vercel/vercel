@@ -61,8 +61,13 @@ function fetchWithRetry(url, opts = {}) {
 
 function createResolver() {
   let resolver;
-  const p = new Promise(res => (resolver = res));
+  let rejector;
+  const p = new Promise((resolve, reject) => {
+    resolver = resolve;
+    rejector = reject;
+  });
   p.resolve = resolver;
+  p.reject = rejector;
   return p;
 }
 
@@ -274,7 +279,13 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  { expectedCode = 0, skipDeploy, isExample, projectSettings } = {}
+  {
+    expectedCode = 0,
+    skipDeploy,
+    isExample,
+    projectSettings,
+    readyTimeout = 0,
+  } = {}
 ) {
   return async () => {
     const nodeMajor = Number(process.versions.node.split('.')[0]);
@@ -385,6 +396,18 @@ function testFixtureStdio(
     const readyResolver = createResolver();
     const exitResolver = createResolver();
 
+    // By default, tests will wait 6 minutes for the dev server to be ready and
+    // perform the tests, however a `readyTimeout` can be used to reduce the
+    // wait time if the dev server is expected to fail to start or hang
+    let readyTimer = null;
+    if (readyTimeout > 0) {
+      readyTimer = setTimeout(() => {
+        readyResolver.reject(
+          new Error('Dev server timed out while waiting to be ready')
+        );
+      }, readyTimeout);
+    }
+
     try {
       let printedOutput = false;
 
@@ -424,6 +447,7 @@ function testFixtureStdio(
         stderr += data;
 
         if (stripAnsi(data).includes('Ready! Available at')) {
+          clearTimeout(readyTimer);
           readyResolver.resolve();
         }
 
@@ -507,5 +531,6 @@ module.exports = {
   shouldSkip,
   fixture,
   fetch,
+  fetchWithRetry,
   validateResponseHeaders,
 };
