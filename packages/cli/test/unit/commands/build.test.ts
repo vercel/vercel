@@ -1312,6 +1312,59 @@ describe('build', () => {
         },
         ms('5 minutes')
       );
+
+      test(
+        `skip when rootDirectory is null or '.'`,
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
+
+            const projectJSONPath = join(cwd, '.vercel/project.json');
+            const projectJSON = JSON.parse(
+              await fs.readFile(projectJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              projectJSONPath,
+              JSON.stringify({
+                ...projectJSON,
+                settings: {
+                  rootDirectory: null,
+                  outputDirectory: null,
+                },
+              })
+            );
+
+            const packageJSONPath = join(cwd, 'package.json');
+            const packageJSON = JSON.parse(
+              await fs.readFile(packageJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              packageJSONPath,
+              JSON.stringify({
+                ...packageJSON,
+                scripts: {
+                  ...packageJSON.scripts,
+                  build: `node build.js`,
+                },
+              })
+            );
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            const result = await fs.readFile(
+              join(cwd, '.vercel/output/static/index.txt'),
+              'utf8'
+            );
+            expect(result).toMatch(/Hello, world/);
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
+          }
+        },
+        ms('5 miuntes')
+      );
     });
 
     describe.each([
