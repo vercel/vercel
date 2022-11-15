@@ -95,6 +95,8 @@ describe('login', () => {
       await expect(client.stderr).not.toOutput(emoji('tip'));
 
       await expect(exitCodePromise).resolves.toEqual(0);
+
+      process.env.NO_COLOR = undefined;
     });
   });
 });

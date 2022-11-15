@@ -1,4 +1,4 @@
-export const emojiLabels = {
+const emojiLabels = {
   notice: '📝',
   tip: '💡',
   warning: '❗️',
@@ -15,7 +15,7 @@ export function emoji(label: EmojiLabel) {
 }
 
 export function prependEmoji(message: string, emoji?: string): string {
-  if (emoji && process.stdout.isTTY) {
+  if (emoji && process.stdout.isTTY && process.env.NO_COLOR !== '1') {
     return `${emoji}  ${message}`;
   }
 
