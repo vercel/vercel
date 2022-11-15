@@ -1,0 +1,24 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "index page",
+      "status": 200
+    },
+    {
+      "path": "/api/hello",
+      "status": 200,
+      "mustContain": "hello"
+    },
+    {
+      "path": "/api/another",
+      "status": 200,
+      "mustContain": "[id]"
+    },
+    {
+      "path": "/api/one-more",
+      "status": 200,
+      "mustContain": "[id]"
+    }
+  ]
+}

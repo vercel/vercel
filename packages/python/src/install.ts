@@ -96,7 +96,7 @@ interface InstallRequirementArg {
 }
 
 // note that any internal dependency that vc_init.py requires that's installed
-// with this function can get overriden by a newer version from requirements.txt,
+// with this function can get overridden by a newer version from requirements.txt,
 // so vc_init should do runtime version checks to be compatible with any recent
 // version of its dependencies
 export async function installRequirement({

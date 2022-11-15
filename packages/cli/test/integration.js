@@ -360,7 +360,7 @@ test('default command should prompt login with empty auth.json', async t => {
   } catch (err) {
     t.true(
       err.stderr.includes(
-        'Error! No existing credentials found. Please run `vercel login` or pass "--token"'
+        'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
       )
     );
   }
@@ -749,7 +749,7 @@ test('deploy fails using --local-config flag with non-existent path', async t =>
 
   t.is(exitCode, 1, formatOutput({ stderr, stdout }));
 
-  t.regex(stderr, /Error! Couldn't find a project configuration file at/);
+  t.regex(stderr, /Error: Couldn't find a project configuration file at/);
   t.regex(stderr, /does-not-exist\.json/);
 });
 
@@ -1451,7 +1451,7 @@ test('login with unregistered user', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  const goal = `Error! Please sign up: https://vercel.com/signup`;
+  const goal = `Error: Please sign up: https://vercel.com/signup`;
   const lines = stderr.trim().split('\n');
   const last = lines[lines.length - 1];
 
@@ -1536,23 +1536,6 @@ test('list the scopes', async t => {
     include.test(stdout),
     `Expected: ${include}\n\nReceived instead:\n${stdout}\n${stderr}`
   );
-});
-
-test('list the payment methods', async t => {
-  const { stdout, stderr, exitCode } = await execa(
-    binaryPath,
-    ['billing', 'ls', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 0);
-  t.true(stdout.startsWith(`> 0 cards found under ${contextName}`));
 });
 
 test('domains inspect', async t => {
@@ -1646,7 +1629,7 @@ test('try to purchase a domain', async t => {
   t.is(exitCode, 1);
   t.regex(
     stderr,
-    /Error! Could not purchase domain\. Please add a payment method using/
+    /Error: Could not purchase domain\. Please add a payment method using/
   );
 });
 
@@ -1672,7 +1655,7 @@ test('try to transfer-in a domain with "--code" option', async t => {
 
   t.true(
     stderr.includes(
-      `Error! The domain "${session}-test.com" is not transferable.`
+      `Error: The domain "${session}-test.com" is not transferable.`
     )
   );
   t.is(exitCode, 1);
@@ -1697,46 +1680,8 @@ test('try to move an invalid domain', async t => {
   console.log(stdout);
   console.log(exitCode);
 
-  t.true(stderr.includes(`Error! Domain not found under `));
+  t.true(stderr.includes(`Error: Domain not found under `));
   t.is(exitCode, 1);
-});
-
-test('try to set default without existing payment method', async t => {
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    ['billing', 'set-default', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 0);
-  t.true(stderr.includes('You have no credit cards to choose from'));
-});
-
-test('try to remove a non-existing payment method', async t => {
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    ['billing', 'rm', 'card_d2j32d9382jr928rd', ...defaultArgs],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  t.is(exitCode, 0);
-  t.true(
-    stderr.includes(
-      `You have no credit cards to choose from to delete under ${contextName}`
-    )
-  );
 });
 
 /*
@@ -1917,7 +1862,7 @@ test('ensure we render a prompt when deploying home directory', async t => {
       'You are deploying your home directory. Do you want to continue? [y/N]'
     )
   );
-  t.true(stderr.includes('Aborted'));
+  t.true(stderr.includes('Canceled'));
 });
 
 test('ensure the `scope` property works with email', async t => {
@@ -2019,7 +1964,7 @@ test('try to create a builds deployments with wrong now.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
+      'Error: Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
     )
   );
   t.true(stderr.includes('https://vercel.com/docs/configuration'));
@@ -2043,7 +1988,7 @@ test('try to create a builds deployments with wrong vercel.json', async t => {
   t.is(exitCode, 1);
   t.true(
     stderr.includes(
-      'Error! Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
+      'Error: Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
     )
   );
   t.true(stderr.includes('https://vercel.com/docs/configuration'));
@@ -2064,7 +2009,7 @@ test('try to create a builds deployments with wrong `build.env` property', async
   t.is(exitCode, 1, formatOutput({ stdout, stderr }));
   t.true(
     stderr.includes(
-      'Error! Invalid vercel.json - should NOT have additional property `build.env`. Did you mean `{ "build": { "env": {"name": "value"} } }`?'
+      'Error: Invalid vercel.json - should NOT have additional property `build.env`. Did you mean `{ "build": { "env": {"name": "value"} } }`?'
     ),
     formatOutput({ stdout, stderr })
   );
@@ -2225,47 +2170,8 @@ test('use build-env', async t => {
   t.is(content.trim(), 'bar');
 });
 
-test('use `--debug` CLI flag', async t => {
-  const directory = fixture('build-env-debug');
-
-  const { stderr, stdout, exitCode } = await execa(
-    binaryPath,
-    [
-      directory,
-      '--public',
-      '--name',
-      session,
-      '--debug',
-      ...defaultArgs,
-      '--yes',
-    ],
-    {
-      reject: false,
-    }
-  );
-
-  console.log(stderr);
-  console.log(stdout);
-  console.log(exitCode);
-
-  // Ensure the exit code is right
-  t.is(exitCode, 0, `Received:\n"${stderr}"\n"${stdout}"`);
-
-  // Test if the output is really a URL
-  const deploymentUrl = pickUrl(stdout);
-  const { href, host } = new URL(deploymentUrl);
-  t.is(host.split('-')[0], session);
-
-  await waitForDeployment(href);
-
-  // get the content
-  const response = await fetch(href);
-  const content = await response.text();
-  t.is(content.trim(), 'off');
-});
-
 test('try to deploy non-existing path', async t => {
-  const goal = `Error! The specified file or directory "${session}" does not exist.`;
+  const goal = `Error: The specified file or directory "${session}" does not exist.`;
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -2285,7 +2191,7 @@ test('try to deploy non-existing path', async t => {
 
 test('try to deploy with non-existing team', async t => {
   const target = fixture('static-deployment');
-  const goal = `Error! The specified scope does not exist`;
+  const goal = `Error: The specified scope does not exist`;
 
   const { stderr, stdout, exitCode } = await execa(
     binaryPath,
@@ -2368,7 +2274,7 @@ test('try to initialize example to existing directory', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    'Error! Destination path "angular" already exists and is not an empty directory. You may use `--force` or `-f` to override it.';
+    'Error: Destination path "angular" already exists and is not an empty directory. You may use `--force` or `-f` to override it.';
 
   await ensureDir(path.join(cwd, 'angular'));
   createFile(path.join(cwd, 'angular', '.gitignore'));
@@ -2385,7 +2291,7 @@ test('try to initialize misspelled example (noce) in non-tty', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    'Error! No example found for noce, run `vercel init` to see the list of available examples.';
+    'Error: No example found for noce, run `vercel init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'noce'], { cwd });
 
@@ -2401,7 +2307,7 @@ test('try to initialize example "example-404"', async t => {
   tmpDir = tmp.dirSync({ unsafeCleanup: true });
   const cwd = tmpDir.name;
   const goal =
-    'Error! No example found for example-404, run `vercel init` to see the list of available examples.';
+    'Error: No example found for example-404, run `vercel init` to see the list of available examples.';
 
   const { stdout, stderr, exitCode } = await execute(['init', 'example-404'], {
     cwd,
@@ -2577,7 +2483,7 @@ test('`vercel rm` should fail with unexpected option', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.regex(
     output.stderr,
-    /Error! unknown or unexpected option: --fake/gm,
+    /Error: unknown or unexpected option: --fake/gm,
     formatOutput(output)
   );
 });
@@ -2871,7 +2777,7 @@ test('invalid `--token`', async t => {
   t.is(output.exitCode, 1, formatOutput(output));
   t.true(
     output.stderr.includes(
-      'Error! You defined "--token", but its contents are invalid. Must not contain: "\\n", ",", "."'
+      'Error: You defined "--token", but its contents are invalid. Must not contain: "\\n", ",", "."'
     )
   );
 });
@@ -3540,23 +3446,20 @@ test('deploy pnpm twice using pnp and symlink=false', async t => {
     ]);
   }
 
-  function logs(deploymentUrl) {
-    return execa(binaryPath, ['logs', deploymentUrl, ...defaultArgs]);
-  }
-
   let { exitCode, stderr, stdout } = await deploy();
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  let { stdout: logsOutput } = await logs(stdout);
-
-  t.regex(logsOutput, /Build Cache not found/m);
+  let page = await fetch(stdout);
+  let text = await page.text();
+  t.is(text, 'no cache\n');
 
   ({ exitCode, stderr, stdout } = await deploy());
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  ({ stdout: logsOutput } = await logs(stdout));
+  page = await fetch(stdout);
+  text = await page.text();
 
-  t.regex(logsOutput, /Build cache downloaded/m);
+  t.is(text, 'cache exists\n');
 });
 
 test('reject deploying with wrong team .vercel config', async t => {
@@ -3594,7 +3497,7 @@ test('reject deploying with invalid token', async t => {
   t.is(exitCode, 1, formatOutput({ stderr, stdout }));
   t.regex(
     stderr,
-    /Error! Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\./g
+    /Error: Could not retrieve Project Settings\. To link your Project, remove the `\.vercel` directory and deploy again\./g
   );
 });
 

@@ -1,6 +1,7 @@
 import type {
   Builder,
   BuilderFunctions,
+  Images,
   ProjectSettings,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
@@ -41,6 +42,7 @@ export interface Deployment {
   id: string;
   deploymentId?: string;
   url: string;
+  inspectorUrl: string;
   name: string;
   meta: Dictionary<string | number | boolean>;
   version: 2;
@@ -69,12 +71,14 @@ export interface Deployment {
     | 'QUEUED'
     | 'CANCELED'
     | 'ERROR';
+  ready?: number;
   createdAt: number;
   createdIn: string;
   buildingAt?: number;
   creator?: {
     uid?: string;
     email?: string;
+    name?: string;
     username?: string;
   };
   env: Dictionary<string>;
@@ -149,6 +153,7 @@ export interface VercelConfig {
   installCommand?: string | null;
   framework?: string | null;
   outputDirectory?: string | null;
+  images?: Images;
 }
 
 export interface GitMetadata {

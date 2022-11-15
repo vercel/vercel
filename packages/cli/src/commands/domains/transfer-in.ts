@@ -111,9 +111,7 @@ export default async function transferIn(
 
   if (transferInResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method using ${getCommandName(
-        `billing add`
-      )}.`
+      `Could not purchase domain. Please add a payment method using the dashboard.`
     );
     return 1;
   }

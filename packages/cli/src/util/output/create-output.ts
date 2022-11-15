@@ -4,7 +4,9 @@ import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlink
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '../../types';
-import { errorToString } from '../is-error';
+import { errorToString } from '@vercel/error-utils';
+
+const IS_TEST = process.env.NODE_ENV === 'test';
 
 export interface OutputOptions {
   debug?: boolean;
@@ -89,7 +91,7 @@ export class Output {
     link?: string,
     action = 'Learn More'
   ) => {
-    this.print(`${chalk.red(`Error!`)} ${str}\n`);
+    this.print(`${chalk.red(`Error:`)} ${str}\n`);
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
       this.print(
@@ -128,12 +130,15 @@ export class Output {
   };
 
   spinner = (message: string, delay: number = 300): void => {
-    this.spinnerMessage = message;
     if (this.debugEnabled) {
       this.debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       return;
     }
-    if (this.stream.isTTY) {
+    if (IS_TEST || !this.stream.isTTY) {
+      this.print(`${message}\n`);
+    } else {
+      this.spinnerMessage = message;
+
       if (this._spinner) {
         this._spinner.text = message;
       } else {
@@ -145,8 +150,6 @@ export class Output {
           delay
         );
       }
-    } else {
-      this.print(`${message}\n`);
     }
   };
 

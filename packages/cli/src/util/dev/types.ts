@@ -12,21 +12,19 @@ import {
   FileBlob,
   FileFsRef,
   Lambda,
-  PackageJson,
 } from '@vercel/build-utils';
 import { VercelConfig } from '@vercel/client';
 import { HandleValue, Route } from '@vercel/routing-utils';
 import { Output } from '../output';
-import { ProjectEnvVariable, ProjectSettings } from '../../types';
+import { ProjectSettings } from '../../types';
+import { BuilderWithPkg } from '../build/import-builders';
 
 export { VercelConfig };
 
 export interface DevServerOptions {
   output: Output;
-  devCommand?: string;
   projectSettings?: ProjectSettings;
-  systemEnvValues?: string[];
-  projectEnvs?: ProjectEnvVariable[];
+  envValues?: Record<string, string>;
 }
 
 export interface EnvConfigs {
@@ -49,7 +47,7 @@ export interface EnvConfigs {
 export interface BuildMatch extends BuildConfig {
   entrypoint: string;
   src: string;
-  builderWithPkg: BuilderWithPackage;
+  builderWithPkg: BuilderWithPkg;
   buildOutput: BuilderOutputs;
   buildResults: Map<string | null, BuildResult>;
   buildTimestamp: number;
@@ -121,13 +119,6 @@ export interface BuildResultV4 {
   routes: Route[];
   watch: string[];
   distPath?: string;
-}
-
-export interface BuilderWithPackage {
-  runInProcess?: boolean;
-  requirePath: string;
-  builder: Readonly<Builder>;
-  package: Readonly<PackageJson>;
 }
 
 export interface HttpHeadersConfig {

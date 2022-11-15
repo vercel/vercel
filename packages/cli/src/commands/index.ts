@@ -1,10 +1,8 @@
 export default new Map([
   ['alias', 'alias'],
   ['aliases', 'alias'],
-  ['billing', 'billing'],
   ['bisect', 'bisect'],
   ['build', 'build'],
-  ['cc', 'billing'],
   ['cert', 'certs'],
   ['certs', 'certs'],
   ['deploy', 'deploy'],
@@ -36,6 +34,5 @@ export default new Map([
   ['switch', 'teams'],
   ['team', 'teams'],
   ['teams', 'teams'],
-  ['update', 'update'],
   ['whoami', 'whoami'],
 ]);

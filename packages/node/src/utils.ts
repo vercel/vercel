@@ -1,5 +1,6 @@
 import { extname } from 'path';
 import { pathToRegexp } from 'path-to-regexp';
+import { debug } from '@vercel/build-utils';
 
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   if (!matcherOrMatchers) {
@@ -12,7 +13,11 @@ export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   return regExps;
 }
 
-function getRegExpFromMatcher(matcher: unknown): string[] {
+function getRegExpFromMatcher(
+  matcher: unknown,
+  index: number,
+  allMatchers: unknown[]
+): string[] {
   if (typeof matcher !== 'string') {
     throw new Error(
       "Middleware's `config.matcher` must be a path matcher (string) or an array of path matchers (string[])"
@@ -26,7 +31,7 @@ function getRegExpFromMatcher(matcher: unknown): string[] {
   }
 
   const regExps = [pathToRegexp(matcher).source];
-  if (matcher === '/') {
+  if (matcher === '/' && !allMatchers.includes('/index')) {
     regExps.push(pathToRegexp('/index').source);
   }
   return regExps;
@@ -50,4 +55,15 @@ export function entrypointToOutputPath(
     return entrypoint.slice(0, entrypoint.length - ext.length);
   }
   return entrypoint;
+}
+
+export function logError(error: Error) {
+  console.error(error.message);
+  if (error.stack) {
+    // only show the stack trace if debug is enabled
+    // because it points to internals, not user code
+    const errorPrefixLength = 'Error: '.length;
+    const errorMessageLength = errorPrefixLength + error.message.length;
+    debug(error.stack.substring(errorMessageLength + 1));
+  }
 }

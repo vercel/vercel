@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { isErrnoException, isError, errorToString } from './util/is-error';
+import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
 
 try {
   // Test to see if cwd has been deleted before
@@ -7,7 +7,7 @@ try {
   process.cwd();
 } catch (err: unknown) {
   if (isError(err) && err.message.includes('uv_cwd')) {
-    console.error('Error! The current working directory does not exist.');
+    console.error('Error: The current working directory does not exist.');
     process.exit(1);
   }
 }
@@ -323,14 +323,7 @@ const main = async () => {
     client.argv.push('-h');
   }
 
-  const subcommandsWithoutToken = [
-    'login',
-    'logout',
-    'help',
-    'init',
-    'update',
-    'build',
-  ];
+  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'build'];
 
   // Prompt for login if there is no current token
   if (
@@ -505,9 +498,6 @@ const main = async () => {
       case 'alias':
         func = require('./commands/alias').default;
         break;
-      case 'billing':
-        func = require('./commands/billing').default;
-        break;
       case 'bisect':
         func = require('./commands/bisect').default;
         break;
@@ -571,9 +561,6 @@ const main = async () => {
       case 'teams':
         func = require('./commands/teams').default;
         break;
-      case 'update':
-        func = require('./commands/update').default;
-        break;
       case 'whoami':
         func = require('./commands/whoami').default;
         break;
@@ -619,6 +606,21 @@ const main = async () => {
       }
       if (typeof err.stack === 'string') {
         output.debug(err.stack);
+      }
+      return 1;
+    }
+
+    if (isErrnoException(err) && err.code === 'ECONNRESET') {
+      // Error message will look like the following:
+      // request to https://api.vercel.com/v2/user failed, reason: socket hang up
+      const matches = /request to https:\/\/(.*?)\//.exec(err.message || '');
+      const hostname = matches?.[1];
+      if (hostname) {
+        output.error(
+          `Connection to ${highlight(
+            hostname
+          )} interrupted. Please verify your internet connectivity and DNS configuration.`
+        );
       }
       return 1;
     }

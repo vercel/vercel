@@ -31,11 +31,11 @@ import { invalidate } from '$app/navigation';
 export function enhance(form, { pending, error, result } = {}) {
   let current_token;
 
-  /** @param {SubmitEvent} e */
-  async function handle_submit(e) {
+  /** @param {SubmitEvent} event */
+  async function handle_submit(event) {
     const token = (current_token = {});
 
-    e.preventDefault();
+    event.preventDefault();
 
     const data = new FormData(form);
 
@@ -63,11 +63,11 @@ export function enhance(form, { pending, error, result } = {}) {
       } else {
         console.error(await response.text());
       }
-    } catch (e) {
-      if (error && e instanceof Error) {
-        error({ data, form, error: e, response: null });
+    } catch (err) {
+      if (error && err instanceof Error) {
+        error({ data, form, error: err, response: null });
       } else {
-        throw e;
+        throw err;
       }
     }
   }
