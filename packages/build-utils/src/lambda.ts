@@ -11,7 +11,7 @@ interface Environment {
   [key: string]: string;
 }
 
-type OperationType = 'API' | 'Page' /* SSR */ | 'ISR';
+type OperationType = 'API' | 'SSR' | 'ISR' | 'Bundled';
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
@@ -27,6 +27,11 @@ export interface LambdaOptionsBase {
   supportsWrapper?: boolean;
   experimentalResponseStreaming?: boolean;
   operationType?: OperationType;
+  bundledFunctions?: {
+    API: number;
+    ISR: number;
+    SSR: number;
+  };
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
