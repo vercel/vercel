@@ -8,6 +8,7 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import { setupFixture } from '../../helpers/setup-fixture';
+import JSON5 from 'json5';
 // import execa from 'execa';
 
 jest.setTimeout(ms('1 minute'));
@@ -1244,13 +1245,13 @@ describe('build', () => {
             // }
 
             const projectJSONPath = join(cwd, '.vercel/project.json');
-            const projectJSON = JSON.parse(
+            const projectJSON = JSON5.parse(
               await fs.readFile(projectJSONPath, 'utf-8')
             );
 
             await fs.writeFile(
               projectJSONPath,
-              JSON.stringify({
+              JSON5.stringify({
                 ...projectJSON,
                 settings: {
                   ...projectJSON.settings,
@@ -1291,7 +1292,7 @@ describe('build', () => {
 
             await fs.writeFile(
               join(cwd, 'packages/app-1/vercel.json'),
-              JSON.stringify({
+              JSON5.stringify({
                 buildCommand,
                 installCommand,
               })
@@ -1320,13 +1321,13 @@ describe('build', () => {
             const cwd = setupMonorepoDetectionFixture(fixture);
 
             const projectJSONPath = join(cwd, '.vercel/project.json');
-            const projectJSON = JSON.parse(
+            const projectJSON = JSON5.parse(
               await fs.readFile(projectJSONPath, 'utf-8')
             );
 
             await fs.writeFile(
               projectJSONPath,
-              JSON.stringify({
+              JSON5.stringify({
                 ...projectJSON,
                 settings: {
                   rootDirectory: null,
@@ -1336,13 +1337,13 @@ describe('build', () => {
             );
 
             const packageJSONPath = join(cwd, 'package.json');
-            const packageJSON = JSON.parse(
+            const packageJSON = JSON5.parse(
               await fs.readFile(packageJSONPath, 'utf-8')
             );
 
             await fs.writeFile(
               packageJSONPath,
-              JSON.stringify({
+              JSON5.stringify({
                 ...packageJSON,
                 scripts: {
                   ...packageJSON.scripts,
@@ -1426,10 +1427,10 @@ describe('build', () => {
             const cwd = setupMonorepoDetectionFixture(fixture);
 
             const configPath = join(cwd, configFile);
-            const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+            const config = JSON5.parse(await fs.readFile(configPath, 'utf-8'));
 
             deleteSubProperty(config, propertyAccessor);
-            await fs.writeFile(configPath, JSON.stringify(config));
+            await fs.writeFile(configPath, JSON5.stringify(config));
 
             const exitCode = await build(client);
 
