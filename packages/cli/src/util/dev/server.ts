@@ -18,7 +18,6 @@ import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
-import which from 'which';
 import npa from 'npm-package-arg';
 import type { ChildProcess } from 'child_process';
 
@@ -33,6 +32,7 @@ import {
   Builder,
   cloneEnv,
   Env,
+  getNodeBinPath,
   StartDevServerResult,
   FileFsRef,
   PackageJson,
@@ -2238,6 +2238,10 @@ export default class DevServer {
       }
     );
 
+    // add the node_modules/.bin directory to the PATH
+    const nodeBinPath = await getNodeBinPath({ cwd });
+    env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
+
     // This is necesary so that the dev command in the Project
     // will work cross-platform (especially Windows).
     let command = devCommand
@@ -2251,22 +2255,6 @@ export default class DevServer {
         port,
       })}`
     );
-
-    const isNpxAvailable = await which('npx')
-      .then(() => true)
-      .catch(() => false);
-
-    if (isNpxAvailable) {
-      command = `npx --no-install ${command}`;
-    } else {
-      const isYarnAvailable = await which('yarn')
-        .then(() => true)
-        .catch(() => false);
-
-      if (isYarnAvailable) {
-        command = `yarn run --silent ${command}`;
-      }
-    }
 
     this.output.debug(`Spawning dev command: ${command}`);
 
