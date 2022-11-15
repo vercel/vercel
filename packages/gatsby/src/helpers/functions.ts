@@ -93,7 +93,6 @@ export async function createAPIRoutes({
       shouldAddHelpers: true,
       shouldAddSourcemapSupport: false,
       files: {
-        ...(await getFunctionLibsFiles()),
         'index.js': new FileBlob({
           data: await getHandler({
             nodeVersion,
