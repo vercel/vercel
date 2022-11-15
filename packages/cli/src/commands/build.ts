@@ -304,7 +304,12 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
-  await setMonorepoDefaultSettings(cwd, workPath, projectSettings, output);
+  if (
+    projectSettings.rootDirectory !== null &&
+    projectSettings.rootDirectory !== '.'
+  ) {
+    await setMonorepoDefaultSettings(cwd, workPath, projectSettings, output);
+  }
 
   // Get a list of source files
   const files = (await getFiles(workPath, client)).map(f =>

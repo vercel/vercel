@@ -9,6 +9,7 @@ import {
 import { ProjectLinkAndSettings } from '../projects/project-settings';
 import { Output } from '../output';
 import title from 'title';
+import JSON5 from 'json5';
 
 export async function setMonorepoDefaultSettings(
   cwd: string,
@@ -55,7 +56,7 @@ export async function setMonorepoDefaultSettings(
 
   if (monorepoManager === 'turbo') {
     // No ENOENT handling required here since conditional wouldn't be `true` unless `turbo.json` was found.
-    const turboJSON = JSON.parse(
+    const turboJSON = JSON5.parse(
       fs.readFileSync(join(cwd, 'turbo.json'), 'utf-8')
     );
 
@@ -76,7 +77,7 @@ export async function setMonorepoDefaultSettings(
     );
   } else if (monorepoManager === 'nx') {
     // No ENOENT handling required here since conditional wouldn't be `true` unless `nx.json` was found.
-    const nxJSON = JSON.parse(fs.readFileSync(join(cwd, 'nx.json'), 'utf-8'));
+    const nxJSON = JSON5.parse(fs.readFileSync(join(cwd, 'nx.json'), 'utf-8'));
 
     if (!nxJSON?.targetDefaults?.build) {
       output.log(
@@ -92,14 +93,14 @@ export async function setMonorepoDefaultSettings(
 
       if (projectJSONBuf) {
         output.log('Found project.json Nx configuration.');
-        const projectJSON = JSON.parse(projectJSONBuf.toString('utf-8'));
+        const projectJSON = JSON5.parse(projectJSONBuf.toString('utf-8'));
         if (projectJSON?.targets?.build) {
           hasBuildTarget = true;
         }
       }
 
       if (packageJsonBuf) {
-        const packageJSON = JSON.parse(packageJsonBuf.toString('utf-8'));
+        const packageJSON = JSON5.parse(packageJsonBuf.toString('utf-8'));
         if (packageJSON?.nx) {
           output.log('Found package.json Nx configuration.');
           if (packageJSON.nx.targets?.build) {
