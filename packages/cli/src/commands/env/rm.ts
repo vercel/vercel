@@ -19,7 +19,7 @@ import { isAPIError } from '../../util/errors-ts';
 
 type Options = {
   '--debug': boolean;
-  '--text-only': boolean;
+  '--no-color': boolean;
   '--yes': boolean;
 };
 

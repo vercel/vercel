@@ -93,7 +93,7 @@ export default async (client: Client): Promise<number> => {
       '--prod': Boolean,
       '--archive': String,
       '--yes': Boolean,
-      '--text-only': Boolean,
+      '--no-color': Boolean,
       '-f': '--force',
       '-p': '--public',
       '-e': '--env',

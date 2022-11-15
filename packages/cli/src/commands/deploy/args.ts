@@ -52,7 +52,7 @@ export const help = () => `
   'DIR'
 )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
-    --text-only                    Text only mode [off]
+    --no-color                     No color mode [off]
     -f, --force                    Force a new deployment even if nothing has changed
     --with-cache                   Retain build cache when using "--force"
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(

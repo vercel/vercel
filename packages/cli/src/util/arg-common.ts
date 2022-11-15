@@ -8,7 +8,7 @@ const ARG_COMMON = {
   '--debug': Boolean,
   '-d': '--debug',
 
-  '--text-only': Boolean,
+  '--no-color': Boolean,
 
   '--token': String,
   '-t': '--token',

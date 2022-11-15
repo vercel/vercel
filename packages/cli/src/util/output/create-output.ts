@@ -6,11 +6,10 @@ import { errorToString } from '@vercel/error-utils';
 import { emojiLabels } from '../emoji';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
-const IS_TEXT_ONLY_MODE = process.env.TEXT_ONLY_MODE === 'on';
 
 export interface OutputOptions {
   debug?: boolean;
-  textOnly?: boolean;
+  noColor?: boolean;
 }
 
 export interface LogOptions {
@@ -20,20 +19,17 @@ export interface LogOptions {
 export class Output {
   stream: WritableTTY;
   debugEnabled: boolean;
-  textOnly: boolean;
+  noColor: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
   constructor(
     stream: WritableTTY,
-    {
-      debug: debugEnabled = false,
-      textOnly = IS_TEXT_ONLY_MODE,
-    }: OutputOptions = {}
+    { debug: debugEnabled = false, noColor = false }: OutputOptions = {}
   ) {
     this.stream = stream;
     this.debugEnabled = debugEnabled;
-    this.textOnly = textOnly;
+    this.noColor = noColor;
     this.spinnerMessage = '';
     this._spinner = null;
   }
@@ -43,7 +39,7 @@ export class Output {
   };
 
   print = (str: string) => {
-    if (this.textOnly) {
+    if (this.noColor) {
       const regExp = new RegExp(Object.values(emojiLabels).join('|'), 'gi');
       const textOnlyStr = str.replace(regExp, '').trimStart();
 
