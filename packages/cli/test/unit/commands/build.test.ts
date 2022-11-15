@@ -9,6 +9,7 @@ import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import { setupFixture } from '../../helpers/setup-fixture';
 import JSON5 from 'json5';
+// TODO (@Ethan-Arrowood) - After shipping support for turbo and nx, revisit rush support
 // import execa from 'execa';
 
 jest.setTimeout(ms('1 minute'));
@@ -1245,13 +1246,13 @@ describe('build', () => {
             // }
 
             const projectJSONPath = join(cwd, '.vercel/project.json');
-            const projectJSON = JSON5.parse(
+            const projectJSON = JSON.parse(
               await fs.readFile(projectJSONPath, 'utf-8')
             );
 
             await fs.writeFile(
               projectJSONPath,
-              JSON5.stringify({
+              JSON.stringify({
                 ...projectJSON,
                 settings: {
                   ...projectJSON.settings,
@@ -1292,7 +1293,7 @@ describe('build', () => {
 
             await fs.writeFile(
               join(cwd, 'packages/app-1/vercel.json'),
-              JSON5.stringify({
+              JSON.stringify({
                 buildCommand,
                 installCommand,
               })
@@ -1321,13 +1322,13 @@ describe('build', () => {
             const cwd = setupMonorepoDetectionFixture(fixture);
 
             const projectJSONPath = join(cwd, '.vercel/project.json');
-            const projectJSON = JSON5.parse(
+            const projectJSON = JSON.parse(
               await fs.readFile(projectJSONPath, 'utf-8')
             );
 
             await fs.writeFile(
               projectJSONPath,
-              JSON5.stringify({
+              JSON.stringify({
                 ...projectJSON,
                 settings: {
                   rootDirectory: null,
@@ -1337,13 +1338,13 @@ describe('build', () => {
             );
 
             const packageJSONPath = join(cwd, 'package.json');
-            const packageJSON = JSON5.parse(
+            const packageJSON = JSON.parse(
               await fs.readFile(packageJSONPath, 'utf-8')
             );
 
             await fs.writeFile(
               packageJSONPath,
-              JSON5.stringify({
+              JSON.stringify({
                 ...packageJSON,
                 scripts: {
                   ...packageJSON.scripts,
