@@ -31,8 +31,7 @@ export async function injectVercelAnalyticsPlugin(dir: string): Promise<void> {
       `Injecting Gatsby.js analytics plugin "${GATSBY_PLUGIN_PACKAGE_NAME}" to \`${gatsbyConfigPathTs}\``
     );
     await addGatsbyPackage(dir);
-    await updateGatsbyTsConfig(gatsbyConfigPathTs);
-    return;
+    return updateGatsbyTsConfig(gatsbyConfigPathTs);
   }
 
   console.log(
@@ -70,6 +69,7 @@ async function updateGatsbyTsConfig(configPath: string): Promise<void> {
   await fs.writeFile(
     configPath,
     `import userConfig from "./gatsby-config.ts.__vercel_builder_backup__.ts";
+import type { PluginRef } from "gatsby";
 
 // https://github.com/gatsbyjs/gatsby/blob/354003fb2908e02ff12109ca3a02978a5a6e608c/packages/gatsby/src/bootstrap/prefer-default.ts
 const preferDefault = (m: any) => (m && m.default) || m;
@@ -85,7 +85,7 @@ if (!vercelConfig.plugins) {
 }
 
 const hasPlugin = vercelConfig.plugins.find(
-  (p: any) =>
+  (p: PluginRef) =>
     p && (p === "gatsby-plugin-vercel" || p.resolve === "gatsby-plugin-vercel")
 );
 
