@@ -15,6 +15,12 @@ type OperationType = 'API' | 'SSR' | 'ISR' | 'Bundled';
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
+export type BundledFunctions = {
+  API?: number;
+  ISR?: number;
+  SSR?: number;
+};
+
 export interface LambdaOptionsBase {
   handler: string;
   runtime: string;
@@ -27,11 +33,7 @@ export interface LambdaOptionsBase {
   supportsWrapper?: boolean;
   experimentalResponseStreaming?: boolean;
   operationType?: OperationType;
-  bundledFunctions?: {
-    API: number;
-    ISR: number;
-    SSR: number;
-  };
+  bundledFunctions?: BundledFunctions;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -56,6 +58,7 @@ interface GetLambdaOptionsFromFunctionOptions {
 export class Lambda {
   type: 'Lambda';
   operationType?: OperationType;
+  bundledFunctions?: BundledFunctions;
   files?: Files;
   handler: string;
   runtime: string;
@@ -85,6 +88,7 @@ export class Lambda {
       supportsWrapper,
       experimentalResponseStreaming,
       operationType,
+      bundledFunctions,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -136,6 +140,7 @@ export class Lambda {
 
     this.type = 'Lambda';
     this.operationType = operationType;
+    this.bundledFunctions = bundledFunctions;
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
