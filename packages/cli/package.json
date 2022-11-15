@@ -142,6 +142,7 @@
     "is-url": "1.2.2",
     "jaro-winkler": "0.2.8",
     "jsonlines": "0.1.1",
+    "line-async-iterator": "3.0.0",
     "load-json-file": "3.0.0",
     "mime-types": "2.1.24",
     "minimatch": "3.0.4",
