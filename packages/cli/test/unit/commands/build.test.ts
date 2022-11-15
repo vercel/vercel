@@ -1431,7 +1431,7 @@ describe('build', () => {
             const config = JSON5.parse(await fs.readFile(configPath, 'utf-8'));
 
             deleteSubProperty(config, propertyAccessor);
-            await fs.writeFile(configPath, JSON5.stringify(config));
+            await fs.writeFile(configPath, JSON.stringify(config));
 
             const exitCode = await build(client);
 
