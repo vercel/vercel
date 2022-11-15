@@ -46,7 +46,7 @@ export default async function rm(
   );
 
   if (!yes) {
-    output.error(`User aborted.`);
+    output.error(`User canceled.`);
     return 0;
   }
 

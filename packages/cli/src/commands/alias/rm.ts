@@ -59,7 +59,7 @@ export default async function rm(
 
   const removeStamp = stamp();
   if (!opts['--yes'] && !(await confirmAliasRemove(client, alias))) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 

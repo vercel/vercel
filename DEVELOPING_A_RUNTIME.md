@@ -63,9 +63,6 @@ export async function build(options: BuildOptions) {
   const lambda = createLambda(/* … */);
   return {
     output: lambda,
-    watch: [
-      // Dependent files to trigger a rebuild in `vercel dev` go here…
-    ],
     routes: [
       // If your Runtime needs to define additional routing, define it here…
     ],
@@ -383,8 +380,8 @@ This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 
 This is an abstract enumeration type that is implemented by one of the following possible `String` values:
 
+- `nodejs16.x`
 - `nodejs14.x`
-- `nodejs12.x`
 - `go1.x`
 - `java11`
 - `python3.9`

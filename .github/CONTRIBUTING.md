@@ -13,6 +13,7 @@ To get started, execute the following:
 ```
 git clone https://github.com/vercel/vercel
 cd vercel
+corepack enable
 yarn install
 yarn bootstrap
 yarn build

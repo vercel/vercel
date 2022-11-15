@@ -12,8 +12,9 @@ import {
 
 describe('project', () => {
   describe('list', () => {
-    it('should list deployments under a user', async () => {
+    it('should list projects', async () => {
       const user = useUser();
+      useTeams('team_dummy');
       const project = useProject({
         ...defaultProject,
       });
@@ -21,36 +22,44 @@ describe('project', () => {
       client.setArgv('project', 'ls');
       await projects(client);
 
-      const output = await readOutputStream(client, 2);
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const output = await readOutputStream(client, 3);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[1]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
       data.pop();
 
       expect(org).toEqual(user.username);
-      expect(header).toEqual(['name', 'updated']);
-      expect(data).toEqual([project.project.name]);
+      expect(header).toEqual([
+        'Project Name',
+        'Latest Production URL',
+        'Updated',
+      ]);
+      expect(data).toEqual([project.project.name, 'https://foobar.com']);
     });
-    it('should list deployments for a team', async () => {
-      useUser();
-      const team = useTeams('team_dummy');
+    it('should list projects when there is no production deployment', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      defaultProject.alias = [];
       const project = useProject({
         ...defaultProject,
       });
 
-      client.config.currentTeam = team[0].id;
       client.setArgv('project', 'ls');
       await projects(client);
 
-      const output = await readOutputStream(client, 2);
-      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[0]);
-      const header: string[] = parseSpacedTableRow(output.split('\n')[2]);
-      const data: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const output = await readOutputStream(client, 3);
+      const { org } = pluckIdentifiersFromDeploymentList(output.split('\n')[1]);
+      const header: string[] = parseSpacedTableRow(output.split('\n')[3]);
+      const data: string[] = parseSpacedTableRow(output.split('\n')[4]);
       data.pop();
 
-      expect(org).toEqual(team[0].slug);
-      expect(header).toEqual(['name', 'updated']);
-      expect(data).toEqual([project.project.name]);
+      expect(org).toEqual(user.username);
+      expect(header).toEqual([
+        'Project Name',
+        'Latest Production URL',
+        'Updated',
+      ]);
+      expect(data).toEqual([project.project.name, '--']);
     });
   });
   describe('add', () => {

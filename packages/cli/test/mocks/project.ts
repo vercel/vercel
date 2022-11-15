@@ -1,37 +1,44 @@
 import { client } from './client';
-import { Project } from '../../src/types';
-import { formatProvider } from '../../src/util/projects/connect-git-provider';
+import {
+  Project,
+  ProjectEnvTarget,
+  ProjectEnvType,
+  ProjectEnvVariable,
+} from '../../src/types';
+import { formatProvider } from '../../src/util/git/connect-git-provider';
+import { parseEnvironment } from '../../src/commands/pull';
+import { Env } from '@vercel/build-utils/dist';
 
-const envs = [
+const envs: ProjectEnvVariable[] = [
   {
-    type: 'encrypted',
+    type: ProjectEnvType.Encrypted,
     id: '781dt89g8r2h789g',
     key: 'REDIS_CONNECTION_STRING',
     value: 'redis://abc123@redis.example.com:6379',
-    target: ['production', 'preview'],
-    gitBranch: null,
+    target: [ProjectEnvTarget.Production, ProjectEnvTarget.Preview],
+    gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361455,
     createdAt: 1557241361455,
   },
   {
-    type: 'encrypted',
+    type: ProjectEnvType.Encrypted,
     id: 'r124t6frtu25df16',
     key: 'SQL_CONNECTION_STRING',
     value: 'Server=sql.example.com;Database=app;Uid=root;Pwd=P455W0RD;',
-    target: ['production'],
-    gitBranch: null,
+    target: [ProjectEnvTarget.Production],
+    gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361445,
     createdAt: 1557241361445,
   },
   {
-    type: 'encrypted',
+    type: ProjectEnvType.Encrypted,
     id: 'a235l6frtu25df32',
     key: 'SPECIAL_FLAG',
     value: '1',
-    target: ['development'],
-    gitBranch: null,
+    target: [ProjectEnvTarget.Development],
+    gitBranch: undefined,
     configurationId: null,
     updatedAt: 1557241361445,
     createdAt: 1557241361445,
@@ -123,7 +130,77 @@ export const defaultProject = {
       userId: 'K4amb7K9dAt5R2vBJWF32bmY',
     },
   ],
+  alias: [
+    {
+      domain: 'foobar.com',
+      target: 'PRODUCTION' as const,
+    },
+  ],
 };
+
+/**
+ * Responds to any GET for a project with a 404.
+ * `useUnknownProject` should always come after `useProject`, if any,
+ * to allow `useProject` responses to still happen.
+ */
+export function useUnknownProject() {
+  let project: Project;
+  client.scenario.get(`/v8/projects/:projectNameOrId`, (_req, res) => {
+    res.status(404).send();
+  });
+  client.scenario.post(`/:version/projects`, (req, res) => {
+    const { name } = req.body;
+    project = {
+      ...defaultProject,
+      name,
+      id: name,
+    };
+    res.json(project);
+  });
+  client.scenario.post(`/v9/projects/:projectNameOrId/link`, (req, res) => {
+    const { type, repo, org } = req.body;
+    const projName = req.params.projectNameOrId;
+    if (projName !== project.name && projName !== project.id) {
+      return res.status(404).send('Invalid Project name or ID');
+    }
+    if (
+      (type === 'github' || type === 'gitlab' || type === 'bitbucket') &&
+      (repo === 'user/repo' || repo === 'user2/repo2')
+    ) {
+      project.link = {
+        type,
+        repo,
+        repoId: 1010,
+        org,
+        gitCredentialId: '',
+        sourceless: true,
+        createdAt: 1656109539791,
+        updatedAt: 1656109539791,
+      };
+      res.json(project);
+    } else {
+      if (type === 'github') {
+        res.status(400).json({
+          message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
+          action: 'Install GitHub App',
+          link: 'https://github.com/apps/vercel',
+          repo,
+        });
+      } else {
+        res.status(400).json({
+          code: 'repo_not_found',
+          message: `The repository "${repo}" couldn't be found in your linked ${formatProvider(
+            type
+          )} account.`,
+        });
+      }
+    }
+  });
+  client.scenario.patch(`/:version/projects/:projectNameOrId`, (req, res) => {
+    Object.assign(project, req.body);
+    res.json(project);
+  });
+}
 
 export function useProject(project: Partial<Project> = defaultProject) {
   client.scenario.get(`/v8/projects/${project.name}`, (_req, res) => {
@@ -132,6 +209,47 @@ export function useProject(project: Partial<Project> = defaultProject) {
   client.scenario.get(`/v8/projects/${project.id}`, (_req, res) => {
     res.json(project);
   });
+  client.scenario.patch(`/:version/projects/${project.id}`, (req, res) => {
+    Object.assign(project, req.body);
+    res.json(project);
+  });
+  client.scenario.get(
+    `/v1/env/pull/${project.id}/:target?/:gitBranch?`,
+    (req, res) => {
+      const target: ProjectEnvTarget | undefined =
+        typeof req.params.target === 'string'
+          ? parseEnvironment(req.params.target)
+          : undefined;
+      let projectEnvs = envs;
+      if (target) {
+        projectEnvs = projectEnvs.filter(env => {
+          if (typeof env.target === 'string') {
+            return env.target === target;
+          }
+          if (Array.isArray(env.target)) {
+            return env.target.includes(target);
+          }
+          return false;
+        });
+      }
+      const allEnvs = Object.entries(
+        exposeSystemEnvs(
+          projectEnvs,
+          systemEnvs.map(env => env.key),
+          project.autoExposeSystemEnvs,
+          undefined,
+          target
+        )
+      );
+
+      const env: Record<string, string> = {};
+
+      allEnvs.forEach(([k, v]) => {
+        env[k] = v ?? '';
+      });
+      res.json({ env: env });
+    }
+  );
   client.scenario.get(
     `/v6/projects/${project.id}/system-env-values`,
     (_req, res) => {
@@ -148,15 +266,26 @@ export function useProject(project: Partial<Project> = defaultProject) {
       });
     }
   );
-  client.scenario.get(`/v8/projects/${project.id}/env`, (_req, res) => {
-    const target = _req.query.target;
-    if (typeof target === 'string') {
-      const targetEnvs = envs.filter(env => env.target.includes(target));
-      res.json({ envs: targetEnvs });
-      return;
+  client.scenario.get(`/v8/projects/${project.id}/env`, (req, res) => {
+    const target: ProjectEnvTarget | undefined =
+      typeof req.query.target === 'string'
+        ? parseEnvironment(req.query.target)
+        : undefined;
+
+    let targetEnvs = envs;
+    if (target) {
+      targetEnvs = targetEnvs.filter(env => {
+        if (typeof env.target === 'string') {
+          return env.target === target;
+        }
+        if (Array.isArray(env.target)) {
+          return env.target.includes(target);
+        }
+        return false;
+      });
     }
 
-    res.json({ envs });
+    res.json({ envs: targetEnvs });
   });
   client.scenario.post(`/v8/projects/${project.id}/env`, (req, res) => {
     const envObj = req.body;
@@ -177,11 +306,11 @@ export function useProject(project: Partial<Project> = defaultProject) {
       res.json(envs);
     }
   );
-  client.scenario.post(`/v4/projects/${project.id}/link`, (req, res) => {
+  client.scenario.post(`/v9/projects/${project.id}/link`, (req, res) => {
     const { type, repo, org } = req.body;
     if (
       (type === 'github' || type === 'gitlab' || type === 'bitbucket') &&
-      (repo === 'user/repo' || repo === 'user2/repo2')
+      (repo === 'user/repo' || repo === 'user2/repo2' || repo === 'user3/repo3')
     ) {
       project.link = {
         type,
@@ -198,11 +327,9 @@ export function useProject(project: Partial<Project> = defaultProject) {
       if (type === 'github') {
         res.status(400).json({
           message: `To link a GitHub repository, you need to install the GitHub integration first. (400)\nInstall GitHub App: https://github.com/apps/vercel`,
-          meta: {
-            action: 'Install GitHub App',
-            link: 'https://github.com/apps/vercel',
-            repo,
-          },
+          action: 'Install GitHub App',
+          link: 'https://github.com/apps/vercel',
+          repo,
         });
       } else {
         res.status(400).json({
@@ -214,7 +341,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
       }
     }
   });
-  client.scenario.delete(`/v4/projects/${project.id}/link`, (_req, res) => {
+  client.scenario.delete(`/v9/projects/${project.id}/link`, (_req, res) => {
     if (project.link) {
       project.link = undefined;
     }
@@ -237,4 +364,44 @@ export function useProject(project: Partial<Project> = defaultProject) {
   });
 
   return { project, envs };
+}
+
+function getSystemEnvValue(
+  systemEnvRef: string,
+  { vercelUrl }: { vercelUrl?: string }
+) {
+  if (systemEnvRef === 'VERCEL_URL') {
+    return vercelUrl || '';
+  }
+
+  return '';
+}
+
+function exposeSystemEnvs(
+  projectEnvs: ProjectEnvVariable[],
+  systemEnvValues: string[],
+  autoExposeSystemEnvs: boolean | undefined,
+  vercelUrl?: string,
+  target?: ProjectEnvTarget
+) {
+  const envs: Env = {};
+
+  if (autoExposeSystemEnvs) {
+    envs['VERCEL'] = '1';
+    envs['VERCEL_ENV'] = target || 'development';
+
+    for (const key of systemEnvValues) {
+      envs[key] = getSystemEnvValue(key, { vercelUrl });
+    }
+  }
+
+  for (let env of projectEnvs) {
+    if (env.type === ProjectEnvType.System) {
+      envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
+    } else {
+      envs[env.key] = env.value;
+    }
+  }
+
+  return envs;
 }

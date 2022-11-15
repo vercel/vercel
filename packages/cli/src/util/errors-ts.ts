@@ -5,7 +5,7 @@ import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
 import chalk from 'chalk';
-import { isError } from './is-error';
+import { isError } from '@vercel/error-utils';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -152,9 +152,7 @@ export class SourceNotFound extends NowError<'SOURCE_NOT_FOUND', {}> {
     super({
       code: 'SOURCE_NOT_FOUND',
       meta: {},
-      message: `Not able to purchase. Please add a payment method using ${getCommandName(
-        `billing add`
-      )}.`,
+      message: `Not able to purchase. Please add a payment method using the dashboard.`,
     });
   }
 }
@@ -428,7 +426,7 @@ export class UserAborted extends NowError<'USER_ABORTED', {}> {
     super({
       code: 'USER_ABORTED',
       meta: {},
-      message: `The user aborted the operation.`,
+      message: `The user canceled the operation.`,
     });
   }
 }

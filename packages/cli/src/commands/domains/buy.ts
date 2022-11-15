@@ -11,7 +11,7 @@ import promptBool from '../../util/input/prompt-bool';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { errorToString } from '../../util/is-error';
+import { errorToString } from '@vercel/error-utils';
 
 type Options = {};
 
@@ -116,9 +116,7 @@ export default async function buy(
 
   if (buyResult instanceof ERRORS.SourceNotFound) {
     output.error(
-      `Could not purchase domain. Please add a payment method using ${getCommandName(
-        `billing add`
-      )}.`
+      `Could not purchase domain. Please add a payment method using the dashboard.`
     );
     return 1;
   }

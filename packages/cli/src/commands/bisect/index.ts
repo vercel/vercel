@@ -2,7 +2,6 @@ import open from 'open';
 import boxen from 'boxen';
 import execa from 'execa';
 import plural from 'pluralize';
-import inquirer from 'inquirer';
 import { resolve } from 'path';
 import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
@@ -116,8 +115,6 @@ export default async function main(client: Client): Promise<number> {
     }
   }
 
-  const badDeploymentPromise = getDeployment(client, bad).catch(err => err);
-
   good = normalizeURL(good);
   parsed = parse(good);
   if (!parsed.hostname) {
@@ -138,8 +135,6 @@ export default async function main(client: Client): Promise<number> {
     );
   }
 
-  const goodDeploymentPromise = getDeployment(client, good).catch(err => err);
-
   if (!subpath) {
     subpath = await prompt(
       client,
@@ -148,14 +143,15 @@ export default async function main(client: Client): Promise<number> {
   }
 
   output.spinner('Retrieving deployments…');
-  const [badDeployment, goodDeployment] = await Promise.all([
-    badDeploymentPromise,
-    goodDeploymentPromise,
-  ]);
+
+  // `getDeployment` cannot be parallelized because it might prompt for login
+  const badDeployment = await getDeployment(client, bad).catch(err => err);
 
   if (badDeployment) {
     if (badDeployment instanceof Error) {
-      badDeployment.message += ` "${bad}"`;
+      badDeployment.message += ` when requesting bad deployment "${normalizeURL(
+        bad
+      )}"`;
       output.prettyError(badDeployment);
       return 1;
     }
@@ -165,11 +161,14 @@ export default async function main(client: Client): Promise<number> {
     return 1;
   }
 
-  const { projectId } = badDeployment;
+  // `getDeployment` cannot be parallelized because it might prompt for login
+  const goodDeployment = await getDeployment(client, good).catch(err => err);
 
   if (goodDeployment) {
     if (goodDeployment instanceof Error) {
-      goodDeployment.message += ` "${good}"`;
+      goodDeployment.message += ` when requesting good deployment "${normalizeURL(
+        good
+      )}"`;
       output.prettyError(goodDeployment);
       return 1;
     }
@@ -180,6 +179,8 @@ export default async function main(client: Client): Promise<number> {
     );
     return 1;
   }
+
+  const { projectId } = badDeployment;
 
   if (projectId !== goodDeployment.projectId) {
     output.error(`Good and Bad deployments must be from the same Project`);
@@ -228,7 +229,8 @@ export default async function main(client: Client): Promise<number> {
     // If we have the "good" deployment in this chunk, then we're done
     for (let i = 0; i < newDeployments.length; i++) {
       if (newDeployments[i].url === good) {
-        newDeployments = newDeployments.slice(0, i + 1);
+        // grab all deployments up until the good one
+        newDeployments = newDeployments.slice(0, i);
         next = undefined;
         break;
       }
@@ -318,7 +320,7 @@ export default async function main(client: Client): Promise<number> {
       if (openEnabled) {
         await open(testUrl);
       }
-      const answer = await inquirer.prompt({
+      const answer = await client.prompt({
         type: 'expand',
         name: 'action',
         message: 'Select an action:',
