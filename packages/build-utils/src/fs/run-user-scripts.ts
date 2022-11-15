@@ -492,7 +492,7 @@ export async function runNpmInstall(
 
     try {
       await spawnAsync(cliType, commandArgs, opts);
-    } catch (_) {
+    } catch (err: unknown) {
       const potentialErrorPath = path.join(
         process.env.HOME || '/',
         '.npm',
@@ -508,6 +508,8 @@ export async function runNpmInstall(
         );
         commandArgs.push('--legacy-peer-deps');
         await spawnAsync(cliType, commandArgs, opts);
+      } else {
+        throw err;
       }
     }
     debug(`Install complete [${Date.now() - installTime}ms]`);
