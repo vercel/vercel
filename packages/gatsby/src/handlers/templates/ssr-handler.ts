@@ -1,6 +1,6 @@
 import { join } from 'path';
 import os from 'os';
-import { copySync, existsSync, readFileSync } from 'fs-extra';
+import { copySync, existsSync } from 'fs-extra';
 
 import { getPageSSRHelpers, getGraphQLEngine } from '../utils';
 import type {
@@ -45,15 +45,6 @@ export default async function handler(
     }
   } catch (e) {
     console.log(e);
-
-    if (existsSync(join(__dirname, './500.html'))) {
-      res.setHeader('Content-Type', 'text/html');
-
-      return res
-        .status(500)
-        .send(readFileSync(join(__dirname, './500.html'), 'utf-8'));
-    }
-
     throw e;
   }
 }

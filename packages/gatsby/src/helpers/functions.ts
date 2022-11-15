@@ -1,9 +1,5 @@
-import { join, sep } from 'path';
-import {
-  getFunctionLibsFiles,
-  getFunctionHTMLFiles,
-  getHandler,
-} from '../handlers/build';
+import { join } from 'path';
+import { getFunctionLibsFiles, getHandler } from '../handlers/build';
 import {
   FileBlob,
   FileFsRef,
@@ -12,8 +8,7 @@ import {
   Prerender,
 } from '@vercel/build-utils/dist';
 
-const getFunctionName = (route: string) =>
-  route.replace(/\/$/, '').split(sep).pop()!;
+const getFunctionName = (route: string) => route.replace(/\/$/, '');
 
 export async function createFunctionLambda({
   nodeVersion,
@@ -29,7 +24,6 @@ export async function createFunctionLambda({
     shouldAddSourcemapSupport: false,
     files: {
       ...(await getFunctionLibsFiles()),
-      ...(await getFunctionHTMLFiles()),
       'index.js': new FileBlob({
         data: await getHandler({
           nodeVersion,
@@ -87,17 +81,28 @@ export async function createAPIRoutes({
 }: {
   functions: Record<string, FileFsRef>;
   nodeVersion: NodeVersion;
-}): Promise<Record<string, FileBlob>> {
-  const blobs: Record<string, FileBlob> = {};
+}): Promise<Record<string, NodejsLambda>> {
+  const lambdas: Record<string, NodejsLambda> = {};
 
   for (const [key, { fsPath }] of Object.entries(functions)) {
-    blobs[key] = new FileBlob({
-      data: await getHandler({
-        nodeVersion,
-        handlerFile: fsPath,
-      }),
+    const trimmedKey = key.replace(/\.[^/.]+$/, '');
+
+    lambdas[`api/${trimmedKey}`] = new NodejsLambda({
+      handler: 'index.js',
+      runtime: nodeVersion.runtime,
+      shouldAddHelpers: true,
+      shouldAddSourcemapSupport: false,
+      files: {
+        ...(await getFunctionLibsFiles()),
+        'index.js': new FileBlob({
+          data: await getHandler({
+            nodeVersion,
+            handlerFile: fsPath,
+          }),
+        }),
+      },
     });
   }
 
-  return blobs;
+  return lambdas;
 }
