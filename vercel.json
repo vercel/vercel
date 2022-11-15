@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "build": {
+    "env": {
+      "VERCEL_CLI_VERSION": "http://vercel-18bitzbjn.vercel.sh/tarballs/vercel.tgz"
+    }
+  },
   "rewrites": [
     {
       "source": "/",
