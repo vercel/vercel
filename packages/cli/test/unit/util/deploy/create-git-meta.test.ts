@@ -1,6 +1,7 @@
 import { join } from 'path';
 import fs from 'fs-extra';
 import os from 'os';
+import createLineIterator from 'line-async-iterator';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import {
   createGitMeta,
@@ -10,7 +11,6 @@ import {
 } from '../../../../src/util/create-git-meta';
 import { client } from '../../../mocks/client';
 import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
-import { readOutputStream } from '../../../helpers/read-output-stream';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { Project } from '../../../../src/types';
@@ -270,12 +270,18 @@ describe('createGitMeta', () => {
       client.output.debugEnabled = true;
       const data = await createGitMeta(tmpDir, client.output);
 
-      const output = await readOutputStream(client, 2);
+      const lines = createLineIterator(client.stderr);
 
-      expect(output).toContain(
+      let line = await lines.next();
+      expect(line.value).toContain(
         `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
       );
-      expect(output).toContain(
+
+      // skip next line
+      await lines.next();
+
+      line = await lines.next();
+      expect(line.value).toContain(
         `Failed to determine if Git repo has been modified:`
       );
       expect(data).toBeUndefined();
