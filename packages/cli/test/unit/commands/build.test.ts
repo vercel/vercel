@@ -8,6 +8,8 @@ import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import { setupFixture } from '../../helpers/setup-fixture';
+import JSON5 from 'json5';
+// TODO (@Ethan-Arrowood) - After shipping support for turbo and nx, revisit rush support
 // import execa from 'execa';
 
 jest.setTimeout(ms('1 minute'));
@@ -1312,6 +1314,59 @@ describe('build', () => {
         },
         ms('5 minutes')
       );
+
+      test(
+        `skip when rootDirectory is null or '.'`,
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
+
+            const projectJSONPath = join(cwd, '.vercel/project.json');
+            const projectJSON = JSON.parse(
+              await fs.readFile(projectJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              projectJSONPath,
+              JSON.stringify({
+                ...projectJSON,
+                settings: {
+                  rootDirectory: null,
+                  outputDirectory: null,
+                },
+              })
+            );
+
+            const packageJSONPath = join(cwd, 'package.json');
+            const packageJSON = JSON.parse(
+              await fs.readFile(packageJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              packageJSONPath,
+              JSON.stringify({
+                ...packageJSON,
+                scripts: {
+                  ...packageJSON.scripts,
+                  build: `node build.js`,
+                },
+              })
+            );
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            const result = await fs.readFile(
+              join(cwd, '.vercel/output/static/index.txt'),
+              'utf8'
+            );
+            expect(result).toMatch(/Hello, world/);
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
+          }
+        },
+        ms('5 miuntes')
+      );
     });
 
     describe.each([
@@ -1373,7 +1428,7 @@ describe('build', () => {
             const cwd = setupMonorepoDetectionFixture(fixture);
 
             const configPath = join(cwd, configFile);
-            const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+            const config = JSON5.parse(await fs.readFile(configPath, 'utf-8'));
 
             deleteSubProperty(config, propertyAccessor);
             await fs.writeFile(configPath, JSON.stringify(config));
