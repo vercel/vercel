@@ -10,7 +10,7 @@ const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
-const { spawnSync, execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -252,9 +252,6 @@ async function testFixture(directory, opts = {}, args = []) {
             ', '
           )}`
       );
-      if (process.platform === 'linux') {
-        execSync('ps axfl', { stdio: 'inherit' });
-      }
     }, 5000);
   });
 
@@ -573,10 +570,6 @@ async function nukeProcessTree(pid, signal) {
   if (process.platform === 'win32') {
     spawnSync('taskkill', ['/pid', pid, '/T', '/F'], { stdio: 'inherit' });
     return;
-  }
-
-  if (process.platform === 'linux') {
-    execSync('ps axfl', { stdio: 'inherit' });
   }
 
   const pids = await ps(pid, {
