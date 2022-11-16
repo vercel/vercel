@@ -209,11 +209,12 @@ async function testFixture(directory, opts = {}, args = []) {
         : []),
       '-l',
       String(port),
+      '--debug',
       ...args,
     ],
     {
       reject: false,
-      detached: true,
+      // detached: true,
       shell: true,
       stdio: 'pipe',
       ...opts,
