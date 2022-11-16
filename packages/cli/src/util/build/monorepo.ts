@@ -55,7 +55,7 @@ export async function setMonorepoDefaultSettings(
   }
 
   if (monorepoManager === 'turbo') {
-    const [turboJSONBuf, packageJsonBuf] = await Promise.all([
+    const [turboJSONBuf, packageJSONBuf] = await Promise.all([
       fs.readFile(join(cwd, 'turbo.json')).catch(() => null),
       fs.readFile(join(cwd, 'package.json')).catch(() => null),
     ]);
@@ -68,8 +68,8 @@ export async function setMonorepoDefaultSettings(
       if (turboJSON?.pipeline?.build) {
         hasBuildPipeline = true;
       }
-    } else if (packageJsonBuf !== null) {
-      const packageJSON = JSON.parse(packageJsonBuf.toString('utf-8'));
+    } else if (packageJSONBuf !== null) {
+      const packageJSON = JSON.parse(packageJSONBuf.toString('utf-8'));
 
       if (packageJSON?.turbo?.pipeline?.build) {
         hasBuildPipeline = true;
@@ -103,7 +103,7 @@ export async function setMonorepoDefaultSettings(
         'Missing default `build` target in nx.json. Checking for project level Nx configuration...'
       );
 
-      const [projectJSONBuf, packageJsonBuf] = await Promise.all([
+      const [projectJSONBuf, packageJSONBuf] = await Promise.all([
         fs.readFile(join(workPath, 'project.json')).catch(() => null),
         fs.readFile(join(workPath, 'package.json')).catch(() => null),
       ]);
@@ -118,8 +118,8 @@ export async function setMonorepoDefaultSettings(
         }
       }
 
-      if (packageJsonBuf) {
-        const packageJSON = JSON5.parse(packageJsonBuf.toString('utf-8'));
+      if (packageJSONBuf) {
+        const packageJSON = JSON5.parse(packageJSONBuf.toString('utf-8'));
         if (packageJSON?.nx) {
           output.log('Found package.json Nx configuration.');
           if (packageJSON.nx.targets?.build) {
