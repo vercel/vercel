@@ -46,16 +46,20 @@ test('[vercel dev] validate mixed routes and rewrites', async () => {
 // Test seems unstable: It won't return sometimes.
 test('[vercel dev] validate env var names', async () => {
   const directory = fixture('invalid-env-var-name');
-  const { dev } = await testFixture(directory, { stdio: 'pipe' });
+  console.log('!!!!! START');
+  const { dev } = await testFixture(directory, {
+    encoding: 'utf8',
+    stdio: 'pipe',
+  });
 
   try {
     let stderr = '';
-    dev.stderr.setEncoding('utf8');
 
     await new Promise<void>((resolve, reject) => {
-      dev.stderr.on('data', (b: any) => {
+      dev.stderr.on('data', (b: string) => {
         stderr += b.toString();
 
+        console.log('!!!!! STDERR', stderr);
         if (
           stderr.includes('Ignoring env var "1" because name is invalid') &&
           stderr.includes(
@@ -65,6 +69,7 @@ test('[vercel dev] validate env var names', async () => {
             'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
           )
         ) {
+          console.log('!!!!! DONE');
           resolve();
         }
       });
@@ -72,6 +77,8 @@ test('[vercel dev] validate env var names', async () => {
       dev.on('error', reject);
       dev.on('close', resolve);
     });
+  } catch (e) {
+    console.log('!!!!! ERROR', e);
   } finally {
     await dev.kill();
   }
