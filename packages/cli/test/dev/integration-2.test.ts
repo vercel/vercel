@@ -67,7 +67,8 @@ test('[vercel dev] validate env var names', async () => {
           ) &&
           stderr.includes(
             'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
-          )
+          ) &&
+          stderr.includes('Ready!')
         ) {
           console.log('!!!!! DONE');
           resolve();
