@@ -2278,8 +2278,12 @@ export default class DevServer {
       process.stdout.write(data.replace(proxyPort, this.address.port));
     });
 
-    p.on('close', (code, signal) => {
+    p.on('exit', (code, signal) => {
       this.output.debug(`Dev command exited with "${signal || code}"`);
+    });
+
+    p.on('close', (code, signal) => {
+      this.output.debug(`Dev command closed with "${signal || code}"`);
       this.devProcessOrigin = undefined;
     });
 

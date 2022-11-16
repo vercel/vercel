@@ -214,7 +214,7 @@ async function testFixture(directory, opts = {}, args = []) {
     ],
     {
       reject: false,
-      // detached: true,
+      detached: true,
       shell: true,
       stdio: 'pipe',
       ...opts,
