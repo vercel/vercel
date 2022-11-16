@@ -211,8 +211,6 @@ export default class DevServer {
     this.podId = Math.random().toString(32).slice(-5);
 
     this.devServerPids = new Set();
-
-    process.on('SIGTERM', () => this.stop());
   }
 
   async exit(code = 1) {

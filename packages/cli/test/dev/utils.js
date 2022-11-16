@@ -276,9 +276,7 @@ async function testFixture(directory, opts = {}, args = []) {
 
   dev._kill = dev.kill;
   dev.kill = async () => {
-    // kill the entire process tree for the child as some tests
-    // spawn child processes that we don't have the pid for
-    await nukeProcessTree(dev.pid);
+    dev._kill();
 
     await exitResolver;
     return {
