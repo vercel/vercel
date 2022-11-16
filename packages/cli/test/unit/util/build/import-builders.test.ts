@@ -10,7 +10,7 @@ import {
 import vercelNextPkg from '@vercel/next/package.json';
 import vercelNodePkg from '@vercel/node/package.json';
 
-jest.setTimeout(ms('60 seconds'));
+jest.setTimeout(ms('30 seconds'));
 
 const repoRoot = join(__dirname, '../../../../../..');
 
@@ -119,7 +119,6 @@ describe('importBuilders()', () => {
 
     const cwd = await getWriteableDirectory();
     try {
-      console.log('!!!!!! START IMPORT BUILDER');
       const spec = 'vercel-deno@2.0.1';
       const tarballSpec = 'https://test2020-h5hdll5dz-tootallnate.vercel.app';
       const specs = new Set([spec, tarballSpec]);
@@ -142,9 +141,7 @@ describe('importBuilders()', () => {
       await expect(client.stderr).toOutput(
         '> Installing Builders: vercel-deno@2.0.1, https://test2020-h5hdll5dz-tootallnate.vercel.app'
       );
-      console.log('!!!!!! END IMPORT BUILDER');
     } finally {
-      console.log('!!!!!! CLEANUP IMPORT BUILDER');
       await remove(cwd);
     }
   });
