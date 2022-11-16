@@ -19,7 +19,7 @@ import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import npa from 'npm-package-arg';
-import { ChildProcess, execSync } from 'child_process';
+import { ChildProcess } from 'child_process';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
@@ -212,9 +212,7 @@ export default class DevServer {
 
     this.devServerPids = new Set();
 
-    process.on('beforeExit', () => {
-      this.stop();
-    });
+    process.on('SIGTERM', () => this.stop());
   }
 
   async exit(code = 1) {
@@ -1030,14 +1028,7 @@ export default class DevServer {
     debug(`Killing builder dev server with PID ${pid}`);
     this.devServerPids.delete(pid);
     try {
-      if (process.platform === 'linux') {
-        execSync('ps axfl', { stdio: 'inherit' });
-      }
       await treeKill(pid);
-      if (process.platform === 'linux') {
-        execSync('ps axfl', { stdio: 'inherit' });
-      }
-      // process.kill(pid, 'SIGTERM');
       debug(`Killed builder dev server with PID ${pid}`);
     } catch (err) {
       debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
