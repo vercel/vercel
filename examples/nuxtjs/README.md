@@ -1,4 +1,10 @@
-# Nuxt 3 Minimal Starter
+# Nuxt Example
+
+Deploy your [Nuxt](https://nuxt.com) project to Vercel with zero configuration.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/nuxtjs&template=nuxtjs)
+
+_Live Example: https://nuxtjs-template.vercel.app_
 
 Look at the [nuxt 3 documentation](https://v3.nuxtjs.org) to learn more.
 
