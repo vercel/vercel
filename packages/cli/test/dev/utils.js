@@ -251,7 +251,9 @@ async function testFixture(directory, opts = {}, args = []) {
             ', '
           )}`
       );
-      execSync('ps aux', { stdio: 'inherit' });
+      if (process.platform === 'linux') {
+        execSync('ps axfl', { stdio: 'inherit' });
+      }
     }, 5000);
   });
 
