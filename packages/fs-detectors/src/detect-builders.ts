@@ -94,7 +94,6 @@ export async function detectBuilders(
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
-  limitedRoutes: LimitedRoutes | null;
 }> {
   const errors: ErrorResponse[] = [];
   const warnings: ErrorResponse[] = [];
@@ -113,7 +112,6 @@ export async function detectBuilders(
       redirectRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
-      limitedRoutes: null,
     };
   }
 
@@ -179,7 +177,6 @@ export async function detectBuilders(
           redirectRoutes: null,
           rewriteRoutes: null,
           errorRoutes: null,
-          limitedRoutes: null,
         };
       }
 
@@ -258,7 +255,6 @@ export async function detectBuilders(
         defaultRoutes: null,
         rewriteRoutes: null,
         errorRoutes: null,
-        limitedRoutes: null,
       };
     }
 
@@ -301,7 +297,6 @@ export async function detectBuilders(
       defaultRoutes: null,
       rewriteRoutes: null,
       errorRoutes: null,
-      limitedRoutes: null,
     };
   }
 
@@ -347,7 +342,6 @@ export async function detectBuilders(
   }
 
   const routesResult = getRouteResult(
-    pkg,
     apiRoutes,
     dynamicRoutes,
     usedOutputDirectory,
@@ -364,7 +358,6 @@ export async function detectBuilders(
     defaultRoutes: routesResult.defaultRoutes,
     rewriteRoutes: routesResult.rewriteRoutes,
     errorRoutes: routesResult.errorRoutes,
-    limitedRoutes: routesResult.limitedRoutes,
   };
 }
 
@@ -969,14 +962,7 @@ function createRouteFromPath(
   return { route, isDynamic };
 }
 
-interface LimitedRoutes {
-  defaultRoutes: Route[];
-  redirectRoutes: Route[];
-  rewriteRoutes: Route[];
-}
-
 function getRouteResult(
-  pkg: PackageJson | undefined | null,
   apiRoutes: RouteWithSrc[],
   dynamicRoutes: RouteWithSrc[],
   outputDirectory: string,
@@ -988,18 +974,11 @@ function getRouteResult(
   redirectRoutes: Route[];
   rewriteRoutes: Route[];
   errorRoutes: Route[];
-  limitedRoutes: LimitedRoutes;
 } {
-  const deps = Object.assign({}, pkg?.dependencies, pkg?.devDependencies);
   const defaultRoutes: Route[] = [];
   const redirectRoutes: Route[] = [];
   const rewriteRoutes: Route[] = [];
   const errorRoutes: Route[] = [];
-  const limitedRoutes: LimitedRoutes = {
-    defaultRoutes: [],
-    redirectRoutes: [],
-    rewriteRoutes: [],
-  };
   const framework = frontendBuilder?.config?.framework || '';
   const isNextjs =
     framework === 'nextjs' || isOfficialRuntime('next', frontendBuilder?.use);
@@ -1012,36 +991,8 @@ function getRouteResult(
       // return a copy of routes.
       // We should exclud errorRoutes and
       const extSet = detectApiExtensions(apiBuilders);
-      const withTag = options.tag ? `@${options.tag}` : '';
-      const extSetLimited = detectApiExtensions(
-        apiBuilders.filter(b => {
-          if (
-            b.use === `@vercel/python${withTag}` &&
-            !('vercel-plugin-python' in deps)
-          ) {
-            return false;
-          }
-          if (
-            b.use === `@vercel/go${withTag}` &&
-            !('vercel-plugin-go' in deps)
-          ) {
-            return false;
-          }
-          if (
-            b.use === `@vercel/ruby${withTag}` &&
-            !('vercel-plugin-ruby' in deps)
-          ) {
-            return false;
-          }
-          return true;
-        })
-      );
-
       if (extSet.size > 0) {
         const extGroup = `(?:\\.(?:${Array.from(extSet)
-          .map(ext => ext.slice(1))
-          .join('|')}))`;
-        const extGroupLimited = `(?:\\.(?:${Array.from(extSetLimited)
           .map(ext => ext.slice(1))
           .join('|')}))`;
 
@@ -1059,20 +1010,6 @@ function getRouteResult(
             },
             status: 308,
           });
-
-          limitedRoutes.redirectRoutes.push({
-            src: `^/(api(?:.+)?)/index${extGroupLimited}?/?$`,
-            headers: { Location: options.trailingSlash ? '/$1/' : '/$1' },
-            status: 308,
-          });
-
-          limitedRoutes.redirectRoutes.push({
-            src: `^/api/(.+)${extGroupLimited}/?$`,
-            headers: {
-              Location: options.trailingSlash ? '/api/$1/' : '/api/$1',
-            },
-            status: 308,
-          });
         } else {
           defaultRoutes.push({ handle: 'miss' });
           defaultRoutes.push({
@@ -1080,18 +1017,10 @@ function getRouteResult(
             dest: '/api/$1',
             check: true,
           });
-
-          limitedRoutes.defaultRoutes.push({ handle: 'miss' });
-          limitedRoutes.defaultRoutes.push({
-            src: `^/api/(.+)${extGroupLimited}$`,
-            dest: '/api/$1',
-            check: true,
-          });
         }
       }
 
       rewriteRoutes.push(...dynamicRoutes);
-      limitedRoutes.rewriteRoutes.push(...dynamicRoutes);
 
       if (typeof ignoreRuntimes === 'undefined') {
         // This route is only necessary to hide the directory listing
@@ -1142,7 +1071,6 @@ function getRouteResult(
     redirectRoutes,
     rewriteRoutes,
     errorRoutes,
-    limitedRoutes,
   };
 }
 

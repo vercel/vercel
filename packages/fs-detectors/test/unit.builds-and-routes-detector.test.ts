@@ -2453,10 +2453,13 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
-    const { defaultRoutes, rewriteRoutes, errorRoutes, limitedRoutes } =
-      await detectBuilders(files, null, {
+    const { defaultRoutes, rewriteRoutes, errorRoutes } = await detectBuilders(
+      files,
+      null,
+      {
         featHandleMiss,
-      });
+      }
+    );
     expect(defaultRoutes).toStrictEqual([
       { handle: 'miss' },
       {
@@ -2478,22 +2481,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`', async () => {
         dest: '/404.html',
       },
     ]);
-
-    // Limited routes should have js but not go since the go plugin is not installed
-    expect(limitedRoutes).toStrictEqual({
-      redirectRoutes: [],
-      rewriteRoutes: [],
-      defaultRoutes: [
-        {
-          handle: 'miss',
-        },
-        {
-          src: '^/api/(.+)(?:\\.(?:js))$',
-          dest: '/api/$1',
-          check: true,
-        },
-      ],
-    });
 
     const pattern = new RegExp(errorRoutes![0].src!);
 
@@ -2897,13 +2884,8 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
-    const {
-      defaultRoutes,
-      redirectRoutes,
-      rewriteRoutes,
-      errorRoutes,
-      limitedRoutes,
-    } = await detectBuilders(files, null, options);
+    const { defaultRoutes, redirectRoutes, rewriteRoutes, errorRoutes } =
+      await detectBuilders(files, null, options);
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([]);
     expect(rewriteRoutes).toStrictEqual([
@@ -2919,28 +2901,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', async () 
         dest: '/404',
       },
     ]);
-
-    // Limited routes should have js but not go since the go plugin is not installed
-    expect(limitedRoutes).toStrictEqual({
-      redirectRoutes: [
-        {
-          src: '^/(api(?:.+)?)/index(?:\\.(?:js))?/?$',
-          headers: {
-            Location: '/$1',
-          },
-          status: 308,
-        },
-        {
-          src: '^/api/(.+)(?:\\.(?:js))/?$',
-          headers: {
-            Location: '/api/$1',
-          },
-          status: 308,
-        },
-      ],
-      rewriteRoutes: [],
-      defaultRoutes: [],
-    });
 
     // expected redirect should match inputs
     const getLocation = createReplaceLocation(redirectRoutes);
@@ -3185,7 +3145,7 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
   {
     const files = ['api/user.go', 'api/team.js', 'api/package.json'];
 
-    const { defaultRoutes, redirectRoutes, rewriteRoutes, limitedRoutes } =
+    const { defaultRoutes, redirectRoutes, rewriteRoutes } =
       await detectBuilders(files, null, options);
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([]);
@@ -3195,28 +3155,6 @@ it('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `trailingS
         src: '^/api(/.*)?$',
       },
     ]);
-
-    // Limited routes should have js but not go since the go plugin is not installed
-    expect(limitedRoutes).toStrictEqual({
-      redirectRoutes: [
-        {
-          src: '^/(api(?:.+)?)/index(?:\\.(?:js))?/?$',
-          headers: {
-            Location: '/$1/',
-          },
-          status: 308,
-        },
-        {
-          src: '^/api/(.+)(?:\\.(?:js))/?$',
-          headers: {
-            Location: '/api/$1/',
-          },
-          status: 308,
-        },
-      ],
-      rewriteRoutes: [],
-      defaultRoutes: [],
-    });
 
     // expected redirect should match inputs
     const getLocation = createReplaceLocation(redirectRoutes);
