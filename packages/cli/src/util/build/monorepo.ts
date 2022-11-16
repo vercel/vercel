@@ -39,7 +39,7 @@ export async function setMonorepoDefaultSettings(
   ) => {
     if (projectSettings[command]) {
       output.warn(
-        `Cannot automatically assign ${command} as it is already set via project settings or configuarion overrides.`
+        `Cannot automatically assign ${command} as it is already set via project settings or configuration overrides.`
       );
     } else {
       projectSettings[command] = value;

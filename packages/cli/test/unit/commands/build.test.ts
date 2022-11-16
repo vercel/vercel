@@ -1271,10 +1271,10 @@ describe('build', () => {
             const exitCode = await build(client);
             expect(exitCode).toBe(0);
             await expect(client.stderr).toOutput(
-              'Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides.'
+              'Cannot automatically assign buildCommand as it is already set via project settings or configuration overrides.'
             );
             await expect(client.stderr).toOutput(
-              'Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides.'
+              'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
             );
           } finally {
             process.chdir(originalCwd);
@@ -1308,10 +1308,10 @@ describe('build', () => {
             const exitCode = await build(client);
             expect(exitCode).toBe(0);
             await expect(client.stderr).toOutput(
-              'Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides.'
+              'Cannot automatically assign buildCommand as it is already set via project settings or configuration overrides.'
             );
             await expect(client.stderr).toOutput(
-              'Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides.'
+              'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
             );
           } finally {
             process.chdir(originalCwd);
