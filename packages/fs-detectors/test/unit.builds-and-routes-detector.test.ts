@@ -2235,9 +2235,14 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
   it('no package.json + no build + root-level "middleware.js"', async () => {
     const files = ['middleware.js', 'index.html', 'web/middleware.js'];
-    const { builders, errors } = await detectBuilders(files, null, {
-      featHandleMiss,
-    });
+    const { builders, rewriteRoutes, errors } = await detectBuilders(
+      files,
+      null,
+      {
+        featHandleMiss,
+      }
+    );
+    expect(rewriteRoutes).toHaveLength(0);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('middleware.js');
     expect(builders![0].config?.middleware).toEqual(true);
@@ -2249,9 +2254,14 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
 
   it('no package.json + no build + root-level "middleware.ts"', async () => {
     const files = ['middleware.ts', 'index.html', 'web/middleware.js'];
-    const { builders, errors } = await detectBuilders(files, null, {
-      featHandleMiss,
-    });
+    const { builders, rewriteRoutes, errors } = await detectBuilders(
+      files,
+      null,
+      {
+        featHandleMiss,
+      }
+    );
+    expect(rewriteRoutes).toHaveLength(0);
     expect(builders![0].use).toBe('@vercel/node');
     expect(builders![0].src).toBe('middleware.ts');
     expect(builders![0].config?.middleware).toEqual(true);
