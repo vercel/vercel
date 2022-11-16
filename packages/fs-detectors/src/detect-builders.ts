@@ -342,7 +342,6 @@ export async function detectBuilders(
   }
 
   const routesResult = getRouteResult(
-    pkg,
     apiRoutes,
     dynamicRoutes,
     usedOutputDirectory,
@@ -964,7 +963,6 @@ function createRouteFromPath(
 }
 
 function getRouteResult(
-  pkg: PackageJson | undefined | null,
   apiRoutes: RouteWithSrc[],
   dynamicRoutes: RouteWithSrc[],
   outputDirectory: string,
