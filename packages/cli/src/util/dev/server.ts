@@ -19,7 +19,7 @@ import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import npa from 'npm-package-arg';
-import { ChildProcess } from 'child_process';
+import type { ChildProcess } from 'child_process';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
