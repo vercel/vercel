@@ -88,7 +88,6 @@ async function createBuildProcess(
   return new Promise((resolve, reject) => {
     // The first message that the builder process sends is the `ready` event
     buildProcess.once('message', data => {
-      buildProcess.disconnect();
       if (
         data !== null &&
         typeof data === 'object' &&
