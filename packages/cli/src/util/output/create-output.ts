@@ -30,11 +30,17 @@ export class Output {
       noColor: colorDisabled = false,
     }: OutputOptions = {}
   ) {
+    const NO_COLOR =
+      process.env.FORCE_COLOR === '0' || process.env.NO_COLOR === '1';
     this.stream = stream;
     this.debugEnabled = debugEnabled;
-    this.colorDisabled = colorDisabled;
+    this.colorDisabled = colorDisabled || NO_COLOR;
     this.spinnerMessage = '';
     this._spinner = null;
+
+    if (colorDisabled || NO_COLOR) {
+      chalk.level = 0;
+    }
   }
 
   isDebugEnabled = () => {

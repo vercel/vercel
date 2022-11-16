@@ -73,6 +73,8 @@ describe('login', () => {
     });
     it('should remove image the `NO_COLOR` env var with 1', async () => {
       process.env.NO_COLOR = '1';
+      client.resetOutput();
+
       const user = useUser();
       client.setArgv('login');
       const exitCodePromise = login(client);
