@@ -71,7 +71,7 @@ describe('login', () => {
 
       await expect(exitCodePromise).resolves.toEqual(0);
     });
-    it('should remove image the `NO_COLOR` env var with 1', async () => {
+    it('should remove emoji the `NO_COLOR` env var with 1', async () => {
       process.env.NO_COLOR = '1';
       client.resetOutput();
 
@@ -99,6 +99,35 @@ describe('login', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
 
       process.env.NO_COLOR = undefined;
+    });
+    it('should remove emoji the `FORCE_COLOR` env var with 0', async () => {
+      process.env.FORCE_COLOR = '0';
+      client.resetOutput();
+
+      const user = useUser();
+      client.setArgv('login');
+      const exitCodePromise = login(client);
+      await expect(client.stderr).toOutput(`> Log in to Vercel`);
+
+      // Move down to "Email" option
+      client.stdin.write('\x1B[B'); // Down arrow
+      client.stdin.write('\x1B[B'); // Down arrow
+      client.stdin.write('\x1B[B'); // Down arrow
+      client.stdin.write('\r'); // Return key
+
+      await expect(client.stderr).toOutput('> Enter your email address:');
+
+      client.stdin.write(`${user.email}\n`);
+
+      await expect(client.stderr).toOutput(
+        `Success! Email authentication complete for ${user.email}`
+      );
+
+      await expect(client.stderr).not.toOutput(emoji('tip'));
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      process.env.FORCE_COLOR = undefined;
     });
   });
 });
