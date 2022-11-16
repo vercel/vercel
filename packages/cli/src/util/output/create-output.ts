@@ -3,11 +3,13 @@ import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '../../types';
 import { errorToString } from '@vercel/error-utils';
+import { removeEmoji } from '../emoji';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 
 export interface OutputOptions {
   debug?: boolean;
+  noColor?: boolean;
 }
 
 export interface LogOptions {
@@ -17,15 +19,20 @@ export interface LogOptions {
 export class Output {
   stream: WritableTTY;
   debugEnabled: boolean;
+  colorDisabled: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
   constructor(
     stream: WritableTTY,
-    { debug: debugEnabled = false }: OutputOptions = {}
+    {
+      debug: debugEnabled = false,
+      noColor: colorDisabled = false,
+    }: OutputOptions = {}
   ) {
     this.stream = stream;
     this.debugEnabled = debugEnabled;
+    this.colorDisabled = colorDisabled;
     this.spinnerMessage = '';
     this._spinner = null;
   }
@@ -35,6 +42,12 @@ export class Output {
   };
 
   print = (str: string) => {
+    if (this.colorDisabled) {
+      const strWithoutEmoji = removeEmoji(str);
+      this.stopSpinner();
+      this.stream.write(strWithoutEmoji);
+      return;
+    }
     this.stopSpinner();
     this.stream.write(str);
   };

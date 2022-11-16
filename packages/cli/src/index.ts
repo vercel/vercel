@@ -81,6 +81,7 @@ Sentry.init({
 
 let client: Client;
 let debug: (s: string) => void = () => {};
+let noColor: boolean = false;
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
@@ -117,14 +118,15 @@ const main = async () => {
     process.env.NO_COLOR === '1' ||
     isNoColor
   ) {
-    process.env.NO_COLOR = '1';
     chalk.level = 0;
+    noColor = true;
   }
 
   const isDebugging = argv['--debug'];
 
   const output = new Output(process.stderr, {
     debug: isDebugging,
+    noColor,
   });
 
   debug = output.debug;
