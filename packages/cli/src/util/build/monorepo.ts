@@ -55,14 +55,30 @@ export async function setMonorepoDefaultSettings(
   }
 
   if (monorepoManager === 'turbo') {
-    // No ENOENT handling required here since conditional wouldn't be `true` unless `turbo.json` was found.
-    const turboJSON = JSON5.parse(
-      fs.readFileSync(join(cwd, 'turbo.json'), 'utf-8')
-    );
+    const [turboJSONBuf, packageJsonBuf] = await Promise.all([
+      fs.readFile(join(cwd, 'turbo.json')).catch(() => null),
+      fs.readFile(join(cwd, 'package.json')).catch(() => null),
+    ]);
 
-    if (!turboJSON?.pipeline?.build) {
+    let hasBuildPipeline = false;
+
+    if (turboJSONBuf !== null) {
+      const turboJSON = JSON5.parse(turboJSONBuf.toString('utf-8'));
+
+      if (turboJSON?.pipeline?.build) {
+        hasBuildPipeline = true;
+      }
+    } else if (packageJsonBuf !== null) {
+      const packageJson = JSON.parse(packageJsonBuf.toString('utf-8'));
+
+      if (packageJson?.turbo?.pipeline?.build) {
+        hasBuildPipeline = true;
+      }
+    }
+
+    if (!hasBuildPipeline) {
       output.warn(
-        'Missing required `build` pipeline in turbo.json. Skipping automatic setting assignment.'
+        'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.'
       );
       return;
     }
