@@ -49,7 +49,7 @@ export async function writeBuildResult(
   build: Builder,
   builder: BuilderV2 | BuilderV3,
   builderPkg: PackageJson,
-  vercelConfig: VercelConfig | null
+  vercelConfig?: VercelConfig
 ) {
   const { version } = builder;
   if (typeof version !== 'number' || version === 2) {
@@ -107,30 +107,36 @@ function stripDuplicateSlashes(path: string): string {
 async function writeBuildResultV2(
   outputDir: string,
   buildResult: BuildResultV2,
-  vercelConfig: VercelConfig | null
+  vercelConfig?: VercelConfig
 ) {
   if ('buildOutputPath' in buildResult) {
     await mergeBuilderOutput(outputDir, buildResult);
     return;
   }
 
-  const lambdas = new Map<Lambda, string>();
+  const functionsPathsMap = new Map<EdgeFunction | Lambda, string>();
   const overrides: Record<string, PathOverride> = {};
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
-      await writeLambda(outputDir, output, normalizedPath, undefined, lambdas);
+      await writeLambda(
+        outputDir,
+        output,
+        normalizedPath,
+        undefined,
+        functionsPathsMap
+      );
     } else if (isPrerender(output)) {
       await writeLambda(
         outputDir,
         output.lambda,
         normalizedPath,
         undefined,
-        lambdas
+        functionsPathsMap
       );
 
       // Write the fallback file alongside the Lambda directory
-      let fallback = output.fallback;
+      let { fallback } = output;
       if (fallback) {
         const ext = getFileExtension(fallback);
         const fallbackName = `${normalizedPath}.prerender-fallback${ext}`;
@@ -166,7 +172,12 @@ async function writeBuildResultV2(
         vercelConfig?.cleanUrls
       );
     } else if (isEdgeFunction(output)) {
-      await writeEdgeFunction(outputDir, output, normalizedPath);
+      await writeEdgeFunction(
+        outputDir,
+        output,
+        normalizedPath,
+        functionsPathsMap
+      );
     } else {
       throw new Error(
         `Unsupported output type: "${
@@ -186,21 +197,17 @@ async function writeBuildResultV3(
   outputDir: string,
   buildResult: BuildResultV3,
   build: Builder,
-  vercelConfig: VercelConfig | null
+  vercelConfig?: VercelConfig
 ) {
   const { output } = buildResult;
   const src = build.src;
   if (typeof src !== 'string') {
     throw new Error(`Expected "build.src" to be a string`);
   }
-
-  const functionConfiguration = vercelConfig
-    ? await getLambdaOptionsFromFunction({
-        sourceFile: src,
-        config: vercelConfig,
-      })
-    : {};
-
+  const functionConfiguration = await getLambdaOptionsFromFunction({
+    sourceFile: src,
+    config: vercelConfig,
+  });
   const ext = extname(src);
   const path = stripDuplicateSlashes(
     build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
@@ -271,6 +278,33 @@ async function writeStaticFile(
 }
 
 /**
+ * If the EdgeFunction/Lambda has already been written to the
+ * filesystem at a different location, then create a symlink
+ * to the previous location instead of copying the files again.
+ */
+async function createDuplicateFunctionSymlink(
+  outputDir: string,
+  dest: string,
+  output: EdgeFunction | Lambda,
+  functionsPathsMap?: Map<EdgeFunction | Lambda, string>
+): Promise<boolean> {
+  const existingFunctionPath = functionsPathsMap?.get(output);
+  if (existingFunctionPath) {
+    const destDir = dirname(dest);
+    const targetDest = join(
+      outputDir,
+      'functions',
+      `${existingFunctionPath}.func`
+    );
+    const target = relative(destDir, targetDest);
+    await fs.mkdirp(destDir);
+    await fs.symlink(target, dest);
+    return true;
+  }
+  return false;
+}
+
+/**
  * Serializes the `EdgeFunction` instance to the file system.
  *
  * @param edgeFunction The `EdgeFunction` instance
@@ -279,9 +313,21 @@ async function writeStaticFile(
 async function writeEdgeFunction(
   outputDir: string,
   edgeFunction: EdgeFunction,
-  path: string
+  path: string,
+  functionsPathsMap?: Map<EdgeFunction | Lambda, string>
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
+
+  const symlinkWritten = await createDuplicateFunctionSymlink(
+    outputDir,
+    dest,
+    edgeFunction,
+    functionsPathsMap
+  );
+  if (symlinkWritten) {
+    return;
+  }
+  functionsPathsMap?.set(edgeFunction, path);
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
@@ -308,34 +354,27 @@ async function writeEdgeFunction(
  *
  * @param lambda The `Lambda` instance
  * @param path The URL path where the `Lambda` can be accessed from
- * @param lambdas (optional) Map of `Lambda` instances that have previously been written
+ * @param functionsPathsMap (optional) Map of `Lambda` instances that have previously been written
  */
 async function writeLambda(
   outputDir: string,
   lambda: Lambda,
   path: string,
   functionConfiguration?: FunctionConfiguration,
-  lambdas?: Map<Lambda, string>
+  functionsPathsMap?: Map<EdgeFunction | Lambda, string>
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
-  // If the `lambda` has already been written to the filesystem at a different
-  // location then create a symlink to the previous location instead of copying
-  // the files again.
-  const existingLambdaPath = lambdas?.get(lambda);
-  if (existingLambdaPath) {
-    const destDir = dirname(dest);
-    const targetDest = join(
-      outputDir,
-      'functions',
-      `${existingLambdaPath}.func`
-    );
-    const target = relative(destDir, targetDest);
-    await fs.mkdirp(destDir);
-    await fs.symlink(target, dest);
+  const symlinkWritten = await createDuplicateFunctionSymlink(
+    outputDir,
+    dest,
+    lambda,
+    functionsPathsMap
+  );
+  if (symlinkWritten) {
     return;
   }
-  lambdas?.set(lambda, path);
+  functionsPathsMap?.set(lambda, path);
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];

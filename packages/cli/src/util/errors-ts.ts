@@ -674,7 +674,7 @@ export class CantParseJSONFile extends NowError<
     super({
       code: 'CANT_PARSE_JSON_FILE',
       meta: { file },
-      message: `Can't parse json file`,
+      message: `Can't parse json file: ${JSON.stringify(file)}`,
     });
   }
 }
