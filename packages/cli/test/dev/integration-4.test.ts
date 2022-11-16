@@ -289,7 +289,6 @@ test(
   })
 );
 
-// FIXME: Possible orphan process on linux
 test(
   '[vercel dev] 40-mixed-modules',
   testFixtureStdio('40-mixed-modules', async (testPath: any) => {
