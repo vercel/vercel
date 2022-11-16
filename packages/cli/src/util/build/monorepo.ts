@@ -69,9 +69,9 @@ export async function setMonorepoDefaultSettings(
         hasBuildPipeline = true;
       }
     } else if (packageJsonBuf !== null) {
-      const packageJson = JSON.parse(packageJsonBuf.toString('utf-8'));
+      const packageJSON = JSON.parse(packageJsonBuf.toString('utf-8'));
 
-      if (packageJson?.turbo?.pipeline?.build) {
+      if (packageJSON?.turbo?.pipeline?.build) {
         hasBuildPipeline = true;
       }
     }
@@ -85,7 +85,10 @@ export async function setMonorepoDefaultSettings(
 
     setCommand(
       'buildCommand',
-      `cd ${relativeToRoot} && npx turbo run build --filter=${projectName}...`
+      `cd ${relativeToRoot} && npx turbo run build --filter={./${relative(
+        cwd,
+        workPath
+      )}}...`
     );
     setCommand(
       'installCommand',
