@@ -1022,7 +1022,10 @@ function getRouteResult(
 
       rewriteRoutes.push(...dynamicRoutes);
 
-      if (typeof ignoreRuntimes === 'undefined') {
+      const hasApiBuild = apiBuilders.find(builder => {
+        return builder.src?.startsWith('api/');
+      });
+      if (typeof ignoreRuntimes === 'undefined' && hasApiBuild) {
         // This route is only necessary to hide the directory listing
         // to avoid enumerating serverless function names.
         // But it causes issues in `vc dev` for frameworks that handle

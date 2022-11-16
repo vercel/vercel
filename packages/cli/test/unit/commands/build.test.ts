@@ -485,9 +485,12 @@ describe('build', () => {
       expect(config).toMatchObject({
         version: 3,
         routes: [
-          { src: '^/.*$', middlewarePath: 'middleware', continue: true },
-          { handle: 'filesystem' },
-          { src: '^/api(/.*)?$', status: 404 },
+          {
+            src: '^/.*$',
+            middlewarePath: 'middleware',
+            override: true,
+            continue: true,
+          },
           { handle: 'error' },
           { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
         ],
@@ -546,9 +549,12 @@ describe('build', () => {
       expect(config).toMatchObject({
         version: 3,
         routes: [
-          { src: '^/.*$', middlewarePath: 'middleware', continue: true },
-          { handle: 'filesystem' },
-          { src: '^/api(/.*)?$', status: 404 },
+          {
+            src: '^/.*$',
+            middlewarePath: 'middleware',
+            override: true,
+            continue: true,
+          },
           { handle: 'error' },
           { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
         ],
@@ -610,10 +616,9 @@ describe('build', () => {
           {
             src: '^\\/about(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$|^\\/dashboard(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
             middlewarePath: 'middleware',
+            override: true,
             continue: true,
           },
-          { handle: 'filesystem' },
-          { src: '^/api(/.*)?$', status: 404 },
           { handle: 'error' },
           { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
         ],
