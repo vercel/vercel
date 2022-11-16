@@ -574,6 +574,10 @@ async function nukeProcessTree(pid, signal) {
     return;
   }
 
+  if (process.platform === 'linux') {
+    execSync('ps axfl', { stdio: 'inherit' });
+  }
+
   const pids = await ps(pid, {
     [pid]: [],
   });
