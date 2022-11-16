@@ -10,7 +10,7 @@ const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
-const { spawnSync } = require('child_process');
+const { spawnSync, execSync } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -251,6 +251,7 @@ async function testFixture(directory, opts = {}, args = []) {
             ', '
           )}`
       );
+      execSync('ps aux', { stdio: 'inherit' });
     }, 5000);
   });
 
@@ -481,12 +482,7 @@ function testFixtureStdio(
         }
       });
 
-      dev.on('exit', () => {
-        console.log('VC DEV EXIT', dev.pid);
-      });
-
       dev.on('close', () => {
-        console.log('VC DEV CLOSE', dev.pid);
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;
