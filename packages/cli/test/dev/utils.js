@@ -481,7 +481,12 @@ function testFixtureStdio(
         }
       });
 
+      dev.on('exit', () => {
+        console.log('VC DEV EXIT', dev.pid);
+      });
+
       dev.on('close', () => {
+        console.log('VC DEV CLOSE', dev.pid);
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;
