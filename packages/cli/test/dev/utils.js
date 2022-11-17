@@ -244,12 +244,12 @@ async function testFixture(directory, opts = {}, args = []) {
 
   dev.on('exit', code => {
     devTimer = setTimeout(async () => {
+      const pids = Object.keys(await ps(dev.pid)).join(', ');
       console.error(
         `Test ${directory} exited with code ${code}, but has timed out closing stdio\n` +
-          `Hanging child processes: ${
-            Object.keys(await ps(dev.pid)).join(', ') ||
-            `None, ${dev.pid} already exited`
-          }`
+          (pids
+            ? `Hanging child processes: ${pids}`
+            : `${dev.pid} already exited`)
       );
     }, 5000);
   });
