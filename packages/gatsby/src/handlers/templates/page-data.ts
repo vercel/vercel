@@ -12,7 +12,9 @@ export default async function handler(
   req: ServerlessFunctionRequest,
   res: ServerlessFunctionResponse
 ) {
-  const splitPathName = (req.url as string).split('/')[2];
+  const splitPathName = (req.url as string)
+    .split('/page-data.json')[0]
+    .split('/page-data/')[1];
   const pathName = splitPathName === `index` ? `/` : splitPathName;
 
   if (
@@ -55,6 +57,6 @@ export default async function handler(
     return res.status(200).json(body);
   } catch (e) {
     console.error(e);
-    return res.status(500).send('Internal server error.');
+    return res.status(200);
   }
 }
