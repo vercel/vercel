@@ -1,6 +1,7 @@
 import { join } from 'path';
 import ms from 'ms';
 import fs, { mkdirp } from 'fs-extra';
+import { execSync } from 'child_process';
 
 const {
   exec,
@@ -72,7 +73,16 @@ test('[vercel dev] validate env var names', async () => {
       dev.on('close', resolve);
     });
   } finally {
+    if (process.platform === 'linux') {
+      console.log(`!!!!! KILLING ${dev.pid}`);
+      execSync('ps axfl', { stdio: 'inherit' });
+    }
     await dev.kill();
+    if (process.platform === 'linux') {
+      console.log('!!!!! SLEEPING');
+      await sleep(ms('2s'));
+      execSync('ps axfl', { stdio: 'inherit' });
+    }
   }
 });
 
