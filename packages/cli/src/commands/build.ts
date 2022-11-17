@@ -57,6 +57,7 @@ import { initCorepack, cleanupCorepack } from '../util/build/corepack';
 import { sortBuilders } from '../util/build/sort-builders';
 import { toEnumerableError } from '../util/error';
 import { validateConfig } from '../util/validate-config';
+import { parseEnv } from '../util/parse-env';
 
 import { setMonorepoDefaultSettings } from '../util/build/monorepo';
 
@@ -131,6 +132,7 @@ export default async function main(client: Client): Promise<number> {
   // Parse CLI args
   const argv = getArgs(client.argv.slice(2), {
     '--cwd': String,
+    '--env': [String],
     '--output': String,
     '--prod': Boolean,
     '--yes': Boolean,
@@ -227,6 +229,15 @@ export default async function main(client: Client): Promise<number> {
       output.debug(`Loaded environment variables from "${envPath}"`);
     }
 
+    // Merge dotenv config, `env` from `--env` / `-e` arguments
+    const deploymentEnv = Object.assign({}, parseEnv(argv['--env']));
+
+    if (Object.keys(deploymentEnv).length > 0) {
+      output.debug(`Loaded environment variables from --env`);
+      for (const key of Object.keys(deploymentEnv)) {
+        process.env[key] = deploymentEnv[key];
+      }
+    }
     // For Vercel Analytics support
     if (project.settings.analyticsId) {
       envToUnset.add('VERCEL_ANALYTICS_ID');

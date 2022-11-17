@@ -72,7 +72,7 @@ import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
-
+import { addProcessEnv } from '../../util/add-process-env';
 export default async (client: Client): Promise<number> => {
   const { output } = client;
 
@@ -806,37 +806,6 @@ function handleCreateDeployError(
 
   return error;
 }
-
-const addProcessEnv = async (
-  log: (str: string) => void,
-  env: typeof process.env
-) => {
-  let val;
-
-  for (const key of Object.keys(env)) {
-    if (typeof env[key] !== 'undefined') {
-      continue;
-    }
-
-    val = process.env[key];
-
-    if (typeof val === 'string') {
-      log(
-        `Reading ${chalk.bold(
-          `"${chalk.bold(key)}"`
-        )} from your env (as no value was specified)`
-      );
-      // Escape value if it begins with @
-      env[key] = val.replace(/^@/, '\\@');
-    } else {
-      throw new Error(
-        `No value specified for env ${chalk.bold(
-          `"${chalk.bold(key)}"`
-        )} and it was not found in your env.`
-      );
-    }
-  }
-};
 
 const printDeploymentStatus = async (
   output: Output,
