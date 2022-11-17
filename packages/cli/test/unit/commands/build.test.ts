@@ -1166,6 +1166,13 @@ describe('build', () => {
    * timeout window granted for these tests. Maybe we are doing something wrong.
    */
   describe('monorepo-detection', () => {
+    beforeAll(() => {
+      process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+    });
+
+    afterAll(() => {
+      delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
+    });
     const setupMonorepoDetectionFixture = (fixture: string) => {
       const cwd = setupFixture(`commands/build/monorepo-detection/${fixture}`);
       process.chdir(cwd);
