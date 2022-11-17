@@ -1,6 +1,6 @@
 import chalk from 'chalk';
-import { homedir } from 'node:os';
-import { join, normalize } from 'node:path';
+import { homedir } from 'os';
+import { join, normalize } from 'path';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
