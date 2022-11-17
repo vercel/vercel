@@ -43,7 +43,6 @@ test('[vercel dev] validate mixed routes and rewrites', async () => {
   expect(output.stderr).toMatch(/vercel\.link\/mix-routing-props/m);
 });
 
-// Test seems unstable: It won't return sometimes.
 test('[vercel dev] validate env var names', async () => {
   const directory = fixture('invalid-env-var-name');
   const { dev } = await testFixture(directory, { encoding: 'utf8' });
