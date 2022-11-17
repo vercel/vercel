@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import pluralize from 'pluralize';
 import { homedir } from 'os';
 import { join, normalize } from 'path';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
@@ -10,6 +11,7 @@ import { getRemoteUrls } from '../create-git-meta';
 import { Project } from '../../types';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
+import selectOrg from '../input/select-org';
 
 const home = homedir();
 
@@ -25,8 +27,33 @@ export interface RepoProjectsConfig {
   projects: RepoProjectConfig[];
 }
 
-export interface RepoLink extends RepoProjectsConfig {
-  repoRoot: string;
+export interface RepoLink {
+  rootPath?: string;
+  repoConfigPath?: string;
+  repoConfig?: RepoProjectsConfig;
+}
+
+/**
+ * Given a directory path `cwd`, finds the root of the Git repository
+ * and returns the parsed `.vercel/repo.json` file if the repository
+ * has already been linked.
+ */
+export async function getRepoLink(cwd: string): Promise<RepoLink> {
+  let repoConfigPath: string | undefined;
+  let repoConfig: RepoProjectsConfig | undefined;
+
+  // Determine where the root of the repo is
+  const rootPath = await findRepoRoot(cwd);
+
+  // Read the `repo.json`, if this repo has already been linked
+  if (rootPath) {
+    repoConfigPath = join(rootPath, VERCEL_DIR, 'repo.json');
+    repoConfig = await readJSON(repoConfigPath).catch(err => {
+      if (err.code !== 'ENOENT') throw err;
+    });
+  }
+
+  return { rootPath, repoConfig, repoConfigPath };
 }
 
 /**
@@ -39,20 +66,17 @@ export async function ensureRepoLink(
 ): Promise<RepoLink | undefined> {
   const { output } = client;
 
-  // First order of business is to determine where the root of the repo is
-  const repoRoot = await findRepoRoot(cwd);
-  output.debug(`Found Git repository root directory: ${repoRoot}`);
-  if (!repoRoot) {
+  let { rootPath, repoConfig, repoConfigPath } = await getRepoLink(cwd);
+  if (rootPath) {
+    output.debug(`Found Git repository root directory: ${rootPath}`);
+  } else {
     throw new Error('Could not determine Git repository root directory');
   }
 
-  // Read the `repo.json`, if this repo has already been linked
-  const repoConfigPath = join(repoRoot, VERCEL_DIR, 'repo.json');
-  let repoConfig: RepoProjectsConfig | undefined = await readJSON(
-    repoConfigPath
-  ).catch(err => {
-    if (err.code !== 'ENOENT') throw err;
-  });
+  // If `repoPath` is defined then this should always be defined
+  if (!repoConfigPath) {
+    throw new Error('`repoConfigPath` not defined');
+  }
 
   if (!repoConfig) {
     // Not yet linked, so prompt user to begin linking
@@ -61,7 +85,7 @@ export async function ensureRepoLink(
       (await confirm(
         client,
         `Link to Git repository at ${chalk.cyan(
-          `“${toHumanPath(repoRoot)}”`
+          `“${toHumanPath(rootPath)}”`
         )}?`,
         true
       ));
@@ -71,12 +95,19 @@ export async function ensureRepoLink(
       return;
     }
 
+    const org = await selectOrg(
+      client,
+      'Which scope should contain your Project(s)?',
+      yes
+    );
+    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
     const remoteUrls = await getRemoteUrls(
-      join(repoRoot, '.git/config'),
+      join(rootPath, '.git/config'),
       output
     );
     if (!remoteUrls) {
-      throw new Error('Could not determit Git remote URLs');
+      throw new Error('Could not determine Git remote URLs');
     }
     const remoteNames = Object.keys(remoteUrls);
     let remoteName: string;
@@ -97,34 +128,41 @@ export async function ensureRepoLink(
       remoteName = answer.value;
     }
     const repoUrl = remoteUrls[remoteName];
-    output.spinner(`Fetching Projects for ${link(repoUrl)} on "vercel" team…`);
+    output.spinner(
+      `Fetching Projects for ${link(repoUrl)} under ${chalk.bold(org.slug)}…`
+    );
+    // TODO: Add pagination to fetch all Projects
     const query = new URLSearchParams({ repoUrl, limit: '100' });
     const projects: Project[] = await client.fetch(`/v2/projects?${query}`);
     if (projects.length === 0) {
       output.log(
-        `No Projects are linked to ${link(repoUrl)} on "vercel" team.`
+        `No Projects are linked to ${link(repoUrl)} under ${chalk.bold(
+          org.slug
+        )}.`
       );
       // TODO: run detection logic to find potential projects.
       // then prompt user to select valid projects.
       // then create new Projects
     } else {
       output.log(
-        `Found ${chalk.bold(projects.length)} Projects linked to ${link(
-          repoUrl
-        )} on "vercel" team:`
+        `Found ${chalk.bold(projects.length)} ${pluralize(
+          'Project',
+          projects.length
+        )} linked to ${link(repoUrl)} under ${chalk.bold(org.slug)}:`
       );
     }
 
-    const projectsMeta = projects.map(project => {
-      output.print(`  * ${chalk.cyan(`vercel/${project.name}\n`)}`);
-      return {
-        id: project.id,
-        name: project.name,
-        directory: normalize(project.rootDirectory || ''),
-      };
-    });
+    for (const project of projects) {
+      output.print(`  * ${chalk.cyan(`${org.slug}/${project.name}\n`)}`);
+    }
 
-    shouldLink = yes || (await confirm(client, `Link to them?`, true));
+    shouldLink =
+      yes ||
+      (await confirm(
+        client,
+        `Link to ${projects.length === 1 ? 'it' : 'them'}?`,
+        true
+      ));
 
     if (!shouldLink) {
       output.print(`Canceled. Repository not linked.\n`);
@@ -132,9 +170,15 @@ export async function ensureRepoLink(
     }
 
     repoConfig = {
-      orgId: '1234',
+      orgId: org.id,
       remoteName,
-      projects: projectsMeta,
+      projects: projects.map(project => {
+        return {
+          id: project.id,
+          name: project.name,
+          directory: normalize(project.rootDirectory || ''),
+        };
+      }),
     };
     await outputJSON(repoConfigPath, repoConfig, { spaces: 2 });
     // TODO: add `README.txt`
@@ -142,7 +186,9 @@ export async function ensureRepoLink(
     let isGitIgnoreUpdated = false;
     output.print(
       prependEmoji(
-        `Linked to ${link(repoUrl)} on "vercel" Team (created ${VERCEL_DIR}${
+        `Linked to ${link(repoUrl)} under ${chalk.bold(
+          org.slug
+        )} (created ${VERCEL_DIR}${
           isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
         })`,
         emoji('link')
@@ -151,8 +197,9 @@ export async function ensureRepoLink(
   }
 
   return {
-    ...repoConfig,
-    repoRoot,
+    repoConfig,
+    repoConfigPath,
+    rootPath,
   };
 }
 
