@@ -5,6 +5,7 @@ import getArgs from '../util/get-args';
 import { getPkgName } from '../util/pkg-name';
 import handleError from '../util/handle-error';
 import logo from '../util/output/logo';
+import ms from 'ms';
 import requestRollback from '../util/rollback/request-rollback';
 import rollbackStatus from '../util/rollback/status';
 import validatePaths from '../util/validate-paths';
@@ -94,9 +95,15 @@ export default async (client: Client): Promise<number> => {
     return linkedProject;
   }
 
+  // validate the timeout
+  let timeout = argv['--timeout'];
+  if (timeout && !ms(timeout)) {
+    client.output.error(`Invalid timeout "${timeout}"`);
+    return 1;
+  }
+
   const { project } = linkedProject;
   const actionOrDeployId = argv._[1] || 'status';
-  const timeout = argv['--timeout'];
 
   if (actionOrDeployId === 'status') {
     return await rollbackStatus({

@@ -118,11 +118,11 @@ export default async function rollbackStatus({
             deployment ||
             (await getDeploymentInfo(client, contextName, toDeploymentId))
           )?.url;
-          output.log(
+          output.error(
             `Failed to remap all aliases to the requested deployment ${name} (${toDeploymentId})`
           );
         } catch (e) {
-          output.log(
+          output.error(
             `Failed to remap all aliases to the requested deployment ${toDeploymentId}`
           );
         }

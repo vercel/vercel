@@ -322,7 +322,7 @@ export type ProjectLinkResult =
         | 'MISSING_PROJECT_SETTINGS';
     };
 
-type AliasStatus =
+export type RollbackJobStatus =
   | 'pending'
   | 'in-progress'
   | 'succeeded'
@@ -331,7 +331,7 @@ type AliasStatus =
 
 export interface RollbackTarget {
   fromDeploymentId: string;
-  jobStatus: AliasStatus;
+  jobStatus: RollbackJobStatus;
   requestedAt: number;
   toDeploymentId: string;
 }
