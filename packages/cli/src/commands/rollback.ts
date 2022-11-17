@@ -97,7 +97,7 @@ export default async (client: Client): Promise<number> => {
 
   // validate the timeout
   let timeout = argv['--timeout'];
-  if (timeout && !ms(timeout)) {
+  if (timeout && ms(timeout) === undefined) {
     client.output.error(`Invalid timeout "${timeout}"`);
     return 1;
   }

@@ -45,7 +45,7 @@ export default async function rollbackStatus({
   contextName,
   deployment,
   project,
-  timeout,
+  timeout = '3m',
 }: {
   client: Client;
   contextName?: string;
@@ -54,9 +54,8 @@ export default async function rollbackStatus({
   timeout?: string;
 }): Promise<number> {
   const { output } = client;
-  const timeoutMS = ms(timeout || '3m');
-  const recentThreshold = Date.now() - timeoutMS;
-  const rollbackTimeout = Date.now() + timeoutMS;
+  const recentThreshold = Date.now() - ms('3m');
+  const rollbackTimeout = Date.now() + ms(timeout);
   let counter = 0;
   let msg = deployment
     ? 'Rollback in progress'

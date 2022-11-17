@@ -239,6 +239,27 @@ describe('rollback', () => {
 
     await expect(exitCodePromise).resolves.toEqual(1);
   });
+
+  it('should immediately exit after requesting rollback', async () => {
+    const { cwd, previousDeployment } = initRollbackTest();
+    client.setArgv(
+      'rollback',
+      previousDeployment.id,
+      '--yes',
+      '--cwd',
+      cwd,
+      '--timeout',
+      '0'
+    );
+    const exitCodePromise = rollback(client);
+
+    await expect(client.stderr).toOutput('Retrieving project…');
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+    );
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+  });
 });
 
 type RollbackAlias = {

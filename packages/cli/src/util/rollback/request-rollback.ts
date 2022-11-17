@@ -3,6 +3,7 @@ import type Client from '../client';
 import getDeploymentInfo from './get-deployment-info';
 import getScope from '../get-scope';
 import { isValidName } from '../is-valid-name';
+import ms from 'ms';
 import type { Project } from '../../types';
 import rollbackStatus from './status';
 
@@ -59,6 +60,10 @@ export default async function requestRollback({
       method: 'POST',
     }
   );
+
+  if (timeout !== undefined && ms(timeout) === 0) {
+    return 0;
+  }
 
   // check the status
   return await rollbackStatus({
