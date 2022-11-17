@@ -10,7 +10,7 @@ const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
-const { spawnSync } = require('child_process');
+const { spawnSync, execSync } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -293,6 +293,7 @@ async function testFixture(directory, opts = {}, args = []) {
       directory.includes('invalid-env-var-name')
     ) {
       console.log('!!!!! dev._kill() done, waiting for exit resolver');
+      execSync('ps axfl', { stdio: 'inherit' });
     }
 
     await exitResolver;
