@@ -255,6 +255,12 @@ async function testFixture(directory, opts = {}, args = []) {
   });
 
   dev.on('close', () => {
+    if (
+      process.platform === 'linux' &&
+      directory.includes('invalid-env-var-name')
+    ) {
+      console.log(`!!!!! PID ${dev.pid} CLOSED`);
+    }
     clearTimeout(devTimer);
     if (!printedOutput) {
       printOutput(directory, stdout, stderr);
@@ -275,7 +281,19 @@ async function testFixture(directory, opts = {}, args = []) {
 
   dev._kill = dev.kill;
   dev.kill = async () => {
+    if (
+      process.platform === 'linux' &&
+      directory.includes('invalid-env-var-name')
+    ) {
+      console.log('!!!!! calling dev._kill()');
+    }
     dev._kill();
+    if (
+      process.platform === 'linux' &&
+      directory.includes('invalid-env-var-name')
+    ) {
+      console.log('!!!!! dev._kill() done, waiting for exit resolver');
+    }
 
     await exitResolver;
     return {
