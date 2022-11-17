@@ -1,7 +1,11 @@
-import { PaginationOptions } from '../types';
 import chalk from 'chalk';
 import type Client from '../util/client';
-import type { Deployment, Project } from '../types';
+import type {
+  Deployment,
+  PaginationOptions,
+  Project,
+  RollbackTarget,
+} from '../types';
 import elapsed from '../util/output/elapsed';
 import { ensureLink } from '../util/link/ensure-link';
 import formatDate from '../util/format-date';
@@ -75,7 +79,8 @@ export default async (client: Client): Promise<number> => {
   }
 
   // ensure the current directory is good
-  const pathValidation = await validatePaths(client, [process.cwd()]);
+  const cwd = argv['--cwd'] || process.cwd();
+  const pathValidation = await validatePaths(client, [cwd]);
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
   }
@@ -143,7 +148,10 @@ async function rollback({
   let deployment;
   try {
     deployment = await getDeploymentInfo(client, contextName, deployId);
-  } catch (e) {
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      output.error(err.toString());
+    }
     return 1;
   } finally {
     output.stopSpinner();
@@ -151,7 +159,7 @@ async function rollback({
 
   // create the rollback
   await client.fetch<any>(
-    `/v1/projects/${project.id}/rollback/${deployment.uid}`,
+    `/v9/projects/${project.id}/rollback/${deployment.uid}`,
     {
       body: {}, // required
       method: 'POST',
@@ -183,15 +191,17 @@ async function status({
   contextName,
   deployment,
   project,
+  timeout = 3 * 60 * 1000, // 3 minutes
 }: {
   client: Client;
   contextName?: string;
   deployment?: Deployment;
   project: Project;
+  timeout?: number;
 }): Promise<number> {
   const { output } = client;
-  const recentThreshold = Date.now() - 3 * 60 * 1000; // 3 minutes
-  const timeout = Date.now() + 3 * 60 * 1000;
+  const recentThreshold = Date.now() - timeout;
+  const rollbackTimeout = Date.now() + timeout;
   let counter = 0;
   let msg = deployment
     ? 'Rollback in progress'
@@ -260,7 +270,7 @@ async function status({
 
         let nextTimestamp;
         for (;;) {
-          let url = `/api/v9/projects/${project.id}/rollback/aliases?failedOnly=true&limit=20`;
+          let url = `/v9/projects/${project.id}/rollback/aliases?failedOnly=true&limit=20`;
           if (nextTimestamp) {
             url += `&until=${nextTimestamp}`;
           }
@@ -299,7 +309,7 @@ async function status({
       }
 
       // check if we have been running for too long
-      if (requestedAt < recentThreshold || Date.now() >= timeout) {
+      if (requestedAt < recentThreshold || Date.now() >= rollbackTimeout) {
         output.log(
           `The rollback exceeded its deadline - rerun ${chalk.bold(
             `vercel rollback ${toDeploymentId}`
@@ -370,20 +380,6 @@ function renderAliasStatus(status: string): string {
     return chalk.gray(status);
   }
   return chalk.yellow(status);
-}
-
-type AliasStatus =
-  | 'pending'
-  | 'in-progress'
-  | 'succeeded'
-  | 'failed'
-  | 'skipped';
-
-interface RollbackTarget {
-  fromDeploymentId: string;
-  jobStatus: AliasStatus;
-  requestedAt: number;
-  toDeploymentId: string;
 }
 
 interface RollbackAlias {
