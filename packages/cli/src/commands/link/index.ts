@@ -4,6 +4,8 @@ import getArgs from '../../util/get-args';
 import logo from '../../util/output/logo';
 import { getPkgName } from '../../util/pkg-name';
 import { ensureLink } from '../../util/link/ensure-link';
+import cmd from '../../util/output/cmd';
+import { ensureRepoLink } from '../../util/link/repo';
 
 const help = () => {
   console.log(`
@@ -12,6 +14,7 @@ const help = () => {
   ${chalk.dim('Options:')}
 
     -h, --help                     Output usage information
+    -r, --repo                     Link multiple projects based on Git repository
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
@@ -39,9 +42,16 @@ const help = () => {
 
       ${chalk.cyan(`$ ${getPkgName()} link --yes`)}
 
+  ${chalk.gray(
+    '–'
+  )} Link to the current Git repository, allowing for multiple Vercel
+    Projects to be linked simultaneously (useful for monorepos)
+
+      ${chalk.cyan(`$ ${getPkgName()} link --repo`)}
+
   ${chalk.gray('–')} Link a specific directory to a Vercel Project
 
-      ${chalk.cyan(`$ ${getPkgName()} link /usr/src/project`)}
+      ${chalk.cyan(`$ ${getPkgName()} link --cwd /path/to/project`)}
 `);
 };
 
@@ -51,6 +61,8 @@ export default async function main(client: Client) {
     '-y': '--yes',
     '--project': String,
     '-p': '--project',
+    '--repo': Boolean,
+    '-r': '--repo',
 
     // deprecated
     '--confirm': Boolean,
@@ -67,17 +79,33 @@ export default async function main(client: Client) {
     argv['--yes'] = argv['--confirm'];
   }
 
-  const cwd = argv._[1] || process.cwd();
+  const yes = !!argv['--yes'];
 
-  const link = await ensureLink('link', client, cwd, {
-    autoConfirm: !!argv['--yes'],
-    forceDelete: true,
-    projectName: argv['--project'],
-    successEmoji: 'success',
-  });
-
-  if (typeof link === 'number') {
-    return link;
+  let cwd = argv._[1];
+  if (cwd) {
+    client.output.warn(
+      `The ${cmd('vc link <directory>')} syntax is deprecated, please use ${cmd(
+        `vc link --cwd ${cwd}`
+      )} instead`
+    );
+  } else {
+    cwd = process.cwd();
   }
+
+  if (argv['--repo']) {
+    await ensureRepoLink(client, cwd, yes);
+  } else {
+    const link = await ensureLink('link', client, cwd, {
+      autoConfirm: yes,
+      forceDelete: true,
+      projectName: argv['--project'],
+      successEmoji: 'success',
+    });
+
+    if (typeof link === 'number') {
+      return link;
+    }
+  }
+
   return 0;
 }
