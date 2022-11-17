@@ -2,6 +2,7 @@ const { parse, pathToFileURL } = require('url');
 const { createServer, Server } = require('http');
 const { isAbsolute } = require('path');
 const { Bridge } = require('./bridge.js');
+const { wrapWebHandler } = require('./web-handler.js');
 
 /**
  * @param {import('./types').LauncherConfiguration} config
@@ -42,6 +43,7 @@ function getVercelLauncher({
   helpersPath,
   shouldAddHelpers = false,
   useRequire = false,
+  webSignature = false,
 }) {
   return function () {
     const bridge = new Bridge();
@@ -86,6 +88,9 @@ function getVercelLauncher({
           bridge.setServer(server);
           bridge.listen();
         } else if (typeof listener === 'function') {
+          if (webSignature) {
+            listener = wrapWebHandler(listener);
+          }
           Server.prototype.listen = originalListen;
           if (shouldAddHelpers) {
             bridge.setStoreEvents(true);

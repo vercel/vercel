@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "lib": ["ES2020"],
+    "lib": ["ES2020", "DOM"],
     "noEmit": true,
     "noImplicitReturns": true,
     "strict": true,
@@ -10,6 +10,6 @@
     "declaration": true,
     "module": "commonjs"
   },
-  "include": ["helpers.ts", "bridge.js", "launcher.js"],
+  "include": ["helpers.ts", "bridge.js", "launcher.js", "web-handler.js"],
   "exclude": ["node_modules"]
 }

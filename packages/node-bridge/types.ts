@@ -51,6 +51,7 @@ export type LauncherConfiguration = {
   shouldAddSourcemapSupport?: boolean;
   awsLambdaHandler?: string;
   useRequire?: boolean;
+  webSignature?: boolean;
 };
 
 export type VercelRequestCookies = { [key: string]: string };

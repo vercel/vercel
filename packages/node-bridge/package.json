@@ -13,7 +13,8 @@
     "launcher.*",
     "index.js",
     "helpers.js",
-    "source-map-support.js"
+    "source-map-support.js",
+    "web-handler.js"
   ],
   "scripts": {
     "build": "node build.js",
@@ -21,6 +22,7 @@
     "test-unit": "yarn test"
   },
   "devDependencies": {
+    "@edge-runtime/primitives": "2.0.2",
     "@types/aws-lambda": "8.10.19",
     "@types/node": "14.18.33",
     "jsonlines": "0.1.1",
