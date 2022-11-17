@@ -1,3 +1,5 @@
+let spawnExitCode = 0;
+
 const spawnMock = jest.fn();
 jest.mock('cross-spawn', () => {
   const spawn = (...args: any) => {
@@ -5,7 +7,7 @@ jest.mock('cross-spawn', () => {
     const child = {
       on: (type: string, fn: (code: number) => void) => {
         if (type === 'close') {
-          return fn(0);
+          return fn(spawnExitCode);
         }
       },
     };
@@ -15,6 +17,7 @@ jest.mock('cross-spawn', () => {
 });
 
 afterEach(() => {
+  spawnExitCode = 0;
   spawnMock.mockClear();
 });
 
@@ -193,5 +196,29 @@ it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)
     prettyCommand: 'yarn install',
     stdio: 'inherit',
     env: expect.any(Object),
+  });
+});
+
+it('should throw error when install failed - yarn', async () => {
+  spawnExitCode = 1;
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '19-yarn-v2');
+  await expect(
+    runNpmInstall(fixture, [], undefined, meta)
+  ).rejects.toMatchObject({
+    name: 'Error',
+    message: 'Command "yarn install" exited with 1',
+  });
+});
+
+it('should throw error when install failed - npm', async () => {
+  spawnExitCode = 1;
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+  await expect(
+    runNpmInstall(fixture, [], undefined, meta)
+  ).rejects.toMatchObject({
+    name: 'Error',
+    message: 'Command "npm install" exited with 1',
   });
 });
