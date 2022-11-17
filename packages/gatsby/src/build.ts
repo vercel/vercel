@@ -133,15 +133,15 @@ export const build: BuildV2 = async ({
       dsgRoutes: [],
     }
   );
+  const functions = await glob('**', join(entrypointFsDirname, 'src', 'api'));
 
   const { routes } = getTransformedRoutes({
     trailingSlash: false,
     rewrites: [
-      {
-        source: '^/page-data(?:/(.*))/page-data\\.json$',
-        destination: '/_page-data',
-      },
       ...((vercelConfig?.rewrites as Rewrite[]) || []),
+      ...(Object.keys(functions).length
+        ? [{ source: '/page-data(.*)', destination: '/_page-data' }]
+        : []),
     ],
     redirects: vercelConfig?.redirects,
   });
@@ -151,18 +151,18 @@ export const build: BuildV2 = async ({
       ...(await createStaticOutput({
         staticDir: join(entrypointFsDirname, 'public'),
       })),
-      ...(await createServerlessFunction({
-        ssrRoutes,
-        dsgRoutes,
-        nodeVersion,
-      })),
-      ...(await createAPIRoutes({
-        functions: await glob('**', join(entrypointFsDirname, 'src', 'api')),
-        nodeVersion,
-      })),
-      '_page-data': await createFunctionLambda({
-        nodeVersion,
-        handlerFile: join(__dirname, 'handlers', 'templates', 'page-data'),
+      ...(Object.keys(functions).length &&
+        (await createAPIRoutes({ functions, nodeVersion }))),
+      ...((dsgRoutes.length || ssrRoutes.length) && {
+        ...(await createServerlessFunction({
+          ssrRoutes,
+          dsgRoutes,
+          nodeVersion,
+        })),
+        '_page-data': await createFunctionLambda({
+          nodeVersion,
+          handlerFile: join(__dirname, 'handlers', 'templates', 'page-data'),
+        }),
       }),
     },
     routes: routes || undefined,
