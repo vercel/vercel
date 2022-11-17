@@ -1365,7 +1365,44 @@ describe('build', () => {
               join(cwd, '.vercel/output/static/index.txt'),
               'utf8'
             );
-            expect(result).toMatch(/Hello, world/);
+            expect(result).toMatch(/Hello, from build\.js/);
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
+          }
+        },
+        ms('5 miuntes')
+      );
+
+      test(
+        `skip when vercel-build is defined`,
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
+
+            const packageJSONPath = join(cwd, 'packages/app-1/package.json');
+            const packageJSON = JSON.parse(
+              await fs.readFile(packageJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              packageJSONPath,
+              JSON.stringify({
+                ...packageJSON,
+                scripts: {
+                  ...packageJSON.scripts,
+                  'vercel-build': `node ../../build.js`,
+                },
+              })
+            );
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            const result = await fs.readFile(
+              join(cwd, '.vercel/output/static/index.txt'),
+              'utf8'
+            );
+            expect(result).toMatch(/Hello, from build\.js/);
           } finally {
             process.chdir(originalCwd);
             delete process.env.__VERCEL_BUILD_RUNNING;

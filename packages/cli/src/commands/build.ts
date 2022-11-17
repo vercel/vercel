@@ -304,7 +304,10 @@ async function doBuild(
     ...pickOverrides(localConfig),
   };
 
+  console.log(pkg);
+
   if (
+    pkg?.scripts?.['vercel-build'] === undefined &&
     projectSettings.rootDirectory !== null &&
     projectSettings.rootDirectory !== '.'
   ) {
