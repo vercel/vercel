@@ -1,7 +1,6 @@
 import { join } from 'path';
 import ms from 'ms';
 import fs, { mkdirp } from 'fs-extra';
-import { execSync } from 'child_process';
 
 const {
   exec,
@@ -47,14 +46,14 @@ test('[vercel dev] validate mixed routes and rewrites', async () => {
 // Test seems unstable: It won't return sometimes.
 test('[vercel dev] validate env var names', async () => {
   const directory = fixture('invalid-env-var-name');
-  const { dev } = await testFixture(directory);
+  const { dev } = await testFixture(directory, { encoding: 'utf8' });
 
   try {
     let stderr = '';
 
     await new Promise<void>((resolve, reject) => {
-      dev.stderr.on('data', (b: Buffer) => {
-        stderr += b.toString();
+      dev.stderr.on('data', (b: string) => {
+        stderr += b;
         if (
           stderr.includes('Ignoring env var "1" because name is invalid') &&
           stderr.includes(
@@ -62,8 +61,7 @@ test('[vercel dev] validate env var names', async () => {
           ) &&
           stderr.includes(
             'Env var names must start with letters, and can only contain alphanumeric characters and underscores'
-          ) &&
-          stderr.includes('Ready!')
+          )
         ) {
           resolve();
         }
@@ -73,16 +71,7 @@ test('[vercel dev] validate env var names', async () => {
       dev.on('close', resolve);
     });
   } finally {
-    if (process.platform === 'linux') {
-      console.log(`!!!!! KILLING ${dev.pid}`);
-      execSync('ps axfl', { stdio: 'inherit' });
-    }
     await dev.kill();
-    if (process.platform === 'linux') {
-      console.log('!!!!! SLEEPING');
-      await sleep(ms('2s'));
-      execSync('ps axfl', { stdio: 'inherit' });
-    }
   }
 });
 

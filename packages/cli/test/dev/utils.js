@@ -10,7 +10,7 @@ const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
-const { spawnSync, execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
@@ -255,12 +255,6 @@ async function testFixture(directory, opts = {}, args = []) {
   });
 
   dev.on('close', () => {
-    if (
-      process.platform === 'linux' &&
-      directory.includes('invalid-env-var-name')
-    ) {
-      console.log(`!!!!! PID ${dev.pid} CLOSED`);
-    }
     clearTimeout(devTimer);
     if (!printedOutput) {
       printOutput(directory, stdout, stderr);
@@ -281,20 +275,10 @@ async function testFixture(directory, opts = {}, args = []) {
 
   dev._kill = dev.kill;
   dev.kill = async () => {
-    if (
-      process.platform === 'linux' &&
-      directory.includes('invalid-env-var-name')
-    ) {
-      console.log('!!!!! calling dev._kill()');
-    }
-    dev._kill();
-    if (
-      process.platform === 'linux' &&
-      directory.includes('invalid-env-var-name')
-    ) {
-      console.log('!!!!! dev._kill() done, waiting for exit resolver');
-      execSync('ps axfl', { stdio: 'inherit' });
-    }
+    // kill the entire process tree for the child as some tests will spawn
+    // child processes that either become defunct or assigned a new parent
+    // process
+    await nukeProcessTree(dev.pid);
 
     await exitResolver;
     return {
