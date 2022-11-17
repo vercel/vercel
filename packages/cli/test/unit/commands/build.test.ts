@@ -485,9 +485,12 @@ describe('build', () => {
       expect(config).toMatchObject({
         version: 3,
         routes: [
-          { src: '^/.*$', middlewarePath: 'middleware', continue: true },
-          { handle: 'filesystem' },
-          { src: '^/api(/.*)?$', status: 404 },
+          {
+            src: '^/.*$',
+            middlewarePath: 'middleware',
+            override: true,
+            continue: true,
+          },
           { handle: 'error' },
           { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
         ],
@@ -546,9 +549,12 @@ describe('build', () => {
       expect(config).toMatchObject({
         version: 3,
         routes: [
-          { src: '^/.*$', middlewarePath: 'middleware', continue: true },
-          { handle: 'filesystem' },
-          { src: '^/api(/.*)?$', status: 404 },
+          {
+            src: '^/.*$',
+            middlewarePath: 'middleware',
+            override: true,
+            continue: true,
+          },
           { handle: 'error' },
           { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
         ],
@@ -610,10 +616,9 @@ describe('build', () => {
           {
             src: '^\\/about(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$|^\\/dashboard(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
             middlewarePath: 'middleware',
+            override: true,
             continue: true,
           },
-          { handle: 'filesystem' },
-          { src: '^/api(/.*)?$', status: 404 },
           { handle: 'error' },
           { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
         ],
@@ -1168,13 +1173,14 @@ describe('build', () => {
     };
 
     describe.each([
-      'turbo',
       'nx',
-      'nx-project-config',
       'nx-package-config',
       'nx-project-and-package-config-1',
       'nx-project-and-package-config-2',
+      'nx-project-config',
       // 'rush',
+      'turbo',
+      'turbo-package-config',
     ])('fixture: %s', fixture => {
       const monorepoManagerMap: Record<
         string,
@@ -1265,10 +1271,10 @@ describe('build', () => {
             const exitCode = await build(client);
             expect(exitCode).toBe(0);
             await expect(client.stderr).toOutput(
-              'Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides.'
+              'Cannot automatically assign buildCommand as it is already set via project settings or configuration overrides.'
             );
             await expect(client.stderr).toOutput(
-              'Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides.'
+              'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
             );
           } finally {
             process.chdir(originalCwd);
@@ -1302,10 +1308,10 @@ describe('build', () => {
             const exitCode = await build(client);
             expect(exitCode).toBe(0);
             await expect(client.stderr).toOutput(
-              'Cannot automatically assign buildCommand as it is already set via project settings or configuarion overrides.'
+              'Cannot automatically assign buildCommand as it is already set via project settings or configuration overrides.'
             );
             await expect(client.stderr).toOutput(
-              'Cannot automatically assign installCommand as it is already set via project settings or configuarion overrides.'
+              'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
             );
           } finally {
             process.chdir(originalCwd);
@@ -1404,7 +1410,15 @@ describe('build', () => {
         'turbo.json',
         'pipeline.build',
         [
-          'Missing required `build` pipeline in turbo.json. Skipping automatic setting assignment.',
+          'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.',
+        ],
+      ],
+      [
+        'turbo-package-config',
+        'package.json',
+        'turbo.pipeline.build',
+        [
+          'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.',
         ],
       ],
     ])('fixture: %s', (fixture, configFile, propertyAccessor, expectedLogs) => {
