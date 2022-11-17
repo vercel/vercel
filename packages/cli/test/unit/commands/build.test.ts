@@ -1173,13 +1173,14 @@ describe('build', () => {
     };
 
     describe.each([
-      'turbo',
       'nx',
-      'nx-project-config',
       'nx-package-config',
       'nx-project-and-package-config-1',
       'nx-project-and-package-config-2',
+      'nx-project-config',
       // 'rush',
+      'turbo',
+      'turbo-package-config',
     ])('fixture: %s', fixture => {
       const monorepoManagerMap: Record<
         string,
@@ -1409,7 +1410,15 @@ describe('build', () => {
         'turbo.json',
         'pipeline.build',
         [
-          'Missing required `build` pipeline in turbo.json. Skipping automatic setting assignment.',
+          'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.',
+        ],
+      ],
+      [
+        'turbo-package-config',
+        'package.json',
+        'turbo.pipeline.build',
+        [
+          'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.',
         ],
       ],
     ])('fixture: %s', (fixture, configFile, propertyAccessor, expectedLogs) => {

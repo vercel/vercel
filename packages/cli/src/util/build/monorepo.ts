@@ -55,21 +55,40 @@ export async function setMonorepoDefaultSettings(
   }
 
   if (monorepoManager === 'turbo') {
-    // No ENOENT handling required here since conditional wouldn't be `true` unless `turbo.json` was found.
-    const turboJSON = JSON5.parse(
-      fs.readFileSync(join(cwd, 'turbo.json'), 'utf-8')
-    );
+    const [turboJSONBuf, packageJSONBuf] = await Promise.all([
+      fs.readFile(join(cwd, 'turbo.json')).catch(() => null),
+      fs.readFile(join(cwd, 'package.json')).catch(() => null),
+    ]);
 
-    if (!turboJSON?.pipeline?.build) {
+    let hasBuildPipeline = false;
+
+    if (turboJSONBuf !== null) {
+      const turboJSON = JSON5.parse(turboJSONBuf.toString('utf-8'));
+
+      if (turboJSON?.pipeline?.build) {
+        hasBuildPipeline = true;
+      }
+    } else if (packageJSONBuf !== null) {
+      const packageJSON = JSON.parse(packageJSONBuf.toString('utf-8'));
+
+      if (packageJSON?.turbo?.pipeline?.build) {
+        hasBuildPipeline = true;
+      }
+    }
+
+    if (!hasBuildPipeline) {
       output.warn(
-        'Missing required `build` pipeline in turbo.json. Skipping automatic setting assignment.'
+        'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.'
       );
       return;
     }
 
     setCommand(
       'buildCommand',
-      `cd ${relativeToRoot} && npx turbo run build --filter=${projectName}...`
+      `cd ${relativeToRoot} && npx turbo run build --filter={./${relative(
+        cwd,
+        workPath
+      )}}...`
     );
     setCommand(
       'installCommand',
@@ -84,7 +103,7 @@ export async function setMonorepoDefaultSettings(
         'Missing default `build` target in nx.json. Checking for project level Nx configuration...'
       );
 
-      const [projectJSONBuf, packageJsonBuf] = await Promise.all([
+      const [projectJSONBuf, packageJSONBuf] = await Promise.all([
         fs.readFile(join(workPath, 'project.json')).catch(() => null),
         fs.readFile(join(workPath, 'package.json')).catch(() => null),
       ]);
@@ -99,8 +118,8 @@ export async function setMonorepoDefaultSettings(
         }
       }
 
-      if (packageJsonBuf) {
-        const packageJSON = JSON5.parse(packageJsonBuf.toString('utf-8'));
+      if (packageJSONBuf) {
+        const packageJSON = JSON5.parse(packageJSONBuf.toString('utf-8'));
         if (packageJSON?.nx) {
           output.log('Found package.json Nx configuration.');
           if (packageJSON.nx.targets?.build) {
