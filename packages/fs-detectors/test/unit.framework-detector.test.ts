@@ -2,7 +2,7 @@ import path from 'path';
 import frameworkList from '@vercel/frameworks';
 import workspaceManagers from '../src/workspaces/workspace-managers';
 import { detectFramework, DetectorFilesystem } from '../src';
-import { Stat } from '../src/detectors/filesystem';
+import { DetectorFilesystemStat } from '../src/detectors/filesystem';
 
 const posixPath = path.posix;
 
@@ -58,7 +58,7 @@ class VirtualFilesystem extends DetectorFilesystem {
   /**
    * An example of how to implement readdir for a virtual filesystem.
    */
-  async _readdir(name = '/'): Promise<Stat[]> {
+  async _readdir(name = '/'): Promise<DetectorFilesystemStat[]> {
     return (
       [...this.files.keys()]
         .map(filepath => {
@@ -104,7 +104,7 @@ class VirtualFilesystem extends DetectorFilesystem {
           return null;
         })
         // remove nulls
-        .filter((stat): stat is Stat => stat !== null)
+        .filter((stat): stat is DetectorFilesystemStat => stat !== null)
         // remove duplicates
         .filter(
           (stat, index, self) =>

@@ -1,6 +1,6 @@
 import { posix as posixPath } from 'path';
 
-export interface Stat {
+export interface DetectorFilesystemStat {
   name: string;
   path: string;
   type: 'file' | 'dir';
@@ -34,13 +34,13 @@ export abstract class DetectorFilesystem {
   protected abstract _hasPath(name: string): Promise<boolean>;
   protected abstract _readFile(name: string): Promise<Buffer>;
   protected abstract _isFile(name: string): Promise<boolean>;
-  protected abstract _readdir(name: string): Promise<Stat[]>;
+  protected abstract _readdir(name: string): Promise<DetectorFilesystemStat[]>;
   protected abstract _chdir(name: string): DetectorFilesystem;
 
   private pathCache: Map<string, Promise<boolean>>;
   private fileCache: Map<string, Promise<boolean>>;
   private readFileCache: Map<string, Promise<Buffer>>;
-  private readdirCache: Map<string, Promise<Stat[]>>;
+  private readdirCache: Map<string, Promise<DetectorFilesystemStat[]>>;
 
   constructor() {
     this.pathCache = new Map();
@@ -84,7 +84,7 @@ export abstract class DetectorFilesystem {
   public readdir = async (
     dirPath: string,
     options?: { potentialFiles?: string[] }
-  ): Promise<Stat[]> => {
+  ): Promise<DetectorFilesystemStat[]> => {
     let p = this.readdirCache.get(dirPath);
     if (!p) {
       p = this._readdir(dirPath);
