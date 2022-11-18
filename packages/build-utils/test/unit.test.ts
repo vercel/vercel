@@ -410,7 +410,7 @@ it('should throw for discontinued versions', async () => {
   global.Date.now = realDateNow;
 });
 
-it('should only match supported node versions, otherwise throw an error', async () => {
+it('should warn for deprecated versions, soon to be discontinued', async () => {
   // Mock a future date so that Node 10 warns
   const realDateNow = Date.now.bind(global.Date);
   global.Date.now = () => new Date('2021-02-23').getTime();
