@@ -1,5 +1,4 @@
 {
-  "nodeVersion": "16.x",
   "functions": {
     "api/**/*.js": {
       "memory": 128
