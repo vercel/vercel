@@ -143,6 +143,7 @@ async function runNpmInstall(fixturePath) {
     await execa('yarn', ['install'], {
       cwd: fixturePath,
       shell: true,
+      stdio: 'inherit',
     });
   }
 }

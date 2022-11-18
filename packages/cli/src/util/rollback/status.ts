@@ -57,7 +57,7 @@ export default async function rollbackStatus({
   const recentThreshold = Date.now() - ms('3m');
   const rollbackTimeout = Date.now() + ms(timeout);
   let counter = 0;
-  let msg = deployment
+  let spinnerMessage = deployment
     ? 'Rollback in progress'
     : `Checking rollback status of ${project.name}`;
 
@@ -73,40 +73,52 @@ export default async function rollbackStatus({
   }
 
   try {
-    output.spinner(msg);
+    output.spinner(`${spinnerMessage}…`);
 
     for (;;) {
       const { jobStatus, requestedAt, toDeploymentId }: RollbackTarget =
         (await check()) ?? {};
 
-      output.stopSpinner();
+      if (
+        !jobStatus ||
+        (jobStatus !== 'in-progress' && jobStatus !== 'pending')
+      ) {
+        output.stopSpinner();
+        output.log(`${spinnerMessage}…`);
+      }
 
       if (!jobStatus || requestedAt < recentThreshold) {
         output.log('No deployment rollback in progress');
         return 0;
       }
 
+      if (jobStatus === 'skipped') {
+        output.log('Rollback was skipped');
+        return 0;
+      }
+
       if (jobStatus === 'succeeded') {
-        let deploymentName = '';
+        let deploymentInfo = '';
         try {
           const deployment = await getDeploymentInfo(
             client,
             contextName,
             toDeploymentId
           );
-          deploymentName = `to ${chalk.bold(deployment.url)} `;
+          deploymentInfo = `${chalk.bold(deployment.url)} (${toDeploymentId})`;
         } catch (err: unknown) {
           if (err instanceof Error) {
             output.debug(
               `Failed to get deployment url for ${toDeploymentId}: ${err.toString()}`
             );
           }
+          deploymentInfo = chalk.bold(toDeploymentId);
         }
         const duration = deployment ? elapsed(Date.now() - requestedAt) : '';
         output.log(
           `Success! ${chalk.bold(
             project.name
-          )} was rolled back ${deploymentName}(${toDeploymentId}) ${duration}`
+          )} was rolled back to ${deploymentInfo} ${duration}`
         );
         return 0;
       }
@@ -154,11 +166,6 @@ export default async function rollbackStatus({
         return 1;
       }
 
-      if (jobStatus === 'skipped') {
-        output.log('Rollback was skipped');
-        return 0;
-      }
-
       // lastly, if we're not pending/in-progress, then we don't know what
       // the status is, so bail
       if (jobStatus !== 'pending' && jobStatus !== 'in-progress') {
@@ -179,9 +186,9 @@ export default async function rollbackStatus({
       // if we've done our first poll and not rolling back, then print the
       // requested at date/time
       if (counter++ === 0 && !deployment) {
-        msg += ` requested at ${formatDate(requestedAt)}`;
+        spinnerMessage += ` requested at ${formatDate(requestedAt)}`;
       }
-      output.spinner(msg);
+      output.spinner(`${spinnerMessage}…`);
 
       await sleep(500);
     }

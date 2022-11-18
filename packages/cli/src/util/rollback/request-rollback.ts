@@ -38,7 +38,7 @@ export default async function requestRollback({
   }
 
   output.spinner(
-    `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}`
+    `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
   );
 
   let deployment;
@@ -51,6 +51,10 @@ export default async function requestRollback({
     return 1;
   } finally {
     output.stopSpinner();
+    // re-render the spinner text because it goes so fast
+    output.log(
+      `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
+    );
   }
 
   // create the rollback
