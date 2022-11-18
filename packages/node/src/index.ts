@@ -548,7 +548,7 @@ export const startDevServer: StartDevServer = async opts => {
   }
 
   const onMessage = once<{ port: number }>(child, 'message');
-  const onExit = once.spread<[number, string | null]>(child, 'exit');
+  const onExit = once.spread<[number, string | null]>(child, 'close');
   const result = await Promise.race([onMessage, onExit]);
   onExit.cancel();
   onMessage.cancel();
@@ -625,5 +625,5 @@ async function doTypeCheck(
       stdio: 'inherit',
     }
   );
-  await once.spread<[number, string | null]>(child, 'exit');
+  await once.spread<[number, string | null]>(child, 'close');
 }
