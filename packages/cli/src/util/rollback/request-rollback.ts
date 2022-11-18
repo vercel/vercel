@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../client';
+import { getCommandName } from '../pkg-name';
 import getDeploymentInfo from './get-deployment-info';
 import getScope from '../get-scope';
 import { isValidName } from '../is-valid-name';
@@ -62,6 +63,12 @@ export default async function requestRollback({
   );
 
   if (timeout !== undefined && ms(timeout) === 0) {
+    output.log(
+      `Successfully requested rollback of ${chalk.bold(project.name)} to ${
+        deployment.url
+      } (${deployment.uid})`
+    );
+    output.log(`To check rollback status, run ${getCommandName('rollback')}.`);
     return 0;
   }
 

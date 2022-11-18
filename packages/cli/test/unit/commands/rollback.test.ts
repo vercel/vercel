@@ -257,6 +257,11 @@ describe('rollback', () => {
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
+    await expect(client.stderr).toOutput(
+      `Successfully requested rollback of ${chalk.bold('vercel-rollback')} to ${
+        previousDeployment.url
+      } (${previousDeployment.id})`
+    );
 
     await expect(exitCodePromise).resolves.toEqual(0);
   });
