@@ -534,7 +534,7 @@ async function ps(parentPid, pids = {}) {
       }
     }
   } catch (e) {
-    console.debug(`Failed to get processes: ${e.toString()}`);
+    console.log(`Failed to get processes: ${e.toString()}`);
   }
   return pids;
 }
@@ -550,7 +550,7 @@ async function nukePID(pid, signal = 'SIGTERM', retries = 10) {
     process.kill(pid, signal);
   } catch (e) {
     // process does not exist
-    console.debug(`pid ${pid} is not running`);
+    console.log(`pid ${pid} is not running`);
     return;
   }
 
@@ -560,7 +560,7 @@ async function nukePID(pid, signal = 'SIGTERM', retries = 10) {
     // check if killed
     process.kill(pid, 0);
   } catch (e) {
-    console.debug(`pid ${pid} is not running`);
+    console.log(`pid ${pid} is not running`);
     return;
   }
 
