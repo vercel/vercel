@@ -141,10 +141,6 @@ export default async function main(client: Client): Promise<number> {
     return 2;
   }
 
-  // Set the working directory if necessary
-  if (argv['--cwd']) {
-    process.chdir(argv['--cwd']);
-  }
   const cwd = process.cwd();
 
   // Build `target` influences which environment variables will be used
