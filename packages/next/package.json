@@ -9,7 +9,7 @@
     "build-dev": "node build.js --dev",
     "test": "jest --env node --verbose --bail --runInBand",
     "test-unit": "yarn test test/unit/",
-    "test-next-local": "jest --env node --verbose --bail --forceExit --testTimeout=360000 test/integration/*.test.js test/integration/*.test.ts",
+    "test-next-local": "jest --env node --verbose --bail --testTimeout=360000 test/integration/*.test.js test/integration/*.test.ts",
     "test-next-local:middleware": "jest --env node --verbose --bail --useStderr --testTimeout=360000 test/integration/middleware.test.ts",
     "test-integration-once": "rm test/builder-info.json; jest --env node --verbose --runInBand --bail test/fixtures/**/*.test.js"
   },

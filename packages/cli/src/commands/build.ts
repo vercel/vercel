@@ -305,6 +305,8 @@ async function doBuild(
   };
 
   if (
+    process.env.VERCEL_BUILD_MONOREPO_SUPPORT === '1' &&
+    pkg?.scripts?.['vercel-build'] === undefined &&
     projectSettings.rootDirectory !== null &&
     projectSettings.rootDirectory !== '.'
   ) {
