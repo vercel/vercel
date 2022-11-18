@@ -130,7 +130,6 @@ export default async function main(client: Client): Promise<number> {
 
   // Parse CLI args
   const argv = getArgs(client.argv.slice(2), {
-    '--cwd': String,
     '--output': String,
     '--prod': Boolean,
     '--yes': Boolean,
