@@ -1,0 +1,9 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "Welcome to the Stencil App Starter" },
+    {
+      "path": "/profile/stencil",
+      "mustContain": "Welcome to the Stencil App Starter"
+    }
+  ]
+}

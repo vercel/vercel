@@ -43,7 +43,7 @@ export function createBuildOutput(
   buildOutputPath: string,
   framework?: Framework
 ): BuildResultV2 {
-  if (!meta.cliVersion) {
+  if (meta.isDev) {
     let buildCommandName: string;
 
     if (buildCommand) buildCommandName = `"${buildCommand}"`;
@@ -51,7 +51,7 @@ export function createBuildOutput(
     else buildCommandName = 'the "build" script';
 
     throw new Error(
-      `Detected Build Output v3 from ${buildCommandName}, but this Deployment is not using \`vercel build\`.\nPlease set the \`ENABLE_VC_BUILD=1\` environment variable.`
+      `Detected Build Output v3 from ${buildCommandName}, but it is not supported for \`vercel dev\`. Please set the Development Command in your Project Settings.`
     );
   }
 

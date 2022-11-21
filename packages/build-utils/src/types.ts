@@ -41,6 +41,7 @@ export interface Config {
   devCommand?: string;
   framework?: string | null;
   nodeVersion?: string;
+  middleware?: boolean;
   [key: string]: unknown;
 }
 
@@ -82,7 +83,7 @@ export interface BuildOptions {
    * is the Git Repository Root. This is only relevant for Monorepos.
    * See https://vercel.com/blog/monorepos
    */
-  repoRootPath?: string;
+  repoRootPath: string;
 
   /**
    * An arbitrary object passed by the user in the build definition defined
@@ -123,7 +124,7 @@ export interface PrepareCacheOptions {
    * is the Git Repository Root. This is only relevant for Monorepos.
    * See https://vercel.com/blog/monorepos
    */
-  repoRootPath?: string;
+  repoRootPath: string;
 
   /**
    * An arbitrary object passed by the user in the build definition defined
@@ -295,6 +296,7 @@ export interface PackageJson {
   readonly preferGlobal?: boolean;
   readonly private?: boolean;
   readonly publishConfig?: PackageJson.PublishConfig;
+  readonly packageManager?: string;
 }
 
 export interface NodeVersion {
@@ -340,6 +342,7 @@ export interface BuilderV2 {
   version: 2;
   build: BuildV2;
   prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
 }
 
 export interface BuilderV3 {
@@ -427,7 +430,9 @@ export interface BuildResultV2Typical {
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
 export interface BuildResultV3 {
-  output: Lambda;
+  // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
+  routes?: any[];
+  output: Lambda | EdgeFunction;
 }
 
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;

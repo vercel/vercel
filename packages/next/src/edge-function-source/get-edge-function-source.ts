@@ -3,7 +3,7 @@ import { readFile } from 'fs-extra';
 import { ConcatSource, Source } from 'webpack-sources';
 import { fileToSource, raw, sourcemapped } from '../sourcemapped';
 import { join } from 'path';
-import { EDGE_FUNCTION_USER_SCRIPT_SIZE_LIMIT } from './constants';
+import { EDGE_FUNCTION_SIZE_LIMIT } from './constants';
 import zlib from 'zlib';
 import { promisify } from 'util';
 import bytes from 'pretty-bytes';
@@ -44,7 +44,8 @@ export async function getNextjsEdgeFunctionSource(
    * We validate at this point because we want to verify against user code.
    * It should not count the Worker wrapper nor the Next.js wrapper.
    */
-  await validateScript(text);
+  const wasmFiles = (wasm ?? []).map(({ filePath }) => join(outputDir, filePath));
+  await validateSize(text, wasmFiles);
 
   // Wrap to fake module.exports
   const getPageMatchCode = `(function () {
@@ -72,13 +73,19 @@ function getWasmImportStatements(wasm: { name: string }[] = []) {
     .join('\n');
 }
 
-async function validateScript(content: string) {
+async function validateSize(script: string, wasmFiles: string[]) {
+  const buffers = [Buffer.from(script, 'utf8')];
+  for (const filePath of wasmFiles) {
+    buffers.push(await readFile(filePath));
+  }
+  const content = Buffer.concat(buffers);
+
   const gzipped = await gzip(content);
-  if (gzipped.length > EDGE_FUNCTION_USER_SCRIPT_SIZE_LIMIT) {
+  if (gzipped.length > EDGE_FUNCTION_SIZE_LIMIT) {
     throw new Error(
-      `Exceeds maximum edge function script size: ${bytes(
+      `Exceeds maximum edge function size: ${bytes(
         gzipped.length
-      )} / ${bytes(EDGE_FUNCTION_USER_SCRIPT_SIZE_LIMIT)}`
+      )} / ${bytes(EDGE_FUNCTION_SIZE_LIMIT)}`
     );
   }
 }

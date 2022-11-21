@@ -19,11 +19,9 @@
 
 ## Vercel
 
-Vercel is a platform for **static sites and frontend frameworks**, built to integrate with your headless content, commerce, or database.
+Vercel is the platform for frontend developers, providing the speed and reliability innovators need to create at the moment of inspiration.
 
-We provide a **frictionless developer experience** to take care of the hard things: deploy instantly, scale automatically, and serve personalized content around the globe.
-
-We make it easy for frontend teams to **develop, preview, and ship** delightful user experiences, where performance is the default.
+We enable teams to iterate quickly and develop, preview, and ship delightful user experiences. Vercel has zero-configuration support for 35+ frontend frameworks and integrates with your headless content, commerce, or database of choice.
 
 ## Deploy
 
@@ -35,6 +33,6 @@ For details on how to use Vercel, check out our [documentation](https://vercel.c
 
 ## Contributing
 
-- [Code of Conduct](https://github.com/vercel/vercel/blob/main/.github/CODE_OF_CONDUCT.md)
-- [Contributing Guidelines](https://github.com/vercel/vercel/blob/main/.github/CONTRIBUTING.md)
-- [MIT License](https://github.com/vercel/vercel/blob/main/LICENSE)
+- [Code of Conduct](./.github/CODE_OF_CONDUCT.md)
+- [Contributing Guidelines](./.github/CONTRIBUTING.md)
+- [Apache 2.0 License](./LICENSE)

@@ -1,0 +1,37 @@
+{
+  "probes": [
+    {
+      "path": "/.vercel/functions/root",
+      "mustContain": "Hello from /root/index.js on /.vercel/functions/root"
+    },
+    { "path": "/", "mustContain": "Hello from /root/index.js on /" },
+    {
+      "path": "/.vercel/functions/about",
+      "mustContain": "Hello from /about/index.js on /.vercel/functions/about - Milkshake"
+    },
+    {
+      "path": "/about",
+      "mustContain": "Hello from /about/index.js on /about - Milkshake"
+    },
+    {
+      "path": "/esm",
+      "mustContain": "Hello from .mjs"
+    },
+    {
+      "path": "/.vercel/functions/esm",
+      "mustContain": "Hello from .mjs"
+    },
+    { "path": "/.vercel/functions/about/util", "status": 404 },
+    { "path": "/about/util", "status": 404 },
+    {
+      "path": "/.vercel/functions/product",
+      "mustContain": "Hello from /product/index.js on /.vercel/functions/product - Information about a Product"
+    },
+    {
+      "path": "/product",
+      "mustContain": "Hello from /product/index.js on /product - Information about a Product"
+    },
+    { "path": "/.vercel/functions/product/info", "status": 404 },
+    { "path": "/product/info", "status": 404 }
+  ]
+}

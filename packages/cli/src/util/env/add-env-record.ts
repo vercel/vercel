@@ -29,6 +29,6 @@ export default async function addEnvRecord(
   const url = `/v8/projects/${projectId}/env`;
   await client.fetch(url, {
     method: 'POST',
-    body: JSON.stringify(body),
+    body,
   });
 }

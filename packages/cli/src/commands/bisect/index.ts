@@ -2,7 +2,6 @@ import open from 'open';
 import boxen from 'boxen';
 import execa from 'execa';
 import plural from 'pluralize';
-import inquirer from 'inquirer';
 import { resolve } from 'path';
 import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
@@ -14,8 +13,8 @@ import logo from '../../util/output/logo';
 import getArgs from '../../util/get-args';
 import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
-import { Output } from '../../util/output';
 import { Deployment, PaginationOptions } from '../../types';
+import { normalizeURL } from '../../util/bisect/normalize-url';
 
 interface DeploymentV6
   extends Pick<
@@ -85,10 +84,10 @@ export default async function main(client: Client): Promise<number> {
 
   let bad =
     argv['--bad'] ||
-    (await prompt(output, `Specify a URL where the bug occurs:`));
+    (await prompt(client, `Specify a URL where the bug occurs:`));
   let good =
     argv['--good'] ||
-    (await prompt(output, `Specify a URL where the bug does not occur:`));
+    (await prompt(client, `Specify a URL where the bug does not occur:`));
   let subpath = argv['--path'] || '';
   let run = argv['--run'] || '';
   const openEnabled = argv['--open'] || false;
@@ -97,9 +96,7 @@ export default async function main(client: Client): Promise<number> {
     run = resolve(run);
   }
 
-  if (!bad.startsWith('https://')) {
-    bad = `https://${bad}`;
-  }
+  bad = normalizeURL(bad);
   let parsed = parse(bad);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
@@ -118,11 +115,7 @@ export default async function main(client: Client): Promise<number> {
     }
   }
 
-  const badDeploymentPromise = getDeployment(client, bad).catch(err => err);
-
-  if (!good.startsWith('https://')) {
-    good = `https://${good}`;
-  }
+  good = normalizeURL(good);
   parsed = parse(good);
   if (!parsed.hostname) {
     output.error('Invalid input: no hostname provided');
@@ -142,24 +135,23 @@ export default async function main(client: Client): Promise<number> {
     );
   }
 
-  const goodDeploymentPromise = getDeployment(client, good).catch(err => err);
-
   if (!subpath) {
     subpath = await prompt(
-      output,
+      client,
       `Specify the URL subpath where the bug occurs:`
     );
   }
 
   output.spinner('Retrieving deployments…');
-  const [badDeployment, goodDeployment] = await Promise.all([
-    badDeploymentPromise,
-    goodDeploymentPromise,
-  ]);
+
+  // `getDeployment` cannot be parallelized because it might prompt for login
+  const badDeployment = await getDeployment(client, bad).catch(err => err);
 
   if (badDeployment) {
     if (badDeployment instanceof Error) {
-      badDeployment.message += ` "${bad}"`;
+      badDeployment.message += ` when requesting bad deployment "${normalizeURL(
+        bad
+      )}"`;
       output.prettyError(badDeployment);
       return 1;
     }
@@ -169,11 +161,14 @@ export default async function main(client: Client): Promise<number> {
     return 1;
   }
 
-  const { projectId } = badDeployment;
+  // `getDeployment` cannot be parallelized because it might prompt for login
+  const goodDeployment = await getDeployment(client, good).catch(err => err);
 
   if (goodDeployment) {
     if (goodDeployment instanceof Error) {
-      goodDeployment.message += ` "${good}"`;
+      goodDeployment.message += ` when requesting good deployment "${normalizeURL(
+        good
+      )}"`;
       output.prettyError(goodDeployment);
       return 1;
     }
@@ -184,6 +179,8 @@ export default async function main(client: Client): Promise<number> {
     );
     return 1;
   }
+
+  const { projectId } = badDeployment;
 
   if (projectId !== goodDeployment.projectId) {
     output.error(`Good and Bad deployments must be from the same Project`);
@@ -232,7 +229,8 @@ export default async function main(client: Client): Promise<number> {
     // If we have the "good" deployment in this chunk, then we're done
     for (let i = 0; i < newDeployments.length; i++) {
       if (newDeployments[i].url === good) {
-        newDeployments = newDeployments.slice(0, i + 1);
+        // grab all deployments up until the good one
+        newDeployments = newDeployments.slice(0, i);
         next = undefined;
         break;
       }
@@ -322,7 +320,7 @@ export default async function main(client: Client): Promise<number> {
       if (openEnabled) {
         await open(testUrl);
       }
-      const answer = await inquirer.prompt({
+      const answer = await client.prompt({
         type: 'expand',
         name: 'action',
         message: 'Select an action:',
@@ -394,10 +392,10 @@ function getCommit(deployment: DeploymentV6) {
   return { sha, message };
 }
 
-async function prompt(output: Output, message: string): Promise<string> {
+async function prompt(client: Client, message: string): Promise<string> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const { val } = await inquirer.prompt({
+    const { val } = await client.prompt({
       type: 'input',
       name: 'val',
       message,
@@ -405,7 +403,7 @@ async function prompt(output: Output, message: string): Promise<string> {
     if (val) {
       return val;
     } else {
-      output.error('A value must be specified');
+      client.output.error('A value must be specified');
     }
   }
 }

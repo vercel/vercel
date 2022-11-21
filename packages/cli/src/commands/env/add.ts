@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
 import { ProjectEnvTarget, Project, ProjectEnvType } from '../../types';
 import { Output } from '../../util/output';
 import Client from '../../util/client';
@@ -16,6 +15,7 @@ import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
+import { isAPIError } from '../../util/errors-ts';
 
 type Options = {
   '--debug': boolean;
@@ -31,7 +31,7 @@ export default async function add(
   // improve the way we show inquirer prompts
   require('../../util/input/patch-inquirer');
 
-  const stdInput = await readStandardInput();
+  const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
 
   if (args.length > 3) {
@@ -66,7 +66,7 @@ export default async function add(
   }
 
   while (!envName) {
-    const { inputName } = await inquirer.prompt({
+    const { inputName } = await client.prompt({
       type: 'input',
       name: 'inputName',
       message: `What’s the name of the variable?`,
@@ -106,7 +106,7 @@ export default async function add(
   if (stdInput) {
     envValue = stdInput;
   } else {
-    const { inputValue } = await inquirer.prompt({
+    const { inputValue } = await client.prompt({
       type: 'input',
       name: 'inputValue',
       message: `What’s the value of ${envName}?`,
@@ -116,7 +116,7 @@ export default async function add(
   }
 
   while (envTargets.length === 0) {
-    const { inputTargets } = await inquirer.prompt({
+    const { inputTargets } = await client.prompt({
       name: 'inputTargets',
       type: 'checkbox',
       message: `Add ${envName} to which Environments (select multiple)?`,
@@ -136,7 +136,7 @@ export default async function add(
     envTargets.length === 1 &&
     envTargets[0] === ProjectEnvTarget.Preview
   ) {
-    const { inputValue } = await inquirer.prompt({
+    const { inputValue } = await client.prompt({
       type: 'input',
       name: 'inputValue',
       message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
@@ -157,12 +157,12 @@ export default async function add(
       envTargets,
       envGitBranch
     );
-  } catch (error) {
-    if (isKnownError(error) && error.serverMessage) {
-      output.error(error.serverMessage);
+  } catch (err: unknown) {
+    if (isAPIError(err) && isKnownError(err)) {
+      output.error(err.serverMessage);
       return 1;
     }
-    throw error;
+    throw err;
   }
 
   output.print(

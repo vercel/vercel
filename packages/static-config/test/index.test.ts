@@ -10,7 +10,7 @@ describe('getConfig()', () => {
     expect(config).toMatchInlineSnapshot(`
       Object {
         "memory": 1024,
-        "use": "node",
+        "runtime": "nodejs",
       }
     `);
   });
@@ -27,7 +27,7 @@ describe('getConfig()', () => {
     expect(config).toMatchInlineSnapshot(`
       Object {
         "location": "https://example.com/page",
-        "use": "deno",
+        "runtime": "deno",
       }
     `);
   });

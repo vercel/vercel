@@ -1,6 +1,5 @@
-import { resolve } from 'path';
-import _glob, { IOptions as GlobOptions } from 'glob';
 import fs from 'fs-extra';
+import { resolve } from 'path';
 import { getVercelIgnore } from '@vercel/client';
 import uniqueStrings from './unique-strings';
 import { Output } from './output/create-output';
@@ -19,14 +18,6 @@ function flatten(
     }
   }
   return res;
-}
-
-async function glob(pattern: string, options: GlobOptions): Promise<string[]> {
-  return new Promise((resolve, reject) => {
-    _glob(pattern, options, (err, files) => {
-      err ? reject(err) : resolve(files);
-    });
-  });
 }
 
 /**
@@ -65,15 +56,16 @@ interface StaticFilesOptions {
 export async function staticFiles(
   path: string,
   { output, src }: StaticFilesOptions
-) {
+): Promise<string[]> {
   const { debug, time } = output;
   let files: string[] = [];
 
   // The package.json `files` whitelist still
   // honors ignores: https://docs.npmjs.com/files/package.json#files
   const source = src || '.';
-  // Convert all filenames into absolute paths
-  const search = await glob(source, { cwd: path, absolute: true, dot: true });
+
+  // Ensure that `path` is an absolute path
+  const search = resolve(path, source);
 
   // Compile list of ignored patterns and files
   const { ig } = await getVercelIgnore(path);
@@ -104,7 +96,7 @@ export async function staticFiles(
   // Locate files
   files = await time(
     `Locating files ${path}`,
-    explode(search, {
+    explode([search], {
       accepts,
       output,
     })
@@ -164,7 +156,7 @@ async function explode(
       const all = await fs.readdir(file);
       /* eslint-disable no-use-before-define */
       const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
-      return (recursive as any) as Promise<string | null>;
+      return recursive as any as Promise<string | null>;
       /* eslint-enable no-use-before-define */
     }
     if (!s.isFile()) {

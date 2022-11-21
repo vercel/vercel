@@ -1,4 +1,7 @@
 module.exports = {
+  generateBuildId() {
+    return 'testing-build-id';
+  },
   redirects() {
     return [
       {
@@ -14,6 +17,20 @@ module.exports = {
         {
           source: '/rewrite-before-files',
           destination: '/somewhere',
+        },
+      ],
+      afterFiles: [
+        {
+          source: '/after-file-rewrite',
+          destination: '/about',
+        },
+        {
+          source: '/after-file-rewrite-auto-static',
+          destination: '/home/a',
+        },
+        {
+          source: '/after-file-rewrite-auto-static-dynamic',
+          destination: '/dynamic/first',
         },
       ],
     };

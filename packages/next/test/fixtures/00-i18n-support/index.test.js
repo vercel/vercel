@@ -4,6 +4,8 @@ const cheerio = require('cheerio');
 const { check, deployAndTest } = require('../../utils');
 const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 
+const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
+
 async function checkForChange(url, initialValue, hardError) {
   return check(
     async () => {
@@ -32,6 +34,13 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should deploy and pass probe checks', async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
+
+    if (!ABSOLUTE_URL_PATTERN.test(ctx.deploymentUrl)) {
+      const details = JSON.stringify(ctx);
+      throw new Error(
+        `Deployment did not result in an absolute deploymentUrl: ${details}`
+      );
+    }
   });
 
   it('should revalidate content properly from /', async () => {

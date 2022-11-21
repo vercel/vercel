@@ -20,25 +20,27 @@ export default async function moveOutDomain(
         method: 'PATCH',
       }
     );
-  } catch (error) {
-    if (error.code === 'forbidden') {
-      return new ERRORS.DomainPermissionDenied(name, contextName);
+  } catch (err: unknown) {
+    if (ERRORS.isAPIError(err)) {
+      if (err.code === 'forbidden') {
+        return new ERRORS.DomainPermissionDenied(name, contextName);
+      }
+      if (err.code === 'not_found') {
+        return new ERRORS.DomainNotFound(name);
+      }
+      if (err.code === 'invalid_move_destination') {
+        return new ERRORS.InvalidMoveDestination(destination);
+      }
+      if (err.code === 'domain_move_conflict') {
+        const { pendingAsyncPurchase, resolvable, suffix, message } = err;
+        return new ERRORS.DomainMoveConflict({
+          message,
+          pendingAsyncPurchase,
+          resolvable,
+          suffix,
+        });
+      }
     }
-    if (error.code === 'not_found') {
-      return new ERRORS.DomainNotFound(name);
-    }
-    if (error.code === 'invalid_move_destination') {
-      return new ERRORS.InvalidMoveDestination(destination);
-    }
-    if (error.code === 'domain_move_conflict') {
-      const { pendingAsyncPurchase, resolvable, suffix, message } = error;
-      return new ERRORS.DomainMoveConflict({
-        message,
-        pendingAsyncPurchase,
-        resolvable,
-        suffix,
-      });
-    }
-    throw error;
+    throw err;
   }
 }

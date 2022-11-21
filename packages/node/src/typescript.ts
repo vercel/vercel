@@ -141,9 +141,11 @@ export function register(opts: Options = {}): Register {
   //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require_(compiler);
   if (compiler.startsWith(nowNodeBase)) {
-    console.log('Using TypeScript ' + ts.version + ' (no local tsconfig.json)');
+    console.log(
+      `Using built-in TypeScript ${ts.version} since "typescript" missing from "devDependencies"`
+    );
   } else {
-    console.log('Using TypeScript ' + ts.version + ' (local user-provided)');
+    console.log(`Using TypeScript ${ts.version} (local user-provided)`);
   }
   const transformers = options.transformers || undefined;
   const readFile = options.readFile || ts.sys.readFile;
@@ -450,7 +452,6 @@ export function fixConfig(
   delete config.compilerOptions.tsBuildInfoFile;
   delete config.compilerOptions.incremental;
 
-  // Target esnext output by default (instead of ES3).
   // This will prevent TS from polyfill/downlevel emit.
   if (config.compilerOptions.target === undefined) {
     // See https://github.com/tsconfig/bases/tree/main/bases

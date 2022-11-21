@@ -20,6 +20,7 @@ describe('build()', () => {
       files: {},
       entrypoint: 'package.json',
       workPath,
+      repoRootPath: workPath,
       config: {},
     });
     assert('output' in result);
@@ -36,6 +37,7 @@ describe('build()', () => {
       files: {},
       entrypoint: 'package.json',
       workPath,
+      repoRootPath: workPath,
       config: {},
     });
     const cacheNames = Object.keys(cache);

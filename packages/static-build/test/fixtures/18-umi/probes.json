@@ -1,0 +1,7 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "/umi.css" },
+    { "path": "/iudieufwunifiwwnuwfuw", "mustContain": "/umi.css" },
+    { "path": "/umi.js", "mustContain": "Welcome to umi" }
+  ]
+}

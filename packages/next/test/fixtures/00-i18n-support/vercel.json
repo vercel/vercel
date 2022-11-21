@@ -8,6 +8,36 @@
   ],
   "probes": [
     {
+      "path": "/$$",
+      "status": 200,
+      "mustContain": ">$$<"
+    },
+    {
+      "path": "/_next/data/testing-build-id/en/$$.json",
+      "status": 200,
+      "mustContain": "\"$$\""
+    },
+    {
+      "path": "/$$b",
+      "status": 200,
+      "mustContain": ">$$b<"
+    },
+    {
+      "path": "/_next/data/testing-build-id/en/$$b.json",
+      "status": 200,
+      "mustContain": "\"$$b\""
+    },
+    {
+      "path": "/b$$",
+      "status": 200,
+      "mustContain": ">b$$<"
+    },
+    {
+      "path": "/_next/data/testing-build-id/en/b$$.json",
+      "status": 200,
+      "mustContain": "\"b$$\""
+    },
+    {
       "path": "/",
       "headers": {
         "accept-language": "en;q=0.9"

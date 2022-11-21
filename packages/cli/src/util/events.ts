@@ -81,21 +81,21 @@ async function printEvents(
                     return;
                   }
                   poller = startPoller();
-                } catch (error) {
+                } catch (err: unknown) {
                   stream.end();
-                  finish(error);
+                  finish(err);
                 }
               }, 5000);
             })();
           }
 
           let finishCalled = false;
-          function finish(error?: Error) {
+          function finish(err?: unknown) {
             if (finishCalled) return;
             finishCalled = true;
             clearTimeout(poller);
-            if (error) {
-              reject(error);
+            if (err) {
+              reject(err);
             } else {
               resolve();
             }

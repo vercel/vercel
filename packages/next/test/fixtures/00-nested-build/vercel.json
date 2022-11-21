@@ -2,7 +2,7 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercelruntimes/next",
+      "use": "@vercel/next",
       "config": {
         "rootDirectory": "website",
         "outputDirectory": "website-preview/.next"

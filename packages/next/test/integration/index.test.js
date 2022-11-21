@@ -5,20 +5,82 @@ const fs = require('fs-extra');
 
 const runBuildLambda = require('../../../../test/lib/run-build-lambda');
 
-it('should show error from basePath with legacy monorepo build', async () => {
-  let error;
+jest.setTimeout(360000);
 
-  try {
-    await runBuildLambda(path.join(__dirname, 'legacy-monorepo-basepath'));
-  } catch (err) {
-    error = err;
-  }
-  console.error(error);
+// experimental appDir currently requires Node.js >= 16
+if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
+  it('should build with app-dir correctly', async () => {
+    const { buildResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir')
+    );
 
-  expect(error.message).toBe(
-    'basePath can not be used with `builds` in vercel.json, use Project Settings to configure your monorepo instead'
-  );
-});
+    const lambdas = new Set();
+
+    for (const key of Object.keys(buildResult.output)) {
+      if (buildResult.output[key].type === 'Lambda') {
+        lambdas.add(buildResult.output[key]);
+      }
+    }
+
+    expect(lambdas.size).toBe(2);
+    expect(buildResult.output['dashboard']).toBeDefined();
+    expect(buildResult.output['dashboard/another']).toBeDefined();
+    expect(buildResult.output['dashboard/changelog']).toBeDefined();
+    expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
+
+    // prefixed static generation output with `/app` under dist server files
+    expect(buildResult.output['dashboard'].type).toBe('Prerender');
+    expect(buildResult.output['dashboard'].fallback.fsPath).toMatch(
+      /server\/app\/dashboard\.html$/
+    );
+    expect(buildResult.output['dashboard.rsc'].type).toBe('Prerender');
+    expect(buildResult.output['dashboard.rsc'].fallback.fsPath).toMatch(
+      /server\/app\/dashboard\.rsc$/
+    );
+    expect(buildResult.output['dashboard/index/index'].type).toBe('Prerender');
+    expect(buildResult.output['dashboard/index/index'].fallback.fsPath).toMatch(
+      /server\/app\/dashboard\/index\.html$/
+    );
+    expect(buildResult.output['dashboard/index.rsc'].type).toBe('Prerender');
+    expect(buildResult.output['dashboard/index.rsc'].fallback.fsPath).toMatch(
+      /server\/app\/dashboard\/index\.rsc$/
+    );
+  });
+
+  it('should build with app-dir in edge runtime correctly', async () => {
+    const { buildResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-edge')
+    );
+
+    const edgeFunctions = new Set();
+
+    for (const key of Object.keys(buildResult.output)) {
+      if (buildResult.output[key].type === 'EdgeFunction') {
+        edgeFunctions.add(buildResult.output[key]);
+      }
+    }
+
+    expect(edgeFunctions.size).toBe(3);
+    expect(buildResult.output['edge']).toBeDefined();
+    expect(buildResult.output['index']).toBeDefined();
+    expect(buildResult.output['index/index']).toBeDefined();
+  });
+
+  it('should show error from basePath with legacy monorepo build', async () => {
+    let error;
+
+    try {
+      await runBuildLambda(path.join(__dirname, 'legacy-monorepo-basepath'));
+    } catch (err) {
+      error = err;
+    }
+    console.error(error);
+
+    expect(error.message).toBe(
+      'basePath can not be used with `builds` in vercel.json, use Project Settings to configure your monorepo instead'
+    );
+  });
+}
 
 it('should build using server build', async () => {
   const origLog = console.log;
@@ -76,8 +138,20 @@ it('should build using server build', async () => {
   expect(output['dynamic/[slug]'].maxDuration).toBe(5);
   expect(output['fallback/[slug]'].type).toBe('Prerender');
   expect(output['fallback/[slug]'].allowQuery).toEqual(['slug']);
+  expect(output['_next/data/testing-build-id/fallback/[slug].json'].type).toBe(
+    'Prerender'
+  );
+  expect(
+    output['_next/data/testing-build-id/fallback/[slug].json'].allowQuery
+  ).toEqual(['slug']);
   expect(output['fallback/first'].type).toBe('Prerender');
-  expect(output['fallback/first'].allowQuery).toEqual(['slug']);
+  expect(output['fallback/first'].allowQuery).toEqual([]);
+  expect(output['_next/data/testing-build-id/fallback/first.json'].type).toBe(
+    'Prerender'
+  );
+  expect(
+    output['_next/data/testing-build-id/fallback/first.json'].allowQuery
+  ).toEqual([]);
   expect(output['api'].type).toBe('Lambda');
   expect(output['api'].allowQuery).toBe(undefined);
   expect(output['api'].memory).toBe(128);
@@ -103,6 +177,21 @@ it('should build using server build', async () => {
       log.includes('WARNING: Unable to find source file for page')
     )
   ).toBeFalsy();
+
+  const lambdas = new Set();
+  let totalLambdas = 0;
+
+  for (const item of Object.values(output)) {
+    if (item.type === 'Lambda') {
+      totalLambdas += 1;
+      lambdas.add(item);
+    } else if (item.type === 'Prerender') {
+      lambdas.add(item.lambda);
+      totalLambdas += 1;
+    }
+  }
+  expect(lambdas.size).toBe(5);
+  expect(lambdas.size).toBeLessThan(totalLambdas);
 });
 
 it('should build custom error lambda correctly', async () => {
@@ -238,9 +327,9 @@ it('Should build the gip-gsp-404 example', async () => {
   expect(routes[handleErrorIdx + 1].dest).toBe('/404');
   expect(routes[handleErrorIdx + 1].headers).toBe(undefined);
   expect(output['404']).toBeDefined();
-  expect(output['404'].type).toBe('FileFsRef');
+  expect(output['404'].type).toBe('Prerender');
   expect(output['_next/data/testing-build-id/404.json']).toBeDefined();
-  expect(output['_next/data/testing-build-id/404.json'].type).toBe('FileFsRef');
+  expect(output['_next/data/testing-build-id/404.json'].type).toBe('Prerender');
   const filePaths = Object.keys(output);
   const serverlessError = filePaths.some(filePath => filePath.match(/_error/));
   const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
@@ -694,7 +783,6 @@ it('Should not exceed function limit for large dependencies (shared lambda)', as
 });
 
 it('Should provide lambda info when limit is hit (server build)', async () => {
-  let error;
   let logs = '';
 
   const origLog = console.log;
@@ -709,14 +797,13 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
       path.join(__dirname, 'test-limit-exceeded-server-build')
     );
   } catch (err) {
-    error = err;
+    console.error(err);
   }
   console.log = origLog;
 
   expect(logs).toContain(
-    'Max serverless function size was exceeded for 1 function'
+    'Max serverless function size was exceeded for 2 functions'
   );
-  expect(error).toBeDefined();
   expect(logs).toContain(
     'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
   );
@@ -733,7 +820,6 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
 });
 
 it('Should provide lambda info when limit is hit (shared lambdas)', async () => {
-  let error;
   let logs = '';
 
   const origLog = console.log;
@@ -748,14 +834,13 @@ it('Should provide lambda info when limit is hit (shared lambdas)', async () => 
       path.join(__dirname, 'test-limit-exceeded-shared-lambdas')
     );
   } catch (err) {
-    error = err;
+    console.error(err);
   }
   console.log = origLog;
 
   expect(logs).toContain(
     'Max serverless function size was exceeded for 1 function'
   );
-  expect(error).toBeDefined();
   expect(logs).toContain(
     'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
   );
@@ -770,7 +855,6 @@ it('Should provide lambda info when limit is hit (shared lambdas)', async () => 
 });
 
 it('Should provide lambda info when limit is hit for internal pages (server build)', async () => {
-  let error;
   let logs = '';
 
   const origLog = console.log;
@@ -785,11 +869,10 @@ it('Should provide lambda info when limit is hit for internal pages (server buil
       path.join(__dirname, 'test-limit-exceeded-internal-files-server-build')
     );
   } catch (err) {
-    error = err;
+    console.error(err);
   }
   console.log = origLog;
 
-  expect(error).toBeDefined();
   expect(logs).toContain(
     'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
   );
@@ -805,4 +888,100 @@ it('Should provide lambda info when limit is hit for internal pages (server buil
   expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
   expect(logs).toMatch(/public\/big-image-1\.jpg/);
   expect(logs).toMatch(/public\/big-image-2\.jpg/);
+});
+
+it('Should provide lambda info when limit is hit (uncompressed)', async () => {
+  let logs = '';
+
+  const origLog = console.log;
+
+  console.log = function (...args) {
+    logs += args.join(' ');
+    origLog(...args);
+  };
+
+  try {
+    await runBuildLambda(
+      path.join(__dirname, 'test-limit-exceeded-404-static-files')
+    );
+  } catch (err) {
+    console.error(err);
+  }
+  console.log = origLog;
+
+  expect(logs).toContain(
+    'Max serverless function size was exceeded for 1 function'
+  );
+  expect(logs).toContain(
+    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
+  );
+  expect(logs).toContain(`Serverless Function's page: api/hello.js`);
+  expect(logs).toMatch(
+    /Large Dependencies.*?Uncompressed size.*?Compressed size/
+  );
+  expect(logs).toMatch(/data\.txt/);
+  expect(logs).toMatch(/\.next\/server\/pages/);
+});
+
+it('Should de-dupe correctly when limit is close (uncompressed)', async () => {
+  const origLog = console.log;
+  const origError = console.error;
+  const caughtLogs = [];
+
+  console.log = function (...args) {
+    caughtLogs.push(args.join(' '));
+    origLog.apply(this, args);
+  };
+  console.error = function (...args) {
+    caughtLogs.push(args.join(' '));
+    origError.apply(this, args);
+  };
+
+  const {
+    buildResult: { output },
+  } = await runBuildLambda(
+    path.join(__dirname, 'test-limit-large-uncompressed-files')
+  );
+
+  console.log = origLog;
+  console.error = origError;
+
+  expect(output['index']).toBeDefined();
+  expect(output['another']).toBeDefined();
+  expect(output['api/hello']).toBeDefined();
+  expect(output['api/hello-1']).toBeDefined();
+  expect(output['api/hello-2']).toBeDefined();
+  expect(output['api/hello-3']).toBeDefined();
+  expect(output['api/hello-4']).toBeDefined();
+  expect(output['_app']).not.toBeDefined();
+  expect(output['_error']).not.toBeDefined();
+  expect(output['_document']).not.toBeDefined();
+
+  expect(output['index'] === output['another']).toBe(true);
+  expect(output['index'] !== output['api/hello']).toBe(true);
+  expect(output['api/hello'] === output['api/hello-1']).toBe(true);
+  expect(output['api/hello'] === output['api/hello-2']).toBe(true);
+  expect(output['api/hello'] === output['api/hello-3']).toBe(true);
+  expect(output['api/hello'] === output['api/hello-4']).toBe(true);
+
+  expect(
+    caughtLogs.some(log =>
+      log.includes('WARNING: Unable to find source file for page')
+    )
+  ).toBeFalsy();
+
+  const lambdas = new Set();
+  let totalLambdas = 0;
+
+  for (const item of Object.values(output)) {
+    if (item.type === 'Lambda') {
+      totalLambdas += 1;
+      lambdas.add(item);
+    } else if (item.type === 'Prerender') {
+      lambdas.add(item.lambda);
+      totalLambdas += 1;
+    }
+  }
+  expect(lambdas.size).toBe(2);
+  expect(lambdas.size).toBeLessThan(totalLambdas);
 });

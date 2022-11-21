@@ -1,0 +1,1 @@
+{ "functions": { "api/**/*.js": { "memory": 128 } } }

@@ -258,6 +258,39 @@ it(
 );
 
 it(
+  'Should build Gatsby with configuration defined in typescript',
+  async () => {
+    const { workPath } = await runBuildLambda(
+      path.join(__dirname, 'build-fixtures/13-gatsby-with-typescript-config')
+    );
+
+    const contents = await fs.readdir(workPath);
+
+    expect(contents.some(name => name === 'gatsby-config.js')).toBeFalsy();
+    expect(contents.some(name => name === 'gatsby-config.ts')).toBeTruthy();
+
+    expect(require(path.join(workPath, 'gatsby-config.ts')))
+      .toMatchInlineSnapshot(`
+      Object {
+        "default": Object {
+          "plugins": Array [
+            Object {
+              "options": Object {},
+              "resolve": "gatsby-plugin-vercel",
+            },
+          ],
+          "siteMetadata": Object {
+            "siteUrl": "https://gatsby-typescript-config.vercel.app",
+            "title": "Gatsby Typescript Config",
+          },
+        },
+      }
+    `);
+  },
+  FOUR_MINUTES
+);
+
+it(
   'Should build Nuxt.js with "@nuxtjs/web-vitals" plugin',
   async () => {
     const fixture = path.join(__dirname, 'build-fixtures/08-nuxtjs-default');
