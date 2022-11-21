@@ -11,7 +11,7 @@ interface Environment {
   [key: string]: string;
 }
 
-export type OperationType = string | { [key: string]: number };
+export type OperationType = string | Record<string, number>;
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
