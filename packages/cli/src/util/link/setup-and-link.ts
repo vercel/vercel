@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { ProjectLinkResult, ProjectSettings } from '../../types';
 import {
+  getLinkedProject,
   linkFolderToProject,
   getVercelDirectory,
   VERCEL_DIR_README,
@@ -31,7 +32,7 @@ import { isAPIError } from '../errors-ts';
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
   forceDelete?: boolean;
-  link: ProjectLinkResult;
+  link?: ProjectLinkResult;
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
@@ -56,6 +57,9 @@ export default async function setupAndLink(
   if (isFile) {
     output.error(`Expected directory but found file: ${path}`);
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
+  }
+  if (!link) {
+    link = await getLinkedProject(client, path);
   }
   const isTTY = client.stdin.isTTY;
   const quiet = !isTTY;
