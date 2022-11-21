@@ -2,7 +2,6 @@
   "orgId": ".",
   "projectId": ".",
   "settings": {
-    "nodeVersion": "16.x",
     "framework": null
   }
 }
