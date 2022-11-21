@@ -21,7 +21,9 @@ export default async function getDeploymentInfo(
   );
 
   if (deployment === 1) {
-    throw new Error('Failed to get deployment');
+    throw new Error(
+      `Failed to get deployment "${deployId}" in scope "${contextName}"`
+    );
   }
 
   if (deployment instanceof Error) {

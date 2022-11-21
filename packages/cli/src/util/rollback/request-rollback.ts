@@ -44,10 +44,8 @@ export default async function requestRollback({
   let deployment;
   try {
     deployment = await getDeploymentInfo(client, contextName, deployId);
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      output.error(err.toString());
-    }
+  } catch (err: any) {
+    output.error(err?.toString() || err);
     return 1;
   } finally {
     output.stopSpinner();
