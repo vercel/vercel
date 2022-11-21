@@ -949,7 +949,6 @@ describe('build', () => {
       );
       expect(vcConfig).toMatchObject({
         handler: 'api/memory.js',
-        runtime: 'nodejs16.x',
         memory: 128,
         environment: {},
         launcherType: 'Nodejs',
