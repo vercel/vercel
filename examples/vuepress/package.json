@@ -5,6 +5,6 @@
     "build": "vuepress build src"
   },
   "devDependencies": {
-    "vuepress": "^1.5.3"
+    "vuepress": "1.9.7"
   }
 }

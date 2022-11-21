@@ -4,8 +4,8 @@
   "main": "index.js",
   "license": "MIT",
   "devDependencies": {
-    "vitepress": "^1.0.0-alpha.4",
-    "vue": "^3.2.37"
+    "vitepress": "1.0.0-alpha.29",
+    "vue": "3.2.45"
   },
   "scripts": {
     "dev": "vitepress dev docs",
