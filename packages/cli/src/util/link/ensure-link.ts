@@ -30,7 +30,7 @@ export async function ensureLink(
   commandName: string,
   client: Client,
   cwd: string,
-  opts: SetupAndLinkOptions
+  opts: Partial<SetupAndLinkOptions>
 ): Promise<LinkResult | number> {
   let { link } = opts;
   if (!link) {

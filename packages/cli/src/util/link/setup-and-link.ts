@@ -32,7 +32,7 @@ import { isAPIError } from '../errors-ts';
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
   forceDelete?: boolean;
-  link?: ProjectLinkResult;
+  link: ProjectLinkResult;
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
