@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { isErrnoException, isError, errorToString } from './util/is-error';
+import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
 
 try {
   // Test to see if cwd has been deleted before
@@ -607,6 +607,21 @@ const main = async () => {
       }
       if (typeof err.stack === 'string') {
         output.debug(err.stack);
+      }
+      return 1;
+    }
+
+    if (isErrnoException(err) && err.code === 'ECONNRESET') {
+      // Error message will look like the following:
+      // request to https://api.vercel.com/v2/user failed, reason: socket hang up
+      const matches = /request to https:\/\/(.*?)\//.exec(err.message || '');
+      const hostname = matches?.[1];
+      if (hostname) {
+        output.error(
+          `Connection to ${highlight(
+            hostname
+          )} interrupted. Please verify your internet connectivity and DNS configuration.`
+        );
       }
       return 1;
     }

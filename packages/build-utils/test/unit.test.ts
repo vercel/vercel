@@ -226,7 +226,7 @@ it('should only match supported node versions, otherwise throw an error', async 
   );
 
   const autoMessage =
-    'Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.';
+    'Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', true),
     autoMessage
@@ -246,7 +246,7 @@ it('should only match supported node versions, otherwise throw an error', async 
   );
 
   const foundMessage =
-    'Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.';
+    'Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.';
   await expectBuilderError(
     getSupportedNodeVersion('8.11.x', false),
     foundMessage
@@ -267,8 +267,8 @@ it('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(await getSupportedNodeVersion('14.0.0')).toHaveProperty('major', 14);
   expect(await getSupportedNodeVersion('14.x')).toHaveProperty('major', 14);
-  expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 16);
-  expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 16);
+  expect(await getSupportedNodeVersion('>=10')).toHaveProperty('major', 18);
+  expect(await getSupportedNodeVersion('>=10.3.0')).toHaveProperty('major', 18);
   expect(await getSupportedNodeVersion('16.5.0 - 16.9.0')).toHaveProperty(
     'major',
     16
@@ -283,6 +283,14 @@ it('should match all semver ranges', async () => {
     'major',
     14
   );
+});
+
+it('should allow nodejs18.x', async () => {
+  expect(getLatestNodeVersion()).toHaveProperty('major', 18);
+  expect(await getSupportedNodeVersion('18.x')).toHaveProperty('major', 18);
+  expect(await getSupportedNodeVersion('18')).toHaveProperty('major', 18);
+  expect(await getSupportedNodeVersion('18.1.0')).toHaveProperty('major', 18);
+  expect(await getSupportedNodeVersion('>=16')).toHaveProperty('major', 18);
 });
 
 it('should ignore node version in vercel dev getNodeVersion()', async () => {
@@ -339,7 +347,7 @@ it('should warn when package.json engines is greater than', async () => {
       {},
       {}
     )
-  ).toHaveProperty('range', '16.x');
+  ).toHaveProperty('range', '18.x');
   expect(warningMessages).toStrictEqual([
     'Warning: Detected "engines": { "node": ">=16" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version',
   ]);
@@ -378,7 +386,7 @@ it('should not warn when package.json engines matches project setting from confi
 });
 
 it('should get latest node version', async () => {
-  expect(getLatestNodeVersion()).toHaveProperty('major', 16);
+  expect(getLatestNodeVersion()).toHaveProperty('major', 18);
 });
 
 it('should throw for discontinued versions', async () => {
@@ -424,13 +432,45 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
     12
   );
   expect(warningMessages).toStrictEqual([
-    'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
-    'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.',
-    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set "engines": { "node": "16.x" } in your `package.json` file to use Node.js 16.',
-    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 16.x in your Project Settings to use Node.js 16.',
+    'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
+    'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
+    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.',
+    'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.',
   ]);
 
   global.Date.now = realDateNow;
+});
+
+it('should support initialHeaders and initialStatus correctly', async () => {
+  const { Prerender } = require('@vercel/build-utils/dist/prerender.js');
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    initialHeaders: {
+      'content-type': 'application/json',
+      'x-initial': 'true',
+    },
+    initialStatus: 308,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    initialStatus: 308,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    initialHeaders: {
+      'content-type': 'application/json',
+      'x-initial': 'true',
+    },
+  });
 });
 
 it('should support require by path for legacy builders', () => {
