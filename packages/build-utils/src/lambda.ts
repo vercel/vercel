@@ -11,8 +11,6 @@ interface Environment {
   [key: string]: string;
 }
 
-export type OperationType = string | Record<string, number>;
-
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
 export interface LambdaOptionsBase {
@@ -26,7 +24,7 @@ export interface LambdaOptionsBase {
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
   experimentalResponseStreaming?: boolean;
-  operationType?: OperationType;
+  operationType?: string;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -50,7 +48,7 @@ interface GetLambdaOptionsFromFunctionOptions {
 
 export class Lambda {
   type: 'Lambda';
-  operationType?: OperationType;
+  operationType?: string;
   files?: Files;
   handler: string;
   runtime: string;
