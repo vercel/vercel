@@ -15,6 +15,7 @@ function makeVercelLauncher(config) {
     sourcemapSupportPath,
     shouldAddHelpers = false,
     shouldAddSourcemapSupport = false,
+    webSignature = false,
   } = config;
   return `
 const { parse, pathToFileURL } = require('url');
@@ -30,6 +31,8 @@ const entrypointPath = ${JSON.stringify(entrypointPath)};
 const shouldAddHelpers = ${JSON.stringify(shouldAddHelpers)};
 const helpersPath = ${JSON.stringify(helpersPath)};
 const useRequire = false;
+
+console.log("${JSON.stringify(config)}");
 
 const func = (${getVercelLauncher(config).toString()})();
 exports.launcher = func.launcher;`;
