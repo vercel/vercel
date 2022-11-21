@@ -1,0 +1,15 @@
+{
+  "name": "gridsomee",
+  "private": true,
+  "scripts": {
+    "build": "gridsome build",
+    "dev": "gridsome develop -p $PORT",
+    "explore": "gridsome explore"
+  },
+  "dependencies": {
+    "gridsome": "0.7.23"
+  },
+  "engines": {
+    "node": "14.x"
+  }
+}
