@@ -1,7 +1,12 @@
 import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
-import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
+import {
+  Lambda,
+  createLambda,
+  getLambdaOptionsFromFunction,
+  OperationType,
+} from './lambda';
 import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
 import download, {
@@ -86,6 +91,7 @@ export {
   scanParentDirs,
   getIgnoreFilter,
   cloneEnv,
+  OperationType,
 };
 
 export { EdgeFunction } from './edge-function';
