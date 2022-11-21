@@ -1,41 +1,42 @@
 import chalk from 'chalk';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
-import { Writable } from 'stream';
+import type { WritableTTY } from '../../types';
+import { errorToString } from '@vercel/error-utils';
+
+const IS_TEST = process.env.NODE_ENV === 'test';
 
 export interface OutputOptions {
   debug?: boolean;
 }
 
-export interface PrintOptions {
-  w?: Writable;
-}
-
-export interface LogOptions extends PrintOptions {
+export interface LogOptions {
   color?: typeof chalk;
 }
 
 export class Output {
+  stream: WritableTTY;
   debugEnabled: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
-  isTTY: boolean;
 
-  constructor({ debug: debugEnabled = false }: OutputOptions = {}) {
+  constructor(
+    stream: WritableTTY,
+    { debug: debugEnabled = false }: OutputOptions = {}
+  ) {
+    this.stream = stream;
     this.debugEnabled = debugEnabled;
     this.spinnerMessage = '';
     this._spinner = null;
-    this.isTTY = process.stdout.isTTY || false;
   }
 
   isDebugEnabled = () => {
     return this.debugEnabled;
   };
 
-  print = (str: string, { w }: PrintOptions = { w: process.stderr }) => {
+  print = (str: string) => {
     this.stopSpinner();
-    const stream: Writable = w || process.stderr;
-    stream.write(str);
+    this.stream.write(str);
   };
 
   log = (str: string, color = chalk.grey) => {
@@ -74,17 +75,20 @@ export class Output {
     link?: string,
     action = 'Learn More'
   ) => {
-    this.print(`${chalk.red(`Error!`)} ${str}\n`);
+    this.print(`${chalk.red(`Error:`)} ${str}\n`);
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
       this.print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
     }
   };
 
-  prettyError = (
-    err: Pick<Error, 'message'> & { link?: string; action?: string }
-  ) => {
-    return this.error(err.message, undefined, err.link, err.action);
+  prettyError = (err: unknown) => {
+    return this.error(
+      errorToString(err),
+      undefined,
+      (err as any).link,
+      (err as any).action
+    );
   };
 
   ready = (str: string) => {
@@ -106,19 +110,26 @@ export class Output {
   };
 
   spinner = (message: string, delay: number = 300): void => {
-    this.spinnerMessage = message;
     if (this.debugEnabled) {
       this.debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       return;
     }
-    if (this.isTTY) {
+    if (IS_TEST || !this.stream.isTTY) {
+      this.print(`${message}\n`);
+    } else {
+      this.spinnerMessage = message;
+
       if (this._spinner) {
         this._spinner.text = message;
       } else {
-        this._spinner = wait(message, delay);
+        this._spinner = wait(
+          {
+            text: message,
+            stream: this.stream,
+          },
+          delay
+        );
       }
-    } else {
-      this.print(`${message}\n`);
     }
   };
 
@@ -156,8 +167,4 @@ export class Output {
 
     return promise;
   };
-}
-
-export default function createOutput(opts?: OutputOptions) {
-  return new Output(opts);
 }

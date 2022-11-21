@@ -22,6 +22,8 @@ export interface LambdaOptionsBase {
   allowQuery?: string[];
   regions?: string[];
   supportsMultiPayloads?: boolean;
+  supportsWrapper?: boolean;
+  experimentalResponseStreaming?: boolean;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -58,6 +60,8 @@ export class Lambda {
    */
   zipBuffer?: Buffer;
   supportsMultiPayloads?: boolean;
+  supportsWrapper?: boolean;
+  experimentalResponseStreaming?: boolean;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -69,6 +73,8 @@ export class Lambda {
       allowQuery,
       regions,
       supportsMultiPayloads,
+      supportsWrapper,
+      experimentalResponseStreaming,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -103,6 +109,13 @@ export class Lambda {
       );
     }
 
+    if (supportsWrapper !== undefined) {
+      assert(
+        typeof supportsWrapper === 'boolean',
+        '"supportsWrapper" is not a boolean'
+      );
+    }
+
     if (regions !== undefined) {
       assert(Array.isArray(regions), '"regions" is not an Array');
       assert(
@@ -121,6 +134,8 @@ export class Lambda {
     this.regions = regions;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
+    this.supportsWrapper = supportsWrapper;
+    this.experimentalResponseStreaming = experimentalResponseStreaming;
   }
 
   async createZip(): Promise<Buffer> {

@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server';
 
 const ALLOWED = ['allowed'];
 
+export const config = {
+  matcher: [
+    '/dynamic/:path*',
+    '/_sites/:path*',
+    '/:teamId/:slug',
+    '/:path*',
+    '/',
+  ],
+};
+
 export function middleware(request) {
   const url = request.nextUrl;
   const pathname = url.pathname;
@@ -12,7 +22,7 @@ export function middleware(request) {
 
   if (url.pathname === '/redirect-me') {
     url.pathname = '/from-middleware';
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(url, 307);
   }
 
   if (url.pathname === '/next') {
@@ -75,6 +85,20 @@ export function middleware(request) {
     url.pathname = '/about';
     url.searchParams.set('middleware', 'foo');
     return NextResponse.rewrite(url);
+  }
+
+  if (url.pathname === '/rewrite-to-site') {
+    const customUrl = new URL(url);
+    customUrl.pathname = '/_sites/subdomain-1/';
+    console.log('rewriting to', customUrl.pathname, customUrl.href);
+    return NextResponse.rewrite(customUrl);
+  }
+
+  if (url.pathname === '/rewrite-to-another-site') {
+    const customUrl = new URL(url);
+    customUrl.pathname = '/_sites/test-revalidate';
+    console.log('rewriting to', customUrl.pathname, customUrl.href);
+    return NextResponse.rewrite(customUrl);
   }
 
   if (url.pathname === '/redirect-me-to-about') {
@@ -200,15 +224,15 @@ export function middleware(request) {
   }
 
   if (pathname.startsWith('/home')) {
-    if (!request.cookies.bucket) {
+    if (!request.cookies.get('bucket')) {
       const bucket = Math.random() >= 0.5 ? 'a' : 'b';
       url.pathname = `/home/${bucket}`;
       const response = NextResponse.rewrite(url);
-      response.cookie('bucket', bucket);
+      response.cookies.set('bucket', bucket);
       return response;
     }
 
-    url.pathname = `/home/${request.cookies.bucket}`;
+    url.pathname = `/home/${request.cookies.get('bucket')}`;
     return NextResponse.rewrite(url);
   }
 

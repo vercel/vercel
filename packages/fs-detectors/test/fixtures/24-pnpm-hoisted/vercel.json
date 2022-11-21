@@ -1,0 +1,20 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Hello, World!"
+    },
+    {
+      "path": "/",
+      "logMustContain": "once"
+    },
+    {
+      "path": "/",
+      "logMustContain": "exeggcute"
+    },
+    {
+      "path": "/",
+      "logMustContain": "wrappy"
+    }
+  ]
+}

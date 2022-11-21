@@ -1,5 +1,5 @@
 import { DNSRecord, PaginationOptions } from '../../types';
-import { DomainNotFound } from '../errors-ts';
+import { DomainNotFound, isAPIError } from '../errors-ts';
 import { Output } from '../output';
 import Client from '../client';
 
@@ -27,10 +27,10 @@ export default async function getDomainDNSRecords(
 
     const data = await client.fetch<Response>(url);
     return data;
-  } catch (error) {
-    if (error.code === 'not_found') {
+  } catch (err: unknown) {
+    if (isAPIError(err) && err.code === 'not_found') {
       return new DomainNotFound(domain);
     }
-    throw error;
+    throw err;
   }
 }

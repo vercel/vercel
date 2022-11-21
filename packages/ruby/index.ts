@@ -16,6 +16,7 @@ import {
   createLambda,
   debug,
   walkParentDirs,
+  cloneEnv,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -47,31 +48,29 @@ async function bundleInstall(
 ) {
   debug(`running "bundle install --deployment"...`);
   const bundleAppConfig = await getWriteableDirectory();
-
-  try {
-    await execa(
-      bundlePath,
-      [
-        'install',
-        '--deployment',
-        '--gemfile',
-        gemfilePath,
-        '--path',
-        bundleDir,
-      ],
-      {
-        stdio: 'pipe',
-        env: {
-          BUNDLE_SILENCE_ROOT_WARNING: '1',
-          BUNDLE_APP_CONFIG: bundleAppConfig,
-          BUNDLE_JOBS: '4',
-        },
-      }
+  const gemfileContent = await readFile(gemfilePath, 'utf8');
+  if (gemfileContent.includes('ruby "~> 2.7.x"')) {
+    // Gemfile contains "2.7.x" which will cause an error message:
+    // "Your Ruby patchlevel is 0, but your Gemfile specified -1"
+    // See https://github.com/rubygems/bundler/blob/3f0638c6c8d340c2f2405ecb84eb3b39c433e36e/lib/bundler/errors.rb#L49
+    // We must correct to the actual version in the build container.
+    await writeFile(
+      gemfilePath,
+      gemfileContent.replace('ruby "~> 2.7.x"', 'ruby "~> 2.7.0"')
     );
-  } catch (err) {
-    debug(`failed to run "bundle install --deployment"...`);
-    throw err;
   }
+  await execa(
+    bundlePath,
+    ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
+    {
+      stdio: 'pipe',
+      env: cloneEnv(process.env, {
+        BUNDLE_SILENCE_ROOT_WARNING: '1',
+        BUNDLE_APP_CONFIG: bundleAppConfig,
+        BUNDLE_JOBS: '4',
+      }),
+    }
+  );
 }
 
 export const version = 3;
@@ -142,14 +141,7 @@ export async function build({
       } else {
         // try installing. this won't work if native extesions are required.
         // if that's the case, gems should be vendored locally before deploying.
-        try {
-          await bundleInstall(bundlerPath, bundleDir, gemfilePath);
-        } catch (err) {
-          debug(
-            'unable to build gems from Gemfile. vendor the gems locally with "bundle install --deployment" and retry.'
-          );
-          throw err;
-        }
+        await bundleInstall(bundlerPath, bundleDir, gemfilePath);
       }
     }
   } else {

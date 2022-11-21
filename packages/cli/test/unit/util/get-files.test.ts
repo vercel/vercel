@@ -1,18 +1,15 @@
 import { join, sep } from 'path';
 // @ts-ignore - Missing types for "alpha-sort"
 import { asc as alpha } from 'alpha-sort';
-import createOutput from '../../../src/util/output';
 import { staticFiles as getStaticFiles_ } from '../../../src/util/get-files';
+import { client } from '../../mocks/client';
 
-const output = createOutput({ debug: false });
 const prefix = `${join(__dirname, '../../fixtures/unit')}${sep}`;
 const base = (path: string) => path.replace(prefix, '');
 const fixture = (name: string) => join(prefix, name);
 
 const getStaticFiles = async (dir: string) => {
-  const files = await getStaticFiles_(dir, {
-    output,
-  });
+  const files = await getStaticFiles_(dir, client);
   return normalizeWindowsPaths(files);
 };
 

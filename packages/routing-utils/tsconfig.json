@@ -10,6 +10,6 @@
     "declaration": true,
     "typeRoots": ["./@types", "./node_modules/@types"]
   },
-  "include": ["src/**/*", "test/**/*.ts"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules"]
 }

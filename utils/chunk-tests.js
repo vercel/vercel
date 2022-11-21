@@ -81,16 +81,19 @@ async function getChunkedTests() {
   return chunkedTests;
 }
 
+/**
+ * Run turbo cli
+ * @param {string[]} args
+ */
 async function turbo(args) {
   const chunks = [];
   try {
     await new Promise((resolve, reject) => {
-      const spawned = child_process.spawn(`yarn`, ['turbo', '--', ...args], {
-        cwd: path.resolve(__dirname, '..'),
-        env: {
-          ...process.env,
-          YARN_SILENT: '1',
-        },
+      const root = path.resolve(__dirname, '..');
+      const turbo = path.join(root, 'node_modules', '.bin', 'turbo');
+      const spawned = child_process.spawn(turbo, args, {
+        cwd: root,
+        env: process.env,
       });
       spawned.stdout.on('data', data => {
         chunks.push(data);

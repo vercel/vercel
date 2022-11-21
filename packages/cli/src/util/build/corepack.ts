@@ -6,11 +6,9 @@ import { VERCEL_DIR } from '../projects/link';
 import readJSONFile from '../read-json-file';
 
 export async function initCorepack({
-  cwd,
-  rootPackageJsonPath,
+  repoRootPath,
 }: {
-  cwd: string;
-  rootPackageJsonPath: string;
+  repoRootPath: string;
 }): Promise<string | null> {
   if (process.env.ENABLE_EXPERIMENTAL_COREPACK !== '1') {
     // Since corepack is experimental, we need to exit early
@@ -18,7 +16,7 @@ export async function initCorepack({
     return null;
   }
   const pkg = await readJSONFile<PackageJson>(
-    join(rootPackageJsonPath, 'package.json')
+    join(repoRootPath, 'package.json')
   );
   if (pkg instanceof CantParseJSONFile) {
     console.warn(
@@ -32,16 +30,13 @@ export async function initCorepack({
     console.log(
       `Detected ENABLE_EXPERIMENTAL_COREPACK=1 and "${pkg.packageManager}" in package.json`
     );
-    const corepackRootDir = join(cwd, VERCEL_DIR, 'cache', 'corepack');
+    const corepackRootDir = join(repoRootPath, VERCEL_DIR, 'cache', 'corepack');
     const corepackHomeDir = join(corepackRootDir, 'home');
     const corepackShimDir = join(corepackRootDir, 'shim');
     await fs.mkdirp(corepackHomeDir);
     await fs.mkdirp(corepackShimDir);
     process.env.COREPACK_HOME = corepackHomeDir;
     process.env.PATH = `${corepackShimDir}${delimiter}${process.env.PATH}`;
-    process.env.DEBUG = process.env.DEBUG
-      ? `corepack,${process.env.DEBUG}`
-      : 'corepack';
     const pkgManagerName = pkg.packageManager.split('@')[0];
     // We must explicitly call `corepack enable npm` since `corepack enable`
     // doesn't work with npm. See https://github.com/nodejs/corepack/pull/24
@@ -71,12 +66,5 @@ export function cleanupCorepack(corepackShimDir: string) {
       `${corepackShimDir}${delimiter}`,
       ''
     );
-  }
-  if (process.env.DEBUG) {
-    if (process.env.DEBUG === 'corepack') {
-      delete process.env.DEBUG;
-    } else {
-      process.env.DEBUG = process.env.DEBUG.replace('corepack,', '');
-    }
   }
 }

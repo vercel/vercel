@@ -1,8 +1,8 @@
 import inquirer from 'inquirer';
 import confirm from './confirm';
 import chalk from 'chalk';
-import { Output } from '../output';
 import frameworkList, { Framework } from '@vercel/frameworks';
+import Client from '../client';
 import { isSettingValue } from '../is-setting-value';
 import { ProjectSettings } from '../../types';
 
@@ -22,12 +22,14 @@ const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
 export type PartialProjectSettings = Pick<ProjectSettings, ConfigKeys>;
 
 export default async function editProjectSettings(
-  output: Output,
+  client: Client,
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
   autoConfirm: boolean,
   localConfigurationOverrides: PartialProjectSettings | null
 ): Promise<ProjectSettings> {
+  const { output } = client;
+
   // Create initial settings object defaulting everything to `null` and assigning what may exist in `projectSettings`
   const settings: ProjectSettings = Object.assign(
     {
@@ -118,7 +120,7 @@ export default async function editProjectSettings(
   // Prompt the user if they want to modify any settings not defined by local configuration.
   if (
     autoConfirm ||
-    !(await confirm('Want to modify these settings?', false))
+    !(await confirm(client, 'Want to modify these settings?', false))
   ) {
     return settings;
   }

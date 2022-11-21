@@ -11,6 +11,7 @@ import { NowBuildError } from '../errors';
 import { Meta, PackageJson, NodeVersion, Config } from '../types';
 import { getSupportedNodeVersion, getLatestNodeVersion } from './node-version';
 import { readConfigFile } from './read-config-file';
+import { cloneEnv } from '../clone-env';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
@@ -23,8 +24,7 @@ export interface ScanParentDirsResult {
    */
   cliType: CliType;
   /**
-   * The file path of found `package.json` file, or `undefined` if none was
-   * found.
+   * The file path of found `package.json` file, or `undefined` if not found.
    */
   packageJsonPath?: string;
   /**
@@ -33,8 +33,13 @@ export interface ScanParentDirsResult {
    */
   packageJson?: PackageJson;
   /**
-   * The `lockfileVersion` number from the `package-lock.json` file,
-   * when present.
+   * The file path of the lockfile (`yarn.lock`, `package-lock.json`, or `pnpm-lock.yaml`)
+   * or `undefined` if not found.
+   */
+  lockfilePath?: string;
+  /**
+   * The `lockfileVersion` number from lockfile (`package-lock.json` or `pnpm-lock.yaml`),
+   * or `undefined` if not found.
    */
   lockfileVersion?: number;
 }
@@ -61,6 +66,13 @@ export interface SpawnOptionsExtended extends SpawnOptions {
    * Pretty formatted command that is being spawned for logging purposes.
    */
   prettyCommand?: string;
+
+  /**
+   * Returns instead of throwing an error when the process exits with a
+   * non-0 exit code. When relevant, the returned object will include
+   * the error code, stdout and stderr.
+   */
+  ignoreNon0Exit?: boolean;
 }
 
 export function spawnAsync(
@@ -79,7 +91,7 @@ export function spawnAsync(
 
     child.on('error', reject);
     child.on('close', (code, signal) => {
-      if (code === 0) {
+      if (code === 0 || opts.ignoreNon0Exit) {
         return resolve();
       }
 
@@ -123,24 +135,24 @@ export function execAsync(
 
       child.on('error', reject);
       child.on('close', (code, signal) => {
-        if (code !== 0) {
-          const cmd = opts.prettyCommand
-            ? `Command "${opts.prettyCommand}"`
-            : 'Command';
-
-          return reject(
-            new NowBuildError({
-              code: `BUILD_UTILS_EXEC_${code || signal}`,
-              message: `${cmd} exited with ${code || signal}`,
-            })
-          );
+        if (code === 0 || opts.ignoreNon0Exit) {
+          return resolve({
+            code,
+            stdout: Buffer.concat(stdoutList).toString(),
+            stderr: Buffer.concat(stderrList).toString(),
+          });
         }
 
-        return resolve({
-          code,
-          stdout: Buffer.concat(stdoutList).toString(),
-          stderr: Buffer.concat(stderrList).toString(),
-        });
+        const cmd = opts.prettyCommand
+          ? `Command "${opts.prettyCommand}"`
+          : 'Command';
+
+        return reject(
+          new NowBuildError({
+            code: `BUILD_UTILS_EXEC_${code || signal}`,
+            message: `${cmd} exited with ${code || signal}`,
+          })
+        );
       });
     }
   );
@@ -166,9 +178,14 @@ export async function execCommand(command: string, options: SpawnOptions = {}) {
   return true;
 }
 
-export async function getNodeBinPath({ cwd }: { cwd: string }) {
-  const { stdout } = await execAsync('npm', ['bin'], { cwd });
-  return stdout.trim();
+export async function getNodeBinPath({
+  cwd,
+}: {
+  cwd: string;
+}): Promise<string> {
+  const { lockfilePath } = await scanParentDirs(cwd);
+  const dir = path.dirname(lockfilePath || cwd);
+  return path.join(dir, 'node_modules', '.bin');
 }
 
 async function chmodPlusX(fsPath: string) {
@@ -201,14 +218,27 @@ export function getSpawnOptions(
   nodeVersion: NodeVersion
 ): SpawnOptions {
   const opts = {
-    env: { ...process.env },
+    env: cloneEnv(process.env),
   };
 
   if (!meta.isDev) {
-    // Ensure that the selected Node version is at the beginning of the `$PATH`
-    opts.env.PATH = `/node${nodeVersion.major}/bin${path.delimiter}${
-      opts.env.PATH || process.env.PATH
-    }`;
+    let found = false;
+    const oldPath = opts.env.PATH || process.env.PATH || '';
+
+    const pathSegments = oldPath.split(path.delimiter).map(segment => {
+      if (/^\/node[0-9]+\/bin/.test(segment)) {
+        found = true;
+        return `/node${nodeVersion.major}/bin`;
+      }
+      return segment;
+    });
+
+    if (!found) {
+      // If we didn't find & replace, prepend at beginning of PATH
+      pathSegments.unshift(`/node${nodeVersion.major}/bin`);
+    }
+
+    opts.env.PATH = pathSegments.filter(Boolean).join(path.delimiter);
   }
 
   return opts;
@@ -221,33 +251,24 @@ export async function getNodeVersion(
   meta: Meta = {}
 ): Promise<NodeVersion> {
   const latest = getLatestNodeVersion();
-  if (meta && meta.isDev) {
+  if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
   let { nodeVersion } = config;
   let isAuto = true;
-  if (packageJson && packageJson.engines && packageJson.engines.node) {
+  if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;
-    if (
-      nodeVersion &&
-      validRange(node) &&
-      !intersects(nodeVersion, node) &&
-      !meta.isDev
-    ) {
+    if (nodeVersion && validRange(node) && !intersects(nodeVersion, node)) {
       console.warn(
         `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${nodeVersion}") will not apply. Learn More: http://vercel.link/node-version`
       );
-    } else if (coerce(node)?.raw === node && !meta.isDev) {
+    } else if (coerce(node)?.raw === node) {
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
       );
-    } else if (
-      validRange(node) &&
-      intersects(`${latest.major + 1}.x`, node) &&
-      !meta.isDev
-    ) {
+    } else if (validRange(node) && intersects(`${latest.major + 1}.x`, node)) {
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
       );
@@ -264,68 +285,56 @@ export async function scanParentDirs(
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
-  let cliType: CliType = 'yarn';
-  let packageJson: PackageJson | undefined;
-  let packageJsonPath: string | undefined;
-  let currentDestPath = destPath;
+  const pkgJsonPath = await walkParentDirs({
+    base: '/',
+    start: destPath,
+    filename: 'package.json',
+  });
+  const packageJson: PackageJson | undefined =
+    readPackageJson && pkgJsonPath
+      ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
+      : undefined;
+  const [yarnLockPath, npmLockPath, pnpmLockPath] = await walkParentDirsMulti({
+    base: '/',
+    start: destPath,
+    filenames: ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml'],
+  });
+  let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
+  let cliType: CliType = 'yarn';
 
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    packageJsonPath = path.join(currentDestPath, 'package.json');
-    // eslint-disable-next-line no-await-in-loop
-    if (await fs.pathExists(packageJsonPath)) {
-      // Only read the contents of the *first* `package.json` file found,
-      // since that's the one related to this installation.
-      if (readPackageJson && !packageJson) {
-        // eslint-disable-next-line no-await-in-loop
-        packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
-      }
+  const [hasYarnLock, packageLockJson, pnpmLockYaml] = await Promise.all([
+    Boolean(yarnLockPath),
+    npmLockPath
+      ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
+      : null,
+    pnpmLockPath
+      ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
+      : null,
+  ]);
 
-      // eslint-disable-next-line no-await-in-loop
-      const [packageLockJson, hasYarnLock, pnpmLockYaml] = await Promise.all([
-        fs
-          .readJson(path.join(currentDestPath, 'package-lock.json'))
-          .catch(error => {
-            // If the file doesn't exist, fail gracefully otherwise error
-            if (error.code === 'ENOENT') {
-              return null;
-            }
-            throw error;
-          }),
-        fs.pathExists(path.join(currentDestPath, 'yarn.lock')),
-        readConfigFile<{ lockfileVersion: number }>(
-          path.join(currentDestPath, 'pnpm-lock.yaml')
-        ),
-      ]);
-
-      // Priority order is Yarn > pnpm > npm
-      // - find highest priority lock file and use that
-      if (hasYarnLock) {
-        cliType = 'yarn';
-      } else if (pnpmLockYaml) {
-        cliType = 'pnpm';
-        // just ensure that it is read as a number and not a string
-        lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
-      } else if (packageLockJson) {
-        cliType = 'npm';
-        lockfileVersion = packageLockJson.lockfileVersion;
-      }
-
-      // Only stop iterating if a lockfile was found, because it's possible
-      // that the lockfile is in a higher path than where the `package.json`
-      // file was found.
-      if (packageLockJson || hasYarnLock || pnpmLockYaml) {
-        break;
-      }
-    }
-
-    const newDestPath = path.dirname(currentDestPath);
-    if (currentDestPath === newDestPath) break;
-    currentDestPath = newDestPath;
+  // Priority order is Yarn > pnpm > npm
+  if (hasYarnLock) {
+    cliType = 'yarn';
+    lockfilePath = yarnLockPath;
+  } else if (pnpmLockYaml) {
+    cliType = 'pnpm';
+    lockfilePath = pnpmLockPath;
+    lockfileVersion = Number(pnpmLockYaml.lockfileVersion);
+  } else if (packageLockJson) {
+    cliType = 'npm';
+    lockfilePath = npmLockPath;
+    lockfileVersion = packageLockJson.lockfileVersion;
   }
 
-  return { cliType, packageJson, lockfileVersion, packageJsonPath };
+  const packageJsonPath = pkgJsonPath || undefined;
+  return {
+    cliType,
+    packageJson,
+    lockfilePath,
+    lockfileVersion,
+    packageJsonPath,
+  };
 }
 
 export async function walkParentDirs({
@@ -346,9 +355,46 @@ export async function walkParentDirs({
     }
 
     parent = path.dirname(current);
+
+    if (parent === current) {
+      // Reached root directory of the filesystem
+      break;
+    }
   }
 
   return null;
+}
+
+async function walkParentDirsMulti({
+  base,
+  start,
+  filenames,
+}: {
+  base: string;
+  start: string;
+  filenames: string[];
+}): Promise<(string | undefined)[]> {
+  let parent = '';
+  for (let current = start; base.length <= current.length; current = parent) {
+    const fullPaths = filenames.map(f => path.join(current, f));
+    const existResults = await Promise.all(
+      fullPaths.map(f => fs.pathExists(f))
+    );
+    const foundOneOrMore = existResults.some(b => b);
+
+    if (foundOneOrMore) {
+      return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
+    }
+
+    parent = path.dirname(current);
+
+    if (parent === current) {
+      // Reached root directory of the filesystem
+      break;
+    }
+  }
+
+  return [];
 }
 
 function isSet<T>(v: any): v is Set<T> {
@@ -395,7 +441,7 @@ export async function runNpmInstall(
     debug(`Installing to ${destPath}`);
 
     const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
-    const env = opts.env ? { ...opts.env } : { ...process.env };
+    const env = cloneEnv(opts.env || process.env);
     delete env.NODE_ENV;
     opts.env = getEnvForPackageManager({
       cliType,
@@ -404,12 +450,30 @@ export async function runNpmInstall(
       env,
     });
     let commandArgs: string[];
+    const isPotentiallyBrokenNpm =
+      cliType === 'npm' &&
+      (nodeVersion?.major === 16 ||
+        opts.env.PATH?.includes('/node16/bin-npm7')) &&
+      !args.includes('--legacy-peer-deps') &&
+      spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK !== '1';
 
     if (cliType === 'npm') {
       opts.prettyCommand = 'npm install';
       commandArgs = args
         .filter(a => a !== '--prefer-offline')
         .concat(['install', '--no-audit', '--unsafe-perm']);
+      if (
+        isPotentiallyBrokenNpm &&
+        spawnOpts?.env?.VERCEL_NPM_LEGACY_PEER_DEPS === '1'
+      ) {
+        // Starting in npm@8.6.0, if you ran `npm install --legacy-peer-deps`,
+        // and then later ran `npm install`, it would fail. So the only way
+        // to safely upgrade npm from npm@8.5.0 is to set this flag. The docs
+        // say this flag is not recommended so its is behind a feature flag
+        // so we can remove it in node@18, which can introduce breaking changes.
+        // See https://docs.npmjs.com/cli/v8/using-npm/config#legacy-peer-deps
+        commandArgs.push('--legacy-peer-deps');
+      }
     } else if (cliType === 'pnpm') {
       // PNPM's install command is similar to NPM's but without the audit nonsense
       // @see options https://pnpm.io/cli/install
@@ -426,7 +490,28 @@ export async function runNpmInstall(
       commandArgs.push('--production');
     }
 
-    await spawnAsync(cliType, commandArgs, opts);
+    try {
+      await spawnAsync(cliType, commandArgs, opts);
+    } catch (err: unknown) {
+      const potentialErrorPath = path.join(
+        process.env.HOME || '/',
+        '.npm',
+        'eresolve-report.txt'
+      );
+      if (
+        isPotentiallyBrokenNpm &&
+        !commandArgs.includes('--legacy-peer-deps') &&
+        fs.existsSync(potentialErrorPath)
+      ) {
+        console.warn(
+          'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.'
+        );
+        commandArgs.push('--legacy-peer-deps');
+        await spawnAsync(cliType, commandArgs, opts);
+      } else {
+        throw err;
+      }
+    }
     debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
   } finally {
@@ -446,20 +531,31 @@ export function getEnvForPackageManager({
   env: { [x: string]: string | undefined };
 }) {
   const newEnv: { [x: string]: string | undefined } = { ...env };
+  const oldPath = env.PATH + '';
+  const npm7 = '/node16/bin-npm7';
+  const pnpm7 = '/pnpm7/node_modules/.bin';
+  const corepackEnabled = env.ENABLE_EXPERIMENTAL_COREPACK === '1';
   if (cliType === 'npm') {
     if (
       typeof lockfileVersion === 'number' &&
       lockfileVersion >= 2 &&
-      (nodeVersion?.major || 0) < 16
+      (nodeVersion?.major || 0) < 16 &&
+      !oldPath.includes(npm7) &&
+      !corepackEnabled
     ) {
       // Ensure that npm 7 is at the beginning of the `$PATH`
-      newEnv.PATH = `/node16/bin-npm7${path.delimiter}${env.PATH}`;
-      console.log('Detected `package-lock.json` generated by npm 7...');
+      newEnv.PATH = `${npm7}${path.delimiter}${oldPath}`;
+      console.log('Detected `package-lock.json` generated by npm 7+...');
     }
   } else if (cliType === 'pnpm') {
-    if (typeof lockfileVersion === 'number' && lockfileVersion === 5.4) {
+    if (
+      typeof lockfileVersion === 'number' &&
+      lockfileVersion === 5.4 &&
+      !oldPath.includes(pnpm7) &&
+      !corepackEnabled
+    ) {
       // Ensure that pnpm 7 is at the beginning of the `$PATH`
-      newEnv.PATH = `/pnpm7/node_modules/.bin${path.delimiter}${env.PATH}`;
+      newEnv.PATH = `${pnpm7}${path.delimiter}${oldPath}`;
       console.log('Detected `pnpm-lock.yaml` generated by pnpm 7...');
     }
   } else {
@@ -526,10 +622,7 @@ export async function runPackageJsonScript(
       cliType,
       lockfileVersion,
       nodeVersion: undefined,
-      env: {
-        ...process.env,
-        ...spawnOpts?.env,
-      },
+      env: cloneEnv(process.env, spawnOpts?.env),
     }),
   };
 
