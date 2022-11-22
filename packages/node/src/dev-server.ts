@@ -107,7 +107,7 @@ function parseRuntime(
 
 async function createEventHandler(
   entrypoint: string,
-  config: Config,
+  config: Config & { launcherType?: 'Nodejs' | 'Web' }, // TODO while changing @vercel/build-utils
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const entrypointPath = join(process.cwd(), entrypoint!);
@@ -127,6 +127,7 @@ async function createEventHandler(
   return createServerlessEventHandler(entrypointPath, {
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire,
+    launcherType: config.launcherType || 'Nodejs',
   });
 }
 

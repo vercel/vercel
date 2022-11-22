@@ -22,6 +22,7 @@ function rawBody(readable: Readable): Promise<Buffer> {
 export async function createServerlessEventHandler(
   entrypoint: string,
   options: {
+    launcherType: 'Nodejs' | 'Web';
     shouldAddHelpers: boolean;
     useRequire: boolean;
   }
@@ -32,7 +33,7 @@ export async function createServerlessEventHandler(
     webHandlerPath: './web-handler.js',
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire: options.useRequire,
-    launcherType: 'Nodejs',
+    launcherType: options.launcherType,
 
     // not used
     bridgePath: '',

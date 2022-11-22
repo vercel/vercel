@@ -31,6 +31,10 @@ export const functionsSchema = {
           type: 'string',
           maxLength: 256,
         },
+        launcherType: {
+          type: 'string',
+          enum: ['Nodejs', 'Web'],
+        },
       },
     },
   },
