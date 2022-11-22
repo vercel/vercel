@@ -78,7 +78,7 @@ async function createBuildProcess(
   });
   match.buildProcess = buildProcess;
 
-  buildProcess.on('exit', (code, signal) => {
+  buildProcess.on('close', (code, signal) => {
     output.debug(
       `Build process for "${match.entrypoint}" exited with ${signal || code}`
     );
@@ -191,10 +191,10 @@ export async function executeBuild(
         reject(err);
       }
       function cleanup() {
-        buildProcess!.removeListener('exit', onExit);
+        buildProcess!.removeListener('close', onExit);
         buildProcess!.removeListener('message', onMessage);
       }
-      buildProcess!.on('exit', onExit);
+      buildProcess!.on('close', onExit);
       buildProcess!.on('message', onMessage);
     });
   } else {
