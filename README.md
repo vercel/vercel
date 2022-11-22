@@ -37,7 +37,7 @@ This project uses [yarn](https://yarnpkg.com/) to install dependencies and run s
 
 You can use the `dev` script to run local changes as if you were invoking Vercel CLI. For example, `vercel deploy --cwd=/path/to/project` could be run with local changes with `yarn dev deploy --cwd=/path/to/project`.
 
-See the [Contributing Guidelines](./.github/CONTRIBUTING.md) for full documentation.
+See the [Contributing Guidelines](./.github/CONTRIBUTING.md) for more details.
 
 ## Reference
 
