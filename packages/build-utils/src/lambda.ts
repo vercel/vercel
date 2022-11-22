@@ -48,7 +48,7 @@ interface GetLambdaOptionsFromFunctionOptions {
 
 export class Lambda {
   type: 'Lambda';
-  operationType?: string;
+  operationType?: string; // defaults to "API" (or "ISR" for prerenders)
   files?: Files;
   handler: string;
   runtime: string;
