@@ -1,7 +1,10 @@
 {
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
-    "next": "canary",
-    "react": "experimental",
-    "react-dom": "experimental"
+    "next": "13.0.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   }
 }
