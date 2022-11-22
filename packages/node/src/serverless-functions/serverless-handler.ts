@@ -32,6 +32,7 @@ export async function createServerlessEventHandler(
     webHandlerPath: './web-handler.js',
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire: options.useRequire,
+    launcherType: 'Nodejs',
 
     // not used
     bridgePath: '',

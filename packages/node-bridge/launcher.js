@@ -41,6 +41,7 @@ exports.launcher = func.launcher;`;
  * @param {import('./types').LauncherConfiguration} config
  */
 function getVercelLauncher({
+  launcherType,
   entrypointPath,
   helpersPath,
   webHandlerPath,
@@ -84,7 +85,7 @@ function getVercelLauncher({
 
     getListener(entrypointPath)
       .then(listener => {
-        if (listener.webSignature) {
+        if (launcherType === 'Web') {
           return import(webHandlerPath).then(({ wrapWebHandler }) =>
             wrapWebHandler(listener)
           );

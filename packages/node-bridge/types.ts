@@ -43,6 +43,7 @@ export interface ServerLike {
   ) => Server | void;
 }
 export type LauncherConfiguration = {
+  launcherType: 'Nodejs' | 'Web';
   entrypointPath: string;
   bridgePath: string;
   helpersPath: string;
