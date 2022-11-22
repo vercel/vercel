@@ -3389,9 +3389,9 @@
   resolved "https://registry.yarnpkg.com/@vercel/build-utils/-/build-utils-4.2.0.tgz#251a496bd426f06ed3e882047728e07121c1d303"
   integrity sha512-W0TKBUGaUXHj16thnPjzFUT94rR6Hkw0Zf+PlZbUN2Op7KswgBCl5At306tz5xi/BYC8lXc9WqDd3ZWnfiw4Ng==
 
-"@vercel/build-utils@https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/build-utils.tgz":
-  version "5.5.9-3afb179"
-  resolved "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/build-utils.tgz#2e0d4b065e0cb556832eeede33ceee0f50de30f5"
+"@vercel/build-utils@https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/build-utils.tgz":
+  version "5.5.9-b85dfd3"
+  resolved "https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/build-utils.tgz#654e82b1936e2c16190ca7a6e8ca3e050a1f3a8b"
 
 "@vercel/fun@1.0.4":
   version "1.0.4"
@@ -3441,19 +3441,19 @@
     resolve-from "^5.0.0"
     rollup-pluginutils "^2.8.2"
 
-"@vercel/node-bridge@https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node-bridge.tgz":
-  version "3.1.2-3afb179"
-  resolved "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node-bridge.tgz#9e8a9b306ce96e164358d67130b60f1ab527ac4c"
+"@vercel/node-bridge@https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/node-bridge.tgz":
+  version "3.1.2-b85dfd3"
+  resolved "https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/node-bridge.tgz#5ff13e3c856e61099cc99af9354e99a6a9165320"
 
-"@vercel/node@https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node.tgz":
-  version "2.6.4-3afb179"
-  resolved "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node.tgz#36439a235b47b0fc13d199e20b4bf9f51f60e88e"
+"@vercel/node@https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/node.tgz":
+  version "2.6.4-b85dfd3"
+  resolved "https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/node.tgz#a1c0d60749348e0f5e6e25acf6ecb632006f8722"
   dependencies:
     "@edge-runtime/vm" "2.0.0"
     "@types/node" "14.18.33"
-    "@vercel/build-utils" "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/build-utils.tgz"
-    "@vercel/node-bridge" "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node-bridge.tgz"
-    "@vercel/static-config" "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/static-config.tgz"
+    "@vercel/build-utils" "https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/build-utils.tgz"
+    "@vercel/node-bridge" "https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/node-bridge.tgz"
+    "@vercel/static-config" "https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/static-config.tgz"
     edge-runtime "2.0.0"
     esbuild "0.14.47"
     exit-hook "2.2.1"
@@ -3461,9 +3461,9 @@
     ts-node "8.9.1"
     typescript "4.3.4"
 
-"@vercel/static-config@https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/static-config.tgz":
-  version "2.0.6-3afb179"
-  resolved "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/static-config.tgz#5e21b7e17b3f020fba0f063a5b2394def3be3e22"
+"@vercel/static-config@https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/static-config.tgz":
+  version "2.0.6-b85dfd3"
+  resolved "https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/static-config.tgz#a62fc41be981847d4ea6ae69e78e0976ccd4606b"
   dependencies:
     ajv "8.6.3"
     json-schema-to-ts "1.6.4"
