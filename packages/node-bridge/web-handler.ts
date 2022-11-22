@@ -15,7 +15,7 @@ type WebHandler = (req: Request) => Promise<Response> | Response;
 const { Readable } = require('stream');
 
 export function wrapWebHandler(handler: WebHandler): NodeHandler {
-  enrichGlobalWithPrimitives();
+  // enrichGlobalWithPrimitives();
 
   return (request: IncomingMessage, response: ServerResponse) => {
     // TODO add the second parameter
@@ -110,8 +110,8 @@ function buildStreamFromReadableStream(readableStream: ReadableStream) {
   return readable;
 }
 
-function enrichGlobalWithPrimitives() {
-  Object.assign(global, require('@edge-runtime/primitives/abort-controller'));
-  Object.assign(global, require('@edge-runtime/primitives/streams'));
-  Object.assign(global, require('@edge-runtime/primitives/fetch'));
-}
+// function enrichGlobalWithPrimitives() {
+//   Object.assign(global, require('@edge-runtime/primitives/abort-controller'));
+//   Object.assign(global, require('@edge-runtime/primitives/streams'));
+//   Object.assign(global, require('@edge-runtime/primitives/fetch'));
+// }

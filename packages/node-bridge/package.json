@@ -22,7 +22,6 @@
     "test-unit": "yarn test"
   },
   "devDependencies": {
-    "@edge-runtime/primitives": "2.0.2",
     "@types/aws-lambda": "8.10.19",
     "@types/node": "14.18.33",
     "jsonlines": "0.1.1",
