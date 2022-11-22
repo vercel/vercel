@@ -41,11 +41,11 @@
     "node": ">= 14"
   },
   "dependencies": {
-    "@vercel/build-utils": "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/build-utils.tgz",
+    "@vercel/build-utils": "https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/build-utils.tgz",
     "@vercel/go": "2.2.17",
     "@vercel/hydrogen": "0.0.31",
     "@vercel/next": "3.2.13",
-    "@vercel/node": "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node.tgz",
+    "@vercel/node": "https://vercel-m5his95f7.vercel.sh/tarballs/@vercel/node.tgz",
     "@vercel/python": "3.1.27",
     "@vercel/redwood": "1.0.37",
     "@vercel/remix": "1.0.37",
