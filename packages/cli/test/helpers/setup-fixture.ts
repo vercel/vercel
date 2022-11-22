@@ -46,6 +46,23 @@ export function setupFixture(fixtureName: string) {
   return cwd;
 }
 
+export function setupFixtureFromTemplate(
+  fixture: string,
+  template: string,
+  nestedPaths?: string[]
+) {
+  const cwd = setupFixture(fixture);
+  const templateFixture = path.join(fixturesRoot!, 'unit', template);
+  if (Array.isArray(nestedPaths)) {
+    for (const nestedPath of nestedPaths) {
+      fs.copySync(templateFixture, path.join(cwd, nestedPath));
+    }
+  } else {
+    fs.copySync(templateFixture, cwd);
+  }
+  return cwd;
+}
+
 export function cleanupFixtures() {
   if (tempRoot) {
     tempRoot.removeCallback();

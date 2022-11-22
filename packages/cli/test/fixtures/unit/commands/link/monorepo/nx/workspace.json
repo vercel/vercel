@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "app-1": "apps/app-1",
+    "app-2": "apps/app-2",
+    "package-1": "packages/package-1",
+    "package-2": "packages/package-2"
+  }
+}

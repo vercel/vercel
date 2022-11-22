@@ -44,7 +44,7 @@ export class LocalFileSystemDetector extends DetectorFilesystem {
     };
     return dir.map(dirent => ({
       name: dirent.name,
-      path: path.join(dirPath, dirent.name),
+      path: path.join(name, dirent.name),
       type: getType(dirent),
     }));
   }
