@@ -9,6 +9,7 @@ const { wrapWebHandler } = require('./web-handler.js');
  */
 function makeVercelLauncher(config) {
   const {
+    launcherType = 'Nodejs',
     entrypointPath,
     bridgePath,
     helpersPath,
@@ -31,6 +32,7 @@ const entrypointPath = ${JSON.stringify(entrypointPath)};
 const shouldAddHelpers = ${JSON.stringify(shouldAddHelpers)};
 const helpersPath = ${JSON.stringify(helpersPath)};
 const webHandlerPath = ${JSON.stringify(webHandlerPath)}
+const launcherType = ${JSON.stringify(launcherType)}
 const useRequire = false;
 
 const func = (${getVercelLauncher(config).toString()})();
