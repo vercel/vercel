@@ -46,12 +46,12 @@ export type LauncherConfiguration = {
   entrypointPath: string;
   bridgePath: string;
   helpersPath: string;
+  webHandlerPath: string;
   sourcemapSupportPath: string;
   shouldAddHelpers?: boolean;
   shouldAddSourcemapSupport?: boolean;
   awsLambdaHandler?: string;
   useRequire?: boolean;
-  webSignature?: boolean;
 };
 
 export type VercelRequestCookies = { [key: string]: string };

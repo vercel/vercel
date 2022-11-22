@@ -12,6 +12,7 @@ function makeVercelLauncher(config) {
     entrypointPath,
     bridgePath,
     helpersPath,
+    webHandlerPath,
     sourcemapSupportPath,
     shouldAddHelpers = false,
     shouldAddSourcemapSupport = false,
@@ -29,6 +30,7 @@ ${
 const entrypointPath = ${JSON.stringify(entrypointPath)};
 const shouldAddHelpers = ${JSON.stringify(shouldAddHelpers)};
 const helpersPath = ${JSON.stringify(helpersPath)};
+const webHandlerPath = ${JSON.stringify(webHandlerPath)}
 const useRequire = false;
 
 const func = (${getVercelLauncher(config).toString()})();
@@ -41,9 +43,9 @@ exports.launcher = func.launcher;`;
 function getVercelLauncher({
   entrypointPath,
   helpersPath,
+  webHandlerPath,
   shouldAddHelpers = false,
   useRequire = false,
-  webSignature = false,
 }) {
   return function () {
     const bridge = new Bridge();
@@ -82,15 +84,20 @@ function getVercelLauncher({
 
     getListener(entrypointPath)
       .then(listener => {
+        if (listener.webSignature) {
+          return import(webHandlerPath).then(({ wrapWebHandler }) =>
+            wrapWebHandler(listener)
+          );
+        }
+        return listener;
+      })
+      .then(listener => {
         if (typeof listener.listen === 'function') {
           Server.prototype.listen = originalListen;
           const server = listener;
           bridge.setServer(server);
           bridge.listen();
         } else if (typeof listener === 'function') {
-          if (listener.webSignature) {
-            listener = wrapWebHandler(listener);
-          }
           Server.prototype.listen = originalListen;
           if (shouldAddHelpers) {
             bridge.setStoreEvents(true);

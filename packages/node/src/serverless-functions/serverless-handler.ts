@@ -29,6 +29,7 @@ export async function createServerlessEventHandler(
   const launcher = getVercelLauncher({
     entrypointPath: entrypoint,
     helpersPath: './helpers.js',
+    webHandlerPath: './web-handler.js',
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire: options.useRequire,
 
