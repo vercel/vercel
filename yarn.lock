@@ -3389,6 +3389,10 @@
   resolved "https://registry.yarnpkg.com/@vercel/build-utils/-/build-utils-4.2.0.tgz#251a496bd426f06ed3e882047728e07121c1d303"
   integrity sha512-W0TKBUGaUXHj16thnPjzFUT94rR6Hkw0Zf+PlZbUN2Op7KswgBCl5At306tz5xi/BYC8lXc9WqDd3ZWnfiw4Ng==
 
+"@vercel/build-utils@https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/build-utils.tgz":
+  version "5.5.9-3afb179"
+  resolved "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/build-utils.tgz#2e0d4b065e0cb556832eeede33ceee0f50de30f5"
+
 "@vercel/fun@1.0.4":
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/@vercel/fun/-/fun-1.0.4.tgz#5d01cca962488b2328063b0c3fc0b6fac2555c2a"
@@ -3436,6 +3440,34 @@
     node-gyp-build "^4.2.2"
     resolve-from "^5.0.0"
     rollup-pluginutils "^2.8.2"
+
+"@vercel/node-bridge@https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node-bridge.tgz":
+  version "3.1.2-3afb179"
+  resolved "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node-bridge.tgz#9e8a9b306ce96e164358d67130b60f1ab527ac4c"
+
+"@vercel/node@https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node.tgz":
+  version "2.6.4-3afb179"
+  resolved "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node.tgz#36439a235b47b0fc13d199e20b4bf9f51f60e88e"
+  dependencies:
+    "@edge-runtime/vm" "2.0.0"
+    "@types/node" "14.18.33"
+    "@vercel/build-utils" "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/build-utils.tgz"
+    "@vercel/node-bridge" "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/node-bridge.tgz"
+    "@vercel/static-config" "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/static-config.tgz"
+    edge-runtime "2.0.0"
+    esbuild "0.14.47"
+    exit-hook "2.2.1"
+    node-fetch "2.6.7"
+    ts-node "8.9.1"
+    typescript "4.3.4"
+
+"@vercel/static-config@https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/static-config.tgz":
+  version "2.0.6-3afb179"
+  resolved "https://vercel-plypu7hux.vercel.sh/tarballs/@vercel/static-config.tgz#5e21b7e17b3f020fba0f063a5b2394def3be3e22"
+  dependencies:
+    ajv "8.6.3"
+    json-schema-to-ts "1.6.4"
+    ts-morph "12.0.0"
 
 "@zeit/dns-cached-resolve@2.1.0":
   version "2.1.0"
