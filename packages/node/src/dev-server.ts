@@ -148,6 +148,7 @@ async function main() {
   const proxyServer = createServer(onDevRequest);
   await listen(proxyServer, 0, '127.0.0.1');
 
+  console.log('>>> invoke handler', entrypoint, config);
   try {
     handleEvent = await createEventHandler(entrypoint!, config, {
       shouldAddHelpers,
