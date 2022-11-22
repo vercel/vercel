@@ -4,11 +4,14 @@
   "scripts": {
     "build": "next build"
   },
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "chrome-aws-lambda": "8.0.0",
     "firebase": "8.3.0",
-    "next": "13.0.4",
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "next": "10.0.8",
+    "react": "17.0.1",
+    "react-dom": "17.0.1"
   }
 }
