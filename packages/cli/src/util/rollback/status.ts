@@ -236,12 +236,12 @@ async function renderJobSucceeded({
       toDeploymentId
     );
     deploymentInfo = `${chalk.bold(deployment.url)} (${toDeploymentId})`;
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      output.debug(
-        `Failed to get deployment url for ${toDeploymentId}: ${err.toString()}`
-      );
-    }
+  } catch (err: any) {
+    output.debug(
+      `Failed to get deployment url for ${toDeploymentId}: ${
+        err?.toString() || err
+      }`
+    );
     deploymentInfo = chalk.bold(toDeploymentId);
   }
 
