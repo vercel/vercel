@@ -1,4 +1,3 @@
-// eslint-disable-next-line
 import { join } from 'path';
 import ms from 'ms';
 import fs, { mkdirp } from 'fs-extra';
@@ -44,19 +43,16 @@ test('[vercel dev] validate mixed routes and rewrites', async () => {
   expect(output.stderr).toMatch(/vercel\.link\/mix-routing-props/m);
 });
 
-// Test seems unstable: It won't return sometimes.
 test('[vercel dev] validate env var names', async () => {
   const directory = fixture('invalid-env-var-name');
-  const { dev } = await testFixture(directory, { stdio: 'pipe' });
+  const { dev } = await testFixture(directory, { encoding: 'utf8' });
 
   try {
     let stderr = '';
-    dev.stderr.setEncoding('utf8');
 
     await new Promise<void>((resolve, reject) => {
-      dev.stderr.on('data', (b: any) => {
-        stderr += b.toString();
-
+      dev.stderr.on('data', (b: string) => {
+        stderr += b;
         if (
           stderr.includes('Ignoring env var "1" because name is invalid') &&
           stderr.includes(
@@ -71,10 +67,10 @@ test('[vercel dev] validate env var names', async () => {
       });
 
       dev.on('error', reject);
-      dev.on('exit', resolve);
+      dev.on('close', resolve);
     });
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 

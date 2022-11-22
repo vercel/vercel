@@ -109,7 +109,7 @@ test('[vercel dev] no build matches warning', async () => {
       });
     });
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -147,7 +147,7 @@ test('[vercel dev] render warning for empty cwd dir', async () => {
     validateResponseHeaders(response);
     expect(response.status).toBe(404);
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -187,7 +187,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
     const text2 = await resp2.text();
     expect(text2.trim()).toBe('hello second');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -490,7 +490,7 @@ test('[vercel dev] Middleware rewrites with same origin', async () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
   } finally {
-    await dev.kill('SIGTERM');
+    await await dev.kill();
   }
 });
 
