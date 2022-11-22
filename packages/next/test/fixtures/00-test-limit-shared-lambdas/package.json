@@ -1,6 +1,9 @@
 {
   "name": "test-limit",
   "version": "1.0.0",
+  "engines": {
+    "node": "16.x"
+  },
   "scripts": {
     "build": "next build"
   },
