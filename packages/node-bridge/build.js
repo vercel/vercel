@@ -47,6 +47,7 @@ async function bundle(sourceFile, finalName) {
     join(outputDir, 'index.js'),
     join(__dirname, `${finalName}.js`)
   );
+  console.error(`ncc: Writing ${finalName}.js`);
   await fs.remove(outputDir);
 }
 
