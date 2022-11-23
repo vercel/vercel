@@ -23,7 +23,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     },
     {
@@ -43,7 +43,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     },
     {
@@ -60,7 +60,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     },
     {
@@ -110,7 +110,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     }
   ]

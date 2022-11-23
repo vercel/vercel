@@ -3,6 +3,9 @@
     "build": "next build",
     "now-build": "next build"
   },
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "next": "10.0.8",
     "react": "latest",
