@@ -1194,7 +1194,8 @@ describe('build', () => {
       > = {
         turbo: {
           name: 'Turbo',
-          buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
+          buildCommand:
+            'cd ../.. && npx turbo run build  --force --filter=app-1...',
           installCommand: 'cd ../.. && yarn install',
         },
         nx: {

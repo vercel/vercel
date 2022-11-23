@@ -85,7 +85,7 @@ export async function setMonorepoDefaultSettings(
 
     setCommand(
       'buildCommand',
-      `cd ${relativeToRoot} && npx turbo run build --filter={./${relative(
+      `cd ${relativeToRoot} && npx turbo run build  --force --filter={./${relative(
         cwd,
         workPath
       )}}...`
