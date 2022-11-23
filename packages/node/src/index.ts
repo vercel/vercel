@@ -73,7 +73,7 @@ function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
 
-const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge'];
+const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge', 'web'];
 
 const require_ = eval('require');
 
@@ -471,6 +471,7 @@ export const build: BuildV3 = async ({
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
+      launcherType: staticConfig?.runtime === 'web' ? 'Web' : 'Nodejs',
       runtime: nodeVersion.runtime,
       shouldAddHelpers,
       shouldAddSourcemapSupport,
