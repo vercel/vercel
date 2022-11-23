@@ -35,7 +35,9 @@ export class Prerender {
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
+
     this.lambda = lambda;
+    this.lambda.operationType = this.lambda.operationType || 'ISR';
 
     if (
       typeof group !== 'undefined' &&
