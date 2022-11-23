@@ -10,7 +10,7 @@
     "@redwoodjs/core": "^0.16.0"
   },
   "engines": {
-    "node": ">=12",
+    "node": "16.x",
     "yarn": ">=1.15"
   }
 }
