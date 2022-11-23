@@ -5,7 +5,7 @@
     "build": "next build"
   },
   "engines": {
-    "node": "16.x"
+    "node": "14.x"
   },
   "dependencies": {
     "chrome-aws-lambda": "8.0.0",
