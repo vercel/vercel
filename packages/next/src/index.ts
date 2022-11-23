@@ -1072,6 +1072,7 @@ export const build: BuildV2 = async ({
           handler: '___next_launcher.cjs',
           runtime: nodeVersion.runtime,
           ...lambdaOptions,
+          operationType: 'SSR',
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
           supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
