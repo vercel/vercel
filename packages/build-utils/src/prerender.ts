@@ -37,9 +37,7 @@ export class Prerender {
     this.expiration = expiration;
 
     this.lambda = lambda;
-    if (this.lambda) {
-      this.lambda.operationType = this.lambda.operationType || 'ISR';
-    }
+    this.lambda.operationType = this.lambda.operationType || 'ISR';
 
     if (
       typeof group !== 'undefined' &&
