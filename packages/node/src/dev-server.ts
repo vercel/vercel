@@ -86,7 +86,7 @@ function listen(server: Server, port: number, host: string): Promise<void> {
   });
 }
 
-const validRuntimes = ['experimental-edge'];
+const validRuntimes = ['experimental-edge', 'web'];
 function parseRuntime(
   entrypoint: string,
   entryPointPath: string
@@ -127,7 +127,8 @@ async function createEventHandler(
   return createServerlessEventHandler(entrypointPath, {
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire,
-    launcherType: findLauncherType(entrypoint, config),
+    launcherType:
+      runtime === 'web' ? 'Web' : findLauncherType(entrypoint, config),
   });
 }
 
