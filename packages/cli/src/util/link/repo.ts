@@ -12,7 +12,6 @@ import { Project } from '../../types';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
 import selectOrg from '../input/select-org';
-import { projectSelector } from '../input/project-selector';
 
 const home = homedir();
 
@@ -142,7 +141,6 @@ export async function ensureRepoLink(
         )}.`
       );
 
-      await projectSelector(client, cwd, repoConfig, yes);
       // TODO: run detection logic to find potential projects.
       // then prompt user to select valid projects.
       // then create new Projects
