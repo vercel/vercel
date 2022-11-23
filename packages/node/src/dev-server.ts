@@ -107,7 +107,7 @@ function parseRuntime(
 
 async function createEventHandler(
   entrypoint: string,
-  config: Config & { launcherType?: 'Nodejs' | 'Web' }, // TODO while changing @vercel/build-utils
+  config: Config,
   options: { shouldAddHelpers: boolean }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const entrypointPath = join(process.cwd(), entrypoint!);
@@ -127,8 +127,12 @@ async function createEventHandler(
   return createServerlessEventHandler(entrypointPath, {
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire,
-    launcherType: config.launcherType || 'Nodejs',
+    launcherType: findLauncherType(entrypoint, config),
   });
+}
+
+function findLauncherType(entrypoint: string, config: Config) {
+  return config.functions?.[entrypoint]?.launcherType ?? 'Nodejs';
 }
 
 let handleEvent: (request: IncomingMessage) => Promise<VercelProxyResponse>;
@@ -148,7 +152,6 @@ async function main() {
   const proxyServer = createServer(onDevRequest);
   await listen(proxyServer, 0, '127.0.0.1');
 
-  console.log('>>> invoke handler', entrypoint, config);
   try {
     handleEvent = await createEventHandler(entrypoint!, config, {
       shouldAddHelpers,
