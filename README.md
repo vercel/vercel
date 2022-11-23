@@ -33,6 +33,14 @@ For details on how to use Vercel, check out our [documentation](https://vercel.c
 
 ## Contributing
 
+This project uses [yarn](https://yarnpkg.com/) to install dependencies and run scripts.
+
+You can use the `dev` script to run local changes as if you were invoking Vercel CLI. For example, `vercel deploy --cwd=/path/to/project` could be run with local changes with `yarn dev deploy --cwd=/path/to/project`.
+
+See the [Contributing Guidelines](./.github/CONTRIBUTING.md) for more details.
+
+## Reference
+
 - [Code of Conduct](./.github/CODE_OF_CONDUCT.md)
 - [Contributing Guidelines](./.github/CONTRIBUTING.md)
 - [Apache 2.0 License](./LICENSE)
