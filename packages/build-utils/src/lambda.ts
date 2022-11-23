@@ -49,7 +49,9 @@ interface GetLambdaOptionsFromFunctionOptions {
 export class Lambda {
   type: 'Lambda';
   /**
-   * framework-specific lambda type label
+   * This is a label for the type of Lambda a framework is producing.
+   * The value can be any string that makes sense for a given framework.
+   * Examples: "API", "ISR", "SSR", "SSG", "Render", "Resource"
    */
   operationType?: string;
   files?: Files;
