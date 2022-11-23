@@ -8,6 +8,9 @@
     "watch": "tsc -w",
     "build": "tsc"
   },
+  "engines": {
+    "node": "16.x"
+  },
   "devDependencies": {
     "typescript": "^3.7.3"
   }
