@@ -48,7 +48,10 @@ interface GetLambdaOptionsFromFunctionOptions {
 
 export class Lambda {
   type: 'Lambda';
-  operationType?: string; // framework-specific lambda type label
+  /**
+   * framework-specific lambda type label
+   */
+  operationType?: string;
   files?: Files;
   handler: string;
   runtime: string;
