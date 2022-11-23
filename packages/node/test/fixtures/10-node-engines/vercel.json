@@ -7,8 +7,8 @@
     }
   ],
   "probes": [
-    { "path": "/empty", "mustContain": "RANDOMNESS_PLACEHOLDER:16" },
-    { "path": "/greater", "mustContain": "RANDOMNESS_PLACEHOLDER:16" },
+    { "path": "/empty", "mustContain": "RANDOMNESS_PLACEHOLDER:18" },
+    { "path": "/greater", "mustContain": "RANDOMNESS_PLACEHOLDER:18" },
     { "path": "/major", "mustContain": "RANDOMNESS_PLACEHOLDER:14" },
     { "path": "/range", "mustContain": "RANDOMNESS_PLACEHOLDER:14" }
   ]
