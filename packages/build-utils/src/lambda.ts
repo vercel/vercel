@@ -24,6 +24,7 @@ export interface LambdaOptionsBase {
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
   experimentalResponseStreaming?: boolean;
+  operationType?: string;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -47,6 +48,12 @@ interface GetLambdaOptionsFromFunctionOptions {
 
 export class Lambda {
   type: 'Lambda';
+  /**
+   * This is a label for the type of Lambda a framework is producing.
+   * The value can be any string that makes sense for a given framework.
+   * Examples: "API", "ISR", "SSR", "SSG", "Render", "Resource"
+   */
+  operationType?: string;
   files?: Files;
   handler: string;
   runtime: string;
@@ -75,6 +82,7 @@ export class Lambda {
       supportsMultiPayloads,
       supportsWrapper,
       experimentalResponseStreaming,
+      operationType,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -123,7 +131,9 @@ export class Lambda {
         '"regions" is not a string Array'
       );
     }
+
     this.type = 'Lambda';
+    this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
