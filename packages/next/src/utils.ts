@@ -209,6 +209,11 @@ type RoutesManifestOld = {
       defaultLocale: string;
     }>;
   };
+  rsc?: {
+    header: string;
+    varyHeader: string;
+  };
+  skipMiddlewareUrlNormalize?: boolean;
 };
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
@@ -748,6 +753,7 @@ export async function createPseudoLayer(files: {
 
 interface CreateLambdaFromPseudoLayersOptions extends LambdaOptionsWithFiles {
   layers: PseudoLayer[];
+  isStreaming?: boolean;
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -757,6 +763,7 @@ const createLambdaSema = new Sema(1);
 export async function createLambdaFromPseudoLayers({
   files: baseFiles,
   layers,
+  isStreaming,
   ...lambdaOptions
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -791,6 +798,11 @@ export async function createLambdaFromPseudoLayers({
 
   return new NodejsLambda({
     ...lambdaOptions,
+    ...(isStreaming
+      ? {
+          experimentalResponseStreaming: true,
+        }
+      : {}),
     files,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
@@ -1273,6 +1285,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  isStreaming?: boolean;
   isPrerenders?: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
@@ -1983,6 +1996,9 @@ export const onPrerenderRoute =
           allowQuery = [];
         }
       }
+      const rscVaryHeader =
+        routesManifest?.rsc?.varyHeader ||
+        '__rsc__, __next_router_state_tree__, __next_router_prefetch__';
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
@@ -2000,7 +2016,7 @@ export const onPrerenderRoute =
         ...(isAppPathRoute
           ? {
               initialHeaders: {
-                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+                vary: rscVaryHeader,
               },
             }
           : {}),
@@ -2023,7 +2039,7 @@ export const onPrerenderRoute =
           ? {
               initialHeaders: {
                 'content-type': 'application/octet-stream',
-                vary: '__rsc__, __next_router_state_tree__, __next_router_prefetch__',
+                vary: rscVaryHeader,
               },
             }
           : {}),
@@ -2262,6 +2278,7 @@ interface EdgeFunctionInfoV2 extends BaseEdgeFunctionInfo {
 interface EdgeFunctionMatcher {
   regexp: string;
   has?: HasField;
+  missing?: HasField;
 }
 
 export async function getMiddlewareBundle({
@@ -2437,6 +2454,12 @@ export async function getMiddlewareBundle({
           shortPath.replace(/^app\//, '').replace(/(^|\/)page$/, '') || 'index';
       }
 
+      if (routesManifest?.basePath) {
+        shortPath = path.posix
+          .join(routesManifest.basePath, shortPath)
+          .replace(/^\//, '');
+      }
+
       worker.edgeFunction.name = shortPath;
       source.edgeFunctions[shortPath] = worker.edgeFunction;
 
@@ -2457,6 +2480,7 @@ export async function getMiddlewareBundle({
               key: 'x-prerender-revalidate',
               value: prerenderBypassToken,
             },
+            ...(matcher.missing || []),
           ],
         };
 
@@ -2586,6 +2610,9 @@ function getRouteMatchers(
     };
     if (matcher.has) {
       m.has = normalizeHas(matcher.has);
+    }
+    if (matcher.missing) {
+      m.missing = normalizeHas(matcher.missing);
     }
     return m;
   });

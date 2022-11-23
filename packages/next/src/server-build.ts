@@ -338,6 +338,7 @@ export async function serverBuild({
 
     const apiPages: string[] = [];
     const nonApiPages: string[] = [];
+    const streamingPages: string[] = [];
 
     lambdaPageKeys.forEach(page => {
       if (
@@ -359,6 +360,8 @@ export async function serverBuild({
 
       if (pageMatchesApi(page)) {
         apiPages.push(page);
+      } else if (appDir && lambdaAppPaths[page]) {
+        streamingPages.push(page);
       } else {
         nonApiPages.push(page);
       }
@@ -546,7 +549,12 @@ export async function serverBuild({
     const compressedPages: {
       [page: string]: PseudoFile;
     } = {};
-    const mergedPageKeys = [...nonApiPages, ...apiPages, ...internalPages];
+    const mergedPageKeys = [
+      ...nonApiPages,
+      ...streamingPages,
+      ...apiPages,
+      ...internalPages,
+    ];
     const traceCache = {};
 
     const getOriginalPagePath = (page: string) => {
@@ -704,6 +712,27 @@ export async function serverBuild({
       pageExtensions,
     });
 
+    const streamingPageLambdaGroups = await getPageLambdaGroups({
+      entryPath: requiredServerFilesManifest.appDir || entryPath,
+      config,
+      pages: streamingPages,
+      prerenderRoutes,
+      pageTraces,
+      compressedPages,
+      tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
+      initialPseudoLayer,
+      lambdaCompressedByteLimit,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
+      internalPages,
+      pageExtensions,
+    });
+
+    for (const group of streamingPageLambdaGroups) {
+      if (!group.isPrerenders) {
+        group.isStreaming = true;
+      }
+    }
+
     const apiLambdaGroups = await getPageLambdaGroups({
       entryPath: requiredServerFilesManifest.appDir || entryPath,
       config,
@@ -733,13 +762,23 @@ export async function serverBuild({
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
+          streamingPageLambdaGroups: streamingPageLambdaGroups.map(group => ({
+            pages: group.pages,
+            isPrerender: group.isPrerenders,
+            pseudoLayerBytes: group.pseudoLayerBytes,
+            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
+          })),
           nextServerLayerSize: initialPseudoLayer.pseudoLayerBytes,
         },
         null,
         2
       )
     );
-    const combinedGroups = [...pageLambdaGroups, ...apiLambdaGroups];
+    const combinedGroups = [
+      ...pageLambdaGroups,
+      ...streamingPageLambdaGroups,
+      ...apiLambdaGroups,
+    ];
 
     await detectLambdaLimitExceeding(
       combinedGroups,
@@ -832,6 +871,7 @@ export async function serverBuild({
         memory: group.memory,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
+        isStreaming: group.isStreaming,
       });
 
       for (const page of group.pages) {
@@ -1097,6 +1137,25 @@ export async function serverBuild({
     }
   }
 
+  const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
+  const completeDynamicRoutes: typeof dynamicRoutes = [];
+
+  if (appDir) {
+    for (const route of dynamicRoutes) {
+      completeDynamicRoutes.push(route);
+      completeDynamicRoutes.push({
+        ...route,
+        src: route.src.replace(
+          new RegExp(escapeStringRegexp('(?:/)?$')),
+          '(?:\\.rsc)?(?:/)?$'
+        ),
+        dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
+      });
+    }
+  } else {
+    completeDynamicRoutes.push(...dynamicRoutes);
+  }
+
   return {
     wildcard: wildcardConfig,
     images:
@@ -1271,7 +1330,15 @@ export async function serverBuild({
 
       // middleware comes directly after redirects but before
       // beforeFiles rewrites as middleware is not a "file" route
+      ...(routesManifest?.skipMiddlewareUrlNormalize
+        ? denormalizeNextDataRoute(true)
+        : []),
+
       ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
+
+      ...(routesManifest?.skipMiddlewareUrlNormalize
+        ? normalizeNextDataRoute(true)
+        : []),
 
       ...beforeFilesRewrites,
 
@@ -1350,7 +1417,7 @@ export async function serverBuild({
               has: [
                 {
                   type: 'header',
-                  key: '__rsc__',
+                  key: rscHeader,
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
@@ -1361,7 +1428,7 @@ export async function serverBuild({
               has: [
                 {
                   type: 'header',
-                  key: '__rsc__',
+                  key: rscHeader,
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
@@ -1462,7 +1529,7 @@ export async function serverBuild({
         ? // when resolving data routes for middleware we need to include
           // all dynamic routes including non-SSG/SSP so that the priority
           // is correct
-          dynamicRoutes
+          completeDynamicRoutes
             .map(route => {
               route = Object.assign({}, route);
               let normalizedSrc = route.src;
@@ -1537,7 +1604,7 @@ export async function serverBuild({
 
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
-      ...dynamicRoutes,
+      ...completeDynamicRoutes,
 
       ...(isNextDataServerResolving
         ? [

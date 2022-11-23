@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import Client from '../client';
 import { Cert } from '../../types';
-import { isErrnoException } from '../is-error';
+import { isErrnoException } from '@vercel/error-utils';
 import { isAPIError } from '../errors-ts';
 
 export default async function createCertFromFile(
