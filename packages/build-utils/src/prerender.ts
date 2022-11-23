@@ -37,6 +37,7 @@ export class Prerender {
     this.expiration = expiration;
 
     this.lambda = lambda;
+    // "ISR" is the platform default lambda label for prerender functions
     this.lambda.operationType = this.lambda.operationType || 'ISR';
 
     if (
