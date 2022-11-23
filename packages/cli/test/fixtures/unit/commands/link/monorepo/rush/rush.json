@@ -1,0 +1,16 @@
+{
+  "projects": [
+    {
+      "projectFolder": "apps/app-1"
+    },
+    {
+      "projectFolder": "apps/app-2"
+    },
+    {
+      "projectFolder": "packages/package-1"
+    },
+    {
+      "projectFolder": "packages/package-2"
+    }
+  ]
+}

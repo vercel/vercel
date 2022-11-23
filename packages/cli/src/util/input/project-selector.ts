@@ -15,7 +15,6 @@ export async function projectSelector(
   autoConfirm: boolean = false
 ) {
   require('./patch-inquirer');
-  // const { output, config } = client;
 
   const choices: Array<CheckboxChoiceOptions> = [];
 
@@ -23,14 +22,13 @@ export async function projectSelector(
     for (const project of repoConfig.projects) {
       choices.push({
         name: project.name,
-        value: project.id,
+        value: project.directory,
         checked: true,
       });
     }
   } else {
     const localFS = new LocalFileSystemDetector(cwd);
     const workspaces = await getWorkspaces({ fs: localFS });
-    console.log(workspaces);
     const packagesPaths = await Promise.all(
       workspaces.map(workspace =>
         getWorkspacePackagePaths({ fs: localFS, workspace })
@@ -57,15 +55,15 @@ export async function projectSelector(
   }
 
   if (autoConfirm) {
+    return choices.filter(choice => choice.checked).map(choice => choice.value);
+  } else {
+    const answers = await client.prompt({
+      type: 'checkbox',
+      name: 'projects',
+      message: 'Select projects',
+      choices,
+    });
+
+    return answers.projects;
   }
-
-  const answers = await client.prompt({
-    type: 'checkbox',
-    name: 'projects',
-    message: 'Select projects',
-    choices,
-    default: 0,
-  });
-
-  return answers.projects;
 }
