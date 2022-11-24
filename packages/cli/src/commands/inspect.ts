@@ -13,7 +13,7 @@ import { getDeployment } from '../util/get-deployment';
 import { Deployment } from '@vercel/client';
 import { Build } from '../types';
 import title from 'title';
-import { isErrnoException } from '../util/is-error';
+import { isErrnoException } from '@vercel/error-utils';
 import { isAPIError } from '../util/errors-ts';
 import { URL } from 'url';
 

@@ -23,7 +23,7 @@ class MockStream extends PassThrough {
     this.isTTY = true;
   }
 
-  // These is for the `ora` module
+  // These are for the `ora` module
   clearLine() {}
   cursorTo() {}
 }
@@ -94,7 +94,9 @@ export class MockClient extends Client {
     this.output = new Output(this.stderr);
 
     this.argv = [];
-    this.authConfig = {};
+    this.authConfig = {
+      token: 'token_dummy',
+    };
     this.config = {};
     this.localConfig = {};
 

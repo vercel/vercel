@@ -12,21 +12,19 @@ import {
   FileBlob,
   FileFsRef,
   Lambda,
-  PackageJson,
 } from '@vercel/build-utils';
 import { VercelConfig } from '@vercel/client';
 import { HandleValue, Route } from '@vercel/routing-utils';
 import { Output } from '../output';
-import { ProjectEnvVariable, ProjectSettings } from '../../types';
+import { ProjectSettings } from '../../types';
+import { BuilderWithPkg } from '../build/import-builders';
 
 export { VercelConfig };
 
 export interface DevServerOptions {
   output: Output;
-  devCommand?: string;
   projectSettings?: ProjectSettings;
-  systemEnvValues?: string[];
-  projectEnvs?: ProjectEnvVariable[];
+  envValues?: Record<string, string>;
 }
 
 export interface EnvConfigs {
@@ -49,7 +47,7 @@ export interface EnvConfigs {
 export interface BuildMatch extends BuildConfig {
   entrypoint: string;
   src: string;
-  builderWithPkg: BuilderWithPackage;
+  builderWithPkg: BuilderWithPkg;
   buildOutput: BuilderOutputs;
   buildResults: Map<string | null, BuildResult>;
   buildTimestamp: number;
@@ -123,13 +121,6 @@ export interface BuildResultV4 {
   distPath?: string;
 }
 
-export interface BuilderWithPackage {
-  runInProcess?: boolean;
-  requirePath: string;
-  builder: Readonly<Builder>;
-  package: Readonly<PackageJson>;
-}
-
 export interface HttpHeadersConfig {
   [name: string]: string;
 }
@@ -145,8 +136,8 @@ export interface RouteResult {
   status?: number;
   // "headers": <object of the added response header values>
   headers: HttpHeadersConfig;
-  // "uri_args": <object (key=value) list of new uri args to be passed along to dest >
-  uri_args?: { [key: string]: any };
+  // "query": <object (key=values) of new uri args to be passed along to dest>
+  query?: Record<string, string[]>;
   // "matched_route": <object of the route spec that matched>
   matched_route?: Route;
   // "matched_route_idx": <integer of the index of the route matched>

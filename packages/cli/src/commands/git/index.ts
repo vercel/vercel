@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import Client from '../../util/client';
-import { ensureLink } from '../../util/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
@@ -16,7 +16,7 @@ const help = () => {
 
   ${chalk.dim('Commands:')}
 
-    connect                   Connect your Git config "origin" remote as a Git provider to your project
+    connect [url]             Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository
     disconnect                Disconnect the Git provider repository from your project
 
   ${chalk.dim('Options:')}
@@ -25,13 +25,23 @@ const help = () => {
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}   Login token
-    -y, --yes                 Skip questions when setting up new project using default scope and settings
+    -y, --yes                 Skip confirmation when connecting a Git provider
 
   ${chalk.dim('Examples:')}
 
-  ${chalk.gray('–')} Connect a Git provider repository
+  ${chalk.gray(
+    '–'
+  )} Connect your Vercel Project to your Git repository defined in your local .git config
 
     ${chalk.cyan(`$ ${getPkgName()} git connect`)}
+  
+  ${chalk.gray(
+    '–'
+  )} Connect your Vercel Project to a Git repository using the remote URL
+
+    ${chalk.cyan(
+      `$ ${getPkgName()} git connect https://github.com/user/repo.git`
+    )}
 
   ${chalk.gray('–')} Disconnect the Git provider repository
 
@@ -70,7 +80,7 @@ export default async function main(client: Client) {
   argv._ = argv._.slice(1);
   subcommand = argv._[0];
   const args = argv._.slice(1);
-  const confirm = Boolean(argv['--yes']);
+  const autoConfirm = Boolean(argv['--yes']);
   const { output } = client;
 
   let paths = [process.cwd()];
@@ -80,7 +90,7 @@ export default async function main(client: Client) {
   }
   const { path } = pathValidation;
 
-  const linkedProject = await ensureLink('git', client, path, confirm);
+  const linkedProject = await ensureLink('git', client, path, { autoConfirm });
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }

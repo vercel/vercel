@@ -1,3 +1,4 @@
+// bust cache
 const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
@@ -75,12 +76,6 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
   }
 
   logWithinTest('id', deploymentId);
-  const st = typeof expect !== 'undefined' ? expect.getState() : {};
-  const expectstate = {
-    currentTestName: st.currentTestName,
-    testPath: st.testPath,
-  };
-  logWithinTest('deploymentUrl', `https://${deploymentUrl}`, expectstate);
 
   for (let i = 0; i < 750; i += 1) {
     const deployment = await deploymentGet(deploymentId);
@@ -94,10 +89,10 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
       throw error;
     }
     if (readyState === 'READY') {
-      logWithinTest('state is READY, moving on');
+      logWithinTest(`State of https://${deploymentUrl} is READY, moving on`);
       break;
     }
-    if (i > 0 && i % 25 === 0) {
+    if (i % 25 === 0) {
       logWithinTest(
         `State of https://${deploymentUrl} is ${readyState}, retry number ${i}`
       );
@@ -162,7 +157,6 @@ async function deploymentPost(payload) {
 
 async function deploymentGet(deploymentId) {
   const url = `/v13/deployments/${deploymentId}`;
-  logWithinTest('fetching deployment', url);
   const resp = await fetchWithAuth(url);
   const json = await resp.json();
   if (json.error) {
@@ -207,8 +201,8 @@ async function fetchTokenWithRetry(retries = 5) {
     NOW_TOKEN,
     TEMP_TOKEN,
     VERCEL_TOKEN,
-    VERCEL_TEAM_TOKEN,
-    VERCEL_REGISTRATION_URL,
+    VERCEL_TEST_TOKEN,
+    VERCEL_TEST_REGISTRATION_URL,
   } = process.env;
   if (VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN) {
     if (!TEMP_TOKEN) {
@@ -218,7 +212,7 @@ async function fetchTokenWithRetry(retries = 5) {
     }
     return VERCEL_TOKEN || NOW_TOKEN || TEMP_TOKEN;
   }
-  if (!VERCEL_TEAM_TOKEN || !VERCEL_REGISTRATION_URL) {
+  if (!VERCEL_TEST_TOKEN || !VERCEL_TEST_REGISTRATION_URL) {
     throw new Error(
       process.env.CI
         ? 'Failed to create test deployment. This is expected for 3rd-party Pull Requests. Please run tests locally.'
@@ -226,10 +220,10 @@ async function fetchTokenWithRetry(retries = 5) {
     );
   }
   try {
-    const res = await _fetch(VERCEL_REGISTRATION_URL, {
+    const res = await _fetch(VERCEL_TEST_REGISTRATION_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${VERCEL_TEAM_TOKEN}`,
+        Authorization: `Bearer ${VERCEL_TEST_TOKEN}`,
       },
     });
     if (!res.ok) {

@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import inquirer from 'inquirer';
 import { Project } from '../../types';
 import { Output } from '../../util/output';
 import confirm from '../../util/input/confirm';
@@ -45,7 +44,7 @@ export default async function rm(
   let [envName, envTarget, envGitBranch] = args;
 
   while (!envName) {
-    const { inputName } = await inquirer.prompt({
+    const { inputName } = await client.prompt({
       type: 'input',
       name: 'inputName',
       message: `What’s the name of the variable?`,
@@ -87,7 +86,7 @@ export default async function rm(
   }
 
   while (envs.length > 1) {
-    const { id } = await inquirer.prompt({
+    const { id } = await client.prompt({
       name: 'id',
       type: 'list',
       message: `Remove ${envName} from which Environments?`,
@@ -112,7 +111,7 @@ export default async function rm(
       false
     ))
   ) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 

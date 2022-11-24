@@ -308,18 +308,6 @@ async function testDeployment(fixturePath) {
   const uploadNowJson = nowJson.uploadNowJson;
   delete nowJson.uploadNowJson;
 
-  ['VERCEL_BUILDER_DEBUG', 'VERCEL_BUILD_CLI_PACKAGE'].forEach(name => {
-    if (process.env[name]) {
-      if (!nowJson.build) {
-        nowJson.build = {};
-      }
-      if (!nowJson.build.env) {
-        nowJson.build.env = {};
-      }
-      nowJson.build.env[name] = process.env[name];
-    }
-  });
-
   const probePath = path.resolve(fixturePath, 'probe.js');
   let probes = [];
   if ('probes' in nowJson) {

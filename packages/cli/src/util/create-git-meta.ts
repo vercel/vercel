@@ -5,7 +5,7 @@ import git from 'git-last-commit';
 import { exec } from 'child_process';
 import { GitMetadata, Project } from '../types';
 import { Output } from './output';
-import { errorToString } from './is-error';
+import { errorToString } from '@vercel/error-utils';
 
 export async function createGitMeta(
   directory: string,
@@ -78,16 +78,24 @@ function getLastCommit(directory: string): Promise<git.Commit> {
 
 export function isDirty(directory: string, output: Output): Promise<boolean> {
   return new Promise(resolve => {
-    exec('git status -s', { cwd: directory }, function (err, stdout, stderr) {
-      let debugMessage = `Failed to determine if Git repo has been modified:`;
-      if (err || stderr) {
-        if (err) debugMessage += `\n${err}`;
-        if (stderr) debugMessage += `\n${stderr.trim()}`;
-        output.debug(debugMessage);
-        return resolve(false);
+    // note: we specify the `--no-optional-locks` git flag so that `git status`
+    // does not perform any "optional" operations such as optimizing the index
+    // in the background: https://git-scm.com/docs/git-status#_background_refresh
+    exec(
+      'git --no-optional-locks status -s',
+      { cwd: directory },
+      function (err, stdout, stderr) {
+        let debugMessage = `Failed to determine if Git repo has been modified:`;
+        stderr = stderr && stderr.trim();
+        if (err || stderr) {
+          if (err) debugMessage += `\n${err}`;
+          if (stderr) debugMessage += `\n${stderr.trim()}`;
+          output.debug(debugMessage);
+          return resolve(false);
+        }
+        resolve(stdout.trim().length > 0);
       }
-      resolve(stdout.trim().length > 0);
-    });
+    );
   });
 }
 

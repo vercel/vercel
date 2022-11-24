@@ -86,7 +86,7 @@ export default async function rm(
       client
     ))
   ) {
-    output.log('Aborted');
+    output.log('Canceled');
     return 0;
   }
 
@@ -224,7 +224,7 @@ async function removeDomain(
       !skipConfirmation &&
       !(await promptBool(`Remove conflicts associated with domain?`, client))
     ) {
-      output.log('Aborted');
+      output.log('Canceled');
       return 0;
     }
 

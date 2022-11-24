@@ -11,7 +11,7 @@ import { getPkgName, getCommandName } from '../../util/pkg-name';
 import Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
-import { errorToString, isError } from '../../util/is-error';
+import { errorToString, isError } from '@vercel/error-utils';
 
 const validateSlugKeypress = (data: string, value: string) =>
   // TODO: the `value` here should contain the current value + the keypress
@@ -59,7 +59,7 @@ export default async function add(client: Client): Promise<number> {
       });
     } catch (err: unknown) {
       if (isError(err) && err.message === 'USER_ABORT') {
-        output.log('Aborted');
+        output.log('Canceled');
         return 0;
       }
 

@@ -31,6 +31,7 @@ import {
   debug,
   NowBuildError,
   scanParentDirs,
+  cloneEnv,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
@@ -39,6 +40,7 @@ import * as BuildOutputV3 from './utils/build-output-v3';
 import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
+import treeKill from 'tree-kill';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -163,12 +165,12 @@ const nowDevScriptPorts = new Map<string, number>();
 const nowDevChildProcesses = new Set<ChildProcess>();
 
 ['SIGINT', 'SIGTERM'].forEach(signal => {
-  process.once(signal as NodeJS.Signals, () => {
+  process.once(signal as NodeJS.Signals, async () => {
     for (const child of nowDevChildProcesses) {
       debug(
         `Got ${signal}, killing dev server child process (pid=${child.pid})`
       );
-      process.kill(child.pid!, signal);
+      await new Promise(resolve => treeKill(child.pid!, signal, resolve));
     }
     process.exit(0);
   });
@@ -465,8 +467,7 @@ export const build: BuildV2 = async ({
           debug('Detected Gemfile');
           printInstall();
           const opts = {
-            env: {
-              ...process.env,
+            env: cloneEnv(process.env, {
               // See more: https://github.com/rubygems/rubygems/blob/a82d04856deba58be6b90f681a5e42a7c0f2baa7/bundler/lib/bundler/man/bundle-config.1.ronn
               BUNDLE_BIN: 'vendor/bin',
               BUNDLE_CACHE_PATH: 'vendor/cache',
@@ -476,7 +477,7 @@ export const build: BuildV2 = async ({
               BUNDLE_SILENCE_ROOT_WARNING: '1',
               BUNDLE_DISABLE_SHARED_GEMS: '1',
               BUNDLE_DISABLE_VERSION_CHECK: '1',
-            },
+            }),
           };
           await runBundleInstall(workPath, [], opts, meta);
           isBundleInstall = true;
@@ -568,7 +569,7 @@ export const build: BuildV2 = async ({
         const cmd = devCommand || `yarn run ${devScript}`;
         const child: ChildProcess = spawnCommand(cmd, opts);
 
-        child.on('exit', () => nowDevScriptPorts.delete(entrypoint));
+        child.on('close', () => nowDevScriptPorts.delete(entrypoint));
         nowDevChildProcesses.add(child);
 
         // Wait for the server to have listened on `$PORT`, after which we

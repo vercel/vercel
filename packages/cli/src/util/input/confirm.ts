@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 
 export default async function confirm(
   client: Client,

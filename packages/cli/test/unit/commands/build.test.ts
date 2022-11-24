@@ -7,6 +7,10 @@ import { client } from '../../mocks/client';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
+import { setupFixture } from '../../helpers/setup-fixture';
+import JSON5 from 'json5';
+// TODO (@Ethan-Arrowood) - After shipping support for turbo and nx, revisit rush support
+// import execa from 'execa';
 
 jest.setTimeout(ms('1 minute'));
 
@@ -481,9 +485,12 @@ describe('build', () => {
       expect(config).toMatchObject({
         version: 3,
         routes: [
-          { src: '^/.*$', middlewarePath: 'middleware', continue: true },
-          { handle: 'filesystem' },
-          { src: '^/api(/.*)?$', status: 404 },
+          {
+            src: '^/.*$',
+            middlewarePath: 'middleware',
+            override: true,
+            continue: true,
+          },
           { handle: 'error' },
           { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
         ],
@@ -542,9 +549,12 @@ describe('build', () => {
       expect(config).toMatchObject({
         version: 3,
         routes: [
-          { src: '^/.*$', middlewarePath: 'middleware', continue: true },
-          { handle: 'filesystem' },
-          { src: '^/api(/.*)?$', status: 404 },
+          {
+            src: '^/.*$',
+            middlewarePath: 'middleware',
+            override: true,
+            continue: true,
+          },
           { handle: 'error' },
           { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
         ],
@@ -606,10 +616,9 @@ describe('build', () => {
           {
             src: '^\\/about(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$|^\\/dashboard(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
             middlewarePath: 'middleware',
+            override: true,
             continue: true,
           },
-          { handle: 'filesystem' },
-          { src: '^/api(/.*)?$', status: 404 },
           { handle: 'error' },
           { status: 404, src: '^(?!/api).*$', dest: '/404.html' },
         ],
@@ -711,7 +720,7 @@ describe('build', () => {
 
       // Error gets printed to the terminal
       await expect(client.stderr).toOutput(
-        'Error! Function must contain at least one property.'
+        'Error: Function must contain at least one property.'
       );
 
       // `builds.json` contains top-level "error" property
@@ -750,11 +759,71 @@ describe('build', () => {
       const errorBuilds = builds.builds.filter((b: any) => 'error' in b);
       expect(errorBuilds).toHaveLength(1);
 
-      expect(errorBuilds[0].error.name).toEqual('Error');
-      expect(errorBuilds[0].error.message).toMatch(`TS1005`);
-      expect(errorBuilds[0].error.message).toMatch(`',' expected.`);
-      expect(errorBuilds[0].error.hideStackTrace).toEqual(true);
-      expect(errorBuilds[0].error.code).toEqual('NODE_TYPESCRIPT_ERROR');
+      expect(errorBuilds[0].error).toEqual({
+        name: 'Error',
+        message: expect.stringContaining('TS1005'),
+        stack: expect.stringContaining('api/typescript.ts'),
+        hideStackTrace: true,
+        code: 'NODE_TYPESCRIPT_ERROR',
+      });
+
+      // top level "error" also contains the same error
+      expect(builds.error).toEqual({
+        name: 'Error',
+        message: expect.stringContaining('TS1005'),
+        stack: expect.stringContaining('api/typescript.ts'),
+        hideStackTrace: true,
+        code: 'NODE_TYPESCRIPT_ERROR',
+      });
+
+      // `config.json` contains `version`
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.version).toBe(3);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on Windows');
+      return;
+    }
+    const cwd = fixture('discontinued-nodejs12.x');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      // Error gets printed to the terminal
+      await expect(client.stderr).toOutput(
+        'The Runtime "vercel-php@0.1.0" is using "nodejs12.x", which is discontinued. Please upgrade your Runtime to a more recent version or consult the author for more details.'
+      );
+
+      // `builds.json` contains "error" build
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      const errorBuilds = builds.builds.filter((b: any) => 'error' in b);
+      expect(errorBuilds).toHaveLength(1);
+      expect(errorBuilds[0].error).toEqual({
+        name: 'Error',
+        message: expect.stringContaining('Please upgrade your Runtime'),
+        stack: expect.stringContaining('Please upgrade your Runtime'),
+        hideStackTrace: true,
+        code: 'NODEJS_DISCONTINUED_VERSION',
+        link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      });
+
+      // top level "error" also contains the same error
+      expect(builds.error).toEqual({
+        name: 'Error',
+        message: expect.stringContaining('Please upgrade your Runtime'),
+        stack: expect.stringContaining('Please upgrade your Runtime'),
+        hideStackTrace: true,
+        code: 'NODEJS_DISCONTINUED_VERSION',
+        link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      });
 
       // `config.json` contains `version`
       const configJson = await fs.readJSON(join(output, 'config.json'));
@@ -880,7 +949,6 @@ describe('build', () => {
       );
       expect(vcConfig).toMatchObject({
         handler: 'api/memory.js',
-        runtime: 'nodejs16.x',
         memory: 128,
         environment: {},
         launcherType: 'Nodejs',
@@ -888,6 +956,89 @@ describe('build', () => {
         shouldAddSourcemapSupport: false,
         awsLambdaHandler: '',
       });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should apply project settings overrides from "vercel.json"', async () => {
+    if (process.platform === 'win32') {
+      // this test runs a build command with `mkdir -p` which is unsupported on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
+    const cwd = fixture('project-settings-override');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // The `buildCommand` override in "vercel.json" outputs "3" to the
+      // index.txt file, so verify that that was produced in the build output
+      const contents = await fs.readFile(
+        join(output, 'static/index.txt'),
+        'utf8'
+      );
+      expect(contents.trim()).toEqual('3');
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should apply "images" configuration from `vercel.json`', async () => {
+    const cwd = fixture('images');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `config.json` includes "images" from `vercel.json`
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson).toMatchObject({
+        images: {
+          sizes: [256, 384, 600, 1000],
+          domains: [],
+          minimumCacheTTL: 60,
+          formats: ['image/avif', 'image/webp'],
+        },
+      });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should fail with invalid "rewrites" configuration from `vercel.json`', async () => {
+    const cwd = fixture('invalid-rewrites');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?' +
+          '\n' +
+          'View Documentation: https://vercel.com/docs/configuration#project/rewrites'
+      );
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.builds).toBeUndefined();
+      expect(builds.error).toEqual({
+        name: 'Error',
+        message:
+          'Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?',
+        stack: expect.stringContaining('at validateConfig'),
+        hideStackTrace: true,
+        code: 'INVALID_VERCEL_CONFIG',
+        link: 'https://vercel.com/docs/configuration#project/rewrites',
+        action: 'View Documentation',
+      });
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.version).toBe(3);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
@@ -1005,6 +1156,392 @@ describe('build', () => {
       );
       const packageDistFiles = await fs.readdir(packageDir);
       expect(packageDistFiles).toContain('dist-module.js');
+    });
+  });
+
+  /**
+   * TODO (@Ethan-Arrowood) - After shipping support for turbo and nx, revisit rush support
+   * Previously, rush tests were too flaky and consistently would timeout beyone the excessive
+   * timeout window granted for these tests. Maybe we are doing something wrong.
+   */
+  describe('monorepo-detection', () => {
+    beforeAll(() => {
+      process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+    });
+
+    afterAll(() => {
+      delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
+    });
+    const setupMonorepoDetectionFixture = (fixture: string) => {
+      const cwd = setupFixture(`commands/build/monorepo-detection/${fixture}`);
+      process.chdir(cwd);
+      return cwd;
+    };
+
+    describe.each([
+      'nx',
+      'nx-package-config',
+      'nx-project-and-package-config-1',
+      'nx-project-and-package-config-2',
+      'nx-project-config',
+      // 'rush',
+      'turbo',
+      'turbo-package-config',
+    ])('fixture: %s', fixture => {
+      const monorepoManagerMap: Record<
+        string,
+        { name: string; buildCommand: string; installCommand: string }
+      > = {
+        turbo: {
+          name: 'Turbo',
+          buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
+          installCommand: 'cd ../.. && yarn install',
+        },
+        nx: {
+          name: 'Nx',
+          buildCommand: 'cd ../.. && npx nx build app-1',
+          installCommand: 'cd ../.. && yarn install',
+        },
+        // rush: {
+        //   name: 'Rush',
+        //   buildCommand:
+        //     'node ../../common/scripts/install-run-rush.js build --to app-1',
+        //   installCommand:
+        //     'node ../../common/scripts/install-run-rush.js install',
+        // },
+      };
+
+      const { name, buildCommand, installCommand } =
+        monorepoManagerMap[fixture.split('-')[0]];
+      test(
+        'should detect and use correct defaults',
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
+
+            // if (fixture === 'rush') {
+            //   await execa('npx', ['@microsoft/rush', 'update'], {
+            //     cwd,
+            //     reject: false,
+            //   });
+            // }
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            await expect(client.stderr).toOutput(
+              `Automatically detected ${name} monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
+            );
+            const result = await fs.readFile(
+              join(cwd, '.vercel/output/static/index.txt'),
+              'utf8'
+            );
+            expect(result).toMatch(/Hello, world/);
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
+          }
+        },
+        ms('5 minutes')
+      );
+
+      test(
+        'should not override preconfigured project settings',
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
+
+            // if (fixture === 'rush') {
+            //   await execa('npx', ['@microsoft/rush', 'update'], {
+            //     cwd,
+            //     reject: false,
+            //   });
+            // }
+
+            const projectJSONPath = join(cwd, '.vercel/project.json');
+            const projectJSON = JSON.parse(
+              await fs.readFile(projectJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              projectJSONPath,
+              JSON.stringify({
+                ...projectJSON,
+                settings: {
+                  ...projectJSON.settings,
+                  buildCommand,
+                  installCommand,
+                },
+              })
+            );
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            await expect(client.stderr).toOutput(
+              'Cannot automatically assign buildCommand as it is already set via project settings or configuration overrides.'
+            );
+            await expect(client.stderr).toOutput(
+              'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
+            );
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
+          }
+        },
+        ms('5 minutes')
+      );
+
+      test(
+        'should not override configuration overrides',
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
+
+            // if (fixture === 'rush') {
+            //   await execa('npx', ['@microsoft/rush', 'update'], {
+            //     cwd,
+            //     reject: false,
+            //   });
+            // }
+
+            await fs.writeFile(
+              join(cwd, 'packages/app-1/vercel.json'),
+              JSON.stringify({
+                buildCommand,
+                installCommand,
+              })
+            );
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            await expect(client.stderr).toOutput(
+              'Cannot automatically assign buildCommand as it is already set via project settings or configuration overrides.'
+            );
+            await expect(client.stderr).toOutput(
+              'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
+            );
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
+          }
+        },
+        ms('5 minutes')
+      );
+
+      test(
+        `skip when rootDirectory is null or '.'`,
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
+
+            const projectJSONPath = join(cwd, '.vercel/project.json');
+            const projectJSON = JSON.parse(
+              await fs.readFile(projectJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              projectJSONPath,
+              JSON.stringify({
+                ...projectJSON,
+                settings: {
+                  rootDirectory: null,
+                  outputDirectory: null,
+                },
+              })
+            );
+
+            const packageJSONPath = join(cwd, 'package.json');
+            const packageJSON = JSON.parse(
+              await fs.readFile(packageJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              packageJSONPath,
+              JSON.stringify({
+                ...packageJSON,
+                scripts: {
+                  ...packageJSON.scripts,
+                  build: `node build.js`,
+                },
+              })
+            );
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            const result = await fs.readFile(
+              join(cwd, '.vercel/output/static/index.txt'),
+              'utf8'
+            );
+            expect(result).toMatch(/Hello, from build\.js/);
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
+          }
+        },
+        ms('5 miuntes')
+      );
+
+      test(
+        `skip when vercel-build is defined`,
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
+
+            const packageJSONPath = join(cwd, 'packages/app-1/package.json');
+            const packageJSON = JSON.parse(
+              await fs.readFile(packageJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              packageJSONPath,
+              JSON.stringify({
+                ...packageJSON,
+                scripts: {
+                  ...packageJSON.scripts,
+                  'vercel-build': `node ../../build.js`,
+                },
+              })
+            );
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            const result = await fs.readFile(
+              join(cwd, '.vercel/output/static/index.txt'),
+              'utf8'
+            );
+            expect(result).toMatch(/Hello, from build\.js/);
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
+          }
+        },
+        ms('5 miuntes')
+      );
+
+      test(
+        `skip when VERCEL_BUILD_MONOREPO_SUPPORT is disabled`,
+        async () => {
+          try {
+            process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '0';
+            const cwd = setupMonorepoDetectionFixture(fixture);
+
+            const packageJSONPath = join(cwd, 'packages/app-1/package.json');
+            const packageJSON = JSON.parse(
+              await fs.readFile(packageJSONPath, 'utf-8')
+            );
+
+            await fs.writeFile(
+              packageJSONPath,
+              JSON.stringify({
+                ...packageJSON,
+                scripts: {
+                  ...packageJSON.scripts,
+                  build: `node ../../build.js`,
+                },
+              })
+            );
+
+            const exitCode = await build(client);
+            expect(exitCode).toBe(0);
+            const result = await fs.readFile(
+              join(cwd, '.vercel/output/static/index.txt'),
+              'utf8'
+            );
+            expect(result).toMatch(/Hello, from build\.js/);
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
+            process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+          }
+        },
+        ms('5 miuntes')
+      );
+    });
+
+    describe.each([
+      [
+        'nx',
+        'nx.json',
+        'targetDefaults.build',
+        [
+          'Missing default `build` target in nx.json. Checking for project level Nx configuration...',
+          'Missing required `build` target in either project.json or package.json Nx configuration. Skipping automatic setting assignment.',
+        ],
+      ],
+      [
+        'nx-project-config',
+        'packages/app-1/project.json',
+        'targets.build',
+        [
+          'Missing default `build` target in nx.json. Checking for project level Nx configuration...',
+          'Found project.json Nx configuration.',
+          'Missing required `build` target in either project.json or package.json Nx configuration. Skipping automatic setting assignment.',
+        ],
+      ],
+      [
+        'nx-package-config',
+        'packages/app-1/package.json',
+        'nx.targets.build',
+        [
+          'Missing default `build` target in nx.json. Checking for project level Nx configuration...',
+          'Found package.json Nx configuration.',
+          'Missing required `build` target in either project.json or package.json Nx configuration. Skipping automatic setting assignment.',
+        ],
+      ],
+      [
+        'turbo',
+        'turbo.json',
+        'pipeline.build',
+        [
+          'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.',
+        ],
+      ],
+      [
+        'turbo-package-config',
+        'package.json',
+        'turbo.pipeline.build',
+        [
+          'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.',
+        ],
+      ],
+    ])('fixture: %s', (fixture, configFile, propertyAccessor, expectedLogs) => {
+      function deleteSubProperty(
+        obj: { [k: string]: any },
+        accessorString: string
+      ) {
+        const accessors = accessorString.split('.');
+        const lastAccessor = accessors.pop();
+        for (const accessor of accessors) {
+          obj = obj[accessor];
+        }
+        // lastAccessor cannot be undefined as accessors will always be an array of atleast one string
+        delete obj[lastAccessor as string];
+      }
+
+      test(
+        'should warn and not configure settings when project does not satisfy requirements',
+        async () => {
+          try {
+            const cwd = setupMonorepoDetectionFixture(fixture);
+
+            const configPath = join(cwd, configFile);
+            const config = JSON5.parse(await fs.readFile(configPath, 'utf-8'));
+
+            deleteSubProperty(config, propertyAccessor);
+            await fs.writeFile(configPath, JSON.stringify(config));
+
+            const exitCode = await build(client);
+
+            expect(exitCode).toBe(1);
+            for (const log of expectedLogs) {
+              await expect(client.stderr).toOutput(log);
+            }
+          } finally {
+            process.chdir(originalCwd);
+            delete process.env.__VERCEL_BUILD_RUNNING;
+          }
+        },
+        ms('3 minutes')
+      );
     });
   });
 });

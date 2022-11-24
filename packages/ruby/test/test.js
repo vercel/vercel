@@ -16,8 +16,16 @@ const testsThatFailToBuild = new Map([
   ],
 ]);
 
+const testsThatShouldBeSkipped = ['06-rails'];
+
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
+  const shouldSkip = testsThatShouldBeSkipped.includes(fixture);
+  if (shouldSkip) {
+    console.log(`Skipping: ${fixture}`);
+    continue;
+  }
+
   const errMsg = testsThatFailToBuild.get(fixture);
   if (errMsg) {
     // eslint-disable-next-line no-loop-func

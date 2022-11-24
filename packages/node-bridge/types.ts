@@ -1,5 +1,6 @@
 /// <reference types="node" />
-import {
+import type { CipherCCMTypes } from 'crypto';
+import type {
   Server,
   IncomingHttpHeaders,
   OutgoingHttpHeaders,
@@ -11,12 +12,18 @@ export interface VercelProxyEvent {
   body: string;
 }
 export interface VercelProxyRequest {
-  isApiGateway?: boolean;
+  isApiGateway: boolean;
   method: string;
   path: string;
   headers: IncomingHttpHeaders;
   body: Buffer;
+  encoding?: string;
   payloads?: Array<VercelProxyRequest>;
+  responseCallbackCipher?: CipherCCMTypes;
+  responseCallbackCipherIV?: string;
+  responseCallbackCipherKey?: string;
+  responseCallbackStream?: string;
+  responseCallbackUrl?: string;
 }
 export interface VercelProxyResponse {
   statusCode: number;
@@ -24,6 +31,7 @@ export interface VercelProxyResponse {
   body: string;
   encoding: BufferEncoding;
 }
+export type VercelStreamProxyResponse = Record<string, never>;
 export interface ServerLike {
   timeout?: number;
   listen: (

@@ -10,9 +10,11 @@ const { version: cliVersion } = require('../../package.json');
 const {
   fetchCachedToken,
 } = require('../../../../test/lib/deployment/now-deploy');
+const { spawnSync } = require('child_process');
 
 jest.setTimeout(6 * 60 * 1000);
 
+const isCI = !!process.env.CI;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const isCanary = () => getDistTag(cliVersion) === 'canary';
 
@@ -32,7 +34,7 @@ function execa(...args) {
   const child = _execa(...args);
 
   processList.set(procId, child);
-  child.on('exit', () => processList.delete(procId));
+  child.on('close', () => processList.delete(procId));
 
   return child;
 }
@@ -52,7 +54,7 @@ function fetchWithRetry(url, opts = {}) {
       return res;
     },
     {
-      retries: opts.retries || 3,
+      retries: opts.retries ?? 3,
       factor: 1,
     }
   );
@@ -60,8 +62,13 @@ function fetchWithRetry(url, opts = {}) {
 
 function createResolver() {
   let resolver;
-  const p = new Promise(res => (resolver = res));
+  let rejector;
+  const p = new Promise((resolve, reject) => {
+    resolver = resolve;
+    rejector = reject;
+  });
   p.resolve = resolver;
+  p.reject = rejector;
   return p;
 }
 
@@ -150,9 +157,9 @@ async function testPath(
   fetchOpts = {}
 ) {
   const opts = {
+    retries: isCI ? 5 : 0,
     ...fetchOpts,
     redirect: 'manual-dont-change',
-    retries: 5,
     status,
   };
   const url = `${origin}${path}`;
@@ -206,7 +213,6 @@ async function testFixture(directory, opts = {}, args = []) {
     ],
     {
       reject: false,
-      detached: true,
       shell: true,
       stdio: 'pipe',
       ...opts,
@@ -234,8 +240,22 @@ async function testFixture(directory, opts = {}, args = []) {
   });
 
   let printedOutput = false;
+  let devTimer = null;
 
-  dev.on('exit', () => {
+  dev.on('exit', code => {
+    devTimer = setTimeout(async () => {
+      const pids = Object.keys(await ps(dev.pid)).join(', ');
+      console.error(
+        `Test ${directory} exited with code ${code}, but has timed out closing stdio\n` +
+          (pids
+            ? `Hanging child processes: ${pids}`
+            : `${dev.pid} already exited`)
+      );
+    }, 5000);
+  });
+
+  dev.on('close', () => {
+    clearTimeout(devTimer);
     if (!printedOutput) {
       printOutput(directory, stdout, stderr);
       printedOutput = true;
@@ -254,8 +274,12 @@ async function testFixture(directory, opts = {}, args = []) {
   });
 
   dev._kill = dev.kill;
-  dev.kill = async (...args) => {
-    dev._kill(...args);
+  dev.kill = async () => {
+    // kill the entire process tree for the child as some tests will spawn
+    // child processes that either become defunct or assigned a new parent
+    // process
+    await nukeProcessTree(dev.pid);
+
     await exitResolver;
     return {
       stdout,
@@ -273,7 +297,13 @@ async function testFixture(directory, opts = {}, args = []) {
 function testFixtureStdio(
   directory,
   fn,
-  { expectedCode = 0, skipDeploy, isExample, projectSettings } = {}
+  {
+    expectedCode = 0,
+    skipDeploy,
+    isExample,
+    projectSettings,
+    readyTimeout = 0,
+  } = {}
 ) {
   return async () => {
     const nodeMajor = Number(process.versions.node.split('.')[0]);
@@ -330,7 +360,7 @@ function testFixtureStdio(
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify(projectSettings),
-              retries: 3,
+              retries: isCI ? 3 : 0,
               status: 200,
             }
           );
@@ -384,6 +414,18 @@ function testFixtureStdio(
     const readyResolver = createResolver();
     const exitResolver = createResolver();
 
+    // By default, tests will wait 6 minutes for the dev server to be ready and
+    // perform the tests, however a `readyTimeout` can be used to reduce the
+    // wait time if the dev server is expected to fail to start or hang
+    let readyTimer = null;
+    if (readyTimeout > 0) {
+      readyTimer = setTimeout(() => {
+        readyResolver.reject(
+          new Error('Dev server timed out while waiting to be ready')
+        );
+      }, readyTimeout);
+    }
+
     try {
       let printedOutput = false;
 
@@ -419,27 +461,28 @@ function testFixtureStdio(
         stdout += data;
       });
 
-      dev.stderr.on('data', data => {
+      dev.stderr.on('data', async data => {
         stderr += data;
 
         if (stripAnsi(data).includes('Ready! Available at')) {
+          clearTimeout(readyTimer);
           readyResolver.resolve();
         }
 
         if (stderr.includes(`Requested port ${port} is already in use`)) {
-          dev.kill('SIGTERM');
+          await nukeProcessTree(dev.pid);
           throw new Error(
             `Failed for "${directory}" with port ${port} with stderr "${stderr}".`
           );
         }
 
         if (stderr.includes('Command failed')) {
-          dev.kill('SIGTERM');
+          await nukeProcessTree(dev.pid);
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
       });
 
-      dev.on('exit', () => {
+      dev.on('close', () => {
         if (!printedOutput) {
           printOutput(directory, stdout, stderr);
           printedOutput = true;
@@ -465,10 +508,78 @@ function testFixtureStdio(
       };
       await fn(helperTestPath, port);
     } finally {
-      dev.kill('SIGTERM');
+      await nukeProcessTree(dev.pid);
       await exitResolver;
     }
   };
+}
+
+async function ps(parentPid, pids = {}) {
+  const cmd =
+    process.platform === 'darwin'
+      ? ['pgrep', '-P', parentPid]
+      : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
+
+  try {
+    const { stdout: buf } = spawnSync(cmd[0], cmd.slice(1), {
+      encoding: 'utf-8',
+    });
+    for (let pid of buf.match(/\d+/g)) {
+      pid = parseInt(pid);
+      const recurse = Object.prototype.hasOwnProperty.call(pids, pid);
+      pids[parentPid].push(pid);
+      pids[pid] = [];
+      if (recurse) {
+        await ps(pid, pids);
+      }
+    }
+  } catch (e) {
+    console.log(`Failed to get processes: ${e.toString()}`);
+  }
+  return pids;
+}
+
+async function nukePID(pid, signal = 'SIGTERM', retries = 10) {
+  if (retries === 0) {
+    console.log(`pid ${pid} won't die, giving up`);
+    return;
+  }
+
+  // kill the process
+  try {
+    process.kill(pid, signal);
+  } catch (e) {
+    // process does not exist
+    console.log(`pid ${pid} is not running`);
+    return;
+  }
+
+  await sleep(250);
+
+  try {
+    // check if killed
+    process.kill(pid, 0);
+  } catch (e) {
+    console.log(`pid ${pid} is not running`);
+    return;
+  }
+
+  console.log(`pid ${pid} didn't exit, sending SIGKILL (retries ${retries})`);
+  await nukePID(pid, 'SIGKILL', retries - 1);
+}
+
+async function nukeProcessTree(pid, signal) {
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', pid, '/T', '/F'], { stdio: 'inherit' });
+    return;
+  }
+
+  const pids = await ps(pid, {
+    [pid]: [],
+  });
+
+  console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
+  await Promise.all(Object.keys(pids).map(pid => nukePID(pid, signal)));
 }
 
 beforeEach(() => {
@@ -478,17 +589,15 @@ beforeEach(() => {
 afterEach(async () => {
   await Promise.all(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    Array.from(processList).map(([_procId, proc]) => {
-      if (proc.killed === false) {
-        console.log(
-          `killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`
-        );
+    Array.from(processList).map(async ([_procId, proc]) => {
+      console.log(`killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`);
 
-        try {
-          process.kill(proc.pid, 'SIGTERM');
-        } catch (err) {
-          // Was already killed
-          console.error(`Failed to kill process`, proc.pid, err);
+      try {
+        await nukeProcessTree(proc.pid);
+      } catch (err) {
+        // Was already killed
+        if (err.code !== 'ESRCH') {
+          console.error('Failed to kill process', proc.pid, err);
         }
       }
     })
@@ -506,5 +615,6 @@ module.exports = {
   shouldSkip,
   fixture,
   fetch,
+  fetchWithRetry,
   validateResponseHeaders,
 };

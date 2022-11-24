@@ -4,6 +4,9 @@
   "scripts": {
     "build": "next build"
   },
+  "engines": {
+    "node": "14.x"
+  },
   "dependencies": {
     "chrome-aws-lambda": "8.0.0",
     "firebase": "8.3.0",
