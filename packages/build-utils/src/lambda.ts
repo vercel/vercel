@@ -23,6 +23,8 @@ export interface LambdaOptionsBase {
   regions?: string[];
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
+  experimentalResponseStreaming?: boolean;
+  operationType?: string;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -46,6 +48,12 @@ interface GetLambdaOptionsFromFunctionOptions {
 
 export class Lambda {
   type: 'Lambda';
+  /**
+   * This is a label for the type of Lambda a framework is producing.
+   * The value can be any string that makes sense for a given framework.
+   * Examples: "API", "ISR", "SSR", "SSG", "Render", "Resource"
+   */
+  operationType?: string;
   files?: Files;
   handler: string;
   runtime: string;
@@ -60,6 +68,7 @@ export class Lambda {
   zipBuffer?: Buffer;
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
+  experimentalResponseStreaming?: boolean;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -72,6 +81,8 @@ export class Lambda {
       regions,
       supportsMultiPayloads,
       supportsWrapper,
+      experimentalResponseStreaming,
+      operationType,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -120,7 +131,9 @@ export class Lambda {
         '"regions" is not a string Array'
       );
     }
+
     this.type = 'Lambda';
+    this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
@@ -132,6 +145,7 @@ export class Lambda {
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
+    this.experimentalResponseStreaming = experimentalResponseStreaming;
   }
 
   async createZip(): Promise<Buffer> {

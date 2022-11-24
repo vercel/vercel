@@ -58,6 +58,8 @@ import { sortBuilders } from '../util/build/sort-builders';
 import { toEnumerableError } from '../util/error';
 import { validateConfig } from '../util/validate-config';
 
+import { setMonorepoDefaultSettings } from '../util/build/monorepo';
+
 type BuildResult = BuildResultV2 | BuildResultV3;
 
 interface SerializedBuilder extends Builder {
@@ -99,7 +101,7 @@ const help = () => {
 
     ${chalk.dim('Examples:')}
 
-    ${chalk.gray('–')} Build the project
+    ${chalk.gray('-')} Build the project
 
       ${chalk.cyan(`$ ${cli.name} build`)}
       ${chalk.cyan(`$ ${cli.name} build --cwd ./path-to-project`)}
@@ -128,7 +130,6 @@ export default async function main(client: Client): Promise<number> {
 
   // Parse CLI args
   const argv = getArgs(client.argv.slice(2), {
-    '--cwd': String,
     '--output': String,
     '--prod': Boolean,
     '--yes': Boolean,
@@ -139,10 +140,6 @@ export default async function main(client: Client): Promise<number> {
     return 2;
   }
 
-  // Set the working directory if necessary
-  if (argv['--cwd']) {
-    process.chdir(argv['--cwd']);
-  }
   const cwd = process.cwd();
 
   // Build `target` influences which environment variables will be used
@@ -271,6 +268,7 @@ async function doBuild(
   outputDir: string
 ): Promise<void> {
   const { output } = client;
+
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
   const [pkg, vercelConfig, nowConfig] = await Promise.all([
@@ -300,6 +298,15 @@ async function doBuild(
     ...project.settings,
     ...pickOverrides(localConfig),
   };
+
+  if (
+    process.env.VERCEL_BUILD_MONOREPO_SUPPORT === '1' &&
+    pkg?.scripts?.['vercel-build'] === undefined &&
+    projectSettings.rootDirectory !== null &&
+    projectSettings.rootDirectory !== '.'
+  ) {
+    await setMonorepoDefaultSettings(cwd, workPath, projectSettings, output);
+  }
 
   // Get a list of source files
   const files = (await getFiles(workPath, client)).map(f =>

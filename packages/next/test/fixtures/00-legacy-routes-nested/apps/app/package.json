@@ -2,6 +2,9 @@
   "scripts": {
     "build": "next build"
   },
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "next": "8.0.3",
     "react": "latest",

@@ -20,7 +20,7 @@ import { getLinkedProject } from '../util/projects/link';
 import { ensureLink } from '../util/link/ensure-link';
 import getScope from '../util/get-scope';
 import { isAPIError } from '../util/errors-ts';
-import { isErrnoException } from '../util/is-error';
+import { isErrnoException } from '@vercel/error-utils';
 
 const help = () => {
   console.log(`
@@ -56,7 +56,7 @@ const help = () => {
   ${chalk.gray('–')} List all deployments for the project ${chalk.dim(
     '`my-app`'
   )} in the team of the currently linked project
-  
+
     ${chalk.cyan(`$ ${getPkgName()} ls my-app`)}
 
   ${chalk.gray('–')} Filter deployments by metadata

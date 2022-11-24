@@ -15,7 +15,7 @@ async function main() {
   });
 
   await new Promise((resolve, reject) => {
-    server.on('exit', () => resolve());
+    server.on('close', () => resolve());
     server.on('error', error => reject(error));
   });
 }
