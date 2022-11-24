@@ -1,9 +1,9 @@
-export interface Options {
+export interface PaginationOptions {
   '--next'?: number;
   '--limit'?: number;
 }
 
-export function getPaginationOpts(opts: Options) {
+export function getPaginationOpts(opts: PaginationOptions) {
   const { '--next': nextTimestamp, '--limit': limit } = opts;
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
@@ -17,5 +17,5 @@ export function getPaginationOpts(opts: Options) {
     throw new Error('Please provide a number up to 100 for flag --limit');
   }
 
-  return { nextTimestamp, limit };
+  return [nextTimestamp, limit];
 }

@@ -4,7 +4,10 @@ import table from 'text-table';
 import Client from '../../util/client';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
-import { Options, getPaginationOpts } from '../../util/get-pagination-opts';
+import {
+  PaginationOptions,
+  getPaginationOpts,
+} from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import strlen from '../../util/strlen';
 import getCommandFlags from '../../util/get-command-flags';
@@ -13,16 +16,16 @@ import { Alias } from '../../types';
 
 export default async function ls(
   client: Client,
-  opts: Options,
+  opts: PaginationOptions,
   args: string[]
 ) {
   const { output } = client;
   const { contextName } = await getScope(client);
 
-  let validated;
+  let paginationOptions;
 
   try {
-    validated = getPaginationOpts(opts);
+    paginationOptions = getPaginationOpts(opts);
   } catch (err: unknown) {
     output.prettyError(err);
     return 1;
@@ -45,8 +48,7 @@ export default async function ls(
   const { aliases, pagination } = await getAliases(
     client,
     undefined,
-    validated.nextTimestamp,
-    validated.limit
+    ...paginationOptions
   );
   output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
   output.log(printAliasTable(aliases));

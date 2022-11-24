@@ -9,14 +9,17 @@ import getDNSRecords, {
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
-import { Options, getPaginationOpts } from '../../util/get-pagination-opts';
+import {
+  PaginationOptions,
+  getPaginationOpts,
+} from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function ls(
   client: Client,
-  opts: Options,
+  opts: PaginationOptions,
   args: string[]
 ) {
   const { output } = client;
@@ -34,10 +37,10 @@ export default async function ls(
     return 1;
   }
 
-  let validated;
+  let paginationOptions;
 
   try {
-    validated = getPaginationOpts(opts);
+    paginationOptions = getPaginationOpts(opts);
   } catch (err: unknown) {
     output.prettyError(err);
     return 1;
@@ -48,9 +51,8 @@ export default async function ls(
       output,
       client,
       domainName,
-      validated.nextTimestamp,
       4,
-      validated.limit
+      ...paginationOptions
     );
     if (data instanceof DomainNotFound) {
       output.error(
@@ -86,7 +88,7 @@ export default async function ls(
     output,
     client,
     contextName,
-    validated.nextTimestamp
+    ...paginationOptions
   );
   const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
   output.log(

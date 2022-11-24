@@ -12,8 +12,8 @@ export default async function getDomainDNSRecords(
   output: Output,
   client: Client,
   domain: string,
-  nextTimestamp?: number,
   apiVersion = 3,
+  nextTimestamp?: number,
   limit = 20
 ) {
   output.debug(`Fetching for DNS records of domain ${domain}`);

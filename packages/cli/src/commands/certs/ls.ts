@@ -3,7 +3,10 @@ import ms from 'ms';
 import table from 'text-table';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import { Options, getPaginationOpts } from '../../util/get-pagination-opts';
+import {
+  PaginationOptions,
+  getPaginationOpts,
+} from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import strlen from '../../util/strlen';
@@ -13,16 +16,16 @@ import { getCommandName } from '../../util/pkg-name';
 
 async function ls(
   client: Client,
-  opts: Options,
+  opts: PaginationOptions,
   args: string[]
 ): Promise<number> {
   const { output } = client;
   const { contextName } = await getScope(client);
 
-  let validated;
+  let paginationOptions;
 
   try {
-    validated = getPaginationOpts(opts);
+    paginationOptions = getPaginationOpts(opts);
   } catch (err: unknown) {
     output.prettyError(err);
     return 1;
@@ -42,8 +45,7 @@ async function ls(
   // Get the list of certificates
   const { certs, pagination } = await getCerts(
     client,
-    validated.nextTimestamp,
-    validated.limit
+    ...paginationOptions
   ).catch(err => err);
 
   output.log(

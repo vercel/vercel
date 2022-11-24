@@ -10,22 +10,25 @@ import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
 import { Domain } from '../../types';
 import getCommandFlags from '../../util/get-command-flags';
-import { Options, getPaginationOpts } from '../../util/get-pagination-opts';
+import {
+  PaginationOptions,
+  getPaginationOpts,
+} from '../../util/get-pagination-opts';
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 
 export default async function ls(
   client: Client,
-  opts: Partial<Options>,
+  opts: Partial<PaginationOptions>,
   args: string[]
 ) {
   const { output } = client;
 
-  let validated;
+  let paginationOptions;
 
   try {
-    validated = getPaginationOpts(opts);
+    paginationOptions = getPaginationOpts(opts);
   } catch (err: unknown) {
     output.prettyError(err);
     return 1;
@@ -48,8 +51,7 @@ export default async function ls(
 
   const { domains, pagination } = await getDomains(
     client,
-    validated.nextTimestamp,
-    validated.limit
+    ...paginationOptions
   );
 
   output.log(
