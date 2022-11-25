@@ -1727,6 +1727,74 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
   },
   {
+    name: 'VitePress',
+    slug: 'vitepress',
+    demo: 'https://vitepress-starter-template.vercel.app/',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/vite.svg',
+    tagline: "VitePress is VuePress' little brother, built on top of Vite.",
+    description: 'VuePress on top of Vite',
+    website: 'https://vitepress.vuejs.org/',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*vitepress:\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vitepress build docs`',
+        value: 'vitepress build docs',
+      },
+      devCommand: {
+        value: 'vitepress dev docs --port $PORT',
+      },
+      outputDirectory: {
+        value: 'docs/.vitepress/dist',
+      },
+    },
+    getOutputDirName: async () => '.vitepress/dist',
+  },
+  {
+    name: 'VuePress',
+    slug: 'vuepress',
+    demo: 'https://vuepress-starter-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/vuepress.png',
+    tagline: 'Vue-powered Static Site Generator',
+    description: 'Vue-powered Static Site Generator',
+    website: 'https://vuepress.vuejs.org/',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*vuepress:\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vuepress build src`',
+        value: 'vuepress build src',
+      },
+      devCommand: {
+        value: 'vuepress dev src --port $PORT',
+      },
+      outputDirectory: {
+        value: 'src/.vuepress/dist',
+      },
+    },
+    getOutputDirName: async () => 'src/.vuepress/dist',
+  },
+  {
     name: 'Parcel',
     slug: 'parcel',
     demo: 'https://parcel-template.vercel.app',
