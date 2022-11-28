@@ -46,7 +46,7 @@ const help = () => {
 
   ${chalk.gray('–')} Rollback a deployment using id or url
 
-    ${chalk.cyan(`$ ${getPkgName()} rollback <deploymnent id/url>`)}
+    ${chalk.cyan(`$ ${getPkgName()} rollback <deployment id/url>`)}
 `);
 };
 
