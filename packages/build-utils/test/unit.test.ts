@@ -2,7 +2,7 @@ import ms from 'ms';
 import path from 'path';
 import fs, { readlink } from 'fs-extra';
 import { strict as assert, strictEqual } from 'assert';
-import { createZip, Lambda } from '../src/lambda';
+import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import download from '../src/fs/download';
 import {
@@ -443,12 +443,6 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
 });
 
 it('should support initialHeaders and initialStatus correctly', async () => {
-  const dummyLambda = new Lambda({
-    files: {},
-    handler: '',
-    runtime: '',
-  });
-
   new Prerender({
     expiration: 1,
     fallback: null,
@@ -459,7 +453,6 @@ it('should support initialHeaders and initialStatus correctly', async () => {
       'x-initial': 'true',
     },
     initialStatus: 308,
-    lambda: dummyLambda,
   });
   new Prerender({
     expiration: 1,
@@ -467,7 +460,6 @@ it('should support initialHeaders and initialStatus correctly', async () => {
     group: 1,
     bypassToken: 'some-long-bypass-token-to-make-it-work',
     initialStatus: 308,
-    lambda: dummyLambda,
   });
   new Prerender({
     expiration: 1,
@@ -478,7 +470,6 @@ it('should support initialHeaders and initialStatus correctly', async () => {
       'content-type': 'application/json',
       'x-initial': 'true',
     },
-    lambda: dummyLambda,
   });
 });
 
