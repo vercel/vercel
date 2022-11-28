@@ -425,6 +425,10 @@ export interface BuildResultV2Typical {
     domain: string;
     value: string;
   }>;
+  meta?: {
+    framework: string;
+    frameworkVersion: string;
+  };
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
