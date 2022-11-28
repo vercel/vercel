@@ -130,7 +130,6 @@ export default async function main(client: Client): Promise<number> {
 
   // Parse CLI args
   const argv = getArgs(client.argv.slice(2), {
-    '--cwd': String,
     '--output': String,
     '--prod': Boolean,
     '--yes': Boolean,
@@ -141,10 +140,6 @@ export default async function main(client: Client): Promise<number> {
     return 2;
   }
 
-  // Set the working directory if necessary
-  if (argv['--cwd']) {
-    process.chdir(argv['--cwd']);
-  }
   const cwd = process.cwd();
 
   // Build `target` influences which environment variables will be used

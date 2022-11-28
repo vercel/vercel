@@ -278,6 +278,7 @@ async function createRenderFunction(
     runtime: nodeVersion.runtime,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
+    operationType: 'SSR',
   });
 
   return lambda;
