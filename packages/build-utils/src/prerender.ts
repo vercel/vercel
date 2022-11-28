@@ -3,7 +3,7 @@ import { Lambda } from './lambda';
 
 interface PrerenderOptions {
   expiration: number | false;
-  lambda: Lambda;
+  lambda?: Lambda;
   fallback: File | null;
   group?: number;
   bypassToken?: string | null /* optional to be non-breaking change */;
@@ -15,7 +15,7 @@ interface PrerenderOptions {
 export class Prerender {
   public type: 'Prerender';
   public expiration: number | false;
-  public lambda: Lambda;
+  public lambda?: Lambda;
   public fallback: File | null;
   public group?: number;
   public bypassToken: string | null;
@@ -37,8 +37,10 @@ export class Prerender {
     this.expiration = expiration;
 
     this.lambda = lambda;
-    // "ISR" is the platform default lambda label for prerender functions
-    this.lambda.operationType = this.lambda.operationType || 'ISR';
+    if (this.lambda) {
+      // "ISR" is the platform default lambda label for prerender functions
+      this.lambda.operationType = this.lambda.operationType || 'ISR';
+    }
 
     if (
       typeof group !== 'undefined' &&
