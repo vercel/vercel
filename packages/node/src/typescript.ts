@@ -190,7 +190,10 @@ export function register(opts: Options = {}): Register {
     }
   }
 
-  function getBuild(configFileName = ''): GetOutputFunction {
+  function getBuild(
+    configFileName = '',
+    skipTypeCheck?: boolean
+  ): GetOutputFunction {
     let getOutput: GetOutputFunction;
     let outFiles = new Map<string, SourceOutput>();
     const cache = configFileToBuildMap.get(configFileName);
@@ -343,9 +346,7 @@ export function register(opts: Options = {}): Register {
         return file;
       };
 
-      getOutput = config.raw?.transpileOnly
-        ? getOutputTranspile
-        : getOutputTypeCheck;
+      getOutput = skipTypeCheck ? getOutputTranspile : getOutputTypeCheck;
       configFileToBuildMap.set(configFileName, { getOutput, outFiles });
     }
     return getOutput;
@@ -430,9 +431,13 @@ export function register(opts: Options = {}): Register {
   }
 
   // Create a simple TypeScript compiler proxy.
-  function compile(code: string, fileName: string): SourceOutput {
+  function compile(
+    code: string,
+    fileName: string,
+    skipTypeCheck?: boolean
+  ): SourceOutput {
     const configFileName = detectConfig();
-    const buildOutput = getBuild(configFileName);
+    const buildOutput = getBuild(configFileName, skipTypeCheck);
     const { code: value, map: sourceMap } = buildOutput(code, fileName);
     const output = {
       code: value,
