@@ -113,11 +113,6 @@ function cachedLookup<T>(fn: (arg: string) => T): (arg: string) => T {
   };
 }
 
-type Build = {
-  getOutput: GetOutputFunction;
-  outFiles: Map<string, SourceOutput>;
-};
-
 /**
  * Maps the config path to a build func
  */
@@ -458,6 +453,11 @@ export function register(opts: Options = {}): Register {
 }
 
 type GetOutputFunction = (code: string, fileName: string) => SourceOutput;
+
+interface Build {
+  getOutput: GetOutputFunction;
+  outFiles: Map<string, SourceOutput>;
+}
 
 /**
  * Do post-processing on config options to support `ts-node`.
