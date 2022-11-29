@@ -1421,10 +1421,14 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
-              check: true,
+              continue: true,
             },
             {
-              src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                '/((?!.+\\.rsc).+)$'
+              )}`,
               has: [
                 {
                   type: 'header',
@@ -1432,7 +1436,7 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
-              check: true,
+              continue: true,
             },
           ]
         : []),
