@@ -92,7 +92,11 @@ function normalizeSlashes(value: string): string {
 /**
  * Return type for registering `ts-node`.
  */
-export type Register = (code: string, fileName: string) => SourceOutput;
+export type Register = (
+  code: string,
+  fileName: string,
+  skipTypeCheck?: boolean
+) => SourceOutput;
 
 /**
  * Cached fs operation wrapper.
