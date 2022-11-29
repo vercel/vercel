@@ -114,6 +114,11 @@ function cachedLookup<T>(fn: (arg: string) => T): (arg: string) => T {
 }
 
 /**
+ * Maps the config path to a build func
+ */
+const configFileToBuildMap = new Map<string, Build>();
+
+/**
  * Register TypeScript compiler.
  */
 export function register(opts: Options = {}): Register {
@@ -184,10 +189,8 @@ export function register(opts: Options = {}): Register {
     }
   }
 
-  // we create a custom build per tsconfig.json instance
-  const builds = new Map<string, Build>();
   function getBuild(configFileName = ''): Build {
-    let build = builds.get(configFileName);
+    let build = configFileToBuildMap.get(configFileName);
     if (build) return build;
 
     const config = readConfig(configFileName);
@@ -314,13 +317,8 @@ export function register(opts: Options = {}): Register {
       };
     }
 
-    builds.set(
-      configFileName,
-      (build = {
-        getOutput,
-        getOutputTypeCheck,
-      })
-    );
+    build = { getOutput, getOutputTypeCheck };
+    configFileToBuildMap.set(configFileName, build);
     return build;
   }
 
