@@ -109,6 +109,11 @@ function cachedLookup<T>(fn: (arg: string) => T): (arg: string) => T {
   };
 }
 
+type Build = {
+  getOutput: GetOutputFunction;
+  outFiles: Map<string, SourceOutput>;
+};
+
 /**
  * Maps the config path to a build func
  */
@@ -185,22 +190,28 @@ export function register(opts: Options = {}): Register {
     }
   }
 
-  function getBuild(configFileName = ''): Build {
-    let build: Build;
-    const cachedBuild = configFileToBuildMap.get(configFileName);
+  function getBuild(configFileName = ''): GetOutputFunction {
+    let getOutput: GetOutputFunction;
+    let outFiles = new Map<string, SourceOutput>();
+    const cache = configFileToBuildMap.get(configFileName);
 
-    if (cachedBuild) {
-      build = cachedBuild;
+    if (cache) {
+      getOutput = cache.getOutput;
+      outFiles = cache.outFiles;
     } else {
       const config = readConfig(configFileName);
 
       /**
        * Create the basic function for transpile only (ts-node --transpileOnly)
        */
-      const getOutput: Build = function (
+      const getOutputTranspile: GetOutputFunction = function (
         code: string,
         fileName: string
       ): SourceOutput {
+        const outFile = outFiles.get(fileName);
+        if (outFile) {
+          return outFile;
+        }
         const result = ts.transpileModule(code, {
           fileName,
           transformers,
@@ -214,16 +225,21 @@ export function register(opts: Options = {}): Register {
 
         reportTSError(diagnosticList, config.options.noEmitOnError);
 
-        return { code: result.outputText, map: result.sourceMapText as string };
+        const file = {
+          code: result.outputText,
+          map: result.sourceMapText as string,
+        };
+        outFiles.set(fileName, file);
+        return file;
       };
 
       /**
        * Create complete function with full language services (normal behavior for `tsc`)
        */
-      let getOutputTypeCheck: Build;
+      let getOutputTypeCheck: GetOutputFunction;
       {
         const memoryCache = new MemoryCache(config.fileNames);
-        const cachedReadFile = cachedLookup(debugFn('readFile', readFile));
+        const cachedReadFile = cachedLookup(readFile);
 
         // Create the compiler host for type checking.
         const serviceHost: _ts.LanguageServiceHost = {
@@ -286,6 +302,10 @@ export function register(opts: Options = {}): Register {
         };
 
         getOutputTypeCheck = function (code: string, fileName: string) {
+          const outFile = outFiles.get(fileName);
+          if (outFile) {
+            return outFile;
+          }
           updateMemoryCache(code, fileName);
 
           const output = service.getEmitOutput(fileName);
@@ -317,17 +337,21 @@ export function register(opts: Options = {}): Register {
             );
           }
 
-          return {
+          const file = {
             code: output.outputFiles[1].text,
             map: output.outputFiles[0].text,
           };
+          outFiles.set(fileName, file);
+          return file;
         };
       }
 
-      build = config.options.noEmitOnError ? getOutputTypeCheck : getOutput;
-      configFileToBuildMap.set(configFileName, build);
+      getOutput = config.options.noEmitOnError
+        ? getOutputTypeCheck
+        : getOutputTranspile;
+      configFileToBuildMap.set(configFileName, { getOutput, outFiles });
     }
-    return build;
+    return getOutput;
   }
 
   // determine the tsconfig.json path for a given folder
@@ -427,7 +451,7 @@ export function register(opts: Options = {}): Register {
   return compile;
 }
 
-type Build = (code: string, fileName: string) => SourceOutput;
+type GetOutputFunction = (code: string, fileName: string) => SourceOutput;
 
 /**
  * Do post-processing on config options to support `ts-node`.
