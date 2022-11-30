@@ -6,7 +6,7 @@ import { join } from 'path';
 import { EDGE_FUNCTION_SIZE_LIMIT } from './constants';
 import zlib from 'zlib';
 import { promisify } from 'util';
-import { prettyKibibytes } from '../utils';
+import { prettyBytes } from '../utils';
 
 // @ts-expect-error this is a prebuilt file, based on `../../scripts/build-edge-function-template.js`
 import template from '../../dist/___get-nextjs-edge-function.js';
@@ -85,9 +85,9 @@ async function validateSize(script: string, wasmFiles: string[]) {
   const gzipped = await gzip(content);
   if (gzipped.length > EDGE_FUNCTION_SIZE_LIMIT) {
     throw new Error(
-      `Exceeds maximum edge function size: ${prettyKibibytes(
+      `Exceeds maximum edge function size: ${prettyBytes(
         gzipped.length
-      )} / ${prettyKibibytes(EDGE_FUNCTION_SIZE_LIMIT)}`
+      )} / ${prettyBytes(EDGE_FUNCTION_SIZE_LIMIT)}`
     );
   }
 }

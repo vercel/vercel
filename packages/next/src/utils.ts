@@ -43,7 +43,8 @@ import bytes from 'bytes';
 
 type stringMap = { [key: string]: string };
 
-export const prettyKibibytes = (n: number) => bytes(n, { unitSeparator: ' ' });
+const _prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
+export { _prettyBytes as prettyBytes }
 
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
