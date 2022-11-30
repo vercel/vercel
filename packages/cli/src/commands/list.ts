@@ -147,6 +147,7 @@ export default async function main(client: Client) {
   if (status === 'not_linked' && !app) {
     const linkedProject = await ensureLink('list', client, path, {
       autoConfirm,
+      link,
     });
     if (typeof linkedProject === 'number') {
       return linkedProject;

@@ -32,7 +32,11 @@ export async function ensureLink(
   cwd: string,
   opts: SetupAndLinkOptions
 ): Promise<LinkResult | number> {
-  let link = await getLinkedProject(client, cwd);
+  let { link } = opts;
+  if (!link) {
+    link = await getLinkedProject(client, cwd);
+    opts.link = link;
+  }
 
   if (
     (link.status === 'linked' && opts.forceDelete) ||
