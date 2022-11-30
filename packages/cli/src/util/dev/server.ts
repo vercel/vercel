@@ -1,6 +1,7 @@
 import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
+import querystring from 'querystring';
 import chalk from 'chalk';
 import fetch from 'node-fetch';
 import plural from 'pluralize';
@@ -19,13 +20,18 @@ import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import npa from 'npm-package-arg';
+import crypto from 'crypto';
+import cookie from 'cookie';
 import type { ChildProcess } from 'child_process';
+import {
+  get_resolver,
+  InvokeMiddleware,
+} from '@vercel/routing-utils/dist/resolver';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
   getTransformedRoutes,
   appendRoutesToPhase,
-  HandleValue,
   Route,
 } from '@vercel/routing-utils';
 import {
@@ -58,7 +64,7 @@ import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles } from '../get-files';
 import { validateConfig } from '../validate-config';
-import { devRouter, getRoutesTypes } from './router';
+import { devRouter } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
@@ -87,7 +93,7 @@ import {
 } from './types';
 import { ProjectSettings } from '../../types';
 import { treeKill } from '../tree-kill';
-import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
+import { nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
   errorToString,
@@ -95,7 +101,6 @@ import {
   isError,
   isSpawnError,
 } from '@vercel/error-utils';
-import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
 import { replaceLocalhost } from './parse-listen';
 
@@ -1298,35 +1303,6 @@ export default class DevServer {
   };
 
   /**
-   * This is the equivalent to now-proxy exit_with_status() function.
-   */
-  exitWithStatus = async (
-    match: BuildMatch | null,
-    routeResult: RouteResult,
-    phase: HandleValue | null,
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-    requestId: string
-  ): Promise<boolean> => {
-    const { status, headers, dest } = routeResult;
-    const location = headers['location'] || dest;
-
-    if (status && location && 300 <= status && status <= 399) {
-      this.output.debug(`Route found with redirect status code ${status}`);
-      await this.sendRedirect(req, res, requestId, location, status);
-      return true;
-    }
-
-    if (!match && status && phase !== 'miss') {
-      this.output.debug(`Route found with with status code ${status}`);
-      await this.sendError(req, res, requestId, '', status, headers);
-      return true;
-    }
-
-    return false;
-  };
-
-  /**
    * Serve project directory as a v2 deployment.
    */
   serveProjectAsNowV2 = async (
@@ -1368,32 +1344,6 @@ export default class DevServer {
       await this.blockingBuildsPromise;
     }
 
-    const getReqUrl = (rr: RouteResult): string | undefined => {
-      if (rr.dest) {
-        if (rr.query) {
-          const destParsed = url.parse(rr.dest);
-          const destQuery = parseQueryString(destParsed.search);
-          Object.assign(destQuery, rr.query);
-          destParsed.search = formatQueryString(destQuery);
-          return url.format(destParsed);
-        }
-        return rr.dest;
-      }
-      return req.url;
-    };
-
-    const handleMap = getRoutesTypes(routes);
-    const missRoutes = handleMap.get('miss') || [];
-    const hitRoutes = handleMap.get('hit') || [];
-    const errorRoutes = handleMap.get('error') || [];
-    const filesystemRoutes = handleMap.get('filesystem') || [];
-    const phases: (HandleValue | null)[] = [null, 'filesystem'];
-
-    let routeResult: RouteResult | null = null;
-    let match: BuildMatch | null = null;
-    let statusCode: number | undefined;
-    let prevUrl = req.url;
-    let prevHeaders: HttpHeadersConfig = {};
     let middlewarePid: number | undefined;
 
     // Run the middleware file, if present, and apply any
@@ -1402,7 +1352,18 @@ export default class DevServer {
     const middleware = [...this.buildMatches.values()].find(
       m => m.config?.middleware === true
     );
-    if (middleware) {
+
+    const invoke_middleware: InvokeMiddleware = async (
+      middlewareIndex,
+      ctx
+    ) => {
+      console.error('invoke_middleware', middleware, ctx);
+
+      if (!middleware) {
+        console.warn(`Failed to invoke middleware no matching items`);
+        return { headers: {}, status: 200, body: undefined };
+      }
+
       let startMiddlewareResult: StartDevServerResult | undefined;
       // TODO: can we add some caching to prevent (re-)starting
       // the middleware server for every HTTP request?
@@ -1431,21 +1392,31 @@ export default class DevServer {
           middlewarePid = pid;
           this.devServerPids.add(pid);
 
-          const middlewareReqHeaders = nodeHeadersToFetchHeaders(req.headers);
+          const middlewareReqHeaders = nodeHeadersToFetchHeaders(ctx.headers);
 
           // Add the Vercel platform proxy request headers
           const proxyHeaders = this.getProxyHeaders(req, requestId, true);
           for (const [name, value] of nodeHeadersToFetchHeaders(proxyHeaders)) {
             middlewareReqHeaders.set(name, value);
           }
+          const queryStr = querystring.stringify(ctx.query);
 
           const middlewareRes = await fetch(
-            `http://127.0.0.1:${port}${parsed.path}`,
+            `http://127.0.0.1:${port}${ctx.path}${
+              queryStr ? '?' : ''
+            }${queryStr}`,
             {
               headers: middlewareReqHeaders,
               method: req.method,
               redirect: 'manual',
             }
+          );
+
+          console.error(
+            'invoking middleware',
+            `http://127.0.0.1:${port}${ctx.path}${
+              queryStr ? '?' : ''
+            }${queryStr}`
           );
 
           const middlewareBody = await middlewareRes.buffer();
@@ -1458,89 +1429,18 @@ export default class DevServer {
               'EDGE_FUNCTION_INVOCATION_FAILED',
               500
             );
-            return;
+            return {
+              headers: {},
+              status: middlewareRes.status,
+              body: undefined,
+            };
           }
 
-          // Apply status code from middleware invocation,
-          // for i.e. redirects or a custom 404 page
-          res.statusCode = middlewareRes.status;
-
-          let rewritePath = '';
-          let contentType = '';
-          let shouldContinue = false;
-          const skipMiddlewareHeaders = new Set([
-            'date',
-            'connection',
-            'content-length',
-            'transfer-encoding',
-          ]);
-
-          applyOverriddenHeaders(req.headers, middlewareRes.headers);
-
-          for (const [name, value] of middlewareRes.headers) {
-            if (name === 'x-middleware-next') {
-              shouldContinue = value === '1';
-            } else if (name === 'x-middleware-rewrite') {
-              rewritePath = value;
-              shouldContinue = true;
-            } else if (name === 'content-type') {
-              contentType = value;
-            } else if (!skipMiddlewareHeaders.has(name)) {
-              // Any other kind of response header should be included
-              // on both the incoming HTTP request (for when proxying
-              // to another function) and the outgoing HTTP response.
-              res.setHeader(name, value);
-              req.headers[name] = value;
-            }
-          }
-
-          if (!shouldContinue) {
-            this.setResponseHeaders(res, requestId);
-            if (middlewareBody.length > 0) {
-              res.setHeader('content-length', middlewareBody.length);
-              if (contentType) {
-                res.setHeader('content-type', contentType);
-              }
-              res.end(middlewareBody);
-            } else {
-              res.end();
-            }
-            return;
-          }
-
-          if (rewritePath) {
-            debug(`Detected rewrite path from middleware: "${rewritePath}"`);
-            prevUrl = rewritePath;
-
-            const beforeRewriteUrl = req.url || '/';
-
-            if (isURL(rewritePath)) {
-              const rewriteUrlParsed = new URL(rewritePath);
-
-              // `this.address` already has localhost normalized from ip4 and ip6 values
-              if (this.address.origin === rewriteUrlParsed.origin) {
-                // remove origin, leaving the path
-                req.url =
-                  rewritePath.slice(rewriteUrlParsed.origin.length) || '/';
-                prevUrl = req.url;
-              } else {
-                // Proxy to absolute URL with different origin
-                debug(`ProxyPass: ${rewritePath}`);
-                this.setResponseHeaders(res, requestId);
-                proxyPass(req, res, rewritePath, this, requestId);
-                return;
-              }
-            } else {
-              // Retain orginal pathname, but override query parameters from the rewrite
-              const rewriteUrlParsed = url.parse(beforeRewriteUrl);
-              rewriteUrlParsed.search = url.parse(rewritePath).search;
-              req.url = url.format(rewriteUrlParsed);
-            }
-
-            debug(
-              `Rewrote incoming HTTP URL from "${beforeRewriteUrl}" to "${req.url}"`
-            );
-          }
+          return {
+            headers: Object.fromEntries(middlewareRes.headers) as any,
+            status: middlewareRes.status,
+            body: middlewareBody,
+          };
         }
       } catch (err: unknown) {
         // `startDevServer()` threw an error. Most likely this means the dev
@@ -1563,193 +1463,132 @@ export default class DevServer {
           'EDGE_FUNCTION_INVOCATION_FAILED',
           500
         );
-        return;
+        return { headers: {}, status: 500, body: undefined };
       } finally {
         if (middlewarePid) {
           this.killBuilderDevServer(middlewarePid);
         }
       }
+      return { headers: {}, status: 500, body: undefined };
+    };
+    // the middleware route isn't present in dev so we always invoke
+    // it if the buildMatch has middleware config
+    if (middleware) {
+      routes?.unshift({
+        middleware: 0,
+        src: '/.*',
+      });
     }
+    console.error('routes', routes);
 
-    for (const phase of phases) {
-      statusCode = undefined;
+    const resolverContext: Parameters<typeof get_resolver>[0] = {
+      invoke_middleware,
+      check_file_system: async outputName => {
+        const result = await this.hasFilesystem(outputName, vercelConfig);
+        console.error('hasFilesystem', { outputName, result });
+        return result;
+      },
+      hash_func: content =>
+        crypto.createHash('md5').update(content).digest('hex'),
+      encode_query: (query: Record<string, string | string[]>) => {
+        return querystring.stringify(query);
+      },
+      match_regex: (regexString, testString) => {
+        const matches = testString.match(new RegExp(regexString));
 
-      const phaseRoutes = handleMap.get(phase) || [];
-      routeResult = await devRouter(
-        prevUrl,
-        req.method,
-        phaseRoutes,
-        this,
-        vercelConfig,
-        prevHeaders,
-        missRoutes,
-        phase
-      );
+        if (!matches) {
+          return null;
+        }
+        const normalized: Record<string, string> = {};
+        const match_index = matches.length > 1 ? 1 : 0;
 
-      if (routeResult.continue) {
-        if (routeResult.dest) {
-          prevUrl = getReqUrl(routeResult);
+        for (let i = match_index; i < matches?.length; i++) {
+          normalized[match_index > 0 ? i : i + 1] = matches[i];
         }
 
-        if (routeResult.headers) {
-          prevHeaders = routeResult.headers;
+        if (matches.groups) {
+          for (const key of Object.keys(matches.groups)) {
+            normalized[key] = matches.groups[key];
+          }
         }
-      }
+        return normalized;
+      },
+      regex_replace: (regexString, original, replace) =>
+        original.replace(new RegExp(regexString, 'g'), replace),
+      parse_path: urlPath => {
+        console.error('parse_path', urlPath);
+        const parsed = new URL(urlPath, 'http://n');
 
-      if (routeResult.isDestUrl) {
-        // Mix the `routes` result dest query params into the req path
-        const destParsed = url.parse(routeResult.dest);
-        const destQuery = parseQueryString(destParsed.search);
-        Object.assign(destQuery, routeResult.query);
-        destParsed.search = formatQueryString(destQuery);
-        const destUrl = url.format(destParsed);
-
-        debug(`ProxyPass: ${destUrl}`);
-        this.setResponseHeaders(res, requestId);
-        return proxyPass(req, res, destUrl, this, requestId);
-      }
-
-      match = await findBuildMatch(
-        this.buildMatches,
-        this.files,
-        routeResult.dest,
-        this,
-        vercelConfig
-      );
-
-      if (
-        await this.exitWithStatus(
-          match,
-          routeResult,
-          phase,
-          req,
-          res,
-          requestId
-        )
-      ) {
-        return;
-      }
-
-      if (!match && missRoutes.length > 0) {
-        // Since there was no build match, enter the miss phase
-        routeResult = await devRouter(
-          getReqUrl(routeResult),
-          req.method,
-          missRoutes,
-          this,
-          vercelConfig,
-          routeResult.headers,
-          [],
-          'miss'
-        );
-
-        match = await findBuildMatch(
-          this.buildMatches,
-          this.files,
-          routeResult.dest,
-          this,
-          vercelConfig
-        );
-        if (
-          await this.exitWithStatus(
-            match,
-            routeResult,
-            phase,
-            req,
-            res,
-            requestId
-          )
-        ) {
-          return;
+        if (parsed.hostname === 'n') {
+          return {
+            pathname: parsed.pathname,
+            hash: parsed.hash,
+            query: Object.fromEntries(parsed.searchParams),
+          };
         }
-      } else if (match && hitRoutes.length > 0) {
-        // Since there was a build match, enter the hit phase.
-        // The hit phase must not set status code.
-        const prevStatus = routeResult.status;
-        routeResult = await devRouter(
-          getReqUrl(routeResult),
-          req.method,
-          hitRoutes,
-          this,
-          vercelConfig,
-          routeResult.headers,
-          [],
-          'hit'
-        );
-        routeResult.status = prevStatus;
-      }
+        return {
+          scheme: parsed.protocol.substring(0, parsed.protocol.length - 1),
+          host: parsed.hostname,
+          port: parsed.port ? Number(parsed.port) : undefined,
+          pathname: parsed.pathname,
+          hash: parsed.hash,
+          query: Object.fromEntries(parsed.searchParams),
+        };
+      },
+      route_result_cache: {
+        get() {},
+        set() {},
+      },
+      route_key_meta_cache: {
+        get() {},
+        set() {},
+      },
+    };
+    const routeResolver = get_resolver(resolverContext);
 
-      statusCode = routeResult.status;
+    const parsedUrl = url.parse(req.url || '', true);
+    const cookies = cookie.parse(req.headers.cookie || '');
 
-      if (match) {
-        // end the phase
-        break;
-      }
+    const routeResult = await routeResolver({
+      routes: routes || [],
+      request_path: parsedUrl.pathname || '',
+      query: parsedUrl.query as any,
+      host: req.headers['host'] || 'localhost',
+      wildcard: '',
+      deployment_id: 'dev',
+      headers: req.headers as any,
+      cookies,
+      request_method: req.method || 'GET',
+    });
 
-      if (phase === null && filesystemRoutes.length === 0) {
-        // hack to skip the reset from null to filesystem
-        break;
-      }
-    }
+    console.log({ url: req.url, routeResult });
 
-    if (!match && routeResult && errorRoutes.length > 0) {
-      // error phase
-      const routeResultForError = await devRouter(
-        getReqUrl(routeResult),
-        req.method,
-        errorRoutes,
-        this,
-        vercelConfig,
-        routeResult.headers,
-        [],
-        'error'
-      );
-      const { matched_route } = routeResultForError;
-
-      const matchForError = await findBuildMatch(
-        this.buildMatches,
-        this.files,
-        routeResultForError.dest,
-        this,
-        vercelConfig
-      );
-
-      if (matchForError) {
-        debug(`Route match detected in error phase, breaking loop`);
-        routeResult = routeResultForError;
-        statusCode = routeResultForError.status;
-        match = matchForError;
-      } else if (matched_route && matched_route.src && !matched_route.dest) {
-        debug(
-          'Route without `dest` detected in error phase, attempting to exit early'
-        );
-        if (
-          await this.exitWithStatus(
-            matchForError,
-            routeResultForError,
-            'error',
-            req,
-            res,
-            requestId
-          )
-        ) {
-          return;
-        }
-      }
-    }
+    const match = await findBuildMatch(
+      this.buildMatches,
+      this.files,
+      routeResult.dest_path,
+      this,
+      vercelConfig
+    );
 
     if (!routeResult) {
       throw new Error('Expected Route Result but none was found.');
     }
+    const { dest_path: dest, query, headers, status: statusCode } = routeResult;
 
-    const { dest, query, headers } = routeResult;
+    console.log({ url: req.url }, routeResult);
 
     // Set any headers defined in the matched `route` config
     for (const [name, value] of Object.entries(headers)) {
-      res.setHeader(name, value);
+      res.setHeader(name, value || '');
     }
 
-    if (statusCode) {
+    if (
+      statusCode !== 200 &&
+      routeResult.matched_output &&
+      !match &&
+      !this.devProcess
+    ) {
       // Set the `statusCode` as read-only so that `http-proxy`
       // is not able to modify the value in the future
       Object.defineProperty(res, 'statusCode', {
@@ -1765,7 +1604,31 @@ export default class DevServer {
 
     const requestPath = dest.replace(/^\//, '');
 
-    if (!match) {
+    if (routeResult.dest_path.match(/http(s)?:\/\//)) {
+      // Mix the `routes` result dest query params into the req path
+      let destUrl = routeResult.dest_path;
+      const parsedDestUrl = url.parse(destUrl);
+
+      debug(`ProxyPass: ${routeResult.dest_path}`);
+      const origUrl = url.parse(req.url || '');
+      const origQuery = parseQueryString(origUrl.search);
+      const destQuery = parseQueryString(parsedDestUrl.search);
+
+      Object.assign(origQuery, destQuery);
+
+      origUrl.search = formatQueryString(origQuery);
+      parsedDestUrl.search = origUrl.search;
+
+      destUrl = url.format(parsedDestUrl);
+      req.url = url.format(origUrl);
+
+      console.log({ url: req.url, origQuery, query, destUrl });
+
+      this.setResponseHeaders(res, requestId);
+      return proxyPass(req, res, destUrl, this, requestId);
+    }
+
+    if (!routeResult.matched_output && !match) {
       // If the dev command is started, then proxy to it
       if (this.devProcessOrigin) {
         const upstream = this.devProcessOrigin;
@@ -1780,7 +1643,11 @@ export default class DevServer {
         this.setResponseHeaders(res, requestId);
         const origUrl = url.parse(req.url || '/');
         const origQuery = parseQueryString(origUrl.search);
-        origUrl.pathname = dest;
+
+        // TODO: should we be skipping handle: 'error' if devProcess handles 404
+        if (routeResult.status !== 404) {
+          origUrl.pathname = dest;
+        }
         Object.assign(origQuery, query);
         origUrl.search = formatQueryString(origQuery);
         req.url = url.format(origUrl);
@@ -1788,11 +1655,26 @@ export default class DevServer {
       }
 
       if (
-        (statusCode === 404 && routeResult.phase === 'miss') ||
+        statusCode === 404 ||
         !this.renderDirectoryListing(req, res, requestPath, requestId)
       ) {
         await this.send404(req, res, requestId);
       }
+      return;
+    }
+
+    if (routeResult.is_redirect) {
+      await this.sendRedirect(
+        req,
+        res,
+        requestId,
+        routeResult.dest_path,
+        routeResult.status
+      );
+      return;
+    }
+
+    if (!match) {
       return;
     }
 
@@ -1813,15 +1695,20 @@ export default class DevServer {
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
-      const matchedRoute = await devRouter(
-        newUrl,
-        req.method,
-        buildResult.routes,
-        this,
-        vercelConfig
-      );
-      if (matchedRoute.found && callLevel === 0) {
-        debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
+      const curRouteResult = await routeResolver({
+        routes: buildResult.routes || [],
+        request_path: routeResult.dest_path || '',
+        query: origQuery as any,
+        host: req.headers['host'] || 'localhost',
+        wildcard: '',
+        deployment_id: 'dev',
+        headers: req.headers as any,
+        cookies,
+        request_method: req.method || 'GET',
+      });
+
+      if (curRouteResult.matched_output && callLevel === 0) {
+        debug(`Found matching route ${curRouteResult.dest_path} for ${newUrl}`);
         req.url = newUrl;
         await this.serveProjectAsNowV2(
           req,
@@ -1909,7 +1796,8 @@ export default class DevServer {
         const origUrl = url.parse(req.url || '/');
         const origQuery = parseQueryString(origUrl.search);
         Object.assign(origQuery, query);
-        origUrl.search = formatQueryString(origQuery);
+        origUrl.search = querystring.stringify(origQuery);
+
         req.url = url.format({
           pathname: origUrl.pathname,
           search: origUrl.search,

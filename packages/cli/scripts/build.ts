@@ -27,6 +27,7 @@ function envToString(key: string) {
 }
 
 async function main() {
+  const watchMode = process.argv.includes('--watch');
   // Read the secrets from GitHub Actions and generate a file.
   // During local development, these secrets will be empty.
   await createConstants();
@@ -50,6 +51,7 @@ async function main() {
     'build',
     '--external',
     'update-notifier',
+    ...(watchMode ? ['--watch'] : []),
     'src/index.ts',
   ];
   await execa('yarn', args, { stdio: 'inherit', cwd: dirRoot });
