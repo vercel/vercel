@@ -7,7 +7,7 @@ export function getPaginationOpts(opts: PaginationOptions) {
   const { '--next': nextTimestamp, '--limit': limit } = opts;
 
   if (typeof nextTimestamp !== undefined && Number.isNaN(nextTimestamp)) {
-    throw new Error('Please provide a number for flag --next');
+    throw new Error('Please provide a number for option --next');
   }
 
   if (
