@@ -267,16 +267,9 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
-        src: '^/dist/(.*)$',
+        src: '^/assets/(.*)$',
         headers: { 'cache-control': 'public, max-age=31536000, immutable' },
         continue: true,
-      },
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/index.html',
       },
     ],
   },
