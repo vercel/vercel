@@ -34,6 +34,7 @@
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
     "@types/buffer-crc32": "0.2.0",
+    "@types/bytes": "3.1.1",
     "@types/convert-source-map": "1.5.2",
     "@types/find-up": "4.0.0",
     "@types/fs-extra": "8.0.0",
@@ -49,6 +50,7 @@
     "@vercel/routing-utils": "2.1.3",
     "async-sema": "3.0.1",
     "buffer-crc32": "0.2.13",
+    "bytes": "3.1.2",
     "cheerio": "1.0.0-rc.10",
     "convert-source-map": "1.8.0",
     "esbuild": "0.12.22",
