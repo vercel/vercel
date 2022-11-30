@@ -39,8 +39,12 @@ import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-fun
 import type { LambdaOptionsWithFiles } from '@vercel/build-utils/dist/lambda';
 import { stringifySourceMap } from './sourcemapped';
 import type { RawSourceMap } from 'source-map';
+import bytes from 'bytes';
 
 type stringMap = { [key: string]: string };
+
+const _prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
+export { _prettyBytes as prettyBytes }
 
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
