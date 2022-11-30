@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 import toHost from '../to-host';
 import { Deployment } from '../../types';
 import {

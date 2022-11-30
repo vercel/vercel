@@ -130,6 +130,7 @@ export const defaultProject = {
       userId: 'K4amb7K9dAt5R2vBJWF32bmY',
     },
   ],
+  lastRollbackTarget: null,
   alias: [
     {
       domain: 'foobar.com',
