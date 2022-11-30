@@ -14,7 +14,8 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --project tsconfig.build.json",
+    "dev": "tsc --project tsconfig.build.json --watch",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "yarn test"
   },
