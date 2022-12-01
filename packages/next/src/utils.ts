@@ -1502,7 +1502,7 @@ export const outputFunctionFileSizeInfo = (
     .forEach(depKey => {
       const dep = dependencies[depKey];
 
-      if (dep.compressed < 100 * MIB && dep.uncompressed < 500 * MIB) {
+      if (dep.compressed < 100 * KIB && dep.uncompressed < 500 * KIB) {
         // ignore smaller dependencies to reduce noise
         return;
       }
