@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { isErrnoException, isError, errorToString } from './util/is-error';
+import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
 
 try {
   // Test to see if cwd has been deleted before
@@ -18,7 +18,7 @@ import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import updateNotifier from 'update-notifier';
+import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
@@ -54,13 +54,6 @@ import { AuthConfig, GlobalConfig } from './types';
 import { VercelConfig } from '@vercel/client';
 
 const isCanary = pkg.version.includes('canary');
-
-// Checks for available update and returns an instance
-const notifier = updateNotifier({
-  pkg,
-  distTag: isCanary ? 'canary' : 'latest',
-  updateCheckInterval: 1000 * 60 * 60 * 24 * 7, // 1 week
-});
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -149,22 +142,30 @@ const main = async () => {
   }
 
   // Print update information, if available
-  if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
-    const { latest } = notifier.update;
-    console.log(
-      info(
-        `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
-          `Run ${cmd(
-            await getUpdateCommand()
-          )} to install ${getTitleName()} CLI ${latest}`
-      )
-    );
+  if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
+    // Check if an update is available. If so, `latest` will contain a string
+    // of the latest version, otherwise `undefined`.
+    const latest = getLatestVersion({
+      distTag: isCanary ? 'canary' : 'latest',
+      output,
+      pkg,
+    });
+    if (latest) {
+      console.log(
+        info(
+          `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
+            `Run ${cmd(
+              await getUpdateCommand()
+            )} to install ${getTitleName()} CLI ${latest}`
+        )
+      );
 
-    console.log(
-      info(
-        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`
-      )
-    );
+      console.log(
+        `${info(
+          `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`
+        )}\n`
+      );
+    }
   }
 
   // The second argument to the command can be:
@@ -174,7 +175,7 @@ const main = async () => {
   const targetOrSubcommand = argv._[2];
 
   // Currently no beta commands - add here as needed
-  const betaCommands: string[] = [];
+  const betaCommands: string[] = ['rollback'];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
@@ -555,6 +556,9 @@ const main = async () => {
       case 'remove':
         func = require('./commands/remove').default;
         break;
+      case 'rollback':
+        func = require('./commands/rollback').default;
+        break;
       case 'secrets':
         func = require('./commands/secrets').default;
         break;
@@ -606,6 +610,21 @@ const main = async () => {
       }
       if (typeof err.stack === 'string') {
         output.debug(err.stack);
+      }
+      return 1;
+    }
+
+    if (isErrnoException(err) && err.code === 'ECONNRESET') {
+      // Error message will look like the following:
+      // request to https://api.vercel.com/v2/user failed, reason: socket hang up
+      const matches = /request to https:\/\/(.*?)\//.exec(err.message || '');
+      const hostname = matches?.[1];
+      if (hostname) {
+        output.error(
+          `Connection to ${highlight(
+            hostname
+          )} interrupted. Please verify your internet connectivity and DNS configuration.`
+        );
       }
       return 1;
     }

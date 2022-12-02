@@ -18,7 +18,7 @@ import { prependEmoji, emoji, EmojiLabel } from '../emoji';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
-import { isErrnoException, isError } from '../is-error';
+import { isErrnoException, isError } from '@vercel/error-utils';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -186,15 +186,14 @@ export async function getLinkedProject(
         })})\n`
       );
       return { status: 'error', exitCode: 1 };
-    } else {
-      output.print(
-        prependEmoji(
-          'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
-          emoji('warning')
-        )
-      );
     }
 
+    output.print(
+      prependEmoji(
+        'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
+        emoji('warning')
+      )
+    );
     return { status: 'not_linked', org: null, project: null };
   }
 

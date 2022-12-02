@@ -1,7 +1,7 @@
 const fs = require('fs-extra');
 const ms = require('ms');
 const path = require('path');
-const { build } = require('../../../../src');
+const { build } = require('../../../../dist');
 const { FileFsRef } = require('@vercel/build-utils');
 
 jest.setTimeout(ms('6m'));
@@ -12,6 +12,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       'index.test.js',
       'next.config.js',
       'package.json',
+      'data/strings.json',
       'pages/foo/bar/index.js',
       'pages/foo/index.js',
       'pages/index.js',
@@ -38,9 +39,15 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     for (const page of pages) {
       expect(output).toHaveProperty(page);
-      expect(path.resolve(output[page].fsPath)).toEqual(
-        path.join(pagesDir, `${page}.html`)
-      );
+      if (page === 'index') {
+        const { files, type } = output[page];
+        expect(type).toEqual('Lambda');
+        expect(files).toHaveProperty([path.join('data', 'strings.json')]);
+      } else {
+        expect(path.resolve(output[page].fsPath)).toEqual(
+          path.join(pagesDir, `${page}.html`)
+        );
+      }
     }
 
     for (const route of routes) {

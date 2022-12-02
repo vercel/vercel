@@ -287,6 +287,7 @@ export interface Project extends ProjectSettings {
   link?: ProjectLinkData;
   alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
+  lastRollbackTarget: RollbackTarget | null;
 }
 
 export interface Org {
@@ -320,6 +321,20 @@ export type ProjectLinkResult =
         | 'INVALID_ROOT_DIRECTORY'
         | 'MISSING_PROJECT_SETTINGS';
     };
+
+export type RollbackJobStatus =
+  | 'pending'
+  | 'in-progress'
+  | 'succeeded'
+  | 'failed'
+  | 'skipped';
+
+export interface RollbackTarget {
+  fromDeploymentId: string;
+  jobStatus: RollbackJobStatus;
+  requestedAt: number;
+  toDeploymentId: string;
+}
 
 export interface Token {
   id: string;

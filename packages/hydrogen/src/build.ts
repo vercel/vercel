@@ -15,6 +15,8 @@ import {
   scanParentDirs,
 } from '@vercel/build-utils';
 import type { BuildV2, PackageJson } from '@vercel/build-utils';
+import { getConfig } from '@vercel/static-config';
+import { Project } from 'ts-morph';
 
 export const build: BuildV2 = async ({
   entrypoint,
@@ -118,6 +120,15 @@ export const build: BuildV2 = async ({
     deploymentTarget: 'v8-worker',
     entrypoint: 'index.js',
     files: edgeFunctionFiles,
+    regions: (() => {
+      try {
+        const project = new Project();
+        const config = getConfig(project, edgeFunctionFiles['index.js'].fsPath);
+        return config?.regions;
+      } catch {
+        return undefined;
+      }
+    })(),
   });
 
   // The `index.html` file is a template, but we want to serve the

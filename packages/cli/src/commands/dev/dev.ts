@@ -3,16 +3,14 @@ import fs from 'fs-extra';
 
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
-import { ProjectEnvVariable } from '../../types';
 import Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import { ProjectSettings } from '../../types';
-import getDecryptedEnvRecords from '../../util/get-decrypted-env-records';
 import setupAndLink from '../../util/link/setup-and-link';
-import getSystemEnvValues from '../../util/env/get-system-env-values';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
+import { pullEnvRecords } from '../../util/env/get-env-records';
 
 type Options = {
   '--listen': string;
@@ -35,6 +33,7 @@ export default async function dev(
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     link = await setupAndLink(client, cwd, {
       autoConfirm: opts['--yes'],
+      link,
       successEmoji: 'link',
       setupMsg: 'Set up and develop',
     });
@@ -57,8 +56,7 @@ export default async function dev(
   }
 
   let projectSettings: ProjectSettings | undefined;
-  let projectEnvs: ProjectEnvVariable[] = [];
-  let systemEnvValues: string[] = [];
+  let envValues: Record<string, string> = {};
   if (link.status === 'linked') {
     const { project, org } = link;
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -69,20 +67,19 @@ export default async function dev(
       cwd = join(cwd, project.rootDirectory);
     }
 
-    [{ envs: projectEnvs }, { systemEnvValues }] = await Promise.all([
-      getDecryptedEnvRecords(output, client, project.id, 'vercel-cli:dev'),
-      project.autoExposeSystemEnvs
-        ? getSystemEnvValues(output, client, project.id)
-        : { systemEnvValues: [] },
-    ]);
+    envValues = (
+      await pullEnvRecords(output, client, project.id, 'vercel-cli:dev')
+    ).env;
   }
 
   const devServer = new DevServer(cwd, {
     output,
     projectSettings,
-    projectEnvs,
-    systemEnvValues,
+    envValues,
   });
+
+  // listen to SIGTERM for graceful shutdown
+  process.on('SIGTERM', () => devServer.stop());
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by

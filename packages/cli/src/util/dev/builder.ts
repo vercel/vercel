@@ -78,7 +78,7 @@ async function createBuildProcess(
   });
   match.buildProcess = buildProcess;
 
-  buildProcess.on('exit', (code, signal) => {
+  buildProcess.on('close', (code, signal) => {
     output.debug(
       `Build process for "${match.entrypoint}" exited with ${signal || code}`
     );
@@ -87,8 +87,12 @@ async function createBuildProcess(
 
   return new Promise((resolve, reject) => {
     // The first message that the builder process sends is the `ready` event
-    buildProcess.once('message', ({ type }) => {
-      if (type !== 'ready') {
+    buildProcess.once('message', data => {
+      if (
+        data !== null &&
+        typeof data === 'object' &&
+        (data as { type: string }).type !== 'ready'
+      ) {
         reject(new Error('Did not get "ready" event from builder'));
       } else {
         resolve(buildProcess);
@@ -187,10 +191,10 @@ export async function executeBuild(
         reject(err);
       }
       function cleanup() {
-        buildProcess!.removeListener('exit', onExit);
+        buildProcess!.removeListener('close', onExit);
         buildProcess!.removeListener('message', onMessage);
       }
-      buildProcess!.on('exit', onExit);
+      buildProcess!.on('close', onExit);
       buildProcess!.on('message', onMessage);
     });
   } else {
