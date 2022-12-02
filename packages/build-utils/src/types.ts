@@ -425,9 +425,8 @@ export interface BuildResultV2Typical {
     domain: string;
     value: string;
   }>;
-  meta?: {
-    framework: string;
-    frameworkVersion: string;
+  framework?: {
+    version: string;
   };
 }
 
