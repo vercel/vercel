@@ -68,4 +68,5 @@ export type VercelResponse = ServerResponse & {
   json: (jsonBody: any) => VercelResponse;
   status: (statusCode: number) => VercelResponse;
   redirect: (statusOrUrl: string | number, url?: string) => VercelResponse;
+  waitUntil: (promise: Promise<any>) => void;
 };

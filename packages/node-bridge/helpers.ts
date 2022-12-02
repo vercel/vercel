@@ -5,7 +5,7 @@ import type {
   VercelRequestQuery,
   VercelRequestBody,
 } from './types';
-import { Server } from 'http';
+import { IncomingMessage, Server, ServerResponse } from 'http';
 import type { Bridge } from './bridge';
 
 function getBodyParser(req: VercelRequest, body: Buffer) {
@@ -235,7 +235,7 @@ export class ApiError extends Error {
 }
 
 export function sendError(
-  res: VercelResponse,
+  res: ServerResponse,
   statusCode: number,
   message: string
 ) {
@@ -260,6 +260,40 @@ function setLazyProp<T>(req: VercelRequest, prop: string, getter: () => T) {
       Object.defineProperty(req, prop, { ...optsReset, value });
     },
   });
+}
+
+/**
+ * This should be called at the very top level wrapping the listener right before it's passed to the Server constructor (or createServer)
+ * It ensures that the bridge is aware of the handler's promise and adds the `waitUntil` helper to the response object
+ */
+export function wrapListenerWithWaitUntil(
+  listener: (req: IncomingMessage, res: ServerResponse) => Promise<void>,
+  bridge: Bridge
+) {
+  return async (req: IncomingMessage, res: ServerResponse) => {
+    // This is added by the bridge and used to assign the promises to the right event
+    const waitUntilId = req.headers['x-now-bridge-wait-until-id'];
+
+    // Don't expose this header to the client
+    delete req.headers['x-now-bridge-wait-until-id'];
+
+    if (typeof waitUntilId !== 'string') {
+      sendError(res, 500, 'Internal Server Error');
+      return;
+    }
+
+    // Attach `waitUntil` to the response, ensuring the promises get added to the right request
+    (res as VercelResponse).waitUntil = (promise: Promise<any>) =>
+      bridge.waitUntil(waitUntilId, promise, /* isHandler */ false);
+
+    const listenerPromise = listener(req, res);
+    // Add the handler promise to the bridge
+    // This promise will be awaited first, before any other promises to make sure we have collected all calls to `res.waitUntil`
+    bridge.waitUntil(waitUntilId, listenerPromise, /* isHandler */ true);
+    // Return the promise
+    // This is never used since this should be the top-level wrapper, but it's here for consistency
+    return listenerPromise;
+  };
 }
 
 export function createServerWithHelpers(

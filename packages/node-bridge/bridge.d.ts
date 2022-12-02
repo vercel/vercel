@@ -14,5 +14,10 @@ export declare class Bridge {
   listen(): void | Server;
   launcher(event: VercelProxyEvent, context: any): Promise<VercelProxyResponse>;
   consumeEvent(reqId: string): VercelProxyRequest;
+  waitUntil(
+    waitUntilId: string,
+    promise: Promise<any>,
+    isHandler: boolean
+  ): void;
 }
 export {};

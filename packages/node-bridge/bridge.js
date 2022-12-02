@@ -140,10 +140,17 @@ class Bridge {
     this.shouldStoreEvents = shouldStoreEvents;
     this.launcher = this.launcher.bind(this);
     this.reqIdSeed = 1;
+    this.waitUntilIdSeed = 1;
     /**
      * @type {{ [key: string]: import('./types').VercelProxyRequest }}
      */
     this.events = {};
+    /**
+     * Each request will have one promise for the handler and any extra promises that were added using `res.waitUntil`
+     *
+     * @type {{ [key: string]: { handler?: Promise<void>, extra: Promise<any>[] } }}
+     */
+    this.waitUntilPromises = {};
 
     this.listening = new Promise(resolve => {
       this.resolveListening = resolve;
@@ -203,6 +210,25 @@ class Bridge {
         resolveListening(addr);
       }
     );
+  }
+
+  /**
+   * @param {string} waitUntilId
+   * @param {Promise<any>} promise
+   * @param {boolean} isHandler
+   */
+  waitUntil(waitUntilId, promise, isHandler) {
+    if (!this.waitUntilPromises[waitUntilId]) {
+      this.waitUntilPromises[waitUntilId] = {
+        extra: [],
+      };
+    }
+
+    if (isHandler) {
+      this.waitUntilPromises[waitUntilId].handler = promise;
+    } else {
+      this.waitUntilPromises[waitUntilId].extra.push(promise);
+    }
   }
 
   /**
@@ -335,7 +361,11 @@ class Bridge {
       headers['x-now-bridge-request-id'] = reqId;
     }
 
-    return new Promise((resolve, reject) => {
+    const waitUntilId = `${this.waitUntilIdSeed++}`;
+    this.waitUntilPromises[waitUntilId] = { extra: [] };
+    headers['x-now-bridge-wait-until-id'] = waitUntilId;
+
+    const result = await new Promise((resolve, reject) => {
       let socket;
       let cipher;
       let url;
@@ -392,6 +422,20 @@ class Bridge {
       if (body) req.write(body);
       req.end();
     });
+
+    try {
+      // First we wait for the handler to finish in case there's more promises added after the response is sent
+      await this.waitUntilPromises[waitUntilId].handler;
+      // Then we wait for all the extra promises to finish
+      await Promise.all(this.waitUntilPromises[waitUntilId].extra || []);
+      // Finally we clean up the record for this request
+      delete this.waitUntilPromises[waitUntilId];
+    } catch (error) {
+      // We don't want to block the response if something fails here, so we log the error and proceed
+      console.error('Uncaught: waitUntil errored', error);
+    }
+
+    return result;
   }
 
   /**

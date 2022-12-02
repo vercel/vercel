@@ -87,19 +87,29 @@ function getVercelLauncher({
           bridge.listen();
         } else if (typeof listener === 'function') {
           Server.prototype.listen = originalListen;
+
           if (shouldAddHelpers) {
             bridge.setStoreEvents(true);
-            import(helpersPath).then(helper => {
-              const h = helper.default || helper;
-              const server = h.createServerWithHelpers(listener, bridge);
-              bridge.setServer(server);
-              bridge.listen();
-            });
-          } else {
-            const server = createServer(listener);
-            bridge.setServer(server);
-            bridge.listen();
           }
+
+          import(helpersPath).then(helper => {
+            const h = helper.default || helper;
+
+            if (shouldAddHelpers) {
+              const server = h.createServerWithHelpers(
+                h.wrapListenerWithWaitUntil(listener, bridge),
+                bridge
+              );
+              bridge.setServer(server);
+            } else {
+              const server = createServer(
+                h.wrapListenerWithWaitUntil(listener, bridge)
+              );
+              bridge.setServer(server);
+            }
+
+            bridge.listen();
+          });
         } else if (
           typeof listener === 'object' &&
           Object.keys(listener).length === 0
