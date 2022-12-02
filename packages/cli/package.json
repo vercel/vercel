@@ -50,7 +50,8 @@
     "@vercel/redwood": "1.0.39",
     "@vercel/remix": "1.1.1",
     "@vercel/ruby": "1.3.45",
-    "@vercel/static-build": "1.0.42"
+    "@vercel/static-build": "1.0.42",
+    "update-notifier": "5.1.0"
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "1.0.5",
