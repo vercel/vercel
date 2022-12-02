@@ -18,7 +18,7 @@ import sourceMap from '@zeit/source-map-support';
 import { mkdirp } from 'fs-extra';
 import chalk from 'chalk';
 import epipebomb from 'epipebomb';
-import updateNotifier from 'update-notifier';
+import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
@@ -54,13 +54,6 @@ import { AuthConfig, GlobalConfig } from './types';
 import { VercelConfig } from '@vercel/client';
 
 const isCanary = pkg.version.includes('canary');
-
-// Checks for available update and returns an instance
-const notifier = updateNotifier({
-  pkg,
-  distTag: isCanary ? 'canary' : 'latest',
-  updateCheckInterval: 1000 * 60 * 60 * 24 * 7, // 1 week
-});
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -149,22 +142,30 @@ const main = async () => {
   }
 
   // Print update information, if available
-  if (notifier.update && notifier.update.latest !== pkg.version && isTTY) {
-    const { latest } = notifier.update;
-    console.log(
-      info(
-        `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
-          `Run ${cmd(
-            await getUpdateCommand()
-          )} to install ${getTitleName()} CLI ${latest}`
-      )
-    );
+  if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
+    // Check if an update is available. If so, `latest` will contain a string
+    // of the latest version, otherwise `undefined`.
+    const latest = getLatestVersion({
+      distTag: isCanary ? 'canary' : 'latest',
+      output,
+      pkg,
+    });
+    if (latest) {
+      console.log(
+        info(
+          `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
+            `Run ${cmd(
+              await getUpdateCommand()
+            )} to install ${getTitleName()} CLI ${latest}`
+        )
+      );
 
-    console.log(
-      info(
-        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`
-      )
-    );
+      console.log(
+        `${info(
+          `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`
+        )}\n`
+      );
+    }
   }
 
   // The second argument to the command can be:
