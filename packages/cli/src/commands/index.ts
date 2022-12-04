@@ -29,6 +29,7 @@ export default new Map([
   ['pull', 'pull'],
   ['remove', 'remove'],
   ['rm', 'remove'],
+  ['rollback', 'rollback'],
   ['secret', 'secrets'],
   ['secrets', 'secrets'],
   ['switch', 'teams'],

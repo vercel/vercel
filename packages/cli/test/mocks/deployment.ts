@@ -140,6 +140,51 @@ function setupDeploymentEndpoints() {
     res.json(deployment);
   });
 
+  client.scenario.get('/v5/now/deployments/:id', (req, res) => {
+    const { id } = req.params;
+    const { url } = req.query;
+    let deployment;
+    if (id === 'get') {
+      if (typeof url !== 'string') {
+        res.statusCode = 400;
+        return res.json({ error: { code: 'bad_request' } });
+      }
+      deployment = Array.from(deployments.values()).find(d => {
+        return d.url === url;
+      });
+    } else {
+      // lookup by ID
+      deployment = deployments.get(id);
+    }
+    if (!deployment) {
+      res.statusCode = 404;
+      return res.json({
+        error: { code: 'not_found', message: 'Deployment not found', id },
+      });
+    }
+    res.json({
+      uid: deployment.id,
+      url: deployment.url,
+      name: '',
+      type: 'LAMBDAS',
+      state: 'READY',
+      version: deployment.version,
+      created: deployment.createdAt,
+      ready: deployment.ready,
+      buildingAt: deployment.buildingAt,
+      creator: {
+        uid: deployment.creator?.uid,
+        username: deployment.creator?.username,
+      },
+      target: deployment.target,
+      ownerId: undefined, // ?
+      projectId: undefined, // ?
+      inspectorUrl: deployment.inspectorUrl,
+      meta: {},
+      alias: deployment.alias,
+    });
+  });
+
   client.scenario.get('/:version/deployments/:id/builds', (req, res) => {
     const { id } = req.params;
     const deployment = deployments.get(id);
