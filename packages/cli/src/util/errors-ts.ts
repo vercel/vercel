@@ -679,6 +679,23 @@ export class CantParseJSONFile extends NowError<
   }
 }
 
+export class CantParseJSON extends NowError<
+  'CANT_PARSE_JSON',
+  {
+    rawJsonTrimmed: string;
+    innerError?: string; // just the message
+  }
+> {
+  constructor(innerError: string, rawJson: string) {
+    const rawJsonTrimmed = rawJson.slice(0, 100);
+    super({
+      code: 'CANT_PARSE_JSON',
+      meta: { rawJsonTrimmed, innerError },
+      message: `Can't parse json`,
+    });
+  }
+}
+
 export class ConflictingConfigFiles extends NowBuildError {
   files: string[];
 

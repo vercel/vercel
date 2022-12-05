@@ -193,7 +193,7 @@ export interface Framework {
    */
   defaultVersion?: string;
   /**
-   * Packages from which to determine framework version.
+   * Installed packages from which to determine framework version.
    */
   versionDependencies?: string[];
 }

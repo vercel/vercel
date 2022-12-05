@@ -40,8 +40,9 @@ import getArgs from '../util/get-args';
 import cmd from '../util/output/cmd';
 import * as cli from '../util/pkg-name';
 import cliPkg from '../util/pkg';
+import readJSON from '../util/read-json';
 import readJSONFile from '../util/read-json-file';
-import { CantParseJSONFile } from '../util/errors-ts';
+import { CantParseJSON, CantParseJSONFile } from '../util/errors-ts';
 import {
   pickOverrides,
   ProjectLinkAndSettings,
@@ -592,7 +593,7 @@ async function doBuild(
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
-  const framework = await findFramework(cwd, pkg, output);
+  const framework = await findFramework(cwd, output);
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
@@ -618,11 +619,7 @@ async function doBuild(
   );
 }
 
-async function findFramework(
-  cwd: string,
-  pkg: PackageJson | null,
-  output: Output
-) {
+async function findFramework(cwd: string, output: Output) {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
     frameworkList: frameworks,
@@ -642,25 +639,39 @@ async function findFramework(
   }
 }
 
+interface NpmLSOutput {
+  dependencies?: {
+    [dependency: string]:
+      | {
+          version: string;
+        }
+      | undefined;
+  };
+}
+
 async function lookupInstalledVersion(
   cwd: string,
   packageName: string,
   output: Output
 ) {
   try {
-    const args = `ls ${packageName} --depth=0`.split(' ');
+    const args = `ls ${packageName} --depth=0 --json`.split(' ');
     const { stdout } = await execa('npm', args, { cwd });
 
     // Example output:
     // blitz@1.0.0 /Users/smassa/source/demo/cli-finding/blitz
     // └── react@18.2.0
 
-    const regex = new RegExp(String.raw`${packageName}@([\.\d]+)`);
-    const matches = stdout.match(regex);
-    if (matches) {
-      // return the capture group (match `1`), which is the version number
-      return matches[1];
+    const lsOutput = readJSON<NpmLSOutput>(stdout);
+    if (!lsOutput || lsOutput instanceof CantParseJSON) {
+      const errorMessage = lsOutput ? `: ${lsOutput?.meta.innerError}` : '';
+      output.debug(
+        `Could not parse JSON output of \`npm ls\` for ${packageName}${errorMessage}`
+      );
+      return;
     }
+
+    return lsOutput.dependencies?.[packageName]?.version;
   } catch (error) {
     output.debug(`Error during lookupInstalledVersion: ${error}`);
   }
