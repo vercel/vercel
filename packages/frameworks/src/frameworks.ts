@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { promises } from 'fs';
 
-import { DependencyMap, Framework } from './types';
+import { Framework } from './types';
 import { readConfigFile } from './read-config-file';
 
 export * from './types';
@@ -51,7 +51,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    getVersion: async (dependencies: DependencyMap) => dependencies['blitz'],
+    versionDependencies: ['blitz'],
   },
   {
     name: 'Next.js',
@@ -102,7 +102,7 @@ export const frameworks = [
     ],
     getOutputDirName: async () => 'public',
     cachePattern: '.next/cache/**',
-    getVersion: async (dependencies: DependencyMap) => dependencies['next'],
+    versionDependencies: ['next'],
   },
   {
     name: 'Gatsby.js',
@@ -190,7 +190,7 @@ export const frameworks = [
       }
     },
     cachePattern: '{.cache,public}/**',
-    getVersion: async (dependencies: DependencyMap) => dependencies['gatsby'],
+    versionDependencies: ['gatsby'],
   },
   {
     name: 'Remix',
@@ -228,7 +228,7 @@ export const frameworks = [
     },
     dependency: 'remix',
     getOutputDirName: async () => 'public',
-    getVersion: async (dependencies: DependencyMap) => dependencies['remix'],
+    versionDependencies: ['remix'],
   },
   {
     name: 'Astro',
@@ -276,7 +276,7 @@ export const frameworks = [
         continue: true,
       },
     ],
-    getVersion: async (dependencies: DependencyMap) => dependencies['astro'],
+    versionDependencies: ['astro'],
   },
   {
     name: 'Hexo',
@@ -314,7 +314,7 @@ export const frameworks = [
     },
     dependency: 'hexo',
     getOutputDirName: async () => 'public',
-    getVersion: async (dependencies: DependencyMap) => dependencies['hexo'],
+    versionDependencies: ['hexo'],
   },
   {
     name: 'Eleventy',
@@ -353,8 +353,7 @@ export const frameworks = [
     dependency: '@11ty/eleventy',
     getOutputDirName: async () => '_site',
     cachePattern: '.cache/**',
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@11ty/eleventy'],
+    versionDependencies: ['@11ty/eleventy'],
   },
   {
     name: 'Docusaurus 2',
@@ -443,8 +442,7 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@docusaurus/core'],
+    versionDependencies: ['@docusaurus/core'],
   },
   {
     name: 'Docusaurus 1',
@@ -497,8 +495,7 @@ export const frameworks = [
       }
       return base;
     },
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['docusaurus'],
+    versionDependencies: ['docusaurus'],
   },
   {
     name: 'Preact',
@@ -550,7 +547,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) => dependencies['preact'],
+    versionDependencies: ['preact'],
   },
   {
     name: 'SolidStart',
@@ -591,8 +588,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => '.output',
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['solid-js'] || dependencies['solid-start'],
+    versionDependencies: ['solid-js', 'solid-start'],
   },
   {
     name: 'Dojo',
@@ -655,8 +651,7 @@ export const frameworks = [
         continue: true,
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@dojo/framework'],
+    versionDependencies: ['@dojo/framework'],
   },
   {
     name: 'Ember.js',
@@ -708,8 +703,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['ember-cli'] || dependencies['ember-source'],
+    versionDependencies: ['ember-cli', 'ember-source'],
   },
   {
     name: 'Vue.js',
@@ -767,8 +761,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@vue/cli-service'],
+    versionDependencies: ['@vue/cli-service'],
   },
   {
     name: 'Scully',
@@ -805,8 +798,7 @@ export const frameworks = [
     },
     dependency: '@scullyio/init',
     getOutputDirName: async () => 'dist/static',
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@scullyio/init'],
+    versionDependencies: ['@scullyio/init'],
   },
   {
     name: 'Ionic Angular',
@@ -852,8 +844,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@ionic/angular'],
+    versionDependencies: ['@ionic/angular'],
   },
   {
     name: 'Angular',
@@ -914,8 +905,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@angular/cli'],
+    versionDependencies: ['@angular/cli'],
   },
   {
     name: 'Polymer',
@@ -973,8 +963,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['polymer-cli'],
+    versionDependencies: ['polymer-cli'],
   },
   {
     name: 'Svelte',
@@ -1026,7 +1015,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) => dependencies['svelte'],
+    versionDependencies: ['svelte'],
   },
   {
     name: 'SvelteKit',
@@ -1066,7 +1055,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    getVersion: async (dependencies: DependencyMap) => dependencies['svelte'],
+    versionDependencies: ['svelte'],
   },
   {
     name: 'Ionic React',
@@ -1128,8 +1117,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@ionic/react'],
+    versionDependencies: ['@ionic/react'],
   },
   {
     name: 'Create React App',
@@ -1197,8 +1185,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['react-scripts'],
+    versionDependencies: ['react-scripts'],
   },
   {
     name: 'Gridsome',
@@ -1236,8 +1223,7 @@ export const frameworks = [
     },
     dependency: 'gridsome',
     getOutputDirName: async () => 'dist',
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@gridsome/cli'],
+    versionDependencies: ['@gridsome/cli'],
   },
   {
     name: 'UmiJS',
@@ -1284,7 +1270,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) => dependencies['umi'],
+    versionDependencies: ['umi'],
   },
   {
     name: 'Sapper',
@@ -1322,7 +1308,7 @@ export const frameworks = [
     },
     dependency: 'sapper',
     getOutputDirName: async () => '__sapper__/export',
-    getVersion: async (dependencies: DependencyMap) => dependencies['sapper'],
+    versionDependencies: ['sapper'],
   },
   {
     name: 'Saber',
@@ -1374,7 +1360,7 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) => dependencies['saber'],
+    versionDependencies: ['saber'],
   },
   {
     name: 'Stencil',
@@ -1436,8 +1422,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@stencil/core'],
+    versionDependencies: ['@stencil/core'],
   },
   {
     name: 'Nuxt.js',
@@ -1498,8 +1483,7 @@ export const frameworks = [
         dest: '/200.html',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['nuxt3'] || dependencies['nuxt3-edge'],
+    versionDependencies: ['nuxt3', 'nuxt3-edge'],
   },
   {
     name: 'RedwoodJS',
@@ -1537,8 +1521,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@redwoodjs/core'],
+    versionDependencies: ['@redwoodjs/core'],
   },
   {
     name: 'Hugo',
@@ -1667,7 +1650,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    getVersion: async (dependencies: DependencyMap) => dependencies['brunch'],
+    versionDependencies: ['brunch'],
   },
   {
     name: 'Middleman',
@@ -1775,7 +1758,7 @@ export const frameworks = [
     },
     dependency: 'vite',
     getOutputDirName: async () => 'dist',
-    getVersion: async (dependencies: DependencyMap) => dependencies['vite'],
+    versionDependencies: ['vite'],
   },
   {
     name: 'VitePress',
@@ -1810,8 +1793,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => '.vitepress/dist',
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['vitepress'],
+    versionDependencies: ['vitepress'],
   },
   {
     name: 'VuePress',
@@ -1846,7 +1828,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'src/.vuepress/dist',
-    getVersion: async (dependencies: DependencyMap) => dependencies['vuepress'],
+    versionDependencies: ['vuepress'],
   },
   {
     name: 'Parcel',
@@ -1894,7 +1876,7 @@ export const frameworks = [
         handle: 'filesystem',
       },
     ],
-    getVersion: async (dependencies: DependencyMap) => dependencies['parcel'],
+    versionDependencies: ['parcel'],
   },
   {
     name: 'Sanity',
@@ -1988,8 +1970,7 @@ export const frameworks = [
     },
     dependency: '@shopify/hydrogen',
     getOutputDirName: async () => 'dist',
-    getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@shopify/hydrogen'],
+    versionDependencies: ['@shopify/hydrogen'],
   },
   {
     name: 'Other',

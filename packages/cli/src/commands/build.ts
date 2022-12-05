@@ -64,6 +64,8 @@ import { validateConfig } from '../util/validate-config';
 
 import { setMonorepoDefaultSettings } from '../util/build/monorepo';
 import frameworks from '@vercel/frameworks';
+import execa from 'execa';
+import { Output } from '../util/output';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -590,7 +592,7 @@ async function doBuild(
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
-  const framework = await findFramework(cwd, pkg);
+  const framework = await findFramework(cwd, pkg, output);
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
@@ -616,28 +618,52 @@ async function doBuild(
   );
 }
 
-async function findFramework(cwd: string, pkg: PackageJson | null) {
-  if (!pkg) {
-    return;
-  }
-
+async function findFramework(
+  cwd: string,
+  pkg: PackageJson | null,
+  output: Output
+) {
   const detectedFramework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(cwd),
     frameworkList: frameworks,
   });
 
-  if (!detectedFramework || !detectedFramework.getVersion) {
+  if (!detectedFramework?.versionDependencies?.length) {
     return;
   }
 
-  const allDependencies = Object.assign(
-    {},
-    pkg.devDependencies,
-    pkg.dependencies
-  );
-  return {
-    version: await detectedFramework.getVersion(allDependencies),
-  };
+  for (let packageName of detectedFramework.versionDependencies) {
+    const version = await lookupInstalledVersion(cwd, packageName, output);
+    if (version) {
+      return {
+        version,
+      };
+    }
+  }
+}
+
+async function lookupInstalledVersion(
+  cwd: string,
+  packageName: string,
+  output: Output
+) {
+  try {
+    const args = `ls ${packageName} --depth=0`.split(' ');
+    const { stdout } = await execa('npm', args, { cwd });
+
+    // Example output:
+    // blitz@1.0.0 /Users/smassa/source/demo/cli-finding/blitz
+    // └── react@18.2.0
+
+    const regex = new RegExp(String.raw`${packageName}@([\.\d]+)`);
+    const matches = stdout.match(regex);
+    if (matches) {
+      // return the capture group (match `1`), which is the version number
+      return matches[1];
+    }
+  } catch (error) {
+    output.debug(`Error during lookupInstalledVersion: ${error}`);
+  }
 }
 
 function expandBuild(files: string[], build: Builder): Builder[] {

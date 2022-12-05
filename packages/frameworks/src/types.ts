@@ -193,7 +193,7 @@ export interface Framework {
    */
   defaultVersion?: string;
   /**
-   * Function that returns the version of the framework given a map of dependencies.
+   * Packages from which to determine framework version.
    */
-  getVersion?: (dependencyMap: DependencyMap) => Promise<string | undefined>;
+  versionDependencies?: string[];
 }
