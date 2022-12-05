@@ -806,7 +806,7 @@ export const frameworks = [
     dependency: '@scullyio/init',
     getOutputDirName: async () => 'dist/static',
     getVersion: async (dependencies: DependencyMap) =>
-      dependencies['@vue/cli-service'],
+      dependencies['@scullyio/init'],
   },
   {
     name: 'Ionic Angular',
@@ -852,6 +852,8 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@ionic/angular'],
   },
   {
     name: 'Angular',
@@ -912,6 +914,8 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@angular/cli'],
   },
   {
     name: 'Polymer',
@@ -969,6 +973,8 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['polymer-cli'],
   },
   {
     name: 'Svelte',
@@ -1020,6 +1026,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) => dependencies['svelte'],
   },
   {
     name: 'SvelteKit',
@@ -1059,6 +1066,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
+    getVersion: async (dependencies: DependencyMap) => dependencies['svelte'],
   },
   {
     name: 'Ionic React',
@@ -1120,6 +1128,8 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@ionic/react'],
   },
   {
     name: 'Create React App',
@@ -1187,6 +1197,8 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['react-scripts'],
   },
   {
     name: 'Gridsome',
@@ -1224,6 +1236,8 @@ export const frameworks = [
     },
     dependency: 'gridsome',
     getOutputDirName: async () => 'dist',
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@gridsome/cli'],
   },
   {
     name: 'UmiJS',
@@ -1270,6 +1284,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) => dependencies['umi'],
   },
   {
     name: 'Sapper',
@@ -1307,6 +1322,7 @@ export const frameworks = [
     },
     dependency: 'sapper',
     getOutputDirName: async () => '__sapper__/export',
+    getVersion: async (dependencies: DependencyMap) => dependencies['sapper'],
   },
   {
     name: 'Saber',
@@ -1358,6 +1374,7 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) => dependencies['saber'],
   },
   {
     name: 'Stencil',
@@ -1419,6 +1436,8 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@stencil/core'],
   },
   {
     name: 'Nuxt.js',
@@ -1479,6 +1498,8 @@ export const frameworks = [
         dest: '/200.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['nuxt3'] || dependencies['nuxt3-edge'],
   },
   {
     name: 'RedwoodJS',
@@ -1516,6 +1537,8 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@redwoodjs/core'],
   },
   {
     name: 'Hugo',
@@ -1644,6 +1667,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
+    getVersion: async (dependencies: DependencyMap) => dependencies['brunch'],
   },
   {
     name: 'Middleman',
@@ -1751,6 +1775,7 @@ export const frameworks = [
     },
     dependency: 'vite',
     getOutputDirName: async () => 'dist',
+    getVersion: async (dependencies: DependencyMap) => dependencies['vite'],
   },
   {
     name: 'VitePress',
@@ -1785,6 +1810,8 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => '.vitepress/dist',
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['vitepress'],
   },
   {
     name: 'VuePress',
@@ -1819,6 +1846,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'src/.vuepress/dist',
+    getVersion: async (dependencies: DependencyMap) => dependencies['vuepress'],
   },
   {
     name: 'Parcel',
@@ -1866,6 +1894,7 @@ export const frameworks = [
         handle: 'filesystem',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) => dependencies['parcel'],
   },
   {
     name: 'Sanity',
@@ -1959,6 +1988,8 @@ export const frameworks = [
     },
     dependency: '@shopify/hydrogen',
     getOutputDirName: async () => 'dist',
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@shopify/hydrogen'],
   },
   {
     name: 'Other',
