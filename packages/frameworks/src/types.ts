@@ -37,6 +37,10 @@ export type Redirect = Rewrite & {
   permanent?: boolean;
 };
 
+export interface DependencyMap {
+  [dependencyName: string]: string;
+}
+
 /**
  * Framework detection information.
  */
@@ -188,4 +192,8 @@ export interface Framework {
    * @example "0.13.0"
    */
   defaultVersion?: string;
+  /**
+   * Function that returns the version of the framework given a map of dependencies.
+   */
+  getVersion?: (dependencyMap: DependencyMap) => Promise<string | undefined>;
 }

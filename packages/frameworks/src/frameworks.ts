@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { promises } from 'fs';
 
-import { Framework } from './types';
+import { DependencyMap, Framework } from './types';
 import { readConfigFile } from './read-config-file';
 
 export * from './types';
@@ -51,6 +51,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
+    getVersion: async (dependencies: DependencyMap) => dependencies['blitz'],
   },
   {
     name: 'Next.js',
@@ -101,6 +102,7 @@ export const frameworks = [
     ],
     getOutputDirName: async () => 'public',
     cachePattern: '.next/cache/**',
+    getVersion: async (dependencies: DependencyMap) => dependencies['next'],
   },
   {
     name: 'Gatsby.js',
@@ -188,6 +190,7 @@ export const frameworks = [
       }
     },
     cachePattern: '{.cache,public}/**',
+    getVersion: async (dependencies: DependencyMap) => dependencies['gatsby'],
   },
   {
     name: 'Remix',
@@ -225,6 +228,7 @@ export const frameworks = [
     },
     dependency: 'remix',
     getOutputDirName: async () => 'public',
+    getVersion: async (dependencies: DependencyMap) => dependencies['remix'],
   },
   {
     name: 'Astro',
@@ -272,6 +276,7 @@ export const frameworks = [
         continue: true,
       },
     ],
+    getVersion: async (dependencies: DependencyMap) => dependencies['astro'],
   },
   {
     name: 'Hexo',
@@ -309,6 +314,7 @@ export const frameworks = [
     },
     dependency: 'hexo',
     getOutputDirName: async () => 'public',
+    getVersion: async (dependencies: DependencyMap) => dependencies['hexo'],
   },
   {
     name: 'Eleventy',
@@ -347,6 +353,8 @@ export const frameworks = [
     dependency: '@11ty/eleventy',
     getOutputDirName: async () => '_site',
     cachePattern: '.cache/**',
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@11ty/eleventy'],
   },
   {
     name: 'Docusaurus 2',
@@ -435,6 +443,8 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@docusaurus/core'],
   },
   {
     name: 'Docusaurus 1',
@@ -487,6 +497,8 @@ export const frameworks = [
       }
       return base;
     },
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['docusaurus'],
   },
   {
     name: 'Preact',
@@ -498,11 +510,16 @@ export const frameworks = [
     description: 'A Preact app, created with the Preact CLI.',
     website: 'https://preactjs.com',
     detectors: {
-      every: [
+      some: [
         {
           path: 'package.json',
           matchContent:
             '"(dev)?(d|D)ependencies":\\s*{[^}]*"preact-cli":\\s*".+?"[^}]*}',
+        },
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"preact":\\s*".+?"[^}]*}',
         },
       ],
     },
@@ -533,6 +550,7 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) => dependencies['preact'],
   },
   {
     name: 'SolidStart',
@@ -573,6 +591,8 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => '.output',
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['solid-js'] || dependencies['solid-start'],
   },
   {
     name: 'Dojo',
@@ -635,6 +655,8 @@ export const frameworks = [
         continue: true,
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@dojo/framework'],
   },
   {
     name: 'Ember.js',
@@ -646,11 +668,16 @@ export const frameworks = [
     description: 'An Ember app, created with the Ember CLI.',
     website: 'https://emberjs.com/',
     detectors: {
-      every: [
+      some: [
         {
           path: 'package.json',
           matchContent:
             '"(dev)?(d|D)ependencies":\\s*{[^}]*"ember-cli":\\s*".+?"[^}]*}',
+        },
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"ember-source":\\s*".+?"[^}]*}',
         },
       ],
     },
@@ -681,6 +708,8 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['ember-cli'] || dependencies['ember-source'],
   },
   {
     name: 'Vue.js',
@@ -738,6 +767,8 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@vue/cli-service'],
   },
   {
     name: 'Scully',
@@ -774,6 +805,8 @@ export const frameworks = [
     },
     dependency: '@scullyio/init',
     getOutputDirName: async () => 'dist/static',
+    getVersion: async (dependencies: DependencyMap) =>
+      dependencies['@vue/cli-service'],
   },
   {
     name: 'Ionic Angular',

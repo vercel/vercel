@@ -11,6 +11,11 @@ export interface DetectFrameworkOptions {
   frameworkList: readonly BaseFramework[];
 }
 
+export interface DetectFrameworkRecordOptions {
+  fs: DetectorFilesystem;
+  frameworkList: readonly Framework[];
+}
+
 async function matches(fs: DetectorFilesystem, framework: BaseFramework) {
   const { detectors } = framework;
 
@@ -84,6 +89,21 @@ export async function detectFramework({
     frameworkList.map(async frameworkMatch => {
       if (await matches(fs, frameworkMatch)) {
         return frameworkMatch.slug;
+      }
+      return null;
+    })
+  );
+  return result.find(res => res !== null) ?? null;
+}
+
+export async function detectFrameworkRecord({
+  fs,
+  frameworkList,
+}: DetectFrameworkRecordOptions): Promise<Framework | null> {
+  const result = await Promise.all(
+    frameworkList.map(async frameworkMatch => {
+      if (await matches(fs, frameworkMatch)) {
+        return frameworkMatch;
       }
       return null;
     })

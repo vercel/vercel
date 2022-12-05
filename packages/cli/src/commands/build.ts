@@ -17,7 +17,11 @@ import {
   BuildResultV3,
   NowBuildError,
 } from '@vercel/build-utils';
-import { detectBuilders } from '@vercel/fs-detectors';
+import {
+  detectBuilders,
+  detectFrameworkRecord,
+  LocalFileSystemDetector,
+} from '@vercel/fs-detectors';
 import minimatch from 'minimatch';
 import {
   appendRoutesToPhase,
@@ -59,6 +63,7 @@ import { toEnumerableError } from '../util/error';
 import { validateConfig } from '../util/validate-config';
 
 import { setMonorepoDefaultSettings } from '../util/build/monorepo';
+import frameworks from '@vercel/frameworks';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -585,6 +590,8 @@ async function doBuild(
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
+  const framework = await findFramework(cwd, pkg);
+
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
   // TODO: properly type
@@ -594,6 +601,7 @@ async function doBuild(
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
+    framework,
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
@@ -606,6 +614,30 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
+}
+
+async function findFramework(cwd: string, pkg: PackageJson | null) {
+  if (!pkg) {
+    return;
+  }
+
+  const detectedFramework = await detectFrameworkRecord({
+    fs: new LocalFileSystemDetector(cwd),
+    frameworkList: frameworks,
+  });
+
+  if (!detectedFramework || !detectedFramework.getVersion) {
+    return;
+  }
+
+  const allDependencies = Object.assign(
+    {},
+    pkg.devDependencies,
+    pkg.dependencies
+  );
+  return {
+    version: detectedFramework.getVersion(allDependencies),
+  };
 }
 
 function expandBuild(files: string[], build: Builder): Builder[] {
