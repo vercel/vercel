@@ -636,7 +636,7 @@ async function findFramework(cwd: string, pkg: PackageJson | null) {
     pkg.dependencies
   );
   return {
-    version: detectedFramework.getVersion(allDependencies),
+    version: await detectedFramework.getVersion(allDependencies),
   };
 }
 
