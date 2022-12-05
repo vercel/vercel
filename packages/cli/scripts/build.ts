@@ -1,7 +1,7 @@
 import cpy from 'cpy';
 import execa from 'execa';
 import { join } from 'path';
-import { remove, readJSON, writeFile } from 'fs-extra';
+import { remove, writeFile } from 'fs-extra';
 
 const dirRoot = join(__dirname, '..');
 const distRoot = join(dirRoot, 'dist');
@@ -43,15 +43,15 @@ async function main() {
     stdio: 'inherit',
   });
 
-  const pkg = await readJSON(join(dirRoot, 'package.json'));
-  const dependencies = Object.keys(pkg?.dependencies ?? {});
   // Do the initial `ncc` build
-  console.log('Dependencies:', dependencies);
-  const externs = [];
-  for (const dep of dependencies) {
-    externs.push('--external', dep);
-  }
-  const args = ['ncc', 'build', 'src/index.ts', ...externs];
+  console.log();
+  const args = [
+    'ncc',
+    'build',
+    '--external',
+    'update-notifier',
+    'src/index.ts',
+  ];
   await execa('yarn', args, { stdio: 'inherit', cwd: dirRoot });
 
   // `ncc` has some issues with `@vercel/fun`'s runtime files:
@@ -78,10 +78,6 @@ async function main() {
   // Band-aid to bundle stuff that `ncc` neglects to bundle
   await cpy(join(dirRoot, 'src/util/projects/VERCEL_DIR_README.txt'), distRoot);
   await cpy(join(dirRoot, 'src/util/dev/builder-worker.js'), distRoot);
-  await cpy(
-    join(dirRoot, 'src/util/get-latest-version/get-latest-worker.js'),
-    distRoot
-  );
 
   console.log('Finished building Vercel CLI');
 }
