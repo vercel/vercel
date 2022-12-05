@@ -37,10 +37,6 @@ export type Redirect = Rewrite & {
   permanent?: boolean;
 };
 
-export interface DependencyMap {
-  [dependencyName: string]: string;
-}
-
 /**
  * Framework detection information.
  */
