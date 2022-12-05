@@ -29,8 +29,7 @@ import { findConfig } from './utils';
 // Name of the Remix runtime adapter npm package for Vercel
 const REMIX_RUNTIME_ADAPTER_NAME = '@remix-run/vercel';
 
-// Pinned version of the last verified working version of the adapter
-const REMIX_RUNTIME_ADAPTER_VERSION = '1.6.1';
+const REMIX_DEV_NAME = '@remix-run/dev';
 
 export const build: BuildV2 = async ({
   entrypoint,
@@ -81,8 +80,10 @@ export const build: BuildV2 = async ({
       await fs.readFile(packageJsonPath, 'utf8')
     );
     const { dependencies = {}, devDependencies = {} } = packageJson;
-
     let modified = false;
+
+    const remixVersion = devDependencies[REMIX_DEV_NAME];
+
     if (REMIX_RUNTIME_ADAPTER_NAME in devDependencies) {
       dependencies[REMIX_RUNTIME_ADAPTER_NAME] =
         devDependencies[REMIX_RUNTIME_ADAPTER_NAME];
@@ -92,9 +93,9 @@ export const build: BuildV2 = async ({
       );
       modified = true;
     } else if (!(REMIX_RUNTIME_ADAPTER_NAME in dependencies)) {
-      dependencies[REMIX_RUNTIME_ADAPTER_NAME] = REMIX_RUNTIME_ADAPTER_VERSION;
+      dependencies[REMIX_RUNTIME_ADAPTER_NAME] = remixVersion;
       console.log(
-        `Warning: Adding "${REMIX_RUNTIME_ADAPTER_NAME}" v${REMIX_RUNTIME_ADAPTER_VERSION} to \`dependencies\`. You should commit this change.`
+        `Warning: Adding "${REMIX_RUNTIME_ADAPTER_NAME}" v${remixVersion} to \`dependencies\`. You should commit this change.`
       );
       modified = true;
     }
