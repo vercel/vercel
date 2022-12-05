@@ -507,16 +507,11 @@ export const frameworks = [
     description: 'A Preact app, created with the Preact CLI.',
     website: 'https://preactjs.com',
     detectors: {
-      some: [
+      every: [
         {
           path: 'package.json',
           matchContent:
             '"(dev)?(d|D)ependencies":\\s*{[^}]*"preact-cli":\\s*".+?"[^}]*}',
-        },
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"preact":\\s*".+?"[^}]*}',
         },
       ],
     },
@@ -663,16 +658,11 @@ export const frameworks = [
     description: 'An Ember app, created with the Ember CLI.',
     website: 'https://emberjs.com/',
     detectors: {
-      some: [
+      every: [
         {
           path: 'package.json',
           matchContent:
             '"(dev)?(d|D)ependencies":\\s*{[^}]*"ember-cli":\\s*".+?"[^}]*}',
-        },
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"ember-source":\\s*".+?"[^}]*}',
         },
       ],
     },
