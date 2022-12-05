@@ -425,6 +425,9 @@ export interface BuildResultV2Typical {
     domain: string;
     value: string;
   }>;
+  framework?: {
+    version: string;
+  };
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
