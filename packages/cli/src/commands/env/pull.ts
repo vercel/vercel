@@ -25,6 +25,7 @@ const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 type Options = {
   '--debug': boolean;
   '--yes': boolean;
+  '--branch': string;
 };
 
 function readHeadSync(path: string, length: number) {
@@ -65,6 +66,15 @@ export default async function pull(
     return 1;
   }
 
+  const gitBranch = opts['--branch'];
+
+  if (gitBranch && environment !== 'preview') {
+    output.error(
+      `The \`--branch\` flag can only be used with \`--environment preview\``
+    );
+    return 1;
+  }
+
   // handle relative or absolute filename
   const [filename = '.env'] = args;
   const fullPath = resolve(cwd, filename);
@@ -100,6 +110,7 @@ export default async function pull(
   const records = (
     await pullEnvRecords(output, client, project.id, source, {
       target: environment || ProjectEnvTarget.Development,
+      gitBranch,
     })
   ).env;
 
