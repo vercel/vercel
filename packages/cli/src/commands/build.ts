@@ -658,10 +658,6 @@ async function lookupInstalledVersion(
     const args = `ls ${packageName} --depth=0 --json`.split(' ');
     const { stdout } = await execa('npm', args, { cwd });
 
-    // Example output:
-    // blitz@1.0.0 /Users/smassa/source/demo/cli-finding/blitz
-    // └── react@18.2.0
-
     const lsOutput = readJSON<NpmLSOutput>(stdout);
     if (!lsOutput || lsOutput instanceof CantParseJSON) {
       const errorMessage = lsOutput ? `: ${lsOutput?.meta.innerError}` : '';
