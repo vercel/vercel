@@ -922,6 +922,7 @@ export const build: BuildV2 = async ({
             ]
           : []),
       ],
+      framework: { version: nextVersion },
     };
   }
 
@@ -2157,11 +2158,6 @@ export const build: BuildV2 = async ({
 
   const { i18n } = routesManifest || {};
 
-  let framework: { version: string } | undefined;
-  if (nextVersion) {
-    framework = { version: nextVersion };
-  }
-
   return {
     output: {
       ...publicDirectoryFiles,
@@ -2586,7 +2582,7 @@ export const build: BuildV2 = async ({
                 ]),
           ]),
     ],
-    framework,
+    framework: { version: nextVersion },
   };
 };
 
