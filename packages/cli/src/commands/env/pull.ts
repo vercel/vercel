@@ -25,7 +25,7 @@ const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 type Options = {
   '--debug': boolean;
   '--yes': boolean;
-  '--branch': string;
+  '--git-branch': string;
 };
 
 function readHeadSync(path: string, length: number) {
@@ -70,7 +70,7 @@ export default async function pull(
   const [filename = '.env'] = args;
   const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
-  const gitBranch = opts['--branch'];
+  const gitBranch = opts['--git-branch'];
 
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
