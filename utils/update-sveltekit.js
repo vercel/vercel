@@ -30,15 +30,16 @@ module.exports = async ({ github, context }) => {
   const newKit = newVersion('@sveltejs/kit');
   const newVercel = newVersion('@sveltejs/adapter-vercel');
   const newCreate = newVersion('create-svelte');
-  const branch = `sveltekit-${`${newKit}-${newVercel}-${newCreate}`.replaceAll(
-    '.',
-    '-'
-  )}`;
 
   if (oldKit === newKit && oldVercel === newVercel && oldCreate === newCreate) {
     console.log(`SvelteKit package versions did not change; skipping update.`);
     return;
   }
+
+  const branch = `sveltekit-${`${newKit}-${newVercel}-${newCreate}`.replaceAll(
+    '.',
+    '-'
+  )}`;
 
   if (
     exec('git', ['ls-remote', '--heads', 'origin', branch]).toString().trim()
