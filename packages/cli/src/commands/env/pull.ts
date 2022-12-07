@@ -66,19 +66,11 @@ export default async function pull(
     return 1;
   }
 
-  const gitBranch = opts['--branch'];
-
-  if (gitBranch && environment !== 'preview') {
-    output.error(
-      `The \`--branch\` flag can only be used with \`--environment preview\``
-    );
-    return 1;
-  }
-
   // handle relative or absolute filename
   const [filename = '.env'] = args;
   const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
+  const gitBranch = opts['--branch'];
 
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
