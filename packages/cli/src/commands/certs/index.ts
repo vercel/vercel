@@ -50,6 +50,9 @@ const help = () => {
       'FILE'
     )}                      CA certificate chain file
     -N, --next                     Show next page of results
+    --limit=${chalk.bold.underline(
+      'VALUE'
+    )}                  Number of results to return per page (default: 20, max: 100)
 
   ${chalk.dim('Examples:')}
 
@@ -92,6 +95,7 @@ export default async function main(client: Client) {
       '--ca': String,
       '--next': Number,
       '-N': '--next',
+      '--limit': Number,
     });
   } catch (err) {
     handleError(err);
