@@ -1156,6 +1156,7 @@ export async function serverBuild({
     completeDynamicRoutes.push(...dynamicRoutes);
   }
 
+  console.log(`[FRAMEWORK] exit from server-build: ${nextVersion}`);
   return {
     wildcard: wildcardConfig,
     images:
