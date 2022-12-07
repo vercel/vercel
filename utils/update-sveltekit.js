@@ -66,15 +66,18 @@ module.exports = async ({ github, context }) => {
 
   // replace the default adapter-static with adapter-vercel
 
-  const packageJsonContents = fs.readFileSync(PACKAGE_JSON_PATH, 'utf8');
+  const packageJsonContents = require(PACKAGE_JSON_PATH);
   const svelteKitConfigContents = fs.readFileSync(
     SVELTEKIT_CONFIG_PATH,
     'utf8'
   );
 
+  delete packageJsonContents.dependencies['@sveltejs/adapter-static'];
+  packageJsonContents.dependencies['@sveltejs/adapter-vercel'] = newVercel;
+
   fs.writeFileSync(
     PACKAGE_JSON_PATH,
-    packageJsonContents.replace('adapter-auto', 'adapter-vercel')
+    JSON.stringify(packageJsonContents, null, '\t') + '\n'
   );
   fs.writeFileSync(
     SVELTEKIT_CONFIG_PATH,
