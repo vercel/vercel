@@ -53,7 +53,12 @@ import type {
 import { getConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
-import { entrypointToOutputPath, getRegExpFromMatchers } from './utils';
+import {
+  EdgeRuntimes,
+  entrypointToOutputPath,
+  getRegExpFromMatchers,
+  isEdgeRuntime,
+} from './utils';
 
 export { shouldServe };
 
@@ -73,7 +78,7 @@ function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
 
-const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge'];
+const ALLOWED_RUNTIMES = ['nodejs', ...Object.values(EdgeRuntimes)];
 
 const require_ = eval('require');
 
@@ -393,7 +398,7 @@ export const build: BuildV3 = async ({
 
   // Will output an `EdgeFunction` for when `config.middleware = true`
   // (i.e. for root-level "middleware" file) or if source code contains:
-  // `export const config = { runtime: 'experimental-edge' }`
+  // `export const config = { runtime: 'edge' }`
   let isEdgeFunction = isMiddleware;
 
   const project = new Project();
@@ -406,7 +411,7 @@ export const build: BuildV3 = async ({
         )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
       );
     }
-    isEdgeFunction = staticConfig.runtime === 'experimental-edge';
+    isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
 
   debug('Tracing input files...');
