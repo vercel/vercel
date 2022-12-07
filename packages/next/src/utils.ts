@@ -1299,7 +1299,7 @@ export type LambdaGroup = {
 
 export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
 const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * MIB;
-const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * MIB;
+const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 
 export async function getPageLambdaGroups({
   entryPath,
