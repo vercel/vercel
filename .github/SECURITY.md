@@ -4,6 +4,6 @@ If you believe you have found a security vulnerability in Vercel, we encourage y
 
 We will investigate all legitimate reports and do our best to quickly fix the problem.
 
-Please email `security@vercel.com` to disclose any security vulnerabilities.
+Please email `responsible.disclosure@vercel.com` to disclose any security vulnerabilities.
 
 https://vercel.com/security
