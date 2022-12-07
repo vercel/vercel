@@ -1,6 +1,6 @@
 const { execFileSync } = require('child_process');
 let { create } = require('create-svelte');
-const fs = require('fs/promises');
+const fs = require('fs');
 
 function exec(cmd, args, opts) {
   console.log({ input: `${cmd} ${args.join(' ')}` });
@@ -65,22 +65,24 @@ module.exports = async ({ github, context }) => {
   });
 
   // replace the default adapter-static with adapter-vercel
-
-  const packageJsonContents = require(PACKAGE_JSON_PATH);
+  // fs paths are root-relative
+  const packageJsonContents = JSON.parse(
+    fs.readFileSync(PACKAGE_JSON_PATH.slice(1), 'utf8')
+  );
   const svelteKitConfigContents = fs.readFileSync(
-    SVELTEKIT_CONFIG_PATH,
+    SVELTEKIT_CONFIG_PATH.slice(1),
     'utf8'
   );
 
-  delete packageJsonContents.dependencies['@sveltejs/adapter-static'];
-  packageJsonContents.dependencies['@sveltejs/adapter-vercel'] = newVercel;
+  delete packageJsonContents.devDependencies['@sveltejs/adapter-static'];
+  packageJsonContents.devDependencies['@sveltejs/adapter-vercel'] = newVercel;
 
   fs.writeFileSync(
-    PACKAGE_JSON_PATH,
+    PACKAGE_JSON_PATH.slice(1),
     JSON.stringify(packageJsonContents, null, '\t') + '\n'
   );
   fs.writeFileSync(
-    SVELTEKIT_CONFIG_PATH,
+    SVELTEKIT_CONFIG_PATH.slice(1),
     svelteKitConfigContents.replace('adapter-auto', 'adapter-vercel')
   );
 
