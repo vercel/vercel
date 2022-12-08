@@ -15,7 +15,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc",
-    "c8 test": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
+    "test": "c8 jest --env node --verbose --runInBand --bail test/unit.*test.*",
     "test-unit": "yarn test"
   },
   "dependencies": {

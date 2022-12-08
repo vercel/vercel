@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsc",
     "test-integration-once": "yarn test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
-    "c8 test": "jest --env node --verbose --runInBand --bail",
+    "test": "c8 jest --env node --verbose --runInBand --bail",
     "test-unit": "yarn test tests/unit.*test.*"
   },
   "engines": {
