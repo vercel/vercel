@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "node build",
-    "test": "jest --env node --verbose --bail --runInBand",
+    "test": "c8 jest --env node --verbose --bail --runInBand",
     "test-unit": "yarn test test/prepare-cache.test.ts test/utils.test.ts",
     "test-integration-once": "yarn test test/integration-*.test.js"
   },

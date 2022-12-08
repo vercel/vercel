@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest --coverage --env node --verbose",
+    "test": "c8 jest --coverage --env node --verbose",
     "test-unit": "yarn test"
   },
   "license": "MIT",

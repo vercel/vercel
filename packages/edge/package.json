@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --dts --format esm,cjs",
-    "test": "jest --env node --verbose --runInBand --bail",
+    "test": "c8 jest --env node --verbose --runInBand --bail",
     "test-unit": "yarn test",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },

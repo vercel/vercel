@@ -16,7 +16,7 @@
   },
   "scripts": {
     "build": "node build",
-    "test": "jest --env node --verbose --runInBand --bail",
+    "test": "c8 jest --env node --verbose --runInBand --bail",
     "test-integration-once": "yarn test"
   },
   "devDependencies": {
