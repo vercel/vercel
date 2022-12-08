@@ -108,4 +108,20 @@ describe('Test `getSpawnOptions()`', () => {
       expect(opts.env?.PATH).toBe(want);
     });
   }
+
+  describe('meta buildEnv', () => {
+    it('should add meta buildEnv to the env', () => {
+      const opts = getSpawnOptions({
+        buildEnv: {
+          NEXT_PRIVATE_STANDALONE: 'true'
+        }
+      }, {
+        major: 18, range: '18.x', runtime: 'nodejs18.x'
+      })
+
+      expect(opts.env.NEXT_PRIVATE_STANDALONE).toBe('true')
+    })
+  })
 });
+
+
