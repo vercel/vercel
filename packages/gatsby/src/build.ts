@@ -108,7 +108,12 @@ export const build: BuildV2 = async ({
     const curDir = process.cwd();
     // Change dir into `entrypointFsDirname` to get correct `pages` from redux store.
     process.chdir(entrypointFsDirname);
-    const { pages } = require('gatsby/dist/redux').store.getState();
+    const gatsbyPkgPath = require.resolve('gatsby/package.json', {
+      paths: [entrypointFsDirname],
+    });
+    const reduxPath = join(gatsbyPkgPath, '../dist/redux');
+    console.log({ reduxPath });
+    const { pages } = require(reduxPath).store.getState();
     process.chdir(curDir);
     return pages;
   }
