@@ -1,0 +1,24 @@
+name: 🤖 Issue labeler - Triaged
+on:
+  issues:
+    types:
+      - labeled
+jobs:
+  add-comment:
+    if: github.event.label.name == 'triaged: bug'  
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          comment: |
+            Thank you so much for filing this issue :bow:
+            
+            We have triaged this and confirmed a bug that should be fixed. 
+            
+            We would accept a pull request for this issue if you follow the [contributing guidelines](https://github.com/vercel/vercel/blob/main/.github/CONTRIBUTING.md).
+            
+            At this time we don't have a timeline for when this issue will be fixed, but now it's in our backlog.
