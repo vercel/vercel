@@ -14,7 +14,7 @@ jobs:
         uses: peter-evans/create-or-update-comment@5adcb0bb0f9fb3f95ef05400558bdb3f329ee808
         with:
           issue-number: ${{ github.event.issue.number }}
-          comment: |
+          body: |
             Thank you for taking the time to file this issue!             
             
             We have confirmed this is a bug and added it to our backlog.
