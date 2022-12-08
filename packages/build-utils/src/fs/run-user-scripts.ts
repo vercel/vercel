@@ -218,7 +218,7 @@ export function getSpawnOptions(
   nodeVersion: NodeVersion
 ): SpawnOptions {
   const opts = {
-    env: cloneEnv(process.env),
+    env: { ...cloneEnv(process.env), ...meta.buildEnv },
   };
 
   if (!meta.isDev) {
