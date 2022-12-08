@@ -15,10 +15,10 @@ jobs:
         with:
           issue-number: ${{ github.event.issue.number }}
           comment: |
-            Thank you so much for filing this issue :bow:
+            Thank you for taking the time to file this issue!             
             
-            We have triaged this and confirmed a bug that should be fixed. 
+            We have confirmed this is a bug and added it to our backlog.
             
-            We would accept a pull request for this issue if you follow the [contributing guidelines](https://github.com/vercel/vercel/blob/main/.github/CONTRIBUTING.md).
+            We don't have a timeline for when this issue will be fixed, but we will accept a Pull Request with a fix and a test.
             
-            At this time we don't have a timeline for when this issue will be fixed, but now it's in our backlog.
+            See the [contributing guidelines](https://github.com/vercel/vercel/blob/main/.github/CONTRIBUTING.md) for more info.
