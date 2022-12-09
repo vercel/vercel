@@ -139,12 +139,9 @@ describe('detectFrameworkRecord', () => {
 
     const frameworkRecord = await detectFrameworkRecord({ fs, frameworkList });
     if (!frameworkRecord) {
-      fail(
-        new Error(
-          '`frameworkRecord` was not detected, expected "nextjs" frameworks object'
-        )
+      throw new Error(
+        '`frameworkRecord` was not detected, expected "nextjs" frameworks object'
       );
-      return;
     }
     expect(frameworkRecord.slug).toBe('nextjs');
     expect(frameworkRecord.name).toBe('Next.js');
