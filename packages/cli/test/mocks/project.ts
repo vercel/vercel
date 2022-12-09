@@ -23,6 +23,17 @@ const envs: ProjectEnvVariable[] = [
   },
   {
     type: ProjectEnvType.Encrypted,
+    id: '781dt89g8r2h789g',
+    key: 'BRANCH_ENV_VAR',
+    value: 'env var for a specific branch',
+    target: [ProjectEnvTarget.Preview],
+    gitBranch: 'feat/awesome-thing',
+    configurationId: null,
+    updatedAt: 1557241361455,
+    createdAt: 1557241361455,
+  },
+  {
+    type: ProjectEnvType.Encrypted,
     id: 'r124t6frtu25df16',
     key: 'SQL_CONNECTION_STRING',
     value: 'Server=sql.example.com;Database=app;Uid=root;Pwd=P455W0RD;',
@@ -217,20 +228,23 @@ export function useProject(project: Partial<Project> = defaultProject) {
   client.scenario.get(
     `/v1/env/pull/${project.id}/:target?/:gitBranch?`,
     (req, res) => {
-      const target: ProjectEnvTarget | undefined =
+      const target =
         typeof req.params.target === 'string'
           ? parseEnvironment(req.params.target)
           : undefined;
       let projectEnvs = envs;
       if (target) {
         projectEnvs = projectEnvs.filter(env => {
-          if (typeof env.target === 'string') {
-            return env.target === target;
-          }
-          if (Array.isArray(env.target)) {
-            return env.target.includes(target);
-          }
-          return false;
+          if (!env.target) return false;
+
+          // Ensure `target` matches
+          const targets = Array.isArray(env.target) ? env.target : [env.target];
+          const matchingTarget = targets.includes(target);
+          if (!matchingTarget) return false;
+
+          // Ensure `gitBranch` matches
+          if (!env.gitBranch) return true;
+          return req.params.gitBranch === env.gitBranch;
         });
       }
       const allEnvs = Object.entries(
