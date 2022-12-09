@@ -67,6 +67,7 @@ import { setMonorepoDefaultSettings } from '../util/build/monorepo';
 import frameworks from '@vercel/frameworks';
 import execa from 'execa';
 import { Output } from '../util/output';
+import { UnboxPromise } from 'utility-types';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -576,9 +577,21 @@ async function doBuild(
         buildResults.set(build, existingConfig);
         break;
       }
-      if ('framework' in buildResult) {
-        framework = buildResult.framework;
-      }
+    }
+  }
+
+  // find framework (mostly version) from the relevant build result
+  const detectedFramework = await detectFrameworkRecord({
+    fs: new LocalFileSystemDetector(cwd),
+    frameworkList: frameworks,
+  });
+  for (const [build, buildResult] of buildResults.entries()) {
+    if (
+      'framework' in buildResult &&
+      build.use === detectedFramework?.useRuntime?.use
+    ) {
+      framework = buildResult.framework;
+      break;
     }
   }
 
@@ -612,7 +625,7 @@ async function doBuild(
 
   if (!framework) {
     // if no `buildResult` identified a framework version, try to determine it here
-    framework = await findFramework(cwd, output);
+    framework = await determineFrameworkVersion(detectedFramework, cwd, output);
   }
 
   // Write out the final `config.json` file based on the
@@ -638,17 +651,16 @@ async function doBuild(
   );
 }
 
-async function findFramework(cwd: string, output: Output) {
-  const detectedFramework = await detectFrameworkRecord({
-    fs: new LocalFileSystemDetector(cwd),
-    frameworkList: frameworks,
-  });
-
-  if (!detectedFramework?.versionDependencies?.length) {
+async function determineFrameworkVersion(
+  frameworkRecord: UnboxPromise<ReturnType<typeof detectFrameworkRecord>>,
+  cwd: string,
+  output: Output
+) {
+  if (!frameworkRecord?.versionDependencies?.length) {
     return;
   }
 
-  for (let packageName of detectedFramework.versionDependencies) {
+  for (let packageName of frameworkRecord.versionDependencies) {
     const version = await lookupInstalledVersion(cwd, packageName, output);
     if (version) {
       return {
