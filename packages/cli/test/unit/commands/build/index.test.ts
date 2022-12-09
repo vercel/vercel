@@ -2,12 +2,12 @@ import ms from 'ms';
 import fs from 'fs-extra';
 import { join } from 'path';
 import { getWriteableDirectory } from '@vercel/build-utils';
-import build from '../../../src/commands/build';
-import { client } from '../../mocks/client';
-import { defaultProject, useProject } from '../../mocks/project';
-import { useTeams } from '../../mocks/team';
-import { useUser } from '../../mocks/user';
-import { setupFixture } from '../../helpers/setup-fixture';
+import build from '../../../../src/commands/build';
+import { client } from '../../../mocks/client';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { useUser } from '../../../mocks/user';
+import { setupFixture } from '../../../helpers/setup-fixture';
 import JSON5 from 'json5';
 // TODO (@Ethan-Arrowood) - After shipping support for turbo and nx, revisit rush support
 // import execa from 'execa';

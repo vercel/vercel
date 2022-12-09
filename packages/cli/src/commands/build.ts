@@ -651,7 +651,7 @@ async function doBuild(
   );
 }
 
-async function determineFrameworkVersion(
+export async function determineFrameworkVersion(
   frameworkRecord: UnboxPromise<ReturnType<typeof detectFrameworkRecord>>,
   cwd: string,
   output: Output
