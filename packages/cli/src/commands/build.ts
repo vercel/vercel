@@ -78,6 +78,20 @@ interface SerializedBuilder extends Builder {
 }
 
 /**
+ *  Build Output API `config.json` file interface.
+ */
+interface BuildOutputConfig {
+  version?: 3;
+  wildcard?: BuildResultV2Typical['wildcard'];
+  images?: BuildResultV2Typical['images'];
+  routes?: BuildResultV2Typical['routes'];
+  overrides?: Record<string, PathOverride>;
+  framework?: {
+    version: string;
+  };
+}
+
+/**
  * Contents of the `builds.json` file.
  */
 export interface BuildsManifest {
@@ -442,7 +456,7 @@ async function doBuild(
   // Execute Builders for detected entrypoints
   // TODO: parallelize builds (except for frontend)
   const sortedBuilders = sortBuilders(builds);
-  const buildResults: Map<Builder, BuildResult> = new Map();
+  const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
   const corepackShimDir = await initCorepack({ repoRootPath });
@@ -546,8 +560,8 @@ async function doBuild(
 
   // Merge existing `config.json` file into the one that will be produced
   const configPath = join(outputDir, 'config.json');
-  // TODO: properly type
-  const existingConfig = await readJSONFile<any>(configPath);
+  let framework: { version: string } | undefined;
+  const existingConfig = await readJSONFile<BuildOutputConfig>(configPath);
   if (existingConfig instanceof CantParseJSONFile) {
     throw existingConfig;
   }
@@ -561,6 +575,9 @@ async function doBuild(
         output.debug(`Using "config.json" for "${build.use}`);
         buildResults.set(build, existingConfig);
         break;
+      }
+      if ('framework' in buildResult) {
+        framework = buildResult.framework;
       }
     }
   }
@@ -593,12 +610,14 @@ async function doBuild(
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
-  const framework = await findFramework(cwd, output);
+  if (!framework) {
+    // if no `buildResult` identified a framework version, try to determine it here
+    framework = await findFramework(cwd, output);
+  }
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
-  // TODO: properly type
-  const config = {
+  const config: BuildOutputConfig = {
     version: 3,
     routes: mergedRoutes,
     images: mergedImages,
@@ -713,7 +732,7 @@ function expandBuild(files: string[], build: Builder): Builder[] {
 
 function mergeImages(
   images: BuildResultV2Typical['images'],
-  buildResults: Iterable<BuildResult>
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
 ): BuildResultV2Typical['images'] {
   for (const result of buildResults) {
     if ('images' in result && result.images) {
@@ -724,7 +743,7 @@ function mergeImages(
 }
 
 function mergeWildcard(
-  buildResults: Iterable<BuildResult>
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
 ): BuildResultV2Typical['wildcard'] {
   let wildcard: BuildResultV2Typical['wildcard'] = undefined;
   for (const result of buildResults) {
