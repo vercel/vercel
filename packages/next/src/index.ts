@@ -799,7 +799,6 @@ export const build: BuildV2 = async ({
         }
       });
 
-    console.log(`[FRAMEWORK] exit from index 1: ${nextVersion}`);
     return {
       output,
       images:
@@ -2159,7 +2158,6 @@ export const build: BuildV2 = async ({
 
   const { i18n } = routesManifest || {};
 
-  console.log(`[FRAMEWORK] exit from index 2: ${nextVersion}`);
   return {
     output: {
       ...publicDirectoryFiles,
