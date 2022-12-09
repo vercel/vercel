@@ -15,7 +15,7 @@ import JSON5 from 'json5';
 jest.setTimeout(ms('1 minute'));
 
 const fixture = (name: string) =>
-  join(__dirname, '../../fixtures/unit/commands/build', name);
+  join(__dirname, '../../../fixtures/unit/commands/build', name);
 
 describe('build', () => {
   const originalCwd = process.cwd();
