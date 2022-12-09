@@ -66,7 +66,7 @@ export const monorepoManagers: Array<
         value: null,
       },
       outputDirectory: {
-        placeholder: 'Nx default',
+        value: null,
       },
       installCommand: {
         value: null,
@@ -93,7 +93,7 @@ export const monorepoManagers: Array<
         value: null,
       },
       outputDirectory: {
-        placeholder: 'Rush default',
+        value: null,
       },
       installCommand: {
         placeholder: 'Rush default',

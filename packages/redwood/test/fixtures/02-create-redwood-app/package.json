@@ -11,7 +11,7 @@
     "netlify-plugin-prisma-provider": "^0.3.0"
   },
   "engines": {
-    "node": ">=12",
+    "node": "16.x",
     "yarn": ">=1.15"
   }
 }

@@ -2,6 +2,7 @@ import ms from 'ms';
 import fs from 'fs-extra';
 import { isIP } from 'net';
 import { join } from 'path';
+import { Response } from 'node-fetch';
 
 const {
   fetch,
@@ -108,7 +109,7 @@ test('[vercel dev] no build matches warning', async () => {
       });
     });
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -146,7 +147,7 @@ test('[vercel dev] render warning for empty cwd dir', async () => {
     validateResponseHeaders(response);
     expect(response.status).toBe(404);
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -186,7 +187,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
     const text2 = await resp2.text();
     expect(text2.trim()).toBe('hello second');
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 });
 
@@ -489,7 +490,7 @@ test('[vercel dev] Middleware rewrites with same origin', async () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
   } finally {
-    await dev.kill('SIGTERM');
+    await await dev.kill();
   }
 });
 
@@ -550,7 +551,7 @@ test(
 test(
   '[vercel dev] Middleware with an explicit 500 response',
   testFixtureStdio('middleware-500-response', async (testPath: any) => {
-    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+    await testPath(500, '/', 'Example Error');
   })
 );
 
@@ -609,6 +610,75 @@ test(
       } finally {
         await fs.writeJSON(vercelJsonPath, originalVercelJson);
       }
+    },
+    { skipDeploy: true }
+  )
+);
+
+test(
+  '[vercel dev] Middleware can override request headers',
+  testFixtureStdio(
+    'middleware-request-headers-override',
+    async (testPath: any) => {
+      await testPath(
+        200,
+        '/api/dump-headers',
+        (actual: string, res: Response) => {
+          // Headers sent to the API route.
+          const headers = JSON.parse(actual);
+
+          // Preserved headers.
+          expect(headers).toHaveProperty(
+            'x-from-client-a',
+            'hello from client'
+          );
+
+          // Headers added/modified by the middleware.
+          expect(headers).toHaveProperty(
+            'x-from-client-b',
+            'hello from middleware'
+          );
+          expect(headers).toHaveProperty('x-from-middleware-a', 'hello a!');
+          expect(headers).toHaveProperty('x-from-middleware-b', 'hello b!');
+
+          // Headers deleted by the middleware.
+          expect(headers).not.toHaveProperty('x-from-client-c');
+
+          // Internal headers should not be visible from API routes.
+          expect(headers).not.toHaveProperty('x-middleware-override-headers');
+          expect(headers).not.toHaveProperty(
+            'x-middleware-request-from-middleware-a'
+          );
+          expect(headers).not.toHaveProperty(
+            'x-middleware-request-from-middleware-b'
+          );
+
+          // Request headers should not be visible from clients.
+          const respHeaders = Object.fromEntries(res.headers.entries());
+          expect(respHeaders).not.toHaveProperty(
+            'x-middleware-override-headers'
+          );
+          expect(respHeaders).not.toHaveProperty(
+            'x-middleware-request-from-middleware-a'
+          );
+          expect(respHeaders).not.toHaveProperty(
+            'x-middleware-request-from-middleware-b'
+          );
+          expect(respHeaders).not.toHaveProperty('from-middleware-a');
+          expect(respHeaders).not.toHaveProperty('from-middleware-b');
+          expect(respHeaders).not.toHaveProperty('x-from-client-a');
+          expect(respHeaders).not.toHaveProperty('x-from-client-b');
+          expect(respHeaders).not.toHaveProperty('x-from-client-c');
+        },
+        /*expectedHeaders=*/ {},
+        {
+          headers: {
+            'x-from-client-a': 'hello from client',
+            'x-from-client-b': 'hello from client',
+            'x-from-client-c': 'hello from client',
+          },
+        }
+      );
     },
     { skipDeploy: true }
   )

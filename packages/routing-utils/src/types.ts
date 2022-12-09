@@ -122,6 +122,7 @@ export interface AppendRoutesToPhaseProps {
   newRoutes: Route[] | null;
   /**
    * The phase to append the routes such as `filesystem`.
+   * If the phase is `null`, the routes will be appended prior to the first handle being found.
    */
-  phase: HandleValue;
+  phase: HandleValue | null;
 }

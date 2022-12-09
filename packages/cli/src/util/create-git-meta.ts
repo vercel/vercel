@@ -5,7 +5,7 @@ import git from 'git-last-commit';
 import { exec } from 'child_process';
 import { GitMetadata, Project } from '../types';
 import { Output } from './output';
-import { errorToString } from './is-error';
+import { errorToString } from '@vercel/error-utils';
 
 export async function createGitMeta(
   directory: string,
@@ -86,6 +86,7 @@ export function isDirty(directory: string, output: Output): Promise<boolean> {
       { cwd: directory },
       function (err, stdout, stderr) {
         let debugMessage = `Failed to determine if Git repo has been modified:`;
+        stderr = stderr && stderr.trim();
         if (err || stderr) {
           if (err) debugMessage += `\n${err}`;
           if (stderr) debugMessage += `\n${stderr.trim()}`;

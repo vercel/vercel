@@ -5,7 +5,7 @@ import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
 import chalk from 'chalk';
-import { isError } from './is-error';
+import { isError } from '@vercel/error-utils';
 
 /**
  * This error is thrown when there is an API error with a payload. The error
@@ -571,7 +571,7 @@ export class DeploymentNotFound extends NowError<
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
       meta: { id, context },
-      message: `Can't find the deployment ${id} under the context ${context}`,
+      message: `Can't find the deployment "${id}" under the context "${context}"`,
     });
   }
 }
