@@ -835,6 +835,12 @@ describe('build', () => {
   });
 
   it('should error when builder returns result without "output" such as @now/node-server', async () => {
+    if (process.platform !== 'linux') {
+      console.log(
+        `Skipping test on ${process.platform} since this legacy builder only works on Linux`
+      );
+      return;
+    }
     const cwd = fixture('now-node-server');
     const output = join(cwd, '.vercel/output');
     try {
