@@ -1,6 +1,5 @@
 import { join } from 'path';
 import fs from 'fs-extra';
-import ms from 'ms';
 import os from 'os';
 import createLineIterator from 'line-async-iterator';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -259,41 +258,37 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
     }
   });
-  it(
-    'fails when `.git` is corrupt',
-    async () => {
-      const directory = fixture('git-corrupt');
-      const tmpDir = join(os.tmpdir(), 'git-corrupt');
-      try {
-        // Copy the fixture into a temp dir so that we don't pick
-        // up Git information from the `vercel/vercel` repo itself
-        await fs.copy(directory, tmpDir);
-        await fs.rename(join(tmpDir, 'git'), join(tmpDir, '.git'));
+  it('fails when `.git` is corrupt', async () => {
+    const directory = fixture('git-corrupt');
+    const tmpDir = join(os.tmpdir(), 'git-corrupt');
+    try {
+      // Copy the fixture into a temp dir so that we don't pick
+      // up Git information from the `vercel/vercel` repo itself
+      await fs.copy(directory, tmpDir);
+      await fs.rename(join(tmpDir, 'git'), join(tmpDir, '.git'));
 
-        client.output.debugEnabled = true;
-        const data = await createGitMeta(tmpDir, client.output);
+      client.output.debugEnabled = true;
+      const data = await createGitMeta(tmpDir, client.output);
 
-        const lines = createLineIterator(client.stderr);
+      const lines = createLineIterator(client.stderr);
 
-        let line = await lines.next();
-        expect(line.value).toContain(
-          `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
-        );
+      let line = await lines.next();
+      expect(line.value).toContain(
+        `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
+      );
 
-        // skip next line
-        await lines.next();
+      // skip next line
+      await lines.next();
 
-        line = await lines.next();
-        expect(line.value).toContain(
-          `Failed to determine if Git repo has been modified:`
-        );
-        expect(data).toBeUndefined();
-      } finally {
-        await fs.remove(tmpDir);
-      }
-    },
-    ms('10s')
-  );
+      line = await lines.next();
+      expect(line.value).toContain(
+        `Failed to determine if Git repo has been modified:`
+      );
+      expect(data).toBeUndefined();
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
   it('uses the repo url for a connected project', async () => {
     const originalCwd = process.cwd();
     const directory = fixture('connected-repo');
