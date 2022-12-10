@@ -67,3 +67,15 @@ export function logError(error: Error) {
     debug(error.stack.substring(errorMessageLength + 1));
   }
 }
+
+export enum EdgeRuntimes {
+  Edge = 'edge',
+  ExperimentalEdge = 'experimental-edge',
+}
+
+export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
+  return (
+    runtime !== undefined &&
+    Object.values(EdgeRuntimes).includes(runtime as EdgeRuntimes)
+  );
+}

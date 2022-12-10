@@ -74,7 +74,7 @@ import { VercelProxyResponse } from '@vercel/node-bridge/types';
 import { Config } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import { logError } from './utils';
+import { EdgeRuntimes, isEdgeRuntime, logError } from './utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler';
 import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
 
@@ -86,7 +86,6 @@ function listen(server: Server, port: number, host: string): Promise<void> {
   });
 }
 
-const validRuntimes = ['experimental-edge'];
 function parseRuntime(
   entrypoint: string,
   entryPointPath: string
@@ -94,10 +93,10 @@ function parseRuntime(
   const project = new Project();
   const staticConfig = getConfig(project, entryPointPath);
   const runtime = staticConfig?.runtime;
-  if (runtime && !validRuntimes.includes(runtime)) {
+  if (runtime && !isEdgeRuntime(runtime)) {
     throw new Error(
       `Invalid function runtime "${runtime}" for "${entrypoint}". Valid runtimes are: ${JSON.stringify(
-        validRuntimes
+        Object.values(EdgeRuntimes)
       )}. Learn more: https://vercel.link/creating-edge-functions`
     );
   }
@@ -115,8 +114,8 @@ async function createEventHandler(
 
   // `middleware.js`/`middleware.ts` file is always run as
   // an Edge Function, otherwise needs to be opted-in via
-  // `export const config = { runtime: 'experimental-edge' }`
-  if (config.middleware === true || runtime === 'experimental-edge') {
+  // `export const config = { runtime: 'edge' }`
+  if (config.middleware === true || isEdgeRuntime(runtime)) {
     return createEdgeEventHandler(
       entrypointPath,
       entrypoint,
