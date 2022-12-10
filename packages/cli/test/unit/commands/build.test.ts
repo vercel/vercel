@@ -1,4 +1,5 @@
 import ms from 'ms';
+import os from 'os';
 import fs from 'fs-extra';
 import { join } from 'path';
 import { getWriteableDirectory } from '@vercel/build-utils';
@@ -835,9 +836,11 @@ describe('build', () => {
   });
 
   it('should error when builder returns result without "output" such as @now/node-server', async () => {
-    const cwd = fixture('now-node-server');
+    const cwd = join(os.tmpdir(), 'now-node-server');
     const output = join(cwd, '.vercel/output');
     try {
+      // Copy to a temp directory to avoid breaking other tests
+      await fs.copy(fixture('now-node-server'), cwd);
       process.chdir(cwd);
       const exitCode = await build(client);
       expect(exitCode).toEqual(1);
@@ -860,6 +863,7 @@ describe('build', () => {
       const configJson = await fs.readJSON(join(output, 'config.json'));
       expect(configJson.version).toBe(3);
     } finally {
+      await fs.remove(cwd);
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
     }
