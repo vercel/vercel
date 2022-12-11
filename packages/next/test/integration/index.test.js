@@ -674,10 +674,7 @@ it('Should invoke build command with serverless-no-config', async () => {
   ).toBeFalsy();
 });
 
-// this test is unstable as `next-server`'s size can change up and down
-// on canary so skipping to prevent random failures.
-// eslint-disable-next-line
-it.skip('Should not exceed function limit for large dependencies (server build)', async () => {
+it('Should not exceed function limit for large dependencies (server build)', async () => {
   let logs = '';
 
   const origLog = console.log;
@@ -719,11 +716,14 @@ it.skip('Should not exceed function limit for large dependencies (server build)'
       lambdas.add(output[filePath]);
     }
   });
-  expect(lambdas.size).toBe(4);
+  expect(lambdas.size).toBe(12);
 
-  expect(logs).toContain(
-    'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
-  );
+  // this assertion is unstable as `next-server`'s size can change up and down
+  // on canary so skipping to prevent random failures.
+  // expect(logs).toContain(
+  //   'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
+  // );
+
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 

@@ -39,8 +39,12 @@ import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-fun
 import type { LambdaOptionsWithFiles } from '@vercel/build-utils/dist/lambda';
 import { stringifySourceMap } from './sourcemapped';
 import type { RawSourceMap } from 'source-map';
+import bytes from 'bytes';
 
 type stringMap = { [key: string]: string };
+
+const _prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
+export { _prettyBytes as prettyBytes }
 
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
@@ -1815,13 +1819,16 @@ export const onPrerenderRoute =
       isAppPathRoute = true;
     }
 
+    const isOmittedOrNotFound = isOmitted || isNotFound;
     const htmlFsRef =
       isBlocking || (isNotFound && !static404Page)
         ? // Blocking pages do not have an HTML fallback
           null
         : new FileFsRef({
             fsPath: path.join(
-              isAppPathRoute && appDir ? appDir : pagesDir,
+              isAppPathRoute && !isOmittedOrNotFound && appDir
+                ? appDir
+                : pagesDir,
               isFallback
                 ? // Fallback pages have a special file.
                   addLocaleOrDefault(
@@ -1832,7 +1839,7 @@ export const onPrerenderRoute =
                 : // Otherwise, the route itself should exist as a static HTML
                   // file.
                   `${
-                    isOmitted || isNotFound
+                    isOmittedOrNotFound
                       ? addLocaleOrDefault('/404', routesManifest, locale)
                       : routeFileNoExt
                   }.html`
@@ -1844,9 +1851,11 @@ export const onPrerenderRoute =
         ? null
         : new FileFsRef({
             fsPath: path.join(
-              isAppPathRoute && appDir ? appDir : pagesDir,
+              isAppPathRoute && !isOmittedOrNotFound && appDir
+                ? appDir
+                : pagesDir,
               `${
-                isOmitted || isNotFound
+                isOmittedOrNotFound
                   ? addLocaleOrDefault('/404.html', routesManifest, locale)
                   : isAppPathRoute
                   ? dataRoute

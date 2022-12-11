@@ -15,6 +15,7 @@ import {
   runPackageJsonScript,
   scanParentDirs,
   FileBlob,
+  Prerender,
 } from '../src';
 
 jest.setTimeout(10 * 1000);
@@ -442,7 +443,6 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
 });
 
 it('should support initialHeaders and initialStatus correctly', async () => {
-  const { Prerender } = require('@vercel/build-utils/dist/prerender.js');
   new Prerender({
     expiration: 1,
     fallback: null,

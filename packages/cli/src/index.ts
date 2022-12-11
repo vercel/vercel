@@ -174,7 +174,7 @@ const main = async () => {
   const targetOrSubcommand = argv._[2];
 
   // Currently no beta commands - add here as needed
-  const betaCommands: string[] = [];
+  const betaCommands: string[] = ['rollback'];
   if (betaCommands.includes(targetOrSubcommand)) {
     console.log(
       `${chalk.grey(
@@ -554,6 +554,9 @@ const main = async () => {
         break;
       case 'remove':
         func = require('./commands/remove').default;
+        break;
+      case 'rollback':
+        func = require('./commands/rollback').default;
         break;
       case 'secrets':
         func = require('./commands/secrets').default;
