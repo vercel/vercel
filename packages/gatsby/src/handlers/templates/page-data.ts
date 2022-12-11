@@ -37,26 +37,20 @@ export default async function handler(
   const { getData, renderPageData } = await getPageSSRHelpers();
   const graphqlEngine = await getGraphQLEngine();
 
-  try {
-    const data = await getData({
-      req,
-      graphqlEngine,
-      pathName,
-    });
+  const data = await getData({
+    req,
+    graphqlEngine,
+    pathName,
+  });
 
-    const body = JSON.stringify(await renderPageData({ data }));
+  const body = JSON.stringify(await renderPageData({ data }));
 
-    if (data.serverDataHeaders) {
-      for (const [name, value] of Object.entries(data.serverDataHeaders)) {
-        res.setHeader(name, value);
-      }
+  if (data.serverDataHeaders) {
+    for (const [name, value] of Object.entries(data.serverDataHeaders)) {
+      res.setHeader(name, value);
     }
-
-    res.setHeader('ETag', etag(body));
-    res.setHeader('Content-Type', 'application/json');
-    return res.status(200).json(body);
-  } catch (e) {
-    console.error(e);
-    return res.status(200);
   }
+
+  res.setHeader('ETag', etag(body));
+  return res.json(body);
 }
