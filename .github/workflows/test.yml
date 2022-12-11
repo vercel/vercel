@@ -36,7 +36,11 @@ jobs:
         timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
+      - uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: yarn-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: yarn-${{ matrix.os }}-${{ matrix.node }}
       - run: yarn install --network-timeout 1000000 --frozen-lockfile
       - id: set-tests
         run: |
@@ -73,7 +77,11 @@ jobs:
         timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
+      - uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: yarn-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: yarn-${{ matrix.os }}-${{ matrix.node }}
 
       - name: Install Hugo
         if: matrix.runner == 'macos-latest'
