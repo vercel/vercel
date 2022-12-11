@@ -108,6 +108,8 @@ export const build: BuildV2 = async ({
     const curDir = process.cwd();
     // Change dir into `entrypointFsDirname` to get correct `pages` from redux store.
     process.chdir(entrypointFsDirname);
+
+    // Need to resolve absolute import path in order to load project's version of `gatsby`.
     const gatsbyPkgPath = require.resolve('gatsby/package.json', {
       paths: [entrypointFsDirname],
     });
