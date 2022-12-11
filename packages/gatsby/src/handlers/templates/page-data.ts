@@ -1,12 +1,21 @@
-import { existsSync, readFileSync } from 'fs';
+import os from 'os';
 import { join } from 'path';
 import etag from 'etag';
+import { copySync, existsSync, readFileSync } from 'fs-extra';
 
 import { getGraphQLEngine, getPageSSRHelpers } from '../utils';
 import type {
   ServerlessFunctionRequest,
   ServerlessFunctionResponse,
 } from '../../types';
+
+const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
+const CUR_DATA_PATH = join(__dirname, 'assets/data/datastore');
+
+if (!existsSync(TMP_DATA_PATH)) {
+  // Copies executable `data` files to the writable /tmp directory.
+  copySync(CUR_DATA_PATH, TMP_DATA_PATH);
+}
 
 export default async function handler(
   req: ServerlessFunctionRequest,
