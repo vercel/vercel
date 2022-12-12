@@ -81,6 +81,7 @@ async function matches(fs: DetectorFilesystem, framework: BaseFramework) {
   return result.every(res => res === true);
 }
 
+// TODO: Deprecate and replace with `detectFrameworkRecord`
 export async function detectFramework({
   fs,
   frameworkList,

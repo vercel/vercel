@@ -40,9 +40,8 @@ import getArgs from '../util/get-args';
 import cmd from '../util/output/cmd';
 import * as cli from '../util/pkg-name';
 import cliPkg from '../util/pkg';
-import readJSON from '../util/read-json';
 import readJSONFile from '../util/read-json-file';
-import { CantParseJSON, CantParseJSONFile } from '../util/errors-ts';
+import { CantParseJSONFile } from '../util/errors-ts';
 import {
   pickOverrides,
   ProjectLinkAndSettings,
@@ -64,10 +63,8 @@ import { toEnumerableError } from '../util/error';
 import { validateConfig } from '../util/validate-config';
 
 import { setMonorepoDefaultSettings } from '../util/build/monorepo';
-import frameworks from '@vercel/frameworks';
-import execa from 'execa';
-import { Output } from '../util/output';
-import { UnboxPromise } from 'utility-types';
+import frameworks, { Framework } from '@vercel/frameworks';
+import { Output } from '../util/output/create-output';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -585,13 +582,15 @@ async function doBuild(
     fs: new LocalFileSystemDetector(cwd),
     frameworkList: frameworks,
   });
-  for (const [build, buildResult] of buildResults.entries()) {
-    if (
-      'framework' in buildResult &&
-      build.use === detectedFramework?.useRuntime?.use
-    ) {
-      framework = buildResult.framework;
-      break;
+  if (detectedFramework?.useRuntime) {
+    for (const [build, buildResult] of buildResults.entries()) {
+      if (
+        'framework' in buildResult &&
+        build.use === detectedFramework.useRuntime.use
+      ) {
+        framework = buildResult.framework;
+        break;
+      }
     }
   }
 
@@ -623,9 +622,9 @@ async function doBuild(
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
-  if (!framework) {
+  if (!framework && detectedFramework) {
     // if no `buildResult` identified a framework version, try to determine it here
-    framework = await determineFrameworkVersion(detectedFramework, cwd, output);
+    framework = await detectFrameworkVersion(detectedFramework, output);
   }
 
   // Write out the final `config.json` file based on the
@@ -651,9 +650,8 @@ async function doBuild(
   );
 }
 
-export async function determineFrameworkVersion(
-  frameworkRecord: UnboxPromise<ReturnType<typeof detectFrameworkRecord>>,
-  cwd: string,
+export async function detectFrameworkVersion(
+  frameworkRecord: Framework,
   output: Output
 ) {
   if (!frameworkRecord?.versionDependencies?.length) {
@@ -661,7 +659,7 @@ export async function determineFrameworkVersion(
   }
 
   for (let packageName of frameworkRecord.versionDependencies) {
-    const version = await lookupInstalledVersion(cwd, packageName, output);
+    const version = lookupInstalledVersion(packageName, output);
     if (version) {
       return {
         version,
@@ -670,35 +668,10 @@ export async function determineFrameworkVersion(
   }
 }
 
-interface NpmLSOutput {
-  dependencies?: {
-    [dependency: string]:
-      | {
-          version: string;
-        }
-      | undefined;
-  };
-}
-
-async function lookupInstalledVersion(
-  cwd: string,
-  packageName: string,
-  output: Output
-) {
+function lookupInstalledVersion(packageName: string, output: Output) {
   try {
-    const args = `ls ${packageName} --depth=0 --json`.split(' ');
-    const { stdout } = await execa('npm', args, { cwd });
-
-    const lsOutput = readJSON<NpmLSOutput>(stdout);
-    if (!lsOutput || lsOutput instanceof CantParseJSON) {
-      const errorMessage = lsOutput ? `: ${lsOutput?.meta.innerError}` : '';
-      output.debug(
-        `Could not parse JSON output of \`npm ls\` for ${packageName}${errorMessage}`
-      );
-      return;
-    }
-
-    return lsOutput.dependencies?.[packageName]?.version;
+    const pkgJson = require(`${packageName}/package.json`) as PackageJson;
+    return pkgJson.version;
   } catch (error) {
     output.debug(`Error during lookupInstalledVersion: ${error}`);
   }
