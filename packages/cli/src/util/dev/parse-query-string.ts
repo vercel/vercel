@@ -37,7 +37,7 @@ export function parseQueryString(
  * @param query - The query object to stringify.
  */
 export function formatQueryString(
-  query: Record<string, string[]> | undefined
+  query: Record<string, string | string[]> | undefined
 ): string | null {
   if (!query) {
     return null;
@@ -45,6 +45,9 @@ export function formatQueryString(
   let s = '';
   let prefix = '?';
   for (let [key, values] of Object.entries(query)) {
+    if (!Array.isArray(values)) {
+      values = [values];
+    }
     for (let value of values) {
       s += prefix;
       s += encodeURIComponent(key);

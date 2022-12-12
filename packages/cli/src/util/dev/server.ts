@@ -20,12 +20,22 @@ import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
 import npa from 'npm-package-arg';
 import type { ChildProcess } from 'child_process';
+import {
+  get_resolver,
+  RoutingResult,
+} from '@vercel/routing-utils/dist/resolver';
+import {
+  match_regex,
+  parse_path,
+  encode_query,
+  regex_replace,
+  hash_func,
+} from '@vercel/routing-utils/dist/resolver-utils';
 
 import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
   getTransformedRoutes,
   appendRoutesToPhase,
-  HandleValue,
   Route,
 } from '@vercel/routing-utils';
 import {
@@ -58,7 +68,6 @@ import cliPkg from '../pkg';
 import { getVercelDirectory } from '../projects/link';
 import { staticFiles as getFiles } from '../get-files';
 import { validateConfig } from '../validate-config';
-import { devRouter, getRoutesTypes } from './router';
 import getMimeType from './mime-type';
 import { executeBuild, getBuildMatches, shutdownBuilder } from './builder';
 import { generateErrorMessage, generateHttpStatusDescription } from './errors';
@@ -81,7 +90,6 @@ import {
   InvokePayload,
   InvokeResult,
   ListenSpec,
-  RouteResult,
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
@@ -1302,14 +1310,13 @@ export default class DevServer {
    */
   exitWithStatus = async (
     match: BuildMatch | null,
-    routeResult: RouteResult,
-    phase: HandleValue | null,
+    routeResult: RoutingResult,
     req: http.IncomingMessage,
     res: http.ServerResponse,
     requestId: string
   ): Promise<boolean> => {
-    const { status, headers, dest } = routeResult;
-    const location = headers['location'] || dest;
+    const { status, headers, dest_path } = routeResult;
+    const location = (headers['location'] || dest_path) as string;
 
     if (status && location && 300 <= status && status <= 399) {
       this.output.debug(`Route found with redirect status code ${status}`);
@@ -1317,7 +1324,7 @@ export default class DevServer {
       return true;
     }
 
-    if (!match && status && phase !== 'miss') {
+    if (!match && status) {
       this.output.debug(`Route found with with status code ${status}`);
       await this.sendError(req, res, requestId, '', status, headers);
       return true;
@@ -1341,7 +1348,7 @@ export default class DevServer {
 
     // If there is a double-slash present in the URL,
     // then perform a redirect to make it "clean".
-    const parsed = url.parse(req.url || '/');
+    const parsed = url.parse(req.url || '/', true);
     if (typeof parsed.pathname === 'string' && parsed.pathname.includes('//')) {
       let location = parsed.pathname.replace(/\/+/g, '/');
       if (parsed.search) {
@@ -1368,32 +1375,9 @@ export default class DevServer {
       await this.blockingBuildsPromise;
     }
 
-    const getReqUrl = (rr: RouteResult): string | undefined => {
-      if (rr.dest) {
-        if (rr.query) {
-          const destParsed = url.parse(rr.dest);
-          const destQuery = parseQueryString(destParsed.search);
-          Object.assign(destQuery, rr.query);
-          destParsed.search = formatQueryString(destQuery);
-          return url.format(destParsed);
-        }
-        return rr.dest;
-      }
-      return req.url;
-    };
-
-    const handleMap = getRoutesTypes(routes);
-    const missRoutes = handleMap.get('miss') || [];
-    const hitRoutes = handleMap.get('hit') || [];
-    const errorRoutes = handleMap.get('error') || [];
-    const filesystemRoutes = handleMap.get('filesystem') || [];
-    const phases: (HandleValue | null)[] = [null, 'filesystem'];
-
-    let routeResult: RouteResult | null = null;
+    let routeResult: RoutingResult | null = null;
     let match: BuildMatch | null = null;
     let statusCode: number | undefined;
-    let prevUrl = req.url;
-    let prevHeaders: HttpHeadersConfig = {};
     let middlewarePid: number | undefined;
 
     // Run the middleware file, if present, and apply any
@@ -1510,7 +1494,6 @@ export default class DevServer {
 
           if (rewritePath) {
             debug(`Detected rewrite path from middleware: "${rewritePath}"`);
-            prevUrl = rewritePath;
 
             const beforeRewriteUrl = req.url || '/';
 
@@ -1522,7 +1505,6 @@ export default class DevServer {
                 // remove origin, leaving the path
                 req.url =
                   rewritePath.slice(rewriteUrlParsed.origin.length) || '/';
-                prevUrl = req.url;
               } else {
                 // Proxy to absolute URL with different origin
                 debug(`ProxyPass: ${rewritePath}`);
@@ -1531,7 +1513,7 @@ export default class DevServer {
                 return;
               }
             } else {
-              // Retain orginal pathname, but override query parameters from the rewrite
+              // Retain original pathname, but override query parameters from the rewrite
               const rewriteUrlParsed = url.parse(beforeRewriteUrl);
               rewriteUrlParsed.search = url.parse(rewritePath).search;
               req.url = url.format(rewriteUrlParsed);
@@ -1571,145 +1553,65 @@ export default class DevServer {
       }
     }
 
-    for (const phase of phases) {
-      statusCode = undefined;
+    const routeResolver = get_resolver({
+      check_file_system: (output: string) =>
+        this.hasFilesystem(output, vercelConfig),
+      encode_query,
+      hash_func,
+      match_regex,
+      regex_replace,
+      parse_path,
+    });
+    const routesConfig = {
+      routes: routes || [],
+      query: parsed.query as any,
+      request_path: parsed.pathname || '',
+      request_method: req.method || 'GET',
+      deployment_id: 'dev',
+      skip_handle_error: true,
+      host: 'localhost',
+      headers: req.headers,
+      wildcard: '',
+      cookies: {},
+    };
+    routeResult = await routeResolver(routesConfig);
 
-      const phaseRoutes = handleMap.get(phase) || [];
-      routeResult = await devRouter(
-        prevUrl,
-        req.method,
-        phaseRoutes,
-        this,
-        vercelConfig,
-        prevHeaders,
-        missRoutes,
-        phase
-      );
+    if (routeResult.is_external_rewrite) {
+      // Mix the `routes` result dest query params into the req path
+      const destParsed = url.parse(routeResult.dest_path);
+      const destQuery = parseQueryString(destParsed.search);
+      Object.assign(destQuery, routeResult.query);
+      destParsed.search = formatQueryString(destQuery);
+      const destUrl = url.format(destParsed);
 
-      if (routeResult.continue) {
-        if (routeResult.dest) {
-          prevUrl = getReqUrl(routeResult);
-        }
-
-        if (routeResult.headers) {
-          prevHeaders = routeResult.headers;
-        }
-      }
-
-      if (routeResult.isDestUrl) {
-        // Mix the `routes` result dest query params into the req path
-        const destParsed = url.parse(routeResult.dest);
-        const destQuery = parseQueryString(destParsed.search);
-        Object.assign(destQuery, routeResult.query);
-        destParsed.search = formatQueryString(destQuery);
-        const destUrl = url.format(destParsed);
-
-        debug(`ProxyPass: ${destUrl}`);
-        this.setResponseHeaders(res, requestId);
-        return proxyPass(req, res, destUrl, this, requestId);
-      }
-
-      match = await findBuildMatch(
-        this.buildMatches,
-        this.files,
-        routeResult.dest,
-        this,
-        vercelConfig
-      );
-
-      if (
-        await this.exitWithStatus(
-          match,
-          routeResult,
-          phase,
-          req,
-          res,
-          requestId
-        )
-      ) {
-        return;
-      }
-
-      if (!match && missRoutes.length > 0) {
-        // Since there was no build match, enter the miss phase
-        routeResult = await devRouter(
-          getReqUrl(routeResult),
-          req.method,
-          missRoutes,
-          this,
-          vercelConfig,
-          routeResult.headers,
-          [],
-          'miss'
-        );
-
-        match = await findBuildMatch(
-          this.buildMatches,
-          this.files,
-          routeResult.dest,
-          this,
-          vercelConfig
-        );
-        if (
-          await this.exitWithStatus(
-            match,
-            routeResult,
-            phase,
-            req,
-            res,
-            requestId
-          )
-        ) {
-          return;
-        }
-      } else if (match && hitRoutes.length > 0) {
-        // Since there was a build match, enter the hit phase.
-        // The hit phase must not set status code.
-        const prevStatus = routeResult.status;
-        routeResult = await devRouter(
-          getReqUrl(routeResult),
-          req.method,
-          hitRoutes,
-          this,
-          vercelConfig,
-          routeResult.headers,
-          [],
-          'hit'
-        );
-        routeResult.status = prevStatus;
-      }
-
-      statusCode = routeResult.status;
-
-      if (match) {
-        // end the phase
-        break;
-      }
-
-      if (phase === null && filesystemRoutes.length === 0) {
-        // hack to skip the reset from null to filesystem
-        break;
-      }
+      debug(`ProxyPass: ${destUrl}`);
+      this.setResponseHeaders(res, requestId);
+      return proxyPass(req, res, destUrl, this, requestId);
     }
 
-    if (!match && routeResult && errorRoutes.length > 0) {
+    match = await findBuildMatch(
+      this.buildMatches,
+      this.files,
+      routeResult.dest_path,
+      this,
+      vercelConfig
+    );
+
+    if (await this.exitWithStatus(match, routeResult, req, res, requestId)) {
+      return;
+    }
+
+    if (!match && routeResult) {
       // error phase
-      const routeResultForError = await devRouter(
-        getReqUrl(routeResult),
-        req.method,
-        errorRoutes,
-        this,
-        vercelConfig,
-        routeResult.headers,
-        [],
-        'error'
-      );
-      const { matched_route } = routeResultForError;
+      const routeResultForError = await routeResolver({
+        ...routeResolver,
+        skip_handle_error: false,
+      } as typeof routesConfig);
 
       const matchForError = await findBuildMatch(
         this.buildMatches,
         this.files,
-        routeResultForError.dest,
+        routeResultForError.dest_path,
         this,
         vercelConfig
       );
@@ -1719,7 +1621,10 @@ export default class DevServer {
         routeResult = routeResultForError;
         statusCode = routeResultForError.status;
         match = matchForError;
-      } else if (matched_route && matched_route.src && !matched_route.dest) {
+      } else if (
+        routeResultForError.finished &&
+        !routeResultForError.matched_output
+      ) {
         debug(
           'Route without `dest` detected in error phase, attempting to exit early'
         );
@@ -1727,7 +1632,6 @@ export default class DevServer {
           await this.exitWithStatus(
             matchForError,
             routeResultForError,
-            'error',
             req,
             res,
             requestId
@@ -1742,11 +1646,11 @@ export default class DevServer {
       throw new Error('Expected Route Result but none was found.');
     }
 
-    const { dest, query, headers } = routeResult;
+    const { dest_path, query, headers } = routeResult;
 
     // Set any headers defined in the matched `route` config
     for (const [name, value] of Object.entries(headers)) {
-      res.setHeader(name, value);
+      res.setHeader(name, value || '');
     }
 
     if (statusCode) {
@@ -1763,7 +1667,7 @@ export default class DevServer {
       });
     }
 
-    const requestPath = dest.replace(/^\//, '');
+    const requestPath = dest_path.replace(/^\//, '');
 
     if (!match) {
       // If the dev command is started, then proxy to it
@@ -1780,15 +1684,16 @@ export default class DevServer {
         this.setResponseHeaders(res, requestId);
         const origUrl = url.parse(req.url || '/');
         const origQuery = parseQueryString(origUrl.search);
-        origUrl.pathname = dest;
+        origUrl.pathname = dest_path;
         Object.assign(origQuery, query);
         origUrl.search = formatQueryString(origQuery);
         req.url = url.format(origUrl);
+
         return proxyPass(req, res, upstream, this, requestId, false);
       }
 
       if (
-        (statusCode === 404 && routeResult.phase === 'miss') ||
+        statusCode === 404 ||
         !this.renderDirectoryListing(req, res, requestPath, requestId)
       ) {
         await this.send404(req, res, requestId);
@@ -1806,22 +1711,21 @@ export default class DevServer {
     ) {
       const origUrl = url.parse(req.url || '/');
       const origQuery = parseQueryString(origUrl.search);
-      origUrl.pathname = dest;
+      origUrl.pathname = dest_path;
       Object.assign(origQuery, query);
       origUrl.search = formatQueryString(origQuery);
       const newUrl = url.format(origUrl);
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
-      const matchedRoute = await devRouter(
-        newUrl,
-        req.method,
-        buildResult.routes,
-        this,
-        vercelConfig
-      );
-      if (matchedRoute.found && callLevel === 0) {
-        debug(`Found matching route ${matchedRoute.dest} for ${newUrl}`);
+      const matchedRoute = await routeResolver({
+        ...routesConfig,
+        dest_path: origUrl.pathname,
+        query: origQuery,
+      } as typeof routesConfig);
+
+      if (matchedRoute.matched_output && callLevel === 0) {
+        debug(`Found matching route ${matchedRoute.dest_path} for ${newUrl}`);
         req.url = newUrl;
         await this.serveProjectAsNowV2(
           req,
@@ -2466,7 +2370,29 @@ async function shouldServe(
     return true;
   } else if (
     !isFilesystem &&
-    (await findMatchingRoute(match, requestPath, devServer, vercelConfig))
+    (
+      await (
+        await get_resolver({
+          check_file_system: async () => false,
+          encode_query,
+          hash_func,
+          match_regex,
+          regex_replace,
+          parse_path,
+        })
+      )({
+        routes: vercelConfig.routes || [],
+        query: {},
+        request_path: requestPath || '',
+        request_method: 'GET',
+        deployment_id: 'dev',
+        skip_handle_error: true,
+        host: 'localhost',
+        headers: {},
+        wildcard: '',
+        cookies: {},
+      })
+    ).finished
   ) {
     // If there's no `shouldServe()` function and no matched asset, then look
     // up if there's a matching build route on the `match` that has already
@@ -2474,28 +2400,6 @@ async function shouldServe(
     return true;
   }
   return false;
-}
-
-async function findMatchingRoute(
-  match: BuildMatch,
-  requestPath: string,
-  devServer: DevServer,
-  vercelConfig: VercelConfig
-): Promise<RouteResult | void> {
-  const reqUrl = `/${requestPath}`;
-  for (const buildResult of match.buildResults.values()) {
-    if (!Array.isArray(buildResult.routes)) continue;
-    const route = await devRouter(
-      reqUrl,
-      undefined,
-      buildResult.routes,
-      devServer,
-      vercelConfig
-    );
-    if (route.found) {
-      return route;
-    }
-  }
 }
 
 function findAsset(

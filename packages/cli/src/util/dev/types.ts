@@ -122,7 +122,7 @@ export interface BuildResultV4 {
 }
 
 export interface HttpHeadersConfig {
-  [name: string]: string;
+  [name: string]: string | string[] | undefined;
 }
 
 export interface RouteResult {
