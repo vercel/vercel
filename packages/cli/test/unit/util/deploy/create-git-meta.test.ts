@@ -277,13 +277,6 @@ describe('createGitMeta', () => {
         `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
       );
 
-      // skip next line
-      await lines.next();
-
-      line = await lines.next();
-      expect(line.value).toContain(
-        `Failed to determine if Git repo has been modified:`
-      );
       expect(data).toBeUndefined();
     } finally {
       await fs.remove(tmpDir);
