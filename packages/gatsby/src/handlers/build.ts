@@ -1,8 +1,7 @@
 import { join } from 'path';
 import { build } from 'esbuild';
-import { FileFsRef, NodeVersion, glob, FileBlob } from '@vercel/build-utils';
-
-type FileFsRefs = Record<string, FileFsRef>;
+import { glob, FileBlob } from '@vercel/build-utils';
+import type { Files, NodeVersion } from '@vercel/build-utils';
 
 export const getHandler = async ({
   nodeVersion,
@@ -41,25 +40,25 @@ export const minifyGraphQLEngine = async (): Promise<string> => {
   return res.outputFiles[0].text;
 };
 
-export async function getFunctionLibsFiles(): Promise<FileFsRefs> {
-  const files: FileFsRefs = {};
+export async function getFunctionLibsFiles(): Promise<Files> {
+  const files: Files = {};
 
   /* Copies the required libs for Serverless Functions from .cache to the <name>.func folder */
   for (const cur of [
     {
-      name: 'lib/query-engine/assets',
+      name: '.cache/query-engine/assets',
       src: join('.cache', 'query-engine', 'assets'),
     },
     {
-      name: 'lib/page-ssr',
+      name: '.cache/page-ssr',
       src: join('.cache', 'page-ssr'),
     },
     {
-      name: 'assets/data/datastore',
+      name: '.cache/data/datastore',
       src: join('.cache', 'data', 'datastore'),
     },
     {
-      name: 'cache/caches',
+      name: '.cache/caches',
       src: join('.cache', 'caches'),
     },
   ]) {
@@ -70,8 +69,7 @@ export async function getFunctionLibsFiles(): Promise<FileFsRefs> {
   }
 
   // Minify pre-bundled GraphQL Engine
-  // @ts-ignore
-  files['lib/query-engine/index.js'] = new FileBlob({
+  files['.cache/query-engine/index.js'] = new FileBlob({
     data: await minifyGraphQLEngine(),
   });
 

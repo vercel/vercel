@@ -31,16 +31,11 @@ export default async function handler(
   ) {
     /* Non-SSR/DSG pages already have a pre-generated page-data.json file. 
       Instead of generating this dynamically, we can directly serve this JSON. */
-    res.setHeader('Content-Type', 'application/json');
-
-    return res
-      .status(200)
-      .json(
-        readFileSync(
-          join(__dirname, 'page-data', splitPathName, 'page-data.json'),
-          'utf-8'
-        )
-      );
+    const data = readFileSync(
+      join(__dirname, 'page-data', splitPathName, 'page-data.json'),
+      'utf-8'
+    );
+    return res.json(JSON.parse(data));
   }
 
   const { getData, renderPageData } = await getPageSSRHelpers();
@@ -52,7 +47,7 @@ export default async function handler(
     pathName,
   });
 
-  const body = JSON.stringify(await renderPageData({ data }));
+  const pageData = await renderPageData({ data });
 
   if (data.serverDataHeaders) {
     for (const [name, value] of Object.entries(data.serverDataHeaders)) {
@@ -60,6 +55,6 @@ export default async function handler(
     }
   }
 
-  res.setHeader('ETag', etag(body));
-  return res.json(body);
+  res.setHeader('ETag', etag(JSON.stringify(pageData)));
+  return res.json(pageData);
 }
