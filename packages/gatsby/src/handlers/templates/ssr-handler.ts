@@ -1,5 +1,5 @@
-import { join } from 'path';
 import os from 'os';
+import { join } from 'path';
 import { copySync, existsSync } from 'fs-extra';
 
 import { getPageSSRHelpers, getGraphQLEngine } from '../utils';
@@ -20,31 +20,26 @@ export default async function handler(
   req: ServerlessFunctionRequest,
   res: ServerlessFunctionResponse
 ) {
-  try {
-    const graphqlEngine = await getGraphQLEngine();
-    const { getData, renderHTML } = await getPageSSRHelpers();
+  const graphqlEngine = await getGraphQLEngine();
+  const { getData, renderHTML } = await getPageSSRHelpers();
 
-    const data = await getData({
-      pathName: req.url as string,
-      graphqlEngine,
-      req,
-    });
+  const data = await getData({
+    pathName: req.url as string,
+    graphqlEngine,
+    req,
+  });
 
-    const results = await renderHTML({ data });
+  const results = await renderHTML({ data });
 
-    if (data.serverDataHeaders) {
-      for (const [name, value] of Object.entries(data.serverDataHeaders)) {
-        res.setHeader(name, value);
-      }
+  if (data.serverDataHeaders) {
+    for (const [name, value] of Object.entries(data.serverDataHeaders)) {
+      res.setHeader(name, value);
     }
-
-    if (data.serverDataStatus) {
-      return res.status(data.serverDataStatus).send(results);
-    } else {
-      return res.status(200).send(results);
-    }
-  } catch (e) {
-    console.log(e);
-    throw e;
   }
+
+  if (data.serverDataStatus) {
+    res.statusCode = data.serverDataStatus;
+  }
+
+  res.send(results);
 }

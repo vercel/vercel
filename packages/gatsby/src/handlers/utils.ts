@@ -1,5 +1,5 @@
-import { join } from 'path';
 import os from 'os';
+import { join } from 'path';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
 
@@ -11,7 +11,7 @@ export async function getGraphQLEngine() {
   return new GraphQLEngine({ dbPath: TMP_DATA_PATH });
 }
 
-export async function getPageSSRHelpers(): Promise<
+export function getPageSSRHelpers(): Promise<
   typeof import('gatsby/dist/utils/page-ssr-module/entry')
 > {
   return import(join(__dirname, '.cache/page-ssr/index.js'));
