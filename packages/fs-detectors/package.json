@@ -14,7 +14,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && echo 'Done!'",
     "test": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
     "test-unit": "yarn test"
   },
