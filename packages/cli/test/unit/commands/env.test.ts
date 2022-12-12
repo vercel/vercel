@@ -3,6 +3,7 @@ import path from 'path';
 import env from '../../../src/commands/env';
 import { setupFixture } from '../../helpers/setup-fixture';
 import { client } from '../../mocks/client';
+import { ProjectEnvTarget, ProjectEnvType } from '../../../src/types';
 import { defaultProject, useProject } from '../../mocks/project';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
@@ -31,6 +32,78 @@ describe('env', () => {
       // check for development env value
       const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
       expect(devFileHasDevEnv).toBeTruthy();
+    });
+
+    it('should handle pulling from Preview env vars', async () => {
+      const cwd = setupFixture('vercel-env-pull');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      client.setArgv(
+        'env',
+        'pull',
+        '--yes',
+        '--cwd',
+        cwd,
+        '--environment',
+        'preview'
+      );
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Downloading `preview` Environment Variables for Project vercel-env-pull'
+      );
+      await expect(client.stderr).toOutput('Created .env file');
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      // check for Preview env vars
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env'), 'utf8');
+      expect(rawDevEnv).toContain(
+        'REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"'
+      );
+      expect(rawDevEnv).not.toContain(
+        'BRANCH_ENV_VAR="env var for a specific branch"'
+      );
+    });
+
+    it('should handle pulling from specific Git branch', async () => {
+      const cwd = setupFixture('vercel-env-pull');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      client.setArgv(
+        'env',
+        'pull',
+        '--yes',
+        '--cwd',
+        cwd,
+        '--environment',
+        'preview',
+        '--git-branch',
+        'feat/awesome-thing'
+      );
+      const exitCodePromise = env(client);
+      await expect(client.stderr).toOutput(
+        'Downloading `preview` Environment Variables for Project vercel-env-pull'
+      );
+      await expect(client.stderr).toOutput('Created .env file');
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      // check for Preview env vars
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env'), 'utf8');
+      expect(rawDevEnv).toContain(
+        'REDIS_CONNECTION_STRING="redis://abc123@redis.example.com:6379"'
+      );
+      expect(rawDevEnv).toContain(
+        'BRANCH_ENV_VAR="env var for a specific branch"'
+      );
     });
 
     it('should handle alternate filename', async () => {
@@ -229,12 +302,11 @@ describe('env', () => {
         useUser();
         useTeams('team_dummy');
         defaultProject.env.push({
-          type: 'encrypted',
+          type: ProjectEnvType.Encrypted,
           id: '781dt89g8r2h789g',
           key: 'NEW_VAR',
           value: '"testvalue"',
-          target: ['development'],
-          gitBranch: null,
+          target: [ProjectEnvTarget.Development],
           configurationId: null,
           updatedAt: 1557241361455,
           createdAt: 1557241361455,
@@ -267,12 +339,11 @@ describe('env', () => {
         useUser();
         useTeams('team_dummy');
         defaultProject.env.push({
-          type: 'encrypted',
+          type: ProjectEnvType.Encrypted,
           id: '781dt89g8r2h789g',
           key: 'NEW_VAR',
           value: 'testvalue',
-          target: ['development'],
-          gitBranch: null,
+          target: [ProjectEnvTarget.Development],
           configurationId: null,
           updatedAt: 1557241361455,
           createdAt: 1557241361455,
