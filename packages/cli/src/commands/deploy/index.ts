@@ -72,6 +72,7 @@ import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import { parseEnv } from '../../util/parse-env';
 import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
 import { pickOverrides } from '../../util/projects/project-settings';
+import { updateWebhooks } from '../../util/update-webhooks';
 
 export default async (client: Client): Promise<number> => {
   const { output } = client;
@@ -509,6 +510,16 @@ export default async (client: Client): Promise<number> => {
   let deployment = null;
 
   const localConfigurationOverrides = pickOverrides(localConfig);
+  const localConfigNoEvents: any = {};
+  Object.keys(localConfig.functions ?? {}).forEach(key => {
+    if (!localConfigNoEvents.functions) {
+      localConfigNoEvents.functions = {};
+    }
+    localConfigNoEvents.functions[key] = {
+      ...localConfig?.functions?.[key],
+      events: undefined,
+    };
+  });
 
   try {
     const createArgs: any = {
@@ -523,7 +534,7 @@ export default async (client: Client): Promise<number> => {
       wantsPublic: argv['--public'] || localConfig.public,
       type: null,
       nowConfig: {
-        ...localConfig,
+        ...localConfigNoEvents,
         // `images` is allowed in "vercel.json" and processed
         // by `vc build`, but don't send it to the API endpoint
         images: undefined,
@@ -557,6 +568,9 @@ export default async (client: Client): Promise<number> => {
       path,
       archive
     );
+    if (target === 'production') {
+      await updateWebhooks(client, deployment, currentTeam);
+    }
 
     if (deployment.code === 'missing_project_settings') {
       let { projectSettings, framework } = deployment;
