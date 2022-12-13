@@ -121,6 +121,12 @@ async function writeBuildResultV2(
     if (isLambda(output)) {
       await writeLambda(outputDir, output, normalizedPath, undefined, lambdas);
     } else if (isPrerender(output)) {
+      if (!output.lambda) {
+        throw new Error(
+          `Invalid Prerender with no "lambda" property: ${normalizedPath}`
+        );
+      }
+
       await writeLambda(
         outputDir,
         output.lambda,

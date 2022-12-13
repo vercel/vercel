@@ -34,13 +34,18 @@ import url from 'url';
 import escapeStringRegexp from 'escape-string-regexp';
 import { htmlContentType } from '.';
 import textTable from 'text-table';
-import prettyBytes from 'pretty-bytes';
 import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-function-source';
 import type { LambdaOptionsWithFiles } from '@vercel/build-utils/dist/lambda';
 import { stringifySourceMap } from './sourcemapped';
 import type { RawSourceMap } from 'source-map';
+import bytes from 'bytes';
 
 type stringMap = { [key: string]: string };
+
+export const KIB = 1024;
+export const MIB = 1024 * KIB;
+
+export const prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
 
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
@@ -1292,9 +1297,9 @@ export type LambdaGroup = {
   pseudoLayerUncompressedBytes: number;
 };
 
-export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * 1000 * 1000; // 250MB
-const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * 1000 * 1000; // 2.5MB
-const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * 1000; // 250KB
+export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
+const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * MIB;
+const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 
 export async function getPageLambdaGroups({
   entryPath,
@@ -1497,7 +1502,7 @@ export const outputFunctionFileSizeInfo = (
     .forEach(depKey => {
       const dep = dependencies[depKey];
 
-      if (dep.compressed < 100 * 1000 && dep.uncompressed < 500 * 1000) {
+      if (dep.compressed < 100 * KIB && dep.uncompressed < 500 * KIB) {
         // ignore smaller dependencies to reduce noise
         return;
       }
@@ -1537,9 +1542,8 @@ export const detectLambdaLimitExceeding = async (
   }
 ) => {
   // show debug info if within 5 MB of exceeding the limit
-  const COMPRESSED_SIZE_LIMIT_CLOSE = compressedSizeLimit - 5 * 1000 * 1000;
-  const UNCOMPRESSED_SIZE_LIMIT_CLOSE =
-    MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * 1000 * 1000;
+  const COMPRESSED_SIZE_LIMIT_CLOSE = compressedSizeLimit - 5 * MIB;
+  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * MIB;
 
   let numExceededLimit = 0;
   let numCloseToLimit = 0;
@@ -1815,13 +1819,16 @@ export const onPrerenderRoute =
       isAppPathRoute = true;
     }
 
+    const isOmittedOrNotFound = isOmitted || isNotFound;
     const htmlFsRef =
       isBlocking || (isNotFound && !static404Page)
         ? // Blocking pages do not have an HTML fallback
           null
         : new FileFsRef({
             fsPath: path.join(
-              isAppPathRoute && appDir ? appDir : pagesDir,
+              isAppPathRoute && !isOmittedOrNotFound && appDir
+                ? appDir
+                : pagesDir,
               isFallback
                 ? // Fallback pages have a special file.
                   addLocaleOrDefault(
@@ -1832,7 +1839,7 @@ export const onPrerenderRoute =
                 : // Otherwise, the route itself should exist as a static HTML
                   // file.
                   `${
-                    isOmitted || isNotFound
+                    isOmittedOrNotFound
                       ? addLocaleOrDefault('/404', routesManifest, locale)
                       : routeFileNoExt
                   }.html`
@@ -1844,9 +1851,11 @@ export const onPrerenderRoute =
         ? null
         : new FileFsRef({
             fsPath: path.join(
-              isAppPathRoute && appDir ? appDir : pagesDir,
+              isAppPathRoute && !isOmittedOrNotFound && appDir
+                ? appDir
+                : pagesDir,
               `${
-                isOmitted || isNotFound
+                isOmittedOrNotFound
                   ? addLocaleOrDefault('/404.html', routesManifest, locale)
                   : isAppPathRoute
                   ? dataRoute

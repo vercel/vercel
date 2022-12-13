@@ -2,7 +2,7 @@ import { snakeCase } from 'snake-case';
 import { upper } from '../lib/upper';
 
 export const config = {
-  runtime: 'experimental-edge',
+  runtime: 'edge',
 };
 
 export default async function edge(request, event) {
