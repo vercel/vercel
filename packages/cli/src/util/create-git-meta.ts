@@ -99,7 +99,7 @@ export function isDirty(directory: string): Promise<boolean> {
         if (err) {
           return reject(err);
         }
-        if (stderr?.trim()) {
+        if (stderr !== undefined && stderr.trim().length > 0) {
           return reject(new Error(stderr));
         }
 
