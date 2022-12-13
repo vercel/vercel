@@ -1,7 +1,7 @@
 import describeYourself from '../packages/only-browser';
 
 export const config = {
-  runtime: 'experimental-edge',
+  runtime: 'edge',
 };
 
 export default function () {
