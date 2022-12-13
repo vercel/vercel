@@ -5,7 +5,7 @@ import git from 'git-last-commit';
 import { exec } from 'child_process';
 import { GitMetadata, Project } from '../types';
 import { Output } from './output';
-import { errorToString } from '@vercel/error-utils';
+import { errorToString, normalizeError } from '@vercel/error-utils';
 
 export async function createGitMeta(
   directory: string,
@@ -40,19 +40,27 @@ export async function createGitMeta(
     return;
   }
 
-  const [commit, dirty] = await Promise.all([
-    getLastCommit(directory).catch(err => {
-      output.debug(
-        `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.\n${err}`
-      );
-      return;
-    }),
-    isDirty(directory, output),
+  const [commitResult, dirtyResult] = await Promise.allSettled([
+    getLastCommit(directory),
+    isDirty(directory),
   ]);
 
-  if (!commit) {
+  if (commitResult.status === 'rejected') {
+    output.debug(
+      `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.\n${commitResult.reason}`
+    );
     return;
   }
+
+  if (dirtyResult.status === 'rejected') {
+    output.debug(
+      `Failed to determine if Git repo has been modified:\n${dirtyResult.reason}`
+    );
+    return;
+  }
+
+  const dirty = dirtyResult.value;
+  const commit = commitResult.value;
 
   return {
     remoteUrl,
@@ -68,7 +76,10 @@ function getLastCommit(directory: string): Promise<git.Commit> {
   return new Promise((resolve, reject) => {
     git.getLastCommit(
       (err, commit) => {
-        if (err) return reject(err);
+        if (err) {
+          return reject(normalizeError(err));
+        }
+
         resolve(commit);
       },
       { dst: directory }
@@ -76,8 +87,8 @@ function getLastCommit(directory: string): Promise<git.Commit> {
   });
 }
 
-export function isDirty(directory: string, output: Output): Promise<boolean> {
-  return new Promise(resolve => {
+export function isDirty(directory: string): Promise<boolean> {
+  return new Promise((resolve, reject) => {
     // note: we specify the `--no-optional-locks` git flag so that `git status`
     // does not perform any "optional" operations such as optimizing the index
     // in the background: https://git-scm.com/docs/git-status#_background_refresh
@@ -85,14 +96,15 @@ export function isDirty(directory: string, output: Output): Promise<boolean> {
       'git --no-optional-locks status -s',
       { cwd: directory },
       function (err, stdout, stderr) {
-        let debugMessage = `Failed to determine if Git repo has been modified:`;
-        stderr = stderr && stderr.trim();
-        if (err || stderr) {
-          if (err) debugMessage += `\n${err}`;
-          if (stderr) debugMessage += `\n${stderr.trim()}`;
-          output.debug(debugMessage);
-          return resolve(false);
+        if (err) {
+          return reject(err);
         }
+        if (stderr !== undefined && stderr.trim().length > 0) {
+          return reject(new Error(stderr));
+        }
+
+        // Example output (when dirty):
+        //    M ../fs-detectors/src/index.ts
         resolve(stdout.trim().length > 0);
       }
     );

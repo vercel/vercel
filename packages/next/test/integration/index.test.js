@@ -716,7 +716,7 @@ it('Should not exceed function limit for large dependencies (server build)', asy
       lambdas.add(output[filePath]);
     }
   });
-  expect(lambdas.size).toBe(12);
+  expect(lambdas.size).toBe(3);
 
   // this assertion is unstable as `next-server`'s size can change up and down
   // on canary so skipping to prevent random failures.
