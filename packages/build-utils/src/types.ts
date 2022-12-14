@@ -410,6 +410,11 @@ export interface BuildResultBuildOutput {
   buildOutputPath: string;
 }
 
+export interface Cron {
+  path: string;
+  cron: string;
+}
+
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.
@@ -428,6 +433,7 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
+  crons?: Cron[];
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
@@ -436,6 +442,7 @@ export interface BuildResultV3 {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   output: Lambda | EdgeFunction;
+  cron?: string;
 }
 
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;

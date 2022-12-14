@@ -184,6 +184,19 @@ async function writeBuildResultV2(
   return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
 
+export function getBuildV3Path(build: Builder): string {
+  const { src } = build;
+
+  if (typeof src !== 'string') {
+    throw new Error(`Expected "build.src" to be a string`);
+  }
+
+  const ext = extname(src);
+  return stripDuplicateSlashes(
+    build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
+  );
+}
+
 /**
  * Writes the output from the `build()` return value of a v3 Builder to
  * the filesystem.
@@ -207,10 +220,7 @@ async function writeBuildResultV3(
       })
     : {};
 
-  const ext = extname(src);
-  const path = stripDuplicateSlashes(
-    build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
-  );
+  const path = getBuildV3Path(build);
   if (isLambda(output)) {
     await writeLambda(outputDir, output, path, functionConfiguration);
   } else if (isEdgeFunction(output)) {

@@ -51,6 +51,7 @@ import type {
   BuildResultV3,
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
+import cronValidate from 'cron-validate';
 
 import { Register, register } from './typescript';
 import {
@@ -414,6 +415,21 @@ export const build: BuildV3 = async ({
     isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
 
+  const cron = staticConfig?.cron;
+
+  if (cron) {
+    const cronValidationResult = cronValidate(cron, {
+      preset: 'aws-cloud-watch',
+    });
+    if (!cronValidationResult.isValid()) {
+      throw new Error(
+        `Invalid "cron" property in \`config\`: ${
+          cronValidationResult.getError()[0]
+        }`
+      );
+    }
+  }
+
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -484,7 +500,7 @@ export const build: BuildV3 = async ({
     });
   }
 
-  return { routes, output };
+  return { routes, output, cron };
 };
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
