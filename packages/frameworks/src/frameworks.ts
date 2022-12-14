@@ -1056,7 +1056,7 @@ export const frameworks = [
         value: 'vite build',
       },
       devCommand: {
-        value: 'vite dev',
+        value: 'vite dev --port $PORT',
         placeholder: '`pnpm run dev`',
       },
       outputDirectory: {
