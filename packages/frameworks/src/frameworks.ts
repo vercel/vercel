@@ -997,8 +997,9 @@ export const frameworks = [
       'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
-    description: 'A SvelteKit app optimized Edge-first.',
+    description: 'A SvelteKit legacy app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    sort: 99,
     envPrefix: 'VITE_',
     detectors: {
       every: [
@@ -1030,7 +1031,7 @@ export const frameworks = [
   {
     name: 'SvelteKit',
     slug: 'sveltekit-1',
-    demo: 'https://sveltekit-template.vercel.app',
+    demo: 'https://sveltekit-1-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
     screenshot:
       'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
@@ -1052,12 +1053,12 @@ export const frameworks = [
         placeholder: '`yarn install`, `pnpm install`, or `npm install`',
       },
       buildCommand: {
-        placeholder: '`pnpm run build``',
+        placeholder: 'vite build',
         value: 'vite build',
       },
       devCommand: {
+        placeholder: 'vite dev',
         value: 'vite dev --port $PORT',
-        placeholder: '`pnpm run dev`',
       },
       outputDirectory: {
         value: 'public',
