@@ -1043,7 +1043,7 @@ export const frameworks = [
         {
           path: 'package.json',
           matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".*?"[^}]*}',
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".+?"[^}]*}',
         },
       ],
     },
