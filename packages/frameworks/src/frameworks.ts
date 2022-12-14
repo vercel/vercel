@@ -1053,10 +1053,10 @@ export const frameworks = [
       },
       buildCommand: {
         placeholder: '`pnpm run build``',
-        value: 'pnpm run build',
+        value: 'vite build',
       },
       devCommand: {
-        value: 'pnpm run dev',
+        value: 'vite dev',
         placeholder: '`pnpm run dev`',
       },
       outputDirectory: {
