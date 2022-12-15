@@ -153,3 +153,34 @@ export function next(init?: ExtraResponseInit): Response {
     headers,
   });
 }
+
+/**
+ * Returns a Response that contains a JSON payload as the response body.
+ *
+ * @param data The payload to serialize as JSON
+ * @param init Additional options for the response
+ *
+ * @example
+ * <caption>JSON response body</caption>
+ *
+ * ```ts
+ * import { json } from '@vercel/edge';
+ *
+ * export default function middleware(_req: Request) {
+ *   return json({
+ *     hello: 'world'
+ *   });
+ * }
+ * ```
+ */
+export function json(data: unknown, init?: ExtraResponseInit): Response {
+  const headers = new Headers(init?.headers ?? {});
+  if (!headers.has('content-type')) {
+    headers.set('content-type', 'application/json; charset=utf-8');
+  }
+  const body = JSON.stringify(data);
+  return new Response(body, {
+    ...init,
+    headers,
+  });
+}
