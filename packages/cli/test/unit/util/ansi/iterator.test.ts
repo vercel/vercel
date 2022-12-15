@@ -165,13 +165,16 @@ describe('createAnsiIterator()', () => {
     expect(array).toMatchInlineSnapshot(`
       [
         {
+          "leftover": "
+      ba",
           "raw": "foo",
           "type": "text",
         },
         {
+          "leftover": "ba",
           "raw": "
       ",
-          "type": "escape",
+          "type": "control",
         },
         {
           "raw": "ba",
