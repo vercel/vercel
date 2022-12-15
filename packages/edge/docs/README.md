@@ -22,6 +22,7 @@
 
 - [geolocation](README.md#geolocation)
 - [ipAddress](README.md#ipaddress)
+- [json](README.md#json)
 - [next](README.md#next)
 - [rewrite](README.md#rewrite)
 
@@ -166,6 +167,43 @@ Returns the IP address of the request from the headers.
 #### Defined in
 
 [src/edge-headers.ts:77](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L77)
+
+---
+
+### json
+
+▸ **json**(`data`, `init?`): `Response`
+
+Returns a Response that contains a JSON payload as the response body.
+
+**`Example`**
+
+<caption>JSON response body</caption>
+
+```ts
+import { json } from '@vercel/edge';
+
+export default function middleware(_req: Request) {
+  return json({
+    hello: 'world',
+  });
+}
+```
+
+#### Parameters
+
+| Name    | Type                                                   | Description                         |
+| :------ | :----------------------------------------------------- | :---------------------------------- |
+| `data`  | `unknown`                                              | The payload to serialize as JSON    |
+| `init?` | [`ExtraResponseInit`](interfaces/ExtraResponseInit.md) | Additional options for the response |
+
+#### Returns
+
+`Response`
+
+#### Defined in
+
+[src/middleware-helpers.ts:176](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L176)
 
 ---
 
