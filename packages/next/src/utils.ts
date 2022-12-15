@@ -14,6 +14,7 @@ import {
   isSymbolicLink,
   NodejsLambda,
   EdgeFunction,
+  Cron,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -227,6 +228,30 @@ type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
 };
 
 export type RoutesManifest = RoutesManifestV4 | RoutesManifestOld;
+
+export type CronManifest = Cron[];
+
+export async function getCronManifest(
+  entryPath: string,
+  outputDirectory: string
+): Promise<CronManifest | undefined> {
+  const cronManifestPath = path.join(
+    entryPath,
+    outputDirectory,
+    'server',
+    'cron-manifest.json'
+  );
+
+  const hasCronManifest = await fs
+    .access(cronManifestPath)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasCronManifest) return undefined;
+
+  const cronManifest: CronManifest = await fs.readJSON(cronManifestPath);
+  return cronManifest;
+}
 
 export async function getRoutesManifest(
   entryPath: string,

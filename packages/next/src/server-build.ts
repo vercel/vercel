@@ -42,6 +42,7 @@ import {
   getMiddlewareBundle,
   getFilesMapFromReasons,
   UnwrapPromise,
+  CronManifest,
 } from './utils';
 import {
   nodeFileTrace,
@@ -98,6 +99,7 @@ export async function serverBuild({
   isCorrectLocaleAPIRoutes,
   lambdaCompressedByteLimit,
   requiredServerFilesManifest,
+  cronManifest,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -136,6 +138,7 @@ export async function serverBuild({
   imagesManifest?: NextImagesManifest;
   prerenderManifest: NextPrerenderedRoutes;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
+  cronManifest: CronManifest | undefined;
 }): Promise<BuildResult> {
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
@@ -1157,6 +1160,7 @@ export async function serverBuild({
   }
 
   return {
+    crons: cronManifest,
     wildcard: wildcardConfig,
     images:
       imagesManifest?.images?.loader === 'default'
