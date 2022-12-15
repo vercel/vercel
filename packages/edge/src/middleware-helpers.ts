@@ -176,7 +176,7 @@ export function next(init?: ExtraResponseInit): Response {
 export function json(data: unknown, init?: ExtraResponseInit): Response {
   const headers = new Headers(init?.headers ?? {});
   if (!headers.has('content-type')) {
-    headers.set('content-type', 'application/json; charset=utf-8');
+    headers.set('content-type', 'application/json');
   }
   const body = JSON.stringify(data);
   return new Response(body, {
