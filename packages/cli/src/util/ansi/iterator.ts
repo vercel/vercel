@@ -1,8 +1,78 @@
-import { Readable } from 'stream';
+export interface TokenBase {
+  raw: string;
+  leftover: string;
+}
 
-export async function* createAnsiIterator(stream: Readable) {
+export interface ControlCode extends TokenBase {
+  type: 'control';
+}
+
+export interface TextSequence extends TokenBase {
+  type: 'text';
+}
+
+export interface EscapeSequenceBase extends TokenBase {
+  type: 'escape';
+  code: string;
+  parameters: string;
+}
+
+export interface StepsEscapeSequence extends EscapeSequenceBase {
+  abbr: 'CUU' | 'CUD' | 'CUF' | 'CUB' | 'CNL' | 'CPL' | 'CHA' | 'SU' | 'ST';
+  steps: number;
+}
+
+export interface ModeEscapeSequence extends EscapeSequenceBase {
+  abbr: 'ED' | 'EL';
+  mode: number;
+}
+
+export interface RowsColsEscapeSequence extends EscapeSequenceBase {
+  abbr: 'CHA' | 'CUP' | 'HVP';
+  row: number;
+  column: number;
+}
+
+export interface SgrEscapeSequence extends EscapeSequenceBase {
+  abbr: 'SGR';
+  style: SgrStyle;
+}
+
+export interface NoParamsEscapeSequence extends EscapeSequenceBase {
+  abbr: 'SCP' | 'RCP' | 'unknown';
+}
+
+export type EscapeSequence =
+  | NoParamsEscapeSequence
+  | StepsEscapeSequence
+  | ModeEscapeSequence
+  | RowsColsEscapeSequence
+  | SgrEscapeSequence;
+
+export type AnsiToken = ControlCode | EscapeSequence | TextSequence;
+
+export interface RgbColor {
+  r: number;
+  g: number;
+  b: number;
+}
+
+export interface SgrStyle {
+  reset?: boolean;
+  bold?: boolean;
+  dim?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  slowBlink?: boolean;
+  fastBlink?: boolean;
+  invert?: boolean;
+  foregroundColor?: RgbColor | number | false;
+  backgroundColor?: RgbColor | number | false;
+}
+
+export async function* createAnsiIterator(stream: AsyncIterable<string>) {
   let done = false;
-  let leftover: string | undefined = '';
+  let leftover = '';
   const it = stream[Symbol.asyncIterator]();
   while (!done) {
     const next = await parseNext(it, leftover);
@@ -15,7 +85,10 @@ export async function* createAnsiIterator(stream: Readable) {
   }
 }
 
-async function parseNext(it: AsyncIterator<string>, leftover = '') {
+async function parseNext(
+  it: AsyncIterator<string>,
+  leftover: string
+): Promise<AnsiToken | undefined> {
   let chunk = leftover;
   if (chunk.length === 0) {
     const next = await it.next();
@@ -28,7 +101,7 @@ async function parseNext(it: AsyncIterator<string>, leftover = '') {
 
   if (!match) {
     // No control code in this chunk - emit as text
-    return { type: 'text', raw: chunk };
+    return { type: 'text', raw: chunk, leftover: '' };
   }
 
   if (typeof match.index === 'number' && match.index > 0) {
@@ -54,12 +127,15 @@ async function parseNext(it: AsyncIterator<string>, leftover = '') {
   }
 }
 
-async function parseEscapeSequence(it: AsyncIterator<string>, leftover = '') {
+async function parseEscapeSequence(
+  it: AsyncIterator<string>,
+  leftover: string
+): Promise<AnsiToken | undefined> {
   let chunk = leftover;
   while (chunk.length === 0) {
     const next = await it.next();
     if (next.done) return;
-    chunk = `${leftover}${next.value}`;
+    chunk = `${chunk}${next.value}`;
   }
   if (/[\u0040-\u005F]/.test(chunk[0])) {
     // Fe Escape sequences (color codes, movements, hyperlinks, etc.)
@@ -69,14 +145,17 @@ async function parseEscapeSequence(it: AsyncIterator<string>, leftover = '') {
   console.log(`Unsupported escape code sequence: ${JSON.stringify(chunk)}`);
 }
 
-async function parseFeEscapeSequence(it: AsyncIterator<string>, leftover = '') {
+async function parseFeEscapeSequence(
+  it: AsyncIterator<string>,
+  leftover: string
+): Promise<AnsiToken | undefined> {
   let chunk = leftover;
 
   // Read at least until the next byte
   while (chunk.length === 0) {
     const next = await it.next();
     if (next.done) return;
-    chunk = `${leftover}${next.value}`;
+    chunk = `${chunk}${next.value}`;
   }
 
   const c1 = chunk[0];
@@ -94,8 +173,8 @@ async function parseFeEscapeSequence(it: AsyncIterator<string>, leftover = '') {
 
 async function parseCsiEscapeSequence(
   it: AsyncIterator<string>,
-  leftover = ''
-) {
+  leftover: string
+): Promise<AnsiToken | undefined> {
   let chunk = leftover;
 
   // Read until chunk contains terminator (byte in the range 0x40 through 0x7E)
@@ -103,7 +182,7 @@ async function parseCsiEscapeSequence(
   while ((terminatorMatch = chunk.match(/[\u0040-\u007E]/)) === null) {
     const next = await it.next();
     if (next.done) return;
-    chunk = `${leftover}${next.value}`;
+    chunk = `${chunk}${next.value}`;
   }
 
   const { index } = terminatorMatch;
@@ -115,6 +194,17 @@ async function parseCsiEscapeSequence(
   const raw = `\u001b[${parameters}${code}`;
 
   if (code === 'm') {
+    // CSI n m
+    // Sets colors and style of the characters following this escape code.
+    return {
+      type: 'escape',
+      abbr: 'SGR', // Select Graphic Rendition
+      code,
+      parameters,
+      raw,
+      style: parseSgrStyle(parameters),
+      leftover,
+    };
   }
 
   if (code === 'A') {
@@ -334,11 +424,128 @@ async function parseCsiEscapeSequence(
     };
   }
 
+  if (code === 's') {
+    // CSI s
+    // Saves the cursor position/state in SCO console mode.
+    return {
+      type: 'escape',
+      abbr: 'SCP', // Save Current Cursor Position
+      code,
+      parameters,
+      raw,
+      leftover,
+    };
+  }
+
+  if (code === 'u') {
+    // CSI s
+    // Restores the cursor position/state in SCO console mode.
+    return {
+      type: 'escape',
+      abbr: 'RCP', // Restore Saved Cursor Position
+      code,
+      parameters,
+      raw,
+      leftover,
+    };
+  }
+
   console.log(`Unsupported CSI escape code sequence: ${JSON.stringify(raw)}`);
   return {
     type: 'escape',
+    abbr: 'unknown',
     code,
     parameters,
+    raw,
+    leftover,
+  };
+}
+
+export function parseSgrStyle(input: string): SgrStyle {
+  const style: SgrStyle = {};
+  const parts = input.split(/[;:]/).map(Number);
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (part === 0) {
+      // reset
+      style.bold = false;
+      style.dim = false;
+      style.italic = false;
+      style.underline = false;
+      style.foregroundColor = false;
+      style.backgroundColor = false;
+    } else if (part === 1) {
+      style.bold = true;
+    } else if (part === 2) {
+      style.dim = true;
+    } else if (part === 3) {
+      style.italic = true;
+    } else if (part === 4) {
+      style.underline = true;
+    } else if (part >= 30 && part <= 37) {
+      style.foregroundColor = part - 30;
+    } else if (part === 38) {
+      const mode = parts[++i];
+      if (mode === 5) {
+        // 256 color
+        style.foregroundColor = parts[++i];
+      } else if (mode === 2) {
+        // 24-bit color
+        const r = parts[++i];
+        const g = parts[++i];
+        const b = parts[++i];
+        style.foregroundColor = { r, g, b };
+      }
+    } else if (part === 39) {
+      style.foregroundColor = false;
+    } else if (part >= 40 && part <= 47) {
+      style.backgroundColor = part - 40;
+    } else if (part === 48) {
+      const mode = parts[++i];
+      if (mode === 5) {
+        // 256 color
+        style.backgroundColor = parts[++i];
+      } else if (mode === 2) {
+        // 24-bit color
+        const r = parts[++i];
+        const g = parts[++i];
+        const b = parts[++i];
+        style.backgroundColor = { r, g, b };
+      }
+    } else if (part === 49) {
+      style.backgroundColor = false;
+    } else {
+      console.log(`Unsupported SGR parameter: ${JSON.stringify(parts[i])}`);
+    }
+  }
+  return style;
+}
+
+async function parseOscEscapeSequence(
+  it: AsyncIterator<string>,
+  leftover: string
+) {
+  let chunk = leftover;
+
+  // Read until chunk contains string terminator ST
+  let terminatorMatch: RegExpMatchArray | null = null;
+  while ((terminatorMatch = chunk.match(/(\u001b\\|\u0007)/)) === null) {
+    const next = await it.next();
+    if (next.done) return;
+    chunk = `${chunk}${next.value}`;
+  }
+
+  const { index } = terminatorMatch;
+  if (typeof index !== 'number') return;
+
+  const data = chunk.substring(0, index);
+  leftover = chunk.substring(index + terminatorMatch[0].length);
+  console.log({ data, index, terminatorMatch });
+
+  return {
+    type: 'escape',
+    abbr: 'OSC',
+    raw: '',
     leftover,
   };
 }
