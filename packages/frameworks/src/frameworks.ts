@@ -1008,7 +1008,7 @@ export const frameworks = [
     versionDependencies: ['svelte'],
   },
   {
-    name: 'SvelteKit',
+    name: 'SvelteKit (Legacy Beta)',
     slug: 'sveltekit',
     demo: 'https://sveltekit-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
@@ -1016,15 +1016,16 @@ export const frameworks = [
       'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
-    description: 'A SvelteKit app optimized Edge-first.',
+    description: 'A SvelteKit legacy app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    sort: 99,
     envPrefix: 'VITE_',
     detectors: {
       every: [
         {
           path: 'package.json',
           matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".+?"[^}]*}',
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*"1\\.0\\.0-next\\.(\\d+)"[^}]*}',
         },
       ],
     },
@@ -1046,6 +1047,44 @@ export const frameworks = [
     },
     getOutputDirName: async () => 'public',
     versionDependencies: ['svelte'],
+  },
+  {
+    name: 'SvelteKit',
+    slug: 'sveltekit-1',
+    demo: 'https://sveltekit-1-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
+    screenshot:
+      'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
+    tagline:
+      'SvelteKit is a framework for building web applications of all sizes.',
+    description: 'A SvelteKit app optimized Edge-first.',
+    website: 'https://kit.svelte.dev',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        placeholder: 'vite build',
+        value: 'vite build',
+      },
+      devCommand: {
+        placeholder: 'vite dev',
+        value: 'vite dev --port $PORT',
+      },
+      outputDirectory: {
+        value: 'public',
+      },
+    },
+    getOutputDirName: async () => 'public',
   },
   {
     name: 'Ionic React',
