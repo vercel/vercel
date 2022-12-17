@@ -53,6 +53,7 @@ import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import { serverBuild } from './server-build';
 import {
+  MIB,
   collectTracedFiles,
   createLambdaFromPseudoLayers,
   createPseudoLayer,
@@ -201,7 +202,7 @@ export const build: BuildV2 = async ({
 
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = (config.maxLambdaSize ||
-    50 * 1000 * 1000) as number;
+    50 * MIB) as number;
 
   let entryDirectory = path.dirname(entrypoint);
   let entryPath = path.join(workPath, entryDirectory);
@@ -1072,6 +1073,7 @@ export const build: BuildV2 = async ({
           handler: '___next_launcher.cjs',
           runtime: nodeVersion.runtime,
           ...lambdaOptions,
+          operationType: 'SSR',
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
           supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
@@ -1088,9 +1090,14 @@ export const build: BuildV2 = async ({
       'pages'
     );
 
+    let appDir: string | null = null;
     const appPathRoutesManifest = await readJSON(
       path.join(entryPath, outputDirectory, 'app-path-routes-manifest.json')
     ).catch(() => null);
+
+    if (appPathRoutesManifest) {
+      appDir = path.join(pagesDir, '../app');
+    }
 
     const { pages, appPaths: lambdaAppPaths } = await getServerlessPages({
       pagesDir,
@@ -2032,9 +2039,10 @@ export const build: BuildV2 = async ({
       console.timeEnd(allLambdasLabel);
     }
     const prerenderRoute = onPrerenderRoute({
+      appDir,
+      pagesDir,
       hasPages404,
       static404Page,
-      pagesDir,
       pageLambdaMap,
       lambdas,
       isServerMode,
@@ -2042,6 +2050,7 @@ export const build: BuildV2 = async ({
       entryDirectory,
       routesManifest,
       prerenderManifest,
+      appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
     });

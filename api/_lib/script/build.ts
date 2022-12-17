@@ -18,6 +18,12 @@ async function main() {
     { recursive: true, force: true }
   );
 
+  await fs.cp(
+    join(repoRoot, 'packages', 'fs-detectors', 'logos'),
+    join(pubDir, 'monorepo-logos'),
+    { recursive: true, force: true }
+  );
+
   const examples = await getExampleList();
   const pathListAll = join(pubDir, 'list-all.json');
   await fs.writeFile(pathListAll, JSON.stringify(examples));

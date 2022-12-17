@@ -1,3 +1,5 @@
+let spawnExitCode = 0;
+
 const spawnMock = jest.fn();
 jest.mock('cross-spawn', () => {
   const spawn = (...args: any) => {
@@ -5,7 +7,7 @@ jest.mock('cross-spawn', () => {
     const child = {
       on: (type: string, fn: (code: number) => void) => {
         if (type === 'close') {
-          return fn(0);
+          return fn(spawnExitCode);
         }
       },
     };
@@ -15,6 +17,7 @@ jest.mock('cross-spawn', () => {
 });
 
 afterEach(() => {
+  spawnExitCode = 0;
   spawnMock.mockClear();
 });
 
@@ -34,7 +37,7 @@ it('should not include peer dependencies when missing VERCEL_NPM_LEGACY_PEER_DEP
   const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
   const meta: Meta = {};
   const spawnOpts = getTestSpawnOpts({});
-  const nodeVersion = { major: 16 } as any;
+  const nodeVersion = getNodeVersion(16);
   await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
   expect(spawnMock.mock.calls.length).toBe(1);
   const args = spawnMock.mock.calls[0];
@@ -71,10 +74,35 @@ it('should include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node1
   });
 });
 
-it('should not include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node14', async () => {
+it('should include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node14 and npm7+', async () => {
   const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
   const meta: Meta = {};
   const spawnOpts = getTestSpawnOpts({ VERCEL_NPM_LEGACY_PEER_DEPS: '1' });
+
+  const nodeVersion = getNodeVersion(14);
+  await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
+  expect(spawnMock.mock.calls.length).toBe(1);
+  const args = spawnMock.mock.calls[0];
+  expect(args[0]).toEqual('npm');
+  expect(args[1]).toEqual([
+    'install',
+    '--no-audit',
+    '--unsafe-perm',
+    '--legacy-peer-deps',
+  ]);
+  expect(args[2]).toEqual({
+    cwd: fixture,
+    prettyCommand: 'npm install',
+    stdio: 'inherit',
+    env: expect.any(Object),
+  });
+});
+
+it('should not include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node14 and npm6', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '14-npm-6-legacy-peer-deps');
+  const meta: Meta = {};
+  const spawnOpts = getTestSpawnOpts({ VERCEL_NPM_LEGACY_PEER_DEPS: '1' });
+
   const nodeVersion = getNodeVersion(14);
   await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
   expect(spawnMock.mock.calls.length).toBe(1);
@@ -168,5 +196,29 @@ it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)
     prettyCommand: 'yarn install',
     stdio: 'inherit',
     env: expect.any(Object),
+  });
+});
+
+it('should throw error when install failed - yarn', async () => {
+  spawnExitCode = 1;
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '19-yarn-v2');
+  await expect(
+    runNpmInstall(fixture, [], undefined, meta)
+  ).rejects.toMatchObject({
+    name: 'Error',
+    message: 'Command "yarn install" exited with 1',
+  });
+});
+
+it('should throw error when install failed - npm', async () => {
+  spawnExitCode = 1;
+  const meta: Meta = {};
+  const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+  await expect(
+    runNpmInstall(fixture, [], undefined, meta)
+  ).rejects.toMatchObject({
+    name: 'Error',
+    message: 'Command "npm install" exited with 1',
   });
 });

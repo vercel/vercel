@@ -2,9 +2,12 @@
   "scripts": {
     "build": "next build"
   },
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "next": "canary",
-    "react": "^16.8.6",
-    "react-dom": "^16.8.6"
+    "react": "latest",
+    "react-dom": "latest"
   }
 }

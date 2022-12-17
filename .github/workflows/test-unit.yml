@@ -13,10 +13,14 @@ env:
   TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   test:
     name: Unit
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -31,9 +35,14 @@ jobs:
         with:
             fetch-depth: 2
       - uses: actions/setup-node@v3
+        timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
         with:
             node-version: ${{ matrix.node }}
-            cache: 'yarn'
+      - uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: yarn-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: yarn-${{ matrix.os }}-${{ matrix.node }}
       - run: yarn install --network-timeout 1000000 --frozen-lockfile
       - run: yarn run build
       - run: yarn run lint

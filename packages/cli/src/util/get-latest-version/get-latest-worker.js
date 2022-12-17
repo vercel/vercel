@@ -10,11 +10,16 @@
  * the world, but something to be aware of.
  */
 
-const fetch = require('node-fetch');
-const fs = require('fs-extra');
+const https = require('https');
+const { mkdirSync, writeFileSync } = require('fs');
+const {
+  access,
+  mkdir,
+  readFile,
+  unlink,
+  writeFile,
+} = require('node:fs/promises');
 const path = require('path');
-const { Agent: HttpsAgent } = require('https');
-const { bold, gray, red } = require('chalk');
 const { format, inspect } = require('util');
 
 /**
@@ -44,13 +49,9 @@ class WorkerOutput {
     );
     this.debugLog.push(`[${new Date().toISOString()}] [${type}] ${str}`);
     if (type === 'debug' && this.debugOutputEnabled) {
-      console.error(
-        `${gray('>')} ${bold('[debug]')} ${gray(
-          `[${new Date().toISOString()}]`
-        )} ${str}`
-      );
+      console.error(`> '[debug] [${new Date().toISOString()}] ${str}`);
     } else if (type === 'error') {
-      console.error(`${red(`Error:`)} ${str}`);
+      console.error(`Error: ${str}`);
     }
   }
 
@@ -59,7 +60,8 @@ class WorkerOutput {
     if (this.logFile === null) {
       process.on('exit', () => {
         if (this.debugLog.length) {
-          fs.outputFileSync(this.logFile, this.debugLog.join('\n'));
+          mkdirSync(path.dirname(this.logFile), { recursive: true });
+          writeFileSync(this.logFile, this.debugLog.join('\n'));
         }
       });
     }
@@ -93,7 +95,7 @@ process.once('message', async msg => {
 
   const { cacheFile, distTag, name, updateCheckInterval } = msg;
   const cacheFileParsed = path.parse(cacheFile);
-  await fs.mkdirp(cacheFileParsed.dir);
+  await mkdir(cacheFileParsed.dir, { recursive: true });
 
   output.setLogFile(
     path.join(cacheFileParsed.dir, `${cacheFileParsed.name}.log`)
@@ -112,10 +114,10 @@ process.once('message', async msg => {
       process.exit(1);
     }
     output.debug(`Initializing lock file with pid ${process.pid}`);
-    await fs.writeFile(lockFile, String(process.pid), 'utf-8');
+    await writeFile(lockFile, String(process.pid), 'utf-8');
 
     // fetch the latest version from npm
-    const agent = new HttpsAgent({
+    const agent = new https.Agent({
       keepAlive: true,
       maxSockets: 15, // See: `npm config get maxsockets`
     });
@@ -125,8 +127,33 @@ process.once('message', async msg => {
     };
     const url = `https://registry.npmjs.org/${name}`;
     output.debug(`Fetching ${url}`);
-    const res = await fetch(url, { agent, headers });
-    const json = await res.json();
+
+    const json = await new Promise((resolve, reject) => {
+      const req = https.get(
+        url,
+        {
+          agent,
+          headers,
+        },
+        res => {
+          let buf = '';
+          res.on('data', chunk => {
+            buf += chunk;
+          });
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(buf));
+            } catch (err) {
+              reject(err);
+            }
+          });
+        }
+      );
+
+      req.on('error', reject);
+      req.end();
+    });
+
     const tags = json['dist-tags'];
     const version = tags[distTag];
 
@@ -138,18 +165,23 @@ process.once('message', async msg => {
     }
 
     output.debug(`Writing cache file: ${cacheFile}`);
-    await fs.outputJSON(cacheFile, {
-      expireAt: Date.now() + updateCheckInterval,
-      notified: false,
-      version,
-    });
+    await writeFile(
+      cacheFile,
+      JSON.stringify({
+        expireAt: Date.now() + updateCheckInterval,
+        notified: false,
+        version,
+      })
+    );
   } catch (err) {
     output.error(`Failed to get package info:`, err);
   } finally {
     clearTimeout(timer);
 
-    output.debug(`Releasing lock file: ${lockFile}`);
-    await fs.remove(lockFile);
+    if (await fileExists(lockFile)) {
+      output.debug(`Releasing lock file: ${lockFile}`);
+      await unlink(lockFile);
+    }
 
     output.debug(`Worker finished successfully!`);
 
@@ -167,9 +199,15 @@ if (process.connected) {
   process.exit(1);
 }
 
+async function fileExists(file) {
+  return access(file)
+    .then(() => true)
+    .catch(() => false);
+}
+
 async function isRunning(lockFile) {
   try {
-    const pid = parseInt(await fs.readFile(lockFile, 'utf-8'));
+    const pid = parseInt(await readFile(lockFile, 'utf-8'));
     output.debug(`Found lock file with pid: ${pid}`);
 
     // checks for existence of a process; throws if not found
@@ -178,9 +216,11 @@ async function isRunning(lockFile) {
     // process is still running
     return true;
   } catch (err) {
-    // lock file does not exist or process is not running and pid is stale
-    output.debug(`Resetting lock file: ${err.toString()}`);
-    await fs.remove(lockFile);
+    if (await fileExists(lockFile)) {
+      // lock file does not exist or process is not running and pid is stale
+      output.debug(`Resetting lock file: ${err.toString()}`);
+      await unlink(lockFile);
+    }
     return false;
   }
 }

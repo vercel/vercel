@@ -1,4 +1,7 @@
+import bytes from 'bytes';
+import fs from 'fs-extra';
 import { join } from 'path';
+import { randomBytes } from 'crypto';
 import { fileNameSymbol } from '@vercel/client';
 import { client } from '../../mocks/client';
 import deploy from '../../../src/commands/deploy';
@@ -195,6 +198,121 @@ describe('deploy', () => {
       expect(exitCode).toEqual(0);
       expect(body?.files?.length).toEqual(1);
       expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
+
+  it('should upload missing files', async () => {
+    const cwd = setupFixture('commands/deploy/archive');
+    const originalCwd = process.cwd();
+
+    // Add random 1mb file
+    await fs.writeFile(join(cwd, 'data'), randomBytes(bytes('1mb')));
+
+    try {
+      process.chdir(cwd);
+
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'archive',
+        id: 'archive',
+      });
+
+      let body: any;
+      let fileUploaded = false;
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        if (fileUploaded) {
+          body = req.body;
+          res.json({
+            creator: {
+              uid: user.id,
+              username: user.username,
+            },
+            id: 'dpl_archive_test',
+          });
+        } else {
+          const sha = req.body.files[0].sha;
+          res.status(400).json({
+            error: {
+              code: 'missing_files',
+              message: 'Missing files',
+              missing: [sha],
+            },
+          });
+        }
+      });
+      client.scenario.post('/v2/files', (req, res) => {
+        // Wait for file to be finished uploading
+        req.on('data', () => {
+          // Noop
+        });
+        req.on('end', () => {
+          fileUploaded = true;
+          res.end();
+        });
+      });
+      client.scenario.get(`/v13/deployments/dpl_archive_test`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_archive_test',
+          readyState: 'READY',
+          aliasAssigned: true,
+          alias: [],
+        });
+      });
+      client.scenario.get(
+        `/v10/now/deployments/dpl_archive_test`,
+        (req, res) => {
+          res.json({
+            creator: {
+              uid: user.id,
+              username: user.username,
+            },
+            id: 'dpl_archive_test',
+            readyState: 'READY',
+            aliasAssigned: true,
+            alias: [],
+          });
+        }
+      );
+
+      // When stderr is not a TTY we expect 5 progress lines to be printed
+      client.stderr.isTTY = false;
+
+      client.setArgv('deploy', '--archive=tgz');
+      const uploadingLines: string[] = [];
+      client.stderr.on('data', data => {
+        if (data.startsWith('Uploading [')) {
+          uploadingLines.push(data);
+        }
+      });
+      client.stderr.resume();
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+      expect(body?.files?.length).toEqual(1);
+      expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
+      expect(uploadingLines.length).toEqual(5);
+      expect(
+        uploadingLines[0].startsWith('Uploading [--------------------]')
+      ).toEqual(true);
+      expect(
+        uploadingLines[1].startsWith('Uploading [=====---------------]')
+      ).toEqual(true);
+      expect(
+        uploadingLines[2].startsWith('Uploading [==========----------]')
+      ).toEqual(true);
+      expect(
+        uploadingLines[3].startsWith('Uploading [===============-----]')
+      ).toEqual(true);
+      expect(
+        uploadingLines[4].startsWith('Uploading [====================]')
+      ).toEqual(true);
     } finally {
       process.chdir(originalCwd);
     }

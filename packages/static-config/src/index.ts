@@ -17,8 +17,15 @@ export const BaseFunctionConfigSchema = {
     memory: { type: 'number' },
     maxDuration: { type: 'number' },
     regions: {
-      type: 'array',
-      items: { type: 'string' },
+      oneOf: [
+        {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        {
+          enum: ['all', 'default', 'auto'],
+        },
+      ],
     },
   },
 } as const;
