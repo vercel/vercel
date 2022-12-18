@@ -23,6 +23,7 @@
     "@typescript-eslint/parser": "5.21.0",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
+    "create-svelte": "2.0.1",
     "eslint": "8.14.0",
     "eslint-config-prettier": "8.5.0",
     "eslint-plugin-jest": "26.1.5",
