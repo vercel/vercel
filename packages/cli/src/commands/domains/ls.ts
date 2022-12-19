@@ -67,7 +67,7 @@ export default async function ls(
     output.print('\n\n');
   }
 
-  if (pagination && pagination.count === 20) {
+  if (pagination && pagination.count === paginationOptions[1]) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page, run ${getCommandName(

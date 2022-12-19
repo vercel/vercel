@@ -53,7 +53,7 @@ export default async function ls(
   output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
   output.log(printAliasTable(aliases));
 
-  if (pagination && pagination.count === 20) {
+  if (pagination && pagination.count === paginationOptions[1]) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${getCommandName(
