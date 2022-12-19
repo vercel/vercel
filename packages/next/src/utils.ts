@@ -1282,7 +1282,7 @@ export function addLocaleOrDefault(
   if (!locale) locale = routesManifest.i18n.defaultLocale;
 
   return locale
-    ? `/${locale}${(pathname === '/index' || pathname === '/') ? '' : pathname}`
+    ? `/${locale}${pathname === '/index' ? '' : pathname}`
     : pathname;
 }
 
@@ -1892,8 +1892,9 @@ export const onPrerenderRoute =
         new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
         // ensure we escape "$" correctly while replacing as "$" is a special
         // character, we need to do double escaping as first is for the initial
-        // replace on the routeFile and then the second on the outputPath
-        `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
+        // replace on the routeFile and then the second on the outputPath.
+        // Also remove the trailing slash if it exists to avoid `pathname/.json`.
+        `${routeFileNoExt.replace(/\$/g, '$$$$').replace(/\\$/, '')}.json`
       );
     }
 
