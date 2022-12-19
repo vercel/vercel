@@ -152,18 +152,14 @@ const main = async () => {
     });
     if (latest) {
       output.log(
-        info(
-          `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
-            `Run ${cmd(
-              await getUpdateCommand()
-            )} to install ${getTitleName()} CLI ${latest}`
-        )
+        `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
+          `Run ${cmd(
+            await getUpdateCommand()
+          )} to install ${getTitleName()} CLI ${latest}`
       );
 
       output.log(
-        `${info(
-          `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}`
-        )}\n`
+        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}\n`
       );
     }
   }
