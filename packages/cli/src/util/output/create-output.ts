@@ -63,7 +63,7 @@ export class Output {
     str: string,
     slug: string | null = null,
     link: string | null = null,
-    action: string = 'Learn More'
+    action: string | null = 'Learn More'
   ) => {
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
 
@@ -71,11 +71,7 @@ export class Output {
       chalk.yellow(
         chalk.bold('WARN! ') +
           str +
-          (details
-            ? `\n${this.link(action, details, {
-                fallback: () => `${action}: ${renderLink(details)}`,
-              })}`
-            : '')
+          (details ? `\n${action}: ${renderLink(details)}` : '')
       )
     );
     this.print('\n');
@@ -94,11 +90,7 @@ export class Output {
     this.print(`${chalk.red(`Error:`)} ${str}\n`);
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
-      this.print(
-        `${this.link(action, details, {
-          fallback: () => `${chalk.bold(action)}: ${renderLink(details)}`,
-        })}\n`
-      );
+      this.print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
     }
   };
 
