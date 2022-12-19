@@ -1,0 +1,17 @@
+name: Deploy Freeze
+on: pull_request
+
+jobs:
+  comment:
+    name: Comment
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+    steps:
+      - name: Add comment
+        uses: peter-evans/create-or-update-comment@5adcb0bb0f9fb3f95ef05400558bdb3f329ee808
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Just a reminder that we are in a code freeze. Please checkout this channel: ... and this document: ... before merging or using any automerge features.
