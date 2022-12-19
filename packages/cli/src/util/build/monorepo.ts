@@ -51,15 +51,15 @@ export async function setMonorepoDefaultSettings(
     output.log(
       `Automatically detected ${title(
         monorepoManager
-      )} monorepo manager. Assigning default settings.`
+      )} monorepo manager. Attempting to assign default settings.`
     );
 
     for (const [key, value] of Object.entries(commands)) {
       setCommand(
         key as
-          | 'buildCommand'
-          | 'installCommand'
-          | 'commandForIgnoringBuildStep',
+        | 'buildCommand'
+        | 'installCommand'
+        | 'commandForIgnoringBuildStep',
         value
       );
     }

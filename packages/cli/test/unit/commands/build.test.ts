@@ -1022,8 +1022,8 @@ describe('build', () => {
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
         'Error: Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?' +
-          '\n' +
-          'View Documentation: https://vercel.com/docs/configuration#project/rewrites'
+        '\n' +
+        'View Documentation: https://vercel.com/docs/configuration#project/rewrites'
       );
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds.builds).toBeUndefined();
@@ -1164,7 +1164,7 @@ describe('build', () => {
    * Previously, rush tests were too flaky and consistently would timeout beyone the excessive
    * timeout window granted for these tests. Maybe we are doing something wrong.
    */
-  describe('monorepo-detection', () => {
+  describe.only('monorepo-detection', () => {
     beforeAll(() => {
       process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
     });
@@ -1190,12 +1190,13 @@ describe('build', () => {
     ])('fixture: %s', fixture => {
       const monorepoManagerMap: Record<
         string,
-        { name: string; buildCommand: string; installCommand: string }
+        { name: string; buildCommand: string; installCommand: string, commandForIgnoringBuildStep?: string }
       > = {
         turbo: {
           name: 'Turbo',
           buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
           installCommand: 'cd ../.. && yarn install',
+          commandForIgnoringBuildStep: 'cd ../.. && npx turbo-ignore'
         },
         nx: {
           name: 'Nx',
@@ -1229,7 +1230,7 @@ describe('build', () => {
             const exitCode = await build(client);
             expect(exitCode).toBe(0);
             await expect(client.stderr).toOutput(
-              `Automatically detected ${name} monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
+              `Automatically detected ${name} monorepo manager. Attempting to assign default settings.`
             );
             const result = await fs.readFile(
               join(cwd, '.vercel/output/static/index.txt'),
@@ -1282,6 +1283,11 @@ describe('build', () => {
             await expect(client.stderr).toOutput(
               'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
             );
+            if (name === 'Turbo') {
+              await expect(client.stderr).toOutput(
+                'Cannot automatically assign commandForIgnoringBuildStep as it is already set via project settings or configuration overrides.'
+              );
+            }
           } finally {
             process.chdir(originalCwd);
             delete process.env.__VERCEL_BUILD_RUNNING;
@@ -1319,6 +1325,11 @@ describe('build', () => {
             await expect(client.stderr).toOutput(
               'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
             );
+            if (name === 'Turbo') {
+              await expect(client.stderr).toOutput(
+                'Cannot automatically assign commandForIgnoringBuildStep as it is already set via project settings or configuration overrides.'
+              );
+            }
           } finally {
             process.chdir(originalCwd);
             delete process.env.__VERCEL_BUILD_RUNNING;
