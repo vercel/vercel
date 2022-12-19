@@ -22,6 +22,7 @@
 
 - [geolocation](README.md#geolocation)
 - [ipAddress](README.md#ipaddress)
+- [json](README.md#json)
 - [next](README.md#next)
 - [rewrite](README.md#rewrite)
 
@@ -166,6 +167,49 @@ Returns the IP address of the request from the headers.
 #### Defined in
 
 [src/edge-headers.ts:77](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L77)
+
+---
+
+### json
+
+▸ **json**(`data`, `init?`): `Response`
+
+Builds a response object from a serializable JavaScript object:
+
+- sets the 'Content-Type' response header to 'application/json'
+- sets the response body from provided data
+
+**`See`**
+
+[https://fetch.spec.whatwg.org/#dom-response-json](https://fetch.spec.whatwg.org/#dom-response-json)
+
+**`Example`**
+
+<caption>Building a JSON response</caption>
+
+```ts
+import { json } from '@vercel/edge';
+
+const response = json(
+  { notification: { success: true, content: 'worked' } },
+  { headers: { 'x-custom': '1' } }
+);
+```
+
+#### Parameters
+
+| Name    | Type           | Description                                             |
+| :------ | :------------- | :------------------------------------------------------ |
+| `data`  | `any`          | serialized data                                         |
+| `init?` | `ResponseInit` | optional custom response status, statusText and headers |
+
+#### Returns
+
+`Response`
+
+#### Defined in
+
+[src/response.ts:19](https://github.com/vercel/vercel/blob/main/packages/edge/src/response.ts#L19)
 
 ---
 
