@@ -177,4 +177,44 @@ describe('pull', () => {
       .includes('SQL_CONNECTION_STRING');
     expect(previewFileHasPreviewEnv2).toBeTruthy();
   });
+
+  it('should handle VERCEL_ENV environment variable', async () => {
+    try {
+      process.env.VERCEL_ENV = 'production';
+      const cwd = setupFixture('vercel-pull-next');
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-pull-next',
+        name: 'vercel-pull-next',
+      });
+      client.setArgv('pull', cwd);
+      const exitCodePromise = pull(client);
+      await expect(client.stderr).toOutput(
+        'Downloading `production` Environment Variables for Project vercel-pull-next'
+      );
+      await expect(client.stderr).toOutput(
+        `Created .vercel${path.sep}.env.production.local file`
+      );
+      await expect(client.stderr).toOutput(
+        `Downloaded project settings to .vercel${path.sep}project.json`
+      );
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      const rawProdEnv = await fs.readFile(
+        path.join(cwd, '.vercel', '.env.production.local')
+      );
+      const previewFileHasPreviewEnv1 = rawProdEnv
+        .toString()
+        .includes('REDIS_CONNECTION_STRING');
+      expect(previewFileHasPreviewEnv1).toBeTruthy();
+      const previewFileHasPreviewEnv2 = rawProdEnv
+        .toString()
+        .includes('SQL_CONNECTION_STRING');
+      expect(previewFileHasPreviewEnv2).toBeTruthy();
+    } finally {
+      delete process.env.VERCEL_ENV;
+    }
+  });
 });

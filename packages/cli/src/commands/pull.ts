@@ -117,7 +117,9 @@ export default async function main(client: Client) {
 
   const cwd = argv._[1] || process.cwd();
   const autoConfirm = Boolean(argv['--yes']);
-  const environment = parseEnvironment(argv['--environment'] || undefined);
+  const environment = parseEnvironment(
+    argv['--environment'] || process.env['VERCEL_ENV'] || undefined
+  );
 
   const link = await ensureLink('pull', client, cwd, { autoConfirm });
   if (typeof link === 'number') {
