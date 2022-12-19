@@ -1022,8 +1022,8 @@ describe('build', () => {
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
         'Error: Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?' +
-        '\n' +
-        'View Documentation: https://vercel.com/docs/configuration#project/rewrites'
+          '\n' +
+          'View Documentation: https://vercel.com/docs/configuration#project/rewrites'
       );
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds.builds).toBeUndefined();
@@ -1164,7 +1164,7 @@ describe('build', () => {
    * Previously, rush tests were too flaky and consistently would timeout beyone the excessive
    * timeout window granted for these tests. Maybe we are doing something wrong.
    */
-  describe.only('monorepo-detection', () => {
+  describe('monorepo-detection', () => {
     beforeAll(() => {
       process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
     });
@@ -1190,13 +1190,18 @@ describe('build', () => {
     ])('fixture: %s', fixture => {
       const monorepoManagerMap: Record<
         string,
-        { name: string; buildCommand: string; installCommand: string, commandForIgnoringBuildStep?: string }
+        {
+          name: string;
+          buildCommand: string;
+          installCommand: string;
+          commandForIgnoringBuildStep?: string;
+        }
       > = {
         turbo: {
           name: 'Turbo',
           buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
           installCommand: 'cd ../.. && yarn install',
-          commandForIgnoringBuildStep: 'cd ../.. && npx turbo-ignore'
+          commandForIgnoringBuildStep: 'cd ../.. && npx turbo-ignore',
         },
         nx: {
           name: 'Nx',

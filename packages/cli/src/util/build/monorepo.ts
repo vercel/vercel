@@ -57,9 +57,9 @@ export async function setMonorepoDefaultSettings(
     for (const [key, value] of Object.entries(commands)) {
       setCommand(
         key as
-        | 'buildCommand'
-        | 'installCommand'
-        | 'commandForIgnoringBuildStep',
+          | 'buildCommand'
+          | 'installCommand'
+          | 'commandForIgnoringBuildStep',
         value
       );
     }

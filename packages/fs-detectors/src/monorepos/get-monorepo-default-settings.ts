@@ -68,7 +68,7 @@ export async function getMonorepoDefaultSettings(
       monorepoManager: 'turbo',
       buildCommand: `cd ${relativeToRoot} && npx turbo run build --filter={${projectName}...}`,
       installCommand: `cd ${relativeToRoot} && ${packageManager} install`,
-      commandForIgnoringBuildStep: `cd ${relativeToRoot} && npx turbo-ignore`
+      commandForIgnoringBuildStep: `cd ${relativeToRoot} && npx turbo-ignore`,
     };
   } else if (monorepoManager === 'nx') {
     // No ENOENT handling required here since conditional wouldn't be `true` unless `nx.json` was found.
