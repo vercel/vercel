@@ -14,8 +14,10 @@ export function getPaginationOpts(opts: PaginationOptions) {
     typeof limit === 'number' &&
     (!Number.isInteger(limit) || limit > 100 || limit < 1)
   ) {
-    throw new Error('Please provide an integer from 1 to 100 for option --limit');
+    throw new Error(
+      'Please provide an integer from 1 to 100 for option --limit'
+    );
   }
 
-  return [nextTimestamp, limit];
+  return [nextTimestamp, limit || 20];
 }
