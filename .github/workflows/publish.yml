@@ -42,7 +42,13 @@ jobs:
       timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
       with:
         node-version: 14
-        cache: 'yarn'
+    - name: Cache
+      if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
+      uses: actions/cache@v3
+      with:
+        path: '**/node_modules'
+        key: yarn-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
+        restore-keys: yarn-${{ matrix.os }}-${{ matrix.node }}
     - name: Install
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       run: yarn install --check-files --frozen-lockfile --network-timeout 1000000
