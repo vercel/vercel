@@ -131,7 +131,7 @@ describe('get latest version', () => {
 });
 
 async function waitForCacheFile() {
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 40; i++) {
     await sleep(100);
     if (await fs.pathExists(cacheFile)) {
       return;
