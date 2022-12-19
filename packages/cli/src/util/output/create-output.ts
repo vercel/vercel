@@ -188,6 +188,7 @@ export class Output {
     url: string,
     { fallback }: LinkOptions = {}
   ): string => {
+    // Based on https://github.com/sindresorhus/terminal-link (MIT license)
     if (!this.supportsHyperlink) {
       // If the fallback has been explicitly disabled, don't modify the text itself
       if (fallback === false) {
