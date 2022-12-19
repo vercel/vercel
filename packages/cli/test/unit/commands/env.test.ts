@@ -164,6 +164,38 @@ describe('env', () => {
       expect(envFileHasEnv).toBeTruthy();
     });
 
+    it('should use given VERCEL_ENV environment', async () => {
+      try {
+        process.env.VERCEL_ENV = 'production';
+        const cwd = setupFixture('vercel-env-pull');
+        useUser();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'vercel-env-pull',
+          name: 'vercel-env-pull',
+        });
+
+        client.setArgv('env', 'pull', '--cwd', cwd);
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput(
+          `Downloading \`production\` Environment Variables for Project vercel-env-pull`
+        );
+        await expect(client.stderr).toOutput('Created .env file');
+        await expect(exitCodePromise).resolves.toEqual(0);
+
+        const rawProdEnv = await fs.readFile(path.join(cwd, '.env'));
+
+        // check for development env value
+        const envFileHasEnv = rawProdEnv
+          .toString()
+          .includes('REDIS_CONNECTION_STRING');
+        expect(envFileHasEnv).toBeTruthy();
+      } finally {
+        delete process.env.VERCEL_ENV;
+      }
+    });
+
     it('should throw an error when it does not recognize given environment', async () => {
       const cwd = setupFixture('vercel-env-pull');
       useUser();
