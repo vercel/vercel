@@ -8,17 +8,15 @@
  * previous cache file resetting the `notified` flag and cause the update
  * notification to appear for multiple consequetive commands. Not the end of
  * the world, but something to be aware of.
+ *
+ * IMPORTANT! This file must NOT depend on any 3rd party dependencies. This
+ * file is NOT bundled by `ncc` and thus any 3rd party dependencies will never
+ * be available.
  */
 
 const https = require('https');
 const { mkdirSync, writeFileSync } = require('fs');
-const {
-  access,
-  mkdir,
-  readFile,
-  unlink,
-  writeFile,
-} = require('node:fs/promises');
+const { access, mkdir, readFile, unlink, writeFile } = require('fs/promises');
 const path = require('path');
 const { format, inspect } = require('util');
 
