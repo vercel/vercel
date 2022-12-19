@@ -1463,8 +1463,7 @@ describe('build', () => {
         'nx.json',
         'targetDefaults.build',
         [
-          'Missing default `build` target in nx.json. Checking for project level Nx configuration...',
-          'Missing required `build` target in either project.json or package.json Nx configuration. Skipping automatic setting assignment.',
+          'Missing required `build` target in either nx.json, project.json, or package.json Nx configuration. Skipping automatic setting assignment.',
         ],
       ],
       [
@@ -1472,9 +1471,7 @@ describe('build', () => {
         'packages/app-1/project.json',
         'targets.build',
         [
-          'Missing default `build` target in nx.json. Checking for project level Nx configuration...',
-          'Found project.json Nx configuration.',
-          'Missing required `build` target in either project.json or package.json Nx configuration. Skipping automatic setting assignment.',
+          'Missing required `build` target in either nx.json, project.json, or package.json Nx configuration. Skipping automatic setting assignment.',
         ],
       ],
       [
@@ -1482,9 +1479,7 @@ describe('build', () => {
         'packages/app-1/package.json',
         'nx.targets.build',
         [
-          'Missing default `build` target in nx.json. Checking for project level Nx configuration...',
-          'Found package.json Nx configuration.',
-          'Missing required `build` target in either project.json or package.json Nx configuration. Skipping automatic setting assignment.',
+          'Missing required `build` target in either nx.json, project.json, or package.json Nx configuration. Skipping automatic setting assignment.',
         ],
       ],
       [
