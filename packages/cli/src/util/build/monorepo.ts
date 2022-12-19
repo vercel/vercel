@@ -9,6 +9,7 @@ import {
 import { ProjectLinkAndSettings } from '../projects/project-settings';
 import { Output } from '../output';
 import title from 'title';
+import JSON5 from 'json5';
 
 export async function setMonorepoDefaultSettings(
   cwd: string,
@@ -38,7 +39,7 @@ export async function setMonorepoDefaultSettings(
   ) => {
     if (projectSettings[command]) {
       output.warn(
-        `Cannot automatically assign ${command} as it is already set via project settings or configuarion overrides.`
+        `Cannot automatically assign ${command} as it is already set via project settings or configuration overrides.`
       );
     } else {
       projectSettings[command] = value;
@@ -54,21 +55,40 @@ export async function setMonorepoDefaultSettings(
   }
 
   if (monorepoManager === 'turbo') {
-    // No ENOENT handling required here since conditional wouldn't be `true` unless `turbo.json` was found.
-    const turboJSON = JSON.parse(
-      fs.readFileSync(join(cwd, 'turbo.json'), 'utf-8')
-    );
+    const [turboJSONBuf, packageJSONBuf] = await Promise.all([
+      fs.readFile(join(cwd, 'turbo.json')).catch(() => null),
+      fs.readFile(join(cwd, 'package.json')).catch(() => null),
+    ]);
 
-    if (!turboJSON?.pipeline?.build) {
+    let hasBuildPipeline = false;
+
+    if (turboJSONBuf !== null) {
+      const turboJSON = JSON5.parse(turboJSONBuf.toString('utf-8'));
+
+      if (turboJSON?.pipeline?.build) {
+        hasBuildPipeline = true;
+      }
+    } else if (packageJSONBuf !== null) {
+      const packageJSON = JSON.parse(packageJSONBuf.toString('utf-8'));
+
+      if (packageJSON?.turbo?.pipeline?.build) {
+        hasBuildPipeline = true;
+      }
+    }
+
+    if (!hasBuildPipeline) {
       output.warn(
-        'Missing required `build` pipeline in turbo.json. Skipping automatic setting assignment.'
+        'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.'
       );
       return;
     }
 
     setCommand(
       'buildCommand',
-      `cd ${relativeToRoot} && npx turbo run build --filter=${projectName}...`
+      `cd ${relativeToRoot} && npx turbo run build --filter={./${relative(
+        cwd,
+        workPath
+      )}}...`
     );
     setCommand(
       'installCommand',
@@ -76,14 +96,14 @@ export async function setMonorepoDefaultSettings(
     );
   } else if (monorepoManager === 'nx') {
     // No ENOENT handling required here since conditional wouldn't be `true` unless `nx.json` was found.
-    const nxJSON = JSON.parse(fs.readFileSync(join(cwd, 'nx.json'), 'utf-8'));
+    const nxJSON = JSON5.parse(fs.readFileSync(join(cwd, 'nx.json'), 'utf-8'));
 
     if (!nxJSON?.targetDefaults?.build) {
       output.log(
         'Missing default `build` target in nx.json. Checking for project level Nx configuration...'
       );
 
-      const [projectJSONBuf, packageJsonBuf] = await Promise.all([
+      const [projectJSONBuf, packageJSONBuf] = await Promise.all([
         fs.readFile(join(workPath, 'project.json')).catch(() => null),
         fs.readFile(join(workPath, 'package.json')).catch(() => null),
       ]);
@@ -92,14 +112,14 @@ export async function setMonorepoDefaultSettings(
 
       if (projectJSONBuf) {
         output.log('Found project.json Nx configuration.');
-        const projectJSON = JSON.parse(projectJSONBuf.toString('utf-8'));
+        const projectJSON = JSON5.parse(projectJSONBuf.toString('utf-8'));
         if (projectJSON?.targets?.build) {
           hasBuildTarget = true;
         }
       }
 
-      if (packageJsonBuf) {
-        const packageJSON = JSON.parse(packageJsonBuf.toString('utf-8'));
+      if (packageJSONBuf) {
+        const packageJSON = JSON5.parse(packageJSONBuf.toString('utf-8'));
         if (packageJSON?.nx) {
           output.log('Found package.json Nx configuration.');
           if (packageJSON.nx.targets?.build) {

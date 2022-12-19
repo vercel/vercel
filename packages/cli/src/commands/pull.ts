@@ -60,6 +60,7 @@ function processArgs(client: Client) {
   return getArgs(client.argv.slice(2), {
     '--yes': Boolean,
     '--environment': String,
+    '--git-branch': String,
     '--debug': Boolean,
     '-d': '--debug',
     '-y': '--yes',

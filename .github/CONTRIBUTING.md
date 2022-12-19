@@ -23,6 +23,17 @@ yarn test-unit
 
 Make sure all the tests pass before making changes.
 
+### Running Vercel CLI Changes
+
+You can use `yarn dev` from the `cli` package to invoke Vercel CLI with local changes:
+
+```
+cd ./packages/cli
+yarn dev <cli-commands...>
+```
+
+See [CLI Local Development](../packages/cli#local-development) for more details.
+
 ## Verifying your change
 
 Once you are done with your changes (we even suggest doing it along the way), make sure all the tests still pass by running:

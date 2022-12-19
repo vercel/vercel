@@ -18,22 +18,20 @@ const { readdir, readFile, unlink } = promises;
 
 export const frameworks = [
   {
-    name: 'Blitz.js',
+    name: 'Blitz.js (Legacy)',
     slug: 'blitzjs',
     demo: 'https://blitz-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/blitz.svg',
     tagline: 'Blitz.js: The Fullstack React Framework',
     description:
-      'A brand new Blitz.js app - the result of running `npx blitz new`.',
+      'A brand new Blitz.js app - the result of running `npx blitz@0.45.4 new`.',
     website: 'https://blitzjs.com',
     envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"blitz":\\s*".+?"[^}]*}',
+          path: 'blitz.config.(js|ts)',
         },
       ],
     },
@@ -269,16 +267,9 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
     defaultRoutes: [
       {
-        src: '^/dist/(.*)$',
+        src: '^/assets/(.*)$',
         headers: { 'cache-control': 'public, max-age=31536000, immutable' },
         continue: true,
-      },
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/index.html',
       },
     ],
   },
@@ -998,7 +989,7 @@ export const frameworks = [
     ],
   },
   {
-    name: 'SvelteKit',
+    name: 'SvelteKit (Legacy Beta)',
     slug: 'sveltekit',
     demo: 'https://sveltekit-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
@@ -1006,15 +997,16 @@ export const frameworks = [
       'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
     tagline:
       'SvelteKit is a framework for building web applications of all sizes.',
-    description: 'A SvelteKit app optimized Edge-first.',
+    description: 'A SvelteKit legacy app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    sort: 99,
     envPrefix: 'VITE_',
     detectors: {
       every: [
         {
           path: 'package.json',
           matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".+?"[^}]*}',
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*"1\\.0\\.0-next\\.(\\d+)"[^}]*}',
         },
       ],
     },
@@ -1029,6 +1021,44 @@ export const frameworks = [
       devCommand: {
         value: 'svelte-kit dev --port $PORT',
         placeholder: 'svelte-kit dev',
+      },
+      outputDirectory: {
+        value: 'public',
+      },
+    },
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'SvelteKit',
+    slug: 'sveltekit-1',
+    demo: 'https://sveltekit-1-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
+    screenshot:
+      'https://assets.vercel.com/image/upload/v1647366075/front/import/sveltekit.png',
+    tagline:
+      'SvelteKit is a framework for building web applications of all sizes.',
+    description: 'A SvelteKit app optimized Edge-first.',
+    website: 'https://kit.svelte.dev',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        placeholder: 'vite build',
+        value: 'vite build',
+      },
+      devCommand: {
+        placeholder: 'vite dev',
+        value: 'vite dev --port $PORT',
       },
       outputDirectory: {
         value: 'public',
@@ -1727,6 +1757,74 @@ export const frameworks = [
     },
     dependency: 'vite',
     getOutputDirName: async () => 'dist',
+  },
+  {
+    name: 'VitePress',
+    slug: 'vitepress',
+    demo: 'https://vitepress-starter-template.vercel.app/',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/vite.svg',
+    tagline: "VitePress is VuePress' little brother, built on top of Vite.",
+    description: 'VuePress on top of Vite',
+    website: 'https://vitepress.vuejs.org/',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"vitepress":\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vitepress build docs`',
+        value: 'vitepress build docs',
+      },
+      devCommand: {
+        value: 'vitepress dev docs --port $PORT',
+      },
+      outputDirectory: {
+        value: 'docs/.vitepress/dist',
+      },
+    },
+    getOutputDirName: async () => '.vitepress/dist',
+  },
+  {
+    name: 'VuePress',
+    slug: 'vuepress',
+    demo: 'https://vuepress-starter-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/vuepress.png',
+    tagline: 'Vue-powered Static Site Generator',
+    description: 'Vue-powered Static Site Generator',
+    website: 'https://vuepress.vuejs.org/',
+    detectors: {
+      every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*vuepress:\\s*".+?"[^}]*}',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `vuepress build src`',
+        value: 'vuepress build src',
+      },
+      devCommand: {
+        value: 'vuepress dev src --port $PORT',
+      },
+      outputDirectory: {
+        value: 'src/.vuepress/dist',
+      },
+    },
+    getOutputDirName: async () => 'src/.vuepress/dist',
   },
   {
     name: 'Parcel',
