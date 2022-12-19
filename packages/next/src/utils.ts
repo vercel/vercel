@@ -1282,7 +1282,7 @@ export function addLocaleOrDefault(
   if (!locale) locale = routesManifest.i18n.defaultLocale;
 
   return locale
-    ? `/${locale}${pathname === '/index' ? '' : pathname}`
+    ? `/${locale}${(pathname === '/index' || pathname === '/') ? '' : pathname}`
     : pathname;
 }
 
