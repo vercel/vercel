@@ -65,6 +65,7 @@ import {
   getExportIntent,
   getExportStatus,
   getFilesMapFromReasons,
+  getImagesConfig,
   getImagesManifest,
   getMiddlewareManifest,
   getNextConfig,
@@ -802,18 +803,7 @@ export const build: BuildV2 = async ({
 
     return {
       output,
-      images:
-        imagesManifest?.images?.loader === 'default'
-          ? {
-              domains: imagesManifest.images.domains,
-              sizes: imagesManifest.images.sizes,
-              remotePatterns: imagesManifest.images.remotePatterns,
-              minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-              dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-              contentSecurityPolicy:
-                imagesManifest.images.contentSecurityPolicy,
-            }
-          : undefined,
+      images: getImagesConfig(imagesManifest),
       routes: [
         ...privateOutputs.routes,
 
@@ -2170,17 +2160,7 @@ export const build: BuildV2 = async ({
       ...privateOutputs.files,
     },
     wildcard: wildcardConfig,
-    images:
-      imagesManifest?.images?.loader === 'default'
-        ? {
-            domains: imagesManifest.images.domains,
-            sizes: imagesManifest.images.sizes,
-            remotePatterns: imagesManifest.images.remotePatterns,
-            minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-            dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-            contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
-          }
-        : undefined,
+    images: getImagesConfig(imagesManifest),
     /*
       Desired routes order
       - Runtime headers
