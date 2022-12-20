@@ -143,7 +143,10 @@ export default async function main(client: Client): Promise<number> {
   const cwd = process.cwd();
 
   // Build `target` influences which environment variables will be used
-  const target = argv['--prod'] ? 'production' : 'preview';
+  const target =
+    argv['--prod'] || process.env['VERCEL_ENV'] == 'production'
+      ? 'production'
+      : 'preview';
   const yes = Boolean(argv['--yes']);
 
   // TODO: read project settings from the API, fall back to local `project.json` if that fails

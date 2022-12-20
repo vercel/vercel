@@ -445,6 +445,46 @@ describe('build', () => {
     }
   });
 
+  it('should pull "production" env vars VERCEL_ENV set to `production`', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    const envFilePath = join(cwd, '.vercel', '.env.production.local');
+    const projectJsonPath = join(cwd, '.vercel', 'project.json');
+    const originalProjectJson = await fs.readJSON(
+      join(cwd, '.vercel/project.json')
+    );
+    try {
+      console.log('*' * 100);
+      process.chdir(cwd);
+      process.env.VERCEL_ENV = 'production';
+      client.setArgv('build', '--yes');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const prodEnv = await fs.readFile(envFilePath, 'utf8');
+      const envFileHasProductionEnv1 = prodEnv.includes(
+        'REDIS_CONNECTION_STRING'
+      );
+      expect(envFileHasProductionEnv1).toBeTruthy();
+      const envFileHasProductionEnv2 = prodEnv.includes(
+        'SQL_CONNECTION_STRING'
+      );
+      expect(envFileHasProductionEnv2).toBeTruthy();
+    } finally {
+      await fs.remove(envFilePath);
+      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+      delete process.env.VERCEL_ENV;
+    }
+  });
+
   it('should build root-level `middleware.js` and exclude from static files', async () => {
     const cwd = fixture('middleware');
     const output = join(cwd, '.vercel/output');
