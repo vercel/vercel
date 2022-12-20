@@ -54,13 +54,12 @@ export async function setMonorepoDefaultSettings(
       )} monorepo manager. Attempting to assign default settings.`
     );
 
-    for (const [key, value] of Object.entries(commands)) {
+    setCommand('buildCommand', commands.buildCommand);
+    setCommand('installCommand', commands.installCommand);
+    if (commands.commandForIgnoringBuildStep) {
       setCommand(
-        key as
-          | 'buildCommand'
-          | 'installCommand'
-          | 'commandForIgnoringBuildStep',
-        value
+        'commandForIgnoringBuildStep',
+        commands.commandForIgnoringBuildStep
       );
     }
   } catch (error) {

@@ -1172,6 +1172,7 @@ describe('build', () => {
     afterAll(() => {
       delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
     });
+
     const setupMonorepoDetectionFixture = (fixture: string) => {
       const cwd = setupFixture(`commands/build/monorepo-detection/${fixture}`);
       process.chdir(cwd);
@@ -1188,20 +1189,12 @@ describe('build', () => {
       'turbo',
       'turbo-package-config',
     ])('fixture: %s', fixture => {
-      const monorepoManagerMap: Record<
-        string,
-        {
-          name: string;
-          buildCommand: string;
-          installCommand: string;
-          commandForIgnoringBuildStep?: string;
-        }
-      > = {
+      const monorepoManagerMap: Record<string, Record<string, string>> = {
         turbo: {
           name: 'Turbo',
           buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
           installCommand: 'cd ../.. && yarn install',
-          commandForIgnoringBuildStep: 'cd ../.. && npx turbo-ignore',
+          ignoreCommand: 'cd ../.. && npx turbo-ignore',
         },
         nx: {
           name: 'Nx',
@@ -1217,8 +1210,8 @@ describe('build', () => {
         // },
       };
 
-      const { name, buildCommand, installCommand } =
-        monorepoManagerMap[fixture.split('-')[0]];
+      const { name, ...commands } = monorepoManagerMap[fixture.split('-')[0]];
+
       test(
         'should detect and use correct defaults',
         async () => {
@@ -1268,14 +1261,18 @@ describe('build', () => {
               await fs.readFile(projectJSONPath, 'utf-8')
             );
 
+            if (commands.ignoreCommand) {
+              commands.commandForIgnoringBuildStep = commands.ignoreCommand;
+              delete commands.ignoreCommand;
+            }
+
             await fs.writeFile(
               projectJSONPath,
               JSON.stringify({
                 ...projectJSON,
                 settings: {
                   ...projectJSON.settings,
-                  buildCommand,
-                  installCommand,
+                  ...commands,
                 },
               })
             );
@@ -1317,8 +1314,7 @@ describe('build', () => {
             await fs.writeFile(
               join(cwd, 'packages/app-1/vercel.json'),
               JSON.stringify({
-                buildCommand,
-                installCommand,
+                ...commands,
               })
             );
 
