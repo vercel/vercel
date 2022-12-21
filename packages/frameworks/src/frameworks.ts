@@ -1790,7 +1790,7 @@ export const frameworks = [
         value: 'docs/.vitepress/dist',
       },
     },
-    getOutputDirName: async () => '.vitepress/dist',
+    getOutputDirName: async () => 'docs/.vitepress/dist',
   },
   {
     name: 'VuePress',
