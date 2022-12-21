@@ -468,7 +468,7 @@ export const build: BuildV2 = async ({
 
   if (buildOutputVersion) {
     return {
-      buildOutputPath: outputDirectory,
+      buildOutputPath: path.join(outputDirectory, 'output'),
       buildOutputVersion,
     } as BuildResultBuildOutput;
   }
