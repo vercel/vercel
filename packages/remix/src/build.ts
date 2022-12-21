@@ -1,5 +1,5 @@
-import { promises as fs, existsSync } from 'fs';
-import { dirname, join, relative, resolve } from 'path';
+import { promises as fs } from 'fs';
+import { dirname, join, relative } from 'path';
 import {
   debug,
   download,
@@ -25,6 +25,7 @@ import type {
 import { nodeFileTrace } from '@vercel/nft';
 import type { AppConfig } from './types';
 import { pathToFileURL } from 'url';
+import { findConfig } from './utils';
 
 // Name of the Remix runtime adapter npm package for Vercel
 const REMIX_RUNTIME_ADAPTER_NAME = '@remix-run/vercel';
@@ -288,15 +289,4 @@ async function createRenderFunction(
   });
 
   return lambda;
-}
-
-const configExts = ['.js', '.cjs', '.mjs'];
-
-function findConfig(dir: string, basename: string): string | undefined {
-  for (const ext of configExts) {
-    const file = resolve(dir, basename + ext);
-    if (existsSync(file)) return relative(dir, file);
-  }
-
-  return undefined;
 }
