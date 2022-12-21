@@ -24,6 +24,7 @@ import {
   PrepareCache,
   NodejsLambda,
   BuildResultV2Typical as BuildResult,
+  BuildResultBuildOutput,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -453,6 +454,24 @@ export const build: BuildV2 = async ({
     });
   }
   debug('build command exited');
+
+  let buildOutputVersion: undefined | number;
+
+  try {
+    const data = await readJSON(
+      path.join(outputDirectory, 'output/config.json')
+    );
+    buildOutputVersion = data.version;
+  } catch (_) {
+    // tolerate for older versions
+  }
+
+  if (buildOutputVersion) {
+    return {
+      buildOutputPath: outputDirectory,
+      buildOutputVersion,
+    } as BuildResultBuildOutput;
+  }
 
   let appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
