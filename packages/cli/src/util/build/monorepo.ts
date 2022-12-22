@@ -37,7 +37,7 @@ export async function setMonorepoDefaultSettings(
   try {
     const result = await getMonorepoDefaultSettings(
       projectName,
-      workPath,
+      relative(cwd, workPath),
       relativeToRoot,
       localFileSystem
     );

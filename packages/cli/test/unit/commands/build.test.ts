@@ -1261,9 +1261,14 @@ describe('build', () => {
               await fs.readFile(projectJSONPath, 'utf-8')
             );
 
-            if (commands.ignoreCommand) {
-              commands.commandForIgnoringBuildStep = commands.ignoreCommand;
-              delete commands.ignoreCommand;
+            const projectJSONCommands = {
+              ...commands,
+            };
+
+            if (projectJSONCommands.ignoreCommand) {
+              projectJSONCommands.commandForIgnoringBuildStep =
+                projectJSONCommands.ignoreCommand;
+              delete projectJSONCommands.ignoreCommand;
             }
 
             await fs.writeFile(
@@ -1272,7 +1277,7 @@ describe('build', () => {
                 ...projectJSON,
                 settings: {
                   ...projectJSON.settings,
-                  ...commands,
+                  ...projectJSONCommands,
                 },
               })
             );
