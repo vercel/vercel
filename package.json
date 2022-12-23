@@ -53,7 +53,7 @@
     "test-integration-cli": "node utils/gen.js && turbo run test-integration-cli",
     "test-integration-once": "node utils/gen.js && turbo run test-integration-once",
     "test-integration-dev": "node utils/gen.js && turbo run test-integration-dev",
-    "lint": "eslint . --ext .ts,.js",
+    "lint": "eslint . --cache --ext .ts,.js",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts"
   },
