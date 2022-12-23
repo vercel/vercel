@@ -341,10 +341,24 @@ function initRollbackTest({
     res.json(data);
   });
 
+  // get deployment id by url
   client.scenario.get(`/:version/now/deployments/get`, (req, res) => {
     const { url } = req.query;
     if (url === previousDeployment.url) {
       res.json({ id: previousDeployment.id });
+    } else {
+      res.statusCode = 404;
+      res.json({
+        error: { code: 'not_found', message: 'Deployment not found' },
+      });
+    }
+  });
+
+  // get deployment by id
+  client.scenario.get(`/:version/now/deployments/:id`, (req, res) => {
+    const { id } = req.params;
+    if (id === previousDeployment.id) {
+      res.json(previousDeployment);
     } else {
       res.statusCode = 404;
       res.json({

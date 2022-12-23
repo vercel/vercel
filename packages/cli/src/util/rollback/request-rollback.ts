@@ -39,14 +39,14 @@ export default async function requestRollback({
     return 1;
   }
 
-  output.spinner(
-    `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
-  );
-
   let deployment: DeploymentV10 | undefined;
   let team: Team | undefined;
 
   try {
+    output.spinner(
+      `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
+    );
+
     const [teamResult, deploymentResult] = await Promise.allSettled([
       config.currentTeam ? getTeamById(client, config.currentTeam) : undefined,
       getDeploymentInfo(client, contextName, deployId),

@@ -228,6 +228,7 @@ async function renderJobSucceeded({
 }) {
   const { output } = client;
 
+  // attempt to get the new deployment url
   let deploymentInfo = '';
   try {
     const deployment = await getDeploymentInfo(
