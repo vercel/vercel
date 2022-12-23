@@ -1,6 +1,7 @@
 import type Client from '../client';
-import type { Deployment } from '../../types';
+import type { DeploymentV10 } from '../../types';
 import getDeploymentByIdOrHost from '../deploy/get-deployment-by-id-or-host';
+import type { GetDeploymentByIdOrHostReturnType } from '../deploy/get-deployment-by-id-or-host';
 import handleCertError from '../certs/handle-cert-error';
 
 /**
@@ -14,11 +15,12 @@ export default async function getDeploymentInfo(
   client: Client,
   contextName: string,
   deployId: string
-): Promise<Deployment> {
-  const deployment = handleCertError(
-    client.output,
-    await getDeploymentByIdOrHost(client, contextName, deployId)
-  );
+): Promise<DeploymentV10> {
+  const deployment: DeploymentV10 | GetDeploymentByIdOrHostReturnType | 1 =
+    handleCertError<DeploymentV10 | GetDeploymentByIdOrHostReturnType>(
+      client.output,
+      await getDeploymentByIdOrHost(client, contextName, deployId, 'v10')
+    );
 
   if (deployment === 1) {
     throw new Error(
@@ -30,7 +32,7 @@ export default async function getDeploymentInfo(
     throw deployment;
   }
 
-  if (!deployment) {
+  if (deployment === null) {
     throw new Error(`Couldn't find the deployment "${deployId}"`);
   }
 

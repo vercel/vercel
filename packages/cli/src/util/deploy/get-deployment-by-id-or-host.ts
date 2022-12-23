@@ -1,6 +1,6 @@
 import type Client from '../client';
 import toHost from '../to-host';
-import { Deployment } from '../../types';
+import { Deployment, DeploymentV5, DeploymentV10 } from '../../types';
 import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
@@ -11,12 +11,30 @@ import mapCertError from '../certs/map-cert-error';
 
 type APIVersion = 'v5' | 'v10';
 
+export type GetDeploymentByIdOrHostReturnType =
+  | DeploymentNotFound
+  | DeploymentPermissionDenied
+  | InvalidDeploymentId
+  | ReturnType<typeof mapCertError>;
+
 export default async function getDeploymentByIdOrHost(
   client: Client,
   contextName: string,
   idOrHost: string,
-  apiVersion: APIVersion = 'v5'
-) {
+  apiVersion: 'v5'
+): Promise<DeploymentV5 | GetDeploymentByIdOrHostReturnType>;
+export default async function getDeploymentByIdOrHost(
+  client: Client,
+  contextName: string,
+  idOrHost: string,
+  apiVersion: 'v10'
+): Promise<DeploymentV10 | GetDeploymentByIdOrHostReturnType>;
+export default async function getDeploymentByIdOrHost(
+  client: Client,
+  contextName: string,
+  idOrHost: string,
+  apiVersion: APIVersion
+): Promise<Deployment | GetDeploymentByIdOrHostReturnType> {
   try {
     const { deployment } =
       idOrHost.indexOf('.') !== -1

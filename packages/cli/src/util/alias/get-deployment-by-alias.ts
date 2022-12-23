@@ -22,7 +22,12 @@ async function getAppLastDeployment(
 
   // Try to fetch deployment details
   if (deploymentItem) {
-    return getDeploymentByIdOrHost(client, contextName, deploymentItem.uid);
+    return getDeploymentByIdOrHost(
+      client,
+      contextName,
+      deploymentItem.uid,
+      'v5'
+    );
   }
 
   return null;
@@ -45,7 +50,8 @@ export async function getDeploymentForAlias(
     const deployment = await getDeploymentByIdOrHost(
       client,
       contextName,
-      deploymentId
+      deploymentId,
+      'v5'
     );
     output.stopSpinner();
     return deployment;

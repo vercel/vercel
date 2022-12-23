@@ -1,4 +1,6 @@
+import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
+import type { Route } from '@vercel/routing-utils';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
@@ -116,7 +118,7 @@ export type Cert = {
   expiration: string;
 };
 
-export type Deployment = {
+export type DeploymentV5 = {
   uid: string;
   url: string;
   name: string;
@@ -143,6 +145,66 @@ export type Deployment = {
   };
   alias?: string[];
 };
+
+type RouteOrMiddleware =
+  | Route
+  | {
+      src: string;
+      continue: boolean;
+      middleware: 0;
+    };
+
+export type DeploymentV10 = {
+  alias?: string[];
+  aliasAssigned?: boolean | null | number;
+  aliasError?: null | { code: string; message: string };
+  bootedAt?: number;
+  build: { env: string[] };
+  builds?: { use: string; src?: string; config?: { [key: string]: any } };
+  buildingAt?: number;
+  createdAt?: number;
+  createdIn: string;
+  creator?: { uid: string; username: string };
+  env: { [key: string]: string };
+  functions?: BuilderFunctions | null;
+  id: string;
+  initReadyAt?: number;
+  inspectorUrl: string | null;
+  lambdas?: Build[];
+  name: string;
+  meta: {
+    [key: string]: any;
+  };
+  ownerId: string;
+  plan: Billing['plan'] | 'oss';
+  projectId: string;
+  public: boolean;
+  ready?: number;
+  readyState:
+    | 'BUILDING'
+    | 'ERROR'
+    | 'INITIALIZING'
+    | 'QUEUED'
+    | 'READY'
+    | 'CANCELED';
+  regions: string[];
+  routes: RouteOrMiddleware[] | null;
+  source?: 'cli' | 'git' | 'import' | 'import/repo' | 'clone/repo';
+  status:
+    | 'BUILDING'
+    | 'ERROR'
+    | 'INITIALIZING'
+    | 'QUEUED'
+    | 'READY'
+    | 'CANCELED';
+  target?: 'staging' | 'production' | null;
+  teamId?: string | null;
+  type: 'LAMBDAS';
+  url: string;
+  version: 2;
+};
+
+export type Deployment = DeploymentV5 | DeploymentV10;
 
 export type Alias = {
   uid: string;

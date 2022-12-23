@@ -10,7 +10,8 @@ export default async function getDeploymentByIdOrThrow(
   const deployment = await getDeploymentByIdOrHost(
     client,
     contextName,
-    idOrHost
+    idOrHost,
+    'v5'
   );
   if (deployment instanceof NowError) {
     throw deployment;

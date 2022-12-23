@@ -136,7 +136,7 @@ export default async function set(
   const [deploymentIdOrHost, aliasTarget] = args;
   const deployment = handleCertError(
     output,
-    await getDeploymentByIdOrHost(client, contextName, deploymentIdOrHost)
+    await getDeploymentByIdOrHost(client, contextName, deploymentIdOrHost, 'v5')
   );
 
   if (deployment === 1) {

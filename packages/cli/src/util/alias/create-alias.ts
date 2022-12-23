@@ -1,4 +1,4 @@
-import { Deployment } from '../../types';
+import { DeploymentV5 } from '../../types';
 import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
@@ -15,7 +15,7 @@ export default async function createAlias(
   output: Output,
   client: Client,
   contextName: string,
-  deployment: Deployment,
+  deployment: DeploymentV5,
   alias: string,
   externalDomain: boolean
 ) {
@@ -57,7 +57,7 @@ export default async function createAlias(
 async function performCreateAlias(
   client: Client,
   contextName: string,
-  deployment: Deployment,
+  deployment: DeploymentV5,
   alias: string
 ) {
   try {
