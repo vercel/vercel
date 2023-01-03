@@ -2,15 +2,20 @@ import { URL } from 'url';
 import chance from 'chance';
 import { Deployment } from '@vercel/client';
 import { client } from './client';
-import { Build, User } from '../../src/types';
+import { Build, DeploymentV10, User } from '../../src/types';
 import type { Request, Response } from 'express';
 
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
+let deploymentsV10 = new Map<string, DeploymentV10>();
+let deploymentBuildsV10 = new Map<DeploymentV10, Build[]>();
 let alreadySetupDeplomentEndpoints = false;
 
 type State = Deployment['readyState'];
 
+/**
+ * Initializes a v5 deployment.
+ */
 export function useDeployment({
   creator,
   state = 'READY',
@@ -65,6 +70,68 @@ export function useDeployment({
   return deployment;
 }
 
+/**
+ * Initializes a v10 deployment.
+ */
+export function useDeploymentV10({
+  creator,
+  state = 'READY',
+  createdAt,
+}: {
+  creator: Pick<User, 'id' | 'email' | 'name' | 'username'>;
+  state?:
+    | 'BUILDING'
+    | 'ERROR'
+    | 'INITIALIZING'
+    | 'QUEUED'
+    | 'READY'
+    | 'CANCELED';
+  createdAt?: number;
+}) {
+  setupDeploymentEndpoints();
+
+  createdAt = createdAt || Date.now();
+  const url = new URL(chance().url());
+  const name = chance().name();
+  const id = `dpl_${chance().guid()}`;
+
+  const deployment: DeploymentV10 = {
+    alias: [],
+    aliasAssigned: true,
+    aliasError: null,
+    build: { env: [] },
+    buildingAt: Date.now(),
+    createdAt,
+    createdIn: 'sfo1',
+    creator: {
+      uid: creator.id,
+      username: creator.username,
+    },
+    env: [],
+    id,
+    inspectorUrl: `https://vercel.com/${creator.name}/${id}`,
+    meta: {},
+    name,
+    ownerId: creator.id,
+    plan: 'hobby',
+    public: false,
+    ready: createdAt + 30000,
+    readyState: state,
+    regions: [],
+    routes: [],
+    status: state,
+    target: 'production',
+    type: 'LAMBDAS',
+    url: url.hostname,
+    version: 2,
+  };
+
+  deploymentsV10.set(deployment.id, deployment);
+  deploymentBuildsV10.set(deployment, []);
+
+  return deployment;
+}
+
 export function useDeploymentMissingProjectSettings() {
   client.scenario.post('/:version/deployments', (_req, res) => {
     res.status(400).json({
@@ -105,6 +172,8 @@ export function useDeploymentMissingProjectSettings() {
 beforeEach(() => {
   deployments = new Map();
   deploymentBuilds = new Map();
+  deploymentsV10 = new Map();
+  deploymentBuildsV10 = new Map();
   alreadySetupDeplomentEndpoints = false;
 });
 
@@ -185,6 +254,19 @@ function setupDeploymentEndpoints() {
     });
   });
 
+  // v10 deployment builds endpoint
+  client.scenario.get('/v10/deployments/:id/builds', (req, res) => {
+    const { id } = req.params;
+    const deployment = deploymentsV10.get(id);
+    if (!deployment) {
+      res.statusCode = 404;
+      return res.json({ error: { code: 'not_found' } });
+    }
+    const builds = deploymentBuildsV10.get(deployment);
+    res.json({ builds });
+  });
+
+  // v5 deployment builds endpoint
   client.scenario.get('/:version/deployments/:id/builds', (req, res) => {
     const { id } = req.params;
     const deployment = deployments.get(id);

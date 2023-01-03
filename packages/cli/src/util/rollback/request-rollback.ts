@@ -73,8 +73,8 @@ export default async function requestRollback({
     output.stopSpinner();
   }
 
-  if (deployment.teamId) {
-    if (!team || deployment.teamId !== team.id) {
+  if (deployment.team?.id) {
+    if (!team || deployment.team.id !== team.id) {
       output.error(
         team
           ? `Deployment doesn't belong to current team ${chalk.bold(

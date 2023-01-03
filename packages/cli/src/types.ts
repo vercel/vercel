@@ -158,26 +158,63 @@ export type DeploymentV10 = {
   alias?: string[];
   aliasAssigned?: boolean | null | number;
   aliasError?: null | { code: string; message: string };
+  aliasFinal?: string | null;
+  aliasWarning?: null | {
+    code: string;
+    message: string;
+    link?: string;
+    action?: string;
+  };
   bootedAt?: number;
-  build: { env: string[] };
+  build?: { env: string[] };
   builds?: { use: string; src?: string; config?: { [key: string]: any } };
-  buildingAt?: number;
-  createdAt?: number;
-  createdIn: string;
-  creator?: { uid: string; username: string };
-  env: { [key: string]: string };
+  buildErrorAt?: number;
+  buildingAt: number;
+  canceledAt?: number;
+  checksState?: 'completed' | 'registered' | 'running';
+  checksConclusion?: 'canceled' | 'failed' | 'skipped' | 'succeeded';
+  createdAt: number;
+  createdIn?: string;
+  creator: { uid: string; username?: string };
+  env?: string[];
+  errorCode?: string;
+  errorLink?: string;
+  errorMessage?: string | null;
+  errorStep?: string;
   functions?: BuilderFunctions | null;
+  gitSource?: {
+    org?: string;
+    owner?: string;
+    prId?: number | null;
+    projectId: number;
+    ref?: string | null;
+    repoId?: number;
+    repoUuid: string;
+    sha?: string;
+    slug?: string;
+    type: string;
+    workspaceUuid: string;
+  };
   id: string;
   initReadyAt?: number;
-  inspectorUrl: string | null;
+  inspectorUrl?: string | null;
   lambdas?: Build[];
-  name: string;
-  meta: {
-    [key: string]: any;
+  meta?: {
+    [key: string]: string | undefined;
   };
-  ownerId: string;
-  plan: Billing['plan'] | 'oss';
-  projectId: string;
+  monorepoManager?: string | null;
+  name: string;
+  ownerId?: string;
+  plan?: 'enterprise' | 'hobby' | 'oss' | 'pro';
+  previewCommentsEnabled?: boolean;
+  projectId?: string;
+  projectSettings?: {
+    buildCommand?: string | null;
+    devCommand?: string | null;
+    framework?: string;
+    installCommand?: string | null;
+    outputDirectory?: string | null;
+  };
   public: boolean;
   ready?: number;
   readyState:
@@ -188,7 +225,7 @@ export type DeploymentV10 = {
     | 'READY'
     | 'CANCELED';
   regions: string[];
-  routes: RouteOrMiddleware[] | null;
+  routes?: RouteOrMiddleware[] | null;
   source?: 'cli' | 'git' | 'import' | 'import/repo' | 'clone/repo';
   status:
     | 'BUILDING'
@@ -198,9 +235,15 @@ export type DeploymentV10 = {
     | 'READY'
     | 'CANCELED';
   target?: 'staging' | 'production' | null;
-  teamId?: string | null;
+  team?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  ttyBuildLogs?: boolean;
   type: 'LAMBDAS';
   url: string;
+  userAliases?: string[];
   version: 2;
 };
 

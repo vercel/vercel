@@ -5,7 +5,7 @@ import { Request, Response } from 'express';
 import rollback from '../../../src/commands/rollback';
 import { RollbackJobStatus, RollbackTarget } from '../../../src/types';
 import { setupFixture } from '../../helpers/setup-fixture';
-import { useDeployment } from '../../mocks/deployment';
+import { useDeploymentV10 } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import sleep from '../../../src/util/sleep';
@@ -265,6 +265,27 @@ describe('rollback', () => {
 
     await expect(exitCodePromise).resolves.toEqual(0);
   });
+
+  it('should error if deployment belongs to different team', async () => {
+    const { cwd, previousDeployment } = initRollbackTest();
+    previousDeployment.team = {
+      id: 'abc',
+      name: 'abc',
+      slug: 'abc',
+    };
+    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
+    const exitCodePromise = rollback(client);
+
+    await expect(client.stderr).toOutput('Retrieving project…');
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput(
+      'Error: Deployment belong to a different team'
+    );
+
+    await expect(exitCodePromise).resolves.toEqual(1);
+  });
 });
 
 type RollbackAlias = {
@@ -295,8 +316,8 @@ function initRollbackTest({
     name: 'vercel-rollback',
   });
 
-  const currentDeployment = useDeployment({ creator: user });
-  const previousDeployment = useDeployment({ creator: user });
+  const currentDeployment = useDeploymentV10({ creator: user });
+  const previousDeployment = useDeploymentV10({ creator: user });
   let lastRollbackTarget: RollbackTarget | null = null;
 
   client.scenario.post(
