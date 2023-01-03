@@ -14,6 +14,7 @@ import {
   isSymbolicLink,
   NodejsLambda,
   EdgeFunction,
+  Images,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -34,7 +35,6 @@ import url from 'url';
 import escapeStringRegexp from 'escape-string-regexp';
 import { htmlContentType } from '.';
 import textTable from 'text-table';
-import prettyBytes from 'pretty-bytes';
 import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-function-source';
 import type { LambdaOptionsWithFiles } from '@vercel/build-utils/dist/lambda';
 import { stringifySourceMap } from './sourcemapped';
@@ -43,8 +43,10 @@ import bytes from 'bytes';
 
 type stringMap = { [key: string]: string };
 
-const _prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
-export { _prettyBytes as prettyBytes }
+export const KIB = 1024;
+export const MIB = 1024 * KIB;
+
+export const prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
 
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
@@ -152,6 +154,23 @@ async function getNextConfig(workPath: string, entryPath: string) {
   }
 
   return null;
+}
+
+function getImagesConfig(
+  imagesManifest: NextImagesManifest | undefined
+): Images | undefined {
+  return imagesManifest?.images?.loader === 'default' &&
+    imagesManifest.images?.unoptimized !== true
+    ? {
+        domains: imagesManifest.images.domains,
+        sizes: imagesManifest.images.sizes,
+        remotePatterns: imagesManifest.images.remotePatterns,
+        minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
+        formats: imagesManifest.images.formats,
+        dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
+        contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
+      }
+    : undefined;
 }
 
 function normalizePage(page: string): string {
@@ -498,6 +517,7 @@ export type NextImagesManifest = {
     remotePatterns: RemotePattern[];
     minimumCacheTTL?: number;
     formats?: ImageFormat[];
+    unoptimized?: boolean;
     dangerouslyAllowSVG?: boolean;
     contentSecurityPolicy?: string;
   };
@@ -1296,9 +1316,9 @@ export type LambdaGroup = {
   pseudoLayerUncompressedBytes: number;
 };
 
-export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * 1000 * 1000; // 250MB
-const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * 1000 * 1000; // 2.5MB
-const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * 1000; // 250KB
+export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
+const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * MIB;
+const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 
 export async function getPageLambdaGroups({
   entryPath,
@@ -1501,7 +1521,7 @@ export const outputFunctionFileSizeInfo = (
     .forEach(depKey => {
       const dep = dependencies[depKey];
 
-      if (dep.compressed < 100 * 1000 && dep.uncompressed < 500 * 1000) {
+      if (dep.compressed < 100 * KIB && dep.uncompressed < 500 * KIB) {
         // ignore smaller dependencies to reduce noise
         return;
       }
@@ -1541,9 +1561,8 @@ export const detectLambdaLimitExceeding = async (
   }
 ) => {
   // show debug info if within 5 MB of exceeding the limit
-  const COMPRESSED_SIZE_LIMIT_CLOSE = compressedSizeLimit - 5 * 1000 * 1000;
-  const UNCOMPRESSED_SIZE_LIMIT_CLOSE =
-    MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * 1000 * 1000;
+  const COMPRESSED_SIZE_LIMIT_CLOSE = compressedSizeLimit - 5 * MIB;
+  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * MIB;
 
   let numExceededLimit = 0;
   let numCloseToLimit = 0;
@@ -2244,6 +2263,7 @@ export {
   validateEntrypoint,
   normalizePackageJson,
   getNextConfig,
+  getImagesConfig,
   stringMap,
   normalizePage,
   isDynamicRoute,

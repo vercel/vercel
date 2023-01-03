@@ -28,4 +28,5 @@ test/lib/deployment/failed-page.txt
 __pycache__
 .vercel
 .turbo
+.eslintcache
 turbo-cache-key.json
