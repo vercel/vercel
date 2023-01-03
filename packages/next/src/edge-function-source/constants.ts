@@ -1,5 +1,4 @@
-const KIB = 1024;
-const MIB = 1024 * KIB;
+import { MIB } from '../utils';
 
 /**
  * The maximum size of a *compressed* edge function.
