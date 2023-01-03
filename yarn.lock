@@ -4822,11 +4822,6 @@
     "@typescript-eslint/types" "5.48.0"
     eslint-visitor-keys "^3.3.0"
 
-"@vercel/build-utils@5.5.3":
-  version "5.5.3"
-  resolved "https://registry.yarnpkg.com/@vercel/build-utils/-/build-utils-5.5.3.tgz#cee00400dbdec0081ca2e6ce011480333c0a39bf"
-  integrity sha512-T4MYD87rwocybIQzv4giRFYiisQqFLZOsPXn5tglQfnsB0DJM47l8VW9oFgGX2cJyp/px7C/ovdLrhwY/XWhYQ==
-
 "@vercel/fun@1.0.4":
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/@vercel/fun/-/fun-1.0.4.tgz#5d01cca962488b2328063b0c3fc0b6fac2555c2a"
@@ -4874,15 +4869,6 @@
     node-gyp-build "^4.2.2"
     resolve-from "^5.0.0"
     rollup-pluginutils "^2.8.2"
-
-"@vercel/routing-utils@2.0.2":
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/@vercel/routing-utils/-/routing-utils-2.0.2.tgz#01f89c3b13311df34422356a8134f9f15267b9b3"
-  integrity sha512-Ach23n7fjhVVRplBVDmSlJ0E1rJTOxuQdqJfyuC6yGQl5ykmfarCXfjrLFCgeujqmQwAU9q0PR3K6HVOaAmbfg==
-  dependencies:
-    path-to-regexp "6.1.0"
-  optionalDependencies:
-    ajv "^6.0.0"
 
 "@vercel/webpack-asset-relocator-loader@^1.7.0":
   version "1.7.3"
