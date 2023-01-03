@@ -1,0 +1,10 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "Welcome to Gatsby!" },
+    { "path": "/page-2", "mustContain": "Hi from the second page" },
+    {
+      "path": "/using-typescript",
+      "mustContain": "Gatsby supports TypeScript by default"
+    }
+  ]
+}
