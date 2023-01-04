@@ -15,7 +15,12 @@ export default async function glob(
   opts: GlobOptions | string,
   mountpoint?: string
 ): Promise<Record<string, FileFsRef>> {
-  const options: GlobOptions = typeof opts === 'string' ? { cwd: opts } : opts;
+  let options: GlobOptions;
+  if (typeof opts === 'string') {
+    options = { cwd: opts };
+  } else {
+    options = opts;
+  }
 
   if (!options.cwd) {
     throw new Error(
@@ -29,18 +34,13 @@ export default async function glob(
 
   const results: Record<string, FileFsRef> = {};
   const statCache: Record<string, Stats> = {};
-  const symlinks: Record<string, boolean | undefined> = {};
 
-  const files = await vanillaGlob(pattern, {
-    ...options,
-    symlinks,
-    statCache,
-    stat: true,
-    dot: true,
-  });
+  options.symlinks = {};
+  options.statCache = statCache;
+  options.stat = true;
+  options.dot = true;
 
-  const dirs = new Set<string>();
-  const dirsWithEntries = new Set<string>();
+  const files = await vanillaGlob(pattern, options);
 
   for (const relativePath of files) {
     const fsPath = normalizePath(path.join(options.cwd, relativePath));
@@ -49,18 +49,10 @@ export default async function glob(
       stat,
       `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`
     );
-    const isSymlink = symlinks[fsPath];
-    if (isSymlink || stat.isFile() || stat.isDirectory()) {
+    const isSymlink = options.symlinks![fsPath];
+    if (isSymlink || stat.isFile()) {
       if (isSymlink) {
         stat = await lstat(fsPath);
-      }
-
-      // Some bookkeeping to track which directories already have entries within
-      const dirname = path.dirname(relativePath);
-      dirsWithEntries.add(dirname);
-      if (stat.isDirectory()) {
-        dirs.add(relativePath);
-        continue;
       }
 
       let finalPath = relativePath;
@@ -70,21 +62,6 @@ export default async function glob(
 
       results[finalPath] = new FileFsRef({ mode: stat.mode, fsPath });
     }
-  }
-
-  // Add empty directory entries
-  for (const relativePath of dirs) {
-    if (dirsWithEntries.has(relativePath)) continue;
-
-    let finalPath = relativePath;
-    if (mountpoint) {
-      finalPath = path.join(mountpoint, finalPath);
-    }
-
-    const fsPath = normalizePath(path.join(options.cwd, relativePath));
-    const stat = statCache[fsPath];
-
-    results[finalPath] = new FileFsRef({ mode: stat.mode, fsPath });
   }
 
   return results;
