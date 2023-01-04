@@ -25,8 +25,13 @@ export function cloneEnv(...envs: (Env | undefined)[]): Env {
       // however we lose this proxied value when we destructure and
       // thus we must explicitly copy it, but we must also remove the
       // `Path` property since we can't have both a `PATH` and `Path`
-      obj.PATH = obj.Path;
-      delete obj.Path;
+
+      // while using git bash obj.path is undefined, but obj.PATH is the correct path
+      if(obj.Path !== undefined){
+        obj.PATH = obj.Path;
+
+        delete obj.Path;
+      }
     }
 
     return obj;
