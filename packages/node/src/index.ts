@@ -52,7 +52,7 @@ import type {
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 
-import { Register, register } from './typescript';
+import { fixConfig, Register, register } from './typescript';
 import {
   EdgeRuntimes,
   entrypointToOutputPath,
@@ -61,6 +61,8 @@ import {
 } from './utils';
 
 export { shouldServe };
+
+type TypescriptModule = typeof import('typescript');
 
 interface DownloadOptions {
   files: Files;
@@ -516,8 +518,9 @@ export const startDevServer: StartDevServer = async opts => {
   }
 
   const entryDir = dirname(entrypointPath);
+  const ext = extname(entrypoint);
 
-  const projectTsConfig = await walkParentDirs({
+  const pathToTsConfig = await walkParentDirs({
     base: workPath,
     start: entryDir,
     filename: 'tsconfig.json',
@@ -528,20 +531,81 @@ export const startDevServer: StartDevServer = async opts => {
     filename: 'package.json',
   });
   const pkg = pathToPkg ? require_(pathToPkg) : {};
+  const tsNodeLoader = join(require_.resolve('ts-node'), '..', '..', 'esm.mjs');
+  const isTypescript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
   const isEsm =
-    entrypoint.endsWith('.mjs') ||
-    (pkg.type === 'module' && entrypoint.endsWith('.js'));
+    ext === '.mjs' ||
+    ext === '.mts' ||
+    (pkg.type === 'module' && ['.js', '.ts', '.tsx'].includes(ext));
 
   const devServerPath = join(__dirname, 'dev-server.js');
+  let tsConfig: any = {};
+
+  if (isTypescript || !isEsm) {
+    const resolveTypescript = (p: string): string => {
+      try {
+        return require_.resolve('typescript', {
+          paths: [p],
+        });
+      } catch (_) {
+        return '';
+      }
+    };
+
+    const requireTypescript = (p: string): TypescriptModule => require_(p);
+
+    let ts: TypescriptModule | null = null;
+
+    // Use the project's version of Typescript if available and supports `target`
+    let compiler = resolveTypescript(process.cwd());
+    if (compiler) {
+      ts = requireTypescript(compiler);
+    }
+
+    // Otherwise fall back to using the copy that `@vercel/node` uses
+    if (!ts) {
+      compiler = resolveTypescript(join(__dirname, '..'));
+      ts = requireTypescript(compiler);
+    }
+
+    if (pathToTsConfig) {
+      try {
+        tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          console.error(`Error while parsing "${pathToTsConfig}"`);
+          throw err;
+        }
+      }
+    }
+
+    const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
+    fixConfig(tsConfig, nodeVersionMajor);
+
+    // In prod, `.ts` inputs use TypeScript and
+    // `.js` inputs use Babel to convert ESM to CJS.
+    // In dev, both `.ts` and `.js` inputs use ts-node
+    // without Babel so we must enable `allowJs`.
+    tsConfig.compilerOptions.allowJs = true;
+
+    // In prod, we emit outputs to the filesystem.
+    // In dev, we don't emit because we use ts-node.
+    tsConfig.compilerOptions.noEmit = true;
+  }
+
   const child = fork(devServerPath, [], {
     cwd: workPath,
     execArgv: [],
     env: cloneEnv(process.env, meta.env, {
       VERCEL_DEV_ENTRYPOINT: entrypoint,
-      VERCEL_DEV_TSCONFIG: projectTsConfig || '',
       VERCEL_DEV_IS_ESM: isEsm ? '1' : undefined,
       VERCEL_DEV_CONFIG: JSON.stringify(config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(meta.buildEnv || {}),
+      TS_NODE_TRANSPILE_ONLY: '1',
+      TS_NODE_COMPILER_OPTIONS: tsConfig?.compilerOptions
+        ? JSON.stringify(tsConfig.compilerOptions)
+        : undefined,
+      NODE_OPTIONS: isEsm ? `--loader ${tsNodeLoader}` : undefined,
     }),
   });
 
@@ -560,11 +624,10 @@ export const startDevServer: StartDevServer = async opts => {
 
   if (isPortInfo(result)) {
     // "message" event
-    const ext = extname(entrypoint);
-    if (ext === '.ts' || ext === '.tsx') {
+    if (isTypescript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
-      doTypeCheck(opts, projectTsConfig).catch((err: Error) => {
+      doTypeCheck(opts, pathToTsConfig).catch((err: Error) => {
         console.error('Type check for %j failed:', entrypoint, err);
       });
     }
