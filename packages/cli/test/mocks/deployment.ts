@@ -1,17 +1,30 @@
 import { URL } from 'url';
 import chance from 'chance';
-import { Deployment } from '@vercel/client';
 import { client } from './client';
-import { Build, DeploymentV10, User } from '../../src/types';
+import {
+  Build,
+  Deployment,
+  DeploymentV5,
+  DeploymentV13,
+  User,
+} from '../../src/types';
 import type { Request, Response } from 'express';
 
-let deployments = new Map<string, Deployment>();
-let deploymentBuilds = new Map<Deployment, Build[]>();
-let deploymentsV10 = new Map<string, DeploymentV10>();
-let deploymentBuildsV10 = new Map<DeploymentV10, Build[]>();
+let deployments: {
+  [apiVersion: string]: Map<string, Deployment>;
+} = {
+  v5: new Map<string, DeploymentV5>(),
+  v13: new Map<string, DeploymentV13>(),
+};
+let deploymentBuilds: {
+  [apiVersion: string]: Map<Deployment, Build[]>;
+} = {
+  v5: new Map<DeploymentV5, Build[]>(),
+  v13: new Map<DeploymentV13, Build[]>(),
+};
 let alreadySetupDeplomentEndpoints = false;
 
-type State = Deployment['readyState'];
+type State = DeploymentV13['readyState'];
 
 /**
  * Initializes a v5 deployment.
@@ -25,15 +38,16 @@ export function useDeployment({
   state?: State;
   createdAt?: number;
 }) {
-  setupDeploymentEndpoints();
+  setupDeploymentEndpoints('v5');
 
   createdAt = createdAt || Date.now();
   const url = new URL(chance().url());
   const name = chance().name();
   const id = `dpl_${chance().guid()}`;
 
-  const deployment: Deployment = {
+  const deployment: DeploymentV5 = {
     id,
+    uid: id,
     url: url.hostname,
     name,
     meta: {},
@@ -48,8 +62,6 @@ export function useDeployment({
     ownerId: creator.id,
     creator: {
       uid: creator.id,
-      email: creator.email,
-      name: creator.name,
       username: creator.username,
     },
     readyState: state,
@@ -62,18 +74,19 @@ export function useDeployment({
     aliasAssigned: true,
     aliasError: null,
     inspectorUrl: `https://vercel.com/${creator.name}/${id}`,
+    type: 'LAMBDAS',
   };
 
-  deployments.set(deployment.id, deployment);
-  deploymentBuilds.set(deployment, []);
+  deployments.v5.set(deployment.id, deployment);
+  deploymentBuilds.v5.set(deployment, []);
 
   return deployment;
 }
 
 /**
- * Initializes a v10 deployment.
+ * Initializes a v13 deployment.
  */
-export function useDeploymentV10({
+export function useDeploymentV13({
   creator,
   state = 'READY',
   createdAt,
@@ -88,14 +101,14 @@ export function useDeploymentV10({
     | 'CANCELED';
   createdAt?: number;
 }) {
-  setupDeploymentEndpoints();
+  setupDeploymentEndpoints('v13');
 
   createdAt = createdAt || Date.now();
   const url = new URL(chance().url());
   const name = chance().name();
   const id = `dpl_${chance().guid()}`;
 
-  const deployment: DeploymentV10 = {
+  const deployment: DeploymentV13 = {
     alias: [],
     aliasAssigned: true,
     aliasError: null,
@@ -126,8 +139,8 @@ export function useDeploymentV10({
     version: 2,
   };
 
-  deploymentsV10.set(deployment.id, deployment);
-  deploymentBuildsV10.set(deployment, []);
+  deployments.v13.set(deployment.id, deployment);
+  deploymentBuilds.v13.set(deployment, []);
 
   return deployment;
 }
@@ -170,14 +183,14 @@ export function useDeploymentMissingProjectSettings() {
 }
 
 beforeEach(() => {
-  deployments = new Map();
-  deploymentBuilds = new Map();
-  deploymentsV10 = new Map();
-  deploymentBuildsV10 = new Map();
+  deployments.v5 = new Map();
+  deployments.v13 = new Map();
+  deploymentBuilds.v5 = new Map();
+  deploymentBuilds.v13 = new Map();
   alreadySetupDeplomentEndpoints = false;
 });
 
-function setupDeploymentEndpoints() {
+function setupDeploymentEndpoints(apiVersion: string): void {
   if (alreadySetupDeplomentEndpoints) {
     return;
   }
@@ -193,12 +206,12 @@ function setupDeploymentEndpoints() {
         res.statusCode = 400;
         return res.json({ error: { code: 'bad_request' } });
       }
-      deployment = Array.from(deployments.values()).find(d => {
+      deployment = Array.from(deployments[apiVersion].values()).find(d => {
         return d.url === url;
       });
     } else {
       // lookup by ID
-      deployment = deployments.get(id);
+      deployment = deployments[apiVersion].get(id);
     }
     if (!deployment) {
       res.statusCode = 404;
@@ -209,82 +222,86 @@ function setupDeploymentEndpoints() {
     res.json(deployment);
   });
 
-  client.scenario.get('/v5/now/deployments/:id', (req, res) => {
-    const { id } = req.params;
-    const { url } = req.query;
-    let deployment;
-    if (id === 'get') {
-      if (typeof url !== 'string') {
-        res.statusCode = 400;
-        return res.json({ error: { code: 'bad_request' } });
+  if (apiVersion === 'v5') {
+    client.scenario.get('/v5/deployments/:id', (req, res) => {
+      const { id } = req.params;
+      const { url } = req.query;
+      let deployment;
+      if (id === 'get') {
+        if (typeof url !== 'string') {
+          res.statusCode = 400;
+          return res.json({ error: { code: 'bad_request' } });
+        }
+        deployment = Array.from(deployments[apiVersion].values()).find(d => {
+          return d.url === url;
+        });
+      } else {
+        // lookup by ID
+        deployment = deployments[apiVersion].get(id);
       }
-      deployment = Array.from(deployments.values()).find(d => {
-        return d.url === url;
+      if (!deployment) {
+        res.statusCode = 404;
+        return res.json({
+          error: { code: 'not_found', message: 'Deployment not found', id },
+        });
+      }
+      res.json({
+        uid: deployment.id,
+        url: deployment.url,
+        name: '',
+        type: 'LAMBDAS',
+        state: 'READY',
+        version: deployment.version,
+        created: deployment.createdAt,
+        ready: deployment.ready,
+        buildingAt: deployment.buildingAt,
+        creator: {
+          uid: deployment.creator?.uid,
+          username: deployment.creator?.username,
+        },
+        target: deployment.target,
+        ownerId: undefined, // ?
+        projectId: undefined, // ?
+        inspectorUrl: deployment.inspectorUrl,
+        meta: {},
+        alias: deployment.alias,
       });
-    } else {
-      // lookup by ID
-      deployment = deployments.get(id);
-    }
-    if (!deployment) {
-      res.statusCode = 404;
-      return res.json({
-        error: { code: 'not_found', message: 'Deployment not found', id },
-      });
-    }
-    res.json({
-      uid: deployment.id,
-      url: deployment.url,
-      name: '',
-      type: 'LAMBDAS',
-      state: 'READY',
-      version: deployment.version,
-      created: deployment.createdAt,
-      ready: deployment.ready,
-      buildingAt: deployment.buildingAt,
-      creator: {
-        uid: deployment.creator?.uid,
-        username: deployment.creator?.username,
-      },
-      target: deployment.target,
-      ownerId: undefined, // ?
-      projectId: undefined, // ?
-      inspectorUrl: deployment.inspectorUrl,
-      meta: {},
-      alias: deployment.alias,
     });
-  });
+  }
 
-  // v10 deployment builds endpoint
-  client.scenario.get('/v10/deployments/:id/builds', (req, res) => {
-    const { id } = req.params;
-    const deployment = deploymentsV10.get(id);
-    if (!deployment) {
-      res.statusCode = 404;
-      return res.json({ error: { code: 'not_found' } });
-    }
-    const builds = deploymentBuildsV10.get(deployment);
-    res.json({ builds });
-  });
+  // v13 deployment builds endpoint
+  if (apiVersion === 'v13') {
+    client.scenario.get('/v13/deployments/:id/builds', (req, res) => {
+      const { id } = req.params;
+      const deployment = deployments[apiVersion].get(id);
+      if (!deployment) {
+        res.statusCode = 404;
+        return res.json({ error: { code: 'not_found' } });
+      }
+      const builds = deploymentBuilds[apiVersion].get(deployment);
+      res.json({ builds });
+    });
+  }
 
   // v5 deployment builds endpoint
   client.scenario.get('/:version/deployments/:id/builds', (req, res) => {
     const { id } = req.params;
-    const deployment = deployments.get(id);
+    const deployment = deployments[apiVersion].get(id);
     if (!deployment) {
       res.statusCode = 404;
       return res.json({ error: { code: 'not_found' } });
     }
-    const builds = deploymentBuilds.get(deployment);
+    const builds = deploymentBuilds[apiVersion].get(deployment);
     res.json({ builds });
   });
 
   function handleGetDeployments(req: Request, res: Response) {
-    const currentDeployments = Array.from(deployments.values()).sort(
-      (a: Deployment, b: Deployment) => {
-        // sort in reverse chronological order
-        return b.createdAt - a.createdAt;
-      }
-    );
+    const currentDeployments = Array.from(
+      deployments[apiVersion].values()
+    ).sort((a: Deployment, b: Deployment) => {
+      // sort in reverse chronological order
+      return (b?.createdAt || 0) - (a?.createdAt || 0);
+    });
 
     res.json({
       pagination: {

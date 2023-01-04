@@ -124,6 +124,7 @@ export const defaultProject = {
     {
       alias: ['foobar.com'],
       aliasAssigned: 1571239348998,
+      buildingAt: 1571239348998,
       createdAt: 1571239348998,
       createdIn: 'sfo1',
       deploymentHostname: 'a-project-name-rjtr4pz3f',

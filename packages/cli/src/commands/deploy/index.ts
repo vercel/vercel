@@ -633,7 +633,7 @@ export default async (client: Client): Promise<number> => {
       client,
       contextName,
       deployment.id,
-      'v10'
+      'v13'
     );
 
     if (

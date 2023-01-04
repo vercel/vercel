@@ -1,6 +1,6 @@
 import type Client from '../client';
 import toHost from '../to-host';
-import { Deployment, DeploymentV5, DeploymentV10 } from '../../types';
+import { Deployment, DeploymentV5, DeploymentV13 } from '../../types';
 import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
@@ -9,7 +9,7 @@ import {
 } from '../errors-ts';
 import mapCertError from '../certs/map-cert-error';
 
-type APIVersion = 'v5' | 'v10';
+type APIVersion = 'v5' | 'v13';
 
 export type GetDeploymentByIdOrHostReturnType =
   | DeploymentNotFound
@@ -17,6 +17,14 @@ export type GetDeploymentByIdOrHostReturnType =
   | InvalidDeploymentId
   | ReturnType<typeof mapCertError>;
 
+/**
+ * Retrieves a deployment by id or host. If host is a URL, the hostname is
+ * extracted from the URL.
+ * @param client - The Vercel client.
+ * @param contextName - The name of the scope/team.
+ * @param host - The deployment id or hostname.
+ * @param apiVersion - Must be 'v5' or 'v13'.
+ */
 export default async function getDeploymentByIdOrHost(
   client: Client,
   contextName: string,
@@ -27,8 +35,8 @@ export default async function getDeploymentByIdOrHost(
   client: Client,
   contextName: string,
   idOrHost: string,
-  apiVersion: 'v10'
-): Promise<DeploymentV10 | GetDeploymentByIdOrHostReturnType>;
+  apiVersion: 'v13'
+): Promise<DeploymentV13 | GetDeploymentByIdOrHostReturnType>;
 export default async function getDeploymentByIdOrHost(
   client: Client,
   contextName: string,
@@ -36,13 +44,19 @@ export default async function getDeploymentByIdOrHost(
   apiVersion: APIVersion
 ): Promise<Deployment | GetDeploymentByIdOrHostReturnType> {
   try {
+    console.log({
+      apiVersion,
+      idOrHost,
+    });
+
+    const isHost = idOrHost.indexOf('.') !== -1;
+    if (isHost) {
+      idOrHost = toHost(idOrHost);
+    }
+
     const { deployment } =
-      idOrHost.indexOf('.') !== -1
-        ? await getDeploymentByHost(
-            client,
-            toHost(idOrHost) as string,
-            apiVersion
-          )
+      apiVersion === 'v5' && isHost
+        ? await getDeploymentByHost(client, idOrHost, apiVersion)
         : await getDeploymentById(client, idOrHost, apiVersion);
     return deployment;
   } catch (err: unknown) {
@@ -67,14 +81,24 @@ export default async function getDeploymentByIdOrHost(
   }
 }
 
+/**
+ * Fetches a deployment by id.
+ * @param client - The Vercel client.
+ * @param id - When `apiVersion` is 'v5', `id` must be a deployment id. When
+ * `apiVersion` is 'v13', `id` can be either a deployment id or a hostname.
+ * @param apiVersion - Must be 'v5' or 'v13'.
+ */
 async function getDeploymentById(
   client: Client,
   id: string,
   apiVersion: APIVersion
 ) {
+  console.log(`/${apiVersion}/deployments/${encodeURIComponent(id)}`);
   const deployment = await client.fetch<Deployment>(
-    `/${apiVersion}/now/deployments/${encodeURIComponent(id)}`
+    `/${apiVersion}/deployments/${encodeURIComponent(id)}`
   );
+  console.log('^'.repeat(100));
+  console.log(deployment);
   return { deployment };
 }
 
@@ -82,6 +106,13 @@ type Response = {
   id: string;
 };
 
+/**
+ * When `apiVersion` is 'v5', we need to call a different endpoint to resolve
+ * the host to the deployment id, then return fetch the deployment by id.
+ * @param client - The Vercel client.
+ * @param host - The deployment hostname.
+ * @param apiVersion - Must be 'v5' or 'v13'.
+ */
 async function getDeploymentByHost(
   client: Client,
   host: string,

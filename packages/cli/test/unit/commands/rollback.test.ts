@@ -5,7 +5,7 @@ import { Request, Response } from 'express';
 import rollback from '../../../src/commands/rollback';
 import { RollbackJobStatus, RollbackTarget } from '../../../src/types';
 import { setupFixture } from '../../helpers/setup-fixture';
-import { useDeploymentV10 } from '../../mocks/deployment';
+import { useDeploymentV13 } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import sleep from '../../../src/util/sleep';
@@ -281,7 +281,7 @@ describe('rollback', () => {
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
     await expect(client.stderr).toOutput(
-      'Error: Deployment belong to a different team'
+      'Error: Deployment belongs to a different team'
     );
 
     await expect(exitCodePromise).resolves.toEqual(1);
@@ -316,8 +316,8 @@ function initRollbackTest({
     name: 'vercel-rollback',
   });
 
-  const currentDeployment = useDeploymentV10({ creator: user });
-  const previousDeployment = useDeploymentV10({ creator: user });
+  const currentDeployment = useDeploymentV13({ creator: user });
+  const previousDeployment = useDeploymentV13({ creator: user });
   let lastRollbackTarget: RollbackTarget | null = null;
 
   client.scenario.post(
@@ -362,21 +362,8 @@ function initRollbackTest({
     res.json(data);
   });
 
-  // get deployment id by url
-  client.scenario.get(`/:version/now/deployments/get`, (req, res) => {
-    const { url } = req.query;
-    if (url === previousDeployment.url) {
-      res.json({ id: previousDeployment.id });
-    } else {
-      res.statusCode = 404;
-      res.json({
-        error: { code: 'not_found', message: 'Deployment not found' },
-      });
-    }
-  });
-
   // get deployment by id
-  client.scenario.get(`/:version/now/deployments/:id`, (req, res) => {
+  client.scenario.get(`/:version/deployments/:id`, (req, res) => {
     const { id } = req.params;
     if (id === previousDeployment.id) {
       res.json(previousDeployment);

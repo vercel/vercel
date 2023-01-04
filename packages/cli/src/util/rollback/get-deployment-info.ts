@@ -1,5 +1,5 @@
 import type Client from '../client';
-import type { DeploymentV10 } from '../../types';
+import type { DeploymentV13 } from '../../types';
 import getDeploymentByIdOrHost from '../deploy/get-deployment-by-id-or-host';
 import type { GetDeploymentByIdOrHostReturnType } from '../deploy/get-deployment-by-id-or-host';
 import handleCertError from '../certs/handle-cert-error';
@@ -15,11 +15,11 @@ export default async function getDeploymentInfo(
   client: Client,
   contextName: string,
   deployId: string
-): Promise<DeploymentV10> {
-  const deployment: DeploymentV10 | GetDeploymentByIdOrHostReturnType | 1 =
-    handleCertError<DeploymentV10 | GetDeploymentByIdOrHostReturnType>(
+): Promise<DeploymentV13> {
+  const deployment: DeploymentV13 | GetDeploymentByIdOrHostReturnType | 1 =
+    handleCertError<DeploymentV13 | GetDeploymentByIdOrHostReturnType>(
       client.output,
-      await getDeploymentByIdOrHost(client, contextName, deployId, 'v10')
+      await getDeploymentByIdOrHost(client, contextName, deployId, 'v13')
     );
 
   if (deployment === 1) {

@@ -28,6 +28,7 @@ export async function toOutput(
 
     function onData(data: string) {
       output += data;
+      console.log(data);
       if (output.includes(test)) {
         cleanup();
         resolve({

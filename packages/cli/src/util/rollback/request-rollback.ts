@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../client';
-import type { DeploymentV10, Project, Team } from '../../types';
+import type { DeploymentV13, Project, Team } from '../../types';
 import { getCommandName } from '../pkg-name';
 import getDeploymentInfo from './get-deployment-info';
 import getScope from '../get-scope';
@@ -39,7 +39,7 @@ export default async function requestRollback({
     return 1;
   }
 
-  let deployment: DeploymentV10 | undefined;
+  let deployment: DeploymentV13 | undefined;
   let team: Team | undefined;
 
   try {
@@ -80,7 +80,7 @@ export default async function requestRollback({
           ? `Deployment doesn't belong to current team ${chalk.bold(
               contextName
             )}`
-          : `Deployment belong to a different team`
+          : `Deployment belongs to a different team`
       );
       output.error(
         `Use ${chalk.bold('vc switch')} to change your current team`
