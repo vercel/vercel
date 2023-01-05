@@ -1,5 +1,5 @@
 import type { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
-import { PackageJson } from '../../build-utils/dist';
+import { spawnSync } from 'child_process';
 import { DetectorFilesystem } from './detectors/filesystem';
 
 interface BaseFramework {
@@ -214,10 +214,14 @@ export async function detectFrameworkVersion(
   return;
 }
 
-function lookupInstalledVersion(packageName: string) {
+function lookupInstalledVersion(packageName: string): string | undefined {
   try {
-    const pkgJson = require(`${packageName}/package.json`) as PackageJson;
-    return pkgJson.version;
+    // we can't use "require(`${packageName}/package.json`)" here because
+    // ncc bundling will make it look in the wrong place
+    const script = `eval('require')('${packageName}/package.json').version`;
+    return spawnSync(process.execPath, ['-p', script], {
+      encoding: 'utf-8',
+    }).stdout.trim();
   } catch (error) {
     console.debug(
       `Error looking up version of installed package "${packageName}": ${error}`
