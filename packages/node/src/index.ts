@@ -535,15 +535,17 @@ export const startDevServer: StartDevServer = async opts => {
   const esmLoader = join(tsNodePath, '..', '..', 'esm.mjs');
   const cjsLoader = join(tsNodePath, '..', '..', 'register');
   const isTypescript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
+  const maybeTranspile = isTypescript || !['.cjs', '.mjs'].includes(ext);
   const isEsm =
     ext === '.mjs' ||
     ext === '.mts' ||
     (pkg.type === 'module' && ['.js', '.ts', '.tsx'].includes(ext));
 
   const devServerPath = join(__dirname, 'dev-server.js');
+  let nodeOptions = process.env.NODE_OPTIONS;
   let tsConfig: any = {};
 
-  if (isTypescript || !isEsm) {
+  if (maybeTranspile) {
     const resolveTypescript = (p: string): string => {
       try {
         return require_.resolve('typescript', {
@@ -593,15 +595,19 @@ export const startDevServer: StartDevServer = async opts => {
     // In prod, we emit outputs to the filesystem.
     // In dev, we don't emit because we use ts-node.
     tsConfig.compilerOptions.noEmit = true;
-  }
 
-  let nodeOptions = process.env.NODE_OPTIONS;
-
-  if (isTypescript) {
-    if (isEsm) {
-      nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
+    if (isTypescript) {
+      if (isEsm) {
+        nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
+      } else {
+        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+      }
     } else {
-      nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+      if (isEsm) {
+        // no transform needed because Node.js supports ESM natively
+      } else {
+        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+      }
     }
   }
 
