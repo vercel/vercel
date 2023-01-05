@@ -153,7 +153,7 @@ export const build: BuildV2 = async ({
     redirects: vercelConfig?.redirects,
   });
 
-  return {
+  const result = {
     output: {
       ...(await createStaticOutput({
         staticDir: join(entrypointFsDirname, 'public'),
@@ -174,4 +174,8 @@ export const build: BuildV2 = async ({
     },
     routes: routes || undefined,
   };
+
+  console.log(result);
+
+  return result;
 };
