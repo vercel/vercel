@@ -115,7 +115,9 @@ export const build: BuildV2 = async ({
     });
     const reduxPath = join(gatsbyPkgPath, '../dist/redux');
     console.log({ reduxPath });
-    const { pages } = require(reduxPath).store.getState();
+    const state = require(reduxPath).store.getState();
+    console.log('state', state);
+    const pages = state.pages;
     console.log('pages', pages);
     process.chdir(curDir);
     return pages;
