@@ -29,9 +29,12 @@ export const frameworks = [
     envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
-      every: [
+      some: [
         {
-          path: 'blitz.config.(js|ts)',
+          path: 'blitz.config.js',
+        },
+        {
+          path: 'blitz.config.ts',
         },
       ],
     },
@@ -1761,7 +1764,7 @@ export const frameworks = [
   {
     name: 'VitePress',
     slug: 'vitepress',
-    demo: 'https://vitepress-starter-template.vercel.app/',
+    demo: 'https://vitepress-starter-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/vite.svg',
     tagline: "VitePress is VuePress' little brother, built on top of Vite.",
     description: 'VuePress on top of Vite',
