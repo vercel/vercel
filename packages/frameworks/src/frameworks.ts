@@ -30,11 +30,8 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
       some: [
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"blitz":\\s*".+?"[^}]*}',
-        },
+        // Intentionally does not detect a package name
+        // https://github.com/vercel/vercel/pull/8432
         {
           path: 'blitz.config.js',
         },
