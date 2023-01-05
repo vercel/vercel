@@ -15,17 +15,11 @@ import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
 import { Deployment, PaginationOptions } from '../../types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
-
-interface DeploymentV6
-  extends Pick<
-    Deployment,
-    'url' | 'target' | 'projectId' | 'ownerId' | 'meta' | 'inspectorUrl'
-  > {
-  createdAt: number;
-}
+import getScope from '../../util/get-scope';
+import getDeployment from '../../util/get-deployment';
 
 interface Deployments {
-  deployments: DeploymentV6[];
+  deployments: Deployment[];
   pagination: PaginationOptions;
 }
 
@@ -63,6 +57,8 @@ const help = () => {
 
 export default async function main(client: Client): Promise<number> {
   const { output } = client;
+  const scope = await getScope(client);
+  const { contextName } = scope;
 
   const argv = getArgs(client.argv.slice(2), {
     '--bad': String,
@@ -145,7 +141,9 @@ export default async function main(client: Client): Promise<number> {
   output.spinner('Retrieving deployments…');
 
   // `getDeployment` cannot be parallelized because it might prompt for login
-  const badDeployment = await getDeployment(client, bad).catch(err => err);
+  const badDeployment = await getDeployment(client, contextName, bad).catch(
+    err => err
+  );
 
   if (badDeployment) {
     if (badDeployment instanceof Error) {
@@ -162,7 +160,9 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // `getDeployment` cannot be parallelized because it might prompt for login
-  const goodDeployment = await getDeployment(client, good).catch(err => err);
+  const goodDeployment = await getDeployment(client, contextName, good).catch(
+    err => err
+  );
 
   if (goodDeployment) {
     if (goodDeployment instanceof Error) {
@@ -368,28 +368,20 @@ export default async function main(client: Client): Promise<number> {
   return 0;
 }
 
-function getDeployment(
-  client: Client,
-  hostname: string
-): Promise<DeploymentV6> {
-  const query = new URLSearchParams();
-  query.set('url', hostname);
-  query.set('resolve', '1');
-  query.set('noState', '1');
-  return client.fetch<DeploymentV6>(`/v10/deployments/get?${query}`);
-}
-
-function getCommit(deployment: DeploymentV6) {
+function getCommit(deployment: Deployment) {
   const sha =
     deployment.meta?.githubCommitSha ||
     deployment.meta?.gitlabCommitSha ||
-    deployment.meta?.bitbucketCommitSha;
+    (deployment.meta?.bitbucketCommitSha as string);
   if (!sha) return null;
   const message =
     deployment.meta?.githubCommitMessage ||
     deployment.meta?.gitlabCommitMessage ||
     deployment.meta?.bitbucketCommitMessage;
-  return { sha, message };
+  return {
+    sha: sha as string,
+    message: message as string,
+  };
 }
 
 async function prompt(client: Client, message: string): Promise<string> {

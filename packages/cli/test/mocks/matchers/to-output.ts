@@ -14,6 +14,8 @@ export async function toOutput(
   test: string,
   timeout = 3000
 ) {
+  console.log('toOutput() called!');
+
   const { isNot } = this;
   const matcherName = 'toOutput';
   const matcherHintOptions: MatcherHintOptions = {
@@ -28,7 +30,6 @@ export async function toOutput(
 
     function onData(data: string) {
       output += data;
-      console.log(data);
       if (output.includes(test)) {
         cleanup();
         resolve({

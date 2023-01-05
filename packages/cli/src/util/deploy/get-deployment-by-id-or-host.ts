@@ -1,6 +1,6 @@
 import type Client from '../client';
 import toHost from '../to-host';
-import { Deployment, DeploymentV5, DeploymentV13 } from '../../types';
+import { Deployment } from '../../types';
 import {
   DeploymentNotFound,
   DeploymentPermissionDenied,
@@ -44,12 +44,7 @@ export default async function getDeploymentByIdOrHost(
   apiVersion: APIVersion
 ): Promise<Deployment | GetDeploymentByIdOrHostReturnType> {
   try {
-    console.log({
-      apiVersion,
-      idOrHost,
-    });
-
-    const isHost = idOrHost.indexOf('.') !== -1;
+    const isHost = idOrHost.includes('.');
     if (isHost) {
       idOrHost = toHost(idOrHost);
     }
@@ -93,12 +88,9 @@ async function getDeploymentById(
   id: string,
   apiVersion: APIVersion
 ) {
-  console.log(`/${apiVersion}/deployments/${encodeURIComponent(id)}`);
   const deployment = await client.fetch<Deployment>(
     `/${apiVersion}/deployments/${encodeURIComponent(id)}`
   );
-  console.log('^'.repeat(100));
-  console.log(deployment);
   return { deployment };
 }
 

@@ -7,7 +7,7 @@ import {
 } from '../../src/types';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
-import { Env } from '@vercel/build-utils/dist';
+import type { Env } from '@vercel/build-utils';
 
 const envs: ProjectEnvVariable[] = [
   {

@@ -5,7 +5,7 @@ import { Request, Response } from 'express';
 import rollback from '../../../src/commands/rollback';
 import { RollbackJobStatus, RollbackTarget } from '../../../src/types';
 import { setupFixture } from '../../helpers/setup-fixture';
-import { useDeploymentV13 } from '../../mocks/deployment';
+import { useDeployment } from '../../mocks/deployment';
 import { useTeams } from '../../mocks/team';
 import { useUser } from '../../mocks/user';
 import sleep from '../../../src/util/sleep';
@@ -316,8 +316,8 @@ function initRollbackTest({
     name: 'vercel-rollback',
   });
 
-  const currentDeployment = useDeploymentV13({ creator: user });
-  const previousDeployment = useDeploymentV13({ creator: user });
+  const currentDeployment = useDeployment({ creator: user });
+  const previousDeployment = useDeployment({ creator: user });
   let lastRollbackTarget: RollbackTarget | null = null;
 
   client.scenario.post(
@@ -351,7 +351,7 @@ function initRollbackTest({
 
   let counter = 0;
 
-  client.scenario.get(`/v9/projects/${project.id}`, (req, res) => {
+  client.scenario.get(`/:version/projects/${project.id}`, (req, res) => {
     const data = { ...project };
     if (req.query?.rollbackInfo === 'true') {
       if (lastRollbackTarget && counter++ > rollbackPollCount) {
@@ -360,19 +360,6 @@ function initRollbackTest({
       data.lastRollbackTarget = lastRollbackTarget;
     }
     res.json(data);
-  });
-
-  // get deployment by id
-  client.scenario.get(`/:version/deployments/:id`, (req, res) => {
-    const { id } = req.params;
-    if (id === previousDeployment.id) {
-      res.json(previousDeployment);
-    } else {
-      res.statusCode = 404;
-      res.json({
-        error: { code: 'not_found', message: 'Deployment not found' },
-      });
-    }
   });
 
   client.scenario.get(

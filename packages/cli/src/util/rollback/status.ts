@@ -8,7 +8,7 @@ import type {
 } from '../../types';
 import elapsed from '../output/elapsed';
 import formatDate from '../format-date';
-import getDeploymentInfo from './get-deployment-info';
+import getDeployment from '../get-deployment';
 import getScope from '../get-scope';
 import ms from 'ms';
 import renderAliasStatus from './render-alias-status';
@@ -168,8 +168,7 @@ async function renderJobFailed({
 
   try {
     const name = (
-      deployment ||
-      (await getDeploymentInfo(client, contextName, toDeploymentId))
+      deployment || (await getDeployment(client, contextName, toDeploymentId))
     )?.url;
     output.error(
       `Failed to remap all aliases to the requested deployment ${name} (${toDeploymentId})`
@@ -231,11 +230,7 @@ async function renderJobSucceeded({
   // attempt to get the new deployment url
   let deploymentInfo = '';
   try {
-    const deployment = await getDeploymentInfo(
-      client,
-      contextName,
-      toDeploymentId
-    );
+    const deployment = await getDeployment(client, contextName, toDeploymentId);
     deploymentInfo = `${chalk.bold(deployment.url)} (${toDeploymentId})`;
   } catch (err: any) {
     output.debug(

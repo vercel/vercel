@@ -1,7 +1,6 @@
 import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
 import type { Route } from '@vercel/routing-utils';
-import type { Dictionary } from '@vercel/client';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
@@ -119,57 +118,6 @@ export type Cert = {
   expiration: string;
 };
 
-// Note: the following v5 type definition is likely not 100% accurate
-export type DeploymentV5 = {
-  alias?: string[];
-  aliasAssigned?: null | number | boolean;
-  aliasError?: string | null;
-  build?: { env?: Dictionary<string> };
-  buildingAt?: number;
-  created?: number;
-  createdAt?: number;
-  createdIn?: string;
-  creator: { uid: string; username?: string };
-  env: {
-    [key: string]: string | undefined;
-  };
-  id: string;
-  inspectorUrl: string;
-  limits?: unknown;
-  meta: Dictionary<string | number | boolean>;
-  metadata?: {
-    [key: string]: string | undefined;
-  };
-  name: string;
-  ownerId: string;
-  plan?: 'enterprise' | 'hobby' | 'oss' | 'pro';
-  projectId?: string;
-  public?: boolean;
-  ready?: number;
-  readyState:
-    | 'BUILDING'
-    | 'ERROR'
-    | 'INITIALIZING'
-    | 'QUEUED'
-    | 'READY'
-    | 'CANCELED';
-  regions: string[];
-  routes?: RouteOrMiddleware[] | null;
-  scale?: unknown;
-  state:
-    | 'BUILDING'
-    | 'ERROR'
-    | 'INITIALIZING'
-    | 'QUEUED'
-    | 'READY'
-    | 'CANCELED';
-  target?: 'staging' | 'production' | null;
-  type: 'LAMBDAS';
-  uid: string;
-  url: string;
-  version: 2;
-};
-
 type RouteOrMiddleware =
   | Route
   | {
@@ -178,7 +126,7 @@ type RouteOrMiddleware =
       middleware: 0;
     };
 
-export type DeploymentV13 = {
+export type Deployment = {
   alias?: string[];
   aliasAssigned?: boolean | null | number;
   aliasError?: null | { code: string; message: string };
@@ -270,8 +218,6 @@ export type DeploymentV13 = {
   userAliases?: string[];
   version: 2;
 };
-
-export type Deployment = DeploymentV5 | DeploymentV13;
 
 export type Alias = {
   uid: string;

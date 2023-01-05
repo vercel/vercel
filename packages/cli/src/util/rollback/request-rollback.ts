@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import type Client from '../client';
-import type { DeploymentV13, Project, Team } from '../../types';
+import type { Deployment, Project, Team } from '../../types';
 import { getCommandName } from '../pkg-name';
-import getDeploymentInfo from './get-deployment-info';
+import getDeployment from '../get-deployment';
 import getScope from '../get-scope';
 import getTeamById from '../teams/get-team-by-id';
 import { isValidName } from '../is-valid-name';
@@ -39,7 +39,7 @@ export default async function requestRollback({
     return 1;
   }
 
-  let deployment: DeploymentV13 | undefined;
+  let deployment: Deployment;
   let team: Team | undefined;
 
   try {
@@ -49,7 +49,7 @@ export default async function requestRollback({
 
     const [teamResult, deploymentResult] = await Promise.allSettled([
       config.currentTeam ? getTeamById(client, config.currentTeam) : undefined,
-      getDeploymentInfo(client, contextName, deployId),
+      getDeployment(client, contextName, deployId),
     ]);
 
     if (teamResult.status === 'rejected') {
