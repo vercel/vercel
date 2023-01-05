@@ -533,7 +533,7 @@ export const startDevServer: StartDevServer = async opts => {
   const pkg = pathToPkg ? require_(pathToPkg) : {};
   const tsNodePath = require_.resolve('ts-node');
   const esmLoader = join(tsNodePath, '..', '..', 'esm.mjs');
-  const cjsLoader = join(tsNodePath, '..', '..', 'register');
+  const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
   const isTypescript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
   const maybeTranspile = isTypescript || !['.cjs', '.mjs'].includes(ext);
   const isEsm =
