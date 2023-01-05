@@ -63,8 +63,8 @@ import { toEnumerableError } from '../util/error';
 import { validateConfig } from '../util/validate-config';
 
 import { setMonorepoDefaultSettings } from '../util/build/monorepo';
-import frameworks, { Framework } from '@vercel/frameworks';
-import { Output } from '../util/output/create-output';
+import frameworks from '@vercel/frameworks';
+import { detectFrameworkVersion } from '@vercel/fs-detectors';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -577,23 +577,6 @@ async function doBuild(
     }
   }
 
-  // find framework (mostly version) from the relevant build result
-  const detectedFramework = await detectFrameworkRecord({
-    fs: new LocalFileSystemDetector(cwd),
-    frameworkList: frameworks,
-  });
-  if (detectedFramework?.useRuntime) {
-    for (const [build, buildResult] of buildResults.entries()) {
-      if (
-        'framework' in buildResult &&
-        build.use === detectedFramework.useRuntime.use
-      ) {
-        framework = buildResult.framework;
-        break;
-      }
-    }
-  }
-
   const builderRoutes: MergeRoutesProps['builds'] = Array.from(
     buildResults.entries()
   )
@@ -622,9 +605,31 @@ async function doBuild(
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
 
-  if (!framework && detectedFramework) {
+  // find framework (mostly version) from the relevant build result
+  const detectedFramework = await detectFrameworkRecord({
+    fs: new LocalFileSystemDetector(cwd),
+    frameworkList: frameworks,
+  });
+  if (detectedFramework?.useRuntime) {
+    for (const [build, buildResult] of buildResults.entries()) {
+      if (
+        'framework' in buildResult &&
+        build.use === detectedFramework.useRuntime.use
+      ) {
+        framework = buildResult.framework;
+        break;
+      }
+    }
+  }
+
+  if (!framework && detectedFramework?.detectedVersion) {
     // if no `buildResult` identified a framework version, try to determine it here
-    framework = await detectFrameworkVersion(detectedFramework, output);
+    const frameworkVersion = await detectFrameworkVersion(detectedFramework);
+    if (frameworkVersion) {
+      framework = {
+        version: frameworkVersion,
+      };
+    }
   }
 
   // Write out the final `config.json` file based on the
@@ -648,33 +653,6 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
-}
-
-export async function detectFrameworkVersion(
-  frameworkRecord: Framework,
-  output: Output
-) {
-  if (!frameworkRecord?.versionDependencies?.length) {
-    return;
-  }
-
-  for (let packageName of frameworkRecord.versionDependencies) {
-    const version = lookupInstalledVersion(packageName, output);
-    if (version) {
-      return {
-        version,
-      };
-    }
-  }
-}
-
-function lookupInstalledVersion(packageName: string, output: Output) {
-  try {
-    const pkgJson = require(`${packageName}/package.json`) as PackageJson;
-    return pkgJson.version;
-  } catch (error) {
-    output.debug(`Error during lookupInstalledVersion: ${error}`);
-  }
 }
 
 function expandBuild(files: string[], build: Builder): Builder[] {

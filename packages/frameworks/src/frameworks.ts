@@ -51,7 +51,6 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    versionDependencies: ['blitz'],
   },
   {
     name: 'Next.js',
@@ -72,9 +71,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"next":\\s*".+?"[^}]*}',
+          matchPackage: 'next',
         },
       ],
     },
@@ -102,7 +99,6 @@ export const frameworks = [
     ],
     getOutputDirName: async () => 'public',
     cachePattern: '.next/cache/**',
-    versionDependencies: ['next'],
   },
   {
     name: 'Gatsby.js',
@@ -118,9 +114,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"gatsby":\\s*".+?"[^}]*}',
+          matchPackage: 'gatsby',
         },
       ],
     },
@@ -190,7 +184,6 @@ export const frameworks = [
       }
     },
     cachePattern: '{.cache,public}/**',
-    versionDependencies: ['gatsby'],
   },
   {
     name: 'Remix',
@@ -228,7 +221,6 @@ export const frameworks = [
     },
     dependency: 'remix',
     getOutputDirName: async () => 'public',
-    versionDependencies: ['remix'],
   },
   {
     name: 'Astro',
@@ -245,9 +237,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"astro":\\s*".+?"[^}]*}',
+          matchPackage: 'astro',
         },
       ],
     },
@@ -276,7 +266,6 @@ export const frameworks = [
         continue: true,
       },
     ],
-    versionDependencies: ['astro'],
   },
   {
     name: 'Hexo',
@@ -290,9 +279,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"hexo":\\s*".+?"[^}]*}',
+          matchPackage: 'hexo',
         },
       ],
     },
@@ -314,7 +301,6 @@ export const frameworks = [
     },
     dependency: 'hexo',
     getOutputDirName: async () => 'public',
-    versionDependencies: ['hexo'],
   },
   {
     name: 'Eleventy',
@@ -328,9 +314,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@11ty\\/eleventy":\\s*".+?"[^}]*}',
+          matchPackage: '@11ty/eleventy',
         },
       ],
     },
@@ -353,7 +337,6 @@ export const frameworks = [
     dependency: '@11ty/eleventy',
     getOutputDirName: async () => '_site',
     cachePattern: '.cache/**',
-    versionDependencies: ['@11ty/eleventy'],
   },
   {
     name: 'Docusaurus 2',
@@ -368,9 +351,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@docusaurus\\/core":\\s*".+?"[^}]*}',
+          matchPackage: '@docusaurus/core',
         },
       ],
     },
@@ -442,7 +423,6 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
-    versionDependencies: ['@docusaurus/core'],
   },
   {
     name: 'Docusaurus 1',
@@ -457,9 +437,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"docusaurus":\\s*".+?"[^}]*}',
+          matchPackage: 'docusaurus',
         },
       ],
     },
@@ -495,7 +473,6 @@ export const frameworks = [
       }
       return base;
     },
-    versionDependencies: ['docusaurus'],
   },
   {
     name: 'Preact',
@@ -509,9 +486,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"preact-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'preact-cli',
         },
       ],
     },
@@ -542,7 +517,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['preact'],
   },
   {
     name: 'SolidStart',
@@ -556,14 +530,10 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-js":\\s*".+?"[^}]*}',
+          matchPackage: 'solid-js',
         },
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-start":\\s*".+?"[^}]*}',
+          matchPackage: 'solid-start',
         },
       ],
     },
@@ -583,7 +553,6 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => '.output',
-    versionDependencies: ['solid-js', 'solid-start'],
   },
   {
     name: 'Dojo',
@@ -597,9 +566,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@dojo\\/framework":\\s*".+?"[^}]*}',
+          matchPackage: '@dojo/framework',
         },
         {
           path: '.dojorc',
@@ -646,7 +613,6 @@ export const frameworks = [
         continue: true,
       },
     ],
-    versionDependencies: ['@dojo/framework'],
   },
   {
     name: 'Ember.js',
@@ -660,9 +626,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"ember-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'ember-cli',
         },
       ],
     },
@@ -693,7 +657,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['ember-cli', 'ember-source'],
   },
   {
     name: 'Vue.js',
@@ -708,9 +671,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@vue\\/cli-service":\\s*".+?"[^}]*}',
+          matchPackage: '@vue/cli-service',
         },
       ],
     },
@@ -751,7 +712,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['@vue/cli-service'],
   },
   {
     name: 'Scully',
@@ -764,9 +724,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@scullyio\\/init":\\s*".+?"[^}]*}',
+          matchPackage: '@scullyio/init',
         },
       ],
     },
@@ -788,7 +746,6 @@ export const frameworks = [
     },
     dependency: '@scullyio/init',
     getOutputDirName: async () => 'dist/static',
-    versionDependencies: ['@scullyio/init'],
   },
   {
     name: 'Ionic Angular',
@@ -802,9 +759,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@ionic\\/angular":\\s*".+?"[^}]*}',
+          matchPackage: '@ionic/angular',
         },
       ],
     },
@@ -834,7 +789,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['@ionic/angular'],
   },
   {
     name: 'Angular',
@@ -848,9 +802,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@angular\\/cli":\\s*".+?"[^}]*}',
+          matchPackage: '@angular/cli',
         },
       ],
     },
@@ -895,7 +847,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['@angular/cli'],
   },
   {
     name: 'Polymer',
@@ -909,9 +860,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"polymer-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'polymer-cli',
         },
       ],
     },
@@ -953,7 +902,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['polymer-cli'],
   },
   {
     name: 'Svelte',
@@ -968,14 +916,10 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"svelte":\\s*".+?"[^}]*}',
+          matchPackage: 'svelte',
         },
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sirv-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'sirv-cli',
         },
       ],
     },
@@ -1005,7 +949,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['svelte'],
   },
   {
     name: 'SvelteKit',
@@ -1022,9 +965,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@sveltejs\\/kit":\\s*".+?"[^}]*}',
+          matchPackage: '@sveltejs/kit',
         },
       ],
     },
@@ -1045,7 +986,6 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    versionDependencies: ['svelte'],
   },
   {
     name: 'Ionic React',
@@ -1059,9 +999,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@ionic\\/react":\\s*".+?"[^}]*}',
+          matchPackage: '@ionic/react',
         },
       ],
     },
@@ -1107,7 +1045,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['@ionic/react'],
   },
   {
     name: 'Create React App',
@@ -1122,14 +1059,10 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"react-scripts":\\s*".+?"[^}]*}',
+          matchPackage: 'react-scripts',
         },
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"react-dev-utils":\\s*".+?"[^}]*}',
+          matchPackage: 'react-dev-utils',
         },
       ],
     },
@@ -1175,7 +1108,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['react-scripts'],
   },
   {
     name: 'Gridsome',
@@ -1189,9 +1121,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"gridsome":\\s*".+?"[^}]*}',
+          matchPackage: 'gridsome',
         },
       ],
     },
@@ -1213,7 +1143,6 @@ export const frameworks = [
     },
     dependency: 'gridsome',
     getOutputDirName: async () => 'dist',
-    versionDependencies: ['@gridsome/cli'],
   },
   {
     name: 'UmiJS',
@@ -1227,9 +1156,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"umi":\\s*".+?"[^}]*}',
+          matchPackage: 'umi',
         },
       ],
     },
@@ -1260,7 +1187,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['umi'],
   },
   {
     name: 'Sapper',
@@ -1274,9 +1200,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sapper":\\s*".+?"[^}]*}',
+          matchPackage: 'sapper',
         },
       ],
     },
@@ -1298,7 +1222,6 @@ export const frameworks = [
     },
     dependency: 'sapper',
     getOutputDirName: async () => '__sapper__/export',
-    versionDependencies: ['sapper'],
   },
   {
     name: 'Saber',
@@ -1312,9 +1235,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"saber":\\s*".+?"[^}]*}',
+          matchPackage: 'saber',
         },
       ],
     },
@@ -1350,7 +1271,6 @@ export const frameworks = [
         dest: '404.html',
       },
     ],
-    versionDependencies: ['saber'],
   },
   {
     name: 'Stencil',
@@ -1364,9 +1284,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@stencil\\/core":\\s*".+?"[^}]*}',
+          matchPackage: '@stencil/core',
         },
       ],
     },
@@ -1412,7 +1330,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-    versionDependencies: ['@stencil/core'],
   },
   {
     name: 'Nuxt.js',
@@ -1428,11 +1345,15 @@ export const frameworks = [
     sort: 2,
     envPrefix: 'NUXT_ENV_',
     detectors: {
-      every: [
+      some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"nuxt3?(-edge)?":\\s*".+?"[^}]*}',
+          matchPackage: 'nuxt',
+        },
+        {
+          matchPackage: 'nuxt3',
+        },
+        {
+          matchPackage: 'nuxt3-edge',
         },
       ],
     },
@@ -1473,7 +1394,6 @@ export const frameworks = [
         dest: '/200.html',
       },
     ],
-    versionDependencies: ['nuxt3', 'nuxt3-edge'],
   },
   {
     name: 'RedwoodJS',
@@ -1489,9 +1409,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@redwoodjs\\/core":\\s*".+?"[^}]*}',
+          matchPackage: '@redwoodjs/core',
         },
       ],
     },
@@ -1511,7 +1429,6 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    versionDependencies: ['@redwoodjs/core'],
   },
   {
     name: 'Hugo',
@@ -1640,7 +1557,6 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    versionDependencies: ['brunch'],
   },
   {
     name: 'Middleman',
@@ -1724,9 +1640,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"vite":\\s*".+?"[^}]*}',
+          matchPackage: 'vite',
         },
       ],
     },
@@ -1748,7 +1662,6 @@ export const frameworks = [
     },
     dependency: 'vite',
     getOutputDirName: async () => 'dist',
-    versionDependencies: ['vite'],
   },
   {
     name: 'VitePress',
@@ -1761,9 +1674,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"vitepress":\\s*".+?"[^}]*}',
+          matchPackage: 'vitepress',
         },
       ],
     },
@@ -1783,7 +1694,6 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => '.vitepress/dist',
-    versionDependencies: ['vitepress'],
   },
   {
     name: 'VuePress',
@@ -1796,9 +1706,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*vuepress:\\s*".+?"[^}]*}',
+          matchPackage: 'vuepress',
         },
       ],
     },
@@ -1818,7 +1726,6 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'src/.vuepress/dist',
-    versionDependencies: ['vuepress'],
   },
   {
     name: 'Parcel',
@@ -1832,9 +1739,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"parcel":\\s*".+?"[^}]*}',
+          matchPackage: 'parcel',
         },
       ],
     },
@@ -1866,7 +1771,6 @@ export const frameworks = [
         handle: 'filesystem',
       },
     ],
-    versionDependencies: ['parcel'],
   },
   {
     name: 'Sanity',
@@ -1960,7 +1864,6 @@ export const frameworks = [
     },
     dependency: '@shopify/hydrogen',
     getOutputDirName: async () => 'dist',
-    versionDependencies: ['@shopify/hydrogen'],
   },
   {
     name: 'Other',
