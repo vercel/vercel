@@ -14,6 +14,7 @@ import {
   isSymbolicLink,
   NodejsLambda,
   EdgeFunction,
+  Images,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -153,6 +154,23 @@ async function getNextConfig(workPath: string, entryPath: string) {
   }
 
   return null;
+}
+
+function getImagesConfig(
+  imagesManifest: NextImagesManifest | undefined
+): Images | undefined {
+  return imagesManifest?.images?.loader === 'default' &&
+    imagesManifest.images?.unoptimized !== true
+    ? {
+        domains: imagesManifest.images.domains,
+        sizes: imagesManifest.images.sizes,
+        remotePatterns: imagesManifest.images.remotePatterns,
+        minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
+        formats: imagesManifest.images.formats,
+        dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
+        contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
+      }
+    : undefined;
 }
 
 function normalizePage(page: string): string {
@@ -499,6 +517,7 @@ export type NextImagesManifest = {
     remotePatterns: RemotePattern[];
     minimumCacheTTL?: number;
     formats?: ImageFormat[];
+    unoptimized?: boolean;
     dangerouslyAllowSVG?: boolean;
     contentSecurityPolicy?: string;
   };
@@ -2244,6 +2263,7 @@ export {
   validateEntrypoint,
   normalizePackageJson,
   getNextConfig,
+  getImagesConfig,
   stringMap,
   normalizePage,
   isDynamicRoute,

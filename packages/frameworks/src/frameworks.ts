@@ -1707,7 +1707,7 @@ export const frameworks = [
   {
     name: 'VitePress',
     slug: 'vitepress',
-    demo: 'https://vitepress-starter-template.vercel.app/',
+    demo: 'https://vitepress-starter-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/vite.svg',
     tagline: "VitePress is VuePress' little brother, built on top of Vite.",
     description: 'VuePress on top of Vite',
@@ -1734,7 +1734,7 @@ export const frameworks = [
         value: 'docs/.vitepress/dist',
       },
     },
-    getOutputDirName: async () => '.vitepress/dist',
+    getOutputDirName: async () => 'docs/.vitepress/dist',
   },
   {
     name: 'VuePress',

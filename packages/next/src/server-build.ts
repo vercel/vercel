@@ -38,6 +38,7 @@ import {
   outputFunctionFileSizeInfo,
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
   normalizeIndexOutput,
+  getImagesConfig,
   getNextServerPath,
   getMiddlewareBundle,
   getFilesMapFromReasons,
@@ -1158,18 +1159,7 @@ export async function serverBuild({
 
   return {
     wildcard: wildcardConfig,
-    images:
-      imagesManifest?.images?.loader === 'default'
-        ? {
-            domains: imagesManifest.images.domains,
-            sizes: imagesManifest.images.sizes,
-            remotePatterns: imagesManifest.images.remotePatterns,
-            minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-            formats: imagesManifest.images.formats,
-            dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-            contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
-          }
-        : undefined,
+    images: getImagesConfig(imagesManifest),
     output: {
       ...publicDirectoryFiles,
       ...lambdas,
