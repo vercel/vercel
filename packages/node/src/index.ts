@@ -531,7 +531,9 @@ export const startDevServer: StartDevServer = async opts => {
     filename: 'package.json',
   });
   const pkg = pathToPkg ? require_(pathToPkg) : {};
-  const tsNodeLoader = join(require_.resolve('ts-node'), '..', '..', 'esm.mjs');
+  const tsNodePath = require_.resolve('ts-node');
+  const esmLoader = join(tsNodePath, '..', '..', 'esm.mjs');
+  const cjsLoader = join(tsNodePath, '..', '..', 'register');
   const isTypescript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
   const isEsm =
     ext === '.mjs' ||
@@ -605,7 +607,7 @@ export const startDevServer: StartDevServer = async opts => {
       TS_NODE_COMPILER_OPTIONS: tsConfig?.compilerOptions
         ? JSON.stringify(tsConfig.compilerOptions)
         : undefined,
-      NODE_OPTIONS: isEsm ? `--loader ${tsNodeLoader}` : undefined,
+      NODE_OPTIONS: isEsm ? `--loader ${esmLoader}` : `--require ${cjsLoader}`,
     }),
   });
 
