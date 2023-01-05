@@ -23,26 +23,25 @@ function sendToAnalytics(metric, options) {
     .slice(1)
     .join("-");
 
+  const chunkMapping = self.___chunkMapping ? (typeof self.___chunkMapping === "string" ? JSON.parse(self.___chunkMapping) : self.___chunkMapping) : {};
+
   // Verify page name is correct:
   const pageName =
-    "component---" + pageScript in (self.___chunkMapping ?? {})
+    "component---" + pageScript in chunkMapping
       ? pageScript
       : null;
 
-  if (!pageName) {
-    if (options.debug) {
-      onDebug(
-        `[gatsby-plugin-vercel]`,
-        "Unable to detect Page Name, skipping reporting."
-      );
-    }
-    return;
+  if (options.debug && !pageName) {
+    onDebug(
+      `[gatsby-plugin-vercel]`,
+      "Unable to detect Page Name, skipping reporting."
+    );
   }
-
+  
   const body = {
     dsn: options.analyticsId,
     id: metric.id,
-    page: pageName,
+    page: pageName ?? '',
     href: location.href,
     event_name: metric.name,
     value: metric.value.toString(),
