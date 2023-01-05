@@ -29,7 +29,7 @@ export const frameworks = [
     envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
-      every: [
+      some: [
         {
           path: 'package.json',
           matchContent:
@@ -206,7 +206,7 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/remix' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
-      every: [
+      some: [
         {
           path: 'package.json',
           matchContent:
@@ -1647,7 +1647,7 @@ export const frameworks = [
     description: 'A Brunch app, created with the Brunch CLI.',
     website: 'https://brunch.io/',
     detectors: {
-      every: [
+      some: [
         {
           path: 'package.json',
           matchContent:
