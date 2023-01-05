@@ -31,6 +31,11 @@ export const frameworks = [
     detectors: {
       every: [
         {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"blitz":\\s*".+?"[^}]*}',
+        },
+        {
           path: 'blitz.config.(js|ts)',
         },
       ],
@@ -202,6 +207,11 @@ export const frameworks = [
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
       every: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"remix":\\s*".+?"[^}]*}',
+        },
         {
           path: 'remix.config.js',
         },
@@ -498,7 +508,12 @@ export const frameworks = [
     description: 'A Preact app, created with the Preact CLI.',
     website: 'https://preactjs.com',
     detectors: {
-      every: [
+      some: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"preact":\\s*".+?"[^}]*}',
+        },
         {
           path: 'package.json',
           matchContent:
@@ -646,7 +661,12 @@ export const frameworks = [
     description: 'An Ember app, created with the Ember CLI.',
     website: 'https://emberjs.com/',
     detectors: {
-      every: [
+      some: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"ember-source":\\s*".+?"[^}]*}',
+        },
         {
           path: 'package.json',
           matchContent:
@@ -1629,6 +1649,11 @@ export const frameworks = [
     detectors: {
       every: [
         {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"brunch":\\s*".+?"[^}]*}',
+        },
+        {
           path: 'brunch-config.js',
         },
       ],
@@ -1939,6 +1964,11 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
     detectors: {
       some: [
+        {
+          path: 'package.json',
+          matchContent:
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@shopify/hydrogen":\\s*".+?"[^}]*}',
+        },
         {
           path: 'hydrogen.config.js',
         },
