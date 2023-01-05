@@ -18,7 +18,6 @@ describe('detectFrameworkRecord', () => {
       'package.json': JSON.stringify({
         dependencies: {
           next: '9.0.0',
-          gatsby: '4.18.0',
         },
       }),
     });
