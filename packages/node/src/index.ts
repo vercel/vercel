@@ -595,6 +595,16 @@ export const startDevServer: StartDevServer = async opts => {
     tsConfig.compilerOptions.noEmit = true;
   }
 
+  let nodeOptions = process.env.NODE_OPTIONS;
+
+  if (isTypescript) {
+    if (isEsm) {
+      nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
+    } else {
+      nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+    }
+  }
+
   const child = fork(devServerPath, [], {
     cwd: workPath,
     execArgv: [],
@@ -607,7 +617,7 @@ export const startDevServer: StartDevServer = async opts => {
       TS_NODE_COMPILER_OPTIONS: tsConfig?.compilerOptions
         ? JSON.stringify(tsConfig.compilerOptions)
         : undefined,
-      NODE_OPTIONS: isEsm ? `--loader ${esmLoader}` : `--require ${cjsLoader}`,
+      NODE_OPTIONS: nodeOptions,
     }),
   });
 
