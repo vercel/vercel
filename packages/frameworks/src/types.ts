@@ -197,8 +197,4 @@ export interface Framework {
    * @example "0.13.0"
    */
   defaultVersion?: string;
-  /**
-   * Installed packages from which to determine framework version.
-   */
-  versionDependencies?: string[];
 }
