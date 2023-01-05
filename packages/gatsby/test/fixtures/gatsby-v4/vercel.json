@@ -1,3 +1,8 @@
 {
-  "builds": [{ "src": "package.json", "use": "@lydiahallie/gatsby-vercel" }]
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "https://vercel-5myx39lrp.vercel.sh/tarballs/%40vercel/gatsby.tgz"
+    }
+  ]
 }

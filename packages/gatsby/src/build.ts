@@ -116,6 +116,7 @@ export const build: BuildV2 = async ({
     const reduxPath = join(gatsbyPkgPath, '../dist/redux');
     console.log({ reduxPath });
     const { pages } = require(reduxPath).store.getState();
+    console.log('pages', pages);
     process.chdir(curDir);
     return pages;
   }
@@ -140,6 +141,7 @@ export const build: BuildV2 = async ({
       dsgRoutes: [],
     }
   );
+  console.log('ssrRoutes', ssrRoutes, 'dsgRoutes', dsgRoutes);
   const functions = await glob('**', join(entrypointFsDirname, 'src', 'api'));
 
   const { routes } = getTransformedRoutes({
@@ -175,7 +177,7 @@ export const build: BuildV2 = async ({
     routes: routes || undefined,
   };
 
-  console.log(result);
+  // console.log(result);
 
   return result;
 };
