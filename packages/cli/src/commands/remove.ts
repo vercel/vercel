@@ -142,7 +142,7 @@ export default async function main(client: Client) {
           if (!contextName) {
             throw new Error('Context name is not defined');
           }
-          return getDeployment(client, contextName, idOrHost);
+          return getDeployment(client, contextName, idOrHost).catch(err => err);
         })
       ),
       Promise.all(
