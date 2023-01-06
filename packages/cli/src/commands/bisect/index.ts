@@ -279,7 +279,7 @@ export default async function main(client: Client): Promise<number> {
     const commit = getCommit(deployment);
     if (commit) {
       const shortSha = commit.sha.substring(0, 7);
-      const firstLine = commit.message.split('\n')[0];
+      const firstLine = commit.message?.split('\n')[0];
       output.log(`${chalk.bold('Commit:')} [${shortSha}] ${firstLine}`);
     }
 
@@ -356,7 +356,7 @@ export default async function main(client: Client): Promise<number> {
   const commit = getCommit(lastBad);
   if (commit) {
     const shortSha = commit.sha.substring(0, 7);
-    const firstLine = commit.message.split('\n')[0];
+    const firstLine = commit.message?.split('\n')[0];
     result.push(` ${chalk.bold('Commit:')} [${shortSha}] ${firstLine}`);
   }
 
@@ -372,16 +372,13 @@ function getCommit(deployment: Deployment) {
   const sha =
     deployment.meta?.githubCommitSha ||
     deployment.meta?.gitlabCommitSha ||
-    (deployment.meta?.bitbucketCommitSha as string);
+    deployment.meta?.bitbucketCommitSha;
   if (!sha) return null;
   const message =
     deployment.meta?.githubCommitMessage ||
     deployment.meta?.gitlabCommitMessage ||
     deployment.meta?.bitbucketCommitMessage;
-  return {
-    sha: sha as string,
-    message: message as string,
-  };
+  return { sha, message };
 }
 
 async function prompt(client: Client, message: string): Promise<string> {
