@@ -11,6 +11,7 @@ describe('parseEnvTarget', () => {
   });
 
   it('defaults to `development`', () => {
+    delete process.env.VERCEL_ENV;
     let result = getEnvTargetRequested(output);
     expect(result).toEqual('development');
   });
