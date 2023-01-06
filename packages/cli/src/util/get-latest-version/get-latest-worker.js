@@ -123,10 +123,10 @@ process.once('message', async msg => {
       accept:
         'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*',
     };
-    const url = `https://registry.npmjs.org/${name}`;
+    const url = `https://registry.npmjs.org/-/package/${name}/dist-tags`;
     output.debug(`Fetching ${url}`);
 
-    const json = await new Promise((resolve, reject) => {
+    const tags = await new Promise((resolve, reject) => {
       const req = https.get(
         url,
         {
@@ -152,7 +152,6 @@ process.once('message', async msg => {
       req.end();
     });
 
-    const tags = json['dist-tags'];
     const version = tags[distTag];
 
     if (version) {
