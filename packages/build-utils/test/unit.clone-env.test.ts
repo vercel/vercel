@@ -36,14 +36,15 @@ it('should clone env with PATH', () => {
   });
 });
 
-it('should clone env with Path and PATH when Path is undefined', () => {
+it('should not overwrite PATH when path is undefined', () => {
   expect(
     cloneEnv(
+      {
+        PATH: 'baz',
+      },
       new Proxy(
         {
-          foo: 'bar',
           Path: undefined,
-          PATH: 'baz',
         },
         {
           get(target: typeof process.env, prop: string) {
@@ -56,7 +57,6 @@ it('should clone env with Path and PATH when Path is undefined', () => {
       )
     )
   ).toEqual({
-    foo: 'bar',
     PATH: 'baz',
   });
 });

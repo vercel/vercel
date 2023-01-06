@@ -19,8 +19,7 @@ export function cloneEnv(...envs: (Env | undefined)[]): Env {
     // mixin the env first
     obj = Object.assign(obj, env);
 
-    // while using git bash obj.path is undefined, but obj.PATH is the correct path
-    if (hasOwnProperty.call(obj, 'Path') {
+    if (hasOwnProperty.call(env, 'Path')) {
       // the system path is called `Path` on Windows and Node.js will
       // automatically return the system path when accessing `PATH`,
       // however we lose this proxied value when we destructure and
@@ -28,8 +27,9 @@ export function cloneEnv(...envs: (Env | undefined)[]): Env {
       // `Path` property since we can't have both a `PATH` and `Path`
 
       if (obj.Path !== undefined) {
-          obj.PATH = obj.Path;
+        obj.PATH = obj.Path;
       }
+
       delete obj.Path;
     }
 
