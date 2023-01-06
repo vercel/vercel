@@ -8,6 +8,7 @@ import getEnvRecords from '../../util/env/get-env-records';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
+  getEnvTargetRequested,
   getEnvTargetChoices,
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
@@ -32,7 +33,7 @@ export default async function add(
   require('../../util/input/patch-inquirer');
 
   const stdInput = await readStandardInput(client.stdin);
-  let [envName, envTargetArg, envGitBranch] = args;
+  let [envName, argTarget, envGitBranch] = args;
 
   if (args.length > 3) {
     output.error(
@@ -43,7 +44,7 @@ export default async function add(
     return 1;
   }
 
-  if (stdInput && (!envName || !envTargetArg)) {
+  if (stdInput && (!envName || !argTarget)) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
         `env add <name> <target> <gitbranch> < <file>`
@@ -52,17 +53,18 @@ export default async function add(
     return 1;
   }
 
+  const target = getEnvTargetRequested(output, argTarget);
   let envTargets: ProjectEnvTarget[] = [];
-  if (envTargetArg) {
-    if (!isValidEnvTarget(envTargetArg)) {
+  if (target) {
+    if (!isValidEnvTarget(target)) {
       output.error(
         `The Environment ${param(
-          envTargetArg
+          target
         )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
       );
       return 1;
     }
-    envTargets.push(envTargetArg);
+    envTargets.push(target);
   }
 
   while (!envName) {

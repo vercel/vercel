@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import Client from '../../util/client';
 import {
   getEnvTargetPlaceholder,
+  getEnvTargetRequested,
   isValidEnvTarget,
 } from '../../util/env/env-target';
 import getArgs from '../../util/get-args';
@@ -134,10 +135,7 @@ export default async function main(client: Client) {
   const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
   const { output, config } = client;
 
-  const target =
-    argv['--environment']?.toLowerCase() ||
-    process.env['VERCEL_ENV'] ||
-    'development';
+  const target = getEnvTargetRequested(output, argv['--environment']);
   if (!isValidEnvTarget(target)) {
     output.error(
       `Invalid environment \`${chalk.cyan(
