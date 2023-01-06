@@ -4,6 +4,6 @@
     "packages/*"
   ],
   "devDependencies": {
-    "nx": "15.0.1"
+    "nx": "15.4.5"
   }
 }
