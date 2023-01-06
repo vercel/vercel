@@ -31,6 +31,7 @@ type Options = {
   '--debug': boolean;
   '--yes': boolean;
   '--git-branch': string;
+  '--environment': string;
 };
 
 function readHeadSync(path: string, length: number) {

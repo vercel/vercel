@@ -13,6 +13,7 @@ import envPull from './env/pull';
 import type { Project } from '../types';
 import {
   isValidEnvTarget,
+  getEnvTargetRequested,
   getEnvTargetPlaceholder,
 } from '../util/env/env-target';
 import { ensureLink } from '../util/link/ensure-link';
@@ -89,7 +90,6 @@ async function pullAllEnvFiles(
   return envPull(
     client,
     project,
-    environment,
     argv,
     [join('.vercel', environmentFile)],
     client.output,
@@ -99,8 +99,10 @@ async function pullAllEnvFiles(
 }
 
 export function parseEnvironment(
-  environment = 'development'
+  output: Client['output'],
+  requested = 'development'
 ): ProjectEnvTarget {
+  const environment = getEnvTargetRequested(output, requested);
   if (!isValidEnvTarget(environment)) {
     throw new Error(
       `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`
@@ -117,9 +119,7 @@ export default async function main(client: Client) {
 
   const cwd = argv._[1] || process.cwd();
   const autoConfirm = Boolean(argv['--yes']);
-  const environment = parseEnvironment(
-    argv['--environment'] || process.env['VERCEL_ENV'] || undefined
-  );
+  const environment = parseEnvironment(client.output, argv['--environment']);
 
   const link = await ensureLink('pull', client, cwd, { autoConfirm });
   if (typeof link === 'number') {
