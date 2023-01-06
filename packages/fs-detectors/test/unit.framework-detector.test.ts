@@ -420,5 +420,13 @@ describe('DetectorFilesystem', () => {
 
       expect(await detectFramework({ fs, frameworkList })).toBe('zola');
     });
+
+    it('Detect Blitz.js (Legacy)', async () => {
+      const fs = new VirtualFilesystem({
+        'blitz.config.js': '// some config',
+      });
+
+      expect(await detectFramework({ fs, frameworkList })).toBe('blitzjs');
+    });
   });
 });
