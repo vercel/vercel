@@ -1,4 +1,4 @@
-import { DeploymentV5 } from '../../types';
+import type { Deployment } from '../../types';
 import { Output } from '../output';
 import Client from '../client';
 import createAlias from './create-alias';
@@ -8,7 +8,7 @@ import setupDomain from '../domains/setup-domain';
 export default async function assignAlias(
   output: Output,
   client: Client,
-  deployment: DeploymentV5,
+  deployment: Deployment,
   alias: string,
   contextName: string
 ) {

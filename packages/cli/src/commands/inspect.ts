@@ -9,7 +9,7 @@ import { handleError } from '../util/error';
 import getScope from '../util/get-scope';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
-import { getDeployment } from '../util/get-deployment';
+import getDeployment from '../util/get-deployment';
 import { Build, Deployment } from '../types';
 import title from 'title';
 import { isErrnoException } from '@vercel/error-utils';

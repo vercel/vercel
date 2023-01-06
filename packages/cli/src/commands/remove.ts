@@ -11,7 +11,7 @@ import getScope from '../util/get-scope';
 import { isValidName } from '../util/is-valid-name';
 import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
-import getDeploymentByIdOrHost from '../util/deploy/get-deployment-by-id-or-host';
+import getDeployment from '../util/get-deployment';
 import getDeploymentsByProjectId, {
   DeploymentPartial,
 } from '../util/deploy/get-deployments-by-project-id';
@@ -142,7 +142,7 @@ export default async function main(client: Client) {
           if (!contextName) {
             throw new Error('Context name is not defined');
           }
-          return getDeploymentByIdOrHost(client, contextName, idOrHost, 'v5');
+          return getDeployment(client, contextName, idOrHost);
         })
       ),
       Promise.all(

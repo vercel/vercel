@@ -204,7 +204,7 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Fetch all the project's "READY" deployments with the pagination API
-  let deployments: DeploymentV6[] = [];
+  let deployments: Deployment[] = [];
   let next: number | undefined = badDeployment.createdAt + 1;
   do {
     const query = new URLSearchParams();

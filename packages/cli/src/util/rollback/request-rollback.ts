@@ -29,8 +29,7 @@ export default async function requestRollback({
   timeout?: string;
 }): Promise<number> {
   const { config, output } = client;
-  const scope = await getScope(client);
-  const { contextName } = scope;
+  const { contextName } = await getScope(client);
 
   if (!isValidName(deployId)) {
     output.error(
