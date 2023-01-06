@@ -41,6 +41,7 @@ export const build: BuildV2 = async ({
   const { installCommand, buildCommand } = config;
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
+  console.log('entrypointFsDirname', entrypoint)
   const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
     undefined,

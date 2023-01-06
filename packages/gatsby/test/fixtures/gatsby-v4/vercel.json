@@ -2,7 +2,7 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "https://vercel-ri9m9ra79.vercel.sh/tarballs/%40vercel/gatsby.tgz"
+      "use": "https://vercel-n3n6ut5jq.vercel.sh/tarballs/%40vercel/gatsby.tgz"
     }
   ]
 }

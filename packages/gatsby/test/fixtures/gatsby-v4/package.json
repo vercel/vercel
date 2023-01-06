@@ -13,7 +13,7 @@
     "react-dom": "^18.1.0"
   },
   "scripts": {
-    "build": "gatsby build",
+    "build": "gatsby -v && gatsby build",
     "develop": "gatsby develop",
     "start": "gatsby develop",
     "serve": "gatsby serve",
