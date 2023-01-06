@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-build",
-  "version": "1.0.45",
+  "version": "1.0.46",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
@@ -37,7 +37,7 @@
     "@types/node-fetch": "2.5.4",
     "@types/promise-timeout": "1.3.0",
     "@vercel/build-utils": "5.7.3",
-    "@vercel/frameworks": "1.1.16",
+    "@vercel/frameworks": "1.1.17",
     "@vercel/ncc": "0.24.0",
     "@vercel/routing-utils": "2.1.3",
     "@vercel/static-config": "2.0.6",

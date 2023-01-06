@@ -1,73 +1,15 @@
 const entrypoint = process.env.VERCEL_DEV_ENTRYPOINT;
 delete process.env.VERCEL_DEV_ENTRYPOINT;
 
-const tsconfig = process.env.VERCEL_DEV_TSCONFIG;
-delete process.env.VERCEL_DEV_TSCONFIG;
-
 if (!entrypoint) {
   throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
+delete process.env.TS_NODE_TRANSPILE_ONLY;
+delete process.env.TS_NODE_COMPILER_OPTIONS;
+
 import { join } from 'path';
-import { register } from 'ts-node';
-import { fixConfig } from './typescript';
-
-type TypescriptModule = typeof import('typescript');
-
-let useRequire = false;
-
-if (!process.env.VERCEL_DEV_IS_ESM) {
-  const resolveTypescript = (p: string): string => {
-    try {
-      return require.resolve('typescript', {
-        paths: [p],
-      });
-    } catch (_) {
-      return '';
-    }
-  };
-
-  const requireTypescript = (p: string): TypescriptModule => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return require(p) as TypescriptModule;
-  };
-
-  let ts: TypescriptModule | null = null;
-
-  // Use the project's version of Typescript if available and supports `target`
-  let compiler = resolveTypescript(process.cwd());
-  if (compiler) {
-    ts = requireTypescript(compiler);
-  }
-
-  // Otherwise fall back to using the copy that `@vercel/node` uses
-  if (!ts) {
-    compiler = resolveTypescript(join(__dirname, '..'));
-    ts = requireTypescript(compiler);
-  }
-
-  let config: any = {};
-  if (tsconfig) {
-    try {
-      config = ts.readConfigFile(tsconfig, ts.sys.readFile).config;
-    } catch (err) {
-      if (err.code !== 'ENOENT') {
-        console.error(`Error while parsing "${tsconfig}"`);
-        throw err;
-      }
-    }
-  }
-
-  fixConfigDev(config);
-
-  register({
-    compiler,
-    compilerOptions: config.compilerOptions,
-    transpileOnly: true,
-  });
-
-  useRequire = true;
-}
+const useRequire = process.env.VERCEL_DEV_IS_ESM !== '1';
 
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
 import { VercelProxyResponse } from '@vercel/node-bridge/types';
@@ -193,21 +135,6 @@ export async function onDevRequest(
     res.statusCode = 500;
     res.end(error.stack);
   }
-}
-
-export function fixConfigDev(config: { compilerOptions: any }): void {
-  const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
-  fixConfig(config, nodeVersionMajor);
-
-  // In prod, `.ts` inputs use TypeScript and
-  // `.js` inputs use Babel to convert ESM to CJS.
-  // In dev, both `.ts` and `.js` inputs use ts-node
-  // without Babel so we must enable `allowJs`.
-  config.compilerOptions.allowJs = true;
-
-  // In prod, we emit outputs to the filesystem.
-  // In dev, we don't emit because we use ts-node.
-  config.compilerOptions.noEmit = true;
 }
 
 main().catch(err => {
