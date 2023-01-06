@@ -46,7 +46,7 @@ export default async function ls(
 
   // Get the list of alias
   const { aliases, pagination } = await getAliases({
-    client: client,
+    client,
     ...paginationOptions,
   });
   output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
