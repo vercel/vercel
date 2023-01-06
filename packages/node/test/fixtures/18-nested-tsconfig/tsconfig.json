@@ -4,7 +4,7 @@
     "allowJs": true,
     "jsx": "preserve",
     "target": "esnext",
-    "module": "esnext",
+    "module": "commonjs",
     "lib": ["dom", "es2017"],
     "noEmitOnError": true,
     "moduleResolution": "node",
