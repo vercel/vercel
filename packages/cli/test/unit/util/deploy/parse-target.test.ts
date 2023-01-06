@@ -52,4 +52,44 @@ describe('parseTarget', () => {
     let result = parseTarget(output, undefined, false);
     expect(result).toEqual(undefined);
   });
+
+  it('parses VERCEL_ENV', () => {
+    try {
+      process.env.VERCEL_ENV = 'staging';
+      let result = parseTarget(output);
+      expect(result).toEqual('staging');
+    } finally {
+      delete process.env.VERCEL_ENV;
+    }
+  });
+
+  it('returns VERCEL_ENV of preview as undefined', () => {
+    try {
+      process.env.VERCEL_ENV = 'preview';
+      let result = parseTarget(output);
+      expect(result).toEqual(undefined);
+    } finally {
+      delete process.env.VERCEL_ENV;
+    }
+  });
+
+  it('prefers production argument over VERCEL_ENV', () => {
+    try {
+      process.env.VERCEL_ENV = 'preview';
+      let result = parseTarget(output, undefined, true);
+      expect(result).toEqual('production');
+    } finally {
+      delete process.env.VERCEL_ENV;
+    }
+  });
+
+  it('validates VERCEL_ENV', () => {
+    try {
+      process.env.VERCEL_ENV = 'foo';
+      let result = parseTarget(output);
+      expect(result).toEqual(1);
+    } finally {
+      delete process.env.VERCEL_ENV;
+    }
+  });
 });
