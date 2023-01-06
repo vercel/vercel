@@ -36,6 +36,17 @@ it('should clone env with PATH', () => {
   });
 });
 
+it('should clone env with Path and PATH when Path is undefined', () => {
+  expect(
+    cloneEnv({
+      Path: undefined,
+      PATH: 'baz',
+    })
+  ).toEqual({
+    PATH: 'baz',
+  });
+});
+
 it('should clone and merge multiple env objects', () => {
   // note: this also tests the last object doesn't overwrite `PATH` with
   // `undefined`
