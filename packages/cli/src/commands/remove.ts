@@ -133,7 +133,7 @@ export default async function main(client: Client) {
         id =>
           d &&
           !(d instanceof NowError) &&
-          (d.uid === id || d.name === id || d.url === normalizeURL(id))
+          (d.id === id || d.name === id || d.url === normalizeURL(id))
       );
 
     const [deploymentList, projectList] = await Promise.all<any>([
@@ -180,7 +180,7 @@ export default async function main(client: Client) {
 
     aliases = await Promise.all(
       deployments.map(async depl => {
-        const { aliases } = await getAliases(client, depl.uid);
+        const { aliases } = await getAliases(client, depl.id);
         return aliases;
       })
     );
@@ -238,7 +238,7 @@ export default async function main(client: Client) {
   const start = Date.now();
 
   await Promise.all<any>([
-    ...deployments.map(depl => now.remove(depl.uid, { hard })),
+    ...deployments.map(depl => now.remove(depl.id, { hard })),
     ...projects.map(project => removeProject(client, project.id)),
   ]);
 
@@ -275,9 +275,9 @@ function readConfirmation(
 
       const deploymentTable = table(
         deployments.map(depl => {
-          const time = chalk.gray(`${ms(Date.now() - depl.created)} ago`);
+          const time = chalk.gray(`${ms(Date.now() - depl.createdAt)} ago`);
           const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
-          return [`  ${depl.uid}`, url, time];
+          return [`  ${depl.id}`, url, time];
         }),
         { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
       );
