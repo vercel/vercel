@@ -37,11 +37,24 @@ export default function parseTarget(
     return 'production';
   }
 
-  if (process.env.VERCEL_ENV) {
+  const VERCEL_ENV = process.env.VERCEL_ENV;
+  if (VERCEL_ENV) {
+    if (!['preview', 'staging', 'production'].includes(VERCEL_ENV)) {
+      output.error(
+        `The specified environment variable ${param('VERCEL_ENV')} ${code(
+          VERCEL_ENV
+        )} is not valid.`
+      );
+      return 1;
+    }
     output.debug(
       `Setting target to ${process.env.VERCEL_ENV} using VERCEL_ENV environment variable.`
     );
-    return process.env.VERCEL_ENV;
+    if (VERCEL_ENV == 'preview') {
+      // If the target is `undefined` then the API will create it as a preview, however if you explicitly set it to preview then it will fail.
+      return undefined;
+    }
+    return VERCEL_ENV;
   }
 
   return undefined;
