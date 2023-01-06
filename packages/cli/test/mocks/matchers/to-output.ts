@@ -14,8 +14,6 @@ export async function toOutput(
   test: string,
   timeout = 3000
 ) {
-  console.log('toOutput() called!');
-
   const { isNot } = this;
   const matcherName = 'toOutput';
   const matcherHintOptions: MatcherHintOptions = {
