@@ -28,7 +28,7 @@ Official Runtimes are published to [the npm registry](https://npmjs.com) as a pa
 > **Note:** The `use` property in the `builds` array will work with any [npm
 > install argument](https://docs.npmjs.com/cli/install) such as a git repo URL,
 > which is useful for testing your Runtime. Alternatively, the `functions` property
-> requires that you specify a specifc tag published to npm, for stability purposes.
+> requires that you specify a specific tag published to npm, for stability purposes.
 
 See the [Runtimes Documentation](https://vercel.com/docs/runtimes) to view example usage.
 
