@@ -19,5 +19,5 @@ export function getPaginationOpts(opts: PaginationOptions) {
     );
   }
 
-  return [nextTimestamp, limit || 20];
+  return { nextTimestamp, limit: limit || 20 };
 }

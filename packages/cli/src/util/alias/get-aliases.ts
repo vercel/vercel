@@ -6,20 +6,22 @@ type Response = {
   pagination: PaginationOptions;
 };
 
-export default async function getAliases(
-  client: Client,
-  deploymentId?: string,
-  next?: number,
-  limit = 20
-) {
-  let aliasUrl = `/v3/now/aliases?limit=${limit}`;
-  if (next) {
-    aliasUrl += `&until=${next}`;
+type getAliasArgs = {
+  client: Client;
+  limit: number;
+  nextTimestamp?: number;
+  deploymentId?: string;
+};
+
+export default async function getAliases(args: getAliasArgs) {
+  let aliasUrl = `/v3/now/aliases?limit=${args.limit}`;
+  if (args.nextTimestamp) {
+    aliasUrl += `&until=${args.nextTimestamp}`;
   }
 
-  const to = deploymentId
-    ? `/now/deployments/${deploymentId}/aliases`
+  const to = args.deploymentId
+    ? `/now/deployments/${args.deploymentId}/aliases`
     : aliasUrl;
-  const payload = await client.fetch<Response>(to);
+  const payload = await args.client.fetch<Response>(to);
   return payload;
 }
