@@ -14,7 +14,7 @@ export function getEnvTargetChoices() {
 
 export function getEnvTargetRequested(output: Output, argument?: string) {
   if (argument !== undefined) {
-    output.debug(`Setting target to ${argument}.`);
+    output.debug(`Setting target to ${argument} from the command line.`);
     return argument.toLowerCase();
   }
 

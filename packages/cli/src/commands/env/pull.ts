@@ -15,6 +15,11 @@ import {
   pullEnvRecords,
 } from '../../util/env/get-env-records';
 import {
+  isValidEnvTarget,
+  getEnvTargetRequested,
+  getEnvTargetPlaceholder,
+} from '../../util/env/env-target';
+import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
@@ -52,7 +57,6 @@ function tryReadHeadSync(path: string, length: number) {
 export default async function pull(
   client: Client,
   project: Project,
-  environment: ProjectEnvTarget,
   opts: Partial<Options>,
   args: string[],
   output: Output,
@@ -66,6 +70,15 @@ export default async function pull(
     return 1;
   }
 
+  const environment = getEnvTargetRequested(output, opts['--environment']);
+  if (!isValidEnvTarget(environment)) {
+    output.error(
+      `Invalid environment \`${chalk.cyan(
+        environment
+      )}\`. Valid options: ${getEnvTargetPlaceholder()}`
+    );
+    return 1;
+  }
   // handle relative or absolute filename
   const [filename = '.env'] = args;
   const fullPath = resolve(cwd, filename);
