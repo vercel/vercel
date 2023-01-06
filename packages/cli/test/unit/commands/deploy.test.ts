@@ -91,6 +91,33 @@ describe('deploy', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
+  it('should reject deploying a directory that was built with a different target environment when `--prebuilt` and VERCEL_ENV="production" is used on "preview" output', async () => {
+    try {
+      process.env.VERCEL_ENV = 'production';
+      const cwd = setupFixture('build-output-api-preview');
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'build-output-api-preview',
+        name: 'build-output-api-preview',
+      });
+
+      client.setArgv('deploy', cwd, '--prebuilt');
+      const exitCodePromise = deploy(client);
+      await expect(client.stderr).toOutput(
+        'Error: The "--prebuilt" option was used with the target environment "production",' +
+          ' but the prebuilt output found in ".vercel/output" was built with target environment "preview".' +
+          ' Please run `vercel --prebuilt`.\n' +
+          'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
+      );
+      await expect(exitCodePromise).resolves.toEqual(1);
+    } finally {
+      delete process.env.VERCEL_ENV;
+    }
+  });
+
   it('should reject deploying a directory that was built with a different target environment when `--prebuilt` is used on "production" output', async () => {
     const cwd = setupFixture('build-output-api-production');
 
