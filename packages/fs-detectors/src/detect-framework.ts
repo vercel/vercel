@@ -151,6 +151,10 @@ export async function detectFramework({
   return result.find(res => res !== null) ?? null;
 }
 
+/**
+ * Framework with a `detectedVersion` specifying the version
+ * or version range of the relevant package
+ */
 type VersionedFramework = Framework & {
   detectedVersion?: string;
 };
@@ -174,23 +178,7 @@ export async function detectFrameworkRecord({
   );
   const frameworkRecord = result.find(res => res !== null) ?? null;
 
-  if (!frameworkRecord) {
-    return null;
-  }
-
-  if (frameworkRecord.detectedVersion) {
-    return frameworkRecord;
-  }
-
-  const detectedVersion = await detectFrameworkVersion(frameworkRecord);
-  if (!detectedVersion) {
-    return frameworkRecord;
-  }
-
-  return {
-    ...frameworkRecord,
-    detectedVersion,
-  };
+  return frameworkRecord;
 }
 
 export async function detectFrameworkVersion(
@@ -206,7 +194,10 @@ export async function detectFrameworkVersion(
     return;
   }
 
-  const version = lookupInstalledVersion(firstMatchPackage.matchPackage);
+  const version = lookupInstalledVersion(
+    process.execPath,
+    firstMatchPackage.matchPackage
+  );
   if (version) {
     return version;
   }
@@ -214,12 +205,13 @@ export async function detectFrameworkVersion(
   return;
 }
 
-function lookupInstalledVersion(packageName: string): string | undefined {
+function lookupInstalledVersion(
+  cwd: string,
+  packageName: string
+): string | undefined {
   try {
-    // we can't use "require(`${packageName}/package.json`)" here because
-    // ncc bundling will make it look in the wrong place
-    const script = `eval('require')('${packageName}/package.json').version`;
-    return spawnSync(process.execPath, ['-p', script], {
+    const script = `require('${packageName}/package.json').version`;
+    return spawnSync(cwd, ['-p', script], {
       encoding: 'utf-8',
     }).stdout.trim();
   } catch (error) {
