@@ -38,11 +38,25 @@ it('should clone env with PATH', () => {
 
 it('should clone env with Path and PATH when Path is undefined', () => {
   expect(
-    cloneEnv({
-      Path: undefined,
-      PATH: 'baz',
-    })
+    cloneEnv(
+      new Proxy(
+        {
+          foo: 'bar',
+          Path: undefined,
+          PATH: 'baz',
+        },
+        {
+          get(target: typeof process.env, prop: string) {
+            if (prop === 'PATH') {
+              return target.PATH ?? target.Path;
+            }
+            return target[prop];
+          },
+        }
+      )
+    )
   ).toEqual({
+    foo: 'bar',
     PATH: 'baz',
   });
 });
