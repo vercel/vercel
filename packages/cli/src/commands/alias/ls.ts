@@ -45,15 +45,14 @@ export default async function ls(
   output.spinner(`Fetching aliases under ${chalk.bold(contextName)}`);
 
   // Get the list of alias
-  const { aliases, pagination } = await getAliases(
-    client,
-    undefined,
-    ...paginationOptions
-  );
+  const { aliases, pagination } = await getAliases({
+    client: client,
+    ...paginationOptions,
+  });
   output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
   output.log(printAliasTable(aliases));
 
-  if (pagination && pagination.count === paginationOptions[1]) {
+  if (pagination && pagination.count === paginationOptions.limit) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${getCommandName(
