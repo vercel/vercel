@@ -7,6 +7,7 @@ import getEnvRecords from '../../util/env/get-env-records';
 import formatEnvTarget from '../../util/env/format-env-target';
 import {
   isValidEnvTarget,
+  getEnvTargetRequested,
   getEnvTargetPlaceholder,
 } from '../../util/env/env-target';
 import Client from '../../util/client';
@@ -41,8 +42,7 @@ export default async function rm(
     return 1;
   }
 
-  let [envName, envTarget, envGitBranch] = args;
-
+  let [envName, argsTarget, envGitBranch] = args;
   while (!envName) {
     const { inputName } = await client.prompt({
       type: 'input',
@@ -58,10 +58,11 @@ export default async function rm(
     envName = inputName;
   }
 
-  if (!isValidEnvTarget(envTarget)) {
+  const target = getEnvTargetRequested(output, argsTarget);
+  if (!isValidEnvTarget(target)) {
     output.error(
       `The Environment ${param(
-        envTarget
+        target
       )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
     );
     return 1;
@@ -73,7 +74,7 @@ export default async function rm(
     project.id,
     'vercel-cli:env:rm',
     {
-      target: envTarget,
+      target,
       gitBranch: envGitBranch,
     }
   );

@@ -1,3 +1,4 @@
+import { Output } from '../../util/output';
 import { ProjectEnvTarget } from '../../types';
 
 function envTargets(): string[] {
@@ -9,6 +10,22 @@ export function getEnvTargetChoices() {
     name: key,
     value: value,
   }));
+}
+
+export function getEnvTargetRequested(output: Output, argument?: string) {
+  if (argument !== undefined) {
+    output.debug(`Setting target to ${argument}.`);
+    return argument.toLowerCase();
+  }
+
+  if (process.env['VERCEL_ENV']) {
+    output.debug(
+      `Setting target to ${process.env.VERCEL_ENV} using VERCEL_ENV environment variable.`
+    );
+    return process.env['VERCEL_ENV'];
+  }
+
+  return 'development';
 }
 
 export function isValidEnvTarget(

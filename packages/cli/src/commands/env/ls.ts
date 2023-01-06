@@ -8,6 +8,7 @@ import getEnvRecords from '../../util/env/get-env-records';
 import formatEnvTarget from '../../util/env/format-env-target';
 import {
   isValidEnvTarget,
+  getEnvTargetRequested,
   getEnvTargetPlaceholder,
 } from '../../util/env/env-target';
 import stamp from '../../util/output/stamp';
@@ -35,12 +36,12 @@ export default async function ls(
     return 1;
   }
 
-  const [envTarget, envGitBranch] = args;
-
-  if (!isValidEnvTarget(envTarget)) {
+  const [argsTarget, envGitBranch] = args;
+  const target = getEnvTargetRequested(output, argsTarget);
+  if (!isValidEnvTarget(target)) {
     output.error(
       `The Environment ${param(
-        envTarget
+        target
       )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
     );
     return 1;
@@ -54,7 +55,7 @@ export default async function ls(
     project.id,
     'vercel-cli:env:ls',
     {
-      target: envTarget,
+      target,
       gitBranch: envGitBranch,
     }
   );
