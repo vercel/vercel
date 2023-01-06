@@ -102,7 +102,7 @@ export function parseEnvironment(
   output: Client['output'],
   requested?: string
 ): ProjectEnvTarget {
-  const environment = getEnvTargetRequested(output, requested);
+  const environment = getEnvTargetRequested(output, requested, 'production');
   if (!isValidEnvTarget(environment)) {
     throw new Error(
       `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`

@@ -12,7 +12,11 @@ export function getEnvTargetChoices() {
   }));
 }
 
-export function getEnvTargetRequested(output: Output, argument?: string) {
+export function getEnvTargetRequested(
+  output: Output,
+  argument?: string,
+  defaultEnv?: string
+) {
   if (argument !== undefined) {
     output.debug(`Setting target to ${argument} from the command line.`);
     return argument.toLowerCase();
@@ -25,7 +29,7 @@ export function getEnvTargetRequested(output: Output, argument?: string) {
     return process.env['VERCEL_ENV'];
   }
 
-  return 'development';
+  return defaultEnv || 'development';
 }
 
 export function isValidEnvTarget(
