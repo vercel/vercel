@@ -247,7 +247,7 @@ export default async (client: Client): Promise<number> => {
     }
 
     // Ensure that the deploy target matches the build target
-    const assumedTarget = target || process.env['VERCEL_ENV'] || 'preview';
+    const assumedTarget = target || 'preview';
     if (prebuiltBuild?.target && prebuiltBuild.target !== assumedTarget) {
       let specifyTarget = '';
       if (prebuiltBuild.target === 'production') {

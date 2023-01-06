@@ -37,5 +37,12 @@ export default function parseTarget(
     return 'production';
   }
 
+  if (process.env.VERCEL_ENV) {
+    output.debug(
+      `Setting target to ${process.env.VERCEL_ENV} using VERCEL_ENV environment variable.`
+    );
+    return process.env.VERCEL_ENV;
+  }
+
   return undefined;
 }
