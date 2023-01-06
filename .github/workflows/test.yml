@@ -47,7 +47,7 @@ jobs:
           TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
           echo "Files to test:"
           echo "$TESTS_ARRAY"
-          echo "::set-output name=tests::$TESTS_ARRAY"
+          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
       - uses: patrickedqvist/wait-for-vercel-preview@ae34b392ef30297f2b672f9afb3c329bde9bd487
         id: waitForTarball
         with:
