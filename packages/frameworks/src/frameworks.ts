@@ -29,9 +29,12 @@ export const frameworks = [
     envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
-      every: [
+      some: [
         {
-          path: 'blitz.config.(js|ts)',
+          path: 'blitz.config.js',
+        },
+        {
+          path: 'blitz.config.ts',
         },
       ],
     },
@@ -60,7 +63,7 @@ export const frameworks = [
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/next-dark.svg',
     screenshot:
-      'https://assets.vercel.com/image/upload/v1647366075/front/import/nextjs.png',
+      'https://assets.vercel.com/image/upload/v1673027027/front/import/nextjs.png',
     tagline:
       'Next.js makes you productive with React instantly — whether you want to build static or dynamic sites.',
     description: 'A Next.js app and a Serverless Function API.',
