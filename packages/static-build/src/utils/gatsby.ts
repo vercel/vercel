@@ -8,8 +8,7 @@ import {
   writePackageJson,
 } from './_shared';
 
-const GATSBY_PLUGIN_PACKAGE_NAME =
-  '@vercel/${GATSBY_PLUGIN_PACKAGE_NAME}-analytics';
+const GATSBY_PLUGIN_PACKAGE_NAME = '@vercel/gatsby-plugin-vercel-analytics';
 const DEFAULT_CONFIG = {
   plugins: [
     {
