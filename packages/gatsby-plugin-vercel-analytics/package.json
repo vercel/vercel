@@ -1,46 +1,21 @@
 {
-  "name": "gatsby-plugin-vercel",
-  "version": "0.0.0-development",
+  "name": "@vercel/gatsby-plugin-vercel-analytics",
+  "version": "0.0.1",
   "description": "Track Core Web Vitals in Gatsby projects with Vercel Analytics.",
   "main": "index.js",
-  "scripts": {
-    "build": "babel src --out-dir .",
-    "test": "exit 0",
-    "prepare": "cross-env NODE_ENV=production npm run build",
-    "watch": "babel -w src --out-dir .",
-    "prepublishOnly": "yarn test",
-    "semantic-release": "semantic-release",
-    "commit": "git-cz"
-  },
+  "files": [
+    "gatsby-browser.js",
+    "web-vitals.js"
+  ],
+  "scripts": {},
   "dependencies": {
     "@babel/runtime": "7.12.1",
     "web-vitals": "0.2.4"
   },
-  "devDependencies": {
-    "@babel/cli": "7.12.1",
-    "@babel/core": "7.12.3",
-    "babel-preset-gatsby-package": "0.5.3",
-    "cross-env": "7.0.2",
-    "cz-conventional-changelog": "3.2.0",
-    "husky": "^4.2.5",
-    "prettier": "^2.0.5",
-    "pretty-quick": "^2.0.1",
-    "semantic-release": "19.0.5"
-  },
-  "config": {
-    "commitizen": {
-      "path": "./node_modules/cz-conventional-changelog"
-    }
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "pretty-quick --staged"
-    }
-  },
-  "prettier": {},
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vercel/gatsby-plugin-vercel.git"
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/gatsby-plugin-vercel-analytics"
   },
   "keywords": [
     "gatsby",
@@ -54,9 +29,5 @@
     "lcp",
     "ttfb"
   ],
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/vercel/gatsby-plugin-vercel/issues"
-  },
-  "homepage": "https://github.com/vercel/gatsby-plugin-vercel#readme"
+  "license": "MIT"
 }
