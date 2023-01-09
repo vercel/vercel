@@ -206,12 +206,9 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/remix' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
-      some: [
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"remix":\\s*".+?"[^}]*}',
-        },
+      every: [
+        // Intentionally does not detect a package name
+        // https://github.com/vercel/vercel/pull/7761
         {
           path: 'remix.config.js',
         },
