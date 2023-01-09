@@ -30,7 +30,7 @@ it(
         "plugins": Array [
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
       }
@@ -61,7 +61,7 @@ it(
         "plugins": Array [
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -98,7 +98,7 @@ it(
           "gatsby-plugin-react-helmet",
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -132,7 +132,7 @@ it(
       .toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
-          "gatsby-plugin-vercel",
+          "@vercel/gatsby-plugin-vercel-analytics",
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -167,7 +167,7 @@ it(
         "plugins": Array [
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -204,7 +204,7 @@ it(
           "gatsby-plugin-react-helmet",
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -243,7 +243,7 @@ it(
           },
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -276,7 +276,7 @@ it(
           "plugins": Array [
             Object {
               "options": Object {},
-              "resolve": "gatsby-plugin-vercel",
+              "resolve": "@vercel/@vercel/gatsby-plugin-vercel-analytics-analytics",
             },
           ],
           "siteMetadata": Object {
@@ -321,13 +321,13 @@ if (!vercelConfig.plugins) {
 
 const hasPlugin = vercelConfig.plugins.find(
   (p) =>
-    p && (p === "gatsby-plugin-vercel" || p.resolve === "gatsby-plugin-vercel")
+    p && (p === "@vercel/@vercel/gatsby-plugin-vercel-analytics-analytics" || p.resolve === "@vercel/@vercel/gatsby-plugin-vercel-analytics-analytics")
 );
 
 if (!hasPlugin) {
   vercelConfig.plugins = vercelConfig.plugins.slice();
   vercelConfig.plugins.push({
-    resolve: "gatsby-plugin-vercel",
+    resolve: "@vercel/@vercel/gatsby-plugin-vercel-analytics-analytics",
     options: {},
   });
 }

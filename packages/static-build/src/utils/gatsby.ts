@@ -8,15 +8,16 @@ import {
   writePackageJson,
 } from './_shared';
 
+const GATSBY_PLUGIN_PACKAGE_NAME =
+  '@vercel/${GATSBY_PLUGIN_PACKAGE_NAME}-analytics';
 const DEFAULT_CONFIG = {
   plugins: [
     {
-      resolve: 'gatsby-plugin-vercel',
+      resolve: GATSBY_PLUGIN_PACKAGE_NAME,
       options: {},
     },
   ],
 };
-const GATSBY_PLUGIN_PACKAGE_NAME = 'gatsby-plugin-vercel';
 const GATSBY_CONFIG_FILE = 'gatsby-config';
 
 export async function injectVercelAnalyticsPlugin(dir: string): Promise<void> {
@@ -96,13 +97,13 @@ if (!vercelConfig.plugins) {
 
 const hasPlugin = vercelConfig.plugins.find(
   (p: PluginRef) =>
-    p && (p === "gatsby-plugin-vercel" || p.resolve === "gatsby-plugin-vercel")
+    p && (p === "${GATSBY_PLUGIN_PACKAGE_NAME}" || p.resolve === "${GATSBY_PLUGIN_PACKAGE_NAME}")
 );
 
 if (!hasPlugin) {
   vercelConfig.plugins = vercelConfig.plugins.slice();
   vercelConfig.plugins.push({
-    resolve: "gatsby-plugin-vercel",
+    resolve: "${GATSBY_PLUGIN_PACKAGE_NAME}",
     options: {},
   });
 }
@@ -134,13 +135,13 @@ if (!vercelConfig.plugins) {
 
 const hasPlugin = vercelConfig.plugins.find(
   (p) =>
-    p && (p === "gatsby-plugin-vercel" || p.resolve === "gatsby-plugin-vercel")
+    p && (p === "${GATSBY_PLUGIN_PACKAGE_NAME}" || p.resolve === "${GATSBY_PLUGIN_PACKAGE_NAME}")
 );
 
 if (!hasPlugin) {
   vercelConfig.plugins = vercelConfig.plugins.slice();
   vercelConfig.plugins.push({
-    resolve: "gatsby-plugin-vercel",
+    resolve: "${GATSBY_PLUGIN_PACKAGE_NAME}",
     options: {},
   });
 }
@@ -172,12 +173,12 @@ if (!vercelConfig.plugins) {
 
 const hasPlugin = vercelConfig.plugins.find(
   (p) =>
-    p && (p === "gatsby-plugin-vercel" || p.resolve === "gatsby-plugin-vercel")
+    p && (p === "${GATSBY_PLUGIN_PACKAGE_NAME}" || p.resolve === "${GATSBY_PLUGIN_PACKAGE_NAME}")
 );
 if (!hasPlugin) {
   vercelConfig.plugins = vercelConfig.plugins.slice();
   vercelConfig.plugins.push({
-    resolve: "gatsby-plugin-vercel",
+    resolve: "${GATSBY_PLUGIN_PACKAGE_NAME}",
     options: {},
   });
 }
