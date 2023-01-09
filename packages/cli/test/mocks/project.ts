@@ -230,7 +230,7 @@ export function useProject(project: Partial<Project> = defaultProject) {
     (req, res) => {
       const target =
         typeof req.params.target === 'string'
-          ? parseEnvironment(req.params.target)
+          ? parseEnvironment(client.output, req.params.target)
           : undefined;
       let projectEnvs = envs;
       if (target) {

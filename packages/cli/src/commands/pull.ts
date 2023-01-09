@@ -102,7 +102,7 @@ export function parseEnvironment(
   output: Client['output'],
   requested?: string
 ): ProjectEnvTarget {
-  const environment = getEnvTargetRequested(output, requested, 'production');
+  const environment = getEnvTargetRequested(output, requested);
   if (!isValidEnvTarget(environment)) {
     throw new Error(
       `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`
@@ -121,6 +121,7 @@ export default async function main(client: Client) {
   const autoConfirm = Boolean(argv['--yes']);
   const environment = parseEnvironment(client.output, argv['--environment']);
 
+  console.log('**** Environment', environment);
   const link = await ensureLink('pull', client, cwd, { autoConfirm });
   if (typeof link === 'number') {
     return link;

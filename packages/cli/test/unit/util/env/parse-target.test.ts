@@ -16,12 +16,6 @@ describe('parseEnvTarget', () => {
     expect(result).toEqual('development');
   });
 
-  it('defaults to defaultEnv', () => {
-    delete process.env.VERCEL_ENV;
-    let result = getEnvTargetRequested(output, undefined, 'staging');
-    expect(result).toEqual('staging');
-  });
-
   it('defaults to arg', () => {
     try {
       process.env.VERCEL_ENV = 'some-env';
