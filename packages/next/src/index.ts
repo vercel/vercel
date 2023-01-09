@@ -24,6 +24,7 @@ import {
   PrepareCache,
   NodejsLambda,
   BuildResultV2Typical as BuildResult,
+  BuildResultBuildOutput,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -53,6 +54,7 @@ import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import { serverBuild } from './server-build';
 import {
+  MIB,
   collectTracedFiles,
   createLambdaFromPseudoLayers,
   createPseudoLayer,
@@ -64,6 +66,7 @@ import {
   getExportIntent,
   getExportStatus,
   getFilesMapFromReasons,
+  getImagesConfig,
   getImagesManifest,
   getMiddlewareManifest,
   getNextConfig,
@@ -201,7 +204,7 @@ export const build: BuildV2 = async ({
 
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = (config.maxLambdaSize ||
-    50 * 1000 * 1000) as number;
+    50 * MIB) as number;
 
   let entryDirectory = path.dirname(entrypoint);
   let entryPath = path.join(workPath, entryDirectory);
@@ -451,6 +454,24 @@ export const build: BuildV2 = async ({
     });
   }
   debug('build command exited');
+
+  let buildOutputVersion: undefined | number;
+
+  try {
+    const data = await readJSON(
+      path.join(outputDirectory, 'output/config.json')
+    );
+    buildOutputVersion = data.version;
+  } catch (_) {
+    // tolerate for older versions
+  }
+
+  if (buildOutputVersion) {
+    return {
+      buildOutputPath: path.join(outputDirectory, 'output'),
+      buildOutputVersion,
+    } as BuildResultBuildOutput;
+  }
 
   let appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
@@ -801,18 +822,7 @@ export const build: BuildV2 = async ({
 
     return {
       output,
-      images:
-        imagesManifest?.images?.loader === 'default'
-          ? {
-              domains: imagesManifest.images.domains,
-              sizes: imagesManifest.images.sizes,
-              remotePatterns: imagesManifest.images.remotePatterns,
-              minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-              dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-              contentSecurityPolicy:
-                imagesManifest.images.contentSecurityPolicy,
-            }
-          : undefined,
+      images: getImagesConfig(imagesManifest),
       routes: [
         ...privateOutputs.routes,
 
@@ -2169,17 +2179,7 @@ export const build: BuildV2 = async ({
       ...privateOutputs.files,
     },
     wildcard: wildcardConfig,
-    images:
-      imagesManifest?.images?.loader === 'default'
-        ? {
-            domains: imagesManifest.images.domains,
-            sizes: imagesManifest.images.sizes,
-            remotePatterns: imagesManifest.images.remotePatterns,
-            minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-            dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-            contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
-          }
-        : undefined,
+    images: getImagesConfig(imagesManifest),
     /*
       Desired routes order
       - Runtime headers
