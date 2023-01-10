@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "next",
-    "@sveltejs/kit": "next",
+    "@sveltejs/kit": "next TODO ",
     "@types/cookie": "^0.5.1",
     "prettier": "^2.6.2",
     "prettier-plugin-svelte": "^2.7.0",
