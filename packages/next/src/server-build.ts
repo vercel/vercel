@@ -869,6 +869,7 @@ export async function serverBuild({
           ),
           '___next_launcher.cjs'
         ),
+        operationType: 'SSR', // TODO: Are these only ever SSR?
         memory: group.memory,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,

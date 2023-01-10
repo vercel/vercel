@@ -1082,7 +1082,7 @@ export const build: BuildV2 = async ({
           handler: '___next_launcher.cjs',
           runtime: nodeVersion.runtime,
           ...lambdaOptions,
-          operationType: 'SSR',
+          operationType: 'SSR', // TODO: Is this ever ISR?
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
           supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
@@ -1807,6 +1807,7 @@ export const build: BuildV2 = async ({
                 path.relative(baseDir, entryPath),
                 '___next_launcher.cjs'
               ),
+              operationType: 'SSR', // TODO: What should these be?
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
             });
@@ -1826,6 +1827,7 @@ export const build: BuildV2 = async ({
                 path.relative(baseDir, entryPath),
                 '___next_launcher.cjs'
               ),
+              operationType: 'SSR', // TODO: What should these be?
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
             });
@@ -2037,6 +2039,7 @@ export const build: BuildV2 = async ({
                   path.relative(baseDir, entryPath),
                   '___next_launcher.cjs'
                 ),
+                operationType: group.isApiLambda ? 'API' : 'SSR', // TODO: Is this ever ISR?
                 runtime: nodeVersion.runtime,
               });
           }
