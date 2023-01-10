@@ -1311,6 +1311,7 @@ export type LambdaGroup = {
   maxDuration?: number;
   isStreaming?: boolean;
   isPrerenders?: boolean;
+  isApiLambda: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
@@ -1417,6 +1418,7 @@ export async function getPageLambdaGroups({
         pages: [page],
         ...opts,
         isPrerenders: isPrerenderRoute,
+        isApiLambda: !!isApiPage(page),
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
@@ -2665,4 +2667,44 @@ function transformSourceMap(
     });
 
   return { ...sourcemap, sources };
+}
+
+interface LambdaGroupTypeInterface {
+  isApiLambda: boolean;
+  isPrerenders?: boolean;
+}
+
+export function getOperationType({
+  group,
+  prerenderManifest,
+  pageFileName,
+}: {
+  group?: LambdaGroupTypeInterface;
+  prerenderManifest?: NextPrerenderedRoutes;
+  pageFileName?: string;
+}) {
+  console.log({ pageFileName, prerenderManifest });
+
+  if (group?.isApiLambda || isApiPage(pageFileName)) {
+    return 'API';
+  }
+
+  if (group?.isPrerenders) {
+    return 'ISR';
+  }
+
+  // TODO: ???
+  // if (prerenderManifest?.staticRoutes[0].srcRoute
+
+  return 'SSR';
+}
+
+export function isApiPage(page: string | undefined) {
+  if (!page) {
+    return false;
+  }
+
+  return page
+    .replace(/\\/g, '/')
+    .match(/(serverless|server)\/pages\/api(\/|\.js$)/);
 }

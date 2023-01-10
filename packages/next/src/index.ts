@@ -89,6 +89,8 @@ import {
   PseudoLayerResult,
   updateRouteSrc,
   validateEntrypoint,
+  getOperationType,
+  isApiPage,
 } from './utils';
 
 export const version = 2;
@@ -1082,7 +1084,7 @@ export const build: BuildV2 = async ({
           handler: '___next_launcher.cjs',
           runtime: nodeVersion.runtime,
           ...lambdaOptions,
-          operationType: 'SSR', // TODO: Is this ever ISR?
+          operationType: 'SSR', // always SSR because we're in legacy mode
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
           supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
@@ -1114,10 +1116,6 @@ export const build: BuildV2 = async ({
       outputDirectory,
       appPathRoutesManifest,
     });
-    const isApiPage = (page: string) =>
-      page
-        .replace(/\\/g, '/')
-        .match(/(serverless|server)\/pages\/api(\/|\.js$)/);
 
     const canUsePreviewMode = Object.keys(pages).some(page =>
       isApiPage(pages[page].fsPath)
@@ -1586,6 +1584,10 @@ export const build: BuildV2 = async ({
         internalPages: [],
       });
 
+      for (const group of initialApiLambdaGroups) {
+        group.isApiLambda = true;
+      }
+
       debug(
         JSON.stringify(
           {
@@ -1807,7 +1809,10 @@ export const build: BuildV2 = async ({
                 path.relative(baseDir, entryPath),
                 '___next_launcher.cjs'
               ),
-              operationType: 'SSR', // TODO: What should these be?
+              operationType: getOperationType({
+                prerenderManifest,
+                pageFileName,
+              }),
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
             });
@@ -1827,7 +1832,7 @@ export const build: BuildV2 = async ({
                 path.relative(baseDir, entryPath),
                 '___next_launcher.cjs'
               ),
-              operationType: 'SSR', // TODO: What should these be?
+              operationType: getOperationType({ pageFileName }), // can only be API or SSR
               runtime: nodeVersion.runtime,
               ...lambdaOptions,
             });
@@ -2028,6 +2033,12 @@ export const build: BuildV2 = async ({
               pageLambdaMap[page] = group.lambdaIdentifier;
             }
 
+            const operationType = getOperationType({
+              group,
+              prerenderManifest,
+              pageFileName: page,
+            });
+
             lambdas[group.lambdaIdentifier] =
               await createLambdaFromPseudoLayers({
                 files: {
@@ -2039,7 +2050,7 @@ export const build: BuildV2 = async ({
                   path.relative(baseDir, entryPath),
                   '___next_launcher.cjs'
                 ),
-                operationType: group.isApiLambda ? 'API' : 'SSR', // TODO: Is this ever ISR?
+                operationType,
                 runtime: nodeVersion.runtime,
               });
           }
