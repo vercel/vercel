@@ -992,6 +992,7 @@ export const frameworks = [
     ],
   },
   {
+    // TODO: fix detected as "sveltekit-1"
     name: 'SvelteKit (Legacy Beta)',
     slug: 'sveltekit',
     demo: 'https://sveltekit-template.vercel.app',
@@ -1796,6 +1797,7 @@ export const frameworks = [
     getOutputDirName: async () => 'docs/.vitepress/dist',
   },
   {
+    // TODO: fix not detected
     name: 'VuePress',
     slug: 'vuepress',
     demo: 'https://vuepress-starter-template.vercel.app',
@@ -1932,6 +1934,7 @@ export const frameworks = [
     ],
   },
   {
+    // TODO: fix detected as "vite"
     name: 'Hydrogen',
     slug: 'hydrogen',
     demo: 'https://hydrogen-template.vercel.app',
