@@ -137,6 +137,7 @@ export function execAsync(
       child.on('close', (code, signal) => {
         if (code === 0 || opts.ignoreNon0Exit) {
           return resolve({
+            // @ts-ignore
             code,
             stdout: Buffer.concat(stdoutList).toString(),
             stderr: Buffer.concat(stderrList).toString(),
