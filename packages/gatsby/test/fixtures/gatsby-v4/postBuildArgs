@@ -1,0 +1,27 @@
+{
+  "0": {},
+  "2": {
+    "id": "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/gatsby/test/fixtures/gatsby-v4/gatsby-node.js",
+    "path": "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/gatsby/test/fixtures/gatsby-v4",
+    "exports": {},
+    "filename": "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/gatsby/test/fixtures/gatsby-v4/gatsby-node.js",
+    "loaded": true,
+    "children": [],
+    "paths": [
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/gatsby/test/fixtures/gatsby-v4/node_modules",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/gatsby/test/fixtures/node_modules",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/gatsby/test/node_modules",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/gatsby/node_modules",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/node_modules",
+      "/Users/ethanarrowood/Documents/github/vercel/vercel/node_modules",
+      "/Users/ethanarrowood/Documents/github/vercel/node_modules",
+      "/Users/ethanarrowood/Documents/github/node_modules",
+      "/Users/ethanarrowood/Documents/node_modules",
+      "/Users/ethanarrowood/node_modules",
+      "/Users/node_modules",
+      "/node_modules"
+    ]
+  },
+  "3": "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/gatsby/test/fixtures/gatsby-v4/gatsby-node.js",
+  "4": "/Users/ethanarrowood/Documents/github/vercel/vercel/packages/gatsby/test/fixtures/gatsby-v4"
+}

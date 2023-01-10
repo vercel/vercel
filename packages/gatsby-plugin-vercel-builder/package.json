@@ -1,0 +1,13 @@
+{
+  "name": "@vercel/gatsby-plugin-vercel-builder",
+  "version": "0.0.1",
+  "scripts": {},
+  "dependencies": {
+    "gatsby": "4.25.2",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.4"
+  }
+}
