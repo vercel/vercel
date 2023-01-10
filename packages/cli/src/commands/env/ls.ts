@@ -37,7 +37,7 @@ export default async function ls(
   }
 
   const [argsTarget, envGitBranch] = args;
-  const target = getEnvTargetRequested(output, argsTarget);
+  const target = getEnvTargetRequested(output, '', argsTarget);
   if (!isValidEnvTarget(target)) {
     output.error(
       `The Environment ${param(

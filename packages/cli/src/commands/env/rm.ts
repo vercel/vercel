@@ -58,7 +58,7 @@ export default async function rm(
     envName = inputName;
   }
 
-  const target = getEnvTargetRequested(output, argsTarget);
+  const target = getEnvTargetRequested(output, '', argsTarget);
   if (!isValidEnvTarget(target)) {
     output.error(
       `The Environment ${param(

@@ -53,7 +53,7 @@ export default async function add(
     return 1;
   }
 
-  const target = getEnvTargetRequested(output, argTarget);
+  const target = getEnvTargetRequested(output, '', argTarget);
   let envTargets: ProjectEnvTarget[] = [];
   if (target) {
     if (!isValidEnvTarget(target)) {

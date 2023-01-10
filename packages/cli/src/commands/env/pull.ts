@@ -71,7 +71,12 @@ export default async function pull(
     return 1;
   }
 
-  const environment = getEnvTargetRequested(output, opts['--environment']);
+  const environment = getEnvTargetRequested(
+    output,
+    'development',
+    opts['--environment']
+  );
+
   if (!isValidEnvTarget(environment)) {
     output.error(
       `Invalid environment \`${chalk.cyan(

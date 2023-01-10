@@ -10,17 +10,15 @@ describe('parseEnvTarget', () => {
     output.error = jest.fn();
   });
 
-  it('defaults to `development`', () => {
-    delete process.env.VERCEL_ENV;
-    let result = getEnvTargetRequested(output);
-    expect(result).toEqual('development');
-  });
-
   it('defaults to arg', () => {
     try {
       process.env.VERCEL_ENV = 'some-env';
-      const result = getEnvTargetRequested(output, 'arg-env');
-      expect(result).toEqual('arg-env');
+      const result = getEnvTargetRequested(
+        output,
+        'some-default-env',
+        'some-env'
+      );
+      expect(result).toEqual('some-env');
     } finally {
       delete process.env.VERCEL_ENV;
     }
@@ -29,10 +27,19 @@ describe('parseEnvTarget', () => {
   it('use VERCEL_ENV when no arg', () => {
     try {
       process.env.VERCEL_ENV = 'some-env';
-      const result = getEnvTargetRequested(output);
+      const result = getEnvTargetRequested(
+        output,
+        'some-default-env',
+        undefined
+      );
       expect(result).toEqual('some-env');
     } finally {
       delete process.env.VERCEL_ENV;
     }
+  });
+
+  it('uses default', () => {
+    const result = getEnvTargetRequested(output, 'some-default-env', undefined);
+    expect(result).toEqual('some-default-env');
   });
 });
