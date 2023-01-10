@@ -666,7 +666,7 @@ async function getFramework(
   }
 
   // determine framework version with runtime lookup
-  const frameworkVersion = await detectFrameworkVersion(detectedFramework);
+  const frameworkVersion = detectFrameworkVersion(detectedFramework);
   if (frameworkVersion) {
     return {
       version: frameworkVersion,

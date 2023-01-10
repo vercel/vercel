@@ -181,9 +181,9 @@ export async function detectFrameworkRecord({
   return frameworkRecord;
 }
 
-export async function detectFrameworkVersion(
+export function detectFrameworkVersion(
   frameworkRecord: Framework
-): Promise<string | undefined> {
+): string | undefined {
   const allDetectors = [
     ...(frameworkRecord.detectors?.every || []),
     ...(frameworkRecord.detectors?.some || []),
