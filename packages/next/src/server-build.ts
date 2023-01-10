@@ -1143,7 +1143,6 @@ export async function serverBuild({
 
   if (appDir) {
     for (const route of dynamicRoutes) {
-      completeDynamicRoutes.push(route);
       completeDynamicRoutes.push({
         ...route,
         src: route.src.replace(
@@ -1152,6 +1151,7 @@ export async function serverBuild({
         ),
         dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
       });
+      completeDynamicRoutes.push(route);
     }
   } else {
     completeDynamicRoutes.push(...dynamicRoutes);
