@@ -52,6 +52,7 @@
     "@vercel/routing-utils": "workspace:2.1.3",
     "@vercel/ruby": "workspace:1.3.49",
     "@vercel/static-build": "workspace:1.1.0",
+    "qs": "6.11.0",
     "update-notifier": "5.1.0"
   },
   "devDependencies": {
@@ -85,6 +86,7 @@
     "@types/npm-package-arg": "6.1.0",
     "@types/pluralize": "0.0.29",
     "@types/psl": "1.1.0",
+    "@types/qs": "6.9.7",
     "@types/semver": "6.0.1",
     "@types/tar-fs": "1.16.1",
     "@types/text-table": "0.2.0",
