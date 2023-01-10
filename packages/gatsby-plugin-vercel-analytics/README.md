@@ -18,12 +18,6 @@ This plugin sends [Core Web Vitals](https://web.dev/vitals/) to Vercel Analytics
 npm i @vercel/gatsby-plugin-vercel-analytics
 ```
 
-or
-
-```bash
-pnpm add @vercel/gatsby-plugin-vercel-analytics
-```
-
 ## Usage
 
 ```js
