@@ -505,12 +505,9 @@ export const frameworks = [
     description: 'A Preact app, created with the Preact CLI.',
     website: 'https://preactjs.com',
     detectors: {
-      some: [
-        {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"preact":\\s*".+?"[^}]*}',
-        },
+      every: [
+        // Intentionally does not detect "preact" package because that can be
+        // used to power other frameworks.
         {
           path: 'package.json',
           matchContent:
