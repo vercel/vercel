@@ -15,9 +15,9 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "yarn test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
+    "test-integration-once": "pnpm test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-unit": "yarn test tests/unit.*test.*"
+    "test-unit": "pnpm test tests/unit.*test.*"
   },
   "engines": {
     "node": ">= 14"

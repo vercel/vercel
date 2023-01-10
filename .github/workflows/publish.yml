@@ -3,9 +3,9 @@ name: Publish
 on:
   push:
     branches:
-    - main
+      - main
     tags:
-    - '!*'
+      - '!*'
 
 env:
   TURBO_REMOTE_ONLY: 'true'
@@ -17,51 +17,51 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    - name: Check Release
-      id: check-release
-      run: |
-        tag="$(git describe --tags --exact-match 2> /dev/null || :)"
-        if [[ -z "$tag" ]];
-          then
-            echo "IS_RELEASE=false" >> $GITHUB_OUTPUT
-          else
-            echo "IS_RELEASE=true" >> $GITHUB_OUTPUT
-        fi
-    - name: Setup Go
-      if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.13.15'
-    - name: Setup Node
-      if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      uses: actions/setup-node@v3
-      timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
-      with:
-        node-version: 14
-    - name: Cache
-      if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      uses: actions/cache@v3
-      with:
-        path: '**/node_modules'
-        key: yarn-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
-        restore-keys: yarn-${{ matrix.os }}-${{ matrix.node }}
-    - name: Install
-      if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      run: yarn install --check-files --frozen-lockfile --network-timeout 1000000
-    - name: Build
-      if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      run: yarn build
-      env:
-        GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
-        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-    - name: Publish
-      if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      run: yarn publish-from-github
-      env:
-        NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
-        GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
-        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check Release
+        id: check-release
+        run: |
+          tag="$(git describe --tags --exact-match 2> /dev/null || :)"
+          if [[ -z "$tag" ]];
+            then
+              echo "IS_RELEASE=false" >> $GITHUB_OUTPUT
+            else
+              echo "IS_RELEASE=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Setup Go
+        if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.13.15'
+      - name: Setup Node
+        if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
+        uses: actions/setup-node@v3
+        timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
+        with:
+          node-version: 14
+      - name: Cache
+        if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
+        uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
+      - name: Install
+        if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
+        run: pnpm install --check-files --frozen-lockfile --network-timeout 1000000
+      - name: Build
+        if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
+        run: pnpm build
+        env:
+          GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      - name: Publish
+        if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
+        run: pnpm publish-from-github
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
+          GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}

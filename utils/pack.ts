@@ -38,7 +38,7 @@ async function main() {
     }
     await fs.writeJson(packageJsonPath, packageObj, { spaces: 2 });
 
-    await execa('yarn', ['pack'], {
+    await execa('pnpm', ['pack'], {
       cwd: dir,
       stdio: 'inherit',
     });

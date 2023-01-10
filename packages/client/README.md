@@ -11,7 +11,7 @@ Firstly, install the package:
 ```bash
 npm install @vercel/client
 # or
-yarn add @vercel/client
+pnpm add @vercel/client
 ```
 
 Next, load it:

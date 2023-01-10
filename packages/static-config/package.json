@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-unit": "yarn test",
+    "test-unit": "pnpm test",
     "test": "jest --env node --verbose --runInBand --bail"
   },
   "files": [

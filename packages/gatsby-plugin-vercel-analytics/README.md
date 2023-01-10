@@ -21,7 +21,7 @@ npm i @vercel/gatsby-plugin-vercel-analytics
 or
 
 ```bash
-yarn add @vercel/gatsby-plugin-vercel-analytics
+pnpm add @vercel/gatsby-plugin-vercel-analytics
 ```
 
 ## Usage

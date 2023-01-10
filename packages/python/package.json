@@ -16,8 +16,8 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-unit": "yarn test test/unit.test.ts",
-    "test-integration-once": "yarn test test/integration.test.ts"
+    "test-unit": "pnpm test test/unit.test.ts",
+    "test-integration-once": "pnpm test test/integration.test.ts"
   },
   "devDependencies": {
     "@types/execa": "^0.9.0",

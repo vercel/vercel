@@ -12,8 +12,8 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --bail --runInBand",
-    "test-unit": "yarn test test/prepare-cache.test.ts test/utils.test.ts",
-    "test-integration-once": "yarn test test/integration-*.test.js"
+    "test-unit": "pnpm test test/prepare-cache.test.ts test/utils.test.ts",
+    "test-integration-once": "pnpm test test/integration-*.test.js"
   },
   "files": [
     "dist"
