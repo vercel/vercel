@@ -41,7 +41,9 @@ jobs:
           path: '**/node_modules'
           key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
-      - run: pnpm install --network-timeout 1000000 --frozen-lockfile
+      - name: Corepack
+        run: corepack enable
+      - run: pnpm install
       - id: set-tests
         run: |
           TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
