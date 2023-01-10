@@ -1147,7 +1147,7 @@ export async function serverBuild({
         ...route,
         src: route.src.replace(
           new RegExp(escapeStringRegexp('(?:/)?$')),
-          '(?:\\.rsc)?(?:/)?$'
+          '(?:\\.rsc)(?:/)?$'
         ),
         dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
       });
