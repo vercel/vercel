@@ -4,6 +4,17 @@
   "private": true,
   "license": "Apache-2.0",
   "packageManager": "pnpm@7.24.2",
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ],
+    "nohoist": [
+      "**/@types/**",
+      "**/typedoc",
+      "**/typedoc-plugin-markdown",
+      "**/typedoc-plugin-mdn-links"
+    ]
+  },
   "dependencies": {
     "lerna": "3.16.4"
   },

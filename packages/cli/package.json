@@ -52,7 +52,6 @@
     "@vercel/routing-utils": "workspace:2.1.3",
     "@vercel/ruby": "1.3.49",
     "@vercel/static-build": "1.1.0",
-    "i": "^0.3.7",
     "update-notifier": "5.1.0"
   },
   "devDependencies": {

@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-unit": "yarn test",
+    "test-unit": "pnpm test",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },
   "devDependencies": {
