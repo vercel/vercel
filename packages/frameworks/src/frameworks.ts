@@ -1725,6 +1725,44 @@ export const frameworks = [
     defaultVersion: '0.13.0', // Must match the build image
   },
   {
+    name: 'Hydrogen',
+    slug: 'hydrogen',
+    demo: 'https://hydrogen-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/hydrogen.svg',
+    tagline: 'React framework for headless commerce',
+    description: 'React framework for headless commerce',
+    website: 'https://hydrogen.shopify.dev',
+    useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
+    detectors: {
+      some: [
+        {
+          path: 'hydrogen.config.js',
+        },
+        {
+          path: 'hydrogen.config.ts',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'shopify hydrogen build',
+        placeholder: '`npm run build` or `shopify hydrogen build`',
+      },
+      devCommand: {
+        value: 'shopify hydrogen dev',
+        placeholder: 'shopify hydrogen dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: '@shopify/hydrogen',
+    getOutputDirName: async () => 'dist',
+  },
+  {
     name: 'Vite',
     slug: 'vite',
     demo: 'https://vite-vue-template.vercel.app',
@@ -1931,45 +1969,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-  },
-  {
-    // TODO: fix detected as "vite"
-    name: 'Hydrogen',
-    slug: 'hydrogen',
-    demo: 'https://hydrogen-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/hydrogen.svg',
-    tagline: 'React framework for headless commerce',
-    description: 'React framework for headless commerce',
-    website: 'https://hydrogen.shopify.dev',
-    useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
-    detectors: {
-      some: [
-        {
-          path: 'hydrogen.config.js',
-        },
-        {
-          path: 'hydrogen.config.ts',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
-      },
-      buildCommand: {
-        value: 'shopify hydrogen build',
-        placeholder: '`npm run build` or `shopify hydrogen build`',
-      },
-      devCommand: {
-        value: 'shopify hydrogen dev',
-        placeholder: 'shopify hydrogen dev',
-      },
-      outputDirectory: {
-        value: 'dist',
-      },
-    },
-    dependency: '@shopify/hydrogen',
-    getOutputDirName: async () => 'dist',
   },
   {
     name: 'Other',
