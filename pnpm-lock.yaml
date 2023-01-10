@@ -63,6 +63,7 @@ importers:
       '@types/glob': 7.2.0
       '@types/jest': 27.4.1
       '@types/js-yaml': 3.12.1
+      '@types/minimatch': ^5.1.2
       '@types/ms': 0.7.31
       '@types/multistream': 2.1.1
       '@types/node': 14.18.33
@@ -96,6 +97,7 @@ importers:
       '@types/glob': 7.2.0
       '@types/jest': 27.4.1
       '@types/js-yaml': 3.12.1
+      '@types/minimatch': 5.1.2
       '@types/ms': 0.7.31
       '@types/multistream': 2.1.1
       '@types/node': 14.18.33
@@ -3799,7 +3801,7 @@ packages:
   /@types/glob/7.2.0:
     resolution: {integrity: sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==}
     dependencies:
-      '@types/minimatch': 3.0.5
+      '@types/minimatch': 5.1.2
       '@types/node': 18.11.18
     dev: true
 
@@ -3915,6 +3917,10 @@ packages:
 
   /@types/minimatch/3.0.5:
     resolution: {integrity: sha512-Klz949h02Gz2uZCMGwDUSDS1YBlTdDDgbWHi+81l29tQALUtvz4rAYi5uoVhE5Lagoq6DeqAUlbrHvW/mXDgdQ==}
+
+  /@types/minimatch/5.1.2:
+    resolution: {integrity: sha512-K0VQKziLUWkVKiRVrx4a40iPaxTUefQmjtkQofBkYRcoaaL/8rhwDWww9qWbrgicNOgnpIsMxyNIUM4+n6dUIA==}
+    dev: true
 
   /@types/minimist/1.2.0:
     resolution: {integrity: sha512-BsF2gEVEIOcbQCSwXR6V14fGD6QLLT0yQBK6RpblkxVYP9x8ANNThpxMUxV7h4KKjqMDR8qELlcnqrEoyvsohw==}
