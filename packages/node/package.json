@@ -57,8 +57,11 @@
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",
+    "execa": "3.2.0",
+    "fs-extra": "^11.1.0",
     "path-to-regexp": "6.2.1",
     "source-map-support": "0.5.12",
-    "test-listen": "1.1.0"
+    "test-listen": "1.1.0",
+    "ts-morph": "12.0.0"
   }
 }

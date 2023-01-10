@@ -52,7 +52,7 @@ async function main() {
     'update-notifier',
     'src/index.ts',
   ];
-  await execa('yarn', args, { stdio: 'inherit', cwd: dirRoot });
+  await execa('pnpm', args, { stdio: 'inherit', cwd: dirRoot });
 
   // `ncc` has some issues with `@vercel/fun`'s runtime files:
   //   - Executable bits on the `bootstrap` files appear to be lost:
