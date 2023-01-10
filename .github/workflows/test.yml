@@ -90,7 +90,7 @@ jobs:
       - name: Corepack
         run: corepack enable
 
-      - run: pnpm install --network-timeout 1000000
+      - run: pnpm install
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps

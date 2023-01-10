@@ -45,7 +45,7 @@ jobs:
           restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
       - name: Corepack
         run: corepack enable
-      - run: pnpm install --network-timeout 1000000 --frozen-lockfile
+      - run: pnpm install
       - run: pnpm run build
       - run: pnpm test-integration-cli
         env:

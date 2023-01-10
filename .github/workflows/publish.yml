@@ -53,7 +53,7 @@ jobs:
         run: corepack enable
       - name: Install
         if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-        run: pnpm install --check-files --frozen-lockfile --network-timeout 1000000
+        run: pnpm install --check-files
       - name: Build
         if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
         run: pnpm build
