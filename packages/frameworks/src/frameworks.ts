@@ -1797,7 +1797,6 @@ export const frameworks = [
     getOutputDirName: async () => 'docs/.vitepress/dist',
   },
   {
-    // TODO: fix not detected
     name: 'VuePress',
     slug: 'vuepress',
     demo: 'https://vuepress-starter-template.vercel.app',
@@ -1810,7 +1809,7 @@ export const frameworks = [
         {
           path: 'package.json',
           matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*vuepress:\\s*".+?"[^}]*}',
+            '"(dev)?(d|D)ependencies":\\s*{[^}]*"vuepress":\\s*".+?"[^}]*}',
         },
       ],
     },
