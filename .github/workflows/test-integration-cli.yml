@@ -43,6 +43,8 @@ jobs:
           path: '**/node_modules'
           key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
+      - name: Corepack
+        run: corepack enable
       - run: pnpm install --network-timeout 1000000 --frozen-lockfile
       - run: pnpm run build
       - run: pnpm test-integration-cli

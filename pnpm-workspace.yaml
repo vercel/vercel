@@ -1,5 +1,2 @@
 packages:
-  - 'packages/**'
-  - 'api'
-  - '!**/test/**'
-  - '!**/tests/**'
+  - 'packages/*'
