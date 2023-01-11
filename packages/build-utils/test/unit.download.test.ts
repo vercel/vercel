@@ -159,7 +159,7 @@ describe('download()', () => {
     await fs.remove(outDir);
     const files = {
       'empty-dir': new FileBlob({
-        mode: 16877,
+        mode: 16877, // drwxr-xr-x
         contentType: undefined,
         data: '',
       }),
@@ -174,7 +174,7 @@ describe('download()', () => {
         data: '',
       }),
       'another/subdir': new FileBlob({
-        mode: 16877,
+        mode: 16895, // drwxrwxrwx
         contentType: undefined,
         data: '',
       }),
@@ -182,14 +182,10 @@ describe('download()', () => {
 
     await download(files, outDir);
 
-    const stats = await Promise.all([
-      fs.lstat(path.join(outDir, 'empty-dir')),
-      fs.lstat(path.join(outDir, 'dir')),
-      fs.lstat(path.join(outDir, 'dir/subdir')),
-      fs.lstat(path.join(outDir, 'another/subdir')),
-    ]);
-    for (const stat of stats) {
+    for (const [p, f] of Object.entries(files)) {
+      const stat = await fs.lstat(path.join(outDir, p));
       expect(stat.isDirectory()).toEqual(true);
+      expect(stat.mode).toEqual(f.mode);
     }
   });
 });
