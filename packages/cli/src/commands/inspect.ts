@@ -9,12 +9,10 @@ import { handleError } from '../util/error';
 import getScope from '../util/get-scope';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import Client from '../util/client';
-import { getDeployment } from '../util/get-deployment';
-import { Deployment } from '@vercel/client';
-import { Build } from '../types';
+import getDeployment from '../util/get-deployment';
+import { Build, Deployment } from '../types';
 import title from 'title';
 import { isErrnoException } from '@vercel/error-utils';
-import { isAPIError } from '../util/errors-ts';
 import { URL } from 'url';
 
 const help = () => {
@@ -49,7 +47,6 @@ const help = () => {
 };
 
 export default async function main(client: Client) {
-  let deployment;
   let argv;
 
   try {
@@ -101,30 +98,11 @@ export default async function main(client: Client) {
   );
 
   // resolve the deployment, since we might have been given an alias
-  try {
-    deployment = await getDeployment(client, deploymentIdOrHost);
-  } catch (err: unknown) {
-    if (isAPIError(err)) {
-      if (err.status === 404) {
-        error(
-          `Failed to find deployment "${deploymentIdOrHost}" in ${chalk.bold(
-            contextName
-          )}`
-        );
-        return 1;
-      }
-      if (err.status === 403) {
-        error(
-          `No permission to access deployment "${deploymentIdOrHost}" in ${chalk.bold(
-            contextName
-          )}`
-        );
-        return 1;
-      }
-    }
-    // unexpected
-    throw err;
-  }
+  const deployment = await getDeployment(
+    client,
+    contextName,
+    deploymentIdOrHost
+  );
 
   const {
     id,
@@ -138,11 +116,11 @@ export default async function main(client: Client) {
 
   const { builds } =
     deployment.version === 2
-      ? await client.fetch<{ builds: Build[] }>(`/v1/deployments/${id}/builds`)
+      ? await client.fetch<{ builds: Build[] }>(`/v11/deployments/${id}/builds`)
       : { builds: [] };
 
   log(
-    `Fetched deployment ${chalk.bold(url)} in ${chalk.bold(
+    `Fetched deployment "${chalk.bold(url)}" in ${chalk.bold(
       contextName
     )} ${elapsed(Date.now() - depFetchStart)}`
   );
@@ -163,7 +141,7 @@ export default async function main(client: Client) {
   }
   print('\n\n');
 
-  if (aliases.length > 0) {
+  if (aliases !== undefined && aliases.length > 0) {
     print(chalk.bold('  Aliases\n\n'));
     let aliasList = '';
     for (const alias of aliases) {
@@ -202,8 +180,6 @@ function stateString(s: Deployment['readyState']) {
   switch (s) {
     case 'INITIALIZING':
     case 'BUILDING':
-    case 'DEPLOYING':
-    case 'ANALYZING':
       return chalk.yellow(CIRCLE) + sTitle;
     case 'ERROR':
       return chalk.red(CIRCLE) + sTitle;
