@@ -4,6 +4,8 @@ const path = require('path');
 const docs = path.join(__dirname, '..', 'docs');
 const interfaces = path.join(docs, 'interfaces');
 
+console.log(`Fixing links in ${docs} and ${interfaces}`);
+
 for (const dir of [docs, interfaces]) {
   for (const entity of fs.readdirSync(dir)) {
     try {
