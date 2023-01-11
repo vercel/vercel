@@ -20,7 +20,7 @@ async function getChunkedTests() {
       `--cache-dir=.turbo`,
       '--output-logs=full',
       '--',
-      '--',
+      '--', // need two of these due to pnpm arg parsing
       '--listTests',
     ])
   ).toString('utf8');

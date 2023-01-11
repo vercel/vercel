@@ -444,7 +444,7 @@ it('should support initialHeaders and initialStatus correctly', async () => {
 });
 
 it('should support require by path for legacy builders', () => {
-  const index = require('../dist');
+  const index = require('../');
 
   const download2 = require('../fs/download.js');
   const getWriteableDirectory2 = require('../fs/get-writable-directory.js');

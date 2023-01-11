@@ -137,6 +137,8 @@ export function execAsync(
       child.on('close', (code, signal) => {
         if (code === 0 || opts.ignoreNon0Exit) {
           return resolve({
+            // ignoring the next line due to do some Node.js type issue when we removed hoisting of dependencies in https://github.com/vercel/vercel/pull/9198
+            // should eventually be fixed when this method is remove by https://github.com/vercel/vercel/pull/9200 or we update to Node 16
             // @ts-ignore
             code,
             stdout: Buffer.concat(stdoutList).toString(),

@@ -1,3 +1,5 @@
+// this step is necessary until https://github.com/TypeStrong/typedoc/issues/2140 is fixed
+
 const fs = require('fs');
 const path = require('path');
 
