@@ -2036,7 +2036,6 @@ export const build: BuildV2 = async ({
             const operationType = getOperationType({
               group,
               prerenderManifest,
-              pageFileName: page,
             });
 
             lambdas[group.lambdaIdentifier] =
