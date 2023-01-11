@@ -265,6 +265,27 @@ describe('rollback', () => {
 
     await expect(exitCodePromise).resolves.toEqual(0);
   });
+
+  it('should error if deployment belongs to different team', async () => {
+    const { cwd, previousDeployment } = initRollbackTest();
+    previousDeployment.team = {
+      id: 'abc',
+      name: 'abc',
+      slug: 'abc',
+    };
+    client.setArgv('rollback', previousDeployment.id, '--yes', '--cwd', cwd);
+    const exitCodePromise = rollback(client);
+
+    await expect(client.stderr).toOutput('Retrieving project…');
+    await expect(client.stderr).toOutput(
+      `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
+    );
+    await expect(client.stderr).toOutput(
+      'Error: Deployment belongs to a different team'
+    );
+
+    await expect(exitCodePromise).resolves.toEqual(1);
+  });
 });
 
 type RollbackAlias = {
@@ -330,7 +351,7 @@ function initRollbackTest({
 
   let counter = 0;
 
-  client.scenario.get(`/v9/projects/${project.id}`, (req, res) => {
+  client.scenario.get(`/:version/projects/${project.id}`, (req, res) => {
     const data = { ...project };
     if (req.query?.rollbackInfo === 'true') {
       if (lastRollbackTarget && counter++ > rollbackPollCount) {
@@ -339,18 +360,6 @@ function initRollbackTest({
       data.lastRollbackTarget = lastRollbackTarget;
     }
     res.json(data);
-  });
-
-  client.scenario.get(`/:version/now/deployments/get`, (req, res) => {
-    const { url } = req.query;
-    if (url === previousDeployment.url) {
-      res.json({ id: previousDeployment.id });
-    } else {
-      res.statusCode = 404;
-      res.json({
-        error: { code: 'not_found', message: 'Deployment not found' },
-      });
-    }
   });
 
   client.scenario.get(
