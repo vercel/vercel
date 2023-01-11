@@ -52,7 +52,7 @@ Omit.status
 
 #### Defined in
 
-node_modules/.pnpm/typescript@4.7.4/node_modules/typescript/lib/lib.dom.d.ts:1578
+node_modules/typescript/lib/lib.dom.d.ts:1578
 
 ---
 
@@ -66,4 +66,4 @@ Omit.statusText
 
 #### Defined in
 
-node_modules/.pnpm/typescript@4.7.4/node_modules/typescript/lib/lib.dom.d.ts:1579
+node_modules/typescript/lib/lib.dom.d.ts:1579
