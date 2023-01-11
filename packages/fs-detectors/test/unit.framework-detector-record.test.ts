@@ -56,9 +56,9 @@ describe('detectFrameworkRecord', () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
-          nuxt: '1.0.0',
+          'nuxt-edge': '3.0.0',
           nuxt3: '2.0.0',
-          'nuxt3-edge': '3.0.0',
+          nuxt: '1.0.0',
         },
       }),
     });
