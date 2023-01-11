@@ -2,7 +2,7 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs-extra');
 const json5 = require('json5');
-const { glob } = require('@vercel/build-utils');
+const { glob } = require('../../packages/build-utils');
 
 function runAnalyze(wrapper, context) {
   if (wrapper.analyze) {
