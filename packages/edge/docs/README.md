@@ -284,10 +284,10 @@ export default () => {
 
 #### Parameters
 
-| Name          | Type                                                                                                                                                                                                                            | Description                                                              |
-| :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :----------------------------------------------------------------------- |
-| `dataPromise` | [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string` \| [`Uint8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array)\> | Promise for data. Supported types of data are string and Uint Uint8Array |
-| `init?`       | `ResponseInit`                                                                                                                                                                                                                  | optional custom response status, statusText and headers                  |
+| Name          | Type                                                                                                                                                                                                                            | Description                                                                                                                                                                                                      |
+| :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dataPromise` | [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string` \| [`Uint8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array)\> | Promise for data to be sent as the response body. Note, that if this promise is rejected, then a plain text "ERROR" is returned to the cliet. Catch errors on the promise yourself to add custom error handling. |
+| `init?`       | `ResponseInit`                                                                                                                                                                                                                  | optional custom response status, statusText and headers                                                                                                                                                          |
 
 #### Returns
 
@@ -295,7 +295,7 @@ export default () => {
 
 #### Defined in
 
-[src/response.ts:41](https://github.com/vercel/vercel/blob/main/packages/edge/src/response.ts#L41)
+[src/response.ts:43](https://github.com/vercel/vercel/blob/main/packages/edge/src/response.ts#L43)
 
 ---
 

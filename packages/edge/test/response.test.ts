@@ -71,4 +71,11 @@ describe('potentiallyLongRunningResponse', () => {
     );
     expect(await response.text()).toBe('data');
   });
+
+  it('returns ERROR on rejected promise', async () => {
+    const response = potentiallyLongRunningResponse(
+      new Promise((_, reject) => reject(new Error('test')))
+    );
+    expect(await response.text()).toBe('ERROR');
+  });
 });
