@@ -25,7 +25,7 @@ export function json(data: any, init?: ResponseInit): Response {
  * Builds a response for returning data based on promise that take many seconds to resolve.
  * The response is returned immediately, but data is only written to it when the promise resolves.
  *
- * @param dataPromise Promise for data. Supported types of data are string and Uint Uint8Array
+ * @param dataPromise Promise for data to be sent as the response body
  * @param init optional custom response status, statusText and headers
  *
  * @example
