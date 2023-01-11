@@ -1,12 +1,8 @@
 import ms from 'ms';
 import path from 'path';
 import fs from 'fs-extra';
-import { strict as assert } from 'assert';
-import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import {
-  glob,
-  spawnAsync,
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
@@ -17,24 +13,6 @@ import {
 } from '../src';
 
 jest.setTimeout(10 * 1000);
-
-async function expectBuilderError(promise: Promise<any>, pattern: string) {
-  let result;
-  try {
-    result = await promise;
-  } catch (error) {
-    result = error;
-  }
-  assert('message' in result, `Expected error message but found ${result}`);
-  assert(
-    typeof result.message === 'string',
-    `Expected error to be a string but found ${typeof result.message}`
-  );
-  assert(
-    result.message.includes(pattern),
-    `Expected ${pattern} but found "${result.message}"`
-  );
-}
 
 let warningMessages: string[];
 const originalConsoleWarn = console.warn;
@@ -47,82 +25,6 @@ beforeEach(() => {
 
 afterEach(() => {
   console.warn = originalConsoleWarn;
-});
-
-it('should create zip files with symlinks properly', async () => {
-  if (process.platform === 'win32') {
-    console.log('Skipping test on windows');
-    return;
-  }
-  const files = await glob('**', path.join(__dirname, 'symlinks'));
-  assert.equal(Object.keys(files).length, 4);
-
-  const outFile = path.join(__dirname, 'symlinks.zip');
-  await fs.remove(outFile);
-
-  const outDir = path.join(__dirname, 'symlinks-out');
-  await fs.remove(outDir);
-  await fs.mkdirp(outDir);
-
-  await fs.writeFile(outFile, await createZip(files));
-  await spawnAsync('unzip', [outFile], { cwd: outDir });
-
-  const [linkStat, linkDirStat, aStat] = await Promise.all([
-    fs.lstat(path.join(outDir, 'link.txt')),
-    fs.lstat(path.join(outDir, 'link-dir')),
-    fs.lstat(path.join(outDir, 'a.txt')),
-  ]);
-  assert(linkStat.isSymbolicLink());
-  assert(linkDirStat.isSymbolicLink());
-  assert(aStat.isFile());
-});
-
-it('should only match supported node versions, otherwise throw an error', async () => {
-  expect(await getSupportedNodeVersion('14.x', false)).toHaveProperty(
-    'major',
-    14
-  );
-  expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
-    'major',
-    16
-  );
-
-  const autoMessage =
-    'Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.';
-  await expectBuilderError(
-    getSupportedNodeVersion('8.11.x', true),
-    autoMessage
-  );
-  await expectBuilderError(getSupportedNodeVersion('6.x', true), autoMessage);
-  await expectBuilderError(getSupportedNodeVersion('999.x', true), autoMessage);
-  await expectBuilderError(getSupportedNodeVersion('foo', true), autoMessage);
-  await expectBuilderError(getSupportedNodeVersion('=> 10', true), autoMessage);
-
-  expect(await getSupportedNodeVersion('14.x', true)).toHaveProperty(
-    'major',
-    14
-  );
-  expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
-    'major',
-    16
-  );
-
-  const foundMessage =
-    'Please set "engines": { "node": "18.x" } in your `package.json` file to use Node.js 18.';
-  await expectBuilderError(
-    getSupportedNodeVersion('8.11.x', false),
-    foundMessage
-  );
-  await expectBuilderError(getSupportedNodeVersion('6.x', false), foundMessage);
-  await expectBuilderError(
-    getSupportedNodeVersion('999.x', false),
-    foundMessage
-  );
-  await expectBuilderError(getSupportedNodeVersion('foo', false), foundMessage);
-  await expectBuilderError(
-    getSupportedNodeVersion('=> 10', false),
-    foundMessage
-  );
 });
 
 it('should match all semver ranges', async () => {

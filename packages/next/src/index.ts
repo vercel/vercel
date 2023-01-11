@@ -24,6 +24,7 @@ import {
   PrepareCache,
   NodejsLambda,
   BuildResultV2Typical as BuildResult,
+  BuildResultBuildOutput,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -65,6 +66,7 @@ import {
   getExportIntent,
   getExportStatus,
   getFilesMapFromReasons,
+  getImagesConfig,
   getImagesManifest,
   getMiddlewareManifest,
   getNextConfig,
@@ -453,6 +455,24 @@ export const build: BuildV2 = async ({
   }
   debug('build command exited');
 
+  let buildOutputVersion: undefined | number;
+
+  try {
+    const data = await readJSON(
+      path.join(outputDirectory, 'output/config.json')
+    );
+    buildOutputVersion = data.version;
+  } catch (_) {
+    // tolerate for older versions
+  }
+
+  if (buildOutputVersion) {
+    return {
+      buildOutputPath: path.join(outputDirectory, 'output'),
+      buildOutputVersion,
+    } as BuildResultBuildOutput;
+  }
+
   let appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
     .replace(/\/+$/, '');
@@ -802,18 +822,7 @@ export const build: BuildV2 = async ({
 
     return {
       output,
-      images:
-        imagesManifest?.images?.loader === 'default'
-          ? {
-              domains: imagesManifest.images.domains,
-              sizes: imagesManifest.images.sizes,
-              remotePatterns: imagesManifest.images.remotePatterns,
-              minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-              dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-              contentSecurityPolicy:
-                imagesManifest.images.contentSecurityPolicy,
-            }
-          : undefined,
+      images: getImagesConfig(imagesManifest),
       routes: [
         ...privateOutputs.routes,
 
@@ -2170,17 +2179,7 @@ export const build: BuildV2 = async ({
       ...privateOutputs.files,
     },
     wildcard: wildcardConfig,
-    images:
-      imagesManifest?.images?.loader === 'default'
-        ? {
-            domains: imagesManifest.images.domains,
-            sizes: imagesManifest.images.sizes,
-            remotePatterns: imagesManifest.images.remotePatterns,
-            minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-            dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-            contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
-          }
-        : undefined,
+    images: getImagesConfig(imagesManifest),
     /*
       Desired routes order
       - Runtime headers
@@ -2663,7 +2662,7 @@ async function getServerlessPages(params: {
   for (const edgeFunctionFile of Object.keys(
     middlewareManifest?.functions ?? {}
   )) {
-    const edgePath = edgeFunctionFile.slice(1) + '.js';
+    const edgePath = (edgeFunctionFile.slice(1) || 'index') + '.js';
     delete normalizedAppPaths[edgePath];
     delete pages[edgePath];
   }

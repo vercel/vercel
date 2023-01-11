@@ -1172,6 +1172,7 @@ describe('build', () => {
     afterAll(() => {
       delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
     });
+
     const setupMonorepoDetectionFixture = (fixture: string) => {
       const cwd = setupFixture(`commands/build/monorepo-detection/${fixture}`);
       process.chdir(cwd);
@@ -1188,14 +1189,12 @@ describe('build', () => {
       'turbo',
       'turbo-package-config',
     ])('fixture: %s', fixture => {
-      const monorepoManagerMap: Record<
-        string,
-        { name: string; buildCommand: string; installCommand: string }
-      > = {
+      const monorepoManagerMap: Record<string, Record<string, string>> = {
         turbo: {
           name: 'Turbo',
           buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
           installCommand: 'cd ../.. && yarn install',
+          ignoreCommand: 'cd ../.. && npx turbo-ignore',
         },
         nx: {
           name: 'Nx',
@@ -1211,8 +1210,8 @@ describe('build', () => {
         // },
       };
 
-      const { name, buildCommand, installCommand } =
-        monorepoManagerMap[fixture.split('-')[0]];
+      const { name, ...commands } = monorepoManagerMap[fixture.split('-')[0]];
+
       test(
         'should detect and use correct defaults',
         async () => {
@@ -1229,7 +1228,7 @@ describe('build', () => {
             const exitCode = await build(client);
             expect(exitCode).toBe(0);
             await expect(client.stderr).toOutput(
-              `Automatically detected ${name} monorepo manager. Attempting to assign default \`buildCommand\` and \`installCommand\` settings.`
+              `Automatically detected ${name} monorepo manager. Attempting to assign default settings.`
             );
             const result = await fs.readFile(
               join(cwd, '.vercel/output/static/index.txt'),
@@ -1262,14 +1261,23 @@ describe('build', () => {
               await fs.readFile(projectJSONPath, 'utf-8')
             );
 
+            const projectJSONCommands = {
+              ...commands,
+            };
+
+            if (projectJSONCommands.ignoreCommand) {
+              projectJSONCommands.commandForIgnoringBuildStep =
+                projectJSONCommands.ignoreCommand;
+              delete projectJSONCommands.ignoreCommand;
+            }
+
             await fs.writeFile(
               projectJSONPath,
               JSON.stringify({
                 ...projectJSON,
                 settings: {
                   ...projectJSON.settings,
-                  buildCommand,
-                  installCommand,
+                  ...projectJSONCommands,
                 },
               })
             );
@@ -1282,6 +1290,11 @@ describe('build', () => {
             await expect(client.stderr).toOutput(
               'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
             );
+            if (name === 'Turbo') {
+              await expect(client.stderr).toOutput(
+                'Cannot automatically assign commandForIgnoringBuildStep as it is already set via project settings or configuration overrides.'
+              );
+            }
           } finally {
             process.chdir(originalCwd);
             delete process.env.__VERCEL_BUILD_RUNNING;
@@ -1306,8 +1319,7 @@ describe('build', () => {
             await fs.writeFile(
               join(cwd, 'packages/app-1/vercel.json'),
               JSON.stringify({
-                buildCommand,
-                installCommand,
+                ...commands,
               })
             );
 
@@ -1319,6 +1331,11 @@ describe('build', () => {
             await expect(client.stderr).toOutput(
               'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
             );
+            if (name === 'Turbo') {
+              await expect(client.stderr).toOutput(
+                'Cannot automatically assign commandForIgnoringBuildStep as it is already set via project settings or configuration overrides.'
+              );
+            }
           } finally {
             process.chdir(originalCwd);
             delete process.env.__VERCEL_BUILD_RUNNING;
@@ -1463,8 +1480,7 @@ describe('build', () => {
         'nx.json',
         'targetDefaults.build',
         [
-          'Missing default `build` target in nx.json. Checking for project level Nx configuration...',
-          'Missing required `build` target in either project.json or package.json Nx configuration. Skipping automatic setting assignment.',
+          'Missing required `build` target in either nx.json, project.json, or package.json Nx configuration. Skipping automatic setting assignment.',
         ],
       ],
       [
@@ -1472,9 +1488,7 @@ describe('build', () => {
         'packages/app-1/project.json',
         'targets.build',
         [
-          'Missing default `build` target in nx.json. Checking for project level Nx configuration...',
-          'Found project.json Nx configuration.',
-          'Missing required `build` target in either project.json or package.json Nx configuration. Skipping automatic setting assignment.',
+          'Missing required `build` target in either nx.json, project.json, or package.json Nx configuration. Skipping automatic setting assignment.',
         ],
       ],
       [
@@ -1482,9 +1496,7 @@ describe('build', () => {
         'packages/app-1/package.json',
         'nx.targets.build',
         [
-          'Missing default `build` target in nx.json. Checking for project level Nx configuration...',
-          'Found package.json Nx configuration.',
-          'Missing required `build` target in either project.json or package.json Nx configuration. Skipping automatic setting assignment.',
+          'Missing required `build` target in either nx.json, project.json, or package.json Nx configuration. Skipping automatic setting assignment.',
         ],
       ],
       [
