@@ -1,11 +1,11 @@
 import { join, dirname, basename } from 'path';
 import execa from 'execa';
 import fs from 'fs';
+import { mkdirp } from 'fs-extra';
 import { promisify } from 'util';
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 import {
-  GlobOptions,
   BuildOptions,
   getWriteableDirectory,
   download,
@@ -32,6 +32,29 @@ async function pipenvConvert(cmd: string, srcDir: string) {
   }
 }
 
+async function matchPaths(
+  configPatterns: string | string[] | undefined,
+  workPath: string
+) {
+  if (!configPatterns) {
+    return [];
+  }
+
+  const patterns =
+    typeof configPatterns === 'string' ? [configPatterns] : configPatterns;
+
+  const patternPaths = (
+    await Promise.all(
+      patterns.map(async pattern => {
+        const files = await glob(pattern, workPath);
+        return Object.keys(files);
+      })
+    )
+  ).flat();
+
+  return patternPaths;
+}
+
 export const version = 3;
 
 export async function downloadFilesInWorkPath({
@@ -45,7 +68,11 @@ export async function downloadFilesInWorkPath({
   if (meta.isDev) {
     // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
-    const destCache = join(devCacheDir, basename(entrypoint, '.py'));
+    const destCache = join(
+      devCacheDir,
+      dirname(entrypoint),
+      basename(entrypoint, '.py')
+    );
     await download(downloadedFiles, destCache);
     downloadedFiles = await glob('**', destCache);
     workPath = destCache;
@@ -88,12 +115,16 @@ export const build = async ({
 
   console.log('Installing required dependencies...');
 
+  const packagesDir = '__pypackages__';
+
+  await mkdirp(join(workPath, packagesDir));
+
   await installRequirement({
     pythonPath: pythonVersion.pythonPath,
     pipPath: pythonVersion.pipPath,
     dependency: 'werkzeug',
     version: '1.0.1',
-    workPath,
+    workPath: join(workPath, packagesDir),
     meta,
   });
 
@@ -148,9 +179,15 @@ export const build = async ({
 
     // Python needs to know where to look up all the packages we just installed.
     // We tell it to use the same location as used with `--target`
+    const pythonPath = process.env.PYTHONPATH;
     process.env.PYTHONPATH = tempDir;
     const convertCmd = join(tempDir, 'bin', 'pipfile2req');
     await pipenvConvert(convertCmd, pipfileLockDir);
+    if (pythonPath === undefined) {
+      delete process.env.PYTHONPATH;
+    } else {
+      process.env.PYTHONPATH = pythonPath;
+    }
   }
 
   fsFiles = await glob('**', workPath);
@@ -163,7 +200,7 @@ export const build = async ({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
-      workPath,
+      workPath: join(workPath, packagesDir),
       meta,
     });
   } else if (fsFiles['requirements.txt']) {
@@ -173,7 +210,7 @@ export const build = async ({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
-      workPath,
+      workPath: join(workPath, packagesDir),
       meta,
     });
   }
@@ -188,7 +225,8 @@ export const build = async ({
   debug('Entrypoint with suffix is', entrypointWithSuffix);
   const handlerPyContents = originalHandlerPyContents
     .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
-    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix);
+    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
+    .replace(/__VC_PACKAGES_DIR/g, packagesDir);
 
   // in order to allow the user to have `server.py`, we need our `server.py` to be called
   // somethig else
@@ -196,16 +234,39 @@ export const build = async ({
 
   await writeFile(join(workPath, `${handlerPyFilename}.py`), handlerPyContents);
 
-  const globOptions: GlobOptions = {
-    cwd: workPath,
-    ignore:
-      config && typeof config.excludeFiles === 'string'
-        ? config.excludeFiles
-        : 'node_modules/**',
-  };
+  const outputFiles = await glob('**', workPath);
+
+  // Static analysis is difficult with Python. Instead, provide `includeFiles`
+  // and `excludeFiles` config options to reduce bundle size.
+  if (config && (config.includeFiles || config.excludeFiles)) {
+    const includedPaths = await matchPaths(config.includeFiles, workPath);
+    const excludedPaths = await matchPaths(
+      config.excludeFiles || 'node_modules/**',
+      workPath
+    );
+
+    for (let i = 0; i < excludedPaths.length; i++) {
+      // whitelist includeFiles
+      if (includedPaths.includes(excludedPaths[i])) {
+        continue;
+      }
+
+      // whitelist handler
+      if (excludedPaths[i] === `${handlerPyFilename}.py`) {
+        continue;
+      }
+
+      // whitelist Python packages directory
+      if (excludedPaths[i].startsWith(packagesDir)) {
+        continue;
+      }
+
+      delete outputFiles[excludedPaths[i]];
+    }
+  }
 
   const lambda = await createLambda({
-    files: await glob('**', globOptions),
+    files: outputFiles,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
     environment: {},
