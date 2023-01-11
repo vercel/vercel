@@ -50,7 +50,7 @@ jobs:
       - run: pnpm run lint
         if: matrix.os == 'ubuntu-latest' && matrix.node == 14 # only run lint once
       - run: pnpm run test-unit
-      - run: pnpm workspace vercel run coverage
+      - run: pnpm -C packages/cli run coverage
         if: matrix.os == 'ubuntu-latest' && matrix.node == 14 # only run coverage once
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
