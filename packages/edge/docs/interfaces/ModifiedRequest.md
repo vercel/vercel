@@ -10,7 +10,7 @@
 
 ### headers
 
-• `Optional` **headers**: [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
+• `Optional` **headers**: `Headers`
 
 If set, overwrites the incoming headers to the origin request.
 

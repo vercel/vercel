@@ -172,7 +172,7 @@ Returns the IP address of the request from the headers.
 
 ### json
 
-▸ **json**(`data`, `init?`): [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+▸ **json**(`data`, `init?`): `Response`
 
 Builds a response object from a serializable JavaScript object:
 
@@ -205,7 +205,7 @@ const response = json(
 
 #### Returns
 
-[`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+`Response`
 
 #### Defined in
 
@@ -215,7 +215,7 @@ const response = json(
 
 ### next
 
-▸ **next**(`init?`): [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+▸ **next**(`init?`): `Response`
 
 Returns a Response that instructs the system to continue processing the request.
 
@@ -253,7 +253,7 @@ export default function middleware(_req: Request) {
 
 #### Returns
 
-[`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+`Response`
 
 #### Defined in
 
@@ -263,7 +263,7 @@ export default function middleware(_req: Request) {
 
 ### rewrite
 
-▸ **rewrite**(`destination`, `init?`): [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+▸ **rewrite**(`destination`, `init?`): `Response`
 
 Returns a response that rewrites the request to a different URL.
 
@@ -315,7 +315,7 @@ export const config = { matcher: '/api/users/:path*' };
 
 #### Returns
 
-[`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+`Response`
 
 #### Defined in
 
