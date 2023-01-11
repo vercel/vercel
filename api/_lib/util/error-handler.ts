@@ -13,6 +13,7 @@ function initSentry() {
   sentryInitDone = true;
 
   init({
+    // @ts-ignore
     dsn: assertEnv('SENTRY_DSN'),
     environment: process.env.NODE_ENV || 'production',
     release: `${serviceName}`,

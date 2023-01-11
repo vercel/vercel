@@ -21,6 +21,9 @@ async function main() {
     const dir = path.join(rootDir, task.directory);
     const packageJsonPath = path.join(dir, 'package.json');
     const originalPackageObj = await fs.readJson(packageJsonPath);
+    if (originalPackageObj.name === 'api') {
+      continue;
+    }
     const packageObj = await fs.readJson(packageJsonPath);
     packageObj.version += `-${sha.trim()}`;
 
