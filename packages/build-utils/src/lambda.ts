@@ -3,7 +3,7 @@ import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
-import { isSymbolicLink } from './fs/download';
+import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
 import type { Files, Config } from './types';
 
@@ -200,6 +200,8 @@ export async function createZip(files: Files): Promise<Buffer> {
       const symlinkTarget = symlinkTargets.get(name);
       if (typeof symlinkTarget === 'string') {
         zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), name, opts);
+      } else if (file.mode && isDirectory(file.mode)) {
+        zipFile.addEmptyDirectory(name, opts);
       } else {
         const stream = file.toStream();
         stream.on('error', reject);

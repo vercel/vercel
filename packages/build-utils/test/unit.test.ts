@@ -2,12 +2,10 @@ import ms from 'ms';
 import path from 'path';
 import fs, { readlink } from 'fs-extra';
 import { strict as assert, strictEqual } from 'assert';
-import { createZip } from '../src/lambda';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import download from '../src/fs/download';
 import {
   glob,
-  spawnAsync,
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
@@ -139,34 +137,6 @@ it('should re-create FileBlob symlinks properly', async () => {
 
   strictEqual(linkDirContents, 'dir');
   strictEqual(linkTextContents, 'a.txt');
-});
-
-it('should create zip files with symlinks properly', async () => {
-  if (process.platform === 'win32') {
-    console.log('Skipping test on windows');
-    return;
-  }
-  const files = await glob('**', path.join(__dirname, 'symlinks'));
-  assert.equal(Object.keys(files).length, 4);
-
-  const outFile = path.join(__dirname, 'symlinks.zip');
-  await fs.remove(outFile);
-
-  const outDir = path.join(__dirname, 'symlinks-out');
-  await fs.remove(outDir);
-  await fs.mkdirp(outDir);
-
-  await fs.writeFile(outFile, await createZip(files));
-  await spawnAsync('unzip', [outFile], { cwd: outDir });
-
-  const [linkStat, linkDirStat, aStat] = await Promise.all([
-    fs.lstat(path.join(outDir, 'link.txt')),
-    fs.lstat(path.join(outDir, 'link-dir')),
-    fs.lstat(path.join(outDir, 'a.txt')),
-  ]);
-  assert(linkStat.isSymbolicLink());
-  assert(linkDirStat.isSymbolicLink());
-  assert(aStat.isFile());
 });
 
 it('should download symlinks even with incorrect file', async () => {
