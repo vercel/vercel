@@ -9,8 +9,13 @@ export interface DownloadedFiles {
   [filePath: string]: FileFsRef;
 }
 
-const S_IFMT = 61440; /* 0170000 type of file */
+const S_IFDIR = 16384; /* 0040000 directory */
 const S_IFLNK = 40960; /* 0120000 symbolic link */
+const S_IFMT = 61440; /* 0170000 type of file */
+
+export function isDirectory(mode: number): boolean {
+  return (mode & S_IFMT) === S_IFDIR;
+}
 
 export function isSymbolicLink(mode: number): boolean {
   return (mode & S_IFMT) === S_IFLNK;

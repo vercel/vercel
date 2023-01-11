@@ -1,4 +1,4 @@
-# gatsby-plugin-vercel
+# @vercel/gatsby-plugin-vercel-analytics
 
 ---
 
@@ -15,13 +15,13 @@ This plugin sends [Core Web Vitals](https://web.dev/vitals/) to Vercel Analytics
 ## Install
 
 ```bash
-npm i gatsby-plugin-vercel
+npm i @vercel/gatsby-plugin-vercel-analytics
 ```
 
 or
 
 ```bash
-yarn add gatsby-plugin-vercel
+yarn add @vercel/gatsby-plugin-vercel-analytics
 ```
 
 ## Usage
@@ -31,7 +31,7 @@ yarn add gatsby-plugin-vercel
 module.exports = {
   plugins: [
     {
-      resolve: "gatsby-plugin-vercel",
+      resolve: "@vercel/gatsby-plugin-vercel-analytics",
       options: {
         // (optional) Prints metrics in the console when true
         debug: false,

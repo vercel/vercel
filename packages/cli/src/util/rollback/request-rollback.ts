@@ -1,11 +1,12 @@
 import chalk from 'chalk';
 import type Client from '../client';
+import type { Deployment, Project, Team } from '../../types';
 import { getCommandName } from '../pkg-name';
-import getDeploymentInfo from './get-deployment-info';
+import getDeployment from '../get-deployment';
 import getScope from '../get-scope';
+import getTeamById from '../teams/get-team-by-id';
 import { isValidName } from '../is-valid-name';
 import ms from 'ms';
-import type { Project } from '../../types';
 import rollbackStatus from './status';
 
 /**
@@ -27,7 +28,7 @@ export default async function requestRollback({
   project: Project;
   timeout?: string;
 }): Promise<number> {
-  const { output } = client;
+  const { config, output } = client;
   const { contextName } = await getScope(client);
 
   if (!isValidName(deployId)) {
@@ -37,27 +38,65 @@ export default async function requestRollback({
     return 1;
   }
 
-  output.spinner(
-    `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
-  );
+  let deployment: Deployment;
+  let team: Team | undefined;
 
-  let deployment;
   try {
-    deployment = await getDeploymentInfo(client, contextName, deployId);
-  } catch (err: any) {
-    output.error(err?.toString() || err);
-    return 1;
-  } finally {
-    output.stopSpinner();
+    output.spinner(
+      `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
+    );
+
+    const [teamResult, deploymentResult] = await Promise.allSettled([
+      config.currentTeam ? getTeamById(client, config.currentTeam) : undefined,
+      getDeployment(client, contextName, deployId),
+    ]);
+
+    if (teamResult.status === 'rejected') {
+      output.error(`Failed to retrieve team information: ${teamResult.reason}`);
+      return 1;
+    }
+
+    if (deploymentResult.status === 'rejected') {
+      output.error(deploymentResult.reason);
+      return 1;
+    }
+
+    team = teamResult.value;
+    deployment = deploymentResult.value;
+
     // re-render the spinner text because it goes so fast
     output.log(
       `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
     );
+  } finally {
+    output.stopSpinner();
+  }
+
+  if (deployment.team?.id) {
+    if (!team || deployment.team.id !== team.id) {
+      output.error(
+        team
+          ? `Deployment doesn't belong to current team ${chalk.bold(
+              contextName
+            )}`
+          : `Deployment belongs to a different team`
+      );
+      output.error(
+        `Use ${chalk.bold('vc switch')} to change your current team`
+      );
+      return 1;
+    }
+  } else if (team) {
+    output.error(
+      `Deployment doesn't belong to current team ${chalk.bold(contextName)}`
+    );
+    output.error(`Use ${chalk.bold('vc switch')} to change your current team`);
+    return 1;
   }
 
   // create the rollback
   await client.fetch<any>(
-    `/v9/projects/${project.id}/rollback/${deployment.uid}`,
+    `/v9/projects/${project.id}/rollback/${deployment.id}`,
     {
       body: {}, // required
       method: 'POST',
@@ -68,7 +107,7 @@ export default async function requestRollback({
     output.log(
       `Successfully requested rollback of ${chalk.bold(project.name)} to ${
         deployment.url
-      } (${deployment.uid})`
+      } (${deployment.id})`
     );
     output.log(`To check rollback status, run ${getCommandName('rollback')}.`);
     return 0;
