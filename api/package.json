@@ -18,7 +18,7 @@
   "devDependencies": {
     "@types/node": "16.18.11",
     "@types/node-fetch": "2.5.4",
-    "@vercel/node": "workspace:2.8.5",
+    "@vercel/node": "workspace:2.8.6",
     "typescript": "4.3.4"
   }
 }

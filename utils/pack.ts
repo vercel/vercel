@@ -21,6 +21,7 @@ async function main() {
     const dir = path.join(rootDir, task.directory);
     const packageJsonPath = path.join(dir, 'package.json');
     const originalPackageObj = await fs.readJson(packageJsonPath);
+    // api is not a package that will be published of this repo, but is used when deployed to Vercel
     if (originalPackageObj.name === 'api') {
       continue;
     }
