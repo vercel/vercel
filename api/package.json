@@ -5,7 +5,6 @@
   "description": "API for the vercel/vercel repo",
   "main": "index.js",
   "scripts": {
-    "//TODO": "We should add this pkg to pnpm workspaces"
   },
   "dependencies": {
     "@sentry/node": "5.11.1",
