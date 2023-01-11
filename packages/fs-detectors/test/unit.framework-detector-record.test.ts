@@ -95,11 +95,11 @@ describe('detectFrameworkRecord', () => {
     expect(framework?.slug).toBe('nuxtjs');
   });
 
-  it('Detect Nuxt.js 3 edge', async () => {
+  it('Detect Nuxt.js edge', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
         dependencies: {
-          'nuxt3-edge': '1.0.0',
+          'nuxt-edge': '1.0.0',
         },
       }),
     });
