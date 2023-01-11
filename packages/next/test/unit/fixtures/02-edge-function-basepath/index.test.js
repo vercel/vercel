@@ -36,7 +36,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(output).toHaveProperty('test/api/hello');
     expect(output['test/api/hello'].type).toEqual('EdgeFunction');
 
-    for (let name in output) {
+    for (const name in output) {
       expect(output[name].type).not.toBe('Lambda');
     }
   });
