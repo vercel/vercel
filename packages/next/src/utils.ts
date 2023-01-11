@@ -2683,7 +2683,13 @@ export function getOperationType({
   prerenderManifest?: NextPrerenderedRoutes;
   pageFileName?: string;
 }) {
-  console.log({ pageFileName, prerenderManifest });
+  console.log(
+    JSON.stringify({
+      pageFileName,
+      prerenderManifest,
+      group,
+    })
+  );
 
   if (group?.isApiLambda || isApiPage(pageFileName)) {
     return 'API';
@@ -2693,8 +2699,11 @@ export function getOperationType({
     return 'ISR';
   }
 
-  // TODO: ???
-  // if (prerenderManifest?.staticRoutes[0].srcRoute
+  const routePaths = Object.keys(prerenderManifest?.staticRoutes || {});
+  // TODO: probably not the right comparison
+  if (routePaths.includes('/' + pageFileName)) {
+    return 'ISR';
+  }
 
   return 'SSR';
 }
