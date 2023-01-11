@@ -13,7 +13,7 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-unit": "pnpm test test/unit.*test.*",
+    "test-unit": "turbo build --filter=@vercel/build-utils && pnpm test test/unit.*test.*",
     "test-integration-once": "pnpm test test/integration.test.ts"
   },
   "devDependencies": {

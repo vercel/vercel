@@ -474,21 +474,21 @@ it('should support initialHeaders and initialStatus correctly', async () => {
 });
 
 it('should support require by path for legacy builders', () => {
-  const index = require('@vercel/build-utils');
+  const index = require('../dist');
 
-  const download2 = require('@vercel/build-utils/fs/download.js');
-  const getWriteableDirectory2 = require('@vercel/build-utils/fs/get-writable-directory.js');
-  const glob2 = require('@vercel/build-utils/fs/glob.js');
-  const rename2 = require('@vercel/build-utils/fs/rename.js');
+  const download2 = require('../fs/download.js');
+  const getWriteableDirectory2 = require('../fs/get-writable-directory.js');
+  const glob2 = require('../fs/glob.js');
+  const rename2 = require('../fs/rename.js');
   const {
     runNpmInstall: runNpmInstall2,
-  } = require('@vercel/build-utils/fs/run-user-scripts.js');
-  const streamToBuffer2 = require('@vercel/build-utils/fs/stream-to-buffer.js');
+  } = require('../fs/run-user-scripts.js');
+  const streamToBuffer2 = require('../fs/stream-to-buffer.js');
 
-  const FileBlob2 = require('@vercel/build-utils/file-blob.js');
-  const FileFsRef2 = require('@vercel/build-utils/file-fs-ref.js');
-  const FileRef2 = require('@vercel/build-utils/file-ref.js');
-  const { Lambda: Lambda2 } = require('@vercel/build-utils/lambda.js');
+  const FileBlob2 = require('../file-blob.js');
+  const FileFsRef2 = require('../file-fs-ref.js');
+  const FileRef2 = require('../file-ref.js');
+  const { Lambda: Lambda2 } = require('../lambda.js');
 
   expect(download2).toBe(index.download);
   expect(getWriteableDirectory2).toBe(index.getWriteableDirectory);
@@ -590,9 +590,9 @@ it('should detect package.json in nested backend', async () => {
     '../../node/test/fixtures/18.1-nested-packagejson/backend'
   );
   const result = await scanParentDirs(fixture);
-  expect(result.cliType).toEqual('yarn');
-  expect(result.lockfileVersion).toEqual(undefined);
-  // There is no lockfile but this test will pick up vercel/vercel/yarn.lock
+  expect(result.cliType).toEqual('pnpm');
+  // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
+  expect(result.lockfileVersion).toEqual(5.4);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -602,9 +602,9 @@ it('should detect package.json in nested frontend', async () => {
     '../../node/test/fixtures/18.1-nested-packagejson/frontend'
   );
   const result = await scanParentDirs(fixture);
-  expect(result.cliType).toEqual('yarn');
-  expect(result.lockfileVersion).toEqual(undefined);
-  // There is no lockfile but this test will pick up vercel/vercel/yarn.lock
+  expect(result.cliType).toEqual('pnpm');
+  // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
+  expect(result.lockfileVersion).toEqual(5.4);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 

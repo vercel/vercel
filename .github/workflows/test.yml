@@ -41,8 +41,8 @@ jobs:
           path: '**/node_modules'
           key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
-      - name: install pnpm
-        run: npm i -g pnpm
+      - name: install pnpm@7.24.2
+        run: npm i -g pnpm@7.24.2
       - run: pnpm install
       - id: set-tests
         run: |
@@ -89,8 +89,8 @@ jobs:
         if: matrix.runner == 'macos-latest'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
 
-      - name: install pnpm
-        run: npm i -g pnpm
+      - name: install pnpm@7.24.2
+        run: npm i -g pnpm@7.24.2
 
       - run: pnpm install
 

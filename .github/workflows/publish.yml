@@ -49,8 +49,8 @@ jobs:
         path: '**/node_modules'
         key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
         restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
-    - name: install pnpm
-      run: npm i -g pnpm
+    - name: install pnpm@7.24.2
+      run: npm i -g pnpm@7.24.2
     - name: Install
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       run: pnpm install
