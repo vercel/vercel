@@ -19,8 +19,6 @@ async function getChunkedTests() {
       ...scripts,
       `--cache-dir=.turbo`,
       '--output-logs=full',
-      '--',
-      '--',
       '--listTests',
     ])
   ).toString('utf8');
