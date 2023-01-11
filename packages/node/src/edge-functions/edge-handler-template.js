@@ -1,5 +1,5 @@
 // provided by the edge runtime:
-/* global addEventListener Request Response atob */
+/* global addEventListener Request Response */
 
 // provided by our edge handler logic:
 /* global IS_MIDDLEWARE ENTRYPOINT_LABEL */
