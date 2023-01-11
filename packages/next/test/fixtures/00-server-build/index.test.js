@@ -22,7 +22,7 @@ async function checkForChange(url, initialValue, getNewValue) {
 const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
-  it('should deploy and pass probe checks', async () => {
+  beforeAll(async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
