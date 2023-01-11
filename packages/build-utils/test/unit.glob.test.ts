@@ -1,13 +1,7 @@
 import fs from 'fs-extra';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { glob } from '../src';
-
-function isDirectory(mode: number): boolean {
-  const stat = new fs.Stats();
-  stat.mode = mode;
-  return stat.isDirectory();
-}
+import { glob, isDirectory } from '../src';
 
 describe('glob()', () => {
   it('should return entries for empty directories', async () => {
