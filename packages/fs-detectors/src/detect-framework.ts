@@ -194,15 +194,10 @@ export function detectFrameworkVersion(
     return;
   }
 
-  const version = lookupInstalledVersion(
+  return lookupInstalledVersion(
     process.execPath,
     firstMatchPackage.matchPackage
   );
-  if (version) {
-    return version;
-  }
-
-  return;
 }
 
 function lookupInstalledVersion(
