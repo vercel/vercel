@@ -9,8 +9,7 @@ const test = process.platform === 'win32' ? it.skip : it;
 
 test('docs are up to date', async () => {
   const cwd = path.resolve(__dirname, '../');
-  const res = await execAsync(`pnpm build:docs`, { cwd });
-  console.log(res);
+  await execAsync(`pnpm build:docs`, { cwd });
   const result = await execAsync(`git status --short docs`, {
     cwd,
     encoding: 'utf-8',
