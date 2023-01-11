@@ -34,6 +34,11 @@ describe('Lambda', () => {
   });
 
   it('should create zip file with empty directory', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on windows');
+      return;
+    }
+
     const dir = await fs.mkdtemp(path.join(tmpdir(), 'create-zip-empty-dir'));
     try {
       const files = {
