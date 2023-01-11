@@ -1397,7 +1397,7 @@ export const frameworks = [
           matchPackage: 'nuxt3',
         },
         {
-          matchPackage: 'nuxt3-edge',
+          matchPackage: 'nuxt-edge',
         },
       ],
     },
