@@ -4,6 +4,9 @@ import fs from 'fs-extra';
 import { createZip } from '../src/lambda';
 import { FileBlob, glob, spawnAsync } from '../src';
 
+const MODE_DIRECTORY = 16877; /* drwxr-xr-x */
+const MODE_FILE = 33188; /* -rw-r--r-- */
+
 describe('Lambda', () => {
   it('should create zip file with symlinks', async () => {
     if (process.platform === 'win32') {
@@ -44,23 +47,23 @@ describe('Lambda', () => {
       const files = {
         a: new FileBlob({
           data: 'contents',
-          mode: 33188,
+          mode: MODE_FILE,
         }),
         empty: new FileBlob({
           data: '',
-          mode: 16877,
+          mode: MODE_DIRECTORY,
         }),
         'b/a': new FileBlob({
           data: 'inside dir b',
-          mode: 33188,
+          mode: MODE_FILE,
         }),
         c: new FileBlob({
           data: '',
-          mode: 16877,
+          mode: MODE_DIRECTORY,
         }),
         'c/a': new FileBlob({
           data: 'inside dir c',
-          mode: 33188,
+          mode: MODE_FILE,
         }),
       };
 
