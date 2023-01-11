@@ -8,7 +8,6 @@ for (const dir of [docs, interfaces]) {
   for (const entity of fs.readdirSync(dir)) {
     try {
       const entityPath = path.join(dir, entity);
-      console.log(entityPath);
       const stat = fs.statSync(entityPath);
 
       if (stat.isFile()) {
