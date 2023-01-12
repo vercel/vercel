@@ -30,6 +30,7 @@ describe('glob()', () => {
       expect(isDirectory(files['empty-dir'].mode)).toEqual(true);
       expect(isDirectory(files['dir-with-file/data.json'].mode)).toEqual(false);
       expect(isDirectory(files['root.txt'].mode)).toEqual(false);
+      expect(files['dir-with-file']).toBeUndefined();
     } finally {
       await fs.remove(dir);
     }
