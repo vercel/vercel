@@ -34,7 +34,7 @@ const help = () => {
   )} Connect your Vercel Project to your Git repository defined in your local .git config
 
     ${chalk.cyan(`$ ${getPkgName()} git connect`)}
-  
+
   ${chalk.gray(
     '–'
   )} Connect your Vercel Project to a Git repository using the remote URL
@@ -96,6 +96,7 @@ export default async function main(client: Client) {
   }
 
   const { org, project } = linkedProject;
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   switch (subcommand) {
     case 'connect':
