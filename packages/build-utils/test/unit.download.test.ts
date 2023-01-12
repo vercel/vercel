@@ -185,7 +185,11 @@ describe('download()', () => {
     for (const [p, f] of Object.entries(files)) {
       const stat = await fs.lstat(path.join(outDir, p));
       expect(stat.isDirectory()).toEqual(true);
-      expect(stat.mode).toEqual(f.mode);
+
+      if (process.platform !== 'win32') {
+        // Don't test Windows since it doesn't support the same permissions
+        expect(stat.mode).toEqual(f.mode);
+      }
     }
   });
 });
