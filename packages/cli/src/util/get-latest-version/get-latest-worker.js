@@ -42,6 +42,8 @@ class WorkerOutput {
   }
 
   print(type, args) {
+    // note: `args` may contain an `Error` that will be toString()'d and thus
+    // no stack trace
     const str = format(
       ...args.map(s => (typeof s === 'string' ? s : inspect(s)))
     );
