@@ -15,7 +15,7 @@ export default async function glob(
   opts: GlobOptions | string,
   mountpoint?: string
 ): Promise<Record<string, FileFsRef>> {
-  const options: GlobOptions = typeof opts === 'string' ? { cwd: opts } : opts;
+  const options = typeof opts === 'string' ? { cwd: opts } : opts;
 
   if (!options.cwd) {
     throw new Error(
