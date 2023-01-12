@@ -1369,6 +1369,44 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((errorRoutes![0] as Source).status).toBe(404);
   });
 
+  it('api detect node jsx files', async () => {
+    const files = [
+      'api/index.jsx',
+      'api/users.jsx',
+      'api/config/staging.jsx',
+      'api/config/production.jsx',
+      'api/src/controllers/health.jsx',
+      'api/src/controllers/user.module.jsx',
+    ];
+
+    const { builders, errorRoutes } = await detectBuilders(files, undefined, {
+      featHandleMiss,
+    });
+    expect(builders?.length).toBe(6);
+    expect(builders!.every(b => b.src!.endsWith('.jsx'))).toBe(true);
+    expect(errorRoutes?.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
+  });
+
+  it('api detect node tsx files', async () => {
+    const files = [
+      'api/index.tsx',
+      'api/users.tsx',
+      'api/config/staging.tsx',
+      'api/config/production.tsx',
+      'api/src/controllers/health.tsx',
+      'api/src/controllers/user.module.tsx',
+    ];
+
+    const { builders, errorRoutes } = await detectBuilders(files, undefined, {
+      featHandleMiss,
+    });
+    expect(builders?.length).toBe(6);
+    expect(builders!.every(b => b.src!.endsWith('.tsx'))).toBe(true);
+    expect(errorRoutes?.length).toBe(1);
+    expect((errorRoutes![0] as Source).status).toBe(404);
+  });
+
   it('just public', async () => {
     const files = ['public/index.html', 'public/favicon.ico', 'README.md'];
 
