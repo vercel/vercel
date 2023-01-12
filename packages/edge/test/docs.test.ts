@@ -9,7 +9,7 @@ const test = process.platform === 'win32' ? it.skip : it;
 
 test('docs are up to date', async () => {
   const cwd = path.resolve(__dirname, '../');
-  await execAsync(`yarn build:docs`, { cwd });
+  await execAsync(`pnpm build:docs`, { cwd });
   const result = await execAsync(`git status --short docs`, {
     cwd,
     encoding: 'utf-8',
@@ -27,10 +27,7 @@ test('docs are up to date', async () => {
   if (lines !== '') {
     const diff = await execAsync(`git diff docs`, { cwd, encoding: 'utf8' });
     throw new Error(
-      'Docs are not up to date. Please re-run `yarn build:docs` to re-generate them.\nChanges:\n' +
-        lines +
-        '\n\n' +
-        diff.stdout
+      `Docs are not up to date. Please re-run \`pnpm build:docs\` to re-generate them.\nChanges:\n${lines}\n\n${diff.stdout}`
     );
   }
 
