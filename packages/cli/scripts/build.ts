@@ -47,12 +47,12 @@ async function main() {
   const dependencies = Object.keys(pkg?.dependencies ?? {});
   // Do the initial `ncc` build
   console.log('Dependencies:', dependencies);
-  const externs = [];
+  const externs: Array<string> = [];
   for (const dep of dependencies) {
     externs.push('--external', dep);
   }
   const args = ['ncc', 'build', 'src/index.ts', ...externs];
-  await execa('yarn', args, { stdio: 'inherit', cwd: dirRoot });
+  await execa('pnpm', args, { stdio: 'inherit', cwd: dirRoot });
 
   // `ncc` has some issues with `@vercel/fun`'s runtime files:
   //   - Executable bits on the `bootstrap` files appear to be lost:
@@ -66,10 +66,7 @@ async function main() {
   // get compiled into the final ncc bundle file, however, we want them to be
   // present in the npm package because the contents of those files are involved
   // with `fun`'s cache invalidation mechanism and they need to be shasum'd.
-  const runtimes = join(
-    dirRoot,
-    '../../node_modules/@vercel/fun/dist/src/runtimes'
-  );
+  const runtimes = join(dirRoot, 'node_modules/@vercel/fun/dist/src/runtimes');
   await cpy('**/*', join(distRoot, 'runtimes'), {
     parents: true,
     cwd: runtimes,
