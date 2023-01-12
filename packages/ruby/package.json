@@ -17,12 +17,12 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-integration-once": "yarn test"
+    "test-integration-once": "pnpm test"
   },
   "devDependencies": {
     "@types/fs-extra": "8.0.0",
     "@types/semver": "6.0.0",
-    "@vercel/build-utils": "5.7.5",
+    "@vercel/build-utils": "workspace:5.7.5",
     "@vercel/ncc": "0.24.0",
     "execa": "2.0.4",
     "fs-extra": "^7.0.1",
