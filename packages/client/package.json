@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "12.2.24",
+  "version": "12.2.26",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -15,9 +15,9 @@
   },
   "scripts": {
     "build": "tsc",
-    "test-integration-once": "yarn test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
+    "test-integration-once": "pnpm test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-unit": "yarn test tests/unit.*test.*"
+    "test-unit": "pnpm test tests/unit.*test.*"
   },
   "engines": {
     "node": ">= 14"
@@ -43,8 +43,8 @@
     ]
   },
   "dependencies": {
-    "@vercel/build-utils": "5.7.3",
-    "@vercel/routing-utils": "2.1.3",
+    "@vercel/build-utils": "workspace:5.7.5",
+    "@vercel/routing-utils": "workspace:2.1.3",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",
