@@ -66,7 +66,7 @@ export async function getMonorepoDefaultSettings(
 
     return {
       monorepoManager: 'turbo',
-      buildCommand: `cd ${relativeToRoot} && npx turbo run build --filter=${projectName}...`,
+      buildCommand: `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`,
       installCommand: `cd ${relativeToRoot} && ${packageManager} install`,
       commandForIgnoringBuildStep: `cd ${relativeToRoot} && npx turbo-ignore`,
     };

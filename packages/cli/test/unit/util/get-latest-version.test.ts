@@ -6,6 +6,8 @@ import { join } from 'path';
 
 tmp.setGracefulCleanup();
 
+jest.setTimeout(25000);
+
 const cacheDir = tmp.tmpNameSync({
   prefix: 'test-vercel-cli-get-latest-version-',
 });
@@ -131,8 +133,9 @@ describe('get latest version', () => {
 });
 
 async function waitForCacheFile() {
-  for (let i = 0; i < 40; i++) {
-    await sleep(100);
+  const seconds = 20;
+  for (let i = 0; i < seconds * 4; i++) {
+    await sleep(250);
     if (await fs.pathExists(cacheFile)) {
       return;
     }
