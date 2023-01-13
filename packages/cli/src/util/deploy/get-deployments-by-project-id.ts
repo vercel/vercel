@@ -6,7 +6,7 @@ type Response = {
   deployments: DeploymentPartial[];
 };
 export interface DeploymentPartial {
-  uid: string;
+  id: string;
   name: string;
   url: string;
   created: number;
