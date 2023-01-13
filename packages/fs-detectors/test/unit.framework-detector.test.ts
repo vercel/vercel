@@ -225,7 +225,7 @@ describe('DetectorFilesystem', () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
-            'nuxt3-edge': '1.0.0',
+            'nuxt-edge': '1.0.0',
           },
         }),
       });
