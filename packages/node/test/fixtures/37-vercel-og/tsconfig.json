@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "strict": false,
+    "moduleResolution": "node",
+    "module": "esnext",
+    "target": "esnext",
+    "jsx": "react",
+    "outDir": "dist"
+  }
+}
