@@ -453,7 +453,7 @@ function getApiMatches() {
 
   return [
     { src: 'middleware.[jt]s', use: `@vercel/node`, config },
-    { src: 'api/**/*.+(js|jsx|mjs|ts|tsx)', use: `@vercel/node`, config },
+    { src: 'api/**/*.+(js|mjs|ts|tsx)', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
     { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
