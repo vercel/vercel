@@ -41,11 +41,13 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: '**/node_modules'
-          key: yarn-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
-          restore-keys: yarn-${{ matrix.os }}-${{ matrix.node }}
-      - run: yarn install --network-timeout 1000000 --frozen-lockfile
-      - run: yarn run build
-      - run: yarn test-integration-cli
+          key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
+      - name: install pnpm@7.24.2
+        run: npm i -g pnpm@7.24.2
+      - run: pnpm install
+      - run: pnpm run build
+      - run: pnpm test-integration-cli
         env:
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}

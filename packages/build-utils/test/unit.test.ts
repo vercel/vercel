@@ -1,18 +1,18 @@
 import ms from 'ms';
 import path from 'path';
-import fs from 'fs-extra';
-import { strict as assert } from 'assert';
-import { createZip } from '../src/lambda';
+import fs, { readlink } from 'fs-extra';
+import { strict as assert, strictEqual } from 'assert';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
+import download from '../src/fs/download';
 import {
   glob,
-  spawnAsync,
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
+  FileBlob,
   Prerender,
 } from '../src';
 
@@ -49,7 +49,7 @@ afterEach(() => {
   console.warn = originalConsoleWarn;
 });
 
-it('should create zip files with symlinks properly', async () => {
+it('should re-create FileFsRef symlinks properly', async () => {
   if (process.platform === 'win32') {
     console.log('Skipping test on windows');
     return;
@@ -57,15 +57,11 @@ it('should create zip files with symlinks properly', async () => {
   const files = await glob('**', path.join(__dirname, 'symlinks'));
   assert.equal(Object.keys(files).length, 4);
 
-  const outFile = path.join(__dirname, 'symlinks.zip');
-  await fs.remove(outFile);
-
   const outDir = path.join(__dirname, 'symlinks-out');
   await fs.remove(outDir);
-  await fs.mkdirp(outDir);
 
-  await fs.writeFile(outFile, await createZip(files));
-  await spawnAsync('unzip', [outFile], { cwd: outDir });
+  const files2 = await download(files, outDir);
+  assert.equal(Object.keys(files2).length, 4);
 
   const [linkStat, linkDirStat, aStat] = await Promise.all([
     fs.lstat(path.join(outDir, 'link.txt')),
@@ -75,6 +71,119 @@ it('should create zip files with symlinks properly', async () => {
   assert(linkStat.isSymbolicLink());
   assert(linkDirStat.isSymbolicLink());
   assert(aStat.isFile());
+
+  const [linkDirContents, linkTextContents] = await Promise.all([
+    readlink(path.join(outDir, 'link-dir')),
+    readlink(path.join(outDir, 'link.txt')),
+  ]);
+
+  strictEqual(linkDirContents, 'dir');
+  strictEqual(linkTextContents, './a.txt');
+});
+
+it('should re-create FileBlob symlinks properly', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
+
+  const files = {
+    'a.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'a text',
+    }),
+    'dir/b.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'b text',
+    }),
+    'link-dir': new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'dir',
+    }),
+    'link.txt': new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'a.txt',
+    }),
+  };
+
+  strictEqual(Object.keys(files).length, 4);
+
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+
+  const files2 = await download(files, outDir);
+  strictEqual(Object.keys(files2).length, 4);
+
+  const [linkStat, linkDirStat, aStat, dirStat] = await Promise.all([
+    fs.lstat(path.join(outDir, 'link.txt')),
+    fs.lstat(path.join(outDir, 'link-dir')),
+    fs.lstat(path.join(outDir, 'a.txt')),
+    fs.lstat(path.join(outDir, 'dir')),
+  ]);
+
+  assert(linkStat.isSymbolicLink());
+  assert(linkDirStat.isSymbolicLink());
+  assert(aStat.isFile());
+  assert(dirStat.isDirectory());
+
+  const [linkDirContents, linkTextContents] = await Promise.all([
+    readlink(path.join(outDir, 'link-dir')),
+    readlink(path.join(outDir, 'link.txt')),
+  ]);
+
+  strictEqual(linkDirContents, 'dir');
+  strictEqual(linkTextContents, 'a.txt');
+});
+
+it('should download symlinks even with incorrect file', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
+  const files = {
+    'dir/file.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'file text',
+    }),
+    linkdir: new FileBlob({
+      mode: 41453,
+      contentType: undefined,
+      data: 'dir',
+    }),
+    'linkdir/file.txt': new FileBlob({
+      mode: 33188,
+      contentType: undefined,
+      data: 'this file should be discarded',
+    }),
+  };
+
+  const outDir = path.join(__dirname, 'symlinks-out');
+  await fs.remove(outDir);
+  await fs.mkdirp(outDir);
+
+  await download(files, outDir);
+
+  const [dir, file, linkdir] = await Promise.all([
+    fs.lstat(path.join(outDir, 'dir')),
+    fs.lstat(path.join(outDir, 'dir/file.txt')),
+    fs.lstat(path.join(outDir, 'linkdir')),
+  ]);
+  expect(dir.isFile()).toBe(false);
+  expect(dir.isSymbolicLink()).toBe(false);
+
+  expect(file.isFile()).toBe(true);
+  expect(file.isSymbolicLink()).toBe(false);
+
+  expect(linkdir.isSymbolicLink()).toBe(true);
+
+  expect(warningMessages).toEqual([
+    'Warning: file "linkdir/file.txt" is within a symlinked directory "linkdir" and will be ignored',
+  ]);
 });
 
 it('should only match supported node versions, otherwise throw an error', async () => {
@@ -335,21 +444,21 @@ it('should support initialHeaders and initialStatus correctly', async () => {
 });
 
 it('should support require by path for legacy builders', () => {
-  const index = require('@vercel/build-utils');
+  const index = require('../');
 
-  const download2 = require('@vercel/build-utils/fs/download.js');
-  const getWriteableDirectory2 = require('@vercel/build-utils/fs/get-writable-directory.js');
-  const glob2 = require('@vercel/build-utils/fs/glob.js');
-  const rename2 = require('@vercel/build-utils/fs/rename.js');
+  const download2 = require('../fs/download.js');
+  const getWriteableDirectory2 = require('../fs/get-writable-directory.js');
+  const glob2 = require('../fs/glob.js');
+  const rename2 = require('../fs/rename.js');
   const {
     runNpmInstall: runNpmInstall2,
-  } = require('@vercel/build-utils/fs/run-user-scripts.js');
-  const streamToBuffer2 = require('@vercel/build-utils/fs/stream-to-buffer.js');
+  } = require('../fs/run-user-scripts.js');
+  const streamToBuffer2 = require('../fs/stream-to-buffer.js');
 
-  const FileBlob2 = require('@vercel/build-utils/file-blob.js');
-  const FileFsRef2 = require('@vercel/build-utils/file-fs-ref.js');
-  const FileRef2 = require('@vercel/build-utils/file-ref.js');
-  const { Lambda: Lambda2 } = require('@vercel/build-utils/lambda.js');
+  const FileBlob2 = require('../file-blob.js');
+  const FileFsRef2 = require('../file-fs-ref.js');
+  const FileRef2 = require('../file-ref.js');
+  const { Lambda: Lambda2 } = require('../lambda.js');
 
   expect(download2).toBe(index.download);
   expect(getWriteableDirectory2).toBe(index.getWriteableDirectory);
@@ -451,9 +560,9 @@ it('should detect package.json in nested backend', async () => {
     '../../node/test/fixtures/18.1-nested-packagejson/backend'
   );
   const result = await scanParentDirs(fixture);
-  expect(result.cliType).toEqual('yarn');
-  expect(result.lockfileVersion).toEqual(undefined);
-  // There is no lockfile but this test will pick up vercel/vercel/yarn.lock
+  expect(result.cliType).toEqual('pnpm');
+  // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
+  expect(result.lockfileVersion).toEqual(5.4);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
@@ -463,9 +572,9 @@ it('should detect package.json in nested frontend', async () => {
     '../../node/test/fixtures/18.1-nested-packagejson/frontend'
   );
   const result = await scanParentDirs(fixture);
-  expect(result.cliType).toEqual('yarn');
-  expect(result.lockfileVersion).toEqual(undefined);
-  // There is no lockfile but this test will pick up vercel/vercel/yarn.lock
+  expect(result.cliType).toEqual('pnpm');
+  // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
+  expect(result.lockfileVersion).toEqual(5.4);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 

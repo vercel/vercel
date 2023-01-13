@@ -1143,15 +1143,15 @@ export async function serverBuild({
 
   if (appDir) {
     for (const route of dynamicRoutes) {
-      completeDynamicRoutes.push(route);
       completeDynamicRoutes.push({
         ...route,
         src: route.src.replace(
           new RegExp(escapeStringRegexp('(?:/)?$')),
-          '(?:\\.rsc)?(?:/)?$'
+          '(?:\\.rsc)(?:/)?$'
         ),
         dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
       });
+      completeDynamicRoutes.push(route);
     }
   } else {
     completeDynamicRoutes.push(...dynamicRoutes);
@@ -1755,5 +1755,6 @@ export async function serverBuild({
             },
           ]),
     ],
+    framework: { version: nextVersion },
   };
 }

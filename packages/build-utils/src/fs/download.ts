@@ -2,23 +2,23 @@ import path from 'path';
 import debug from '../debug';
 import FileFsRef from '../file-fs-ref';
 import { File, Files, Meta } from '../types';
-import { remove, mkdirp, readlink, symlink, Stats } from 'fs-extra';
+import { remove, mkdirp, readlink, symlink } from 'fs-extra';
 import streamToBuffer from './stream-to-buffer';
 
 export interface DownloadedFiles {
   [filePath: string]: FileFsRef;
 }
 
-const STAT = new Stats();
-
-export function isSymbolicLink(mode: number): boolean {
-  STAT.mode = mode;
-  return STAT.isSymbolicLink();
-}
+const S_IFDIR = 16384; /* 0040000 directory */
+const S_IFLNK = 40960; /* 0120000 symbolic link */
+const S_IFMT = 61440; /* 0170000 type of file */
 
 export function isDirectory(mode: number): boolean {
-  STAT.mode = mode;
-  return STAT.isDirectory();
+  return (mode & S_IFMT) === S_IFDIR;
+}
+
+export function isSymbolicLink(mode: number): boolean {
+  return (mode & S_IFMT) === S_IFLNK;
 }
 
 async function prepareSymlinkTarget(
@@ -50,11 +50,6 @@ export async function downloadFile(
   fsPath: string
 ): Promise<FileFsRef> {
   const { mode } = file;
-
-  if (isDirectory(mode)) {
-    await mkdirp(fsPath);
-    return FileFsRef.fromFsPath({ mode, fsPath });
-  }
 
   // If the source is a symlink, try to create it instead of copying the file.
   // Note: creating symlinks on Windows requires admin priviliges or symlinks
