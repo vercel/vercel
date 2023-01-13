@@ -14,9 +14,9 @@
     "build:src": "tsc -p tsconfig.src.json"
   },
   "dependencies": {
-    "@vercel/build-utils": "workspace:5.7.5",
-    "@vercel/node": "workspace:2.8.6",
-    "@vercel/routing-utils": "workspace:2.1.3",
+    "@vercel/build-utils": "5.8.3",
+    "@vercel/node": "2.8.11",
+    "@vercel/routing-utils": "2.1.8",
     "ajv": "8.12.0",
     "esbuild": "0.16.17",
     "etag": "1.8.1",
