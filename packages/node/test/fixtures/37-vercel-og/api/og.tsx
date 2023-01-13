@@ -3,9 +3,7 @@ import { h } from '../jsx-runtime.js';
 
 import { ImageResponse } from '@vercel/og';
 
-export const config = {
-  runtime: 'edge',
-};
+export const config = { runtime: 'edge' };
 
 export default function () {
   return new ImageResponse(
@@ -13,7 +11,8 @@ export default function () {
       <div
         style={{
           fontSize: 128,
-          background: 'white',
+          color: 'black',
+          background: 'green',
           width: '100%',
           height: '100%',
           display: 'flex',
