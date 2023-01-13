@@ -45,9 +45,14 @@ describe('buildFileTree()', () => {
 
   it('should include symlinked files and directories', async () => {
     const cwd = fixture('symlinks');
+
+    // Also add an empty directory to make sure it's included
+    await fs.mkdirp(join(cwd, 'empty'));
+
     const { fileList } = await buildFileTree(cwd, { isDirectory: true }, noop);
 
     const expectedFileList = toAbsolutePaths(cwd, [
+      'empty',
       'folder-link',
       'folder/text.txt',
       'index.txt',
