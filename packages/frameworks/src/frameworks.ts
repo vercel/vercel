@@ -74,9 +74,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"next":\\s*".+?"[^}]*}',
+          matchPackage: 'next',
         },
       ],
     },
@@ -119,9 +117,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"gatsby":\\s*".+?"[^}]*}',
+          matchPackage: 'gatsby',
         },
       ],
     },
@@ -244,9 +240,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"astro":\\s*".+?"[^}]*}',
+          matchPackage: 'astro',
         },
       ],
     },
@@ -288,9 +282,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"hexo":\\s*".+?"[^}]*}',
+          matchPackage: 'hexo',
         },
       ],
     },
@@ -325,9 +317,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@11ty\\/eleventy":\\s*".+?"[^}]*}',
+          matchPackage: '@11ty/eleventy',
         },
       ],
     },
@@ -364,9 +354,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@docusaurus\\/core":\\s*".+?"[^}]*}',
+          matchPackage: '@docusaurus/core',
         },
       ],
     },
@@ -452,9 +440,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"docusaurus":\\s*".+?"[^}]*}',
+          matchPackage: 'docusaurus',
         },
       ],
     },
@@ -503,9 +489,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"preact-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'preact-cli',
         },
       ],
     },
@@ -549,14 +533,10 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-js":\\s*".+?"[^}]*}',
+          matchPackage: 'solid-js',
         },
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"solid-start":\\s*".+?"[^}]*}',
+          matchPackage: 'solid-start',
         },
       ],
     },
@@ -589,9 +569,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@dojo\\/framework":\\s*".+?"[^}]*}',
+          matchPackage: '@dojo/framework',
         },
         {
           path: '.dojorc',
@@ -651,9 +629,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"ember-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'ember-cli',
         },
       ],
     },
@@ -698,9 +674,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@vue\\/cli-service":\\s*".+?"[^}]*}',
+          matchPackage: '@vue/cli-service',
         },
       ],
     },
@@ -753,9 +727,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@scullyio\\/init":\\s*".+?"[^}]*}',
+          matchPackage: '@scullyio/init',
         },
       ],
     },
@@ -790,9 +762,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@ionic\\/angular":\\s*".+?"[^}]*}',
+          matchPackage: '@ionic/angular',
         },
       ],
     },
@@ -835,9 +805,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@angular\\/cli":\\s*".+?"[^}]*}',
+          matchPackage: '@angular/cli',
         },
       ],
     },
@@ -895,9 +863,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"polymer-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'polymer-cli',
         },
       ],
     },
@@ -953,14 +919,10 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"svelte":\\s*".+?"[^}]*}',
+          matchPackage: 'svelte',
         },
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sirv-cli":\\s*".+?"[^}]*}',
+          matchPackage: 'sirv-cli',
         },
       ],
     },
@@ -992,6 +954,7 @@ export const frameworks = [
     ],
   },
   {
+    // TODO: fix detected as "sveltekit-1"
     name: 'SvelteKit (Legacy Beta)',
     slug: 'sveltekit',
     demo: 'https://sveltekit-template.vercel.app',
@@ -1081,9 +1044,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@ionic\\/react":\\s*".+?"[^}]*}',
+          matchPackage: '@ionic/react',
         },
       ],
     },
@@ -1143,14 +1104,10 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"react-scripts":\\s*".+?"[^}]*}',
+          matchPackage: 'react-scripts',
         },
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"react-dev-utils":\\s*".+?"[^}]*}',
+          matchPackage: 'react-dev-utils',
         },
       ],
     },
@@ -1209,9 +1166,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"gridsome":\\s*".+?"[^}]*}',
+          matchPackage: 'gridsome',
         },
       ],
     },
@@ -1246,9 +1201,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"umi":\\s*".+?"[^}]*}',
+          matchPackage: 'umi',
         },
       ],
     },
@@ -1292,9 +1245,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"sapper":\\s*".+?"[^}]*}',
+          matchPackage: 'sapper',
         },
       ],
     },
@@ -1329,9 +1280,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"saber":\\s*".+?"[^}]*}',
+          matchPackage: 'saber',
         },
       ],
     },
@@ -1380,9 +1329,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@stencil\\/core":\\s*".+?"[^}]*}',
+          matchPackage: '@stencil/core',
         },
       ],
     },
@@ -1443,11 +1390,15 @@ export const frameworks = [
     sort: 2,
     envPrefix: 'NUXT_ENV_',
     detectors: {
-      every: [
+      some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"nuxt3?(-edge)?":\\s*".+?"[^}]*}',
+          matchPackage: 'nuxt',
+        },
+        {
+          matchPackage: 'nuxt3',
+        },
+        {
+          matchPackage: 'nuxt-edge',
         },
       ],
     },
@@ -1503,9 +1454,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@redwoodjs\\/core":\\s*".+?"[^}]*}',
+          matchPackage: '@redwoodjs/core',
         },
       ],
     },
@@ -1724,6 +1673,44 @@ export const frameworks = [
     defaultVersion: '0.13.0', // Must match the build image
   },
   {
+    name: 'Hydrogen',
+    slug: 'hydrogen',
+    demo: 'https://hydrogen-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/hydrogen.svg',
+    tagline: 'React framework for headless commerce',
+    description: 'React framework for headless commerce',
+    website: 'https://hydrogen.shopify.dev',
+    useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
+    detectors: {
+      some: [
+        {
+          path: 'hydrogen.config.js',
+        },
+        {
+          path: 'hydrogen.config.ts',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'shopify hydrogen build',
+        placeholder: '`npm run build` or `shopify hydrogen build`',
+      },
+      devCommand: {
+        value: 'shopify hydrogen dev',
+        placeholder: 'shopify hydrogen dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: '@shopify/hydrogen',
+    getOutputDirName: async () => 'dist',
+  },
+  {
     name: 'Vite',
     slug: 'vite',
     demo: 'https://vite-vue-template.vercel.app',
@@ -1736,9 +1723,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"vite":\\s*".+?"[^}]*}',
+          matchPackage: 'vite',
         },
       ],
     },
@@ -1772,9 +1757,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"vitepress":\\s*".+?"[^}]*}',
+          matchPackage: 'vitepress',
         },
       ],
     },
@@ -1806,9 +1789,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*vuepress:\\s*".+?"[^}]*}',
+          matchPackage: 'vuepress',
         },
       ],
     },
@@ -1841,9 +1822,7 @@ export const frameworks = [
     detectors: {
       every: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"parcel":\\s*".+?"[^}]*}',
+          matchPackage: 'parcel',
         },
       ],
     },
@@ -1930,44 +1909,6 @@ export const frameworks = [
         dest: '/index.html',
       },
     ],
-  },
-  {
-    name: 'Hydrogen',
-    slug: 'hydrogen',
-    demo: 'https://hydrogen-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/hydrogen.svg',
-    tagline: 'React framework for headless commerce',
-    description: 'React framework for headless commerce',
-    website: 'https://hydrogen.shopify.dev',
-    useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
-    detectors: {
-      some: [
-        {
-          path: 'hydrogen.config.js',
-        },
-        {
-          path: 'hydrogen.config.ts',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder: '`yarn install`, `pnpm install`, or `npm install`',
-      },
-      buildCommand: {
-        value: 'shopify hydrogen build',
-        placeholder: '`npm run build` or `shopify hydrogen build`',
-      },
-      devCommand: {
-        value: 'shopify hydrogen dev',
-        placeholder: 'shopify hydrogen dev',
-      },
-      outputDirectory: {
-        value: 'dist',
-      },
-    },
-    dependency: '@shopify/hydrogen',
-    getOutputDirName: async () => 'dist',
   },
   {
     name: 'Other',
