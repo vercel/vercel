@@ -73,7 +73,7 @@ export default function buildCreateDeployment() {
       debug(`Provided 'path' is a single file`);
     }
 
-    let { fileList } = await buildFileTree(path, clientOptions, debug);
+    const { fileList } = await buildFileTree(path, clientOptions, debug);
 
     // This is a useful warning because it prevents people
     // from getting confused about a deployment that renders 404.
