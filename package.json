@@ -37,6 +37,7 @@
   },
   "scripts": {
     "lerna": "lerna",
+    "version": "pnpm install",
     "bootstrap": "lerna bootstrap",
     "publish-stable": "echo 'Run `pnpm changelog` for instructions'",
     "publish-canary": "git checkout main && git pull && lerna version prerelease --preid canary --message \"Publish Canary\" --exact",
