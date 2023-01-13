@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "12.2.28",
+  "version": "12.2.29",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -43,8 +43,8 @@
     ]
   },
   "dependencies": {
-    "@vercel/build-utils": "workspace:5.8.0",
-    "@vercel/routing-utils": "workspace:2.1.5",
+    "@vercel/build-utils": "workspace:5.8.1",
+    "@vercel/routing-utils": "workspace:2.1.6",
     "@zeit/fetch": "5.2.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",
