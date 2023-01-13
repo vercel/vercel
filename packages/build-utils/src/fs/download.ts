@@ -2,7 +2,7 @@ import path from 'path';
 import debug from '../debug';
 import FileFsRef from '../file-fs-ref';
 import { File, Files, Meta } from '../types';
-import { remove, mkdirp, readlink, symlink } from 'fs-extra';
+import { remove, mkdirp, readlink, symlink, chmod } from 'fs-extra';
 import streamToBuffer from './stream-to-buffer';
 
 export interface DownloadedFiles {
@@ -50,6 +50,12 @@ export async function downloadFile(
   fsPath: string
 ): Promise<FileFsRef> {
   const { mode } = file;
+
+  if (isDirectory(mode)) {
+    await mkdirp(fsPath);
+    await chmod(fsPath, mode);
+    return FileFsRef.fromFsPath({ mode, fsPath });
+  }
 
   // If the source is a symlink, try to create it instead of copying the file.
   // Note: creating symlinks on Windows requires admin priviliges or symlinks
