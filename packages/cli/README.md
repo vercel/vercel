@@ -41,7 +41,7 @@ To develop Vercel CLI, first check out the source code, install dependencies, an
 ```bash
 git clone https://github.com/vercel/vercel.git
 cd vercel
-pnpm i
+pnpm install
 pnpm build
 ```
 
