@@ -635,9 +635,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"ember-source":\\s*".+?"[^}]*}',
+          matchPackage: 'ember-source',
         },
         {
           matchPackage: 'ember-cli',
@@ -1591,9 +1589,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"brunch":\\s*".+?"[^}]*}',
+          matchPackage: 'brunch',
         },
         {
           path: 'brunch-config.js',
@@ -1899,9 +1895,7 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'package.json',
-          matchContent:
-            '"(dev)?(d|D)ependencies":\\s*{[^}]*"@shopify/hydrogen":\\s*".+?"[^}]*}',
+          matchPackage: '@shopify/hydrogen',
         },
         {
           path: 'hydrogen.config.js',
