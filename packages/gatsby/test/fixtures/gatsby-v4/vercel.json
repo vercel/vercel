@@ -1,8 +1,0 @@
-{
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "https://vercel-n3n6ut5jq.vercel.sh/tarballs/%40vercel/gatsby.tgz"
-    }
-  ]
-}
