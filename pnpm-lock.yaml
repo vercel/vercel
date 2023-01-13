@@ -431,7 +431,7 @@ importers:
 
   packages/client:
     specifiers:
-      '@types/async-retry': 1.4.5
+      '@types/async-retry': 1.4.1
       '@types/fs-extra': 7.0.0
       '@types/jest': 27.4.1
       '@types/minimatch': 3.0.5
@@ -469,7 +469,7 @@ importers:
       sleep-promise: 8.0.1
       tar-fs: 1.16.3
     devDependencies:
-      '@types/async-retry': 1.4.5
+      '@types/async-retry': 1.4.1
       '@types/fs-extra': 7.0.0
       '@types/jest': 27.4.1
       '@types/minimatch': 3.0.5
@@ -5843,6 +5843,12 @@ packages:
 
   /@types/async-retry/1.2.1:
     resolution: {integrity: sha512-yMQ6CVgICWtyFNBqJT3zqOc+TnqqEPLo4nKJNPFwcialiylil38Ie6q1ENeFTjvaLOkVim9K5LisHgAKJWidGQ==}
+
+  /@types/async-retry/1.4.1:
+    resolution: {integrity: sha512-hDI5Ttk9SUmDLcD/Yl2VuWQRGYZjJ7aaJFeRlomUOz/iTKSE7yA55SwY87QwjiZgwhMlVAKoT1rl08UyQoheag==}
+    dependencies:
+      '@types/retry': 0.12.2
+    dev: true
 
   /@types/async-retry/1.4.2:
     resolution: {integrity: sha512-GUDuJURF0YiJZ+CBjNQA0+vbP/VHlJbB0sFqkzsV7EcOPRfurVonXpXKAt3w8qIjM1TEzpz6hc6POocPvHOS3w==}

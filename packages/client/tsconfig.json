@@ -13,7 +13,7 @@
     "noUnusedParameters": true,
     "strict": true,
     "target": "ES2020",
-    "typeRoots": ["./node_modules/@types"]
+    "skipLibCheck": true
   },
   "include": ["./src"]
 }

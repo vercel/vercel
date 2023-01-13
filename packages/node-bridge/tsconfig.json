@@ -9,7 +9,7 @@
     "target": "ES2020",
     "declaration": true,
     "module": "commonjs",
-    "types": ["node"]
+    "skipLibCheck": true
   },
   "include": ["helpers.ts", "bridge.js", "launcher.js"],
   "exclude": ["node_modules"]

@@ -8,7 +8,7 @@
     "outDir": "dist",
     "sourceMap": false,
     "declaration": false,
-    "typeRoots": ["./node_modules/@types"]
+    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
