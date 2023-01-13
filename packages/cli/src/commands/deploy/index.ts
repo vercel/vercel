@@ -19,15 +19,13 @@ import toHumanPath from '../../util/humanize-path';
 import Now from '../../util';
 import stamp from '../../util/output/stamp';
 import createDeploy from '../../util/deploy/create-deploy';
-import getDeploymentByIdOrHost from '../../util/deploy/get-deployment-by-id-or-host';
+import getDeployment from '../../util/get-deployment';
 import parseMeta from '../../util/parse-meta';
 import linkStyle from '../../util/output/link';
 import param from '../../util/output/param';
 import {
   BuildsRateLimited,
   DeploymentNotFound,
-  DeploymentPermissionDenied,
-  InvalidDeploymentId,
   DomainNotFound,
   DomainNotVerified,
   DomainPermissionDenied,
@@ -630,21 +628,8 @@ export default async (client: Client): Promise<number> => {
       return 1;
     }
 
-    const deploymentResponse = await getDeploymentByIdOrHost(
-      client,
-      contextName,
-      deployment.id,
-      'v10'
-    );
-
-    if (
-      deploymentResponse instanceof DeploymentNotFound ||
-      deploymentResponse instanceof DeploymentPermissionDenied ||
-      deploymentResponse instanceof InvalidDeploymentId
-    ) {
-      output.error(deploymentResponse.message);
-      return 1;
-    }
+    // get the deployment just to double check that it actually deployed
+    await getDeployment(client, contextName, deployment.id);
 
     if (deployment === null) {
       error('Uploading failed. Please try again.');
