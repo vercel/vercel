@@ -2,12 +2,9 @@
   "name": "gatsby-v4",
   "private": true,
   "dependencies": {
-    "@vercel/gatsby-plugin-vercel-analytics": "1.0.0",
-    "@vercel/gatsby-plugin-vercel-builder": "workspace:0.0.1",
     "gatsby": "^4.25.1",
     "gatsby-plugin-image": "^2.21.0",
     "gatsby-plugin-manifest": "^4.21.0",
-    "gatsby-plugin-pnpm": "1.2.10",
     "gatsby-plugin-sharp": "^4.21.0",
     "gatsby-source-filesystem": "^4.21.1",
     "gatsby-transformer-sharp": "^4.21.0",
