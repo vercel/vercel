@@ -30,7 +30,7 @@ it(
         "plugins": Array [
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
       }
@@ -61,7 +61,7 @@ it(
         "plugins": Array [
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -98,7 +98,7 @@ it(
           "gatsby-plugin-react-helmet",
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -132,7 +132,7 @@ it(
       .toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
-          "gatsby-plugin-vercel",
+          "@vercel/gatsby-plugin-vercel-analytics",
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -167,7 +167,7 @@ it(
         "plugins": Array [
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -204,7 +204,7 @@ it(
           "gatsby-plugin-react-helmet",
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -243,7 +243,7 @@ it(
           },
           Object {
             "options": Object {},
-            "resolve": "gatsby-plugin-vercel",
+            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
           },
         ],
         "siteMetadata": Object {
@@ -276,7 +276,7 @@ it(
           "plugins": Array [
             Object {
               "options": Object {},
-              "resolve": "gatsby-plugin-vercel",
+              "resolve": "@vercel/gatsby-plugin-vercel-analytics",
             },
           ],
           "siteMetadata": Object {
@@ -286,6 +286,54 @@ it(
         },
       }
     `);
+  },
+  FOUR_MINUTES
+);
+
+it(
+  'Should build Gatsby with configuration defined in esm',
+  async () => {
+    const { workPath } = await runBuildLambda(
+      path.join(__dirname, 'build-fixtures/14-gatsby-with-esm-config')
+    );
+
+    const contents = await fs.readdir(workPath);
+
+    expect(contents.some(name => name === 'gatsby-config.js')).toBeFalsy();
+    expect(contents.some(name => name === 'gatsby-config.ts')).toBeFalsy();
+    expect(contents.some(name => name === 'gatsby-config.mjs')).toBeTruthy();
+    // using `import` causes a seg fault.
+    expect(await fs.readFile(path.join(workPath, 'gatsby-config.mjs'), 'utf-8'))
+      .toBe(`import userConfig from "./gatsby-config.mjs.__vercel_builder_backup__.mjs";
+
+// https://github.com/gatsbyjs/gatsby/blob/354003fb2908e02ff12109ca3a02978a5a6e608c/packages/gatsby/src/bootstrap/prefer-default.ts
+const preferDefault = (m) => (m && m.default) || m;
+
+const vercelConfig = Object.assign(
+  {},
+
+  // https://github.com/gatsbyjs/gatsby/blob/a6ecfb2b01d761e8a3612b8ea132c698659923d9/packages/gatsby/src/services/initialize.ts#L113-L117
+  preferDefault(userConfig)
+);
+if (!vercelConfig.plugins) {
+  vercelConfig.plugins = [];
+}
+
+const hasPlugin = vercelConfig.plugins.find(
+  (p) =>
+    p && (p === "@vercel/gatsby-plugin-vercel-analytics" || p.resolve === "@vercel/gatsby-plugin-vercel-analytics")
+);
+
+if (!hasPlugin) {
+  vercelConfig.plugins = vercelConfig.plugins.slice();
+  vercelConfig.plugins.push({
+    resolve: "@vercel/gatsby-plugin-vercel-analytics",
+    options: {},
+  });
+}
+
+export default vercelConfig;
+`);
   },
   FOUR_MINUTES
 );

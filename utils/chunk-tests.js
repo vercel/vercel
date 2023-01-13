@@ -14,7 +14,15 @@ async function getChunkedTests() {
   const rootPath = path.resolve(__dirname, '..');
 
   const dryRunText = (
-    await turbo([`run`, ...scripts, `--cache-dir=.turbo`, '--', '--listTests'])
+    await turbo([
+      `run`,
+      ...scripts,
+      `--cache-dir=.turbo`,
+      '--output-logs=full',
+      '--',
+      '--', // need two of these due to pnpm arg parsing
+      '--listTests',
+    ])
   ).toString('utf8');
 
   /**

@@ -33,9 +33,9 @@ For details on how to use Vercel, check out our [documentation](https://vercel.c
 
 ## Contributing
 
-This project uses [yarn](https://yarnpkg.com/) to install dependencies and run scripts.
+This project uses [pnpm](https://pnpm.io/) to install dependencies and run scripts.
 
-You can use the `dev` script to run local changes as if you were invoking Vercel CLI. For example, `vercel deploy --cwd=/path/to/project` could be run with local changes with `yarn dev deploy --cwd=/path/to/project`.
+You can use the `dev` script to run local changes as if you were invoking Vercel CLI. For example, `vercel deploy --cwd=/path/to/project` could be run with local changes with `pnpm dev deploy --cwd=/path/to/project`.
 
 See the [Contributing Guidelines](./.github/CONTRIBUTING.md) for more details.
 
