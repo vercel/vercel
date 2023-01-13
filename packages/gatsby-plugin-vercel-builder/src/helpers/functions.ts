@@ -1,7 +1,8 @@
 import { join } from 'path';
-import { ensureDir } from 'fs-extra';
-import { createSymlink } from '../utils/symlink';
 
+import { ensureDir } from 'fs-extra';
+
+import { createSymlink } from '../utils/symlink';
 import {
   writeHandler,
   writeVCConfig,

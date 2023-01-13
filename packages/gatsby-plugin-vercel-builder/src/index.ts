@@ -1,14 +1,15 @@
-import { validateGatsbyState } from './schemas';
+import { join } from 'path';
 
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { pathExists, writeJson, remove } from 'fs-extra';
+
+import { validateGatsbyState } from './schemas';
 import {
   createServerlessFunctions,
   createPageDataFunction,
   createAPIRoutes,
 } from './helpers/functions';
 import { createStaticDir } from './helpers/static';
-import { join } from 'path';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
   exportPath: string;

@@ -1,6 +1,7 @@
 import { join } from 'path';
-import { build } from 'esbuild';
+
 import { getNodeVersion } from '@vercel/build-utils';
+import { build } from 'esbuild';
 import {
   copy,
   copyFile,
