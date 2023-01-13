@@ -30,6 +30,8 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/next' },
     detectors: {
       some: [
+        // Intentionally does not detect a package name
+        // https://github.com/vercel/vercel/pull/8432
         {
           path: 'blitz.config.js',
         },
@@ -201,6 +203,8 @@ export const frameworks = [
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
       every: [
+        // Intentionally does not detect a package name
+        // https://github.com/vercel/vercel/pull/7761
         {
           path: 'remix.config.js',
         },
@@ -488,6 +492,8 @@ export const frameworks = [
     website: 'https://preactjs.com',
     detectors: {
       every: [
+        // Intentionally does not detect "preact" package because that can be
+        // used to power other frameworks.
         {
           matchPackage: 'preact-cli',
         },
@@ -627,7 +633,10 @@ export const frameworks = [
     description: 'An Ember app, created with the Ember CLI.',
     website: 'https://emberjs.com/',
     detectors: {
-      every: [
+      some: [
+        {
+          matchPackage: 'ember-source',
+        },
         {
           matchPackage: 'ember-cli',
         },
@@ -1579,7 +1588,10 @@ export const frameworks = [
     description: 'A Brunch app, created with the Brunch CLI.',
     website: 'https://brunch.io/',
     detectors: {
-      every: [
+      some: [
+        {
+          matchPackage: 'brunch',
+        },
         {
           path: 'brunch-config.js',
         },
@@ -1683,6 +1695,9 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
     detectors: {
       some: [
+        {
+          matchPackage: '@shopify/hydrogen',
+        },
         {
           path: 'hydrogen.config.js',
         },
