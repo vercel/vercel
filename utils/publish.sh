@@ -29,9 +29,6 @@ else
   echo "Publishing stable release"
 fi
 
-# Sometimes this is a false alarm and blocks publish
-git checkout pnpm-lock.yaml
-
 pnpm run lerna publish from-git $dist_tag --no-verify-access --yes
 
 # always update canary dist-tag as we no longer publish canary versions separate
