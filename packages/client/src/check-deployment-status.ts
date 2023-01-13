@@ -158,7 +158,6 @@ export async function* checkDeploymentStatus(
 
     const elapsed = Date.now() - startTime;
     const duration = getPollingDelay(elapsed);
-    console.log('sleeping for', duration, 'ms'); // TODO: remove
     await sleep(duration);
   }
 }
