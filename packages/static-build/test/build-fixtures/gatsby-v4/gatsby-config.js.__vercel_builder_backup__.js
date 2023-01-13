@@ -6,6 +6,11 @@ module.exports = {
     siteUrl: `https://gatsbystarterdefaultsource.gatsbyjs.io/`,
   },
   plugins: [
+    `gatsby-plugin-pnpm`,
+    {
+      resolve: '@vercel/gatsby-plugin-vercel-builder',
+      options: {},
+    },
     {
       resolve: '@vercel/gatsby-plugin-vercel-analytics',
       options: {
