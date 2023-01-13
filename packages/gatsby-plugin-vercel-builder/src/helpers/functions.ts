@@ -1,6 +1,6 @@
 import { join } from 'path';
 
-import { ensureDir } from 'fs-extra';
+import { ensureDir, mkdirp } from 'fs-extra';
 
 import { createSymlink } from '../utils/symlink';
 import {
@@ -57,6 +57,8 @@ export async function createServerlessFunctions({
       return createSymlink(pathName);
     }),
   ]);
+
+  await mkdirp(join(functionDir, '.cache', 'caches'));
 }
 
 export async function createPageDataFunction() {
