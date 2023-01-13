@@ -2683,14 +2683,6 @@ export function getOperationType({
   prerenderManifest?: NextPrerenderedRoutes;
   pageFileName?: string;
 }) {
-  console.log(
-    JSON.stringify({
-      pageFileName,
-      prerenderManifest,
-      group,
-    })
-  );
-
   if (group?.isApiLambda || isApiPage(pageFileName)) {
     return 'API';
   }
@@ -2699,10 +2691,16 @@ export function getOperationType({
     return 'ISR';
   }
 
-  const routePaths = Object.keys(prerenderManifest?.staticRoutes || {});
-  // TODO: probably not the right comparison
-  if (routePaths.includes('/' + pageFileName)) {
-    return 'ISR';
+  if (pageFileName) {
+    const routePaths = Object.keys({
+      ...prerenderManifest?.staticRoutes,
+      ...prerenderManifest?.blockingFallbackRoutes,
+      ...prerenderManifest?.fallbackRoutes,
+    });
+
+    if (routePaths.includes(pageFileName)) {
+      return 'ISR';
+    }
   }
 
   return 'SSR';
