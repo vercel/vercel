@@ -105,7 +105,7 @@ async function main() {
   const pub = Array.from(pkgs).join(',');
   console.log('To publish a stable release, execute the following:');
   console.log(
-    `\nnpx lerna version --message "Publish Stable" --exact --force-publish=${pub}\n`
+    `\npnpx lerna version --message "Publish Stable" --exact --no-private --force-publish=${pub}\n`
   );
 }
 
