@@ -24,7 +24,11 @@ describe('buildFileTree()', () => {
       noop
     );
 
-    const expectedFileList = toAbsolutePaths(cwd, ['.nowignore', 'index.txt']);
+    const expectedFileList = toAbsolutePaths(cwd, [
+      '.nowignore',
+      'folder',
+      'index.txt',
+    ]);
     expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
       normalizeWindowsPaths(fileList).sort()
     );
