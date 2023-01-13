@@ -11,7 +11,7 @@ async function tryTest({
   try {
     const res = await fetch(`https://${deploymentUrl}${pathname}`);
     assert.equal(res.status, 200);
-    assert.equal(response.headers.get('content-type'), 'image/png');
+    assert.equal(res.headers.get('content-type'), 'image/png');
     console.log(`Finished testing "${pathname}" probe.`);
   } catch (e) {
     if (retries === 0) {
