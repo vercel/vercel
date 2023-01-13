@@ -7,7 +7,7 @@ import { getPageSSRHelpers, getGraphQLEngine } from '../utils';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
-const CUR_DATA_PATH = join(__dirname, 'assets/data/datastore');
+const CUR_DATA_PATH = join(__dirname, '.cache/data/datastore');
 
 if (!existsSync(TMP_DATA_PATH)) {
   // Copies executable `data` files to the writable /tmp directory.

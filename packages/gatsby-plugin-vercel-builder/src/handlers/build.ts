@@ -89,23 +89,23 @@ export async function copyFunctionLibs({
     [
       {
         src: join('.cache', 'query-engine'),
-        dest: join(functionDir, 'lib', 'query-engine'),
+        dest: join(functionDir, '.cache', 'query-engine'),
       },
       {
         src: join('.cache', 'page-ssr'),
-        dest: join(functionDir, 'lib', 'page-ssr'),
+        dest: join(functionDir, '.cache', 'page-ssr'),
       },
-      {
-        src: join(functionDir, 'lib', 'query-engine', 'assets'),
-        dest: join(functionDir, 'assets'),
-      },
+      // {
+      //   src: join(functionDir, '.cache', 'query-engine', 'assets'),
+      //   dest: join(functionDir, 'assets'),
+      // },
       {
         src: join('.cache', 'data', 'datastore'),
-        dest: join(functionDir, 'assets', 'data', 'datastore'),
+        dest: join(functionDir, '.cache', 'data', 'datastore'),
       },
       {
         src: join('.cache', 'caches'),
-        dest: join(functionDir, 'cache', 'caches'),
+        dest: join(functionDir, '.cache', 'caches'),
       },
     ].map(({ src, dest }) => copy(src, dest))
   );
