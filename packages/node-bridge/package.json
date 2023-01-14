@@ -23,6 +23,9 @@
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
     "@types/node": "14.18.33",
+    "content-type": "1.0.4",
+    "cookie": "0.4.0",
+    "etag": "1.8.1",
     "execa": "3.2.0",
     "fs-extra": "10.0.0",
     "jsonlines": "0.1.1",
