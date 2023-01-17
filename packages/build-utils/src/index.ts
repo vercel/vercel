@@ -8,7 +8,6 @@ import download, {
   downloadFile,
   DownloadedFiles,
   isSymbolicLink,
-  isDirectory,
 } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
@@ -83,7 +82,6 @@ export {
   streamToBuffer,
   debug,
   isSymbolicLink,
-  isDirectory,
   getLambdaOptionsFromFunction,
   scanParentDirs,
   getIgnoreFilter,
