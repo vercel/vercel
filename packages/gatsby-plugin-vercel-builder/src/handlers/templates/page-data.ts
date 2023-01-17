@@ -1,10 +1,19 @@
-import { existsSync, readFileSync } from 'fs';
+import os from 'os';
 import { join } from 'path';
 import etag from 'etag';
+import { copySync, existsSync, readFileSync } from 'fs-extra';
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 import { getGraphQLEngine, getPageSSRHelpers } from '../utils';
+
+const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
+const CUR_DATA_PATH = join(__dirname, '.cache/data/datastore');
+
+if (!existsSync(TMP_DATA_PATH)) {
+  // Copies executable `data` files to the writable /tmp directory.
+  copySync(CUR_DATA_PATH, TMP_DATA_PATH);
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const splitPathName = req.url!.split('/')[2];
@@ -30,26 +39,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { getData, renderPageData } = await getPageSSRHelpers();
   const graphqlEngine = await getGraphQLEngine();
 
-  try {
-    const data = await getData({
-      req,
-      graphqlEngine,
-      pathName,
-    });
+  const data = await getData({
+    req,
+    graphqlEngine,
+    pathName,
+  });
 
-    const body = JSON.stringify(await renderPageData({ data }));
+  const pageData = await renderPageData({ data });
 
-    if (data.serverDataHeaders) {
-      for (const [name, value] of Object.entries(data.serverDataHeaders)) {
-        res.setHeader(name, value);
-      }
+  if (data.serverDataHeaders) {
+    for (const [name, value] of Object.entries(data.serverDataHeaders)) {
+      res.setHeader(name, value);
     }
-
-    res.setHeader('ETag', etag(body));
-    res.setHeader('Content-Type', 'application/json');
-    return res.status(200).json(body);
-  } catch (e) {
-    console.error(e);
-    return res.status(500).send('Internal server error.');
   }
+
+  res.setHeader('ETag', etag(JSON.stringify(pageData)));
+  return res.json(pageData);
 }
