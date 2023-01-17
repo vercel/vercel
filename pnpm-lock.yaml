@@ -199,7 +199,7 @@ importers:
       '@types/write-json-file': 2.2.1
       '@types/yauzl-promise': 2.1.0
       '@vercel/build-utils': 5.8.3
-      '@vercel/client': 12.2.31
+      '@vercel/client': 12.3.0
       '@vercel/error-utils': 1.0.8
       '@vercel/frameworks': 1.2.4
       '@vercel/fs-detectors': 3.7.4
@@ -208,7 +208,7 @@ importers:
       '@vercel/hydrogen': 0.0.43
       '@vercel/ncc': 0.24.0
       '@vercel/next': 3.3.14
-      '@vercel/node': 2.8.11
+      '@vercel/node': 2.8.12
       '@vercel/python': 3.1.39
       '@vercel/redwood': 1.0.50
       '@vercel/remix': 1.2.4
@@ -737,7 +737,7 @@ importers:
       '@vercel/build-utils': 5.8.3
       '@vercel/ncc': 0.24.0
       '@vercel/nft': 0.22.5
-      '@vercel/node-bridge': 3.1.8
+      '@vercel/node-bridge': 3.1.9
       '@vercel/static-config': 2.0.11
       content-type: 1.0.4
       cookie: 0.4.0
@@ -793,6 +793,9 @@ importers:
     specifiers:
       '@types/aws-lambda': 8.10.19
       '@types/node': 14.18.33
+      content-type: 1.0.4
+      cookie: 0.4.0
+      etag: 1.8.1
       execa: 3.2.0
       fs-extra: 10.0.0
       jsonlines: 0.1.1
@@ -801,6 +804,9 @@ importers:
     devDependencies:
       '@types/aws-lambda': 8.10.19
       '@types/node': 14.18.33
+      content-type: 1.0.4
+      cookie: 0.4.0
+      etag: 1.8.1
       execa: 3.2.0
       fs-extra: 10.0.0
       jsonlines: 0.1.1
