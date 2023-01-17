@@ -133,7 +133,6 @@ async function turbo(args) {
  * @returns {T[][]}
  */
 function intoChunks(totalChunks, arr) {
-  console.log({ totalChunks, arr });
   const chunkSize = Math.max(
     MINIMUM_PER_CHUNK,
     Math.ceil(arr.length / totalChunks)
