@@ -1,6 +1,6 @@
 import { join } from 'path';
 
-import { ensureDir, mkdirp } from 'fs-extra';
+import { ensureDir } from 'fs-extra';
 
 import { createSymlink } from '../utils/symlink';
 import {
@@ -22,7 +22,8 @@ export async function createServerlessFunctions({
      This plugin creates one Serverless Function called `_ssr.func` that is used by SSR and DSG pages through symlinks.
      DSG is enabled through prerender functions.
   */
-  const functionDir = join('.vercel', 'output', 'functions', '_ssr.func');
+  const functionName = '_ssr.func';
+  const functionDir = join('.vercel', 'output', 'functions', functionName);
   const handlerFile = join(
     __dirname,
     '..',
@@ -42,7 +43,7 @@ export async function createServerlessFunctions({
 
   await Promise.all([
     ...ssrRoutes.map(async (pathName: string) => {
-      return createSymlink(pathName);
+      return createSymlink(pathName, functionName);
     }),
     ...dsgRoutes.map(async (pathName: string) => {
       await writePrerenderConfig(
@@ -54,17 +55,16 @@ export async function createServerlessFunctions({
         )
       );
 
-      return createSymlink(pathName);
+      return createSymlink(pathName, functionName);
     }),
   ]);
-
-  await mkdirp(join(functionDir, '.cache', 'caches'));
 }
 
-export async function createPageDataFunction() {
+export async function createPageDataFunction({ dsgRoutes, ssrRoutes }: Routes) {
   /* Gatsby uses /page-data/<path>/page-data.json to fetch data. This plugin creates a
-    `page-data.func` function that dynamically generates this data if it's not available in `static/page-data`. */
-  const functionDir = join('.vercel', 'output', 'functions', '_page-data.func');
+    `_page-data.func` function that dynamically generates this data if it's not available in `static/page-data`. */
+  const functionName = '_page-data.func';
+  const functionDir = join('.vercel', 'output', 'functions', functionName);
   const handlerFile = join(
     __dirname,
     '..',
@@ -80,6 +80,24 @@ export async function createPageDataFunction() {
     copyFunctionLibs({ functionDir }),
     movePageData({ functionDir }),
     writeVCConfig({ functionDir }),
+  ]);
+
+  await Promise.all([
+    ...ssrRoutes.map(async (pathName: string) => {
+      return createSymlink(pathName, functionName);
+    }),
+    ...dsgRoutes.map(async (pathName: string) => {
+      await writePrerenderConfig(
+        join(
+          '.vercel',
+          'output',
+          'functions',
+          `${pathName}.prerender-config.json`
+        )
+      );
+
+      return createSymlink(pathName, functionName);
+    }),
   ]);
 }
 

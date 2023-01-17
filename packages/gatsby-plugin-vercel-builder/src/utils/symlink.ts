@@ -4,7 +4,7 @@ import { ensureDir, symlinkSync } from 'fs-extra';
 
 const removeTrailingSlash = (str: string) => str.replace(/\/$/, '');
 
-export const createSymlink = async (pathName: string) => {
+export const createSymlink = async (pathName: string, destName: string) => {
   const functionName = removeTrailingSlash(pathName).split(sep).pop();
 
   const dirPath = removeTrailingSlash(
@@ -14,8 +14,7 @@ export const createSymlink = async (pathName: string) => {
   await ensureDir(dirPath);
 
   symlinkSync(
-    path.relative(dirPath, join('.vercel', 'output', 'functions', '_ssr.func')),
-    path.join(dirPath, `./${functionName}.func`),
-    'file'
+    path.relative(dirPath, join('.vercel', 'output', 'functions', destName)),
+    path.join(dirPath, `${functionName}.func`)
   );
 };
