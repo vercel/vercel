@@ -63,9 +63,10 @@ export async function generateVercelBuildOutputAPI3Output({
 
     if (functions.length > 0) createPromises.push(createAPIRoutes(functions));
 
-    if (ssrRoutes.length > 0 || dsgRoutes.length > 0)
+    if (ssrRoutes.length > 0 || dsgRoutes.length > 0) {
       createPromises.push(createPageDataFunction({ ssrRoutes, dsgRoutes }));
-    createPromises.push(createServerlessFunctions({ ssrRoutes, dsgRoutes }));
+      createPromises.push(createServerlessFunctions({ ssrRoutes, dsgRoutes }));
+    }
 
     await Promise.all(createPromises);
 
