@@ -256,6 +256,8 @@ export default async function main(client: Client): Promise<number> {
     await doBuild(client, project, buildsJson, cwd, outputDir);
     return 0;
   } catch (err: any) {
+    console.log(`[!!!] build catch: ${JSON.stringify(err)}`);
+
     output.prettyError(err);
 
     // Write error to `builds.json` file
@@ -443,6 +445,8 @@ async function doBuild(
   await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, {
     spaces: 2,
   });
+
+  console.log(`[!!!] builds.json: ${JSON.stringify(buildsJson)}`);
 
   // The `meta` config property is re-used for each Builder
   // invocation so that Builders can share state between

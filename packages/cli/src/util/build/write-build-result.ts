@@ -323,6 +323,13 @@ async function writeLambda(
   functionConfiguration?: FunctionConfiguration,
   lambdas?: Map<Lambda, string>
 ) {
+  const opts = {
+    outputDir,
+    path,
+    lambda,
+  };
+  console.log(`[!!!] writeLambda start: ${JSON.stringify(opts)}`);
+
   const dest = join(outputDir, 'functions', `${path}.func`);
 
   // If the `lambda` has already been written to the filesystem at a different
@@ -395,6 +402,8 @@ async function writeLambda(
       await fs.remove(absDir);
     }
   }
+
+  console.log(`[!!!] writeLambda end`);
 }
 
 /**

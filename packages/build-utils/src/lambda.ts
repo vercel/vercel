@@ -71,6 +71,8 @@ export class Lambda {
   experimentalResponseStreaming?: boolean;
 
   constructor(opts: LambdaOptions) {
+    console.log(`[!!!] Lambda constructor start: ${JSON.stringify(opts)}`);
+
     const {
       handler,
       runtime,
@@ -146,6 +148,8 @@ export class Lambda {
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
     this.experimentalResponseStreaming = experimentalResponseStreaming;
+
+    console.log(`[!!!] Lambda constructor end`);
   }
 
   async createZip(): Promise<Buffer> {
