@@ -221,6 +221,30 @@ describe('DetectorFilesystem', () => {
       expect(await detectFramework({ fs, frameworkList })).toBe('nuxtjs');
     });
 
+    it('Detect Nuxt.js Edge', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          dependencies: {
+            'nuxt-edge': '1.0.0',
+          },
+        }),
+      });
+
+      expect(await detectFramework({ fs, frameworkList })).toBe('nuxtjs');
+    });
+
+    it('Detect Nuxt.js 3', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          dependencies: {
+            nuxt3: '1.0.0',
+          },
+        }),
+      });
+
+      expect(await detectFramework({ fs, frameworkList })).toBe('nuxtjs');
+    });
+
     it('Detect Gatsby', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
@@ -303,6 +327,70 @@ describe('DetectorFilesystem', () => {
       });
 
       expect(await detectFramework({ fs, frameworkList })).toBe('blitzjs');
+    });
+
+    it('Detect Ember via `ember-source`', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          dependencies: {
+            'ember-source': 'latest',
+          },
+        }),
+      });
+
+      expect(await detectFramework({ fs, frameworkList })).toBe('ember');
+    });
+
+    it('Detect Ember via `ember-cli`', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          dependencies: {
+            'ember-cli': 'latest',
+          },
+        }),
+      });
+
+      expect(await detectFramework({ fs, frameworkList })).toBe('ember');
+    });
+
+    it('Detect Brunch via `brunch`', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          dependencies: {
+            brunch: 'latest',
+          },
+        }),
+      });
+
+      expect(await detectFramework({ fs, frameworkList })).toBe('brunch');
+    });
+
+    it('Detect Brunch via `brunch-config.js`', async () => {
+      const fs = new VirtualFilesystem({
+        'brunch-config.js': '// some config',
+      });
+
+      expect(await detectFramework({ fs, frameworkList })).toBe('brunch');
+    });
+
+    it('Detect Hydrogen via `hydrogen.config.js`', async () => {
+      const fs = new VirtualFilesystem({
+        'hydrogen.config.js': '// some config',
+      });
+
+      expect(await detectFramework({ fs, frameworkList })).toBe('hydrogen');
+    });
+
+    it('Detect Hydrogen via `@shopify/hydrogen`', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          dependencies: {
+            '@shopify/hydrogen': 'latest',
+          },
+        }),
+      });
+
+      expect(await detectFramework({ fs, frameworkList })).toBe('hydrogen');
     });
   });
 });
