@@ -3,7 +3,7 @@
     "declaration": true,
     "esModuleInterop": true,
     "lib": ["ES2020"],
-    "module": "es2020",
+    "module": "commonjs",
     "moduleResolution": "node",
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,

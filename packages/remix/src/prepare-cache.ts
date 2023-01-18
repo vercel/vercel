@@ -15,7 +15,7 @@ export const prepareCache: PrepareCache = async ({
   try {
     const remixConfigFile = findConfig(entrypointFsDirname, 'remix.config');
     if (remixConfigFile) {
-      const remixConfigModule = await import(remixConfigFile);
+      const remixConfigModule = await eval('import(remixConfigFile)');
       const remixConfig: AppConfig = remixConfigModule?.default || {};
       if (remixConfig.cacheDirectory) {
         cacheDirectory = remixConfig.cacheDirectory;
