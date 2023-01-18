@@ -32,7 +32,7 @@ export function useDomains() {
   client.scenario.get('/v5/domains', (req, res) => {
     const limit = parseInt(req.query.limit);
     const domains = Array.from({ length: limit }, (v, i) =>
-      createDomain(`${i}`)
+      createDomain(`${i + 1}`)
     );
     res.json({
       domains: domains,

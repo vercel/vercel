@@ -3,7 +3,7 @@ import { client } from './client';
 import { createDomain } from './domains';
 
 export function useDns() {
-  client.scenario.get('/v3/domains/:domain?/records', (_req, res) => {
+  client.scenario.get('/v4/domains/:domain?/records', (_req, res) => {
     res.json({
       records: [
         {
@@ -21,7 +21,7 @@ export function useDns() {
   client.scenario.get('/v5/domains', (req, res) => {
     const limit = parseInt(req.query.limit);
     const domains = Array.from({ length: limit }, (_, k) =>
-      createDomain(k.toString())
+      createDomain((k + 1).toString())
     );
     res.json({
       domains: domains,
