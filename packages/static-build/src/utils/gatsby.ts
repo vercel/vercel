@@ -22,7 +22,7 @@ export async function injectPlugins(
 ) {
   const pluginsToInject = [];
 
-  if (detectedVersion) {
+  if (process.env.VERCEL_GATSBY_BUILDER_PLUGIN && detectedVersion) {
     const version = semver.coerce(detectedVersion);
     if (version && semver.satisfies(version, '>=4.0.0')) {
       pluginsToInject.push(PLUGINS.GATSBY_PLUGIN_VERCEL_BUILDER);
