@@ -60,6 +60,9 @@ jobs:
       env:
         GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+    - name: Verify Package
+      if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
+      run: pnpm verify-package
     - name: Publish
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       run: pnpm publish-from-github
