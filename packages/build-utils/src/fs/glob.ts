@@ -6,7 +6,9 @@ import { lstat, Stats } from 'fs-extra';
 import { normalizePath } from './normalize-path';
 import FileFsRef from '../file-fs-ref';
 
-export type GlobOptions = vanillaGlob_.IOptions;
+export interface GlobOptions extends vanillaGlob_.IOptions {
+  includeDirectories?: boolean;
+}
 
 const vanillaGlob = promisify(vanillaGlob_);
 
@@ -73,18 +75,20 @@ export default async function glob(
   }
 
   // Add empty directory entries
-  for (const relativePath of dirs) {
-    if (dirsWithEntries.has(relativePath)) continue;
+  if (options.includeDirectories) {
+    for (const relativePath of dirs) {
+      if (dirsWithEntries.has(relativePath)) continue;
 
-    let finalPath = relativePath;
-    if (mountpoint) {
-      finalPath = path.join(mountpoint, finalPath);
+      let finalPath = relativePath;
+      if (mountpoint) {
+        finalPath = path.join(mountpoint, finalPath);
+      }
+
+      const fsPath = normalizePath(path.join(options.cwd, relativePath));
+      const stat = statCache[fsPath];
+
+      results[finalPath] = new FileFsRef({ mode: stat.mode, fsPath });
     }
-
-    const fsPath = normalizePath(path.join(options.cwd, relativePath));
-    const stat = statCache[fsPath];
-
-    results[finalPath] = new FileFsRef({ mode: stat.mode, fsPath });
   }
 
   return results;
