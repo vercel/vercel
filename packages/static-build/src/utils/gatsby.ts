@@ -38,30 +38,22 @@ export async function injectPlugins(
     return;
   }
 
-  const gatsbyConfigPathJs = path.join(dir, `${GATSBY_CONFIG_FILE}.js`);
-  const gatsbyConfigPathMjs = path.join(dir, `${GATSBY_CONFIG_FILE}.mjs`);
-  const gatsbyConfigPathTs = path.join(dir, `${GATSBY_CONFIG_FILE}.ts`);
+  await addGatsbyPackage(dir, pluginsToInject);
 
+  const gatsbyConfigPathTs = path.join(dir, `${GATSBY_CONFIG_FILE}.ts`);
   if (await fileExists(gatsbyConfigPathTs)) {
-    console.log(
-      `Injecting Gatsby.js plugins "${pluginsToInject}" to \`${gatsbyConfigPathTs}\``
-    );
-    await addGatsbyPackage(dir, pluginsToInject);
+    printInjectingPlugins(pluginsToInject, gatsbyConfigPathTs);
     return updateGatsbyTsConfig(gatsbyConfigPathTs, pluginsToInject);
   }
 
+  const gatsbyConfigPathMjs = path.join(dir, `${GATSBY_CONFIG_FILE}.mjs`);
   if (await fileExists(gatsbyConfigPathMjs)) {
-    console.log(
-      `Injecting Gatsby.js plugins "${pluginsToInject}" to \`${gatsbyConfigPathMjs}\``
-    );
-    await addGatsbyPackage(dir, pluginsToInject);
+    printInjectingPlugins(pluginsToInject, gatsbyConfigPathMjs);
     return updateGatsbyMjsConfig(gatsbyConfigPathMjs, pluginsToInject);
   }
 
-  console.log(
-    `Injecting Gatsby.js plugins "${pluginsToInject}" to \`${gatsbyConfigPathJs}\``
-  );
-  await addGatsbyPackage(dir, pluginsToInject);
+  const gatsbyConfigPathJs = path.join(dir, `${GATSBY_CONFIG_FILE}.js`);
+  printInjectingPlugins(pluginsToInject, gatsbyConfigPathJs);
   if (await fileExists(gatsbyConfigPathJs)) {
     await updateGatsbyJsConfig(gatsbyConfigPathJs, pluginsToInject);
   } else {
@@ -72,6 +64,18 @@ export async function injectPlugins(
       })}`
     );
   }
+}
+
+function printInjectingPlugins(plugins: string[], configPath: string) {
+  let pluginsStr = 'plugin';
+  if (plugins.length > 1) {
+    pluginsStr += 's';
+  }
+  console.log(
+    `Injecting Gatsby.js ${pluginsStr} ${plugins
+      .map(p => `"${p}"`)
+      .join(', ')} to \`${configPath}\``
+  );
 }
 
 async function addGatsbyPackage(
