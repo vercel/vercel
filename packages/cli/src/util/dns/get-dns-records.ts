@@ -40,7 +40,7 @@ export default async function getDNSRecords(args: getDNSRecordsArgs) {
   };
 }
 
-function createGetDomainRecords(output: Output, client: Client, limit: number) {
+function createGetDomainRecords(output: Output, client: Client, limit = 20) {
   return async (domainName: string) => {
     const data = await getDomainDNSRecords({
       output,
