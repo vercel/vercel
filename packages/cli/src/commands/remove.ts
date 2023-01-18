@@ -180,7 +180,10 @@ export default async function main(client: Client) {
 
     aliases = await Promise.all(
       deployments.map(async depl => {
-        const { aliases } = await getAliases(client, depl.id);
+        const { aliases } = await getAliases({
+          client,
+          deploymentId: depl.id,
+        });
         return aliases;
       })
     );

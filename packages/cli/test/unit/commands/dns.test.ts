@@ -16,7 +16,7 @@ describe('dns', () => {
   it('should list up to 2 dns if limit set to 2', async () => {
     useUser();
     useDns();
-    client.setArgv('dns', 'ls', '--limit', 2);
+    client.setArgv('dns', 'ls', '--limit', '2');
     let exitCodePromise = dns(client);
     await expect(client.stderr).toOutput('example-2.com');
     await expect(exitCodePromise).resolves.toEqual(0);

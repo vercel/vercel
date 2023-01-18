@@ -8,7 +8,7 @@ type Response = {
 
 type getAliasArgs = {
   client: Client;
-  limit: number;
+  limit?: number;
   nextTimestamp?: number;
   deploymentId?: string;
 };

@@ -43,10 +43,10 @@ async function ls(
   }
 
   // Get the list of certificates
-  const { certs, pagination } = await getCerts(
+  const { certs, pagination } = await getCerts({
     client,
-    ...paginationOptions
-  ).catch(err => err);
+    ...paginationOptions,
+  }).catch(err => err);
 
   output.log(
     `${
@@ -58,7 +58,7 @@ async function ls(
     output.log(formatCertsTable(certs));
   }
 
-  if (pagination && pagination.count === paginationOptions[1]) {
+  if (pagination && pagination.count === paginationOptions.limit) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${getCommandName(

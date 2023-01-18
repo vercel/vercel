@@ -6,16 +6,18 @@ type Response = {
   pagination: PaginationOptions;
 };
 
-export default async function getCerts(
-  client: Client,
-  next?: number,
-  limit = 20
-) {
-  let certsUrl = `/v4/now/certs?limit=${limit}`;
+type getCertsArgs = {
+  client: Client;
+  limit?: number;
+  nextTimestamp?: number;
+};
 
-  if (next) {
-    certsUrl += `&until=${next}`;
+export default async function getCerts(args: getCertsArgs) {
+  let certsUrl = `/v4/now/certs?limit=${args.limit}`;
+
+  if (args.nextTimestamp) {
+    certsUrl += `&until=${args.nextTimestamp}`;
   }
 
-  return await client.fetch<Response>(certsUrl);
+  return await args.client.fetch<Response>(certsUrl);
 }

@@ -47,13 +47,12 @@ export default async function ls(
   }
 
   if (domainName) {
-    const data = await getDomainDNSRecords(
+    const data = await getDomainDNSRecords({
       output,
       client,
-      domainName,
-      4,
-      ...paginationOptions
-    );
+      domain: domainName,
+      ...paginationOptions,
+    });
     if (data instanceof DomainNotFound) {
       output.error(
         `The domain ${domainName} can't be found under ${chalk.bold(
@@ -72,7 +71,7 @@ export default async function ls(
     );
     output.log(getDNSRecordsTable([{ domainName, records }]));
 
-    if (pagination && pagination.count === 20) {
+    if (pagination && pagination.count === paginationOptions.limit) {
       const flags = getCommandFlags(opts, ['_', '--next']);
       output.log(
         `To display the next page run ${getCommandName(
@@ -84,12 +83,12 @@ export default async function ls(
     return 0;
   }
 
-  const { records: dnsRecords, pagination } = await getDNSRecords(
+  const { records: dnsRecords, pagination } = await getDNSRecords({
     output,
     client,
     contextName,
-    ...paginationOptions
-  );
+    ...paginationOptions,
+  });
   const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
   output.log(
     `${nRecords > 0 ? 'Records' : 'No records'} found under ${chalk.bold(
@@ -98,7 +97,7 @@ export default async function ls(
   );
   output.log(getDNSRecordsTable(dnsRecords));
 
-  if (pagination && pagination.count === paginationOptions[1]) {
+  if (pagination && pagination.count === paginationOptions.limit) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page run ${getCommandName(

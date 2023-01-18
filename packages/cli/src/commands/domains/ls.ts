@@ -49,10 +49,10 @@ export default async function ls(
 
   output.spinner(`Fetching Domains under ${chalk.bold(contextName)}`);
 
-  const { domains, pagination } = await getDomains(
+  const { domains, pagination } = await getDomains({
     client,
-    ...paginationOptions
-  );
+    ...paginationOptions,
+  });
 
   output.log(
     `${plural('Domain', domains.length, true)} found under ${chalk.bold(
@@ -67,7 +67,7 @@ export default async function ls(
     output.print('\n\n');
   }
 
-  if (pagination && pagination.count === paginationOptions[1]) {
+  if (pagination && pagination.count === paginationOptions.limit) {
     const flags = getCommandFlags(opts, ['_', '--next']);
     output.log(
       `To display the next page, run ${getCommandName(
