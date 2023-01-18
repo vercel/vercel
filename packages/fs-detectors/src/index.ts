@@ -9,6 +9,7 @@ export {
   detectFramework,
   detectFrameworkRecord,
   detectFrameworkVersion,
+  VersionedFramework,
 } from './detect-framework';
 export { getProjectPaths } from './get-project-paths';
 export { DetectorFilesystem } from './detectors/filesystem';

@@ -44,6 +44,7 @@ import treeKill from 'tree-kill';
 import {
   detectFrameworkRecord,
   LocalFileSystemDetector,
+  VersionedFramework,
 } from '@vercel/fs-detectors';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -124,7 +125,7 @@ function getCommand(
   name: 'install' | 'build' | 'dev',
   pkg: PackageJson | null,
   config: Config,
-  framework: Framework | undefined
+  framework: VersionedFramework | null
 ): string | null {
   if (!config.zeroConfig) {
     return null;
@@ -271,7 +272,7 @@ async function fetchBinary(url: string, framework: string, version: string) {
 }
 
 async function getUpdatedDistPath(
-  framework: Framework | undefined,
+  framework: VersionedFramework | null,
   outputDirPrefix: string,
   entrypointDir: string,
   distPath: string,
@@ -308,8 +309,6 @@ export const build: BuildV2 = async ({
   config,
   meta = {},
 }) => {
-  debug('test');
-  console.log('test');
   await download(files, workPath, meta);
 
   const mountpoint = path.dirname(entrypoint);
@@ -323,12 +322,10 @@ export const build: BuildV2 = async ({
 
   const pkg = getPkg(entrypoint, workPath);
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
-  const framework = getFramework(config, pkg);
-  const f = await detectFrameworkRecord({
+  const framework = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(workPath),
     frameworkList: frameworks,
   });
-  console.log(f);
   // debug(JSON.stringify(f, null, 2));
   const devCommand = getCommand('dev', pkg, config, framework);
   const buildCommand = getCommand('build', pkg, config, framework);
@@ -390,9 +387,9 @@ export const build: BuildV2 = async ({
         process.env[key] = value;
       }
 
-      // if (framework.slug === 'gatsby') {
-      //   await GatsbyUtils.injectPlugins(framework, entrypointDir);
-      // }
+      if (framework.slug === 'gatsby') {
+        await GatsbyUtils.injectPlugins(framework, entrypointDir);
+      }
 
       if (process.env.VERCEL_ANALYTICS_ID) {
         const frameworkDirectory = path.join(
@@ -400,9 +397,6 @@ export const build: BuildV2 = async ({
           path.dirname(entrypoint)
         );
         switch (framework.slug) {
-          case 'gatsby':
-            await GatsbyUtils.injectVercelAnalyticsPlugin(frameworkDirectory);
-            break;
           case 'nuxtjs':
             await NuxtUtils.injectVercelAnalyticsPlugin(frameworkDirectory);
             break;

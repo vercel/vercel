@@ -28,10 +28,7 @@ it(
       .toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
-          Object {
-            "options": Object {},
-            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
-          },
+          "@vercel/gatsby-plugin-vercel-analytics"
         ],
       }
     `);
@@ -59,10 +56,7 @@ it(
       .toMatchInlineSnapshot(`
       Object {
         "plugins": Array [
-          Object {
-            "options": Object {},
-            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
-          },
+          "@vercel/gatsby-plugin-vercel-analytics"
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -96,10 +90,7 @@ it(
       Object {
         "plugins": Array [
           "gatsby-plugin-react-helmet",
-          Object {
-            "options": Object {},
-            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
-          },
+          "@vercel/gatsby-plugin-vercel-analytics"
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -202,10 +193,7 @@ it(
       Object {
         "plugins": Array [
           "gatsby-plugin-react-helmet",
-          Object {
-            "options": Object {},
-            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
-          },
+          "@vercel/gatsby-plugin-vercel-analytics"
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -241,10 +229,7 @@ it(
             },
             "resolve": "gatsby-plugin-zeit-now",
           },
-          Object {
-            "options": Object {},
-            "resolve": "@vercel/gatsby-plugin-vercel-analytics",
-          },
+          "@vercel/gatsby-plugin-vercel-analytics"
         ],
         "siteMetadata": Object {
           "author": "@gatsbyjs",
@@ -274,10 +259,8 @@ it(
       Object {
         "default": Object {
           "plugins": Array [
-            Object {
-              "options": Object {},
-              "resolve": "@vercel/gatsby-plugin-vercel-analytics",
-            },
+            "@vercel/gatsby-plugin-vercel-builder",
+            "@vercel/gatsby-plugin-vercel-analytics",
           ],
           "siteMetadata": Object {
             "siteUrl": "https://gatsby-typescript-config.vercel.app",
@@ -311,7 +294,6 @@ const preferDefault = (m) => (m && m.default) || m;
 
 const vercelConfig = Object.assign(
   {},
-
   // https://github.com/gatsbyjs/gatsby/blob/a6ecfb2b01d761e8a3612b8ea132c698659923d9/packages/gatsby/src/services/initialize.ts#L113-L117
   preferDefault(userConfig)
 );
@@ -319,17 +301,15 @@ if (!vercelConfig.plugins) {
   vercelConfig.plugins = [];
 }
 
-const hasPlugin = vercelConfig.plugins.find(
-  (p) =>
-    p && (p === "@vercel/gatsby-plugin-vercel-analytics" || p.resolve === "@vercel/gatsby-plugin-vercel-analytics")
-);
+for (const plugin of ["@vercel/gatsby-plugin-vercel-builder","@vercel/gatsby-plugin-vercel-analytics"]) {
+  const hasPlugin = vercelConfig.plugins.find(
+    (p) => p && (p === plugin || p.resolve === plugin)
+  );
 
-if (!hasPlugin) {
-  vercelConfig.plugins = vercelConfig.plugins.slice();
-  vercelConfig.plugins.push({
-    resolve: "@vercel/gatsby-plugin-vercel-analytics",
-    options: {},
-  });
+  if (!hasPlugin) {
+    vercelConfig.plugins = vercelConfig.plugins.slice();
+    vercelConfig.plugins.push(plugin);
+  }
 }
 
 export default vercelConfig;
@@ -337,6 +317,21 @@ export default vercelConfig;
   },
   FOUR_MINUTES
 );
+
+const {
+  testDeployment,
+} = require('../../../test/lib/deployment/test-deployment.js');
+
+for (const fixture of ['gatsby-v2', 'gatsby-v3', 'gatsby-v4']) {
+  const fixturePath = path.join(__dirname, 'build-fixtures', fixture);
+  it(
+    `should build ${fixture}`,
+    async () => {
+      await expect(testDeployment(fixturePath)).resolves.toBeDefined();
+    },
+    FOUR_MINUTES
+  );
+}
 
 it(
   'Should build Nuxt.js with "@nuxtjs/web-vitals" plugin',
