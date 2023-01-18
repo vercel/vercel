@@ -34,6 +34,10 @@ export async function injectPlugins(
     pluginsToInject.push(PLUGINS.GATSBY_PLUGIN_VERCEL_ANALYTICS);
   }
 
+  if (pluginsToInject.length === 0) {
+    return;
+  }
+
   const gatsbyConfigPathJs = path.join(dir, `${GATSBY_CONFIG_FILE}.js`);
   const gatsbyConfigPathMjs = path.join(dir, `${GATSBY_CONFIG_FILE}.mjs`);
   const gatsbyConfigPathTs = path.join(dir, `${GATSBY_CONFIG_FILE}.ts`);
