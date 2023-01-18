@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "12.3.1",
+  "version": "12.3.2",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -23,7 +23,7 @@
     "node": ">= 14"
   },
   "devDependencies": {
-    "@types/async-retry": "1.4.1",
+    "@types/async-retry": "1.4.5",
     "@types/fs-extra": "7.0.0",
     "@types/jest": "27.4.1",
     "@types/minimatch": "3.0.5",
