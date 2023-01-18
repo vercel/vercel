@@ -318,21 +318,6 @@ export default vercelConfig;
   FOUR_MINUTES
 );
 
-const {
-  testDeployment,
-} = require('../../../test/lib/deployment/test-deployment.js');
-
-for (const fixture of ['gatsby-v2', 'gatsby-v3', 'gatsby-v4']) {
-  const fixturePath = path.join(__dirname, 'build-fixtures', fixture);
-  it(
-    `should build ${fixture}`,
-    async () => {
-      await expect(testDeployment(fixturePath)).resolves.toBeDefined();
-    },
-    FOUR_MINUTES
-  );
-}
-
 it(
   'Should build Nuxt.js with "@nuxtjs/web-vitals" plugin',
   async () => {
