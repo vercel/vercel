@@ -8,7 +8,7 @@ const {
 jest.setTimeout(12 * 60 * 1000);
 
 const fixturesPath = join(__dirname, 'fixtures');
-const exampleAbsolute = name =>
+const exampleAbsolute = (name: string) =>
   join(__dirname, '..', '..', '..', 'examples', name);
 
 // eslint-disable-next-line no-restricted-syntax
