@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { promises as fs } from 'fs';
 import { BuildResultV2, Meta } from '@vercel/build-utils';
-import { VersionedFramework } from '@vercel/fs-detectors';
+import { Framework } from '@vercel/frameworks';
 
 const BUILD_OUTPUT_DIR = '.vercel/output';
 
@@ -41,7 +41,7 @@ export function createBuildOutput(
   meta: Meta,
   buildCommand: string | null,
   buildOutputPath: string,
-  framework: VersionedFramework | null
+  framework: Framework | undefined
 ): BuildResultV2 {
   if (meta.isDev) {
     let buildCommandName: string;

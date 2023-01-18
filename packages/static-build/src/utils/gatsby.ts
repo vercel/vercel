@@ -1,5 +1,4 @@
 import { PackageJson } from '@vercel/build-utils';
-import { VersionedFramework } from '@vercel/fs-detectors';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import semver from 'semver';
@@ -18,13 +17,13 @@ const PLUGINS = {
 const GATSBY_CONFIG_FILE = 'gatsby-config';
 
 export async function injectPlugins(
-  framework: VersionedFramework,
+  detectedVersion: string | null,
   dir: string
 ) {
   const pluginsToInject = [];
 
-  if (framework.detectedVersion) {
-    const version = semver.coerce(framework.detectedVersion);
+  if (detectedVersion) {
+    const version = semver.coerce(detectedVersion);
     if (version && semver.satisfies(version, '>=4.0.0')) {
       pluginsToInject.push(PLUGINS.GATSBY_PLUGIN_VERCEL_BUILDER);
     }

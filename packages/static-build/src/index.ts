@@ -44,7 +44,6 @@ import treeKill from 'tree-kill';
 import {
   detectFrameworkRecord,
   LocalFileSystemDetector,
-  VersionedFramework,
 } from '@vercel/fs-detectors';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -125,7 +124,7 @@ function getCommand(
   name: 'install' | 'build' | 'dev',
   pkg: PackageJson | null,
   config: Config,
-  framework: VersionedFramework | null
+  framework?: Framework
 ): string | null {
   if (!config.zeroConfig) {
     return null;
@@ -272,7 +271,7 @@ async function fetchBinary(url: string, framework: string, version: string) {
 }
 
 async function getUpdatedDistPath(
-  framework: VersionedFramework | null,
+  framework: Framework | undefined,
   outputDirPrefix: string,
   entrypointDir: string,
   distPath: string,
@@ -322,10 +321,12 @@ export const build: BuildV2 = async ({
 
   const pkg = getPkg(entrypoint, workPath);
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
-  const framework = await detectFrameworkRecord({
-    fs: new LocalFileSystemDetector(workPath),
-    frameworkList: frameworks,
-  });
+  const framework = getFramework(config, pkg);
+  const { detectedVersion = null } =
+    (await detectFrameworkRecord({
+      fs: new LocalFileSystemDetector(workPath),
+      frameworkList: frameworks,
+    })) ?? {};
   const devCommand = getCommand('dev', pkg, config, framework);
   const buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
@@ -387,7 +388,7 @@ export const build: BuildV2 = async ({
       }
 
       if (framework.slug === 'gatsby') {
-        await GatsbyUtils.injectPlugins(framework, entrypointDir);
+        await GatsbyUtils.injectPlugins(detectedVersion, entrypointDir);
       }
 
       if (process.env.VERCEL_ANALYTICS_ID) {

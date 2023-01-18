@@ -155,7 +155,7 @@ export async function detectFramework({
  * Framework with a `detectedVersion` specifying the version
  * or version range of the relevant package
  */
-export type VersionedFramework = Framework & {
+type VersionedFramework = Framework & {
   detectedVersion?: string;
 };
 
