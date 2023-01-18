@@ -1755,5 +1755,6 @@ export async function serverBuild({
             },
           ]),
     ],
+    framework: { version: nextVersion },
   };
 }

@@ -17,13 +17,16 @@ const SchemaFrameworkDetectionItem = {
   items: [
     {
       type: 'object',
-      required: ['path'],
+      required: [],
       additionalProperties: false,
       properties: {
         path: {
           type: 'string',
         },
         matchContent: {
+          type: 'string',
+        },
+        matchPackage: {
           type: 'string',
         },
       },
