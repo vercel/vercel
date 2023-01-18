@@ -1,4 +1,5 @@
 import { dirname, join, relative } from 'path';
+import { pathToFileURL } from 'url';
 import { glob } from '@vercel/build-utils';
 import type { PrepareCache } from '@vercel/build-utils';
 import type { AppConfig } from './types';
@@ -15,7 +16,9 @@ export const prepareCache: PrepareCache = async ({
   try {
     const remixConfigFile = findConfig(entrypointFsDirname, 'remix.config');
     if (remixConfigFile) {
-      const remixConfigModule = await eval('import(remixConfigFile)');
+      const remixConfigModule = await import(
+        pathToFileURL(remixConfigFile).href
+      );
       const remixConfig: AppConfig = remixConfigModule?.default || {};
       if (remixConfig.cacheDirectory) {
         cacheDirectory = remixConfig.cacheDirectory;

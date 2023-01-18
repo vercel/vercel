@@ -24,6 +24,7 @@ import type {
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import type { AppConfig } from './types';
+import { pathToFileURL } from 'url';
 import { findConfig } from './utils';
 
 // Name of the Remix runtime adapter npm package for Vercel
@@ -168,7 +169,9 @@ export const build: BuildV2 = async ({
 
   try {
     if (remixConfigFile) {
-      const remixConfigModule = await eval('import(remixConfigFile)');
+      const remixConfigModule = await import(
+        pathToFileURL(remixConfigFile).href
+      );
       const remixConfig: AppConfig = remixConfigModule?.default || {};
 
       // If `serverBuildTarget === 'vercel'` then Remix will output a handler
