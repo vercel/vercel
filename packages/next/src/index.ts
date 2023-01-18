@@ -932,6 +932,7 @@ export const build: BuildV2 = async ({
             ]
           : []),
       ],
+      framework: { version: nextVersion },
     };
   }
 
@@ -2581,6 +2582,7 @@ export const build: BuildV2 = async ({
                 ]),
           ]),
     ],
+    framework: { version: nextVersion },
   };
 };
 
