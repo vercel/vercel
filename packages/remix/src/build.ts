@@ -169,9 +169,7 @@ export const build: BuildV2 = async ({
 
   try {
     if (remixConfigFile) {
-      const remixConfigModule = await import(
-        pathToFileURL(remixConfigFile).href
-      );
+      const remixConfigModule = await import(remixConfigFile);
       const remixConfig: AppConfig = remixConfigModule?.default || {};
 
       // If `serverBuildTarget === 'vercel'` then Remix will output a handler
