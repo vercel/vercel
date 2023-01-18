@@ -1,0 +1,25 @@
+{
+  "name": "gatsby-v4",
+  "private": true,
+  "dependencies": {
+    "@vercel/gatsby-plugin-vercel-analytics": "1.0.0",
+    "@vercel/gatsby-plugin-vercel-builder": "https://vercel-d78q2acj7.vercel.sh/tarballs/%40vercel/gatsby-plugin-vercel-builder.tgz",
+    "gatsby": "4.25.2",
+    "gatsby-plugin-image": "^2.21.0",
+    "gatsby-plugin-manifest": "^4.21.0",
+    "gatsby-plugin-pnpm": "1.2.10",
+    "gatsby-plugin-sharp": "^4.21.0",
+    "gatsby-source-filesystem": "^4.21.1",
+    "gatsby-transformer-sharp": "^4.21.0",
+    "prop-types": "^15.8.1",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0"
+  },
+  "scripts": {
+    "build": "gatsby -v && gatsby build",
+    "develop": "gatsby develop",
+    "start": "gatsby develop",
+    "serve": "gatsby serve",
+    "clean": "gatsby clean"
+  }
+}

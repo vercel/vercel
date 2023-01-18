@@ -1,4 +1,5 @@
 import { PackageJson } from '@vercel/build-utils';
+// import { Framework } from '@vercel/frameworks';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import {
@@ -8,18 +9,32 @@ import {
   writePackageJson,
 } from './_shared';
 
-const GATSBY_PLUGIN_PACKAGE_NAME = '@vercel/gatsby-plugin-vercel-analytics';
-const DEFAULT_CONFIG = {
-  plugins: [
-    {
-      resolve: GATSBY_PLUGIN_PACKAGE_NAME,
-      options: {},
-    },
-  ],
+const PLUGINS = {
+  GATSBY_PLUGIN_VERCEL_ANALYTICS: '@vercel/gatsby-plugin-vercel-analytics',
+  GATSBY_PLUGIN_VERCEL_BUILDER: '@vercel/gatsby-plugin-vercel-builder',
 };
+
+const DEFAULT_CONFIG = {
+  plugins: [PLUGINS.GATSBY_PLUGIN_VERCEL_ANALYTICS],
+};
+
+// const V4_CONFIG = {
+//   plugins: [
+//     PLUGINS.GATSBY_PLUGIN_VERCEL_ANALYTICS,
+//     PLUGINS.GATSBY_PLUGIN_VERCEL_BUILDER
+//   ]
+// }
+
 const GATSBY_CONFIG_FILE = 'gatsby-config';
 
+// export async function injectPlugins(framework: Framework, dir: string) {
+//   process.env.GATSBY_VERCEL_ANALYTICS_ID = process.env.VERCEL_ANALYTICS_ID;
+// }
+
+const GATSBY_PLUGIN_PACKAGE_NAME = PLUGINS.GATSBY_PLUGIN_VERCEL_ANALYTICS;
+
 export async function injectVercelAnalyticsPlugin(dir: string): Promise<void> {
+  console.log('HELLO');
   // Gatsby requires a special variable name for environment variables to be
   // exposed to the client-side JavaScript bundles:
   process.env.GATSBY_VERCEL_ANALYTICS_ID = process.env.VERCEL_ANALYTICS_ID;
