@@ -1,4 +1,4 @@
-const { exec, fixture, testFixture } = require('./utils.js');
+const { exec, fixture, testFixture, testFixtureStdio } = require('./utils.js');
 
 test('[vercel dev] validate redirects', async () => {
   const directory = fixture('invalid-redirects');
@@ -61,3 +61,52 @@ test('[vercel dev] validate env var names', async () => {
     await dev.kill();
   }
 });
+
+test(
+  '[vercel dev] test rewrites with segments serve correct content',
+  testFixtureStdio('test-rewrites-with-segments', async (testPath: any) => {
+    await testPath(200, '/api/users/first', 'first');
+    await testPath(200, '/api/fourty-two', '42');
+    await testPath(200, '/rand', '42');
+    await testPath(200, '/api/dynamic', 'dynamic');
+    await testPath(404, '/api');
+  })
+);
+
+test(
+  '[vercel dev] test rewrites serve correct content',
+  testFixtureStdio('test-rewrites', async (testPath: any) => {
+    await testPath(200, '/hello', 'Hello World');
+  })
+);
+
+test(
+  '[vercel dev] test rewrites and redirects serve correct external content',
+  testFixtureStdio(
+    'test-external-rewrites-and-redirects',
+    async (testPath: any) => {
+      const vcRobots = `https://vercel.com/robots.txt`;
+      await testPath(200, '/rewrite', /User-Agent: \*/m);
+      await testPath(308, '/redirect', `Redirecting to ${vcRobots} (308)`, {
+        Location: vcRobots,
+      });
+      await testPath(307, '/tempRedirect', `Redirecting to ${vcRobots} (307)`, {
+        Location: vcRobots,
+      });
+    }
+  )
+);
+
+test(
+  '[vercel dev] test rewrites and redirects is case sensitive',
+  testFixtureStdio('test-routing-case-sensitive', async (testPath: any) => {
+    await testPath(200, '/Path', 'UPPERCASE');
+    await testPath(200, '/path', 'lowercase');
+    await testPath(308, '/GoTo', 'Redirecting to /upper.html (308)', {
+      Location: '/upper.html',
+    });
+    await testPath(308, '/goto', 'Redirecting to /lower.html (308)', {
+      Location: '/lower.html',
+    });
+  })
+);
