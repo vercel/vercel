@@ -24,7 +24,6 @@ import type {
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import type { AppConfig } from './types';
-import { pathToFileURL } from 'url';
 import { findConfig } from './utils';
 
 // Name of the Remix runtime adapter npm package for Vercel

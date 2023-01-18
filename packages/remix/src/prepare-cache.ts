@@ -1,5 +1,4 @@
 import { dirname, join, relative } from 'path';
-import { pathToFileURL } from 'url';
 import { glob } from '@vercel/build-utils';
 import type { PrepareCache } from '@vercel/build-utils';
 import type { AppConfig } from './types';
