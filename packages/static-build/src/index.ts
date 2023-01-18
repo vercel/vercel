@@ -326,7 +326,6 @@ export const build: BuildV2 = async ({
     fs: new LocalFileSystemDetector(workPath),
     frameworkList: frameworks,
   });
-  // debug(JSON.stringify(f, null, 2));
   const devCommand = getCommand('dev', pkg, config, framework);
   const buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
