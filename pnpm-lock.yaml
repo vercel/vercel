@@ -39,7 +39,7 @@ importers:
       '@typescript-eslint/parser': 5.21.0_eslint@8.14.0
       '@vercel/build-utils': link:packages/build-utils
       '@vercel/ncc': 0.24.0
-      '@vercel/next': 3.3.15
+      '@vercel/next': link:packages/next
       async-retry: 1.2.3
       buffer-replace: 1.0.0
       create-svelte: 2.0.1
@@ -588,8 +588,8 @@ importers:
       '@types/fs-extra': 11.0.1
       '@types/node': 14.18.33
       '@types/react': 18.0.26
-      '@vercel/build-utils': 5.8.3
-      '@vercel/node': 2.8.11
+      '@vercel/build-utils': 5.9.0
+      '@vercel/node': 2.8.13
       '@vercel/routing-utils': 2.1.8
       ajv: 8.12.0
       esbuild: 0.16.17
@@ -599,7 +599,7 @@ importers:
       typescript: 4.3.4
     dependencies:
       '@vercel/build-utils': link:../build-utils
-      '@vercel/node': 2.8.11
+      '@vercel/node': link:../node
       '@vercel/routing-utils': link:../routing-utils
       ajv: 8.12.0
       esbuild: 0.16.17
@@ -6907,10 +6907,6 @@ packages:
       eslint-visitor-keys: 3.3.0
     dev: true
 
-  /@vercel/build-utils/5.8.3:
-    resolution: {integrity: sha512-t9IdZjTh65NnYvVMQfGIVXaYSBkSxuBSJHdrwy8FbSD0WB0OiRLg3sXJpKIl36M5E7IRsx29qgiw3qXEhoObtg==}
-    dev: false
-
   /@vercel/fun/1.0.4:
     resolution: {integrity: sha512-zLY2d1U9JJm3CorfEcuZ7307fo77/Z/mU12LDJpSGtdpjzxgpxMlU5NPq8whz8hIZhIMkBJv0DqZ5bgenktQnw==}
     engines: {node: '>= 10'}
@@ -6945,10 +6941,6 @@ packages:
     hasBin: true
     dev: true
 
-  /@vercel/next/3.3.15:
-    resolution: {integrity: sha512-zfJ54JkalkMvxE4e0/OAL0sPEm9AplUCBR2Bq6JhGrOEaxBGdCyv2RPBAyZOV1JL+m9y06hJpWyFQGsOtI5RgA==}
-    dev: true
-
   /@vercel/nft/0.22.5:
     resolution: {integrity: sha512-mug57Wd1BL7GMj9gXMgMeKUjdqO0e4u+0QLPYMFE1rwdJ+55oPy6lp3nIBCS8gOvigT62UI4QKUL2sGqcoW4Hw==}
     engines: {node: '>=14'}
@@ -6968,38 +6960,6 @@ packages:
     transitivePeerDependencies:
       - encoding
       - supports-color
-
-  /@vercel/node-bridge/3.1.8:
-    resolution: {integrity: sha512-zF4lUQLq2uqCUl1vm9KITK/rOVPeCCuSle5skqVi4ybQDaXaHpumBT7NovuOD5ls4AJxqVcyiOOheRT4f/le3A==}
-    dev: false
-
-  /@vercel/node/2.8.11:
-    resolution: {integrity: sha512-XYkyNe+C+FIDc2TnlZxyS7cc0PbwGvuK3AFU75KaB898UUnOueEki2i0s8dokG1M9T3dT2QnbozyZ0anxT8jlQ==}
-    dependencies:
-      '@edge-runtime/vm': 2.0.0
-      '@types/node': 14.18.33
-      '@vercel/build-utils': 5.8.3
-      '@vercel/node-bridge': 3.1.8
-      '@vercel/static-config': 2.0.11
-      edge-runtime: 2.0.0
-      esbuild: 0.14.47
-      exit-hook: 2.2.1
-      node-fetch: 2.6.7
-      ts-node: 10.9.1_jh3j7gf3qptnaxtpzk3sx5vjku
-      typescript: 4.3.4
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - encoding
-    dev: false
-
-  /@vercel/static-config/2.0.11:
-    resolution: {integrity: sha512-dw6CAJ7U2AcQpjZV9YfOyz2wTseSFdkT3qivBg2GjHtVyd5wdY7vkQ9seLKEckYhFx3CjQ29IhzhDND9F5oINw==}
-    dependencies:
-      ajv: 8.6.3
-      json-schema-to-ts: 1.6.4
-      ts-morph: 12.0.0
-    dev: false
 
   /@vercel/webpack-asset-relocator-loader/1.7.3:
     resolution: {integrity: sha512-vizrI18v8Lcb1PmNNUBz7yxPxxXoOeuaVEjTG9MjvDrphjiSxFZrRJ5tIghk+qdLFRCXI5HBCshgobftbmrC5g==}
