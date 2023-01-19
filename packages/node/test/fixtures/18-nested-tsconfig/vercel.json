@@ -24,7 +24,8 @@
   "probes": [
     {
       "path": "/",
-      "mustContain": "`"
+      "mustContain": "`",
+      "logMustContain": "mehhhhhh"
     },
     {
       "path": "/functions/es5.ts",
