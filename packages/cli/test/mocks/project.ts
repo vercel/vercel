@@ -7,7 +7,7 @@ import {
 } from '../../src/types';
 import { formatProvider } from '../../src/util/git/connect-git-provider';
 import { parseEnvironment } from '../../src/commands/pull';
-import { Env } from '@vercel/build-utils/dist';
+import type { Env } from '@vercel/build-utils';
 
 const envs: ProjectEnvVariable[] = [
   {
@@ -124,6 +124,7 @@ export const defaultProject = {
     {
       alias: ['foobar.com'],
       aliasAssigned: 1571239348998,
+      buildingAt: 1571239348998,
       createdAt: 1571239348998,
       createdIn: 'sfo1',
       deploymentHostname: 'a-project-name-rjtr4pz3f',

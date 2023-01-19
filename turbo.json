@@ -12,6 +12,11 @@
       "outputMode": "new-only",
       "outputs": ["helpers.js", "source-map-support.js"]
     },
+    "@vercel/gatsby-plugin-vercel-builder#build": {
+      "dependsOn": ["^build"],
+      "outputMode": "new-only",
+      "outputs": ["dist/**", "gatsby-node.js"]
+    },
     "vercel#build": {
       "dependsOn": ["^build"],
       "outputMode": "new-only",

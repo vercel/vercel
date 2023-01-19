@@ -20,6 +20,7 @@ async function getChunkedTests() {
       `--cache-dir=.turbo`,
       '--output-logs=full',
       '--',
+      '--', // need two of these due to pnpm arg parsing
       '--listTests',
     ])
   ).toString('utf8');
@@ -59,7 +60,8 @@ async function getChunkedTests() {
     ([packagePathAndName, scriptNames]) => {
       const [packagePath, packageName] = packagePathAndName.split(',');
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
-        return intoChunks(NUMBER_OF_CHUNKS, testPaths).flatMap(
+        const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
+        return intoChunks(NUMBER_OF_CHUNKS, sortedTestPaths).flatMap(
           (chunk, chunkNumber, allChunks) => {
             const runners = runnersMap.get(scriptName) || ['ubuntu-latest'];
 
@@ -144,7 +146,7 @@ function intoChunks(totalChunks, arr) {
 
 async function main() {
   try {
-    const chunks = await getChunkedTests(process.argv[2]);
+    const chunks = await getChunkedTests();
     // TODO: pack and build the runtimes for each package and cache it so we only deploy it once
     console.log(JSON.stringify(chunks));
   } catch (e) {
