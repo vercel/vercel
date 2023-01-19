@@ -36,6 +36,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
   const nowJson = JSON.parse(
     bodies['vercel.json'] || bodies['now.json'] || '{}'
   );
+  console.log(nowJson);
 
   delete nowJson.probes;
 
@@ -58,6 +59,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
     meta: {},
     ...nowJson,
   };
+  console.log(nowDeployPayload);
 
   logWithinTest(`posting ${files.length} files`);
 
