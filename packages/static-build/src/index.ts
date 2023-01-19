@@ -41,6 +41,10 @@ import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
 import treeKill from 'tree-kill';
+import {
+  detectFrameworkRecord,
+  LocalFileSystemDetector,
+} from '@vercel/fs-detectors';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -120,7 +124,7 @@ function getCommand(
   name: 'install' | 'build' | 'dev',
   pkg: PackageJson | null,
   config: Config,
-  framework: Framework | undefined
+  framework?: Framework
 ): string | null {
   if (!config.zeroConfig) {
     return null;
@@ -318,6 +322,11 @@ export const build: BuildV2 = async ({
   const pkg = getPkg(entrypoint, workPath);
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
   const framework = getFramework(config, pkg);
+  const { detectedVersion = null } =
+    (await detectFrameworkRecord({
+      fs: new LocalFileSystemDetector(workPath),
+      frameworkList: frameworks,
+    })) ?? {};
   const devCommand = getCommand('dev', pkg, config, framework);
   const buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
@@ -378,15 +387,16 @@ export const build: BuildV2 = async ({
         process.env[key] = value;
       }
 
+      if (framework.slug === 'gatsby') {
+        await GatsbyUtils.injectPlugins(detectedVersion, entrypointDir);
+      }
+
       if (process.env.VERCEL_ANALYTICS_ID) {
         const frameworkDirectory = path.join(
           workPath,
           path.dirname(entrypoint)
         );
         switch (framework.slug) {
-          case 'gatsby':
-            await GatsbyUtils.injectVercelAnalyticsPlugin(frameworkDirectory);
-            break;
           case 'nuxtjs':
             await NuxtUtils.injectVercelAnalyticsPlugin(frameworkDirectory);
             break;

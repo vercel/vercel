@@ -10,6 +10,7 @@ importers:
       '@vercel/build-utils': '*'
       '@vercel/ncc': 0.24.0
       '@vercel/next': '*'
+      '@vercel/static-build': '*'
       async-retry: 1.2.3
       buffer-replace: 1.0.0
       create-svelte: 2.0.1
@@ -40,6 +41,7 @@ importers:
       '@vercel/build-utils': link:packages/build-utils
       '@vercel/ncc': 0.24.0
       '@vercel/next': link:packages/next
+      '@vercel/static-build': link:packages/static-build
       async-retry: 1.2.3
       buffer-replace: 1.0.0
       create-svelte: 2.0.1
@@ -948,8 +950,10 @@ importers:
       '@types/node': 14.18.33
       '@types/node-fetch': 2.5.4
       '@types/promise-timeout': 1.3.0
+      '@types/semver': 7.3.13
       '@vercel/build-utils': 5.9.0
       '@vercel/frameworks': 1.2.4
+      '@vercel/fs-detectors': 3.7.5
       '@vercel/ncc': 0.24.0
       '@vercel/routing-utils': 2.1.8
       '@vercel/static-config': 2.0.11
@@ -960,6 +964,7 @@ importers:
       ms: 2.1.2
       node-fetch: 2.6.7
       rc9: 1.2.0
+      semver: 7.3.8
       tree-kill: 1.2.2
       ts-morph: 12.0.0
       typescript: 4.3.4
@@ -972,8 +977,10 @@ importers:
       '@types/node': 14.18.33
       '@types/node-fetch': 2.5.4
       '@types/promise-timeout': 1.3.0
+      '@types/semver': 7.3.13
       '@vercel/build-utils': link:../build-utils
       '@vercel/frameworks': link:../frameworks
+      '@vercel/fs-detectors': link:../fs-detectors
       '@vercel/ncc': 0.24.0
       '@vercel/routing-utils': link:../routing-utils
       '@vercel/static-config': link:../static-config
@@ -984,6 +991,7 @@ importers:
       ms: 2.1.2
       node-fetch: 2.6.7
       rc9: 1.2.0
+      semver: 7.3.8
       tree-kill: 1.2.2
       ts-morph: 12.0.0
       typescript: 4.3.4
@@ -1206,7 +1214,7 @@ packages:
       '@babel/core': ^7.0.0
     dependencies:
       '@babel/compat-data': 7.20.10
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-validator-option': 7.18.6
       browserslist: 4.21.4
       lru-cache: 5.1.1
@@ -1711,7 +1719,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-plugin-utils': 7.20.2
     dev: true
 
@@ -1841,7 +1849,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-plugin-utils': 7.20.2
     dev: true
 
@@ -1850,7 +1858,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-plugin-utils': 7.20.2
     dev: true
 
@@ -6103,7 +6111,7 @@ packages:
   /@types/fs-extra/9.0.13:
     resolution: {integrity: sha512-nEnwB++1u5lVDM2UI4c1+5R+FYaKfaAzS4OococimjVm3nQw3TuzH5UNsocrcTBbhnerblyHj4A49qXbIiZdpA==}
     dependencies:
-      '@types/node': 14.18.33
+      '@types/node': 18.11.18
     dev: true
 
   /@types/get-port/3.2.0:
@@ -9858,7 +9866,7 @@ packages:
       supports-color:
         optional: true
     dependencies:
-      ms: 2.1.2
+      ms: 2.1.3
     dev: true
 
   /debug/4.1.1_supports-color@7.2.0:
@@ -9870,7 +9878,7 @@ packages:
       supports-color:
         optional: true
     dependencies:
-      ms: 2.1.2
+      ms: 2.1.3
       supports-color: 7.2.0
     dev: true
 
@@ -13803,7 +13811,7 @@ packages:
   /ignore-walk/3.0.3:
     resolution: {integrity: sha512-m7o6xuOaT1aqheYHKf8W6J5pYH85ZI9w077erOzLje3JsB1gkafkAhHHY19dqjulgIZHFm32Cp5uNZgcQqdJKw==}
     dependencies:
-      minimatch: 3.0.4
+      minimatch: 3.1.2
     dev: true
 
   /ignore-walk/5.0.1:
@@ -17195,7 +17203,7 @@ packages:
     dependencies:
       hosted-git-info: 2.8.9
       osenv: 0.1.5
-      semver: 5.5.0
+      semver: 5.7.1
       validate-npm-package-name: 3.0.0
     dev: true
 
