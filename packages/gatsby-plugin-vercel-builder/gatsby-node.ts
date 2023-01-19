@@ -2,8 +2,8 @@ import path from 'path';
 
 import type { GatsbyNode } from 'gatsby';
 
-// this gets built separately, so import from "build" instead of "src"
-import { generateVercelBuildOutputAPI3Output } from './build';
+// this gets built separately, so import from "dist" instead of "src"
+import { generateVercelBuildOutputAPI3Output } from './dist';
 
 export const pluginOptionsSchema: GatsbyNode['pluginOptionsSchema'] = ({
   Joi,
