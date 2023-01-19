@@ -1417,7 +1417,7 @@ export async function serverBuild({
               src: `^${path.posix.join(
                 '/',
                 entryDirectory,
-                '/((?!.+\\.rsc).+)$'
+                '/((?!.+\\.rsc).+?)(?:/)?$'
               )}`,
               has: [
                 {
