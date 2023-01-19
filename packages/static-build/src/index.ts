@@ -43,7 +43,9 @@ import type { ImagesConfig, BuildConfig } from './utils/_shared';
 import treeKill from 'tree-kill';
 import {
   detectFrameworkRecord,
+  detectFramework,
   LocalFileSystemDetector,
+  packageManagers,
 } from '@vercel/fs-detectors';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -322,9 +324,10 @@ export const build: BuildV2 = async ({
   const pkg = getPkg(entrypoint, workPath);
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
   const framework = getFramework(config, pkg);
+  const localFileSystemDetector = new LocalFileSystemDetector(workPath);
   const { detectedVersion = null } =
     (await detectFrameworkRecord({
-      fs: new LocalFileSystemDetector(workPath),
+      fs: localFileSystemDetector,
       frameworkList: frameworks,
     })) ?? {};
   const devCommand = getCommand('dev', pkg, config, framework);
@@ -388,7 +391,20 @@ export const build: BuildV2 = async ({
       }
 
       if (framework.slug === 'gatsby') {
-        await GatsbyUtils.injectPlugins(detectedVersion, entrypointDir);
+        const injectedPlugins = await GatsbyUtils.injectPlugins(
+          detectedVersion,
+          entrypointDir
+        );
+
+        if (injectedPlugins) {
+          const packageManager = await detectFramework({
+            fs: localFileSystemDetector,
+            frameworkList: packageManagers,
+          });
+          if (packageManager === 'pnpm') {
+            await execCommand('pnpm install --lockfile-only');
+          }
+        }
       }
 
       if (process.env.VERCEL_ANALYTICS_ID) {
