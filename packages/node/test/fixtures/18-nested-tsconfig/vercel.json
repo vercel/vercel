@@ -25,7 +25,7 @@
     {
       "path": "/",
       "mustContain": "`",
-      "logMustContain": "mehhhhhh"
+      "logMustContain": "Using TypeScript 3.5.3 (local user-provided)"
     },
     {
       "path": "/functions/es5.ts",

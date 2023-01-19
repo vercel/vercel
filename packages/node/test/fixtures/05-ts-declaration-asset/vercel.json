@@ -5,7 +5,7 @@
     {
       "path": "/",
       "mustContain": "declare namespace Test",
-      "logMustContain": "mehhhhhh"
+      "logMustContain": "Using built-in TypeScript"
     }
   ]
 }
