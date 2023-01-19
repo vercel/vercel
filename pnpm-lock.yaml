@@ -9,8 +9,6 @@ importers:
       '@typescript-eslint/parser': 5.21.0
       '@vercel/build-utils': '*'
       '@vercel/ncc': 0.24.0
-      '@vercel/next': '*'
-      '@vercel/static-build': '*'
       async-retry: 1.2.3
       buffer-replace: 1.0.0
       create-svelte: 2.0.1
@@ -40,8 +38,6 @@ importers:
       '@typescript-eslint/parser': 5.21.0_eslint@8.14.0
       '@vercel/build-utils': link:packages/build-utils
       '@vercel/ncc': 0.24.0
-      '@vercel/next': link:packages/next
-      '@vercel/static-build': link:packages/static-build
       async-retry: 1.2.3
       buffer-replace: 1.0.0
       create-svelte: 2.0.1
@@ -1214,7 +1210,7 @@ packages:
       '@babel/core': ^7.0.0
     dependencies:
       '@babel/compat-data': 7.20.10
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-validator-option': 7.18.6
       browserslist: 4.21.4
       lru-cache: 5.1.1
@@ -1719,7 +1715,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
     dev: true
 
@@ -1849,7 +1845,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
     dev: true
 
@@ -1858,7 +1854,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
     dev: true
 
