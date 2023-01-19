@@ -43,6 +43,10 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
   const nowDeployPayload = {
     version: 2,
     public: true,
+    name: projectName,
+    files,
+    meta: {},
+    ...nowJson,
     env: { ...nowJson.env, RANDOMNESS_ENV_VAR: randomness },
     build: {
       env: {
@@ -54,12 +58,9 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
         NEXT_TELEMETRY_DISABLED: '1',
       },
     },
-    name: projectName,
-    files,
-    meta: {},
-    ...nowJson,
   };
   console.log(nowDeployPayload);
+  console.log(nowDeployPayload.build.env);
 
   logWithinTest(`posting ${files.length} files`);
 
