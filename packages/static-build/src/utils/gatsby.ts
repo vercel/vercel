@@ -35,35 +35,34 @@ export async function injectPlugins(
   }
 
   if (pluginsToInject.length === 0) {
-    return;
+    return false;
   }
 
   await addGatsbyPackage(dir, pluginsToInject);
 
   const gatsbyConfigPathTs = path.join(dir, `${GATSBY_CONFIG_FILE}.ts`);
+  const gatsbyConfigPathMjs = path.join(dir, `${GATSBY_CONFIG_FILE}.mjs`);
+  const gatsbyConfigPathJs = path.join(dir, `${GATSBY_CONFIG_FILE}.js`);
   if (await fileExists(gatsbyConfigPathTs)) {
     printInjectingPlugins(pluginsToInject, gatsbyConfigPathTs);
-    return updateGatsbyTsConfig(gatsbyConfigPathTs, pluginsToInject);
-  }
-
-  const gatsbyConfigPathMjs = path.join(dir, `${GATSBY_CONFIG_FILE}.mjs`);
-  if (await fileExists(gatsbyConfigPathMjs)) {
+    await updateGatsbyTsConfig(gatsbyConfigPathTs, pluginsToInject);
+  } else if (await fileExists(gatsbyConfigPathMjs)) {
     printInjectingPlugins(pluginsToInject, gatsbyConfigPathMjs);
-    return updateGatsbyMjsConfig(gatsbyConfigPathMjs, pluginsToInject);
-  }
-
-  const gatsbyConfigPathJs = path.join(dir, `${GATSBY_CONFIG_FILE}.js`);
-  printInjectingPlugins(pluginsToInject, gatsbyConfigPathJs);
-  if (await fileExists(gatsbyConfigPathJs)) {
-    await updateGatsbyJsConfig(gatsbyConfigPathJs, pluginsToInject);
+    await updateGatsbyMjsConfig(gatsbyConfigPathMjs, pluginsToInject);
   } else {
-    await fs.writeFile(
-      gatsbyConfigPathJs,
-      `module.exports = ${JSON.stringify({
-        plugins: pluginsToInject,
-      })}`
-    );
+    printInjectingPlugins(pluginsToInject, gatsbyConfigPathJs);
+    if (await fileExists(gatsbyConfigPathJs)) {
+      await updateGatsbyJsConfig(gatsbyConfigPathJs, pluginsToInject);
+    } else {
+      await fs.writeFile(
+        gatsbyConfigPathJs,
+        `module.exports = ${JSON.stringify({
+          plugins: pluginsToInject,
+        })}`
+      );
+    }
   }
+  return true;
 }
 
 function printInjectingPlugins(plugins: string[], configPath: string) {
