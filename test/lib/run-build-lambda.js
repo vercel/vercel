@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 const json5 = require('json5');
 const { glob } = require('@vercel/build-utils');
 
-exports.createRunBuildLambda = async function (builder) {
+exports.createRunBuildLambda = function (builder) {
   return async inputPath => {
     const inputFiles = await glob('**', inputPath);
     const nowJsonRef = inputFiles['vercel.json'] || inputFiles['now.json'];
