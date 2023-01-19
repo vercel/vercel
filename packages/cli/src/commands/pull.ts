@@ -103,7 +103,7 @@ export function parseEnvironment(
   requested?: string
 ): ProjectEnvTarget {
   const environment = getEnvTargetRequested(output, 'development', requested);
-  if (!isValidEnvTarget(environment)) {
+  if (!environment || !isValidEnvTarget(environment)) {
     throw new Error(
       `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`
     );
