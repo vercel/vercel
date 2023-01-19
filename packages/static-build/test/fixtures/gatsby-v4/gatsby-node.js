@@ -1,5 +1,3 @@
-// const fs = require('fs');
-
 exports.createPages = async ({ actions }) => {
   const { createPage } = actions;
   createPage({
@@ -10,6 +8,3 @@ exports.createPages = async ({ actions }) => {
   });
 };
 
-// exports.onPostBuild = async ({ store }) => {
-//   console.log(store.getState().pages);
-// };

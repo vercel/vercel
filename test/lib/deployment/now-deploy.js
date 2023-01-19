@@ -32,11 +32,9 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
 
   const { FORCE_BUILD_IN_REGION, VERCEL_DEBUG, VERCEL_CLI_VERSION } =
     process.env;
-  console.log({ VERCEL_CLI_VERSION });
   const nowJson = JSON.parse(
     bodies['vercel.json'] || bodies['now.json'] || '{}'
   );
-  console.log(nowJson);
 
   delete nowJson.probes;
 
@@ -59,8 +57,6 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
       },
     },
   };
-  console.log(nowDeployPayload);
-  console.log(nowDeployPayload.build.env);
 
   logWithinTest(`posting ${files.length} files`);
 
