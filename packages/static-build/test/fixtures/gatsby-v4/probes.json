@@ -8,8 +8,11 @@
     },
     {
       "path": "/using-ssr",
-      "mustContain": "This page is rendered server-side"
+      "mustContain": "This page is rendered server side"
     },
-    { "path": "/using-dsg", "mustContain": "Hello from a DSG Page" }
+    {
+      "path": "/using-dsg",
+      "mustContain": "This page is not created until requested by a user"
+    }
   ]
 }
