@@ -1,15 +1,14 @@
 import { join } from 'path';
-
 import { getTransformedRoutes } from '@vercel/routing-utils';
-import { pathExists, writeJson, remove, mkdirp } from 'fs-extra';
-
+import { pathExists, writeJson, remove } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
 import {
   createServerlessFunctions,
-  createPageDataFunction,
+  createPageDataFunctions,
   createAPIRoutes,
 } from './helpers/functions';
 import { createStaticDir } from './helpers/static';
+import type { Config, Routes } from './types';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
   exportPath: string;
@@ -20,7 +19,6 @@ export interface GenerateVercelBuildOutputAPI3OutputOptions {
   };
   [x: string]: unknown;
 }
-import type { Config, Routes } from './types';
 export async function generateVercelBuildOutputAPI3Output({
   exportPath,
   gatsbyStoreState,
@@ -30,8 +28,6 @@ export async function generateVercelBuildOutputAPI3Output({
     redirects: gatsbyStoreState.redirects,
     functions: gatsbyStoreState.functions,
   };
-
-  console.log(state);
 
   if (validateGatsbyState(state)) {
     console.log('▲ Creating Vercel build output');
@@ -57,14 +53,14 @@ export async function generateVercelBuildOutputAPI3Output({
 
     await createStaticDir();
 
-    await mkdirp(join('.cache', 'caches'));
-
     const createPromises: Promise<void>[] = [];
 
-    if (functions.length > 0) createPromises.push(createAPIRoutes(functions));
+    if (functions.length > 0) {
+      createPromises.push(createAPIRoutes(functions));
+    }
 
     if (ssrRoutes.length > 0 || dsgRoutes.length > 0) {
-      createPromises.push(createPageDataFunction({ ssrRoutes, dsgRoutes }));
+      createPromises.push(createPageDataFunctions({ ssrRoutes, dsgRoutes }));
       createPromises.push(createServerlessFunctions({ ssrRoutes, dsgRoutes }));
     }
 
@@ -77,26 +73,20 @@ export async function generateVercelBuildOutputAPI3Output({
 
     const { routes } = getTransformedRoutes({
       ...vercelConfig,
-      trailingSlash: false,
+      // TODO: handle `trailingSlash` based on project config
+      // https://www.gatsbyjs.com/docs/reference/config-files/gatsby-config/#trailingslash
+      trailingSlash: true,
       redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
         source: fromPath,
         destination: toPath,
         permanent: isPermanent,
       })),
-      rewrites: [
-        {
-          source: '^/page-data(?:/(.*))/page-data\\.json$',
-          destination: '/_page-data',
-        },
-      ],
     });
 
     const config: Config = {
       version: 3,
       routes: routes || undefined,
     };
-
-    console.log(config);
 
     await writeJson(exportPath, config);
     console.log('Vercel output has been generated');
