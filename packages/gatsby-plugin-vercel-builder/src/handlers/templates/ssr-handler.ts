@@ -23,9 +23,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     pageName = '/';
   }
 
-  // TODO: remove
-  console.log({ pathname, pageName });
-
   const graphqlEngine = await getGraphQLEngine();
   const { getData, renderHTML } = await getPageSSRHelpers();
 

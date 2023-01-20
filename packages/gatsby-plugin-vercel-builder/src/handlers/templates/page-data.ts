@@ -19,9 +19,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const splitPathName = basename(dirname(pathname));
   const pageName = splitPathName === `index` ? `/` : splitPathName;
 
-  // TODO: remove
-  console.log({ pathname, splitPathName, pageName });
-
   const graphqlEngine = await getGraphQLEngine();
   const { getData, renderPageData } = await getPageSSRHelpers();
 

@@ -55,11 +55,9 @@ export async function generateVercelBuildOutputAPI3Output({
 
     const createPromises: Promise<void>[] = [];
 
-    if (functions.length > 0) createPromises.push(createAPIRoutes(functions));
-
-    // TODO: remove
-    console.log('ssrRoutes', ssrRoutes);
-    console.log('dsgRoutes', dsgRoutes);
+    if (functions.length > 0) {
+      createPromises.push(createAPIRoutes(functions));
+    }
 
     if (ssrRoutes.length > 0 || dsgRoutes.length > 0) {
       createPromises.push(createPageDataFunctions({ ssrRoutes, dsgRoutes }));
