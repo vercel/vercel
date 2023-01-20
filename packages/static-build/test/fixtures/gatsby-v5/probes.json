@@ -7,7 +7,7 @@
     },
     {
       "path": "/dsg/",
-      "mustContain": "This page is DSG"
+      "mustContain": "This page is <b>DSG</b>"
     }
   ]
 }
