@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-build",
-  "version": "1.1.7",
+  "version": "1.2.0",
   "license": "MIT",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
