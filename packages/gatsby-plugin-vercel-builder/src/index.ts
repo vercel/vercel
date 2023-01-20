@@ -31,8 +31,6 @@ export async function generateVercelBuildOutputAPI3Output({
     functions: gatsbyStoreState.functions,
   };
 
-  console.log(state);
-
   if (validateGatsbyState(state)) {
     console.log('▲ Creating Vercel build output');
     await remove(join('.vercel', 'output'));
@@ -95,8 +93,6 @@ export async function generateVercelBuildOutputAPI3Output({
       version: 3,
       routes: routes || undefined,
     };
-
-    console.log(config);
 
     await writeJson(exportPath, config);
     console.log('Vercel output has been generated');
