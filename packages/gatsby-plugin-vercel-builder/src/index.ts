@@ -75,7 +75,7 @@ export async function generateVercelBuildOutputAPI3Output({
 
     const { routes } = getTransformedRoutes({
       ...vercelConfig,
-      trailingSlash: false,
+      trailingSlash: true,
       redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
         source: fromPath,
         destination: toPath,
