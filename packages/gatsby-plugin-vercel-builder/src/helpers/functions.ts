@@ -53,7 +53,7 @@ export async function createServerlessFunctions({
           'functions',
           `${pathName}.prerender-config.json`
         ),
-        index
+        index + 1
       );
 
       return createSymlink(pathName, functionName);
@@ -103,7 +103,7 @@ export async function createPageDataFunctions({
           'functions',
           `${funcPath}.prerender-config.json`
         ),
-        index
+        index + 1
       );
 
       return createSymlink(funcPath, functionName);
