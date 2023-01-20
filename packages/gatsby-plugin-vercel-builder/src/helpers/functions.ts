@@ -42,17 +42,18 @@ export async function createServerlessFunctions({
   ]);
 
   await Promise.all([
-    ...ssrRoutes.map(async (pathName: string) => {
+    ...ssrRoutes.map(async pathName => {
       return createSymlink(pathName, functionName);
     }),
-    ...dsgRoutes.map(async (pathName: string) => {
+    ...dsgRoutes.map(async (pathName, index) => {
       writePrerenderConfig(
         join(
           '.vercel',
           'output',
           'functions',
           `${pathName}.prerender-config.json`
-        )
+        ),
+        index
       );
 
       return createSymlink(pathName, functionName);
@@ -83,13 +84,13 @@ export async function createPageDataFunction({ dsgRoutes, ssrRoutes }: Routes) {
   ]);
 
   await Promise.all([
-    ...ssrRoutes.map(async (pathName: string) => {
+    ...ssrRoutes.map(async pathName => {
       return createSymlink(
         `page-data/${pathName}/page-data.json`,
         functionName
       );
     }),
-    ...dsgRoutes.map(async (pathName: string) => {
+    ...dsgRoutes.map(async (pathName, index) => {
       const funcPath = `page-data/${pathName}/page-data.json`;
 
       writePrerenderConfig(
@@ -98,7 +99,8 @@ export async function createPageDataFunction({ dsgRoutes, ssrRoutes }: Routes) {
           'output',
           'functions',
           `${funcPath}.prerender-config.json`
-        )
+        ),
+        index
       );
 
       return createSymlink(funcPath, functionName);
