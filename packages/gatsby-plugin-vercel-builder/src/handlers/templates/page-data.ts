@@ -16,8 +16,10 @@ if (!existsSync(TMP_DATA_PATH)) {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const pathname = parse(req.url!).pathname || '/';
-  const splitPathName = basename(dirname(pathname));
-  const pageName = splitPathName === `index` ? `/` : splitPathName;
+  let pageName = basename(dirname(pathname));
+  if (pageName === 'index') {
+    pageName = '/';
+  }
 
   const graphqlEngine = await getGraphQLEngine();
   const { getData, renderPageData } = await getPageSSRHelpers();
