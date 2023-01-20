@@ -89,10 +89,16 @@ export async function createPageDataFunctions({
 
   await Promise.all([
     ...ssrRoutes.map(async pathName => {
+      if (!pathName || pathName === '/') {
+        pathName = 'index';
+      }
       const funcPath = join('page-data', pathName, 'page-data.json');
       return createSymlink(funcPath, functionName);
     }),
     ...dsgRoutes.map(async (pathName, index) => {
+      if (!pathName || pathName === '/') {
+        pathName = 'index';
+      }
       const funcPath = join('page-data', pathName, 'page-data.json');
       writePrerenderConfig(
         join(

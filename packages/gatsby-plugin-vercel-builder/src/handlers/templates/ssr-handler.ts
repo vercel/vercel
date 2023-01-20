@@ -1,4 +1,5 @@
 import os from 'os';
+import { parse } from 'url';
 import { copySync, existsSync } from 'fs-extra';
 import { join, dirname, basename } from 'path';
 import { getPageSSRHelpers, getGraphQLEngine } from '../utils';
@@ -13,15 +14,23 @@ if (!existsSync(TMP_DATA_PATH)) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const splitPathName = basename(dirname(req.url!));
-  const pathName = splitPathName === `index` ? `/` : splitPathName;
-  console.log({ url: req.url, splitPathName, pathName });
+  const pathname = parse(req.url!).pathname || '/';
+  let pageName = basename(pathname);
+  if (pageName === 'index.html') {
+    pageName = basename(dirname(pathname));
+  }
+  if (!pageName) {
+    pageName = '/';
+  }
+
+  // TODO: remove
+  console.log({ pathname, pageName });
 
   const graphqlEngine = await getGraphQLEngine();
   const { getData, renderHTML } = await getPageSSRHelpers();
 
   const data = await getData({
-    pathName,
+    pathName: pageName,
     graphqlEngine,
     req,
   });
