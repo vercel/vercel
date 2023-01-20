@@ -1,15 +1,14 @@
 import { join } from 'path';
-
 import { getTransformedRoutes } from '@vercel/routing-utils';
-import { pathExists, writeJson, remove, mkdirp } from 'fs-extra';
-
+import { pathExists, writeJson, remove } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
 import {
   createServerlessFunctions,
-  createPageDataFunction,
+  createPageDataFunctions,
   createAPIRoutes,
 } from './helpers/functions';
 import { createStaticDir } from './helpers/static';
+import type { Config, Routes } from './types';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
   exportPath: string;
@@ -17,10 +16,10 @@ export interface GenerateVercelBuildOutputAPI3OutputOptions {
     pages: Map<string, unknown>;
     redirects: unknown;
     functions: unknown;
+    config: unknown;
   };
   [x: string]: unknown;
 }
-import type { Config, Routes } from './types';
 export async function generateVercelBuildOutputAPI3Output({
   exportPath,
   gatsbyStoreState,
@@ -29,13 +28,14 @@ export async function generateVercelBuildOutputAPI3Output({
     pages: Array.from(gatsbyStoreState.pages.entries()), // must transform from a Map for validation
     redirects: gatsbyStoreState.redirects,
     functions: gatsbyStoreState.functions,
+    config: gatsbyStoreState.config,
   };
 
   if (validateGatsbyState(state)) {
     console.log('▲ Creating Vercel build output');
     await remove(join('.vercel', 'output'));
 
-    const { pages, redirects, functions } = state;
+    const { pages, redirects, functions, config: gatsbyConfig } = state;
 
     const { ssrRoutes, dsgRoutes } = pages.reduce<Routes>(
       (acc, [, cur]) => {
@@ -55,14 +55,14 @@ export async function generateVercelBuildOutputAPI3Output({
 
     await createStaticDir();
 
-    await mkdirp(join('.cache', 'caches'));
-
     const createPromises: Promise<void>[] = [];
 
-    if (functions.length > 0) createPromises.push(createAPIRoutes(functions));
+    if (functions.length > 0) {
+      createPromises.push(createAPIRoutes(functions));
+    }
 
     if (ssrRoutes.length > 0 || dsgRoutes.length > 0) {
-      createPromises.push(createPageDataFunction({ ssrRoutes, dsgRoutes }));
+      createPromises.push(createPageDataFunctions({ ssrRoutes, dsgRoutes }));
       createPromises.push(createServerlessFunctions({ ssrRoutes, dsgRoutes }));
     }
 
@@ -73,20 +73,22 @@ export async function generateVercelBuildOutputAPI3Output({
       ? require(vercelConfigPath).default
       : {};
 
+    let trailingSlash: boolean | undefined = undefined;
+
+    if (gatsbyConfig.trailingSlash === 'always') {
+      trailingSlash = true;
+    } else if (gatsbyConfig.trailingSlash === 'never') {
+      trailingSlash = false;
+    }
+
     const { routes } = getTransformedRoutes({
       ...vercelConfig,
-      trailingSlash: false,
+      trailingSlash,
       redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
         source: fromPath,
         destination: toPath,
         permanent: isPermanent,
       })),
-      rewrites: [
-        {
-          source: '^/page-data(?:/(.*))/page-data\\.json$',
-          destination: '/_page-data',
-        },
-      ],
     });
 
     const config: Config = {
