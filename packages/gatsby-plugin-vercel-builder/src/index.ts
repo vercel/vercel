@@ -16,6 +16,7 @@ export interface GenerateVercelBuildOutputAPI3OutputOptions {
     pages: Map<string, unknown>;
     redirects: unknown;
     functions: unknown;
+    config: unknown;
   };
   [x: string]: unknown;
 }
@@ -27,13 +28,14 @@ export async function generateVercelBuildOutputAPI3Output({
     pages: Array.from(gatsbyStoreState.pages.entries()), // must transform from a Map for validation
     redirects: gatsbyStoreState.redirects,
     functions: gatsbyStoreState.functions,
+    config: gatsbyStoreState.config,
   };
 
   if (validateGatsbyState(state)) {
     console.log('▲ Creating Vercel build output');
     await remove(join('.vercel', 'output'));
 
-    const { pages, redirects, functions } = state;
+    const { pages, redirects, functions, config: gatsbyConfig } = state;
 
     const { ssrRoutes, dsgRoutes } = pages.reduce<Routes>(
       (acc, [, cur]) => {
@@ -71,11 +73,17 @@ export async function generateVercelBuildOutputAPI3Output({
       ? require(vercelConfigPath).default
       : {};
 
+    let trailingSlash: boolean | undefined = undefined;
+
+    if (gatsbyConfig.trailingSlash === 'always') {
+      trailingSlash = true;
+    } else if (gatsbyConfig.trailingSlash === 'never') {
+      trailingSlash = false;
+    }
+
     const { routes } = getTransformedRoutes({
       ...vercelConfig,
-      // TODO: handle `trailingSlash` based on project config
-      // https://www.gatsbyjs.com/docs/reference/config-files/gatsby-config/#trailingslash
-      trailingSlash: true,
+      trailingSlash,
       redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
         source: fromPath,
         destination: toPath,
