@@ -15,6 +15,7 @@ if (!existsSync(TMP_DATA_PATH)) {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const splitPathName = basename(dirname(req.url!));
   const pathName = splitPathName === `index` ? `/` : splitPathName;
+  console.log({ url: req.url, splitPathName, pathName });
 
   const graphqlEngine = await getGraphQLEngine();
   const { getData, renderHTML } = await getPageSSRHelpers();
