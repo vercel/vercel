@@ -10,7 +10,7 @@ describe('alias', () => {
     client.setArgv('alias', 'ls');
     const exitCodePromise = alias(client);
     await expect(exitCodePromise).resolves.toEqual(0);
-    await expect(client.stderr).toOutput('dummy-19.app');
+    await expect(client.stdout).toOutput('dummy-19.app');
   });
 
   it('should list up to 2 aliases', async () => {
@@ -19,6 +19,6 @@ describe('alias', () => {
     client.setArgv('alias', 'ls', '--limit', '2');
     const exitCodePromise = alias(client);
     await expect(exitCodePromise).resolves.toEqual(0);
-    await expect(client.stderr).toOutput('dummy-1.app');
+    await expect(client.stdout).toOutput('dummy-1.app');
   });
 });

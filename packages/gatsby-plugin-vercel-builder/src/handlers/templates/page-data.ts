@@ -1,11 +1,10 @@
 import os from 'os';
-import { join } from 'path';
 import etag from 'etag';
-import { copySync, existsSync, readFileSync } from 'fs-extra';
-
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
+import { parse } from 'url';
+import { copySync, existsSync } from 'fs-extra';
+import { join, dirname, basename } from 'path';
 import { getGraphQLEngine, getPageSSRHelpers } from '../utils';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
 const CUR_DATA_PATH = join(__dirname, '.cache/data/datastore');
@@ -16,33 +15,19 @@ if (!existsSync(TMP_DATA_PATH)) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const splitPathName = req.url!.split('/')[2];
-  const pathName = splitPathName === `index` ? `/` : splitPathName;
-
-  if (
-    existsSync(join(__dirname, 'page-data', splitPathName, 'page-data.json'))
-  ) {
-    /* Non-SSR/DSG pages already have a pre-generated page-data.json file.
-      Instead of generating this dynamically, we can directly serve this JSON. */
-    res.setHeader('Content-Type', 'application/json');
-
-    return res
-      .status(200)
-      .json(
-        readFileSync(
-          join(__dirname, 'page-data', splitPathName, 'page-data.json'),
-          'utf-8'
-        )
-      );
+  const pathname = parse(req.url!).pathname || '/';
+  let pageName = basename(dirname(pathname));
+  if (pageName === 'index') {
+    pageName = '/';
   }
 
-  const { getData, renderPageData } = await getPageSSRHelpers();
   const graphqlEngine = await getGraphQLEngine();
+  const { getData, renderPageData } = await getPageSSRHelpers();
 
   const data = await getData({
-    req,
+    pathName: pageName,
     graphqlEngine,
-    pathName,
+    req,
   });
 
   const pageData = await renderPageData({ data });

@@ -1,6 +1,9 @@
 const path = require('path');
 const fs = require('fs-extra');
-const runBuildLambda = require('../../../test/lib/run-build-lambda');
+const builder = require('../');
+const { createRunBuildLambda } = require('../../../test/lib/run-build-lambda');
+
+const runBuildLambda = createRunBuildLambda(builder);
 
 const FOUR_MINUTES = 240000;
 
