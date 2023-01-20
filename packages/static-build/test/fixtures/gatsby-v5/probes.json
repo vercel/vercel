@@ -3,7 +3,7 @@
     { "path": "/", "mustContain": "you just made a Gatsby site! 🎉🎉🎉" },
     {
       "path": "/ssr/",
-      "mustContain": "This page is rendered server-side"
+      "mustContain": "This page is <b>rendered server-side</b>"
     },
     {
       "path": "/dsg/",
