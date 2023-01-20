@@ -1,6 +1,6 @@
 import { join } from 'path';
 import { getTransformedRoutes } from '@vercel/routing-utils';
-import { pathExists, writeJson, remove, mkdirp } from 'fs-extra';
+import { pathExists, writeJson, remove } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
 import {
   createServerlessFunctions,
@@ -52,8 +52,6 @@ export async function generateVercelBuildOutputAPI3Output({
     );
 
     await createStaticDir();
-
-    await mkdirp(join('.cache', 'caches'));
 
     const createPromises: Promise<void>[] = [];
 
