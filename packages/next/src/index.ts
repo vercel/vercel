@@ -214,7 +214,7 @@ export const build: BuildV2 = async ({
     repoRootPath = entryPath;
     entryPath = path.join(entryPath, config.rootDirectory as string);
   }
-  const outputDirectory = config.outputDirectory || '.next';
+  const outputDirectory = path.join('./', config.outputDirectory || '.next');
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
   // TODO: remove after testing used for simulating root directory monorepo
   // setting that can't be triggered with vercel.json
@@ -2595,7 +2595,7 @@ export const prepareCache: PrepareCache = async ({
   debug('Preparing cache...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
-  const outputDirectory = config.outputDirectory || '.next';
+  const outputDirectory = path.join('./', config.outputDirectory || '.next');
 
   const nextVersionRange = await getNextVersionRange(entryPath);
   const isLegacy = nextVersionRange && isLegacyNext(nextVersionRange);
