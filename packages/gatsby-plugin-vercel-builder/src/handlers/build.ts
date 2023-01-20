@@ -63,11 +63,11 @@ export const writeVCConfig = async ({
   return writeJson(`${functionDir}/.vc-config.json`, config);
 };
 
-export const writePrerenderConfig = (outputPath: string) => {
+export const writePrerenderConfig = (outputPath: string, group: number) => {
   const config: PrerenderFunctionConfig = {
-    expiration: false,
+    group,
+    expiration: 600, // 10 minutes TODO: make this configurable?
   };
-
   ensureFileSync(outputPath);
   return writeFileSync(outputPath, JSON.stringify(config));
 };
