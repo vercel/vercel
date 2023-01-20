@@ -81,12 +81,6 @@ export async function generateVercelBuildOutputAPI3Output({
         destination: toPath,
         permanent: isPermanent,
       })),
-      rewrites: [
-        {
-          source: '^/page-data(?:/(.*))/page-data\\.json$',
-          destination: '/_page-data',
-        },
-      ],
     });
 
     const config: Config = {
