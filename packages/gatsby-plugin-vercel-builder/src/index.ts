@@ -1,15 +1,14 @@
 import { join } from 'path';
-
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { pathExists, writeJson, remove, mkdirp } from 'fs-extra';
-
 import { validateGatsbyState } from './schemas';
 import {
   createServerlessFunctions,
-  createPageDataFunction,
+  createPageDataFunctions,
   createAPIRoutes,
 } from './helpers/functions';
 import { createStaticDir } from './helpers/static';
+import type { Config, Routes } from './types';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
   exportPath: string;
@@ -20,7 +19,6 @@ export interface GenerateVercelBuildOutputAPI3OutputOptions {
   };
   [x: string]: unknown;
 }
-import type { Config, Routes } from './types';
 export async function generateVercelBuildOutputAPI3Output({
   exportPath,
   gatsbyStoreState,
@@ -62,7 +60,7 @@ export async function generateVercelBuildOutputAPI3Output({
     if (functions.length > 0) createPromises.push(createAPIRoutes(functions));
 
     if (ssrRoutes.length > 0 || dsgRoutes.length > 0) {
-      createPromises.push(createPageDataFunction({ ssrRoutes, dsgRoutes }));
+      createPromises.push(createPageDataFunctions({ ssrRoutes, dsgRoutes }));
       createPromises.push(createServerlessFunctions({ ssrRoutes, dsgRoutes }));
     }
 
