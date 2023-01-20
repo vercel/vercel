@@ -1,9 +1,7 @@
-import { join } from 'path';
 import os from 'os';
 import { copySync, existsSync } from 'fs-extra';
-
+import { join, dirname, basename } from 'path';
 import { getPageSSRHelpers, getGraphQLEngine } from '../utils';
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
@@ -15,11 +13,14 @@ if (!existsSync(TMP_DATA_PATH)) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const splitPathName = basename(dirname(req.url!));
+  const pathName = splitPathName === `index` ? `/` : splitPathName;
+
   const graphqlEngine = await getGraphQLEngine();
   const { getData, renderHTML } = await getPageSSRHelpers();
 
   const data = await getData({
-    pathName: req.url as string,
+    pathName,
     graphqlEngine,
     req,
   });
