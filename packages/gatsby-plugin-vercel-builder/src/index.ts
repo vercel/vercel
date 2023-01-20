@@ -73,6 +73,8 @@ export async function generateVercelBuildOutputAPI3Output({
 
     const { routes } = getTransformedRoutes({
       ...vercelConfig,
+      // TODO: handle `trailingSlash` based on project config
+      // https://www.gatsbyjs.com/docs/reference/config-files/gatsby-config/#trailingslash
       trailingSlash: true,
       redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
         source: fromPath,
