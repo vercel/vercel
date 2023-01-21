@@ -9,7 +9,7 @@ describe('certs', () => {
     useCert();
     client.setArgv('certs', 'ls');
     const exitCodePromise = certs(client);
-    await expect(client.stderr).toOutput('dummy-19.cert');
+    await expect(client.stdout).toOutput('dummy-19.cert');
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
@@ -18,7 +18,7 @@ describe('certs', () => {
     useCert();
     client.setArgv('certs', 'ls', '--limit', '2');
     const exitCodePromise = certs(client);
-    await expect(client.stderr).toOutput('dummy-1.cert');
+    await expect(client.stdout).toOutput('dummy-1.cert');
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 });

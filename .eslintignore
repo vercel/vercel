@@ -42,3 +42,9 @@ packages/static-build/test/cache-fixtures
 
 # redwood
 packages/redwood/test/fixtures
+
+# remix
+packages/remix/test/fixtures
+
+# gatsby-plugin-vercel-analytics
+packages/gatsby-plugin-vercel-analytics

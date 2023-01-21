@@ -55,7 +55,7 @@ async function ls(
   );
 
   if (certs.length > 0) {
-    output.log(formatCertsTable(certs));
+    client.stdout.write(formatCertsTable(certs));
   }
 
   if (pagination && pagination.count === 20) {
