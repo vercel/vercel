@@ -5,12 +5,8 @@ import { satisfies } from 'semver';
 import { dirname, join } from 'path';
 import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
-import {
-  BuilderV2,
-  BuilderV3,
-  PackageJson,
-  spawnAsync,
-} from '@vercel/build-utils';
+import { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
+import execa from 'execa';
 import * as staticBuilder from './static-builder';
 import { VERCEL_DIR } from '../projects/link';
 import { Output } from '../output';
@@ -213,14 +209,21 @@ async function installBuilders(
     ).join(', ')}`
   );
   try {
-    await spawnAsync(
+    const { stderr } = await execa(
       'npm',
       ['install', '@vercel/build-utils', ...buildersToAdd],
       {
         cwd: buildersDir,
         stdio: 'pipe',
+        reject: true,
       }
     );
+    stderr
+      .split('\n')
+      .filter(line => line.includes('npm WARN deprecated'))
+      .forEach(line => {
+        output.warn(line);
+      });
   } catch (err: unknown) {
     if (isError(err)) {
       (err as any).link =
