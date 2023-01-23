@@ -42,25 +42,30 @@ export async function createServerlessFunctions({
   ]);
 
   await Promise.all([
-    ...ssrRoutes.map(async (pathName: string) => {
-      return createSymlink(pathName, functionName);
+    ...ssrRoutes.map(async pathName => {
+      const funcPath = join(pathName, 'index.html');
+      return createSymlink(funcPath, functionName);
     }),
-    ...dsgRoutes.map(async (pathName: string) => {
+    ...dsgRoutes.map(async (pathName, index) => {
+      const funcPath = join(pathName, 'index.html');
       writePrerenderConfig(
         join(
           '.vercel',
           'output',
           'functions',
-          `${pathName}.prerender-config.json`
-        )
+          `${funcPath}.prerender-config.json`
+        ),
+        index + 1
       );
-
-      return createSymlink(pathName, functionName);
+      return createSymlink(funcPath, functionName);
     }),
   ]);
 }
 
-export async function createPageDataFunction({ dsgRoutes, ssrRoutes }: Routes) {
+export async function createPageDataFunctions({
+  dsgRoutes,
+  ssrRoutes,
+}: Routes) {
   /* Gatsby uses /page-data/<path>/page-data.json to fetch data. This plugin creates a
     `_page-data.func` function that dynamically generates this data if it's not available in `static/page-data`. */
   const functionName = '_page-data.func';
@@ -83,24 +88,27 @@ export async function createPageDataFunction({ dsgRoutes, ssrRoutes }: Routes) {
   ]);
 
   await Promise.all([
-    ...ssrRoutes.map(async (pathName: string) => {
-      return createSymlink(
-        `page-data/${pathName}/page-data.json`,
-        functionName
-      );
+    ...ssrRoutes.map(async pathName => {
+      if (!pathName || pathName === '/') {
+        pathName = 'index';
+      }
+      const funcPath = join('page-data', pathName, 'page-data.json');
+      return createSymlink(funcPath, functionName);
     }),
-    ...dsgRoutes.map(async (pathName: string) => {
-      const funcPath = `page-data/${pathName}/page-data.json`;
-
+    ...dsgRoutes.map(async (pathName, index) => {
+      if (!pathName || pathName === '/') {
+        pathName = 'index';
+      }
+      const funcPath = join('page-data', pathName, 'page-data.json');
       writePrerenderConfig(
         join(
           '.vercel',
           'output',
           'functions',
           `${funcPath}.prerender-config.json`
-        )
+        ),
+        index + 1
       );
-
       return createSymlink(funcPath, functionName);
     }),
   ]);

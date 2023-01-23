@@ -41,7 +41,7 @@ export function createBuildOutput(
   meta: Meta,
   buildCommand: string | null,
   buildOutputPath: string,
-  framework?: Framework
+  framework: Framework | undefined
 ): BuildResultV2 {
   if (meta.isDev) {
     let buildCommandName: string;
