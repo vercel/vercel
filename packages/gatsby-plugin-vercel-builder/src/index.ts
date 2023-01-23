@@ -4,7 +4,6 @@ import { writeJson, remove } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
 import {
   createServerlessFunctions,
-  createPageDataFunctions,
   createAPIRoutes,
 } from './helpers/functions';
 import { createStaticDir } from './helpers/static';
@@ -62,7 +61,6 @@ export async function generateVercelBuildOutputAPI3Output({
     }
 
     if (ssrRoutes.length > 0 || dsgRoutes.length > 0) {
-      createPromises.push(createPageDataFunctions({ ssrRoutes, dsgRoutes }));
       createPromises.push(createServerlessFunctions({ ssrRoutes, dsgRoutes }));
     }
 
