@@ -219,7 +219,7 @@ async function installBuilders(
       }
     );
     stderr
-      .split('\n')
+      .split('/\r?\n/')
       .filter(line => line.includes('npm WARN deprecated'))
       .forEach(line => {
         output.warn(line);
