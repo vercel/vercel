@@ -312,6 +312,8 @@ export interface Builder {
   config?: Config;
 }
 
+export type LauncherType = 'Nodejs' | 'edge-light';
+
 export interface BuilderFunctions {
   [key: string]: {
     memory?: number;
@@ -319,6 +321,7 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
+    launcherType?: LauncherType;
   };
 }
 

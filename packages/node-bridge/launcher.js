@@ -8,10 +8,13 @@ const { Bridge } = require('./bridge.js');
  */
 function makeVercelLauncher(config) {
   const {
+    launcherType = 'Nodejs',
     entrypointPath,
     bridgePath,
     helpersPath,
+    webHandlerPath,
     sourcemapSupportPath,
+    runtime = '',
     shouldAddHelpers = false,
     shouldAddSourcemapSupport = false,
   } = config;
@@ -28,6 +31,9 @@ ${
 const entrypointPath = ${JSON.stringify(entrypointPath)};
 const shouldAddHelpers = ${JSON.stringify(shouldAddHelpers)};
 const helpersPath = ${JSON.stringify(helpersPath)};
+const webHandlerPath = ${JSON.stringify(webHandlerPath)}
+const launcherType = ${JSON.stringify(launcherType)}
+const runtime = ${JSON.stringify(runtime)}
 const useRequire = false;
 
 const func = (${getVercelLauncher(config).toString()})();
@@ -38,8 +44,11 @@ exports.launcher = func.launcher;`;
  * @param {import('./types').LauncherConfiguration} config
  */
 function getVercelLauncher({
+  launcherType,
   entrypointPath,
   helpersPath,
+  webHandlerPath,
+  runtime,
   shouldAddHelpers = false,
   useRequire = false,
 }) {
@@ -79,6 +88,14 @@ function getVercelLauncher({
     }
 
     getListener(entrypointPath)
+      .then(listener => {
+        if (launcherType === 'edge-light') {
+          return import(webHandlerPath).then(({ transformToNodeHandler }) =>
+            transformToNodeHandler(listener, runtime)
+          );
+        }
+        return listener;
+      })
       .then(listener => {
         if (typeof listener.listen === 'function') {
           Server.prototype.listen = originalListen;

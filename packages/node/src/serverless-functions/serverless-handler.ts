@@ -2,7 +2,10 @@ import { IncomingMessage } from 'http';
 import { Readable } from 'stream';
 import type { Bridge } from '@vercel/node-bridge/bridge';
 import { getVercelLauncher } from '@vercel/node-bridge/launcher.js';
-import { VercelProxyResponse } from '@vercel/node-bridge/types';
+import {
+  LauncherConfiguration,
+  VercelProxyResponse,
+} from '@vercel/node-bridge/types';
 
 function rawBody(readable: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -22,15 +25,20 @@ function rawBody(readable: Readable): Promise<Buffer> {
 export async function createServerlessEventHandler(
   entrypoint: string,
   options: {
+    launcherType: LauncherConfiguration['launcherType'];
     shouldAddHelpers: boolean;
     useRequire: boolean;
+    runtime?: string;
   }
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const launcher = getVercelLauncher({
     entrypointPath: entrypoint,
     helpersPath: './helpers.js',
+    webHandlerPath: './web-handler.js',
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire: options.useRequire,
+    launcherType: options.launcherType,
+    runtime: options.runtime,
 
     // not used
     bridgePath: '',

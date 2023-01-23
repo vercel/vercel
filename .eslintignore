@@ -31,6 +31,7 @@ packages/node-bridge/bridge.js
 packages/node-bridge/launcher.js
 packages/node-bridge/helpers.js
 packages/node-bridge/source-map-support.js
+packages/node-bridge/web-handler.js
 
 # middleware
 packages/middleware/src/entries.js

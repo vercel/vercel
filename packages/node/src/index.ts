@@ -478,6 +478,7 @@ export const build: BuildV3 = async ({
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
+      launcherType: 'Nodejs',
       runtime: nodeVersion.runtime,
       shouldAddHelpers,
       shouldAddSourcemapSupport,

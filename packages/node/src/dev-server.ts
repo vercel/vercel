@@ -68,6 +68,8 @@ async function createEventHandler(
   return createServerlessEventHandler(entrypointPath, {
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire,
+    launcherType: 'Nodejs',
+    runtime: config.functions?.[entrypoint]?.runtime,
   });
 }
 
