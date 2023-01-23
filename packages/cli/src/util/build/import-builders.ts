@@ -12,7 +12,7 @@ import { VERCEL_DIR } from '../projects/link';
 import { Output } from '../output';
 import readJSONFile from '../read-json-file';
 import { CantParseJSONFile } from '../errors-ts';
-import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
+import { isErrnoException, isError } from '@vercel/error-utils';
 import cmd from '../output/cmd';
 import code from '../output/code';
 
@@ -226,22 +226,27 @@ async function installBuilders(
       });
   } catch (err: unknown) {
     if (isError(err)) {
-      (err as any).link =
-        'https://vercel.link/builder-dependencies-install-failed';
-      if (isErrnoException(err) && err.code === 'ENOENT') {
+      const execaMessage = err.message;
+      let message =
+        err && 'stderr' in err && typeof err.stderr === 'string'
+          ? err.stderr
+          : execaMessage;
+      if (execaMessage.startsWith('Command failed with ENOENT')) {
         // `npm` is not installed
-        err.message = `Please install ${cmd('npm')} before continuing`;
+        message = `Please install ${cmd('npm')} before continuing`;
       } else {
-        const message = errorToString(err);
         const notFound = /GET (.*) - Not found/.exec(message);
         if (notFound) {
           const url = new URL(notFound[1]);
           const packageName = decodeURIComponent(url.pathname.slice(1));
-          err.message = `The package ${code(
+          message = `The package ${code(
             packageName
           )} is not published on the npm registry`;
         }
       }
+      err.message = message;
+      (err as any).link =
+        'https://vercel.link/builder-dependencies-install-failed';
     }
     throw err;
   }
