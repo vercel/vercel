@@ -2,6 +2,7 @@ import { PackageJson } from '@vercel/build-utils';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import semver from 'semver';
+import { URL } from 'url';
 import {
   fileExists,
   readPackageJson,
@@ -9,10 +10,28 @@ import {
   writePackageJson,
 } from './_shared';
 
-const PLUGINS = {
-  GATSBY_PLUGIN_VERCEL_ANALYTICS: '@vercel/gatsby-plugin-vercel-analytics',
-  GATSBY_PLUGIN_VERCEL_BUILDER: '@vercel/gatsby-plugin-vercel-builder',
-};
+const PLUGINS = [
+  '@vercel/gatsby-plugin-vercel-analytics',
+  '@vercel/gatsby-plugin-vercel-builder',
+] as const;
+type PluginName = typeof PLUGINS[number];
+
+const PLUGIN_VERSIONS = new Map<PluginName, string>([
+  ['@vercel/gatsby-plugin-vercel-analytics', 'latest'],
+  ['@vercel/gatsby-plugin-vercel-builder', 'latest'],
+]);
+
+// For E2E tests, ensure the same version of the plugin is used as the source code
+const { NODE_ENV, VERCEL_CLI_VERSION } = process.env;
+if (NODE_ENV === 'test' && VERCEL_CLI_VERSION) {
+  for (const name of PLUGIN_VERSIONS.keys()) {
+    PLUGIN_VERSIONS.set(
+      name,
+      new URL(`../${name}.tgz`, VERCEL_CLI_VERSION).href
+    );
+  }
+}
+console.log(PLUGIN_VERSIONS);
 
 const GATSBY_CONFIG_FILE = 'gatsby-config';
 
@@ -20,21 +39,21 @@ export async function injectPlugins(
   detectedVersion: string | null,
   dir: string
 ) {
-  const pluginsToInject = [];
+  const pluginsToInject = new Set<PluginName>();
 
   if (process.env.VERCEL_GATSBY_BUILDER_PLUGIN && detectedVersion) {
     const version = semver.coerce(detectedVersion);
     if (version && semver.satisfies(version, '>=4.0.0')) {
-      pluginsToInject.push(PLUGINS.GATSBY_PLUGIN_VERCEL_BUILDER);
+      pluginsToInject.add('@vercel/gatsby-plugin-vercel-builder');
     }
   }
 
   if (process.env.VERCEL_ANALYTICS_ID) {
     process.env.GATSBY_VERCEL_ANALYTICS_ID = process.env.VERCEL_ANALYTICS_ID;
-    pluginsToInject.push(PLUGINS.GATSBY_PLUGIN_VERCEL_ANALYTICS);
+    pluginsToInject.add('@vercel/gatsby-plugin-vercel-analytics');
   }
 
-  if (pluginsToInject.length === 0) {
+  if (pluginsToInject.size === 0) {
     return false;
   }
 
@@ -65,13 +84,17 @@ export async function injectPlugins(
   return true;
 }
 
-function printInjectingPlugins(plugins: string[], configPath: string) {
+function printInjectingPlugins(
+  plugins: Iterable<PluginName>,
+  configPath: string
+) {
+  const pluginsArray = Array.from(plugins);
   let pluginsStr = 'plugin';
-  if (plugins.length > 1) {
+  if (pluginsArray.length > 1) {
     pluginsStr += 's';
   }
   console.log(
-    `Injecting Gatsby.js ${pluginsStr} ${plugins
+    `Injecting Gatsby.js ${pluginsStr} ${pluginsArray
       .map(p => `"${p}"`)
       .join(', ')} to \`${configPath}\``
   );
@@ -79,7 +102,7 @@ function printInjectingPlugins(plugins: string[], configPath: string) {
 
 async function addGatsbyPackage(
   dir: string,
-  plugins: Array<string>
+  plugins: Iterable<PluginName>
 ): Promise<void> {
   const pkgJson = (await readPackageJson(dir)) as DeepWriteable<PackageJson>;
   if (!pkgJson.dependencies) {
@@ -89,7 +112,7 @@ async function addGatsbyPackage(
   for (const plugin of plugins) {
     if (!pkgJson.dependencies[plugin]) {
       console.log(`Adding "${plugin}" to \`package.json\` "dependencies"`);
-      pkgJson.dependencies[plugin] = 'latest';
+      pkgJson.dependencies[plugin] = PLUGIN_VERSIONS.get(plugin) ?? 'latest';
     }
   }
 
@@ -98,7 +121,7 @@ async function addGatsbyPackage(
 
 async function updateGatsbyTsConfig(
   configPath: string,
-  plugins: Array<string>
+  plugins: Iterable<PluginName>
 ): Promise<void> {
   await fs.rename(configPath, configPath + '.__vercel_builder_backup__.ts');
 
@@ -120,7 +143,7 @@ if (!vercelConfig.plugins) {
   vercelConfig.plugins = [];
 }
 
-for (const plugin of ${JSON.stringify(plugins)}) {
+for (const plugin of ${JSON.stringify(Array.from(plugins))}) {
   const hasPlugin = vercelConfig.plugins.find(
     (p: PluginRef) =>
       p && (p === plugin || p.resolve === plugin)
@@ -139,7 +162,7 @@ export default vercelConfig;
 
 async function updateGatsbyMjsConfig(
   configPath: string,
-  plugins: Array<string>
+  plugins: Iterable<PluginName>
 ): Promise<void> {
   await fs.rename(configPath, configPath + '.__vercel_builder_backup__.mjs');
 
@@ -159,7 +182,7 @@ if (!vercelConfig.plugins) {
   vercelConfig.plugins = [];
 }
 
-for (const plugin of ${JSON.stringify(plugins)}) {
+for (const plugin of ${JSON.stringify(Array.from(plugins))}) {
   const hasPlugin = vercelConfig.plugins.find(
     (p) => p && (p === plugin || p.resolve === plugin)
   );
@@ -177,7 +200,7 @@ export default vercelConfig;
 
 async function updateGatsbyJsConfig(
   configPath: string,
-  plugins: Array<string>
+  plugins: Iterable<PluginName>
 ): Promise<void> {
   await fs.rename(configPath, configPath + '.__vercel_builder_backup__.js');
 
@@ -197,7 +220,7 @@ if (!vercelConfig.plugins) {
   vercelConfig.plugins = [];
 }
 
-for (const plugin of ${JSON.stringify(plugins)}) {
+for (const plugin of ${JSON.stringify(Array.from(plugins))}) {
   const hasPlugin = vercelConfig.plugins.find(
     (p) => p && (p === plugin || p.resolve === plugin)
   );
