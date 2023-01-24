@@ -22,8 +22,8 @@ const PLUGIN_VERSIONS = new Map<PluginName, string>([
 ]);
 
 // For E2E tests, ensure the same version of the plugin is used as the source code
-const { NODE_ENV, VERCEL_CLI_VERSION } = process.env;
-if (NODE_ENV === 'test' && VERCEL_CLI_VERSION) {
+const { VERCEL_CLI_VERSION } = process.env;
+if (VERCEL_CLI_VERSION?.startsWith('https://')) {
   for (const name of PLUGIN_VERSIONS.keys()) {
     PLUGIN_VERSIONS.set(
       name,
