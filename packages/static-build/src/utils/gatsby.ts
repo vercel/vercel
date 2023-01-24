@@ -25,7 +25,7 @@ const PLUGIN_VERSIONS = new Map<PluginName, string>([
 const { VERCEL_CLI_VERSION } = process.env;
 if (VERCEL_CLI_VERSION?.startsWith('https://')) {
   for (const name of PLUGIN_VERSIONS.keys()) {
-    const url = new URL(`../${name}.tgz`, VERCEL_CLI_VERSION);
+    const url = new URL(`./${name}.tgz`, VERCEL_CLI_VERSION);
     PLUGIN_VERSIONS.set(name, url.href);
   }
 }
