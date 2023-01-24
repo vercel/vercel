@@ -40,6 +40,8 @@ export async function generateVercelBuildOutputAPI3Output({
       .map(p => p[1])
       .filter(page => page.mode === 'SSR' || page.mode === 'DSG');
 
+    console.log(`prefix ${gatsbyConfig.pathPrefix}`);
+
     const ops: Promise<void>[] = [createStaticDir(gatsbyConfig.pathPrefix)];
 
     if (functions.length > 0) {

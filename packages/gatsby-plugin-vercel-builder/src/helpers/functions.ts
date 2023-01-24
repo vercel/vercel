@@ -48,14 +48,13 @@ export async function createServerlessFunctions(
       let pathName = page.path;
 
       // HTML renderer
-      const ssrPath = join(pathName, 'index.html');
+      const ssrPath = join(prefix ?? '', pathName, 'index.html');
       if (page.mode === 'DSG') {
         writePrerenderConfig(
           join(
             '.vercel',
             'output',
             'functions',
-            prefix ?? '',
             `${ssrPath}.prerender-config.json`
           ),
           index + 1
@@ -67,14 +66,18 @@ export async function createServerlessFunctions(
       if (!pathName || pathName === '/') {
         pathName = 'index';
       }
-      const pageDataPath = join('page-data', pathName, 'page-data.json');
+      const pageDataPath = join(
+        prefix ?? '',
+        'page-data',
+        pathName,
+        'page-data.json'
+      );
       if (page.mode === 'DSG') {
         writePrerenderConfig(
           join(
             '.vercel',
             'output',
             'functions',
-            prefix ?? '',
             `${pageDataPath}.prerender-config.json`
           ),
           index + 1
