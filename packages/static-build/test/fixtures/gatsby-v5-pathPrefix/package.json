@@ -15,7 +15,7 @@
     "clean": "gatsby clean"
   },
   "dependencies": {
-    "@vercel/gatsby-plugin-vercel-builder": "https://vercel-git-fix-gatsby-path-prefix.vercel.sh/tarballs/%40vercel/gatsby-plugin-vercel-builder.tgz",
+    "@vercel/gatsby-plugin-vercel-builder": "^1.0.0",
     "gatsby": "^5.4.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

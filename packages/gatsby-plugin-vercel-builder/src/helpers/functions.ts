@@ -62,10 +62,10 @@ export async function createServerlessFunctions({
   ]);
 }
 
-export async function createPageDataFunctions({
-  dsgRoutes,
-  ssrRoutes,
-}: Routes) {
+export async function createPageDataFunctions(
+  { dsgRoutes, ssrRoutes }: Routes,
+  prefix?: string
+) {
   /* Gatsby uses /page-data/<path>/page-data.json to fetch data. This plugin creates a
     `_page-data.func` function that dynamically generates this data if it's not available in `static/page-data`. */
   const functionName = '_page-data.func';
@@ -83,7 +83,7 @@ export async function createPageDataFunctions({
   await Promise.all([
     writeHandler({ outDir: functionDir, handlerFile }),
     copyFunctionLibs({ functionDir }),
-    movePageData({ functionDir }),
+    movePageData({ functionDir, prefix }),
     writeVCConfig({ functionDir }),
   ]);
 

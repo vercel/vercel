@@ -62,7 +62,12 @@ export async function generateVercelBuildOutputAPI3Output({
     }
 
     if (ssrRoutes.length > 0 || dsgRoutes.length > 0) {
-      createPromises.push(createPageDataFunctions({ ssrRoutes, dsgRoutes }));
+      createPromises.push(
+        createPageDataFunctions(
+          { ssrRoutes, dsgRoutes },
+          gatsbyConfig.pathPrefix
+        )
+      );
       createPromises.push(createServerlessFunctions({ ssrRoutes, dsgRoutes }));
     }
 

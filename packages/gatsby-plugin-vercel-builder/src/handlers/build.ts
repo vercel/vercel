@@ -72,9 +72,15 @@ export const writePrerenderConfig = (outputPath: string, group: number) => {
   return writeFileSync(outputPath, JSON.stringify(config));
 };
 
-export async function movePageData({ functionDir }: { functionDir: string }) {
+export async function movePageData({
+  functionDir,
+  prefix,
+}: {
+  functionDir: string;
+  prefix?: string;
+}) {
   await copy(
-    join('.vercel', 'output', 'static', 'page-data'),
+    join('.vercel', 'output', 'static', prefix ?? '', 'page-data'),
     join(functionDir, 'page-data')
   );
 }
