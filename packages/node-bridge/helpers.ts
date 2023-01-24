@@ -8,6 +8,10 @@ import type {
 import { Server } from 'http';
 import type { Bridge } from './bridge';
 
+function noop() {
+  return undefined; 
+}
+
 function getBodyParser(req: VercelRequest, body: Buffer) {
   return function parseBody(): VercelRequestBody {
     if (!req.headers['content-type']) {
