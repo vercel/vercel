@@ -6,7 +6,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) and follow it in all your 
 
 ## Local development
 
-This project is configured in a monorepo, where one repository contains multiple npm packages. Dependencies are installed and managed with `yarn`, not `npm` CLI.
+This project is configured in a monorepo, where one repository contains multiple npm packages. Dependencies are installed and managed with `pnpm`, not `npm` CLI.
 
 To get started, execute the following:
 
@@ -14,18 +14,23 @@ To get started, execute the following:
 git clone https://github.com/vercel/vercel
 cd vercel
 corepack enable
-yarn install
-yarn bootstrap
-yarn build
-yarn lint
-yarn test-unit
+pnpm install
+pnpm bootstrap
+pnpm build
+pnpm lint
+pnpm test-unit
 ```
 
 Make sure all the tests pass before making changes.
 
 ### Running Vercel CLI Changes
 
-You can use `yarn dev <cli-commands...>` to invoke Vercel CLI with local changes.
+You can use `pnpm dev` from the `cli` package to invoke Vercel CLI with local changes:
+
+```
+cd ./packages/cli
+pnpm dev <cli-commands...>
+```
 
 See [CLI Local Development](../packages/cli#local-development) for more details.
 
@@ -34,7 +39,7 @@ See [CLI Local Development](../packages/cli#local-development) for more details.
 Once you are done with your changes (we even suggest doing it along the way), make sure all the tests still pass by running:
 
 ```
-yarn test-unit
+pnpm test-unit
 ```
 
 from the root of the project.
@@ -97,7 +102,7 @@ When you run this script, you'll see all the imported files. If anything file is
 Sometimes you want to test changes to a Builder against an existing project, maybe with `vercel dev` or actual deployment. You can avoid publishing every Builder change to npm by uploading the Builder as a tarball.
 
 1. Change directory to the desired Builder `cd ./packages/node`
-2. Run `yarn build` to compile typescript and other build steps
+2. Run `pnpm build` to compile typescript and other build steps
 3. Run `npm pack` to create a tarball file
 4. Run `vercel *.tgz` to upload the tarball file and get a URL
 5. Edit any existing `vercel.json` project and replace `use` with the URL

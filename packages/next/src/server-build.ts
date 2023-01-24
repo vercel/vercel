@@ -38,6 +38,7 @@ import {
   outputFunctionFileSizeInfo,
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
   normalizeIndexOutput,
+  getImagesConfig,
   getNextServerPath,
   getMiddlewareBundle,
   getFilesMapFromReasons,
@@ -1059,9 +1060,9 @@ export async function serverBuild({
           {
             src: path.posix.join(
               '^/',
-              entryDirectory,
-              trailingSlash ? '/' : '',
-              '$'
+              entryDirectory !== '.'
+                ? `${entryDirectory}${trailingSlash ? '/$' : '$'}`
+                : '$'
             ),
             has: [
               {
@@ -1142,15 +1143,15 @@ export async function serverBuild({
 
   if (appDir) {
     for (const route of dynamicRoutes) {
-      completeDynamicRoutes.push(route);
       completeDynamicRoutes.push({
         ...route,
         src: route.src.replace(
           new RegExp(escapeStringRegexp('(?:/)?$')),
-          '(?:\\.rsc)?(?:/)?$'
+          '(?:\\.rsc)(?:/)?$'
         ),
         dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
       });
+      completeDynamicRoutes.push(route);
     }
   } else {
     completeDynamicRoutes.push(...dynamicRoutes);
@@ -1158,18 +1159,7 @@ export async function serverBuild({
 
   return {
     wildcard: wildcardConfig,
-    images:
-      imagesManifest?.images?.loader === 'default'
-        ? {
-            domains: imagesManifest.images.domains,
-            sizes: imagesManifest.images.sizes,
-            remotePatterns: imagesManifest.images.remotePatterns,
-            minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-            formats: imagesManifest.images.formats,
-            dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-            contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
-          }
-        : undefined,
+    images: getImagesConfig(imagesManifest),
     output: {
       ...publicDirectoryFiles,
       ...lambdas,
@@ -1421,10 +1411,14 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
-              check: true,
+              continue: true,
             },
             {
-              src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                '/((?!.+\\.rsc).+?)(?:/)?$'
+              )}`,
               has: [
                 {
                   type: 'header',
@@ -1432,7 +1426,7 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
-              check: true,
+              continue: true,
             },
           ]
         : []),
@@ -1761,5 +1755,6 @@ export async function serverBuild({
             },
           ]),
     ],
+    framework: { version: nextVersion },
   };
 }

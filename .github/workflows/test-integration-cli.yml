@@ -38,10 +38,16 @@ jobs:
         timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
         with:
           node-version: ${{ matrix.node }}
-          cache: 'yarn'
-      - run: yarn install --network-timeout 1000000 --frozen-lockfile
-      - run: yarn run build
-      - run: yarn test-integration-cli
+      - uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
+      - name: install pnpm@7.24.2
+        run: npm i -g pnpm@7.24.2
+      - run: pnpm install
+      - run: pnpm run build
+      - run: pnpm test-integration-cli
         env:
           VERCEL_TEST_TOKEN: ${{ secrets.VERCEL_TEST_TOKEN }}
           VERCEL_TEST_REGISTRATION_URL: ${{ secrets.VERCEL_TEST_REGISTRATION_URL }}

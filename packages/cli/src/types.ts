@@ -1,4 +1,6 @@
+import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
+import type { Route } from '@vercel/routing-utils';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
@@ -116,32 +118,105 @@ export type Cert = {
   expiration: string;
 };
 
+type RouteOrMiddleware =
+  | Route
+  | {
+      src: string;
+      continue: boolean;
+      middleware: 0;
+    };
+
 export type Deployment = {
-  uid: string;
-  url: string;
+  alias?: string[];
+  aliasAssigned?: boolean | null | number;
+  aliasError?: null | { code: string; message: string };
+  aliasFinal?: string | null;
+  aliasWarning?: null | {
+    code: string;
+    message: string;
+    link?: string;
+    action?: string;
+  };
+  bootedAt?: number;
+  build?: { env: string[] };
+  builds?: { use: string; src?: string; config?: { [key: string]: any } };
+  buildErrorAt?: number;
+  buildingAt: number;
+  canceledAt?: number;
+  checksState?: 'completed' | 'registered' | 'running';
+  checksConclusion?: 'canceled' | 'failed' | 'skipped' | 'succeeded';
+  createdAt: number;
+  createdIn?: string;
+  creator: { uid: string; username?: string };
+  env?: string[];
+  errorCode?: string;
+  errorLink?: string;
+  errorMessage?: string | null;
+  errorStep?: string;
+  functions?: BuilderFunctions | null;
+  gitSource?: {
+    org?: string;
+    owner?: string;
+    prId?: number | null;
+    projectId: number;
+    ref?: string | null;
+    repoId?: number;
+    repoUuid: string;
+    sha?: string;
+    slug?: string;
+    type: string;
+    workspaceUuid: string;
+  };
+  id: string;
+  initReadyAt?: number;
+  inspectorUrl?: string | null;
+  lambdas?: Build[];
+  meta?: {
+    [key: string]: string | undefined;
+  };
+  monorepoManager?: string | null;
   name: string;
-  type: 'LAMBDAS';
-  state:
+  ownerId?: string;
+  plan?: 'enterprise' | 'hobby' | 'oss' | 'pro';
+  previewCommentsEnabled?: boolean;
+  projectId?: string;
+  projectSettings?: {
+    buildCommand?: string | null;
+    devCommand?: string | null;
+    framework?: string;
+    installCommand?: string | null;
+    outputDirectory?: string | null;
+  };
+  public: boolean;
+  ready?: number;
+  readyState:
     | 'BUILDING'
     | 'ERROR'
     | 'INITIALIZING'
     | 'QUEUED'
     | 'READY'
     | 'CANCELED';
-  version?: number;
-  created: number;
-  createdAt: number;
-  ready?: number;
-  buildingAt?: number;
-  creator: { uid: string; username: string };
-  target: string | null;
-  ownerId: string;
-  projectId: string;
-  inspectorUrl: string;
-  meta: {
-    [key: string]: any;
+  regions: string[];
+  routes?: RouteOrMiddleware[] | null;
+  source?: 'cli' | 'git' | 'import' | 'import/repo' | 'clone/repo';
+  status:
+    | 'BUILDING'
+    | 'ERROR'
+    | 'INITIALIZING'
+    | 'QUEUED'
+    | 'READY'
+    | 'CANCELED';
+  target?: 'staging' | 'production' | null;
+  team?: {
+    id: string;
+    name: string;
+    slug: string;
   };
-  alias?: string[];
+  ttyBuildLogs?: boolean;
+  type: 'LAMBDAS';
+  url: string;
+  userAliases?: string[];
+  version: 2;
 };
 
 export type Alias = {
@@ -287,6 +362,7 @@ export interface Project extends ProjectSettings {
   link?: ProjectLinkData;
   alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
+  lastRollbackTarget: RollbackTarget | null;
 }
 
 export interface Org {
@@ -320,6 +396,20 @@ export type ProjectLinkResult =
         | 'INVALID_ROOT_DIRECTORY'
         | 'MISSING_PROJECT_SETTINGS';
     };
+
+export type RollbackJobStatus =
+  | 'pending'
+  | 'in-progress'
+  | 'succeeded'
+  | 'failed'
+  | 'skipped';
+
+export interface RollbackTarget {
+  fromDeploymentId: string;
+  jobStatus: RollbackJobStatus;
+  requestedAt: number;
+  toDeploymentId: string;
+}
 
 export interface Token {
   id: string;

@@ -571,7 +571,7 @@ export class DeploymentNotFound extends NowError<
     super({
       code: 'DEPLOYMENT_NOT_FOUND',
       meta: { id, context },
-      message: `Can't find the deployment ${id} under the context ${context}`,
+      message: `Can't find the deployment "${id}" under the context "${context}"`,
     });
   }
 }

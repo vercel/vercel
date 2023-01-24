@@ -1,6 +1,6 @@
 {
   "name": "@vercel/routing-utils",
-  "version": "2.1.3",
+  "version": "2.1.8",
   "description": "Vercel routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-unit": "yarn test"
+    "test-unit": "pnpm test"
   },
   "dependencies": {
     "path-to-regexp": "6.1.0"

@@ -8,12 +8,12 @@ import download, {
   downloadFile,
   DownloadedFiles,
   isSymbolicLink,
+  isDirectory,
 } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
 import glob, { GlobOptions } from './fs/glob';
 import rename from './fs/rename';
 import {
-  execAsync,
   spawnAsync,
   execCommand,
   spawnCommand,
@@ -58,7 +58,6 @@ export {
   glob,
   GlobOptions,
   rename,
-  execAsync,
   spawnAsync,
   getScriptName,
   installDependencies,
@@ -82,6 +81,7 @@ export {
   streamToBuffer,
   debug,
   isSymbolicLink,
+  isDirectory,
   getLambdaOptionsFromFunction,
   scanParentDirs,
   getIgnoreFilter,

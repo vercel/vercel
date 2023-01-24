@@ -25,6 +25,7 @@ import type {
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import type { AppConfig } from './types';
+import { findConfig } from './utils';
 
 // Name of the Remix runtime adapter npm package for Vercel
 const REMIX_RUNTIME_ADAPTER_NAME = '@remix-run/vercel';
@@ -164,11 +165,13 @@ export const build: BuildV2 = async ({
   let serverBuildPath = 'build/index.js';
   let needsHandler = true;
   let isEdge = false;
+
+  const remixConfigFile = findConfig(entrypointFsDirname, 'remix.config');
+
   try {
-    const remixConfig: AppConfig = require(join(
-      entrypointFsDirname,
-      'remix.config'
-    ));
+    if (remixConfigFile) {
+      const remixConfigModule = await eval('import(remixConfigFile)');
+      const remixConfig: AppConfig = remixConfigModule?.default || {};
 
     // If `serverBuildTarget === 'vercel'` then Remix will output a handler
     // that is already in Vercel (req, res) format, so don't inject the handler
@@ -187,21 +190,22 @@ export const build: BuildV2 = async ({
     }
 
 
-    if (remixConfig.serverBuildPath) {
-      // Explicit file path where the server output file will be
-      serverBuildPath = remixConfig.serverBuildPath;
-    } else if (remixConfig.serverBuildDirectory) {
-      // Explicit directory path the server output will be
-      serverBuildPath = join(remixConfig.serverBuildDirectory, 'index.js');
-    }
+      if (remixConfig.serverBuildPath) {
+        // Explicit file path where the server output file will be
+        serverBuildPath = remixConfig.serverBuildPath;
+      } else if (remixConfig.serverBuildDirectory) {
+        // Explicit directory path the server output will be
+        serverBuildPath = join(remixConfig.serverBuildDirectory, 'index.js');
+      }
 
-    // Also check for whether were in a monorepo.
-    // If we are, prepend the app root directory from config onto the build path.
-    // e.g. `/apps/my-remix-app/api/index.js`
-    const isMonorepo = repoRootPath && repoRootPath !== workPath;
-    if (isMonorepo) {
-      const rootDirectory = relative(repoRootPath, workPath);
-      serverBuildPath = join(rootDirectory, serverBuildPath);
+      // Also check for whether were in a monorepo.
+      // If we are, prepend the app root directory from config onto the build path.
+      // e.g. `/apps/my-remix-app/api/index.js`
+      const isMonorepo = repoRootPath && repoRootPath !== workPath;
+      if (isMonorepo) {
+        const rootDirectory = relative(repoRootPath, workPath);
+        serverBuildPath = join(rootDirectory, serverBuildPath);
+      }
     }
   } catch (err: any) {
     // Ignore error if `remix.config.js` does not exist

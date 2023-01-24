@@ -186,15 +186,14 @@ export async function getLinkedProject(
         })})\n`
       );
       return { status: 'error', exitCode: 1 };
-    } else {
-      output.print(
-        prependEmoji(
-          'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
-          emoji('warning')
-        )
-      );
     }
 
+    output.print(
+      prependEmoji(
+        'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
+        emoji('warning')
+      )
+    );
     return { status: 'not_linked', org: null, project: null };
   }
 
