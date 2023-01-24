@@ -1,11 +1,11 @@
-const fetch = require('node-fetch');
-const listen = require('test-listen');
-const qs = require('querystring');
+import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
+import fetch from 'node-fetch';
+import listen from 'test-listen';
+import qs from 'querystring';
+import { createServerWithHelpers } from '../helpers';
 
-const { createServerWithHelpers } = require('../helpers');
-
-const mockListener = jest.fn();
-const consumeEventMock = jest.fn();
+const mockListener = vi.fn();
+const consumeEventMock = vi.fn();
 const mockBridge = { consumeEvent: consumeEventMock };
 
 let server;
@@ -43,13 +43,13 @@ afterEach(async () => {
 });
 
 describe('contract with @vercel/node-bridge', () => {
-  test('should call consumeEvent with the correct reqId', async () => {
+  it('should call consumeEvent with the correct reqId', async () => {
     await fetchWithProxyReq(`${url}/`);
 
     expect(consumeEventMock).toHaveBeenLastCalledWith('2');
   });
 
-  test('should not expose the request id header', async () => {
+  it('should not expose the request id header', async () => {
     await fetchWithProxyReq(`${url}/`, { headers: { 'x-test-header': 'ok' } });
 
     const [{ headers }] = mockListener.mock.calls[0];
@@ -70,8 +70,8 @@ describe('all helpers', () => {
     ['json', 1],
   ];
 
-  test('should not recalculate req properties twice', async () => {
-    const spy = jest.fn(() => {});
+  it('should not recalculate req properties twice', async () => {
+    const spy = vi.fn(() => {});
 
     const nowReqHelpers = nowHelpers.filter(([, i]) => i === 0);
 
@@ -93,8 +93,8 @@ describe('all helpers', () => {
     }
   });
 
-  test('should be able to overwrite request properties', async () => {
-    const spy = jest.fn(() => {});
+  it('should be able to overwrite request properties', async () => {
+    const spy = vi.fn(() => {});
 
     mockListener.mockImplementation((...args) => {
       nowHelpers.forEach(([prop, n]) => {
@@ -112,8 +112,8 @@ describe('all helpers', () => {
     nowHelpers.forEach((_, i) => expect(spy.mock.calls[i][0]).toBe('ok2'));
   });
 
-  test('should be able to reconfig request properties', async () => {
-    const spy = jest.fn(() => {});
+  it('should be able to reconfig request properties', async () => {
+    const spy = vi.fn(() => {});
 
     mockListener.mockImplementation((...args) => {
       nowHelpers.forEach(([prop, n]) => {
@@ -133,7 +133,7 @@ describe('all helpers', () => {
 });
 
 describe('req.query', () => {
-  test('req.query should reflect querystring in the url', async () => {
+  it('req.query should reflect querystring in the url', async () => {
     await fetchWithProxyReq(`${url}/?who=bill&where=us`);
 
     expect(mockListener.mock.calls[0][0].query).toMatchObject({
@@ -142,7 +142,7 @@ describe('req.query', () => {
     });
   });
 
-  test('req.query should turn multiple params with same name into an array', async () => {
+  it('req.query should turn multiple params with same name into an array', async () => {
     await fetchWithProxyReq(`${url}/?a=2&a=1`);
 
     expect(mockListener.mock.calls[0][0].query).toMatchObject({
@@ -150,7 +150,7 @@ describe('req.query', () => {
     });
   });
 
-  test('req.query should be {} when there is no querystring', async () => {
+  it('req.query should be {} when there is no querystring', async () => {
     await fetchWithProxyReq(url);
     const [{ query }] = mockListener.mock.calls[0];
     expect(Object.keys(query).length).toBe(0);
@@ -158,7 +158,7 @@ describe('req.query', () => {
 });
 
 describe('req.cookies', () => {
-  test('req.cookies should reflect req.cookie header', async () => {
+  it('req.cookies should reflect req.cookie header', async () => {
     await fetchWithProxyReq(url, {
       headers: {
         cookie: 'who=bill; where=us',
@@ -173,12 +173,12 @@ describe('req.cookies', () => {
 });
 
 describe('req.body', () => {
-  test('req.body should be undefined by default', async () => {
+  it('req.body should be undefined by default', async () => {
     await fetchWithProxyReq(url);
     expect(mockListener.mock.calls[0][0].body).toBe(undefined);
   });
 
-  test('req.body should be undefined if content-type is not defined', async () => {
+  it('req.body should be undefined if content-type is not defined', async () => {
     await fetchWithProxyReq(url, {
       method: 'POST',
       body: 'hello',
@@ -186,7 +186,7 @@ describe('req.body', () => {
     expect(mockListener.mock.calls[0][0].body).toBe(undefined);
   });
 
-  test('req.body should be a string when content-type is `text/plain`', async () => {
+  it('req.body should be a string when content-type is `text/plain`', async () => {
     await fetchWithProxyReq(url, {
       method: 'POST',
       body: 'hello',
@@ -196,7 +196,7 @@ describe('req.body', () => {
     expect(mockListener.mock.calls[0][0].body).toBe('hello');
   });
 
-  test('req.body should be a buffer when content-type is `application/octet-stream`', async () => {
+  it('req.body should be a buffer when content-type is `application/octet-stream`', async () => {
     await fetchWithProxyReq(url, {
       method: 'POST',
       body: 'hello',
@@ -211,7 +211,7 @@ describe('req.body', () => {
     expect(str).toBe('hello');
   });
 
-  test('req.body should be an object when content-type is `application/x-www-form-urlencoded`', async () => {
+  it('req.body should be an object when content-type is `application/x-www-form-urlencoded`', async () => {
     const obj = { who: 'mike' };
 
     await fetchWithProxyReq(url, {
@@ -223,7 +223,7 @@ describe('req.body', () => {
     expect(mockListener.mock.calls[0][0].body).toMatchObject(obj);
   });
 
-  test('req.body should be an object when content-type is `application/json`', async () => {
+  it('req.body should be an object when content-type is `application/json`', async () => {
     const json = {
       who: 'bill',
       where: 'us',
@@ -238,11 +238,8 @@ describe('req.body', () => {
     expect(mockListener.mock.calls[0][0].body).toMatchObject(json);
   });
 
-  test('should work when body is empty and content-type is `application/json`', async () => {
-    mockListener.mockImplementation((req, res) => {
-      console.log(req.body);
-      res.end();
-    });
+  it('should work when body is empty and content-type is `application/json`', async () => {
+    mockListener.mockImplementation((req, res) => res.end());
 
     const res = await fetchWithProxyReq(url, {
       method: 'POST',
@@ -254,8 +251,8 @@ describe('req.body', () => {
     expect(res.body).toMatchObject({});
   });
 
-  test('should be able to try/catch parse errors', async () => {
-    const bodySpy = jest.fn(() => {});
+  it('should be able to try/catch parse errors', async () => {
+    const bodySpy = vi.fn(() => {});
 
     mockListener.mockImplementation((req, res) => {
       try {
@@ -282,7 +279,7 @@ describe('req.body', () => {
 });
 
 describe('res.status', () => {
-  test('res.status() should set the status code', async () => {
+  it('res.status() should set the status code', async () => {
     mockListener.mockImplementation((req, res) => {
       res.status(404);
       res.end();
@@ -293,8 +290,8 @@ describe('res.status', () => {
     expect(res.status).toBe(404);
   });
 
-  test('res.status() should be chainable', async () => {
-    const spy = jest.fn();
+  it('res.status() should be chainable', async () => {
+    const spy = vi.fn();
 
     mockListener.mockImplementation((req, res) => {
       spy(res, res.status(404));
@@ -309,7 +306,7 @@ describe('res.status', () => {
 });
 
 describe('res.redirect', () => {
-  test('should redirect to login', async () => {
+  it('should redirect to login', async () => {
     mockListener.mockImplementation((req, res) => {
       res.redirect('/login');
       res.end();
@@ -320,7 +317,7 @@ describe('res.redirect', () => {
     expect(res.status).toBe(307);
     expect(res.headers.get('location')).toBe(url + '/login');
   });
-  test('should redirect with status code 301', async () => {
+  it('should redirect with status code 301', async () => {
     mockListener.mockImplementation((req, res) => {
       res.redirect(301, '/login');
       res.end();
@@ -329,7 +326,7 @@ describe('res.redirect', () => {
     expect(res.status).toBe(301);
     expect(res.headers.get('location')).toBe(url + '/login');
   });
-  test('should show friendly error for invalid redirect', async () => {
+  it('should show friendly error for invalid redirect', async () => {
     let error;
     mockListener.mockImplementation((req, res) => {
       try {
@@ -344,7 +341,7 @@ describe('res.redirect', () => {
       `Invalid redirect arguments. Please use a single argument URL, e.g. res.redirect('/destination') or use a status code and URL, e.g. res.redirect(307, '/destination').`
     );
   });
-  test('should show friendly error in case of passing null as first argument redirect', async () => {
+  it('should show friendly error in case of passing null as first argument redirect', async () => {
     let error;
     mockListener.mockImplementation((req, res) => {
       try {
@@ -364,8 +361,8 @@ describe('res.redirect', () => {
 // tests based on expressjs test suite
 // see https://github.com/expressjs/express/blob/master/test/res.send.js
 describe('res.send', () => {
-  test('should be chainable', async () => {
-    const spy = jest.fn();
+  it('should be chainable', async () => {
+    const spy = vi.fn();
 
     mockListener.mockImplementation((req, res) => {
       spy(res, res.send('hello'));
@@ -378,7 +375,7 @@ describe('res.send', () => {
   });
 
   describe('res.send()', () => {
-    test('should set body to ""', async () => {
+    it('should set body to ""', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send();
       });
@@ -390,7 +387,7 @@ describe('res.send', () => {
   });
 
   describe('.send(null)', () => {
-    test('should set body to ""', async () => {
+    it('should set body to ""', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send(null);
       });
@@ -403,7 +400,7 @@ describe('res.send', () => {
   });
 
   describe('.send(undefined)', () => {
-    test('should set body to ""', async () => {
+    it('should set body to ""', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send(undefined);
       });
@@ -415,7 +412,7 @@ describe('res.send', () => {
   });
 
   describe('.send(String)', () => {
-    test('should send as html', async () => {
+    it('should send as html', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send('<p>hey</p>');
       });
@@ -425,7 +422,7 @@ describe('res.send', () => {
       expect(await res.text()).toBe('<p>hey</p>');
     });
 
-    test('should set Content-Length', async () => {
+    it('should set Content-Length', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send('½ + ¼ = ¾');
       });
@@ -436,7 +433,7 @@ describe('res.send', () => {
       expect(await res.text()).toBe('½ + ¼ = ¾');
     });
 
-    test('should set ETag', async () => {
+    it('should set ETag', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send(Array(1000).join('-'));
       });
@@ -448,7 +445,7 @@ describe('res.send', () => {
       );
     });
 
-    test('should not override Content-Type', async () => {
+    it('should not override Content-Type', async () => {
       mockListener.mockImplementation((req, res) => {
         res.setHeader('Content-Type', 'text/plain');
         res.send('hey');
@@ -460,7 +457,7 @@ describe('res.send', () => {
       expect(await res.text()).toBe('hey');
     });
 
-    test('should override charset in Content-Type', async () => {
+    it('should override charset in Content-Type', async () => {
       mockListener.mockImplementation((req, res) => {
         res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
         res.send('hey');
@@ -474,7 +471,7 @@ describe('res.send', () => {
   });
 
   describe('.send(Buffer)', () => {
-    test('should keep charset in Content-Type', async () => {
+    it('should keep charset in Content-Type', async () => {
       mockListener.mockImplementation((req, res) => {
         res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
         res.send(Buffer.from('hi'));
@@ -488,7 +485,7 @@ describe('res.send', () => {
       expect(await res.text()).toBe('hi');
     });
 
-    test('should set Content-Length', async () => {
+    it('should set Content-Length', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send(Buffer.from('½ + ¼ = ¾'));
       });
@@ -499,7 +496,7 @@ describe('res.send', () => {
       expect(await res.text()).toBe('½ + ¼ = ¾');
     });
 
-    test('should send as octet-stream', async () => {
+    it('should send as octet-stream', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send(Buffer.from('hello'));
       });
@@ -512,7 +509,7 @@ describe('res.send', () => {
       );
     });
 
-    test('should set ETag', async () => {
+    it('should set ETag', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send(Buffer.alloc(999, '-'));
       });
@@ -524,7 +521,7 @@ describe('res.send', () => {
       );
     });
 
-    test('should not override Content-Type', async () => {
+    it('should not override Content-Type', async () => {
       mockListener.mockImplementation((req, res) => {
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.send(Buffer.from('hey'));
@@ -536,7 +533,7 @@ describe('res.send', () => {
       expect(await res.text()).toBe('hey');
     });
 
-    test('should not override ETag', async () => {
+    it('should not override ETag', async () => {
       mockListener.mockImplementation((req, res) => {
         res.setHeader('ETag', '"foo"');
         res.send(Buffer.from('hey'));
@@ -550,7 +547,7 @@ describe('res.send', () => {
   });
 
   describe('.send(Object)', () => {
-    test('should send as application/json', async () => {
+    it('should send as application/json', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send({ name: 'tobi' });
       });
@@ -565,7 +562,7 @@ describe('res.send', () => {
   });
 
   describe('when the request method is HEAD', () => {
-    test('should ignore the body', async () => {
+    it('should ignore the body', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send('yay');
       });
@@ -579,7 +576,7 @@ describe('res.send', () => {
   });
 
   describe('when .statusCode is 204', () => {
-    test('should strip Content-* fields, Transfer-Encoding field, and body', async () => {
+    it('should strip Content-* fields, Transfer-Encoding field, and body', async () => {
       mockListener.mockImplementation((req, res) => {
         res.statusCode = 204;
         res.setHeader('Transfer-Encoding', 'chunked');
@@ -596,7 +593,7 @@ describe('res.send', () => {
   });
 
   describe('when .statusCode is 304', () => {
-    test('should strip Content-* fields, Transfer-Encoding field, and body', async () => {
+    it('should strip Content-* fields, Transfer-Encoding field, and body', async () => {
       mockListener.mockImplementation((req, res) => {
         res.statusCode = 304;
         res.setHeader('Transfer-Encoding', 'chunked');
@@ -612,7 +609,7 @@ describe('res.send', () => {
     });
   });
 
-  // test('should always check regardless of length', async () => {
+  // it('should always check regardless of length', async () => {
   //   const etag = '"asdf"';
 
   //   mockListener.mockImplementation((req, res) => {
@@ -626,7 +623,7 @@ describe('res.send', () => {
   //   expect(res.status).toBe(304);
   // });
 
-  // test('should respond with 304 Not Modified when fresh', async () => {
+  // it('should respond with 304 Not Modified when fresh', async () => {
   //   const etag = '"asdf"';
 
   //   mockListener.mockImplementation((req, res) => {
@@ -640,7 +637,7 @@ describe('res.send', () => {
   //   expect(res.status).toBe(304);
   // });
 
-  // test('should not perform freshness check unless 2xx or 304', async () => {
+  // it('should not perform freshness check unless 2xx or 304', async () => {
   //   const etag = '"asdf"';
 
   //   mockListener.mockImplementation((req, res) => {
@@ -657,7 +654,7 @@ describe('res.send', () => {
   // });
 
   describe('etag', () => {
-    test('should send ETag', async () => {
+    it('should send ETag', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send('kajdslfkasdf');
       });
@@ -667,7 +664,7 @@ describe('res.send', () => {
       expect(res.headers.get('ETag')).toBe('W/"c-IgR/L5SF7CJQff4wxKGF/vfPuZ0"');
     });
 
-    test('should send ETag for empty string response', async () => {
+    it('should send ETag for empty string response', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send('');
       });
@@ -677,7 +674,7 @@ describe('res.send', () => {
       expect(res.headers.get('ETag')).toBe('W/"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"');
     });
 
-    test('should send ETag for long response', async () => {
+    it('should send ETag for long response', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send(Array(1000).join('-'));
       });
@@ -689,7 +686,7 @@ describe('res.send', () => {
       );
     });
 
-    test('should not override ETag when manually set', async () => {
+    it('should not override ETag when manually set', async () => {
       mockListener.mockImplementation((req, res) => {
         res.setHeader('etag', '"asdf"');
         res.send('hello');
@@ -700,7 +697,7 @@ describe('res.send', () => {
       expect(res.headers.get('ETag')).toBe('"asdf"');
     });
 
-    test('should not send ETag for res.send()', async () => {
+    it('should not send ETag for res.send()', async () => {
       mockListener.mockImplementation((req, res) => {
         res.send();
       });
@@ -715,8 +712,8 @@ describe('res.send', () => {
 // tests based on expressjs test suite
 // see https://github.com/expressjs/express/blob/master/test/res.json.js
 describe('res.json', () => {
-  test('should send be chainable', async () => {
-    const spy = jest.fn();
+  it('should send be chainable', async () => {
+    const spy = vi.fn();
 
     mockListener.mockImplementation((req, res) => {
       spy(res, res.json({ hello: 'world' }));
@@ -728,7 +725,7 @@ describe('res.json', () => {
     expect(a).toBe(b);
   });
 
-  test('res.json() should send an empty body', async () => {
+  it('res.json() should send an empty body', async () => {
     mockListener.mockImplementation((req, res) => {
       res.json();
     });
@@ -744,7 +741,7 @@ describe('res.json', () => {
   });
 
   describe('.json(object)', () => {
-    test('should not override previous Content-Types', async () => {
+    it('should not override previous Content-Types', async () => {
       mockListener.mockImplementation((req, res) => {
         res.setHeader('content-type', 'application/vnd.example+json');
         res.json({ hello: 'world' });
@@ -758,7 +755,7 @@ describe('res.json', () => {
       expect(await res.text()).toBe('{"hello":"world"}');
     });
 
-    test('should set Content-Length and Content-Type', async () => {
+    it('should set Content-Length and Content-Type', async () => {
       mockListener.mockImplementation((req, res) => {
         res.json({ hello: '½ + ¼ = ¾' });
       });
@@ -773,7 +770,7 @@ describe('res.json', () => {
     });
 
     describe('when given primitives', () => {
-      test('should respond with json for null', async () => {
+      it('should respond with json for null', async () => {
         mockListener.mockImplementation((req, res) => {
           res.json(null);
         });
@@ -786,7 +783,7 @@ describe('res.json', () => {
         expect(await res.text()).toBe('null');
       });
 
-      test('should respond with json for Number', async () => {
+      it('should respond with json for Number', async () => {
         mockListener.mockImplementation((req, res) => {
           res.json(300);
         });
@@ -799,7 +796,7 @@ describe('res.json', () => {
         expect(await res.text()).toBe('300');
       });
 
-      test('should respond with json for String', async () => {
+      it('should respond with json for String', async () => {
         mockListener.mockImplementation((req, res) => {
           res.json('str');
         });
@@ -813,7 +810,7 @@ describe('res.json', () => {
       });
     });
 
-    test('should respond with json when given an array', async () => {
+    it('should respond with json when given an array', async () => {
       mockListener.mockImplementation((req, res) => {
         res.json(['foo', 'bar', 'baz']);
       });
@@ -826,7 +823,7 @@ describe('res.json', () => {
       expect(await res.text()).toBe('["foo","bar","baz"]');
     });
 
-    test('should respond with json when given an object', async () => {
+    it('should respond with json when given an object', async () => {
       mockListener.mockImplementation((req, res) => {
         res.json({ name: 'tobi' });
       });

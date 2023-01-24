@@ -1,22 +1,8 @@
 // Note: browser globals are only available because web handler requires node18 which provides them.
 /* eslint-env node, browser */
-const { createServer } = require('http');
-const { transformToNodeHandler } = require('../web-handler.js');
-
-// TODO should include a link to an error page
-const wrongRuntimeErrorMessage = `web compliant signature can only be used with node.js 18 and later. Please configure your function's runtime accordingly`;
-
-describe('Web handler wrapper', () => {
-  it.each([
-    { title: 'when not providing any runtime', runtime: '' },
-    { title: 'on node 14', runtime: 'nodejs14.x' },
-    { title: 'on node 16', runtime: 'nodejs16.x' },
-  ])('throws $title', ({ runtime }) => {
-    expect(() => transformToNodeHandler(() => {}, runtime)).toThrow(
-      wrongRuntimeErrorMessage
-    );
-  });
-});
+import { describe, afterEach, it, expect } from 'vitest';
+import { createServer } from 'http';
+import { transformToNodeHandler } from '../web-handler';
 
 // web handler wrapper requires node18+
 (parseInt(process.version.slice(1)) < 18 ? describe.skip : describe)(
@@ -26,23 +12,7 @@ describe('Web handler wrapper', () => {
 
     async function invokeWebHandler(handler) {
       // starts a server with provided handler and invokes it
-      server = createServer(transformToNodeHandler(handler, 'nodejs18'));
-
-      // TODO fetch connections are hanging, despite the lack of keepalive.
-      // inspire from https://github.com/isaacs/server-destroy/blob/master/index.js to force-close them.
-      const connections = new Map();
-      server.on('connection', connection => {
-        const key = `${connection.remoteAddress}:${connection.remotePort}`;
-        connections.set(key, connection);
-        connection.on('close', () => connections.delete(key));
-      });
-      server.destroy = done => {
-        for (const connection of connections.values()) {
-          connection.destroy();
-        }
-        server.close(done);
-      };
-
+      server = createServer(transformToNodeHandler(handler));
       await new Promise((resolve, reject) =>
         server.listen(err => {
           err ? reject(err) : resolve();
@@ -67,9 +37,7 @@ describe('Web handler wrapper', () => {
       };
     }
 
-    afterEach(done => {
-      server.destroy(done);
-    });
+    afterEach(done => server.close(done));
 
     it('turns null response into an empty request', async () => {
       const response = await invokeWebHandler(() => null);
