@@ -15,7 +15,7 @@
     },
     {
       "path": "/page-data/dsg/page-data.json",
-      "mustContain": "\"componentChunkName\":\"component---src-pages-dsg-js\",\"path\":\"/dsg/\""
+      "mustContain": "\"componentChunkName\":\"component---src-templates-dsg-js\",\"path\":\"/dsg/\""
     }
   ]
 }
