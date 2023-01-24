@@ -955,6 +955,8 @@ importers:
       '@vercel/build-utils': 5.9.0
       '@vercel/frameworks': 1.2.4
       '@vercel/fs-detectors': 3.7.5
+      '@vercel/gatsby-plugin-vercel-analytics': 1.0.7
+      '@vercel/gatsby-plugin-vercel-builder': 1.0.0
       '@vercel/ncc': 0.24.0
       '@vercel/routing-utils': 2.1.8
       '@vercel/static-config': 2.0.11
@@ -982,6 +984,8 @@ importers:
       '@vercel/build-utils': link:../build-utils
       '@vercel/frameworks': link:../frameworks
       '@vercel/fs-detectors': link:../fs-detectors
+      '@vercel/gatsby-plugin-vercel-analytics': link:../gatsby-plugin-vercel-analytics
+      '@vercel/gatsby-plugin-vercel-builder': link:../gatsby-plugin-vercel-builder
       '@vercel/ncc': 0.24.0
       '@vercel/routing-utils': link:../routing-utils
       '@vercel/static-config': link:../static-config
@@ -12261,18 +12265,6 @@ packages:
         optional: true
     dev: false
 
-  /follow-redirects/1.15.2_debug@3.1.0:
-    resolution: {integrity: sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==}
-    engines: {node: '>=4.0'}
-    peerDependencies:
-      debug: '*'
-    peerDependenciesMeta:
-      debug:
-        optional: true
-    dependencies:
-      debug: 3.1.0
-    dev: true
-
   /follow-redirects/1.15.2_debug@3.2.7:
     resolution: {integrity: sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==}
     engines: {node: '>=4.0'}
@@ -13744,7 +13736,7 @@ packages:
     engines: {node: '>=8.0.0'}
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.15.2_debug@3.1.0
+      follow-redirects: 1.15.2_debug@3.2.7
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
