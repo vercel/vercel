@@ -1,12 +1,12 @@
 {
   "probes": [
-    { "path": "/", "mustContain": "you just made a Gatsby site! 🎉🎉🎉" },
+    { "path": "/foo/", "mustContain": "you just made a Gatsby site! 🎉🎉🎉" },
     {
-      "path": "/ssr/",
+      "path": "/foo/ssr/",
       "mustContain": "This page is <b>rendered server-side</b>"
     },
     {
-      "path": "/dsg/",
+      "path": "/foo/dsg/",
       "mustContain": "This page is <b>DSG</b>"
     }
   ]

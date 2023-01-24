@@ -6,6 +6,6 @@ module.exports = {
     title: `gatsby-v5`,
     siteUrl: `https://www.yourdomain.tld`,
   },
-  plugins: [`@vercel/gatsby-plugin-vercel-builder`],
+  plugins: [],
   pathPrefix: '/foo',
 };
