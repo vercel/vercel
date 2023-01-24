@@ -12,9 +12,7 @@ export async function getGraphQLEngine() {
 }
 
 export async function getPageSSRHelpers() {
-  const { getData, renderPageData, renderHTML } = (await import(
+  return (await import(
     join(__dirname, '.cache/page-ssr/index.js')
   )) as typeof import('gatsby/dist/utils/page-ssr-module/entry');
-
-  return { getData, renderPageData, renderHTML };
 }

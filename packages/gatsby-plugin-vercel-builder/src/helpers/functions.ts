@@ -1,23 +1,16 @@
 import { join } from 'path';
-
 import { ensureDir } from 'fs-extra';
-
 import { createSymlink } from '../utils/symlink';
 import {
   writeHandler,
   writeVCConfig,
   copyFunctionLibs,
-  movePageData,
   copyHTMLFiles,
   writePrerenderConfig,
 } from '../handlers/build';
-import { GatsbyFunction } from '../schemas';
-import { Routes } from '../types';
+import type { GatsbyFunction, GatsbyPage } from '../schemas';
 
-export async function createServerlessFunctions(
-  { dsgRoutes, ssrRoutes }: Routes,
-  prefix?: string
-) {
+export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
   /* Gatsby SSR/DSG on Vercel is enabled through Vercel Serverless Functions.
      This plugin creates one Serverless Function called `_ssr.func` that is used by SSR and DSG pages through symlinks.
      DSG is enabled through prerender functions.
@@ -47,83 +40,44 @@ export async function createServerlessFunctions(
     writeVCConfig({ functionDir }),
   ]);
 
-  await Promise.all([
-    ...ssrRoutes.map(async pathName => {
-      const funcPath = join(pathName, 'index.html');
-      return createSymlink(funcPath, functionName);
-    }),
-    ...dsgRoutes.map(async (pathName, index) => {
-      const funcPath = join(pathName, 'index.html');
-      writePrerenderConfig(
-        join(
-          '.vercel',
-          'output',
-          'functions',
-          `${funcPath}.prerender-config.json`
-        ),
-        index + 1
-      );
-      return createSymlink(funcPath, functionName);
-    }),
-  ]);
-}
+  await Promise.all(
+    ssrRoutes.map(async (page, index) => {
+      let pathName = page.path;
 
-export async function createPageDataFunctions(
-  { dsgRoutes, ssrRoutes }: Routes,
-  prefix?: string
-) {
-  /* Gatsby uses /page-data/<path>/page-data.json to fetch data. This plugin creates a
-    `_page-data.func` function that dynamically generates this data if it's not available in `static/page-data`. */
-  const functionName = '_page-data.func';
-  const functionDir = join(
-    '.vercel',
-    'output',
-    'functions',
-    prefix ?? '',
-    functionName
-  );
-  const handlerFile = join(
-    __dirname,
-    '..',
-    'handlers',
-    'templates',
-    './page-data.js'
-  );
+      // HTML renderer
+      const ssrPath = join(pathName, 'index.html');
+      if (page.mode === 'DSG') {
+        writePrerenderConfig(
+          join(
+            '.vercel',
+            'output',
+            'functions',
+            `${ssrPath}.prerender-config.json`
+          ),
+          index + 1
+        );
+      }
+      await createSymlink(ssrPath, functionName);
 
-  await ensureDir(functionDir);
-
-  await Promise.all([
-    writeHandler({ outDir: functionDir, handlerFile }),
-    copyFunctionLibs({ functionDir }),
-    movePageData({ functionDir, prefix }),
-    writeVCConfig({ functionDir }),
-  ]);
-
-  await Promise.all([
-    ...ssrRoutes.map(async pathName => {
+      // page-data renderer
       if (!pathName || pathName === '/') {
         pathName = 'index';
       }
-      const funcPath = join('page-data', pathName, 'page-data.json');
-      return createSymlink(funcPath, functionName);
-    }),
-    ...dsgRoutes.map(async (pathName, index) => {
-      if (!pathName || pathName === '/') {
-        pathName = 'index';
+      const pageDataPath = join('page-data', pathName, 'page-data.json');
+      if (page.mode === 'DSG') {
+        writePrerenderConfig(
+          join(
+            '.vercel',
+            'output',
+            'functions',
+            `${pageDataPath}.prerender-config.json`
+          ),
+          index + 1
+        );
       }
-      const funcPath = join('page-data', pathName, 'page-data.json');
-      writePrerenderConfig(
-        join(
-          '.vercel',
-          'output',
-          'functions',
-          `${funcPath}.prerender-config.json`
-        ),
-        index + 1
-      );
-      return createSymlink(funcPath, functionName);
-    }),
-  ]);
+      await createSymlink(pageDataPath, functionName);
+    })
+  );
 }
 
 export async function createAPIRoutes(
