@@ -15,7 +15,10 @@ import type { GatsbyFunction, GatsbyPage } from '../schemas';
  * This plugin creates one Serverless Function called `_ssr.func` that is used by SSR and DSG pages through symlinks.
  * DSG is enabled through prerender functions.
  */
-export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
+export async function createServerlessFunctions(
+  ssrRoutes: GatsbyPage[],
+  prefix?: string
+) {
   let functionName: string;
   let functionDir: string;
   const handlerFile = join(__dirname, '../handlers/templates/ssr-handler.js');
@@ -25,7 +28,7 @@ export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
       let pathName = page.path;
 
       // HTML renderer
-      const ssrPath = join(pathName, 'index.html');
+      const ssrPath = join(prefix ?? '', pathName, 'index.html');
       if (index === 0) {
         // For the first page, create the SSR Serverless Function
         functionName = `${ssrPath}.func`;
@@ -43,6 +46,7 @@ export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
         // If it's not the first page, then symlink to the first function
         await createSymlink(ssrPath, functionName);
       }
+
       if (page.mode === 'DSG') {
         writePrerenderConfig(
           join(
@@ -59,8 +63,15 @@ export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
       if (!pathName || pathName === '/') {
         pathName = 'index';
       }
-      const pageDataPath = join('page-data', pathName, 'page-data.json');
+
+      const pageDataPath = join(
+        prefix ?? '',
+        'page-data',
+        pathName,
+        'page-data.json'
+      );
       await createSymlink(pageDataPath, functionName);
+
       if (page.mode === 'DSG') {
         writePrerenderConfig(
           join(
@@ -76,8 +87,11 @@ export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
   );
 }
 
-export async function createAPIRoutes(functions: GatsbyFunction[]) {
-  const apiDir = join('.vercel', 'output', 'functions', 'api');
+export async function createAPIRoutes(
+  functions: GatsbyFunction[],
+  prefix?: string
+) {
+  const apiDir = join('.vercel', 'output', 'functions', 'api', prefix ?? '');
   await ensureDir(apiDir);
 
   await Promise.allSettled(
