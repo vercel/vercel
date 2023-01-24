@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { copy, ensureDir } from 'fs-extra';
 
-export async function createStaticDir({ prefix }: { prefix?: string }) {
+export async function createStaticDir(prefix?: string) {
   const targetDir = join(
     process.cwd(),
     '.vercel',

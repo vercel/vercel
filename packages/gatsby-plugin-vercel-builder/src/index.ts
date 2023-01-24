@@ -40,14 +40,14 @@ export async function generateVercelBuildOutputAPI3Output({
       .map(p => p[1])
       .filter(page => page.mode === 'SSR' || page.mode === 'DSG');
 
-    const ops: Promise<void>[] = [createStaticDir()];
+    const ops: Promise<void>[] = [createStaticDir(gatsbyConfig.pathPrefix)];
 
     if (functions.length > 0) {
-      ops.push(createAPIRoutes(functions));
+      ops.push(createAPIRoutes(functions, gatsbyConfig.pathPrefix));
     }
 
     if (ssrRoutes.length > 0) {
-      ops.push(createServerlessFunctions(ssrRoutes));
+      ops.push(createServerlessFunctions(ssrRoutes, gatsbyConfig.pathPrefix));
     }
 
     await Promise.all(ops);

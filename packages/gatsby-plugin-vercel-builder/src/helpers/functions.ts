@@ -10,7 +10,10 @@ import {
 } from '../handlers/build';
 import type { GatsbyFunction, GatsbyPage } from '../schemas';
 
-export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
+export async function createServerlessFunctions(
+  ssrRoutes: GatsbyPage[],
+  prefix?: string
+) {
   /* Gatsby SSR/DSG on Vercel is enabled through Vercel Serverless Functions.
      This plugin creates one Serverless Function called `_ssr.func` that is used by SSR and DSG pages through symlinks.
      DSG is enabled through prerender functions.
@@ -52,6 +55,7 @@ export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
             '.vercel',
             'output',
             'functions',
+            prefix ?? '',
             `${ssrPath}.prerender-config.json`
           ),
           index + 1
@@ -70,6 +74,7 @@ export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
             '.vercel',
             'output',
             'functions',
+            prefix ?? '',
             `${pageDataPath}.prerender-config.json`
           ),
           index + 1
