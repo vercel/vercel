@@ -1,4 +1,5 @@
 import os from 'os';
+import etag from 'etag';
 import { parse } from 'url';
 import { copySync, existsSync } from 'fs-extra';
 import { join, dirname, basename } from 'path';
@@ -14,17 +15,31 @@ if (!existsSync(TMP_DATA_PATH)) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  let pageName: string;
   const pathname = parse(req.url!).pathname || '/';
-  let pageName = basename(pathname);
-  if (pageName === 'index.html') {
+  const isPageData = pathname.startsWith('/page-data/');
+  if (isPageData) {
+    // /page-data/index/page-data.json
+    // /page-data/using-ssr/page-data.json
     pageName = basename(dirname(pathname));
-  }
-  if (!pageName) {
-    pageName = '/';
+    if (pageName === 'index') {
+      pageName = '/';
+    }
+  } else {
+    // /using-ssr
+    // /using-ssr/
+    // /using-ssr/index.html
+    pageName = basename(pathname);
+    if (pageName === 'index.html') {
+      pageName = basename(dirname(pathname));
+    }
+    if (!pageName) {
+      pageName = '/';
+    }
   }
 
-  const graphqlEngine = await getGraphQLEngine();
-  const { getData, renderHTML } = await getPageSSRHelpers();
+  const [graphqlEngine, { getData, renderHTML, renderPageData }] =
+    await Promise.all([getGraphQLEngine(), getPageSSRHelpers()]);
 
   const data = await getData({
     pathName: pageName,
@@ -32,7 +47,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     req,
   });
 
-  const results = await renderHTML({ data });
+  const results = isPageData
+    ? await renderPageData({ data })
+    : await renderHTML({ data });
 
   if (data.serverDataHeaders) {
     for (const [name, value] of Object.entries(data.serverDataHeaders)) {
@@ -44,5 +61,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.statusCode = data.serverDataStatus;
   }
 
-  res.send(results);
+  if (isPageData) {
+    res.setHeader('ETag', etag(JSON.stringify(results)));
+    res.json(results);
+  } else {
+    res.send(results);
+  }
 }
