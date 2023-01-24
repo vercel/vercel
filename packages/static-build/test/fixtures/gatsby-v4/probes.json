@@ -20,7 +20,7 @@
     },
     {
       "path": "/page-data/using-dsg/page-data.json",
-      "mustContain": "\"componentChunkName\":\"component---src-pages-using-dsg-js\",\"path\":\"/using-dsg/\""
+      "mustContain": "\"componentChunkName\":\"component---src-pages-using-dsg-js\",\"path\":\"/using-dsg\""
     }
   ]
 }
