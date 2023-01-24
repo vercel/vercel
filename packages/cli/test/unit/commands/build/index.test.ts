@@ -834,6 +834,42 @@ describe('build', () => {
     }
   });
 
+  /* Skipping because this legacy builder is causing something to break with cwd
+  it('should error when builder returns result without "output" such as @now/node-server', async () => {
+    const cwd = join(os.tmpdir(), 'now-node-server');
+    const output = join(cwd, '.vercel/output');
+    try {
+      // Copy to a temp directory to avoid breaking other tests
+      await fs.copy(fixture('now-node-server'), cwd);
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      // Error gets printed to the terminal
+      const message =
+        'The build result from "@now/node-server" is missing the "output" property. Please update from "@now" to "@vercel" in your `vercel.json` file.';
+      await expect(client.stderr).toOutput(message);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+
+      // top level "error" also contains the same error
+      expect(builds.error).toEqual({
+        name: 'Error',
+        message,
+        stack: expect.stringContaining(message),
+      });
+
+      // `config.json` contains `version`
+      const configJson = await fs.readJSON(join(output, 'config.json'));
+      expect(configJson.version).toBe(3);
+    } finally {
+      await fs.remove(cwd);
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+  */
+
   it('should allow for missing "build" script', async () => {
     const cwd = fixture('static-with-pkg');
     const output = join(cwd, '.vercel/output');

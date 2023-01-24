@@ -105,6 +105,7 @@ describe('importBuilders()', () => {
       await expect(client.stderr).toOutput(
         '> Installing Builder: @vercel/node'
       );
+      await expect(client.stderr).not.toOutput('npm WARN deprecated');
     } finally {
       await remove(cwd);
     }
@@ -140,6 +141,33 @@ describe('importBuilders()', () => {
       );
       await expect(client.stderr).toOutput(
         '> Installing Builders: vercel-deno@2.0.1, https://test2020-h5hdll5dz-tootallnate.vercel.app'
+      );
+    } finally {
+      await remove(cwd);
+    }
+  });
+
+  it('should install and warn when Builder is deprecated', async () => {
+    if (process.platform === 'win32') {
+      // this test creates symlinks which require admin by default on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
+    const cwd = await getWriteableDirectory();
+    try {
+      const spec = '@now/node';
+      const specs = new Set([spec]);
+      const builders = await importBuilders(specs, cwd, client.output);
+      expect(builders.size).toEqual(1);
+      expect(builders.get(spec)?.pkg.name).toEqual('@now/node');
+      expect(builders.get(spec)?.pkg.version).toEqual('1.8.5');
+      expect(builders.get(spec)?.pkgPath).toEqual(
+        join(cwd, '.vercel/builders/node_modules/@now/node/package.json')
+      );
+      expect(typeof builders.get(spec)?.builder.build).toEqual('function');
+      await expect(client.stderr).toOutput(
+        'npm WARN deprecated @now/node@1.8.5: "@now/node" is deprecated and will stop receiving updates on December 31, 2020. Please use "@vercel/node" instead.'
       );
     } finally {
       await remove(cwd);

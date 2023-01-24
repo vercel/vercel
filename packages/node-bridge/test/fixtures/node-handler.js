@@ -3,7 +3,7 @@ export default async function (request, response) {
     const chunks = [];
     request.on('data', chunk => chunks.push(chunk));
     request.on('error', reject);
-    request.on('close', () => resolve(Buffer.concat(chunks).toString()));
+    request.on('end', () => resolve(Buffer.concat(chunks).toString()));
   });
   response.setHeader('content-type', 'application/json');
   response.end(

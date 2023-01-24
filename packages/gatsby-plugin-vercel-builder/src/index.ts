@@ -1,6 +1,6 @@
 import { join } from 'path';
 import { getTransformedRoutes } from '@vercel/routing-utils';
-import { pathExists, writeJson, remove } from 'fs-extra';
+import { writeJson, remove } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
 import {
   createServerlessFunctions,
@@ -68,11 +68,6 @@ export async function generateVercelBuildOutputAPI3Output({
 
     await Promise.all(createPromises);
 
-    const vercelConfigPath = `${process.cwd()}/vercel.config.js`;
-    const vercelConfig: Config = (await pathExists(vercelConfigPath))
-      ? require(vercelConfigPath).default
-      : {};
-
     let trailingSlash: boolean | undefined = undefined;
 
     if (gatsbyConfig.trailingSlash === 'always') {
@@ -82,7 +77,6 @@ export async function generateVercelBuildOutputAPI3Output({
     }
 
     const { routes } = getTransformedRoutes({
-      ...vercelConfig,
       trailingSlash,
       redirects: redirects.map(({ fromPath, toPath, isPermanent }) => ({
         source: fromPath,
