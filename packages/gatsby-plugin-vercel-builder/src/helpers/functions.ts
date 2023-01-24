@@ -32,11 +32,7 @@ export async function createServerlessFunctions(
       if (index === 0) {
         // For the first page, create the SSR Serverless Function
         functionName = `${ssrPath}.func`;
-        functionDir = join(
-          '.vercel/output/functions',
-          prefix ?? '',
-          functionName
-        );
+        functionDir = join('.vercel/output/functions', functionName);
 
         await ensureDir(functionDir);
 
