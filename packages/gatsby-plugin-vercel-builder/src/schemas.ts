@@ -55,7 +55,10 @@ const GatsbyRedirectSchema: JSONSchemaType<GatsbyRedirect> = {
   required: ['fromPath', 'toPath'],
 } as const;
 
-export type GatsbyConfig = Pick<IGatsbyConfig, 'trailingSlash'>;
+export type GatsbyConfig = Pick<
+  IGatsbyConfig,
+  'trailingSlash' | 'assetPrefix' | 'pathPrefix'
+>;
 
 const GatsbyConfigSchema: JSONSchemaType<GatsbyConfig> = {
   type: 'object',
@@ -63,6 +66,14 @@ const GatsbyConfigSchema: JSONSchemaType<GatsbyConfig> = {
     trailingSlash: {
       type: 'string',
       enum: ['always', 'never', 'ignore', 'legacy'],
+      nullable: true,
+    },
+    assetPrefix: {
+      type: 'string',
+      nullable: true,
+    },
+    pathPrefix: {
+      type: 'string',
       nullable: true,
     },
   },
