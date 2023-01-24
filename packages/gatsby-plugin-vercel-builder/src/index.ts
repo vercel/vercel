@@ -53,7 +53,7 @@ export async function generateVercelBuildOutputAPI3Output({
       }
     );
 
-    await createStaticDir();
+    await createStaticDir({ prefix: gatsbyConfig.pathPrefix });
 
     const createPromises: Promise<void>[] = [];
 
