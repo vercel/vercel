@@ -17,6 +17,11 @@
       "outputMode": "new-only",
       "outputs": ["dist/**", "gatsby-node.js"]
     },
+    "@vercel/gatsby-plugin-vercel-analytics#build": {
+      "dependsOn": ["^build"],
+      "outputMode": "new-only",
+      "outputs": ["gatsby-browser.js", "web-vitals.js", "index.js"]
+    },
     "vercel#build": {
       "dependsOn": ["^build"],
       "outputMode": "new-only",
