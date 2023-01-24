@@ -2,11 +2,11 @@ import { join } from 'path';
 import { copy, ensureDir } from 'fs-extra';
 
 export async function createStaticDir({ prefix }: { prefix?: string }) {
-  const targetDir = join(process.cwd(), '.vercel', 'output', 'static');
-  await ensureDir(targetDir);
-  const paths = [process.cwd(), 'public'];
+  const paths = [process.cwd(), '.vercel', 'output', 'static'];
   if (prefix) {
     paths.push(prefix);
   }
-  await copy(join(...paths), targetDir);
+  const targetDir = join(...paths);
+  await ensureDir(targetDir);
+  await copy(join(process.cwd(), 'public'), targetDir);
 }
