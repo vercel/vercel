@@ -1,9 +1,9 @@
 name: Cron Update Turbo
 
 on:
-  # Run every 4 hours https://crontab.guru/every-4-hours
+  # Run every week https://crontab.guru/every-week
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: '0 0 * * 0'
 
 jobs:
   create-pull-request:
