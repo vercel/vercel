@@ -58,7 +58,7 @@ export async function generateVercelBuildOutputAPI3Output({
     const createPromises: Promise<void>[] = [];
 
     if (functions.length > 0) {
-      createPromises.push(createAPIRoutes(functions));
+      createPromises.push(createAPIRoutes(functions, gatsbyConfig.pathPrefix));
     }
 
     if (ssrRoutes.length > 0 || dsgRoutes.length > 0) {
@@ -68,7 +68,12 @@ export async function generateVercelBuildOutputAPI3Output({
           gatsbyConfig.pathPrefix
         )
       );
-      createPromises.push(createServerlessFunctions({ ssrRoutes, dsgRoutes }));
+      createPromises.push(
+        createServerlessFunctions(
+          { ssrRoutes, dsgRoutes },
+          gatsbyConfig.pathPrefix
+        )
+      );
     }
 
     await Promise.all(createPromises);

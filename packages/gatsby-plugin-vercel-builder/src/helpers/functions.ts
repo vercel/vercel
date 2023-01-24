@@ -14,16 +14,22 @@ import {
 import { GatsbyFunction } from '../schemas';
 import { Routes } from '../types';
 
-export async function createServerlessFunctions({
-  dsgRoutes,
-  ssrRoutes,
-}: Routes) {
+export async function createServerlessFunctions(
+  { dsgRoutes, ssrRoutes }: Routes,
+  prefix?: string
+) {
   /* Gatsby SSR/DSG on Vercel is enabled through Vercel Serverless Functions.
      This plugin creates one Serverless Function called `_ssr.func` that is used by SSR and DSG pages through symlinks.
      DSG is enabled through prerender functions.
   */
   const functionName = '_ssr.func';
-  const functionDir = join('.vercel', 'output', 'functions', functionName);
+  const functionDir = join(
+    '.vercel',
+    'output',
+    'functions',
+    prefix ?? '',
+    functionName
+  );
   const handlerFile = join(
     __dirname,
     '..',
@@ -69,7 +75,13 @@ export async function createPageDataFunctions(
   /* Gatsby uses /page-data/<path>/page-data.json to fetch data. This plugin creates a
     `_page-data.func` function that dynamically generates this data if it's not available in `static/page-data`. */
   const functionName = '_page-data.func';
-  const functionDir = join('.vercel', 'output', 'functions', functionName);
+  const functionDir = join(
+    '.vercel',
+    'output',
+    'functions',
+    prefix ?? '',
+    functionName
+  );
   const handlerFile = join(
     __dirname,
     '..',
@@ -114,8 +126,11 @@ export async function createPageDataFunctions(
   ]);
 }
 
-export async function createAPIRoutes(functions: GatsbyFunction[]) {
-  const apiDir = join('.vercel', 'output', 'functions', 'api');
+export async function createAPIRoutes(
+  functions: GatsbyFunction[],
+  prefix?: string
+) {
+  const apiDir = join('.vercel', 'output', 'functions', 'api', prefix ?? '');
   await ensureDir(apiDir);
 
   await Promise.allSettled(
