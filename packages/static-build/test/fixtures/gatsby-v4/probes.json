@@ -13,6 +13,14 @@
     {
       "path": "/using-dsg",
       "mustContain": "This page is not created until requested by a user"
+    },
+    {
+      "path": "/page-data/using-ssr/page-data.json",
+      "mustContain": "\"componentChunkName\":\"component---src-pages-using-ssr-js\",\"path\":\"/using-ssr/\""
+    },
+    {
+      "path": "/page-data/using-dsg/page-data.json",
+      "mustContain": "\"componentChunkName\":\"component---src-templates-using-dsg-js\",\"path\":\"/using-dsg\""
     }
   ]
 }

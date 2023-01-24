@@ -41,6 +41,8 @@
     "@vercel/build-utils": "5.9.0",
     "@vercel/frameworks": "1.2.4",
     "@vercel/fs-detectors": "3.7.5",
+    "@vercel/gatsby-plugin-vercel-analytics": "1.0.7",
+    "@vercel/gatsby-plugin-vercel-builder": "1.0.0",
     "@vercel/ncc": "0.24.0",
     "@vercel/routing-utils": "2.1.8",
     "@vercel/static-config": "2.0.11",
