@@ -12,6 +12,8 @@ function noop() {
   return undefined; 
 }
 
+noop();
+
 function getBodyParser(req: VercelRequest, body: Buffer) {
   return function parseBody(): VercelRequestBody {
     if (!req.headers['content-type']) {
