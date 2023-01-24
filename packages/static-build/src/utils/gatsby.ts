@@ -21,7 +21,7 @@ const PLUGIN_VERSIONS = new Map<PluginName, string>([
   ['@vercel/gatsby-plugin-vercel-builder', 'latest'],
 ]);
 
-// For E2E tests, ensure the same version of the plugin is used as the source code
+// Use the tarball URL for E2E tests
 const { VERCEL_CLI_VERSION } = process.env;
 if (VERCEL_CLI_VERSION?.startsWith('https://')) {
   for (const name of PLUGIN_VERSIONS.keys()) {
@@ -29,7 +29,6 @@ if (VERCEL_CLI_VERSION?.startsWith('https://')) {
     PLUGIN_VERSIONS.set(name, url.href);
   }
 }
-console.log(PLUGIN_VERSIONS);
 
 const GATSBY_CONFIG_FILE = 'gatsby-config';
 

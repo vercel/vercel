@@ -32,7 +32,7 @@ export async function generateVercelBuildOutputAPI3Output({
   };
 
   if (validateGatsbyState(state)) {
-    console.log('▲ Creating Vercel build output (nate test)');
+    console.log('▲ Creating Vercel build output');
     await remove(join('.vercel', 'output'));
 
     const { pages, redirects, functions, config: gatsbyConfig } = state;
