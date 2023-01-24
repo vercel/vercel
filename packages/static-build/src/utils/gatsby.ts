@@ -10,25 +10,13 @@ import {
   writePackageJson,
 } from './_shared';
 
+const { VERCEL_CLI_VERSION } = process.env;
+
 const PLUGINS = [
   '@vercel/gatsby-plugin-vercel-analytics',
   '@vercel/gatsby-plugin-vercel-builder',
 ] as const;
 type PluginName = typeof PLUGINS[number];
-
-const PLUGIN_VERSIONS = new Map<PluginName, string>([
-  ['@vercel/gatsby-plugin-vercel-analytics', 'latest'],
-  ['@vercel/gatsby-plugin-vercel-builder', 'latest'],
-]);
-
-// Use the tarball URL for E2E tests
-const { VERCEL_CLI_VERSION } = process.env;
-if (VERCEL_CLI_VERSION?.startsWith('https://')) {
-  for (const name of PLUGIN_VERSIONS.keys()) {
-    const url = new URL(`./${name}.tgz`, VERCEL_CLI_VERSION);
-    PLUGIN_VERSIONS.set(name, url.href);
-  }
-}
 
 const GATSBY_CONFIG_FILE = 'gatsby-config';
 
@@ -109,7 +97,14 @@ async function addGatsbyPackage(
   for (const plugin of plugins) {
     if (!pkgJson.dependencies[plugin]) {
       console.log(`Adding "${plugin}" to \`package.json\` "dependencies"`);
-      pkgJson.dependencies[plugin] = PLUGIN_VERSIONS.get(plugin) ?? 'latest';
+      let version = 'latest';
+
+      // Use the tarball URL for E2E tests
+      if (VERCEL_CLI_VERSION?.startsWith('https://')) {
+        version = new URL(`./${plugin}.tgz`, VERCEL_CLI_VERSION).href;
+      }
+
+      pkgJson.dependencies[plugin] = version;
     }
   }
 
