@@ -10,29 +10,15 @@ import {
 } from '../handlers/build';
 import type { GatsbyFunction, GatsbyPage } from '../schemas';
 
+/**
+ * Gatsby SSR/DSG on Vercel is enabled through Vercel Serverless Functions.
+ * This plugin creates one Serverless Function called `_ssr.func` that is used by SSR and DSG pages through symlinks.
+ * DSG is enabled through prerender functions.
+ */
 export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
-  /* Gatsby SSR/DSG on Vercel is enabled through Vercel Serverless Functions.
-     This plugin creates one Serverless Function called `_ssr.func` that is used by SSR and DSG pages through symlinks.
-     DSG is enabled through prerender functions.
-  */
-  const functionName = '_ssr.func';
-  const functionDir = join('.vercel', 'output', 'functions', functionName);
-  const handlerFile = join(
-    __dirname,
-    '..',
-    'handlers',
-    'templates',
-    './ssr-handler.js'
-  );
-
-  await ensureDir(functionDir);
-
-  await Promise.all([
-    writeHandler({ outDir: functionDir, handlerFile }),
-    copyFunctionLibs({ functionDir }),
-    copyHTMLFiles({ functionDir }),
-    writeVCConfig({ functionDir }),
-  ]);
+  let functionName: string;
+  let functionDir: string;
+  const handlerFile = join(__dirname, '../handlers/templates/ssr-handler.js');
 
   await Promise.all(
     ssrRoutes.map(async (page, index) => {
@@ -40,6 +26,23 @@ export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
 
       // HTML renderer
       const ssrPath = join(pathName, 'index.html');
+      if (index === 0) {
+        // For the first page, create the SSR Serverless Function
+        functionName = `${ssrPath}.func`;
+        functionDir = join('.vercel/output/functions', functionName);
+
+        await ensureDir(functionDir);
+
+        await Promise.all([
+          writeHandler({ outDir: functionDir, handlerFile }),
+          copyFunctionLibs({ functionDir }),
+          copyHTMLFiles({ functionDir }),
+          writeVCConfig({ functionDir }),
+        ]);
+      } else {
+        // If it's not the first page, then symlink to the first function
+        await createSymlink(ssrPath, functionName);
+      }
       if (page.mode === 'DSG') {
         writePrerenderConfig(
           join(
@@ -51,13 +54,13 @@ export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
           index + 1
         );
       }
-      await createSymlink(ssrPath, functionName);
 
       // page-data renderer
       if (!pathName || pathName === '/') {
         pathName = 'index';
       }
       const pageDataPath = join('page-data', pathName, 'page-data.json');
+      await createSymlink(pageDataPath, functionName);
       if (page.mode === 'DSG') {
         writePrerenderConfig(
           join(
@@ -69,7 +72,6 @@ export async function createServerlessFunctions(ssrRoutes: GatsbyPage[]) {
           index + 1
         );
       }
-      await createSymlink(pageDataPath, functionName);
     })
   );
 }
