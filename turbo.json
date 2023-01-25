@@ -32,34 +32,28 @@
       ]
     },
     "test-unit": {
-      "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test-integration-dev": {
-      "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test-integration-cli": {
-      "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test-integration-once": {
-      "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test-next-local": {
-      "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test": {
-      "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     }
   }
 }
