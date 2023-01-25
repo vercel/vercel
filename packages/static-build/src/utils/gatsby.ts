@@ -238,7 +238,7 @@ const gatsbyNode = require(${JSON.stringify(relativeRenamedPath)});
 
 const origOnPostBuild = gatsbyNode.onPostBuild;
 
-export const onPostBuild = async (args, options) => {
+gatsbyNode.onPostBuild = async (args, options) => {
   if (typeof origOnPostBuild === 'function') {
     await origOnPostBuild(args, options);
   }
