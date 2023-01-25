@@ -636,32 +636,38 @@ export const build: BuildV2 = async ({
         debug(`Executing "${buildCommand}"`);
       }
 
-      const found =
-        typeof buildCommand === 'string'
-          ? await execCommand(buildCommand, {
-              ...spawnOpts,
+      try {
+        const found =
+          typeof buildCommand === 'string'
+            ? await execCommand(buildCommand, {
+                ...spawnOpts,
 
-              // Yarn v2 PnP mode may be activated, so force
-              // "node-modules" linker style
-              env: {
-                YARN_NODE_LINKER: 'node-modules',
-                ...spawnOpts.env,
-              },
+                // Yarn v2 PnP mode may be activated, so force
+                // "node-modules" linker style
+                env: {
+                  YARN_NODE_LINKER: 'node-modules',
+                  ...spawnOpts.env,
+                },
 
-              cwd: entrypointDir,
-            })
-          : await runPackageJsonScript(
-              entrypointDir,
-              ['vercel-build', 'now-build', 'build'],
-              spawnOpts
-            );
+                cwd: entrypointDir,
+              })
+            : await runPackageJsonScript(
+                entrypointDir,
+                ['vercel-build', 'now-build', 'build'],
+                spawnOpts
+              );
 
-      if (!found) {
-        throw new Error(
-          `Missing required "${
-            buildCommand || 'vercel-build'
-          }" script in "${entrypoint}"`
-        );
+        if (!found) {
+          throw new Error(
+            `Missing required "${
+              buildCommand || 'vercel-build'
+            }" script in "${entrypoint}"`
+          );
+        }
+      } finally {
+        if (framework?.slug === 'gatsby') {
+          await GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
+        }
       }
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
@@ -778,10 +784,6 @@ export const build: BuildV2 = async ({
 
   if (!config.zeroConfig) {
     message += ' or "build.sh"';
-  }
-
-  if (framework?.slug === 'gatsby') {
-    await GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
   }
 
   throw new Error(message);

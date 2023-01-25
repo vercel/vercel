@@ -353,6 +353,8 @@ export async function cleanupGatsbyFiles(dir: string) {
       ) {
         await fs.rm(generatedFilePath);
         await fs.rename(backupFilePath, generatedFilePath);
+      } else if (await fileExists(generatedFilePath)) {
+        await fs.rm(generatedFilePath);
       }
     }
   }
