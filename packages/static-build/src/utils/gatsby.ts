@@ -150,7 +150,7 @@ async function updateGatsbyConfigMjs(
   const relativeRenamedPath = `.${path.sep}${path.basename(renamedPath)}`;
 
   await fs.writeFile(
-    configPath,
+    configPath.replace(/\.js$/, '.mjs'),
     `import userConfig from ${JSON.stringify(relativeRenamedPath)};
 
 const preferDefault = (m) => (m && m.default) || m;
@@ -235,7 +235,7 @@ async function updateGatsbyNodeMjs(configPath: string) {
   const relativeRenamedPath = `.${path.sep}${path.basename(renamedPath)}`;
 
   await fs.writeFile(
-    configPath,
+    configPath.replace(/\.js$/, '.mjs'),
     `import * as vercelBuilder from ${JSON.stringify(GATSBY_BUILDER_PATH)};
 import * as gatsbyNode from ${JSON.stringify(relativeRenamedPath)};
 
