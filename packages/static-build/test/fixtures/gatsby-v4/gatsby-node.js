@@ -11,5 +11,5 @@ exports.createPages = async ({ actions }) => {
 };
 
 exports.onPostBuild = async () => {
-  await fs.copyFile('asset.txt', 'public/asset.txt');
+  await fs.promises.copyFile('asset.txt', 'public/asset.txt');
 };
