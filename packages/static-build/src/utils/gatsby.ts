@@ -84,8 +84,8 @@ async function updateGatsbyConfig(
     await updateGatsbyConfigMjs(gatsbyConfigPathJs, plugins);
   } else {
     await fs.writeFile(
-      gatsbyConfigPathMjs,
-      `export default ${JSON.stringify({
+      gatsbyConfigPathJs,
+      `module.exports = ${JSON.stringify({
         plugins: Object.values(plugins),
       })}`
     );
@@ -192,7 +192,7 @@ async function updateGatsbyNode(dir: string) {
   } else {
     await fs.writeFile(
       gatsbyNodePathJs,
-      `module.exports = ${JSON.stringify(GATSBY_BUILDER_PATH)};`
+      `module.exports = require(${JSON.stringify(GATSBY_BUILDER_PATH)});`
     );
   }
 }
