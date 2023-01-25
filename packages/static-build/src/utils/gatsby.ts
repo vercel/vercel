@@ -335,3 +335,25 @@ module.exports = gatsbyNode;
 `
   );
 }
+
+export async function cleanupGatsbyFiles(dir: string) {
+  const backup = '.__vercel_builder_backup__';
+  const fileEndings = ['.js', '.ts', '.mjs'];
+
+  for (const fileName of [GATSBY_CONFIG_FILE, GATSBY_NODE_FILE]) {
+    for (const fileEnding of fileEndings) {
+      const backupFile = `${fileName}${fileEnding}${backup}${fileEnding}`;
+      const backupFilePath = path.join(dir, backupFile);
+      const generatedFile = `${fileName}${fileEnding}`;
+      const generatedFilePath = path.join(dir, generatedFile);
+
+      if (
+        (await fileExists(backupFilePath)) &&
+        (await fileExists(generatedFilePath))
+      ) {
+        await fs.rm(generatedFilePath);
+        await fs.rename(backupFilePath, generatedFilePath);
+      }
+    }
+  }
+}

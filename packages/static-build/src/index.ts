@@ -780,6 +780,10 @@ export const build: BuildV2 = async ({
     message += ' or "build.sh"';
   }
 
+  if (framework?.slug === 'gatsby') {
+    await GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
+  }
+
   throw new Error(message);
 };
 
