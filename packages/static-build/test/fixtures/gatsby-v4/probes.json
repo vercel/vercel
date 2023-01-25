@@ -21,6 +21,10 @@
     {
       "path": "/page-data/using-dsg/page-data.json",
       "mustContain": "\"componentChunkName\":\"component---src-templates-using-dsg-js\",\"path\":\"/using-dsg\""
+    },
+    {
+      "path": "/asset.txt",
+      "mustContain": "asset that was added in `onPostBuild`"
     }
   ]
 }
