@@ -259,7 +259,7 @@ async function updateGatsbyNode(dir: string) {
   } else {
     await fs.writeFile(
       gatsbyNodePathJs,
-      `module.exports = require('@vercel/gatsby-plugin-vercel-builder');`
+      `module.exports = require('@vercel/gatsby-plugin-vercel-builder/gatsby-node.js');`
     );
   }
 }
@@ -273,7 +273,7 @@ async function updateGatsbyNodeTs(configPath: string) {
   await fs.writeFile(
     configPath,
     `import type { GatsbyNode } from 'gatsby';
-import * as vercelBuilder from '@vercel/gatsby-plugin-vercel-builder';
+import * as vercelBuilder from '@vercel/gatsby-plugin-vercel-builder/gatsby-node.js';
 import * as gatsbyNode from './gatsby-node.ts.__vercel_builder_backup__.ts';
 
 export * from './gatsby-node.ts.__vercel_builder_backup__.ts';
