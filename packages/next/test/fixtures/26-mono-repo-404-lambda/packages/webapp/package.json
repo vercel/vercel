@@ -1,5 +1,6 @@
 {
-  "private": true,
+  "name": "26-packages-webapp",
+  "version": "0.0.1",
   "engines": {
     "node": "14.x"
   },
