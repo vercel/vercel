@@ -4,11 +4,10 @@ import { writeJson, remove } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
 import {
   createServerlessFunctions,
-  createPageDataFunctions,
   createAPIRoutes,
 } from './helpers/functions';
 import { createStaticDir } from './helpers/static';
-import type { Config, Routes } from './types';
+import type { Config } from './types';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
   exportPath: string;
@@ -37,39 +36,23 @@ export async function generateVercelBuildOutputAPI3Output({
 
     const { pages, redirects, functions, config: gatsbyConfig } = state;
 
-    const { ssrRoutes, dsgRoutes } = pages.reduce<Routes>(
-      (acc, [, cur]) => {
-        if (cur.mode === 'SSR') {
-          acc.ssrRoutes.push(cur.path);
-        } else if (cur.mode === 'DSG') {
-          acc.dsgRoutes.push(cur.path);
-        }
+    const ssrRoutes = pages
+      .map(p => p[1])
+      .filter(page => page.mode === 'SSR' || page.mode === 'DSG');
 
-        return acc;
-      },
-      {
-        ssrRoutes: [],
-        dsgRoutes: [],
-      }
-    );
-
-    await createStaticDir();
-
-    const createPromises: Promise<void>[] = [];
+    const ops: Promise<void>[] = [createStaticDir(gatsbyConfig.pathPrefix)];
 
     if (functions.length > 0) {
-      createPromises.push(createAPIRoutes(functions));
+      ops.push(createAPIRoutes(functions, gatsbyConfig.pathPrefix));
     }
 
-    if (ssrRoutes.length > 0 || dsgRoutes.length > 0) {
-      createPromises.push(createPageDataFunctions({ ssrRoutes, dsgRoutes }));
-      createPromises.push(createServerlessFunctions({ ssrRoutes, dsgRoutes }));
+    if (ssrRoutes.length > 0) {
+      ops.push(createServerlessFunctions(ssrRoutes, gatsbyConfig.pathPrefix));
     }
 
-    await Promise.all(createPromises);
+    await Promise.all(ops);
 
     let trailingSlash: boolean | undefined = undefined;
-
     if (gatsbyConfig.trailingSlash === 'always') {
       trailingSlash = true;
     } else if (gatsbyConfig.trailingSlash === 'never') {

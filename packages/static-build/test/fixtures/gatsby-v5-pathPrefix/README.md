@@ -1,18 +1,13 @@
-# Gatsby
+<p align="center">
+  <a href="https://www.gatsbyjs.com/?utm_source=starter&utm_medium=readme&utm_campaign=minimal-starter">
+    <img alt="Gatsby" src="https://www.gatsbyjs.com/Gatsby-Monogram.svg" width="60" />
+  </a>
+</p>
+<h1 align="center">
+  Gatsby minimal starter
+</h1>
 
-This directory is a brief example of a [Gatsby](https://www.gatsbyjs.org/) app that can be deployed to Vercel with zero configuration.
-
-> **Note:** SSR, DSG, and API Routes [are now supported](https://vercel.com/changelog/improved-support-for-gatsby-sites). We do not currently support some Gatsby v5 features, including Partial Hydration and the Slice API.
-
-## Deploy Your Own
-
-Deploy your own Gatsby project, along with Serverless Functions, with Vercel.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/gatsby&template=gatsby)
-
-_Live Example: https://gatsby.vercel.app_
-
-## Quickstart
+## 🚀 Quick start
 
 1.  **Create a Gatsby site.**
 
@@ -51,3 +46,9 @@ _Live Example: https://gatsby.vercel.app_
     - [Plugin Library](https://www.gatsbyjs.com/plugins?utm_source=starter&utm_medium=readme&utm_campaign=minimal-starter)
 
     - [Cheat Sheet](https://www.gatsbyjs.com/docs/cheat-sheet/?utm_source=starter&utm_medium=readme&utm_campaign=minimal-starter)
+
+## 🚀 Quick start (Gatsby Cloud)
+
+Deploy this starter with one click on [Gatsby Cloud](https://www.gatsbyjs.com/cloud/):
+
+[<img src="https://www.gatsbyjs.com/deploynow.svg" alt="Deploy to Gatsby Cloud">](https://www.gatsbyjs.com/dashboard/deploynow?url=https://github.com/gatsbyjs/gatsby-starter-minimal)

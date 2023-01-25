@@ -1,5 +1,3 @@
-import { GatsbyPage } from './schemas';
-
 export type Config = {
   version: 3;
   routes?: Route[];
@@ -119,8 +117,3 @@ export type PrerenderFunctionConfig = {
   fallback?: string;
   allowQuery?: string[];
 };
-
-export interface Routes {
-  ssrRoutes: Array<GatsbyPage['path']>;
-  dsgRoutes: Array<GatsbyPage['path']>;
-}

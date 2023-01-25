@@ -1,121 +1,97 @@
 import { join } from 'path';
-
 import { ensureDir } from 'fs-extra';
-
 import { createSymlink } from '../utils/symlink';
 import {
   writeHandler,
   writeVCConfig,
   copyFunctionLibs,
-  movePageData,
   copyHTMLFiles,
   writePrerenderConfig,
 } from '../handlers/build';
-import { GatsbyFunction } from '../schemas';
-import { Routes } from '../types';
+import type { GatsbyFunction, GatsbyPage } from '../schemas';
 
-export async function createServerlessFunctions({
-  dsgRoutes,
-  ssrRoutes,
-}: Routes) {
-  /* Gatsby SSR/DSG on Vercel is enabled through Vercel Serverless Functions.
-     This plugin creates one Serverless Function called `_ssr.func` that is used by SSR and DSG pages through symlinks.
-     DSG is enabled through prerender functions.
-  */
-  const functionName = '_ssr.func';
-  const functionDir = join('.vercel', 'output', 'functions', functionName);
-  const handlerFile = join(
-    __dirname,
-    '..',
-    'handlers',
-    'templates',
-    './ssr-handler.js'
-  );
+/**
+ * Gatsby SSR/DSG on Vercel is enabled through Vercel Serverless Functions.
+ * This plugin creates one Serverless Function called `_ssr.func` that is used by SSR and DSG pages through symlinks.
+ * DSG is enabled through prerender functions.
+ */
+export async function createServerlessFunctions(
+  ssrRoutes: GatsbyPage[],
+  prefix?: string
+) {
+  let functionName: string;
+  let functionDir: string;
+  const handlerFile = join(__dirname, '../handlers/templates/ssr-handler.js');
 
-  await ensureDir(functionDir);
+  await Promise.all(
+    ssrRoutes.map(async (page, index) => {
+      let pathName = page.path;
 
-  await Promise.all([
-    writeHandler({ outDir: functionDir, handlerFile }),
-    copyFunctionLibs({ functionDir }),
-    copyHTMLFiles({ functionDir }),
-    writeVCConfig({ functionDir }),
-  ]);
+      // HTML renderer
+      const ssrPath = join(prefix ?? '', pathName, 'index.html');
+      if (index === 0) {
+        // For the first page, create the SSR Serverless Function
+        functionName = `${ssrPath}.func`;
+        functionDir = join('.vercel/output/functions', functionName);
 
-  await Promise.all([
-    ...ssrRoutes.map(async pathName => {
-      const funcPath = join(pathName, 'index.html');
-      return createSymlink(funcPath, functionName);
-    }),
-    ...dsgRoutes.map(async (pathName, index) => {
-      const funcPath = join(pathName, 'index.html');
-      writePrerenderConfig(
-        join(
-          '.vercel',
-          'output',
-          'functions',
-          `${funcPath}.prerender-config.json`
-        ),
-        index + 1
-      );
-      return createSymlink(funcPath, functionName);
-    }),
-  ]);
-}
+        await ensureDir(functionDir);
 
-export async function createPageDataFunctions({
-  dsgRoutes,
-  ssrRoutes,
-}: Routes) {
-  /* Gatsby uses /page-data/<path>/page-data.json to fetch data. This plugin creates a
-    `_page-data.func` function that dynamically generates this data if it's not available in `static/page-data`. */
-  const functionName = '_page-data.func';
-  const functionDir = join('.vercel', 'output', 'functions', functionName);
-  const handlerFile = join(
-    __dirname,
-    '..',
-    'handlers',
-    'templates',
-    './page-data.js'
-  );
+        await Promise.all([
+          writeHandler({ outDir: functionDir, handlerFile }),
+          copyFunctionLibs({ functionDir }),
+          copyHTMLFiles({ functionDir }),
+          writeVCConfig({ functionDir }),
+        ]);
+      } else {
+        // If it's not the first page, then symlink to the first function
+        await createSymlink(ssrPath, functionName);
+      }
 
-  await ensureDir(functionDir);
+      if (page.mode === 'DSG') {
+        writePrerenderConfig(
+          join(
+            '.vercel',
+            'output',
+            'functions',
+            `${ssrPath}.prerender-config.json`
+          ),
+          index + 1
+        );
+      }
 
-  await Promise.all([
-    writeHandler({ outDir: functionDir, handlerFile }),
-    copyFunctionLibs({ functionDir }),
-    movePageData({ functionDir }),
-    writeVCConfig({ functionDir }),
-  ]);
-
-  await Promise.all([
-    ...ssrRoutes.map(async pathName => {
+      // page-data renderer
       if (!pathName || pathName === '/') {
         pathName = 'index';
       }
-      const funcPath = join('page-data', pathName, 'page-data.json');
-      return createSymlink(funcPath, functionName);
-    }),
-    ...dsgRoutes.map(async (pathName, index) => {
-      if (!pathName || pathName === '/') {
-        pathName = 'index';
-      }
-      const funcPath = join('page-data', pathName, 'page-data.json');
-      writePrerenderConfig(
-        join(
-          '.vercel',
-          'output',
-          'functions',
-          `${funcPath}.prerender-config.json`
-        ),
-        index + 1
+
+      const pageDataPath = join(
+        prefix ?? '',
+        'page-data',
+        pathName,
+        'page-data.json'
       );
-      return createSymlink(funcPath, functionName);
-    }),
-  ]);
+      await createSymlink(pageDataPath, functionName);
+
+      if (page.mode === 'DSG') {
+        writePrerenderConfig(
+          join(
+            '.vercel',
+            'output',
+            'functions',
+            `${pageDataPath}.prerender-config.json`
+          ),
+          index + 1
+        );
+      }
+    })
+  );
 }
 
-export async function createAPIRoutes(functions: GatsbyFunction[]) {
-  const apiDir = join('.vercel', 'output', 'functions', 'api');
+export async function createAPIRoutes(
+  functions: GatsbyFunction[],
+  prefix?: string
+) {
+  const apiDir = join('.vercel', 'output', 'functions', 'api', prefix ?? '');
   await ensureDir(apiDir);
 
   await Promise.allSettled(
