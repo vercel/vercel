@@ -82,7 +82,7 @@ async function updateGatsbyConfig(dir: string, plugins: string[]) {
   } else if (await fileExists(gatsbyConfigPathMjs)) {
     await updateGatsbyConfigMjs(gatsbyConfigPathMjs, plugins);
   } else if (await fileExists(gatsbyConfigPathJs)) {
-    await updateGatsbyConfigMjs(gatsbyConfigPathJs, plugins);
+    await updateGatsbyConfigJs(gatsbyConfigPathJs, plugins);
   } else {
     await fs.writeFile(
       gatsbyConfigPathJs,
@@ -175,6 +175,45 @@ export default vercelConfig;
   );
 }
 
+async function updateGatsbyConfigJs(
+  configPath: string,
+  plugins: string[]
+): Promise<void> {
+  const renamedPath = `${configPath}.__vercel_builder_backup__.js`;
+  if (!(await fileExists(renamedPath))) {
+    await fs.rename(configPath, renamedPath);
+  }
+
+  await fs.writeFile(
+    configPath,
+    `const userConfig = require("./gatsby-config.js.__vercel_builder_backup__.js");
+
+const preferDefault = m => (m && m.default) || m;
+
+const vercelConfig = Object.assign(
+  {},
+  preferDefault(userConfig)
+);
+
+if (!vercelConfig.plugins) {
+  vercelConfig.plugins = [];
+}
+
+for (const plugin of ${JSON.stringify(plugins)}) {
+  const hasPlugin = vercelConfig.plugins.find(
+    (p) => p && (p === plugin || p.resolve === plugin)
+  );
+
+  if (!hasPlugin) {
+    vercelConfig.plugins = vercelConfig.plugins.slice();
+    vercelConfig.plugins.push(plugin);
+  }
+}
+module.exports = vercelConfig;
+`
+  );
+}
+
 async function updateGatsbyNode(dir: string) {
   const gatsbyNodePathTs = path.join(dir, `${GATSBY_NODE_FILE}.ts`);
   const gatsbyNodePathMjs = path.join(dir, `${GATSBY_NODE_FILE}.mjs`);
@@ -203,9 +242,9 @@ async function updateGatsbyNodeTs(configPath: string) {
     configPath,
     `import type { GatsbyNode } from 'gatsby';
 import * as vercelBuilder from '@vercel/gatsby-plugin-vercel-builder/gatsby-node.js';
-import * as gatsbyNode from './gatsby-node.mjs.__vercel_builder_backup__.mjs';
+import * as gatsbyNode from './gatsby-node.ts.__vercel_builder_backup__.ts';
 
-export * from './gatsby-node.mjs.__vercel_builder_backup__.mjs';
+export * from './gatsby-node.ts.__vercel_builder_backup__.ts';
 
 export const onPostBuild: GatsbyNode['onPostBuild'] = async (args, options) => {
   if (typeof (gatsbyNode as any).onPostBuild === 'function') {
