@@ -184,18 +184,15 @@ export default vercelConfig;
 
 async function updateGatsbyNode(dir: string) {
   const gatsbyNodePathTs = path.join(dir, `${GATSBY_NODE_FILE}.ts`);
-  const gatsbyNodePathMjs = path.join(dir, `${GATSBY_NODE_FILE}.mjs`);
   const gatsbyNodePathJs = path.join(dir, `${GATSBY_NODE_FILE}.js`);
   if (await fileExists(gatsbyNodePathTs)) {
     await updateGatsbyNodeTs(gatsbyNodePathTs);
-  } else if (await fileExists(gatsbyNodePathMjs)) {
-    await updateGatsbyNodeMjs(gatsbyNodePathMjs);
   } else if (await fileExists(gatsbyNodePathJs)) {
-    await updateGatsbyNodeMjs(gatsbyNodePathJs);
+    await updateGatsbyNodeJs(gatsbyNodePathJs);
   } else {
     await fs.writeFile(
-      gatsbyNodePathMjs,
-      `export * from ${JSON.stringify(GATSBY_BUILDER_PATH)};`
+      gatsbyNodePathJs,
+      `module.exports = ${JSON.stringify(GATSBY_BUILDER_PATH)};`
     );
   }
 }
@@ -225,7 +222,7 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async (args, options) => {
   );
 }
 
-async function updateGatsbyNodeMjs(configPath: string) {
+async function updateGatsbyNodeJs(configPath: string) {
   const renamedPath = `${configPath}.__vercel_builder_backup__${path.extname(
     configPath
   )}`;
@@ -235,18 +232,20 @@ async function updateGatsbyNodeMjs(configPath: string) {
   const relativeRenamedPath = `.${path.sep}${path.basename(renamedPath)}`;
 
   await fs.writeFile(
-    configPath.replace(/\.js$/, '.mjs'),
-    `import * as vercelBuilder from ${JSON.stringify(GATSBY_BUILDER_PATH)};
-import * as gatsbyNode from ${JSON.stringify(relativeRenamedPath)};
+    configPath,
+    `const vercelBuilder = require(${JSON.stringify(GATSBY_BUILDER_PATH)});
+const gatsbyNode = require(${JSON.stringify(relativeRenamedPath)});
 
-export * from ${JSON.stringify(relativeRenamedPath)};
+const origOnPostBuild = gatsbyNode.onPostBuild;
 
 export const onPostBuild = async (args, options) => {
-  if (typeof gatsbyNode.onPostBuild === 'function') {
-    await gatsbyNode.onPostBuild(args, options);
+  if (typeof origOnPostBuild === 'function') {
+    await origOnPostBuild(args, options);
   }
   await vercelBuilder.onPostBuild(args, options);
 };
+
+module.exports = gatsbyNode;
 `
   );
 }
