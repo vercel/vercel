@@ -127,7 +127,7 @@ for (const plugin of ${JSON.stringify(plugins)}) {
 
   if (!hasPlugin) {
     vercelConfig.plugins = vercelConfig.plugins.slice();
-    vercelConfig.plugins.push(injectedPlugins[plugin]);
+    vercelConfig.plugins.push(plugin);
   }
 }
 
@@ -170,7 +170,7 @@ for (const plugin of ${JSON.stringify(plugins)}) {
 
   if (!hasPlugin) {
     vercelConfig.plugins = vercelConfig.plugins.slice();
-    vercelConfig.plugins.push(injectedPlugins[plugin]);
+    vercelConfig.plugins.push(plugin);
   }
 }
 
