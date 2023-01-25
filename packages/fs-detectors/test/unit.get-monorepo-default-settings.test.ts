@@ -40,7 +40,7 @@ describe('getMonorepoDefaultSettings', () => {
         monorepoManager: 'turbo',
         buildCommand:
           'cd ../.. && npx turbo run build --filter={packages/app-1}...',
-        installCommand: isNpm ? 'cd ../.. && npm install' : 'yarn install',
+        installCommand: isNpm ? 'npm install --prefix=../..' : 'yarn install',
         commandForIgnoringBuildStep: 'npx turbo-ignore',
       },
       nx: {

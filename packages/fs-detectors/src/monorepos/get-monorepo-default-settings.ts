@@ -69,7 +69,7 @@ export async function getMonorepoDefaultSettings(
       buildCommand: `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`,
       installCommand:
         packageManager === 'npm'
-          ? `cd ${relativeToRoot} && ${packageManager} install`
+          ? `${packageManager} install --prefix=${relativeToRoot}`
           : `${packageManager} install`,
       commandForIgnoringBuildStep: `npx turbo-ignore`,
     };
