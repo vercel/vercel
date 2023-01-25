@@ -511,6 +511,10 @@ export const build: BuildV2 = async ({
       }
     }
 
+    if (framework?.slug === 'gatsby') {
+      await GatsbyUtils.createPluginSymlinks(entrypointDir);
+    }
+
     let gemHome: string | undefined = undefined;
     const pathList = [];
 
