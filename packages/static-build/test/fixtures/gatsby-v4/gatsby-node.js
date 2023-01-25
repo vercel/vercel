@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 exports.createPages = async ({ actions }) => {
   const { createPage } = actions;
   createPage({
@@ -8,3 +10,6 @@ exports.createPages = async ({ actions }) => {
   });
 };
 
+exports.onPostBuild = async () => {
+  await fs.copyFile('asset.txt', 'public/asset.txt');
+};
