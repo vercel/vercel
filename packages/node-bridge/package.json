@@ -18,14 +18,13 @@
   ],
   "scripts": {
     "build": "node build.js",
-    "test": "vitest run --reporter=verbose",
+    "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test"
   },
   "devDependencies": {
     "@edge-runtime/node-utils": "1.0.0",
     "@types/aws-lambda": "8.10.19",
     "@types/node": "14.18.33",
-    "@vitest/coverage-c8": "0.28.1",
     "content-type": "1.0.4",
     "cookie": "0.4.0",
     "etag": "1.8.1",
@@ -33,7 +32,6 @@
     "fs-extra": "10.0.0",
     "jsonlines": "0.1.1",
     "test-listen": "1.1.0",
-    "typescript": "4.3.4",
-    "vitest": "0.28.1"
+    "typescript": "4.3.4"
   }
 }

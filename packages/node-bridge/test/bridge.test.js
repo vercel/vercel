@@ -1,31 +1,26 @@
-import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
-import crypto from 'crypto';
-import jsonlines from 'jsonlines';
-import { Server } from 'http';
-import { Bridge } from '../bridge';
-import { runServer } from './run-test-server';
-import { runTcpServer } from './run-test-server';
+const assert = require('assert');
+const crypto = require('crypto');
+const jsonlines = require('jsonlines');
+const { Server } = require('http');
+const { Bridge } = require('../bridge');
+const { runServer } = require('./run-test-server');
+const { runTcpServer } = require('./run-test-server');
 
-beforeEach(() => vi.clearAllMocks());
-// comment .mockImplementation(() => {}); to see error in test logs
-const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-let server;
-afterEach(() => server?.close());
-
-it('port binding', async () => {
-  server = new Server();
+test('port binding', async () => {
+  const server = new Server();
   const bridge = new Bridge(server);
   bridge.listen();
 
   // Test port binding
   const info = await bridge.listening;
-  expect(info.address).toEqual('127.0.0.1');
-  expect(info.port).toBeTypeOf('number');
+  assert.strictEqual(info.address, '127.0.0.1');
+  assert.strictEqual(typeof info.port, 'number');
+
+  server.close();
 });
 
-it('`APIGatewayProxyEvent` normalizing', async () => {
-  server = new Server((req, res) =>
+test('`APIGatewayProxyEvent` normalizing', async () => {
+  const server = new Server((req, res) =>
     res.end(
       JSON.stringify({
         method: req.method,
@@ -46,18 +41,19 @@ it('`APIGatewayProxyEvent` normalizing', async () => {
     },
     context
   );
-  expect(result.encoding).toEqual('base64');
-  expect(result.statusCode).toEqual(200);
-  expect(JSON.parse(Buffer.from(result.body, 'base64').toString())).toEqual({
-    method: 'GET',
-    path: '/apigateway',
-    headers: expect.objectContaining({ foo: 'bar' }),
-  });
-  expect(context.callbackWaitsForEmptyEventLoop).toBe(false);
+  assert.strictEqual(result.encoding, 'base64');
+  assert.strictEqual(result.statusCode, 200);
+  const body = JSON.parse(Buffer.from(result.body, 'base64').toString());
+  assert.strictEqual(body.method, 'GET');
+  assert.strictEqual(body.path, '/apigateway');
+  assert.strictEqual(body.headers.foo, 'bar');
+  assert.strictEqual(context.callbackWaitsForEmptyEventLoop, false);
+
+  server.close();
 });
 
-it('`NowProxyEvent` normalizing', async () => {
-  server = new Server((req, res) =>
+test('`NowProxyEvent` normalizing', async () => {
+  const server = new Server((req, res) =>
     res.end(
       JSON.stringify({
         method: req.method,
@@ -81,19 +77,19 @@ it('`NowProxyEvent` normalizing', async () => {
     },
     context
   );
+  assert.strictEqual(result.encoding, 'base64');
+  assert.strictEqual(result.statusCode, 200);
+  const body = JSON.parse(Buffer.from(result.body, 'base64').toString());
+  assert.strictEqual(body.method, 'POST');
+  assert.strictEqual(body.path, '/nowproxy');
+  assert.strictEqual(body.headers.foo, 'baz');
+  assert.strictEqual(context.callbackWaitsForEmptyEventLoop, false);
 
-  expect(result.encoding).toEqual('base64');
-  expect(result.statusCode).toEqual(200);
-  expect(JSON.parse(Buffer.from(result.body, 'base64').toString())).toEqual({
-    method: 'POST',
-    path: '/nowproxy',
-    headers: expect.objectContaining({ foo: 'baz' }),
-  });
-  expect(context.callbackWaitsForEmptyEventLoop).toBe(false);
+  server.close();
 });
 
-it('multi-payload handling', async () => {
-  server = new Server((req, res) => {
+test('multi-payload handling', async () => {
+  const server = new Server((req, res) => {
     if (req.url === '/redirect') {
       res.setHeader('Location', '/somewhere');
       res.statusCode = 307;
@@ -141,11 +137,10 @@ it('multi-payload handling', async () => {
     },
     context
   );
-
-  expect(result.encoding).toEqual('base64');
-  expect(result.statusCode).toEqual(200);
-  expect(result.headers).toHaveProperty(
-    'content-type',
+  assert.strictEqual(result.encoding, 'base64');
+  assert.strictEqual(result.statusCode, 200);
+  assert.strictEqual(
+    result.headers['content-type'],
     'multipart/mixed; boundary="payload-separator"'
   );
   const bodies = [];
@@ -167,40 +162,46 @@ it('multi-payload handling', async () => {
 
   // ensure content-type is always specified as is required for
   // proper parsing of the multipart body
-  expect(
-    payloadParts.some(part => part.includes('content-type: text/plain'))
-  ).toBeTruthy();
+  assert(payloadParts.some(part => part.includes('content-type: text/plain')));
 
-  expect(bodies).toEqual([
-    {
-      method: 'GET',
-      path: '/nowproxy',
-      headers: expect.objectContaining({ foo: 'baz' }),
-    },
-    {
-      method: 'GET',
-      path: '/_next/data/build-id/nowproxy.json',
-      headers: expect.objectContaining({ foo: 'baz' }),
-    },
-    '/somewhere',
-  ]);
-  expect(result.headers).toMatchObject({
-    'x-vercel-payload-3-status': '307',
-    'x-vercel-payload-1-content-type': 'text/html',
-    'x-vercel-payload-2-content-type': 'application/json',
-    'x-vercel-payload-3-location': '/somewhere',
-  });
-  expect(result.headers).not.toHaveProperty('x-vercel-payload-2-status');
-  expect(result.headers).not.toHaveProperty('x-vercel-payload-1-status');
-  expect(result.headers).not.toHaveProperty('x-vercel-payload-3-content-type');
-  expect(result.headers).not.toHaveProperty('x-vercel-payload-2-location');
-  expect(context.callbackWaitsForEmptyEventLoop).toBe(false);
+  assert.strictEqual(bodies[0].method, 'GET');
+  assert.strictEqual(bodies[0].path, '/nowproxy');
+  assert.strictEqual(bodies[0].headers.foo, 'baz');
+  assert.strictEqual(bodies[1].method, 'GET');
+  assert.strictEqual(bodies[1].path, '/_next/data/build-id/nowproxy.json');
+  assert.strictEqual(bodies[1].headers.foo, 'baz');
+  assert.strictEqual(bodies[2], '/somewhere');
+  assert.strictEqual(result.headers['x-vercel-payload-3-status'], '307');
+  assert.strictEqual(result.headers['x-vercel-payload-2-status'], undefined);
+  assert.strictEqual(result.headers['x-vercel-payload-1-status'], undefined);
+  assert.strictEqual(
+    result.headers['x-vercel-payload-1-content-type'],
+    'text/html'
+  );
+  assert.strictEqual(
+    result.headers['x-vercel-payload-2-content-type'],
+    'application/json'
+  );
+  assert.strictEqual(
+    result.headers['x-vercel-payload-3-content-type'],
+    undefined
+  );
+  assert.strictEqual(
+    result.headers['x-vercel-payload-3-location'],
+    '/somewhere'
+  );
+  assert.strictEqual(result.headers['x-vercel-payload-2-location'], undefined);
+  assert.strictEqual(context.callbackWaitsForEmptyEventLoop, false);
+
+  server.close();
 });
 
-it('consumeEvent', async () => {
-  const mockListener = vi.fn((_, res) => res.end('hello'));
+test('consumeEvent', async () => {
+  const mockListener = jest.fn((_, res) => {
+    res.end('hello');
+  });
 
-  server = new Server(mockListener);
+  const server = new Server(mockListener);
   const bridge = new Bridge(server, true);
   bridge.listen();
 
@@ -229,12 +230,16 @@ it('consumeEvent', async () => {
   // an event can't be consumed multiple times
   // to avoid memory leaks
   expect(bridge.consumeEvent(reqId)).toBeUndefined();
+
+  server.close();
 });
 
-it('consumeEvent and handle decoded path', async () => {
-  const mockListener = vi.fn((_, res) => res.end('hello'));
+test('consumeEvent and handle decoded path', async () => {
+  const mockListener = jest.fn((_, res) => {
+    res.end('hello');
+  });
 
-  server = new Server(mockListener);
+  const server = new Server(mockListener);
   const bridge = new Bridge(server, true);
   bridge.listen();
 
@@ -263,10 +268,12 @@ it('consumeEvent and handle decoded path', async () => {
   // an event can't be consumed multiple times
   // to avoid memory leaks
   expect(bridge.consumeEvent(reqId)).toBeUndefined();
+
+  server.close();
 });
 
-it('invalid request headers', async () => {
-  server = new Server((req, res) =>
+test('invalid request headers', async () => {
+  const server = new Server((req, res) =>
     res.end(
       JSON.stringify({
         method: req.method,
@@ -290,23 +297,19 @@ it('invalid request headers', async () => {
     },
     context
   );
-  expect(result.encoding).toEqual('base64');
-  expect(result.statusCode).toEqual(200);
+  assert.strictEqual(result.encoding, 'base64');
+  assert.strictEqual(result.statusCode, 200);
   const body = JSON.parse(Buffer.from(result.body, 'base64').toString());
-  expect(body).toEqual({
-    method: 'GET',
-    path: '/nowproxy',
-    headers: expect.objectContaining({ ok: 'true' }),
-  });
-  expect(body.headers).not.toHaveProperty('foo');
-  expect(context.callbackWaitsForEmptyEventLoop).toBe(false);
+  assert.strictEqual(body.method, 'GET');
+  assert.strictEqual(body.path, '/nowproxy');
+  assert.strictEqual(body.headers.ok, 'true');
+  assert(!body.headers.foo);
+  assert.strictEqual(context.callbackWaitsForEmptyEventLoop, false);
 
-  expect(error).nthCalledWith(1, 'Skipping HTTP request header: "foo: baz\n"');
-  expect(error).nthCalledWith(2, 'Invalid character in header content ["foo"]');
-  expect(error).toBeCalledTimes(2);
+  server.close();
 });
 
-describe('given `NowProxyEvent` proxy server', () => {
+test('`NowProxyEvent` proxy streaming with a sync handler', async () => {
   const cipherParams = {
     cipher: 'aes-256-ctr',
     cipherIV: crypto.randomBytes(16),
@@ -314,143 +317,171 @@ describe('given `NowProxyEvent` proxy server', () => {
   };
 
   const effects = {
+    callbackPayload: undefined,
+    callbackStream: undefined,
+  };
+
+  const { deferred, resolve } = createDeferred();
+
+  const httpServer = await runServer({
+    handler: (req, res) => {
+      const chunks = [];
+      req.on('data', chunk => {
+        chunks.push(chunk.toString());
+      });
+      req.on('close', () => {
+        effects.callbackPayload = chunks;
+        res.writeHead(200, 'OK', { 'content-type': 'application/json' });
+        res.end();
+        resolve();
+      });
+    },
+  });
+
+  const tcpServerCallback = await runTcpServer({
+    cipherParams,
+    effects,
+    httpServer,
+  });
+
+  const server = new Server((req, res) => {
+    res.setHeader('content-type', 'text/html');
+    res.end('hello');
+  });
+
+  const bridge = new Bridge(server);
+  bridge.listen();
+  const context = { callbackWaitsForEmptyEventLoop: true };
+  const result = await bridge.launcher(
+    {
+      Action: 'Invoke',
+      body: JSON.stringify({
+        method: 'POST',
+        responseCallbackCipher: cipherParams.cipher,
+        responseCallbackCipherIV: cipherParams.cipherIV.toString('base64'),
+        responseCallbackCipherKey: cipherParams.cipherKey.toString('base64'),
+        responseCallbackStream: 'abc',
+        responseCallbackUrl: String(tcpServerCallback.url),
+        headers: { foo: 'bar' },
+        path: '/nowproxy',
+        body: 'body=1',
+      }),
+    },
+    context
+  );
+
+  await deferred;
+
+  expect(result).toEqual({});
+  expect(context.callbackWaitsForEmptyEventLoop).toEqual(false);
+  expect(effects.callbackStream).toEqual('abc');
+  expect(effects.callbackPayload).toEqual(['hello']);
+
+  server.close();
+  await httpServer.close();
+  await tcpServerCallback.close();
+});
+
+test('`NowProxyEvent` proxy streaming with an async handler', async () => {
+  const effects = {
     callbackHeaders: undefined,
     callbackMethod: undefined,
     callbackPayload: undefined,
     callbackStream: undefined,
   };
 
-  let deferred;
-  let resolve;
-  let httpServer;
-  let tcpServerCallback;
+  const cipherParams = {
+    cipher: 'aes-256-ctr',
+    cipherIV: crypto.randomBytes(16),
+    cipherKey: crypto.randomBytes(32),
+  };
 
-  beforeEach(async () => {
-    const jsonParser = jsonlines.parse();
-
-    httpServer = await runServer({
-      handler: (req, res) => {
-        const chunks = [];
-        if (
-          req.headers['x-vercel-header-content-type'] === 'application/json'
-        ) {
-          req.pipe(jsonParser);
-          jsonParser.on('data', chunk => chunks.push(chunk));
-        } else {
-          req.on('data', chunk => chunks.push(chunk.toString()));
-        }
-        req.on('close', () => {
-          effects.callbackMethod = req.method;
-          effects.callbackHeaders = req.headers;
-          effects.callbackPayload = chunks;
-          res.writeHead(200, 'OK', { 'content-type': 'application/json' });
-          res.end();
-          resolve();
-        });
-      },
-    });
-
-    tcpServerCallback = await runTcpServer({
-      cipherParams,
-      effects,
-      httpServer,
-    });
-
-    deferred = new Promise(_resolve => {
-      resolve = _resolve;
-    });
-  });
-
-  afterEach(async () => {
-    await httpServer.close();
-    await tcpServerCallback.close();
-  });
-
-  it('streams with a sync handler', async () => {
-    server = new Server((req, res) => {
-      res.setHeader('content-type', 'text/html');
-      res.end('hello');
-    });
-
-    const bridge = new Bridge(server);
-    bridge.listen();
-    const context = { callbackWaitsForEmptyEventLoop: true };
-    const result = await bridge.launcher(
-      {
-        Action: 'Invoke',
-        body: JSON.stringify({
-          method: 'POST',
-          responseCallbackCipher: cipherParams.cipher,
-          responseCallbackCipherIV: cipherParams.cipherIV.toString('base64'),
-          responseCallbackCipherKey: cipherParams.cipherKey.toString('base64'),
-          responseCallbackStream: 'abc',
-          responseCallbackUrl: String(tcpServerCallback.url),
-          headers: { foo: 'bar' },
-          path: '/nowproxy',
-          body: 'body=1',
-        }),
-      },
-      context
-    );
-
-    await deferred;
-
-    expect(result).toEqual({});
-    expect(context.callbackWaitsForEmptyEventLoop).toEqual(false);
-    expect(effects.callbackStream).toEqual('abc');
-    expect(effects.callbackPayload).toEqual(['hello']);
-  });
-
-  it('streams with an async handler', async () => {
-    const jsonStringifier = jsonlines.stringify();
-    server = new Server((req, res) => {
-      res.setHeader('x-test', 'hello');
-      res.setHeader('content-type', 'application/json');
-      jsonStringifier.pipe(res);
-      jsonStringifier.write({ method: req.method });
-      jsonStringifier.write({ path: req.url });
-      setTimeout(() => {
-        jsonStringifier.write({ headers: req.headers });
+  const { deferred, resolve } = createDeferred();
+  const jsonParser = jsonlines.parse();
+  const httpServer = await runServer({
+    handler: (req, res) => {
+      const chunks = [];
+      req.pipe(jsonParser);
+      jsonParser.on('data', chunk => {
+        chunks.push(chunk);
+      });
+      req.on('close', () => {
+        effects.callbackMethod = req.method;
+        effects.callbackHeaders = req.headers;
+        effects.callbackPayload = chunks;
+        res.writeHead(200, 'OK', { 'content-type': 'application/json' });
         res.end();
-      }, 100);
-    });
-
-    const bridge = new Bridge(server);
-    bridge.listen();
-    const context = { callbackWaitsForEmptyEventLoop: true };
-    const result = await bridge.launcher(
-      {
-        Action: 'Invoke',
-        body: JSON.stringify({
-          method: 'POST',
-          responseCallbackCipher: cipherParams.cipher,
-          responseCallbackCipherIV: cipherParams.cipherIV.toString('base64'),
-          responseCallbackCipherKey: cipherParams.cipherKey.toString('base64'),
-          responseCallbackStream: 'abc',
-          responseCallbackUrl: String(tcpServerCallback.url),
-          headers: { foo: 'bar' },
-          path: '/nowproxy',
-          body: 'body=1',
-        }),
-      },
-      context
-    );
-
-    await deferred;
-
-    expect(result).toEqual({});
-    expect(context.callbackWaitsForEmptyEventLoop).toEqual(false);
-    expect(effects.callbackStream).toEqual('abc');
-    expect(effects.callbackMethod).toEqual('POST');
-    expect(effects.callbackHeaders).toMatchObject({
-      'x-vercel-status-code': '200',
-      'x-vercel-header-x-test': 'hello',
-      'x-vercel-header-content-type': 'application/json',
-    });
-    expect(effects.callbackPayload).toMatchObject([
-      { method: 'POST' },
-      { path: '/nowproxy' },
-      { headers: { foo: 'bar' } },
-    ]);
+        resolve();
+      });
+    },
   });
+
+  const tcpServerCallback = await runTcpServer({
+    cipherParams,
+    httpServer,
+    effects,
+  });
+
+  const jsonStringifier = jsonlines.stringify();
+  const server = new Server((req, res) => {
+    res.setHeader('x-test', 'hello');
+    res.setHeader('content-type', 'text/html');
+    jsonStringifier.pipe(res);
+    jsonStringifier.write({ method: req.method });
+    jsonStringifier.write({ path: req.url });
+    setTimeout(() => {
+      jsonStringifier.write({ headers: req.headers });
+      res.end();
+    }, 100);
+  });
+
+  const bridge = new Bridge(server);
+  bridge.listen();
+  const context = { callbackWaitsForEmptyEventLoop: true };
+  const result = await bridge.launcher(
+    {
+      Action: 'Invoke',
+      body: JSON.stringify({
+        method: 'POST',
+        responseCallbackCipher: cipherParams.cipher,
+        responseCallbackCipherIV: cipherParams.cipherIV.toString('base64'),
+        responseCallbackCipherKey: cipherParams.cipherKey.toString('base64'),
+        responseCallbackStream: 'abc',
+        responseCallbackUrl: String(tcpServerCallback.url),
+        headers: { foo: 'bar' },
+        path: '/nowproxy',
+        body: 'body=1',
+      }),
+    },
+    context
+  );
+
+  await deferred;
+
+  expect(result).toEqual({});
+  expect(context.callbackWaitsForEmptyEventLoop).toEqual(false);
+  expect(effects.callbackStream).toEqual('abc');
+  expect(effects.callbackMethod).toEqual('POST');
+  expect(effects.callbackHeaders).toMatchObject({
+    'x-vercel-status-code': '200',
+    'x-vercel-header-x-test': 'hello',
+    'x-vercel-header-content-type': 'text/html',
+  });
+  expect(effects.callbackPayload).toMatchObject([
+    { method: 'POST' },
+    { path: '/nowproxy' },
+    { headers: { foo: 'bar' } },
+  ]);
+
+  server.close();
+  httpServer.close();
+  tcpServerCallback.close();
 });
+
+function createDeferred() {
+  let resolve;
+  const deferred = new Promise(_resolve => {
+    resolve = _resolve;
+  });
+  return { deferred, resolve };
+}
