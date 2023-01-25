@@ -38,6 +38,7 @@ function getKillServer(server) {
     });
   };
 }
+exports.getKillServer = getKillServer;
 
 exports.runTcpServer = async function runTcpServer({
   effects,

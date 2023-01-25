@@ -825,7 +825,7 @@ importers:
 
   packages/node-bridge:
     specifiers:
-      '@edge-runtime/node-utils': 1.0.0
+      '@edge-runtime/node-utils': 2.0.0
       '@types/aws-lambda': 8.10.19
       '@types/node': 14.18.33
       content-type: 1.0.4
@@ -837,7 +837,7 @@ importers:
       test-listen: 1.1.0
       typescript: 4.3.4
     devDependencies:
-      '@edge-runtime/node-utils': 1.0.0
+      '@edge-runtime/node-utils': 2.0.0
       '@types/aws-lambda': 8.10.19
       '@types/node': 14.18.33
       content-type: 1.0.4
@@ -1241,7 +1241,7 @@ packages:
       '@babel/core': ^7.0.0
     dependencies:
       '@babel/compat-data': 7.20.10
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-validator-option': 7.18.6
       browserslist: 4.21.4
       lru-cache: 5.1.1
@@ -1746,7 +1746,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
     dev: true
 
@@ -1876,7 +1876,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
     dev: true
 
@@ -1885,7 +1885,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
     dev: true
 
@@ -2636,8 +2636,8 @@ packages:
       jest-util: 28.1.3
     dev: true
 
-  /@edge-runtime/node-utils/1.0.0:
-    resolution: {integrity: sha512-0VtiT0VmO+2w1czXooEaRVU4yQ5R3aDLG3NTdwSmhCi0gEds0iHpWKXVYq+aW0yn0xhl3tdEMN5bOFsLIWYI0Q==}
+  /@edge-runtime/node-utils/2.0.0:
+    resolution: {integrity: sha512-XG2mZq06HlXc2P2KagG1MWkHBSz902RFPkbwTzZB6Vmho+18f3OHiHM7cbmvi4MkFudMTRgscvXcvi28PL4Hcw==}
     engines: {node: '>=14'}
     dev: true
 
