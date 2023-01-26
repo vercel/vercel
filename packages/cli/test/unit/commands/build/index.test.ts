@@ -1216,25 +1216,26 @@ describe('build', () => {
     };
 
     describe.each([
-      'nx',
-      'nx-package-config',
-      'nx-project-and-package-config-1',
-      'nx-project-and-package-config-2',
-      'nx-project-config',
+      ['nx', 'app-12', false],
+      ['nx-package-config', 'app-11', false],
+      ['nx-project-and-package-config-1', 'app-10', false],
+      ['nx-project-and-package-config-2', 'app-9', false],
+      ['nx-project-config', 'app-8', false],
       // 'rush',
-      'turbo',
-      'turbo-package-config',
-    ])('fixture: %s', fixture => {
+      ['turbo', 'app-14', false],
+      ['turbo-package-config', 'app-13', false],
+      ['turbo-npm', 'app-15', true],
+    ])('fixture: %s', (fixture, packageName, isNpm) => {
       const monorepoManagerMap: Record<string, Record<string, string>> = {
         turbo: {
           name: 'Turbo',
-          buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
-          installCommand: 'yarn install',
+          buildCommand: `cd ../.. && npx turbo run build --filter=${packageName}...`,
+          installCommand: isNpm ? 'npm install --prefix=../..' : 'yarn install',
           ignoreCommand: 'npx turbo-ignore',
         },
         nx: {
           name: 'Nx',
-          buildCommand: 'cd ../.. && npx nx build app-1',
+          buildCommand: `cd ../.. && npx nx build ${packageName}`,
           installCommand: 'yarn install',
         },
         // rush: {

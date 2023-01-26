@@ -26,26 +26,25 @@ describe('getMonorepoDefaultSettings', () => {
   });
 
   test.each([
-    ['turbo', 'turbo', false],
-    ['turbo-package-config', 'turbo', false],
-    ['turbo-npm', 'turbo', true],
-    ['nx', 'nx', false],
-    ['nx-package-config', 'nx', false],
-    ['nx-project-and-package-config-1', 'nx', false],
-    ['nx-project-and-package-config-2', 'nx', false],
-    ['nx-project-config', 'nx', false],
-  ])('fixture %s', async (fixture, expectedResultKey, isNpm) => {
+    ['turbo', 'turbo', false, 'app-14'],
+    ['turbo-package-config', 'turbo', false, 'app-13'],
+    ['turbo-npm', 'turbo', true, 'app-15'],
+    ['nx', 'nx', false, 'app-12'],
+    ['nx-package-config', 'nx', false, 'app-11'],
+    ['nx-project-and-package-config-1', 'nx', false, 'app-10'],
+    ['nx-project-and-package-config-2', 'nx', false, 'app-9'],
+    ['nx-project-config', 'nx', false, 'app-8'],
+  ])('fixture %s', async (fixture, expectedResultKey, isNpm, packageName) => {
     const expectedResultMap: Record<string, Record<string, string>> = {
       turbo: {
         monorepoManager: 'turbo',
-        buildCommand:
-          'cd ../.. && npx turbo run build --filter={packages/app-1}...',
+        buildCommand: `cd ../.. && npx turbo run build --filter={packages/${packageName}}...`,
         installCommand: isNpm ? 'npm install --prefix=../..' : 'yarn install',
         commandForIgnoringBuildStep: 'npx turbo-ignore',
       },
       nx: {
         monorepoManager: 'nx',
-        buildCommand: 'cd ../.. && npx nx build app-1',
+        buildCommand: `cd ../.. && npx nx build ${packageName}`,
         installCommand: 'yarn install',
       },
     };
