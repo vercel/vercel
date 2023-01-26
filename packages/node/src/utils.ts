@@ -1,6 +1,8 @@
 import { extname } from 'path';
 import { pathToRegexp } from 'path-to-regexp';
+import { hasEdgeSignature } from '@edge-runtime/feature-detector';
 import { debug } from '@vercel/build-utils';
+import type { LauncherConfiguration } from '@vercel/node-bridge/types';
 
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   if (!matcherOrMatchers) {
@@ -78,4 +80,28 @@ export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
     runtime !== undefined &&
     Object.values(EdgeRuntimes).includes(runtime as EdgeRuntimes)
   );
+}
+
+export function detectServerlessLauncherType(
+  entrypoint: string,
+  targetRuntime: string
+) {
+  const launcherType = hasEdgeSignature(entrypoint) ? 'edge-light' : 'Nodejs';
+  checkLauncherCompatibility(entrypoint, launcherType, targetRuntime);
+  return launcherType;
+}
+
+function checkLauncherCompatibility(
+  entrypoint: string,
+  launcherType: LauncherConfiguration['launcherType'],
+  runtime: string
+) {
+  if (launcherType === 'edge-light') {
+    const nodeMajor = Number(runtime.replace('nodejs', '').split('.')[0]);
+    if (nodeMajor < 18) {
+      throw new Error(
+        `${entrypoint}: ${launcherType} launcher type can only be used with node.js 18 and later`
+      );
+    }
+  }
 }

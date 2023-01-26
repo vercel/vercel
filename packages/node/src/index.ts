@@ -54,6 +54,7 @@ import { getConfig } from '@vercel/static-config';
 
 import { fixConfig, Register, register } from './typescript';
 import {
+  detectServerlessLauncherType,
   EdgeRuntimes,
   entrypointToOutputPath,
   getRegExpFromMatchers,
@@ -475,11 +476,12 @@ export const build: BuildV3 = async ({
     const experimentalResponseStreaming =
       staticConfig?.experimentalResponseStreaming === true ? true : undefined;
 
+    const { runtime } = nodeVersion;
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
-      launcherType: 'Nodejs',
-      runtime: nodeVersion.runtime,
+      launcherType: detectServerlessLauncherType(entrypointPath, runtime),
+      runtime,
       shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,

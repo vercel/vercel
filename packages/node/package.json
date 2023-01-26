@@ -29,6 +29,7 @@
     }
   },
   "dependencies": {
+    "@edge-runtime/feature-detector": "1.0.0",
     "@edge-runtime/vm": "2.0.0",
     "@types/node": "14.18.33",
     "@vercel/build-utils": "5.9.0",

@@ -11,12 +11,17 @@ delete process.env.TS_NODE_COMPILER_OPTIONS;
 import { join } from 'path';
 const useRequire = process.env.VERCEL_DEV_IS_ESM !== '1';
 
+import type { VercelProxyResponse } from '@vercel/node-bridge/types';
 import { createServer, Server, IncomingMessage, ServerResponse } from 'http';
-import { VercelProxyResponse } from '@vercel/node-bridge/types';
 import { Config } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
-import { EdgeRuntimes, isEdgeRuntime, logError } from './utils';
+import {
+  detectServerlessLauncherType,
+  EdgeRuntimes,
+  isEdgeRuntime,
+  logError,
+} from './utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler';
 import { createServerlessEventHandler } from './serverless-functions/serverless-handler';
 
@@ -68,7 +73,10 @@ async function createEventHandler(
   return createServerlessEventHandler(entrypointPath, {
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire,
-    launcherType: 'Nodejs',
+    launcherType: detectServerlessLauncherType(
+      entrypoint!,
+      process.versions.node
+    ),
     runtime: config.functions?.[entrypoint]?.runtime,
   });
 }
