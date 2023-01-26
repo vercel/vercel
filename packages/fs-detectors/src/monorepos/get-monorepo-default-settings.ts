@@ -114,7 +114,10 @@ export async function getMonorepoDefaultSettings(
     return {
       monorepoManager: 'nx',
       buildCommand: `cd ${relativeToRoot} && npx nx build ${projectName}`,
-      installCommand: `cd ${relativeToRoot} && ${packageManager} install`,
+      installCommand:
+        packageManager === 'npm'
+          ? `${packageManager} install --prefix=${relativeToRoot}`
+          : `${packageManager} install`,
     };
   }
   // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better

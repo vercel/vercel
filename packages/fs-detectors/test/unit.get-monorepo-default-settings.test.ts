@@ -38,7 +38,8 @@ describe('getMonorepoDefaultSettings', () => {
     const expectedResultMap: Record<string, Record<string, string>> = {
       turbo: {
         monorepoManager: 'turbo',
-        buildCommand: `cd ../.. && npx turbo run build --filter={packages/${packageName}}...`,
+        buildCommand:
+          'cd ../.. && npx turbo run build --filter={packages/app-1}...',
         installCommand: isNpm ? 'npm install --prefix=../..' : 'yarn install',
         commandForIgnoringBuildStep: 'npx turbo-ignore',
       },
