@@ -1,6 +1,5 @@
 {
-  "private": "true",
-  "name": "26-multiple-lock-files-pnpm",
+  "private": true,
   "workspaces": [
     "a",
     "b"
