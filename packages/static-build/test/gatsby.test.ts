@@ -1,4 +1,4 @@
-import { injectPlugins } from '../src/utils/gatsby';
+import { injectPlugins, createPluginSymlinks } from '../src/utils/gatsby';
 import path from 'path';
 import {
   detectFrameworkRecord,
@@ -58,19 +58,9 @@ describe('gatsby utilities', () => {
     const fixture = await prepareFixture(path.join(fixturesPath, 'gatsby-v3'));
     const version = await detectVersion(fixture);
     await injectPlugins(version, fixture);
-    const [packageJSON, gatsbyConfig] = await Promise.all([
-      fs.readFile(path.join(fixture, 'package.json'), 'utf-8'),
+    const [gatsbyConfig] = await Promise.all([
       fs.readFile(path.join(fixture, 'gatsby-config.js'), 'utf-8'),
     ]);
-    expect(packageJSON).toMatchInlineSnapshot(`
-      "{
-        \\"dependencies\\": {
-          \\"gatsby\\": \\"3.0.0\\",
-          \\"@vercel/gatsby-plugin-vercel-analytics\\": \\"latest\\"
-        }
-      }
-      "
-    `);
     expect(gatsbyConfig).toMatchInlineSnapshot(
       `"module.exports = {\\"plugins\\":[\\"@vercel/gatsby-plugin-vercel-analytics\\"]}"`
     );
@@ -82,21 +72,10 @@ describe('gatsby utilities', () => {
     const fixture = await prepareFixture(path.join(fixturesPath, 'gatsby-v4'));
     const version = await detectVersion(fixture);
     await injectPlugins(version, fixture);
-    const [packageJSON, gatsbyNode, gatsbyConfig] = await Promise.all([
-      fs.readFile(path.join(fixture, 'package.json'), 'utf-8'),
+    const [gatsbyNode, gatsbyConfig] = await Promise.all([
       fs.readFile(path.join(fixture, 'gatsby-node.js'), 'utf-8'),
       fs.readFile(path.join(fixture, 'gatsby-config.js'), 'utf-8'),
     ]);
-    expect(packageJSON).toMatchInlineSnapshot(`
-      "{
-        \\"dependencies\\": {
-          \\"gatsby\\": \\"4.25.2\\",
-          \\"@vercel/gatsby-plugin-vercel-builder\\": \\"latest\\",
-          \\"@vercel/gatsby-plugin-vercel-analytics\\": \\"latest\\"
-        }
-      }
-      "
-    `);
     expect(gatsbyNode).toMatchInlineSnapshot(
       `"module.exports = require('@vercel/gatsby-plugin-vercel-builder/gatsby-node.js');"`
     );
@@ -113,35 +92,19 @@ describe('gatsby utilities', () => {
     );
     const version = await detectVersion(fixture);
     await injectPlugins(version, fixture);
-    const [
-      packageJSON,
-      gatsbyNode,
-      gatsbyNodeBackup,
-      gatsbyConfig,
-      gatsbyConfigBackup,
-    ] = await Promise.all([
-      fs.readFile(path.join(fixture, 'package.json'), 'utf-8'),
-      fs.readFile(path.join(fixture, 'gatsby-node.js'), 'utf-8'),
-      fs.readFile(
-        path.join(fixture, 'gatsby-node.js.__vercel_builder_backup__.js'),
-        'utf-8'
-      ),
-      fs.readFile(path.join(fixture, 'gatsby-config.js'), 'utf-8'),
-      fs.readFile(
-        path.join(fixture, 'gatsby-config.js.__vercel_builder_backup__.js'),
-        'utf-8'
-      ),
-    ]);
-    expect(packageJSON).toMatchInlineSnapshot(`
-      "{
-        \\"dependencies\\": {
-          \\"gatsby\\": \\"4.25.2\\",
-          \\"@vercel/gatsby-plugin-vercel-builder\\": \\"latest\\",
-          \\"@vercel/gatsby-plugin-vercel-analytics\\": \\"latest\\"
-        }
-      }
-      "
-    `);
+    const [gatsbyNode, gatsbyNodeBackup, gatsbyConfig, gatsbyConfigBackup] =
+      await Promise.all([
+        fs.readFile(path.join(fixture, 'gatsby-node.js'), 'utf-8'),
+        fs.readFile(
+          path.join(fixture, 'gatsby-node.js.__vercel_builder_backup__.js'),
+          'utf-8'
+        ),
+        fs.readFile(path.join(fixture, 'gatsby-config.js'), 'utf-8'),
+        fs.readFile(
+          path.join(fixture, 'gatsby-config.js.__vercel_builder_backup__.js'),
+          'utf-8'
+        ),
+      ]);
     expect(gatsbyNode).toMatchInlineSnapshot(`
       "const vercelBuilder = require('@vercel/gatsby-plugin-vercel-builder/gatsby-node.js');
       const gatsbyNode = require('./gatsby-node.js.__vercel_builder_backup__.js');
@@ -171,6 +134,7 @@ describe('gatsby utilities', () => {
         {},
         preferDefault(userConfig)
       );
+
       if (!vercelConfig.plugins) {
         vercelConfig.plugins = [];
       }
@@ -202,35 +166,19 @@ describe('gatsby utilities', () => {
     );
     const version = await detectVersion(fixture);
     await injectPlugins(version, fixture);
-    const [
-      packageJSON,
-      gatsbyNode,
-      gatsbyNodeBackup,
-      gatsbyConfig,
-      gatsbyConfigBackup,
-    ] = await Promise.all([
-      fs.readFile(path.join(fixture, 'package.json'), 'utf-8'),
-      fs.readFile(path.join(fixture, 'gatsby-node.ts'), 'utf-8'),
-      fs.readFile(
-        path.join(fixture, 'gatsby-node.ts.__vercel_builder_backup__.ts'),
-        'utf-8'
-      ),
-      fs.readFile(path.join(fixture, 'gatsby-config.ts'), 'utf-8'),
-      fs.readFile(
-        path.join(fixture, 'gatsby-config.ts.__vercel_builder_backup__.ts'),
-        'utf-8'
-      ),
-    ]);
-    expect(packageJSON).toMatchInlineSnapshot(`
-      "{
-        \\"dependencies\\": {
-          \\"gatsby\\": \\"4.25.2\\",
-          \\"@vercel/gatsby-plugin-vercel-builder\\": \\"latest\\",
-          \\"@vercel/gatsby-plugin-vercel-analytics\\": \\"latest\\"
-        }
-      }
-      "
-    `);
+    const [gatsbyNode, gatsbyNodeBackup, gatsbyConfig, gatsbyConfigBackup] =
+      await Promise.all([
+        fs.readFile(path.join(fixture, 'gatsby-node.ts'), 'utf-8'),
+        fs.readFile(
+          path.join(fixture, 'gatsby-node.ts.__vercel_builder_backup__.ts'),
+          'utf-8'
+        ),
+        fs.readFile(path.join(fixture, 'gatsby-config.ts'), 'utf-8'),
+        fs.readFile(
+          path.join(fixture, 'gatsby-config.ts.__vercel_builder_backup__.ts'),
+          'utf-8'
+        ),
+      ]);
     expect(gatsbyNode).toMatchInlineSnapshot(`
       "import type { GatsbyNode } from 'gatsby';
       import * as vercelBuilder from '@vercel/gatsby-plugin-vercel-builder/gatsby-node.js';
@@ -294,35 +242,19 @@ describe('gatsby utilities', () => {
     );
     const version = await detectVersion(fixture);
     await injectPlugins(version, fixture);
-    const [
-      packageJSON,
-      gatsbyNode,
-      gatsbyNodeBackup,
-      gatsbyConfig,
-      gatsbyConfigBackup,
-    ] = await Promise.all([
-      fs.readFile(path.join(fixture, 'package.json'), 'utf-8'),
-      fs.readFile(path.join(fixture, 'gatsby-node.mjs'), 'utf-8'),
-      fs.readFile(
-        path.join(fixture, 'gatsby-node.mjs.__vercel_builder_backup__.mjs'),
-        'utf-8'
-      ),
-      fs.readFile(path.join(fixture, 'gatsby-config.mjs'), 'utf-8'),
-      fs.readFile(
-        path.join(fixture, 'gatsby-config.mjs.__vercel_builder_backup__.mjs'),
-        'utf-8'
-      ),
-    ]);
-    expect(packageJSON).toMatchInlineSnapshot(`
-      "{
-        \\"dependencies\\": {
-          \\"gatsby\\": \\"4.25.2\\",
-          \\"@vercel/gatsby-plugin-vercel-builder\\": \\"latest\\",
-          \\"@vercel/gatsby-plugin-vercel-analytics\\": \\"latest\\"
-        }
-      }
-      "
-    `);
+    const [gatsbyNode, gatsbyNodeBackup, gatsbyConfig, gatsbyConfigBackup] =
+      await Promise.all([
+        fs.readFile(path.join(fixture, 'gatsby-node.mjs'), 'utf-8'),
+        fs.readFile(
+          path.join(fixture, 'gatsby-node.mjs.__vercel_builder_backup__.mjs'),
+          'utf-8'
+        ),
+        fs.readFile(path.join(fixture, 'gatsby-config.mjs'), 'utf-8'),
+        fs.readFile(
+          path.join(fixture, 'gatsby-config.mjs.__vercel_builder_backup__.mjs'),
+          'utf-8'
+        ),
+      ]);
     expect(gatsbyNode).toMatchInlineSnapshot(`
       "import * as vercelBuilder from '@vercel/gatsby-plugin-vercel-builder/gatsby-node.js';
       import * as gatsbyNode from './gatsby-node.mjs.__vercel_builder_backup__.mjs';
@@ -350,6 +282,7 @@ describe('gatsby utilities', () => {
         {},
         preferDefault(userConfig)
       );
+
       if (!vercelConfig.plugins) {
         vercelConfig.plugins = [];
       }
@@ -372,5 +305,27 @@ describe('gatsby utilities', () => {
       "module.exports = {};
       "
     `);
+  });
+
+  describe(`createPluginSymlinks()`, () => {
+    it('should add symlinks for Gatsby plugins', async () => {
+      const fixture = await prepareFixture(
+        path.join(fixturesPath, 'gatsby-v4-existing-files-mjs')
+      );
+
+      await createPluginSymlinks(fixture);
+
+      const analytics = require(path.join(
+        fixture,
+        'node_modules/@vercel/gatsby-plugin-vercel-analytics'
+      ));
+      expect(typeof analytics).toEqual('object');
+
+      const builder = require(path.join(
+        fixture,
+        'node_modules/@vercel/gatsby-plugin-vercel-builder/gatsby-node.js'
+      ));
+      expect(typeof builder.onPostBuild).toEqual('function');
+    });
   });
 });

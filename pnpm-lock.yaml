@@ -971,6 +971,9 @@ importers:
       tree-kill: 1.2.2
       ts-morph: 12.0.0
       typescript: 4.3.4
+    dependencies:
+      '@vercel/gatsby-plugin-vercel-analytics': link:../gatsby-plugin-vercel-analytics
+      '@vercel/gatsby-plugin-vercel-builder': link:../gatsby-plugin-vercel-builder
     devDependencies:
       '@types/aws-lambda': 8.10.64
       '@types/cross-spawn': 6.0.0
@@ -984,8 +987,6 @@ importers:
       '@vercel/build-utils': link:../build-utils
       '@vercel/frameworks': link:../frameworks
       '@vercel/fs-detectors': link:../fs-detectors
-      '@vercel/gatsby-plugin-vercel-analytics': link:../gatsby-plugin-vercel-analytics
-      '@vercel/gatsby-plugin-vercel-builder': link:../gatsby-plugin-vercel-builder
       '@vercel/ncc': 0.24.0
       '@vercel/routing-utils': link:../routing-utils
       '@vercel/static-config': link:../static-config
