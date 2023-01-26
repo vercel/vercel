@@ -758,6 +758,7 @@ importers:
     specifiers:
       '@babel/core': 7.5.0
       '@babel/plugin-transform-modules-commonjs': 7.5.0
+      '@edge-runtime/feature-detector': 1.0.0
       '@edge-runtime/vm': 2.0.0
       '@tootallnate/once': 1.1.2
       '@types/aws-lambda': 8.10.19
@@ -789,6 +790,7 @@ importers:
       ts-node: 10.9.1
       typescript: 4.3.4
     dependencies:
+      '@edge-runtime/feature-detector': 1.0.0
       '@edge-runtime/vm': 2.0.0
       '@types/node': 14.18.33
       '@vercel/build-utils': link:../build-utils
@@ -2620,6 +2622,13 @@ packages:
     engines: {node: '>=12'}
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
+
+  /@edge-runtime/feature-detector/1.0.0:
+    resolution: {integrity: sha512-8LBdDfXmOBTK61pggHxVLfkra8Pc+3Syw2EDUZEtgkqOHYSpyRWV0y5vFsGTAV6f6WXA2Z7RmNVyq6tTo/btAA==}
+    engines: {node: '>=14'}
+    dependencies:
+      ts-morph: 17.0.1
+    dev: false
 
   /@edge-runtime/format/1.1.0:
     resolution: {integrity: sha512-MkLDDtPhXZIMx83NykdFmOpF7gVWIdd6GBHYb8V/E+PKWvD2pK/qWx9B30oN1iDJ2XBm0SGDjz02S8nDHI9lMQ==}
@@ -5868,6 +5877,15 @@ packages:
       mkdirp: 1.0.4
       path-browserify: 1.0.1
 
+  /@ts-morph/common/0.18.1:
+    resolution: {integrity: sha512-RVE+zSRICWRsfrkAw5qCAK+4ZH9kwEFv5h0+/YeHTLieWP7F4wWq4JsKFuNWG+fYh/KF+8rAtgdj5zb2mm+DVA==}
+    dependencies:
+      fast-glob: 3.2.12
+      minimatch: 5.1.2
+      mkdirp: 1.0.4
+      path-browserify: 1.0.1
+    dev: false
+
   /@tsconfig/node10/1.0.9:
     resolution: {integrity: sha512-jNsYVVxU8v5g43Erja32laIDHXeoNvFEpX33OK4d6hljo3jDhCBDhx5dhCCTMWUojscpAagGiRkBKxpdl9fxqA==}
 
@@ -9076,6 +9094,10 @@ packages:
 
   /code-block-writer/10.1.1:
     resolution: {integrity: sha512-67ueh2IRGst/51p0n6FvPrnRjAGHY5F8xdjkgrYE7DDzpJe6qA07RYQ9VcoUeo5ATOjSOiWpSL3SWBRRbempMw==}
+
+  /code-block-writer/11.0.3:
+    resolution: {integrity: sha512-NiujjUFB4SwScJq2bwbYUtXbZhBSlY6vYzm++3Q6oC+U+injTqfPYFK8wS9COOmb2lueqp0ZRB4nK1VYeHgNyw==}
+    dev: false
 
   /code-excerpt/2.1.1:
     resolution: {integrity: sha512-tJLhH3EpFm/1x7heIW0hemXJTUU5EWl2V0EIX558jp05Mt1U6DVryCgkp3l37cxqs+DNbNgxG43SkwJXpQ14Jw==}
@@ -21054,6 +21076,13 @@ packages:
     dependencies:
       '@ts-morph/common': 0.11.1
       code-block-writer: 10.1.1
+
+  /ts-morph/17.0.1:
+    resolution: {integrity: sha512-10PkHyXmrtsTvZSL+cqtJLTgFXkU43Gd0JCc0Rw6GchWbqKe0Rwgt1v3ouobTZwQzF1mGhDeAlWYBMGRV7y+3g==}
+    dependencies:
+      '@ts-morph/common': 0.18.1
+      code-block-writer: 11.0.3
+    dev: false
 
   /ts-node/10.9.1_j2g5vy3qcga7tp65fndlxsubb4:
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
