@@ -53,7 +53,7 @@ describe('getMonorepoDefaultSettings', () => {
       path.join(__dirname, 'fixtures', 'get-monorepo-default-settings', fixture)
     );
     const result = await getMonorepoDefaultSettings(
-      'app-1',
+      packageName,
       'packages/app-1',
       '../..',
       ffs
