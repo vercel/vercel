@@ -1,5 +1,4 @@
 {
-  "name": "gatsby-v4",
   "private": true,
   "dependencies": {
     "gatsby": "4.25.2",

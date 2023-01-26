@@ -45,7 +45,6 @@ import {
   remove,
   writeFile,
 } from 'fs-extra';
-import os from 'os';
 import path from 'path';
 import resolveFrom from 'resolve-from';
 import semver from 'semver';
@@ -408,8 +407,6 @@ export const build: BuildV2 = async ({
   }
 
   const env: typeof process.env = { ...spawnOpts.env };
-  const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
-  env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
 
   if (target) {
@@ -819,6 +816,10 @@ export const build: BuildV2 = async ({
           value.contentType = value.contentType || 'text/html; charset=utf-8';
         }
       });
+
+    console.log(
+      'Notice: detected `next export`, this de-opts some Next.js features\nSee more info: https://nextjs.org/docs/advanced-features/static-html-export'
+    );
 
     return {
       output,
