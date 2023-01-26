@@ -111,53 +111,6 @@ export function spawnAsync(
   });
 }
 
-export function execAsync(
-  command: string,
-  args: string[],
-  opts: SpawnOptionsExtended = {}
-) {
-  return new Promise<{ stdout: string; stderr: string; code: number }>(
-    (resolve, reject) => {
-      opts.stdio = 'pipe';
-
-      const stdoutList: Buffer[] = [];
-      const stderrList: Buffer[] = [];
-
-      const child = spawn(command, args, opts);
-
-      child.stderr!.on('data', data => {
-        stderrList.push(data);
-      });
-
-      child.stdout!.on('data', data => {
-        stdoutList.push(data);
-      });
-
-      child.on('error', reject);
-      child.on('close', (code, signal) => {
-        if (code === 0 || opts.ignoreNon0Exit) {
-          return resolve({
-            code,
-            stdout: Buffer.concat(stdoutList).toString(),
-            stderr: Buffer.concat(stderrList).toString(),
-          });
-        }
-
-        const cmd = opts.prettyCommand
-          ? `Command "${opts.prettyCommand}"`
-          : 'Command';
-
-        return reject(
-          new NowBuildError({
-            code: `BUILD_UTILS_EXEC_${code || signal}`,
-            message: `${cmd} exited with ${code || signal}`,
-          })
-        );
-      });
-    }
-  );
-}
-
 export function spawnCommand(command: string, options: SpawnOptions = {}) {
   const opts = { ...options, prettyCommand: command };
   if (process.platform === 'win32') {

@@ -1,4 +1,6 @@
 import chalk from 'chalk';
+import * as ansiEscapes from 'ansi-escapes';
+import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
 import renderLink from './link';
 import wait, { StopSpinner } from './wait';
 import type { WritableTTY } from '../../types';
@@ -8,24 +10,34 @@ const IS_TEST = process.env.NODE_ENV === 'test';
 
 export interface OutputOptions {
   debug?: boolean;
+  supportsHyperlink?: boolean;
 }
 
 export interface LogOptions {
   color?: typeof chalk;
 }
 
+interface LinkOptions {
+  fallback?: false | (() => string);
+}
+
 export class Output {
   stream: WritableTTY;
   debugEnabled: boolean;
+  supportsHyperlink: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
   constructor(
     stream: WritableTTY,
-    { debug: debugEnabled = false }: OutputOptions = {}
+    {
+      debug: debugEnabled = false,
+      supportsHyperlink = detectSupportsHyperlink(stream),
+    }: OutputOptions = {}
   ) {
     this.stream = stream;
     this.debugEnabled = debugEnabled;
+    this.supportsHyperlink = supportsHyperlink;
     this.spinnerMessage = '';
     this._spinner = null;
   }
@@ -166,5 +178,28 @@ export class Output {
     }
 
     return promise;
+  };
+
+  /**
+   * Returns an ANSI formatted hyperlink when support has been enabled.
+   */
+  link = (
+    text: string,
+    url: string,
+    { fallback }: LinkOptions = {}
+  ): string => {
+    // Based on https://github.com/sindresorhus/terminal-link (MIT license)
+    if (!this.supportsHyperlink) {
+      // If the fallback has been explicitly disabled, don't modify the text itself
+      if (fallback === false) {
+        return renderLink(text);
+      }
+
+      return typeof fallback === 'function'
+        ? fallback()
+        : `${text} (${renderLink(url)})`;
+    }
+
+    return ansiEscapes.link(chalk.cyan(text), url);
   };
 }

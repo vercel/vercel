@@ -18,7 +18,12 @@ import {
   NowBuildError,
   Cron,
 } from '@vercel/build-utils';
-import { detectBuilders } from '@vercel/fs-detectors';
+import cronValidate from 'cron-validate';
+import {
+  detectBuilders,
+  detectFrameworkRecord,
+  LocalFileSystemDetector,
+} from '@vercel/fs-detectors';
 import minimatch from 'minimatch';
 import {
   appendRoutesToPhase,
@@ -61,6 +66,9 @@ import { toEnumerableError } from '../util/error';
 import { validateConfig } from '../util/validate-config';
 
 import { setMonorepoDefaultSettings } from '../util/build/monorepo';
+import frameworks from '@vercel/frameworks';
+import { detectFrameworkVersion } from '@vercel/fs-detectors';
+import semver from 'semver';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -69,6 +77,20 @@ interface SerializedBuilder extends Builder {
   require?: string;
   requirePath?: string;
   apiVersion: number;
+}
+
+/**
+ *  Build Output API `config.json` file interface.
+ */
+interface BuildOutputConfig {
+  version?: 3;
+  wildcard?: BuildResultV2Typical['wildcard'];
+  images?: BuildResultV2Typical['images'];
+  routes?: BuildResultV2Typical['routes'];
+  overrides?: Record<string, PathOverride>;
+  framework?: {
+    version: string;
+  };
 }
 
 /**
@@ -436,7 +458,7 @@ async function doBuild(
   // Execute Builders for detected entrypoints
   // TODO: parallelize builds (except for frontend)
   const sortedBuilders = sortBuilders(builds);
-  const buildResults: Map<Builder, BuildResult> = new Map();
+  const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
   const corepackShimDir = await initCorepack({ repoRootPath });
@@ -540,8 +562,7 @@ async function doBuild(
 
   // Merge existing `config.json` file into the one that will be produced
   const configPath = join(outputDir, 'config.json');
-  // TODO: properly type
-  const existingConfig = await readJSONFile<any>(configPath);
+  const existingConfig = await readJSONFile<BuildOutputConfig>(configPath);
   if (existingConfig instanceof CantParseJSONFile) {
     throw existingConfig;
   }
@@ -588,16 +609,18 @@ async function doBuild(
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
   const mergedCron = await mergeCron(buildResults.entries(), buildersWithPkgs);
 
+  const framework = await getFramework(cwd, buildResults);
+
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
-  // TODO: properly type
-  const config = {
+  const config: BuildOutputConfig = {
     version: 3,
     routes: mergedRoutes,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
     crons: mergedCron,
+    framework,
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
@@ -610,6 +633,50 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
+}
+
+async function getFramework(
+  cwd: string,
+  buildResults: Map<Builder, BuildResult | BuildOutputConfig>
+): Promise<{ version: string } | undefined> {
+  const detectedFramework = await detectFrameworkRecord({
+    fs: new LocalFileSystemDetector(cwd),
+    frameworkList: frameworks,
+  });
+
+  if (!detectedFramework) {
+    return;
+  }
+
+  // determine framework version from build result
+  if (detectedFramework.useRuntime) {
+    for (const [build, buildResult] of buildResults.entries()) {
+      if (
+        'framework' in buildResult &&
+        build.use === detectedFramework.useRuntime.use
+      ) {
+        return buildResult.framework;
+      }
+    }
+  }
+
+  // determine framework version from listed package.json version
+  if (detectedFramework.detectedVersion) {
+    // check for a valid, explicit version, not a range
+    if (semver.valid(detectedFramework.detectedVersion)) {
+      return {
+        version: detectedFramework.detectedVersion,
+      };
+    }
+  }
+
+  // determine framework version with runtime lookup
+  const frameworkVersion = detectFrameworkVersion(detectedFramework);
+  if (frameworkVersion) {
+    return {
+      version: frameworkVersion,
+    };
+  }
 }
 
 function expandBuild(files: string[], build: Builder): Builder[] {
@@ -652,7 +719,7 @@ function expandBuild(files: string[], build: Builder): Builder[] {
 
 function mergeImages(
   images: BuildResultV2Typical['images'],
-  buildResults: Iterable<BuildResult>
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
 ): BuildResultV2Typical['images'] {
   for (const result of buildResults) {
     if ('images' in result && result.images) {
@@ -663,7 +730,7 @@ function mergeImages(
 }
 
 function mergeWildcard(
-  buildResults: Iterable<BuildResult>
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
 ): BuildResultV2Typical['wildcard'] {
   let wildcard: BuildResultV2Typical['wildcard'] = undefined;
   for (const result of buildResults) {
@@ -680,6 +747,21 @@ async function mergeCron(
   builders: Map<string, BuilderWithPkg>
 ): Promise<Cron[]> {
   let crons: Cron[] = [];
+
+  const addAndValidate = (...cronsToAdd: Cron[]) => {
+    for (const cronToAdd of cronsToAdd) {
+      const cronValidationResult = cronValidate(cronToAdd.cron);
+      if (!cronValidationResult.isValid()) {
+        throw new Error(
+          `Invalid cron expression for ${cronToAdd.path}, "${
+            cronToAdd.cron
+          }": ${cronValidationResult.getError()[0]}`
+        );
+      }
+
+      crons.push(cronToAdd);
+    }
+  };
 
   // Loop through all builds
   for (const [build, buildResult] of builds) {
@@ -704,12 +786,12 @@ async function mergeCron(
         if (buildConfigFile instanceof CantParseJSONFile) throw buildConfigFile;
 
         if (buildConfigFile?.cron && Array.isArray(buildConfigFile.cron)) {
-          crons.push(...buildConfigFile.cron);
+          addAndValidate(...buildConfigFile.cron);
         }
       } else {
         // Otherwise, we just get the crons field from the typical V2 result
         if (buildResultV2.crons && Array.isArray(buildResultV2.crons)) {
-          crons.push(...buildResultV2.crons);
+          addAndValidate(...buildResultV2.crons);
         }
       }
     } else if (version === 3) {
@@ -717,7 +799,7 @@ async function mergeCron(
       const buildResultV3 = buildResult as BuildResultV3;
 
       if (buildResultV3.cron) {
-        crons.push({
+        addAndValidate({
           path: getBuildV3Path(build),
           cron: buildResultV3.cron,
         });

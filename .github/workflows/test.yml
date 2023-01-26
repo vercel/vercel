@@ -39,15 +39,17 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: '**/node_modules'
-          key: yarn-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
-          restore-keys: yarn-${{ matrix.os }}-${{ matrix.node }}
-      - run: yarn install --network-timeout 1000000 --frozen-lockfile
+          key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
+      - name: install pnpm@7.24.2
+        run: npm i -g pnpm@7.24.2
+      - run: pnpm install
       - id: set-tests
         run: |
           TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
           echo "Files to test:"
           echo "$TESTS_ARRAY"
-          echo "::set-output name=tests::$TESTS_ARRAY"
+          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
       - uses: patrickedqvist/wait-for-vercel-preview@ae34b392ef30297f2b672f9afb3c329bde9bd487
         id: waitForTarball
         with:
@@ -80,14 +82,17 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: '**/node_modules'
-          key: yarn-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('yarn.lock') }}
-          restore-keys: yarn-${{ matrix.os }}-${{ matrix.node }}
+          key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
 
       - name: Install Hugo
         if: matrix.runner == 'macos-latest'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
 
-      - run: yarn install --network-timeout 1000000
+      - name: install pnpm@7.24.2
+        run: npm i -g pnpm@7.24.2
+
+      - run: pnpm install
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps

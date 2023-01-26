@@ -2,6 +2,7 @@ import { dirname, join, relative } from 'path';
 import { glob } from '@vercel/build-utils';
 import type { PrepareCache } from '@vercel/build-utils';
 import type { AppConfig } from './types';
+import { findConfig } from './utils';
 
 export const prepareCache: PrepareCache = async ({
   entrypoint,
@@ -12,12 +13,13 @@ export const prepareCache: PrepareCache = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
   try {
-    const remixConfig: AppConfig = require(join(
-      entrypointFsDirname,
-      'remix.config'
-    ));
-    if (remixConfig.cacheDirectory) {
-      cacheDirectory = remixConfig.cacheDirectory;
+    const remixConfigFile = findConfig(entrypointFsDirname, 'remix.config');
+    if (remixConfigFile) {
+      const remixConfigModule = await eval('import(remixConfigFile)');
+      const remixConfig: AppConfig = remixConfigModule?.default || {};
+      if (remixConfig.cacheDirectory) {
+        cacheDirectory = remixConfig.cacheDirectory;
+      }
     }
   } catch (err: any) {
     // Ignore error if `remix.config.js` does not exist
