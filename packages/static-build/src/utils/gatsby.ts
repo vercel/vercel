@@ -22,7 +22,6 @@ const PLUGIN_PATHS: Record<PluginName, string> = {
     eval('require').resolve(`@vercel/gatsby-plugin-vercel-builder/package.json`)
   ),
 };
-console.log(PLUGIN_PATHS);
 
 export async function injectPlugins(
   detectedVersion: string | null,
