@@ -15,7 +15,7 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --bail --runInBand",
-    "test-unit": "pnpm test test/build.test.ts test/prepare-cache.test.ts",
+    "test-unit": "pnpm test test/build.test.ts test/gatsby.test.js test/prepare-cache.test.ts",
     "test-integration-once": "pnpm test test/integration-*.test.js"
   },
   "jest": {
