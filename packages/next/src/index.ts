@@ -817,6 +817,10 @@ export const build: BuildV2 = async ({
         }
       });
 
+    console.log(
+      'Notice: detected `next export`, this de-opts some Next.js features\nSee more info: https://nextjs.org/docs/advanced-features/static-html-export'
+    );
+
     return {
       output,
       images: getImagesConfig(imagesManifest),
