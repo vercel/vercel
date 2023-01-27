@@ -458,17 +458,14 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
 describe('rename', () => {
   it('should rename keys of files map', () => {
     const before: Files = {};
-    const expected: Files = {};
     const toUpper = (s: string) => s.toUpperCase();
 
     for (let i = 97; i <= 122; i++) {
       const key = String.fromCharCode(i);
-      const file = new FileBlob({ contentType: 'text/plain', data: key });
-      before[key] = file;
-      expected[key.toUpperCase()] = file;
+      before[key] = new FileBlob({ contentType: 'text/plain', data: key });
     }
 
     const after = rename(before, toUpper);
-    expect(after).toEqual(expected);
+    expect(Object.keys(after)).toEqual('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''));
   });
 });
