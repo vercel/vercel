@@ -15,7 +15,7 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --bail --runInBand",
-    "test-unit": "pnpm test test/build.test.ts test/gatsby.test.js test/prepare-cache.test.ts",
+    "test-unit": "pnpm test test/build.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
     "test-integration-once": "pnpm test test/integration-*.test.js"
   },
   "jest": {
@@ -27,6 +27,10 @@
         "isolatedModules": true
       }
     }
+  },
+  "dependencies": {
+    "@vercel/gatsby-plugin-vercel-analytics": "1.0.7",
+    "@vercel/gatsby-plugin-vercel-builder": "1.0.1"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.64",
@@ -41,8 +45,6 @@
     "@vercel/build-utils": "6.0.0",
     "@vercel/frameworks": "1.3.0",
     "@vercel/fs-detectors": "3.7.6",
-    "@vercel/gatsby-plugin-vercel-analytics": "1.0.7",
-    "@vercel/gatsby-plugin-vercel-builder": "1.0.1",
     "@vercel/ncc": "0.24.0",
     "@vercel/routing-utils": "2.1.8",
     "@vercel/static-config": "2.0.11",
