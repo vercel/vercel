@@ -4,14 +4,17 @@ import fs from 'fs-extra';
 import { strict as assert } from 'assert';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
 import {
+  FileBlob,
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  rename,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
   Prerender,
 } from '../src';
+import type { Files } from '../src';
 
 jest.setTimeout(10 * 1000);
 
@@ -450,4 +453,19 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
   expect(warningMessages).toStrictEqual([
     'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.',
   ]);
+});
+
+describe('rename', () => {
+  it('should rename keys of files map', () => {
+    const before: Files = {};
+    const toUpper = (s: string) => s.toUpperCase();
+
+    for (let i = 97; i <= 122; i++) {
+      const key = String.fromCharCode(i);
+      before[key] = new FileBlob({ contentType: 'text/plain', data: key });
+    }
+
+    const after = rename(before, toUpper);
+    expect(Object.keys(after)).toEqual('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''));
+  });
 });
