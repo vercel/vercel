@@ -43,9 +43,7 @@ import type { ImagesConfig, BuildConfig } from './utils/_shared';
 import treeKill from 'tree-kill';
 import {
   detectFrameworkRecord,
-  detectFramework,
   LocalFileSystemDetector,
-  packageManagers,
 } from '@vercel/fs-detectors';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
@@ -391,20 +389,7 @@ export const build: BuildV2 = async ({
       }
 
       if (framework.slug === 'gatsby') {
-        const injectedPlugins = await GatsbyUtils.injectPlugins(
-          detectedVersion,
-          entrypointDir
-        );
-
-        if (injectedPlugins) {
-          const packageManager = await detectFramework({
-            fs: localFileSystemDetector,
-            frameworkList: packageManagers,
-          });
-          if (packageManager === 'pnpm') {
-            await execCommand('pnpm install --lockfile-only');
-          }
-        }
+        await GatsbyUtils.injectPlugins(detectedVersion, entrypointDir);
       }
 
       if (process.env.VERCEL_ANALYTICS_ID) {
@@ -524,6 +509,10 @@ export const build: BuildV2 = async ({
           isNpmInstall = true;
         }
       }
+    }
+
+    if (framework?.slug === 'gatsby') {
+      await GatsbyUtils.createPluginSymlinks(entrypointDir);
     }
 
     let gemHome: string | undefined = undefined;
