@@ -35,7 +35,7 @@
     "@vercel/node-bridge": "3.1.10",
     "@vercel/static-config": "2.0.11",
     "edge-runtime": "2.0.0",
-    "esbuild": "0.16.17",
+    "esbuild": "0.14.47",
     "exit-hook": "2.2.1",
     "node-fetch": "2.6.7",
     "ts-node": "10.9.1",
