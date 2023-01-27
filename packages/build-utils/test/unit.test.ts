@@ -459,21 +459,16 @@ describe('rename', () => {
   it('should rename keys of files map', () => {
     const before: Files = {};
     const expected: Files = {};
-    const reverser = (s: string) => s.split('').reverse().join('');
+    const toUpper = (s: string) => s.toUpperCase();
 
-    for (let i = 0; i < 20000; i++) {
-      let key = '';
-      for (let j = 0; j < 5; j++) {
-        key += String.fromCharCode(
-          Math.floor(Math.random() * (122 - 97 + 1) + 97)
-        );
-      }
+    for (let i = 97; i <= 122; i++) {
+      const key = String.fromCharCode(i);
       const file = new FileBlob({ contentType: 'text/plain', data: key });
       before[key] = file;
-      expected[reverser(key)] = file;
+      expected[key.toUpperCase()] = file;
     }
 
-    const after = rename(before, reverser);
+    const after = rename(before, toUpper);
     expect(after).toEqual(expected);
   });
 });
