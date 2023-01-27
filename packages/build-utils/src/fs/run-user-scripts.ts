@@ -209,7 +209,8 @@ export async function getNodeVersion(
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
-  let { nodeVersion } = config;
+  let { nodeVersion = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION } =
+    config;
   let isAuto = true;
   if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;

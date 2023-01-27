@@ -471,6 +471,18 @@ async function doBuild(
     try {
       const { builder, pkg: builderPkg } = builderWithPkg;
 
+      process.env.VERCEL_PROJECT_SETTINGS_OUTPUT_DIRECTORY =
+        projectSettings.outputDirectory;
+      process.env.VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND =
+        projectSettings.installCommand;
+      process.env.VERCEL_PROJECT_SETTINGS_DEV_COMMAND =
+        projectSettings.devCommand;
+      process.env.VERCEL_PROJECT_SETTINGS_BUILD_COMMAND =
+        projectSettings.buildCommand;
+      process.env.VERCEL_PROJECT_SETTINGS_FRAMEWORK = projectSettings.framework;
+      process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION =
+        projectSettings.nodeVersion;
+
       const buildConfig: Config = isZeroConfig
         ? {
             outputDirectory: projectSettings.outputDirectory ?? undefined,
