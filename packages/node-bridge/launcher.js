@@ -89,7 +89,7 @@ function getVercelLauncher({
 
     getListener(entrypointPath)
       .then(listener => {
-        if (launcherType === 'edge-light') {
+        if (launcherType === 'EdgeLight') {
           return import(webHandlerPath).then(({ transformToNodeHandler }) =>
             transformToNodeHandler(listener, runtime)
           );
