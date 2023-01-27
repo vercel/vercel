@@ -75,7 +75,7 @@ async function createEventHandler(
     useRequire,
     launcherType: detectServerlessLauncherType(
       entrypoint!,
-      process.versions.node
+      Number(process.versions.node.split('.')[0])
     ),
     runtime: config.functions?.[entrypoint]?.runtime,
   });

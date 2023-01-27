@@ -476,12 +476,14 @@ export const build: BuildV3 = async ({
     const experimentalResponseStreaming =
       staticConfig?.experimentalResponseStreaming === true ? true : undefined;
 
-    const { runtime } = nodeVersion;
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
-      launcherType: detectServerlessLauncherType(entrypointPath, runtime),
-      runtime,
+      launcherType: detectServerlessLauncherType(
+        entrypointPath,
+        nodeVersion.major
+      ),
+      runtime: nodeVersion.runtime,
       shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,

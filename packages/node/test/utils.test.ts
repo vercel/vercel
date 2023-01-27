@@ -27,51 +27,47 @@ describe('detectServerlessLauncherType()', () => {
     {
       title: 'commonjs, Node-compliant signature',
       entrypoint: 'node/index.js',
-      runtime: '18.x',
       launcherType: 'Nodejs',
     },
     {
       title: 'typescript Node-compliant signature',
       entrypoint: 'node/index.ts',
-      runtime: '18.x',
+      launcherType: 'Nodejs',
+    },
+    {
+      title: 'typesciprt, Node-compliant, incomplete signature',
+      entrypoint: 'node/incomplete.ts',
       launcherType: 'Nodejs',
     },
     {
       title: 'ESM Web-compliant signature',
       entrypoint: 'edge/index.mjs',
-      runtime: '18.x',
-      launcherType: 'edge-light',
+      launcherType: 'EdgeLight',
     },
     {
       title: 'typescript Web-compliant signature',
       entrypoint: 'edge/index.ts',
-      runtime: 'nodejs18.x',
-      launcherType: 'edge-light',
+      launcherType: 'EdgeLight',
     },
   ])(
     'detects $title as $launcherType launcher type',
-    ({ entrypoint, runtime, launcherType }) => {
+    ({ entrypoint, launcherType }) => {
       expect(
-        detectServerlessLauncherType(join(fixtureFolder, entrypoint), runtime)
+        detectServerlessLauncherType(join(fixtureFolder, entrypoint), 18)
       ).toEqual(launcherType);
     }
   );
 
-  it.each([
-    { runtime: '14.x' },
-    { runtime: '16.x' },
-    { runtime: 'nodejs14.x' },
-    { runtime: 'nodejs16.x' },
-  ])(
-    'throws when edge-light launcher type used on runtime $runtime',
-    ({ runtime }) => {
+  it.each([{ nodeMajorVersion: 14 }, { nodeMajorVersion: 16 }])(
+    'throws when EdgeLight launcher type used on node $nodeMajorVersion',
+    ({ nodeMajorVersion }) => {
       expect(() =>
         detectServerlessLauncherType(
           join(fixtureFolder, 'edge/index.mjs'),
-          runtime
+          nodeMajorVersion
         )
       ).toThrow(
-        'edge-light launcher type can only be used with node.js 18 and later'
+        'EdgeLight launcher type can only be used with node.js 18 and later'
       );
     }
   );

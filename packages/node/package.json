@@ -29,7 +29,6 @@
     }
   },
   "dependencies": {
-    "@edge-runtime/feature-detector": "1.0.0",
     "@edge-runtime/vm": "2.0.0",
     "@types/node": "14.18.33",
     "@vercel/build-utils": "6.0.0",
@@ -45,6 +44,7 @@
   "devDependencies": {
     "@babel/core": "7.5.0",
     "@babel/plugin-transform-modules-commonjs": "7.5.0",
+    "@edge-runtime/feature-detector": "1.0.0",
     "@tootallnate/once": "1.1.2",
     "@types/aws-lambda": "8.10.19",
     "@types/content-type": "1.1.3",

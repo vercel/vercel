@@ -1,7 +1,7 @@
 import { extname } from 'path';
 import { pathToRegexp } from 'path-to-regexp';
 import { hasEdgeSignature } from '@edge-runtime/feature-detector';
-import { debug } from '@vercel/build-utils';
+import { debug, NowBuildError } from '@vercel/build-utils';
 import type { LauncherConfiguration } from '@vercel/node-bridge/types';
 
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
@@ -84,24 +84,23 @@ export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
 
 export function detectServerlessLauncherType(
   entrypoint: string,
-  targetRuntime: string
+  nodeMajorVersion: number
 ) {
-  const launcherType = hasEdgeSignature(entrypoint) ? 'edge-light' : 'Nodejs';
-  checkLauncherCompatibility(entrypoint, launcherType, targetRuntime);
+  const launcherType = hasEdgeSignature(entrypoint) ? 'EdgeLight' : 'Nodejs';
+  checkLauncherCompatibility(entrypoint, launcherType, nodeMajorVersion);
   return launcherType;
 }
 
 function checkLauncherCompatibility(
   entrypoint: string,
   launcherType: LauncherConfiguration['launcherType'],
-  runtime: string
+  nodeMajorVersion: number
 ) {
-  if (launcherType === 'edge-light') {
-    const nodeMajor = Number(runtime.replace('nodejs', '').split('.')[0]);
-    if (nodeMajor < 18) {
-      throw new Error(
-        `${entrypoint}: ${launcherType} launcher type can only be used with node.js 18 and later`
-      );
-    }
+  if (launcherType === 'EdgeLight' && nodeMajorVersion < 18) {
+    throw new NowBuildError({
+      code: 'INVALID_RUNTIME_FOR_LAUNCHER',
+      message: `${launcherType} launcher type can only be used with node.js 18 and later`,
+      // TODO when documentation will be available, add link: 'https://vercel.link/isomorphic-support',
+    });
   }
 }
