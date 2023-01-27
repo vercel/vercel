@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "webapp",
+  "name": "25-mono-repo-packages-webapp",
   "version": "0.0.1",
   "engines": {
     "node": "14.x"
