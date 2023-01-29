@@ -32,7 +32,7 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "28.0.5",
-    "turbo": "1.7.0"
+    "turbo": "1.7.1-canary.7"
   },
   "scripts": {
     "lerna": "lerna",
