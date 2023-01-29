@@ -11,9 +11,8 @@
     "@types/node": "14.18.33",
     "@typescript-eslint/eslint-plugin": "5.21.0",
     "@typescript-eslint/parser": "5.21.0",
-    "@vercel/build-utils": "workspace:5.7.5",
+    "@vercel/build-utils": "*",
     "@vercel/ncc": "0.24.0",
-    "@vercel/next": "workspace:3.3.9",
     "async-retry": "1.2.3",
     "buffer-replace": "1.0.0",
     "create-svelte": "2.0.1",
@@ -33,10 +32,11 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "28.0.5",
-    "turbo": "1.7.0-canary.9"
+    "turbo": "1.7.0"
   },
   "scripts": {
     "lerna": "lerna",
+    "version": "pnpm install && git add pnpm-lock.yaml",
     "bootstrap": "lerna bootstrap",
     "publish-stable": "echo 'Run `pnpm changelog` for instructions'",
     "publish-canary": "git checkout main && git pull && lerna version prerelease --preid canary --message \"Publish Canary\" --exact",

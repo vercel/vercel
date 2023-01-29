@@ -70,7 +70,7 @@ export default async function ls(
         records.length > 0 ? 'Records' : 'No records'
       } found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
     );
-    output.log(getDNSRecordsTable([{ domainName, records }]));
+    client.stdout.write(getDNSRecordsTable([{ domainName, records }]));
 
     if (pagination && pagination.count === 20) {
       const flags = getCommandFlags(opts, ['_', '--next']);

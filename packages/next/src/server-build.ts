@@ -1060,9 +1060,9 @@ export async function serverBuild({
           {
             src: path.posix.join(
               '^/',
-              entryDirectory,
-              trailingSlash ? '/' : '',
-              '$'
+              entryDirectory !== '.'
+                ? `${entryDirectory}${trailingSlash ? '/$' : '$'}`
+                : '$'
             ),
             has: [
               {
@@ -1417,7 +1417,7 @@ export async function serverBuild({
               src: `^${path.posix.join(
                 '/',
                 entryDirectory,
-                '/((?!.+\\.rsc).+)$'
+                '/((?!.+\\.rsc).+?)(?:/)?$'
               )}`,
               has: [
                 {
@@ -1755,5 +1755,6 @@ export async function serverBuild({
             },
           ]),
     ],
+    framework: { version: nextVersion },
   };
 }

@@ -45,7 +45,6 @@ import {
   remove,
   writeFile,
 } from 'fs-extra';
-import os from 'os';
 import path from 'path';
 import resolveFrom from 'resolve-from';
 import semver from 'semver';
@@ -214,7 +213,7 @@ export const build: BuildV2 = async ({
     repoRootPath = entryPath;
     entryPath = path.join(entryPath, config.rootDirectory as string);
   }
-  const outputDirectory = config.outputDirectory || '.next';
+  const outputDirectory = path.join('./', config.outputDirectory || '.next');
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
   // TODO: remove after testing used for simulating root directory monorepo
   // setting that can't be triggered with vercel.json
@@ -408,8 +407,6 @@ export const build: BuildV2 = async ({
   }
 
   const env: typeof process.env = { ...spawnOpts.env };
-  const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
-  env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
 
   if (target) {
@@ -820,6 +817,10 @@ export const build: BuildV2 = async ({
         }
       });
 
+    console.log(
+      'Notice: detected `next export`, this de-opts some Next.js features\nSee more info: https://nextjs.org/docs/advanced-features/static-html-export'
+    );
+
     return {
       output,
       images: getImagesConfig(imagesManifest),
@@ -932,6 +933,7 @@ export const build: BuildV2 = async ({
             ]
           : []),
       ],
+      framework: { version: nextVersion },
     };
   }
 
@@ -2581,6 +2583,7 @@ export const build: BuildV2 = async ({
                 ]),
           ]),
     ],
+    framework: { version: nextVersion },
   };
 };
 
@@ -2593,7 +2596,7 @@ export const prepareCache: PrepareCache = async ({
   debug('Preparing cache...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
-  const outputDirectory = config.outputDirectory || '.next';
+  const outputDirectory = path.join('./', config.outputDirectory || '.next');
 
   const nextVersionRange = await getNextVersionRange(entryPath);
   const isLegacy = nextVersionRange && isLegacyNext(nextVersionRange);

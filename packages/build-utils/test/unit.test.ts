@@ -1,20 +1,20 @@
 import ms from 'ms';
 import path from 'path';
-import fs, { readlink } from 'fs-extra';
-import { strict as assert, strictEqual } from 'assert';
+import fs from 'fs-extra';
+import { strict as assert } from 'assert';
 import { getSupportedNodeVersion } from '../src/fs/node-version';
-import download from '../src/fs/download';
 import {
-  glob,
+  FileBlob,
   getNodeVersion,
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  rename,
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
-  FileBlob,
   Prerender,
 } from '../src';
+import type { Files } from '../src';
 
 jest.setTimeout(10 * 1000);
 
@@ -47,143 +47,6 @@ beforeEach(() => {
 
 afterEach(() => {
   console.warn = originalConsoleWarn;
-});
-
-it('should re-create FileFsRef symlinks properly', async () => {
-  if (process.platform === 'win32') {
-    console.log('Skipping test on windows');
-    return;
-  }
-  const files = await glob('**', path.join(__dirname, 'symlinks'));
-  assert.equal(Object.keys(files).length, 4);
-
-  const outDir = path.join(__dirname, 'symlinks-out');
-  await fs.remove(outDir);
-
-  const files2 = await download(files, outDir);
-  assert.equal(Object.keys(files2).length, 4);
-
-  const [linkStat, linkDirStat, aStat] = await Promise.all([
-    fs.lstat(path.join(outDir, 'link.txt')),
-    fs.lstat(path.join(outDir, 'link-dir')),
-    fs.lstat(path.join(outDir, 'a.txt')),
-  ]);
-  assert(linkStat.isSymbolicLink());
-  assert(linkDirStat.isSymbolicLink());
-  assert(aStat.isFile());
-
-  const [linkDirContents, linkTextContents] = await Promise.all([
-    readlink(path.join(outDir, 'link-dir')),
-    readlink(path.join(outDir, 'link.txt')),
-  ]);
-
-  strictEqual(linkDirContents, 'dir');
-  strictEqual(linkTextContents, './a.txt');
-});
-
-it('should re-create FileBlob symlinks properly', async () => {
-  if (process.platform === 'win32') {
-    console.log('Skipping test on windows');
-    return;
-  }
-
-  const files = {
-    'a.txt': new FileBlob({
-      mode: 33188,
-      contentType: undefined,
-      data: 'a text',
-    }),
-    'dir/b.txt': new FileBlob({
-      mode: 33188,
-      contentType: undefined,
-      data: 'b text',
-    }),
-    'link-dir': new FileBlob({
-      mode: 41453,
-      contentType: undefined,
-      data: 'dir',
-    }),
-    'link.txt': new FileBlob({
-      mode: 41453,
-      contentType: undefined,
-      data: 'a.txt',
-    }),
-  };
-
-  strictEqual(Object.keys(files).length, 4);
-
-  const outDir = path.join(__dirname, 'symlinks-out');
-  await fs.remove(outDir);
-
-  const files2 = await download(files, outDir);
-  strictEqual(Object.keys(files2).length, 4);
-
-  const [linkStat, linkDirStat, aStat, dirStat] = await Promise.all([
-    fs.lstat(path.join(outDir, 'link.txt')),
-    fs.lstat(path.join(outDir, 'link-dir')),
-    fs.lstat(path.join(outDir, 'a.txt')),
-    fs.lstat(path.join(outDir, 'dir')),
-  ]);
-
-  assert(linkStat.isSymbolicLink());
-  assert(linkDirStat.isSymbolicLink());
-  assert(aStat.isFile());
-  assert(dirStat.isDirectory());
-
-  const [linkDirContents, linkTextContents] = await Promise.all([
-    readlink(path.join(outDir, 'link-dir')),
-    readlink(path.join(outDir, 'link.txt')),
-  ]);
-
-  strictEqual(linkDirContents, 'dir');
-  strictEqual(linkTextContents, 'a.txt');
-});
-
-it('should download symlinks even with incorrect file', async () => {
-  if (process.platform === 'win32') {
-    console.log('Skipping test on windows');
-    return;
-  }
-  const files = {
-    'dir/file.txt': new FileBlob({
-      mode: 33188,
-      contentType: undefined,
-      data: 'file text',
-    }),
-    linkdir: new FileBlob({
-      mode: 41453,
-      contentType: undefined,
-      data: 'dir',
-    }),
-    'linkdir/file.txt': new FileBlob({
-      mode: 33188,
-      contentType: undefined,
-      data: 'this file should be discarded',
-    }),
-  };
-
-  const outDir = path.join(__dirname, 'symlinks-out');
-  await fs.remove(outDir);
-  await fs.mkdirp(outDir);
-
-  await download(files, outDir);
-
-  const [dir, file, linkdir] = await Promise.all([
-    fs.lstat(path.join(outDir, 'dir')),
-    fs.lstat(path.join(outDir, 'dir/file.txt')),
-    fs.lstat(path.join(outDir, 'linkdir')),
-  ]);
-  expect(dir.isFile()).toBe(false);
-  expect(dir.isSymbolicLink()).toBe(false);
-
-  expect(file.isFile()).toBe(true);
-  expect(file.isSymbolicLink()).toBe(false);
-
-  expect(linkdir.isSymbolicLink()).toBe(true);
-
-  expect(warningMessages).toEqual([
-    'Warning: file "linkdir/file.txt" is within a symlinked directory "linkdir" and will be ignored',
-  ]);
 });
 
 it('should only match supported node versions, otherwise throw an error', async () => {
@@ -590,4 +453,19 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
   expect(warningMessages).toStrictEqual([
     'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.',
   ]);
+});
+
+describe('rename', () => {
+  it('should rename keys of files map', () => {
+    const before: Files = {};
+    const toUpper = (s: string) => s.toUpperCase();
+
+    for (let i = 97; i <= 122; i++) {
+      const key = String.fromCharCode(i);
+      before[key] = new FileBlob({ contentType: 'text/plain', data: key });
+    }
+
+    const after = rename(before, toUpper);
+    expect(Object.keys(after)).toEqual('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''));
+  });
 });
