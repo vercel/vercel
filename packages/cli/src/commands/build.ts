@@ -471,28 +471,28 @@ async function doBuild(
     try {
       const { builder, pkg: builderPkg } = builderWithPkg;
 
-      process.env.VERCEL_PROJECT_SETTINGS_OUTPUT_DIRECTORY =
-        projectSettings.outputDirectory;
-      process.env.VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND =
-        projectSettings.installCommand;
-      process.env.VERCEL_PROJECT_SETTINGS_DEV_COMMAND =
-        projectSettings.devCommand;
-      process.env.VERCEL_PROJECT_SETTINGS_BUILD_COMMAND =
-        projectSettings.buildCommand;
-      process.env.VERCEL_PROJECT_SETTINGS_FRAMEWORK = projectSettings.framework;
-      process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION =
-        projectSettings.nodeVersion;
+      const outputDirectory = projectSettings.outputDirectory ?? undefined;
+      const installCommand = projectSettings.installCommand ?? undefined;
+      const devCommand = projectSettings.devCommand ?? undefined;
+      const buildCommand = projectSettings.buildCommand ?? undefined;
+      const framework = projectSettings.framework;
+      const nodeVersion = projectSettings.nodeVersion;
+
+      process.env.VERCEL_PROJECT_SETTINGS_OUTPUT_DIRECTORY = outputDirectory;
+      process.env.VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND = installCommand;
+      process.env.VERCEL_PROJECT_SETTINGS_BUILD_COMMAND = buildCommand;
+      process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION = nodeVersion;
 
       const buildConfig: Config = isZeroConfig
         ? {
             outputDirectory: projectSettings.outputDirectory ?? undefined,
             ...build.config,
             projectSettings,
-            installCommand: projectSettings.installCommand ?? undefined,
-            devCommand: projectSettings.devCommand ?? undefined,
-            buildCommand: projectSettings.buildCommand ?? undefined,
-            framework: projectSettings.framework,
-            nodeVersion: projectSettings.nodeVersion,
+            installCommand,
+            devCommand,
+            buildCommand,
+            framework,
+            nodeVersion,
           }
         : build.config || {};
       const buildOptions: BuildOptions = {
