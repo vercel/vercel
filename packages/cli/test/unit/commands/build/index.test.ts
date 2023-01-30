@@ -1259,13 +1259,13 @@ describe('build', () => {
         turbo: {
           name: 'Turbo',
           buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
-          installCommand: 'cd ../.. && yarn install',
-          ignoreCommand: 'cd ../.. && npx turbo-ignore',
+          installCommand: 'yarn install',
+          ignoreCommand: 'npx turbo-ignore',
         },
         nx: {
           name: 'Nx',
           buildCommand: 'cd ../.. && npx nx build app-1',
-          installCommand: 'cd ../.. && yarn install',
+          installCommand: 'yarn install',
         },
         // rush: {
         //   name: 'Rush',
