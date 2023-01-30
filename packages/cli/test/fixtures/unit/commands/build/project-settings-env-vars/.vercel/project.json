@@ -1,0 +1,11 @@
+{
+  "orgId": ".",
+  "projectId": ".",
+  "settings": {
+    "nodeVersion": "18.x",
+    "buildCommand": "mkdir -p out && node -p 'JSON.stringify(process.env)' > out/env.json",
+    "installCommand": "",
+    "outputDirectory": "out",
+    "framework": null
+  }
+}

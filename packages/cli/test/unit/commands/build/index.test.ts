@@ -1025,6 +1025,36 @@ describe('build', () => {
     }
   });
 
+  it('should set VERCEL_PROJECT_SETTINGS_ environment variables', async () => {
+    if (process.platform === 'win32') {
+      // this test runs a build command with `mkdir -p` which is unsupported on Windows
+      console.log('Skipping test on Windows');
+      return;
+    }
+
+    const cwd = fixture('project-settings-env-vars');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const contents = await fs.readFile(
+        join(output, 'static/env.json'),
+        'utf8'
+      );
+      expect(JSON.parse(contents)).toMatchObject({
+        VERCEL_PROJECT_SETTINGS_BUILD_COMMAND: `mkdir -p out && node -p 'JSON.stringify(process.env)' > out/env.json`,
+        VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND: '',
+        VERCEL_PROJECT_SETTINGS_OUTPUT_DIRECTORY: 'out',
+        VERCEL_PROJECT_SETTINGS_NODE_VERSION: '18.x',
+      });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should apply "images" configuration from `vercel.json`', async () => {
     const cwd = fixture('images');
     const output = join(cwd, '.vercel/output');
