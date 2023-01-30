@@ -471,28 +471,32 @@ async function doBuild(
     try {
       const { builder, pkg: builderPkg } = builderWithPkg;
 
-      const outputDirectory = projectSettings.outputDirectory ?? undefined;
-      const installCommand = projectSettings.installCommand ?? undefined;
-      const devCommand = projectSettings.devCommand ?? undefined;
-      const buildCommand = projectSettings.buildCommand ?? undefined;
-      const framework = projectSettings.framework;
-      const nodeVersion = projectSettings.nodeVersion;
-
-      process.env.VERCEL_PROJECT_SETTINGS_OUTPUT_DIRECTORY = outputDirectory;
-      process.env.VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND = installCommand;
-      process.env.VERCEL_PROJECT_SETTINGS_BUILD_COMMAND = buildCommand;
-      process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION = nodeVersion;
+      for (const key of [
+        'buildCommand',
+        'installCommand',
+        'outputDirectory',
+        'nodeVersion',
+      ] as const) {
+        const value = projectSettings[key];
+        if (typeof value === 'string') {
+          const envKey =
+            `VERCEL_PROJECT_SETTINGS_` +
+            key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
+          process.env[envKey] = value;
+          output.debug(`Setting env ${envKey} to "${value}"`);
+        }
+      }
 
       const buildConfig: Config = isZeroConfig
         ? {
             outputDirectory: projectSettings.outputDirectory ?? undefined,
             ...build.config,
             projectSettings,
-            installCommand,
-            devCommand,
-            buildCommand,
-            framework,
-            nodeVersion,
+            installCommand: projectSettings.installCommand ?? undefined,
+            devCommand: projectSettings.devCommand ?? undefined,
+            buildCommand: projectSettings.buildCommand ?? undefined,
+            framework: projectSettings.framework,
+            nodeVersion: projectSettings.nodeVersion,
           }
         : build.config || {};
       const buildOptions: BuildOptions = {
