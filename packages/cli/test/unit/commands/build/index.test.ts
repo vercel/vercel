@@ -1216,25 +1216,25 @@ describe('build', () => {
     };
 
     describe.each([
-      ['nx', 'app-12'],
-      ['nx-package-config', 'app-11'],
-      ['nx-project-and-package-config-1', 'app-10'],
-      ['nx-project-and-package-config-2', 'app-9'],
-      ['nx-project-config', 'app-8'],
+      'nx',
+      'nx-package-config',
+      'nx-project-and-package-config-1',
+      'nx-project-and-package-config-2',
+      'nx-project-config',
       // 'rush',
-      ['turbo', 'app-14'],
-      ['turbo-package-config', 'app-13'],
-    ])('fixture: %s', (fixture, packageName) => {
+      'turbo',
+      'turbo-package-config',
+    ])('fixture: %s', fixture => {
       const monorepoManagerMap: Record<string, Record<string, string>> = {
         turbo: {
           name: 'Turbo',
-          buildCommand: `cd ../.. && npx turbo run build --filter=${packageName}...`,
+          buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
           installCommand: 'yarn install',
           ignoreCommand: 'npx turbo-ignore',
         },
         nx: {
           name: 'Nx',
-          buildCommand: `cd ../.. && npx nx build ${packageName}`,
+          buildCommand: 'cd ../.. && npx nx build app-1',
           installCommand: 'yarn install',
         },
         // rush: {
