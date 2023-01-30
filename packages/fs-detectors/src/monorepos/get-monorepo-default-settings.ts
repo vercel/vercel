@@ -38,6 +38,18 @@ export async function getMonorepoDefaultSettings(
     }),
   ]);
 
+  let installCommand = `${packageManager} install`;
+  switch (packageManager) {
+    case 'npm':
+      installCommand = `${packageManager} install --prefix=${relativeToRoot}`;
+      break;
+    case 'pnpm':
+      installCommand = `${packageManager} --filter ${projectName}... install`;
+      break;
+    default:
+      break;
+  }
+
   if (monorepoManager === 'turbo') {
     const [turboJSONBuf, packageJSONBuf] = await Promise.all([
       detectorFilesystem.readFile('turbo.json').catch(() => null),
@@ -67,7 +79,7 @@ export async function getMonorepoDefaultSettings(
     return {
       monorepoManager: 'turbo',
       buildCommand: `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`,
-      installCommand: `cd ${relativeToRoot} && ${packageManager} install`,
+      installCommand,
       commandForIgnoringBuildStep: `cd ${relativeToRoot} && npx turbo-ignore`,
     };
   } else if (monorepoManager === 'nx') {
@@ -111,7 +123,7 @@ export async function getMonorepoDefaultSettings(
     return {
       monorepoManager: 'nx',
       buildCommand: `cd ${relativeToRoot} && npx nx build ${projectName}`,
-      installCommand: `cd ${relativeToRoot} && ${packageManager} install`,
+      installCommand,
     };
   }
   // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better
