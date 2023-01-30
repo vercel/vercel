@@ -117,7 +117,6 @@
     "chokidar": "3.3.1",
     "codecov": "3.8.2",
     "cpy": "7.2.0",
-    "cron-validate": "1.4.5",
     "date-fns": "1.29.0",
     "debug": "3.1.0",
     "dot": "1.1.3",

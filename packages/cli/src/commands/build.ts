@@ -18,7 +18,6 @@ import {
   NowBuildError,
   Cron,
 } from '@vercel/build-utils';
-import cronValidate from 'cron-validate';
 import {
   detectBuilders,
   detectFrameworkRecord,
@@ -88,6 +87,7 @@ interface BuildOutputConfig {
   images?: BuildResultV2Typical['images'];
   routes?: BuildResultV2Typical['routes'];
   overrides?: Record<string, PathOverride>;
+  crons?: Cron[];
   framework?: {
     version: string;
   };
@@ -743,25 +743,10 @@ function mergeWildcard(
 }
 
 async function mergeCron(
-  builds: Iterable<[Builder, BuildResult]>,
+  builds: Iterable<[Builder, BuildResult | BuildOutputConfig]>,
   builders: Map<string, BuilderWithPkg>
 ): Promise<Cron[]> {
-  let crons: Cron[] = [];
-
-  const addAndValidate = (...cronsToAdd: Cron[]) => {
-    for (const cronToAdd of cronsToAdd) {
-      const cronValidationResult = cronValidate(cronToAdd.cron);
-      if (!cronValidationResult.isValid()) {
-        throw new Error(
-          `Invalid cron expression for ${cronToAdd.path}, "${
-            cronToAdd.cron
-          }": ${cronValidationResult.getError()[0]}`
-        );
-      }
-
-      crons.push(cronToAdd);
-    }
-  };
+  const crons: Cron[] = [];
 
   // Loop through all builds
   for (const [build, buildResult] of builds) {
@@ -786,12 +771,12 @@ async function mergeCron(
         if (buildConfigFile instanceof CantParseJSONFile) throw buildConfigFile;
 
         if (buildConfigFile?.cron && Array.isArray(buildConfigFile.cron)) {
-          addAndValidate(...buildConfigFile.cron);
+          crons.push(...buildConfigFile.cron);
         }
       } else {
         // Otherwise, we just get the crons field from the typical V2 result
         if (buildResultV2.crons && Array.isArray(buildResultV2.crons)) {
-          addAndValidate(...buildResultV2.crons);
+          crons.push(...buildResultV2.crons);
         }
       }
     } else if (version === 3) {
@@ -799,7 +784,7 @@ async function mergeCron(
       const buildResultV3 = buildResult as BuildResultV3;
 
       if (buildResultV3.cron) {
-        addAndValidate({
+        crons.push({
           path: getBuildV3Path(build),
           cron: buildResultV3.cron,
         });
