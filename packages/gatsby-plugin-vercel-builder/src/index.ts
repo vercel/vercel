@@ -1,6 +1,5 @@
-import { join } from 'path';
 import { getTransformedRoutes } from '@vercel/routing-utils';
-import { writeJson, remove } from 'fs-extra';
+import { writeJson } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
 import {
   createServerlessFunctions,
@@ -32,7 +31,6 @@ export async function generateVercelBuildOutputAPI3Output({
 
   if (validateGatsbyState(state)) {
     console.log('▲ Creating Vercel build output');
-    await remove(join('.vercel', 'output'));
 
     const { pages, redirects, functions, config: gatsbyConfig } = state;
 
