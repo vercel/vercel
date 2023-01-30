@@ -199,7 +199,7 @@ export function getSpawnOptions(
 
 export async function getNodeVersion(
   destPath: string,
-  _nodeVersion?: string,
+  nodeVersionFallback = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
   meta: Meta = {}
 ): Promise<NodeVersion> {
@@ -209,8 +209,7 @@ export async function getNodeVersion(
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
-  let { nodeVersion = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION } =
-    config;
+  let nodeVersion = config.nodeVersion || nodeVersionFallback;
   let isAuto = true;
   if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;
