@@ -1,7 +1,7 @@
 import execa from 'execa';
 import retry from 'async-retry';
 import { homedir, tmpdir } from 'os';
-import { spawn, spawnSync } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
 import { join, dirname, basename, normalize, sep } from 'path';
@@ -694,9 +694,10 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   }`;
 
   debug(`SPAWNING go build -o ${executable} ./... CWD=${tmp}`);
-  spawnSync('go', ['build', '-o', executable, './...'], {
+  execFileSync('go', ['build', '-o', executable, './...'], {
     cwd: tmp,
     env,
+    stdio: 'inherit',
   });
 
   debug(`SPAWNING ${executable} CWD=${tmp}`);

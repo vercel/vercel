@@ -25,6 +25,10 @@
     {
       "path": "/asset.txt",
       "mustContain": "asset that was added in `onPostBuild`"
+    },
+    {
+      "path": "/api/hello",
+      "mustContain": "{\"message\":\"A ok!\"}"
     }
   ]
 }
