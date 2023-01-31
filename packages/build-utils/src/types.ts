@@ -410,10 +410,7 @@ export interface BuildResultBuildOutput {
   buildOutputPath: string;
 }
 
-export interface Cron {
-  path: string;
-  cron: string;
-}
+export type Cron = string;
 
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected

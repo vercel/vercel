@@ -1082,21 +1082,23 @@ describe('build', () => {
   });
 
   it('should include crons property in build output', async () => {
-    const cwd = fixture('edge-function-with-cron');
-    const output = join(cwd, '.vercel/output');
-    const configPath = join(output, 'config.json');
+    const cwd = fixture('with-cron');
+    const output = join(cwd, '.vercel', 'output', 'functions', 'api');
 
     try {
       process.chdir(cwd);
       const exitCode = await build(client);
       expect(exitCode).toBe(0);
 
-      const configData = JSON.parse(
-        await fs.promises.readFile(configPath, 'utf8')
+      const edge = await fs.readJSON(
+        join(output, 'edge.func', '.vc-config.json')
       );
-      expect(configData).toHaveProperty('crons[0].path', '/api/edge-success');
-      expect(configData).toHaveProperty('crons[0].cron', '* * * * *');
-      expect(configData).not.toHaveProperty('crons[1]');
+      expect(edge).toHaveProperty('cron', '* * * * *');
+
+      const serverless = await fs.readJSON(
+        join(output, 'serverless.func', '.vc-config.json')
+      );
+      expect(serverless).toHaveProperty('cron', '* * * * *');
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;

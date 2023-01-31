@@ -5,7 +5,7 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config } from './types';
+import type { Files, Config, Cron } from './types';
 
 interface Environment {
   [key: string]: string;
@@ -25,6 +25,7 @@ export interface LambdaOptionsBase {
   supportsWrapper?: boolean;
   experimentalResponseStreaming?: boolean;
   operationType?: string;
+  cron?: Cron;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -62,6 +63,7 @@ export class Lambda {
   environment: Environment;
   allowQuery?: string[];
   regions?: string[];
+  cron?: Cron;
   /**
    * @deprecated Use `await lambda.createZip()` instead.
    */
@@ -79,6 +81,7 @@ export class Lambda {
       environment = {},
       allowQuery,
       regions,
+      cron,
       supportsMultiPayloads,
       supportsWrapper,
       experimentalResponseStreaming,
@@ -132,6 +135,10 @@ export class Lambda {
       );
     }
 
+    if (cron !== undefined) {
+      assert(typeof cron === 'string', '"cron" is not a string');
+    }
+
     this.type = 'Lambda';
     this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
@@ -142,6 +149,7 @@ export class Lambda {
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
+    this.cron = cron;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;

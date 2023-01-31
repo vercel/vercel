@@ -467,6 +467,7 @@ export const build: BuildV3 = async ({
       // TODO: remove - these two properties should not be required
       name: outputPath,
       deploymentTarget: 'v8-worker',
+      cron,
     });
   } else {
     // "nodejs" runtime is the default
@@ -485,10 +486,11 @@ export const build: BuildV3 = async ({
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       experimentalResponseStreaming,
+      cron,
     });
   }
 
-  return { routes, output, cron };
+  return { routes, output };
 };
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
