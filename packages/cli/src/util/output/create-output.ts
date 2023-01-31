@@ -36,19 +36,17 @@ export class Output {
     {
       debug: debugEnabled = false,
       supportsHyperlink = detectSupportsHyperlink(stream),
-      noColor: colorDisabled = false,
+      noColor = false,
     }: OutputOptions = {}
   ) {
-    const NO_COLOR =
-      process.env.FORCE_COLOR === '0' || process.env.NO_COLOR === '1';
     this.stream = stream;
     this.debugEnabled = debugEnabled;
     this.supportsHyperlink = supportsHyperlink;
-    this.colorDisabled = colorDisabled || NO_COLOR;
     this.spinnerMessage = '';
     this._spinner = null;
 
-    if (colorDisabled || NO_COLOR) {
+    this.colorDisabled = getNoColor(noColor);
+    if (this.colorDisabled) {
       chalk.level = 0;
     }
   }
@@ -219,4 +217,15 @@ export class Output {
 
     return ansiEscapes.link(chalk.cyan(text), url);
   };
+}
+
+function getNoColor(noColorArg: boolean | undefined): boolean {
+  // FORCE_COLOR: the standard supported by chalk https://github.com/chalk/chalk#supportscolor
+  // NO_COLOR: the standard we want to support https://no-color.org/
+  // noColorArg: the `--no-color` arg passed to the CLI command
+  const noColor =
+    process.env.FORCE_COLOR === '0' ||
+    process.env.NO_COLOR === '1' ||
+    noColorArg;
+  return !!noColor;
 }
