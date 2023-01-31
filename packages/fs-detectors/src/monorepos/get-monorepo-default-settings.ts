@@ -67,8 +67,11 @@ export async function getMonorepoDefaultSettings(
     return {
       monorepoManager: 'turbo',
       buildCommand: `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`,
-      installCommand: `cd ${relativeToRoot} && ${packageManager} install`,
-      commandForIgnoringBuildStep: `cd ${relativeToRoot} && npx turbo-ignore`,
+      installCommand:
+        packageManager === 'npm'
+          ? `${packageManager} install --prefix=${relativeToRoot}`
+          : `${packageManager} install`,
+      commandForIgnoringBuildStep: `npx turbo-ignore`,
     };
   } else if (monorepoManager === 'nx') {
     // No ENOENT handling required here since conditional wouldn't be `true` unless `nx.json` was found.
@@ -111,7 +114,10 @@ export async function getMonorepoDefaultSettings(
     return {
       monorepoManager: 'nx',
       buildCommand: `cd ${relativeToRoot} && npx nx build ${projectName}`,
-      installCommand: `cd ${relativeToRoot} && ${packageManager} install`,
+      installCommand:
+        packageManager === 'npm'
+          ? `${packageManager} install --prefix=${relativeToRoot}`
+          : `${packageManager} install`,
     };
   }
   // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better
