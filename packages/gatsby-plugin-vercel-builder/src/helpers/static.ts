@@ -14,7 +14,7 @@ export async function createStaticDir(prefix?: string) {
   try {
     await move(publicDir, targetDir);
   } catch (err: any) {
-    console.error('failed to move "public" dir', err);
+    console.error(`Failed to move "public" dir from "${publicDir}" to "${targetDir}". Copying instead.`, err);
     await copy(publicDir, targetDir);
   }
 }
