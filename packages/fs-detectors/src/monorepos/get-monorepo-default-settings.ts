@@ -64,15 +64,28 @@ export async function getMonorepoDefaultSettings(
       throw new MissingBuildPipeline();
     }
 
-    return {
+    const rootSettings = {
       monorepoManager: 'turbo',
-      buildCommand: `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`,
+      buildCommand: 'npx turbo run build',
+      installCommand: packageManager ? `${packageManager} install` : null,
+      commandForIgnoringBuildStep: 'npx turbo-ignore',
+    };
+
+    const nonRootSettings = {
+      monorepoManager: 'turbo',
+      buildCommand: projectPath
+        ? `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`
+        : null,
       installCommand:
         packageManager === 'npm'
           ? `${packageManager} install --prefix=${relativeToRoot}`
-          : `${packageManager} install`,
-      commandForIgnoringBuildStep: `npx turbo-ignore`,
+          : packageManager
+          ? `${packageManager} install`
+          : null,
+      commandForIgnoringBuildStep: 'npx turbo-ignore',
     };
+
+    return projectPath === '/' ? rootSettings : nonRootSettings;
   } else if (monorepoManager === 'nx') {
     // No ENOENT handling required here since conditional wouldn't be `true` unless `nx.json` was found.
     const nxJSONBuf = await detectorFilesystem.readFile('nx.json');
@@ -111,14 +124,26 @@ export async function getMonorepoDefaultSettings(
       }
     }
 
-    return {
+    const rootSettings = {
       monorepoManager: 'nx',
-      buildCommand: `cd ${relativeToRoot} && npx nx build ${projectName}`,
+      buildCommand: 'npx nx build',
+      installCommand: packageManager ? `${packageManager} install` : null,
+    };
+
+    const nonRootSettings = {
+      monorepoManager: 'nx',
+      buildCommand: projectName
+        ? `cd ${relativeToRoot} && npx nx build ${projectName}`
+        : null,
       installCommand:
         packageManager === 'npm'
           ? `${packageManager} install --prefix=${relativeToRoot}`
-          : `${packageManager} install`,
+          : packageManager
+          ? `${packageManager} install`
+          : null,
     };
+
+    return projectPath === '/' ? rootSettings : nonRootSettings;
   }
   // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better
   /* else if (monorepoManager === 'rush') {
