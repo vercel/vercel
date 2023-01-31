@@ -88,7 +88,6 @@ import {
   PseudoLayerResult,
   updateRouteSrc,
   validateEntrypoint,
-  getCronManifest,
 } from './utils';
 
 export const version = 2;
@@ -481,7 +480,6 @@ export const build: BuildV2 = async ({
 
   isServerMode = !!requiredServerFilesManifest;
 
-  const cronManifest = await getCronManifest(entryPath, outputDirectory);
   const routesManifest = await getRoutesManifest(
     entryPath,
     outputDirectory,
@@ -825,7 +823,6 @@ export const build: BuildV2 = async ({
 
     return {
       output,
-      crons: cronManifest,
       images: getImagesConfig(imagesManifest),
       routes: [
         ...privateOutputs.routes,
@@ -1342,7 +1339,6 @@ export const build: BuildV2 = async ({
         privateOutputs,
         hasIsr404Page,
         hasIsr500Page,
-        cronManifest,
       });
     }
 
@@ -2184,7 +2180,6 @@ export const build: BuildV2 = async ({
       ...staticDirectoryFiles,
       ...privateOutputs.files,
     },
-    crons: cronManifest,
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
     /*
