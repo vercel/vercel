@@ -421,6 +421,7 @@ async function mergeBuilderOutput(
   buildResult: BuildResultBuildOutput
 ) {
   const absOutputDir = resolve(outputDir);
+  console.log({ absOutputDir, buildResult });
   if (absOutputDir === buildResult.buildOutputPath) {
     // `.vercel/output` dir is already in the correct location,
     // so no need to do anything
