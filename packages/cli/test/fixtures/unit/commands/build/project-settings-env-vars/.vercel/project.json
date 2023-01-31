@@ -3,7 +3,7 @@
   "projectId": ".",
   "settings": {
     "nodeVersion": "18.x",
-    "buildCommand": "node build.mjs",
+    "buildCommand": "node build.cjs",
     "installCommand": "",
     "outputDirectory": "out",
     "framework": null

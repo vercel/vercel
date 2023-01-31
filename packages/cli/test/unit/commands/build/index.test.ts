@@ -1035,7 +1035,7 @@ describe('build', () => {
 
       const contents = await fs.readJSON(join(output, 'static/env.json'));
       expect(contents).toMatchObject({
-        VERCEL_PROJECT_SETTINGS_BUILD_COMMAND: `node build.mjs`,
+        VERCEL_PROJECT_SETTINGS_BUILD_COMMAND: `node build.cjs`,
         VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND: '',
         VERCEL_PROJECT_SETTINGS_OUTPUT_DIRECTORY: 'out',
         VERCEL_PROJECT_SETTINGS_NODE_VERSION: '18.x',
