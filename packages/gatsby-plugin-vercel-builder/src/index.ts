@@ -9,7 +9,7 @@ import { createStaticDir } from './helpers/static';
 import type { Config } from './types';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
-  exportPath: string;
+  pathPrefix: string;
   gatsbyStoreState: {
     pages: Map<string, unknown>;
     redirects: unknown;
@@ -19,7 +19,7 @@ export interface GenerateVercelBuildOutputAPI3OutputOptions {
   [x: string]: unknown;
 }
 export async function generateVercelBuildOutputAPI3Output({
-  exportPath,
+  pathPrefix,
   gatsbyStoreState,
 }: GenerateVercelBuildOutputAPI3OutputOptions) {
   const state = {
@@ -38,14 +38,14 @@ export async function generateVercelBuildOutputAPI3Output({
       .map(p => p[1])
       .filter(page => page.mode === 'SSR' || page.mode === 'DSG');
 
-    const ops: Promise<void>[] = [createStaticDir(gatsbyConfig.pathPrefix)];
+    const ops: Promise<void>[] = [createStaticDir(pathPrefix)];
 
     if (functions.length > 0) {
-      ops.push(createAPIRoutes(functions, gatsbyConfig.pathPrefix));
+      ops.push(createAPIRoutes(functions, pathPrefix));
     }
 
     if (ssrRoutes.length > 0) {
-      ops.push(createServerlessFunctions(ssrRoutes, gatsbyConfig.pathPrefix));
+      ops.push(createServerlessFunctions(ssrRoutes, pathPrefix));
     }
 
     await Promise.all(ops);
@@ -71,7 +71,7 @@ export async function generateVercelBuildOutputAPI3Output({
       routes: routes || undefined,
     };
 
-    await writeJson(exportPath, config);
+    await writeJson('.vercel/output/config.json', config);
     console.log('Vercel output has been generated');
   } else {
     throw new Error(
