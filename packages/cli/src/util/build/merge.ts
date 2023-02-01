@@ -25,7 +25,7 @@ export async function merge(source: string, destination: string) {
       source
     ).catch(err => err);
     if (isErrnoException(contents)) {
-      // If source is not a directory, then fall through to rm + move.
+      // If source is not a directory, then fall through to rm + move
       if (contents.code !== 'ENOTDIR') {
         // Any other error then bail
         throw contents;
