@@ -1,5 +1,4 @@
 import { join } from 'path';
-
 import { getNodeVersion } from '@vercel/build-utils';
 import { build } from 'esbuild';
 import {
@@ -10,7 +9,6 @@ import {
   writeFileSync,
   ensureFileSync,
 } from 'fs-extra';
-
 import type {
   NodejsServerlessFunctionConfig,
   PrerenderFunctionConfig,
@@ -29,7 +27,7 @@ export const writeHandler = async ({
     return await build({
       entryPoints: [handlerFile],
       loader: { '.ts': 'ts' },
-      outfile: join(outDir, './index.js'),
+      outfile: join(outDir, 'index.js'),
       format: 'cjs',
       target: `node${major}`,
       platform: 'node',
@@ -60,7 +58,8 @@ export const writeVCConfig = async ({
     shouldAddHelpers: true,
   };
 
-  return writeJson(`${functionDir}/.vc-config.json`, config);
+  const configPath = join(functionDir, '.vc-config.json');
+  await writeJson(configPath, config);
 };
 
 export const writePrerenderConfig = (outputPath: string, group: number) => {
@@ -88,10 +87,6 @@ export async function copyFunctionLibs({
         src: join('.cache', 'page-ssr'),
         dest: join(functionDir, '.cache', 'page-ssr'),
       },
-      // {
-      //   src: join(functionDir, '.cache', 'query-engine', 'assets'),
-      //   dest: join(functionDir, 'assets'),
-      // },
       {
         src: join('.cache', 'data', 'datastore'),
         dest: join(functionDir, '.cache', 'data', 'datastore'),
