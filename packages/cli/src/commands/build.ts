@@ -476,6 +476,22 @@ async function doBuild(
     try {
       const { builder, pkg: builderPkg } = builderWithPkg;
 
+      for (const key of [
+        'buildCommand',
+        'installCommand',
+        'outputDirectory',
+        'nodeVersion',
+      ] as const) {
+        const value = projectSettings[key];
+        if (typeof value === 'string') {
+          const envKey =
+            `VERCEL_PROJECT_SETTINGS_` +
+            key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
+          process.env[envKey] = value;
+          output.debug(`Setting env ${envKey} to "${value}"`);
+        }
+      }
+
       const buildConfig: Config = isZeroConfig
         ? {
             outputDirectory: projectSettings.outputDirectory ?? undefined,
