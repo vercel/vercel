@@ -1968,7 +1968,6 @@ export default class DevServer {
     }
 
     const { asset, assetKey } = foundAsset;
-    console.log(asset);
     debug(
       `Serving asset: [${asset.type}] ${assetKey} ${
         (asset as any).contentType || ''
