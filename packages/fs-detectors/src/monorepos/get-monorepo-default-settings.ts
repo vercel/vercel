@@ -64,14 +64,16 @@ export async function getMonorepoDefaultSettings(
       throw new MissingBuildPipeline();
     }
 
-    const rootSettings = {
-      monorepoManager: 'turbo',
-      buildCommand: 'npx turbo run build',
-      installCommand: packageManager ? `${packageManager} install` : null,
-      commandForIgnoringBuildStep: 'npx turbo-ignore',
-    };
+    if (projectPath === '/') {
+      return {
+        monorepoManager: 'turbo',
+        buildCommand: 'npx turbo run build',
+        installCommand: packageManager ? `${packageManager} install` : null,
+        commandForIgnoringBuildStep: 'npx turbo-ignore',
+      };
+    }
 
-    const nonRootSettings = {
+    return {
       monorepoManager: 'turbo',
       buildCommand: projectPath
         ? `cd ${relativeToRoot} && npx turbo run build --filter={${projectPath}}...`
@@ -84,8 +86,6 @@ export async function getMonorepoDefaultSettings(
           : null,
       commandForIgnoringBuildStep: 'npx turbo-ignore',
     };
-
-    return projectPath === '/' ? rootSettings : nonRootSettings;
   } else if (monorepoManager === 'nx') {
     // No ENOENT handling required here since conditional wouldn't be `true` unless `nx.json` was found.
     const nxJSONBuf = await detectorFilesystem.readFile('nx.json');
@@ -124,13 +124,14 @@ export async function getMonorepoDefaultSettings(
       }
     }
 
-    const rootSettings = {
-      monorepoManager: 'nx',
-      buildCommand: 'npx nx build',
-      installCommand: packageManager ? `${packageManager} install` : null,
-    };
-
-    const nonRootSettings = {
+    if (projectPath === '/') {
+      return {
+        monorepoManager: 'nx',
+        buildCommand: 'npx nx build',
+        installCommand: packageManager ? `${packageManager} install` : null,
+      };
+    }
+    return {
       monorepoManager: 'nx',
       buildCommand: projectName
         ? `cd ${relativeToRoot} && npx nx build ${projectName}`
@@ -142,8 +143,6 @@ export async function getMonorepoDefaultSettings(
           ? `${packageManager} install`
           : null,
     };
-
-    return projectPath === '/' ? rootSettings : nonRootSettings;
   }
   // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better
   /* else if (monorepoManager === 'rush') {
