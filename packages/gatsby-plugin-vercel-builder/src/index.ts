@@ -16,8 +16,8 @@ export interface GenerateVercelBuildOutputAPI3OutputOptions {
     functions: unknown;
     config: unknown;
   };
-  [x: string]: unknown;
 }
+
 export async function generateVercelBuildOutputAPI3Output({
   pathPrefix,
   gatsbyStoreState,
