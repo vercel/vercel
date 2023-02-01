@@ -448,32 +448,12 @@ test(
   })
 );
 
-test('[vercel dev] should set charset in content-type header', async () => {
-  const directory = fixture('test-tomato');
-  const { dev, port } = await testFixture(directory, {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  try {
-    dev.unref();
-    let stderr: any = [];
-    const start = Date.now();
-
-    dev.stderr.on('data', (str: any) => stderr.push(str));
-
-    while (stderr.join('').includes('Ready') === false) {
-      await sleep(ms('3s'));
-
-      if (Date.now() - start > ms('30s')) {
-        console.log('stderr:', stderr.join(''));
-        break;
-      }
-    }
-
+test(
+  '[vercel dev] should set charset in content-type header',
+  testFixtureStdio('test-tomato', async (_: any, port: any) => {
     const response = await fetch(`http://localhost:${port}/`);
     expect(response.headers.get('content-type')).toBe(
       'text/html; charset: utf8'
     );
-  } finally {
-    await dev.kill();
-  }
-});
+  })
+);
