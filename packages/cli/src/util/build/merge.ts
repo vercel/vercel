@@ -21,7 +21,6 @@ export async function merge(source: string, destination: string) {
     throw destStat;
   } else if (destStat.isDirectory()) {
     // Destination is already a directory, so merge contents recursively
-    // TODO: handle case where `source` is not a directory?
     const contents: string[] | NodeJS.ErrnoException = await readdir(
       source
     ).catch(err => err);
