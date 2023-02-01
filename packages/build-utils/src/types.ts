@@ -430,7 +430,6 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
-  crons?: Cron[];
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
