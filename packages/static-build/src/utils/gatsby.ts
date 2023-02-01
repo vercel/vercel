@@ -1,110 +1,134 @@
-import { PackageJson } from '@vercel/build-utils';
-import { promises as fs } from 'fs';
+import fs from 'fs-extra';
 import * as path from 'path';
-import {
-  fileExists,
-  readPackageJson,
-  DeepWriteable,
-  writePackageJson,
-} from './_shared';
+import semver from 'semver';
+import { fileExists } from './_shared';
 
-const GATSBY_PLUGIN_PACKAGE_NAME = '@vercel/gatsby-plugin-vercel-analytics';
-const DEFAULT_CONFIG = {
-  plugins: [
-    {
-      resolve: GATSBY_PLUGIN_PACKAGE_NAME,
-      options: {},
-    },
-  ],
-};
+const PLUGINS = [
+  '@vercel/gatsby-plugin-vercel-analytics',
+  '@vercel/gatsby-plugin-vercel-builder',
+] as const;
+type PluginName = typeof PLUGINS[number];
+
 const GATSBY_CONFIG_FILE = 'gatsby-config';
+const GATSBY_NODE_FILE = 'gatsby-node';
 
-export async function injectVercelAnalyticsPlugin(dir: string): Promise<void> {
-  // Gatsby requires a special variable name for environment variables to be
-  // exposed to the client-side JavaScript bundles:
-  process.env.GATSBY_VERCEL_ANALYTICS_ID = process.env.VERCEL_ANALYTICS_ID;
+const PLUGIN_PATHS: Record<PluginName, string> = {
+  '@vercel/gatsby-plugin-vercel-analytics': path.dirname(
+    eval('require').resolve(
+      `@vercel/gatsby-plugin-vercel-analytics/package.json`
+    )
+  ),
+  '@vercel/gatsby-plugin-vercel-builder': path.dirname(
+    eval('require').resolve(`@vercel/gatsby-plugin-vercel-builder/package.json`)
+  ),
+};
 
-  const gatsbyConfigPathJs = path.join(dir, `${GATSBY_CONFIG_FILE}.js`);
-  const gatsbyConfigPathMjs = path.join(dir, `${GATSBY_CONFIG_FILE}.mjs`);
-  const gatsbyConfigPathTs = path.join(dir, `${GATSBY_CONFIG_FILE}.ts`);
+export async function injectPlugins(
+  detectedVersion: string | null,
+  dir: string
+) {
+  const plugins = new Set<PluginName>();
 
-  if (await fileExists(gatsbyConfigPathTs)) {
-    console.log(
-      `Injecting Gatsby.js analytics plugin "${GATSBY_PLUGIN_PACKAGE_NAME}" to \`${gatsbyConfigPathTs}\``
-    );
-    await addGatsbyPackage(dir);
-    return updateGatsbyTsConfig(gatsbyConfigPathTs);
+  if (process.env.VERCEL_GATSBY_BUILDER_PLUGIN === '1' && detectedVersion) {
+    const version = semver.coerce(detectedVersion);
+    if (version && semver.satisfies(version, '>=4.0.0')) {
+      plugins.add('@vercel/gatsby-plugin-vercel-builder');
+    }
   }
 
-  if (await fileExists(gatsbyConfigPathMjs)) {
-    console.log(
-      `Injecting Gatsby.js analytics plugin "${GATSBY_PLUGIN_PACKAGE_NAME}" to \`${gatsbyConfigPathMjs}\``
-    );
-    await addGatsbyPackage(dir);
-    return updateGatsbyMjsConfig(gatsbyConfigPathMjs);
+  if (process.env.VERCEL_ANALYTICS_ID) {
+    process.env.GATSBY_VERCEL_ANALYTICS_ID = process.env.VERCEL_ANALYTICS_ID;
+    plugins.add('@vercel/gatsby-plugin-vercel-analytics');
   }
 
+  if (plugins.size === 0) {
+    return false;
+  }
+
+  let pluginsStr = 'plugin';
+  if (plugins.size > 1) {
+    pluginsStr += 's';
+  }
   console.log(
-    `Injecting Gatsby.js analytics plugin "${GATSBY_PLUGIN_PACKAGE_NAME}" to \`${gatsbyConfigPathJs}\``
+    `Injecting Gatsby.js ${pluginsStr} ${Array.from(plugins)
+      .map(p => `"${p}"`)
+      .join(', ')}`
   );
-  await addGatsbyPackage(dir);
-  if (await fileExists(gatsbyConfigPathJs)) {
-    await updateGatsbyJsConfig(gatsbyConfigPathJs);
+
+  const ops = [];
+
+  if (plugins.has('@vercel/gatsby-plugin-vercel-analytics')) {
+    ops.push(
+      updateGatsbyConfig(dir, ['@vercel/gatsby-plugin-vercel-analytics'])
+    );
+  }
+
+  if (plugins.has('@vercel/gatsby-plugin-vercel-builder')) {
+    ops.push(updateGatsbyNode(dir));
+  }
+
+  await Promise.all(ops);
+
+  return true;
+}
+
+async function updateGatsbyConfig(dir: string, plugins: string[]) {
+  const gatsbyConfigPathTs = path.join(dir, `${GATSBY_CONFIG_FILE}.ts`);
+  const gatsbyConfigPathMjs = path.join(dir, `${GATSBY_CONFIG_FILE}.mjs`);
+  const gatsbyConfigPathJs = path.join(dir, `${GATSBY_CONFIG_FILE}.js`);
+  if (await fileExists(gatsbyConfigPathTs)) {
+    await updateGatsbyConfigTs(gatsbyConfigPathTs, plugins);
+  } else if (await fileExists(gatsbyConfigPathMjs)) {
+    await updateGatsbyConfigMjs(gatsbyConfigPathMjs, plugins);
+  } else if (await fileExists(gatsbyConfigPathJs)) {
+    await updateGatsbyConfigJs(gatsbyConfigPathJs, plugins);
   } else {
     await fs.writeFile(
       gatsbyConfigPathJs,
-      `module.exports = ${JSON.stringify(DEFAULT_CONFIG)}`
+      `${GENERATED_FILE_COMMENT}
+module.exports = ${JSON.stringify({ plugins })}`
     );
   }
 }
 
-async function addGatsbyPackage(dir: string): Promise<void> {
-  const pkgJson = (await readPackageJson(dir)) as DeepWriteable<PackageJson>;
-  if (!pkgJson.dependencies) {
-    pkgJson.dependencies = {};
-  }
-  if (!pkgJson.dependencies[GATSBY_PLUGIN_PACKAGE_NAME]) {
-    console.log(
-      `Adding "${GATSBY_PLUGIN_PACKAGE_NAME}" to \`package.json\` "dependencies"`
-    );
-    pkgJson.dependencies[GATSBY_PLUGIN_PACKAGE_NAME] = 'latest';
+const GENERATED_FILE_COMMENT = `// This file was generated by @vercel/static-build`;
 
-    await writePackageJson(dir, pkgJson);
+async function updateGatsbyConfigTs(
+  configPath: string,
+  plugins: string[]
+): Promise<void> {
+  const renamedPath = `${configPath}.__vercel_builder_backup__.ts`;
+  if (!(await fileExists(renamedPath))) {
+    await fs.rename(configPath, renamedPath);
   }
-}
-
-async function updateGatsbyTsConfig(configPath: string): Promise<void> {
-  await fs.rename(configPath, configPath + '.__vercel_builder_backup__.ts');
 
   await fs.writeFile(
     configPath,
-    `import userConfig from "./gatsby-config.ts.__vercel_builder_backup__.ts";
+    `${GENERATED_FILE_COMMENT}
+import userConfig from "./gatsby-config.ts.__vercel_builder_backup__.ts";
 import type { PluginRef } from "gatsby";
 
-// https://github.com/gatsbyjs/gatsby/blob/354003fb2908e02ff12109ca3a02978a5a6e608c/packages/gatsby/src/bootstrap/prefer-default.ts
 const preferDefault = (m: any) => (m && m.default) || m;
 
 const vercelConfig = Object.assign(
   {},
-
-  // https://github.com/gatsbyjs/gatsby/blob/a6ecfb2b01d761e8a3612b8ea132c698659923d9/packages/gatsby/src/services/initialize.ts#L113-L117
   preferDefault(userConfig)
 );
+
 if (!vercelConfig.plugins) {
   vercelConfig.plugins = [];
 }
 
-const hasPlugin = vercelConfig.plugins.find(
-  (p: PluginRef) =>
-    p && (p === "${GATSBY_PLUGIN_PACKAGE_NAME}" || p.resolve === "${GATSBY_PLUGIN_PACKAGE_NAME}")
-);
+for (const plugin of ${JSON.stringify(plugins)}) {
+  const hasPlugin = vercelConfig.plugins.find(
+    (p: PluginRef) =>
+      p && (p === plugin || p.resolve === plugin)
+  );
 
-if (!hasPlugin) {
-  vercelConfig.plugins = vercelConfig.plugins.slice();
-  vercelConfig.plugins.push({
-    resolve: "${GATSBY_PLUGIN_PACKAGE_NAME}",
-    options: {},
-  });
+  if (!hasPlugin) {
+    vercelConfig.plugins = vercelConfig.plugins.slice();
+    vercelConfig.plugins.push(plugin);
+  }
 }
 
 export default vercelConfig;
@@ -112,37 +136,40 @@ export default vercelConfig;
   );
 }
 
-async function updateGatsbyMjsConfig(configPath: string): Promise<void> {
-  await fs.rename(configPath, configPath + '.__vercel_builder_backup__.mjs');
+async function updateGatsbyConfigMjs(
+  configPath: string,
+  plugins: string[]
+): Promise<void> {
+  const renamedPath = `${configPath}.__vercel_builder_backup__.mjs`;
+  if (!(await fileExists(renamedPath))) {
+    await fs.rename(configPath, renamedPath);
+  }
 
   await fs.writeFile(
     configPath,
-    `import userConfig from "./gatsby-config.mjs.__vercel_builder_backup__.mjs";
+    `${GENERATED_FILE_COMMENT}
+import userConfig from "./gatsby-config.mjs.__vercel_builder_backup__.mjs";
 
-// https://github.com/gatsbyjs/gatsby/blob/354003fb2908e02ff12109ca3a02978a5a6e608c/packages/gatsby/src/bootstrap/prefer-default.ts
 const preferDefault = (m) => (m && m.default) || m;
 
 const vercelConfig = Object.assign(
   {},
-
-  // https://github.com/gatsbyjs/gatsby/blob/a6ecfb2b01d761e8a3612b8ea132c698659923d9/packages/gatsby/src/services/initialize.ts#L113-L117
   preferDefault(userConfig)
 );
+
 if (!vercelConfig.plugins) {
   vercelConfig.plugins = [];
 }
 
-const hasPlugin = vercelConfig.plugins.find(
-  (p) =>
-    p && (p === "${GATSBY_PLUGIN_PACKAGE_NAME}" || p.resolve === "${GATSBY_PLUGIN_PACKAGE_NAME}")
-);
+for (const plugin of ${JSON.stringify(plugins)}) {
+  const hasPlugin = vercelConfig.plugins.find(
+    (p) => p && (p === plugin || p.resolve === plugin)
+  );
 
-if (!hasPlugin) {
-  vercelConfig.plugins = vercelConfig.plugins.slice();
-  vercelConfig.plugins.push({
-    resolve: "${GATSBY_PLUGIN_PACKAGE_NAME}",
-    options: {},
-  });
+  if (!hasPlugin) {
+    vercelConfig.plugins = vercelConfig.plugins.slice();
+    vercelConfig.plugins.push(plugin);
+  }
 }
 
 export default vercelConfig;
@@ -150,39 +177,179 @@ export default vercelConfig;
   );
 }
 
-async function updateGatsbyJsConfig(configPath: string): Promise<void> {
-  await fs.rename(configPath, configPath + '.__vercel_builder_backup__.js');
+async function updateGatsbyConfigJs(
+  configPath: string,
+  plugins: string[]
+): Promise<void> {
+  const renamedPath = `${configPath}.__vercel_builder_backup__.js`;
+  if (!(await fileExists(renamedPath))) {
+    await fs.rename(configPath, renamedPath);
+  }
 
   await fs.writeFile(
     configPath,
-    `const userConfig = require("./gatsby-config.js.__vercel_builder_backup__.js");
+    `${GENERATED_FILE_COMMENT}
+const userConfig = require("./gatsby-config.js.__vercel_builder_backup__.js");
 
-// https://github.com/gatsbyjs/gatsby/blob/354003fb2908e02ff12109ca3a02978a5a6e608c/packages/gatsby/src/bootstrap/prefer-default.ts
 const preferDefault = m => (m && m.default) || m;
 
 const vercelConfig = Object.assign(
   {},
-
-  // https://github.com/gatsbyjs/gatsby/blob/a6ecfb2b01d761e8a3612b8ea132c698659923d9/packages/gatsby/src/services/initialize.ts#L113-L117
   preferDefault(userConfig)
 );
+
 if (!vercelConfig.plugins) {
   vercelConfig.plugins = [];
 }
 
-const hasPlugin = vercelConfig.plugins.find(
-  (p) =>
-    p && (p === "${GATSBY_PLUGIN_PACKAGE_NAME}" || p.resolve === "${GATSBY_PLUGIN_PACKAGE_NAME}")
-);
-if (!hasPlugin) {
-  vercelConfig.plugins = vercelConfig.plugins.slice();
-  vercelConfig.plugins.push({
-    resolve: "${GATSBY_PLUGIN_PACKAGE_NAME}",
-    options: {},
-  });
-}
+for (const plugin of ${JSON.stringify(plugins)}) {
+  const hasPlugin = vercelConfig.plugins.find(
+    (p) => p && (p === plugin || p.resolve === plugin)
+  );
 
+  if (!hasPlugin) {
+    vercelConfig.plugins = vercelConfig.plugins.slice();
+    vercelConfig.plugins.push(plugin);
+  }
+}
 module.exports = vercelConfig;
 `
+  );
+}
+
+async function updateGatsbyNode(dir: string) {
+  const gatsbyNodePathTs = path.join(dir, `${GATSBY_NODE_FILE}.ts`);
+  const gatsbyNodePathMjs = path.join(dir, `${GATSBY_NODE_FILE}.mjs`);
+  const gatsbyNodePathJs = path.join(dir, `${GATSBY_NODE_FILE}.js`);
+  if (await fileExists(gatsbyNodePathTs)) {
+    await updateGatsbyNodeTs(gatsbyNodePathTs);
+  } else if (await fileExists(gatsbyNodePathMjs)) {
+    await updateGatsbyNodeMjs(gatsbyNodePathMjs);
+  } else if (await fileExists(gatsbyNodePathJs)) {
+    await updateGatsbyNodeJs(gatsbyNodePathJs);
+  } else {
+    await fs.writeFile(
+      gatsbyNodePathJs,
+      `${GENERATED_FILE_COMMENT}
+module.exports = require('@vercel/gatsby-plugin-vercel-builder/gatsby-node.js');`
+    );
+  }
+}
+
+async function updateGatsbyNodeTs(configPath: string) {
+  const renamedPath = `${configPath}.__vercel_builder_backup__.ts`;
+  if (!(await fileExists(renamedPath))) {
+    await fs.rename(configPath, renamedPath);
+  }
+
+  await fs.writeFile(
+    configPath,
+    `${GENERATED_FILE_COMMENT}
+import type { GatsbyNode } from 'gatsby';
+import * as vercelBuilder from '@vercel/gatsby-plugin-vercel-builder/gatsby-node.js';
+import * as gatsbyNode from './gatsby-node.ts.__vercel_builder_backup__.ts';
+
+export * from './gatsby-node.ts.__vercel_builder_backup__.ts';
+
+export const onPostBuild: GatsbyNode['onPostBuild'] = async (args, options) => {
+  if (typeof (gatsbyNode as any).onPostBuild === 'function') {
+    await (gatsbyNode as any).onPostBuild(args, options);
+  }
+  await vercelBuilder.onPostBuild(args, options);
+};
+`
+  );
+}
+
+async function updateGatsbyNodeMjs(configPath: string) {
+  const renamedPath = `${configPath}.__vercel_builder_backup__.mjs`;
+  if (!(await fileExists(renamedPath))) {
+    await fs.rename(configPath, renamedPath);
+  }
+
+  await fs.writeFile(
+    configPath,
+    `${GENERATED_FILE_COMMENT}
+import * as vercelBuilder from '@vercel/gatsby-plugin-vercel-builder/gatsby-node.js';
+import * as gatsbyNode from './gatsby-node.mjs.__vercel_builder_backup__.mjs';
+
+export * from './gatsby-node.mjs.__vercel_builder_backup__.mjs';
+
+export const onPostBuild = async (args, options) => {
+  if (typeof gatsbyNode.onPostBuild === 'function') {
+    await gatsbyNode.onPostBuild(args, options);
+  }
+  await vercelBuilder.onPostBuild(args, options);
+};
+`
+  );
+}
+
+async function updateGatsbyNodeJs(configPath: string) {
+  const renamedPath = `${configPath}.__vercel_builder_backup__.js`;
+  if (!(await fileExists(renamedPath))) {
+    await fs.rename(configPath, renamedPath);
+  }
+
+  await fs.writeFile(
+    configPath,
+    `${GENERATED_FILE_COMMENT}
+const vercelBuilder = require('@vercel/gatsby-plugin-vercel-builder/gatsby-node.js');
+const gatsbyNode = require('./gatsby-node.js.__vercel_builder_backup__.js');
+
+const origOnPostBuild = gatsbyNode.onPostBuild;
+
+gatsbyNode.onPostBuild = async (args, options) => {
+  if (typeof origOnPostBuild === 'function') {
+    await origOnPostBuild(args, options);
+  }
+  await vercelBuilder.onPostBuild(args, options);
+};
+
+module.exports = gatsbyNode;
+`
+  );
+}
+
+export async function cleanupGatsbyFiles(dir: string) {
+  const backup = '.__vercel_builder_backup__';
+  const fileEndings = ['.js', '.ts', '.mjs'];
+
+  for (const fileName of [GATSBY_CONFIG_FILE, GATSBY_NODE_FILE]) {
+    for (const fileEnding of fileEndings) {
+      const baseFile = `${fileName}${fileEnding}`;
+      const baseFilePath = path.join(dir, baseFile);
+      const backupFile = `${baseFile}${backup}${fileEnding}`;
+      const backupFilePath = path.join(dir, backupFile);
+
+      const [baseFileContent, backupFileContent] = await Promise.all([
+        fs.readFile(baseFilePath, 'utf-8').catch(() => null),
+        fs.readFile(backupFilePath, 'utf-8').catch(() => null),
+      ]);
+
+      if (
+        baseFileContent &&
+        baseFileContent.startsWith(GENERATED_FILE_COMMENT)
+      ) {
+        await fs.rm(baseFilePath);
+      }
+
+      if (backupFileContent) {
+        await fs.rename(backupFilePath, baseFilePath);
+      }
+    }
+  }
+}
+
+export async function createPluginSymlinks(dir: string) {
+  const nodeModulesDir = path.join(dir, 'node_modules');
+  await fs.ensureDir(path.join(nodeModulesDir, '@vercel'));
+  await Promise.all(
+    PLUGINS.map(name => fs.remove(path.join(nodeModulesDir, name)))
+  );
+  await Promise.all(
+    PLUGINS.map(name =>
+      fs.symlink(PLUGIN_PATHS[name], path.join(nodeModulesDir, name))
+    )
   );
 }

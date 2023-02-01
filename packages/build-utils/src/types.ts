@@ -410,6 +410,8 @@ export interface BuildResultBuildOutput {
   buildOutputPath: string;
 }
 
+export type Cron = string;
+
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.

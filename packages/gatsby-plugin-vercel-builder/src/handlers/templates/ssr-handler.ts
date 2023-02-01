@@ -1,9 +1,9 @@
-import { join } from 'path';
 import os from 'os';
+import etag from 'etag';
+import { parse } from 'url';
 import { copySync, existsSync } from 'fs-extra';
-
+import { join, dirname, basename } from 'path';
 import { getPageSSRHelpers, getGraphQLEngine } from '../utils';
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const TMP_DATA_PATH = join(os.tmpdir(), 'data/datastore');
@@ -15,16 +15,41 @@ if (!existsSync(TMP_DATA_PATH)) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const graphqlEngine = await getGraphQLEngine();
-  const { getData, renderHTML } = await getPageSSRHelpers();
+  let pageName: string;
+  const pathname = parse(req.url!).pathname || '/';
+  const isPageData = pathname.startsWith('/page-data/');
+  if (isPageData) {
+    // /page-data/index/page-data.json
+    // /page-data/using-ssr/page-data.json
+    pageName = basename(dirname(pathname));
+    if (pageName === 'index') {
+      pageName = '/';
+    }
+  } else {
+    // /using-ssr
+    // /using-ssr/
+    // /using-ssr/index.html
+    pageName = basename(pathname);
+    if (pageName === 'index.html') {
+      pageName = basename(dirname(pathname));
+    }
+    if (!pageName) {
+      pageName = '/';
+    }
+  }
+
+  const [graphqlEngine, { getData, renderHTML, renderPageData }] =
+    await Promise.all([getGraphQLEngine(), getPageSSRHelpers()]);
 
   const data = await getData({
-    pathName: req.url as string,
+    pathName: pageName,
     graphqlEngine,
     req,
   });
 
-  const results = await renderHTML({ data });
+  const results = isPageData
+    ? await renderPageData({ data })
+    : await renderHTML({ data });
 
   if (data.serverDataHeaders) {
     for (const [name, value] of Object.entries(data.serverDataHeaders)) {
@@ -36,5 +61,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.statusCode = data.serverDataStatus;
   }
 
-  res.send(results);
+  if (isPageData) {
+    res.setHeader('ETag', etag(JSON.stringify(results)));
+    res.json(results);
+  } else {
+    res.send(results);
+  }
 }

@@ -1,28 +1,15 @@
-import path from 'path';
-
 import type { GatsbyNode } from 'gatsby';
 
-// this gets built separately, so import from "build" instead of "src"
-import { generateVercelBuildOutputAPI3Output } from './build';
+// this gets built separately, so import from "dist" instead of "src"
+import { generateVercelBuildOutputAPI3Output } from './dist';
 
-export const pluginOptionsSchema: GatsbyNode['pluginOptionsSchema'] = ({
-  Joi,
+export const onPostBuild: GatsbyNode['onPostBuild'] = async ({
+  pathPrefix,
+  store,
 }) => {
-  return Joi.object({
-    exportPath: Joi.string().optional(),
-  });
-};
-
-export const onPostBuild: GatsbyNode['onPostBuild'] = async (
-  { store },
-  pluginOptions
-) => {
-  // validated by `pluginOptionSchema`
-  const exportPath = (pluginOptions?.exportPath ??
-    path.join('.vercel', 'output', 'config.json')) as string;
-
   await generateVercelBuildOutputAPI3Output({
-    exportPath,
+    pathPrefix,
+    // validated by `pluginOptionSchema`
     gatsbyStoreState: store.getState(),
   });
 };

@@ -272,6 +272,11 @@ export const frameworks = [
         headers: { 'cache-control': 'public, max-age=31536000, immutable' },
         continue: true,
       },
+      {
+        src: '^/_astro/(.*)$',
+        headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+        continue: true,
+      },
     ],
   },
   {

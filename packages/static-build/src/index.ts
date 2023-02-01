@@ -41,6 +41,10 @@ import * as GatsbyUtils from './utils/gatsby';
 import * as NuxtUtils from './utils/nuxt';
 import type { ImagesConfig, BuildConfig } from './utils/_shared';
 import treeKill from 'tree-kill';
+import {
+  detectFrameworkRecord,
+  LocalFileSystemDetector,
+} from '@vercel/fs-detectors';
 
 const sleep = (n: number) => new Promise(resolve => setTimeout(resolve, n));
 
@@ -120,7 +124,7 @@ function getCommand(
   name: 'install' | 'build' | 'dev',
   pkg: PackageJson | null,
   config: Config,
-  framework: Framework | undefined
+  framework?: Framework
 ): string | null {
   if (!config.zeroConfig) {
     return null;
@@ -318,6 +322,12 @@ export const build: BuildV2 = async ({
   const pkg = getPkg(entrypoint, workPath);
   const devScript = pkg ? getScriptName(pkg, 'dev', config) : null;
   const framework = getFramework(config, pkg);
+  const localFileSystemDetector = new LocalFileSystemDetector(workPath);
+  const { detectedVersion = null } =
+    (await detectFrameworkRecord({
+      fs: localFileSystemDetector,
+      frameworkList: frameworks,
+    })) ?? {};
   const devCommand = getCommand('dev', pkg, config, framework);
   const buildCommand = getCommand('build', pkg, config, framework);
   const installCommand = getCommand('install', pkg, config, framework);
@@ -378,15 +388,16 @@ export const build: BuildV2 = async ({
         process.env[key] = value;
       }
 
+      if (framework.slug === 'gatsby') {
+        await GatsbyUtils.injectPlugins(detectedVersion, entrypointDir);
+      }
+
       if (process.env.VERCEL_ANALYTICS_ID) {
         const frameworkDirectory = path.join(
           workPath,
           path.dirname(entrypoint)
         );
         switch (framework.slug) {
-          case 'gatsby':
-            await GatsbyUtils.injectVercelAnalyticsPlugin(frameworkDirectory);
-            break;
           case 'nuxtjs':
             await NuxtUtils.injectVercelAnalyticsPlugin(frameworkDirectory);
             break;
@@ -500,6 +511,10 @@ export const build: BuildV2 = async ({
       }
     }
 
+    if (framework?.slug === 'gatsby') {
+      await GatsbyUtils.createPluginSymlinks(entrypointDir);
+    }
+
     let gemHome: string | undefined = undefined;
     const pathList = [];
 
@@ -610,32 +625,38 @@ export const build: BuildV2 = async ({
         debug(`Executing "${buildCommand}"`);
       }
 
-      const found =
-        typeof buildCommand === 'string'
-          ? await execCommand(buildCommand, {
-              ...spawnOpts,
+      try {
+        const found =
+          typeof buildCommand === 'string'
+            ? await execCommand(buildCommand, {
+                ...spawnOpts,
 
-              // Yarn v2 PnP mode may be activated, so force
-              // "node-modules" linker style
-              env: {
-                YARN_NODE_LINKER: 'node-modules',
-                ...spawnOpts.env,
-              },
+                // Yarn v2 PnP mode may be activated, so force
+                // "node-modules" linker style
+                env: {
+                  YARN_NODE_LINKER: 'node-modules',
+                  ...spawnOpts.env,
+                },
 
-              cwd: entrypointDir,
-            })
-          : await runPackageJsonScript(
-              entrypointDir,
-              ['vercel-build', 'now-build', 'build'],
-              spawnOpts
-            );
+                cwd: entrypointDir,
+              })
+            : await runPackageJsonScript(
+                entrypointDir,
+                ['vercel-build', 'now-build', 'build'],
+                spawnOpts
+              );
 
-      if (!found) {
-        throw new Error(
-          `Missing required "${
-            buildCommand || 'vercel-build'
-          }" script in "${entrypoint}"`
-        );
+        if (!found) {
+          throw new Error(
+            `Missing required "${
+              buildCommand || 'vercel-build'
+            }" script in "${entrypoint}"`
+          );
+        }
+      } finally {
+        if (framework?.slug === 'gatsby') {
+          await GatsbyUtils.cleanupGatsbyFiles(entrypointDir);
+        }
       }
 
       const outputDirPrefix = path.join(workPath, path.dirname(entrypoint));
