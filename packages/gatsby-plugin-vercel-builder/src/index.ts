@@ -38,7 +38,7 @@ export async function generateVercelBuildOutputAPI3Output({
       .map(p => p[1])
       .filter(page => page.mode === 'SSR' || page.mode === 'DSG');
 
-    const ops: Promise<void>[] = [createStaticDir(gatsbyConfig.pathPrefix)];
+    const ops: Promise<void>[] = [];
 
     if (functions.length > 0) {
       ops.push(createAPIRoutes(functions, gatsbyConfig.pathPrefix));
@@ -49,6 +49,9 @@ export async function generateVercelBuildOutputAPI3Output({
     }
 
     await Promise.all(ops);
+
+    // "static" directory needs to happen last since it moves "public"
+    await createStaticDir(gatsbyConfig.pathPrefix);
 
     let trailingSlash: boolean | undefined = undefined;
     if (gatsbyConfig.trailingSlash === 'always') {
