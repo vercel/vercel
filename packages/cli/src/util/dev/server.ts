@@ -1968,6 +1968,7 @@ export default class DevServer {
     }
 
     const { asset, assetKey } = foundAsset;
+    console.log(asset);
     debug(
       `Serving asset: [${asset.type}] ${assetKey} ${
         (asset as any).contentType || ''
@@ -1986,7 +1987,9 @@ export default class DevServer {
               headers: [
                 {
                   key: 'Content-Type',
-                  value: asset.contentType || getMimeType(assetKey),
+                  value: `${
+                    asset.contentType || getMimeType(assetKey)
+                  }; charset=utf-8`,
                 },
               ],
             },
@@ -1996,7 +1999,9 @@ export default class DevServer {
       case 'FileBlob':
         const headers: http.OutgoingHttpHeaders = {
           'Content-Length': asset.data.length,
-          'Content-Type': asset.contentType || getMimeType(assetKey),
+          'Content-Type': `${
+            asset.contentType || getMimeType(assetKey)
+          }; charset=utf-8`,
         };
         this.setResponseHeaders(res, requestId, headers);
         res.end(asset.data);

@@ -453,7 +453,7 @@ test(
   testFixtureStdio('test-tomato', async (_: any, port: any) => {
     const response = await fetch(`http://localhost:${port}/`);
     expect(response.headers.get('content-type')).toBe(
-      'text/html; charset: utf8'
+      'text/html; charset=utf-8'
     );
   })
 );
