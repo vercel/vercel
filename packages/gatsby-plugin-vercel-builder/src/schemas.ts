@@ -2,6 +2,7 @@ import type {
   IGatsbyPage,
   IGatsbyFunction,
   IRedirect,
+  IGatsbyConfig,
 } from 'gatsby/dist/redux/types';
 import Ajv, { JSONSchemaType } from 'ajv';
 
@@ -24,6 +25,7 @@ export interface GatsbyState {
   pages: Array<[string, GatsbyPage]>;
   redirects: Array<GatsbyRedirect>;
   functions: Array<GatsbyFunction>;
+  config: GatsbyConfig;
 }
 
 export type GatsbyFunction = Pick<
@@ -53,6 +55,19 @@ const GatsbyRedirectSchema: JSONSchemaType<GatsbyRedirect> = {
   required: ['fromPath', 'toPath'],
 } as const;
 
+export type GatsbyConfig = Pick<IGatsbyConfig, 'trailingSlash'>;
+
+const GatsbyConfigSchema: JSONSchemaType<GatsbyConfig> = {
+  type: 'object',
+  properties: {
+    trailingSlash: {
+      type: 'string',
+      enum: ['always', 'never', 'ignore', 'legacy'],
+      nullable: true,
+    },
+  },
+} as const;
+
 const GatsbyStateSchema: JSONSchemaType<GatsbyState> = {
   type: 'object',
   properties: {
@@ -73,8 +88,9 @@ const GatsbyStateSchema: JSONSchemaType<GatsbyState> = {
       type: 'array',
       items: GatsbyFunctionSchema,
     },
+    config: GatsbyConfigSchema,
   },
-  required: ['pages', 'redirects', 'functions'],
+  required: ['pages', 'redirects', 'functions', 'config'],
   additionalProperties: true,
 } as const;
 
