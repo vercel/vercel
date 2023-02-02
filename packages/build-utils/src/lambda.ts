@@ -136,7 +136,12 @@ export class Lambda {
     }
 
     if (cron !== undefined) {
-      assert(typeof cron === 'string', '"cron" is not a string');
+      assert(
+        typeof cron === 'string' ||
+          typeof cron === 'object' ||
+          Array.isArray(cron),
+        '"cron" is not a string, object, or an array'
+      );
     }
 
     this.type = 'Lambda';
