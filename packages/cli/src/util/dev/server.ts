@@ -1129,10 +1129,10 @@ export default class DevServer {
       });
       body = `${json}\n`;
     } else if (accept.includes('html')) {
-      res.setHeader('content-type', 'text/html');
+      res.setHeader('content-type', 'text/html; charset=utf-8');
       body = redirectTemplate({ location, statusCode });
     } else {
-      res.setHeader('content-type', 'text/plain');
+      res.setHeader('content-type', 'text/plain; charset=utf-8');
       body = `Redirecting to ${location} (${statusCode})\n`;
     }
     res.end(body);
