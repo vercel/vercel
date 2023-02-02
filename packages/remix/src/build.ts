@@ -283,6 +283,7 @@ async function createRenderFunction(
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
     operationType: 'SSR',
+    experimentalResponseStreaming: true,
   });
 
   return lambda;
