@@ -37,7 +37,6 @@ import {
   FileFsRef,
   PackageJson,
   spawnCommand,
-  FileBlob,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -1975,17 +1974,6 @@ export default class DevServer {
       }`
     );
 
-    const getContentType = (asset: FileFsRef | FileBlob, assetKey: string) => {
-      let contentType = asset.contentType;
-      if (!contentType) {
-        contentType = getMimeType(assetKey);
-      }
-      if (contentType === 'text/html' || contentType === 'text/plain') {
-        contentType = `${contentType}; charset=utf-8`;
-      }
-      return contentType;
-    };
-
     /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
@@ -1998,7 +1986,7 @@ export default class DevServer {
               headers: [
                 {
                   key: 'Content-Type',
-                  value: getContentType(asset, assetKey),
+                  value: asset.contentType || getMimeType(assetKey),
                 },
               ],
             },
@@ -2008,7 +1996,7 @@ export default class DevServer {
       case 'FileBlob':
         const headers: http.OutgoingHttpHeaders = {
           'Content-Length': asset.data.length,
-          'Content-Type': getContentType(asset, assetKey),
+          'Content-Type': asset.contentType || getMimeType(assetKey),
         };
         this.setResponseHeaders(res, requestId, headers);
         res.end(asset.data);
