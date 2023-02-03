@@ -11,6 +11,7 @@
   ],
   "probes": [
     { "path": "/", "mustContain": "Welcome to Remix" },
+    { "path": "/edge", "mustContain": "Welcome to Remix@Edge" },
     { "path": "/b", "mustContain": "B page" },
     { "path": "/nested", "mustContain": "Nested index page" },
     { "path": "/nested/another", "mustContain": "Nested another page" },
