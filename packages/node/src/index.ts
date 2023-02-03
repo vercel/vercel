@@ -413,6 +413,11 @@ export const build: BuildV3 = async ({
         )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
       );
     }
+    if (staticConfig.runtime === 'nodejs') {
+      console.log(
+        `Detected unused static config runtime "nodejs" in "${entrypointPath}"`
+      );
+    }
     isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
 
