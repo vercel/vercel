@@ -1,9 +1,6 @@
 const path = require('node:path');
-const rimraf = require('rimraf');
+const fs = require('fs-extra');
 const { build } = require('../../dist');
-const { promisify } = require('node:util');
-
-const rimrafP = promisify(rimraf);
 
 function getFixture(name) {
   return path.join(__dirname, 'fixtures', name);
@@ -20,10 +17,8 @@ afterEach(() => {
 });
 
 it('should include cron property from config', async () => {
-  // process.env.VERCEL_BUILDER_DEBUG = '1';
-
   const cwd = getFixture('03-with-api-routes');
-  await rimrafP(path.join(cwd, '.next'));
+  await fs.remove(path.join(cwd, '.next'));
 
   const result = await build({
     workPath: cwd,
