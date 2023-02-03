@@ -45,5 +45,5 @@ it('should include cron property from config', async () => {
   });
 
   expect(result.output['api/serverless']).toHaveProperty('cron', '* * * * *');
-  // expect(result.output['api/edge']).toHaveProperty('cron', '* * * * *');
+  expect(result.output['api/edge']).toHaveProperty('cron', '* * * * *');
 });

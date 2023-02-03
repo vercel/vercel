@@ -2314,12 +2314,14 @@ interface EdgeFunctionMatcher {
 }
 
 export async function getMiddlewareBundle({
+  config = {},
   entryPath,
   outputDirectory,
   routesManifest,
   isCorrectMiddlewareOrder,
   prerenderBypassToken,
 }: {
+  config: Config;
   entryPath: string;
   outputDirectory: string;
   prerenderBypassToken: string;
@@ -2375,6 +2377,21 @@ export async function getMiddlewareBundle({
             edgeFunction.wasm
           );
 
+          const edgeFunctionOptions: { cron?: Cron } = {};
+          if (config.functions) {
+            const sourceFile = await getSourceFilePathFromPage({
+              workPath: entryPath,
+              page: `${edgeFunction.page}.js`,
+            });
+
+            const opts = await getLambdaOptionsFromFunction({
+              sourceFile,
+              config,
+            });
+
+            edgeFunctionOptions.cron = opts.cron;
+          }
+
           return {
             type,
             page: edgeFunction.page,
@@ -2419,6 +2436,7 @@ export async function getMiddlewareBundle({
               );
 
               return new EdgeFunction({
+                ...edgeFunctionOptions,
                 deploymentTarget: 'v8-worker',
                 name: edgeFunction.name,
                 files: {

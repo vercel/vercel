@@ -968,6 +968,7 @@ export async function serverBuild({
   });
 
   const middleware = await getMiddlewareBundle({
+    config,
     entryPath,
     outputDirectory,
     routesManifest,
