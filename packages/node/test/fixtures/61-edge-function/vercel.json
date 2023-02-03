@@ -1,5 +1,5 @@
 {
-  "builds": [{ "src": "api/**/*.js", "use": "@vercel/node" }],
+  "builds": [{ "src": "api/**/*.{js,mjs}", "use": "@vercel/node" }],
   "probes": [
     {
       "path": "/api/edge.js",
@@ -10,7 +10,7 @@
       "mustContain": "RANDOMNESS_PLACEHOLDER:edge, 11."
     },
     {
-      "path": "/api/react-dom.js",
+      "path": "/api/react-dom.mjs",
       "mustContain": "<h1>RANDOMNESS_PLACEHOLDER:Hello from Edge</h1>"
     }
   ]
