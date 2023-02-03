@@ -2693,7 +2693,6 @@ export function getOperationType({
 
   if (pageFileName) {
     const routePaths = Object.keys({
-      ...prerenderManifest?.staticRoutes,
       ...prerenderManifest?.blockingFallbackRoutes,
       ...prerenderManifest?.fallbackRoutes,
     });
