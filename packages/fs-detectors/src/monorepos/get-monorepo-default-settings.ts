@@ -22,8 +22,8 @@ export class MissingBuildTarget extends Error {
 }
 
 type MonorepoDefaultSettings = {
-  buildCommand: string | null;
-  installCommand: string | null;
+  buildCommand?: string | null;
+  installCommand?: string | null;
   commandForIgnoringBuildStep?: string;
   monorepoManager: string;
 } | null;
