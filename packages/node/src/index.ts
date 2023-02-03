@@ -413,8 +413,15 @@ export const build: BuildV3 = async ({
         )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
       );
     }
+    if (staticConfig.runtime === 'nodejs') {
+      console.log(
+        `Detected unused static config runtime "nodejs" in "${entrypointPath}"`
+      );
+    }
     isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
+
+  const cron = staticConfig?.cron;
 
   debug('Tracing input files...');
   const traceTime = Date.now();
@@ -465,6 +472,7 @@ export const build: BuildV3 = async ({
       // TODO: remove - these two properties should not be required
       name: outputPath,
       deploymentTarget: 'v8-worker',
+      cron,
     });
   } else {
     // "nodejs" runtime is the default
@@ -483,6 +491,7 @@ export const build: BuildV3 = async ({
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       experimentalResponseStreaming,
+      cron,
     });
   }
 

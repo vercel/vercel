@@ -276,6 +276,14 @@ elif 'app' in __vc_variables:
             query = url.query.encode()
             path = url.path
 
+            headers_encoded = []
+            for k, v in headers.items():
+                # Cope with repeated headers in the encoding.
+                if isinstance(v, list):
+                    headers_encoded.append([k.lower().encode(), [i.encode() for i in v]])
+                else:
+                    headers_encoded.append([k.lower().encode(), v.encode()])
+
             scope = {
                 'server': (headers.get('host', 'lambda'), headers.get('x-forwarded-port', 80)),
                 'client': (headers.get(
@@ -285,7 +293,7 @@ elif 'app' in __vc_variables:
                 'scheme': headers.get('x-forwarded-proto', 'http'),
                 'root_path': '',
                 'query_string': query,
-                'headers': [[k.lower().encode(), v.encode()] for k, v in headers.items()],
+                'headers': headers_encoded,
                 'type': 'http',
                 'http_version': '1.1',
                 'method': payload['method'],

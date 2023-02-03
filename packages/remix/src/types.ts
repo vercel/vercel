@@ -5,3 +5,11 @@ export interface AppConfig {
   serverBuildPath?: string;
   serverBuildTarget?: string;
 }
+
+export interface RemixBuildManifest {
+  routes: {
+    [id: string]: {
+      path: string;
+    };
+  };
+}
