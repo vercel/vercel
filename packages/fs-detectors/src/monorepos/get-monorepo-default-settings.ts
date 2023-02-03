@@ -21,12 +21,12 @@ export class MissingBuildTarget extends Error {
   }
 }
 
-interface MonorepoDefaultSettings {
+type MonorepoDefaultSettings = {
   buildCommand: string | null;
   installCommand: string | null;
   commandForIgnoringBuildStep?: string;
   monorepoManager: string;
-}
+} | null;
 
 export async function getMonorepoDefaultSettings(
   projectName: string,
