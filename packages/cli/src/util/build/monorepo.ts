@@ -54,8 +54,10 @@ export async function setMonorepoDefaultSettings(
       )} monorepo manager. Attempting to assign default settings.`
     );
 
-    setCommand('buildCommand', commands.buildCommand);
-    setCommand('installCommand', commands.installCommand);
+    if (commands.buildCommand)
+      setCommand('buildCommand', commands.buildCommand);
+    if (commands.installCommand)
+      setCommand('installCommand', commands.installCommand);
     if (commands.commandForIgnoringBuildStep) {
       setCommand(
         'commandForIgnoringBuildStep',

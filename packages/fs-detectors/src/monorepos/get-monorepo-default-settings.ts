@@ -21,12 +21,19 @@ export class MissingBuildTarget extends Error {
   }
 }
 
+interface MonorepoDefaultSettings {
+  buildCommand: string | null;
+  installCommand: string | null;
+  commandForIgnoringBuildStep?: string;
+  monorepoManager: string;
+}
+
 export async function getMonorepoDefaultSettings(
   projectName: string,
   projectPath: string,
   relativeToRoot: string,
   detectorFilesystem: DetectorFilesystem
-) {
+): Promise<MonorepoDefaultSettings> {
   const [monorepoManager, packageManager] = await Promise.all([
     detectFramework({
       fs: detectorFilesystem,
