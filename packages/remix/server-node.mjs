@@ -5,7 +5,7 @@ import {
   Request as NodeRequest,
   writeReadableStreamToWritable,
 } from '@remix-run/node';
-import * as build from './index.mjs';
+import build from './index.js';
 
 const handleRequest = createRemixRequestHandler(build, process.env.NODE_ENV);
 

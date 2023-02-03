@@ -113,7 +113,7 @@ export const build: BuildV2 = async ({
       )}';
 config.serverBuildTarget = undefined;
 config.server = undefined;
-config.serverModuleFormat = 'esm';
+config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'neutral';
 config.serverBuildPath = 'build/index.js';
 export default config;`;
@@ -123,7 +123,7 @@ export default config;`;
       )}');
 config.serverBuildTarget = undefined;
 config.server = undefined;
-config.serverModuleFormat = 'esm';
+config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'neutral';
 config.serverBuildPath = 'build/index.js';
 module.exports = config;`;
@@ -171,11 +171,6 @@ module.exports = config;`;
 
   const { serverBuildPath, routes } = remixConfig;
 
-  // Remix enforces that `serverBuildPath` ends with `.js`,
-  // but we want to rename from `.js` to `.mjs`
-  const renamedServerBuildPath = serverBuildPath.replace(/\.js$/, '.mjs');
-  await fs.rename(serverBuildPath, renamedServerBuildPath);
-
   // Figure out which pages should be edge functions
   const edgePages = new Set<ConfigRoute>();
   const project = new Project();
@@ -196,14 +191,14 @@ module.exports = config;`;
     createRenderNodeFunction(
       entrypointFsDirname,
       repoRootPath,
-      renamedServerBuildPath,
+      serverBuildPath,
       nodeVersion
     ),
     edgePages.size > 0
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
-          renamedServerBuildPath
+          serverBuildPath
         )
       : undefined,
   ]);
