@@ -10,13 +10,13 @@ import build from './index.js';
 const handleRequest = createRemixRequestHandler(build, process.env.NODE_ENV);
 
 function createRemixHeaders(requestHeaders) {
-  let headers = new NodeHeaders();
+  const headers = new NodeHeaders();
 
-  for (let key in requestHeaders) {
-    let header = requestHeaders[key];
+  for (const key in requestHeaders) {
+    const header = requestHeaders[key];
     // set-cookie is an array (maybe others)
     if (Array.isArray(header)) {
-      for (let value of header) {
+      for (const value of header) {
         headers.append(key, value);
       }
     } else {
@@ -28,20 +28,17 @@ function createRemixHeaders(requestHeaders) {
 }
 
 function createRemixRequest(req, res) {
-  let host = req.headers['x-forwarded-host'] || req.headers['host'];
-  // doesn't seem to be available on their req object!
-  let protocol = req.headers['x-forwarded-proto'] || 'https';
-  let url = new URL(req.url, `${protocol}://${host}`);
+  const host = req.headers['x-forwarded-host'] || req.headers['host'];
+  const protocol = req.headers['x-forwarded-proto'] || 'https';
+  const url = new URL(req.url, `${protocol}://${host}`);
 
   // Abort action/loaders once we can no longer write a response
-  let controller = new NodeAbortController();
+  const controller = new NodeAbortController();
   res.on('close', () => controller.abort());
 
-  let init = {
+  const init = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    // Cast until reason/throwIfAborted added
-    // https://github.com/mysticatea/abort-controller/issues/36
     signal: controller.signal,
   };
 
