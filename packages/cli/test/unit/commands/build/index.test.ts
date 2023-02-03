@@ -1120,6 +1120,11 @@ describe('build', () => {
         join(output, 'serverless.func', '.vc-config.json')
       );
       expect(serverless).toHaveProperty('cron', '* * * * *');
+
+      const placeholder = await fs.readJSON(
+        join(output, '[placeholder].func', '.vc-config.json')
+      );
+      expect(placeholder).toHaveProperty('cron', '0 * * * *');
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
