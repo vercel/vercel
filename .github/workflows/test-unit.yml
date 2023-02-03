@@ -37,13 +37,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
             node-version: ${{ matrix.node }}
-      - uses: actions/cache@v3
-        with:
-          path: '**/node_modules'
-          key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
-        env:
-          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5 # See https://github.com/actions/cache/issues/810
       - name: install pnpm@7.24.2
         run: npm i -g pnpm@7.24.2
       - run: pnpm install
