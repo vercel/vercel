@@ -16,7 +16,8 @@
   },
   "files": [
     "dist",
-    "default-server.js"
+    "server-node.js",
+    "server-edge.js"
   ],
   "dependencies": {
     "@remix-run/dev": "1.12.0",
