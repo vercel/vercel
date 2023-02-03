@@ -1,6 +1,6 @@
 import { Project } from 'ts-morph';
 import { promises as fs } from 'fs';
-import { basename, dirname, join, relative } from 'path';
+import { basename, dirname, extname, join, relative } from 'path';
 import {
   debug,
   download,
@@ -16,11 +16,10 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
-  walkParentDirs,
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
-import { readConfig } from '@remix-run/dev/dist/config';
+import { readConfig, RemixConfig } from '@remix-run/dev/dist/config';
 import type {
   BuildV2,
   Files,
@@ -29,12 +28,7 @@ import type {
   BuildResultV2Typical,
 } from '@vercel/build-utils';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
-
-// Name of the Remix runtime adapter npm package for Vercel
-const REMIX_RUNTIME_ADAPTER_NAME = '@remix-run/vercel';
-
-// Pinned version of the last verified working version of the adapter
-const REMIX_RUNTIME_ADAPTER_VERSION = '1.6.1';
+import { findConfig } from './utils';
 
 export const build: BuildV2 = async ({
   entrypoint,
@@ -74,51 +68,6 @@ export const build: BuildV2 = async ({
     env: spawnOpts.env || {},
   });
 
-  // Ensure `@remix-run/vercel` is in the project's `package.json`
-  const packageJsonPath = await walkParentDirs({
-    base: repoRootPath,
-    start: workPath,
-    filename: 'package.json',
-  });
-  if (packageJsonPath) {
-    const packageJson: PackageJson = JSON.parse(
-      await fs.readFile(packageJsonPath, 'utf8')
-    );
-    const { dependencies = {}, devDependencies = {} } = packageJson;
-
-    let modified = false;
-    if (REMIX_RUNTIME_ADAPTER_NAME in devDependencies) {
-      dependencies[REMIX_RUNTIME_ADAPTER_NAME] =
-        devDependencies[REMIX_RUNTIME_ADAPTER_NAME];
-      delete devDependencies[REMIX_RUNTIME_ADAPTER_NAME];
-      console.log(
-        `Warning: Moving "${REMIX_RUNTIME_ADAPTER_NAME}" from \`devDependencies\` to \`dependencies\`. You should commit this change.`
-      );
-      modified = true;
-    } else if (!(REMIX_RUNTIME_ADAPTER_NAME in dependencies)) {
-      dependencies[REMIX_RUNTIME_ADAPTER_NAME] = REMIX_RUNTIME_ADAPTER_VERSION;
-      console.log(
-        `Warning: Adding "${REMIX_RUNTIME_ADAPTER_NAME}" v${REMIX_RUNTIME_ADAPTER_VERSION} to \`dependencies\`. You should commit this change.`
-      );
-      modified = true;
-    }
-
-    if (modified) {
-      const packageJsonString = JSON.stringify(
-        {
-          ...packageJson,
-          dependencies,
-          devDependencies,
-        },
-        null,
-        2
-      );
-      await fs.writeFile(packageJsonPath, `${packageJsonString}\n`);
-    }
-  } else {
-    debug(`Failed to find "package.json" file in project`);
-  }
-
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
@@ -136,36 +85,91 @@ export const build: BuildV2 = async ({
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
 
-  // Run "Build Command"
-  if (buildCommand) {
-    debug(`Executing build command "${buildCommand}"`);
-    await execCommand(buildCommand, {
-      ...spawnOpts,
-      cwd: entrypointFsDirname,
-    });
-  } else {
-    const pkg = await readConfigFile<PackageJson>(
-      join(entrypointFsDirname, 'package.json')
-    );
-    if (hasScript('vercel-build', pkg)) {
-      debug(`Executing "yarn vercel-build"`);
-      await runPackageJsonScript(
-        entrypointFsDirname,
-        'vercel-build',
-        spawnOpts
-      );
-    } else if (hasScript('build', pkg)) {
-      debug(`Executing "yarn build"`);
-      await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
+  // We need to patch the `remix.config.js` file to force some values necessary
+  // for a build that works on either Node.js or the Edge runtime
+  const remixConfigPath = findConfig(entrypointFsDirname, 'remix.config');
+  const renamedRemixConfigPath = remixConfigPath
+    ? `${remixConfigPath}.original${extname(remixConfigPath)}`
+    : undefined;
+  console.log({ remixConfigPath, renamedRemixConfigPath });
+  if (remixConfigPath && renamedRemixConfigPath) {
+    await fs.rename(remixConfigPath, renamedRemixConfigPath);
+
+    // Figure out if the `remix.config` file is using ESM syntax
+    let isESM = false;
+    try {
+      eval('require(renamedRemixConfigPath)');
+    } catch (err: any) {
+      if (err.code === 'ERR_REQUIRE_ESM') {
+        isESM = true;
+      } else {
+        throw err;
+      }
+    }
+
+    let patchedConfig: string;
+    if (isESM) {
+      patchedConfig = `import config from './${basename(
+        renamedRemixConfigPath
+      )}';
+config.serverBuildTarget = undefined;
+config.server = undefined;
+config.serverModuleFormat = 'esm';
+config.serverPlatform = 'neutral';
+config.serverBuildPath = 'build/index.js';
+export default config;`;
     } else {
-      await execCommand('remix build', {
+      patchedConfig = `const config = require('./${basename(
+        renamedRemixConfigPath
+      )}');
+config.serverBuildTarget = undefined;
+config.server = undefined;
+config.serverModuleFormat = 'esm';
+config.serverPlatform = 'neutral';
+config.serverBuildPath = 'build/index.js';
+module.exports = config;`;
+    }
+    await fs.writeFile(remixConfigPath, patchedConfig);
+  }
+
+  // Run "Build Command"
+  let remixConfig: RemixConfig;
+  try {
+    if (buildCommand) {
+      debug(`Executing build command "${buildCommand}"`);
+      await execCommand(buildCommand, {
         ...spawnOpts,
         cwd: entrypointFsDirname,
       });
+    } else {
+      const pkg = await readConfigFile<PackageJson>(
+        join(entrypointFsDirname, 'package.json')
+      );
+      if (hasScript('vercel-build', pkg)) {
+        debug(`Executing "yarn vercel-build"`);
+        await runPackageJsonScript(
+          entrypointFsDirname,
+          'vercel-build',
+          spawnOpts
+        );
+      } else if (hasScript('build', pkg)) {
+        debug(`Executing "yarn build"`);
+        await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
+      } else {
+        await execCommand('remix build', {
+          ...spawnOpts,
+          cwd: entrypointFsDirname,
+        });
+      }
+    }
+    remixConfig = await readConfig(entrypointFsDirname);
+  } finally {
+    // Clean up our patched `remix.config.js` to be polite
+    if (remixConfigPath && renamedRemixConfigPath) {
+      await fs.rename(renamedRemixConfigPath, remixConfigPath);
     }
   }
 
-  const remixConfig = await readConfig(entrypointFsDirname);
   console.log(remixConfig);
   const { serverBuildPath, routes } = remixConfig;
 
@@ -220,7 +224,7 @@ export const build: BuildV2 = async ({
 
   const [staticFiles, nodeFunction, edgeFunction] = await Promise.all([
     glob('**', dirname(remixConfig.assetsBuildDirectory)),
-    createRenderServerlessFunction(
+    createRenderNodeFunction(
       entrypointFsDirname,
       repoRootPath,
       renamedServerBuildPath,
@@ -272,7 +276,7 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
   return typeof scripts[scriptName] === 'string';
 }
 
-async function createRenderServerlessFunction(
+async function createRenderNodeFunction(
   entrypointDir: string,
   rootDir: string,
   serverBuildPath: string,
