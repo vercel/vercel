@@ -91,7 +91,6 @@ export const build: BuildV2 = async ({
   const renamedRemixConfigPath = remixConfigPath
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
     : undefined;
-  console.log({ remixConfigPath, renamedRemixConfigPath });
   if (remixConfigPath && renamedRemixConfigPath) {
     await fs.rename(remixConfigPath, renamedRemixConfigPath);
 
@@ -170,37 +169,7 @@ module.exports = config;`;
     }
   }
 
-  console.log(remixConfig);
   const { serverBuildPath, routes } = remixConfig;
-
-  // If `serverBuildTarget === 'vercel'` then Remix will output a handler
-  // that is already in Vercel (req, res) format, so don't inject the handler
-  //if (remixConfig.serverBuildTarget) {
-  //  //if (remixConfig.serverBuildTarget !== 'vercel') {
-  //  //  throw new Error(
-  //  //    `\`serverBuildTarget\` in Remix config must be "vercel" (got "${remixConfig.serverBuildTarget}")`
-  //  //  );
-  //  //}
-  //  serverBuildPath = 'api/index.js';
-  //  needsHandler = false;
-  //}
-
-  //if (remixConfig.serverBuildPath) {
-  //  // Explicit file path where the server output file will be
-  //  serverBuildPath = remixConfig.serverBuildPath;
-  ////} else if (remixConfig.serverBuildDirectory) {
-  ////  // Explicit directory path the server output will be
-  ////  serverBuildPath = join(remixConfig.serverBuildDirectory, 'index.js');
-  //}
-
-  //// Also check for whether were in a monorepo.
-  //// If we are, prepend the app root directory from config onto the build path.
-  //// e.g. `/apps/my-remix-app/api/index.js`
-  //const isMonorepo = repoRootPath && repoRootPath !== workPath;
-  //if (isMonorepo) {
-  //  const rootDirectory = relative(repoRootPath, workPath);
-  //  serverBuildPath = join(rootDirectory, serverBuildPath);
-  //}
 
   // Remix enforces that `serverBuildPath` ends with `.js`,
   // but we want to rename from `.js` to `.mjs`
@@ -299,7 +268,7 @@ async function createRenderNodeFunction(
   });
 
   for (const warning of trace.warnings) {
-    console.log(`Warning from trace: ${warning.message}`);
+    debug(`Warning from trace: ${warning.message}`);
   }
 
   for (const file of trace.fileList) {
@@ -354,7 +323,6 @@ async function createRenderEdgeFunction(
         for (const prop of ['browser', 'module']) {
           const val = pkgJson[prop];
           if (typeof val === 'string') {
-            //console.log(`Using "${prop}" field in ${fsPath}`);
             pkgJson.main = val;
 
             // Return the modified `package.json` to nft
@@ -368,7 +336,7 @@ async function createRenderEdgeFunction(
   });
 
   for (const warning of trace.warnings) {
-    console.log(`Warning from trace: ${warning.message}`);
+    debug(`Warning from trace: ${warning.message}`);
   }
 
   for (const file of trace.fileList) {
