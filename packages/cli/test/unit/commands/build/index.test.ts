@@ -1025,6 +1025,27 @@ describe('build', () => {
     }
   });
 
+  it('should set VERCEL_PROJECT_SETTINGS_ environment variables', async () => {
+    const cwd = fixture('project-settings-env-vars');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const contents = await fs.readJSON(join(output, 'static/env.json'));
+      expect(contents).toMatchObject({
+        VERCEL_PROJECT_SETTINGS_BUILD_COMMAND: `node build.cjs`,
+        VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND: '',
+        VERCEL_PROJECT_SETTINGS_OUTPUT_DIRECTORY: 'out',
+        VERCEL_PROJECT_SETTINGS_NODE_VERSION: '18.x',
+      });
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should apply "images" configuration from `vercel.json`', async () => {
     const cwd = fixture('images');
     const output = join(cwd, '.vercel/output');
@@ -1075,6 +1096,30 @@ describe('build', () => {
       });
       const configJson = await fs.readJSON(join(output, 'config.json'));
       expect(configJson.version).toBe(3);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
+  it('should include crons property in build output', async () => {
+    const cwd = fixture('with-cron');
+    const output = join(cwd, '.vercel', 'output', 'functions', 'api');
+
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toBe(0);
+
+      const edge = await fs.readJSON(
+        join(output, 'edge.func', '.vc-config.json')
+      );
+      expect(edge).toHaveProperty('cron', '* * * * *');
+
+      const serverless = await fs.readJSON(
+        join(output, 'serverless.func', '.vc-config.json')
+      );
+      expect(serverless).toHaveProperty('cron', '* * * * *');
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
@@ -1229,13 +1274,13 @@ describe('build', () => {
         turbo: {
           name: 'Turbo',
           buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
-          installCommand: 'cd ../.. && yarn install',
-          ignoreCommand: 'cd ../.. && npx turbo-ignore',
+          installCommand: 'yarn install',
+          ignoreCommand: 'npx turbo-ignore',
         },
         nx: {
           name: 'Nx',
           buildCommand: 'cd ../.. && npx nx build app-1',
-          installCommand: 'cd ../.. && yarn install',
+          installCommand: 'yarn install',
         },
         // rush: {
         //   name: 'Rush',

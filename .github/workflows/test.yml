@@ -33,14 +33,8 @@ jobs:
         with:
           go-version: '1.13.15'
       - uses: actions/setup-node@v3
-        timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/cache@v3
-        with:
-          path: '**/node_modules'
-          key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
       - name: install pnpm@7.24.2
         run: npm i -g pnpm@7.24.2
       - run: pnpm install
@@ -76,14 +70,8 @@ jobs:
         with:
           go-version: '1.13.15'
       - uses: actions/setup-node@v3
-        timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/cache@v3
-        with:
-          path: '**/node_modules'
-          key: pnpm-${{ matrix.os }}-${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: pnpm-${{ matrix.os }}-${{ matrix.node }}
 
       - name: Install Hugo
         if: matrix.runner == 'macos-latest'

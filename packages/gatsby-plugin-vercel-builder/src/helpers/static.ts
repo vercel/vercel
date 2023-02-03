@@ -1,7 +1,8 @@
-import { join } from 'path';
-import { copy, ensureDir } from 'fs-extra';
+import { join, dirname } from 'path';
+import { copy, move, ensureDir } from 'fs-extra';
 
 export async function createStaticDir(prefix?: string) {
+  const publicDir = join(process.cwd(), 'public');
   const targetDir = join(
     process.cwd(),
     '.vercel',
@@ -9,6 +10,14 @@ export async function createStaticDir(prefix?: string) {
     'static',
     prefix ?? ''
   );
-  await ensureDir(targetDir);
-  await copy(join(process.cwd(), 'public'), targetDir);
+  await ensureDir(dirname(targetDir));
+  try {
+    await move(publicDir, targetDir);
+  } catch (err: any) {
+    console.error(
+      `Failed to move "public" dir from "${publicDir}" to "${targetDir}". Copying instead.`,
+      err
+    );
+    await copy(publicDir, targetDir);
+  }
 }

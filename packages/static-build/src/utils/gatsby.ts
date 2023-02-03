@@ -85,9 +85,8 @@ async function updateGatsbyConfig(dir: string, plugins: string[]) {
   } else {
     await fs.writeFile(
       gatsbyConfigPathJs,
-      `module.exports = ${JSON.stringify({
-        plugins,
-      })}`
+      `${GENERATED_FILE_COMMENT}
+module.exports = ${JSON.stringify({ plugins })}`
     );
   }
 }
@@ -231,7 +230,8 @@ async function updateGatsbyNode(dir: string) {
   } else {
     await fs.writeFile(
       gatsbyNodePathJs,
-      `module.exports = require('@vercel/gatsby-plugin-vercel-builder/gatsby-node.js');`
+      `${GENERATED_FILE_COMMENT}
+module.exports = require('@vercel/gatsby-plugin-vercel-builder/gatsby-node.js');`
     );
   }
 }
