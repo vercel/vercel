@@ -15,6 +15,7 @@ import {
   NodejsLambda,
   EdgeFunction,
   Images,
+  Cron,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -1308,6 +1309,7 @@ export function addLocaleOrDefault(
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
+  cron?: Cron;
   maxDuration?: number;
   isStreaming?: boolean;
   isPrerenders?: boolean;
@@ -1360,7 +1362,7 @@ export async function getPageLambdaGroups({
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
 
-    let opts: { memory?: number; maxDuration?: number } = {};
+    let opts: { memory?: number; maxDuration?: number; cron?: Cron } = {};
 
     if (config && config.functions) {
       const sourceFile = await getSourceFilePathFromPage({
@@ -1378,7 +1380,8 @@ export async function getPageLambdaGroups({
       const matches =
         group.maxDuration === opts.maxDuration &&
         group.memory === opts.memory &&
-        group.isPrerenders === isPrerenderRoute;
+        group.isPrerenders === isPrerenderRoute &&
+        !opts.cron; // Functions with a cronjob must be on their own
 
       if (matches) {
         let newTracedFilesSize = group.pseudoLayerBytes;
