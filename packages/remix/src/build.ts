@@ -207,14 +207,27 @@ module.exports = config;`;
 
   for (const route of Object.values(routes)) {
     if (route.id === 'root') continue;
+    const path = route.path || 'index';
     const isEdge = edgePages.has(route);
-    const fn = isEdge && edgeFunction ? edgeFunction : nodeFunction;
-    output[route.path || 'index'] = fn;
+    const fn =
+      isEdge && edgeFunction
+        ? // `EdgeFunction` currently requires the "name" property to be set.
+          // Ideally this property will be removed, at which point we can
+          // return the same `edgeFunction` instance instead of creating a
+          // new one for each page.
+          new EdgeFunction({
+            ...edgeFunction,
+            name: path,
+          })
+        : nodeFunction;
+    output[path] = fn;
   }
 
   // Add a 404 path for not found pages to be server-side rendered by Remix.
   // Use the edge function if one was generated, otherwise use Node.js.
-  output['404'] = edgeFunction || nodeFunction;
+  output['404'] = edgeFunction
+    ? new EdgeFunction({ ...edgeFunction, name: '404' })
+    : nodeFunction;
 
   return {
     routes: [
