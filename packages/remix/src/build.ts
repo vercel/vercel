@@ -1,5 +1,6 @@
+import { Project } from 'ts-morph';
 import { promises as fs } from 'fs';
-import { dirname, join, relative } from 'path';
+import { basename, dirname, join, relative } from 'path';
 import {
   debug,
   download,
@@ -9,6 +10,7 @@ import {
   getNodeVersion,
   getSpawnOptions,
   glob,
+  EdgeFunction,
   NodejsLambda,
   readConfigFile,
   runNpmInstall,
@@ -16,15 +18,17 @@ import {
   scanParentDirs,
   walkParentDirs,
 } from '@vercel/build-utils';
+import { getConfig } from '@vercel/static-config';
+import { nodeFileTrace } from '@vercel/nft';
+import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   BuildV2,
   Files,
   NodeVersion,
   PackageJson,
+  BuildResultV2Typical,
 } from '@vercel/build-utils';
-import { nodeFileTrace } from '@vercel/nft';
-import { readConfig } from '@remix-run/dev/dist/config';
-import type { BuildResultV2Typical } from '@vercel/build-utils';
+import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 
 // Name of the Remix runtime adapter npm package for Vercel
 const REMIX_RUNTIME_ADAPTER_NAME = '@remix-run/vercel';
@@ -194,27 +198,55 @@ export const build: BuildV2 = async ({
   //  serverBuildPath = join(rootDirectory, serverBuildPath);
   //}
 
-  console.log({ serverBuildPath });
+  // Remix enforces that `serverBuildPath` ends with `.js`,
+  // but we want to rename from `.js` to `.mjs`
+  const renamedServerBuildPath = serverBuildPath.replace(/\.js$/, '.mjs');
+  await fs.rename(serverBuildPath, renamedServerBuildPath);
 
-  const [staticFiles, renderFunction] = await Promise.all([
+  // Figure out which pages should be edge functions
+  const edgePages = new Set<ConfigRoute>();
+  const project = new Project();
+  for (const route of Object.values(routes)) {
+    if (route.id === 'root') continue;
+    const routePath = join(remixConfig.appDirectory, route.file);
+    const staticConfig = getConfig(project, routePath);
+    const isEdge =
+      staticConfig?.runtime === 'edge' ||
+      staticConfig?.runtime === 'experimental-edge';
+    if (isEdge) {
+      edgePages.add(route);
+    }
+  }
+
+  const [staticFiles, nodeFunction, edgeFunction] = await Promise.all([
     glob('**', dirname(remixConfig.assetsBuildDirectory)),
     createRenderServerlessFunction(
       entrypointFsDirname,
       repoRootPath,
-      serverBuildPath,
+      renamedServerBuildPath,
       nodeVersion
     ),
+    edgePages.size > 0
+      ? createRenderEdgeFunction(
+          entrypointFsDirname,
+          repoRootPath,
+          renamedServerBuildPath
+        )
+      : undefined,
   ]);
 
   const output: BuildResultV2Typical['output'] = staticFiles;
 
   for (const route of Object.values(routes)) {
-    if (!route.path) continue;
-    //output[route.path] = renderFunction;
+    if (route.id === 'root') continue;
+    const isEdge = edgePages.has(route);
+    const fn = isEdge && edgeFunction ? edgeFunction : nodeFunction;
+    output[route.path || 'index'] = fn;
   }
 
-  // Add a 404 path for not found pages to be server-side rendered by Remix
-  output['404'] = renderFunction;
+  // Add a 404 path for not found pages to be server-side rendered by Remix.
+  // Use the edge function if one was generated, otherwise use Node.js.
+  output['404'] = edgeFunction || nodeFunction;
 
   return {
     routes: [
@@ -248,15 +280,9 @@ async function createRenderServerlessFunction(
 ): Promise<NodejsLambda> {
   const files: Files = {};
 
-  // Rename from `.js` to `.mjs`
-  const renamedServerBuildPath = serverBuildPath.replace(/\.js$/, '.mjs');
-  await fs.rename(serverBuildPath, renamedServerBuildPath);
-
-  const relativeServerBuildPath = relative(rootDir, renamedServerBuildPath);
-  console.log({ relativeServerBuildPath });
+  const relativeServerBuildPath = relative(rootDir, serverBuildPath);
   const handler = join(dirname(relativeServerBuildPath), 'server-node.mjs');
   const handlerPath = join(rootDir, handler);
-  console.log({ relativeServerBuildPath, handler, handlerPath });
 
   // Copy the `server-node.mjs` file into the "build" directory
   const sourceHandlerPath = join(__dirname, '../server-node.mjs');
@@ -286,4 +312,71 @@ async function createRenderServerlessFunction(
   });
 
   return lambda;
+}
+
+async function createRenderEdgeFunction(
+  entrypointDir: string,
+  rootDir: string,
+  serverBuildPath: string
+): Promise<EdgeFunction> {
+  const files: Files = {};
+
+  const relativeServerBuildPath = relative(rootDir, serverBuildPath);
+  const handler = join(dirname(relativeServerBuildPath), 'server-edge.mjs');
+  const handlerPath = join(rootDir, handler);
+
+  // Copy the `server-edge.mjs` file into the "build" directory
+  const sourceHandlerPath = join(__dirname, '../server-edge.mjs');
+  await fs.copyFile(sourceHandlerPath, handlerPath);
+
+  // Trace the handler with `@vercel/nft`
+  const trace = await nodeFileTrace([handlerPath], {
+    base: rootDir,
+    processCwd: entrypointDir,
+    conditions: ['worker', 'browser'],
+    async readFile(fsPath) {
+      let source: Buffer | string;
+      try {
+        source = await fs.readFile(fsPath);
+      } catch (err: any) {
+        if (err.code === 'ENOENT' || err.code === 'EISDIR') {
+          return null;
+        }
+        throw err;
+      }
+      if (basename(fsPath) === 'package.json') {
+        // For Edge Functions, patch "main" field to prefer "browser" or "module"
+        const pkgJson = JSON.parse(source.toString());
+        for (const prop of ['browser', 'module']) {
+          const val = pkgJson[prop];
+          if (typeof val === 'string') {
+            //console.log(`Using "${prop}" field in ${fsPath}`);
+            pkgJson.main = val;
+
+            // Return the modified `package.json` to nft
+            source = JSON.stringify(pkgJson);
+            break;
+          }
+        }
+      }
+      return source;
+    },
+  });
+
+  for (const warning of trace.warnings) {
+    console.log(`Warning from trace: ${warning.message}`);
+  }
+
+  for (const file of trace.fileList) {
+    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
+  }
+
+  const fn = new EdgeFunction({
+    files,
+    deploymentTarget: 'v8-worker',
+    name: 'render',
+    entrypoint: handler,
+  });
+
+  return fn;
 }
