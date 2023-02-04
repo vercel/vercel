@@ -94,7 +94,6 @@ const main = async () => {
         '-v': '--version',
         '--debug': Boolean,
         '-d': '--debug',
-        '--no-color': Boolean,
       },
       { permissive: true }
     );
