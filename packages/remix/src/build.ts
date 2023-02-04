@@ -387,7 +387,7 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
   // If we got to here then `pkgName` was not resolvable up to the root
   // of the project. Try a couple symlink tricks, otherwise we'll bail.
 
-  // Attempt to see if we can find the package in `node_modules/.pnpm` (pnpm)
+  // Attempt to find the package in `node_modules/.pnpm` (pnpm)
   const pnpmDir = await walkParentDirs({
     base,
     start,
@@ -411,7 +411,7 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
     }
   }
 
-  // Attempt to see if we can find the package in `node_modules/.store` (npm 9+ linked mode)
+  // Attempt to find the package in `node_modules/.store` (npm 9+ linked mode)
   const npmDir = await walkParentDirs({
     base,
     start,
