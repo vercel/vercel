@@ -19,7 +19,6 @@ import { isAPIError } from '../../util/errors-ts';
 
 type Options = {
   '--debug': boolean;
-  '--no-color': boolean;
   '--yes': boolean;
 };
 

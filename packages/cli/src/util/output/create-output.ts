@@ -57,10 +57,7 @@ export class Output {
 
   print = (str: string) => {
     if (this.colorDisabled) {
-      const strWithoutEmoji = removeEmoji(str);
-      this.stopSpinner();
-      this.stream.write(strWithoutEmoji);
-      return;
+      str = removeEmoji(str);
     }
     this.stopSpinner();
     this.stream.write(str);

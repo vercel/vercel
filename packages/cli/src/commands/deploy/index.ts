@@ -91,7 +91,6 @@ export default async (client: Client): Promise<number> => {
       '--prod': Boolean,
       '--archive': String,
       '--yes': Boolean,
-      '--no-color': Boolean,
       '-f': '--force',
       '-p': '--public',
       '-e': '--env',
