@@ -1,6 +1,6 @@
 import { Project } from 'ts-morph';
 import { promises as fs } from 'fs';
-import { basename, dirname, extname, join, relative } from 'path';
+import { basename, dirname, extname, join, relative, sep } from 'path';
 import {
   debug,
   download,
@@ -16,6 +16,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
+  walkParentDirs,
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
@@ -29,6 +30,8 @@ import type {
 } from '@vercel/build-utils';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 import { findConfig } from './utils';
+
+const _require: typeof require = eval('require');
 
 export const build: BuildV2 = async ({
   entrypoint,
@@ -97,7 +100,7 @@ export const build: BuildV2 = async ({
     // Figure out if the `remix.config` file is using ESM syntax
     let isESM = false;
     try {
-      eval('require(renamedRemixConfigPath)');
+      _require(renamedRemixConfigPath);
     } catch (err: any) {
       if (err.code === 'ERR_REQUIRE_ESM') {
         isESM = true;
@@ -267,7 +270,10 @@ async function createRenderNodeFunction(
 
   // Copy the `server-node.mjs` file into the "build" directory
   const sourceHandlerPath = join(__dirname, '../server-node.mjs');
-  await fs.copyFile(sourceHandlerPath, handlerPath);
+  await Promise.all([
+    fs.copyFile(sourceHandlerPath, handlerPath),
+    ensureResolvable(entrypointDir, rootDir, '@remix-run/node'),
+  ]);
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
@@ -308,7 +314,10 @@ async function createRenderEdgeFunction(
 
   // Copy the `server-edge.mjs` file into the "build" directory
   const sourceHandlerPath = join(__dirname, '../server-edge.mjs');
-  await fs.copyFile(sourceHandlerPath, handlerPath);
+  await Promise.all([
+    fs.copyFile(sourceHandlerPath, handlerPath),
+    ensureResolvable(entrypointDir, rootDir, '@remix-run/server-runtime'),
+  ]);
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
@@ -359,4 +368,75 @@ async function createRenderEdgeFunction(
   });
 
   return fn;
+}
+
+async function ensureResolvable(start: string, base: string, pkgName: string) {
+  try {
+    const resolvedPath = _require.resolve(pkgName, { paths: [start] });
+    if (!relative(base, resolvedPath).startsWith(`..${sep}`)) {
+      // Resolved path is within the root of the project, so all good
+      debug(`"${pkgName}" resolved to '${resolvedPath}'`);
+      return;
+    }
+  } catch (err: any) {
+    if (err.code !== 'MODULE_NOT_FOUND') {
+      throw err;
+    }
+  }
+
+  // If we got to here then `pkgName` was not resolvable up to the root
+  // of the project. Try a couple symlink tricks, otherwise we'll bail.
+
+  // Attempt to see if we can find the package in `node_modules/.pnpm` (pnpm)
+  const pnpmDir = await walkParentDirs({
+    base,
+    start,
+    filename: 'node_modules/.pnpm',
+  });
+  if (pnpmDir) {
+    const prefix = `${pkgName.replace('/', '+')}@`;
+    const packages = await fs.readdir(pnpmDir);
+    const match = packages.find(p => p.startsWith(prefix));
+    if (match) {
+      const pkgDir = join(pnpmDir, match, 'node_modules', pkgName);
+      const symlinkPath = join(pnpmDir, '..', pkgName);
+      const symlinkDir = dirname(symlinkPath);
+      const symlinkTarget = relative(symlinkDir, pkgDir);
+      await fs.mkdir(symlinkDir, { recursive: true });
+      await fs.symlink(symlinkTarget, symlinkPath);
+      console.warn(
+        `WARN: Created symlink for "${pkgName}". To silence this warning, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
+      );
+      return;
+    }
+  }
+
+  // Attempt to see if we can find the package in `node_modules/.store` (npm 9+ linked mode)
+  const npmDir = await walkParentDirs({
+    base,
+    start,
+    filename: 'node_modules/.store',
+  });
+  if (npmDir) {
+    const prefix = `${basename(pkgName)}@`;
+    const prefixDir = join(npmDir, dirname(pkgName));
+    const packages = await fs.readdir(prefixDir);
+    const match = packages.find(p => p.startsWith(prefix));
+    if (match) {
+      const pkgDir = join(prefixDir, match, 'node_modules', pkgName);
+      const symlinkPath = join(npmDir, '..', pkgName);
+      const symlinkDir = dirname(symlinkPath);
+      const symlinkTarget = relative(symlinkDir, pkgDir);
+      await fs.mkdir(symlinkDir, { recursive: true });
+      await fs.symlink(symlinkTarget, symlinkPath);
+      console.warn(
+        `WARN: Created symlink for "${pkgName}". To silence this warning, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
+      );
+      return;
+    }
+  }
+
+  throw new Error(
+    `Failed to resolve "${pkgName}". To fix this error, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
+  );
 }
