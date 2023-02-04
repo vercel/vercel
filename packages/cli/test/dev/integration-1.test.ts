@@ -686,6 +686,7 @@ test('[vercel dev] should support static files with zero config', async () => {
     expect(body).toEqual('bye:user');
 
     res = await fetch(`http://localhost:${port}/`);
+    expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
     body = await res.text();
     expect(body.startsWith('<h1>goodbye world</h1>')).toBeTruthy();
   } finally {

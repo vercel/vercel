@@ -138,10 +138,22 @@ it('should ignore node version in vercel dev getNodeVersion()', async () => {
   ).toHaveProperty('runtime', 'nodejs');
 });
 
-it('should select project setting from config when no package.json is found', async () => {
+it('should select project setting from config when no package.json is found and fallback undefined', async () => {
   expect(
     await getNodeVersion('/tmp', undefined, { nodeVersion: '16.x' }, {})
   ).toHaveProperty('range', '16.x');
+  expect(warningMessages).toStrictEqual([]);
+});
+
+it('should select project setting from config when no package.json is found and fallback is null', async () => {
+  expect(
+    await getNodeVersion('/tmp', null as any, { nodeVersion: '16.x' }, {})
+  ).toHaveProperty('range', '16.x');
+  expect(warningMessages).toStrictEqual([]);
+});
+
+it('should select project setting from fallback when no package.json is found', async () => {
+  expect(await getNodeVersion('/tmp', '16.x')).toHaveProperty('range', '16.x');
   expect(warningMessages).toStrictEqual([]);
 });
 
