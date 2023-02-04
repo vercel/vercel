@@ -10,6 +10,11 @@
       }
     }
   ],
+  "build": {
+    "env": {
+      "ENABLE_EXPERIMENTAL_COREPACK": "1"
+    }
+  },
   "probes": [
     { "path": "/", "mustContain": "Welcome to Remix" },
     { "path": "/edge", "mustContain": "Welcome to Remix@Edge" },
