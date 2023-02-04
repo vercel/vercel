@@ -5,7 +5,7 @@
       "src": "package.json",
       "use": "@vercel/remix",
       "config": {
-        "installCommand": "npm install --install-strategy=linked",
+        "installCommand": "env | sort && npm install --install-strategy=linked",
         "zeroConfig": true
       }
     }
