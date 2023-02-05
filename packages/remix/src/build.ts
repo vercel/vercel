@@ -289,16 +289,17 @@ async function createRenderNodeFunction(
     files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
   }
 
-  const lambda = new NodejsLambda({
+  const fn = new NodejsLambda({
     files,
     handler,
     runtime: nodeVersion.runtime,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
     operationType: 'SSR',
+    experimentalResponseStreaming: true,
   });
 
-  return lambda;
+  return fn;
 }
 
 async function createRenderEdgeFunction(
