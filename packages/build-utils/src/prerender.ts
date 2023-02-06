@@ -10,6 +10,7 @@ interface PrerenderOptions {
   allowQuery?: string[];
   initialHeaders?: Record<string, string>;
   initialStatus?: number;
+  passQuery?: boolean;
 }
 
 export class Prerender {
@@ -22,6 +23,7 @@ export class Prerender {
   public allowQuery?: string[];
   public initialHeaders?: Record<string, string>;
   public initialStatus?: number;
+  public passQuery?: boolean;
 
   constructor({
     expiration,
@@ -32,6 +34,7 @@ export class Prerender {
     allowQuery,
     initialHeaders,
     initialStatus,
+    passQuery,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
@@ -51,6 +54,17 @@ export class Prerender {
       );
     }
     this.group = group;
+
+    if (passQuery === true) {
+      this.passQuery = true;
+    } else if (
+      typeof passQuery !== 'boolean' &&
+      typeof passQuery !== 'undefined'
+    ) {
+      throw new Error(
+        `The \`passQuery\` argument for \`Prerender\` must be a boolean.`
+      );
+    }
 
     if (bypassToken == null) {
       this.bypassToken = null;
