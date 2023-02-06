@@ -15,6 +15,7 @@ import {
   NodejsLambda,
   EdgeFunction,
   Images,
+  Cron,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -1308,6 +1309,7 @@ export function addLocaleOrDefault(
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
+  cron?: Cron;
   maxDuration?: number;
   isStreaming?: boolean;
   isPrerenders?: boolean;
@@ -1360,7 +1362,7 @@ export async function getPageLambdaGroups({
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
 
-    let opts: { memory?: number; maxDuration?: number } = {};
+    let opts: { memory?: number; maxDuration?: number; cron?: Cron } = {};
 
     if (config && config.functions) {
       const sourceFile = await getSourceFilePathFromPage({
@@ -1378,7 +1380,8 @@ export async function getPageLambdaGroups({
       const matches =
         group.maxDuration === opts.maxDuration &&
         group.memory === opts.memory &&
-        group.isPrerenders === isPrerenderRoute;
+        group.isPrerenders === isPrerenderRoute &&
+        !opts.cron; // Functions with a cronjob must be on their own
 
       if (matches) {
         let newTracedFilesSize = group.pseudoLayerBytes;
@@ -2311,12 +2314,14 @@ interface EdgeFunctionMatcher {
 }
 
 export async function getMiddlewareBundle({
+  config = {},
   entryPath,
   outputDirectory,
   routesManifest,
   isCorrectMiddlewareOrder,
   prerenderBypassToken,
 }: {
+  config: Config;
   entryPath: string;
   outputDirectory: string;
   prerenderBypassToken: string;
@@ -2372,6 +2377,21 @@ export async function getMiddlewareBundle({
             edgeFunction.wasm
           );
 
+          const edgeFunctionOptions: { cron?: Cron } = {};
+          if (config.functions) {
+            const sourceFile = await getSourceFilePathFromPage({
+              workPath: entryPath,
+              page: `${edgeFunction.page}.js`,
+            });
+
+            const opts = await getLambdaOptionsFromFunction({
+              sourceFile,
+              config,
+            });
+
+            edgeFunctionOptions.cron = opts.cron;
+          }
+
           return {
             type,
             page: edgeFunction.page,
@@ -2416,6 +2436,7 @@ export async function getMiddlewareBundle({
               );
 
               return new EdgeFunction({
+                ...edgeFunctionOptions,
                 deploymentTarget: 'v8-worker',
                 name: edgeFunction.name,
                 files: {
