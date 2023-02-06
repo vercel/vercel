@@ -3,9 +3,9 @@ import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
-import { isSymbolicLink } from './fs/download';
+import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config } from './types';
+import type { Files, Config, Cron } from './types';
 
 interface Environment {
   [key: string]: string;
@@ -24,6 +24,8 @@ export interface LambdaOptionsBase {
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
   experimentalResponseStreaming?: boolean;
+  operationType?: string;
+  cron?: Cron;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -47,6 +49,12 @@ interface GetLambdaOptionsFromFunctionOptions {
 
 export class Lambda {
   type: 'Lambda';
+  /**
+   * This is a label for the type of Lambda a framework is producing.
+   * The value can be any string that makes sense for a given framework.
+   * Examples: "API", "ISR", "SSR", "SSG", "Render", "Resource"
+   */
+  operationType?: string;
   files?: Files;
   handler: string;
   runtime: string;
@@ -55,6 +63,7 @@ export class Lambda {
   environment: Environment;
   allowQuery?: string[];
   regions?: string[];
+  cron?: Cron;
   /**
    * @deprecated Use `await lambda.createZip()` instead.
    */
@@ -72,9 +81,11 @@ export class Lambda {
       environment = {},
       allowQuery,
       regions,
+      cron,
       supportsMultiPayloads,
       supportsWrapper,
       experimentalResponseStreaming,
+      operationType,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -123,7 +134,13 @@ export class Lambda {
         '"regions" is not a string Array'
       );
     }
+
+    if (cron !== undefined) {
+      assert(typeof cron === 'string', '"cron" is not a string');
+    }
+
     this.type = 'Lambda';
+    this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
@@ -132,6 +149,7 @@ export class Lambda {
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
+    this.cron = cron;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
@@ -190,6 +208,8 @@ export async function createZip(files: Files): Promise<Buffer> {
       const symlinkTarget = symlinkTargets.get(name);
       if (typeof symlinkTarget === 'string') {
         zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), name, opts);
+      } else if (file.mode && isDirectory(file.mode)) {
+        zipFile.addEmptyDirectory(name, opts);
       } else {
         const stream = file.toStream();
         stream.on('error', reject);
@@ -208,7 +228,7 @@ export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
-  Pick<LambdaOptions, 'memory' | 'maxDuration'>
+  Pick<LambdaOptions, 'memory' | 'maxDuration' | 'cron'>
 > {
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
@@ -216,6 +236,7 @@ export async function getLambdaOptionsFromFunction({
         return {
           memory: fn.memory,
           maxDuration: fn.maxDuration,
+          cron: fn.cron,
         };
       }
     }

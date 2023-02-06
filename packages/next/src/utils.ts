@@ -14,6 +14,8 @@ import {
   isSymbolicLink,
   NodejsLambda,
   EdgeFunction,
+  Images,
+  Cron,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -34,13 +36,18 @@ import url from 'url';
 import escapeStringRegexp from 'escape-string-regexp';
 import { htmlContentType } from '.';
 import textTable from 'text-table';
-import prettyBytes from 'pretty-bytes';
 import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-function-source';
 import type { LambdaOptionsWithFiles } from '@vercel/build-utils/dist/lambda';
 import { stringifySourceMap } from './sourcemapped';
 import type { RawSourceMap } from 'source-map';
+import bytes from 'bytes';
 
 type stringMap = { [key: string]: string };
+
+export const KIB = 1024;
+export const MIB = 1024 * KIB;
+
+export const prettyBytes = (n: number) => bytes(n, { unitSeparator: ' ' });
 
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
@@ -148,6 +155,23 @@ async function getNextConfig(workPath: string, entryPath: string) {
   }
 
   return null;
+}
+
+function getImagesConfig(
+  imagesManifest: NextImagesManifest | undefined
+): Images | undefined {
+  return imagesManifest?.images?.loader === 'default' &&
+    imagesManifest.images?.unoptimized !== true
+    ? {
+        domains: imagesManifest.images.domains,
+        sizes: imagesManifest.images.sizes,
+        remotePatterns: imagesManifest.images.remotePatterns,
+        minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
+        formats: imagesManifest.images.formats,
+        dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
+        contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
+      }
+    : undefined;
 }
 
 function normalizePage(page: string): string {
@@ -494,6 +518,7 @@ export type NextImagesManifest = {
     remotePatterns: RemotePattern[];
     minimumCacheTTL?: number;
     formats?: ImageFormat[];
+    unoptimized?: boolean;
     dangerouslyAllowSVG?: boolean;
     contentSecurityPolicy?: string;
   };
@@ -1284,6 +1309,7 @@ export function addLocaleOrDefault(
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
+  cron?: Cron;
   maxDuration?: number;
   isStreaming?: boolean;
   isPrerenders?: boolean;
@@ -1292,9 +1318,9 @@ export type LambdaGroup = {
   pseudoLayerUncompressedBytes: number;
 };
 
-export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * 1000 * 1000; // 250MB
-const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * 1000 * 1000; // 2.5MB
-const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * 1000; // 250KB
+export const MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
+const LAMBDA_RESERVED_UNCOMPRESSED_SIZE = 2.5 * MIB;
+const LAMBDA_RESERVED_COMPRESSED_SIZE = 250 * KIB;
 
 export async function getPageLambdaGroups({
   entryPath,
@@ -1336,7 +1362,7 @@ export async function getPageLambdaGroups({
     const routeName = normalizePage(page.replace(/\.js$/, ''));
     const isPrerenderRoute = prerenderRoutes.has(routeName);
 
-    let opts: { memory?: number; maxDuration?: number } = {};
+    let opts: { memory?: number; maxDuration?: number; cron?: Cron } = {};
 
     if (config && config.functions) {
       const sourceFile = await getSourceFilePathFromPage({
@@ -1354,7 +1380,8 @@ export async function getPageLambdaGroups({
       const matches =
         group.maxDuration === opts.maxDuration &&
         group.memory === opts.memory &&
-        group.isPrerenders === isPrerenderRoute;
+        group.isPrerenders === isPrerenderRoute &&
+        !opts.cron; // Functions with a cronjob must be on their own
 
       if (matches) {
         let newTracedFilesSize = group.pseudoLayerBytes;
@@ -1497,7 +1524,7 @@ export const outputFunctionFileSizeInfo = (
     .forEach(depKey => {
       const dep = dependencies[depKey];
 
-      if (dep.compressed < 100 * 1000 && dep.uncompressed < 500 * 1000) {
+      if (dep.compressed < 100 * KIB && dep.uncompressed < 500 * KIB) {
         // ignore smaller dependencies to reduce noise
         return;
       }
@@ -1537,9 +1564,8 @@ export const detectLambdaLimitExceeding = async (
   }
 ) => {
   // show debug info if within 5 MB of exceeding the limit
-  const COMPRESSED_SIZE_LIMIT_CLOSE = compressedSizeLimit - 5 * 1000 * 1000;
-  const UNCOMPRESSED_SIZE_LIMIT_CLOSE =
-    MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * 1000 * 1000;
+  const COMPRESSED_SIZE_LIMIT_CLOSE = compressedSizeLimit - 5 * MIB;
+  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = MAX_UNCOMPRESSED_LAMBDA_SIZE - 5 * MIB;
 
   let numExceededLimit = 0;
   let numCloseToLimit = 0;
@@ -1815,13 +1841,16 @@ export const onPrerenderRoute =
       isAppPathRoute = true;
     }
 
+    const isOmittedOrNotFound = isOmitted || isNotFound;
     const htmlFsRef =
       isBlocking || (isNotFound && !static404Page)
         ? // Blocking pages do not have an HTML fallback
           null
         : new FileFsRef({
             fsPath: path.join(
-              isAppPathRoute && appDir ? appDir : pagesDir,
+              isAppPathRoute && !isOmittedOrNotFound && appDir
+                ? appDir
+                : pagesDir,
               isFallback
                 ? // Fallback pages have a special file.
                   addLocaleOrDefault(
@@ -1832,7 +1861,7 @@ export const onPrerenderRoute =
                 : // Otherwise, the route itself should exist as a static HTML
                   // file.
                   `${
-                    isOmitted || isNotFound
+                    isOmittedOrNotFound
                       ? addLocaleOrDefault('/404', routesManifest, locale)
                       : routeFileNoExt
                   }.html`
@@ -1844,9 +1873,11 @@ export const onPrerenderRoute =
         ? null
         : new FileFsRef({
             fsPath: path.join(
-              isAppPathRoute && appDir ? appDir : pagesDir,
+              isAppPathRoute && !isOmittedOrNotFound && appDir
+                ? appDir
+                : pagesDir,
               `${
-                isOmitted || isNotFound
+                isOmittedOrNotFound
                   ? addLocaleOrDefault('/404.html', routesManifest, locale)
                   : isAppPathRoute
                   ? dataRoute
@@ -2235,6 +2266,7 @@ export {
   validateEntrypoint,
   normalizePackageJson,
   getNextConfig,
+  getImagesConfig,
   stringMap,
   normalizePage,
   isDynamicRoute,
@@ -2282,12 +2314,14 @@ interface EdgeFunctionMatcher {
 }
 
 export async function getMiddlewareBundle({
+  config = {},
   entryPath,
   outputDirectory,
   routesManifest,
   isCorrectMiddlewareOrder,
   prerenderBypassToken,
 }: {
+  config: Config;
   entryPath: string;
   outputDirectory: string;
   prerenderBypassToken: string;
@@ -2343,6 +2377,21 @@ export async function getMiddlewareBundle({
             edgeFunction.wasm
           );
 
+          const edgeFunctionOptions: { cron?: Cron } = {};
+          if (config.functions) {
+            const sourceFile = await getSourceFilePathFromPage({
+              workPath: entryPath,
+              page: `${edgeFunction.page}.js`,
+            });
+
+            const opts = await getLambdaOptionsFromFunction({
+              sourceFile,
+              config,
+            });
+
+            edgeFunctionOptions.cron = opts.cron;
+          }
+
           return {
             type,
             page: edgeFunction.page,
@@ -2387,6 +2436,7 @@ export async function getMiddlewareBundle({
               );
 
               return new EdgeFunction({
+                ...edgeFunctionOptions,
                 deploymentTarget: 'v8-worker',
                 name: edgeFunction.name,
                 files: {

@@ -5,6 +5,7 @@ import debug from '../debug';
 
 function getOptions() {
   const options = [
+    { major: 18, range: '18.x', runtime: 'nodejs18.x' },
     { major: 16, range: '16.x', runtime: 'nodejs16.x' },
     { major: 14, range: '14.x', runtime: 'nodejs14.x' },
     {
@@ -26,12 +27,6 @@ function getOptions() {
       discontinueDate: new Date('2020-01-06'),
     },
   ] as const;
-  if (process.env.VERCEL_ALLOW_NODEJS18 === '1') {
-    return [
-      { major: 18, range: '18.x', runtime: 'nodejs18.x' },
-      ...options,
-    ] as const;
-  }
   return options;
 }
 

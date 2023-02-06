@@ -13,6 +13,7 @@ import {
   Builder,
   BuildResultV2,
   BuildResultV3,
+  Cron,
   File,
   FileFsRef,
   BuilderV2,
@@ -28,9 +29,10 @@ import {
   normalizePath,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
+import { merge } from './merge';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
-import { VercelConfig } from '@vercel/client';
+import { fileNameSymbol, VercelConfig } from '@vercel/client';
 
 const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
@@ -39,6 +41,7 @@ export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
  * An entry in the "functions" object in `vercel.json`.
  */
 interface FunctionConfiguration {
+  cron?: Cron;
   memory?: number;
   maxDuration?: number;
 }
@@ -56,6 +59,7 @@ export async function writeBuildResult(
     return writeBuildResultV2(
       outputDir,
       buildResult as BuildResultV2,
+      build,
       vercelConfig
     );
   } else if (version === 3) {
@@ -107,11 +111,24 @@ function stripDuplicateSlashes(path: string): string {
 async function writeBuildResultV2(
   outputDir: string,
   buildResult: BuildResultV2,
+  build: Builder,
   vercelConfig: VercelConfig | null
 ) {
   if ('buildOutputPath' in buildResult) {
     await mergeBuilderOutput(outputDir, buildResult);
     return;
+  }
+
+  // Some very old `@now` scoped Builders return `output` at the top-level.
+  // These Builders are no longer supported.
+  if (!buildResult.output) {
+    const configFile = vercelConfig?.[fileNameSymbol];
+    const updateMessage = build.use.startsWith('@now/')
+      ? ` Please update from "@now" to "@vercel" in your \`${configFile}\` file.`
+      : '';
+    throw new Error(
+      `The build result from "${build.use}" is missing the "output" property.${updateMessage}`
+    );
   }
 
   const lambdas = new Map<Lambda, string>();
@@ -121,6 +138,12 @@ async function writeBuildResultV2(
     if (isLambda(output)) {
       await writeLambda(outputDir, output, normalizedPath, undefined, lambdas);
     } else if (isPrerender(output)) {
+      if (!output.lambda) {
+        throw new Error(
+          `Invalid Prerender with no "lambda" property: ${normalizedPath}`
+        );
+      }
+
       await writeLambda(
         outputDir,
         output.lambda,
@@ -349,12 +372,14 @@ async function writeLambda(
     throw new Error('Malformed `Lambda` - no "files" present');
   }
 
+  const cron = functionConfiguration?.cron ?? lambda.cron;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
 
   const config = {
     ...lambda,
     handler: normalizePath(lambda.handler),
+    cron,
     memory,
     maxDuration,
     type: undefined,
@@ -406,7 +431,7 @@ async function mergeBuilderOutput(
     // so no need to do anything
     return;
   }
-  await fs.copy(buildResult.buildOutputPath, outputDir);
+  await merge(buildResult.buildOutputPath, outputDir);
 }
 
 /**

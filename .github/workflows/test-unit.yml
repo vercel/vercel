@@ -20,7 +20,7 @@ concurrency:
 jobs:
   test:
     name: Unit
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -35,16 +35,16 @@ jobs:
         with:
             fetch-depth: 2
       - uses: actions/setup-node@v3
-        timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
         with:
             node-version: ${{ matrix.node }}
-            cache: 'yarn'
-      - run: yarn install --network-timeout 1000000 --frozen-lockfile
-      - run: yarn run build
-      - run: yarn run lint
+      - name: install pnpm@7.24.2
+        run: npm i -g pnpm@7.24.2
+      - run: pnpm install
+      - run: pnpm run build
+      - run: pnpm run lint
         if: matrix.os == 'ubuntu-latest' && matrix.node == 14 # only run lint once
-      - run: yarn run test-unit
-      - run: yarn workspace vercel run coverage
+      - run: pnpm run test-unit
+      - run: pnpm -C packages/cli run coverage
         if: matrix.os == 'ubuntu-latest' && matrix.node == 14 # only run coverage once
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

@@ -38,6 +38,9 @@ const help = () => {
     -S, --scope                         Set a custom scope
     -N, --next                          Show next page of results
     -y, --yes                           Skip the confirmation prompt when removing an alias
+    --limit=${chalk.bold.underline(
+      'VALUE'
+    )}                       Number of results to return per page (default: 20, max: 100)
 
   ${chalk.dim('Examples:')}
 
@@ -81,6 +84,7 @@ export default async function main(client: Client) {
       '--json': Boolean,
       '--yes': Boolean,
       '--next': Number,
+      '--limit': Number,
       '-y': '--yes',
       '-N': '--next',
     });

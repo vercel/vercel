@@ -33,8 +33,8 @@ module.exports = async ({ github, context }) => {
 
   exec('rm', ['-rf', './examples/nextjs']);
   exec('npx', ['--yes', 'create-next-app@latest', './examples/nextjs']);
-  exec('git', ['config', '--global', 'user.email', 'team@zeit.co']);
-  exec('git', ['config', '--global', 'user.name', 'Vercel Team Bot']);
+  exec('git', ['config', '--global', 'user.email', 'infra+release@vercel.com']);
+  exec('git', ['config', '--global', 'user.name', 'vercel-release-bot']);
   exec('git', ['checkout', 'main']);
   exec('git', ['checkout', '-b', branch]);
   exec('git', ['add', '-A']);
@@ -57,5 +57,12 @@ module.exports = async ({ github, context }) => {
     repo,
     pull_number: pr.data.number,
     reviewers: ['ijjk', 'styfle'],
+  });
+  
+  github.rest.issues.addLabels({
+    owner,
+    repo,
+    issue_number: pr.data.number,
+    labels: ['area: examples', 'semver: none', 'pr: automerge'],
   });
 };

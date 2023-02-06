@@ -1,4 +1,4 @@
-# `@now/next` No Serverless Pages Built
+# `@vercel/next` No Serverless Pages Built
 
 #### Why This Error Occurred
 
@@ -24,7 +24,7 @@ npm install next --save
 }
 ```
 
-3. Add `target: 'serverless'` to `next.config.js`
+3. Add `target: 'serverless'` to `next.config.js` [deprecated]
 
 ```js
 module.exports = {
@@ -33,13 +33,15 @@ module.exports = {
 };
 ```
 
-4. Remove `distDir` from `next.config.js` as `@now/next` can't parse this file and expects your build output at `/.next`
+4. Remove `distDir` from `next.config.js` as `@vercel/next` can't parse this file and expects your build output at `/.next`
 
 5. Optionally make sure the `"src"` in `"builds"` points to your application `package.json`
 
 ```js
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@now/next" }]
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }]
 }
 ```
+
+6. Make sure you have the correct Node.js version selected for your build step in your project settings (`https://vercel.com/[username]/[project]/settings`)

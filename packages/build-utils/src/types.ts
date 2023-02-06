@@ -319,6 +319,7 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
+    cron?: Cron;
   };
 }
 
@@ -410,6 +411,8 @@ export interface BuildResultBuildOutput {
   buildOutputPath: string;
 }
 
+export type Cron = string;
+
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.
@@ -425,6 +428,9 @@ export interface BuildResultV2Typical {
     domain: string;
     value: string;
   }>;
+  framework?: {
+    version: string;
+  };
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;

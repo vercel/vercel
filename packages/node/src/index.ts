@@ -52,10 +52,17 @@ import type {
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 
-import { Register, register } from './typescript';
-import { entrypointToOutputPath, getRegExpFromMatchers } from './utils';
+import { fixConfig, Register, register } from './typescript';
+import {
+  EdgeRuntimes,
+  entrypointToOutputPath,
+  getRegExpFromMatchers,
+  isEdgeRuntime,
+} from './utils';
 
 export { shouldServe };
+
+type TypescriptModule = typeof import('typescript');
 
 interface DownloadOptions {
   files: Files;
@@ -73,7 +80,7 @@ function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
 
-const ALLOWED_RUNTIMES = ['nodejs', 'experimental-edge'];
+const ALLOWED_RUNTIMES = ['nodejs', ...Object.values(EdgeRuntimes)];
 
 const require_ = eval('require');
 
@@ -393,7 +400,7 @@ export const build: BuildV3 = async ({
 
   // Will output an `EdgeFunction` for when `config.middleware = true`
   // (i.e. for root-level "middleware" file) or if source code contains:
-  // `export const config = { runtime: 'experimental-edge' }`
+  // `export const config = { runtime: 'edge' }`
   let isEdgeFunction = isMiddleware;
 
   const project = new Project();
@@ -406,8 +413,15 @@ export const build: BuildV3 = async ({
         )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
       );
     }
-    isEdgeFunction = staticConfig.runtime === 'experimental-edge';
+    if (staticConfig.runtime === 'nodejs') {
+      console.log(
+        `Detected unused static config runtime "nodejs" in "${entrypointPath}"`
+      );
+    }
+    isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
+
+  const cron = staticConfig?.cron;
 
   debug('Tracing input files...');
   const traceTime = Date.now();
@@ -458,6 +472,7 @@ export const build: BuildV3 = async ({
       // TODO: remove - these two properties should not be required
       name: outputPath,
       deploymentTarget: 'v8-worker',
+      cron,
     });
   } else {
     // "nodejs" runtime is the default
@@ -476,6 +491,7 @@ export const build: BuildV3 = async ({
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       experimentalResponseStreaming,
+      cron,
     });
   }
 
@@ -511,8 +527,9 @@ export const startDevServer: StartDevServer = async opts => {
   }
 
   const entryDir = dirname(entrypointPath);
+  const ext = extname(entrypoint);
 
-  const projectTsConfig = await walkParentDirs({
+  const pathToTsConfig = await walkParentDirs({
     base: workPath,
     start: entryDir,
     filename: 'tsconfig.json',
@@ -523,20 +540,99 @@ export const startDevServer: StartDevServer = async opts => {
     filename: 'package.json',
   });
   const pkg = pathToPkg ? require_(pathToPkg) : {};
+  const tsNodePath = require_.resolve('ts-node');
+  const esmLoader = join(tsNodePath, '..', '..', 'esm.mjs');
+  const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
+  const isTypescript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
+  const maybeTranspile = isTypescript || !['.cjs', '.mjs'].includes(ext);
   const isEsm =
-    entrypoint.endsWith('.mjs') ||
-    (pkg.type === 'module' && entrypoint.endsWith('.js'));
+    ext === '.mjs' ||
+    ext === '.mts' ||
+    (pkg.type === 'module' && ['.js', '.ts', '.tsx'].includes(ext));
 
   const devServerPath = join(__dirname, 'dev-server.js');
+  let nodeOptions = process.env.NODE_OPTIONS;
+  let tsConfig: any = {};
+
+  if (maybeTranspile) {
+    const resolveTypescript = (p: string): string => {
+      try {
+        return require_.resolve('typescript', {
+          paths: [p],
+        });
+      } catch (_) {
+        return '';
+      }
+    };
+
+    const requireTypescript = (p: string): TypescriptModule => require_(p);
+
+    let ts: TypescriptModule | null = null;
+
+    // Use the project's version of Typescript if available and supports `target`
+    let compiler = resolveTypescript(process.cwd());
+    if (compiler) {
+      ts = requireTypescript(compiler);
+    }
+
+    // Otherwise fall back to using the copy that `@vercel/node` uses
+    if (!ts) {
+      compiler = resolveTypescript(join(__dirname, '..'));
+      ts = requireTypescript(compiler);
+    }
+
+    if (pathToTsConfig) {
+      try {
+        tsConfig = ts.readConfigFile(pathToTsConfig, ts.sys.readFile).config;
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          console.error(`Error while parsing "${pathToTsConfig}"`);
+          throw err;
+        }
+      }
+    }
+
+    const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
+    fixConfig(tsConfig, nodeVersionMajor);
+
+    // In prod, `.ts` inputs use TypeScript and
+    // `.js` inputs use Babel to convert ESM to CJS.
+    // In dev, both `.ts` and `.js` inputs use ts-node
+    // without Babel so we must enable `allowJs`.
+    tsConfig.compilerOptions.allowJs = true;
+
+    // In prod, we emit outputs to the filesystem.
+    // In dev, we don't emit because we use ts-node.
+    tsConfig.compilerOptions.noEmit = true;
+
+    if (isTypescript) {
+      if (isEsm) {
+        nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
+      } else {
+        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+      }
+    } else {
+      if (isEsm) {
+        // no transform needed because Node.js supports ESM natively
+      } else {
+        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+      }
+    }
+  }
+
   const child = fork(devServerPath, [], {
     cwd: workPath,
     execArgv: [],
     env: cloneEnv(process.env, meta.env, {
       VERCEL_DEV_ENTRYPOINT: entrypoint,
-      VERCEL_DEV_TSCONFIG: projectTsConfig || '',
       VERCEL_DEV_IS_ESM: isEsm ? '1' : undefined,
       VERCEL_DEV_CONFIG: JSON.stringify(config),
       VERCEL_DEV_BUILD_ENV: JSON.stringify(meta.buildEnv || {}),
+      TS_NODE_TRANSPILE_ONLY: '1',
+      TS_NODE_COMPILER_OPTIONS: tsConfig?.compilerOptions
+        ? JSON.stringify(tsConfig.compilerOptions)
+        : undefined,
+      NODE_OPTIONS: nodeOptions,
     }),
   });
 
@@ -548,18 +644,17 @@ export const startDevServer: StartDevServer = async opts => {
   }
 
   const onMessage = once<{ port: number }>(child, 'message');
-  const onExit = once.spread<[number, string | null]>(child, 'exit');
+  const onExit = once.spread<[number, string | null]>(child, 'close');
   const result = await Promise.race([onMessage, onExit]);
   onExit.cancel();
   onMessage.cancel();
 
   if (isPortInfo(result)) {
     // "message" event
-    const ext = extname(entrypoint);
-    if (ext === '.ts' || ext === '.tsx') {
+    if (isTypescript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
-      doTypeCheck(opts, projectTsConfig).catch((err: Error) => {
+      doTypeCheck(opts, pathToTsConfig).catch((err: Error) => {
         console.error('Type check for %j failed:', entrypoint, err);
       });
     }
@@ -625,5 +720,5 @@ async function doTypeCheck(
       stdio: 'inherit',
     }
   );
-  await once.spread<[number, string | null]>(child, 'exit');
+  await once.spread<[number, string | null]>(child, 'close');
 }

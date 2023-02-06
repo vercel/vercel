@@ -8,7 +8,8 @@
     "strict": true,
     "target": "ES2020",
     "declaration": true,
-    "module": "commonjs"
+    "module": "commonjs",
+    "skipLibCheck": true
   },
   "include": ["helpers.ts", "bridge.js", "launcher.js"],
   "exclude": ["node_modules"]

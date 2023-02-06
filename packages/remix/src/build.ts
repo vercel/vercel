@@ -1,4 +1,5 @@
 import { promises as fs } from 'fs';
+import { runInContext, createContext } from 'vm';
 import { dirname, join, relative } from 'path';
 import {
   debug,
@@ -23,7 +24,9 @@ import type {
   PackageJson,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
-import type { AppConfig } from './types';
+import { findConfig } from './utils';
+import type { AppConfig, RemixBuildManifest } from './types';
+import type { BuildResultV2Typical } from '@vercel/build-utils';
 
 // Name of the Remix runtime adapter npm package for Vercel
 const REMIX_RUNTIME_ADAPTER_NAME = '@remix-run/vercel';
@@ -162,46 +165,49 @@ export const build: BuildV2 = async ({
 
   let serverBuildPath = 'build/index.js';
   let needsHandler = true;
+
+  const remixConfigFile = findConfig(entrypointFsDirname, 'remix.config');
+
   try {
-    const remixConfig: AppConfig = require(join(
-      entrypointFsDirname,
-      'remix.config'
-    ));
+    if (remixConfigFile) {
+      const remixConfigModule = await eval('import(remixConfigFile)');
+      const remixConfig: AppConfig = remixConfigModule?.default || {};
 
-    // If `serverBuildTarget === 'vercel'` then Remix will output a handler
-    // that is already in Vercel (req, res) format, so don't inject the handler
-    if (remixConfig.serverBuildTarget) {
-      if (remixConfig.serverBuildTarget !== 'vercel') {
-        throw new Error(
-          `\`serverBuildTarget\` in Remix config must be "vercel" (got "${remixConfig.serverBuildTarget}")`
-        );
+      // If `serverBuildTarget === 'vercel'` then Remix will output a handler
+      // that is already in Vercel (req, res) format, so don't inject the handler
+      if (remixConfig.serverBuildTarget) {
+        if (remixConfig.serverBuildTarget !== 'vercel') {
+          throw new Error(
+            `\`serverBuildTarget\` in Remix config must be "vercel" (got "${remixConfig.serverBuildTarget}")`
+          );
+        }
+        serverBuildPath = 'api/index.js';
+        needsHandler = false;
       }
-      serverBuildPath = 'api/index.js';
-      needsHandler = false;
-    }
 
-    if (remixConfig.serverBuildPath) {
-      // Explicit file path where the server output file will be
-      serverBuildPath = remixConfig.serverBuildPath;
-    } else if (remixConfig.serverBuildDirectory) {
-      // Explicit directory path the server output will be
-      serverBuildPath = join(remixConfig.serverBuildDirectory, 'index.js');
-    }
+      if (remixConfig.serverBuildPath) {
+        // Explicit file path where the server output file will be
+        serverBuildPath = remixConfig.serverBuildPath;
+      } else if (remixConfig.serverBuildDirectory) {
+        // Explicit directory path the server output will be
+        serverBuildPath = join(remixConfig.serverBuildDirectory, 'index.js');
+      }
 
-    // Also check for whether were in a monorepo.
-    // If we are, prepend the app root directory from config onto the build path.
-    // e.g. `/apps/my-remix-app/api/index.js`
-    const isMonorepo = repoRootPath && repoRootPath !== workPath;
-    if (isMonorepo) {
-      const rootDirectory = relative(repoRootPath, workPath);
-      serverBuildPath = join(rootDirectory, serverBuildPath);
+      // Also check for whether were in a monorepo.
+      // If we are, prepend the app root directory from config onto the build path.
+      // e.g. `/apps/my-remix-app/api/index.js`
+      const isMonorepo = repoRootPath && repoRootPath !== workPath;
+      if (isMonorepo) {
+        const rootDirectory = relative(repoRootPath, workPath);
+        serverBuildPath = join(rootDirectory, serverBuildPath);
+      }
     }
   } catch (err: any) {
     // Ignore error if `remix.config.js` does not exist
     if (err.code !== 'MODULE_NOT_FOUND') throw err;
   }
 
-  const [staticFiles, renderFunction] = await Promise.all([
+  const [staticFiles, renderFunction, ssrRoutes] = await Promise.all([
     glob('**', join(entrypointFsDirname, 'public')),
     createRenderFunction(
       entrypointFsDirname,
@@ -210,7 +216,16 @@ export const build: BuildV2 = async ({
       needsHandler,
       nodeVersion
     ),
+    getSsrRoutes(entrypointFsDirname),
   ]);
+
+  const output: BuildResultV2Typical['output'] = staticFiles;
+  for (const path of ssrRoutes) {
+    output[path] = renderFunction;
+  }
+
+  // Add a 404 path for not found pages to be server-side rendered by Remix
+  output['404'] = renderFunction;
 
   return {
     routes: [
@@ -224,13 +239,10 @@ export const build: BuildV2 = async ({
       },
       {
         src: '/(.*)',
-        dest: '/render',
+        dest: '/404',
       },
     ],
-    output: {
-      render: renderFunction,
-      ...staticFiles,
-    },
+    output,
   };
 };
 
@@ -278,7 +290,35 @@ async function createRenderFunction(
     runtime: nodeVersion.runtime,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
+    operationType: 'SSR',
   });
 
   return lambda;
+}
+
+async function getSsrRoutes(entrypointDir: string): Promise<string[]> {
+  // Find the name of the manifest file
+  const buildDir = join(entrypointDir, 'public/build');
+  const manifestFileName = (await fs.readdir(buildDir)).find(n =>
+    n.startsWith('manifest-')
+  );
+
+  if (!manifestFileName) {
+    throw new Error(`Failed to find manifest file in "${buildDir}"`);
+  }
+
+  const context: { window: { __remixManifest?: RemixBuildManifest } } = {
+    window: {},
+  };
+  createContext(context);
+
+  const code = await fs.readFile(join(buildDir, manifestFileName), 'utf8');
+  runInContext(code, context);
+
+  const routes = context.window.__remixManifest?.routes || {};
+  return Object.keys(routes)
+    .filter(id => id !== 'root')
+    .map(id => {
+      return routes[id].path || 'index';
+    });
 }

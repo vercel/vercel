@@ -7,6 +7,55 @@
   ],
   "probes": [
     {
+      "path": "/dynamic/category-1/id-1",
+      "status": 200,
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/ssg",
+      "status": 200,
+      "mustContain": "hello from /ssg",
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+      }
+    },
+    {
+      "path": "/ssg",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
+      },
+      "headers": {
+        "RSC": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/ssg?override=1",
+      "status": 307,
+      "responseHeaders": {
+        "location": "/overridden/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/ssg?override=1",
+      "status": 307,
+      "responseHeaders": {
+        "location": "/overridden/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
       "path": "/dashboard/deployments/123/settings",
       "status": 200,
       "mustContain": "hello from app/dashboard/deployments/[id]/settings",
@@ -23,7 +72,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     },
     {
@@ -43,7 +92,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     },
     {
@@ -60,7 +109,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     },
     {
@@ -110,7 +159,7 @@
       "headers": {
         "RSC": "1"
       },
-      "mustContain": "M1:{",
+      "mustContain": ":{",
       "mustNotContain": "<html"
     }
   ]

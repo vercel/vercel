@@ -1,18 +1,30 @@
 {
   "$schema": "https://turborepo.org/schema.json",
-  "baseBranch": "origin/main",
   "globalDependencies": ["turbo-cache-key.json", "test/lib/**"],
   "pipeline": {
     "build": {
       "dependsOn": ["^build"],
+      "outputMode": "new-only",
       "outputs": ["dist/**"]
     },
     "@vercel/node-bridge#build": {
       "dependsOn": ["^build"],
+      "outputMode": "new-only",
       "outputs": ["helpers.js", "source-map-support.js"]
+    },
+    "@vercel/gatsby-plugin-vercel-builder#build": {
+      "dependsOn": ["^build"],
+      "outputMode": "new-only",
+      "outputs": ["dist/**", "gatsby-node.js"]
+    },
+    "@vercel/gatsby-plugin-vercel-analytics#build": {
+      "dependsOn": ["^build"],
+      "outputMode": "new-only",
+      "outputs": ["gatsby-browser.js", "web-vitals.js", "index.js"]
     },
     "vercel#build": {
       "dependsOn": ["^build"],
+      "outputMode": "new-only",
       "outputs": [
         "dist/**",
         "src/util/constants.ts",
@@ -20,28 +32,28 @@
       ]
     },
     "test-unit": {
-      "dependsOn": [],
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test-integration-dev": {
-      "dependsOn": [],
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test-integration-cli": {
-      "dependsOn": [],
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test-integration-once": {
-      "dependsOn": [],
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test-next-local": {
-      "dependsOn": [],
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test": {
-      "dependsOn": [],
-      "outputs": []
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     }
   }
 }

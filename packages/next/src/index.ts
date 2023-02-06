@@ -24,6 +24,7 @@ import {
   PrepareCache,
   NodejsLambda,
   BuildResultV2Typical as BuildResult,
+  BuildResultBuildOutput,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -44,7 +45,6 @@ import {
   remove,
   writeFile,
 } from 'fs-extra';
-import os from 'os';
 import path from 'path';
 import resolveFrom from 'resolve-from';
 import semver from 'semver';
@@ -53,6 +53,7 @@ import createServerlessConfig from './create-serverless-config';
 import nextLegacyVersions from './legacy-versions';
 import { serverBuild } from './server-build';
 import {
+  MIB,
   collectTracedFiles,
   createLambdaFromPseudoLayers,
   createPseudoLayer,
@@ -64,6 +65,7 @@ import {
   getExportIntent,
   getExportStatus,
   getFilesMapFromReasons,
+  getImagesConfig,
   getImagesManifest,
   getMiddlewareManifest,
   getNextConfig,
@@ -201,7 +203,7 @@ export const build: BuildV2 = async ({
 
   // Limit for max size each lambda can be, 50 MB if no custom limit
   const lambdaCompressedByteLimit = (config.maxLambdaSize ||
-    50 * 1000 * 1000) as number;
+    50 * MIB) as number;
 
   let entryDirectory = path.dirname(entrypoint);
   let entryPath = path.join(workPath, entryDirectory);
@@ -211,7 +213,7 @@ export const build: BuildV2 = async ({
     repoRootPath = entryPath;
     entryPath = path.join(entryPath, config.rootDirectory as string);
   }
-  const outputDirectory = config.outputDirectory || '.next';
+  const outputDirectory = path.join('./', config.outputDirectory || '.next');
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
   // TODO: remove after testing used for simulating root directory monorepo
   // setting that can't be triggered with vercel.json
@@ -405,8 +407,6 @@ export const build: BuildV2 = async ({
   }
 
   const env: typeof process.env = { ...spawnOpts.env };
-  const memoryToConsume = Math.floor(os.totalmem() / 1024 ** 2) - 128;
-  env.NODE_OPTIONS = `--max_old_space_size=${memoryToConsume}`;
   env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
 
   if (target) {
@@ -451,6 +451,24 @@ export const build: BuildV2 = async ({
     });
   }
   debug('build command exited');
+
+  let buildOutputVersion: undefined | number;
+
+  try {
+    const data = await readJSON(
+      path.join(outputDirectory, 'output/config.json')
+    );
+    buildOutputVersion = data.version;
+  } catch (_) {
+    // tolerate for older versions
+  }
+
+  if (buildOutputVersion) {
+    return {
+      buildOutputPath: path.join(outputDirectory, 'output'),
+      buildOutputVersion,
+    } as BuildResultBuildOutput;
+  }
 
   let appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
@@ -799,20 +817,13 @@ export const build: BuildV2 = async ({
         }
       });
 
+    console.log(
+      'Notice: detected `next export`, this de-opts some Next.js features\nSee more info: https://nextjs.org/docs/advanced-features/static-html-export'
+    );
+
     return {
       output,
-      images:
-        imagesManifest?.images?.loader === 'default'
-          ? {
-              domains: imagesManifest.images.domains,
-              sizes: imagesManifest.images.sizes,
-              remotePatterns: imagesManifest.images.remotePatterns,
-              minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-              dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-              contentSecurityPolicy:
-                imagesManifest.images.contentSecurityPolicy,
-            }
-          : undefined,
+      images: getImagesConfig(imagesManifest),
       routes: [
         ...privateOutputs.routes,
 
@@ -922,6 +933,7 @@ export const build: BuildV2 = async ({
             ]
           : []),
       ],
+      framework: { version: nextVersion },
     };
   }
 
@@ -1072,6 +1084,7 @@ export const build: BuildV2 = async ({
           handler: '___next_launcher.cjs',
           runtime: nodeVersion.runtime,
           ...lambdaOptions,
+          operationType: 'SSR',
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
           supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
@@ -2168,17 +2181,7 @@ export const build: BuildV2 = async ({
       ...privateOutputs.files,
     },
     wildcard: wildcardConfig,
-    images:
-      imagesManifest?.images?.loader === 'default'
-        ? {
-            domains: imagesManifest.images.domains,
-            sizes: imagesManifest.images.sizes,
-            remotePatterns: imagesManifest.images.remotePatterns,
-            minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-            dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-            contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
-          }
-        : undefined,
+    images: getImagesConfig(imagesManifest),
     /*
       Desired routes order
       - Runtime headers
@@ -2580,6 +2583,7 @@ export const build: BuildV2 = async ({
                 ]),
           ]),
     ],
+    framework: { version: nextVersion },
   };
 };
 
@@ -2592,7 +2596,7 @@ export const prepareCache: PrepareCache = async ({
   debug('Preparing cache...');
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
-  const outputDirectory = config.outputDirectory || '.next';
+  const outputDirectory = path.join('./', config.outputDirectory || '.next');
 
   const nextVersionRange = await getNextVersionRange(entryPath);
   const isLegacy = nextVersionRange && isLegacyNext(nextVersionRange);
@@ -2661,7 +2665,7 @@ async function getServerlessPages(params: {
   for (const edgeFunctionFile of Object.keys(
     middlewareManifest?.functions ?? {}
   )) {
-    const edgePath = edgeFunctionFile.slice(1) + '.js';
+    const edgePath = (edgeFunctionFile.slice(1) || 'index') + '.js';
     delete normalizedAppPaths[edgePath];
     delete pages[edgePath];
   }
