@@ -24,7 +24,7 @@ npm install next --save
 }
 ```
 
-3. Add `target: 'serverless'` to `next.config.js`
+3. Add `target: 'serverless'` to `next.config.js` [deprecated]
 
 ```js
 module.exports = {
@@ -43,3 +43,5 @@ module.exports = {
   "builds": [{ "src": "package.json", "use": "@vercel/next" }]
 }
 ```
+
+6. Make sure you have the correct Node.js version selected for your build step in your project settings (`https://vercel.com/[username]/[project]/settings`)
