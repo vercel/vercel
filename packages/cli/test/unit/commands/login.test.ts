@@ -74,7 +74,7 @@ describe('login', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
     });
 
-    describe('with NO_COLOR env var', () => {
+    describe('with NO_COLOR="1" env var', () => {
       let previousNoColor: string | undefined;
 
       beforeEach(() => {
@@ -117,34 +117,46 @@ describe('login', () => {
       });
     });
 
-    it('should remove emoji the `FORCE_COLOR` env var with 0', async () => {
-      process.env.FORCE_COLOR = '0';
-      client.resetOutput();
+    describe('with FORCE_COLOR="0" env var', () => {
+      let previousForceColor: string | undefined;
 
-      const user = useUser();
-      client.setArgv('login');
-      const exitCodePromise = login(client);
-      await expect(client.stderr).toOutput(`> Log in to Vercel`);
+      beforeEach(() => {
+        previousForceColor = process.env.FORCE_COLOR;
+        process.env.FORCE_COLOR = '0';
+      });
 
-      // Move down to "Email" option
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\x1B[B'); // Down arrow
-      client.stdin.write('\r'); // Return key
+      afterEach(() => {
+        delete process.env.FORCE_COLOR;
+        if (previousForceColor) {
+          process.env.FORCE_COLOR = previousForceColor;
+        }
+      });
 
-      await expect(client.stderr).toOutput('> Enter your email address:');
+      it('should remove emoji the `FORCE_COLOR` env var with 0', async () => {
+        client.resetOutput();
 
-      client.stdin.write(`${user.email}\n`);
+        const user = useUser();
+        client.setArgv('login');
+        const exitCodePromise = login(client);
+        await expect(client.stderr).toOutput(`> Log in to Vercel`);
 
-      await expect(client.stderr).toOutput(
-        `Success! Email authentication complete for ${user.email}`
-      );
+        // Move down to "Email" option
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\x1B[B'); // Down arrow
+        client.stdin.write('\r'); // Return key
 
-      await expect(client.stderr).not.toOutput(emoji('tip'));
+        await expect(client.stderr).toOutput('> Enter your email address:');
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+        client.stdin.write(`${user.email}\n`);
 
-      process.env.FORCE_COLOR = undefined;
+        await expect(client.stderr).toOutput(
+          `Success! Email authentication complete for ${user.email}`
+        );
+
+        await expect(client.stderr).not.toOutput(emoji('tip'));
+        await expect(exitCodePromise).resolves.toEqual(0);
+      });
     });
   });
 });
