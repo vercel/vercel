@@ -228,7 +228,7 @@ export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
-  Pick<LambdaOptions, 'memory' | 'maxDuration'>
+  Pick<LambdaOptions, 'memory' | 'maxDuration' | 'cron'>
 > {
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
@@ -236,6 +236,7 @@ export async function getLambdaOptionsFromFunction({
         return {
           memory: fn.memory,
           maxDuration: fn.maxDuration,
+          cron: fn.cron,
         };
       }
     }

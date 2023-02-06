@@ -873,6 +873,7 @@ export async function serverBuild({
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
         isStreaming: group.isStreaming,
+        cron: group.cron,
       });
 
       for (const page of group.pages) {
@@ -967,6 +968,7 @@ export async function serverBuild({
   });
 
   const middleware = await getMiddlewareBundle({
+    config,
     entryPath,
     outputDirectory,
     routesManifest,

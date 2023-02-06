@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/overwrite/serverless.js": {
+      "cron": "0 10-20 * * *"
+    },
+    "api/overwrite/edge.js": {
+      "cron": "10 * * * *"
+    }
+  }
+}
