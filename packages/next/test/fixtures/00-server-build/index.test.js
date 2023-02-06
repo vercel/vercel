@@ -25,6 +25,8 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   beforeAll(async () => {
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
+
+    throw new Error('intentional break!');
   });
 
   it.each([
