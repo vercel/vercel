@@ -707,13 +707,14 @@ main()
       });
       if (latest) {
         const changelog = 'https://github.com/vercel/vercel/releases';
-        const errorMsg = exitCode
-          ? chalk.magenta(
-              `\n\nThe latest update ${chalk.italic(
-                'may'
-              )} fix any errors that occurred.`
-            )
-          : '';
+        const errorMsg =
+          exitCode && exitCode !== 2
+            ? chalk.magenta(
+                `\n\nThe latest update ${chalk.italic(
+                  'may'
+                )} fix any errors that occurred.`
+              )
+            : '';
         output.print(
           box(
             `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
