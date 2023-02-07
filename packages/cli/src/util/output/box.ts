@@ -20,8 +20,9 @@ export type BoxOptions = {
 };
 
 /**
- * Renders text centered inside a yellow box. It applies 1 line of padding on
- * the top/bottom and 4 characters of padding on the left/right.
+ * Renders text centered inside a yellow box. If terminal is too narrow to fit
+ * the text without wrapping, the box will only consist of a top and bottom
+ * horizontal rule with the text left justified.
  *
  * @param message The multiline message to display
  * @param options Various formatting options
@@ -61,7 +62,7 @@ export default function box(
   const maxLine = lines.reduce((p, [, len]) => Math.max(p, len), 0);
   const borderColorFn = (borderColor && chalk[borderColor]) || chalk.yellow;
   const clampedSidePadding = Math.max(1, padding * 3);
-  const slim = maxLine + clampedSidePadding * 2 > cols;
+  const slim = maxLine + 2 + clampedSidePadding * 2 > cols;
   const sidePadding = slim ? 0 : clampedSidePadding;
   const innerWidth = maxLine + sidePadding * 2;
   const [hr, topLeft, topRight, left, right, bottomLeft, bottomRight] = slim
