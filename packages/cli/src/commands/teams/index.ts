@@ -30,6 +30,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -N, --next                     Show next page of results
 
   ${chalk.dim('Examples:')}

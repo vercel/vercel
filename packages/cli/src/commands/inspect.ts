@@ -32,6 +32,7 @@ const help = () => {
     'TOKEN'
   )}        Login token
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -S, --scope                    Set a custom scope
 
   ${chalk.dim('Examples:')}
