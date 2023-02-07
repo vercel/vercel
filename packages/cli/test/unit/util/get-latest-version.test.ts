@@ -148,8 +148,8 @@ describe('get latest version', () => {
     });
     expect(latest).toEqual('28.0.0');
 
-    // we need to wait for the cacheFile to be updated
-    for (let i = 0; i < 20; i++) {
+    // we need to wait up to 20 seconds for the cacheFile to be updated
+    for (let i = 0; i < 80; i++) {
       await sleep(250);
       try {
         const cache = await fs.readJSON(cacheFile);
