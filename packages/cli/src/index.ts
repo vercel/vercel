@@ -720,7 +720,7 @@ main()
             `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
               `v${latest}`
             )}
-Changelog: ${output.link(changelog, changelog, { fallback: () => changelog })}
+Changelog: ${output.link(changelog, changelog, { fallback: false })}
 Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
           )
         );

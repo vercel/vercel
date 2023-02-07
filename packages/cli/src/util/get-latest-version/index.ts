@@ -81,16 +81,19 @@ export default function getLatestVersion({
     );
   }
 
-  if (
-    cache &&
-    (!cache.notifyAt || cache.notifyAt < Date.now()) &&
-    pkg.version &&
-    cache.version &&
-    semver.lt(pkg.version, cache.version)
-  ) {
-    cache.notifyAt = Date.now() + notifyInterval;
-    outputJSONSync(cacheFile, cache);
-    return cache.version;
+  if (cache) {
+    const shouldNotify = !cache.notifyAt || cache.notifyAt < Date.now();
+
+    let updateAvailable = false;
+    if (cache.version && pkg.version) {
+      updateAvailable = semver.lt(pkg.version, cache.version);
+    }
+
+    if (shouldNotify && updateAvailable) {
+      cache.notifyAt = Date.now() + notifyInterval;
+      outputJSONSync(cacheFile, cache);
+      return cache.version;
+    }
   }
 }
 

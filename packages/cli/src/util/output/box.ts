@@ -62,13 +62,12 @@ export default function box(
   const maxLine = lines.reduce((p, [, len]) => Math.max(p, len), 0);
   const borderColorFn = (borderColor && chalk[borderColor]) || chalk.yellow;
   const clampedSidePadding = Math.max(1, padding * 3);
-  const slim = maxLine + 2 + clampedSidePadding * 2 > cols;
-  const sidePadding = slim ? 0 : clampedSidePadding;
+  const narrowMode = maxLine + 2 + clampedSidePadding * 2 > cols;
+  const sidePadding = narrowMode ? 0 : clampedSidePadding;
   const innerWidth = maxLine + sidePadding * 2;
-  const [hr, topLeft, topRight, left, right, bottomLeft, bottomRight] = slim
-    ? nothing
-    : border;
-  const spacerRow = slim
+  const [hr, topLeft, topRight, left, right, bottomLeft, bottomRight] =
+    narrowMode ? nothing : border;
+  const spacerRow = narrowMode
     ? '\n'.repeat(padding)
     : `${borderColorFn(`${left}${' '.repeat(innerWidth)}${right}`)}\n`.repeat(
         padding
@@ -83,7 +82,7 @@ export default function box(
         let leftPadding = 0;
         let rightPadding = 0;
 
-        if (!slim) {
+        if (!narrowMode) {
           leftPadding = sidePadding;
           rightPadding = sidePadding;
 
