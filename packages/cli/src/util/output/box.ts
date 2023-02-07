@@ -73,34 +73,38 @@ export default function box(
         padding
       );
 
+  const renderLine = ([line, len]: [string, number]) => {
+    let leftPadding = 0;
+    let rightPadding = 0;
+
+    if (!narrowMode) {
+      leftPadding = sidePadding;
+      rightPadding = sidePadding;
+
+      if (textAlignment === 'center') {
+        leftPadding += Math.floor((maxLine - len) / 2);
+        rightPadding += maxLine - len - leftPadding + sidePadding;
+      } else if (textAlignment === 'right') {
+        leftPadding += maxLine - len;
+      } else if (textAlignment === 'left') {
+        rightPadding += maxLine - len;
+      }
+    }
+
+    return (
+      borderColorFn(left) +
+      ' '.repeat(leftPadding) +
+      line +
+      ' '.repeat(rightPadding) +
+      borderColorFn(right)
+    );
+  };
+
   return (
     borderColorFn(`${topLeft}${hr.repeat(innerWidth)}${topRight}`) +
     '\n' +
     spacerRow +
-    lines
-      .map(([line, len]) => {
-        let leftPadding = 0;
-        let rightPadding = 0;
-
-        if (!narrowMode) {
-          leftPadding = sidePadding;
-          rightPadding = sidePadding;
-
-          if (textAlignment === 'center') {
-            leftPadding += Math.floor((maxLine - len) / 2);
-            rightPadding += maxLine - len - leftPadding + sidePadding;
-          } else if (textAlignment === 'right') {
-            leftPadding += maxLine - len;
-          } else if (textAlignment === 'left') {
-            rightPadding += maxLine - len;
-          }
-        }
-
-        return `${borderColorFn(left)}${' '.repeat(
-          leftPadding
-        )}${line}${' '.repeat(rightPadding)}${borderColorFn(right)}`;
-      })
-      .join('\n') +
+    lines.map(renderLine).join('\n') +
     '\n' +
     spacerRow +
     borderColorFn(`${bottomLeft}${hr.repeat(innerWidth)}${bottomRight}`)
