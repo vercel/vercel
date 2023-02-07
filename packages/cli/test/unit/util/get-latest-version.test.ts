@@ -159,6 +159,9 @@ describe('get latest version', () => {
       } catch {
         // cacheFile has not been updated yet
       }
+      if (i + 1 === 80) {
+        throw new Error(`Timed out waiting for worker to fetch latest version`);
+      }
     }
 
     let cache = await fs.readJSON(cacheFile);
