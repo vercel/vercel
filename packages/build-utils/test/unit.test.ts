@@ -346,6 +346,19 @@ it('should support passQuery correctly', async () => {
     group: 1,
     bypassToken: 'some-long-bypass-token-to-make-it-work',
   });
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      passQuery: 'true',
+    });
+  }).toThrowError(
+    `The \`passQuery\` argument for \`Prerender\` must be a boolean.`
+  );
 });
 
 it('should support require by path for legacy builders', () => {
