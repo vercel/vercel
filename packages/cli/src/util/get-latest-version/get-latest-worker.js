@@ -163,12 +163,27 @@ process.once('message', async msg => {
       output.debug('Available dist tags:', Object.keys(tags));
     }
 
+    // if the latest version is newer than the previous latest version, then
+    // invalidate `notifyAt` to force the notification to be displayed,
+    // otherwise keep the the existing `notifyAt`
+    let notifyAt;
+    try {
+      const old = JSON.parse(await readFile(cacheFile, 'utf-8'));
+      notifyAt =
+        old?.version && old.version === version ? old?.notifyAt : undefined;
+    } catch (err) {
+      // cache does not exist or malformed
+      if (err.code !== 'ENOENT') {
+        output.debug(`Error reading latest package cache file: ${err}`);
+      }
+    }
+
     output.debug(`Writing cache file: ${cacheFile}`);
     await writeFile(
       cacheFile,
       JSON.stringify({
         expireAt: Date.now() + updateCheckInterval,
-        notified: false,
+        notifyAt,
         version,
       })
     );

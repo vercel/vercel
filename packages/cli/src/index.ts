@@ -52,6 +52,7 @@ import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
 import { AuthConfig, GlobalConfig } from './types';
 import { VercelConfig } from '@vercel/client';
+import box from './util/output/box';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -144,29 +145,6 @@ const main = async () => {
   const cwd = argv['--cwd'];
   if (cwd) {
     process.chdir(cwd);
-  }
-
-  // Print update information, if available
-  if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
-    // Check if an update is available. If so, `latest` will contain a string
-    // of the latest version, otherwise `undefined`.
-    const latest = getLatestVersion({
-      distTag: isCanary ? 'canary' : 'latest',
-      output,
-      pkg,
-    });
-    if (latest) {
-      output.log(
-        `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
-          `Run ${cmd(
-            await getUpdateCommand()
-          )} to install ${getTitleName()} CLI ${latest}`
-      );
-
-      output.log(
-        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}\n`
-      );
-    }
   }
 
   // The second argument to the command can be:
@@ -670,6 +648,30 @@ const main = async () => {
     }
 
     return 1;
+  } finally {
+    // Print update information, if available
+    if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
+      // Check if an update is available. If so, `latest` will contain a string
+      // of the latest version, otherwise `undefined`.
+      const latest = getLatestVersion({
+        distTag: isCanary ? 'canary' : 'latest',
+        output,
+        pkg,
+      });
+      if (latest) {
+        const changelog = 'https://github.com/vercel/vercel/releases';
+        output.print(
+          box(
+            `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
+              `v${latest}`
+            )}
+Changelog: ${output.link(changelog, changelog, { fallback: () => changelog })}
+Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.`
+          )
+        );
+        output.print('\n\n');
+      }
+    }
   }
 
   if (shouldCollectMetrics) {
