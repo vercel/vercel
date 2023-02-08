@@ -189,6 +189,16 @@ module.exports = config;`;
     }
   }
 
+  // This needs to happen before we run NFT to create the Node/Edge functions
+  await Promise.all([
+    ensureResolvable(
+      entrypointFsDirname,
+      repoRootPath,
+      '@remix-run/server-runtime'
+    ),
+    ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node'),
+  ]);
+
   const [staticFiles, nodeFunction, edgeFunction] = await Promise.all([
     glob('**', dirname(remixConfig.assetsBuildDirectory)),
     createRenderNodeFunction(
@@ -204,12 +214,6 @@ module.exports = config;`;
           serverBuildPath
         )
       : undefined,
-    ensureResolvable(
-      entrypointFsDirname,
-      repoRootPath,
-      '@remix-run/server-runtime'
-    ),
-    ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node'),
   ]);
 
   const output: BuildResultV2Typical['output'] = staticFiles;
