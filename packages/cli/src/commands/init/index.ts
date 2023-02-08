@@ -21,6 +21,7 @@ const help = () => {
 
     -h, --help        Output usage information
     -d, --debug       Debug mode [off]
+    --no-color        No color mode [off]
     -f, --force       Overwrite destination directory if exists [off]
 
   ${chalk.dim('Examples:')}
