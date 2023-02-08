@@ -265,7 +265,9 @@ module.exports = config;`;
 
     // If this is a dynamic route then add a Vercel route
     const keys: Key[] = [];
-    const re = pathToRegexp(`/${path}`, keys);
+    // Replace "/*" at the end to handle "splat routes"
+    const rePath = `/${path.replace(/\/\*$/, '/:params+')}`;
+    const re = pathToRegexp(rePath, keys);
     if (keys.length > 0) {
       routes.push({
         src: re.source,
