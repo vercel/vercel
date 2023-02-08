@@ -103,7 +103,12 @@ const main = async () => {
   }
 
   const isDebugging = argv['--debug'];
-  const output = new Output(process.stderr, { debug: isDebugging });
+  const isNoColor = argv['--no-color'];
+
+  const output = new Output(process.stderr, {
+    debug: isDebugging,
+    noColor: isNoColor,
+  });
 
   debug = output.debug;
 

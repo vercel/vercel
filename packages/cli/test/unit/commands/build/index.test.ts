@@ -1120,6 +1120,16 @@ describe('build', () => {
         join(output, 'serverless.func', '.vc-config.json')
       );
       expect(serverless).toHaveProperty('cron', '* * * * *');
+
+      const overwriteServerless = await fs.readJSON(
+        join(output, 'overwrite', 'serverless.func', '.vc-config.json')
+      );
+      expect(overwriteServerless).toHaveProperty('cron', '0 10-20 * * *');
+
+      const overwriteEdge = await fs.readJSON(
+        join(output, 'overwrite', 'edge.func', '.vc-config.json')
+      );
+      expect(overwriteEdge).toHaveProperty('cron', '10 * * * *');
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;

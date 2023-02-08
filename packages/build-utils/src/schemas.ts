@@ -31,6 +31,11 @@ export const functionsSchema = {
           type: 'string',
           maxLength: 256,
         },
+        cron: {
+          type: 'string',
+          minLength: 9,
+          maxLength: 256,
+        },
       },
     },
   },
