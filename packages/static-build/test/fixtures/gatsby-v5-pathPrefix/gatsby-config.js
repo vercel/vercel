@@ -8,4 +8,5 @@ module.exports = {
   },
   plugins: [],
   pathPrefix: '/foo',
+  assetPrefix: 'https://example.com',
 };

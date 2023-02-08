@@ -1,3 +1,4 @@
+import url from 'url';
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { writeJson } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
@@ -19,7 +20,7 @@ export interface GenerateVercelBuildOutputAPI3OutputOptions {
 }
 
 export async function generateVercelBuildOutputAPI3Output({
-  pathPrefix,
+  pathPrefix: _pathPrefix,
   gatsbyStoreState,
 }: GenerateVercelBuildOutputAPI3OutputOptions) {
   const state = {
@@ -31,6 +32,11 @@ export async function generateVercelBuildOutputAPI3Output({
 
   if (validateGatsbyState(state)) {
     console.log('▲ Creating Vercel build output');
+
+    // `_pathPrefix` contains `assetPrefix` + `pathPrefix`,
+    // so strip off the `assetPrefix` portion
+    const pathPrefix = url.parse(_pathPrefix).pathname ?? '';
+    console.log({ _pathPrefix, pathPrefix });
 
     const { pages, redirects, functions, config: gatsbyConfig } = state;
 
