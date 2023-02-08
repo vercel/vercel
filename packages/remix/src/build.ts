@@ -204,6 +204,12 @@ module.exports = config;`;
           serverBuildPath
         )
       : undefined,
+    ensureResolvable(
+      entrypointFsDirname,
+      repoRootPath,
+      '@remix-run/server-runtime'
+    ),
+    ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node'),
   ]);
 
   const output: BuildResultV2Typical['output'] = staticFiles;
@@ -270,10 +276,7 @@ async function createRenderNodeFunction(
 
   // Copy the `server-node.mjs` file into the "build" directory
   const sourceHandlerPath = join(__dirname, '../server-node.mjs');
-  await Promise.all([
-    fs.copyFile(sourceHandlerPath, handlerPath),
-    ensureResolvable(entrypointDir, rootDir, '@remix-run/node'),
-  ]);
+  await fs.copyFile(sourceHandlerPath, handlerPath);
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
@@ -315,10 +318,7 @@ async function createRenderEdgeFunction(
 
   // Copy the `server-edge.mjs` file into the "build" directory
   const sourceHandlerPath = join(__dirname, '../server-edge.mjs');
-  await Promise.all([
-    fs.copyFile(sourceHandlerPath, handlerPath),
-    ensureResolvable(entrypointDir, rootDir, '@remix-run/server-runtime'),
-  ]);
+  await fs.copyFile(sourceHandlerPath, handlerPath);
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
