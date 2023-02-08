@@ -64,7 +64,7 @@ export default function box(
   const clampedSidePadding = Math.max(1, padding * 3);
   const narrowMode = maxLine + 2 + clampedSidePadding * 2 > cols;
   const sidePadding = narrowMode ? 0 : clampedSidePadding;
-  const innerWidth = maxLine + sidePadding * 2;
+  const innerWidth = Math.min(maxLine + sidePadding * 2, cols);
   const [hr, topLeft, topRight, left, right, bottomLeft, bottomRight] =
     narrowMode ? nothing : border;
   const spacerRow = narrowMode
