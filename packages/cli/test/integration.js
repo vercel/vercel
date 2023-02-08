@@ -2625,7 +2625,7 @@ test('next unsupported functions config shows warning link', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
   t.regex(
     output.stderr,
-    /Ignoring function property `runtime`\. When using Next\.js, only `memory` and `maxDuration`, and `cron` can be used\./gm,
+    /Ignoring function property `runtime`\. When using Next\.js, only `memory`, `maxDuration`, and `cron` can be used\./gm,
     formatOutput(output)
   );
   t.regex(
