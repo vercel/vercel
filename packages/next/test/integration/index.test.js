@@ -732,11 +732,6 @@ it('Should not exceed function limit for large dependencies (server build)', asy
 });
 
 it('Should not exceed function limit for large dependencies (shared lambda)', async () => {
-  if (__dirname.includes('file-system-api')) {
-    // Test is not relevant for the File System API
-    return;
-  }
-
   let logs = '';
 
   const origLog = console.log;
