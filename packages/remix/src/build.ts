@@ -1,6 +1,7 @@
 import { Project } from 'ts-morph';
 import { promises as fs } from 'fs';
 import { basename, dirname, extname, join, relative, sep } from 'path';
+import { pathToRegexp, Key } from 'path-to-regexp';
 import {
   debug,
   download,
@@ -172,13 +173,12 @@ module.exports = config;`;
     }
   }
 
-  const { serverBuildPath, routes } = remixConfig;
+  const { serverBuildPath, routes: remixRoutes } = remixConfig;
 
   // Figure out which pages should be edge functions
   const edgePages = new Set<ConfigRoute>();
   const project = new Project();
-  for (const route of Object.values(routes)) {
-    if (route.id === 'root') continue;
+  for (const route of Object.values(remixRoutes)) {
     const routePath = join(remixConfig.appDirectory, route.file);
     const staticConfig = getConfig(project, routePath);
     const isEdge =
@@ -217,10 +217,38 @@ module.exports = config;`;
   ]);
 
   const output: BuildResultV2Typical['output'] = staticFiles;
+  const routes: any[] = [
+    {
+      src: '^/build/(.*)$',
+      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+      continue: true,
+    },
+    {
+      handle: 'filesystem',
+    },
+  ];
 
-  for (const route of Object.values(routes)) {
-    if (route.id === 'root') continue;
-    const path = route.path || 'index';
+  for (const route of Object.values(remixRoutes)) {
+    // Layout routes don't get a function / route added
+    const isLayoutRoute = Object.values(remixRoutes).some(
+      r => r.parentId === route.id
+    );
+    if (isLayoutRoute) continue;
+
+    // Build up the full request path
+    let currentRoute: ConfigRoute | undefined = route;
+    const pathParts: string[] = [];
+    do {
+      if (currentRoute.index) pathParts.push('index');
+      if (currentRoute.path) pathParts.push(currentRoute.path);
+      if (currentRoute.parentId) {
+        currentRoute = remixRoutes[currentRoute.parentId];
+      } else {
+        currentRoute = undefined;
+      }
+    } while (currentRoute);
+    const path = join(...pathParts.reverse());
+
     const isEdge = edgePages.has(route);
     const fn =
       isEdge && edgeFunction
@@ -234,31 +262,31 @@ module.exports = config;`;
           })
         : nodeFunction;
     output[path] = fn;
+
+    // If this is a dynamic route then add a Vercel route
+    const keys: Key[] = [];
+    const re = pathToRegexp(`/${path}`, keys);
+    if (keys.length > 0) {
+      routes.push({
+        src: re.source,
+        dest: path,
+      });
+    }
   }
 
   // Add a 404 path for not found pages to be server-side rendered by Remix.
   // Use the edge function if one was generated, otherwise use Node.js.
-  output['404'] = edgeFunction
-    ? new EdgeFunction({ ...edgeFunction, name: '404' })
-    : nodeFunction;
+  if (!output['404']) {
+    output['404'] = edgeFunction
+      ? new EdgeFunction({ ...edgeFunction, name: '404' })
+      : nodeFunction;
+  }
+  routes.push({
+    src: '/(.*)',
+    dest: '/404',
+  });
 
-  return {
-    routes: [
-      {
-        src: '^/build/(.*)$',
-        headers: { 'cache-control': 'public, max-age=31536000, immutable' },
-        continue: true,
-      },
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/404',
-      },
-    ],
-    output,
-  };
+  return { routes, output };
 };
 
 function hasScript(scriptName: string, pkg: PackageJson | null) {
