@@ -200,7 +200,7 @@ module.exports = config;`;
   ]);
 
   const [staticFiles, nodeFunction, edgeFunction] = await Promise.all([
-    glob('**', dirname(remixConfig.assetsBuildDirectory)),
+    glob('**', join(entrypointFsDirname, 'public')),
     createRenderNodeFunction(
       entrypointFsDirname,
       repoRootPath,
