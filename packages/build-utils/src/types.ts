@@ -322,6 +322,7 @@ export interface BuilderFunctions {
     includeFiles?: string;
     excludeFiles?: string;
     launcherType?: LauncherType;
+    cron?: Cron;
   };
 }
 
@@ -412,6 +413,8 @@ export interface BuildResultBuildOutput {
    */
   buildOutputPath: string;
 }
+
+export type Cron = string;
 
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected

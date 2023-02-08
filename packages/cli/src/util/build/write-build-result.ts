@@ -13,6 +13,7 @@ import {
   Builder,
   BuildResultV2,
   BuildResultV3,
+  Cron,
   File,
   FileFsRef,
   BuilderV2,
@@ -28,6 +29,7 @@ import {
   normalizePath,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
+import { merge } from './merge';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
 import { fileNameSymbol, VercelConfig } from '@vercel/client';
@@ -39,6 +41,7 @@ export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
  * An entry in the "functions" object in `vercel.json`.
  */
 interface FunctionConfiguration {
+  cron?: Cron;
   memory?: number;
   maxDuration?: number;
 }
@@ -369,12 +372,14 @@ async function writeLambda(
     throw new Error('Malformed `Lambda` - no "files" present');
   }
 
+  const cron = functionConfiguration?.cron ?? lambda.cron;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
 
   const config = {
     ...lambda,
     handler: normalizePath(lambda.handler),
+    cron,
     memory,
     maxDuration,
     type: undefined,
@@ -426,7 +431,7 @@ async function mergeBuilderOutput(
     // so no need to do anything
     return;
   }
-  await fs.copy(buildResult.buildOutputPath, outputDir);
+  await merge(buildResult.buildOutputPath, outputDir);
 }
 
 /**

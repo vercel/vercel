@@ -14,6 +14,7 @@ export const BaseFunctionConfigSchema = {
   type: 'object',
   properties: {
     runtime: { type: 'string' },
+    cron: { type: 'string' },
     memory: { type: 'number' },
     maxDuration: { type: 'number' },
     regions: {

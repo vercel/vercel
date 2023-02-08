@@ -33,6 +33,7 @@ const help = () => {
 
     -h, --help                 Output usage information
     -d, --debug                Debug mode [off]
+    --no-color                 No color mode [off]
     -b, --bad                  Known bad URL
     -g, --good                 Known good URL
     -o, --open                 Automatically open each URL in the browser
