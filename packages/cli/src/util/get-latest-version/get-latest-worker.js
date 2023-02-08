@@ -116,45 +116,10 @@ process.once('message', async msg => {
     output.debug(`Initializing lock file with pid ${process.pid}`);
     await writeFile(lockFile, String(process.pid), 'utf-8');
 
-    // fetch the latest version from npm
-    const agent = new https.Agent({
-      keepAlive: true,
-      maxSockets: 15, // See: `npm config get maxsockets`
-    });
-    const headers = {
-      accept:
-        'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*',
-    };
-    const url = `https://registry.npmjs.org/-/package/${name}/dist-tags`;
-    output.debug(`Fetching ${url}`);
-
-    const tags = await new Promise((resolve, reject) => {
-      const req = https.get(
-        url,
-        {
-          agent,
-          headers,
-        },
-        res => {
-          let buf = '';
-          res.on('data', chunk => {
-            buf += chunk;
-          });
-          res.on('end', () => {
-            try {
-              resolve(JSON.parse(buf));
-            } catch (err) {
-              reject(err);
-            }
-          });
-        }
-      );
-
-      req.on('error', reject);
-      req.end();
-    });
-
+    const tags = await fetchDistTags(name);
     const version = tags[distTag];
+    const expireAt = Date.now() + updateCheckInterval;
+    const notifyAt = await getNotifyAt(cacheFile, version);
 
     if (version) {
       output.debug(`Found dist tag "${distTag}" with version "${version}"`);
@@ -163,26 +128,11 @@ process.once('message', async msg => {
       output.debug('Available dist tags:', Object.keys(tags));
     }
 
-    // if the latest version is newer than the previous latest version, then
-    // invalidate `notifyAt` to force the notification to be displayed,
-    // otherwise keep the the existing `notifyAt`
-    let notifyAt;
-    try {
-      const old = JSON.parse(await readFile(cacheFile, 'utf-8'));
-      notifyAt =
-        old?.version && old.version === version ? old?.notifyAt : undefined;
-    } catch (err) {
-      // cache does not exist or malformed
-      if (err.code !== 'ENOENT') {
-        output.debug(`Error reading latest package cache file: ${err}`);
-      }
-    }
-
     output.debug(`Writing cache file: ${cacheFile}`);
     await writeFile(
       cacheFile,
       JSON.stringify({
-        expireAt: Date.now() + updateCheckInterval,
+        expireAt,
         notifyAt,
         version,
       })
@@ -237,4 +187,75 @@ async function isRunning(lockFile) {
     }
     return false;
   }
+}
+
+/**
+ * Attempts to load and return the previous `notifyAt` value.
+ *
+ * If the latest version is newer than the previous latest version, then
+ * return `undefined` to invalidate `notifyAt` which forces the notification
+ * to be displayed, otherwise keep the existing `notifyAt`.
+ *
+ * @param {string} cacheFile The path to the cache file
+ * @param {string} version The latest version
+ * @returns {number | undefined} The previous notifyAt
+ */
+async function getNotifyAt(cacheFile, version) {
+  try {
+    const old = JSON.parse(await readFile(cacheFile, 'utf-8'));
+    if (old?.version && old.version === version) {
+      return old.notifyAt;
+    }
+  } catch (err) {
+    // cache does not exist or malformed
+    if (err.code !== 'ENOENT') {
+      output.debug(`Error reading latest package cache file: ${err}`);
+    }
+  }
+}
+
+/**
+ * Fetches the dist tags from npm for a given package.
+ *
+ * @param {string} name The package name
+ * @returns A map of dist tags to versions
+ */
+async function fetchDistTags(name) {
+  // fetch the latest version from npm
+  const agent = new https.Agent({
+    keepAlive: true,
+    maxSockets: 15, // See: `npm config get maxsockets`
+  });
+  const headers = {
+    accept:
+      'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*',
+  };
+  const url = `https://registry.npmjs.org/-/package/${name}/dist-tags`;
+  output.debug(`Fetching ${url}`);
+
+  return new Promise((resolve, reject) => {
+    const req = https.get(
+      url,
+      {
+        agent,
+        headers,
+      },
+      res => {
+        let buf = '';
+        res.on('data', chunk => {
+          buf += chunk;
+        });
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(buf));
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }
+    );
+
+    req.on('error', reject);
+    req.end();
+  });
 }
