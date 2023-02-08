@@ -1,7 +1,8 @@
-import { join } from 'node:path';
 import {
+  checkLauncherCompatibility,
   detectServerlessLauncherType,
   entrypointToOutputPath,
+  IsomorphicRuntime,
 } from '../src/utils';
 
 describe('entrypointToOutputPath()', () => {
@@ -21,53 +22,40 @@ describe('entrypointToOutputPath()', () => {
 });
 
 describe('detectServerlessLauncherType()', () => {
-  const fixtureFolder = join(__dirname, 'detection-fixtures');
-
   it.each([
     {
-      title: 'commonjs, Node-compliant signature',
-      entrypoint: 'node/index.js',
+      title: 'no configuration',
+      config: undefined,
       launcherType: 'Nodejs',
     },
     {
-      title: 'typescript Node-compliant signature',
-      entrypoint: 'node/index.ts',
+      title: 'configuration with no runtime',
+      config: {},
       launcherType: 'Nodejs',
     },
     {
-      title: 'typesciprt, Node-compliant, incomplete signature',
-      entrypoint: 'node/incomplete.ts',
-      launcherType: 'Nodejs',
-    },
-    {
-      title: 'ESM Web-compliant signature',
-      entrypoint: 'edge/index.mjs',
-      launcherType: 'EdgeLight',
-    },
-    {
-      title: 'typescript Web-compliant signature',
-      entrypoint: 'edge/index.ts',
+      title: 'configured nodejs runtime',
+      config: { runtime: IsomorphicRuntime },
       launcherType: 'EdgeLight',
     },
   ])(
     'detects $title as $launcherType launcher type',
-    ({ entrypoint, launcherType }) => {
-      expect(
-        detectServerlessLauncherType(join(fixtureFolder, entrypoint), 18)
-      ).toEqual(launcherType);
+    ({ config, launcherType }) => {
+      expect(detectServerlessLauncherType(config, 18)).toEqual(launcherType);
     }
   );
+});
+
+describe('checkLauncherCompatibility()', () => {
+  const entrypoint = 'api/isomorphic.js';
 
   it.each([{ nodeMajorVersion: 14 }, { nodeMajorVersion: 16 }])(
     'throws when EdgeLight launcher type used on node $nodeMajorVersion',
     ({ nodeMajorVersion }) => {
       expect(() =>
-        detectServerlessLauncherType(
-          join(fixtureFolder, 'edge/index.mjs'),
-          nodeMajorVersion
-        )
+        checkLauncherCompatibility(entrypoint, 'EdgeLight', nodeMajorVersion)
       ).toThrow(
-        'EdgeLight launcher type can only be used with node.js 18 and later'
+        `${entrypoint}: configured runtime "${IsomorphicRuntime}" can only be used with node.js 18 and later`
       );
     }
   );

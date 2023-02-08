@@ -54,8 +54,9 @@ import { getConfig } from '@vercel/static-config';
 
 import { fixConfig, Register, register } from './typescript';
 import {
+  checkConfiguredRuntime,
+  checkLauncherCompatibility,
   detectServerlessLauncherType,
-  EdgeRuntimes,
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
@@ -80,8 +81,6 @@ interface PortInfo {
 function isPortInfo(v: any): v is PortInfo {
   return v && typeof v.port === 'number';
 }
-
-const ALLOWED_RUNTIMES = ['nodejs', ...Object.values(EdgeRuntimes)];
 
 const require_ = eval('require');
 
@@ -407,18 +406,7 @@ export const build: BuildV3 = async ({
   const project = new Project();
   const staticConfig = getConfig(project, entrypointPath);
   if (staticConfig?.runtime) {
-    if (!ALLOWED_RUNTIMES.includes(staticConfig.runtime)) {
-      throw new Error(
-        `Unsupported "runtime" property in \`config\`: ${JSON.stringify(
-          staticConfig.runtime
-        )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
-      );
-    }
-    if (staticConfig.runtime === 'nodejs') {
-      console.log(
-        `Detected unused static config runtime "nodejs" in "${entrypointPath}"`
-      );
-    }
+    checkConfiguredRuntime(staticConfig.runtime, entrypoint);
     isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
 
@@ -484,13 +472,13 @@ export const build: BuildV3 = async ({
     const experimentalResponseStreaming =
       staticConfig?.experimentalResponseStreaming === true ? true : undefined;
 
+    const launcherType = detectServerlessLauncherType(staticConfig);
+    checkLauncherCompatibility(entrypoint, launcherType, nodeVersion.major);
+
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
-      launcherType: detectServerlessLauncherType(
-        entrypointPath,
-        nodeVersion.major
-      ),
+      launcherType,
       runtime: nodeVersion.runtime,
       shouldAddHelpers,
       shouldAddSourcemapSupport,

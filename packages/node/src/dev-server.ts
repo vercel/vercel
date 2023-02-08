@@ -17,8 +17,9 @@ import { Config } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { Project } from 'ts-morph';
 import {
+  checkConfiguredRuntime,
+  checkLauncherCompatibility,
   detectServerlessLauncherType,
-  EdgeRuntimes,
   isEdgeRuntime,
   logError,
 } from './utils';
@@ -40,14 +41,7 @@ function parseRuntime(
   const project = new Project();
   const staticConfig = getConfig(project, entryPointPath);
   const runtime = staticConfig?.runtime;
-  if (runtime && !isEdgeRuntime(runtime)) {
-    throw new Error(
-      `Invalid function runtime "${runtime}" for "${entrypoint}". Valid runtimes are: ${JSON.stringify(
-        Object.values(EdgeRuntimes)
-      )}. Learn more: https://vercel.link/creating-edge-functions`
-    );
-  }
-
+  checkConfiguredRuntime(runtime, entrypoint);
   return runtime;
 }
 
@@ -70,13 +64,16 @@ async function createEventHandler(
     );
   }
 
+  const launcherType = detectServerlessLauncherType({ runtime });
+  checkLauncherCompatibility(
+    entrypoint,
+    launcherType,
+    Number(process.versions.node.split('.')[0])
+  );
   return createServerlessEventHandler(entrypointPath, {
     shouldAddHelpers: options.shouldAddHelpers,
     useRequire,
-    launcherType: detectServerlessLauncherType(
-      entrypoint!,
-      Number(process.versions.node.split('.')[0])
-    ),
+    launcherType,
     runtime: config.functions?.[entrypoint]?.runtime,
   });
 }

@@ -1,8 +1,8 @@
+import type { LauncherType } from '@vercel/build-utils';
+import type { LauncherConfiguration } from '@vercel/node-bridge/types';
 import { extname } from 'path';
 import { pathToRegexp } from 'path-to-regexp';
-import { hasEdgeSignature } from '@edge-runtime/feature-detector';
 import { debug, NowBuildError } from '@vercel/build-utils';
-import type { LauncherConfiguration } from '@vercel/node-bridge/types';
 
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   if (!matcherOrMatchers) {
@@ -75,6 +75,28 @@ export enum EdgeRuntimes {
   ExperimentalEdge = 'experimental-edge',
 }
 
+export const IsomorphicRuntime = 'nodejs';
+
+export const ALLOWED_RUNTIMES = [
+  IsomorphicRuntime,
+  ...Object.values(EdgeRuntimes),
+];
+
+export function checkConfiguredRuntime(
+  runtime: string | undefined,
+  entrypoint: string
+) {
+  if (runtime && !ALLOWED_RUNTIMES.includes(runtime)) {
+    throw new Error(
+      `${entrypoint}: unsupported "runtime" property in \`config\`: ${JSON.stringify(
+        runtime
+      )} (must be one of: ${JSON.stringify(
+        ALLOWED_RUNTIMES
+      )}). Learn more: https://vercel.link/creating-edge-functions`
+    );
+  }
+}
+
 export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
   return (
     runtime !== undefined &&
@@ -83,15 +105,15 @@ export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
 }
 
 export function detectServerlessLauncherType(
-  entrypoint: string,
-  nodeMajorVersion: number
-) {
-  const launcherType = hasEdgeSignature(entrypoint) ? 'EdgeLight' : 'Nodejs';
-  checkLauncherCompatibility(entrypoint, launcherType, nodeMajorVersion);
-  return launcherType;
+  config: { runtime?: string } | null | undefined
+): LauncherType {
+  // The final execution environment is always node.js, but the signature differ:
+  // - for BuildOutAPI, `launcherType: EdgeLight` is web-compliant signature, `launcherType: Nodejs` is node-compliant signature
+  // - for vc api files, `runtime: edge` is web-compliant signature on Edge, `runtime: nodejs` is web-compliant signature on node.js, nothing is legacy node-compliant on node.js
+  return config?.runtime === IsomorphicRuntime ? 'EdgeLight' : 'Nodejs';
 }
 
-function checkLauncherCompatibility(
+export function checkLauncherCompatibility(
   entrypoint: string,
   launcherType: LauncherConfiguration['launcherType'],
   nodeMajorVersion: number
@@ -99,7 +121,7 @@ function checkLauncherCompatibility(
   if (launcherType === 'EdgeLight' && nodeMajorVersion < 18) {
     throw new NowBuildError({
       code: 'INVALID_RUNTIME_FOR_LAUNCHER',
-      message: `${launcherType} launcher type can only be used with node.js 18 and later`,
+      message: `${entrypoint}: configured runtime "${IsomorphicRuntime}" can only be used with node.js 18 and later`,
       // TODO when documentation will be available, add link: 'https://vercel.link/isomorphic-support',
     });
   }
