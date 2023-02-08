@@ -118,7 +118,7 @@ export const build: BuildV2 = async ({
 config.serverBuildTarget = undefined;
 config.server = undefined;
 config.serverModuleFormat = 'cjs';
-config.serverPlatform = 'neutral';
+config.serverPlatform = 'node';
 config.serverBuildPath = 'build/index.js';
 export default config;`;
     } else {
@@ -128,7 +128,7 @@ export default config;`;
 config.serverBuildTarget = undefined;
 config.server = undefined;
 config.serverModuleFormat = 'cjs';
-config.serverPlatform = 'neutral';
+config.serverPlatform = 'node';
 config.serverBuildPath = 'build/index.js';
 module.exports = config;`;
     }
