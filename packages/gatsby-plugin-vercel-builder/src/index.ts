@@ -36,7 +36,6 @@ export async function generateVercelBuildOutputAPI3Output({
     // `_pathPrefix` contains `assetPrefix` + `pathPrefix`,
     // so strip off the `assetPrefix` portion
     const pathPrefix = url.parse(_pathPrefix).pathname ?? '';
-    console.log({ _pathPrefix, pathPrefix });
 
     const { pages, redirects, functions, config: gatsbyConfig } = state;
 
