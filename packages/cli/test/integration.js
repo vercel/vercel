@@ -2622,15 +2622,10 @@ test('next unsupported functions config shows warning link', async t => {
   const fixturePath = fixture('zero-config-next-js-functions-warning');
   const output = await execute([fixturePath, '--force', '--public', '--yes']);
 
-  console.log('isCanary', isCanary);
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
-
   t.is(output.exitCode, 0, formatOutput(output));
   t.regex(
     output.stderr,
-    /Ignoring function property `runtime`\. When using Next\.js, only `memory` and `maxDuration` can be used\./gm,
+    /Ignoring function property `runtime`\. When using Next\.js, only `memory` and `maxDuration`, and `cron` can be used\./gm,
     formatOutput(output)
   );
   t.regex(
