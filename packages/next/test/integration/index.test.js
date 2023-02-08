@@ -366,11 +366,6 @@ it('Should not deploy preview lambdas for static site', async () => {
 });
 
 it('Should opt-out of shared lambdas when routes are detected', async () => {
-  if (__dirname.includes('file-system-api')) {
-    // Ignore, since `26-mono-repo-404-lambda` is not relevant for the File System API
-    return;
-  }
-
   const {
     buildResult: { output },
   } = await runBuildLambda(
