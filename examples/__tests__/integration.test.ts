@@ -17,6 +17,8 @@ function getExamples() {
       })
     )
     .filter(o =>
+      !o.exampleName.startsWith('.') &&
+      !o.exampleName.startsWith('_') &&
       lstatSync(o.examplePath).isDirectory()
     );
   return examples;
