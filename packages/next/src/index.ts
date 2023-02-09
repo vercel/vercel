@@ -408,6 +408,7 @@ export const build: BuildV2 = async ({
 
   const env: typeof process.env = { ...spawnOpts.env };
   env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
+  env.NEXT_PUBLIC_EDGE_RUNTIME_PROVIDER = env.NEXT_EDGE_RUNTIME_PROVIDER;
 
   if (target) {
     // Since version v10.0.8-canary.15 of Next.js the NEXT_PRIVATE_TARGET env
