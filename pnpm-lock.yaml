@@ -84,6 +84,12 @@ importers:
       '@vercel/node': link:../packages/node
       typescript: 4.3.4
 
+  examples:
+    specifiers:
+      '@vercel/frameworks': 1.3.0
+    devDependencies:
+      '@vercel/frameworks': link:../packages/frameworks
+
   packages/build-utils:
     specifiers:
       '@iarna/toml': 2.2.3
