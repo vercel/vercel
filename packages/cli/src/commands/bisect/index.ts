@@ -1,11 +1,11 @@
 import open from 'open';
-import boxen from 'boxen';
 import execa from 'execa';
 import plural from 'pluralize';
 import { resolve } from 'path';
 import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
 
+import box from '../../util/output/box';
 import sleep from '../../util/sleep';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
@@ -363,7 +363,7 @@ export default async function main(client: Client): Promise<number> {
 
   result.push(`${chalk.bold('Inspect:')} ${link(lastBad.inspectorUrl)}`);
 
-  output.print(boxen(result.join('\n'), { padding: 1 }));
+  output.print(box(result.join('\n')));
   output.print('\n');
 
   return 0;
