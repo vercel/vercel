@@ -415,8 +415,13 @@ export const build: BuildV2 = async ({
     // this helps us catch cases where we can't locate the next.config.js
     // correctly
     env.NEXT_PRIVATE_TARGET = target;
+    env.NEXT_PUBLIC_TARGET = target;
   }
+  // Only NEXT_PUBLIC_ is considered for turbo/nx cache keys
+  // and caches may not have the correct trace root so we
+  // need to ensure this included in the cache key
   env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT = baseDir;
+  env.NEXT_PUBLIC_OUTPUT_TRACE_ROOT = baseDir;
 
   if (isServerMode) {
     // when testing with jest NODE_ENV will be set to test so ensure
