@@ -3,7 +3,7 @@
   "name": "examples",
   "description": "Each subdirectory is an example boilerplate for a framework. This package.json only exists for testing purposes.",
   "scripts": {
-    "test-integration-once": "pnpm test ./__tests__/integration.test.ts",
+    "test-integration-once": "pnpm test",
     "test": "jest --env node --verbose --runInBand --bail"
   },
   "devDependencies": {

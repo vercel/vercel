@@ -1,11 +1,5 @@
-import { readdirSync, lstatSync } from 'fs';
+import { existsSync, lstatSync, readdirSync } from 'fs';
 import { join } from 'path';
-
-const {
-  testDeployment,
-} = require('../../test/lib/deployment/test-deployment.js');
-
-jest.setTimeout(5 * 60 * 1000);
 
 function getExamples() {
   const dirname = join(__dirname, '..');
@@ -14,6 +8,7 @@ function getExamples() {
       ({
         exampleName: example,
         examplePath: join(dirname, example),
+        testPath: join(dirname, '__tests__', 'integration', `${example}.test.ts`),
       })
     )
     .filter(o =>
@@ -24,11 +19,8 @@ function getExamples() {
   return examples;
 }
 
-describe('examples', () => {
-  const examples = getExamples();
-  // TODO: separate each test into its own file
-  it.each(examples)('should build and deploy $exampleName', async ({examplePath}) => {
-    const promise = testDeployment(examplePath);
-    await expect(promise).resolves.toBeDefined();
+describe('should have test for each example', () => {
+  it.each(getExamples())('should exist $exampleName', async ({testPath}) => {
+    expect(existsSync(testPath)).toBeTruthy();
   });
 });
