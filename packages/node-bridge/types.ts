@@ -43,7 +43,7 @@ export interface ServerLike {
   ) => Server | void;
 }
 export type LauncherConfiguration = {
-  launcherType: 'Nodejs' | 'EdgeLight';
+  launcherType: 'Nodejs' | 'WinterCG';
   entrypointPath: string;
   bridgePath: string;
   helpersPath: string;

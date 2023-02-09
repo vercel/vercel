@@ -2,7 +2,7 @@ import {
   checkLauncherCompatibility,
   detectServerlessLauncherType,
   entrypointToOutputPath,
-  IsomorphicRuntime,
+  NodejRuntime,
 } from '../src/utils';
 
 describe('entrypointToOutputPath()', () => {
@@ -35,8 +35,8 @@ describe('detectServerlessLauncherType()', () => {
     },
     {
       title: 'configured nodejs runtime',
-      config: { runtime: IsomorphicRuntime },
-      launcherType: 'EdgeLight',
+      config: { runtime: NodejRuntime.WinterCG },
+      launcherType: 'WinterCG',
     },
   ])(
     'detects $title as $launcherType launcher type',
@@ -53,9 +53,9 @@ describe('checkLauncherCompatibility()', () => {
     'throws when EdgeLight launcher type used on node $nodeMajorVersion',
     ({ nodeMajorVersion }) => {
       expect(() =>
-        checkLauncherCompatibility(entrypoint, 'EdgeLight', nodeMajorVersion)
+        checkLauncherCompatibility(entrypoint, 'WinterCG', nodeMajorVersion)
       ).toThrow(
-        `${entrypoint}: configured runtime "${IsomorphicRuntime}" can only be used with node.js 18 and later`
+        `${entrypoint}: configured runtime "${NodejRuntime.WinterCG}" can only be used with Node.js 18 and newer`
       );
     }
   );

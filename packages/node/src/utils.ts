@@ -75,12 +75,18 @@ export enum EdgeRuntimes {
   ExperimentalEdge = 'experimental-edge',
 }
 
-export const IsomorphicRuntime = 'nodejs';
+export enum NodejRuntime {
+  // @ts-ignore typescript does not allow undefined as a value
+  Legacy = undefined,
+  WinterCG = 'nodejs',
+}
 
 export const ALLOWED_RUNTIMES = [
-  IsomorphicRuntime,
+  NodejRuntime.WinterCG as string,
   ...Object.values(EdgeRuntimes),
 ];
+
+console.log('allowed', ALLOWED_RUNTIMES);
 
 export function checkConfiguredRuntime(
   runtime: string | undefined,
@@ -109,8 +115,8 @@ export function detectServerlessLauncherType(
 ): LauncherType {
   // The final execution environment is always node.js, but the signature differ:
   // - for BuildOutAPI, `launcherType: EdgeLight` is web-compliant signature, `launcherType: Nodejs` is node-compliant signature
-  // - for vc api files, `runtime: edge` is web-compliant signature on Edge, `runtime: nodejs` is web-compliant signature on node.js, nothing is legacy node-compliant on node.js
-  return config?.runtime === IsomorphicRuntime ? 'EdgeLight' : 'Nodejs';
+  // - for vc api files, `runtime: edge` is web-compliant signature on Edge, `runtime: nodejs` is web-compliant signature on node.js, undefined is legacy node-compliant on node.js
+  return config?.runtime === NodejRuntime.WinterCG ? 'WinterCG' : 'Nodejs';
 }
 
 export function checkLauncherCompatibility(
@@ -118,10 +124,10 @@ export function checkLauncherCompatibility(
   launcherType: LauncherConfiguration['launcherType'],
   nodeMajorVersion: number
 ) {
-  if (launcherType === 'EdgeLight' && nodeMajorVersion < 18) {
+  if (launcherType === 'WinterCG' && nodeMajorVersion < 18) {
     throw new NowBuildError({
       code: 'INVALID_RUNTIME_FOR_LAUNCHER',
-      message: `${entrypoint}: configured runtime "${IsomorphicRuntime}" can only be used with node.js 18 and later`,
+      message: `${entrypoint}: configured runtime "${NodejRuntime.WinterCG}" can only be used with Node.js 18 and newer`,
       // TODO when documentation will be available, add link: 'https://vercel.link/isomorphic-support',
     });
   }
