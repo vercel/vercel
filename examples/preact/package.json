@@ -7,6 +7,9 @@
     "lint": "eslint src",
     "test": "jest"
   },
+  "engines": {
+    "node": "16.x"
+  },
   "eslintConfig": {
     "extends": "preact",
     "ignorePatterns": [
