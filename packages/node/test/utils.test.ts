@@ -36,7 +36,7 @@ describe('detectServerlessLauncherType()', () => {
     {
       title: 'configured nodejs runtime',
       config: { runtime: NodejRuntime.WinterCG },
-      launcherType: 'WinterCG',
+      launcherType: 'WinterCG-experimental',
     },
   ])(
     'detects $title as $launcherType launcher type',
@@ -53,7 +53,11 @@ describe('checkLauncherCompatibility()', () => {
     'throws when EdgeLight launcher type used on node $nodeMajorVersion',
     ({ nodeMajorVersion }) => {
       expect(() =>
-        checkLauncherCompatibility(entrypoint, 'WinterCG', nodeMajorVersion)
+        checkLauncherCompatibility(
+          entrypoint,
+          'WinterCG-experimental',
+          nodeMajorVersion
+        )
       ).toThrow(
         `${entrypoint}: configured runtime "${NodejRuntime.WinterCG}" can only be used with Node.js 18 and newer`
       );

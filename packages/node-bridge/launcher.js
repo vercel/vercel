@@ -89,7 +89,8 @@ function getVercelLauncher({
 
     getListener(entrypointPath)
       .then(listener => {
-        if (launcherType === 'WinterCG') {
+        // TODO remove -experimental once ready
+        if (launcherType === 'WinterCG-experimental') {
           return import(webHandlerPath).then(({ transformToNodeHandler }) =>
             transformToNodeHandler(listener, runtime)
           );

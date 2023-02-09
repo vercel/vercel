@@ -43,7 +43,7 @@ export interface ServerLike {
   ) => Server | void;
 }
 export type LauncherConfiguration = {
-  launcherType: 'Nodejs' | 'WinterCG';
+  launcherType: 'Nodejs' | 'WinterCG-experimental'; // TODO remove -experimental once ready
   entrypointPath: string;
   bridgePath: string;
   helpersPath: string;

@@ -312,7 +312,7 @@ export interface Builder {
   config?: Config;
 }
 
-export type LauncherType = 'Nodejs' | 'WinterCG';
+export type LauncherType = 'Nodejs' | 'WinterCG-experimental';
 
 export interface BuilderFunctions {
   [key: string]: {

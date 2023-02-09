@@ -78,7 +78,7 @@ export enum EdgeRuntimes {
 export enum NodejRuntime {
   // @ts-ignore typescript does not allow undefined as a value
   Legacy = undefined,
-  WinterCG = 'nodejs',
+  WinterCG = 'nodejs-experimental', // TODO remove -experimental once ready
 }
 
 export const ALLOWED_RUNTIMES = [
@@ -86,20 +86,26 @@ export const ALLOWED_RUNTIMES = [
   ...Object.values(EdgeRuntimes),
 ];
 
-console.log('allowed', ALLOWED_RUNTIMES);
-
 export function checkConfiguredRuntime(
   runtime: string | undefined,
   entrypoint: string
 ) {
-  if (runtime && !ALLOWED_RUNTIMES.includes(runtime)) {
-    throw new Error(
-      `${entrypoint}: unsupported "runtime" property in \`config\`: ${JSON.stringify(
-        runtime
-      )} (must be one of: ${JSON.stringify(
-        ALLOWED_RUNTIMES
-      )}). Learn more: https://vercel.link/creating-edge-functions`
-    );
+  if (runtime) {
+    // TODO remove when nodejs-experimental will land
+    if (runtime === 'nodejs') {
+      throw new Error(
+        `${entrypoint}: \`config.runtime: "nodejs"\` semantics will evolve soon. Please remove the \`runtime\` key to keep the existing behavior.`
+      );
+    }
+    if (!ALLOWED_RUNTIMES.includes(runtime)) {
+      throw new Error(
+        `${entrypoint}: unsupported "runtime" property in \`config\`: ${JSON.stringify(
+          runtime
+        )} (must be one of: ${JSON.stringify(
+          ALLOWED_RUNTIMES
+        )}). Learn more: https://vercel.link/creating-edge-functions`
+      );
+    }
   }
 }
 
@@ -114,9 +120,11 @@ export function detectServerlessLauncherType(
   config: { runtime?: string } | null | undefined
 ): LauncherType {
   // The final execution environment is always node.js, but the signature differ:
-  // - for BuildOutAPI, `launcherType: EdgeLight` is web-compliant signature, `launcherType: Nodejs` is node-compliant signature
-  // - for vc api files, `runtime: edge` is web-compliant signature on Edge, `runtime: nodejs` is web-compliant signature on node.js, undefined is legacy node-compliant on node.js
-  return config?.runtime === NodejRuntime.WinterCG ? 'WinterCG' : 'Nodejs';
+  // - for BuildOutAPI, `launcherType: WinterCG-experimental` is web-compliant signature, `launcherType: Nodejs` is node-compliant signature
+  // - for vc api files, `runtime: edge` is web-compliant signature on Edge, `runtime: nodejs-experimental` is web-compliant signature on node.js, undefined is legacy node-compliant on node.js
+  return config?.runtime === NodejRuntime.WinterCG
+    ? 'WinterCG-experimental' // TODO remove -experimental once ready
+    : 'Nodejs';
 }
 
 export function checkLauncherCompatibility(
@@ -124,7 +132,8 @@ export function checkLauncherCompatibility(
   launcherType: LauncherConfiguration['launcherType'],
   nodeMajorVersion: number
 ) {
-  if (launcherType === 'WinterCG' && nodeMajorVersion < 18) {
+  // TODO remove -experimental once ready
+  if (launcherType === 'WinterCG-experimental' && nodeMajorVersion < 18) {
     throw new NowBuildError({
       code: 'INVALID_RUNTIME_FOR_LAUNCHER',
       message: `${entrypoint}: configured runtime "${NodejRuntime.WinterCG}" can only be used with Node.js 18 and newer`,
