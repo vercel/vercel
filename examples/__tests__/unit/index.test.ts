@@ -2,7 +2,7 @@ import { existsSync, lstatSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 function getExamples() {
-  const dirname = join(__dirname, '..');
+  const dirname = join(__dirname, '..', '..');
   const examples = readdirSync(dirname)
     .map(example =>
       ({
