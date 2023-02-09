@@ -75,14 +75,14 @@ export enum EdgeRuntimes {
   ExperimentalEdge = 'experimental-edge',
 }
 
-export enum NodejRuntime {
+export enum NodejsRuntimes {
   // @ts-ignore typescript does not allow undefined as a value
   Legacy = undefined,
   WinterCG = 'nodejs-experimental', // TODO remove -experimental once ready
 }
 
 export const ALLOWED_RUNTIMES = [
-  NodejRuntime.WinterCG as string,
+  NodejsRuntimes.WinterCG as string,
   ...Object.values(EdgeRuntimes),
 ];
 
@@ -122,7 +122,7 @@ export function detectServerlessLauncherType(
   // The final execution environment is always node.js, but the signature differ:
   // - for BuildOutAPI, `launcherType: WinterCG-experimental` is web-compliant signature, `launcherType: Nodejs` is node-compliant signature
   // - for vc api files, `runtime: edge` is web-compliant signature on Edge, `runtime: nodejs-experimental` is web-compliant signature on node.js, undefined is legacy node-compliant on node.js
-  return config?.runtime === NodejRuntime.WinterCG
+  return config?.runtime === NodejsRuntimes.WinterCG
     ? 'WinterCG-experimental' // TODO remove -experimental once ready
     : 'Nodejs';
 }
@@ -136,7 +136,7 @@ export function checkLauncherCompatibility(
   if (launcherType === 'WinterCG-experimental' && nodeMajorVersion < 18) {
     throw new NowBuildError({
       code: 'INVALID_RUNTIME_FOR_LAUNCHER',
-      message: `${entrypoint}: configured runtime "${NodejRuntime.WinterCG}" can only be used with Node.js 18 and newer`,
+      message: `${entrypoint}: configured runtime "${NodejsRuntimes.WinterCG}" can only be used with Node.js 18 and newer`,
       // TODO when documentation will be available, add link: 'https://vercel.link/isomorphic-support',
     });
   }

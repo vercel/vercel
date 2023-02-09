@@ -2,7 +2,7 @@ import {
   checkLauncherCompatibility,
   detectServerlessLauncherType,
   entrypointToOutputPath,
-  NodejRuntime,
+  NodejsRuntimes,
 } from '../src/utils';
 
 describe('entrypointToOutputPath()', () => {
@@ -35,7 +35,7 @@ describe('detectServerlessLauncherType()', () => {
     },
     {
       title: 'configured nodejs runtime',
-      config: { runtime: NodejRuntime.WinterCG },
+      config: { runtime: NodejsRuntimes.WinterCG },
       launcherType: 'WinterCG-experimental',
     },
   ])(
@@ -59,7 +59,7 @@ describe('checkLauncherCompatibility()', () => {
           nodeMajorVersion
         )
       ).toThrow(
-        `${entrypoint}: configured runtime "${NodejRuntime.WinterCG}" can only be used with Node.js 18 and newer`
+        `${entrypoint}: configured runtime "${NodejsRuntimes.WinterCG}" can only be used with Node.js 18 and newer`
       );
     }
   );
