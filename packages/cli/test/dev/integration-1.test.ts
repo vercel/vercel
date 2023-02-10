@@ -105,7 +105,7 @@ test('[vercel dev] throws an error when an edge function has no response', async
     expect(await res.status).toBe(500);
     expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
     expect(stdout).toMatch(
-      /Unhandled rejection: Edge Function "api\/edge-no-response.js" did not return a response./g
+      /Rejected Promise returned from api\/edge-no-response: Edge Function "api\/edge-no-response.js" did not return a response./g
     );
     expect(stderr).toMatch(
       /Failed to complete request to \/api\/edge-no-response: Error: socket hang up/g
@@ -163,7 +163,9 @@ test('[vercel dev] should handle runtime errors thrown in edge functions', async
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
+    expect(stdout).toMatch(
+      /Rejected Promise returned from api\/edge-error-runtime: intentional runtime error/g
+    );
     expect(stderr).toMatch(
       /Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
     );
