@@ -169,7 +169,7 @@ export async function createEdgeEventHandler(
       const fakeStackTrace = `    at (${entrypointRelativePath})`;
       const urlPath = extractUrlPath(entrypointRelativePath);
       console.log(
-        `Rejected Promise returned from ${urlPath}: ${body}\n${fakeStackTrace}`
+        `Error from API Route ${urlPath}: ${body}\n${fakeStackTrace}`
       );
 
       // this matches the serverless function bridge launcher's behavior when
