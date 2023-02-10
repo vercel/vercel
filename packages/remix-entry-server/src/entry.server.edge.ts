@@ -5,7 +5,7 @@ export default async function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixServer: any
+  remixServer: JSX.Element
 ) {
   const body = await renderToReadableStream(remixServer, {
     signal: request.signal,

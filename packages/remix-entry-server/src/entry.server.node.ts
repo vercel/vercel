@@ -9,7 +9,7 @@ export default function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixServer: any
+  remixServer: JSX.Element
 ) {
   // If the request is from a bot, we want to wait for the full
   // response to render before sending it to the client. This
