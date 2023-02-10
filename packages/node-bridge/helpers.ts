@@ -280,10 +280,6 @@ export function createServerWithHelpers(
         throw new ApiError(500, 'Internal Server Error');
       }
 
-      if (Math.random() > -1) {
-        throw new ApiError(500, 'Internal Server Error');
-      }
-
       const event = bridge.consumeEvent(reqId);
 
       setLazyProp<VercelRequestCookies>(req, 'cookies', getCookieParser(req));
