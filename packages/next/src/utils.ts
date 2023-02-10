@@ -236,6 +236,7 @@ type RoutesManifestOld = {
   rsc?: {
     header: string;
     varyHeader: string;
+    contentTypeHeader: string;
   };
   skipMiddlewareUrlNormalize?: boolean;
 };
@@ -2030,6 +2031,7 @@ export const onPrerenderRoute =
       const rscVaryHeader =
         routesManifest?.rsc?.varyHeader ||
         '__rsc__, __next_router_state_tree__, __next_router_prefetch__';
+      const rscContentTypeHeader = routesManifest?.rsc?.contentTypeHeader ||  'application/octet-stream';
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
@@ -2069,7 +2071,7 @@ export const onPrerenderRoute =
         ...(isAppPathRoute
           ? {
               initialHeaders: {
-                'content-type': 'application/octet-stream',
+                'content-type': rscContentTypeHeader,
                 vary: rscVaryHeader,
               },
             }
