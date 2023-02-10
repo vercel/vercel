@@ -2,7 +2,6 @@ import { PassThrough } from 'stream';
 import { renderToPipeableStream } from 'react-dom/server';
 import { Response } from '@remix-run/node';
 import isbot from 'isbot';
-import type { Headers, Request } from '@remix-run/node';
 
 const ABORT_DELAY = 5000;
 
