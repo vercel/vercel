@@ -64,7 +64,7 @@ export default async function glob(
     ) {
       const target = await readlink(absPath);
       const absTarget = path.resolve(path.dirname(absPath), target);
-      if (path.posix.relative(options.cwd, absTarget).startsWith('../')) {
+      if (path.relative(options.cwd, absTarget).startsWith(`..${path.sep}`)) {
         continue;
       }
     }
