@@ -9,7 +9,6 @@ export async function deployExample(filename: string) {
 
 export function getExamples() {
   const dirname = join(__dirname, '..');
-  console.log('examples dirname is', dirname);
   const examples = readdirSync(dirname)
     .map(example =>
       ({
