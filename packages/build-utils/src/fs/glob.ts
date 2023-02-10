@@ -2,7 +2,7 @@ import path from 'path';
 import assert from 'assert';
 import vanillaGlob_ from 'glob';
 import { promisify } from 'util';
-import { lstat, Stats } from 'fs-extra';
+import { lstat, readlink, Stats } from 'fs-extra';
 import { normalizePath } from './normalize-path';
 import FileFsRef from '../file-fs-ref';
 
@@ -45,16 +45,33 @@ export default async function glob(
   const dirsWithEntries = new Set<string>();
 
   for (const relativePath of files) {
-    const fsPath = normalizePath(path.join(options.cwd, relativePath));
+    const absPath = path.join(options.cwd, relativePath);
+    const fsPath = normalizePath(absPath);
+
     let stat = statCache[fsPath];
     assert(
       stat,
       `statCache does not contain value for ${relativePath} (resolved to ${fsPath})`
     );
+
     const isSymlink = symlinks[fsPath];
+
+    // When `follow` mode is enabled, ensure that the entry is not a symlink
+    // that points to outside of `cwd`
+    if (
+      options.follow &&
+      (isSymlink || (await lstat(fsPath)).isSymbolicLink())
+    ) {
+      const target = await readlink(absPath);
+      const absTarget = path.join(path.dirname(absPath), target);
+      if (path.posix.relative(options.cwd, absTarget).startsWith('../')) {
+        continue;
+      }
+    }
+
     if (isSymlink || stat.isFile() || stat.isDirectory()) {
       if (isSymlink) {
-        stat = await lstat(fsPath);
+        stat = await lstat(absPath);
       }
 
       // Some bookkeeping to track which directories already have entries within
