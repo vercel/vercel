@@ -5,7 +5,7 @@
     {
       "path": "/",
       "mustContain": "no-emit-on-error-false:RANDOMNESS_PLACEHOLDER",
-      "logmustContain": "error TS2339: Property 'thisDoesNotExist' does not exist on type 'IncomingMessage'"
+      "logMustContain": "error TS2339: Property 'thisDoesNotExist' does not exist on type 'IncomingMessage'"
     }
   ]
 }
