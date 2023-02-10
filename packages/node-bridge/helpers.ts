@@ -294,14 +294,20 @@ export function createServerWithHelpers(
       res.redirect = (statusOrUrl, url) => redirect(res, statusOrUrl, url);
       res.send = body => send(req, res, body);
       res.json = jsonBody => json(req, res, jsonBody);
-
-      await handler(req, res);
     } catch (err) {
       if (err instanceof ApiError) {
         sendError(res, err.statusCode, err.message);
       } else {
-        throw err;
+        console.log(`Internal Error while handling ${req.url}: ${err.stack}`);
+        process.exit(1);
       }
+    }
+
+    try {
+      await handler(req, res);
+    } catch (err) {
+      console.log(`Rejected Promise returned from ${req.url}: ${err.stack}`);
+      process.exit(1);
     }
   });
 
