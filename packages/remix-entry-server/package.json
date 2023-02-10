@@ -11,9 +11,7 @@
   "main": "./dist/entry.server.node.js",
   "browser": "./dist/entry.server.edge.js",
   "scripts": {
-    "build": "node build.js",
-    "test-integration-once": "pnpm test test/integration.test.ts",
-    "test": "jest --env node --verbose --bail --runInBand"
+    "build": "node build.js"
   },
   "license": "MIT",
   "files": [
