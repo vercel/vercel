@@ -1289,8 +1289,8 @@ export default class DevServer {
 
       // wait until the response completes so that the `statusCode` has the real response value
       res.on('close', () => {
-        // an error message was already logged if the status code is 500
-        if (res.statusCode !== 500) {
+        // an error message was already logged if the status code is 500+
+        if (res.statusCode < 500) {
           this.output.print(`${res.statusCode}\n`);
         }
       });
