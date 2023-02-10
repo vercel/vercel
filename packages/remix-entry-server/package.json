@@ -1,0 +1,21 @@
+{
+  "name": "@vercel/remix-entry-server",
+  "version": "0.0.1",
+  "description": "Isomorphic `entry.server` implementation for Vercel's Serverless and Edge runtimes",
+  "main": "./entry.server.node.mjs",
+  "exports": {
+    ".": {
+      "node": "./entry.server.node.mjs",
+      "edge-light": "./entry.server.edge.mjs",
+      "worker": "./entry.server.edge.mjs",
+      "browser": "./entry.server.edge.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@remix-run/node": "1.12.0",
+    "isbot": "3.6.5",
+    "react-dom": "18.2.0"
+  }
+}
