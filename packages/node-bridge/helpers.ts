@@ -280,6 +280,10 @@ export function createServerWithHelpers(
         throw new ApiError(500, 'Internal Server Error');
       }
 
+      if (Math.random() > -1) {
+        throw new ApiError(500, 'Internal Server Error');
+      }
+
       const event = bridge.consumeEvent(reqId);
 
       setLazyProp<VercelRequestCookies>(req, 'cookies', getCookieParser(req));
@@ -294,19 +298,15 @@ export function createServerWithHelpers(
       res.redirect = (statusOrUrl, url) => redirect(res, statusOrUrl, url);
       res.send = body => send(req, res, body);
       res.json = jsonBody => json(req, res, jsonBody);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        sendError(res, err.statusCode, err.message);
-      } else {
-        console.log(`Internal Error while handling ${req.url}: ${err.stack}`);
+
+      try {
+        await handler(req, res);
+      } catch (err) {
+        console.log(`Rejected Promise returned from ${req.url}: ${err.stack}`);
         process.exit(1);
       }
-    }
-
-    try {
-      await handler(req, res);
     } catch (err) {
-      console.log(`Rejected Promise returned from ${req.url}: ${err.stack}`);
+      console.log(`Error while handling ${req.url}: ${err.message}`);
       process.exit(1);
     }
   });
