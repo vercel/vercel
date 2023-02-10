@@ -192,6 +192,6 @@ function extractUrlPath(entrypointRelativePath: string) {
   if (parts.length === 1) {
     return entrypointRelativePath;
   }
-  // pop of the last element
-  return parts.slice(0, -1).join('.');
+  parts.pop();
+  return parts.join('.');
 }
