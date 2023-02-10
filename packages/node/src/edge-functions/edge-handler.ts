@@ -167,10 +167,7 @@ export async function createEdgeEventHandler(
       // We can't currently get a real stack trace from the Edge Function error,
       // but we can fake a basic one that is still usefult to the user.
       const fakeStackTrace = `    at (${entrypointRelativePath})`;
-      const urlPath = extractUrlPath(entrypointRelativePath);
-      console.log(
-        `Error from API Route ${urlPath}: ${body}\n${fakeStackTrace}`
-      );
+      console.log(`${body}\n${fakeStackTrace}`);
 
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
@@ -184,14 +181,4 @@ export async function createEdgeEventHandler(
       encoding: 'utf8',
     };
   };
-}
-
-// turns "api/some.func.js" into "api/some.func"
-function extractUrlPath(entrypointRelativePath: string) {
-  const parts = entrypointRelativePath.split('.');
-  if (parts.length === 1) {
-    return entrypointRelativePath;
-  }
-  parts.pop();
-  return parts.join('.');
 }
