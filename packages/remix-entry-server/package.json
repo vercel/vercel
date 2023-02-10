@@ -9,15 +9,7 @@
     "directory": "packages/remix-entry-server"
   },
   "main": "./dist/entry.server.node.js",
-  "exports": {
-    ".": {
-      "node": "./dist/entry.server.node.js",
-      "edge-light": "./dist/entry.server.edge.js",
-      "worker": "./dist/entry.server.edge.js",
-      "browser": "./dist/entry.server.edge.js"
-    },
-    "./package.json": "./package.json"
-  },
+  "browser": "./dist/entry.server.edge.js",
   "scripts": {
     "build": "node build.js",
     "test-integration-once": "pnpm test test/integration.test.ts",
