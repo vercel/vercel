@@ -63,7 +63,7 @@ export default async function glob(
       (isSymlink || (await lstat(fsPath)).isSymbolicLink())
     ) {
       const target = await readlink(absPath);
-      const absTarget = path.join(path.dirname(absPath), target);
+      const absTarget = path.resolve(path.dirname(absPath), target);
       if (path.posix.relative(options.cwd, absTarget).startsWith('../')) {
         continue;
       }

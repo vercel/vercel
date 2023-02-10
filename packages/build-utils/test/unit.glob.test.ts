@@ -78,14 +78,17 @@ describe('glob()', () => {
           ),
         fs.mkdirp(join(dir, 'another/subdir')),
         fs.symlink('root.txt', join(dir, 'root-link')),
+        fs.symlink(join(dir, 'root.txt'), join(dir, 'abs-root-link')),
         fs.symlink('dir-with-file', join(dir, 'dir-link')),
         fs.symlink('empty-dir', join(dir, 'empty-dir-link')),
         fs.symlink('../root.txt', join(dir, 'outside-cwd-link')),
+        fs.symlink(join(dir, '../root.txt'), join(dir, 'abs-outside-cwd-link')),
       ]);
       const files = await glob('**', { cwd: dir, follow: true });
       const fileNames = Object.keys(files).sort();
-      expect(fileNames).toHaveLength(4);
+      expect(fileNames).toHaveLength(5);
       expect(fileNames).toEqual([
+        'abs-root-link',
         'dir-link/data.json',
         'dir-with-file/data.json',
         'root-link',
