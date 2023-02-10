@@ -2,7 +2,7 @@ import { basename, join } from 'path';
 import { lstatSync, readdirSync } from 'fs';
 
 export async function deployExample(filename: string) {
-  const testDeployment = require('../../test/lib/deployment/test-deployment.js');
+  const { testDeployment } = require('../../test/lib/deployment/test-deployment.js');
   const example = basename(filename).replace(/\.test\.ts$/, '');
   await testDeployment(join(filename, '..', '..', '..', example));
 }
