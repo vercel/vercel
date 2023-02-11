@@ -182,3 +182,13 @@ export async function createEdgeEventHandler(
     };
   };
 }
+
+// turns "api/some.func.js" into "api/some.func"
+function extractUrlPath(entrypointRelativePath: string) {
+  const parts = entrypointRelativePath.split('.');
+  if (parts.length === 1) {
+    return entrypointRelativePath;
+  }
+  parts.pop();
+  return parts.join('.');
+}
