@@ -34,8 +34,8 @@ async function serializeRequest(message: IncomingMessage) {
 }
 
 async function compileUserCode(
-  entrypointPath: string,
-  entrypointLabel: string,
+  entrypointFullPath: string,
+  entrypointRelativePath: string,
   isMiddleware: boolean
 ): Promise<undefined | { userCode: string; wasmAssets: WasmAssets }> {
   const { wasmAssets, plugin: edgeWasmPlugin } = createEdgeWasmPlugin();
@@ -51,7 +51,7 @@ async function compileUserCode(
       legalComments: 'none',
       bundle: true,
       plugins: [edgeWasmPlugin],
-      entryPoints: [entrypointPath],
+      entryPoints: [entrypointFullPath],
       write: false, // operate in memory
       format: 'cjs',
     });
@@ -59,7 +59,7 @@ async function compileUserCode(
     const compiledFile = result.outputFiles?.[0];
     if (!compiledFile) {
       throw new Error(
-        `Compilation of ${entrypointLabel} produced no output files.`
+        `Compilation of ${entrypointRelativePath} produced no output files.`
       );
     }
 
@@ -72,7 +72,7 @@ async function compileUserCode(
 
       // request metadata
       const IS_MIDDLEWARE = ${isMiddleware};
-      const ENTRYPOINT_LABEL = '${entrypointLabel}';
+      const ENTRYPOINT_LABEL = '${entrypointRelativePath}';
 
       // edge handler
       ${edgeHandlerTemplate}
@@ -134,13 +134,13 @@ async function createEdgeRuntime(params?: {
 }
 
 export async function createEdgeEventHandler(
-  entrypointPath: string,
-  entrypointLabel: string,
+  entrypointFullPath: string,
+  entrypointRelativePath: string,
   isMiddleware: boolean
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const userCode = await compileUserCode(
-    entrypointPath,
-    entrypointLabel,
+    entrypointFullPath,
+    entrypointRelativePath,
     isMiddleware
   );
   const server = await createEdgeRuntime(userCode);
@@ -164,8 +164,13 @@ export async function createEdgeEventHandler(
     const isUserError =
       response.headers.get('x-vercel-failed') === 'edge-wrapper';
     if (isUserError && response.status >= 500) {
-      // this error was "unhandled" from the user code's perspective
-      console.log(`Unhandled rejection: ${body}`);
+      // We can't currently get a real stack trace from the Edge Function error,
+      // but we can fake a basic one that is still usefult to the user.
+      const fakeStackTrace = `    at (${entrypointRelativePath})`;
+      const urlPath = extractUrlPath(entrypointRelativePath);
+      console.log(
+        `Error from API Route ${urlPath}: ${body}\n${fakeStackTrace}`
+      );
 
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
@@ -179,4 +184,14 @@ export async function createEdgeEventHandler(
       encoding: 'utf8',
     };
   };
+}
+
+// turns "api/some.func.js" into "api/some.func"
+function extractUrlPath(entrypointRelativePath: string) {
+  const parts = entrypointRelativePath.split('.');
+  if (parts.length === 1) {
+    return entrypointRelativePath;
+  }
+  parts.pop();
+  return parts.join('.');
 }
