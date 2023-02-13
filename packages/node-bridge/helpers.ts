@@ -298,7 +298,8 @@ export function createServerWithHelpers(
       try {
         await handler(req, res);
       } catch (err) {
-        console.log(`~ ERR ${req.url}\n${err.stack}`);
+        const coloredStack = colorRed(err.stack);
+        console.log(`! ERR ${req.url}\n${coloredStack}`);
         process.exit(1);
       }
     } catch (err) {
@@ -308,4 +309,8 @@ export function createServerWithHelpers(
   });
 
   return server;
+}
+
+function colorRed(content: string) {
+  return `\x1b[31m${content}\x1b[0m`;
 }

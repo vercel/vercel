@@ -167,12 +167,13 @@ export async function createEdgeEventHandler(
     if (isUserError && response.status >= 500) {
       // We can't currently get a real stack trace from the Edge Function error,
       // but we can fake a basic one that is still usefult to the user.
-      const fakeStackTrace = `${body}\n    at (${entrypointRelativePath})`;
+      const fakeStackTrace = `Error: ${body}\n    at (${entrypointRelativePath})`;
       const requestPath = entrypointToRequestPath(
         entrypointRelativePath,
         isZeroConfig
       );
-      console.log(`~ ERR ${requestPath}\n${fakeStackTrace}`);
+      const coloredFakeStackTrace = colorRed(fakeStackTrace);
+      console.log(`! ERR ${requestPath}\n${coloredFakeStackTrace}`);
 
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
@@ -186,6 +187,10 @@ export async function createEdgeEventHandler(
       encoding: 'utf8',
     };
   };
+}
+
+function colorRed(content: string) {
+  return `\x1b[31m${content}\x1b[0m`;
 }
 
 function entrypointToRequestPath(
