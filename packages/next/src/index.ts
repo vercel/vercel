@@ -410,6 +410,7 @@ export const build: BuildV2 = async ({
 
   const env: typeof process.env = { ...spawnOpts.env };
   env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
+  env.NEXT_PUBLIC_EDGE_RUNTIME_PROVIDER = env.NEXT_EDGE_RUNTIME_PROVIDER;
 
   if (target) {
     // Since version v10.0.8-canary.15 of Next.js the NEXT_PRIVATE_TARGET env
@@ -417,8 +418,13 @@ export const build: BuildV2 = async ({
     // this helps us catch cases where we can't locate the next.config.js
     // correctly
     env.NEXT_PRIVATE_TARGET = target;
+    env.NEXT_PUBLIC_TARGET = target;
   }
+  // Only NEXT_PUBLIC_ is considered for turbo/nx cache keys
+  // and caches may not have the correct trace root so we
+  // need to ensure this included in the cache key
   env.NEXT_PRIVATE_OUTPUT_TRACE_ROOT = baseDir;
+  env.NEXT_PUBLIC_OUTPUT_TRACE_ROOT = baseDir;
 
   if (isServerMode) {
     // when testing with jest NODE_ENV will be set to test so ensure
