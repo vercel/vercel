@@ -119,7 +119,7 @@
         "RSC": "1"
       },
       "responseHeaders": {
-        "content-type": "application/octet-stream",
+        "content-type": "text/x-component",
         "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch"
       }
     },
