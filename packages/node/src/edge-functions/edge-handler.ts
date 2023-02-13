@@ -7,7 +7,7 @@ import type { EdgeContext } from '@edge-runtime/vm';
 import esbuild from 'esbuild';
 import fetch from 'node-fetch';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
-import { logError } from '../utils';
+import { entrypointToOutputPath, logError } from '../utils';
 import { readFileSync } from 'fs';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
@@ -167,7 +167,12 @@ export async function createEdgeEventHandler(
       // We can't currently get a real stack trace from the Edge Function error,
       // but we can fake a basic one that is still usefult to the user.
       const fakeStackTrace = `    at (${entrypointRelativePath})`;
-      const urlPath = extractUrlPath(entrypointRelativePath);
+
+      // ensure the path starts with a slash to match conventions used elsewhere,
+      // notably when rendering serverless function paths in error messages
+      const urlPath =
+        '/' + entrypointToOutputPath(entrypointRelativePath, true);
+
       console.log(
         `Error from API Route ${urlPath}: ${body}\n${fakeStackTrace}`
       );
@@ -184,19 +189,4 @@ export async function createEdgeEventHandler(
       encoding: 'utf8',
     };
   };
-}
-
-// turns "api/some.func.js" into "api/some.func"
-function extractUrlPath(entrypointRelativePath: string) {
-  const parts = entrypointRelativePath.split('.');
-  if (parts.length === 1) {
-    return entrypointRelativePath;
-  }
-
-  parts.pop();
-  const path = parts.join('.');
-
-  // ensure the path starts with a slash to match conventions used elsewhere,
-  // notably when rendering serverless function paths in error messages
-  return `/${path}`;
 }
