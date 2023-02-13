@@ -180,6 +180,8 @@ async function compile(
     return source;
   }
 
+  const conditions = isEdgeFunction ? ['worker', 'browser'] : undefined;
+
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
     {
@@ -187,6 +189,7 @@ async function compile(
       processCwd: workPath,
       ts: true,
       mixedModules: true,
+      conditions,
       resolve(id, parent, job, cjsResolve) {
         const normalizedWasmImports = id.replace(/\.wasm\?module$/i, '.wasm');
         return nftResolveDependency(
@@ -197,7 +200,7 @@ async function compile(
         );
       },
       ignore: config.excludeFiles,
-      async readFile(fsPath: string): Promise<Buffer | string | null> {
+      async readFile(fsPath) {
         const relPath = relative(baseDir, fsPath);
 
         // If this file has already been read then return from the cache
