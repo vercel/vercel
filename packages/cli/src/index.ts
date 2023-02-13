@@ -52,6 +52,7 @@ import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
 import { AuthConfig, GlobalConfig } from './types';
 import { VercelConfig } from '@vercel/client';
+import box from './util/output/box';
 
 const isCanary = pkg.version.includes('canary');
 
@@ -73,11 +74,12 @@ Sentry.init({
 });
 
 let client: Client;
+let output: Output;
+let { isTTY } = process.stdout;
 let debug: (s: string) => void = () => {};
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
-  let { isTTY } = process.stdout;
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
     process.stdout.isTTY = true;
@@ -103,7 +105,12 @@ const main = async () => {
   }
 
   const isDebugging = argv['--debug'];
-  const output = new Output(process.stderr, { debug: isDebugging });
+  const isNoColor = argv['--no-color'];
+
+  output = new Output(process.stderr, {
+    debug: isDebugging,
+    noColor: isNoColor,
+  });
 
   debug = output.debug;
 
@@ -139,29 +146,6 @@ const main = async () => {
   const cwd = argv['--cwd'];
   if (cwd) {
     process.chdir(cwd);
-  }
-
-  // Print update information, if available
-  if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
-    // Check if an update is available. If so, `latest` will contain a string
-    // of the latest version, otherwise `undefined`.
-    const latest = getLatestVersion({
-      distTag: isCanary ? 'canary' : 'latest',
-      output,
-      pkg,
-    });
-    if (latest) {
-      output.log(
-        `${chalk.black.bgCyan('UPDATE AVAILABLE')} ` +
-          `Run ${cmd(
-            await getUpdateCommand()
-          )} to install ${getTitleName()} CLI ${latest}`
-      );
-
-      output.log(
-        `Changelog: https://github.com/vercel/vercel/releases/tag/vercel@${latest}\n`
-      );
-    }
   }
 
   // The second argument to the command can be:
@@ -711,7 +695,39 @@ process.on('unhandledRejection', handleRejection);
 process.on('uncaughtException', handleUnexpected);
 
 main()
-  .then(exitCode => {
+  .then(async exitCode => {
+    // Print update information, if available
+    if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
+      // Check if an update is available. If so, `latest` will contain a string
+      // of the latest version, otherwise `undefined`.
+      const latest = getLatestVersion({
+        distTag: isCanary ? 'canary' : 'latest',
+        output,
+        pkg,
+      });
+      if (latest) {
+        const changelog = 'https://github.com/vercel/vercel/releases';
+        const errorMsg =
+          exitCode && exitCode !== 2
+            ? chalk.magenta(
+                `\n\nThe latest update ${chalk.italic(
+                  'may'
+                )} fix any errors that occurred.`
+              )
+            : '';
+        output.print(
+          box(
+            `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
+              `v${latest}`
+            )}
+Changelog: ${output.link(changelog, changelog, { fallback: false })}
+Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
+          )
+        );
+        output.print('\n\n');
+      }
+    }
+
     process.exitCode = exitCode;
   })
   .catch(handleUnexpected);

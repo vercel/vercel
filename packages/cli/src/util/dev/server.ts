@@ -2307,7 +2307,10 @@ function proxyPass(
     res,
     { target: dest, ignorePath },
     (error: NodeJS.ErrnoException) => {
-      devServer.output.error(
+      // only debug output this error because it's always something generic like
+      // "Error: socket hang up"
+      // and the original error should have already been logged
+      devServer.output.debug(
         `Failed to complete request to ${req.url}: ${error}`
       );
       if (!res.headersSent) {
