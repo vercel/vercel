@@ -7,7 +7,7 @@ import type { EdgeContext } from '@edge-runtime/vm';
 import esbuild from 'esbuild';
 import fetch from 'node-fetch';
 import { createEdgeWasmPlugin, WasmAssets } from './edge-wasm-plugin';
-import { logError } from '../utils';
+import { entrypointToOutputPath, logError } from '../utils';
 import { readFileSync } from 'fs';
 
 const NODE_VERSION_MAJOR = process.version.match(/^v(\d+)\.\d+/)?.[1];
@@ -136,7 +136,8 @@ async function createEdgeRuntime(params?: {
 export async function createEdgeEventHandler(
   entrypointFullPath: string,
   entrypointRelativePath: string,
-  isMiddleware: boolean
+  isMiddleware: boolean,
+  isZeroConfig?: boolean
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const userCode = await compileUserCode(
     entrypointFullPath,
@@ -166,8 +167,12 @@ export async function createEdgeEventHandler(
     if (isUserError && response.status >= 500) {
       // We can't currently get a real stack trace from the Edge Function error,
       // but we can fake a basic one that is still usefult to the user.
-      const fakeStackTrace = `    at (${entrypointRelativePath})`;
-      console.log(`${body}\n${fakeStackTrace}`);
+      const fakeStackTrace = `${body}\n    at (${entrypointRelativePath})`;
+      const requestPath = entrypointToRequestPath(
+        entrypointRelativePath,
+        isZeroConfig
+      );
+      console.log(`~ ERR ${requestPath}\n${fakeStackTrace}`);
 
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function
@@ -181,4 +186,12 @@ export async function createEdgeEventHandler(
       encoding: 'utf8',
     };
   };
+}
+
+function entrypointToRequestPath(
+  entrypointRelativePath: string,
+  isZeroConfig?: boolean
+) {
+  // ensure the path starts with a slash to match conventions used elsewhere
+  return '/' + entrypointToOutputPath(entrypointRelativePath, isZeroConfig);
 }

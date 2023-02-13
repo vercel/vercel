@@ -298,7 +298,7 @@ export function createServerWithHelpers(
       try {
         await handler(req, res);
       } catch (err) {
-        console.log(err.stack);
+        console.log(`~ ERR ${req.url}\n${err.stack}`);
         process.exit(1);
       }
     } catch (err) {

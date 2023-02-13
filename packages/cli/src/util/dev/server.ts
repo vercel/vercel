@@ -1281,19 +1281,19 @@ export default class DevServer {
     this.output.debug(`${chalk.bold(method)} ${req.url}`);
 
     // `print` without a newline so that we can finish the line later with an error or a status code
-    this.output.print(`${method} ${chalk.bold(req.url)} :: `);
+    this.output.print(`${chalk.bold('→')} ${method} ${chalk.bold(req.url)}\n`);
+
+    // wait until the response completes so that the `statusCode` has the real response value
+    res.on('close', () => {
+      const responseLine = `${chalk.bold('←')} ${res.statusCode} ${chalk.bold(
+        req.url
+      )}`;
+      this.output.print(`${chalk.gray(responseLine)}\n`);
+    });
 
     try {
       const vercelConfig = await this.getVercelConfig();
       await this.serveProjectAsNowV2(req, res, requestId, vercelConfig);
-
-      // wait until the response completes so that the `statusCode` has the real response value
-      res.on('close', () => {
-        // an error message was already logged if the status code is 500+
-        if (res.statusCode < 500) {
-          this.output.print(`${res.statusCode}\n`);
-        }
-      });
     } catch (err: unknown) {
       console.error(err);
 
