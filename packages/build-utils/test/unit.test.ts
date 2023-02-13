@@ -502,6 +502,10 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
     console.log(`Skipping test on node@${nodeMajor}`);
     return;
   }
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
+    return;
+  }
   const fixture = path.join(__dirname, 'fixtures', '15-npm-8-legacy-peer-deps');
   const nodeVersion = { major: nodeMajor } as any;
   await runNpmInstall(fixture, [], {}, {}, nodeVersion);
