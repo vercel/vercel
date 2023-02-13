@@ -4,6 +4,8 @@ This package is meant for use within Remix applications when deploying to Vercel
 
 ## Usage
 
+Make sure `@vercel/remix-entry-server` is installed with your package manager of choice, then replace your `app/entry.server.tsx` file with the following:
+
 ```tsx
 // `app/entry.server.tsx`
 
