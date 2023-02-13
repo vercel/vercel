@@ -136,7 +136,8 @@ async function createEdgeRuntime(params?: {
 export async function createEdgeEventHandler(
   entrypointFullPath: string,
   entrypointRelativePath: string,
-  isMiddleware: boolean
+  isMiddleware: boolean,
+  isZeroConfig?: boolean
 ): Promise<(request: IncomingMessage) => Promise<VercelProxyResponse>> {
   const userCode = await compileUserCode(
     entrypointFullPath,
@@ -167,14 +168,12 @@ export async function createEdgeEventHandler(
       // We can't currently get a real stack trace from the Edge Function error,
       // but we can fake a basic one that is still usefult to the user.
       const fakeStackTrace = `    at (${entrypointRelativePath})`;
-
-      // ensure the path starts with a slash to match conventions used elsewhere,
-      // notably when rendering serverless function paths in error messages
-      const urlPath =
-        '/' + entrypointToOutputPath(entrypointRelativePath, true);
-
+      const requestPath = entrypointToRequestPath(
+        entrypointRelativePath,
+        isZeroConfig
+      );
       console.log(
-        `Error from API Route ${urlPath}: ${body}\n${fakeStackTrace}`
+        `Error from API Route ${requestPath}: ${body}\n${fakeStackTrace}`
       );
 
       // this matches the serverless function bridge launcher's behavior when
@@ -189,4 +188,13 @@ export async function createEdgeEventHandler(
       encoding: 'utf8',
     };
   };
+}
+
+function entrypointToRequestPath(
+  entrypointRelativePath: string,
+  isZeroConfig?: boolean
+) {
+  // ensure the path starts with a slash to match conventions used elsewhere,
+  // notably when rendering serverless function paths in error messages
+  return '/' + entrypointToOutputPath(entrypointRelativePath, isZeroConfig);
 }
