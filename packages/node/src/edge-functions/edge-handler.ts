@@ -169,7 +169,7 @@ export async function createEdgeEventHandler(
       const fakeStackTrace = `    at (${entrypointRelativePath})`;
       const urlPath = extractUrlPath(entrypointRelativePath);
       console.log(
-        `Error from API Route /${urlPath}: ${body}\n${fakeStackTrace}`
+        `Error from API Route ${urlPath}: ${body}\n${fakeStackTrace}`
       );
 
       // this matches the serverless function bridge launcher's behavior when
@@ -192,6 +192,11 @@ function extractUrlPath(entrypointRelativePath: string) {
   if (parts.length === 1) {
     return entrypointRelativePath;
   }
+
   parts.pop();
-  return parts.join('.');
+  const path = parts.join('.');
+
+  // ensure the path starts with a slash to match conventions used elsewhere,
+  // notably when rendering serverless function paths in error messages
+  return `/${path}`;
 }
