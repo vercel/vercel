@@ -40,7 +40,7 @@ jobs:
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       uses: actions/setup-node@v3
       with:
-        node-version: 14
+        node-version: 16
     - name: install pnpm@7.24.2
       run: npm i -g pnpm@7.24.2
     - name: Install
