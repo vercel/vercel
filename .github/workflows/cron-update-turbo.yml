@@ -1,6 +1,8 @@
 name: Cron Update Turbo
 
 on:
+  # Allow manual runs
+  workflow_dispatch:
   # Run every week https://crontab.guru/every-week
   schedule:
     - cron: '0 0 * * 0'
