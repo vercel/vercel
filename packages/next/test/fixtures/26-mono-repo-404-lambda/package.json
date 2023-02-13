@@ -2,5 +2,6 @@
   "workspaces": [
     "packages/*"
   ],
-  "private": true
+  "private": true,
+  "packageManager": "yarn@1.22.19"
 }
