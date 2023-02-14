@@ -1277,19 +1277,8 @@ export default class DevServer {
       return;
     }
 
-    const method = (req.method || 'GET').padEnd(4);
+    const method = req.method || 'GET';
     this.output.debug(`${chalk.bold(method)} ${req.url}`);
-
-    // `print` without a newline so that we can finish the line later with an error or a status code
-    this.output.print(`${chalk.bold('→')} ${method} ${chalk.bold(req.url)}\n`);
-
-    // wait until the response completes so that the `statusCode` has the real response value
-    res.on('close', () => {
-      const responseLine = `${chalk.bold('←')} ${res.statusCode}  ${chalk.bold(
-        req.url
-      )}`;
-      this.output.print(`${chalk.gray(responseLine)}\n`);
-    });
 
     try {
       const vercelConfig = await this.getVercelConfig();
@@ -1857,6 +1846,9 @@ export default class DevServer {
       let devServerResult: StartDevServerResult = null;
       try {
         const { envConfigs, files, devCacheDir, cwd: workPath } = this;
+
+        this.logRequestResponse(req, res);
+
         devServerResult = await builder.startDevServer({
           files,
           entrypoint: match.entrypoint,
@@ -2092,6 +2084,22 @@ export default class DevServer {
         await this.sendError(req, res, requestId, 'UNKNOWN_ASSET_TYPE');
     }
   };
+
+  private logRequestResponse(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ) {
+    const method = (req.method || 'GET').padEnd(4);
+    this.output.print(`${chalk.bold('→')} ${method} ${chalk.bold(req.url)}\n`);
+
+    // wait until the response completes so that the `statusCode` has the real response value
+    res.on('close', () => {
+      const responseLine = `${chalk.bold('←')} ${res.statusCode}  ${chalk.bold(
+        req.url
+      )}`;
+      this.output.print(`${chalk.gray(responseLine)}\n`);
+    });
+  }
 
   renderDirectoryListing(
     _req: http.IncomingMessage,
