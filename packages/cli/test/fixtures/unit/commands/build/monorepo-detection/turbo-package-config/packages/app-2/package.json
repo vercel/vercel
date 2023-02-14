@@ -1,7 +1,10 @@
 {
   "name": "app-2",
   "version": "0.0.1",
-  "main": "index.js",
+  "main": "dist/main.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "node script.js"
   }
