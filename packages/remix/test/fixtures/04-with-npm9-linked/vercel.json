@@ -5,10 +5,16 @@
       "src": "package.json",
       "use": "@vercel/remix",
       "config": {
+        "installCommand": "env | sort && npm install --install-strategy=linked",
         "zeroConfig": true
       }
     }
   ],
+  "build": {
+    "env": {
+      "ENABLE_EXPERIMENTAL_COREPACK": "1"
+    }
+  },
   "probes": [
     { "path": "/", "mustContain": "Welcome to Remix" },
     { "path": "/edge", "mustContain": "Welcome to Remix@Edge" },
