@@ -1,16 +1,16 @@
 {
-  "name": "remix-template-remix",
+  "name": "remix-with-npm9",
   "private": true,
   "description": "",
   "license": "",
   "sideEffects": false,
+  "packageManager": "npm@9.4.1",
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "^1.7.4",
     "@remix-run/react": "^1.7.4",
     "@remix-run/serve": "^1.7.4",
     "react": "18.2.0",
