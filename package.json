@@ -32,7 +32,7 @@
     "source-map-support": "0.5.12",
     "ts-eager": "2.0.2",
     "ts-jest": "28.0.5",
-    "turbo": "1.7.0"
+    "turbo": "1.7.4"
   },
   "scripts": {
     "lerna": "lerna",
@@ -47,9 +47,9 @@
     "pre-commit": "lint-staged",
     "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
     "test-unit": "pnpm test && node utils/gen.js && turbo run test-unit",
-    "test-integration-cli": "node utils/gen.js && turbo run test-integration-cli",
-    "test-integration-once": "node utils/gen.js && turbo run test-integration-once",
-    "test-integration-dev": "node utils/gen.js && turbo run test-integration-dev",
+    "test-cli": "node utils/gen.js && turbo run test-cli",
+    "test-e2e": "node utils/gen.js && turbo run test-e2e",
+    "test-dev": "node utils/gen.js && turbo run test-dev",
     "lint": "eslint . --cache --ext .ts,.js",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts"

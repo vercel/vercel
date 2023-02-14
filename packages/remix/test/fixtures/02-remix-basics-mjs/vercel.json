@@ -9,5 +9,8 @@
       }
     }
   ],
-  "probes": [{ "path": "/", "mustContain": "Welcome to Remix" }]
+  "probes": [
+    { "path": "/", "mustContain": "Welcome to Remix" },
+    { "path": "/edge", "mustContain": "Welcome to Remix@Edge" }
+  ]
 }
