@@ -45,7 +45,10 @@ export class EdgeFunction {
   cron?: Cron;
 
   /** The framework */
-  framework?: string;
+  framework?: {
+    slug: string;
+    version?: string;
+  };
 
   constructor(params: Omit<EdgeFunction, 'type'>) {
     this.type = 'EdgeFunction';
