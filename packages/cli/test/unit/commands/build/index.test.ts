@@ -488,6 +488,7 @@ describe('build', () => {
           {
             src: '^/.*$',
             middlewarePath: 'middleware',
+            middlewareRawSrc: [],
             override: true,
             continue: true,
           },
@@ -552,6 +553,7 @@ describe('build', () => {
           {
             src: '^/.*$',
             middlewarePath: 'middleware',
+            middlewareRawSrc: [],
             override: true,
             continue: true,
           },
@@ -616,6 +618,7 @@ describe('build', () => {
           {
             src: '^\\/about(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$|^\\/dashboard(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
             middlewarePath: 'middleware',
+            middlewareRawSrc: ['/about/:path*', '/dashboard/:path*'],
             override: true,
             continue: true,
           },
