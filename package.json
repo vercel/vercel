@@ -45,7 +45,7 @@
     "build": "node utils/gen.js && turbo run build",
     "vercel-build": "pnpm build && pnpm run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
-    "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.ts\"",
+    "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
     "test-unit": "pnpm test && node utils/gen.js && turbo run test-unit",
     "test-integration-cli": "node utils/gen.js && turbo run test-integration-cli",
     "test-integration-once": "node utils/gen.js && turbo run test-integration-once",
