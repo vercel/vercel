@@ -26,6 +26,7 @@ export interface LambdaOptionsBase {
   experimentalResponseStreaming?: boolean;
   operationType?: string;
   cron?: Cron;
+  framework?: string;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -71,6 +72,7 @@ export class Lambda {
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
   experimentalResponseStreaming?: boolean;
+  framework?: string;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -86,6 +88,7 @@ export class Lambda {
       supportsWrapper,
       experimentalResponseStreaming,
       operationType,
+      framework,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -139,6 +142,10 @@ export class Lambda {
       assert(typeof cron === 'string', '"cron" is not a string');
     }
 
+    if (framework !== undefined) {
+      assert(typeof framework === 'string', '"framework" is not a string');
+    }
+
     this.type = 'Lambda';
     this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
@@ -154,6 +161,7 @@ export class Lambda {
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
     this.experimentalResponseStreaming = experimentalResponseStreaming;
+    this.framework = framework;
   }
 
   async createZip(): Promise<Buffer> {

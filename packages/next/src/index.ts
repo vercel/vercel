@@ -1094,6 +1094,7 @@ export const build: BuildV2 = async ({
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
           supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+          framework: 'nextjs',
         });
         debug(`Created serverless function for page: "${page}"`);
       })

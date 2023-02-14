@@ -833,6 +833,7 @@ export async function createLambdaFromPseudoLayers({
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
     supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+    framework: 'nextjs',
   });
 }
 
@@ -2031,7 +2032,8 @@ export const onPrerenderRoute =
       const rscVaryHeader =
         routesManifest?.rsc?.varyHeader ||
         '__rsc__, __next_router_state_tree__, __next_router_prefetch__';
-      const rscContentTypeHeader = routesManifest?.rsc?.contentTypeHeader ||  'application/octet-stream';
+      const rscContentTypeHeader =
+        routesManifest?.rsc?.contentTypeHeader || 'application/octet-stream';
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,

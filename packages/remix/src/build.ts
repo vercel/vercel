@@ -291,6 +291,7 @@ async function createRenderFunction(
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
     operationType: 'SSR',
+    framework: 'remix',
   });
 
   return lambda;
