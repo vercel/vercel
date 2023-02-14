@@ -268,9 +268,6 @@ export const build: BuildV2 = async ({
       shouldAddHelpers: false,
       shouldAddSourcemapSupport: false,
       awsLambdaHandler,
-      framework: {
-        slug: 'redwoodjs',
-      },
       ...lambdaOptions,
     });
     lambdaOutputs[outputName] = lambda;

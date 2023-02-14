@@ -334,9 +334,6 @@ async function createRenderNodeFunction(
     shouldAddSourcemapSupport: false,
     operationType: 'SSR',
     experimentalResponseStreaming: true,
-    framework: {
-      slug: 'remix',
-    },
   });
 
   return fn;
