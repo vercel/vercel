@@ -312,5 +312,11 @@ export function createServerWithHelpers(
 }
 
 function colorRed(content: string) {
+  const noColor =
+    process.env.FORCE_COLOR === '0' || process.env.NO_COLOR === '1';
+  if (noColor) {
+    return content;
+  }
+
   return `\x1b[31m${content}\x1b[0m`;
 }
