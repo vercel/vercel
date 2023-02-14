@@ -237,7 +237,7 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          memory: 1000,
+          memory: 127,
         },
       },
     });
