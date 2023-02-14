@@ -44,6 +44,9 @@ export class EdgeFunction {
   /** Cronjob definition for the edge function */
   cron?: Cron;
 
+  /** The framework */
+  framework?: string;
+
   constructor(params: Omit<EdgeFunction, 'type'>) {
     this.type = 'EdgeFunction';
     this.name = params.name;
@@ -54,5 +57,6 @@ export class EdgeFunction {
     this.assets = params.assets;
     this.regions = params.regions;
     this.cron = params.cron;
+    this.framework = params.framework;
   }
 }
