@@ -1277,9 +1277,7 @@ export default class DevServer {
       return;
     }
 
-    // const method = req.method || 'GET';
-    const method = Math.random() > 0.5 ? 'GET' : 'POST'; // TODO: remove
-
+    const method = req.method || 'GET';
     const space = method === 'GET' ? '  ' : ' '; // make GET and POST take up the same width
     this.output.debug(`${chalk.bold(method)}${space}${req.url}`);
 
