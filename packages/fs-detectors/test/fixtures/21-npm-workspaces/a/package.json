@@ -2,10 +2,7 @@
   "name": "npm-workspace-a21",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/main.js",
-  "files": [
-    "dist"
-  ],
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
