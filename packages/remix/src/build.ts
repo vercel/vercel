@@ -29,8 +29,9 @@ import type {
   PackageJson,
   BuildResultV2Typical,
 } from '@vercel/build-utils';
+import type { BaseFunctionConfig } from '@vercel/static-config';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
-import { findConfig } from './utils';
+import { findConfig, getRegionsKey } from './utils';
 
 const _require: typeof require = eval('require');
 
@@ -177,10 +178,12 @@ module.exports = config;`;
 
   // Figure out which pages should be edge functions
   const edgePages = new Set<ConfigRoute>();
+  const routesConfigMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
   const project = new Project();
   for (const route of Object.values(remixRoutes)) {
     const routePath = join(remixConfig.appDirectory, route.file);
     const staticConfig = getConfig(project, routePath);
+    routesConfigMap.set(route, staticConfig);
     const isEdge =
       staticConfig?.runtime === 'edge' ||
       staticConfig?.runtime === 'experimental-edge';
@@ -228,6 +231,9 @@ module.exports = config;`;
     },
   ];
 
+  const nodeFunctionsByRegionsMap = new Map<string, NodejsLambda>();
+  const edgeFunctionsByRegionsMap = new Map<string, EdgeFunction>();
+
   for (const route of Object.values(remixRoutes)) {
     // Layout routes don't get a function / route added
     const isLayoutRoute = Object.values(remixRoutes).some(
@@ -249,18 +255,56 @@ module.exports = config;`;
     } while (currentRoute);
     const path = join(...pathParts.reverse());
 
+    const staticConfig = routesConfigMap.get(route);
+    const { regions } = staticConfig ?? {};
+    const regionsKey = getRegionsKey(regions);
     const isEdge = edgePages.has(route);
-    const fn =
-      isEdge && edgeFunction
-        ? // `EdgeFunction` currently requires the "name" property to be set.
-          // Ideally this property will be removed, at which point we can
-          // return the same `edgeFunction` instance instead of creating a
-          // new one for each page.
-          new EdgeFunction({
+
+    let fn: NodejsLambda | EdgeFunction;
+    if (isEdge && edgeFunction) {
+      if (regionsKey) {
+        let func = edgeFunctionsByRegionsMap.get(regionsKey);
+        if (!func) {
+          func = new EdgeFunction({
             ...edgeFunction,
             name: path,
-          })
-        : nodeFunction;
+            regions,
+          });
+          edgeFunctionsByRegionsMap.set(regionsKey, func);
+        }
+        fn = func;
+      } else {
+        // `EdgeFunction` currently requires the "name" property to be set.
+        // Ideally this property will be removed, at which point we can
+        // return the same `edgeFunction` instance instead of creating a
+        // new one for each page.
+        fn = new EdgeFunction({
+          ...edgeFunction,
+          name: path,
+        });
+      }
+    } else {
+      if (regionsKey) {
+        if (!Array.isArray(regions)) {
+          throw new Error(
+            `\`regions\` on page "${path}" must be an array for Node.js functions`
+          );
+        }
+        let func = nodeFunctionsByRegionsMap.get(regionsKey);
+        if (!func) {
+          func = new NodejsLambda({
+            ...nodeFunction,
+            files: nodeFunction.files!,
+            regions,
+          });
+          nodeFunctionsByRegionsMap.set(regionsKey, func);
+        }
+        fn = func;
+      } else {
+        fn = nodeFunction;
+      }
+    }
+
     output[path] = fn;
 
     // If this is a dynamic route then add a Vercel route
