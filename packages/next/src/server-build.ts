@@ -871,6 +871,7 @@ export async function serverBuild({
         ),
         memory: group.memory,
         runtime: nodeVersion.runtime,
+        nextVersion: nextVersion,
         maxDuration: group.maxDuration,
         isStreaming: group.isStreaming,
         cron: group.cron,
