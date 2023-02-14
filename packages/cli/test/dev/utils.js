@@ -522,7 +522,7 @@ async function ps(parentPid, pids = {}) {
       : ['ps', '-o', 'pid', '--no-headers', '--ppid', parentPid];
 
   try {
-    const { stdout: buf } = execFileSync(cmd[0], cmd.slice(1), {
+    const buf = execFileSync(cmd[0], cmd.slice(1), {
       encoding: 'utf-8',
     });
     for (let pid of buf.match(/\d+/g)) {
