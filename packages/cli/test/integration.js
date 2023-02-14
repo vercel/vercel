@@ -2719,7 +2719,7 @@ test('deploy a Lambda with 128MB of memory', async t => {
 });
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async t => {
-  const directory = fixture('lambda-with-200-memory');
+  const directory = fixture('lambda-with-123-memory');
   const output = await execute([directory, '--yes']);
 
   t.is(output.exitCode, 1, formatOutput(output));
