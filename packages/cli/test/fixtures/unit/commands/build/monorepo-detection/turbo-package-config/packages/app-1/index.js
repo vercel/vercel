@@ -1,6 +1,6 @@
 const path = require('node:path');
 const fs = require('node:fs');
-const world = require('../app-2');
+const world = require('app-2');
 
 const dist = path.join(__dirname, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
