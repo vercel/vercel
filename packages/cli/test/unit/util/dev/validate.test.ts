@@ -233,6 +233,22 @@ describe('validateConfig', () => {
     );
   });
 
+  it('should error with invalid memory value', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          memory: 1000,
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].memory` should be equal to one of the allowed values."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
   it('should error with "functions" and "builds"', async () => {
     const error = validateConfig({
       builds: [
