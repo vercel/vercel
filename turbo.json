@@ -35,15 +35,15 @@
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
-    "test-integration-dev": {
+    "test-dev": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
-    "test-integration-cli": {
+    "test-cli": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
-    "test-integration-once": {
+    "test-e2e": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
