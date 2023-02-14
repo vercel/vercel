@@ -91,6 +91,11 @@ export interface Framework {
    */
   website?: string;
   /**
+   * A URL to one of our templates for deploying the framework
+   * @example "https://vercel.com/templates/next.js/nextjs-boilerplate"
+   */
+  template?: string;
+  /**
    * Short description of the framework
    * @example "A Next.js app and a Serverless Function API."
    */
