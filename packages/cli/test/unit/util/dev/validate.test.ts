@@ -41,7 +41,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `rewrites[0]` should NOT have additional property `src`. Did you mean `source`?'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/rewrites'
+      'https://vercel.com/docs/concepts/projects/project-configuration#rewrites'
     );
   });
 
@@ -54,7 +54,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `routes[0]` should NOT have additional property `source`. Did you mean `src`?'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/routes'
+      'https://vercel.com/docs/concepts/projects/project-configuration#routes'
     );
   });
 
@@ -67,7 +67,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `routes` should be array.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/routes'
+      'https://vercel.com/docs/concepts/projects/project-configuration#routes'
     );
   });
 
@@ -84,7 +84,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `redirects[0]` missing required property `source`.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/redirects'
+      'https://vercel.com/docs/concepts/projects/project-configuration#redirects'
     );
   });
 
@@ -97,7 +97,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `redirects[0].permanent` should be boolean.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/redirects'
+      'https://vercel.com/docs/concepts/projects/project-configuration#redirects'
     );
   });
 
@@ -110,7 +110,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `cleanUrls` should be boolean.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/cleanurls'
+      'https://vercel.com/docs/concepts/projects/project-configuration#cleanurls'
     );
   });
 
@@ -123,7 +123,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `trailingSlash` should be boolean.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/trailingslash'
+      'https://vercel.com/docs/concepts/projects/project-configuration#trailingslash'
     );
   });
 
@@ -136,7 +136,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[0]` should NOT have additional property `Content-Type`. Please remove it.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
     );
   });
 
@@ -149,7 +149,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[0].source` should be string.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
     );
   });
 
@@ -162,7 +162,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[0]` should NOT have additional property `stuff`. Please remove it.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
     );
   });
 
@@ -175,7 +175,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[0].headers[0]` should NOT have additional property `Content-Type`. Please remove it.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
     );
   });
 
@@ -190,7 +190,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[0].headers[0]` should NOT have additional property `val`. Please remove it.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
     );
   });
 
@@ -205,7 +205,7 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `redirects` should NOT have more than 1024 items.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/redirects'
+      'https://vercel.com/docs/concepts/projects/project-configuration#redirects'
     );
   });
 
@@ -229,7 +229,39 @@ describe('validateConfig', () => {
       'Invalid vercel.json - `headers[1].headers` should NOT have more than 1024 items.'
     );
     expect(error!.link).toEqual(
-      'https://vercel.com/docs/configuration#project/headers'
+      'https://vercel.com/docs/concepts/projects/project-configuration#headers'
+    );
+  });
+
+  it('should error with too low memory value', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          memory: 127,
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].memory` should be >= 128."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with too high memory value', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          memory: 3009,
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].memory` should be <= 3008."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
     );
   });
 
