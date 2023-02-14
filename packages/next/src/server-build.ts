@@ -975,6 +975,7 @@ export async function serverBuild({
     routesManifest,
     isCorrectMiddlewareOrder,
     prerenderBypassToken: prerenderManifest.bypassToken || '',
+    nextVersion,
   });
 
   const isNextDataServerResolving =

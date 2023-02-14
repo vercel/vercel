@@ -2326,6 +2326,7 @@ export async function getMiddlewareBundle({
   routesManifest,
   isCorrectMiddlewareOrder,
   prerenderBypassToken,
+  nextVersion,
 }: {
   config: Config;
   entryPath: string;
@@ -2333,6 +2334,7 @@ export async function getMiddlewareBundle({
   prerenderBypassToken: string;
   routesManifest: RoutesManifest;
   isCorrectMiddlewareOrder: boolean;
+  nextVersion: string;
 }): Promise<{
   staticRoutes: Route[];
   dynamicRouteMap: Map<string, RouteWithSrc>;
@@ -2470,6 +2472,7 @@ export async function getMiddlewareBundle({
                     path: `assets/${name}`,
                   };
                 }),
+                framework: `nextjs@${nextVersion}`,
               });
             })(),
             routeMatchers: getRouteMatchers(edgeFunction, routesManifest),
