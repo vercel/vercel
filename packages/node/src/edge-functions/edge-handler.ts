@@ -173,7 +173,7 @@ export async function createEdgeEventHandler(
         isZeroConfig
       );
       const coloredFakeStackTrace = colorRed(fakeStackTrace);
-      console.log(`! ERR ${requestPath}\n${coloredFakeStackTrace}`);
+      console.log(`! ERR  ${requestPath}\n${coloredFakeStackTrace}`);
 
       // this matches the serverless function bridge launcher's behavior when
       // an error is thrown in the function

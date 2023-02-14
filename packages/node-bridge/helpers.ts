@@ -299,7 +299,7 @@ export function createServerWithHelpers(
         await handler(req, res);
       } catch (err) {
         const coloredStack = colorRed(err.stack);
-        console.log(`! ERR ${req.url}\n${coloredStack}`);
+        console.log(`! ERR  ${req.url}\n${coloredStack}`);
         process.exit(1);
       }
     } catch (err) {

@@ -1277,15 +1277,20 @@ export default class DevServer {
       return;
     }
 
-    const method = req.method || 'GET';
-    this.output.debug(`${chalk.bold(method)} ${req.url}`);
+    // const method = req.method || 'GET';
+    const method = Math.random() > 0.5 ? 'GET' : 'POST'; // TODO: remove
+
+    const space = method === 'GET' ? '  ' : ' '; // make GET and POST take up the same width
+    this.output.debug(`${chalk.bold(method)}${space}${req.url}`);
 
     // `print` without a newline so that we can finish the line later with an error or a status code
-    this.output.print(`${chalk.bold('→')} ${method} ${chalk.bold(req.url)}\n`);
+    this.output.print(
+      `${chalk.bold('→')} ${method}${space}${chalk.bold(req.url)}\n`
+    );
 
     // wait until the response completes so that the `statusCode` has the real response value
     res.on('close', () => {
-      const responseLine = `${chalk.bold('←')} ${res.statusCode} ${chalk.bold(
+      const responseLine = `${chalk.bold('←')} ${res.statusCode}  ${chalk.bold(
         req.url
       )}`;
       this.output.print(`${chalk.gray(responseLine)}\n`);
