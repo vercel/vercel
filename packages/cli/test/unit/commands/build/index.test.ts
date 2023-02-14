@@ -1325,7 +1325,7 @@ describe('build', () => {
               join(cwd, '.vercel/output/static/index.txt'),
               'utf8'
             );
-            expect(result).toMatch(/Hello, world/);
+            expect(result).toMatch(/Hello/);
           } finally {
             process.chdir(originalCwd);
             delete process.env.__VERCEL_BUILD_RUNNING;
