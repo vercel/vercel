@@ -70,7 +70,7 @@ export const frameworks = [
       'Next.js makes you productive with React instantly — whether you want to build static or dynamic sites.',
     description: 'A Next.js app and a Serverless Function API.',
     website: 'https://nextjs.org',
-    template: 'https://vercel.com/templates/next.js/nextjs-boilerplate',
+    templateUrl: 'https://vercel.com/templates/next.js/nextjs-boilerplate',
     sort: 1,
     envPrefix: 'NEXT_PUBLIC_',
     useRuntime: { src: 'package.json', use: '@vercel/next' },
@@ -115,7 +115,7 @@ export const frameworks = [
       'Gatsby helps developers build blazing fast websites and apps with React.',
     description: 'A Gatsby starter app with an API Route.',
     website: 'https://gatsbyjs.org',
-    template: 'https://vercel.com/templates/gatsby/gatsbyjs-boilerplate',
+    templateUrl: 'https://vercel.com/templates/gatsby/gatsbyjs-boilerplate',
     sort: 5,
     envPrefix: 'GATSBY_',
     detectors: {
@@ -199,7 +199,7 @@ export const frameworks = [
     logo: 'https://api-frameworks.vercel.sh/framework-logos/remix-no-shadow.svg',
     tagline: 'Build Better Websites',
     description: 'A new Remix app — the result of running `npx create-remix`.',
-    template: 'https://vercel.com/templates/remix/remix-boilerplate',
+    templateUrl: 'https://vercel.com/templates/remix/remix-boilerplate',
     website: 'https://remix.run',
     sort: 6,
     useRuntime: { src: 'package.json', use: '@vercel/remix' },
@@ -242,7 +242,7 @@ export const frameworks = [
     tagline:
       'Astro is a new kind of static site builder for the modern web. Powerful developer experience meets lightweight output.',
     description: 'An Astro site, using the basics starter kit.',
-    template: 'https://vercel.com/templates/astro/astro-boilerplate',
+    templateUrl: 'https://vercel.com/templates/astro/astro-boilerplate',
     website: 'https://astro.build',
     envPrefix: 'PUBLIC_',
     detectors: {
@@ -363,7 +363,7 @@ export const frameworks = [
       'Docusaurus makes it easy to maintain Open Source documentation websites.',
     description:
       'A static Docusaurus site that makes it easy to maintain OSS documentation.',
-    template: 'https://vercel.com/templates/react/docusaurus-2',
+    templateUrl: 'https://vercel.com/templates/react/docusaurus-2',
     website: 'https://v2.docusaurus.io',
     detectors: {
       some: [
@@ -499,7 +499,7 @@ export const frameworks = [
     tagline:
       'Preact is a fast 3kB alternative to React with the same modern API.',
     description: 'A Preact app, created with the Preact CLI.',
-    template: 'https://vercel.com/templates/preact/preact-edge-functions',
+    templateUrl: 'https://vercel.com/templates/preact/preact-edge-functions',
     website: 'https://preactjs.com',
     detectors: {
       every: [
@@ -546,7 +546,7 @@ export const frameworks = [
     tagline: 'Simple and performant reactivity for building user interfaces.',
     description: 'A Solid app, created with SolidStart.',
     website: 'https://solidjs.com',
-    template: 'https://vercel.com/templates/solid/solid-start-edge-functions',
+    templateUrl: 'https://vercel.com/templates/solid/solid-start-edge-functions',
     envPrefix: 'VITE_',
     detectors: {
       every: [
@@ -690,7 +690,7 @@ export const frameworks = [
     tagline:
       'Vue.js is a versatile JavaScript framework that is as approachable as it is performant.',
     description: 'A Vue.js app, created with the Vue CLI.',
-    template: 'https://vercel.com/templates/vue/vue',
+    templateUrl: 'https://vercel.com/templates/vue/vue',
     website: 'https://vuejs.org',
     envPrefix: 'VUE_APP_',
     detectors: {
@@ -823,7 +823,7 @@ export const frameworks = [
     tagline:
       'Angular is a TypeScript-based cross-platform framework from Google.',
     description: 'An Angular app, created with the Angular CLI.',
-    template: 'https://vercel.com/templates/angular/angular-boilerplate',
+    templateUrl: 'https://vercel.com/templates/angular/angular-boilerplate',
     website: 'https://angular.io',
     detectors: {
       every: [
@@ -937,7 +937,7 @@ export const frameworks = [
     tagline:
       'Svelte lets you write high performance reactive apps with significantly less boilerplate.',
     description: 'A basic Svelte app using the default template.',
-    template: 'https://vercel.com/templates/svelte/sveltekit-boilerplate',
+    templateUrl: 'https://vercel.com/templates/svelte/sveltekit-boilerplate',
     website: 'https://svelte.dev',
     sort: 3,
     detectors: {
@@ -1122,7 +1122,7 @@ export const frameworks = [
     logo: 'https://api-frameworks.vercel.sh/framework-logos/react.svg',
     tagline: 'Create React App allows you to get going with React in no time.',
     description: 'A client-side React app created with create-react-app.',
-    template: 'https://vercel.com/templates/react/create-react-app',
+    templateUrl: 'https://vercel.com/templates/react/create-react-app',
     website: 'https://create-react-app.dev',
     sort: 4,
     envPrefix: 'REACT_APP_',
@@ -1411,7 +1411,7 @@ export const frameworks = [
     tagline:
       'Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.',
     description: 'A Nuxt.js app, bootstrapped with create-nuxt-app.',
-    template: 'https://vercel.com/templates/nuxt/nuxtjs-boilerplate',
+    templateUrl: 'https://vercel.com/templates/nuxt/nuxtjs-boilerplate',
     website: 'https://nuxtjs.org',
     sort: 2,
     envPrefix: 'NUXT_ENV_',
@@ -1509,7 +1509,7 @@ export const frameworks = [
     tagline:
       'Hugo is the world’s fastest framework for building websites, written in Go.',
     description: 'A Hugo site, created with the Hugo CLI.',
-    template: 'https://vercel.com/templates/hugo/hugo',
+    templateUrl: 'https://vercel.com/templates/hugo/hugo',
     website: 'https://gohugo.io',
     detectors: {
       some: [
