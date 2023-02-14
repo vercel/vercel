@@ -3,6 +3,7 @@
   "workspaces": [
     "packages/*"
   ],
+  "type": "module",
   "devDependencies": {
     "turbo": "1.6.3"
   },
