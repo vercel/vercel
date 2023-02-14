@@ -2094,6 +2094,11 @@ export default class DevServer {
 
     // wait until the response completes so that the `statusCode` has the real response value
     res.on('close', () => {
+      const statusCode = res.statusCode;
+      if (statusCode < 400 || statusCode === 404) {
+        return;
+      }
+
       const responseLine = `${chalk.bold('←')} ${res.statusCode}  ${chalk.bold(
         req.url
       )}`;
