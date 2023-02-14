@@ -90,6 +90,34 @@ test(
   })
 );
 
+test('[vercel dev] only logs request/response for functions', async () => {
+  const dir = fixture('10-nextjs-node');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  try {
+    await readyResolver;
+
+    // "/contact" is a JSX page and should not be logged
+    let res1 = await fetch(`http://localhost:${port}/contact`);
+    validateResponseHeaders(res1);
+    expect(await res1.status).toBe(200);
+
+    // "/api/date" is a serverless function and should be logged
+    let res2 = await fetch(`http://localhost:${port}/api/date`);
+    validateResponseHeaders(res2);
+    expect(await res2.status).toBe(200);
+
+    const { stderr } = await dev.kill();
+
+    expect(stderr).not.toMatch(/→ GET {2}\/contact/g);
+    expect(stderr).not.toMatch(/← 200 {2}\/contact/g);
+    expect(stderr).toMatch(/→ GET {2}\/api\/date/g);
+    expect(stderr).toMatch(/← 200 {2}\/api\/date/g);
+  } finally {
+    await dev.kill();
+  }
+});
+
 test('[vercel dev] throws an error when an edge function has no response', async () => {
   const dir = fixture('edge-function-error');
   const { dev, port, readyResolver } = await testFixture(dir);
