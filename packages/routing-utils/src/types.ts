@@ -44,10 +44,6 @@ export type RouteWithSrc = {
    */
   middlewarePath?: string;
   /**
-   * The original middleware matchers.
-   */
-  middlewareRawSrc?: string[];
-  /**
    * A middleware index in the `middleware` key under the build result
    */
   middleware?: number;
