@@ -701,7 +701,7 @@ function expandBuild(files: string[], build: Builder): Builder[] {
     throw new NowBuildError({
       code: `invalid_build_specification`,
       message: 'Field `use` is missing in build specification',
-      link: 'https://vercel.com/docs/configuration#project/builds',
+      link: 'https://vercel.com/docs/concepts/projects/project-configuration#builds',
       action: 'View Documentation',
     });
   }
@@ -711,7 +711,7 @@ function expandBuild(files: string[], build: Builder): Builder[] {
     throw new NowBuildError({
       code: `invalid_build_specification`,
       message: 'A build `src` path resolves to an empty string',
-      link: 'https://vercel.com/docs/configuration#project/builds',
+      link: 'https://vercel.com/docs/concepts/projects/project-configuration#builds',
       action: 'View Documentation',
     });
   }

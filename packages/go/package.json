@@ -12,7 +12,7 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-integration-once": "pnpm test"
+    "test-e2e": "pnpm test"
   },
   "files": [
     "dist"

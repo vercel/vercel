@@ -11,15 +11,20 @@
   },
   "scripts": {
     "build": "node build.js",
-    "test-integration-once": "pnpm test test/integration.test.ts",
+    "test-e2e": "pnpm test test/integration.test.ts",
     "test": "jest --env node --verbose --bail --runInBand"
   },
   "files": [
     "dist",
-    "default-server.js"
+    "server-node.mjs",
+    "server-edge.mjs"
   ],
   "dependencies": {
-    "@vercel/nft": "0.22.5"
+    "@remix-run/dev": "1.12.0",
+    "@vercel/nft": "0.22.5",
+    "@vercel/static-config": "2.0.12",
+    "path-to-regexp": "6.2.1",
+    "ts-morph": "12.0.0"
   },
   "devDependencies": {
     "@types/jest": "27.5.1",
