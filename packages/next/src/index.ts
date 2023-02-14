@@ -1094,6 +1094,10 @@ export const build: BuildV2 = async ({
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
           supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+          framework: {
+            slug: 'nextjs',
+            version: nextVersion,
+          },
         });
         debug(`Created serverless function for page: "${page}"`);
       })
@@ -1816,6 +1820,10 @@ export const build: BuildV2 = async ({
                 '___next_launcher.cjs'
               ),
               runtime: nodeVersion.runtime,
+              framework: {
+                slug: 'nextjs',
+                version: nextVersion,
+              },
               ...lambdaOptions,
             });
           } else {
@@ -1835,6 +1843,10 @@ export const build: BuildV2 = async ({
                 '___next_launcher.cjs'
               ),
               runtime: nodeVersion.runtime,
+              framework: {
+                slug: 'nextjs',
+                version: nextVersion,
+              },
               ...lambdaOptions,
             });
           }
@@ -2046,6 +2058,10 @@ export const build: BuildV2 = async ({
                   '___next_launcher.cjs'
                 ),
                 runtime: nodeVersion.runtime,
+                framework: {
+                  slug: 'nextjs',
+                  version: nextVersion,
+                },
               });
           }
         )
