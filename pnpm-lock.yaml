@@ -925,6 +925,8 @@ importers:
     specifiers:
       '@remix-run/node': 1.12.0
       '@types/react-dom': 18.0.10
+      execa: 3.2.0
+      fs-extra: 11.1.0
       isbot: 3.6.5
       react-dom: 18.2.0
       typescript: 4.9.4
@@ -934,6 +936,8 @@ importers:
       react-dom: 18.2.0
     devDependencies:
       '@types/react-dom': 18.0.10
+      execa: 3.2.0
+      fs-extra: 11.1.0
       typescript: 4.9.4
 
   packages/routing-utils:
