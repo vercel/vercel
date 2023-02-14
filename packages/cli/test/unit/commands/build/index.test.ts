@@ -1080,7 +1080,7 @@ describe('build', () => {
       await expect(client.stderr).toOutput(
         'Error: Invalid vercel.json - `rewrites[2]` should NOT have additional property `src`. Did you mean `source`?' +
           '\n' +
-          'View Documentation: https://vercel.com/docs/configuration#project/rewrites'
+          'View Documentation: https://vercel.com/docs/concepts/projects/project-configuration#rewrites'
       );
       const builds = await fs.readJSON(join(output, 'builds.json'));
       expect(builds.builds).toBeUndefined();
@@ -1091,7 +1091,7 @@ describe('build', () => {
         stack: expect.stringContaining('at validateConfig'),
         hideStackTrace: true,
         code: 'INVALID_VERCEL_CONFIG',
-        link: 'https://vercel.com/docs/configuration#project/rewrites',
+        link: 'https://vercel.com/docs/concepts/projects/project-configuration#rewrites',
         action: 'View Documentation',
       });
       const configJson = await fs.readJSON(join(output, 'config.json'));
