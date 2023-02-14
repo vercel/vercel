@@ -1967,7 +1967,11 @@ test('try to create a builds deployments with wrong now.json', async t => {
       'Error: Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
     )
   );
-  t.true(stderr.includes('https://vercel.com/docs/configuration'));
+  t.true(
+    stderr.includes(
+      'https://vercel.com/docs/concepts/projects/project-configuration'
+    )
+  );
 });
 
 test('try to create a builds deployments with wrong vercel.json', async t => {
@@ -1991,7 +1995,11 @@ test('try to create a builds deployments with wrong vercel.json', async t => {
       'Error: Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
     )
   );
-  t.true(stderr.includes('https://vercel.com/docs/configuration'));
+  t.true(
+    stderr.includes(
+      'https://vercel.com/docs/concepts/projects/project-configuration'
+    )
+  );
 });
 
 test('try to create a builds deployments with wrong `build.env` property', async t => {
@@ -2014,7 +2022,9 @@ test('try to create a builds deployments with wrong `build.env` property', async
     formatOutput({ stdout, stderr })
   );
   t.true(
-    stderr.includes('https://vercel.com/docs/configuration'),
+    stderr.includes(
+      'https://vercel.com/docs/concepts/projects/project-configuration'
+    ),
     formatOutput({ stdout, stderr })
   );
 });
