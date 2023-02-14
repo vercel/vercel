@@ -233,7 +233,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid memory value', async () => {
+  it('should error with too low memory value', async () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
@@ -242,7 +242,23 @@ describe('validateConfig', () => {
       },
     });
     expect(error!.message).toEqual(
-      "Invalid vercel.json - `functions['api/test.js'].memory` should be equal to one of the allowed values."
+      "Invalid vercel.json - `functions['api/test.js'].memory` should be >= 128."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with too high memory value', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          memory: 3009,
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].memory` should be <= 3008."
     );
     expect(error!.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#functions'
