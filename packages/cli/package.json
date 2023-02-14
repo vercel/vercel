@@ -14,8 +14,8 @@
     "preinstall": "node ./scripts/preinstall.js",
     "test": "jest --env node --verbose --bail",
     "test-unit": "pnpm test test/unit/",
-    "test-integration-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
-    "test-integration-dev": "pnpm test test/dev/",
+    "test-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
+    "test-dev": "pnpm test test/dev/",
     "coverage": "codecov",
     "build": "ts-node ./scripts/build.ts",
     "dev": "ts-node ./src/index.ts"
