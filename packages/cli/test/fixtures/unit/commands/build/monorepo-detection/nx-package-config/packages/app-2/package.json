@@ -1,12 +1,8 @@
 {
   "name": "app-2",
   "version": "0.0.1",
-  "main": "dist/index.js",
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "build": "node script.js"
+    "build": "node index.js"
   },
   "nx": {
     "targets": {
