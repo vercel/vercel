@@ -1102,39 +1102,39 @@ describe('build', () => {
     }
   });
 
-  it('should include crons property in build output', async () => {
-    const cwd = fixture('with-cron');
-    const output = join(cwd, '.vercel', 'output', 'functions', 'api');
+  // it('should include crons property in build output', async () => {
+  //   const cwd = fixture('with-cron');
+  //   const output = join(cwd, '.vercel', 'output', 'functions', 'api');
 
-    try {
-      process.chdir(cwd);
-      const exitCode = await build(client);
-      expect(exitCode).toBe(0);
+  //   try {
+  //     process.chdir(cwd);
+  //     const exitCode = await build(client);
+  //     expect(exitCode).toBe(0);
 
-      const edge = await fs.readJSON(
-        join(output, 'edge.func', '.vc-config.json')
-      );
-      expect(edge).toHaveProperty('cron', '* * * * *');
+  //     const edge = await fs.readJSON(
+  //       join(output, 'edge.func', '.vc-config.json')
+  //     );
+  //     expect(edge).toHaveProperty('cron', '* * * * *');
 
-      const serverless = await fs.readJSON(
-        join(output, 'serverless.func', '.vc-config.json')
-      );
-      expect(serverless).toHaveProperty('cron', '* * * * *');
+  //     const serverless = await fs.readJSON(
+  //       join(output, 'serverless.func', '.vc-config.json')
+  //     );
+  //     expect(serverless).toHaveProperty('cron', '* * * * *');
 
-      const overwriteServerless = await fs.readJSON(
-        join(output, 'overwrite', 'serverless.func', '.vc-config.json')
-      );
-      expect(overwriteServerless).toHaveProperty('cron', '0 10-20 * * *');
+  //     const overwriteServerless = await fs.readJSON(
+  //       join(output, 'overwrite', 'serverless.func', '.vc-config.json')
+  //     );
+  //     expect(overwriteServerless).toHaveProperty('cron', '0 10-20 * * *');
 
-      const overwriteEdge = await fs.readJSON(
-        join(output, 'overwrite', 'edge.func', '.vc-config.json')
-      );
-      expect(overwriteEdge).toHaveProperty('cron', '10 * * * *');
-    } finally {
-      process.chdir(originalCwd);
-      delete process.env.__VERCEL_BUILD_RUNNING;
-    }
-  });
+  //     const overwriteEdge = await fs.readJSON(
+  //       join(output, 'overwrite', 'edge.func', '.vc-config.json')
+  //     );
+  //     expect(overwriteEdge).toHaveProperty('cron', '10 * * * *');
+  //   } finally {
+  //     process.chdir(originalCwd);
+  //     delete process.env.__VERCEL_BUILD_RUNNING;
+  //   }
+  // });
 
   describe('should find packages with different main/module/browser keys', function () {
     let output: string;

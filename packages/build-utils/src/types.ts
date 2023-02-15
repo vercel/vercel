@@ -319,7 +319,6 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
-    cron?: Cron;
   };
 }
 
