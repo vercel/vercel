@@ -1,4 +1,4 @@
-import type { Cron, Files } from './types';
+import type { Cron, Files, Framework } from './types';
 
 /**
  * An Edge Functions output
@@ -45,10 +45,7 @@ export class EdgeFunction {
   cron?: Cron;
 
   /** The framework */
-  framework?: {
-    slug: string;
-    version?: string;
-  };
+  framework?: Framework;
 
   constructor(params: Omit<EdgeFunction, 'type'>) {
     this.type = 'EdgeFunction';

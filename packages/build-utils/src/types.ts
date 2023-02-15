@@ -412,6 +412,11 @@ export interface BuildResultBuildOutput {
 }
 
 export type Cron = string;
+/** The framework which created the function */
+export interface Framework {
+  slug: string;
+  version?: string;
+}
 
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
