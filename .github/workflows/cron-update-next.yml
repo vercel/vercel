@@ -16,10 +16,13 @@ jobs:
         # 0 means fetch all commits so we can commit and push in the script below
         with:
           fetch-depth: 0
+      - name: Enable corepack
+        run: corepack enable pnpm
       - name: Create Pull Request
         uses: actions/github-script@v6
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
         # See https://github.com/actions/github-script#run-a-separate-file-with-an-async-function
         with:
           script: |
