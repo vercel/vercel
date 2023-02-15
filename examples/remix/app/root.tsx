@@ -7,7 +7,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
-import { inject } from '@vercel/analytics';
+import { Analytics } from '@vercel/analytics/react';
 
 export const meta: MetaFunction = () => ({
   charset: "utf-8",
@@ -16,7 +16,6 @@ export const meta: MetaFunction = () => ({
 });
 
 export default function App() {
-  inject();
   return (
     <html lang="en">
       <head>
@@ -28,6 +27,7 @@ export default function App() {
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
+        <Analytics />
       </body>
     </html>
   );

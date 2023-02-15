@@ -12,7 +12,7 @@ importers:
       '@remix-run/server-runtime': ^1.13.0
       '@types/react': ^18.0.25
       '@types/react-dom': ^18.0.11
-      '@vercel/analytics': ^0.1.5
+      '@vercel/analytics': ^0.1.9
       '@vercel/remix-entry-server': ^0.1.0
       eslint: ^8.28.0
       react: ^18.2.0
@@ -23,7 +23,7 @@ importers:
       '@remix-run/react': 1.13.0_biqbaboplfbrettd7655fr4n2y
       '@remix-run/serve': 1.13.0
       '@remix-run/server-runtime': 1.13.0
-      '@vercel/analytics': 0.1.8_react@18.2.0
+      '@vercel/analytics': 0.1.9_react@18.2.0
       '@vercel/remix-entry-server': 0.1.0_react@18.2.0
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
@@ -2252,8 +2252,8 @@ packages:
     resolution: {integrity: sha512-17kVyLq3ePTKOkveHxXuIJZtGYs+cSoev7BlP+Lf4916qfDhk/HBjvlYDe8egrea7LNPHKwSZJK/bzZC+Q6AwQ==}
     dev: true
 
-  /@vercel/analytics/0.1.8_react@18.2.0:
-    resolution: {integrity: sha512-PQrOI8BJ9qUiVJuQfnKiJd15eDjDJH9TBKsNeMrtelT4NAk7d9mBVz1CoZkvoFnHQ0OW7Xnqmr1F2nScfAnznQ==}
+  /@vercel/analytics/0.1.9_react@18.2.0:
+    resolution: {integrity: sha512-Lfus/6HAZXQBr4uv5eCtNKrEvthKWQFFcUNh5wC3fWn+4PbHxT8bqcm1TMQfYvGJ8O4TWzn0IfrQFNWh1DHDbQ==}
     peerDependencies:
       react: ^16.8||^17||^18
     dependencies:
