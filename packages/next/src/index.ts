@@ -2644,7 +2644,10 @@ async function getServerlessPages(params: {
   const [pages, appPaths, middlewareManifest] = await Promise.all([
     glob('**/!(_middleware).js', params.pagesDir),
     params.appPathRoutesManifest
-      ? glob('**/page.js', path.join(params.pagesDir, '../app'))
+      ? Promise.all([
+          glob('**/page.js', path.join(params.pagesDir, '../app')),
+          glob('**/route.js', path.join(params.pagesDir, '../app')),
+        ]).then(items => Object.assign(...items))
       : Promise.resolve({}),
     getMiddlewareManifest(params.entryPath, params.outputDirectory),
   ]);
