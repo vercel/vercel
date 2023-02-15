@@ -174,13 +174,14 @@ module.exports = config;`;
     }
   }
 
-  const { serverBuildPath, routes: remixRoutes } = remixConfig;
+  const { serverBuildPath } = remixConfig;
+  const remixRoutes = Object.values(remixConfig.routes);
 
   // Figure out which pages should be edge functions
   const edgePages = new Set<ConfigRoute>();
   const routesConfigMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
   const project = new Project();
-  for (const route of Object.values(remixRoutes)) {
+  for (const route of remixRoutes) {
     const routePath = join(remixConfig.appDirectory, route.file);
     const staticConfig = getConfig(project, routePath);
     routesConfigMap.set(route, staticConfig);
@@ -234,11 +235,9 @@ module.exports = config;`;
   const nodeFunctionsByRegionsMap = new Map<string, NodejsLambda>();
   const edgeFunctionsByRegionsMap = new Map<string, EdgeFunction>();
 
-  for (const route of Object.values(remixRoutes)) {
+  for (const route of remixRoutes) {
     // Layout routes don't get a function / route added
-    const isLayoutRoute = Object.values(remixRoutes).some(
-      r => r.parentId === route.id
-    );
+    const isLayoutRoute = remixRoutes.some(r => r.parentId === route.id);
     if (isLayoutRoute) continue;
 
     // Build up the full request path
@@ -248,7 +247,7 @@ module.exports = config;`;
       if (currentRoute.index) pathParts.push('index');
       if (currentRoute.path) pathParts.push(currentRoute.path);
       if (currentRoute.parentId) {
-        currentRoute = remixRoutes[currentRoute.parentId];
+        currentRoute = remixConfig.routes[currentRoute.parentId];
       } else {
         currentRoute = undefined;
       }
@@ -284,6 +283,7 @@ module.exports = config;`;
         });
       }
     } else {
+      fn = nodeFunction;
       if (regionsKey) {
         if (!Array.isArray(regions)) {
           throw new Error(
@@ -292,16 +292,16 @@ module.exports = config;`;
         }
         let func = nodeFunctionsByRegionsMap.get(regionsKey);
         if (!func) {
-          func = new NodejsLambda({
+          const lambdaOpts = {
             ...nodeFunction,
             files: nodeFunction.files!,
             regions,
-          });
+          };
+          delete lambdaOpts.zipBuffer;
+          func = new NodejsLambda(lambdaOpts);
           nodeFunctionsByRegionsMap.set(regionsKey, func);
         }
         fn = func;
-      } else {
-        fn = nodeFunction;
       }
     }
 
