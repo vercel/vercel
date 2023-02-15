@@ -1,4 +1,4 @@
-import type { Cron, Files } from './types';
+import type { Cron, Files, FunctionFramework } from './types';
 
 /**
  * An Edge Functions output
@@ -44,6 +44,9 @@ export class EdgeFunction {
   /** Cronjob definition for the edge function */
   cron?: Cron;
 
+  /** The framework */
+  framework?: FunctionFramework;
+
   constructor(params: Omit<EdgeFunction, 'type'>) {
     this.type = 'EdgeFunction';
     this.name = params.name;
@@ -54,5 +57,6 @@ export class EdgeFunction {
     this.assets = params.assets;
     this.regions = params.regions;
     this.cron = params.cron;
+    this.framework = params.framework;
   }
 }
