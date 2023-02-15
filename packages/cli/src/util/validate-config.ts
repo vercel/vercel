@@ -108,7 +108,7 @@ const cronsSchema = {
       },
       schedule: {
         type: 'string',
-        minLength: 1,
+        minLength: 9,
         maxLength: 256,
       },
     },
