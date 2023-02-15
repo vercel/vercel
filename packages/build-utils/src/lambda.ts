@@ -5,7 +5,7 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config, Cron, Framework } from './types';
+import type { Files, Config, Cron, FunctionFramework } from './types';
 
 interface Environment {
   [key: string]: string;
@@ -26,7 +26,7 @@ export interface LambdaOptionsBase {
   experimentalResponseStreaming?: boolean;
   operationType?: string;
   cron?: Cron;
-  framework?: Framework;
+  framework?: FunctionFramework;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -72,7 +72,7 @@ export class Lambda {
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
   experimentalResponseStreaming?: boolean;
-  framework?: Framework;
+  framework?: FunctionFramework;
 
   constructor(opts: LambdaOptions) {
     const {

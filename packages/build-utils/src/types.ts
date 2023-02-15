@@ -413,7 +413,7 @@ export interface BuildResultBuildOutput {
 
 export type Cron = string;
 /** The framework which created the function */
-export interface Framework {
+export interface FunctionFramework {
   slug: string;
   version?: string;
 }
