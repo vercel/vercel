@@ -16,6 +16,7 @@ import {
   BuildResultV2Typical,
   BuildResultV3,
   NowBuildError,
+  Cron,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -88,6 +89,7 @@ interface BuildOutputConfig {
   framework?: {
     version: string;
   };
+  crons?: Cron[];
 }
 
 /**
@@ -638,6 +640,7 @@ async function doBuild(
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
     framework,
+    crons: vercelConfig?.crons,
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 

@@ -93,6 +93,28 @@ const imagesSchema = {
   },
 };
 
+const cronsSchema = {
+  type: 'array',
+  minItems: 0,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['path', 'schedule'],
+    properties: {
+      path: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 512,
+      },
+      schedule: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 256,
+      },
+    },
+  },
+};
+
 const vercelConfigSchema = {
   type: 'object',
   // These are not all possibilities because `vc dev`
@@ -108,6 +130,7 @@ const vercelConfigSchema = {
     trailingSlash: trailingSlashSchema,
     functions: functionsSchema,
     images: imagesSchema,
+    crons: cronsSchema,
   },
 };
 
