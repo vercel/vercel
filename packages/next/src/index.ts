@@ -1820,10 +1820,7 @@ export const build: BuildV2 = async ({
                 '___next_launcher.cjs'
               ),
               runtime: nodeVersion.runtime,
-              framework: {
-                slug: 'nextjs',
-                version: nextVersion,
-              },
+              nextVersion,
               ...lambdaOptions,
             });
           } else {
@@ -1843,10 +1840,7 @@ export const build: BuildV2 = async ({
                 '___next_launcher.cjs'
               ),
               runtime: nodeVersion.runtime,
-              framework: {
-                slug: 'nextjs',
-                version: nextVersion,
-              },
+              nextVersion,
               ...lambdaOptions,
             });
           }
@@ -2058,10 +2052,7 @@ export const build: BuildV2 = async ({
                   '___next_launcher.cjs'
                 ),
                 runtime: nodeVersion.runtime,
-                framework: {
-                  slug: 'nextjs',
-                  version: nextVersion,
-                },
+                nextVersion,
               });
           }
         )
