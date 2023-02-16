@@ -2703,13 +2703,13 @@ export function getOperationType({
   }
 
   if (pageFileName) {
-    for (const key of Object.keys(
-      prerenderManifest?.blockingFallbackRoutes || {}
-    )) {
-      if (key === pageFileName) return 'ISR';
-    }
-    for (const key of Object.keys(prerenderManifest?.fallbackRoutes || {})) {
-      if (key === pageFileName) return 'ISR';
+    const { blockingFallbackRoutes = {}, fallbackRoutes = {} } =
+      prerenderManifest || {};
+    if (
+      pageFileName in blockingFallbackRoutes ||
+      pageFileName in fallbackRoutes
+    ) {
+      return 'ISR';
     }
   }
 
