@@ -2702,9 +2702,9 @@ export function getOperationType({
     return 'ISR';
   }
 
-  if (pageFileName) {
+  if (pageFileName && prerenderManifest) {
     const { blockingFallbackRoutes = {}, fallbackRoutes = {} } =
-      prerenderManifest || {};
+      prerenderManifest;
     if (
       pageFileName in blockingFallbackRoutes ||
       pageFileName in fallbackRoutes
