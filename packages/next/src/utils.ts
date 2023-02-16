@@ -774,6 +774,7 @@ export async function createPseudoLayer(files: {
 interface CreateLambdaFromPseudoLayersOptions extends LambdaOptionsWithFiles {
   layers: PseudoLayer[];
   isStreaming?: boolean;
+  nextVersion?: string;
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -784,6 +785,7 @@ export async function createLambdaFromPseudoLayers({
   files: baseFiles,
   layers,
   isStreaming,
+  nextVersion,
   ...lambdaOptions
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -827,6 +829,10 @@ export async function createLambdaFromPseudoLayers({
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
     supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+    framework: {
+      slug: 'nextjs',
+      version: nextVersion,
+    },
   });
 }
 
@@ -2314,6 +2320,7 @@ export async function getMiddlewareBundle({
   routesManifest,
   isCorrectMiddlewareOrder,
   prerenderBypassToken,
+  nextVersion,
 }: {
   config: Config;
   entryPath: string;
@@ -2321,6 +2328,7 @@ export async function getMiddlewareBundle({
   prerenderBypassToken: string;
   routesManifest: RoutesManifest;
   isCorrectMiddlewareOrder: boolean;
+  nextVersion: string;
 }): Promise<{
   staticRoutes: Route[];
   dynamicRouteMap: Map<string, RouteWithSrc>;
@@ -2442,6 +2450,10 @@ export async function getMiddlewareBundle({
                     path: `assets/${name}`,
                   };
                 }),
+                framework: {
+                  slug: 'nextjs',
+                  version: nextVersion,
+                },
               });
             })(),
             routeMatchers: getRouteMatchers(edgeFunction, routesManifest),

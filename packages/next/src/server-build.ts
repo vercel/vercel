@@ -873,6 +873,7 @@ export async function serverBuild({
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
         isStreaming: group.isStreaming,
+        nextVersion,
       });
 
       for (const page of group.pages) {
@@ -973,6 +974,7 @@ export async function serverBuild({
     routesManifest,
     isCorrectMiddlewareOrder,
     prerenderBypassToken: prerenderManifest.bypassToken || '',
+    nextVersion,
   });
 
   const isNextDataServerResolving =
