@@ -464,7 +464,10 @@ test('[vercel dev] only logs request/response for functions', async () => {
   try {
     await readyResolver;
 
+    console.log('!!! before /contact');
     await makeRequest('/contact');
+    console.log('!!! after /contact');
+
     await makeRequest('/api/edge-good');
     await makeRequest('/api/edge-bad', 500);
     await makeRequest('/api/node-good');

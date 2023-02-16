@@ -27,10 +27,12 @@ const imageUrlToBase64 = async url => {
 // like a browser would, but without having to set up a browser
 // for this text fixture to operate
 export async function getServerSideProps(context) {
+  console.log('!!! in getServerSideProps');
+
   let host = context.req.headers['x-forwarded-host'];
-  if (process.env.CI) {
-    host = host.replace('localhost', '127.0.0.1');
-  }
+  // if (process.env.CI) {
+  //   host = host.replace('127.0.0.1', 'localhost');
+  // }
   const base = `http://${host}`;
 
   const contactUrl = new URL('/api/create-contact', base);
@@ -41,6 +43,8 @@ export async function getServerSideProps(context) {
 
   const teamUrl = new URL('/team.jpg', base).toString();
   const teamSrcData = await imageUrlToBase64(teamUrl);
+
+  console.log('!!! returning getServerSideProps');
 
   return {
     props: {
