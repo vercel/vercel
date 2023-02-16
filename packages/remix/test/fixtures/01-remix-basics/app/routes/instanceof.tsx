@@ -9,5 +9,5 @@ export const loader = ({ request }: LoaderArgs) => {
 
 export default function InstanceOf() {
   const data = useLoaderData<typeof loader>();
-  return <div>InstanceOfRequest:{String(data.instanceOfRequest)}</div>;
+  return <div>{`InstanceOfRequest: ${data.instanceOfRequest}`}</div>;
 }
