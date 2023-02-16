@@ -30,7 +30,7 @@ import type {
   BuildResultV2Typical,
 } from '@vercel/build-utils';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
-import { findConfig } from './utils';
+import { findConfig, getPathFromRoute, isLayoutRoute } from './utils';
 
 const _require: typeof require = eval('require');
 
@@ -173,12 +173,13 @@ module.exports = config;`;
     }
   }
 
-  const { serverBuildPath, routes: remixRoutes } = remixConfig;
+  const { serverBuildPath } = remixConfig;
+  const remixRoutes = Object.values(remixConfig.routes);
 
   // Figure out which pages should be edge functions
   const edgePages = new Set<ConfigRoute>();
   const project = new Project();
-  for (const route of Object.values(remixRoutes)) {
+  for (const route of remixRoutes) {
     const routePath = join(remixConfig.appDirectory, route.file);
     const staticConfig = getConfig(project, routePath);
     const isEdge =
@@ -228,27 +229,11 @@ module.exports = config;`;
     },
   ];
 
-  for (const route of Object.values(remixRoutes)) {
+  for (const route of remixRoutes) {
     // Layout routes don't get a function / route added
-    const isLayoutRoute = Object.values(remixRoutes).some(
-      r => r.parentId === route.id
-    );
-    if (isLayoutRoute) continue;
+    if (isLayoutRoute(route, remixRoutes)) continue;
 
-    // Build up the full request path
-    let currentRoute: ConfigRoute | undefined = route;
-    const pathParts: string[] = [];
-    do {
-      if (currentRoute.index) pathParts.push('index');
-      if (currentRoute.path) pathParts.push(currentRoute.path);
-      if (currentRoute.parentId) {
-        currentRoute = remixRoutes[currentRoute.parentId];
-      } else {
-        currentRoute = undefined;
-      }
-    } while (currentRoute);
-    const path = join(...pathParts.reverse());
-
+    const path = getPathFromRoute(route, remixConfig.routes);
     const isEdge = edgePages.has(route);
     const fn =
       isEdge && edgeFunction
