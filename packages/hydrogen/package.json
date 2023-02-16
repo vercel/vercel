@@ -1,6 +1,6 @@
 {
   "name": "@vercel/hydrogen",
-  "version": "0.0.49",
+  "version": "0.0.53",
   "license": "MIT",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "node build.js",
-    "test-integration-once": "pnpm test test/test.js",
+    "test-e2e": "pnpm test test/test.js",
     "test": "jest --env node --verbose --bail --runInBand"
   },
   "files": [
@@ -21,8 +21,8 @@
   "devDependencies": {
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "6.2.1",
-    "@vercel/static-config": "2.0.12",
+    "@vercel/build-utils": "6.3.0",
+    "@vercel/static-config": "2.0.13",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
     "ts-morph": "12.0.0",

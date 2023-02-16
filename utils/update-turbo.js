@@ -13,7 +13,7 @@ function exec(cmd, args, opts) {
 module.exports = async ({ github, context }) => {
   const pkgJson = JSON.parse(readFileSync('package.json', 'utf-8'));
   const oldVersion = pkgJson.devDependencies.turbo;
-  const newVersion = exec('pnpm', ['view', 'turbo', 'dist-tags.canary']);
+  const newVersion = exec('pnpm', ['view', 'turbo', 'dist-tags.latest']);
   const branch = `turbo-${newVersion.replaceAll('.', '-')}`;
 
   if (oldVersion === newVersion) {
@@ -54,7 +54,7 @@ module.exports = async ({ github, context }) => {
     body: `This auto-generated PR updates Turbo to version ${newVersion}`,
   });
 
-  github.rest.issues.addLabels({
+  await github.rest.issues.addLabels({
     owner,
     repo,
     issue_number: pr.data.number,

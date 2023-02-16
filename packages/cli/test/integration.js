@@ -1967,7 +1967,11 @@ test('try to create a builds deployments with wrong now.json', async t => {
       'Error: Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
     )
   );
-  t.true(stderr.includes('https://vercel.com/docs/configuration'));
+  t.true(
+    stderr.includes(
+      'https://vercel.com/docs/concepts/projects/project-configuration'
+    )
+  );
 });
 
 test('try to create a builds deployments with wrong vercel.json', async t => {
@@ -1991,7 +1995,11 @@ test('try to create a builds deployments with wrong vercel.json', async t => {
       'Error: Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
     )
   );
-  t.true(stderr.includes('https://vercel.com/docs/configuration'));
+  t.true(
+    stderr.includes(
+      'https://vercel.com/docs/concepts/projects/project-configuration'
+    )
+  );
 });
 
 test('try to create a builds deployments with wrong `build.env` property', async t => {
@@ -2014,7 +2022,9 @@ test('try to create a builds deployments with wrong `build.env` property', async
     formatOutput({ stdout, stderr })
   );
   t.true(
-    stderr.includes('https://vercel.com/docs/configuration'),
+    stderr.includes(
+      'https://vercel.com/docs/concepts/projects/project-configuration'
+    ),
     formatOutput({ stdout, stderr })
   );
 });
@@ -2625,7 +2635,7 @@ test('next unsupported functions config shows warning link', async t => {
   t.is(output.exitCode, 0, formatOutput(output));
   t.regex(
     output.stderr,
-    /Ignoring function property `runtime`\. When using Next\.js, only `memory`, `maxDuration`, and `cron` can be used\./gm,
+    /Ignoring function property `runtime`\. When using Next\.js, only `memory` and `maxDuration` can be used\./gm,
     formatOutput(output)
   );
   t.regex(
@@ -2719,11 +2729,15 @@ test('deploy a Lambda with 128MB of memory', async t => {
 });
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async t => {
-  const directory = fixture('lambda-with-200-memory');
+  const directory = fixture('lambda-with-123-memory');
   const output = await execute([directory, '--yes']);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /steps of 64/gm, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Serverless Functions.+memory/gm,
+    formatOutput(output)
+  );
   t.regex(output.stderr, /Learn More/gm, formatOutput(output));
 });
 

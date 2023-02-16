@@ -1096,6 +1096,10 @@ export const build: BuildV2 = async ({
           shouldAddHelpers: false,
           shouldAddSourcemapSupport: false,
           supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+          framework: {
+            slug: 'nextjs',
+            version: nextVersion,
+          },
         });
         debug(`Created serverless function for page: "${page}"`);
       })
@@ -1822,6 +1826,7 @@ export const build: BuildV2 = async ({
                 pageFileName,
               }),
               runtime: nodeVersion.runtime,
+              nextVersion,
               ...lambdaOptions,
             });
           } else {
@@ -1842,6 +1847,7 @@ export const build: BuildV2 = async ({
               ),
               operationType: getOperationType({ pageFileName }), // can only be API or SSR
               runtime: nodeVersion.runtime,
+              nextVersion,
               ...lambdaOptions,
             });
           }
@@ -2059,6 +2065,7 @@ export const build: BuildV2 = async ({
                 ),
                 operationType,
                 runtime: nodeVersion.runtime,
+                nextVersion,
               });
           }
         )
@@ -2657,7 +2664,10 @@ async function getServerlessPages(params: {
   const [pages, appPaths, middlewareManifest] = await Promise.all([
     glob('**/!(_middleware).js', params.pagesDir),
     params.appPathRoutesManifest
-      ? glob('**/page.js', path.join(params.pagesDir, '../app'))
+      ? Promise.all([
+          glob('**/page.js', path.join(params.pagesDir, '../app')),
+          glob('**/route.js', path.join(params.pagesDir, '../app')),
+        ]).then(items => Object.assign(...items))
       : Promise.resolve({}),
     getMiddlewareManifest(params.entryPath, params.outputDirectory),
   ]);
