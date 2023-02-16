@@ -5,7 +5,7 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config, Cron, FunctionFramework } from './types';
+import type { Files, Config, FunctionFramework } from './types';
 
 interface Environment {
   [key: string]: string;
@@ -25,7 +25,6 @@ export interface LambdaOptionsBase {
   supportsWrapper?: boolean;
   experimentalResponseStreaming?: boolean;
   operationType?: string;
-  cron?: Cron;
   framework?: FunctionFramework;
 }
 
@@ -64,7 +63,6 @@ export class Lambda {
   environment: Environment;
   allowQuery?: string[];
   regions?: string[];
-  cron?: Cron;
   /**
    * @deprecated Use `await lambda.createZip()` instead.
    */
@@ -83,7 +81,6 @@ export class Lambda {
       environment = {},
       allowQuery,
       regions,
-      cron,
       supportsMultiPayloads,
       supportsWrapper,
       experimentalResponseStreaming,
@@ -138,10 +135,6 @@ export class Lambda {
       );
     }
 
-    if (cron !== undefined) {
-      assert(typeof cron === 'string', '"cron" is not a string');
-    }
-
     if (framework !== undefined) {
       assert(typeof framework === 'object', '"framework" is not an object');
       assert(
@@ -166,7 +159,6 @@ export class Lambda {
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
-    this.cron = cron;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
@@ -246,7 +238,7 @@ export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
-  Pick<LambdaOptions, 'memory' | 'maxDuration' | 'cron'>
+  Pick<LambdaOptions, 'memory' | 'maxDuration'>
 > {
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
@@ -254,7 +246,6 @@ export async function getLambdaOptionsFromFunction({
         return {
           memory: fn.memory,
           maxDuration: fn.maxDuration,
-          cron: fn.cron,
         };
       }
     }
