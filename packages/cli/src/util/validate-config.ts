@@ -105,6 +105,7 @@ const cronsSchema = {
         type: 'string',
         minLength: 1,
         maxLength: 512,
+        pattern: '^/.*',
       },
       schedule: {
         type: 'string',

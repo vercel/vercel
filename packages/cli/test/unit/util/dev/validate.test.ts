@@ -289,7 +289,7 @@ describe('validateConfig', () => {
   it('should error when crons have missing schedule', () => {
     const error = validateConfig({
       // @ts-ignore
-      crons: [{ path: 'api/test.js' }],
+      crons: [{ path: '/api/test.js' }],
     });
     expect(error!.message).toEqual(
       'Invalid vercel.json - `crons[0]` missing required property `schedule`.'
@@ -354,6 +354,18 @@ describe('validateConfig', () => {
     });
     expect(error!.message).toEqual(
       'Invalid vercel.json - `crons[0].schedule` should NOT be shorter than 9 characters.'
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#crons'
+    );
+  });
+
+  it("should error when path doesn't start with `/`", () => {
+    const error = validateConfig({
+      crons: [{ path: 'api/cron', schedule: '* * * * *' }],
+    });
+    expect(error!.message).toEqual(
+      'Invalid vercel.json - `crons[0].path` should match pattern "^/.*".'
     );
     expect(error!.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#crons'
