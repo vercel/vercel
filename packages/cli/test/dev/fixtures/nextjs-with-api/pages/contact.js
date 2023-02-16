@@ -27,7 +27,11 @@ const imageUrlToBase64 = async url => {
 // like a browser would, but without having to set up a browser
 // in for this text fixture to operate
 export async function getServerSideProps(context) {
-  const base = `http://${context.req.headers['x-forwarded-host']}`;
+  let host = context.req.headers['x-forwarded-host'];
+  if (process.env.CI) {
+    host = host.replace('localhost', '127.0.0.1');
+  }
+  const base = `http://${host}`;
 
   const contactUrl = new URL('/api/create-contact', base);
   const contactResponse = await fetch(contactUrl, {
