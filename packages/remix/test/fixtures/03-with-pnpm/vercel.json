@@ -15,7 +15,7 @@
     { "path": "/b", "mustContain": "B page" },
     { "path": "/nested", "mustContain": "Nested index page" },
     { "path": "/nested/another", "mustContain": "Nested another page" },
-    { "path": "/nested/index", "mustContain": "Params: nested/index" },
-    { "path": "/asdf", "mustContain": "Params: /asdf" }
+    { "path": "/nested/index", "mustContain": "<div>nested/index</div>" },
+    { "path": "/asdf", "mustContain": "<div>asdf</div>" }
   ]
 }
