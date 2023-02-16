@@ -751,12 +751,12 @@ function mergeImages(
 }
 
 function mergeCrons(
-  crons: BuildOutputConfig['crons'],
+  crons: BuildOutputConfig['crons'] = [],
   buildResults: Iterable<BuildResult | BuildOutputConfig>
 ): BuildOutputConfig['crons'] {
   for (const result of buildResults) {
     if ('crons' in result && result.crons) {
-      crons = Object.assign({}, crons, result.crons);
+      crons = crons.concat(result.crons);
     }
   }
   return crons;
