@@ -6,7 +6,7 @@ import { join, delimiter } from 'path';
 import stringArgv from 'string-argv';
 import { debug } from '@vercel/build-utils';
 const versionMap = new Map([
-  ['1.20', '1.20'],
+  ['1.20', '1.20.1'],
   ['1.19', '1.19.5'],
   ['1.18', '1.18.1'],
   ['1.17', '1.17.3'],
