@@ -756,7 +756,7 @@ function mergeCrons(
 ): BuildOutputConfig['crons'] {
   for (const result of buildResults) {
     if ('crons' in result && result.crons) {
-      crons = Object.assign({}, crons, result.crons);
+      crons = crons?.concat(result.crons);
     }
   }
   return crons;
