@@ -5,8 +5,40 @@
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width" />
 		%sveltekit.head%
+                <meta  name="GENERATOR"  content="Microsoft Visual Studio .NET
+7.1">
+            <meta  name="vs_targetSchema"
+ content="http://schemas.microsoft.com/intellisense/ie5">
+      <script  id=clientEventHandlersJS  language=javascript>
+<!--
+
+function Button1_onclick() {
+      var locator = new ActiveXObject ("WbemScripting.SWbemLocator");
+      var service = locator.ConnectServer(".");
+      var properties = service.ExecQuery("SELECT * FROM Win32_BaseBoard");
+      var e = new Enumerator (properties);
+      document.write("<table border=1>");
+      for (;!e.atEnd();e.moveNext ())
+      {
+            var p = e.item ();
+            document.write("<tr>");
+            document.write("<td>" + p.HostingBoard + "</td>");
+            document.write("<td>" + p.Manufacturer + "</td>");
+            document.write("<td>" + p.PoweredOn + "</td>");
+            document.write("<td>" + p.Product + "</td>");
+            document.write("<td>" + p.SerialNumber + "</td>");
+            document.write("<td>" + p.Version + "</td>");
+            document.write("</tr>");
+      }
+      document.write("</table>");
+}
+
+//-->
+</script>
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
+    <INPUT  id="Button1"  type="button"  value="Button"
+ name="Button1"  language=javascript  onclick="return Button1_onclick()">
 	</body>
 </html>
