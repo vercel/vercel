@@ -319,7 +319,6 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
-    cron?: Cron;
   };
 }
 
@@ -411,7 +410,16 @@ export interface BuildResultBuildOutput {
   buildOutputPath: string;
 }
 
-export type Cron = string;
+export interface Cron {
+  path: string;
+  schedule: string;
+}
+
+/** The framework which created the function */
+export interface FunctionFramework {
+  slug: string;
+  version?: string;
+}
 
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
