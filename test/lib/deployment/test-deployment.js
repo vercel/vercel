@@ -238,7 +238,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
           .join('\n');
 
         throw new Error(
-          `Page ${probeUrl} does not have header ${header}.\n\nExpected: ${expected}.\nActual: ${headers}`
+          `Page ${probeUrl} does not have expected response header ${header}.\n\nExpected: ${expected}.\n\nActual: ${headers}`
         );
       }
     });
@@ -254,7 +254,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
           .join('\n');
 
         throw new Error(
-          `Page ${probeUrl} invalid page header ${header}.\n\n Did not expect: ${header}=${expected}.\nBut got ${headers}`
+          `Page ${probeUrl} has unexpected response header ${header}.\n\nDid not expect: ${header}=${expected}.\n\nAll: ${headers}`
         );
       }
     });

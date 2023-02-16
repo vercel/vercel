@@ -58,8 +58,8 @@ module.exports = async ({ github, context }) => {
     pull_number: pr.data.number,
     reviewers: ['ijjk', 'styfle'],
   });
-  
-  github.rest.issues.addLabels({
+
+  await github.rest.issues.addLabels({
     owner,
     repo,
     issue_number: pr.data.number,
