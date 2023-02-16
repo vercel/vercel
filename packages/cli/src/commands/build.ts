@@ -16,6 +16,7 @@ import {
   BuildResultV2Typical,
   BuildResultV3,
   NowBuildError,
+  Cron,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -88,6 +89,7 @@ interface BuildOutputConfig {
   framework?: {
     version: string;
   };
+  crons?: Cron[];
 }
 
 /**
@@ -118,6 +120,7 @@ const help = () => {
       --output [path]                Directory where built assets should be written to
       --prod                         Build a production deployment
       -d, --debug                    Debug mode [off]
+      --no-color                     No color mode [off]
       -y, --yes                      Skip the confirmation prompt about pulling environment variables and project settings when not found locally
 
     ${chalk.dim('Examples:')}
@@ -622,6 +625,7 @@ async function doBuild(
   });
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
+  const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
@@ -637,6 +641,7 @@ async function doBuild(
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
     framework,
+    crons: mergedCrons,
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
@@ -700,7 +705,7 @@ function expandBuild(files: string[], build: Builder): Builder[] {
     throw new NowBuildError({
       code: `invalid_build_specification`,
       message: 'Field `use` is missing in build specification',
-      link: 'https://vercel.com/docs/configuration#project/builds',
+      link: 'https://vercel.com/docs/concepts/projects/project-configuration#builds',
       action: 'View Documentation',
     });
   }
@@ -710,7 +715,7 @@ function expandBuild(files: string[], build: Builder): Builder[] {
     throw new NowBuildError({
       code: `invalid_build_specification`,
       message: 'A build `src` path resolves to an empty string',
-      link: 'https://vercel.com/docs/configuration#project/builds',
+      link: 'https://vercel.com/docs/concepts/projects/project-configuration#builds',
       action: 'View Documentation',
     });
   }
@@ -743,6 +748,18 @@ function mergeImages(
     }
   }
   return images;
+}
+
+function mergeCrons(
+  crons: BuildOutputConfig['crons'],
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
+): BuildOutputConfig['crons'] {
+  for (const result of buildResults) {
+    if ('crons' in result && result.crons) {
+      crons = Object.assign({}, crons, result.crons);
+    }
+  }
+  return crons;
 }
 
 function mergeWildcard(

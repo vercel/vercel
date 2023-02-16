@@ -180,6 +180,8 @@ async function compile(
     return source;
   }
 
+  const conditions = isEdgeFunction ? ['worker', 'browser'] : undefined;
+
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
     {
@@ -187,6 +189,7 @@ async function compile(
       processCwd: workPath,
       ts: true,
       mixedModules: true,
+      conditions,
       resolve(id, parent, job, cjsResolve) {
         const normalizedWasmImports = id.replace(/\.wasm\?module$/i, '.wasm');
         return nftResolveDependency(
@@ -197,7 +200,7 @@ async function compile(
         );
       },
       ignore: config.excludeFiles,
-      async readFile(fsPath: string): Promise<Buffer | string | null> {
+      async readFile(fsPath) {
         const relPath = relative(baseDir, fsPath);
 
         // If this file has already been read then return from the cache
@@ -413,10 +416,13 @@ export const build: BuildV3 = async ({
         )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
       );
     }
+    if (staticConfig.runtime === 'nodejs') {
+      console.log(
+        `Detected unused static config runtime "nodejs" in "${entrypointPath}"`
+      );
+    }
     isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
-
-  const cron = staticConfig?.cron;
 
   debug('Tracing input files...');
   const traceTime = Date.now();
@@ -467,7 +473,6 @@ export const build: BuildV3 = async ({
       // TODO: remove - these two properties should not be required
       name: outputPath,
       deploymentTarget: 'v8-worker',
-      cron,
     });
   } else {
     // "nodejs" runtime is the default
@@ -486,7 +491,6 @@ export const build: BuildV3 = async ({
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       experimentalResponseStreaming,
-      cron,
     });
   }
 

@@ -33,6 +33,7 @@ const help = () => {
 
     -h, --help                     Output usage information
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -f, --force                    Force a domain on a project and remove it from an existing one
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'

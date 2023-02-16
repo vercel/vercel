@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/remix",
+      "config": {
+        "installCommand": "env | sort && npm install --install-strategy=linked",
+        "zeroConfig": true
+      }
+    }
+  ],
+  "build": {
+    "env": {
+      "ENABLE_EXPERIMENTAL_COREPACK": "1"
+    }
+  },
+  "probes": [
+    { "path": "/", "mustContain": "Welcome to Remix" },
+    { "path": "/edge", "mustContain": "Welcome to Remix@Edge" },
+    { "path": "/b", "mustContain": "B page" },
+    { "path": "/nested", "mustContain": "Nested index page" },
+    { "path": "/nested/another", "mustContain": "Nested another page" },
+    { "path": "/nested/index", "mustContain": "Not Found" },
+    { "path": "/asdf", "mustContain": "Not Found" }
+  ]
+}

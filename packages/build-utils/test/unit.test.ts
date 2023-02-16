@@ -318,6 +318,49 @@ it('should support initialHeaders and initialStatus correctly', async () => {
   });
 });
 
+it('should support passQuery correctly', async () => {
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    passQuery: true,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    passQuery: false,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    passQuery: undefined,
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      passQuery: 'true',
+    });
+  }).toThrowError(
+    `The \`passQuery\` argument for \`Prerender\` must be a boolean.`
+  );
+});
+
 it('should support require by path for legacy builders', () => {
   const index = require('../');
 
@@ -457,6 +500,10 @@ it('should retry npm install when peer deps invalid and npm@8 on node@16', async
   const nodeMajor = Number(process.versions.node.split('.')[0]);
   if (nodeMajor !== 16) {
     console.log(`Skipping test on node@${nodeMajor}`);
+    return;
+  }
+  if (process.platform === 'win32') {
+    console.log('Skipping test on windows');
     return;
   }
   const fixture = path.join(__dirname, 'fixtures', '15-npm-8-legacy-peer-deps');
