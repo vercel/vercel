@@ -25,7 +25,7 @@ const imageUrlToBase64 = async url => {
 
 // make these requests on the serverside to trigger the requests
 // like a browser would, but without having to set up a browser
-// in for this text fixture to operate
+// for this text fixture to operate
 export async function getServerSideProps(context) {
   let host = context.req.headers['x-forwarded-host'];
   if (process.env.CI) {
