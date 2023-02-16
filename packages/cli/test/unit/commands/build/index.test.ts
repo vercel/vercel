@@ -1104,32 +1104,46 @@ describe('build', () => {
 
   it('should include crons property in build output', async () => {
     const cwd = fixture('with-cron');
-    const output = join(cwd, '.vercel', 'output', 'functions', 'api');
+    const output = join(cwd, '.vercel', 'output');
 
     try {
       process.chdir(cwd);
       const exitCode = await build(client);
       expect(exitCode).toBe(0);
 
-      const edge = await fs.readJSON(
-        join(output, 'edge.func', '.vc-config.json')
-      );
-      expect(edge).toHaveProperty('cron', '* * * * *');
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toHaveProperty('crons', [
+        {
+          path: '/api/cron-job',
+          schedule: '0 0 * * *',
+        },
+      ]);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
 
-      const serverless = await fs.readJSON(
-        join(output, 'serverless.func', '.vc-config.json')
-      );
-      expect(serverless).toHaveProperty('cron', '* * * * *');
+  it('should merge crons property from build output with vercel.json crons property', async () => {
+    const cwd = fixture('with-cron-merge');
+    const output = join(cwd, '.vercel', 'output');
 
-      const overwriteServerless = await fs.readJSON(
-        join(output, 'overwrite', 'serverless.func', '.vc-config.json')
-      );
-      expect(overwriteServerless).toHaveProperty('cron', '0 10-20 * * *');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toBe(0);
 
-      const overwriteEdge = await fs.readJSON(
-        join(output, 'overwrite', 'edge.func', '.vc-config.json')
-      );
-      expect(overwriteEdge).toHaveProperty('cron', '10 * * * *');
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toHaveProperty('crons', [
+        {
+          path: '/api/cron-job',
+          schedule: '0 0 * * *',
+        },
+        {
+          path: '/api/cron-job-build-output',
+          schedule: '0 0 * * *',
+        },
+      ]);
     } finally {
       process.chdir(originalCwd);
       delete process.env.__VERCEL_BUILD_RUNNING;
