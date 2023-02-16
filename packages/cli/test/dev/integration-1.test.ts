@@ -15,6 +15,8 @@ const {
   validateResponseHeaders,
 } = require('./utils.js');
 
+const RED = '\x1B[31m';
+
 test('[vercel dev] should support edge functions', async () => {
   const dir = fixture('edge-function');
   const { dev, port, readyResolver } = await testFixture(dir, {
@@ -91,28 +93,59 @@ test(
 );
 
 test('[vercel dev] only logs request/response for functions', async () => {
-  const dir = fixture('10-nextjs-node');
+  const dir = fixture('nextjs-with-api');
   const { dev, port, readyResolver } = await testFixture(dir);
+
+  async function makeRequest(path: string, expectedStatusCode = 200) {
+    let res = await fetch(`http://localhost:${port}${path}`);
+    validateResponseHeaders(res);
+    expect(await res.status, path).toBe(expectedStatusCode);
+    return res;
+  }
 
   try {
     await readyResolver;
 
-    // "/contact" is a JSX page and should not be logged
-    let res1 = await fetch(`http://localhost:${port}/contact`);
-    validateResponseHeaders(res1);
-    expect(await res1.status).toBe(200);
-
-    // "/api/date" is a serverless function and should be logged
-    let res2 = await fetch(`http://localhost:${port}/api/date`);
-    validateResponseHeaders(res2);
-    expect(await res2.status).toBe(200);
+    await makeRequest('/contact');
+    await makeRequest('/api/edge-good');
+    await makeRequest('/api/edge-bad', 500);
+    await makeRequest('/api/node-good');
+    await makeRequest('/api/node-meh', 400);
+    await makeRequest('/api/node-bad', 500);
 
     const { stderr } = await dev.kill();
 
-    expect(stderr).not.toMatch(/→ GET {2}\/contact/g);
-    expect(stderr).not.toMatch(/← 200 {2}\/contact/g);
-    expect(stderr).toMatch(/→ GET {2}\/api\/date/g);
-    expect(stderr).toMatch(/← 200 {2}\/api\/date/g);
+    // GET /contact (JSX page, referncing image, calling serverless function)
+    expect(stderr).not.toMatch('→ GET  /contact');
+    expect(stderr).not.toMatch('← 200  /contact');
+    expect(stderr).not.toMatch('→ GET  /team.jpg');
+    expect(stderr).toMatch('→ POST /api/create-contact');
+
+    // GET /api/edge-good
+    expect(stderr).toMatch('→ GET  /api/edge-good');
+    expect(stderr).not.toMatch('← 200  /api/edge-good');
+
+    // GET /api/edge-bad
+    expect(stderr).toMatch('→ GET  /api/edge-bad');
+    expect(stderr).toMatch(
+      `! ERR  /api/edge-bad\n${RED}Error: intentional break!`
+    );
+    expect(stderr).toMatch('← 500  /api/edge-bad');
+
+    // GET /api/node-good
+    expect(stderr).toMatch('→ GET  /api/node-good');
+    expect(stderr).not.toMatch('← 200  /api/node-good');
+
+    // GET /api/node-meh
+    expect(stderr).toMatch('→ GET  /api/node-meh');
+    expect(stderr).toMatch('← 400  /api/node-meh');
+
+    // GET /api/node-bad
+    expect(stderr).toMatch('→ GET  /api/node-bad');
+    expect(stderr).toMatch(
+      `! ERR  /api/node-bad\n${RED}Error: intentional break!`
+    );
+    expect(stderr).toMatch('← 500  /api/node-bad');
   } finally {
     await dev.kill();
   }
