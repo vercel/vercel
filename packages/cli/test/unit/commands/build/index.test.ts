@@ -1124,6 +1124,32 @@ describe('build', () => {
     }
   });
 
+  it('should merge crons property from build output with vercel.json crons property', async () => {
+    const cwd = fixture('with-cron-merge');
+    const output = join(cwd, '.vercel', 'output');
+
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toBe(0);
+
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toHaveProperty('crons', [
+        {
+          path: '/api/cron-job',
+          schedule: '0 0 * * *',
+        },
+        {
+          path: '/api/cron-job-build-output',
+          schedule: '0 0 * * *',
+        },
+      ]);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   describe('should find packages with different main/module/browser keys', function () {
     let output: string;
 
