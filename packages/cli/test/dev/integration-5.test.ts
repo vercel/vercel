@@ -474,36 +474,36 @@ test('[vercel dev] only logs request/response for functions', async () => {
     const { stderr } = await dev.kill();
 
     // GET /contact (JSX page, referncing image, calling serverless function)
-    expect(stderr).not.toMatch('→ GET  /contact');
-    expect(stderr).not.toMatch('← 200  /contact');
-    expect(stderr).not.toMatch('→ GET  /team.jpg');
-    expect(stderr).toMatch('→ POST /api/create-contact');
+    expect(stderr).not.toMatch('→ GET     /contact');
+    expect(stderr).not.toMatch('← 200     /contact');
+    expect(stderr).not.toMatch('→ GET     /team.jpg');
+    expect(stderr).toMatch('→ POST    /api/create-contact');
 
     // GET /api/edge-good
-    expect(stderr).toMatch('→ GET  /api/edge-good');
-    expect(stderr).not.toMatch('← 200  /api/edge-good');
+    expect(stderr).toMatch('→ GET     /api/edge-good');
+    expect(stderr).not.toMatch('← 200     /api/edge-good');
 
     // GET /api/edge-bad
-    expect(stderr).toMatch('→ GET  /api/edge-bad');
+    expect(stderr).toMatch('→ GET     /api/edge-bad');
     expect(stderr).toMatch(
-      `! ERR  /api/edge-bad\n${RED}Error: intentional break!`
+      `! ERR     /api/edge-bad\n${RED}Error: intentional break!`
     );
-    expect(stderr).toMatch('← 500  /api/edge-bad');
+    expect(stderr).toMatch('← 500     /api/edge-bad');
 
     // GET /api/node-good
-    expect(stderr).toMatch('→ GET  /api/node-good');
-    expect(stderr).not.toMatch('← 200  /api/node-good');
+    expect(stderr).toMatch('→ GET     /api/node-good');
+    expect(stderr).not.toMatch('← 200     /api/node-good');
 
     // GET /api/node-meh
-    expect(stderr).toMatch('→ GET  /api/node-meh');
-    expect(stderr).toMatch('← 400  /api/node-meh');
+    expect(stderr).toMatch('→ GET     /api/node-meh');
+    expect(stderr).toMatch('← 400     /api/node-meh');
 
     // GET /api/node-bad
-    expect(stderr).toMatch('→ GET  /api/node-bad');
+    expect(stderr).toMatch('→ GET     /api/node-bad');
     expect(stderr).toMatch(
-      `! ERR  /api/node-bad\n${RED}Error: intentional break!`
+      `! ERR     /api/node-bad\n${RED}Error: intentional break!`
     );
-    expect(stderr).toMatch('← 500  /api/node-bad');
+    expect(stderr).toMatch('← 500     /api/node-bad');
   } finally {
     await dev.kill();
   }

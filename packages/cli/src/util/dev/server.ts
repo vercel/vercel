@@ -2089,7 +2089,7 @@ export default class DevServer {
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) {
-    const method = (req.method || 'GET').padEnd(4);
+    const method = (req.method || 'GET').padEnd(7);
     this.output.print(`${chalk.bold('→')} ${method} ${chalk.bold(req.url)}\n`);
 
     // wait until the response completes so that the `statusCode` has the real response value
@@ -2099,9 +2099,9 @@ export default class DevServer {
         return;
       }
 
-      const responseLine = `${chalk.bold('←')} ${res.statusCode}  ${chalk.bold(
-        req.url
-      )}`;
+      const responseLine = `${chalk.bold('←')} ${
+        res.statusCode
+      }     ${chalk.bold(req.url)}`;
       this.output.print(`${chalk.gray(responseLine)}\n`);
     });
   }
