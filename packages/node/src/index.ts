@@ -424,8 +424,6 @@ export const build: BuildV3 = async ({
     isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
 
-  const cron = staticConfig?.cron;
-
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -475,7 +473,6 @@ export const build: BuildV3 = async ({
       // TODO: remove - these two properties should not be required
       name: outputPath,
       deploymentTarget: 'v8-worker',
-      cron,
     });
   } else {
     // "nodejs" runtime is the default
@@ -494,7 +491,6 @@ export const build: BuildV3 = async ({
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       experimentalResponseStreaming,
-      cron,
     });
   }
 
