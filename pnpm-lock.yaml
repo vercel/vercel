@@ -204,23 +204,23 @@ importers:
       '@types/which': 1.3.2
       '@types/write-json-file': 2.2.1
       '@types/yauzl-promise': 2.1.0
-      '@vercel/build-utils': 6.2.4
-      '@vercel/client': 12.3.10
+      '@vercel/build-utils': 6.3.0
+      '@vercel/client': 12.4.0
       '@vercel/error-utils': 1.0.8
       '@vercel/frameworks': 1.3.1
-      '@vercel/fs-detectors': 3.7.13
+      '@vercel/fs-detectors': 3.7.14
       '@vercel/fun': 1.0.4
-      '@vercel/go': 2.3.6
-      '@vercel/hydrogen': 0.0.52
+      '@vercel/go': 2.3.7
+      '@vercel/hydrogen': 0.0.53
       '@vercel/ncc': 0.24.0
-      '@vercel/next': 3.4.6
-      '@vercel/node': 2.9.5
-      '@vercel/python': 3.1.48
-      '@vercel/redwood': 1.1.4
-      '@vercel/remix': 1.3.2
+      '@vercel/next': 3.4.7
+      '@vercel/node': 2.9.6
+      '@vercel/python': 3.1.49
+      '@vercel/redwood': 1.1.5
+      '@vercel/remix': 1.3.3
       '@vercel/routing-utils': 2.1.9
-      '@vercel/ruby': 1.3.64
-      '@vercel/static-build': 1.3.8
+      '@vercel/ruby': 1.3.65
+      '@vercel/static-build': 1.3.9
       '@zeit/source-map-support': 0.6.2
       ajv: 6.12.2
       alpha-sort: 2.0.1
@@ -446,7 +446,7 @@ importers:
       '@types/node-fetch': 2.5.4
       '@types/recursive-readdir': 2.2.0
       '@types/tar-fs': 1.16.1
-      '@vercel/build-utils': 6.2.4
+      '@vercel/build-utils': 6.3.0
       '@vercel/routing-utils': 2.1.9
       '@zeit/fetch': 5.2.0
       async-retry: 1.2.3
@@ -551,7 +551,7 @@ importers:
       '@types/minimatch': 3.0.5
       '@types/node': 14.18.33
       '@types/semver': 7.3.10
-      '@vercel/build-utils': 6.2.4
+      '@vercel/build-utils': 6.3.0
       '@vercel/error-utils': 1.0.8
       '@vercel/frameworks': 1.3.1
       '@vercel/routing-utils': 2.1.9
@@ -599,8 +599,8 @@ importers:
       '@types/fs-extra': 11.0.1
       '@types/node': 14.18.33
       '@types/react': 18.0.26
-      '@vercel/build-utils': 6.2.4
-      '@vercel/node': 2.9.5
+      '@vercel/build-utils': 6.3.0
+      '@vercel/node': 2.9.6
       '@vercel/routing-utils': 2.1.9
       ajv: 8.12.0
       esbuild: 0.14.47
@@ -634,7 +634,7 @@ importers:
       '@types/node': 14.18.33
       '@types/node-fetch': ^2.3.0
       '@types/tar': ^4.0.0
-      '@vercel/build-utils': 6.2.4
+      '@vercel/build-utils': 6.3.0
       '@vercel/ncc': 0.24.0
       async-retry: 1.3.1
       execa: ^1.0.0
@@ -666,8 +666,8 @@ importers:
     specifiers:
       '@types/jest': 27.5.1
       '@types/node': 14.18.33
-      '@vercel/build-utils': 6.2.4
-      '@vercel/static-config': 2.0.12
+      '@vercel/build-utils': 6.3.0
+      '@vercel/static-config': 2.0.13
       execa: 3.2.0
       fs-extra: 11.1.0
       ts-morph: 12.0.0
@@ -697,7 +697,7 @@ importers:
       '@types/semver': 6.0.0
       '@types/text-table': 0.2.1
       '@types/webpack-sources': 3.2.0
-      '@vercel/build-utils': 6.2.4
+      '@vercel/build-utils': 6.3.0
       '@vercel/nft': 0.22.5
       '@vercel/routing-utils': 2.1.9
       async-sema: 3.0.1
@@ -776,11 +776,11 @@ importers:
       '@types/node': 14.18.33
       '@types/node-fetch': ^2.6.1
       '@types/test-listen': 1.1.0
-      '@vercel/build-utils': 6.2.4
+      '@vercel/build-utils': 6.3.0
       '@vercel/ncc': 0.24.0
       '@vercel/nft': 0.22.5
       '@vercel/node-bridge': 3.1.11
-      '@vercel/static-config': 2.0.12
+      '@vercel/static-config': 2.0.13
       content-type: 1.0.4
       cookie: 0.4.0
       edge-runtime: 2.0.0
@@ -860,7 +860,7 @@ importers:
       '@types/execa': ^0.9.0
       '@types/jest': 27.4.1
       '@types/node': 14.18.33
-      '@vercel/build-utils': 6.2.4
+      '@vercel/build-utils': 6.3.0
       '@vercel/ncc': 0.24.0
       execa: ^1.0.0
       typescript: 4.3.4
@@ -878,7 +878,7 @@ importers:
       '@types/aws-lambda': 8.10.19
       '@types/node': 14.18.33
       '@types/semver': 6.0.0
-      '@vercel/build-utils': 6.2.4
+      '@vercel/build-utils': 6.3.0
       '@vercel/nft': 0.22.5
       '@vercel/routing-utils': 2.1.9
       execa: 3.2.0
@@ -903,9 +903,9 @@ importers:
       '@remix-run/dev': 1.12.0
       '@types/jest': 27.5.1
       '@types/node': 14.18.33
-      '@vercel/build-utils': 6.2.4
+      '@vercel/build-utils': 6.3.0
       '@vercel/nft': 0.22.5
-      '@vercel/static-config': 2.0.12
+      '@vercel/static-config': 2.0.13
       path-to-regexp: 6.2.1
       ts-morph: 12.0.0
       typescript: 4.9.4
@@ -960,7 +960,7 @@ importers:
     specifiers:
       '@types/fs-extra': 8.0.0
       '@types/semver': 6.0.0
-      '@vercel/build-utils': 6.2.4
+      '@vercel/build-utils': 6.3.0
       '@vercel/ncc': 0.24.0
       execa: 2.0.4
       fs-extra: ^7.0.1
@@ -987,14 +987,14 @@ importers:
       '@types/node-fetch': 2.5.4
       '@types/promise-timeout': 1.3.0
       '@types/semver': 7.3.13
-      '@vercel/build-utils': 6.2.4
+      '@vercel/build-utils': 6.3.0
       '@vercel/frameworks': 1.3.1
-      '@vercel/fs-detectors': 3.7.13
+      '@vercel/fs-detectors': 3.7.14
       '@vercel/gatsby-plugin-vercel-analytics': 1.0.7
-      '@vercel/gatsby-plugin-vercel-builder': 1.1.6
+      '@vercel/gatsby-plugin-vercel-builder': 1.1.7
       '@vercel/ncc': 0.24.0
       '@vercel/routing-utils': 2.1.9
-      '@vercel/static-config': 2.0.12
+      '@vercel/static-config': 2.0.13
       execa: 3.2.0
       fs-extra: 10.0.0
       get-port: 5.0.0
