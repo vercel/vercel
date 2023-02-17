@@ -82,6 +82,19 @@ export default async function getConfig(
     return config;
   }
 
+  // Then check whether `vercel` field exists in package.json
+  const packageJsonPath = path.resolve(localPath, 'package.json');
+  const packageJson = await readJSONFile<any>(packageJsonPath);
+  if (packageJson instanceof CantParseJSONFile) {
+    return packageJson;
+  }
+  if (packageJson.vercel !== null) {
+    output.debug(`Found 'vercel' property in package.json (${packageJsonPath})`);
+    config = packageJson.vercel;
+    config[fileNameSymbol] = 'package.json';
+    return config;
+  } 
+
   // If we couldn't find the config anywhere return error
-  return new CantFindConfig([vercelFilePath, nowFilePath].map(humanizePath));
+  return new CantFindConfig([vercelFilePath, nowFilePath, packageJsonPath].map(humanizePath));
 }
