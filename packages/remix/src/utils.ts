@@ -1,5 +1,6 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { pathToRegexp, Key } from 'path-to-regexp';
 import type {
   ConfigRoute,
   RouteManifest,
@@ -18,10 +19,10 @@ export function findConfig(dir: string, basename: string): string | undefined {
 }
 
 export function isLayoutRoute(
-  route: ConfigRoute,
-  routes: ConfigRoute[]
+  routeId: string,
+  routes: Pick<ConfigRoute, 'id' | 'parentId'>[]
 ): boolean {
-  return routes.some(r => r.parentId === route.id);
+  return routes.some(r => r.parentId === routeId);
 }
 
 export function getPathFromRoute(
@@ -41,4 +42,14 @@ export function getPathFromRoute(
   } while (currentRoute);
   const path = join(...pathParts.reverse());
   return path;
+}
+
+export function getRegExpFromPath(path: string): RegExp | false {
+  const keys: Key[] = [];
+  // Replace "/*" at the end to handle "splat routes"
+  const splatPath = '/:params+';
+  const rePath =
+    path === '*' ? splatPath : `/${path.replace(/\/\*$/, splatPath)}`;
+  const re = pathToRegexp(rePath, keys);
+  return keys.length > 0 ? re : false;
 }

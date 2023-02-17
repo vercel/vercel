@@ -1,7 +1,6 @@
 import { Project } from 'ts-morph';
 import { promises as fs } from 'fs';
 import { basename, dirname, extname, join, relative, sep } from 'path';
-import { pathToRegexp, Key } from 'path-to-regexp';
 import {
   debug,
   download,
@@ -30,7 +29,12 @@ import type {
   BuildResultV2Typical,
 } from '@vercel/build-utils';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
-import { findConfig, getPathFromRoute, isLayoutRoute } from './utils';
+import {
+  findConfig,
+  getPathFromRoute,
+  getRegExpFromPath,
+  isLayoutRoute,
+} from './utils';
 
 const _require: typeof require = eval('require');
 
@@ -231,7 +235,7 @@ module.exports = config;`;
 
   for (const route of remixRoutes) {
     // Layout routes don't get a function / route added
-    if (isLayoutRoute(route, remixRoutes)) continue;
+    if (isLayoutRoute(route.id, remixRoutes)) continue;
 
     const path = getPathFromRoute(route, remixConfig.routes);
     const isEdge = edgePages.has(route);
@@ -249,13 +253,8 @@ module.exports = config;`;
     output[path] = fn;
 
     // If this is a dynamic route then add a Vercel route
-    const keys: Key[] = [];
-    // Replace "/*" at the end to handle "splat routes"
-    const splatPath = '/:params+';
-    const rePath =
-      path === '*' ? splatPath : `/${path.replace(/\/\*$/, splatPath)}`;
-    const re = pathToRegexp(rePath, keys);
-    if (keys.length > 0) {
+    const re = getRegExpFromPath(path);
+    if (re) {
       routes.push({
         src: re.source,
         dest: path,
