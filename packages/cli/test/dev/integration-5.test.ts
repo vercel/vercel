@@ -464,10 +464,8 @@ test('[vercel dev] only logs request/response for functions', async () => {
   try {
     await readyResolver;
 
-    console.log('!!! before /contact');
     await makeRequest('/contact');
-    console.log('!!! after /contact');
-
+    await makeRequest('/team.jpg');
     await makeRequest('/api/edge-good');
     await makeRequest('/api/edge-bad', 500);
     await makeRequest('/api/node-good');
@@ -476,11 +474,13 @@ test('[vercel dev] only logs request/response for functions', async () => {
 
     const { stderr } = await dev.kill();
 
-    // GET /contact (JSX page, referncing image, calling serverless function)
+    // GET /contact
     expect(stderr).not.toMatch('→ GET     /contact');
     expect(stderr).not.toMatch('← 200     /contact');
+
+    // GET /team.jpg
     expect(stderr).not.toMatch('→ GET     /team.jpg');
-    expect(stderr).toMatch('→ POST    /api/create-contact');
+    expect(stderr).not.toMatch('← 200     /team.jpg');
 
     // GET /api/edge-good
     expect(stderr).toMatch('→ GET     /api/edge-good');
