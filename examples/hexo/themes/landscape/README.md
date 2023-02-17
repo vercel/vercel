@@ -2,21 +2,35 @@
 
 A brand new default theme for [Hexo].
 
-- [Preview](http://hexo.io/hexo-theme-landscape/)
+- [Preview](https://hexojs.github.io/hexo-theme-landscape/)
 
 ## Installation
 
 ### Install
 
+Local git install:
+
 ```bash
-$ git clone https://github.com/hexojs/hexo-theme-landscape.git themes/landscape
+$ git clone --depth 1 https://github.com/hexojs/hexo-theme-landscape themes/landscape
 ```
 
-**Landscape requires Hexo 2.4 and above.** If you would like to enable the RSS, the [hexo-generate-feed] plugin is also required.
+npm install:
+
+```
+npm i hexo-theme-landscape
+```
+
+**Landscape requires Hexo 2.4 and above.** If you would like to enable the RSS, the [hexo-generator-feed](https://github.com/hexojs/hexo-generator-feed) plugin is also required.
 
 ### Enable
 
 Modify `theme` setting in `_config.yml` to `landscape`.
+
+```diff
+_config.yml
+- theme: some-theme
++ theme: landscape
+```
 
 ### Update
 
@@ -27,43 +41,52 @@ git pull
 
 ## Configuration
 
+It is recommended not to modify `theme/landscape/_config.yml` but to use the `theme_config` section of `_config.yml` or to create `_config.landscape.yml` (see [Alternate Theme Config](https://hexo.io/docs/configuration#Alternate-Theme-Config)).
+
 ```yml
 # Header
 menu:
   Home: /
   Archives: /archives
 rss: /atom.xml
+banner: images/banner.jpg
+subtitle: This a subtitle
 
 # Content
 excerpt_link: Read More
 fancybox: true
+recent_posts_limits: 5
+# Footer
+copyright: |-
+  <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/88x31.png" /></a></br>
+  All website licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank">CC BY-NC-ND 4.0</a></br>
 
 # Sidebar
 sidebar: right
 widgets:
-- category
-- tag
-- tagcloud
-- archives
-- recent_posts
+  - category
+  - tag
+  - tagcloud
+  - archive
+  - recent_posts
 
 # Miscellaneous
 google_analytics:
 favicon: /favicon.png
 twitter:
-google_plus:
 ```
 
 - **menu** - Navigation menu
 - **rss** - RSS link
+- **banner** - Path of title banner image of page top
 - **excerpt_link** - "Read More" link at the bottom of excerpted articles. `false` to hide the link.
 - **fancybox** - Enable [Fancybox]
+- **recent_posts_limits** - How many posts display in Home page.
 - **sidebar** - Sidebar style. You can choose `left`, `right`, `bottom` or `false`.
 - **widgets** - Widgets displaying in sidebar
 - **google_analytics** - Google Analytics ID
 - **favicon** - Favicon path
-- **twitter** - Twiiter ID
-- **google_plus** - Google+ ID
+- **twitter** - Twitter ID
 
 ## Features
 
@@ -91,22 +114,5 @@ Landscape provides 5 built-in widgets:
 
 All of them are enabled by default. You can edit them in `widget` setting.
 
-## Development
-
-### Requirements
-
-- [Grunt] 0.4+
-- Hexo 2.4+
-
-### Grunt tasks
-
-- **default** - Download [Fancybox] and [Font Awesome].
-- **fontawesome** - Only download [Font Awesome].
-- **fancybox** - Only download [Fancybox].
-- **clean** - Clean temporarily files and downloaded files.
-
 [hexo]: https://hexo.io/
-[fancybox]: http://fancyapps.com/fancybox/
-[font awesome]: http://fontawesome.io/
-[grunt]: http://gruntjs.com/
-[hexo-generate-feed]: https://github.com/hexojs/hexo-generator-feed
+[fancybox]: https://github.com/fancyapps/fancyBox

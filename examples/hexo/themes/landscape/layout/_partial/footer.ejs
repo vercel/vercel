@@ -4,8 +4,11 @@
   <% } %>
   <div class="outer">
     <div id="footer-info" class="inner">
+      <% if (theme.copyright){ %>
+        <%- render(theme.copyright, 'pug'); %>
+      <% } %>
       &copy; <%= date(new Date(), 'YYYY') %> <%= config.author || config.title %><br>
-      <%= __('powered_by') %> <a href="http://hexo.io/" target="_blank">Hexo</a>
+      <%= __('powered_by') %> <a href="https://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>
 </footer>
