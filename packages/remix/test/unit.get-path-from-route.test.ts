@@ -57,7 +57,7 @@ describe('getPathFromRoute()', () => {
   };
 
   it.each([
-    { id: 'root', expected: '.' },
+    { id: 'root', expected: '' },
     { id: 'routes/index', expected: 'index' },
     { id: 'routes/api.hello', expected: 'api/hello' },
     { id: 'routes/projects', expected: 'projects' },

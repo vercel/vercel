@@ -40,7 +40,7 @@ export function getPathFromRoute(
       currentRoute = undefined;
     }
   } while (currentRoute);
-  const path = join(...pathParts.reverse());
+  const path = pathParts.reverse().join('/');
   return path;
 }
 
