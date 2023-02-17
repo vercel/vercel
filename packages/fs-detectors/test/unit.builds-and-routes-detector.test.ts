@@ -473,7 +473,7 @@ describe('Test `detectBuilders`', () => {
   });
 
   it('invalid function memory', async () => {
-    const functions = { 'pages/index.ts': { memory: 200 } };
+    const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -482,6 +482,17 @@ describe('Test `detectBuilders`', () => {
     expect(builders).toBe(null);
     expect(errors!.length).toBe(1);
     expect(errors![0].code).toBe('invalid_function_memory');
+  });
+
+  it('should build with function memory not dividable by 64', async () => {
+    const functions = { 'api/index.ts': { memory: 1000 } };
+    const files = ['api/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders![0].use).toBe('@vercel/node');
+    expect(errors).toBeNull();
   });
 
   it('missing runtime version', async () => {
@@ -1720,7 +1731,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
   });
 
   it('invalid function memory', async () => {
-    const functions = { 'pages/index.ts': { memory: 200 } };
+    const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];
     const { builders, errors } = await detectBuilders(files, null, {
       functions,
@@ -1730,6 +1741,18 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders).toBe(null);
     expect(errors!.length).toBe(1);
     expect(errors![0].code).toBe('invalid_function_memory');
+  });
+
+  it('should build with function memory not dividable by 64', async () => {
+    const functions = { 'api/index.ts': { memory: 1000 } };
+    const files = ['api/index.ts'];
+    const { builders, errors } = await detectBuilders(files, null, {
+      functions,
+      featHandleMiss,
+    });
+
+    expect(builders![0].use).toBe('@vercel/node');
+    expect(errors).toBeNull();
   });
 
   it('missing runtime version', async () => {

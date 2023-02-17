@@ -1,3 +1,3 @@
 export default function (req, res) {
-  res.end('serverless says hello');
+  res.send('Hello from cron job!');
 }

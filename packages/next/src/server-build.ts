@@ -43,6 +43,7 @@ import {
   getMiddlewareBundle,
   getFilesMapFromReasons,
   UnwrapPromise,
+  getOperationType,
 } from './utils';
 import {
   nodeFileTrace,
@@ -748,6 +749,10 @@ export async function serverBuild({
       internalPages,
     });
 
+    for (const group of apiLambdaGroups) {
+      group.isApiLambda = true;
+    }
+
     debug(
       JSON.stringify(
         {
@@ -856,6 +861,8 @@ export async function serverBuild({
         }
       }
 
+      const operationType = getOperationType({ group, prerenderManifest });
+
       const lambda = await createLambdaFromPseudoLayers({
         files: {
           ...launcherFiles,
@@ -869,11 +876,12 @@ export async function serverBuild({
           ),
           '___next_launcher.cjs'
         ),
+        operationType,
         memory: group.memory,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
         isStreaming: group.isStreaming,
-        cron: group.cron,
+        nextVersion,
       });
 
       for (const page of group.pages) {
@@ -974,6 +982,7 @@ export async function serverBuild({
     routesManifest,
     isCorrectMiddlewareOrder,
     prerenderBypassToken: prerenderManifest.bypassToken || '',
+    nextVersion,
   });
 
   const isNextDataServerResolving =
