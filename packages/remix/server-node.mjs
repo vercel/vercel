@@ -4,7 +4,11 @@ import {
   Headers as NodeHeaders,
   Request as NodeRequest,
   writeReadableStreamToWritable,
+  installGlobals,
 } from '@remix-run/node';
+
+installGlobals();
+
 import build from './index.js';
 
 const handleRequest = createRemixRequestHandler(build, process.env.NODE_ENV);
