@@ -169,13 +169,13 @@ export default async function main(client: Client) {
         })
       );
 
+      // only process the first 201 projects
       const to = Math.min(projectDeployments.length, 201);
       for (let i = 0; i < to; i++) {
         for (const pDepl of projectDeployments[i]) {
-          deployments.push({
-            ...pDepl,
-            aliases: [],
-          });
+          const depl = pDepl as DeploymentWithAliases;
+          depl.aliases = [];
+          deployments.push(depl);
         }
       }
 
