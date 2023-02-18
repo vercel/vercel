@@ -1149,7 +1149,7 @@ export async function serverBuild({
     }
   }
 
-  const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
+  const rscHeader = routesManifest.rsc?.header?.toLowerCase() || 'rsc';
   const completeDynamicRoutes: typeof dynamicRoutes = [];
 
   if (appDir) {

@@ -2028,11 +2028,10 @@ export const onPrerenderRoute =
           allowQuery = [];
         }
       }
-      const rscVaryHeader =
-        routesManifest?.rsc?.varyHeader ||
-        '__rsc__, __next_router_state_tree__, __next_router_prefetch__';
-      const rscContentTypeHeader =
-        routesManifest?.rsc?.contentTypeHeader || 'application/octet-stream';
+
+      const rscEnabled = !!routesManifest?.rsc;
+      const rscVaryHeader = routesManifest?.rsc?.varyHeader || 'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
+      const rscContentTypeHeader = routesManifest?.rsc?.contentTypeHeader || 'text/x-component';
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
@@ -2047,7 +2046,7 @@ export const onPrerenderRoute =
             }
           : {}),
 
-        ...(isAppPathRoute
+        ...(rscEnabled
           ? {
               initialHeaders: {
                 vary: rscVaryHeader,
@@ -2069,7 +2068,7 @@ export const onPrerenderRoute =
             }
           : {}),
 
-        ...(isAppPathRoute
+        ...(rscEnabled
           ? {
               initialHeaders: {
                 'content-type': rscContentTypeHeader,
