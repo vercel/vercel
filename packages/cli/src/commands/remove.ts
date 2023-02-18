@@ -181,7 +181,7 @@ export default async function main(client: Client) {
 
     aliases = await Promise.all(
       deployments.map(async depl => {
-        const { aliases } = await getAliases(client, depl.id);
+        const { aliases } = await getAliases(client, depl.uid);
         return aliases;
       })
     );
@@ -239,7 +239,7 @@ export default async function main(client: Client) {
   const start = Date.now();
 
   await Promise.all<any>([
-    ...deployments.map(depl => now.remove(depl.id, { hard })),
+    ...deployments.map(depl => now.remove(depl.uid, { hard })),
     ...projects.map(project => removeProject(client, project.id)),
   ]);
 
@@ -276,9 +276,9 @@ function readConfirmation(
 
       const deploymentTable = table(
         deployments.map(depl => {
-          const time = chalk.gray(`${ms(Date.now() - depl.createdAt)} ago`);
+          const time = chalk.gray(`${ms(Date.now() - depl.created)} ago`);
           const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
-          return [`  ${depl.id}`, url, time];
+          return [`  ${depl.uid}`, url, time];
         }),
         { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
       );
