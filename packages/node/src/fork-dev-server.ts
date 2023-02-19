@@ -1,6 +1,7 @@
 import once from '@tootallnate/once';
 import { cloneEnv, Config, Meta } from '@vercel/build-utils';
 import { ChildProcess, fork, ForkOptions } from 'child_process';
+import { pathToFileURL } from 'url';
 import { join } from 'path';
 
 export function forkDevServer(options: {
@@ -17,8 +18,7 @@ export function forkDevServer(options: {
 }) {
   let nodeOptions = process.env.NODE_OPTIONS;
   const tsNodePath = options.require_.resolve('ts-node');
-  // const esmLoader = url.pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
-  const esmLoader = join(tsNodePath, '..', '..', 'esm.mjs');
+  const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
   const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
   const devServerPath =
     options.devServerPath || join(__dirname, 'dev-server.js');
