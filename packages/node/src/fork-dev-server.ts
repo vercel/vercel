@@ -14,6 +14,10 @@ export function forkDevServer(options: {
   require_: NodeRequire;
   entrypoint: string;
   meta: Meta;
+
+  /**
+   * A path to the dev-server path. This is used in tests.
+   */
   devServerPath?: string;
 }) {
   let nodeOptions = process.env.NODE_OPTIONS;
@@ -70,6 +74,11 @@ function checkForPid(
   }
 }
 
+/**
+ * When launching a dev-server, we want to know its state.
+ * This function will be used to know whether it was exited (due to some error),
+ * or it is listening to new requests, and we can start proxying requests.
+ */
 export async function readMessage(
   child: ChildProcess
 ): Promise<
