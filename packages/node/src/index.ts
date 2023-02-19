@@ -58,7 +58,10 @@ import {
   getRegExpFromMatchers,
   isEdgeRuntime,
 } from './utils';
-import { forkDevServer } from './fork-dev-server';
+import {
+  forkDevServer,
+  readMessage as readDevServerMessage,
+} from './fork-dev-server';
 
 export { shouldServe };
 
@@ -70,14 +73,6 @@ interface DownloadOptions {
   workPath: string;
   config: Config;
   meta: Meta;
-}
-
-interface PortInfo {
-  port: number;
-}
-
-function isPortInfo(v: any): v is PortInfo {
-  return v && typeof v.port === 'number';
 }
 
 const ALLOWED_RUNTIMES = ['nodejs', ...Object.values(EdgeRuntimes)];
@@ -613,13 +608,9 @@ export const startDevServer: StartDevServer = async opts => {
   });
 
   const { pid } = child;
-  const onMessage = once<{ port: number }>(child, 'message');
-  const onExit = once.spread<[number, string | null]>(child, 'close');
-  const result = await Promise.race([onMessage, onExit]);
-  onExit.cancel();
-  onMessage.cancel();
+  const message = await readDevServerMessage(child);
 
-  if (isPortInfo(result)) {
+  if (message.state === 'message') {
     // "message" event
     if (isTypescript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
@@ -629,10 +620,10 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
 
-    return { port: result.port, pid };
+    return { port: message.value.port, pid };
   } else {
     // Got "exit" event from child process
-    const [exitCode, signal] = result;
+    const [exitCode, signal] = message.value;
     const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
     throw new Error(`Function \`${entrypoint}\` failed with ${reason}`);
   }
