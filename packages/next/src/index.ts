@@ -2116,6 +2116,8 @@ export const build: BuildV2 = async ({
         ...Object.entries(prerenderManifest.fallbackRoutes),
         ...Object.entries(prerenderManifest.blockingFallbackRoutes),
       ].forEach(([, { dataRouteRegex, dataRoute }]) => {
+        if (!dataRoute || !dataRouteRegex) return;
+
         dataRoutes.push({
           // Next.js provided data route regex
           src: dataRouteRegex.replace(
