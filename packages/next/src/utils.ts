@@ -1734,7 +1734,6 @@ export const onPrerenderRouteInitial = (
       };
     }
 
-    console.log('adding nonLambda', route);
     nonLambdaSsgPages.add(route === '/' ? '/index' : route);
   }
 
