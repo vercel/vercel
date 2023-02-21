@@ -1,7 +1,7 @@
 {
   "private": true,
   "dependencies": {
-    "gatsby": "3.15.0",
+    "gatsby": "latest-v3",
     "gatsby-plugin-image": "1.15.0",
     "gatsby-plugin-manifest": "3.15.0",
     "gatsby-plugin-sharp": "3.15.0",
