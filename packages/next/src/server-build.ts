@@ -1150,6 +1150,9 @@ export async function serverBuild({
   }
 
   const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
+  const rscVaryHeader =
+    routesManifest?.rsc?.varyHeader ||
+    'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const completeDynamicRoutes: typeof dynamicRoutes = [];
 
   if (appDir) {
@@ -1422,7 +1425,9 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              headers: { vary: rscVaryHeader },
               continue: true,
+              override: true,
             },
             {
               src: `^${path.posix.join(
@@ -1437,7 +1442,9 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
+              headers: { vary: rscVaryHeader },
               continue: true,
+              override: true,
             },
           ]
         : []),
