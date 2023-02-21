@@ -76,6 +76,10 @@ async function isGlobal() {
       return true;
     }
 
+    if (installPath.includes(['', 'fnm', 'node-versions', ''].join(sep))) {
+      return true;
+    }
+
     const prefixPath =
       process.env.PREFIX ||
       process.env.npm_config_prefix ||
