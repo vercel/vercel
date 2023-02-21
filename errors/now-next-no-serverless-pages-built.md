@@ -14,9 +14,9 @@ In order to create the smallest possible lambdas Next.js has to be configured to
 npm install next --save
 ```
 
-2. Check the Node version used for the build step. This is a Vercel project setting. Using an old or incompatible Node version can cause the build step to fail with this error message.
+2. Check [Node.js Version](https://vercel.link/node-version) in your Project Settings. Using an old or incompatible version of Node.js can cause the Build Step to fail with this error message.
 
-4. Add the `now-build` script to your `package.json` [deprecated]
+3. Add the `now-build` script to your `package.json` [deprecated]
 
 ```json
 {
