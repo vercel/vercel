@@ -5,7 +5,7 @@
 /* global IS_MIDDLEWARE ENTRYPOINT_LABEL */
 
 function buildUrl(requestDetails) {
-  let proto = requestDetails.headers['x-forwarded-proto'];
+  let proto = requestDetails.headers['x-forwarded-proto'].split(',').shift(); // handling multi-protocol like https,http://...
   let host = requestDetails.headers['x-forwarded-host'];
   let path = requestDetails.url;
   return `${proto}://${host}${path}`;
