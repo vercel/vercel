@@ -49,7 +49,13 @@ export function getRegExpFromPath(path: string): RegExp | false {
   // Replace "/*" at the end to handle "splat routes"
   const splatPath = '/:params+';
   const rePath =
-    path === '*' ? splatPath : `/${path.replace(/\/\*$/, splatPath)}`;
+    path === '*'
+      ? splatPath
+      : `/${path
+          .replace(/\/\*$/, splatPath)
+          .replace(/\[(.+)\]/g, (_, m: string) => {
+            return m.replace(/([.:?])/g, '\\$1');
+          })}`;
   const re = pathToRegexp(rePath, keys);
   return keys.length > 0 ? re : false;
 }

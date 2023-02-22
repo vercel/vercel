@@ -2,12 +2,16 @@ import { getRegExpFromPath } from '../src/utils';
 
 describe('getRegExpFromPath()', () => {
   describe('paths without parameters', () => {
-    it.each([{ path: 'index' }, { path: 'api/hello' }, { path: 'projects' }])(
-      'should return `false` for "$path"',
-      ({ path }) => {
-        expect(getRegExpFromPath(path)).toEqual(false);
-      }
-    );
+    it.each([
+      { path: 'index' },
+      { path: 'api/hello' },
+      { path: 'projects' },
+      { path: '[:]' },
+      { path: '[::]' },
+      { path: 'blog/[about.pdf]' },
+    ])('should return `false` for "$path"', ({ path }) => {
+      expect(getRegExpFromPath(path)).toEqual(false);
+    });
   });
 
   describe.each([
@@ -103,6 +107,19 @@ describe('getRegExpFromPath()', () => {
         },
         {
           url: '/blog/123/another',
+          expected: false,
+        },
+      ],
+    },
+    {
+      path: '[:]/:page',
+      urls: [
+        {
+          url: '/:/1',
+          expected: true,
+        },
+        {
+          url: '/other',
           expected: false,
         },
       ],
