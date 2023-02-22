@@ -21,7 +21,7 @@
     "server-edge.mjs"
   ],
   "dependencies": {
-    "@remix-run/dev": "https://files-6voo1v2rc-tootallnate.vercel.app/",
+    "@remix-run/dev": "https://files-eu0nxde5h-tootallnate.vercel.app/",
     "@vercel/nft": "0.22.5",
     "@vercel/static-config": "2.0.13",
     "path-to-regexp": "6.2.1",

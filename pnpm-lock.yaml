@@ -900,7 +900,7 @@ importers:
 
   packages/remix:
     specifiers:
-      '@remix-run/dev': https://files-6voo1v2rc-tootallnate.vercel.app/
+      '@remix-run/dev': https://files-eu0nxde5h-tootallnate.vercel.app/
       '@types/jest': 27.5.1
       '@types/node': 14.18.33
       '@vercel/build-utils': 6.3.0
@@ -910,7 +910,7 @@ importers:
       ts-morph: 12.0.0
       typescript: 4.9.4
     dependencies:
-      '@remix-run/dev': '@files-13ei9zkc1-tootallnate.vercel.app/'
+      '@remix-run/dev': '@files-6voo1v2rc-tootallnate.vercel.app/'
       '@vercel/nft': 0.22.5
       '@vercel/static-config': link:../static-config
       path-to-regexp: 6.2.1
@@ -4328,10 +4328,10 @@ packages:
       '@lerna/temp-write': 5.6.2
       '@lerna/validation-error': 5.6.2
       '@nrwl/devkit': 15.5.1_nx@15.5.1+typescript@4.9.4
-      chalk: 4.1.0
+      chalk: 4.1.2
       dedent: 0.7.0
       load-json-file: 6.2.0
-      minimatch: 3.0.4
+      minimatch: 3.1.2
       npmlog: 6.0.2
       p-map: 4.0.0
       p-pipe: 3.1.0
@@ -7309,7 +7309,7 @@ packages:
     resolution: {integrity: sha512-J6ySgEdQUqAmlttvZOoXOEsrDTAnHyR/MtEvuAG5a+gwKY/2Cc7xn4CWcpgfuwkp+0a4vXmt2BDwzacDoGDN1g==}
     engines: {node: '>=14.15.0'}
     dependencies:
-      js-yaml: 3.13.1
+      js-yaml: 3.14.1
       tslib: 2.4.1
     dev: false
 
@@ -16159,7 +16159,6 @@ packages:
     dependencies:
       argparse: 1.0.10
       esprima: 4.0.1
-    dev: true
 
   /js-yaml/4.1.0:
     resolution: {integrity: sha512-wpxZs9NoxZaJESJGIZTyDEaYpl0FKSA+FB9aJiyemKhMwkxQg63h4T1KJgUGHpTqPDNRcmmYLugrRjJlBtWvRA==}
@@ -23756,8 +23755,8 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: false
 
-  '@files-13ei9zkc1-tootallnate.vercel.app/':
-    resolution: {tarball: https://files-13ei9zkc1-tootallnate.vercel.app/}
+  '@files-6voo1v2rc-tootallnate.vercel.app/':
+    resolution: {tarball: https://files-6voo1v2rc-tootallnate.vercel.app/}
     name: '@remix-run/dev'
     version: 1.13.0
     engines: {node: '>=14'}
