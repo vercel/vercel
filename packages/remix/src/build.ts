@@ -20,7 +20,7 @@ import {
 } from '@vercel/build-utils';
 import { getConfig, BaseFunctionConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
-import { readConfig, RemixConfig } from '@remix-run/dev/dist/config';
+import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   BuildV2,
   Files,
@@ -94,6 +94,9 @@ export const build: BuildV2 = async ({
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
 
+  let remixConfig = await readConfig(entrypointFsDirname);
+  const { serverEntryPoint } = remixConfig;
+
   // We need to patch the `remix.config.js` file to force some values necessary
   // for a build that works on either Node.js or the Edge runtime
   const remixConfigPath = findConfig(entrypointFsDirname, 'remix.config');
@@ -121,7 +124,6 @@ export const build: BuildV2 = async ({
         renamedRemixConfigPath
       )}';
 config.serverBuildTarget = undefined;
-config.server = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
 config.serverBuildPath = 'build/index.js';
@@ -131,7 +133,6 @@ export default config;`;
         renamedRemixConfigPath
       )}');
 config.serverBuildTarget = undefined;
-config.server = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
 config.serverBuildPath = 'build/index.js';
@@ -141,7 +142,6 @@ module.exports = config;`;
   }
 
   // Run "Build Command"
-  let remixConfig: RemixConfig;
   try {
     if (buildCommand) {
       debug(`Executing build command "${buildCommand}"`);
@@ -212,13 +212,15 @@ module.exports = config;`;
       entrypointFsDirname,
       repoRootPath,
       serverBuildPath,
+      serverEntryPoint,
       nodeVersion
     ),
     hasEdgeRoute
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
-          serverBuildPath
+          serverBuildPath,
+          serverEntryPoint
         )
       : undefined,
   ]);
@@ -297,17 +299,21 @@ async function createRenderNodeFunction(
   entrypointDir: string,
   rootDir: string,
   serverBuildPath: string,
+  serverEntryPoint: string | undefined,
   nodeVersion: NodeVersion
 ): Promise<NodejsLambda> {
   const files: Files = {};
 
-  const relativeServerBuildPath = relative(rootDir, serverBuildPath);
-  const handler = join(dirname(relativeServerBuildPath), 'server-node.mjs');
-  const handlerPath = join(rootDir, handler);
+  let handler = relative(rootDir, serverBuildPath);
+  let handlerPath = join(rootDir, handler);
+  if (!serverEntryPoint) {
+    handler = join(dirname(handler), 'server-node.mjs');
+    handlerPath = join(rootDir, handler);
 
-  // Copy the `server-node.mjs` file into the "build" directory
-  const sourceHandlerPath = join(__dirname, '../server-node.mjs');
-  await fs.copyFile(sourceHandlerPath, handlerPath);
+    // Copy the `server-node.mjs` file into the "build" directory
+    const sourceHandlerPath = join(__dirname, '../server-node.mjs');
+    await fs.copyFile(sourceHandlerPath, handlerPath);
+  }
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
@@ -339,17 +345,21 @@ async function createRenderNodeFunction(
 async function createRenderEdgeFunction(
   entrypointDir: string,
   rootDir: string,
-  serverBuildPath: string
+  serverBuildPath: string,
+  serverEntryPoint: string | undefined
 ): Promise<EdgeFunction> {
   const files: Files = {};
 
-  const relativeServerBuildPath = relative(rootDir, serverBuildPath);
-  const handler = join(dirname(relativeServerBuildPath), 'server-edge.mjs');
-  const handlerPath = join(rootDir, handler);
+  let handler = relative(rootDir, serverBuildPath);
+  let handlerPath = join(rootDir, handler);
+  if (!serverEntryPoint) {
+    handler = join(dirname(handler), 'server-edge.mjs');
+    handlerPath = join(rootDir, handler);
 
-  // Copy the `server-edge.mjs` file into the "build" directory
-  const sourceHandlerPath = join(__dirname, '../server-edge.mjs');
-  await fs.copyFile(sourceHandlerPath, handlerPath);
+    // Copy the `server-edge.mjs` file into the "build" directory
+    const sourceHandlerPath = join(__dirname, '../server-edge.mjs');
+    await fs.copyFile(sourceHandlerPath, handlerPath);
+  }
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
