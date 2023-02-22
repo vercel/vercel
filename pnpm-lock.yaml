@@ -910,7 +910,7 @@ importers:
       ts-morph: 12.0.0
       typescript: 4.9.4
     dependencies:
-      '@remix-run/dev': '@files-6voo1v2rc-tootallnate.vercel.app/'
+      '@remix-run/dev': '@files-eu0nxde5h-tootallnate.vercel.app/'
       '@vercel/nft': 0.22.5
       '@vercel/static-config': link:../static-config
       path-to-regexp: 6.2.1
@@ -23755,8 +23755,8 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: false
 
-  '@files-6voo1v2rc-tootallnate.vercel.app/':
-    resolution: {tarball: https://files-6voo1v2rc-tootallnate.vercel.app/}
+  '@files-eu0nxde5h-tootallnate.vercel.app/':
+    resolution: {tarball: https://files-eu0nxde5h-tootallnate.vercel.app/}
     name: '@remix-run/dev'
     version: 1.13.0
     engines: {node: '>=14'}
