@@ -261,7 +261,6 @@ importers:
       is-url: 1.2.2
       jaro-winkler: 0.2.8
       jest-matcher-utils: 29.3.1
-      json5: 2.2.1
       jsonlines: 0.1.1
       line-async-iterator: 3.0.0
       load-json-file: 3.0.0
@@ -397,7 +396,6 @@ importers:
       is-url: 1.2.2
       jaro-winkler: 0.2.8
       jest-matcher-utils: 29.3.1
-      json5: 2.2.1
       jsonlines: 0.1.1
       line-async-iterator: 3.0.0
       load-json-file: 3.0.0
@@ -16284,12 +16282,6 @@ packages:
     hasBin: true
     dependencies:
       minimist: 1.2.7
-    dev: true
-
-  /json5/2.2.1:
-    resolution: {integrity: sha512-1hqLFMSrGHRHxav9q9gNjJ5EXznIxGVO09xQRrwplcS8qs28pZ8s8hupZAmqDwZUmVZ2Qb2jnyPOWcDH8m8dlA==}
-    engines: {node: '>=6'}
-    hasBin: true
     dev: true
 
   /json5/2.2.2:
