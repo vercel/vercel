@@ -314,7 +314,6 @@ async function createRenderNodeFunction(
     const sourceHandlerPath = join(__dirname, '../server-node.mjs');
     await fs.copyFile(sourceHandlerPath, handlerPath);
   }
-  console.log({ handler, handlerPath });
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
