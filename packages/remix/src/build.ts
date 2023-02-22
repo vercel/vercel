@@ -20,7 +20,7 @@ import {
 } from '@vercel/build-utils';
 import { getConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
-import { readConfig, RemixConfig } from '@remix-run/dev/dist/config';
+import { readConfig } from '@remix-run/dev/dist/config';
 import type {
   BuildV2,
   Files,
@@ -37,6 +37,10 @@ import {
 } from './utils';
 
 const _require: typeof require = eval('require');
+
+const REMIX_RUN_DEV_PATH = dirname(
+  _require.resolve('@remix-run/dev/package.json')
+);
 
 export const build: BuildV2 = async ({
   entrypoint,
@@ -90,8 +94,59 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
+  // Make our version of `remix` CLI available to the project's build
+  // command by creating a symlink to the copy in our node modules,
+  // so that `serverBundles` works: https://github.com/remix-run/remix/pull/5479
+  const nodeModulesDir = join(entrypointFsDirname, 'node_modules');
+  const remixRunDevPath = join(nodeModulesDir, '@remix-run/dev');
+  let backupRemixRunDevPath:
+    | string
+    | false = `${remixRunDevPath}.__vercel_backup`;
+
+  try {
+    await fs.rename(remixRunDevPath, backupRemixRunDevPath);
+    console.log('renamed %s to %s', remixRunDevPath, backupRemixRunDevPath);
+  } catch (err: any) {
+    console.log(err);
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+    backupRemixRunDevPath = false;
+  }
+
+  await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
+  console.log('symlinked %s to %s', REMIX_RUN_DEV_PATH, remixRunDevPath);
+
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
+
+  let remixConfig = await readConfig(entrypointFsDirname);
+  const remixRoutes = Object.values(remixConfig.routes);
+
+  // Figure out which pages should be edge functions
+  const edgePages = new Set<ConfigRoute>();
+  const project = new Project();
+  const edgeRoutes: string[] = [];
+  const nodeRoutes: string[] = [];
+  for (const route of remixRoutes) {
+    const routePath = join(remixConfig.appDirectory, route.file);
+    const staticConfig = getConfig(project, routePath);
+    if (isLayoutRoute(route.id, remixRoutes)) continue;
+
+    const isEdge =
+      staticConfig?.runtime === 'edge' ||
+      staticConfig?.runtime === 'experimental-edge';
+    if (isEdge) {
+      edgePages.add(route);
+      edgeRoutes.push(route.id);
+    } else {
+      nodeRoutes.push(route.id);
+    }
+  }
+  const serverBundles = [
+    { serverBuildPath: 'build/build-edge.js', routes: edgeRoutes },
+    { serverBuildPath: 'build/build-node.js', routes: nodeRoutes },
+  ];
 
   // We need to patch the `remix.config.js` file to force some values necessary
   // for a build that works on either Node.js or the Edge runtime
@@ -124,6 +179,7 @@ config.server = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
 config.serverBuildPath = 'build/index.js';
+config.serverBundles = ${JSON.stringify(serverBundles)}
 export default config;`;
     } else {
       patchedConfig = `const config = require('./${basename(
@@ -134,13 +190,13 @@ config.server = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
 config.serverBuildPath = 'build/index.js';
+config.serverBundles = ${JSON.stringify(serverBundles)}
 module.exports = config;`;
     }
     await fs.writeFile(remixConfigPath, patchedConfig);
   }
 
   // Run "Build Command"
-  let remixConfig: RemixConfig;
   try {
     if (buildCommand) {
       debug(`Executing build command "${buildCommand}"`);
@@ -175,22 +231,12 @@ module.exports = config;`;
     if (remixConfigPath && renamedRemixConfigPath) {
       await fs.rename(renamedRemixConfigPath, remixConfigPath);
     }
-  }
 
-  const { serverBuildPath } = remixConfig;
-  const remixRoutes = Object.values(remixConfig.routes);
-
-  // Figure out which pages should be edge functions
-  const edgePages = new Set<ConfigRoute>();
-  const project = new Project();
-  for (const route of remixRoutes) {
-    const routePath = join(remixConfig.appDirectory, route.file);
-    const staticConfig = getConfig(project, routePath);
-    const isEdge =
-      staticConfig?.runtime === 'edge' ||
-      staticConfig?.runtime === 'experimental-edge';
-    if (isEdge) {
-      edgePages.add(route);
+    // Remove `@remix-run/dev` symlink
+    await fs.unlink(remixRunDevPath);
+    if (backupRemixRunDevPath) {
+      // Restore previous version if it was existed
+      await fs.rename(backupRemixRunDevPath, remixRunDevPath);
     }
   }
 
@@ -209,14 +255,14 @@ module.exports = config;`;
     createRenderNodeFunction(
       entrypointFsDirname,
       repoRootPath,
-      serverBuildPath,
+      join(entrypointFsDirname, 'build/build-node.js'),
       nodeVersion
     ),
     edgePages.size > 0
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
-          serverBuildPath
+          join(entrypointFsDirname, 'build/build-edge.js')
         )
       : undefined,
   ]);
