@@ -18,7 +18,7 @@ import {
   scanParentDirs,
   walkParentDirs,
 } from '@vercel/build-utils';
-import { getConfig } from '@vercel/static-config';
+import { getConfig, BaseFunctionConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
 import { readConfig } from '@remix-run/dev/dist/config';
 import type {
@@ -33,6 +33,7 @@ import {
   findConfig,
   getPathFromRoute,
   getRegExpFromPath,
+  getRouteIterator,
   isLayoutRoute,
 } from './utils';
 
@@ -181,16 +182,17 @@ module.exports = config;`;
   const remixRoutes = Object.values(remixConfig.routes);
 
   // Figure out which pages should be edge functions
-  const edgePages = new Set<ConfigRoute>();
+  let hasEdgeRoute = false;
+  const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig>();
   const project = new Project();
   for (const route of remixRoutes) {
     const routePath = join(remixConfig.appDirectory, route.file);
     const staticConfig = getConfig(project, routePath);
-    const isEdge =
-      staticConfig?.runtime === 'edge' ||
-      staticConfig?.runtime === 'experimental-edge';
-    if (isEdge) {
-      edgePages.add(route);
+    if (staticConfig) {
+      staticConfigsMap.set(route, staticConfig);
+    }
+    if (staticConfig?.runtime && isEdgeRuntime(staticConfig.runtime)) {
+      hasEdgeRoute = true;
     }
   }
 
@@ -213,7 +215,7 @@ module.exports = config;`;
       serverEntryPoint,
       nodeVersion
     ),
-    edgePages.size > 0
+    hasEdgeRoute
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
@@ -240,7 +242,16 @@ module.exports = config;`;
     if (isLayoutRoute(route.id, remixRoutes)) continue;
 
     const path = getPathFromRoute(route, remixConfig.routes);
-    const isEdge = edgePages.has(route);
+
+    let isEdge = false;
+    for (const currentRoute of getRouteIterator(route, remixConfig.routes)) {
+      const staticConfig = staticConfigsMap.get(currentRoute);
+      if (staticConfig?.runtime) {
+        isEdge = isEdgeRuntime(staticConfig.runtime);
+        break;
+      }
+    }
+
     const fn =
       isEdge && edgeFunction
         ? // `EdgeFunction` currently requires the "name" property to be set.
@@ -471,4 +482,8 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
   throw new Error(
     `Failed to resolve "${pkgName}". To fix this error, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
   );
+}
+
+function isEdgeRuntime(runtime: string): boolean {
+  return runtime === 'edge' || runtime === 'experimental-edge';
 }
