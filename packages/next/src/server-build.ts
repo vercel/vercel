@@ -182,7 +182,10 @@ export async function serverBuild({
   }
 
   const pageMatchesApi = (page: string) => {
-    return page.startsWith('api/') || page === 'api.js';
+    return (
+      !appPathRoutesManifest?.[page] &&
+      (page.startsWith('api/') || page === 'api.js')
+    );
   };
 
   const { i18n } = routesManifest;
@@ -1136,8 +1139,19 @@ export async function serverBuild({
     // to match prerenders so we can route the same when the
     // __rsc__ header is present
     const edgeFunctions = middleware.edgeFunctions;
+    // allow looking up original route from normalized route
+    const inverseAppPathManifest: Record<string, string> = {};
+
+    for (const ogRoute of Object.keys(appPathRoutesManifest)) {
+      inverseAppPathManifest[appPathRoutesManifest[ogRoute]] = ogRoute;
+    }
 
     for (let route of Object.values(appPathRoutesManifest)) {
+      const ogRoute = inverseAppPathManifest[route];
+
+      if (ogRoute.endsWith('/route')) {
+        continue;
+      }
       route = path.posix.join('./', route === '/' ? '/index' : route);
 
       if (lambdas[route]) {
@@ -1150,6 +1164,10 @@ export async function serverBuild({
   }
 
   const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
+  const rscVaryHeader =
+    routesManifest?.rsc?.varyHeader ||
+    'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
+
   const completeDynamicRoutes: typeof dynamicRoutes = [];
 
   if (appDir) {
@@ -1422,7 +1440,9 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              headers: { vary: rscVaryHeader },
               continue: true,
+              override: true,
             },
             {
               src: `^${path.posix.join(
@@ -1437,7 +1457,9 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
+              headers: { vary: rscVaryHeader },
               continue: true,
+              override: true,
             },
           ]
         : []),
