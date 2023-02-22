@@ -213,7 +213,7 @@ importers:
       '@vercel/go': 2.3.7
       '@vercel/hydrogen': 0.0.53
       '@vercel/ncc': 0.24.0
-      '@vercel/next': 3.5.1
+      '@vercel/next': 3.5.2
       '@vercel/node': 2.9.6
       '@vercel/python': 3.1.49
       '@vercel/redwood': 1.1.5
