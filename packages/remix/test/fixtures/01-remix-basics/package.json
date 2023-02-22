@@ -5,7 +5,7 @@
   "license": "",
   "sideEffects": false,
   "scripts": {
-    "build": "remix build",
+    "build": "mkdir node_modules/ui && touch node_modules/ui/index.js && remix build",
     "dev": "remix dev",
     "start": "remix-serve build"
   },
