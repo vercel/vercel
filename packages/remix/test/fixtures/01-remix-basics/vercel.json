@@ -19,6 +19,10 @@
     { "path": "/asdf", "mustContain": "Not Found" },
     { "path": "/instanceof", "mustContain": "InstanceOfRequest: true" },
     { "path": "/projects/edge", "mustContain": "\"isEdge\":true" },
-    { "path": "/projects/node", "mustContain": "\"isEdge\":false" }
+    { "path": "/projects/node", "mustContain": "\"isEdge\":false" },
+    {
+      "path": "/text.txt",
+      "mustContain": "this is a text file served at: /text.txt"
+    }
   ]
 }
