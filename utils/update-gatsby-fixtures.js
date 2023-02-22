@@ -60,13 +60,7 @@ module.exports = async ({ github, context }) => {
 
     // update lockfiles
     if (fixture.includes('pnpm')) {
-      const emptyWorkspaceFilePath = path.join(
-        fixturePath,
-        'pnpm-workspace.yaml'
-      );
-      fs.writeFileSync(emptyWorkspaceFilePath, '', 'utf-8'); // required so that its ignored from repo workspace
       exec('pnpm', ['install', '--lockfile-only']);
-      fs.rmSync(emptyWorkspaceFilePath);
     } else {
       exec('npm', ['install', '--package-lock-only']);
     }
