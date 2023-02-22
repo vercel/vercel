@@ -111,11 +111,7 @@ export const build: BuildV2 = async ({
     try {
       _require(renamedRemixConfigPath);
     } catch (err: any) {
-      if (err.code === 'ERR_REQUIRE_ESM') {
-        isESM = true;
-      } else {
-        throw err;
-      }
+      isESM = err.code === 'ERR_REQUIRE_ESM';
     }
 
     let patchedConfig: string;
