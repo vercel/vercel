@@ -356,7 +356,7 @@ async function createRenderEdgeFunction(
     handler = join(dirname(handler), 'server-edge.mjs');
     handlerPath = join(rootDir, handler);
 
-    // Copy the `server-node.mjs` file into the "build" directory
+    // Copy the `server-edge.mjs` file into the "build" directory
     const sourceHandlerPath = join(__dirname, '../server-edge.mjs');
     await fs.copyFile(sourceHandlerPath, handlerPath);
   }
