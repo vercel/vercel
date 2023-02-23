@@ -75,8 +75,11 @@ async function compileUserCode(
       const ENTRYPOINT_LABEL = '${entrypointRelativePath}';
 
       // edge handler
-      ${edgeHandlerTemplate}
+      ${edgeHandlerTemplate};
+      registerFetchListener();
     `;
+
+    // registerFetchListener(${isMiddleware}, '${entrypointRelativePath}');
 
     return { userCode, wasmAssets };
   } catch (error) {
