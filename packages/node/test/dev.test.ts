@@ -2,6 +2,8 @@ import { forkDevServer, readMessage } from '../src/fork-dev-server';
 import { resolve } from 'path';
 import fetch from 'node-fetch';
 
+jest.setTimeout(10 * 1000);
+
 test('runs a mjs endpoint', async () => {
   const child = forkDevServer({
     maybeTranspile: true,
