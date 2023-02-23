@@ -96,6 +96,7 @@ export const build: BuildV2 = async ({
   spawnOpts.env.NODE_ENV = 'production';
 
   let remixConfig = await chdirAndReadConfig(entrypointFsDirname);
+  console.log(remixConfig);
   const { serverEntryPoint } = remixConfig;
 
   // We need to patch the `remix.config.js` file to force some values necessary
@@ -168,6 +169,7 @@ module.exports = config;`;
       }
     }
     remixConfig = await chdirAndReadConfig(entrypointFsDirname);
+    console.log(remixConfig);
   } finally {
     // Clean up our patched `remix.config.js` to be polite
     if (remixConfigPath && renamedRemixConfigPath) {
@@ -175,7 +177,9 @@ module.exports = config;`;
     }
   }
 
-  const { serverBuildPath } = remixConfig;
+  //const { serverBuildPath } = remixConfig;
+  //console.log({ serverBuildPath, serverEntryPoint });
+
   const remixRoutes = Object.values(remixConfig.routes);
 
   // Figure out which pages should be edge functions
@@ -208,7 +212,8 @@ module.exports = config;`;
     createRenderNodeFunction(
       entrypointFsDirname,
       repoRootPath,
-      serverBuildPath,
+      //join(entrypointFsDirname, 'build/index.js'),
+      remixConfig.serverBuildPath,
       serverEntryPoint,
       nodeVersion
     ),
@@ -216,7 +221,8 @@ module.exports = config;`;
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
-          serverBuildPath,
+          //join(entrypointFsDirname, 'build/index.js'),
+          remixConfig.serverBuildPath,
           serverEntryPoint
         )
       : undefined,
