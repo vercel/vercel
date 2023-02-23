@@ -1,9 +1,0 @@
-{
-  "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
-  "dependencies": {
-    "rush": "5.82.1"
-  }
-}
