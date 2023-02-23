@@ -28,6 +28,7 @@ import type {
   PackageJson,
   BuildResultV2Typical,
 } from '@vercel/build-utils';
+import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 import {
   findConfig,
@@ -94,7 +95,7 @@ export const build: BuildV2 = async ({
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
 
-  let remixConfig = await readConfig(entrypointFsDirname);
+  let remixConfig = await chdirAndReadConfig(entrypointFsDirname);
   const { serverEntryPoint } = remixConfig;
 
   // We need to patch the `remix.config.js` file to force some values necessary
@@ -166,7 +167,7 @@ module.exports = config;`;
         });
       }
     }
-    remixConfig = await readConfig(entrypointFsDirname);
+    remixConfig = await chdirAndReadConfig(entrypointFsDirname);
   } finally {
     // Clean up our patched `remix.config.js` to be polite
     if (remixConfigPath && renamedRemixConfigPath) {
@@ -481,4 +482,16 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
 
 function isEdgeRuntime(runtime: string): boolean {
   return runtime === 'edge' || runtime === 'experimental-edge';
+}
+
+async function chdirAndReadConfig(dir: string) {
+  const originalCwd = process.cwd();
+  let remixConfig: RemixConfig;
+  try {
+    process.chdir(dir);
+    remixConfig = await readConfig(dir);
+  } finally {
+    process.chdir(originalCwd);
+  }
+  return remixConfig;
 }
