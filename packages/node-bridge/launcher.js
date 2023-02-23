@@ -3,7 +3,6 @@ const { createServer, Server } = require('http');
 const { isAbsolute } = require('path');
 const { Bridge } = require('./bridge.js');
 
-// TODO: is a 900-second timeout even useful for most cases?
 // Set to max timeout for ENT plans because we don't
 // know what plan the current user is on
 const SERVERLESS_FUNCTION_TIMEOUT = 900 * 1000; // 900 seconds
@@ -147,7 +146,6 @@ function getVercelLauncher({
  * @returns {(req: import('./types').VercelRequest, res: import('./types').VercelResponse) => void}
  */
 function wrapListener(listenerHandler) {
-  // TODO: how can we best test the timeout and warning behavior?
   return async function (req, res) {
     enforceTimeout(res);
     return await validateResponse(listenerHandler, req, res);
@@ -162,10 +160,8 @@ function wrapListener(listenerHandler) {
 async function validateResponse(listenerHandler, req, res) {
   const resp = await listenerHandler(req, res);
   if (typeof resp !== 'undefined') {
-    // TODO: add vercel.link ?
-    // TODO: only show this once per invocation of this function?
     console.log(
-      `WARN: ${req.url} returned a value, which is not expected for serverless functions. See: https://vercel.com/docs/concepts/functions/serverless-functions`
+      `WARN: ${req.url} returned a value, which is not expected for serverless functions. See: https://vercel.link/serverless-function-quickstart`
     );
   }
   return resp;
