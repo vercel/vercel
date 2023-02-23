@@ -21,6 +21,9 @@ const imagesSchema = {
   additionalProperties: false,
   required: ['sizes'],
   properties: {
+    contentDispositionType: {
+      enum: ['inline', 'attachment'],
+    },
     contentSecurityPolicy: {
       type: 'string',
       minLength: 1,
