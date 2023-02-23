@@ -296,7 +296,7 @@ export function createServerWithHelpers(
       res.json = jsonBody => json(req, res, jsonBody);
 
       try {
-        await handler(req, res);
+        return await handler(req, res);
       } catch (err) {
         console.log(`Error from API Route ${req.url}: ${err.stack}`);
         process.exit(1);
