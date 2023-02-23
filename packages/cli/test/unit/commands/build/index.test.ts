@@ -1058,6 +1058,7 @@ describe('build', () => {
           domains: [],
           minimumCacheTTL: 60,
           formats: ['image/avif', 'image/webp'],
+          contentDispositionType: 'attachment',
         },
       });
     } finally {
