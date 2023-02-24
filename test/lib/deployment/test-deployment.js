@@ -224,7 +224,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     // eslint-disable-next-line no-loop-func
     const rawHeaders = resp.headers.raw();
     Object.keys(probe.responseHeaders).forEach(header => {
-      const actualArr = rawHeaders[header];
+      const actualArr = rawHeaders[header.toLowerCase()];
       let expectedArr = probe.responseHeaders[header];
 
       // Header should not exist
