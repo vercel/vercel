@@ -66,9 +66,9 @@ export async function handleRequest(
 
 #### Parameters
 
-| Name      | Type                                                                                                          | Description                                                     |
-| :-------- | :------------------------------------------------------------------------------------------------------------ | :-------------------------------------------------------------- |
-| `promise` | [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`any`\> | A promise that will be kept alive until it resolves or rejects. |
+| Name      | Type                                                                                                              | Description                                                     |
+| :-------- | :---------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------- |
+| `promise` | [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`unknown`\> | A promise that will be kept alive until it resolves or rejects. |
 
 #### Returns
 
