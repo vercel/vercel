@@ -1,4 +1,4 @@
-import { basename, join } from 'path';
+import { join } from 'path';
 import { existsSync } from 'fs';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import type {
@@ -25,10 +25,6 @@ export function isLayoutRoute(
   return routes.some(r => r.parentId === routeId);
 }
 
-export function isPathlessLayoutRoute(routeId: string) {
-  return basename(routeId).startsWith('__');
-}
-
 export function* getRouteIterator(route: ConfigRoute, routes: RouteManifest) {
   let currentRoute: ConfigRoute = route;
   do {
@@ -45,9 +41,12 @@ export function getPathFromRoute(
   route: ConfigRoute,
   routes: RouteManifest
 ): string {
+  if (route.id === 'root' || (route.parentId === 'root' && route.index)) {
+    return 'index';
+  }
+
   const pathParts: string[] = [];
   for (const currentRoute of getRouteIterator(route, routes)) {
-    if (currentRoute.index) pathParts.push('index');
     if (currentRoute.path) pathParts.push(currentRoute.path);
   }
   const path = pathParts.reverse().join('/');
