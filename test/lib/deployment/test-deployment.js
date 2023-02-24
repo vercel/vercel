@@ -222,24 +222,46 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
 
   if (probe.responseHeaders) {
     // eslint-disable-next-line no-loop-func
+    const rawHeaders = resp.headers.raw();
     Object.keys(probe.responseHeaders).forEach(header => {
-      const actual = resp.headers.get(header);
-      const expected = probe.responseHeaders[header];
-      const isEqual = Array.isArray(expected)
-        ? expected.every(h => actual.includes(h))
-        : typeof expected === 'string' &&
-          expected.startsWith('/') &&
-          expected.endsWith('/')
-        ? new RegExp(expected.slice(1, -1)).test(actual)
-        : expected === actual;
-      if (!isEqual) {
-        const headers = Array.from(resp.headers.entries())
-          .map(([k, v]) => `  ${k}=${v}`)
-          .join('\n');
+      const actualArr = rawHeaders[header.toLowerCase()];
+      let expectedArr = probe.responseHeaders[header];
 
-        throw new Error(
-          `Page ${probeUrl} does not have expected response header ${header}.\n\nExpected: ${expected}.\n\nActual: ${headers}`
-        );
+      // Header should not exist
+      if (expectedArr === null) {
+        if (actualArr) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([k, v]) => `  ${k}=${v}`)
+            .join('\n');
+          throw new Error(
+            `Page ${probeUrl} contains response header "${header}", but probe says it should not.\n\nActual: ${headers}`
+          );
+        }
+        return;
+      }
+
+      if (!Array.isArray(expectedArr)) {
+        expectedArr = [expectedArr];
+      }
+      console.log({ header, actualArr, expectedArr });
+      for (const expected of expectedArr) {
+        let isEqual = false;
+        for (const actual of actualArr) {
+          isEqual =
+            expected.startsWith('/') && expected.endsWith('/')
+              ? new RegExp(expected.slice(1, -1)).test(actual)
+              : expected === actual;
+          if (isEqual) break;
+        }
+        if (!isEqual) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([k, v]) => `  ${k}=${v}`)
+            .join('\n');
+
+          throw new Error(
+            `Page ${probeUrl} does not have expected response header ${header}.\n\nExpected: ${expected}.\n\nActual: ${headers}`
+          );
+        }
       }
     });
     hadTest = true;
