@@ -25,6 +25,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
         # See https://github.com/actions/github-script#run-a-separate-file-with-an-async-function
         with:
+          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           script: |
             const script = require('./utils/update-turbo.js')
             await script({ github, context })
