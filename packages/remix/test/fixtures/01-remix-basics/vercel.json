@@ -23,12 +23,12 @@
     {
       "path": "/__pathless",
       "status": 404,
-      "logMustContain": "WARN: Ignoring route \"routes/__pathless\" because it is a pathless layout route without any leafs."
+      "logMustContain": "WARN: Ignoring route \"routes/__pathless\" because it is a pathless layout route without any child routes."
     },
     {
       "path": "/nested/__pathless",
       "status": 404,
-      "logMustContain": "WARN: Ignoring route \"routes/nested/__pathless\" because it is a pathless layout route without any leafs."
+      "logMustContain": "WARN: Ignoring route \"routes/nested/__pathless\" because it is a pathless layout route without any child routes."
     }
   ]
 }
