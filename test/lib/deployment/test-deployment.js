@@ -229,6 +229,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       if (!Array.isArray(expectedArr)) {
         expectedArr = [expectedArr];
       }
+      console.log({ header, actualArr, expectedArr });
       for (const expected of expectedArr) {
         let isEqual = false;
         for (const actual of actualArr) {
