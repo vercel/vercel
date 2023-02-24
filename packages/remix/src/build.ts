@@ -359,7 +359,6 @@ async function createRenderEdgeFunction(
   let remixRunVercelPkgJson: string | undefined;
 
   // Trace the handler with `@vercel/nft`
-  console.log({ handlerPath });
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
     processCwd: entrypointDir,
@@ -383,7 +382,6 @@ async function createRenderEdgeFunction(
         // is used. This is a temporary stop gap until this PR is merged:
         // https://github.com/remix-run/remix/pull/5537
         if (pkgJson.name === '@remix-run/vercel') {
-          console.log('detected @remix-run/vercel');
           pkgJson.browser = 'dist/edge.js';
           pkgJson.dependencies['@remix-run/server-runtime'] =
             pkgJson.dependencies['@remix-run/node'];
@@ -423,19 +421,15 @@ async function createRenderEdgeFunction(
   });
 
   for (const warning of trace.warnings) {
-    console.log(`Warning from trace: ${warning.message}`);
+    debug(`Warning from trace: ${warning.message}`);
   }
 
   for (const file of trace.fileList) {
-    console.log(file);
     if (
       remixRunVercelPkgJson &&
       file.endsWith(`@remix-run${sep}vercel${sep}package.json`)
     ) {
       // Use the modified `@remix-run/vercel` package.json which contains "browser" field
-      console.log(
-        'Use the modified `@remix-run/vercel` package.json which contains "browser" field'
-      );
       files[file] = new FileBlob({ data: remixRunVercelPkgJson });
     } else {
       files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });

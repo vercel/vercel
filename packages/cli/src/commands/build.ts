@@ -654,42 +654,6 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
-
-  console.log(
-    await fs.readdir(join(outputDir, 'functions/edge.func/node_modules'))
-  );
-  console.log(
-    await fs.readdir(
-      join(outputDir, 'functions/edge.func/node_modules/@remix-run')
-    )
-  );
-  console.log(
-    await fs.readFile(
-      join(outputDir, 'functions/edge.func/build/index.js'),
-      'utf8'
-    )
-  );
-  console.log(
-    await fs.readdir(
-      join(outputDir, 'functions/edge.func/node_modules/@remix-run/vercel')
-    )
-  );
-  console.log(
-    await fs.readJSON(
-      join(
-        outputDir,
-        'functions/edge.func/node_modules/@remix-run/vercel/package.json'
-      )
-    )
-  );
-  console.log(
-    await fs.pathExists(
-      join(
-        outputDir,
-        'functions/edge.func/node_modules/@remix-run/vercel/dist/edge.js'
-      )
-    )
-  );
 }
 
 async function getFramework(
