@@ -1,7 +1,7 @@
 import execa from 'execa';
 import retry from 'async-retry';
 import { homedir, tmpdir } from 'os';
-import { execFileSync, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
 import { join, dirname, basename, normalize, sep } from 'path';
@@ -43,9 +43,9 @@ const handlerFileName = `handler${OUT_EXTENSION}`;
 export { shouldServe };
 
 interface Analyzed {
-  found?: boolean;
-  packageName: string;
   functionName: string;
+  packageName: string;
+  watch?: boolean;
 }
 
 interface PortInfo {
@@ -290,17 +290,15 @@ export async function build({
     const mainGoFileName = 'main__vc__go__.go';
 
     if (packageName !== 'main') {
-      const go = await createGo(
-        workPath,
+      const go = await createGo({
         goPath,
-        process.platform,
-        process.arch,
-        {
+        modulePath: goModPath,
+        opts: {
           cwd: entrypointDirname,
           stdio: 'inherit',
         },
-        true
-      );
+        workPath,
+      });
       if (!isGoModExist) {
         try {
           const defaultGoModContent = `module ${packageName}`;
@@ -440,16 +438,14 @@ export async function build({
       // legacy mode
       // we need `main.go` in the same dir as the entrypoint,
       // otherwise `go build` will refuse to build
-      const go = await createGo(
-        workPath,
+      const go = await createGo({
         goPath,
-        process.platform,
-        process.arch,
-        {
+        modulePath: goModPath,
+        opts: {
           cwd: entrypointDirname,
         },
-        false
-      );
+        workPath,
+      });
       const originalMainGoContents = await readFile(
         join(__dirname, 'main.go'),
         'utf8'
@@ -513,7 +509,9 @@ export async function build({
         undoFunctionRenames
       );
     } catch (error) {
-      console.log(`Build cleanup failed: ${error.message}`);
+      if (error instanceof Error) {
+        console.log(`Build cleanup failed: ${error.message}`);
+      }
       debug('Cleanup Error: ' + error);
     }
   }
@@ -640,6 +638,19 @@ async function copyDevServer(
   await writeFile(join(dest, 'vercel-dev-server-main.go'), patched);
 }
 
+async function writeDefaultGoMod(
+  entrypointDirname: string,
+  packageName: string
+) {
+  const defaultGoModContent = `module ${packageName}`;
+
+  await writeFile(
+    join(entrypointDirname, 'go.mod'),
+    defaultGoModContent,
+    'utf-8'
+  );
+}
+
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
@@ -678,6 +689,7 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
   await Promise.all([
     copyEntrypoint(entrypointWithExt, tmpPackage),
     copyDevServer(analyzed.functionName, tmpPackage),
+    goModAbsPathDir ? null : writeDefaultGoMod(tmp, analyzed.packageName),
   ]);
 
   const portFile = join(
@@ -693,12 +705,21 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     process.platform === 'win32' ? '.exe' : ''
   }`;
 
-  debug(`SPAWNING go build -o ${executable} ./... CWD=${tmp}`);
-  execFileSync('go', ['build', '-o', executable, './...'], {
-    cwd: tmp,
-    env,
-    stdio: 'inherit',
+  const go = await createGo({
+    modulePath: '',
+    opts: {
+      cwd: tmp,
+      env,
+    },
+    workPath: '',
   });
+  await go.build('./...', executable);
+  // debug(`SPAWNING go build -o ${executable} ./... CWD=${tmp}`);
+  // execFileSync('go', ['build', '-o', executable, './...'], {
+  //   cwd: tmp,
+  //   env,
+  //   stdio: 'inherit',
+  // });
 
   debug(`SPAWNING ${executable} CWD=${tmp}`);
   const child = spawn(executable, [], {
@@ -770,11 +791,11 @@ async function waitForPortFile_(opts: {
     try {
       const port = Number(await readFile(opts.portFile, 'ascii'));
       retry(() => remove(opts.portFile)).catch((err: Error) => {
-        console.error('Could not delete port file: %j: %s', opts.portFile, err);
+        console.error(`Could not delete port file: ${opts.portFile}: ${err}`);
       });
       return { port };
-    } catch (err) {
-      if (err.code !== 'ENOENT') {
+    } catch (err: any) {
+      if (err?.code !== 'ENOENT') {
         throw err;
       }
     }
