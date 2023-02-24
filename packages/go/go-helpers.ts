@@ -92,7 +92,11 @@ class GoWrapper {
 
   private execute(...args: string[]) {
     const { opts, env } = this;
-    debug(`Exec: go ${args.join(' ')} CWD=${opts.cwd}`);
+    debug(
+      `Exec: go ${args
+        .map(a => (a.includes(' ') ? `"${a}"` : a))
+        .join(' ')} CWD=${opts.cwd}`
+    );
     return execa('go', args, { stdio: 'inherit', ...opts, env });
   }
 
@@ -127,9 +131,9 @@ const goVersionRegExp = /(\d+)\.(\d+)(?:\.(\d+))?/;
 
 function parseGoVersionString(goVersionOutput: string) {
   const parts = goVersionOutput.match(goVersionRegExp);
-  const major = parseInt(parts?.[1] || '0');
-  const minor = parseInt(parts?.[2] || '0');
-  const patch = parseInt(parts?.[3] || '0');
+  const major = parseInt((parts && parts[1]) || '0');
+  const minor = parseInt((parts && parts[2]) || '0');
+  const patch = parseInt((parts && parts[3]) || '0');
   return {
     version: `${major}.${minor}.${patch}`,
     short: `${major}.${minor}`,
@@ -239,118 +243,6 @@ export async function createGo({
   return new GoWrapper(env, opts);
 }
 
-// type CreateGoOpts = {
-//   workPath: string;
-//   goPath: string;
-//   platform?: string;
-//   arch?: string;
-//   opts?: execa.Options;
-//   goMod?: boolean;
-//   useSystemGo?: boolean;
-// };
-
-// export async function createGo({
-//   workPath,
-//   goPath,
-//   platform = process.platform,
-//   arch = process.arch,
-//   opts = {},
-//   goMod = false,
-//   useSystemGo = false,
-// }: CreateGoOpts) {
-//   const env: { [key: string]: string } = {
-//     ...process.env,
-//     GOPATH: goPath,
-//     ...opts.env,
-//   };
-//   if (!useSystemGo) {
-//     const binPath = join(getGoDir(workPath), 'bin');
-//     debug(`Adding ${binPath} to PATH`);
-//     env.PATH = `${binPath}${delimiter}${env.PATH}`;
-//   }
-//   if (goMod) {
-//     env.GO111MODULE = 'on';
-//   }
-//   await createGoPathTree(goPath, platform, arch);
-//   return new GoWrapper(env, opts);
-// }
-
-// export async function downloadGo(workPath: string, modulePath: string) {
-//   const dir = getGoDir(workPath);
-//   const { platform, arch } = process;
-//   let version = await parseGoVersion(modulePath);
-
-//   if (!version) {
-//     // we do *not* have a `go.mod` with a specific version to use, check the
-//     // system if `go` is installed
-//     const { failed, stdout } = await execa('go', ['version'], { reject: false });
-//     if (!failed && parseInt(stdout.split('.')[1]) >= GO_MIN_VERSION) {
-//       debug('Using system installed version of `go`: %o', stdout.trim());
-//       return createGo({
-//         arch,
-//         goPath: dir,
-//         platform,
-//         useSystemGo: true,
-//         workPath,
-//       });
-//     }
-
-//     // default to newest (first)
-//     version = Array.from(versionMap.values())[0];
-//   }
-
-//   debug(`Selected Go version ${version}`);
-
-//   // Check `go` bin in cacheDir
-//   const binDir = join(dir, 'bin');
-//   const isGoExist = await pathExists(binDir);
-//   if (isGoExist) {
-//     // check if `go` has already been downloaded and that the version is correct
-//     const { failed, stdout } = await execa('go', ['version'], {
-//       env: {
-//         ...process.env,
-//         PATH: binDir
-//       },
-//       reject: false,
-//     });
-//     const [, fullVer, partialVer] = !failed && stdout.match(/((\d+\.\d+)\.\d+)/) || [];
-//     if (!failed && (fullVer === version || partialVer === version)) {
-//       debug('Using cached version of `go`: %o', stdout.trim());
-//       return createGo({
-//         arch,
-//         goPath: dir,
-//         platform,
-//         workPath,
-//       });
-//     }
-//   }
-
-//   debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
-//   const url = getGoUrl(version, platform, arch);
-//   debug('Downloading `go` URL: %o', url);
-//   const res = await fetch(url);
-
-//   if (!res.ok) {
-//     throw new Error(`Failed to download: ${url} (${res.status})`);
-//   }
-
-//   // TODO: use a zip extractor when `ext === "zip"`
-//   await mkdirp(dir);
-//   await new Promise((resolve, reject) => {
-//     res.body
-//       .on('error', reject)
-//       .pipe(tar.extract({ cwd: dir, strip: 1 }))
-//       .on('error', reject)
-//       .on('finish', resolve);
-//   });
-//   return createGo({
-//     arch,
-//     goPath: dir,
-//     platform,
-//     workPath,
-//   });
-// }
-
 async function parseGoVersion(modulePath: string): Promise<string | undefined> {
   let version;
   const file = join(modulePath, 'go.mod');
@@ -367,7 +259,7 @@ async function parseGoVersion(modulePath: string): Promise<string | undefined> {
       console.log(`Warning: Unknown Go version in ${file}`);
     }
   } catch (err: any) {
-    if (err?.code === 'ENOENT') {
+    if (err.code === 'ENOENT') {
       debug(`File not found: ${file}`);
     } else {
       throw err;

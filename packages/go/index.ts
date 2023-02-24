@@ -163,7 +163,7 @@ export async function build({
         dirname(goModAbsPath)
       );
     } catch (err) {
-      console.log(`Failed to parse AST for "${entrypoint}"`);
+      console.error(`Failed to parse AST for "${entrypoint}"`);
       throw err;
     }
 
@@ -173,7 +173,7 @@ export async function build({
   Learn more: https://vercel.com/docs/runtimes#official-runtimes/go
         `
       );
-      console.log(err.message);
+      console.error(err.message);
       throw err;
     }
 
@@ -319,7 +319,7 @@ export async function build({
             from: join(entrypointDirname, 'go.sum'),
           });
         } catch (err) {
-          console.log(`Failed to create default go.mod for ${packageName}`);
+          console.error(`Failed to create default go.mod for ${packageName}`);
           throw err;
         }
       }
@@ -401,7 +401,7 @@ export async function build({
           undoDirectoryCreation.push(dirname(finalDestination));
         }
       } catch (err) {
-        console.log('Failed to move entry to package folder');
+        console.error('Failed to move entry to package folder');
         throw err;
       }
 
@@ -419,7 +419,7 @@ export async function build({
         // ensure go.mod up-to-date
         await go.mod();
       } catch (err) {
-        console.log('failed to `go mod tidy`');
+        console.error('failed to `go mod tidy`');
         throw err;
       }
 
@@ -431,7 +431,7 @@ export async function build({
 
         await go.build(src, destPath);
       } catch (err) {
-        console.log('failed to `go build`');
+        console.error('failed to `go build`');
         throw err;
       }
     } else {
@@ -468,7 +468,7 @@ export async function build({
       try {
         await go.get();
       } catch (err) {
-        console.log('Failed to `go get`');
+        console.error('Failed to `go get`');
         throw err;
       }
 
@@ -481,7 +481,7 @@ export async function build({
         ].map(file => normalize(file));
         await go.build(src, destPath);
       } catch (err) {
-        console.log('failed to `go build`');
+        console.error('failed to `go build`');
         throw err;
       }
     }
@@ -510,7 +510,7 @@ export async function build({
       );
     } catch (error) {
       if (error instanceof Error) {
-        console.log(`Build cleanup failed: ${error.message}`);
+        console.error(`Build cleanup failed: ${error.message}`);
       }
       debug('Cleanup Error: ' + error);
     }
@@ -705,22 +705,22 @@ Learn more: https://vercel.com/docs/runtimes#official-runtimes/go`
     process.platform === 'win32' ? '.exe' : ''
   }`;
 
+  // Note: We must run `go build`, then manually spawn the dev server instead
+  // of spawning `go run`. See https://github.com/vercel/vercel/pull/8718 for
+  // more info.
+
+  // build the dev server
   const go = await createGo({
-    modulePath: '',
+    modulePath: goModAbsPathDir,
     opts: {
       cwd: tmp,
       env,
     },
-    workPath: '',
+    workPath,
   });
   await go.build('./...', executable);
-  // debug(`SPAWNING go build -o ${executable} ./... CWD=${tmp}`);
-  // execFileSync('go', ['build', '-o', executable, './...'], {
-  //   cwd: tmp,
-  //   env,
-  //   stdio: 'inherit',
-  // });
 
+  // run the dev server
   debug(`SPAWNING ${executable} CWD=${tmp}`);
   const child = spawn(executable, [], {
     cwd: tmp,
@@ -795,7 +795,7 @@ async function waitForPortFile_(opts: {
       });
       return { port };
     } catch (err: any) {
-      if (err?.code !== 'ENOENT') {
+      if (err.code !== 'ENOENT') {
         throw err;
       }
     }
