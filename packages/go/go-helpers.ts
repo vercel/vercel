@@ -39,7 +39,7 @@ export async function getAnalyzedEntrypoint(
   filePath: string,
   modulePath: string
 ) {
-  debug('Analyzing entrypoint %o with modulePath %o', filePath, modulePath);
+  debug(`Analyzing entrypoint ${filePath} with modulePath ${modulePath}`);
   const bin = join(__dirname, `analyze${OUT_EXTENSION}`);
 
   const isAnalyzeExist = await pathExists(bin);
@@ -52,7 +52,7 @@ export async function getAnalyzedEntrypoint(
   const args = [`-modpath=${modulePath}`, filePath];
 
   const analyzed = await execa.stdout(bin, args);
-  debug('Analyzed entrypoint %o', analyzed);
+  debug(`Analyzed entrypoint ${analyzed}`);
   return analyzed;
 }
 
@@ -60,7 +60,7 @@ export async function getAnalyzedEntrypoint(
 // Without this, `go` won't recognize the `$GOPATH`.
 function createGoPathTree(goPath: string, platform: string, arch: string) {
   const tuple = `${getPlatform(platform)}_${getArch(arch)}`;
-  debug('Creating GOPATH directory structure for %o (%s)', goPath, tuple);
+  debug(`Creating GOPATH directory structure for ${goPath} (${tuple})`);
   return Promise.all([
     mkdirp(join(goPath, 'bin')),
     mkdirp(join(goPath, 'pkg', tuple)),
@@ -81,7 +81,7 @@ class GoWrapper {
 
   private execute(...args: string[]) {
     const { opts, env } = this;
-    debug('Exec %o', `go ${args.join(' ')}`);
+    debug(`Executing go ${args.join(' ')}`);
     return execa('go', args, { stdio: 'pipe', ...opts, env });
   }
 
@@ -92,16 +92,16 @@ class GoWrapper {
   get(src?: string) {
     const args = ['get'];
     if (src) {
-      debug('Fetching `go` dependencies for file %o', src);
+      debug(`Fetching go dependencies for file ${src}`);
       args.push(src);
     } else {
-      debug('Fetching `go` dependencies for cwd %o', this.opts.cwd);
+      debug(`Fetching go dependencies for cwd ${this.opts.cwd}`);
     }
     return this.execute(...args);
   }
 
   build(src: string | string[], dest: string) {
-    debug('Building optimized `go` binary %o -> %o', src, dest);
+    debug(`Building optimized go binary ${src} -> ${dest}`);
     const sources = Array.isArray(src) ? src : [src];
 
     const flags = process.env.GO_BUILD_FLAGS
@@ -145,16 +145,15 @@ export async function downloadGo(workPath: string, modulePath: string) {
   const { failed, stdout } = await execa('go', ['version'], { reject: false });
 
   if (!failed && parseInt(stdout.split('.')[1]) >= GO_MIN_VERSION) {
-    debug('Using system installed version of `go`: %o', stdout.trim());
+    debug(`Using system installed version of go: ${stdout.trim()}`);
     return createGo(workPath, dir, platform, arch);
   }
 
   // Check `go` bin in cacheDir
   const isGoExist = await pathExists(join(dir, 'bin'));
   if (!isGoExist) {
-    debug('Installing `go` v%s to %o for %s %s', version, dir, platform, arch);
     const url = getGoUrl(version, platform, arch);
-    debug('Downloading `go` URL: %o', url);
+    debug(`Downloading go URL: ${url}`);
     const res = await fetch(url);
 
     if (!res.ok) {
@@ -189,7 +188,7 @@ async function parseGoVersion(modulePath: string): Promise<string> {
     } else {
       console.log(`Warning: Unknown Go version in ${file}`);
     }
-  } catch (err) {
+  } catch (err: any) {
     if (err.code === 'ENOENT') {
       debug(`File not found: ${file}`);
     } else {

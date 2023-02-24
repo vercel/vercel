@@ -221,21 +221,6 @@ export const build: BuildV2 = async ({
   // setting that can't be triggered with vercel.json
   const baseDir = repoRootPath || workPath;
 
-  debug(
-    JSON.stringify(
-      {
-        repoRootPath,
-        baseDir,
-        workPath,
-        entryPath,
-        entryDirectory,
-        outputDirectory,
-      },
-      null,
-      2
-    )
-  );
-
   const prefixedEnvs = getPrefixedEnvVars({
     envPrefix: 'NEXT_PUBLIC_',
     envs: process.env,
@@ -293,7 +278,6 @@ export const build: BuildV2 = async ({
 
     debug('Normalizing package.json');
     pkg = normalizePackageJson(pkg);
-    debug('Normalized package.json result: ', pkg);
     await writePackageJson(entryPath, pkg);
   }
 
@@ -1538,7 +1522,7 @@ export const build: BuildV2 = async ({
         );
         assetKeys.forEach(assetFile => debug(`\t${assetFile}`));
         debug(
-          '\nPlease upgrade to Next.js 9.1 to leverage modern asset handling.'
+          'Please upgrade to Next.js 9.1 to leverage modern asset handling.'
         );
       }
     }

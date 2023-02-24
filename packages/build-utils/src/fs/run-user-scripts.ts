@@ -540,7 +540,6 @@ export async function runCustomInstallCommand({
     nodeVersion,
     env: spawnOpts?.env || {},
   });
-  debug(`Running with $PATH:`, env?.PATH || '');
   await execCommand(installCommand, {
     ...spawnOpts,
     env,

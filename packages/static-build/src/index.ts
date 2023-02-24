@@ -565,9 +565,9 @@ export const build: BuildV2 = async ({
 
       if (typeof devPort === 'number') {
         debug(
-          '`%s` server already running for %j',
-          devCommand || devScript,
-          entrypoint
+          `"${
+            devCommand || devScript
+          }" server already running for ${entrypoint}`
         );
       } else {
         // Run the `now-dev` or `dev` script out-of-bounds, since it is assumed that
@@ -598,7 +598,7 @@ export const build: BuildV2 = async ({
           );
         }
 
-        debug('Detected dev server for %j', entrypoint);
+        debug('Detected dev server for ' + entrypoint);
       }
 
       let srcBase = mountpoint.replace(/^\.\/?/, '');

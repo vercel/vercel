@@ -8,7 +8,6 @@ import {
   Lambda,
   Prerender,
   getLambdaOptionsFromFunction,
-  getPlatformEnv,
   streamToBuffer,
   NowBuildError,
   isSymbolicLink,
@@ -1594,12 +1593,7 @@ export const detectLambdaLimitExceeding = async (
       group.pseudoLayerBytes > COMPRESSED_SIZE_LIMIT_CLOSE ||
       group.pseudoLayerUncompressedBytes > UNCOMPRESSED_SIZE_LIMIT_CLOSE;
 
-    if (
-      closeToLimit ||
-      exceededLimit ||
-      getPlatformEnv('BUILDER_DEBUG') ||
-      process.env.NEXT_DEBUG_FUNCTION_SIZE
-    ) {
+    if (closeToLimit || exceededLimit || process.env.NEXT_DEBUG_FUNCTION_SIZE) {
       if (exceededLimit) {
         numExceededLimit += 1;
       }

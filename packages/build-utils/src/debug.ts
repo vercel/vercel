@@ -1,9 +1,6 @@
-import { getPlatformEnv } from './get-platform-env';
-
-export default function debug(message: string, ...additional: any[]) {
-  if (getPlatformEnv('BUILDER_DEBUG')) {
-    console.log(message, ...additional);
-  } else if (process.env.VERCEL_DEBUG_PREFIX) {
-    console.log(`${process.env.VERCEL_DEBUG_PREFIX}${message}`, ...additional);
+export default function debug(message: string) {
+  if (process.env.VERCEL_DEBUG_PREFIX) {
+    const line = message.replace(/\r?\n/g, ' ');
+    console.log(`${process.env.VERCEL_DEBUG_PREFIX}${line}`);
   }
 }

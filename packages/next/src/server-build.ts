@@ -469,14 +469,10 @@ export async function serverBuild({
     }, 0);
 
     debug(
-      JSON.stringify(
-        {
-          uncompressedInitialSize,
-          compressedInitialSize: initialPseudoLayer.pseudoLayerBytes,
-        },
-        null,
-        2
-      )
+      JSON.stringify({
+        uncompressedInitialSize,
+        compressedInitialSize: initialPseudoLayer.pseudoLayerBytes,
+      })
     );
 
     if (
@@ -756,33 +752,6 @@ export async function serverBuild({
       group.isApiLambda = true;
     }
 
-    debug(
-      JSON.stringify(
-        {
-          apiLambdaGroups: apiLambdaGroups.map(group => ({
-            pages: group.pages,
-            isPrerender: group.isPrerenders,
-            pseudoLayerBytes: group.pseudoLayerBytes,
-            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
-          })),
-          pageLambdaGroups: pageLambdaGroups.map(group => ({
-            pages: group.pages,
-            isPrerender: group.isPrerenders,
-            pseudoLayerBytes: group.pseudoLayerBytes,
-            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
-          })),
-          streamingPageLambdaGroups: streamingPageLambdaGroups.map(group => ({
-            pages: group.pages,
-            isPrerender: group.isPrerenders,
-            pseudoLayerBytes: group.pseudoLayerBytes,
-            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
-          })),
-          nextServerLayerSize: initialPseudoLayer.pseudoLayerBytes,
-        },
-        null,
-        2
-      )
-    );
     const combinedGroups = [
       ...pageLambdaGroups,
       ...streamingPageLambdaGroups,

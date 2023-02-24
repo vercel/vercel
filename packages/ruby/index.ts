@@ -160,7 +160,6 @@ export async function build({
 
   // will be used on `require_relative '$here'` or for loading rack config.ru file
   // for example, `require_relative 'api/users'`
-  debug('entrypoint is', entrypoint);
   const userHandlerFilePath = entrypoint.replace(/\.rb$/, '');
   const nowHandlerRbContents = originalHandlerRbContents.replace(
     /__VC_HANDLER_FILENAME/g,
