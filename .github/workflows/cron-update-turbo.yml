@@ -13,12 +13,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        # 0 means fetch all commits so we can commit and push in the script below
         with:
-          # 0 means fetch all commits so we can commit and push in the script below
           fetch-depth: 0
-          # Commits made with the default `GITHUB_TOKEN` won't trigger workflows.
-          # See: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
-          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
       - name: Enable corepack
         run: corepack enable pnpm
       - name: Create Pull Request
