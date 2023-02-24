@@ -54,6 +54,7 @@ describe('getImagesConfig', () => {
       minimumCacheTTL: 60,
       dangerouslyAllowSVG: false,
       contentSecurityPolicy: undefined,
+      contentDispositionType: undefined,
     };
     const result = await getImagesConfig({ images });
     expect(result).toEqual({
@@ -64,6 +65,7 @@ describe('getImagesConfig', () => {
       minimumCacheTTL: 60,
       dangerouslyAllowSVG: false,
       contentSecurityPolicy: undefined,
+      contentDispositionType: undefined,
     });
   });
 
@@ -78,6 +80,7 @@ describe('getImagesConfig', () => {
       minimumCacheTTL: 60,
       dangerouslyAllowSVG: false,
       contentSecurityPolicy: undefined,
+      contentDispositionType: 'attachment',
     };
     const result = await getImagesConfig({ images });
     expect(result).toEqual({
@@ -88,6 +91,7 @@ describe('getImagesConfig', () => {
       minimumCacheTTL: 60,
       dangerouslyAllowSVG: false,
       contentSecurityPolicy: undefined,
+      contentDispositionType: 'attachment',
     });
   });
 
@@ -102,6 +106,7 @@ describe('getImagesConfig', () => {
       minimumCacheTTL: 60,
       dangerouslyAllowSVG: false,
       contentSecurityPolicy: undefined,
+      contentDispositionType: undefined,
     };
     const result = await getImagesConfig({ images });
     expect(result).toBeUndefined();
