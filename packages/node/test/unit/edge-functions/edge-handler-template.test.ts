@@ -40,10 +40,14 @@ describe('edge-handler-template', () => {
         userEdgeHandler,
         request,
         event,
-        isMiddleware,
-        entrypointLabel,
-        Request,
-        Response
+        {
+          isMiddleware,
+          entrypointLabel,
+        },
+        {
+          Request,
+          Response,
+        }
       );
       expect(await response.text()).toBe(
         'hello from: https://somewhere.com/api/add'

@@ -82,10 +82,16 @@ async function compileUserCode(
 
       // edge handler
       ${edgeHandlerTemplate};
-      registerFetchListener(userEdgeHandler, isMiddleware, entrypointLabel, Request, Response);
+      const dependencies = {
+        Request,
+        Response
+      };
+      const options = {
+        isMiddleware,
+        entrypointLabel
+      };
+      registerFetchListener(userEdgeHandler, options, dependencies);
     `;
-
-    // registerFetchListener(${isMiddleware}, '${entrypointRelativePath}');
 
     return { userCode, wasmAssets };
   } catch (error) {

@@ -12,11 +12,12 @@ async function respond(
   userEdgeHandler,
   requestDetails,
   event,
-  isMiddleware,
-  entrypointLabel,
-  Request,
-  Response
+  options,
+  dependencies
 ) {
+  const { Request, Response } = dependencies;
+  const { isMiddleware, entrypointLabel } = options;
+
   let body;
 
   if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
@@ -74,13 +75,7 @@ async function parseRequestEvent(event) {
 
 // This will be invoked by logic using this template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function registerFetchListener(
-  userEdgeHandler,
-  isMiddleware,
-  entrypointLabel,
-  Request,
-  Response
-) {
+function registerFetchListener(userEdgeHandler, options, dependencies) {
   addEventListener('fetch', async event => {
     try {
       let requestDetails = await parseRequestEvent(event);
@@ -88,14 +83,12 @@ function registerFetchListener(
         userEdgeHandler,
         requestDetails,
         event,
-        isMiddleware,
-        entrypointLabel,
-        Request,
-        Response
+        options,
+        dependencies
       );
       return event.respondWith(response);
     } catch (error) {
-      event.respondWith(toResponseError(error, Response));
+      event.respondWith(toResponseError(error, dependencies.Response));
     }
   });
 }
