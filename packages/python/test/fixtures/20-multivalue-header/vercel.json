@@ -4,18 +4,21 @@
   "probes": [
     {
       "path": "/cookie_asgi.py",
+      "status": 200,
       "responseHeaders": {
         "set-cookie": ["one=first", "two=second"]
       }
     },
     {
       "path": "/cookie_handler.py",
+      "status": 200,
       "responseHeaders": {
         "set-cookie": ["one=first", "two=second"]
       }
     },
     {
       "path": "/cookie_wsgi.py",
+      "status": 200,
       "responseHeaders": {
         "set-cookie": ["one=first", "two=second"]
       }
