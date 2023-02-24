@@ -1,4 +1,4 @@
-import { join } from 'path';
+import { basename, join } from 'path';
 import { existsSync } from 'fs';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import type {
@@ -23,6 +23,10 @@ export function isLayoutRoute(
   routes: Pick<ConfigRoute, 'id' | 'parentId'>[]
 ): boolean {
   return routes.some(r => r.parentId === routeId);
+}
+
+export function isPathlessLayoutRoute(routeId: string) {
+  return basename(routeId).startsWith('__');
 }
 
 export function* getRouteIterator(route: ConfigRoute, routes: RouteManifest) {

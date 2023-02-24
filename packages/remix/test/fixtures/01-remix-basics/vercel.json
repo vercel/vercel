@@ -19,6 +19,16 @@
     { "path": "/asdf", "mustContain": "Not Found" },
     { "path": "/instanceof", "mustContain": "InstanceOfRequest: true" },
     { "path": "/projects/edge", "mustContain": "\"isEdge\":true" },
-    { "path": "/projects/node", "mustContain": "\"isEdge\":false" }
+    { "path": "/projects/node", "mustContain": "\"isEdge\":false" },
+    {
+      "path": "/__pathless",
+      "status": 404,
+      "logMustContain": "WARN: Ignoring route \"routes/__pathless\" because it is a pathless layout route without any leafs."
+    },
+    {
+      "path": "/nested/__pathless",
+      "status": 404,
+      "logMustContain": "WARN: Ignoring route \"routes/nested/__pathless\" because it is a pathless layout route without any leafs."
+    }
   ]
 }

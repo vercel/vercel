@@ -36,6 +36,7 @@ import {
   getRegExpFromPath,
   getRouteIterator,
   isLayoutRoute,
+  isPathlessLayoutRoute,
 } from './utils';
 
 const _require: typeof require = eval('require');
@@ -234,6 +235,16 @@ module.exports = config;`;
   for (const route of remixRoutes) {
     // Layout routes don't get a function / route added
     if (isLayoutRoute(route.id, remixRoutes)) continue;
+
+    // If the route is a pathless layout route and doesn't have any sub-routes,
+    // then a function should not be created. It's also improper use of Remix
+    // so show a warning.
+    if (isPathlessLayoutRoute(route.id)) {
+      console.warn(
+        `WARN: Ignoring route "${route.id}" because it is a pathless layout route without any child routes.`
+      );
+      continue;
+    }
 
     const path = getPathFromRoute(route, remixConfig.routes);
 
