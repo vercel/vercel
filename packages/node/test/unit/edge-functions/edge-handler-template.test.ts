@@ -6,20 +6,20 @@ describe('edge-handler-template', () => {
   describe('buildUrl()', () => {
     test('works with basic proto', async () => {
       const url = buildUrl({
-        url: '/over',
+        url: '/api/add',
         headers: {
           'x-forwarded-proto': 'https',
           'x-forwarded-host': 'somewhere.com',
         },
       });
-      expect(url).toBe('https://somewhere.com/over');
+      expect(url).toBe('https://somewhere.com/api/add');
     });
   });
 
   describe('respond()', () => {
     test('works', async () => {
       const request = {
-        url: '/over',
+        url: '/api/add',
         headers: {
           'x-forwarded-proto': 'https',
           'x-forwarded-host': 'somewhere.com',
@@ -31,9 +31,17 @@ describe('edge-handler-template', () => {
       }
 
       const event = {};
-      const response = await respond(userEdgeHandler, request, event);
+      const isMiddleware = false;
+      const entrypointLabel = 'api/add.js';
+      const response = await respond(
+        userEdgeHandler,
+        request,
+        event,
+        isMiddleware,
+        entrypointLabel
+      );
       expect(await response.text()).toBe(
-        'hello from: https://somewhere.com/over'
+        'hello from: https://somewhere.com/api/add'
       );
     });
   });

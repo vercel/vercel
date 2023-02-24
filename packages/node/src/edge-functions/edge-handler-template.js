@@ -1,9 +1,6 @@
 // provided by the edge runtime:
 /* global addEventListener Request Response */
 
-// provided by our edge handler logic:
-/* global IS_MIDDLEWARE ENTRYPOINT_LABEL */
-
 function buildUrl(requestDetails) {
   let proto = requestDetails.headers['x-forwarded-proto'];
   let host = requestDetails.headers['x-forwarded-host'];
@@ -11,7 +8,13 @@ function buildUrl(requestDetails) {
   return `${proto}://${host}${path}`;
 }
 
-async function respond(userEdgeHandler, requestDetails, event) {
+async function respond(
+  userEdgeHandler,
+  requestDetails,
+  event,
+  isMiddleware,
+  entrypointLabel
+) {
   let body;
 
   if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
@@ -31,7 +34,7 @@ async function respond(userEdgeHandler, requestDetails, event) {
   let response = await userEdgeHandler(event.request, event);
 
   if (!response) {
-    if (IS_MIDDLEWARE) {
+    if (isMiddleware) {
       // allow empty responses to pass through
       response = new Response(null, {
         headers: {
@@ -40,7 +43,7 @@ async function respond(userEdgeHandler, requestDetails, event) {
       });
     } else {
       throw new Error(
-        `Edge Function "${ENTRYPOINT_LABEL}" did not return a response.`
+        `Edge Function "${entrypointLabel}" did not return a response.`
       );
     }
   }
@@ -69,11 +72,17 @@ async function parseRequestEvent(event) {
 
 // This will be invoked by logic using this template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function registerFetchListener(userEdgeHandler) {
+function registerFetchListener(userEdgeHandler, isMiddleware, entrypointLabel) {
   addEventListener('fetch', async event => {
     try {
       let requestDetails = await parseRequestEvent(event);
-      let response = await respond(userEdgeHandler, requestDetails, event);
+      let response = await respond(
+        userEdgeHandler,
+        requestDetails,
+        event,
+        isMiddleware,
+        entrypointLabel
+      );
       return event.respondWith(response);
     } catch (error) {
       event.respondWith(toResponseError(error));

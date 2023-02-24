@@ -77,12 +77,12 @@ async function compileUserCode(
       }
 
       // request metadata
-      const IS_MIDDLEWARE = ${isMiddleware};
-      const ENTRYPOINT_LABEL = '${entrypointRelativePath}';
+      const isMiddleware = ${isMiddleware};
+      const entrypointLabel = '${entrypointRelativePath}';
 
       // edge handler
       ${edgeHandlerTemplate};
-      registerFetchListener(userEdgeHandler);
+      registerFetchListener(userEdgeHandler, isMiddleware, entrypointLabel);
     `;
 
     // registerFetchListener(${isMiddleware}, '${entrypointRelativePath}');
