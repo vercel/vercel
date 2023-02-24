@@ -69,6 +69,12 @@ async function compileUserCode(
 
       // user code
       ${compiledFile.text};
+      const userEdgeHandler = module.exports.default;
+      if (!userEdgeHandler) {
+        throw new Error(
+          'No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware'
+        );
+      }
 
       // request metadata
       const IS_MIDDLEWARE = ${isMiddleware};
@@ -76,7 +82,7 @@ async function compileUserCode(
 
       // edge handler
       ${edgeHandlerTemplate};
-      registerFetchListener();
+      registerFetchListener(userEdgeHandler);
     `;
 
     // registerFetchListener(${isMiddleware}, '${entrypointRelativePath}');

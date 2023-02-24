@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-undef */
 
 // using CommonJS format because Module format didn't like
@@ -13,7 +14,8 @@ const template = readFileSync(
 );
 
 // run the template script in the current module context
-eval.call(this, template.toString());
+const { Request } = require('node-fetch'); // used by template
+eval(template.toString());
 
 module.exports = {
   buildUrl,

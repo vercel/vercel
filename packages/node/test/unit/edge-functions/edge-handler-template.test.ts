@@ -1,4 +1,6 @@
-const { buildUrl, respond } = require('./edge-handler-template-export');
+import { Response, Request } from 'node-fetch';
+// @ts-ignore - this is a special patch file to allow importing from the template
+import { buildUrl, respond } from './edge-handler-template-export';
 
 describe('edge-handler-template', () => {
   describe('buildUrl()', () => {
@@ -23,15 +25,16 @@ describe('edge-handler-template', () => {
           'x-forwarded-host': 'somewhere.com',
         },
       };
-      const event = {};
-      // const isMiddleware = false;
-      // const entrypointLabel = '';
 
-      const response = respond(request, event);
-      expect(response.url).toBe('https://somewhere.com/over');
-      expect(response.headers).toContain({
-        'x-middleware-next': '1',
-      });
+      function userEdgeHandler(req: Request) {
+        return new Response(`hello from: ${req.url}`);
+      }
+
+      const event = {};
+      const response = await respond(userEdgeHandler, request, event);
+      expect(await response.text()).toBe(
+        'hello from: https://somewhere.com/over'
+      );
     });
   });
 });

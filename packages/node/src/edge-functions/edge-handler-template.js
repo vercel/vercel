@@ -11,11 +11,13 @@ function buildUrl(requestDetails) {
   return `${proto}://${host}${path}`;
 }
 
-async function respond(requestDetails, event) {
+async function respond(userEdgeHandler, requestDetails, event) {
   let body;
 
   if (requestDetails.method !== 'GET' && requestDetails.method !== 'HEAD') {
-    body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
+    if (requestDetails.body) {
+      body = Uint8Array.from(atob(requestDetails.body), c => c.charCodeAt(0));
+    }
   }
 
   let request = new Request(buildUrl(requestDetails), {
@@ -26,14 +28,7 @@ async function respond(requestDetails, event) {
 
   event.request = request;
 
-  let edgeHandler = module.exports.default;
-  if (!edgeHandler) {
-    throw new Error(
-      'No default export was found. Add a default export to handle requests. Learn more: https://vercel.link/creating-edge-middleware'
-    );
-  }
-
-  let response = await edgeHandler(event.request, event);
+  let response = await userEdgeHandler(event.request, event);
 
   if (!response) {
     if (IS_MIDDLEWARE) {
@@ -74,11 +69,11 @@ async function parseRequestEvent(event) {
 
 // This will be invoked by logic using this template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function registerFetchListener() {
+function registerFetchListener(userEdgeHandler) {
   addEventListener('fetch', async event => {
     try {
       let requestDetails = await parseRequestEvent(event);
-      let response = await respond(requestDetails, event);
+      let response = await respond(userEdgeHandler, requestDetails, event);
       return event.respondWith(response);
     } catch (error) {
       event.respondWith(toResponseError(error));
