@@ -24,28 +24,14 @@
       "path": "/set-cookie-edge",
       "status": 200,
       "responseHeaders": {
-        "set-cookie": "hello=world"
-      }
-    },
-    {
-      "path": "/set-cookie-edge",
-      "status": 200,
-      "responseHeaders": {
-        "set-cookie": "foo=bar"
+        "set-cookie": ["hello=world", "foo=bar"]
       }
     },
     {
       "path": "/set-cookie-node",
       "status": 200,
       "responseHeaders": {
-        "set-cookie": "hello=world"
-      }
-    },
-    {
-      "path": "/set-cookie-node",
-      "status": 200,
-      "responseHeaders": {
-        "set-cookie": "foo=bar"
+        "set-cookie": ["hello=world", "foo=bar"]
       }
     }
   ]
