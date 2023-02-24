@@ -19,6 +19,30 @@
     { "path": "/asdf", "mustContain": "Not Found" },
     { "path": "/instanceof", "mustContain": "InstanceOfRequest: true" },
     { "path": "/projects/edge", "mustContain": "\"isEdge\":true" },
-    { "path": "/projects/node", "mustContain": "\"isEdge\":false" }
+    { "path": "/projects/node", "mustContain": "\"isEdge\":false" },
+    {
+      "path": "/set-cookie-edge",
+      "responseHeaders": {
+        "set-cookie": "hello=world"
+      }
+    },
+    {
+      "path": "/set-cookie-edge",
+      "responseHeaders": {
+        "set-cookie": "foo=bar"
+      }
+    },
+    {
+      "path": "/set-cookie-node",
+      "responseHeaders": {
+        "set-cookie": "hello=world"
+      }
+    },
+    {
+      "path": "/set-cookie-node",
+      "responseHeaders": {
+        "set-cookie": "foo=bar"
+      }
+    }
   ]
 }
