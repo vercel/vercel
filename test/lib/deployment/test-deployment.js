@@ -228,13 +228,16 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       let expectedArr = probe.responseHeaders[header];
 
       // Header should not exist
-      if (expectedArr === null && actualArr) {
-        const headers = Array.from(resp.headers.entries())
-          .map(([k, v]) => `  ${k}=${v}`)
-          .join('\n');
-        throw new Error(
-          `Page ${probeUrl} contains response header "${header}", but probe says it should not.\n\nActual: ${headers}`
-        );
+      if (expectedArr === null) {
+        if (actualArr) {
+          const headers = Array.from(resp.headers.entries())
+            .map(([k, v]) => `  ${k}=${v}`)
+            .join('\n');
+          throw new Error(
+            `Page ${probeUrl} contains response header "${header}", but probe says it should not.\n\nActual: ${headers}`
+          );
+        }
+        return;
       }
 
       if (!Array.isArray(expectedArr)) {
