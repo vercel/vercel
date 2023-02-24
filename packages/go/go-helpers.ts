@@ -1,7 +1,7 @@
 import tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
-import { mkdirp, pathExists, readFile } from 'fs-extra';
+import { mkdirp, pathExists, readFile, remove } from 'fs-extra';
 import { join, delimiter } from 'path';
 import stringArgv from 'string-argv';
 import { debug } from '@vercel/build-utils';
@@ -232,6 +232,7 @@ export async function createGo({
   }
 
   // TODO: use a zip extractor when `ext === "zip"`
+  await remove(goDir);
   await mkdirp(goDir);
   await new Promise((resolve, reject) => {
     res.body
