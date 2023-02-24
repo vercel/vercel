@@ -665,7 +665,7 @@ async function doBuild(
   );
   console.log(
     await fs.readFile(
-      join(outputDir, 'functions/edge.func/dist/index.js'),
+      join(outputDir, 'functions/edge.func/build/index.js'),
       'utf8'
     )
   );
