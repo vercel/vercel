@@ -28,6 +28,7 @@ import type {
   PackageJson,
   BuildResultV2Typical,
 } from '@vercel/build-utils';
+import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 import {
   findConfig,
@@ -94,8 +95,8 @@ export const build: BuildV2 = async ({
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
 
-  let remixConfig = await readConfig(entrypointFsDirname);
-  const { serverEntryPoint } = remixConfig;
+  const remixConfig = await chdirAndReadConfig(entrypointFsDirname);
+  const remixRoutes = Object.values(remixConfig.routes);
 
   // We need to patch the `remix.config.js` file to force some values necessary
   // for a build that works on either Node.js or the Edge runtime
@@ -103,6 +104,7 @@ export const build: BuildV2 = async ({
   const renamedRemixConfigPath = remixConfigPath
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
     : undefined;
+  const serverBuildPath = 'build/index.js';
   if (remixConfigPath && renamedRemixConfigPath) {
     await fs.rename(remixConfigPath, renamedRemixConfigPath);
 
@@ -122,7 +124,7 @@ export const build: BuildV2 = async ({
 config.serverBuildTarget = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
-config.serverBuildPath = 'build/index.js';
+config.serverBuildPath = ${JSON.stringify(serverBuildPath)}
 export default config;`;
     } else {
       patchedConfig = `const config = require('./${basename(
@@ -131,7 +133,7 @@ export default config;`;
 config.serverBuildTarget = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
-config.serverBuildPath = 'build/index.js';
+config.serverBuildPath = ${JSON.stringify(serverBuildPath)}
 module.exports = config;`;
     }
     await fs.writeFile(remixConfigPath, patchedConfig);
@@ -166,16 +168,12 @@ module.exports = config;`;
         });
       }
     }
-    remixConfig = await readConfig(entrypointFsDirname);
   } finally {
     // Clean up our patched `remix.config.js` to be polite
     if (remixConfigPath && renamedRemixConfigPath) {
       await fs.rename(renamedRemixConfigPath, remixConfigPath);
     }
   }
-
-  const { serverBuildPath } = remixConfig;
-  const remixRoutes = Object.values(remixConfig.routes);
 
   // Figure out which pages should be edge functions
   let hasEdgeRoute = false;
@@ -207,16 +205,16 @@ module.exports = config;`;
     createRenderNodeFunction(
       entrypointFsDirname,
       repoRootPath,
-      serverBuildPath,
-      serverEntryPoint,
+      join(entrypointFsDirname, serverBuildPath),
+      remixConfig.serverEntryPoint,
       nodeVersion
     ),
     hasEdgeRoute
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
-          serverBuildPath,
-          serverEntryPoint
+          join(entrypointFsDirname, serverBuildPath),
+          remixConfig.serverEntryPoint
         )
       : undefined,
   ]);
@@ -481,4 +479,16 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
 
 function isEdgeRuntime(runtime: string): boolean {
   return runtime === 'edge' || runtime === 'experimental-edge';
+}
+
+async function chdirAndReadConfig(dir: string) {
+  const originalCwd = process.cwd();
+  let remixConfig: RemixConfig;
+  try {
+    process.chdir(dir);
+    remixConfig = await readConfig(dir);
+  } finally {
+    process.chdir(originalCwd);
+  }
+  return remixConfig;
 }
