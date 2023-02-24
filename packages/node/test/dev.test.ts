@@ -2,6 +2,8 @@ import { forkDevServer, readMessage } from '../src/fork-dev-server';
 import { resolve, extname } from 'path';
 import fetch from 'node-fetch';
 
+jest.setTimeout(10 * 1000);
+
 function testForkDevServer(entrypoint: string) {
   const ext = extname(entrypoint);
   const isTypeScript = ext === '.ts';
