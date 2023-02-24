@@ -220,9 +220,12 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     hadTest = true;
   }
 
+  /**
+   * @type Record<string, string[]>
+   */
+  const rawHeaders = resp.headers.raw();
   if (probe.responseHeaders) {
     // eslint-disable-next-line no-loop-func
-    const rawHeaders = resp.headers.raw();
     Object.keys(probe.responseHeaders).forEach(header => {
       const actualArr = rawHeaders[header.toLowerCase()];
       let expectedArr = probe.responseHeaders[header];
@@ -230,11 +233,10 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       // Header should not exist
       if (expectedArr === null) {
         if (actualArr) {
-          const headers = Array.from(resp.headers.entries())
-            .map(([k, v]) => `  ${k}=${v}`)
-            .join('\n');
           throw new Error(
-            `Page ${probeUrl} contains response header "${header}", but probe says it should not.\n\nActual: ${headers}`
+            `Page ${probeUrl} contains response header "${header}", but probe says it should not.\n\nActual: ${formatHeaders(
+              rawHeaders
+            )}`
           );
         }
         return;
@@ -253,12 +255,10 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
           if (isEqual) break;
         }
         if (!isEqual) {
-          const headers = Array.from(resp.headers.entries())
-            .map(([k, v]) => `  ${k}=${v}`)
-            .join('\n');
-
           throw new Error(
-            `Page ${probeUrl} does not have expected response header ${header}.\n\nExpected: ${expected}.\n\nActual: ${headers}`
+            `Page ${probeUrl} does not have expected response header ${header}.\n\nExpected: ${expected}.\n\nActual: ${formatHeaders(
+              rawHeaders
+            )}`
           );
         }
       }
@@ -270,12 +270,10 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
       const expected = probe.notResponseHeaders[header];
 
       if (headerValue === expected) {
-        const headers = Array.from(resp.headers.entries())
-          .map(([k, v]) => `  ${k}=${v}`)
-          .join('\n');
-
         throw new Error(
-          `Page ${probeUrl} has unexpected response header ${header}.\n\nDid not expect: ${header}=${expected}.\n\nAll: ${headers}`
+          `Page ${probeUrl} has unexpected response header ${header}.\n\nDid not expect: ${header}=${expected}.\n\nAll: ${formatHeaders(
+            rawHeaders
+          )}`
         );
       }
     });
@@ -453,6 +451,15 @@ async function spawnAsync(...args) {
       resolve(result);
     });
   });
+}
+
+/**
+ * @param {Record<string, string[]>} headers
+ */
+function formatHeaders(headers) {
+  return Object.entries(headers)
+    .flatMap(([name, values]) => values.map(v => `  ${name}: ${v}`))
+    .join('\n');
 }
 
 module.exports = {
