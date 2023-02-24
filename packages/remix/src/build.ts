@@ -5,6 +5,7 @@ import {
   debug,
   download,
   execCommand,
+  FileBlob,
   FileFsRef,
   getEnvForPackageManager,
   getNodeVersion,
@@ -355,6 +356,8 @@ async function createRenderEdgeFunction(
     await fs.copyFile(sourceHandlerPath, handlerPath);
   }
 
+  let remixRunVercelPkgJson: string | undefined;
+
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
@@ -373,6 +376,35 @@ async function createRenderEdgeFunction(
       if (basename(fsPath) === 'package.json') {
         // For Edge Functions, patch "main" field to prefer "browser" or "module"
         const pkgJson = JSON.parse(source.toString());
+
+        // When `@remix-run/vercel` is detected, we need to modify the `package.json`
+        // to include the "browser" field so that the proper Edge entrypoint file
+        // is used. This is a temporary stop gap until this PR is merged:
+        // https://github.com/remix-run/remix/pull/5537
+        if (pkgJson.name === '@remix-run/vercel') {
+          pkgJson.browser = 'dist/edge.js';
+          pkgJson.dependencies['@remix-run/server-runtime'] =
+            pkgJson.dependencies['@remix-run/node'];
+
+          if (!remixRunVercelPkgJson) {
+            remixRunVercelPkgJson = JSON.stringify(pkgJson, null, 2) + '\n';
+
+            // Copy in the edge entrypoint so that NFT can properly resolve it
+            const vercelEdgeEntrypointPath = join(
+              __dirname,
+              '../vercel-edge-entrypoint.js'
+            );
+            const vercelEdgeEntrypointDest = join(
+              dirname(fsPath),
+              'dist/edge.js'
+            );
+            await fs.copyFile(
+              vercelEdgeEntrypointPath,
+              vercelEdgeEntrypointDest
+            );
+          }
+        }
+
         for (const prop of ['browser', 'module']) {
           const val = pkgJson[prop];
           if (typeof val === 'string') {
@@ -393,7 +425,15 @@ async function createRenderEdgeFunction(
   }
 
   for (const file of trace.fileList) {
-    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
+    if (
+      remixRunVercelPkgJson &&
+      file.endsWith(`@remix-run${sep}vercel${sep}package.json`)
+    ) {
+      // Use the modified `@remix-run/vercel` package.json which contains "browser" field
+      files[file] = new FileBlob({ data: remixRunVercelPkgJson });
+    } else {
+      files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
+    }
   }
 
   const fn = new EdgeFunction({
