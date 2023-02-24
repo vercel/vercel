@@ -319,7 +319,6 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
-    cron?: Cron;
   };
 }
 
@@ -356,6 +355,8 @@ export interface BuilderV3 {
 
 type ImageFormat = 'image/avif' | 'image/webp';
 
+type ImageContentDispositionType = 'inline' | 'attachment';
+
 export type RemotePattern = {
   /**
    * Must be `http` or `https`.
@@ -391,6 +392,7 @@ export interface Images {
   formats?: ImageFormat[];
   dangerouslyAllowSVG?: boolean;
   contentSecurityPolicy?: string;
+  contentDispositionType?: ImageContentDispositionType;
 }
 
 /**
@@ -411,7 +413,11 @@ export interface BuildResultBuildOutput {
   buildOutputPath: string;
 }
 
-export type Cron = string;
+export interface Cron {
+  path: string;
+  schedule: string;
+}
+
 /** The framework which created the function */
 export interface FunctionFramework {
   slug: string;

@@ -602,12 +602,11 @@ function validateFunctions({ functions = {} }: Options) {
 
     if (
       func.memory !== undefined &&
-      (func.memory < 128 || func.memory > 3008 || func.memory % 64 !== 0)
+      (func.memory < 128 || func.memory > 3008)
     ) {
       return {
         code: 'invalid_function_memory',
-        message:
-          'Functions must have a memory value between 128 and 3008 in steps of 64.',
+        message: 'Functions must have a memory value between 128 and 3008',
       };
     }
 

@@ -22,7 +22,7 @@ const { format, inspect } = require('util');
 
 /**
  * An simple output helper which accumulates error and debug log messages in
- * memory for potential persistance to disk while immediately outputting errors
+ * memory for potential persistence to disk while immediately outputting errors
  * and debug messages, when the `--debug` flag is set, to `stderr`.
  */
 class WorkerOutput {
