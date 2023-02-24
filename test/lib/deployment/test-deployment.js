@@ -222,17 +222,22 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
 
   if (probe.responseHeaders) {
     // eslint-disable-next-line no-loop-func
+    const rawHeaders = resp.headers.raw();
     Object.keys(probe.responseHeaders).forEach(header => {
-      const actual = resp.headers.getAll(header);
+      const actualArr = rawHeaders[header];
       let expectedArr = probe.responseHeaders[header];
       if (!Array.isArray(expectedArr)) {
         expectedArr = [expectedArr];
       }
       for (const expected of expectedArr) {
-        const isEqual =
-          expected.startsWith('/') && expected.endsWith('/')
-            ? new RegExp(expected.slice(1, -1)).test(actual)
-            : expected === actual;
+        let isEqual = false;
+        for (const actual of actualArr) {
+          isEqual =
+            expected.startsWith('/') && expected.endsWith('/')
+              ? new RegExp(expected.slice(1, -1)).test(actual)
+              : expected === actual;
+          if (isEqual) break;
+        }
         if (!isEqual) {
           const headers = Array.from(resp.headers.entries())
             .map(([k, v]) => `  ${k}=${v}`)
