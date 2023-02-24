@@ -1,6 +1,9 @@
 import { Response, Request } from 'node-fetch';
 // @ts-ignore - this is a special patch file to allow importing from the template
-import { buildUrl, respond } from './edge-handler-template-export';
+import {
+  buildUrl,
+  respond,
+} from '../../../src/edge-functions/edge-handler-template.js';
 
 describe('edge-handler-template', () => {
   describe('buildUrl()', () => {
@@ -38,7 +41,9 @@ describe('edge-handler-template', () => {
         request,
         event,
         isMiddleware,
-        entrypointLabel
+        entrypointLabel,
+        Request,
+        Response
       );
       expect(await response.text()).toBe(
         'hello from: https://somewhere.com/api/add'

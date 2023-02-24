@@ -82,7 +82,7 @@ async function compileUserCode(
 
       // edge handler
       ${edgeHandlerTemplate};
-      registerFetchListener(userEdgeHandler, isMiddleware, entrypointLabel);
+      registerFetchListener(userEdgeHandler, isMiddleware, entrypointLabel, Request, Response);
     `;
 
     // registerFetchListener(${isMiddleware}, '${entrypointRelativePath}');

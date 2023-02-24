@@ -1,5 +1,5 @@
 // provided by the edge runtime:
-/* global addEventListener Request Response */
+/* global addEventListener */
 
 function buildUrl(requestDetails) {
   let proto = requestDetails.headers['x-forwarded-proto'];
@@ -13,7 +13,9 @@ async function respond(
   requestDetails,
   event,
   isMiddleware,
-  entrypointLabel
+  entrypointLabel,
+  Request,
+  Response
 ) {
   let body;
 
@@ -50,7 +52,7 @@ async function respond(
   return response;
 }
 
-function toResponseError(error) {
+function toResponseError(error, Response) {
   // we can't easily show a meaningful stack trace
   // so, stick to just the error message for now
   const msg = error.cause
@@ -72,7 +74,13 @@ async function parseRequestEvent(event) {
 
 // This will be invoked by logic using this template
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function registerFetchListener(userEdgeHandler, isMiddleware, entrypointLabel) {
+function registerFetchListener(
+  userEdgeHandler,
+  isMiddleware,
+  entrypointLabel,
+  Request,
+  Response
+) {
   addEventListener('fetch', async event => {
     try {
       let requestDetails = await parseRequestEvent(event);
@@ -81,11 +89,22 @@ function registerFetchListener(userEdgeHandler, isMiddleware, entrypointLabel) {
         requestDetails,
         event,
         isMiddleware,
-        entrypointLabel
+        entrypointLabel,
+        Request,
+        Response
       );
       return event.respondWith(response);
     } catch (error) {
-      event.respondWith(toResponseError(error));
+      event.respondWith(toResponseError(error, Response));
     }
   });
 }
+
+// for testing:
+module.exports = {
+  buildUrl,
+  respond,
+  toResponseError,
+  parseRequestEvent,
+  registerFetchListener,
+};
