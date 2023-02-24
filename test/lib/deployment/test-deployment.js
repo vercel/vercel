@@ -226,6 +226,17 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
     Object.keys(probe.responseHeaders).forEach(header => {
       const actualArr = rawHeaders[header];
       let expectedArr = probe.responseHeaders[header];
+
+      // Header should not exist
+      if (expectedArr === null && actualArr) {
+        const headers = Array.from(resp.headers.entries())
+          .map(([k, v]) => `  ${k}=${v}`)
+          .join('\n');
+        throw new Error(
+          `Page ${probeUrl} contains response header "${header}", but probe says it should not.\n\nActual: ${headers}`
+        );
+      }
+
       if (!Array.isArray(expectedArr)) {
         expectedArr = [expectedArr];
       }
