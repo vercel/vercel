@@ -1,0 +1,8 @@
+{
+  "installCommand": "npm install --install-strategy=linked",
+  "build": {
+    "env": {
+      "ENABLE_EXPERIMENTAL_COREPACK": "1"
+    }
+  }
+}
