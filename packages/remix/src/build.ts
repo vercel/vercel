@@ -237,6 +237,12 @@ module.exports = config;`;
 
     const path = getPathFromRoute(route, remixConfig.routes);
 
+    // If the route is a pathless layout route (at the root level)
+    // and doesn't have any sub-routes, then a function should not be created.
+    if (!path) {
+      continue;
+    }
+
     let isEdge = false;
     for (const currentRoute of getRouteIterator(route, remixConfig.routes)) {
       const staticConfig = staticConfigsMap.get(currentRoute);
