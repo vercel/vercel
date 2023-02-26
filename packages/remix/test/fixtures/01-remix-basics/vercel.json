@@ -20,6 +20,7 @@
     { "path": "/instanceof", "mustContain": "InstanceOfRequest: true" },
     { "path": "/projects/edge", "mustContain": "\"isEdge\":true" },
     { "path": "/projects/node", "mustContain": "\"isEdge\":false" },
+    {
       "path": "/__pathless",
       "status": 404,
       "mustContain": "Not Found"
@@ -47,6 +48,5 @@
         "set-cookie": ["hello=world", "foo=bar"]
       }
     }
-
   ]
 }
