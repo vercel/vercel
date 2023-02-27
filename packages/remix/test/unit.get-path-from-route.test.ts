@@ -72,6 +72,14 @@ describe('getPathFromRoute()', () => {
       parentId: 'root',
       file: 'routes/$.tsx',
     },
+    'routes/nested/index': {
+      path: 'nested',
+      index: true,
+      caseSensitive: undefined,
+      id: 'routes/nested/index',
+      parentId: 'root',
+      file: 'routes/nested/index.tsx',
+    },
   };
 
   it.each([
@@ -79,6 +87,7 @@ describe('getPathFromRoute()', () => {
     { id: 'routes/__pathless', expected: '' },
     { id: 'routes/index', expected: 'index' },
     { id: 'routes/api.hello', expected: 'api/hello' },
+    { id: 'routes/nested/index', expected: 'nested' },
     { id: 'routes/projects', expected: 'projects' },
     { id: 'routes/projects/__pathless', expected: 'projects' },
     { id: 'routes/projects/index', expected: 'projects' },
