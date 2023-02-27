@@ -155,6 +155,7 @@ export const routesSchema = {
           },
           middleware: { type: 'number' },
           middlewarePath: { type: 'string' },
+          middlewareRawSrc: { type: 'string' },
           has: hasSchema,
           missing: hasSchema,
         },
