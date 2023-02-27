@@ -129,8 +129,8 @@ export const build: BuildV2 = async ({
   // Figure out which pages should be edge functions
   const project = new Project();
   const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig>();
-  const edgeRoutes = new Set<string>();
-  const nodeRoutes = new Set<string>();
+  const edgeRoutes = new Set<ConfigRoute>();
+  const nodeRoutes = new Set<ConfigRoute>();
   for (const route of remixRoutes) {
     const routePath = join(remixConfig.appDirectory, route.file);
     const staticConfig = getConfig(project, routePath);
@@ -150,15 +150,16 @@ export const build: BuildV2 = async ({
     }
 
     if (isEdge) {
-      edgeRoutes.add(route.id);
+      edgeRoutes.add(route);
     } else {
-      nodeRoutes.add(route.id);
+      nodeRoutes.add(route);
     }
   }
   const serverBundles = [
     { serverBuildPath: 'build/build-edge.js', routes: Array.from(edgeRoutes) },
     { serverBuildPath: 'build/build-node.js', routes: Array.from(nodeRoutes) },
   ];
+  console.log(serverBundles);
 
   // We need to patch the `remix.config.js` file to force some values necessary
   // for a build that works on either Node.js or the Edge runtime
@@ -166,7 +167,6 @@ export const build: BuildV2 = async ({
   const renamedRemixConfigPath = remixConfigPath
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
     : undefined;
-  const serverBuildPath = 'build/index.js';
   if (remixConfigPath && renamedRemixConfigPath) {
     await fs.rename(remixConfigPath, renamedRemixConfigPath);
 
@@ -186,8 +186,8 @@ export const build: BuildV2 = async ({
 config.serverBuildTarget = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
-config.serverBuildPath = ${JSON.stringify(serverBuildPath)}
-config.serverBundles = ${JSON.stringify(serverBundles)}
+config.serverBuildPath = undefined;
+config.serverBundles = ${JSON.stringify(serverBundles)};
 export default config;`;
     } else {
       patchedConfig = `const config = require('./${basename(
@@ -196,8 +196,8 @@ export default config;`;
 config.serverBuildTarget = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
-config.serverBuildPath = ${JSON.stringify(serverBuildPath)}
-config.serverBundles = ${JSON.stringify(serverBundles)}
+config.serverBuildPath = undefined;
+config.serverBundles = ${JSON.stringify(serverBundles)};
 module.exports = config;`;
     }
     await fs.writeFile(remixConfigPath, patchedConfig);
@@ -300,7 +300,7 @@ module.exports = config;`;
     }
 
     const fn =
-      edgeRoutes.has(route.id) && edgeFunction
+      edgeRoutes.has(route) && edgeFunction
         ? // `EdgeFunction` currently requires the "name" property to be set.
           // Ideally this property will be removed, at which point we can
           // return the same `edgeFunction` instance instead of creating a
