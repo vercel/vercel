@@ -293,17 +293,30 @@ export async function serverBuild({
     }
 
     try {
-      instrumentationHookBuildTrace = JSON.parse(
-        await fs.readFile(
-          path.join(
-            entryPath,
-            outputDirectory,
-            'server',
-            'instrumentation.js.nft.json'
-          ),
-          'utf8'
-        )
-      );
+      const possiblePaths = [
+        path.join(
+          entryPath,
+          outputDirectory,
+          'server',
+          'instrumentation.js.nft.json'
+        ),
+        path.join(
+          entryPath,
+          outputDirectory,
+          'server',
+          'src',
+          'instrumentation.js.nft.json'
+        ),
+      ];
+
+      for (const possiblePath of possiblePaths) {
+        if (await fs.pathExists(possiblePath)) {
+          instrumentationHookBuildTrace = JSON.parse(
+            await fs.readFile(possiblePath, 'utf8')
+          );
+          break;
+        }
+      }
     } catch (_) {
       // if the trace is unavailable it means `instrumentation.js` wasn't used
     }
