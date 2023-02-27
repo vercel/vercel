@@ -347,7 +347,7 @@ export async function serverBuild({
         instrumentationHookBuildTrace.files.map((file: string) => {
           return path.relative(
             baseDir,
-            path.join(entryPath, outputDirectory, file)
+            path.join(entryPath, outputDirectory, 'server', file)
           );
         })
       );
