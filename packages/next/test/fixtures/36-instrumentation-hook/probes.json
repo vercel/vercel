@@ -3,12 +3,12 @@
     {
       "path": "/",
       "status": 200,
-      "mustContain": "false"
+      "mustContain": "isOdd: false"
     },
     {
       "path": "/api/hello",
       "status": 200,
-      "mustContain": "true"
+      "mustContain": "isOdd: true"
     }
   ]
 }

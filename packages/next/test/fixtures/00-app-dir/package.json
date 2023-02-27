@@ -3,8 +3,5 @@
     "next": "canary",
     "react": "experimental",
     "react-dom": "experimental"
-  },
-  "scripts": {
-    "vercel-build": "next build"
   }
 }
