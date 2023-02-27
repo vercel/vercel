@@ -71,8 +71,11 @@ export const createLoggerServer = async (): Promise<LoggerServer> => {
 
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 
-export async function deployAndTest(fixtureDir) {
-  const { deploymentId, deploymentUrl } = await testDeployment(fixtureDir);
+export async function deployAndTest(fixtureDir, opts) {
+  const { deploymentId, deploymentUrl } = await testDeployment(
+    fixtureDir,
+    opts
+  );
 
   return {
     deploymentId,
