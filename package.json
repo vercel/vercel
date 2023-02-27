@@ -34,6 +34,11 @@
     "ts-jest": "28.0.5",
     "turbo": "1.7.4"
   },
+  "pnpm": {
+    "overrides": {
+      "gatsby-sharp>sharp": "npm:is-odd-num@1.1.1"
+    }
+  },
   "scripts": {
     "lerna": "lerna",
     "version": "pnpm install && git add pnpm-lock.yaml",
