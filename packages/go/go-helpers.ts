@@ -41,23 +41,20 @@ export async function getAnalyzedEntrypoint(
   filePath: string,
   modulePath: string
 ) {
-  debug(`Analyzing entrypoint ${filePath} with modulePath ${modulePath}`);
   const bin = join(__dirname, `analyze${OUT_EXTENSION}`);
 
   const isAnalyzeExist = await pathExists(bin);
-  if (isAnalyzeExist) {
-    debug(`Analyze bin exists, skipping building ${bin}`);
-  } else {
+  if (!isAnalyzeExist) {
+    debug(`Building analyze bin: ${bin}`);
     const src = join(__dirname, 'util', 'analyze.go');
     const go = await createGo({
-      modulePath,
       workPath,
     });
     await go.build(src, bin);
   }
 
+  debug(`Analyzing entrypoint ${filePath} with modulePath ${modulePath}`);
   const args = [`-modpath=${modulePath}`, filePath];
-
   const analyzed = await execa.stdout(bin, args);
   debug(`Analyzed entrypoint ${analyzed}`);
   return analyzed;
@@ -145,7 +142,7 @@ function parseGoVersionString(goVersionOutput: string) {
 
 type CreateGoOptions = {
   goPath?: string;
-  modulePath: string;
+  modulePath?: string;
   opts?: execa.Options;
   workPath: string;
 };
@@ -168,37 +165,45 @@ export async function createGo({
   };
 
   // parse the `go.mod`, if exists
-  let goVersion = await parseGoVersion(modulePath);
+  let goVersion;
+  if (modulePath) {
+    goVersion = await parseGoModVersion(modulePath);
+  }
 
   if (goVersion) {
+    debug(`Initializing go ${goVersion} (from go.mod)`);
     env.GO111MODULE = 'on';
   }
 
-  await createGoPathTree(goDir);
+  // check if `go` is installed in the system PATH and if it's the version we want
+  const { failed, stdout } = await execa('go', ['version'], {
+    reject: false,
+  });
+  if (!failed) {
+    const { version, minor } = parseGoVersionString(stdout);
+    if (minor < GO_MIN_VERSION) {
+      debug(`Found go ${version} in system PATH, but version is unsupported`);
+    } else if (!goVersion || goVersion === version) {
+      debug(`Initializing go ${version} (from system PATH)`);
+      return new GoWrapper(env, opts);
+    } else {
+      debug(
+        `Found go ${version} in system PATH, but go.mod requests ${goVersion}`
+      );
+    }
+  }
 
   if (!goVersion) {
-    // we do *not* have a `go.mod` with a specific version to use
-    // check if `go` is in the system PATH
-    const { failed, stdout } = await execa('go', ['version'], {
-      reject: false,
-    });
-    if (!failed) {
-      const { minor } = parseGoVersionString(stdout);
-      if (minor >= GO_MIN_VERSION) {
-        debug(`Using system installed version of 'go': ${stdout.trim()}`);
-        return new GoWrapper(env, opts);
-      }
-    }
-
     // `go` not found in the system PATH
     // default to newest (first) supported go version
     goVersion = Array.from(versionMap.values())[0];
   }
 
+  await createGoPathTree(goDir);
+
   // at this point, we are going to be using `go` from the cache directory,
   // so let's add it to the PATH now
   const binPath = join(getGoDir(workPath), 'bin');
-  debug(`Adding ${binPath} to PATH`);
   env.PATH = `${binPath}${delimiter}${env.PATH}`;
 
   // check we have the desired `go` version cached
@@ -214,17 +219,18 @@ export async function createGo({
     if (!failed) {
       const { version, short } = parseGoVersionString(stdout);
       if (version === goVersion || short === goVersion) {
-        debug(`Using cached version of 'go': ${stdout.trim()}`);
+        debug(`Initializing go ${version} (from cache)`);
         return new GoWrapper(env, opts);
+      } else {
+        debug(`Found cached go ${version}, but need ${goVersion}`);
       }
     }
   }
 
   // we need to download and cache the desired `go` version
   const { arch, platform } = process;
-  debug(`Installing 'go' v${goVersion} to ${goDir} for ${platform} ${arch}`);
   const url = getGoUrl(goVersion, platform, arch);
-  debug(`Downloading 'go' URL: ${url}`);
+  debug(`Downloading go: ${url}`);
   const res = await fetch(url);
 
   if (!res.ok) {
@@ -232,6 +238,7 @@ export async function createGo({
   }
 
   // TODO: use a zip extractor when `ext === "zip"`
+  debug(`Installing go ${goVersion} to ${goDir} (${platform}/${arch})`);
   await remove(goDir);
   await mkdirp(goDir);
   await new Promise((resolve, reject) => {
@@ -244,7 +251,9 @@ export async function createGo({
   return new GoWrapper(env, opts);
 }
 
-async function parseGoVersion(modulePath: string): Promise<string | undefined> {
+async function parseGoModVersion(
+  modulePath: string
+): Promise<string | undefined> {
   let version;
   const file = join(modulePath, 'go.mod');
 
