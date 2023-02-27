@@ -18,7 +18,8 @@
   "files": [
     "dist",
     "server-node.mjs",
-    "server-edge.mjs"
+    "server-edge.mjs",
+    "vercel-edge-entrypoint.js"
   ],
   "dependencies": {
     "@remix-run/dev": "1.13.0",

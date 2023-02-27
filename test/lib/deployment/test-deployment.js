@@ -283,7 +283,7 @@ async function runProbe(probe, deploymentId, deploymentUrl, ctx) {
   assert(hadTest, 'probe must have a test condition');
 }
 
-async function testDeployment(fixturePath) {
+async function testDeployment(fixturePath, opts) {
   const projectName = path
     .basename(fixturePath)
     .toLowerCase()
@@ -348,7 +348,8 @@ async function testDeployment(fixturePath) {
     projectName,
     bodies,
     randomness,
-    uploadNowJson
+    uploadNowJson,
+    opts
   );
   const probeCtx = {};
 
