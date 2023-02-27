@@ -269,6 +269,7 @@ export async function serverBuild({
     let initialFileList: string[];
     let initialFileReasons: NodeFileTraceReasons;
     let nextServerBuildTrace;
+    let instrumentationHookBuildTrace;
 
     const nextServerFile = resolveFrom(
       requiredServerFilesManifest.appDir || entryPath,
@@ -285,6 +286,22 @@ export async function serverBuild({
       );
     } catch (_) {
       // if the trace is unavailable we trace inside the runtime
+    }
+
+    try {
+      instrumentationHookBuildTrace = JSON.parse(
+        await fs.readFile(
+          path.join(
+            entryPath,
+            outputDirectory,
+            'server',
+            'instrumentation.js.nft.json'
+          ),
+          'utf8'
+        )
+      );
+    } catch (_) {
+      // if the trace is unavailable it means `instrumentation.js` wasn't used
     }
 
     if (nextServerBuildTrace) {
@@ -319,6 +336,18 @@ export async function serverBuild({
       });
       initialFileList = Array.from(result.fileList);
       initialFileReasons = result.reasons;
+    }
+
+    if (instrumentationHookBuildTrace) {
+      initialFileList = initialFileList.concat(
+        instrumentationHookBuildTrace.files.map((file: string) => {
+          return path.relative(
+            baseDir,
+            path.join(entryPath, outputDirectory, file)
+          );
+        })
+      );
+      debug('Using instrumentation.js.nft.json trace from build');
     }
 
     debug('collecting initial Next.js server files');
