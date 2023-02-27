@@ -33,6 +33,20 @@
       "path": "/nested2/__pathless",
       "status": 404,
       "mustContain": "Not Found"
+    },
+    {
+      "path": "/set-cookie-edge",
+      "status": 200,
+      "responseHeaders": {
+        "set-cookie": ["hello=world", "foo=bar"]
+      }
+    },
+    {
+      "path": "/set-cookie-node",
+      "status": 200,
+      "responseHeaders": {
+        "set-cookie": ["hello=world", "foo=bar"]
+      }
     }
   ]
 }
