@@ -641,6 +641,7 @@ importers:
       string-argv: 0.3.1
       tar: 4.4.6
       typescript: 4.3.4
+      xdg-app-paths: 5.1.0
     devDependencies:
       '@tootallnate/once': 1.1.2
       '@types/async-retry': 1.4.2
@@ -659,6 +660,7 @@ importers:
       string-argv: 0.3.1
       tar: 4.4.6
       typescript: 4.3.4
+      xdg-app-paths: 5.1.0
 
   packages/hydrogen:
     specifiers:
@@ -1266,7 +1268,7 @@ packages:
       '@babel/core': ^7.0.0
     dependencies:
       '@babel/compat-data': 7.20.10
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-validator-option': 7.18.6
       browserslist: 4.21.4
       lru-cache: 5.1.1
@@ -1729,7 +1731,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-bigint/7.8.3_@babel+core@7.20.12:
@@ -1848,7 +1850,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-optional-catch-binding/7.8.3_@babel+core@7.20.12:
@@ -1856,7 +1858,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12_supports-color@7.2.0
+      '@babel/core': 7.20.12
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-optional-chaining/7.8.3_@babel+core@7.20.12:
