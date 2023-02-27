@@ -41,9 +41,12 @@ export function getPathFromRoute(
   route: ConfigRoute,
   routes: RouteManifest
 ): string {
+  if (route.id === 'root' || (route.parentId === 'root' && route.index)) {
+    return 'index';
+  }
+
   const pathParts: string[] = [];
   for (const currentRoute of getRouteIterator(route, routes)) {
-    if (currentRoute.index) pathParts.push('index');
     if (currentRoute.path) pathParts.push(currentRoute.path);
   }
   const path = pathParts.reverse().join('/');
