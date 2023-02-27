@@ -108,9 +108,7 @@ export const build: BuildV2 = async ({
 
   try {
     await fs.rename(remixRunDevPath, backupRemixRunDevPath);
-    console.log('renamed %s to %s', remixRunDevPath, backupRemixRunDevPath);
   } catch (err: any) {
-    console.log(err);
     if (err.code !== 'ENOENT') {
       throw err;
     }
@@ -118,7 +116,6 @@ export const build: BuildV2 = async ({
   }
 
   await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
-  console.log('symlinked %s to %s', REMIX_RUN_DEV_PATH, remixRunDevPath);
 
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
@@ -156,10 +153,15 @@ export const build: BuildV2 = async ({
     }
   }
   const serverBundles = [
-    { serverBuildPath: 'build/build-edge.js', routes: Array.from(edgeRoutes) },
-    { serverBuildPath: 'build/build-node.js', routes: Array.from(nodeRoutes) },
+    {
+      serverBuildPath: 'build/build-edge.js',
+      routes: Array.from(edgeRoutes).map(r => r.id),
+    },
+    {
+      serverBuildPath: 'build/build-node.js',
+      routes: Array.from(nodeRoutes).map(r => r.id),
+    },
   ];
-  console.log(serverBundles);
 
   // We need to patch the `remix.config.js` file to force some values necessary
   // for a build that works on either Node.js or the Edge runtime
