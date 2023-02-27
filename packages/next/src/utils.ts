@@ -169,6 +169,7 @@ function getImagesConfig(
         formats: imagesManifest.images.formats,
         dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
         contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
+        contentDispositionType: imagesManifest.images.contentDispositionType,
       }
     : undefined;
 }
@@ -510,43 +511,15 @@ export type NextImagesManifest = {
     loader: LoaderKey;
     sizes: number[];
     domains: string[];
-    remotePatterns: RemotePattern[];
-    minimumCacheTTL?: number;
-    formats?: ImageFormat[];
+    remotePatterns: Images['remotePatterns'];
+    minimumCacheTTL?: Images['minimumCacheTTL'];
+    formats?: Images['formats'];
     unoptimized?: boolean;
-    dangerouslyAllowSVG?: boolean;
-    contentSecurityPolicy?: string;
+    dangerouslyAllowSVG?: Images['dangerouslyAllowSVG'];
+    contentSecurityPolicy?: Images['contentSecurityPolicy'];
+    contentDispositionType?: Images['contentDispositionType'];
   };
 };
-
-export type RemotePattern = {
-  /**
-   * Must be `http` or `https`.
-   */
-  protocol?: 'http' | 'https';
-
-  /**
-   * Can be literal or wildcard.
-   * Single `*` matches a single subdomain.
-   * Double `**` matches any number of subdomains.
-   */
-  hostname: string;
-
-  /**
-   * Can be literal port such as `8080` or empty string
-   * meaning no port.
-   */
-  port?: string;
-
-  /**
-   * Can be literal or wildcard.
-   * Single `*` matches a single path segment.
-   * Double `**` matches any number of path segments.
-   */
-  pathname?: string;
-};
-
-type ImageFormat = 'image/avif' | 'image/webp';
 
 export async function getImagesManifest(
   entryPath: string,
@@ -838,6 +811,7 @@ export async function createLambdaFromPseudoLayers({
 
 export type NextRequiredServerFilesManifest = {
   appDir?: string;
+  relativeAppDir?: string;
   files: string[];
   ignore: string[];
   config: Record<string, any>;
@@ -981,6 +955,7 @@ export async function getRequiredServerFilesManifest(
     ignore: [],
     config: {},
     appDir: manifestData.appDir,
+    relativeAppDir: manifestData.relativeAppDir,
   };
 
   switch (manifestData.version) {
@@ -2093,8 +2068,11 @@ export const onPrerenderRoute =
       }
 
       const rscEnabled = !!routesManifest?.rsc;
-      const rscVaryHeader = routesManifest?.rsc?.varyHeader || 'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
-      const rscContentTypeHeader = routesManifest?.rsc?.contentTypeHeader || 'text/x-component';
+      const rscVaryHeader =
+        routesManifest?.rsc?.varyHeader ||
+        'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
+      const rscContentTypeHeader =
+        routesManifest?.rsc?.contentTypeHeader || 'text/x-component';
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,

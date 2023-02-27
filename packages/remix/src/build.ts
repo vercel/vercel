@@ -5,6 +5,7 @@ import {
   debug,
   download,
   execCommand,
+  FileBlob,
   FileFsRef,
   getEnvForPackageManager,
   getNodeVersion,
@@ -18,7 +19,7 @@ import {
   scanParentDirs,
   walkParentDirs,
 } from '@vercel/build-utils';
-import { getConfig } from '@vercel/static-config';
+import { getConfig, BaseFunctionConfig } from '@vercel/static-config';
 import { nodeFileTrace } from '@vercel/nft';
 import { readConfig } from '@remix-run/dev/dist/config';
 import type {
@@ -28,11 +29,13 @@ import type {
   PackageJson,
   BuildResultV2Typical,
 } from '@vercel/build-utils';
+import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 import {
   findConfig,
   getPathFromRoute,
   getRegExpFromPath,
+  getRouteIterator,
   isLayoutRoute,
 } from './utils';
 
@@ -120,32 +123,35 @@ export const build: BuildV2 = async ({
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
 
-  let remixConfig = await readConfig(entrypointFsDirname);
+  const remixConfig = await chdirAndReadConfig(entrypointFsDirname);
   const remixRoutes = Object.values(remixConfig.routes);
 
   // Figure out which pages should be edge functions
-  const edgePages = new Set<ConfigRoute>();
   const project = new Project();
-  const edgeRoutes: string[] = [];
-  const nodeRoutes: string[] = [];
+  const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig>();
+  const edgeRoutes = new Set<string>();
+  const nodeRoutes = new Set<string>();
   for (const route of remixRoutes) {
     const routePath = join(remixConfig.appDirectory, route.file);
     const staticConfig = getConfig(project, routePath);
+    if (staticConfig) {
+      staticConfigsMap.set(route, staticConfig);
+    }
+
     if (isLayoutRoute(route.id, remixRoutes)) continue;
 
     const isEdge =
       staticConfig?.runtime === 'edge' ||
       staticConfig?.runtime === 'experimental-edge';
     if (isEdge) {
-      edgePages.add(route);
-      edgeRoutes.push(route.id);
+      edgeRoutes.add(route.id);
     } else {
-      nodeRoutes.push(route.id);
+      nodeRoutes.add(route.id);
     }
   }
   const serverBundles = [
-    { serverBuildPath: 'build/build-edge.js', routes: edgeRoutes },
-    { serverBuildPath: 'build/build-node.js', routes: nodeRoutes },
+    { serverBuildPath: 'build/build-edge.js', routes: Array.from(edgeRoutes) },
+    { serverBuildPath: 'build/build-node.js', routes: Array.from(nodeRoutes) },
   ];
 
   // We need to patch the `remix.config.js` file to force some values necessary
@@ -154,6 +160,7 @@ export const build: BuildV2 = async ({
   const renamedRemixConfigPath = remixConfigPath
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
     : undefined;
+  const serverBuildPath = 'build/index.js';
   if (remixConfigPath && renamedRemixConfigPath) {
     await fs.rename(remixConfigPath, renamedRemixConfigPath);
 
@@ -162,11 +169,7 @@ export const build: BuildV2 = async ({
     try {
       _require(renamedRemixConfigPath);
     } catch (err: any) {
-      if (err.code === 'ERR_REQUIRE_ESM') {
-        isESM = true;
-      } else {
-        throw err;
-      }
+      isESM = err.code === 'ERR_REQUIRE_ESM';
     }
 
     let patchedConfig: string;
@@ -175,10 +178,9 @@ export const build: BuildV2 = async ({
         renamedRemixConfigPath
       )}';
 config.serverBuildTarget = undefined;
-config.server = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
-config.serverBuildPath = 'build/index.js';
+config.serverBuildPath = ${JSON.stringify(serverBuildPath)}
 config.serverBundles = ${JSON.stringify(serverBundles)}
 export default config;`;
     } else {
@@ -186,10 +188,9 @@ export default config;`;
         renamedRemixConfigPath
       )}');
 config.serverBuildTarget = undefined;
-config.server = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
-config.serverBuildPath = 'build/index.js';
+config.serverBuildPath = ${JSON.stringify(serverBuildPath)}
 config.serverBundles = ${JSON.stringify(serverBundles)}
 module.exports = config;`;
     }
@@ -225,7 +226,6 @@ module.exports = config;`;
         });
       }
     }
-    remixConfig = await readConfig(entrypointFsDirname);
   } finally {
     // Clean up our patched `remix.config.js` to be polite
     if (remixConfigPath && renamedRemixConfigPath) {
@@ -256,13 +256,15 @@ module.exports = config;`;
       entrypointFsDirname,
       repoRootPath,
       join(entrypointFsDirname, 'build/build-node.js'),
+      remixConfig.serverEntryPoint,
       nodeVersion
     ),
-    edgePages.size > 0
+    edgeRoutes.size > 0
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
-          join(entrypointFsDirname, 'build/build-edge.js')
+          join(entrypointFsDirname, 'build/build-edge.js'),
+          remixConfig.serverEntryPoint
         )
       : undefined,
   ]);
@@ -284,7 +286,22 @@ module.exports = config;`;
     if (isLayoutRoute(route.id, remixRoutes)) continue;
 
     const path = getPathFromRoute(route, remixConfig.routes);
-    const isEdge = edgePages.has(route);
+
+    // If the route is a pathless layout route (at the root level)
+    // and doesn't have any sub-routes, then a function should not be created.
+    if (!path) {
+      continue;
+    }
+
+    let isEdge = false;
+    for (const currentRoute of getRouteIterator(route, remixConfig.routes)) {
+      const staticConfig = staticConfigsMap.get(currentRoute);
+      if (staticConfig?.runtime) {
+        isEdge = isEdgeRuntime(staticConfig.runtime);
+        break;
+      }
+    }
+
     const fn =
       isEdge && edgeFunction
         ? // `EdgeFunction` currently requires the "name" property to be set.
@@ -332,17 +349,21 @@ async function createRenderNodeFunction(
   entrypointDir: string,
   rootDir: string,
   serverBuildPath: string,
+  serverEntryPoint: string | undefined,
   nodeVersion: NodeVersion
 ): Promise<NodejsLambda> {
   const files: Files = {};
 
-  const relativeServerBuildPath = relative(rootDir, serverBuildPath);
-  const handler = join(dirname(relativeServerBuildPath), 'server-node.mjs');
-  const handlerPath = join(rootDir, handler);
+  let handler = relative(rootDir, serverBuildPath);
+  let handlerPath = join(rootDir, handler);
+  if (!serverEntryPoint) {
+    handler = join(dirname(handler), 'server-node.mjs');
+    handlerPath = join(rootDir, handler);
 
-  // Copy the `server-node.mjs` file into the "build" directory
-  const sourceHandlerPath = join(__dirname, '../server-node.mjs');
-  await fs.copyFile(sourceHandlerPath, handlerPath);
+    // Copy the `server-node.mjs` file into the "build" directory
+    const sourceHandlerPath = join(__dirname, '../server-node.mjs');
+    await fs.copyFile(sourceHandlerPath, handlerPath);
+  }
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
@@ -374,17 +395,23 @@ async function createRenderNodeFunction(
 async function createRenderEdgeFunction(
   entrypointDir: string,
   rootDir: string,
-  serverBuildPath: string
+  serverBuildPath: string,
+  serverEntryPoint: string | undefined
 ): Promise<EdgeFunction> {
   const files: Files = {};
 
-  const relativeServerBuildPath = relative(rootDir, serverBuildPath);
-  const handler = join(dirname(relativeServerBuildPath), 'server-edge.mjs');
-  const handlerPath = join(rootDir, handler);
+  let handler = relative(rootDir, serverBuildPath);
+  let handlerPath = join(rootDir, handler);
+  if (!serverEntryPoint) {
+    handler = join(dirname(handler), 'server-edge.mjs');
+    handlerPath = join(rootDir, handler);
 
-  // Copy the `server-edge.mjs` file into the "build" directory
-  const sourceHandlerPath = join(__dirname, '../server-edge.mjs');
-  await fs.copyFile(sourceHandlerPath, handlerPath);
+    // Copy the `server-edge.mjs` file into the "build" directory
+    const sourceHandlerPath = join(__dirname, '../server-edge.mjs');
+    await fs.copyFile(sourceHandlerPath, handlerPath);
+  }
+
+  let remixRunVercelPkgJson: string | undefined;
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
@@ -404,6 +431,35 @@ async function createRenderEdgeFunction(
       if (basename(fsPath) === 'package.json') {
         // For Edge Functions, patch "main" field to prefer "browser" or "module"
         const pkgJson = JSON.parse(source.toString());
+
+        // When `@remix-run/vercel` is detected, we need to modify the `package.json`
+        // to include the "browser" field so that the proper Edge entrypoint file
+        // is used. This is a temporary stop gap until this PR is merged:
+        // https://github.com/remix-run/remix/pull/5537
+        if (pkgJson.name === '@remix-run/vercel') {
+          pkgJson.browser = 'dist/edge.js';
+          pkgJson.dependencies['@remix-run/server-runtime'] =
+            pkgJson.dependencies['@remix-run/node'];
+
+          if (!remixRunVercelPkgJson) {
+            remixRunVercelPkgJson = JSON.stringify(pkgJson, null, 2) + '\n';
+
+            // Copy in the edge entrypoint so that NFT can properly resolve it
+            const vercelEdgeEntrypointPath = join(
+              __dirname,
+              '../vercel-edge-entrypoint.js'
+            );
+            const vercelEdgeEntrypointDest = join(
+              dirname(fsPath),
+              'dist/edge.js'
+            );
+            await fs.copyFile(
+              vercelEdgeEntrypointPath,
+              vercelEdgeEntrypointDest
+            );
+          }
+        }
+
         for (const prop of ['browser', 'module']) {
           const val = pkgJson[prop];
           if (typeof val === 'string') {
@@ -424,7 +480,15 @@ async function createRenderEdgeFunction(
   }
 
   for (const file of trace.fileList) {
-    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
+    if (
+      remixRunVercelPkgJson &&
+      file.endsWith(`@remix-run${sep}vercel${sep}package.json`)
+    ) {
+      // Use the modified `@remix-run/vercel` package.json which contains "browser" field
+      files[file] = new FileBlob({ data: remixRunVercelPkgJson });
+    } else {
+      files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
+    }
   }
 
   const fn = new EdgeFunction({
@@ -506,4 +570,20 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
   throw new Error(
     `Failed to resolve "${pkgName}". To fix this error, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
   );
+}
+
+function isEdgeRuntime(runtime: string): boolean {
+  return runtime === 'edge' || runtime === 'experimental-edge';
+}
+
+async function chdirAndReadConfig(dir: string) {
+  const originalCwd = process.cwd();
+  let remixConfig: RemixConfig;
+  try {
+    process.chdir(dir);
+    remixConfig = await readConfig(dir);
+  } finally {
+    process.chdir(originalCwd);
+  }
+  return remixConfig;
 }

@@ -54,11 +54,13 @@ function createRemixRequest(req, res) {
 }
 
 async function sendRemixResponse(res, nodeResponse) {
-  res.statusCode = nodeResponse.status;
   res.statusMessage = nodeResponse.statusText;
-  for (const [name, value] of nodeResponse.headers.entries()) {
-    res.setHeader(name, value);
-  }
+  let multiValueHeaders = nodeResponse.headers.raw();
+  res.writeHead(
+    nodeResponse.status,
+    nodeResponse.statusText,
+    multiValueHeaders
+  );
 
   if (nodeResponse.body) {
     await writeReadableStreamToWritable(nodeResponse.body, res);

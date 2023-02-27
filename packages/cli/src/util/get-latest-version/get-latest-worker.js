@@ -247,6 +247,14 @@ async function fetchDistTags(name) {
         });
         res.on('end', () => {
           try {
+            if (res.statusCode && res.statusCode >= 400) {
+              return reject(
+                new Error(
+                  `Fetch dist-tags failed ${res.statusCode} ${res.statusMessage}`
+                )
+              );
+            }
+
             resolve(JSON.parse(buf));
           } catch (err) {
             reject(err);
