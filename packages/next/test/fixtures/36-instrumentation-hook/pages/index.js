@@ -1,5 +1,5 @@
 export default function Home(props) {
-  return `isOdd: {props.isOdd}`;
+  return `isOdd: ${props.isOdd}`;
 }
 
 export async function getServerSideProps() {
