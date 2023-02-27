@@ -18,16 +18,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     - name: Check Release
       id: check-release
       run: |
         tag="$(git describe --tags --exact-match 2> /dev/null || :)"
         if [[ -z "$tag" ]];
           then
-            echo "::set-output name=IS_RELEASE::false"
+            echo "IS_RELEASE=false" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=IS_RELEASE::true"
+            echo "IS_RELEASE=true" >> $GITHUB_OUTPUT
         fi
     - name: Setup Go
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
@@ -37,22 +39,22 @@ jobs:
     - name: Setup Node
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       uses: actions/setup-node@v3
-      timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
       with:
-        node-version: 14
-        cache: 'yarn'
+        node-version: 16
+    - name: install pnpm@7.24.2
+      run: npm i -g pnpm@7.24.2
     - name: Install
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      run: yarn install --check-files --frozen-lockfile --network-timeout 1000000
+      run: pnpm install
     - name: Build
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      run: yarn build
+      run: pnpm build
       env:
         GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     - name: Publish
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
-      run: yarn publish-from-github
+      run: pnpm publish-from-github
       env:
         NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
         GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}

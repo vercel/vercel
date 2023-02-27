@@ -17,10 +17,10 @@ import Client from '../util/client';
 import { Deployment } from '@vercel/client';
 import validatePaths from '../util/validate-paths';
 import { getLinkedProject } from '../util/projects/link';
-import { ensureLink } from '../util/ensure-link';
+import { ensureLink } from '../util/link/ensure-link';
 import getScope from '../util/get-scope';
 import { isAPIError } from '../util/errors-ts';
-import { isErrnoException } from '../util/is-error';
+import { isErrnoException } from '@vercel/error-utils';
 
 const help = () => {
   console.log(`
@@ -36,6 +36,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -y, --yes                      Skip questions when setting up new project using default scope and settings
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
@@ -56,7 +57,7 @@ const help = () => {
   ${chalk.gray('–')} List all deployments for the project ${chalk.dim(
     '`my-app`'
   )} in the team of the currently linked project
-  
+
     ${chalk.cyan(`$ ${getPkgName()} ls my-app`)}
 
   ${chalk.gray('–')} Filter deployments by metadata
@@ -112,7 +113,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  const yes = !!argv['--yes'];
+  const autoConfirm = !!argv['--yes'];
   const prod = argv['--prod'] || false;
 
   const meta = parseMeta(argv['--meta']);
@@ -145,7 +146,10 @@ export default async function main(client: Client) {
   // If there's no linked project and user doesn't pass `app` arg,
   // prompt to link their current directory.
   if (status === 'not_linked' && !app) {
-    const linkedProject = await ensureLink('list', client, path, yes);
+    const linkedProject = await ensureLink('list', client, path, {
+      autoConfirm,
+      link,
+    });
     if (typeof linkedProject === 'number') {
       return linkedProject;
     }

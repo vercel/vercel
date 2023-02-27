@@ -1,0 +1,18 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "Welcome to <b>Gatsby!</b>" },
+    { "path": "/page-2", "mustContain": "Hi from the second page" },
+    {
+      "path": "/using-typescript",
+      "mustContain": "Gatsby supports <b>TypeScript by default</b>"
+    },
+    {
+      "path": "/using-ssr",
+      "mustContain": "This page is rendered server side"
+    },
+    {
+      "path": "/using-dsg",
+      "mustContain": "This page is not created until requested by a user"
+    }
+  ]
+}

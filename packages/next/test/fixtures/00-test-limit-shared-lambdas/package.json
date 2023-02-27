@@ -1,8 +1,10 @@
 {
-  "name": "test-limit",
-  "version": "1.0.0",
+  "private": true,
   "scripts": {
     "build": "next build"
+  },
+  "engines": {
+    "node": "16.x"
   },
   "dependencies": {
     "chrome-aws-lambda": "8.0.0",

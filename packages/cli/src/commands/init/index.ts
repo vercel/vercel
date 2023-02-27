@@ -7,7 +7,7 @@ import handleError from '../../util/handle-error';
 import logo from '../../util/output/logo';
 import init from './init';
 import { getPkgName } from '../../util/pkg-name';
-import { isError } from '../../util/is-error';
+import { isError } from '@vercel/error-utils';
 
 const COMMAND_CONFIG = {
   init: ['init'],
@@ -21,6 +21,7 @@ const help = () => {
 
     -h, --help        Output usage information
     -d, --debug       Debug mode [off]
+    --no-color        No color mode [off]
     -f, --force       Overwrite destination directory if exists [off]
 
   ${chalk.dim('Examples:')}

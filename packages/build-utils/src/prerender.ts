@@ -3,21 +3,27 @@ import { Lambda } from './lambda';
 
 interface PrerenderOptions {
   expiration: number | false;
-  lambda: Lambda;
+  lambda?: Lambda;
   fallback: File | null;
   group?: number;
   bypassToken?: string | null /* optional to be non-breaking change */;
   allowQuery?: string[];
+  initialHeaders?: Record<string, string>;
+  initialStatus?: number;
+  passQuery?: boolean;
 }
 
 export class Prerender {
   public type: 'Prerender';
   public expiration: number | false;
-  public lambda: Lambda;
+  public lambda?: Lambda;
   public fallback: File | null;
   public group?: number;
   public bypassToken: string | null;
   public allowQuery?: string[];
+  public initialHeaders?: Record<string, string>;
+  public initialStatus?: number;
+  public passQuery?: boolean;
 
   constructor({
     expiration,
@@ -26,10 +32,18 @@ export class Prerender {
     group,
     bypassToken,
     allowQuery,
+    initialHeaders,
+    initialStatus,
+    passQuery,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
+
     this.lambda = lambda;
+    if (this.lambda) {
+      // "ISR" is the platform default lambda label for prerender functions
+      this.lambda.operationType = this.lambda.operationType || 'ISR';
+    }
 
     if (
       typeof group !== 'undefined' &&
@@ -40,6 +54,17 @@ export class Prerender {
       );
     }
     this.group = group;
+
+    if (passQuery === true) {
+      this.passQuery = true;
+    } else if (
+      typeof passQuery !== 'boolean' &&
+      typeof passQuery !== 'undefined'
+    ) {
+      throw new Error(
+        `The \`passQuery\` argument for \`Prerender\` must be a boolean.`
+      );
+    }
 
     if (bypassToken == null) {
       this.bypassToken = null;
@@ -63,6 +88,30 @@ export class Prerender {
       );
     }
     this.fallback = fallback;
+
+    if (initialHeaders !== undefined) {
+      if (
+        !initialHeaders ||
+        typeof initialHeaders !== 'object' ||
+        Object.entries(initialHeaders).some(
+          ([key, value]) => typeof key !== 'string' || typeof value !== 'string'
+        )
+      ) {
+        throw new Error(
+          `The \`initialHeaders\` argument for \`Prerender\` must be an object with string key/values`
+        );
+      }
+      this.initialHeaders = initialHeaders;
+    }
+
+    if (initialStatus !== undefined) {
+      if (initialStatus <= 0 || !Number.isInteger(initialStatus)) {
+        throw new Error(
+          `The \`initialStatus\` argument for \`Prerender\` must be a natural number.`
+        );
+      }
+      this.initialStatus = initialStatus;
+    }
 
     if (allowQuery !== undefined) {
       if (!Array.isArray(allowQuery)) {

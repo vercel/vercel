@@ -14,7 +14,7 @@ import {
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
+import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
@@ -38,10 +38,12 @@ import {
   outputFunctionFileSizeInfo,
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
   normalizeIndexOutput,
+  getImagesConfig,
   getNextServerPath,
   getMiddlewareBundle,
   getFilesMapFromReasons,
   UnwrapPromise,
+  getOperationType,
 } from './utils';
 import {
   nodeFileTrace,
@@ -148,6 +150,10 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
+  const projectDir = requiredServerFilesManifest.relativeAppDir
+    ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
+    : requiredServerFilesManifest.appDir || entryPath;
+
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
 
@@ -180,7 +186,10 @@ export async function serverBuild({
   }
 
   const pageMatchesApi = (page: string) => {
-    return page.startsWith('api/') || page === 'api.js';
+    return (
+      !appPathRoutesManifest?.[page] &&
+      (page.startsWith('api/') || page === 'api.js')
+    );
   };
 
   const { i18n } = routesManifest;
@@ -218,7 +227,8 @@ export async function serverBuild({
       nonLambdaSsgPages,
       route,
       routesManifest.pages404,
-      routesManifest
+      routesManifest,
+      appDir
     );
 
     if (result && result.static404Page) {
@@ -265,7 +275,7 @@ export async function serverBuild({
     let nextServerBuildTrace;
 
     const nextServerFile = resolveFrom(
-      requiredServerFilesManifest.appDir || entryPath,
+      projectDir,
       `${getNextServerPath(nextVersion)}/next-server.js`
     );
 
@@ -337,6 +347,7 @@ export async function serverBuild({
 
     const apiPages: string[] = [];
     const nonApiPages: string[] = [];
+    const streamingPages: string[] = [];
 
     lambdaPageKeys.forEach(page => {
       if (
@@ -358,6 +369,8 @@ export async function serverBuild({
 
       if (pageMatchesApi(page)) {
         apiPages.push(page);
+      } else if (appDir && lambdaAppPaths[page]) {
+        streamingPages.push(page);
       } else {
         nonApiPages.push(page);
       }
@@ -428,8 +441,8 @@ export async function serverBuild({
           file
         );
 
-        if (requiredServerFilesManifest.appDir) {
-          fsPath = path.join(requiredServerFilesManifest.appDir, file);
+        if (projectDir) {
+          fsPath = path.join(projectDir, file);
         }
 
         const relativePath = path.relative(baseDir, fsPath);
@@ -507,7 +520,7 @@ export async function serverBuild({
         `conf: ${JSON.stringify({
           ...requiredServerFilesManifest.config,
           distDir: path.relative(
-            requiredServerFilesManifest.appDir || entryPath,
+            projectDir,
             path.join(entryPath, outputDirectory)
           ),
           compress: false,
@@ -534,10 +547,8 @@ export async function serverBuild({
     }
 
     const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-      [path.join(
-        path.relative(baseDir, requiredServerFilesManifest.appDir || entryPath),
-        '___next_launcher.cjs'
-      )]: new FileBlob({ data: launcher }),
+      [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
+        new FileBlob({ data: launcher }),
     };
     const pageTraces: {
       [page: string]: { [key: string]: FileFsRef };
@@ -545,7 +556,12 @@ export async function serverBuild({
     const compressedPages: {
       [page: string]: PseudoFile;
     } = {};
-    const mergedPageKeys = [...nonApiPages, ...apiPages, ...internalPages];
+    const mergedPageKeys = [
+      ...nonApiPages,
+      ...streamingPages,
+      ...apiPages,
+      ...internalPages,
+    ];
     const traceCache = {};
 
     const getOriginalPagePath = (page: string) => {
@@ -580,7 +596,7 @@ export async function serverBuild({
       traceResult = await nodeFileTrace(pathsToTrace, {
         base: baseDir,
         cache: traceCache,
-        processCwd: requiredServerFilesManifest.appDir || entryPath,
+        processCwd: projectDir,
       });
       traceResult.esmFileList.forEach(file => traceResult?.fileList.add(file));
       parentFilesMap = getFilesMapFromReasons(
@@ -633,7 +649,7 @@ export async function serverBuild({
         const curPagesDir = isAppPath && appDir ? appDir : pagesDir;
         const pageDir = path.dirname(path.join(curPagesDir, originalPagePath));
         const normalizedBaseDir = `${baseDir}${
-          baseDir.endsWith('/') ? '' : '/'
+          baseDir.endsWith(path.sep) ? '' : path.sep
         }`;
         files.forEach((file: string) => {
           const absolutePath = path.join(pageDir, file);
@@ -689,7 +705,7 @@ export async function serverBuild({
     const pageExtensions = requiredServerFilesManifest.config?.pageExtensions;
 
     const pageLambdaGroups = await getPageLambdaGroups({
-      entryPath: requiredServerFilesManifest.appDir || entryPath,
+      entryPath: projectDir,
       config,
       pages: nonApiPages,
       prerenderRoutes,
@@ -703,8 +719,29 @@ export async function serverBuild({
       pageExtensions,
     });
 
+    const streamingPageLambdaGroups = await getPageLambdaGroups({
+      entryPath: projectDir,
+      config,
+      pages: streamingPages,
+      prerenderRoutes,
+      pageTraces,
+      compressedPages,
+      tracedPseudoLayer: tracedPseudoLayer.pseudoLayer,
+      initialPseudoLayer,
+      lambdaCompressedByteLimit,
+      initialPseudoLayerUncompressed: uncompressedInitialSize,
+      internalPages,
+      pageExtensions,
+    });
+
+    for (const group of streamingPageLambdaGroups) {
+      if (!group.isPrerenders) {
+        group.isStreaming = true;
+      }
+    }
+
     const apiLambdaGroups = await getPageLambdaGroups({
-      entryPath: requiredServerFilesManifest.appDir || entryPath,
+      entryPath: projectDir,
       config,
       pages: apiPages,
       prerenderRoutes,
@@ -716,6 +753,10 @@ export async function serverBuild({
       lambdaCompressedByteLimit,
       internalPages,
     });
+
+    for (const group of apiLambdaGroups) {
+      group.isApiLambda = true;
+    }
 
     debug(
       JSON.stringify(
@@ -732,13 +773,23 @@ export async function serverBuild({
             pseudoLayerBytes: group.pseudoLayerBytes,
             uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
           })),
+          streamingPageLambdaGroups: streamingPageLambdaGroups.map(group => ({
+            pages: group.pages,
+            isPrerender: group.isPrerenders,
+            pseudoLayerBytes: group.pseudoLayerBytes,
+            uncompressedLayerBytes: group.pseudoLayerUncompressedBytes,
+          })),
           nextServerLayerSize: initialPseudoLayer.pseudoLayerBytes,
         },
         null,
         2
       )
     );
-    const combinedGroups = [...pageLambdaGroups, ...apiLambdaGroups];
+    const combinedGroups = [
+      ...pageLambdaGroups,
+      ...streamingPageLambdaGroups,
+      ...apiLambdaGroups,
+    ];
 
     await detectLambdaLimitExceeding(
       combinedGroups,
@@ -815,6 +866,8 @@ export async function serverBuild({
         }
       }
 
+      const operationType = getOperationType({ group, prerenderManifest });
+
       const lambda = await createLambdaFromPseudoLayers({
         files: {
           ...launcherFiles,
@@ -822,15 +875,15 @@ export async function serverBuild({
         },
         layers: [group.pseudoLayer, groupPageFiles],
         handler: path.join(
-          path.relative(
-            baseDir,
-            requiredServerFilesManifest.appDir || entryPath
-          ),
+          path.relative(baseDir, projectDir),
           '___next_launcher.cjs'
         ),
+        operationType,
         memory: group.memory,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
+        isStreaming: group.isStreaming,
+        nextVersion,
       });
 
       for (const page of group.pages) {
@@ -925,11 +978,13 @@ export async function serverBuild({
   });
 
   const middleware = await getMiddlewareBundle({
+    config,
     entryPath,
     outputDirectory,
     routesManifest,
     isCorrectMiddlewareOrder,
     prerenderBypassToken: prerenderManifest.bypassToken || '',
+    nextVersion,
   });
 
   const isNextDataServerResolving =
@@ -962,59 +1017,6 @@ export async function serverBuild({
 
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
-
-  const notFoundPreviewRoutes: RouteWithSrc[] = [];
-
-  if (prerenderManifest.notFoundRoutes?.length > 0 && canUsePreviewMode) {
-    // we combine routes into one src here to reduce the number of needed
-    // routes since only the status is being modified and we don't want
-    // to exceed the routes limit
-    const starterRouteSrc = `^${
-      entryDirectory !== '.' ? path.posix.join('/', entryDirectory, '()') : '()'
-    }`;
-    let currentRouteSrc = starterRouteSrc;
-
-    const pushRoute = (src: string) => {
-      notFoundPreviewRoutes.push({
-        src,
-        missing: [
-          {
-            type: 'cookie',
-            key: '__prerender_bypass',
-            value: prerenderManifest.bypassToken || undefined,
-          },
-          {
-            type: 'cookie',
-            key: '__next_preview_data',
-          },
-        ],
-        status: 404,
-      });
-    };
-
-    for (let i = 0; i < prerenderManifest.notFoundRoutes.length; i++) {
-      const route = prerenderManifest.notFoundRoutes[i];
-      const isLastRoute = i === prerenderManifest.notFoundRoutes.length - 1;
-
-      if (prerenderManifest.staticRoutes[route]?.initialRevalidate === false) {
-        if (currentRouteSrc.length + route.length + 1 >= 4096) {
-          pushRoute(currentRouteSrc);
-          currentRouteSrc = starterRouteSrc;
-        }
-        // add to existing route src if src length limit isn't reached
-        currentRouteSrc = `${currentRouteSrc.substring(
-          0,
-          currentRouteSrc.length - 1
-        )}${
-          currentRouteSrc[currentRouteSrc.length - 2] === '(' ? '' : '|'
-        }${route})`;
-
-        if (isLastRoute) {
-          pushRoute(currentRouteSrc);
-        }
-      }
-    }
-  }
 
   const normalizeNextDataRoute = (isOverride = false) => {
     return isNextDataServerResolving
@@ -1071,9 +1073,9 @@ export async function serverBuild({
           {
             src: path.posix.join(
               '^/',
-              entryDirectory,
-              trailingSlash ? '/' : '',
-              '$'
+              entryDirectory !== '.'
+                ? `${entryDirectory}${trailingSlash ? '/$' : '$'}`
+                : '$'
             ),
             has: [
               {
@@ -1134,34 +1136,58 @@ export async function serverBuild({
   if (appPathRoutesManifest) {
     // create .rsc variant for app lambdas and edge functions
     // to match prerenders so we can route the same when the
-    // __flight__ header is present
+    // __rsc__ header is present
     const edgeFunctions = middleware.edgeFunctions;
+    // allow looking up original route from normalized route
+    const inverseAppPathManifest: Record<string, string> = {};
+
+    for (const ogRoute of Object.keys(appPathRoutesManifest)) {
+      inverseAppPathManifest[appPathRoutesManifest[ogRoute]] = ogRoute;
+    }
 
     for (let route of Object.values(appPathRoutesManifest)) {
+      const ogRoute = inverseAppPathManifest[route];
+
+      if (ogRoute.endsWith('/route')) {
+        continue;
+      }
       route = path.posix.join('./', route === '/' ? '/index' : route);
 
       if (lambdas[route]) {
         lambdas[`${route}.rsc`] = lambdas[route];
-      } else if (edgeFunctions[route]) {
+      }
+      if (edgeFunctions[route]) {
         edgeFunctions[`${route}.rsc`] = edgeFunctions[route];
       }
     }
   }
 
+  const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
+  const rscVaryHeader =
+    routesManifest?.rsc?.varyHeader ||
+    'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
+
+  const completeDynamicRoutes: typeof dynamicRoutes = [];
+
+  if (appDir) {
+    for (const route of dynamicRoutes) {
+      completeDynamicRoutes.push({
+        ...route,
+        src: route.src.replace(
+          new RegExp(escapeStringRegexp('(?:/)?$')),
+          '(?:\\.rsc)(?:/)?$'
+        ),
+        dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
+      });
+      completeDynamicRoutes.push(route);
+    }
+  } else {
+    completeDynamicRoutes.push(...dynamicRoutes);
+  }
+
   return {
     wildcard: wildcardConfig,
-    images:
-      imagesManifest?.images?.loader === 'default'
-        ? {
-            domains: imagesManifest.images.domains,
-            sizes: imagesManifest.images.sizes,
-            remotePatterns: imagesManifest.images.remotePatterns,
-            minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
-            formats: imagesManifest.images.formats,
-            dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
-            contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
-          }
-        : undefined,
+    images: getImagesConfig(imagesManifest),
     output: {
       ...publicDirectoryFiles,
       ...lambdas,
@@ -1322,13 +1348,17 @@ export async function serverBuild({
 
       // middleware comes directly after redirects but before
       // beforeFiles rewrites as middleware is not a "file" route
+      ...(routesManifest?.skipMiddlewareUrlNormalize
+        ? denormalizeNextDataRoute(true)
+        : []),
+
       ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
 
-      ...beforeFilesRewrites,
+      ...(routesManifest?.skipMiddlewareUrlNormalize
+        ? normalizeNextDataRoute(true)
+        : []),
 
-      // ensure prerender's for notFound: true static routes
-      // have 404 status code when not in preview mode
-      ...notFoundPreviewRoutes,
+      ...beforeFilesRewrites,
 
       // Make sure to 404 for the /404 path itself
       ...(i18n
@@ -1343,6 +1373,12 @@ export async function serverBuild({
                 .join('|')})?[/]?404/?`,
               status: 404,
               continue: true,
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-prerender-revalidate',
+                },
+              ],
             },
           ]
         : [
@@ -1350,6 +1386,12 @@ export async function serverBuild({
               src: path.posix.join('/', entryDirectory, '404/?'),
               status: 404,
               continue: true,
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-prerender-revalidate',
+                },
+              ],
             },
           ]),
 
@@ -1389,15 +1431,34 @@ export async function serverBuild({
       ...(appDir
         ? [
             {
-              src: `^${path.posix.join('/', entryDirectory, '/(.*)$')}`,
+              src: `^${path.posix.join('/', entryDirectory, '/')}`,
               has: [
                 {
                   type: 'header',
-                  key: '__flight__',
+                  key: rscHeader,
+                },
+              ],
+              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              headers: { vary: rscVaryHeader },
+              continue: true,
+              override: true,
+            },
+            {
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                '/((?!.+\\.rsc).+?)(?:/)?$'
+              )}`,
+              has: [
+                {
+                  type: 'header',
+                  key: rscHeader,
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
-              check: true,
+              headers: { vary: rscVaryHeader },
+              continue: true,
+              override: true,
             },
           ]
         : []),
@@ -1494,21 +1555,34 @@ export async function serverBuild({
         ? // when resolving data routes for middleware we need to include
           // all dynamic routes including non-SSG/SSP so that the priority
           // is correct
-          dynamicRoutes
+          completeDynamicRoutes
             .map(route => {
               route = Object.assign({}, route);
+              let normalizedSrc = route.src;
+
+              if (routesManifest.basePath) {
+                normalizedSrc = normalizedSrc.replace(
+                  new RegExp(
+                    `\\^${escapeStringRegexp(routesManifest.basePath)}`
+                  ),
+                  '^'
+                );
+              }
+
               route.src = path.posix.join(
                 '^/',
                 entryDirectory,
                 '_next/data/',
                 escapedBuildId,
-                route.src.replace(/(^\^|\$$)/g, '') + '.json$'
+                normalizedSrc
+                  .replace(/\^\(\?:\/\(\?</, '(?:(?<')
+                  .replace(/(^\^|\$$)/g, '') + '.json$'
               );
 
-              const { pathname, search } = new URL(
-                route.dest || '/',
-                'http://n'
-              );
+              const parsedDestination = new URL(route.dest || '/', 'http://n');
+              let pathname = parsedDestination.pathname;
+              const search = parsedDestination.search;
+
               let isPrerender = !!prerenders[path.join('./', pathname)];
 
               if (routesManifest.i18n) {
@@ -1525,9 +1599,17 @@ export async function serverBuild({
               }
 
               if (isPrerender) {
-                route.dest = `/_next/data/${buildId}${pathname}.json${
-                  search || ''
-                }`;
+                if (routesManifest.basePath) {
+                  pathname = pathname.replace(
+                    new RegExp(
+                      `^${escapeStringRegexp(routesManifest.basePath)}`
+                    ),
+                    ''
+                  );
+                }
+                route.dest = `${
+                  routesManifest.basePath || ''
+                }/_next/data/${buildId}${pathname}.json${search || ''}`;
               }
               return route;
             })
@@ -1548,7 +1630,7 @@ export async function serverBuild({
 
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
-      ...dynamicRoutes,
+      ...completeDynamicRoutes,
 
       ...(isNextDataServerResolving
         ? [
@@ -1705,5 +1787,6 @@ export async function serverBuild({
             },
           ]),
     ],
+    framework: { version: nextVersion },
   };
 }

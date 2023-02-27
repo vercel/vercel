@@ -7,8 +7,7 @@ import getScope from '../util/get-scope';
 import { getPkgName } from '../util/pkg-name';
 import getArgs from '../util/get-args';
 import Client from '../util/client';
-import { getDeployment } from '../util/get-deployment';
-import { isAPIError } from '../util/errors-ts';
+import getDeployment from '../util/get-deployment';
 
 const help = () => {
   console.log(`
@@ -24,6 +23,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -f, --follow                   Wait for additional data [off]
     -n ${chalk.bold.underline(
       'NUMBER'
@@ -125,28 +125,9 @@ export default async function main(client: Client) {
 
   let deployment;
   try {
-    deployment = await getDeployment(client, id);
-  } catch (err: unknown) {
+    deployment = await getDeployment(client, contextName, id);
+  } finally {
     output.stopSpinner();
-
-    if (isAPIError(err)) {
-      if (err.status === 404) {
-        output.error(
-          `Failed to find deployment "${id}" in ${chalk.bold(contextName)}`
-        );
-        return 1;
-      }
-      if (err.status === 403) {
-        output.error(
-          `No permission to access deployment "${id}" in ${chalk.bold(
-            contextName
-          )}`
-        );
-        return 1;
-      }
-    }
-    // unexpected
-    throw err;
   }
 
   output.log(

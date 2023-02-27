@@ -32,6 +32,7 @@ const help = () => {
 
     -h, --help                     Output usage information
     --environment                  Set the Environment (development, preview, production) when pulling Environment Variables
+    --git-branch                   Specify the Git branch to pull specific Environment Variables for
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
     'FILE'
   )}   Path to the local ${'`vercel.json`'} file
@@ -39,6 +40,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -116,6 +118,7 @@ export default async function main(client: Client) {
       '--yes': Boolean,
       '-y': '--yes',
       '--environment': String,
+      '--git-branch': String,
     });
   } catch (error) {
     handleError(error);

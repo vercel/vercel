@@ -1,3 +1,4 @@
+// bust cache
 const assert = require('assert');
 const { createHash } = require('crypto');
 const path = require('path');
@@ -9,7 +10,7 @@ const ms = require('ms');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
+async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
   const files = Object.keys(bodies)
     .filter(n =>
       uploadNowJson
@@ -40,6 +41,10 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
   const nowDeployPayload = {
     version: 2,
     public: true,
+    name: projectName,
+    files,
+    meta: {},
+    ...nowJson,
     env: { ...nowJson.env, RANDOMNESS_ENV_VAR: randomness },
     build: {
       env: {
@@ -51,10 +56,6 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
         NEXT_TELEMETRY_DISABLED: '1',
       },
     },
-    name: projectName,
-    files,
-    meta: {},
-    ...nowJson,
   };
 
   logWithinTest(`posting ${files.length} files`);
@@ -67,7 +68,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson) {
   let deploymentUrl;
 
   {
-    const json = await deploymentPost(nowDeployPayload);
+    const json = await deploymentPost(nowDeployPayload, opts);
     if (json.error && json.error.code === 'missing_files')
       throw new Error('Missing files');
     deploymentId = json.id;
@@ -136,8 +137,11 @@ async function filePost(body, digest) {
   return json;
 }
 
-async function deploymentPost(payload) {
-  const url = '/v13/deployments?skipAutoDetectionConfirmation=1&forceNew=1';
+async function deploymentPost(payload, opts = {}) {
+  const url = `/v13/deployments?skipAutoDetectionConfirmation=1${
+    // skipForceNew allows turbo cache to be leveraged
+    !opts.skipForceNew ? `&forceNew=1` : ''
+  }`;
   const resp = await fetchWithAuth(url, {
     method: 'POST',
     body: JSON.stringify(payload),

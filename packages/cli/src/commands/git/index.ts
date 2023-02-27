@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import Client from '../../util/client';
-import { ensureLink } from '../../util/ensure-link';
+import { ensureLink } from '../../util/link/ensure-link';
 import getArgs from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
@@ -34,7 +34,7 @@ const help = () => {
   )} Connect your Vercel Project to your Git repository defined in your local .git config
 
     ${chalk.cyan(`$ ${getPkgName()} git connect`)}
-  
+
   ${chalk.gray(
     '–'
   )} Connect your Vercel Project to a Git repository using the remote URL
@@ -80,7 +80,7 @@ export default async function main(client: Client) {
   argv._ = argv._.slice(1);
   subcommand = argv._[0];
   const args = argv._.slice(1);
-  const confirm = Boolean(argv['--yes']);
+  const autoConfirm = Boolean(argv['--yes']);
   const { output } = client;
 
   let paths = [process.cwd()];
@@ -90,12 +90,13 @@ export default async function main(client: Client) {
   }
   const { path } = pathValidation;
 
-  const linkedProject = await ensureLink('git', client, path, confirm);
+  const linkedProject = await ensureLink('git', client, path, { autoConfirm });
   if (typeof linkedProject === 'number') {
     return linkedProject;
   }
 
   const { org, project } = linkedProject;
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   switch (subcommand) {
     case 'connect':

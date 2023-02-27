@@ -5,18 +5,14 @@ import { satisfies } from 'semver';
 import { dirname, join } from 'path';
 import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
-import {
-  BuilderV2,
-  BuilderV3,
-  PackageJson,
-  spawnAsync,
-} from '@vercel/build-utils';
+import { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
+import execa from 'execa';
 import * as staticBuilder from './static-builder';
 import { VERCEL_DIR } from '../projects/link';
 import { Output } from '../output';
 import readJSONFile from '../read-json-file';
 import { CantParseJSONFile } from '../errors-ts';
-import { errorToString, isErrnoException, isError } from '../is-error';
+import { isErrnoException, isError } from '@vercel/error-utils';
 import cmd from '../output/cmd';
 import code from '../output/code';
 
@@ -213,32 +209,44 @@ async function installBuilders(
     ).join(', ')}`
   );
   try {
-    await spawnAsync(
+    const { stderr } = await execa(
       'npm',
       ['install', '@vercel/build-utils', ...buildersToAdd],
       {
         cwd: buildersDir,
         stdio: 'pipe',
+        reject: true,
       }
     );
+    stderr
+      .split('/\r?\n/')
+      .filter(line => line.includes('npm WARN deprecated'))
+      .forEach(line => {
+        output.warn(line);
+      });
   } catch (err: unknown) {
     if (isError(err)) {
-      (err as any).link =
-        'https://vercel.link/builder-dependencies-install-failed';
-      if (isErrnoException(err) && err.code === 'ENOENT') {
+      const execaMessage = err.message;
+      let message =
+        err && 'stderr' in err && typeof err.stderr === 'string'
+          ? err.stderr
+          : execaMessage;
+      if (execaMessage.startsWith('Command failed with ENOENT')) {
         // `npm` is not installed
-        err.message = `Please install ${cmd('npm')} before continuing`;
+        message = `Please install ${cmd('npm')} before continuing`;
       } else {
-        const message = errorToString(err);
         const notFound = /GET (.*) - Not found/.exec(message);
         if (notFound) {
           const url = new URL(notFound[1]);
           const packageName = decodeURIComponent(url.pathname.slice(1));
-          err.message = `The package ${code(
+          message = `The package ${code(
             packageName
           )} is not published on the npm registry`;
         }
       }
+      err.message = message;
+      (err as any).link =
+        'https://vercel.link/builder-dependencies-install-failed';
     }
     throw err;
   }

@@ -2,7 +2,7 @@ import { promises } from 'fs';
 import path from 'path';
 
 import { DetectorFilesystem } from '../../src';
-import { Stat } from '../../src/detectors/filesystem';
+import { DetectorFilesystemStat } from '../../src/detectors/filesystem';
 
 const { stat, readFile, readdir } = promises;
 
@@ -34,7 +34,7 @@ export class FixtureFilesystem extends DetectorFilesystem {
     return (await stat(filePath)).isFile();
   }
 
-  async _readdir(name: string): Promise<Stat[]> {
+  async _readdir(name: string): Promise<DetectorFilesystemStat[]> {
     const dirPath = path.join(this.rootPath, name);
     const files = await readdir(dirPath, { withFileTypes: true });
 

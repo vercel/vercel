@@ -3,9 +3,9 @@ import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
-import { isSymbolicLink } from './fs/download';
+import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config } from './types';
+import type { Files, Config, FunctionFramework } from './types';
 
 interface Environment {
   [key: string]: string;
@@ -23,6 +23,9 @@ export interface LambdaOptionsBase {
   regions?: string[];
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
+  experimentalResponseStreaming?: boolean;
+  operationType?: string;
+  framework?: FunctionFramework;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -46,6 +49,12 @@ interface GetLambdaOptionsFromFunctionOptions {
 
 export class Lambda {
   type: 'Lambda';
+  /**
+   * This is a label for the type of Lambda a framework is producing.
+   * The value can be any string that makes sense for a given framework.
+   * Examples: "API", "ISR", "SSR", "SSG", "Render", "Resource"
+   */
+  operationType?: string;
   files?: Files;
   handler: string;
   runtime: string;
@@ -60,6 +69,8 @@ export class Lambda {
   zipBuffer?: Buffer;
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
+  experimentalResponseStreaming?: boolean;
+  framework?: FunctionFramework;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -72,6 +83,9 @@ export class Lambda {
       regions,
       supportsMultiPayloads,
       supportsWrapper,
+      experimentalResponseStreaming,
+      operationType,
+      framework,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -120,7 +134,23 @@ export class Lambda {
         '"regions" is not a string Array'
       );
     }
+
+    if (framework !== undefined) {
+      assert(typeof framework === 'object', '"framework" is not an object');
+      assert(
+        typeof framework.slug === 'string',
+        '"framework.slug" is not a string'
+      );
+      if (framework.version !== undefined) {
+        assert(
+          typeof framework.version === 'string',
+          '"framework.version" is not a string'
+        );
+      }
+    }
+
     this.type = 'Lambda';
+    this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
@@ -132,6 +162,8 @@ export class Lambda {
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
+    this.experimentalResponseStreaming = experimentalResponseStreaming;
+    this.framework = framework;
   }
 
   async createZip(): Promise<Buffer> {
@@ -186,6 +218,8 @@ export async function createZip(files: Files): Promise<Buffer> {
       const symlinkTarget = symlinkTargets.get(name);
       if (typeof symlinkTarget === 'string') {
         zipFile.addBuffer(Buffer.from(symlinkTarget, 'utf8'), name, opts);
+      } else if (file.mode && isDirectory(file.mode)) {
+        zipFile.addEmptyDirectory(name, opts);
       } else {
         const stream = file.toStream();
         stream.on('error', reject);

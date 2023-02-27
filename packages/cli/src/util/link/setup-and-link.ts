@@ -30,10 +30,11 @@ import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';
 
 export interface SetupAndLinkOptions {
-  forceDelete?: boolean;
   autoConfirm?: boolean;
-  successEmoji: EmojiLabel;
-  setupMsg: string;
+  forceDelete?: boolean;
+  link?: ProjectLinkResult;
+  successEmoji?: EmojiLabel;
+  setupMsg?: string;
   projectName?: string;
 }
 
@@ -41,10 +42,11 @@ export default async function setupAndLink(
   client: Client,
   path: string,
   {
-    forceDelete = false,
     autoConfirm = false,
-    successEmoji,
-    setupMsg,
+    forceDelete = false,
+    link,
+    successEmoji = 'link',
+    setupMsg = 'Set up',
     projectName,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
@@ -56,7 +58,9 @@ export default async function setupAndLink(
     output.error(`Expected directory but found file: ${path}`);
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
-  const link = await getLinkedProject(client, path);
+  if (!link) {
+    link = await getLinkedProject(client, path);
+  }
   const isTTY = client.stdin.isTTY;
   const quiet = !isTTY;
   let rootDirectory: string | null = null;

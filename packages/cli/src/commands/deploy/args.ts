@@ -23,6 +23,7 @@ export const help = () => `
       login                [email]     Logs into your account or creates a new one
       logout                           Logs out of your account
       pull                 [path]      Pull your Project Settings from the cloud
+      rollback             [url|id]    Quickly revert back to a previous deployment [beta]
       switch               [scope]     Switches between teams and your personal account
 
     ${chalk.dim('Advanced')}
@@ -52,6 +53,7 @@ export const help = () => `
   'DIR'
 )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -f, --force                    Force a new deployment even if nothing has changed
     --with-cache                   Retain build cache when using "--force"
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(

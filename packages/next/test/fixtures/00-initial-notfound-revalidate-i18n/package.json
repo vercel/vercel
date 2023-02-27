@@ -1,6 +1,4 @@
 {
-  "name": "notfound-deploy-test",
-  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,7 +8,7 @@
   },
   "dependencies": {
     "next": "canary",
-    "react": "17.0.2",
-    "react-dom": "17.0.2"
+    "react": "latest",
+    "react-dom": "latest"
   }
 }

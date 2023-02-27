@@ -1,5 +1,4 @@
 import Client from '../client';
-import { stringify } from 'qs';
 import { Org } from '../../types';
 import chalk from 'chalk';
 import link from '../output/link';
@@ -19,9 +18,7 @@ export async function disconnectGitProvider(
   org: Org,
   projectId: string
 ) {
-  const fetchUrl = `/v9/projects/${projectId}/link?${stringify({
-    teamId: org.type === 'team' ? org.id : undefined,
-  })}`;
+  const fetchUrl = `/v9/projects/${projectId}/link`;
   return client.fetch(fetchUrl, {
     method: 'DELETE',
     headers: {
@@ -37,9 +34,7 @@ export async function connectGitProvider(
   type: string,
   repo: string
 ) {
-  const fetchUrl = `/v9/projects/${projectId}/link?${stringify({
-    teamId: org.type === 'team' ? org.id : undefined,
-  })}`;
+  const fetchUrl = `/v9/projects/${projectId}/link`;
   try {
     return await client.fetch(fetchUrl, {
       method: 'POST',

@@ -9,10 +9,14 @@ on:
   pull_request:
 
 env:
-  NODE_VERSION: '14'
+  NODE_VERSION: '16'
   TURBO_REMOTE_ONLY: 'true'
   TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   setup:
@@ -29,17 +33,17 @@ jobs:
         with:
           go-version: '1.13.15'
       - uses: actions/setup-node@v3
-        timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
-      - run: yarn install --network-timeout 1000000 --frozen-lockfile
+      - name: install pnpm@7.24.2
+        run: npm i -g pnpm@7.24.2
+      - run: pnpm install
       - id: set-tests
         run: |
           TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
           echo "Files to test:"
           echo "$TESTS_ARRAY"
-          echo "::set-output name=tests::$TESTS_ARRAY"
+          echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
       - uses: patrickedqvist/wait-for-vercel-preview@ae34b392ef30297f2b672f9afb3c329bde9bd487
         id: waitForTarball
         with:
@@ -66,23 +70,24 @@ jobs:
         with:
           go-version: '1.13.15'
       - uses: actions/setup-node@v3
-        timeout-minutes: 5 # See https://github.com/actions/cache/issues/810
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
 
       - name: Install Hugo
         if: matrix.runner == 'macos-latest'
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
 
-      - run: yarn install --network-timeout 1000000
+      - name: install pnpm@7.24.2
+        run: npm i -g pnpm@7.24.2
+
+      - run: pnpm install
 
       - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
-        run: node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
+        run: node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz

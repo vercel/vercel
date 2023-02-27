@@ -2,73 +2,94 @@ process.env.NEXT_TELEMETRY_DISABLED = '1';
 
 const path = require('path');
 const fs = require('fs-extra');
+const builder = require('../../');
+const {
+  createRunBuildLambda,
+} = require('../../../../test/lib/run-build-lambda');
 
-const runBuildLambda = require('../../../../test/lib/run-build-lambda');
+const runBuildLambda = createRunBuildLambda(builder);
 
 jest.setTimeout(360000);
 
-it('should build with app-dir correctly', async () => {
-  const { buildResult } = await runBuildLambda(
-    path.join(__dirname, '../fixtures/00-app-dir')
-  );
+// experimental appDir currently requires Node.js >= 16
+if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
+  it('should build with app-dir correctly', async () => {
+    const { buildResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir')
+    );
 
-  const lambdas = new Set();
+    const lambdas = new Set();
 
-  for (const key of Object.keys(buildResult.output)) {
-    if (buildResult.output[key].type === 'Lambda') {
-      lambdas.add(buildResult.output[key]);
+    for (const key of Object.keys(buildResult.output)) {
+      if (buildResult.output[key].type === 'Lambda') {
+        lambdas.add(buildResult.output[key]);
+      }
     }
-  }
-  expect(lambdas.size).toBe(1);
-  expect(buildResult.output['dashboard']).toBeDefined();
-  expect(buildResult.output['dashboard/another']).toBeDefined();
-  expect(buildResult.output['dashboard/changelog']).toBeDefined();
-  expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
 
-  // prefixed static generation output with `/app` under dist server files
-  expect(buildResult.output['dashboard'].type).toBe('FileFsRef');
-  expect(buildResult.output['dashboard'].fsPath).toMatch(
-    /server\/app\/dashboard\.html$/
-  );
-  expect(buildResult.output['dashboard.rsc'].type).toBe('FileFsRef');
-  expect(buildResult.output['dashboard.rsc'].fsPath).toMatch(
-    /server\/app\/dashboard\.rsc$/
-  );
-});
+    expect(lambdas.size).toBe(2);
+    expect(buildResult.output['dashboard']).toBeDefined();
+    expect(buildResult.output['dashboard/another']).toBeDefined();
+    expect(buildResult.output['dashboard/changelog']).toBeDefined();
+    expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
 
-it('should build with app-dir in edg runtime correctly', async () => {
-  const { buildResult } = await runBuildLambda(
-    path.join(__dirname, '../fixtures/00-app-dir-edge')
-  );
+    expect(buildResult.output['edge-route-handler']).toBeDefined();
+    expect(buildResult.output['edge-route-handler'].type).toBe('EdgeFunction');
+    expect(buildResult.output['edge-route-handler.rsc']).not.toBeDefined();
 
-  const edgeFunctions = new Set();
+    // prefixed static generation output with `/app` under dist server files
+    expect(buildResult.output['dashboard'].type).toBe('Prerender');
+    expect(buildResult.output['dashboard'].fallback.fsPath).toMatch(
+      /server\/app\/dashboard\.html$/
+    );
+    expect(buildResult.output['dashboard.rsc'].type).toBe('Prerender');
+    expect(buildResult.output['dashboard.rsc'].fallback.fsPath).toMatch(
+      /server\/app\/dashboard\.rsc$/
+    );
+    // TODO: re-enable after index/index handling is corrected
+    // expect(buildResult.output['dashboard/index/index'].type).toBe('Prerender');
+    // expect(buildResult.output['dashboard/index/index'].fallback.fsPath).toMatch(
+    //   /server\/app\/dashboard\/index\.html$/
+    // );
+    // expect(buildResult.output['dashboard/index.rsc'].type).toBe('Prerender');
+    // expect(buildResult.output['dashboard/index.rsc'].fallback.fsPath).toMatch(
+    //   /server\/app\/dashboard\/index\.rsc$/
+    // );
+  });
 
-  for (const key of Object.keys(buildResult.output)) {
-    if (buildResult.output[key].type === 'EdgeFunction') {
-      edgeFunctions.add(buildResult.output[key]);
+  it('should build with app-dir in edge runtime correctly', async () => {
+    const { buildResult } = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-edge')
+    );
+
+    const edgeFunctions = new Set();
+
+    for (const key of Object.keys(buildResult.output)) {
+      if (buildResult.output[key].type === 'EdgeFunction') {
+        edgeFunctions.add(buildResult.output[key]);
+      }
     }
-  }
 
-  expect(edgeFunctions.size).toBe(3);
-  expect(buildResult.output['edge']).toBeDefined();
-  expect(buildResult.output['index']).toBeDefined();
-  expect(buildResult.output['index/index']).toBeDefined();
-});
+    expect(edgeFunctions.size).toBe(3);
+    expect(buildResult.output['edge']).toBeDefined();
+    expect(buildResult.output['index']).toBeDefined();
+    expect(buildResult.output['index/index']).toBeDefined();
+  });
 
-it('should show error from basePath with legacy monorepo build', async () => {
-  let error;
+  it('should show error from basePath with legacy monorepo build', async () => {
+    let error;
 
-  try {
-    await runBuildLambda(path.join(__dirname, 'legacy-monorepo-basepath'));
-  } catch (err) {
-    error = err;
-  }
-  console.error(error);
+    try {
+      await runBuildLambda(path.join(__dirname, 'legacy-monorepo-basepath'));
+    } catch (err) {
+      error = err;
+    }
+    console.error(error);
 
-  expect(error.message).toBe(
-    'basePath can not be used with `builds` in vercel.json, use Project Settings to configure your monorepo instead'
-  );
-});
+    expect(error.message).toBe(
+      'basePath can not be used with `builds` in vercel.json, use Project Settings to configure your monorepo instead'
+    );
+  });
+}
 
 it('should build using server build', async () => {
   const origLog = console.log;
@@ -117,41 +138,70 @@ it('should build using server build', async () => {
   expect(output['index'].allowQuery).toBe(undefined);
   expect(output['index'].memory).toBe(512);
   expect(output['index'].maxDuration).toBe(5);
+  expect(output['index'].operationType).toBe('SSR');
+
   expect(output['another'].type).toBe('Lambda');
   expect(output['another'].memory).toBe(512);
   expect(output['another'].maxDuration).toBe(5);
   expect(output['another'].allowQuery).toBe(undefined);
+  expect(output['another'].operationType).toBe('SSR');
+
   expect(output['dynamic/[slug]'].type).toBe('Lambda');
   expect(output['dynamic/[slug]'].memory).toBe(undefined);
   expect(output['dynamic/[slug]'].maxDuration).toBe(5);
+  expect(output['dynamic/[slug]'].operationType).toBe('SSR');
+
   expect(output['fallback/[slug]'].type).toBe('Prerender');
   expect(output['fallback/[slug]'].allowQuery).toEqual(['slug']);
+  expect(output['fallback/[slug]'].lambda.operationType).toBe('ISR');
+
   expect(output['_next/data/testing-build-id/fallback/[slug].json'].type).toBe(
     'Prerender'
   );
   expect(
     output['_next/data/testing-build-id/fallback/[slug].json'].allowQuery
   ).toEqual(['slug']);
+  expect(
+    output['_next/data/testing-build-id/fallback/[slug].json'].lambda
+      .operationType
+  ).toBe('ISR');
+
   expect(output['fallback/first'].type).toBe('Prerender');
   expect(output['fallback/first'].allowQuery).toEqual([]);
+  expect(output['fallback/first'].lambda.operationType).toBe('ISR');
+
   expect(output['_next/data/testing-build-id/fallback/first.json'].type).toBe(
     'Prerender'
   );
   expect(
     output['_next/data/testing-build-id/fallback/first.json'].allowQuery
   ).toEqual([]);
+  expect(
+    output['_next/data/testing-build-id/fallback/first.json'].lambda
+      .operationType
+  ).toBe('ISR');
+
   expect(output['api'].type).toBe('Lambda');
   expect(output['api'].allowQuery).toBe(undefined);
   expect(output['api'].memory).toBe(128);
   expect(output['api'].maxDuration).toBe(5);
+  expect(output['api'].operationType).toBe('API');
+
   expect(output['api/another'].type).toBe('Lambda');
   expect(output['api/another'].allowQuery).toBe(undefined);
+  expect(output['api/another'].operationType).toBe('API');
+
   expect(output['api/blog/[slug]'].type).toBe('Lambda');
   expect(output['api/blog/[slug]'].allowQuery).toBe(undefined);
+  expect(output['api/blog/[slug]'].operationType).toBe('API');
+
   expect(output['static'].type).toBe('FileFsRef');
   expect(output['static'].allowQuery).toBe(undefined);
+  expect(output['static'].operationType).toBe(undefined);
+
   expect(output['ssg'].type).toBe('Prerender');
   expect(output['ssg'].allowQuery).toEqual([]);
+  expect(output['ssg'].lambda.operationType).toBe('ISR');
 
   expect(output['index'] === output['another']).toBe(true);
   expect(output['dynamic/[slug]'] !== output['fallback/[slug]'].lambda).toBe(
@@ -315,9 +365,9 @@ it('Should build the gip-gsp-404 example', async () => {
   expect(routes[handleErrorIdx + 1].dest).toBe('/404');
   expect(routes[handleErrorIdx + 1].headers).toBe(undefined);
   expect(output['404']).toBeDefined();
-  expect(output['404'].type).toBe('FileFsRef');
+  expect(output['404'].type).toBe('Prerender');
   expect(output['_next/data/testing-build-id/404.json']).toBeDefined();
-  expect(output['_next/data/testing-build-id/404.json'].type).toBe('FileFsRef');
+  expect(output['_next/data/testing-build-id/404.json'].type).toBe('Prerender');
   const filePaths = Object.keys(output);
   const serverlessError = filePaths.some(filePath => filePath.match(/_error/));
   const hasUnderScoreAppStaticFile = filePaths.some(filePath =>
@@ -350,11 +400,6 @@ it('Should not deploy preview lambdas for static site', async () => {
 });
 
 it('Should opt-out of shared lambdas when routes are detected', async () => {
-  if (__dirname.includes('file-system-api')) {
-    // Ignore, since `26-mono-repo-404-lambda` is not relevant for the File System API
-    return;
-  }
-
   const {
     buildResult: { output },
   } = await runBuildLambda(
@@ -662,10 +707,7 @@ it('Should invoke build command with serverless-no-config', async () => {
   ).toBeFalsy();
 });
 
-// this test is unstable as `next-server`'s size can change up and down
-// on canary so skipping to prevent random failures.
-// eslint-disable-next-line
-it.skip('Should not exceed function limit for large dependencies (server build)', async () => {
+it('Should not exceed function limit for large dependencies (server build)', async () => {
   let logs = '';
 
   const origLog = console.log;
@@ -707,20 +749,18 @@ it.skip('Should not exceed function limit for large dependencies (server build)'
       lambdas.add(output[filePath]);
     }
   });
-  expect(lambdas.size).toBe(4);
+  expect(lambdas.size).toBe(3);
 
-  expect(logs).toContain(
-    'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
-  );
+  // this assertion is unstable as `next-server`'s size can change up and down
+  // on canary so skipping to prevent random failures.
+  // expect(logs).toContain(
+  //   'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
+  // );
+
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 
 it('Should not exceed function limit for large dependencies (shared lambda)', async () => {
-  if (__dirname.includes('file-system-api')) {
-    // Test is not relevant for the File System API
-    return;
-  }
-
   let logs = '';
 
   const origLog = console.log;

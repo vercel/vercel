@@ -19,11 +19,9 @@
 
 ## Vercel
 
-Vercel is a platform for **static sites and frontend frameworks**, built to integrate with your headless content, commerce, or database.
+Vercel is the platform for frontend developers, providing the speed and reliability innovators need to create at the moment of inspiration.
 
-We provide a **frictionless developer experience** to take care of the hard things: deploy instantly, scale automatically, and serve personalized content around the globe.
-
-We make it easy for frontend teams to **develop, preview, and ship** delightful user experiences, where performance is the default.
+We enable teams to iterate quickly and develop, preview, and ship delightful user experiences. Vercel has zero-configuration support for 35+ frontend frameworks and integrates with your headless content, commerce, or database of choice.
 
 ## Deploy
 
@@ -35,6 +33,14 @@ For details on how to use Vercel, check out our [documentation](https://vercel.c
 
 ## Contributing
 
+This project uses [pnpm](https://pnpm.io/) to install dependencies and run scripts.
+
+You can use the `dev` script to run local changes as if you were invoking Vercel CLI. For example, `vercel deploy --cwd=/path/to/project` could be run with local changes with `pnpm dev deploy --cwd=/path/to/project`.
+
+See the [Contributing Guidelines](./.github/CONTRIBUTING.md) for more details.
+
+## Reference
+
 - [Code of Conduct](./.github/CODE_OF_CONDUCT.md)
 - [Contributing Guidelines](./.github/CONTRIBUTING.md)
-- [MIT License](./LICENSE)
+- [Apache 2.0 License](./LICENSE)

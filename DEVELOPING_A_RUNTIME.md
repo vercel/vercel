@@ -28,7 +28,7 @@ Official Runtimes are published to [the npm registry](https://npmjs.com) as a pa
 > **Note:** The `use` property in the `builds` array will work with any [npm
 > install argument](https://docs.npmjs.com/cli/install) such as a git repo URL,
 > which is useful for testing your Runtime. Alternatively, the `functions` property
-> requires that you specify a specifc tag published to npm, for stability purposes.
+> requires that you specify a specific tag published to npm, for stability purposes.
 
 See the [Runtimes Documentation](https://vercel.com/docs/runtimes) to view example usage.
 
@@ -216,7 +216,7 @@ If a custom runtime is based on one of these Lambda runtimes, large environment
 support will be available without further configuration. Custom runtimes based on
 other Lambda runtimes, including those that provide the runtime via `provided` and
 `provided.al2`, must implement runtime wrapper support and indicate it via the
-`supportsWrapper` flag when calling [`createLambda`](#createlambda()).
+`supportsWrapper` flag when calling [`createLambda`](<#createlambda()>).
 
 To add support for runtime wrappers to a custom runtime, first check the value of the
 `AWS_LAMBDA_EXEC_WRAPPER` environment variable in the bootstrap script. Its value is
@@ -264,7 +264,7 @@ This is achieved by using `exec` in `bash` to replace the running process with t
 maintaining the same PID and environment.
 
 Once support for runtime wrappers is included, ensure `supportsWrapper` is set to
-`true` in the call to [`createLambda`](#createlambda()). This will inform the build
+`true` in the call to [`createLambda`](<#createlambda()>). This will inform the build
 process to enable large environment support for this runtime.
 
 ### Utilities as peerDependencies
@@ -380,8 +380,9 @@ This is a [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 
 This is an abstract enumeration type that is implemented by one of the following possible `String` values:
 
+- `nodejs18.x`
+- `nodejs16.x`
 - `nodejs14.x`
-- `nodejs12.x`
 - `go1.x`
 - `java11`
 - `python3.9`

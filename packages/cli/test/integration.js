@@ -1967,7 +1967,11 @@ test('try to create a builds deployments with wrong now.json', async t => {
       'Error: Invalid now.json - should NOT have additional property `builder`. Did you mean `builds`?'
     )
   );
-  t.true(stderr.includes('https://vercel.com/docs/configuration'));
+  t.true(
+    stderr.includes(
+      'https://vercel.com/docs/concepts/projects/project-configuration'
+    )
+  );
 });
 
 test('try to create a builds deployments with wrong vercel.json', async t => {
@@ -1991,7 +1995,11 @@ test('try to create a builds deployments with wrong vercel.json', async t => {
       'Error: Invalid vercel.json - should NOT have additional property `fake`. Please remove it.'
     )
   );
-  t.true(stderr.includes('https://vercel.com/docs/configuration'));
+  t.true(
+    stderr.includes(
+      'https://vercel.com/docs/concepts/projects/project-configuration'
+    )
+  );
 });
 
 test('try to create a builds deployments with wrong `build.env` property', async t => {
@@ -2014,7 +2022,9 @@ test('try to create a builds deployments with wrong `build.env` property', async
     formatOutput({ stdout, stderr })
   );
   t.true(
-    stderr.includes('https://vercel.com/docs/configuration'),
+    stderr.includes(
+      'https://vercel.com/docs/concepts/projects/project-configuration'
+    ),
     formatOutput({ stdout, stderr })
   );
 });
@@ -2622,11 +2632,6 @@ test('next unsupported functions config shows warning link', async t => {
   const fixturePath = fixture('zero-config-next-js-functions-warning');
   const output = await execute([fixturePath, '--force', '--public', '--yes']);
 
-  console.log('isCanary', isCanary);
-  console.log(output.stderr);
-  console.log(output.stdout);
-  console.log(output.exitCode);
-
   t.is(output.exitCode, 0, formatOutput(output));
   t.regex(
     output.stderr,
@@ -2724,11 +2729,15 @@ test('deploy a Lambda with 128MB of memory', async t => {
 });
 
 test('fail to deploy a Lambda with an incorrect value for of memory', async t => {
-  const directory = fixture('lambda-with-200-memory');
+  const directory = fixture('lambda-with-123-memory');
   const output = await execute([directory, '--yes']);
 
   t.is(output.exitCode, 1, formatOutput(output));
-  t.regex(output.stderr, /steps of 64/gm, formatOutput(output));
+  t.regex(
+    output.stderr,
+    /Serverless Functions.+memory/gm,
+    formatOutput(output)
+  );
   t.regex(output.stderr, /Learn More/gm, formatOutput(output));
 });
 
@@ -2924,7 +2933,7 @@ test('should show prompts to set up project during first deploy', async t => {
     dev.stdout.pipe(process.stdout);
     dev.stderr.pipe(process.stderr);
     await new Promise((resolve, reject) => {
-      dev.once('exit', (code, signal) => {
+      dev.once('close', (code, signal) => {
         reject(`"vc dev" failed with ${signal || code}`);
       });
       dev.stderr.on('data', data => {
@@ -3446,23 +3455,20 @@ test('deploy pnpm twice using pnp and symlink=false', async t => {
     ]);
   }
 
-  function logs(deploymentUrl) {
-    return execa(binaryPath, ['logs', deploymentUrl, ...defaultArgs]);
-  }
-
   let { exitCode, stderr, stdout } = await deploy();
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  let { stdout: logsOutput } = await logs(stdout);
-
-  t.regex(logsOutput, /Build Cache not found/m);
+  let page = await fetch(stdout);
+  let text = await page.text();
+  t.is(text, 'no cache\n');
 
   ({ exitCode, stderr, stdout } = await deploy());
   t.is(exitCode, 0, formatOutput({ stderr, stdout }));
 
-  ({ stdout: logsOutput } = await logs(stdout));
+  page = await fetch(stdout);
+  text = await page.text();
 
-  t.regex(logsOutput, /Build cache downloaded/m);
+  t.is(text, 'cache exists\n');
 });
 
 test('reject deploying with wrong team .vercel config', async t => {

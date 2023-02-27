@@ -8,6 +8,13 @@ This directory is a brief example of a [Remix](https://remix.run/docs) site that
 
 _Live Example: https://remix-run-template.vercel.app_
 
+You can also deploy using the [Vercel CLI](https://vercel.com/cli):
+
+```sh
+npm i -g vercel
+vercel
+```
+
 ## Development
 
 To run your Remix app locally, make sure your project's local dependencies are installed:
@@ -23,5 +30,3 @@ npm run dev
 ```
 
 Open up [http://localhost:3000](http://localhost:3000) and you should be ready to go!
-
-If you're used to using the `vercel dev` command provided by [Vercel CLI](https://vercel.com/cli) instead, you can also use that, but it's not needed.

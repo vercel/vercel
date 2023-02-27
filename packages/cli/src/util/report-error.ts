@@ -1,7 +1,7 @@
 import Client from './client';
 import getScope from './get-scope';
 import getArgs from './get-args';
-import { isError } from './is-error';
+import { isError } from '@vercel/error-utils';
 import type { Team, User } from '../types';
 
 export default async function reportError(

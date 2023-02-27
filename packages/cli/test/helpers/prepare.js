@@ -271,7 +271,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
-    'lambda-with-200-memory': {
+    'lambda-with-123-memory': {
       'api/memory.js': `
         module.exports = (req, res) => {
           res.json({ memory: parseInt(process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE) });
@@ -280,7 +280,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'now.json': JSON.stringify({
         functions: {
           'api/**/*.js': {
-            memory: 200,
+            memory: 123,
           },
         },
       }),
@@ -326,7 +326,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'vercel.json': JSON.stringify({
         functions: {
           'api/**/*.php': {
-            runtime: 'vercel-php@0.1.0',
+            runtime: 'vercel-php@0.5.2',
           },
         },
       }),

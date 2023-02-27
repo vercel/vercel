@@ -1,5 +1,5 @@
 {
-  "name": "18-gridsome",
+  "name": "17-gridsome",
   "private": true,
   "scripts": {
     "build": "gridsome build",
@@ -8,5 +8,8 @@
   },
   "dependencies": {
     "gridsome": "^0.7.23"
+  },
+  "engines": {
+    "node": "16.x"
   }
 }

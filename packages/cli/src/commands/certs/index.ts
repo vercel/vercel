@@ -37,6 +37,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -50,6 +51,9 @@ const help = () => {
       'FILE'
     )}                      CA certificate chain file
     -N, --next                     Show next page of results
+    --limit=${chalk.bold.underline(
+      'VALUE'
+    )}                  Number of results to return per page (default: 20, max: 100)
 
   ${chalk.dim('Examples:')}
 
@@ -92,6 +96,7 @@ export default async function main(client: Client) {
       '--ca': String,
       '--next': Number,
       '-N': '--next',
+      '--limit': Number,
     });
   } catch (err) {
     handleError(err);

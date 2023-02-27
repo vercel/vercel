@@ -1,6 +1,7 @@
 import _path from 'path';
 import yaml from 'js-yaml';
 import glob from 'glob';
+import json5 from 'json5';
 import { DetectorFilesystem } from '../detectors/filesystem';
 import { Workspace } from './get-workspaces';
 import { getGlobFs } from './get-glob-fs';
@@ -144,7 +145,7 @@ async function getRushWorkspacePackagePaths({
 }: GetPackagePathOptions): Promise<string[]> {
   const rushWorkspaceAsBuffer = await fs.readFile('rush.json');
 
-  const { projects = [] } = JSON.parse(
+  const { projects = [] } = json5.parse(
     rushWorkspaceAsBuffer.toString()
   ) as RushWorkspaces;
 

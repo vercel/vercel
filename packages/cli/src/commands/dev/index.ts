@@ -15,7 +15,7 @@ import readConfig from '../../util/config/read-config';
 import readJSONFile from '../../util/read-json-file';
 import { getPkgName, getCommandName } from '../../util/pkg-name';
 import { CantParseJSONFile } from '../../util/errors-ts';
-import { isErrnoException } from '../../util/is-error';
+import { isErrnoException } from '@vercel/error-utils';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -31,6 +31,7 @@ const help = () => {
 
     -h, --help             Output usage information
     -d, --debug            Debug mode [off]
+    --no-color             No color mode [off]
     -l, --listen  [uri]    Specify a URI endpoint on which to listen [0.0.0.0:3000]
     -t, --token   [token]  Specify an Authorization Token
     -y, --yes              Skip questions when setting up new project using default scope and settings

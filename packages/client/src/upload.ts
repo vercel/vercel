@@ -1,10 +1,11 @@
-import { Agent } from 'https';
+import http from 'http';
+import https from 'https';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
 
-import { DeploymentFile } from './utils/hashes';
+import { DeploymentFile, FilesMap } from './utils/hashes';
 import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
@@ -28,7 +29,7 @@ const isClientNetworkError = (err: Error) => {
 };
 
 export async function* upload(
-  files: Map<string, DeploymentFile>,
+  files: FilesMap,
   clientOptions: VercelClientOptions,
   deploymentOptions: DeploymentOptions
 ): AsyncIterableIterator<any> {
@@ -78,7 +79,9 @@ export async function* upload(
   debug('Building an upload list...');
 
   const semaphore = new Sema(50, { capacity: 50 });
-  const agent = new Agent({ keepAlive: true });
+  const agent = apiUrl?.startsWith('https://')
+    ? new https.Agent({ keepAlive: true })
+    : new http.Agent({ keepAlive: true });
 
   shas.forEach((sha, index) => {
     const uploadProgress = uploads[index];
@@ -95,6 +98,10 @@ export async function* upload(
         await semaphore.acquire();
 
         const { data } = file;
+        if (typeof data === 'undefined') {
+          // Directories don't need to be uploaded
+          return;
+        }
 
         uploadProgress.bytesUploaded = 0;
 

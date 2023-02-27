@@ -1,4 +1,4 @@
-import type { Files } from './types';
+import type { Files, FunctionFramework } from './types';
 
 /**
  * An Edge Functions output
@@ -39,7 +39,10 @@ export class EdgeFunction {
   assets?: { name: string; path: string }[];
 
   /** The regions where the edge function will be executed on */
-  regions?: 'auto' | string[] | 'all' | 'default';
+  regions?: string | string[];
+
+  /** The framework */
+  framework?: FunctionFramework;
 
   constructor(params: Omit<EdgeFunction, 'type'>) {
     this.type = 'EdgeFunction';
@@ -50,5 +53,6 @@ export class EdgeFunction {
     this.envVarsInUse = params.envVarsInUse;
     this.assets = params.assets;
     this.regions = params.regions;
+    this.framework = params.framework;
   }
 }

@@ -18,7 +18,6 @@ import directoryTemplate from 'serve-handler/src/directory';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import deepEqual from 'fast-deep-equal';
-import which from 'which';
 import npa from 'npm-package-arg';
 import type { ChildProcess } from 'child_process';
 
@@ -33,6 +32,7 @@ import {
   Builder,
   cloneEnv,
   Env,
+  getNodeBinPath,
   StartDevServerResult,
   FileFsRef,
   PackageJson,
@@ -85,17 +85,16 @@ import {
   HttpHeadersConfig,
   EnvConfigs,
 } from './types';
-import { ProjectEnvVariable, ProjectSettings } from '../../types';
-import exposeSystemEnvs from './expose-system-envs';
+import { ProjectSettings } from '../../types';
 import { treeKill } from '../tree-kill';
-import { nodeHeadersToFetchHeaders } from './headers';
+import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
   errorToString,
   isErrnoException,
   isError,
   isSpawnError,
-} from '../is-error';
+} from '@vercel/error-utils';
 import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
 import { replaceLocalhost } from './parse-listen';
@@ -168,15 +167,13 @@ export default class DevServer {
   private blockingBuildsPromise: Promise<void> | null;
   private startPromise: Promise<void> | null;
 
-  private systemEnvValues: string[];
-  private projectEnvs: ProjectEnvVariable[];
+  private envValues: Record<string, string>;
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.output = options.output;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
-    this.systemEnvValues = options.systemEnvValues || [];
-    this.projectEnvs = options.projectEnvs || [];
+    this.envValues = options.envValues || {};
     this.files = {};
     this.originalProjectSettings = options.projectSettings;
     this.projectSettings = options.projectSettings;
@@ -684,16 +681,13 @@ export default class DevServer {
 
     // If no .env/.build.env is present, use cloud environment variables
     if (Object.keys(allEnv).length === 0) {
-      const cloudEnv = exposeSystemEnvs(
-        this.projectEnvs || [],
-        this.systemEnvValues || [],
-        this.projectSettings?.autoExposeSystemEnvs,
-        this.address.host
-      );
-
-      allEnv = { ...cloudEnv };
-      runEnv = { ...cloudEnv };
-      buildEnv = { ...cloudEnv };
+      const envValues = { ...this.envValues };
+      if (this.address.host) {
+        envValues['VERCEL_URL'] = this.address.host;
+      }
+      allEnv = { ...envValues };
+      runEnv = { ...envValues };
+      buildEnv = { ...envValues };
     }
 
     // legacy NOW_REGION env variable
@@ -1032,7 +1026,7 @@ export default class DevServer {
     debug(`Killing builder dev server with PID ${pid}`);
     this.devServerPids.delete(pid);
     try {
-      process.kill(pid, 'SIGTERM');
+      await treeKill(pid);
       debug(`Killed builder dev server with PID ${pid}`);
     } catch (err) {
       debug(`Failed to kill builder dev server with PID ${pid}: ${err}`);
@@ -1135,10 +1129,10 @@ export default class DevServer {
       });
       body = `${json}\n`;
     } else if (accept.includes('html')) {
-      res.setHeader('content-type', 'text/html');
+      res.setHeader('content-type', 'text/html; charset=utf-8');
       body = redirectTemplate({ location, statusCode });
     } else {
-      res.setHeader('content-type', 'text/plain');
+      res.setHeader('content-type', 'text/plain; charset=utf-8');
       body = `Redirecting to ${location} (${statusCode})\n`;
     }
     res.end(body);
@@ -1454,7 +1448,9 @@ export default class DevServer {
             }
           );
 
-          if (middlewareRes.status === 500) {
+          const middlewareBody = await middlewareRes.buffer();
+
+          if (middlewareRes.status === 500 && middlewareBody.byteLength === 0) {
             await this.sendError(
               req,
               res,
@@ -1478,6 +1474,9 @@ export default class DevServer {
             'content-length',
             'transfer-encoding',
           ]);
+
+          applyOverriddenHeaders(req.headers, middlewareRes.headers);
+
           for (const [name, value] of middlewareRes.headers) {
             if (name === 'x-middleware-next') {
               shouldContinue = value === '1';
@@ -1496,7 +1495,6 @@ export default class DevServer {
           }
 
           if (!shouldContinue) {
-            const middlewareBody = await middlewareRes.buffer();
             this.setResponseHeaders(res, requestId);
             if (middlewareBody.length > 0) {
               res.setHeader('content-length', middlewareBody.length);
@@ -2240,6 +2238,10 @@ export default class DevServer {
       }
     );
 
+    // add the node_modules/.bin directory to the PATH
+    const nodeBinPath = await getNodeBinPath({ cwd });
+    env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
+
     // This is necesary so that the dev command in the Project
     // will work cross-platform (especially Windows).
     let command = devCommand
@@ -2253,22 +2255,6 @@ export default class DevServer {
         port,
       })}`
     );
-
-    const isNpxAvailable = await which('npx')
-      .then(() => true)
-      .catch(() => false);
-
-    if (isNpxAvailable) {
-      command = `npx --no-install ${command}`;
-    } else {
-      const isYarnAvailable = await which('yarn')
-        .then(() => true)
-        .catch(() => false);
-
-      if (isYarnAvailable) {
-        command = `yarn run --silent ${command}`;
-      }
-    }
 
     this.output.debug(`Spawning dev command: ${command}`);
 
@@ -2293,6 +2279,10 @@ export default class DevServer {
 
     p.on('exit', (code, signal) => {
       this.output.debug(`Dev command exited with "${signal || code}"`);
+    });
+
+    p.on('close', (code, signal) => {
+      this.output.debug(`Dev command closed with "${signal || code}"`);
       this.devProcessOrigin = undefined;
     });
 
@@ -2317,7 +2307,10 @@ function proxyPass(
     res,
     { target: dest, ignorePath },
     (error: NodeJS.ErrnoException) => {
-      devServer.output.error(
+      // only debug output this error because it's always something generic like
+      // "Error: socket hang up"
+      // and the original error should have already been logged
+      devServer.output.debug(
         `Failed to complete request to ${req.url}: ${error}`
       );
       if (!res.headersSent) {

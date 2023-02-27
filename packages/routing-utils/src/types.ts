@@ -44,6 +44,10 @@ export type RouteWithSrc = {
    */
   middlewarePath?: string;
   /**
+   * The original middleware matchers.
+   */
+  middlewareRawSrc?: string[];
+  /**
    * A middleware index in the `middleware` key under the build result
    */
   middleware?: number;
@@ -122,6 +126,7 @@ export interface AppendRoutesToPhaseProps {
   newRoutes: Route[] | null;
   /**
    * The phase to append the routes such as `filesystem`.
+   * If the phase is `null`, the routes will be appended prior to the first handle being found.
    */
-  phase: HandleValue;
+  phase: HandleValue | null;
 }

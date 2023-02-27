@@ -111,53 +111,6 @@ export function spawnAsync(
   });
 }
 
-export function execAsync(
-  command: string,
-  args: string[],
-  opts: SpawnOptionsExtended = {}
-) {
-  return new Promise<{ stdout: string; stderr: string; code: number }>(
-    (resolve, reject) => {
-      opts.stdio = 'pipe';
-
-      const stdoutList: Buffer[] = [];
-      const stderrList: Buffer[] = [];
-
-      const child = spawn(command, args, opts);
-
-      child.stderr!.on('data', data => {
-        stderrList.push(data);
-      });
-
-      child.stdout!.on('data', data => {
-        stdoutList.push(data);
-      });
-
-      child.on('error', reject);
-      child.on('close', (code, signal) => {
-        if (code === 0 || opts.ignoreNon0Exit) {
-          return resolve({
-            code,
-            stdout: Buffer.concat(stdoutList).toString(),
-            stderr: Buffer.concat(stderrList).toString(),
-          });
-        }
-
-        const cmd = opts.prettyCommand
-          ? `Command "${opts.prettyCommand}"`
-          : 'Command';
-
-        return reject(
-          new NowBuildError({
-            code: `BUILD_UTILS_EXEC_${code || signal}`,
-            message: `${cmd} exited with ${code || signal}`,
-          })
-        );
-      });
-    }
-  );
-}
-
 export function spawnCommand(command: string, options: SpawnOptions = {}) {
   const opts = { ...options, prettyCommand: command };
   if (process.platform === 'win32') {
@@ -246,38 +199,29 @@ export function getSpawnOptions(
 
 export async function getNodeVersion(
   destPath: string,
-  _nodeVersion?: string,
+  nodeVersionFallback = process.env.VERCEL_PROJECT_SETTINGS_NODE_VERSION,
   config: Config = {},
   meta: Meta = {}
 ): Promise<NodeVersion> {
   const latest = getLatestNodeVersion();
-  if (meta && meta.isDev) {
+  if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
     return { ...latest, runtime: 'nodejs' };
   }
   const { packageJson } = await scanParentDirs(destPath, true);
-  let { nodeVersion } = config;
+  let nodeVersion = config.nodeVersion || nodeVersionFallback;
   let isAuto = true;
-  if (packageJson && packageJson.engines && packageJson.engines.node) {
+  if (packageJson?.engines?.node) {
     const { node } = packageJson.engines;
-    if (
-      nodeVersion &&
-      validRange(node) &&
-      !intersects(nodeVersion, node) &&
-      !meta.isDev
-    ) {
+    if (nodeVersion && validRange(node) && !intersects(nodeVersion, node)) {
       console.warn(
         `Warning: Due to "engines": { "node": "${node}" } in your \`package.json\` file, the Node.js Version defined in your Project Settings ("${nodeVersion}") will not apply. Learn More: http://vercel.link/node-version`
       );
-    } else if (coerce(node)?.raw === node && !meta.isDev) {
+    } else if (coerce(node)?.raw === node) {
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` with major.minor.patch, but only major Node.js Version can be selected. Learn More: http://vercel.link/node-version`
       );
-    } else if (
-      validRange(node) &&
-      intersects(`${latest.major + 1}.x`, node) &&
-      !meta.isDev
-    ) {
+    } else if (validRange(node) && intersects(`${latest.major + 1}.x`, node)) {
       console.warn(
         `Warning: Detected "engines": { "node": "${node}" } in your \`package.json\` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version`
       );
@@ -461,7 +405,8 @@ export async function runNpmInstall(
     let commandArgs: string[];
     const isPotentiallyBrokenNpm =
       cliType === 'npm' &&
-      nodeVersion?.major === 16 &&
+      (nodeVersion?.major === 16 ||
+        opts.env.PATH?.includes('/node16/bin-npm7')) &&
       !args.includes('--legacy-peer-deps') &&
       spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK !== '1';
 
@@ -500,7 +445,7 @@ export async function runNpmInstall(
 
     try {
       await spawnAsync(cliType, commandArgs, opts);
-    } catch (_) {
+    } catch (err: unknown) {
       const potentialErrorPath = path.join(
         process.env.HOME || '/',
         '.npm',
@@ -516,6 +461,8 @@ export async function runNpmInstall(
         );
         commandArgs.push('--legacy-peer-deps');
         await spawnAsync(cliType, commandArgs, opts);
+      } else {
+        throw err;
       }
     }
     debug(`Install complete [${Date.now() - installTime}ms]`);

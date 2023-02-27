@@ -23,7 +23,7 @@ class MockStream extends PassThrough {
     this.isTTY = true;
   }
 
-  // These is for the `ora` module
+  // These are for the `ora` module
   clearLine() {}
   cursorTo() {}
 }
@@ -132,6 +132,14 @@ export class MockClient extends Client {
 
   setArgv(...argv: string[]) {
     this.argv = [process.execPath, 'cli.js', ...argv];
+    this.output = new Output(this.stderr, {
+      debug: argv.includes('--debug') || argv.includes('-d'),
+      noColor: argv.includes('--no-color'),
+    });
+  }
+
+  resetOutput() {
+    this.output = new Output(this.stderr);
   }
 
   useScenario(scenario: Scenario) {

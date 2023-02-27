@@ -1,11 +1,11 @@
 import open from 'open';
-import boxen from 'boxen';
 import execa from 'execa';
 import plural from 'pluralize';
 import { resolve } from 'path';
 import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
 
+import box from '../../util/output/box';
 import sleep from '../../util/sleep';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
@@ -15,17 +15,11 @@ import Client from '../../util/client';
 import { getPkgName } from '../../util/pkg-name';
 import { Deployment, PaginationOptions } from '../../types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
-
-interface DeploymentV6
-  extends Pick<
-    Deployment,
-    'url' | 'target' | 'projectId' | 'ownerId' | 'meta' | 'inspectorUrl'
-  > {
-  createdAt: number;
-}
+import getScope from '../../util/get-scope';
+import getDeployment from '../../util/get-deployment';
 
 interface Deployments {
-  deployments: DeploymentV6[];
+  deployments: Deployment[];
   pagination: PaginationOptions;
 }
 
@@ -39,6 +33,7 @@ const help = () => {
 
     -h, --help                 Output usage information
     -d, --debug                Debug mode [off]
+    --no-color                 No color mode [off]
     -b, --bad                  Known bad URL
     -g, --good                 Known good URL
     -o, --open                 Automatically open each URL in the browser
@@ -63,6 +58,8 @@ const help = () => {
 
 export default async function main(client: Client): Promise<number> {
   const { output } = client;
+  const scope = await getScope(client);
+  const { contextName } = scope;
 
   const argv = getArgs(client.argv.slice(2), {
     '--bad': String,
@@ -145,7 +142,9 @@ export default async function main(client: Client): Promise<number> {
   output.spinner('Retrieving deployments…');
 
   // `getDeployment` cannot be parallelized because it might prompt for login
-  const badDeployment = await getDeployment(client, bad).catch(err => err);
+  const badDeployment = await getDeployment(client, contextName, bad).catch(
+    err => err
+  );
 
   if (badDeployment) {
     if (badDeployment instanceof Error) {
@@ -162,7 +161,9 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // `getDeployment` cannot be parallelized because it might prompt for login
-  const goodDeployment = await getDeployment(client, good).catch(err => err);
+  const goodDeployment = await getDeployment(client, contextName, good).catch(
+    err => err
+  );
 
   if (goodDeployment) {
     if (goodDeployment instanceof Error) {
@@ -204,7 +205,7 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // Fetch all the project's "READY" deployments with the pagination API
-  let deployments: DeploymentV6[] = [];
+  let deployments: Deployment[] = [];
   let next: number | undefined = badDeployment.createdAt + 1;
   do {
     const query = new URLSearchParams();
@@ -279,7 +280,7 @@ export default async function main(client: Client): Promise<number> {
     const commit = getCommit(deployment);
     if (commit) {
       const shortSha = commit.sha.substring(0, 7);
-      const firstLine = commit.message.split('\n')[0];
+      const firstLine = commit.message?.split('\n')[0];
       output.log(`${chalk.bold('Commit:')} [${shortSha}] ${firstLine}`);
     }
 
@@ -356,30 +357,19 @@ export default async function main(client: Client): Promise<number> {
   const commit = getCommit(lastBad);
   if (commit) {
     const shortSha = commit.sha.substring(0, 7);
-    const firstLine = commit.message.split('\n')[0];
+    const firstLine = commit.message?.split('\n')[0];
     result.push(` ${chalk.bold('Commit:')} [${shortSha}] ${firstLine}`);
   }
 
   result.push(`${chalk.bold('Inspect:')} ${link(lastBad.inspectorUrl)}`);
 
-  output.print(boxen(result.join('\n'), { padding: 1 }));
+  output.print(box(result.join('\n')));
   output.print('\n');
 
   return 0;
 }
 
-function getDeployment(
-  client: Client,
-  hostname: string
-): Promise<DeploymentV6> {
-  const query = new URLSearchParams();
-  query.set('url', hostname);
-  query.set('resolve', '1');
-  query.set('noState', '1');
-  return client.fetch<DeploymentV6>(`/v10/deployments/get?${query}`);
-}
-
-function getCommit(deployment: DeploymentV6) {
+function getCommit(deployment: Deployment) {
   const sha =
     deployment.meta?.githubCommitSha ||
     deployment.meta?.gitlabCommitSha ||

@@ -41,7 +41,7 @@ test('[vercel dev] 02-angular-node', async () => {
     const body = await response.text();
     expect(body).toMatch(/Angular \+ Node.js API/m);
   } finally {
-    dev.kill('SIGTERM');
+    await dev.kill();
   }
 
   await sleep(5000);
@@ -70,27 +70,6 @@ test(
     await testPath(200, '/', /React App/m);
   })
 );
-/*
-test(
-  '[vercel dev] 05-gatsby',
-  testFixtureStdio('05-gatsby', async (testPath: any) => {
-    await testPath(200, '/', /Gatsby Default Starter/m);
-  })
-);
-*/
-test(
-  '[vercel dev] 06-gridsome',
-  testFixtureStdio('06-gridsome', async (testPath: any) => {
-    await testPath(200, '/');
-    await testPath(200, '/about');
-    await testPath(308, '/support', 'Redirecting to /about?ref=support (308)', {
-      Location: '/about?ref=support',
-    });
-    // Bug with gridsome's dev server: https://github.com/gridsome/gridsome/issues/831
-    // Works in prod only so leave out for now
-    // await testPath(404, '/nothing');
-  })
-);
 
 test(
   '[vercel dev] 07-hexo-node',
@@ -104,13 +83,38 @@ test(
 
 test('[vercel dev] 08-hugo', async () => {
   if (process.platform === 'darwin') {
-    // Update PATH to find the Hugo executable installed via GH Actions
+    // 1. run the test without Hugo in the PATH
+    let tester = await testFixtureStdio(
+      '08-hugo',
+      async () => {
+        throw new Error('Expected dev server to fail to be ready');
+      },
+      {
+        readyTimeout: 2000,
+
+        // Important: for the first test, we MUST deploy this app so that the
+        // framework (e.g. Hugo) will be detected by the server and associated
+        // with the project since `vc dev` doesn't do framework detection
+        skipDeploy: false,
+      }
+    );
+    await expect(tester()).rejects.toThrow(
+      new Error('Dev server timed out while waiting to be ready')
+    );
+
+    // 2. Update PATH to find the Hugo executable installed via GH Actions
     process.env.PATH = `${resolve(fixture('08-hugo'))}${delimiter}${
       process.env.PATH
     }`;
-    const tester = testFixtureStdio('08-hugo', async (testPath: any) => {
-      await testPath(200, '/', /Hugo/m);
-    });
+
+    // 3. Rerun the test now that Hugo is in the PATH
+    tester = testFixtureStdio(
+      '08-hugo',
+      async (testPath: any) => {
+        await testPath(200, '/', /Hugo/m);
+      },
+      { skipDeploy: true }
+    );
     await tester();
   } else {
     console.log(`Skipping 08-hugo on platform ${process.platform}`);
