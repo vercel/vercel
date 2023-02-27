@@ -126,17 +126,23 @@ export const build: BuildV2 = async ({
   // Figure out which pages should be edge functions
   const project = new Project();
   const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig>();
-  const edgeRoutes = new Set<ConfigRoute>();
-  const nodeRoutes = new Set<ConfigRoute>();
   for (const route of remixRoutes) {
     const routePath = join(remixConfig.appDirectory, route.file);
     const staticConfig = getConfig(project, routePath);
     if (staticConfig) {
       staticConfigsMap.set(route, staticConfig);
     }
+  }
 
+  // Figure out which pages should be edge functions
+  const edgeRoutes = new Set<ConfigRoute>();
+  const nodeRoutes = new Set<ConfigRoute>();
+  for (const route of remixRoutes) {
     if (isLayoutRoute(route.id, remixRoutes)) continue;
 
+    // Support runtime inheritance when defined in a parent route,
+    // by iterating through the route's parent hierarchy until a
+    // config containing "runtime" is found.
     let isEdge = false;
     for (const currentRoute of getRouteIterator(route, remixConfig.routes)) {
       const staticConfig = staticConfigsMap.get(currentRoute);
