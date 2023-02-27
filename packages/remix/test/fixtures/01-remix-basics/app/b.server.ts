@@ -8,7 +8,7 @@ import { json } from '@remix-run/node';
 
 export async function loader() {
   const hi = await new Promise<string>((resolve, reject) => {
-    exec('echo hi', (err, stdout) => {
+    exec('echo hi from the B page', (err, stdout) => {
       if (err) return reject(err);
       resolve(stdout);
     });
