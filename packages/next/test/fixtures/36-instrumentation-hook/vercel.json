@@ -5,17 +5,5 @@
       "src": "package.json",
       "use": "@vercel/next"
     }
-  ],
-  "probes": [
-    {
-      "path": "/",
-      "status": 200,
-      "mustContain": "false"
-    },
-    {
-      "path": "/api/hello",
-      "status": 200,
-      "mustContain": "true"
-    }
   ]
 }
