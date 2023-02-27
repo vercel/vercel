@@ -25,21 +25,30 @@ export function isLayoutRoute(
   return routes.some(r => r.parentId === routeId);
 }
 
+export function* getRouteIterator(route: ConfigRoute, routes: RouteManifest) {
+  let currentRoute: ConfigRoute = route;
+  do {
+    yield currentRoute;
+    if (currentRoute.parentId) {
+      currentRoute = routes[currentRoute.parentId];
+    } else {
+      break;
+    }
+  } while (currentRoute);
+}
+
 export function getPathFromRoute(
   route: ConfigRoute,
   routes: RouteManifest
 ): string {
-  let currentRoute: ConfigRoute | undefined = route;
+  if (route.id === 'root' || (route.parentId === 'root' && route.index)) {
+    return 'index';
+  }
+
   const pathParts: string[] = [];
-  do {
-    if (currentRoute.index) pathParts.push('index');
+  for (const currentRoute of getRouteIterator(route, routes)) {
     if (currentRoute.path) pathParts.push(currentRoute.path);
-    if (currentRoute.parentId) {
-      currentRoute = routes[currentRoute.parentId];
-    } else {
-      currentRoute = undefined;
-    }
-  } while (currentRoute);
+  }
   const path = pathParts.reverse().join('/');
   return path;
 }
