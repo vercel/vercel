@@ -140,9 +140,15 @@ export const build: BuildV2 = async ({
 
     if (isLayoutRoute(route.id, remixRoutes)) continue;
 
-    const isEdge =
-      staticConfig?.runtime === 'edge' ||
-      staticConfig?.runtime === 'experimental-edge';
+    let isEdge = false;
+    for (const currentRoute of getRouteIterator(route, remixConfig.routes)) {
+      const staticConfig = staticConfigsMap.get(currentRoute);
+      if (staticConfig?.runtime) {
+        isEdge = isEdgeRuntime(staticConfig.runtime);
+        break;
+      }
+    }
+
     if (isEdge) {
       edgeRoutes.add(route.id);
     } else {
@@ -293,17 +299,8 @@ module.exports = config;`;
       continue;
     }
 
-    let isEdge = false;
-    for (const currentRoute of getRouteIterator(route, remixConfig.routes)) {
-      const staticConfig = staticConfigsMap.get(currentRoute);
-      if (staticConfig?.runtime) {
-        isEdge = isEdgeRuntime(staticConfig.runtime);
-        break;
-      }
-    }
-
     const fn =
-      isEdge && edgeFunction
+      edgeRoutes.has(route.id) && edgeFunction
         ? // `EdgeFunction` currently requires the "name" property to be set.
           // Ideally this property will be removed, at which point we can
           // return the same `edgeFunction` instance instead of creating a
