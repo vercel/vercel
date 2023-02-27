@@ -202,11 +202,12 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/remix' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
-      every: [
-        // Intentionally does not detect a package name
-        // https://github.com/vercel/vercel/pull/7761
+      some: [
         {
           path: 'remix.config.js',
+        },
+        {
+          path: 'remix.config.mjs',
         },
       ],
     },
