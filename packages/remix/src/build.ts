@@ -93,6 +93,14 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
+  const remixDevPackageJsonPath = _require.resolve(
+    '@remix-run/dev/package.json',
+    { paths: [entrypointFsDirname] }
+  );
+  const remixVersion = JSON.parse(
+    await fs.readFile(remixDevPackageJsonPath, 'utf8')
+  ).version;
+
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
 
@@ -208,14 +216,16 @@ module.exports = config;`;
       repoRootPath,
       join(entrypointFsDirname, serverBuildPath),
       remixConfig.serverEntryPoint,
-      nodeVersion
+      nodeVersion,
+      remixVersion
     ),
     hasEdgeRoute
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
           join(entrypointFsDirname, serverBuildPath),
-          remixConfig.serverEntryPoint
+          remixConfig.serverEntryPoint,
+          remixVersion
         )
       : undefined,
   ]);
@@ -301,7 +311,8 @@ async function createRenderNodeFunction(
   rootDir: string,
   serverBuildPath: string,
   serverEntryPoint: string | undefined,
-  nodeVersion: NodeVersion
+  nodeVersion: NodeVersion,
+  remixVersion: string
 ): Promise<NodejsLambda> {
   const files: Files = {};
 
@@ -338,6 +349,10 @@ async function createRenderNodeFunction(
     shouldAddSourcemapSupport: false,
     operationType: 'SSR',
     experimentalResponseStreaming: true,
+    framework: {
+      slug: 'remix',
+      version: remixVersion,
+    },
   });
 
   return fn;
@@ -347,7 +362,8 @@ async function createRenderEdgeFunction(
   entrypointDir: string,
   rootDir: string,
   serverBuildPath: string,
-  serverEntryPoint: string | undefined
+  serverEntryPoint: string | undefined,
+  remixVersion: string
 ): Promise<EdgeFunction> {
   const files: Files = {};
 
@@ -447,6 +463,10 @@ async function createRenderEdgeFunction(
     deploymentTarget: 'v8-worker',
     name: 'render',
     entrypoint: handler,
+    framework: {
+      slug: 'remix',
+      version: remixVersion,
+    },
   });
 
   return fn;
