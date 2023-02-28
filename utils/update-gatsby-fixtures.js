@@ -12,7 +12,12 @@ const branch = `update/gatsby-fixtures`;
 module.exports = async ({ github, context }) => {
   exec('git', ['config', '--global', 'user.email', 'infra+release@vercel.com']);
   exec('git', ['config', '--global', 'user.name', 'vercel-release-bot']);
-  exec('git', ['checkout', branch]);
+  try {
+    // Branch may exist if there's already an existing PR
+    exec('git', ['checkout', branch]);
+  } catch {
+    exec('git', ['checkout', '-b', branch]);
+  }
 
   const fixturePath = path.join(
     '..',
@@ -29,6 +34,8 @@ module.exports = async ({ github, context }) => {
     'gatsby-v5-pathPrefix',
     'gatsby-v5',
   ];
+
+  let somethingChanged = false;
 
   for (const fixture of gatsbyFixtures) {
     const packageJSONPath = path.join(fixturePath, fixture);
@@ -50,11 +57,13 @@ module.exports = async ({ github, context }) => {
       continue;
     }
 
+    somethingChanged = true;
+
     packageJSON.dependencies.gatsby = newVersion;
 
     fs.writeFileSync(
       packageJSONPath,
-      JSON.stringify(packageJSON, null, 2),
+      JSON.stringify(packageJSON, null, 2) + '\n',
       'utf-8'
     );
 
@@ -66,46 +75,49 @@ module.exports = async ({ github, context }) => {
     }
   }
 
-  exec('git', ['add', '-A']);
-  exec('git', ['commit', '-m', branch]);
-  exec('git', ['push', 'origin', branch]);
+  if (somethingChanged) {
+    exec('git', ['add', '-A']);
+    exec('git', ['commit', '-m', branch]);
+    exec('git', ['push', 'origin', branch]);
 
-  const { repo, owner } = context.repo;
+    const { repo, owner } = context.repo;
 
-  const pulls = await github.rest.pulls.list({
-    owner,
-    repo,
-    state: 'open',
-    head: branch,
-  });
-  if (pulls.length === 0) {
-    const pr = await github.rest.pulls.create({
+    const pulls = await github.rest.pulls.list({
       owner,
       repo,
+      state: 'open',
       head: branch,
-      base: 'main',
-      title: '[tests] Update Gatsby fixture versions',
-      body: 'Automatically generated PR to update Gatsby fixture versions in `@vercel/static-build`',
     });
 
-    await github.rest.pulls.requestReviewers({
-      owner,
-      repo,
-      pull_number: pr.data.number,
-      reviewers: [
-        'Ethan-Arrowood',
-        'styfle',
-        'TooTallNate',
-        'EndangeredMassa',
-        'cb1kenobi',
-      ],
-    });
+    if (pulls.length === 0) {
+      const pr = await github.rest.pulls.create({
+        owner,
+        repo,
+        head: branch,
+        base: 'main',
+        title: '[tests] Update Gatsby fixture versions',
+        body: 'Automatically generated PR to update Gatsby fixture versions in `@vercel/static-build`',
+      });
 
-    await github.rest.issues.addLabels({
-      owner,
-      repo,
-      issue_number: pr.data.number,
-      labels: ['area: tests', 'semver: none', 'pr: automerge'],
-    });
+      await github.rest.pulls.requestReviewers({
+        owner,
+        repo,
+        pull_number: pr.data.number,
+        reviewers: [
+          'Ethan-Arrowood',
+          'styfle',
+          'TooTallNate',
+          'EndangeredMassa',
+          'cb1kenobi',
+        ],
+      });
+
+      await github.rest.issues.addLabels({
+        owner,
+        repo,
+        issue_number: pr.data.number,
+        labels: ['area: tests', 'semver: none', 'pr: automerge'],
+      });
+    }
   }
 };
