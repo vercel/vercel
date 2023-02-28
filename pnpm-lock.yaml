@@ -214,13 +214,13 @@ importers:
       '@vercel/hydrogen': 0.0.55
       '@vercel/ncc': 0.24.0
       '@vercel/next': 3.6.2
-      '@vercel/node': 2.9.9
+      '@vercel/node': 2.9.10
       '@vercel/python': 3.1.51
       '@vercel/redwood': 1.1.7
       '@vercel/remix': 1.4.2
       '@vercel/routing-utils': 2.1.10
       '@vercel/ruby': 1.3.68
-      '@vercel/static-build': 1.3.13
+      '@vercel/static-build': 1.3.14
       '@zeit/source-map-support': 0.6.2
       ajv: 6.12.2
       alpha-sort: 2.0.1
@@ -598,7 +598,7 @@ importers:
       '@types/node': 14.18.33
       '@types/react': 18.0.26
       '@vercel/build-utils': 6.3.2
-      '@vercel/node': 2.9.9
+      '@vercel/node': 2.9.10
       '@vercel/routing-utils': 2.1.10
       ajv: 8.12.0
       esbuild: 0.14.47
@@ -779,7 +779,7 @@ importers:
       '@vercel/build-utils': 6.3.2
       '@vercel/ncc': 0.24.0
       '@vercel/nft': 0.22.5
-      '@vercel/node-bridge': 3.1.13
+      '@vercel/node-bridge': 3.1.14
       '@vercel/static-config': 2.0.13
       content-type: 1.0.4
       cookie: 0.4.0
@@ -950,7 +950,7 @@ importers:
     dependencies:
       path-to-regexp: 6.1.0
     optionalDependencies:
-      ajv: 6.12.6
+      ajv: 6.12.2
     devDependencies:
       '@types/jest': 27.4.1
       '@types/node': 14.18.33
@@ -990,8 +990,8 @@ importers:
       '@vercel/build-utils': 6.3.2
       '@vercel/frameworks': 1.3.2
       '@vercel/fs-detectors': 3.8.2
-      '@vercel/gatsby-plugin-vercel-analytics': 1.0.7
-      '@vercel/gatsby-plugin-vercel-builder': 1.1.10
+      '@vercel/gatsby-plugin-vercel-analytics': 1.0.8
+      '@vercel/gatsby-plugin-vercel-builder': 1.1.11
       '@vercel/ncc': 0.24.0
       '@vercel/routing-utils': 2.1.10
       '@vercel/static-config': 2.0.13
@@ -1268,7 +1268,7 @@ packages:
       '@babel/core': ^7.0.0
     dependencies:
       '@babel/compat-data': 7.20.10
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-validator-option': 7.18.6
       browserslist: 4.21.4
       lru-cache: 5.1.1
@@ -1731,7 +1731,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-bigint/7.8.3_@babel+core@7.20.12:
@@ -1850,7 +1850,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-optional-catch-binding/7.8.3_@babel+core@7.20.12:
@@ -1858,7 +1858,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-optional-chaining/7.8.3_@babel+core@7.20.12:
@@ -7580,6 +7580,14 @@ packages:
     resolution: {integrity: sha512-hCOfMzbFx5IDutmWLAt6MZwOUjIfSM9G9FyVxytmE4Rs/5YDPWQrD/+IR1w+FweD9H2oOZEnv36TmkjhNURBVA==}
     dev: false
 
+  /ajv-keywords/3.5.2_ajv@6.12.2:
+    resolution: {integrity: sha512-5p6WTN0DdTGVQk6VjcEju19IgaHudalcfabD7yhDGeA6bcQnmL+CpveLJq/3hvfwd1aof6L386Ougkx6RfyMIQ==}
+    peerDependencies:
+      ajv: ^6.9.1
+    dependencies:
+      ajv: 6.12.2
+    dev: true
+
   /ajv-keywords/3.5.2_ajv@6.12.6:
     resolution: {integrity: sha512-5p6WTN0DdTGVQk6VjcEju19IgaHudalcfabD7yhDGeA6bcQnmL+CpveLJq/3hvfwd1aof6L386Ougkx6RfyMIQ==}
     peerDependencies:
@@ -7595,7 +7603,6 @@ packages:
       fast-json-stable-stringify: 2.1.0
       json-schema-traverse: 0.4.1
       uri-js: 4.4.1
-    dev: true
 
   /ajv/6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
@@ -7604,6 +7611,7 @@ packages:
       fast-json-stable-stringify: 2.1.0
       json-schema-traverse: 0.4.1
       uri-js: 4.4.1
+    dev: true
 
   /ajv/8.12.0:
     resolution: {integrity: sha512-sRu1kpcO9yLtYxBKvqfTeh9KzZEwO3STyX1HT+4CaDzC6HpTGYhIhPIzj9XuKU7KYDwnaeh5hcOwjy1QuJzBPA==}
@@ -11846,7 +11854,7 @@ packages:
       '@babel/code-frame': 7.12.11
       '@eslint/eslintrc': 0.4.3
       '@humanwhocodes/config-array': 0.5.0
-      ajv: 6.12.6
+      ajv: 6.12.2
       chalk: 4.1.2
       cross-spawn: 7.0.3
       debug: 4.3.4
@@ -11894,7 +11902,7 @@ packages:
     dependencies:
       '@eslint/eslintrc': 1.4.1
       '@humanwhocodes/config-array': 0.9.5
-      ajv: 6.12.6
+      ajv: 6.12.2
       chalk: 4.1.2
       cross-spawn: 7.0.3
       debug: 4.3.4
@@ -12689,6 +12697,18 @@ packages:
       debug:
         optional: true
     dev: false
+
+  /follow-redirects/1.15.2_debug@3.1.0:
+    resolution: {integrity: sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==}
+    engines: {node: '>=4.0'}
+    peerDependencies:
+      debug: '*'
+    peerDependenciesMeta:
+      debug:
+        optional: true
+    dependencies:
+      debug: 3.1.0
+    dev: true
 
   /follow-redirects/1.15.2_debug@3.2.7:
     resolution: {integrity: sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==}
@@ -14235,7 +14255,7 @@ packages:
     engines: {node: '>=8.0.0'}
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.15.2_debug@3.2.7
+      follow-redirects: 1.15.2_debug@3.1.0
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -20703,8 +20723,8 @@ packages:
     engines: {node: '>= 8.9.0'}
     dependencies:
       '@types/json-schema': 7.0.11
-      ajv: 6.12.6
-      ajv-keywords: 3.5.2_ajv@6.12.6
+      ajv: 6.12.2
+      ajv-keywords: 3.5.2_ajv@6.12.2
     dev: true
 
   /schema-utils/2.7.1:
