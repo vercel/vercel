@@ -70,7 +70,6 @@ module.exports = async ({ github, context }) => {
   // git diff --quiet returns exit code 1 if changes detected
   try {
     exec('git', ['diff', '--quiet']);
-    console.log('no changes');
   } catch {
     exec('git', ['add', '-A']);
     exec('git', ['commit', '-m', branch]);
@@ -85,9 +84,7 @@ module.exports = async ({ github, context }) => {
       head: `vercel:${branch}`,
     });
 
-    console.log(pulls);
-
-    if (pulls.length === 0) {
+    if (pulls.data.length === 0) {
       const pr = await github.rest.pulls.create({
         owner,
         repo,

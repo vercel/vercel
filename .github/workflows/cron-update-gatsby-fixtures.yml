@@ -3,9 +3,9 @@ name: Cron Update Gatsby Fixtures
 on:
   # Allow manual runs
   workflow_dispatch:
-  # Run once a week https://crontab.guru/once-a-week
+  # Run once a day https://crontab.guru/once-a-day
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: '0 0 * * *'
 
 jobs:
   create-pull-request:
