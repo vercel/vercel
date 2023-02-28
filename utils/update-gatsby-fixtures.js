@@ -84,6 +84,8 @@ module.exports = async ({ github, context }) => {
       head: branch,
     });
 
+    console.log(pulls);
+
     if (pulls.length === 0) {
       const pr = await github.rest.pulls.create({
         owner,
