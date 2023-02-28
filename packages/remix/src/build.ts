@@ -93,6 +93,14 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
+  const remixDevPackageJsonPath = _require.resolve(
+    '@remix-run/dev/package.json',
+    { paths: [entrypointFsDirname] }
+  );
+  const remixVersion = JSON.parse(
+    await fs.readFile(remixDevPackageJsonPath, 'utf8')
+  ).version;
+
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
 
@@ -200,12 +208,6 @@ module.exports = config;`;
     ),
     ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node'),
   ]);
-
-  const remixDevPackageJsonPath = _require.resolve(
-    '@remix-run/dev/package.json',
-    { paths: [entrypointFsDirname] }
-  );
-  const remixVersion = _require(remixDevPackageJsonPath).version;
 
   const [staticFiles, nodeFunction, edgeFunction] = await Promise.all([
     glob('**', join(entrypointFsDirname, 'public')),
