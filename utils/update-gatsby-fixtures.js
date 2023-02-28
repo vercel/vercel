@@ -66,7 +66,11 @@ module.exports = async ({ github, context }) => {
     }
   }
 
-  if (exec('git', ['diff']) !== '') {
+  // exec throws error on non-zero exit code
+  // git diff --quiet returns exit code 1 if changes detected
+  try {
+    exec('git', ['diff', '--quiet']);
+  } catch {
     exec('git', ['add', '-A']);
     exec('git', ['commit', '-m', branch]);
     exec('git', ['push', 'origin', branch]);
