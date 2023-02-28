@@ -166,11 +166,6 @@ export function register(opts: Options = {}): Register {
     getCanonicalFileName: path => path,
   };
 
-  function createTSError(diagnostics: ReadonlyArray<_ts.Diagnostic>) {
-    const message = formatDiagnostics(diagnostics, diagnosticHost);
-    return new NowBuildError({ code: 'NODE_TYPESCRIPT_ERROR', message });
-  }
-
   function reportTSError(
     diagnostics: _ts.Diagnostic[],
     shouldExit: boolean | undefined
@@ -178,13 +173,13 @@ export function register(opts: Options = {}): Register {
     if (!diagnostics || diagnostics.length === 0) {
       return;
     }
-    const error = createTSError(diagnostics);
+    const message = formatDiagnostics(diagnostics, diagnosticHost);
 
     if (shouldExit) {
-      throw error;
+      throw new NowBuildError({ code: 'NODE_TYPESCRIPT_ERROR', message });
     } else {
       // Print error in red color and continue execution.
-      console.error('\x1b[31m%s\x1b[0m', error);
+      console.error(message);
     }
   }
 

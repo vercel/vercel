@@ -26,40 +26,56 @@ describe('getMonorepoDefaultSettings', () => {
   });
 
   test.each([
-    ['turbo', 'turbo'],
-    ['turbo-package-config', 'turbo'],
-    ['nx', 'nx'],
-    ['nx-package-config', 'nx'],
-    ['nx-project-and-package-config-1', 'nx'],
-    ['nx-project-and-package-config-2', 'nx'],
-    ['nx-project-config', 'nx'],
-  ])('fixture %s', async (fixture, expectedResultKey) => {
-    const expectedResultMap: Record<string, Record<string, string>> = {
-      turbo: {
-        monorepoManager: 'turbo',
-        buildCommand:
-          'cd ../.. && npx turbo run build --filter={packages/app-1}...',
-        installCommand: 'cd ../.. && yarn install',
-        commandForIgnoringBuildStep: 'cd ../.. && npx turbo-ignore',
-      },
-      nx: {
-        monorepoManager: 'nx',
-        buildCommand: 'cd ../.. && npx nx build app-1',
-        installCommand: 'cd ../.. && yarn install',
-      },
-    };
+    ['turbo', 'turbo', false, 'app-14', false],
+    ['turbo-package-config', 'turbo', false, 'app-13', false],
+    ['turbo-npm', 'turbo', true, 'app-15', false],
+    ['turbo-npm-root-proj', 'turbo', true, 'app-root-proj', true],
+    ['nx', 'nx', false, 'app-12', false],
+    ['nx-package-config', 'nx', false, 'app-11', false],
+    ['nx-project-and-package-config-1', 'nx', false, 'app-10', false],
+    ['nx-project-and-package-config-2', 'nx', false, 'app-9', false],
+    ['nx-project-config', 'nx', false, 'app-8', false],
+  ])(
+    'fixture %s',
+    async (fixture, expectedResultKey, isNpm, packageName, isRoot) => {
+      const expectedResultMap: Record<string, Record<string, string>> = {
+        turbo: {
+          monorepoManager: 'turbo',
+          buildCommand: isRoot
+            ? 'npx turbo run build'
+            : 'cd ../.. && npx turbo run build --filter={packages/app-1}...',
+          installCommand:
+            isNpm && isRoot
+              ? 'npm install'
+              : isNpm
+              ? 'npm install --prefix=../..'
+              : 'yarn install',
+          commandForIgnoringBuildStep: 'npx turbo-ignore',
+        },
+        nx: {
+          monorepoManager: 'nx',
+          buildCommand: `cd ../.. && npx nx build ${packageName}`,
+          installCommand: 'yarn install',
+        },
+      };
 
-    const ffs = new FixtureFilesystem(
-      path.join(__dirname, 'fixtures', 'get-monorepo-default-settings', fixture)
-    );
-    const result = await getMonorepoDefaultSettings(
-      'app-1',
-      'packages/app-1',
-      '../..',
-      ffs
-    );
-    expect(result).toStrictEqual(expectedResultMap[expectedResultKey]);
-  });
+      const ffs = new FixtureFilesystem(
+        path.join(
+          __dirname,
+          'fixtures',
+          'get-monorepo-default-settings',
+          fixture
+        )
+      );
+      const result = await getMonorepoDefaultSettings(
+        packageName,
+        isRoot ? '/' : 'packages/app-1',
+        isRoot ? '/' : '../..',
+        ffs
+      );
+      expect(result).toStrictEqual(expectedResultMap[expectedResultKey]);
+    }
+  );
 
   test('returns null when neither nx nor turbo is detected', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'monorepo-test-'));

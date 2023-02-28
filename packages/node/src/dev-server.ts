@@ -61,7 +61,8 @@ async function createEventHandler(
     return createEdgeEventHandler(
       entrypointPath,
       entrypoint,
-      config.middleware || false
+      config.middleware || false,
+      config.zeroConfig
     );
   }
 

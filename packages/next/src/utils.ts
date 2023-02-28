@@ -169,6 +169,7 @@ function getImagesConfig(
         formats: imagesManifest.images.formats,
         dangerouslyAllowSVG: imagesManifest.images.dangerouslyAllowSVG,
         contentSecurityPolicy: imagesManifest.images.contentSecurityPolicy,
+        contentDispositionType: imagesManifest.images.contentDispositionType,
       }
     : undefined;
 }
@@ -235,6 +236,7 @@ type RoutesManifestOld = {
   rsc?: {
     header: string;
     varyHeader: string;
+    contentTypeHeader: string;
   };
   skipMiddlewareUrlNormalize?: boolean;
 };
@@ -267,12 +269,7 @@ export async function getRoutesManifest(
 
   if (shouldHaveManifest && !hasRoutesManifest) {
     throw new NowBuildError({
-      message:
-        `The file "${pathRoutesManifest}" couldn't be found. This is normally caused by a misconfiguration in your project.\n` +
-        'Please check the following, and reach out to support if you cannot resolve the problem:\n' +
-        '  1. If present, be sure your `build` script in "package.json" calls `next build`.' +
-        '  2. Navigate to your project\'s settings in the Vercel dashboard, and verify that the "Build Command" is not overridden, or that it calls `next build`.' +
-        '  3. Navigate to your project\'s settings in the Vercel dashboard, and verify that the "Output Directory" is not overridden. Note that `next export` does **not** require you change this setting, even if you customize the `next export` output directory.',
+      message: `The file "${pathRoutesManifest}" couldn't be found. This is often caused by a misconfiguration in your project.`,
       link: 'https://err.sh/vercel/vercel/now-next-routes-manifest',
       code: 'NEXT_NO_ROUTES_MANIFEST',
     });
@@ -514,43 +511,15 @@ export type NextImagesManifest = {
     loader: LoaderKey;
     sizes: number[];
     domains: string[];
-    remotePatterns: RemotePattern[];
-    minimumCacheTTL?: number;
-    formats?: ImageFormat[];
+    remotePatterns: Images['remotePatterns'];
+    minimumCacheTTL?: Images['minimumCacheTTL'];
+    formats?: Images['formats'];
     unoptimized?: boolean;
-    dangerouslyAllowSVG?: boolean;
-    contentSecurityPolicy?: string;
+    dangerouslyAllowSVG?: Images['dangerouslyAllowSVG'];
+    contentSecurityPolicy?: Images['contentSecurityPolicy'];
+    contentDispositionType?: Images['contentDispositionType'];
   };
 };
-
-export type RemotePattern = {
-  /**
-   * Must be `http` or `https`.
-   */
-  protocol?: 'http' | 'https';
-
-  /**
-   * Can be literal or wildcard.
-   * Single `*` matches a single subdomain.
-   * Double `**` matches any number of subdomains.
-   */
-  hostname: string;
-
-  /**
-   * Can be literal port such as `8080` or empty string
-   * meaning no port.
-   */
-  port?: string;
-
-  /**
-   * Can be literal or wildcard.
-   * Single `*` matches a single path segment.
-   * Double `**` matches any number of path segments.
-   */
-  pathname?: string;
-};
-
-type ImageFormat = 'image/avif' | 'image/webp';
 
 export async function getImagesManifest(
   entryPath: string,
@@ -778,6 +747,7 @@ export async function createPseudoLayer(files: {
 interface CreateLambdaFromPseudoLayersOptions extends LambdaOptionsWithFiles {
   layers: PseudoLayer[];
   isStreaming?: boolean;
+  nextVersion?: string;
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -788,6 +758,7 @@ export async function createLambdaFromPseudoLayers({
   files: baseFiles,
   layers,
   isStreaming,
+  nextVersion,
   ...lambdaOptions
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -831,11 +802,16 @@ export async function createLambdaFromPseudoLayers({
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: false,
     supportsMultiPayloads: !!process.env.NEXT_PRIVATE_MULTI_PAYLOAD,
+    framework: {
+      slug: 'nextjs',
+      version: nextVersion,
+    },
   });
 }
 
 export type NextRequiredServerFilesManifest = {
   appDir?: string;
+  relativeAppDir?: string;
   files: string[];
   ignore: string[];
   config: Record<string, any>;
@@ -847,16 +823,18 @@ export type NextPrerenderedRoutes = {
   staticRoutes: {
     [route: string]: {
       initialRevalidate: number | false;
-      dataRoute: string;
+      dataRoute: string | null;
       srcRoute: string | null;
+      initialStatus?: number;
+      initialHeaders?: Record<string, string>;
     };
   };
 
   blockingFallbackRoutes: {
     [route: string]: {
       routeRegex: string;
-      dataRoute: string;
-      dataRouteRegex: string;
+      dataRoute: string | null;
+      dataRouteRegex: string | null;
     };
   };
 
@@ -864,16 +842,16 @@ export type NextPrerenderedRoutes = {
     [route: string]: {
       fallback: string;
       routeRegex: string;
-      dataRoute: string;
-      dataRouteRegex: string;
+      dataRoute: string | null;
+      dataRouteRegex: string | null;
     };
   };
 
   omittedRoutes: {
     [route: string]: {
       routeRegex: string;
-      dataRoute: string;
-      dataRouteRegex: string;
+      dataRoute: string | null;
+      dataRouteRegex: string | null;
     };
   };
 
@@ -977,6 +955,7 @@ export async function getRequiredServerFilesManifest(
     ignore: [],
     config: {},
     appDir: manifestData.appDir,
+    relativeAppDir: manifestData.relativeAppDir,
   };
 
   switch (manifestData.version) {
@@ -1066,6 +1045,30 @@ export async function getPrerenderManifest(
           previewModeId: string;
         };
         notFoundRoutes?: string[];
+      }
+    | {
+        version: 4;
+        routes: {
+          [route: string]: {
+            initialRevalidateSeconds: number | false;
+            srcRoute: string | null;
+            dataRoute: string | null;
+            initialStatus?: number;
+            initialHeaders?: Record<string, string>;
+          };
+        };
+        dynamicRoutes: {
+          [route: string]: {
+            routeRegex: string;
+            fallback: string | false;
+            dataRoute: string | null;
+            dataRouteRegex: string | null;
+          };
+        };
+        preview: {
+          previewModeId: string;
+        };
+        notFoundRoutes?: string[];
       } = JSON.parse(await fs.readFile(pathPrerenderManifest, 'utf8'));
 
   switch (manifest.version) {
@@ -1120,7 +1123,8 @@ export async function getPrerenderManifest(
       return ret;
     }
     case 2:
-    case 3: {
+    case 3:
+    case 4: {
       const routes = Object.keys(manifest.routes);
       const lazyRoutes = Object.keys(manifest.dynamicRoutes);
 
@@ -1141,6 +1145,15 @@ export async function getPrerenderManifest(
       routes.forEach(route => {
         const { initialRevalidateSeconds, dataRoute, srcRoute } =
           manifest.routes[route];
+
+        let initialStatus: undefined | number;
+        let initialHeaders: undefined | Record<string, string>;
+
+        if (manifest.version === 4) {
+          initialStatus = manifest.routes[route].initialStatus;
+          initialHeaders = manifest.routes[route].initialHeaders;
+        }
+
         ret.staticRoutes[route] = {
           initialRevalidate:
             initialRevalidateSeconds === false
@@ -1148,6 +1161,8 @@ export async function getPrerenderManifest(
               : Math.max(1, initialRevalidateSeconds),
           dataRoute,
           srcRoute,
+          initialStatus,
+          initialHeaders,
         };
       });
 
@@ -1311,6 +1326,7 @@ export type LambdaGroup = {
   maxDuration?: number;
   isStreaming?: boolean;
   isPrerenders?: boolean;
+  isApiLambda: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
@@ -1417,6 +1433,7 @@ export async function getPageLambdaGroups({
         pages: [page],
         ...opts,
         isPrerenders: isPrerenderRoute,
+        isApiLambda: !!isApiPage(page),
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
@@ -1648,7 +1665,7 @@ export const onPrerenderRouteInitial = (
   const { initialRevalidate, srcRoute, dataRoute } = pr;
   const route = srcRoute || routeKey;
 
-  const isAppPathRoute = appDir && dataRoute?.endsWith('.rsc');
+  const isAppPathRoute = appDir && (!dataRoute || dataRoute?.endsWith('.rsc'));
 
   const routeNoLocale = routesManifest?.i18n
     ? normalizeLocalePath(routeKey, routesManifest.i18n.locales).pathname
@@ -1806,7 +1823,9 @@ export const onPrerenderRoute =
 
     let initialRevalidate: false | number;
     let srcRoute: string | null;
-    let dataRoute: string;
+    let dataRoute: string | null;
+    let initialStatus: number | undefined;
+    let initialHeaders: Record<string, string> | undefined;
 
     if (isFallback || isBlocking) {
       const pr = isFallback
@@ -1829,44 +1848,60 @@ export const onPrerenderRoute =
       dataRoute = prerenderManifest.omittedRoutes[routeKey].dataRoute;
     } else {
       const pr = prerenderManifest.staticRoutes[routeKey];
-      ({ initialRevalidate, srcRoute, dataRoute } = pr);
+      ({
+        initialRevalidate,
+        srcRoute,
+        dataRoute,
+        initialHeaders,
+        initialStatus,
+      } = pr);
     }
 
     let isAppPathRoute = false;
     // TODO: leverage manifest to determine app paths more accurately
-    if (appDir && srcRoute && dataRoute.endsWith('.rsc')) {
+    if (appDir && srcRoute && (!dataRoute || dataRoute?.endsWith('.rsc'))) {
       isAppPathRoute = true;
     }
 
     const isOmittedOrNotFound = isOmitted || isNotFound;
-    const htmlFsRef =
-      isBlocking || (isNotFound && !static404Page)
-        ? // Blocking pages do not have an HTML fallback
-          null
-        : new FileFsRef({
-            fsPath: path.join(
-              isAppPathRoute && !isOmittedOrNotFound && appDir
-                ? appDir
-                : pagesDir,
-              isFallback
-                ? // Fallback pages have a special file.
-                  addLocaleOrDefault(
-                    prerenderManifest.fallbackRoutes[routeKey].fallback,
-                    routesManifest,
-                    locale
-                  )
-                : // Otherwise, the route itself should exist as a static HTML
-                  // file.
-                  `${
-                    isOmittedOrNotFound
-                      ? addLocaleOrDefault('/404', routesManifest, locale)
-                      : routeFileNoExt
-                  }.html`
-            ),
-          });
+    let htmlFsRef: FileFsRef | null;
+
+    if (appDir && !dataRoute && isAppPathRoute && !(isBlocking || isFallback)) {
+      const contentType = initialHeaders?.['content-type'];
+      htmlFsRef = new FileFsRef({
+        fsPath: path.join(appDir, `${routeFileNoExt}.body`),
+        contentType: contentType || 'text/html;charset=utf-8',
+      });
+    } else {
+      htmlFsRef =
+        isBlocking || (isNotFound && !static404Page)
+          ? // Blocking pages do not have an HTML fallback
+            null
+          : new FileFsRef({
+              fsPath: path.join(
+                isAppPathRoute && !isOmittedOrNotFound && appDir
+                  ? appDir
+                  : pagesDir,
+                isFallback
+                  ? // Fallback pages have a special file.
+                    addLocaleOrDefault(
+                      prerenderManifest.fallbackRoutes[routeKey].fallback,
+                      routesManifest,
+                      locale
+                    )
+                  : // Otherwise, the route itself should exist as a static HTML
+                    // file.
+                    `${
+                      isOmittedOrNotFound
+                        ? addLocaleOrDefault('/404', routesManifest, locale)
+                        : routeFileNoExt
+                    }.html`
+              ),
+            });
+    }
     const jsonFsRef =
       // JSON data does not exist for fallback or blocking pages
-      isFallback || isBlocking || (isNotFound && !static404Page)
+      isFallback || isBlocking || (isNotFound && !static404Page) || !dataRoute
         ? null
         : new FileFsRef({
             fsPath: path.join(
@@ -1904,16 +1939,20 @@ export const onPrerenderRoute =
     );
 
     let lambda: undefined | Lambda;
-    let outputPathData = path.posix.join(entryDirectory, dataRoute);
+    let outputPathData: null | string = null;
 
-    if (nonDynamicSsg || isFallback || isOmitted) {
-      outputPathData = outputPathData.replace(
-        new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
-        // ensure we escape "$" correctly while replacing as "$" is a special
-        // character, we need to do double escaping as first is for the initial
-        // replace on the routeFile and then the second on the outputPath
-        `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
-      );
+    if (dataRoute) {
+      outputPathData = path.posix.join(entryDirectory, dataRoute);
+
+      if (nonDynamicSsg || isFallback || isOmitted) {
+        outputPathData = outputPathData.replace(
+          new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
+          // ensure we escape "$" correctly while replacing as "$" is a special
+          // character, we need to do double escaping as first is for the initial
+          // replace on the routeFile and then the second on the outputPath
+          `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
+        );
+      }
     }
 
     if (isSharedLambdas) {
@@ -1950,7 +1989,7 @@ export const onPrerenderRoute =
       if (htmlFsRef == null || jsonFsRef == null) {
         throw new NowBuildError({
           code: 'NEXT_HTMLFSREF_JSONFSREF',
-          message: 'invariant: htmlFsRef != null && jsonFsRef != null',
+          message: `invariant: htmlFsRef != null && jsonFsRef != null ${routeFileNoExt}`,
         });
       }
 
@@ -1962,7 +2001,10 @@ export const onPrerenderRoute =
       ) {
         htmlFsRef.contentType = htmlContentType;
         prerenders[outputPathPage] = htmlFsRef;
-        prerenders[outputPathData] = jsonFsRef;
+
+        if (outputPathData) {
+          prerenders[outputPathData] = jsonFsRef;
+        }
       }
     }
     const isNotFoundPreview =
@@ -2024,9 +2066,13 @@ export const onPrerenderRoute =
           allowQuery = [];
         }
       }
+
+      const rscEnabled = !!routesManifest?.rsc;
       const rscVaryHeader =
         routesManifest?.rsc?.varyHeader ||
-        '__rsc__, __next_router_state_tree__, __next_router_prefetch__';
+        'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
+      const rscContentTypeHeader =
+        routesManifest?.rsc?.contentTypeHeader || 'text/x-component';
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
@@ -2035,27 +2081,8 @@ export const onPrerenderRoute =
         fallback: htmlFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
-        ...(isNotFound
-          ? {
-              initialStatus: 404,
-            }
-          : {}),
-
-        ...(isAppPathRoute
-          ? {
-              initialHeaders: {
-                vary: rscVaryHeader,
-              },
-            }
-          : {}),
-      });
-      prerenders[outputPathData] = new Prerender({
-        expiration: initialRevalidate,
-        lambda,
-        allowQuery,
-        fallback: jsonFsRef,
-        group: prerenderGroup,
-        bypassToken: prerenderManifest.bypassToken,
+        initialStatus,
+        initialHeaders,
 
         ...(isNotFound
           ? {
@@ -2063,15 +2090,41 @@ export const onPrerenderRoute =
             }
           : {}),
 
-        ...(isAppPathRoute
+        ...(rscEnabled
           ? {
               initialHeaders: {
-                'content-type': 'application/octet-stream',
+                ...initialHeaders,
                 vary: rscVaryHeader,
               },
             }
           : {}),
       });
+
+      if (outputPathData) {
+        prerenders[outputPathData] = new Prerender({
+          expiration: initialRevalidate,
+          lambda,
+          allowQuery,
+          fallback: jsonFsRef,
+          group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
+
+          ...(isNotFound
+            ? {
+                initialStatus: 404,
+              }
+            : {}),
+
+          ...(rscEnabled
+            ? {
+                initialHeaders: {
+                  'content-type': rscContentTypeHeader,
+                  vary: rscVaryHeader,
+                },
+              }
+            : {}),
+        });
+      }
 
       ++prerenderGroup;
 
@@ -2086,29 +2139,30 @@ export const onPrerenderRoute =
             path.posix.join(entryDirectory, localeRouteFileNoExt),
             isServerMode
           );
-          const localeOutputPathData = outputPathData.replace(
-            new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
-            `${localeRouteFileNoExt}${
-              localeRouteFileNoExt !== origRouteFileNoExt &&
-              origRouteFileNoExt === '/index'
-                ? '/index'
-                : ''
-            }.json`
-          );
 
           const origPrerenderPage = prerenders[outputPathPage];
-          const origPrerenderData = prerenders[outputPathData];
-
           prerenders[localeOutputPathPage] = {
             ...origPrerenderPage,
             group: prerenderGroup,
           } as Prerender;
 
-          prerenders[localeOutputPathData] = {
-            ...origPrerenderData,
-            group: prerenderGroup,
-          } as Prerender;
+          if (outputPathData) {
+            const localeOutputPathData = outputPathData.replace(
+              new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
+              `${localeRouteFileNoExt}${
+                localeRouteFileNoExt !== origRouteFileNoExt &&
+                origRouteFileNoExt === '/index'
+                  ? '/index'
+                  : ''
+              }.json`
+            );
+            const origPrerenderData = prerenders[outputPathData];
 
+            prerenders[localeOutputPathData] = {
+              ...origPrerenderData,
+              group: prerenderGroup,
+            } as Prerender;
+          }
           ++prerenderGroup;
         }
       }
@@ -2316,12 +2370,15 @@ export async function getMiddlewareBundle({
   routesManifest,
   isCorrectMiddlewareOrder,
   prerenderBypassToken,
+  nextVersion,
 }: {
+  config: Config;
   entryPath: string;
   outputDirectory: string;
   prerenderBypassToken: string;
   routesManifest: RoutesManifest;
   isCorrectMiddlewareOrder: boolean;
+  nextVersion: string;
 }): Promise<{
   staticRoutes: Route[];
   dynamicRouteMap: Map<string, RouteWithSrc>;
@@ -2443,6 +2500,10 @@ export async function getMiddlewareBundle({
                     path: `assets/${name}`,
                   };
                 }),
+                framework: {
+                  slug: 'nextjs',
+                  version: nextVersion,
+                },
               });
             })(),
             routeMatchers: getRouteMatchers(edgeFunction, routesManifest),
@@ -2478,9 +2539,13 @@ export async function getMiddlewareBundle({
       //    app/index/page -> index/index
       if (shortPath.startsWith('pages/')) {
         shortPath = shortPath.replace(/^pages\//, '');
-      } else if (shortPath.startsWith('app/') && shortPath.endsWith('/page')) {
+      } else if (
+        shortPath.startsWith('app/') &&
+        (shortPath.endsWith('/page') || shortPath.endsWith('/route'))
+      ) {
         shortPath =
-          shortPath.replace(/^app\//, '').replace(/(^|\/)page$/, '') || 'index';
+          shortPath.replace(/^app\//, '').replace(/(^|\/)(page|route)$/, '') ||
+          'index';
       }
 
       if (routesManifest?.basePath) {
@@ -2665,4 +2730,50 @@ function transformSourceMap(
     });
 
   return { ...sourcemap, sources };
+}
+
+interface LambdaGroupTypeInterface {
+  isApiLambda: boolean;
+  isPrerenders?: boolean;
+}
+
+export function getOperationType({
+  group,
+  prerenderManifest,
+  pageFileName,
+}: {
+  group?: LambdaGroupTypeInterface;
+  prerenderManifest?: NextPrerenderedRoutes;
+  pageFileName?: string;
+}) {
+  if (group?.isApiLambda || isApiPage(pageFileName)) {
+    return 'API';
+  }
+
+  if (group?.isPrerenders) {
+    return 'ISR';
+  }
+
+  if (pageFileName && prerenderManifest) {
+    const { blockingFallbackRoutes = {}, fallbackRoutes = {} } =
+      prerenderManifest;
+    if (
+      pageFileName in blockingFallbackRoutes ||
+      pageFileName in fallbackRoutes
+    ) {
+      return 'ISR';
+    }
+  }
+
+  return 'SSR';
+}
+
+export function isApiPage(page: string | undefined) {
+  if (!page) {
+    return false;
+  }
+
+  return page
+    .replace(/\\/g, '/')
+    .match(/(serverless|server)\/pages\/api(\/|\.js$)/);
 }

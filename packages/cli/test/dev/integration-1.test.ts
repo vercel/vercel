@@ -100,15 +100,12 @@ test('[vercel dev] throws an error when an edge function has no response', async
     let res = await fetch(`http://localhost:${port}/api/edge-no-response`);
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill();
+    const { stdout } = await dev.kill();
 
     expect(await res.status).toBe(500);
     expect(await res.text()).toMatch('FUNCTION_INVOCATION_FAILED');
     expect(stdout).toMatch(
-      /Unhandled rejection: Edge Function "api\/edge-no-response.js" did not return a response./g
-    );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-no-response: Error: socket hang up/g
+      /Error from API Route \/api\/edge-no-response: Edge Function "api\/edge-no-response.js" did not return a response./g
     );
   } finally {
     await dev.kill();
@@ -158,14 +155,13 @@ test('[vercel dev] should handle runtime errors thrown in edge functions', async
     });
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill();
+    const { stdout } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
-    expect(stdout).toMatch(/Unhandled rejection: intentional runtime error/g);
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-runtime: Error: socket hang up/g
+    expect(stdout).toMatch(
+      /Error from API Route \/api\/edge-error-runtime: intentional runtime error/g
     );
   } finally {
     await dev.kill();
@@ -196,9 +192,6 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
     expect(stderr).toMatch(
       /Invalid function runtime "invalid-runtime-value" for "api\/edge-error-config.js". Valid runtimes are: \["edge","experimental-edge"\]/g
     );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-config: Error: socket hang up/g
-    );
   } finally {
     await dev.kill();
   }
@@ -227,9 +220,6 @@ test('[vercel dev] should handle startup errors thrown in edge functions', async
     );
     expect(stderr).toMatch(/Failed to instantiate edge runtime./g);
     expect(stderr).toMatch(/intentional startup error/g);
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-startup: Error: socket hang up/g
-    );
   } finally {
     await dev.kill();
   }
@@ -258,9 +248,6 @@ test('[vercel dev] should handle syntax errors thrown in edge functions', async 
     );
     expect(stderr).toMatch(/Failed to compile user code for edge runtime./g);
     expect(stderr).toMatch(/Unexpected end of file/g);
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-syntax: Error: socket hang up/g
-    );
   } finally {
     await dev.kill();
   }
@@ -293,9 +280,6 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
     expect(stderr).toMatch(
       /Could not resolve "unknown-module-893427589372458934795843"/g
     );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-unknown-import: Error: socket hang up/g
-    );
   } finally {
     await dev.kill();
   }
@@ -320,16 +304,13 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
     );
     validateResponseHeaders(res);
 
-    const { stdout, stderr } = await dev.kill();
+    const { stdout } = await dev.kill();
 
     expect(await res.text()).toMatch(
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
     expect(stdout).toMatch(
       /No default export was found. Add a default export to handle requests./g
-    );
-    expect(stderr).toMatch(
-      /Failed to complete request to \/api\/edge-error-no-handler: Error: socket hang up/g
     );
   } finally {
     await dev.kill();
@@ -686,6 +667,7 @@ test('[vercel dev] should support static files with zero config', async () => {
     expect(body).toEqual('bye:user');
 
     res = await fetch(`http://localhost:${port}/`);
+    expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
     body = await res.text();
     expect(body.startsWith('<h1>goodbye world</h1>')).toBeTruthy();
   } finally {

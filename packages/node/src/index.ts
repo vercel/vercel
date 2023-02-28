@@ -1,5 +1,5 @@
 import url from 'url';
-import { fork, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import {
   readFileSync,
   lstatSync,
@@ -36,7 +36,6 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
-  cloneEnv,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -59,6 +58,10 @@ import {
   getRegExpFromMatchers,
   isEdgeRuntime,
 } from './utils';
+import {
+  forkDevServer,
+  readMessage as readDevServerMessage,
+} from './fork-dev-server';
 
 export { shouldServe };
 
@@ -70,14 +73,6 @@ interface DownloadOptions {
   workPath: string;
   config: Config;
   meta: Meta;
-}
-
-interface PortInfo {
-  port: number;
-}
-
-function isPortInfo(v: any): v is PortInfo {
-  return v && typeof v.port === 'number';
 }
 
 const ALLOWED_RUNTIMES = ['nodejs', ...Object.values(EdgeRuntimes)];
@@ -180,6 +175,8 @@ async function compile(
     return source;
   }
 
+  const conditions = isEdgeFunction ? ['worker', 'browser'] : undefined;
+
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
     {
@@ -187,6 +184,7 @@ async function compile(
       processCwd: workPath,
       ts: true,
       mixedModules: true,
+      conditions,
       resolve(id, parent, job, cjsResolve) {
         const normalizedWasmImports = id.replace(/\.wasm\?module$/i, '.wasm');
         return nftResolveDependency(
@@ -197,7 +195,7 @@ async function compile(
         );
       },
       ignore: config.excludeFiles,
-      async readFile(fsPath: string): Promise<Buffer | string | null> {
+      async readFile(fsPath) {
         const relPath = relative(baseDir, fsPath);
 
         // If this file has already been read then return from the cache
@@ -413,6 +411,11 @@ export const build: BuildV3 = async ({
         )} (must be one of: ${JSON.stringify(ALLOWED_RUNTIMES)})`
       );
     }
+    if (staticConfig.runtime === 'nodejs') {
+      console.log(
+        `Detected unused static config runtime "nodejs" in "${entrypointPath}"`
+      );
+    }
     isEdgeFunction = isEdgeRuntime(staticConfig.runtime);
   }
 
@@ -531,9 +534,6 @@ export const startDevServer: StartDevServer = async opts => {
     filename: 'package.json',
   });
   const pkg = pathToPkg ? require_(pathToPkg) : {};
-  const tsNodePath = require_.resolve('ts-node');
-  const esmLoader = join(tsNodePath, '..', '..', 'esm.mjs');
-  const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
   const isTypescript = ['.ts', '.tsx', '.mts', '.cts'].includes(ext);
   const maybeTranspile = isTypescript || !['.cjs', '.mjs'].includes(ext);
   const isEsm =
@@ -541,8 +541,6 @@ export const startDevServer: StartDevServer = async opts => {
     ext === '.mts' ||
     (pkg.type === 'module' && ['.js', '.ts', '.tsx'].includes(ext));
 
-  const devServerPath = join(__dirname, 'dev-server.js');
-  let nodeOptions = process.env.NODE_OPTIONS;
   let tsConfig: any = {};
 
   if (maybeTranspile) {
@@ -595,52 +593,24 @@ export const startDevServer: StartDevServer = async opts => {
     // In prod, we emit outputs to the filesystem.
     // In dev, we don't emit because we use ts-node.
     tsConfig.compilerOptions.noEmit = true;
-
-    if (isTypescript) {
-      if (isEsm) {
-        nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
-      } else {
-        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
-      }
-    } else {
-      if (isEsm) {
-        // no transform needed because Node.js supports ESM natively
-      } else {
-        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
-      }
-    }
   }
 
-  const child = fork(devServerPath, [], {
-    cwd: workPath,
-    execArgv: [],
-    env: cloneEnv(process.env, meta.env, {
-      VERCEL_DEV_ENTRYPOINT: entrypoint,
-      VERCEL_DEV_IS_ESM: isEsm ? '1' : undefined,
-      VERCEL_DEV_CONFIG: JSON.stringify(config),
-      VERCEL_DEV_BUILD_ENV: JSON.stringify(meta.buildEnv || {}),
-      TS_NODE_TRANSPILE_ONLY: '1',
-      TS_NODE_COMPILER_OPTIONS: tsConfig?.compilerOptions
-        ? JSON.stringify(tsConfig.compilerOptions)
-        : undefined,
-      NODE_OPTIONS: nodeOptions,
-    }),
+  const child = forkDevServer({
+    workPath,
+    config,
+    entrypoint,
+    require_,
+    isEsm,
+    isTypeScript: isTypescript,
+    maybeTranspile,
+    meta,
+    tsConfig,
   });
 
   const { pid } = child;
-  if (!pid) {
-    throw new Error(
-      `Child Process has no "pid" when forking: "${devServerPath}"`
-    );
-  }
+  const message = await readDevServerMessage(child);
 
-  const onMessage = once<{ port: number }>(child, 'message');
-  const onExit = once.spread<[number, string | null]>(child, 'close');
-  const result = await Promise.race([onMessage, onExit]);
-  onExit.cancel();
-  onMessage.cancel();
-
-  if (isPortInfo(result)) {
+  if (message.state === 'message') {
     // "message" event
     if (isTypescript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
@@ -650,10 +620,10 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
 
-    return { port: result.port, pid };
+    return { port: message.value.port, pid };
   } else {
     // Got "exit" event from child process
-    const [exitCode, signal] = result;
+    const [exitCode, signal] = message.value;
     const reason = signal ? `"${signal}" signal` : `exit code ${exitCode}`;
     throw new Error(`Function \`${entrypoint}\` failed with ${reason}`);
   }

@@ -1,12 +1,5 @@
 {
-  "name": "gatsby-v5",
-  "version": "1.0.0",
   "private": true,
-  "description": "gatsby-v5",
-  "author": "Ethan Arrowood",
-  "keywords": [
-    "gatsby"
-  ],
   "scripts": {
     "develop": "gatsby develop",
     "start": "gatsby develop",
@@ -15,7 +8,7 @@
     "clean": "gatsby clean"
   },
   "dependencies": {
-    "gatsby": "^5.4.2",
+    "gatsby": "5.7.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   }

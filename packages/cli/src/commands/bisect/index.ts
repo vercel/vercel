@@ -1,11 +1,11 @@
 import open from 'open';
-import boxen from 'boxen';
 import execa from 'execa';
 import plural from 'pluralize';
 import { resolve } from 'path';
 import chalk, { Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'url';
 
+import box from '../../util/output/box';
 import sleep from '../../util/sleep';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
@@ -33,6 +33,7 @@ const help = () => {
 
     -h, --help                 Output usage information
     -d, --debug                Debug mode [off]
+    --no-color                 No color mode [off]
     -b, --bad                  Known bad URL
     -g, --good                 Known good URL
     -o, --open                 Automatically open each URL in the browser
@@ -362,7 +363,7 @@ export default async function main(client: Client): Promise<number> {
 
   result.push(`${chalk.bold('Inspect:')} ${link(lastBad.inspectorUrl)}`);
 
-  output.print(boxen(result.join('\n'), { padding: 1 }));
+  output.print(box(result.join('\n')));
   output.print('\n');
 
   return 0;

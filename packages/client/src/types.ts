@@ -3,6 +3,7 @@ import type {
   BuilderFunctions,
   Images,
   ProjectSettings,
+  Cron,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
@@ -154,6 +155,7 @@ export interface VercelConfig {
   framework?: string | null;
   outputDirectory?: string | null;
   images?: Images;
+  crons?: Cron[];
 }
 
 export interface GitMetadata {

@@ -1,7 +1,6 @@
 {
-  "name": "TODO",
-  "description": "TODO",
-  "version": "0.0.1",
+  "name": "sapper",
+  "private": true,
   "scripts": {
     "start": "sapper dev",
     "dev": "sapper dev --port $PORT",
@@ -9,6 +8,9 @@
     "cy:run": "cypress run",
     "cy:open": "cypress open",
     "test": "run-p --race dev cy:run"
+  },
+  "engines": {
+    "node": "16.x"
   },
   "dependencies": {
     "compression": "^1.7.1",

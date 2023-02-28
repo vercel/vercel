@@ -1,27 +1,26 @@
-import { join } from 'path';
+import url from 'url';
 import { getTransformedRoutes } from '@vercel/routing-utils';
-import { writeJson, remove } from 'fs-extra';
+import { writeJson } from 'fs-extra';
 import { validateGatsbyState } from './schemas';
 import {
   createServerlessFunctions,
-  createPageDataFunctions,
   createAPIRoutes,
 } from './helpers/functions';
 import { createStaticDir } from './helpers/static';
-import type { Config, Routes } from './types';
+import type { Config } from './types';
 
 export interface GenerateVercelBuildOutputAPI3OutputOptions {
-  exportPath: string;
+  pathPrefix: string;
   gatsbyStoreState: {
     pages: Map<string, unknown>;
     redirects: unknown;
     functions: unknown;
     config: unknown;
   };
-  [x: string]: unknown;
 }
+
 export async function generateVercelBuildOutputAPI3Output({
-  exportPath,
+  pathPrefix: _pathPrefix,
   gatsbyStoreState,
 }: GenerateVercelBuildOutputAPI3OutputOptions) {
   const state = {
@@ -33,43 +32,33 @@ export async function generateVercelBuildOutputAPI3Output({
 
   if (validateGatsbyState(state)) {
     console.log('▲ Creating Vercel build output');
-    await remove(join('.vercel', 'output'));
+
+    // `_pathPrefix` contains `assetPrefix` + `pathPrefix`,
+    // so strip off the `assetPrefix` portion
+    const pathPrefix = url.parse(_pathPrefix).pathname ?? '';
 
     const { pages, redirects, functions, config: gatsbyConfig } = state;
 
-    const { ssrRoutes, dsgRoutes } = pages.reduce<Routes>(
-      (acc, [, cur]) => {
-        if (cur.mode === 'SSR') {
-          acc.ssrRoutes.push(cur.path);
-        } else if (cur.mode === 'DSG') {
-          acc.dsgRoutes.push(cur.path);
-        }
+    const ssrRoutes = pages
+      .map(p => p[1])
+      .filter(page => page.mode === 'SSR' || page.mode === 'DSG');
 
-        return acc;
-      },
-      {
-        ssrRoutes: [],
-        dsgRoutes: [],
-      }
-    );
-
-    await createStaticDir();
-
-    const createPromises: Promise<void>[] = [];
+    const ops: Promise<void>[] = [];
 
     if (functions.length > 0) {
-      createPromises.push(createAPIRoutes(functions));
+      ops.push(createAPIRoutes(functions, pathPrefix));
     }
 
-    if (ssrRoutes.length > 0 || dsgRoutes.length > 0) {
-      createPromises.push(createPageDataFunctions({ ssrRoutes, dsgRoutes }));
-      createPromises.push(createServerlessFunctions({ ssrRoutes, dsgRoutes }));
+    if (ssrRoutes.length > 0) {
+      ops.push(createServerlessFunctions(ssrRoutes, pathPrefix));
     }
 
-    await Promise.all(createPromises);
+    await Promise.all(ops);
+
+    // "static" directory needs to happen last since it moves "public"
+    await createStaticDir(pathPrefix);
 
     let trailingSlash: boolean | undefined = undefined;
-
     if (gatsbyConfig.trailingSlash === 'always') {
       trailingSlash = true;
     } else if (gatsbyConfig.trailingSlash === 'never') {
@@ -90,7 +79,7 @@ export async function generateVercelBuildOutputAPI3Output({
       routes: routes || undefined,
     };
 
-    await writeJson(exportPath, config);
+    await writeJson('.vercel/output/config.json', config);
     console.log('Vercel output has been generated');
   } else {
     throw new Error(

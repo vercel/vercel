@@ -12,16 +12,18 @@ import { isValidName } from '../util/is-valid-name';
 import removeProject from '../util/projects/remove-project';
 import getProjectByIdOrName from '../util/projects/get-project-by-id-or-name';
 import getDeployment from '../util/get-deployment';
-import getDeploymentsByProjectId, {
-  DeploymentPartial,
-} from '../util/deploy/get-deployments-by-project-id';
+import getDeploymentsByProjectId from '../util/deploy/get-deployments-by-project-id';
 import { getPkgName, getCommandName } from '../util/pkg-name';
 import getArgs from '../util/get-args';
 import handleError from '../util/handle-error';
 import type Client from '../util/client';
 import { Output } from '../util/output';
-import { Alias, Project } from '../types';
+import { Alias, Deployment, Project } from '../types';
 import { NowError } from '../util/now-error';
+
+type DeploymentWithAliases = Deployment & {
+  aliases: Alias[];
+};
 
 const help = () => {
   console.log(`
@@ -39,6 +41,7 @@ const help = () => {
     'DIR'
   )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
     -t ${chalk.bold.underline('TOKEN')}, --token=${chalk.bold.underline(
     'TOKEN'
   )}        Login token
@@ -124,11 +127,11 @@ export default async function main(client: Client) {
 
   let aliases: Alias[][];
   let projects: Project[];
-  let deployments: DeploymentPartial[];
+  let deployments: DeploymentWithAliases[];
   const findStart = Date.now();
 
   try {
-    const searchFilter = (d: DeploymentPartial) =>
+    const searchFilter = (d: Deployment) =>
       ids.some(
         id =>
           d &&
@@ -166,9 +169,15 @@ export default async function main(client: Client) {
         })
       );
 
-      projectDeployments
-        .slice(0, 201)
-        .map(pDeployments => deployments.push(...pDeployments));
+      // only process the first 201 projects
+      const to = Math.min(projectDeployments.length, 201);
+      for (let i = 0; i < to; i++) {
+        for (const pDepl of projectDeployments[i]) {
+          const depl = pDepl as DeploymentWithAliases;
+          depl.aliases = [];
+          deployments.push(depl);
+        }
+      }
 
       projects = [];
     } else {
@@ -259,7 +268,7 @@ export default async function main(client: Client) {
 }
 
 function readConfirmation(
-  deployments: DeploymentPartial[],
+  deployments: DeploymentWithAliases[],
   projects: Project[],
   output: Output
 ): Promise<string> {
@@ -324,7 +333,7 @@ function readConfirmation(
 }
 
 function deploymentsAndProjects(
-  deployments: DeploymentPartial[],
+  deployments: DeploymentWithAliases[],
   projects: Project[],
   conjunction = 'and'
 ) {

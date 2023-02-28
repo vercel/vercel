@@ -1129,10 +1129,10 @@ export default class DevServer {
       });
       body = `${json}\n`;
     } else if (accept.includes('html')) {
-      res.setHeader('content-type', 'text/html');
+      res.setHeader('content-type', 'text/html; charset=utf-8');
       body = redirectTemplate({ location, statusCode });
     } else {
-      res.setHeader('content-type', 'text/plain');
+      res.setHeader('content-type', 'text/plain; charset=utf-8');
       body = `Redirecting to ${location} (${statusCode})\n`;
     }
     res.end(body);
@@ -2307,7 +2307,10 @@ function proxyPass(
     res,
     { target: dest, ignorePath },
     (error: NodeJS.ErrnoException) => {
-      devServer.output.error(
+      // only debug output this error because it's always something generic like
+      // "Error: socket hang up"
+      // and the original error should have already been logged
+      devServer.output.debug(
         `Failed to complete request to ${req.url}: ${error}`
       );
       if (!res.headersSent) {

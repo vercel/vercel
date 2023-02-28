@@ -9,22 +9,23 @@ import { spawn } from 'child_process';
 interface GetLatestVersionOptions {
   cacheDir?: string;
   distTag?: string;
+  notifyInterval?: number;
   output?: Output;
   pkg: PackageJson;
   updateCheckInterval?: number;
 }
 
 interface PackageInfoCache {
-  version: string;
   expireAt: number;
-  notified: boolean;
+  notifyAt: number;
+  version: string;
 }
 
 interface GetLatestWorkerPayload {
   cacheFile?: string;
   distTag?: string;
-  updateCheckInterval?: number;
   name?: string;
+  updateCheckInterval?: number;
 }
 
 /**
@@ -38,9 +39,10 @@ interface GetLatestWorkerPayload {
 export default function getLatestVersion({
   cacheDir = XDGAppPaths('com.vercel.cli').cache(),
   distTag = 'latest',
+  notifyInterval = 1000 * 60 * 60 * 24 * 3, // 3 days
   output,
   pkg,
-  updateCheckInterval = 1000 * 60 * 60 * 24 * 7, // 1 week
+  updateCheckInterval = 1000 * 60 * 60 * 24, // 1 day
 }: GetLatestVersionOptions): string | undefined {
   if (
     !pkg ||
@@ -67,27 +69,31 @@ export default function getLatestVersion({
     }
   }
 
-  if (!cache || cache.expireAt < Date.now()) {
+  if (!cache || !cache.expireAt || cache.expireAt < Date.now()) {
     spawnWorker(
       {
         cacheFile,
         distTag,
-        updateCheckInterval,
         name: pkg.name,
+        updateCheckInterval,
       },
       output
     );
   }
 
-  if (
-    cache &&
-    !cache.notified &&
-    pkg.version &&
-    semver.lt(pkg.version, cache.version)
-  ) {
-    cache.notified = true;
-    outputJSONSync(cacheFile, cache);
-    return cache.version;
+  if (cache) {
+    const shouldNotify = !cache.notifyAt || cache.notifyAt < Date.now();
+
+    let updateAvailable = false;
+    if (cache.version && pkg.version) {
+      updateAvailable = semver.lt(pkg.version, cache.version);
+    }
+
+    if (shouldNotify && updateAvailable) {
+      cache.notifyAt = Date.now() + notifyInterval;
+      outputJSONSync(cacheFile, cache);
+      return cache.version;
+    }
   }
 }
 
