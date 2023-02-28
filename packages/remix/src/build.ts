@@ -201,6 +201,12 @@ module.exports = config;`;
     ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node'),
   ]);
 
+  const remixDevPackageJsonPath = _require.resolve(
+    '@remix-run/dev/package.json',
+    { paths: [entrypointFsDirname] }
+  );
+  const remixVersion = _require(remixDevPackageJsonPath).version;
+
   const [staticFiles, nodeFunction, edgeFunction] = await Promise.all([
     glob('**', join(entrypointFsDirname, 'public')),
     createRenderNodeFunction(
@@ -208,14 +214,16 @@ module.exports = config;`;
       repoRootPath,
       join(entrypointFsDirname, serverBuildPath),
       remixConfig.serverEntryPoint,
-      nodeVersion
+      nodeVersion,
+      remixVersion
     ),
     hasEdgeRoute
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
           join(entrypointFsDirname, serverBuildPath),
-          remixConfig.serverEntryPoint
+          remixConfig.serverEntryPoint,
+          remixVersion
         )
       : undefined,
   ]);
@@ -301,7 +309,8 @@ async function createRenderNodeFunction(
   rootDir: string,
   serverBuildPath: string,
   serverEntryPoint: string | undefined,
-  nodeVersion: NodeVersion
+  nodeVersion: NodeVersion,
+  remixVersion: string
 ): Promise<NodejsLambda> {
   const files: Files = {};
 
@@ -338,6 +347,10 @@ async function createRenderNodeFunction(
     shouldAddSourcemapSupport: false,
     operationType: 'SSR',
     experimentalResponseStreaming: true,
+    framework: {
+      slug: 'remix',
+      version: remixVersion,
+    },
   });
 
   return fn;
@@ -347,7 +360,8 @@ async function createRenderEdgeFunction(
   entrypointDir: string,
   rootDir: string,
   serverBuildPath: string,
-  serverEntryPoint: string | undefined
+  serverEntryPoint: string | undefined,
+  remixVersion: string
 ): Promise<EdgeFunction> {
   const files: Files = {};
 
@@ -447,6 +461,10 @@ async function createRenderEdgeFunction(
     deploymentTarget: 'v8-worker',
     name: 'render',
     entrypoint: handler,
+    framework: {
+      slug: 'remix',
+      version: remixVersion,
+    },
   });
 
   return fn;
