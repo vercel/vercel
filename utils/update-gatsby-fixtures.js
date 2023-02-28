@@ -82,7 +82,7 @@ module.exports = async ({ github, context }) => {
       owner,
       repo,
       state: 'open',
-      head: branch,
+      head: `vercel:${branch}`,
     });
 
     console.log(pulls);
