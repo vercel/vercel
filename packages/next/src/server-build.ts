@@ -150,6 +150,10 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
+  const projectDir = requiredServerFilesManifest.relativeAppDir
+    ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
+    : requiredServerFilesManifest.appDir || entryPath;
+
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
 
@@ -269,9 +273,10 @@ export async function serverBuild({
     let initialFileList: string[];
     let initialFileReasons: NodeFileTraceReasons;
     let nextServerBuildTrace;
+    let instrumentationHookBuildTrace;
 
     const nextServerFile = resolveFrom(
-      requiredServerFilesManifest.appDir || entryPath,
+      projectDir,
       `${getNextServerPath(nextVersion)}/next-server.js`
     );
 
@@ -285,6 +290,22 @@ export async function serverBuild({
       );
     } catch (_) {
       // if the trace is unavailable we trace inside the runtime
+    }
+
+    try {
+      instrumentationHookBuildTrace = JSON.parse(
+        await fs.readFile(
+          path.join(
+            entryPath,
+            outputDirectory,
+            'server',
+            'instrumentation.js.nft.json'
+          ),
+          'utf8'
+        )
+      );
+    } catch (_) {
+      // if the trace is unavailable it means `instrumentation.js` wasn't used
     }
 
     if (nextServerBuildTrace) {
@@ -319,6 +340,18 @@ export async function serverBuild({
       });
       initialFileList = Array.from(result.fileList);
       initialFileReasons = result.reasons;
+    }
+
+    if (instrumentationHookBuildTrace) {
+      initialFileList = initialFileList.concat(
+        instrumentationHookBuildTrace.files.map((file: string) => {
+          return path.relative(
+            baseDir,
+            path.join(entryPath, outputDirectory, 'server', file)
+          );
+        })
+      );
+      debug('Using instrumentation.js.nft.json trace from build');
     }
 
     debug('collecting initial Next.js server files');
@@ -437,8 +470,8 @@ export async function serverBuild({
           file
         );
 
-        if (requiredServerFilesManifest.appDir) {
-          fsPath = path.join(requiredServerFilesManifest.appDir, file);
+        if (projectDir) {
+          fsPath = path.join(projectDir, file);
         }
 
         const relativePath = path.relative(baseDir, fsPath);
@@ -516,7 +549,7 @@ export async function serverBuild({
         `conf: ${JSON.stringify({
           ...requiredServerFilesManifest.config,
           distDir: path.relative(
-            requiredServerFilesManifest.appDir || entryPath,
+            projectDir,
             path.join(entryPath, outputDirectory)
           ),
           compress: false,
@@ -543,10 +576,8 @@ export async function serverBuild({
     }
 
     const launcherFiles: { [name: string]: FileFsRef | FileBlob } = {
-      [path.join(
-        path.relative(baseDir, requiredServerFilesManifest.appDir || entryPath),
-        '___next_launcher.cjs'
-      )]: new FileBlob({ data: launcher }),
+      [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
+        new FileBlob({ data: launcher }),
     };
     const pageTraces: {
       [page: string]: { [key: string]: FileFsRef };
@@ -594,7 +625,7 @@ export async function serverBuild({
       traceResult = await nodeFileTrace(pathsToTrace, {
         base: baseDir,
         cache: traceCache,
-        processCwd: requiredServerFilesManifest.appDir || entryPath,
+        processCwd: projectDir,
       });
       traceResult.esmFileList.forEach(file => traceResult?.fileList.add(file));
       parentFilesMap = getFilesMapFromReasons(
@@ -703,7 +734,7 @@ export async function serverBuild({
     const pageExtensions = requiredServerFilesManifest.config?.pageExtensions;
 
     const pageLambdaGroups = await getPageLambdaGroups({
-      entryPath: requiredServerFilesManifest.appDir || entryPath,
+      entryPath: projectDir,
       config,
       pages: nonApiPages,
       prerenderRoutes,
@@ -718,7 +749,7 @@ export async function serverBuild({
     });
 
     const streamingPageLambdaGroups = await getPageLambdaGroups({
-      entryPath: requiredServerFilesManifest.appDir || entryPath,
+      entryPath: projectDir,
       config,
       pages: streamingPages,
       prerenderRoutes,
@@ -739,7 +770,7 @@ export async function serverBuild({
     }
 
     const apiLambdaGroups = await getPageLambdaGroups({
-      entryPath: requiredServerFilesManifest.appDir || entryPath,
+      entryPath: projectDir,
       config,
       pages: apiPages,
       prerenderRoutes,
@@ -873,10 +904,7 @@ export async function serverBuild({
         },
         layers: [group.pseudoLayer, groupPageFiles],
         handler: path.join(
-          path.relative(
-            baseDir,
-            requiredServerFilesManifest.appDir || entryPath
-          ),
+          path.relative(baseDir, projectDir),
           '___next_launcher.cjs'
         ),
         operationType,

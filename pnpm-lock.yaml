@@ -204,23 +204,23 @@ importers:
       '@types/which': 1.3.2
       '@types/write-json-file': 2.2.1
       '@types/yauzl-promise': 2.1.0
-      '@vercel/build-utils': 6.3.0
-      '@vercel/client': 12.4.0
+      '@vercel/build-utils': 6.3.1
+      '@vercel/client': 12.4.1
       '@vercel/error-utils': 1.0.8
       '@vercel/frameworks': 1.3.1
-      '@vercel/fs-detectors': 3.8.0
+      '@vercel/fs-detectors': 3.8.1
       '@vercel/fun': 1.0.4
-      '@vercel/go': 2.3.7
-      '@vercel/hydrogen': 0.0.53
+      '@vercel/go': 2.3.8
+      '@vercel/hydrogen': 0.0.54
       '@vercel/ncc': 0.24.0
-      '@vercel/next': 3.5.2
-      '@vercel/node': 2.9.6
-      '@vercel/python': 3.1.49
-      '@vercel/redwood': 1.1.5
-      '@vercel/remix': 1.3.5
+      '@vercel/next': 3.6.1
+      '@vercel/node': 2.9.8
+      '@vercel/python': 3.1.50
+      '@vercel/redwood': 1.1.6
+      '@vercel/remix': 1.4.1
       '@vercel/routing-utils': 2.1.9
-      '@vercel/ruby': 1.3.66
-      '@vercel/static-build': 1.3.10
+      '@vercel/ruby': 1.3.67
+      '@vercel/static-build': 1.3.12
       '@zeit/source-map-support': 0.6.2
       ajv: 6.12.2
       alpha-sort: 2.0.1
@@ -261,7 +261,6 @@ importers:
       is-url: 1.2.2
       jaro-winkler: 0.2.8
       jest-matcher-utils: 29.3.1
-      json5: 2.2.1
       jsonlines: 0.1.1
       line-async-iterator: 3.0.0
       load-json-file: 3.0.0
@@ -397,7 +396,6 @@ importers:
       is-url: 1.2.2
       jaro-winkler: 0.2.8
       jest-matcher-utils: 29.3.1
-      json5: 2.2.1
       jsonlines: 0.1.1
       line-async-iterator: 3.0.0
       load-json-file: 3.0.0
@@ -446,7 +444,7 @@ importers:
       '@types/node-fetch': 2.5.4
       '@types/recursive-readdir': 2.2.0
       '@types/tar-fs': 1.16.1
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/routing-utils': 2.1.9
       '@zeit/fetch': 5.2.0
       async-retry: 1.2.3
@@ -551,7 +549,7 @@ importers:
       '@types/minimatch': 3.0.5
       '@types/node': 14.18.33
       '@types/semver': 7.3.10
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/error-utils': 1.0.8
       '@vercel/frameworks': 1.3.1
       '@vercel/routing-utils': 2.1.9
@@ -599,8 +597,8 @@ importers:
       '@types/fs-extra': 11.0.1
       '@types/node': 14.18.33
       '@types/react': 18.0.26
-      '@vercel/build-utils': 6.3.0
-      '@vercel/node': 2.9.6
+      '@vercel/build-utils': 6.3.1
+      '@vercel/node': 2.9.8
       '@vercel/routing-utils': 2.1.9
       ajv: 8.12.0
       esbuild: 0.14.47
@@ -634,7 +632,7 @@ importers:
       '@types/node': 14.18.33
       '@types/node-fetch': ^2.3.0
       '@types/tar': ^4.0.0
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/ncc': 0.24.0
       async-retry: 1.3.1
       execa: ^1.0.0
@@ -666,7 +664,7 @@ importers:
     specifiers:
       '@types/jest': 27.5.1
       '@types/node': 14.18.33
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/static-config': 2.0.13
       execa: 3.2.0
       fs-extra: 11.1.0
@@ -697,7 +695,7 @@ importers:
       '@types/semver': 6.0.0
       '@types/text-table': 0.2.1
       '@types/webpack-sources': 3.2.0
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/nft': 0.22.5
       '@vercel/routing-utils': 2.1.9
       async-sema: 3.0.1
@@ -776,10 +774,10 @@ importers:
       '@types/node': 14.18.33
       '@types/node-fetch': ^2.6.1
       '@types/test-listen': 1.1.0
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/ncc': 0.24.0
       '@vercel/nft': 0.22.5
-      '@vercel/node-bridge': 3.1.11
+      '@vercel/node-bridge': 3.1.12
       '@vercel/static-config': 2.0.13
       content-type: 1.0.4
       cookie: 0.4.0
@@ -860,7 +858,7 @@ importers:
       '@types/execa': ^0.9.0
       '@types/jest': 27.4.1
       '@types/node': 14.18.33
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/ncc': 0.24.0
       execa: ^1.0.0
       typescript: 4.3.4
@@ -878,7 +876,7 @@ importers:
       '@types/aws-lambda': 8.10.19
       '@types/node': 14.18.33
       '@types/semver': 6.0.0
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/nft': 0.22.5
       '@vercel/routing-utils': 2.1.9
       execa: 3.2.0
@@ -900,17 +898,17 @@ importers:
 
   packages/remix:
     specifiers:
-      '@remix-run/dev': 1.12.0
+      '@remix-run/dev': 1.13.0
       '@types/jest': 27.5.1
       '@types/node': 14.18.33
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/nft': 0.22.5
       '@vercel/static-config': 2.0.13
       path-to-regexp: 6.2.1
       ts-morph: 12.0.0
       typescript: 4.9.4
     dependencies:
-      '@remix-run/dev': 1.12.0
+      '@remix-run/dev': 1.13.0
       '@vercel/nft': 0.22.5
       '@vercel/static-config': link:../static-config
       path-to-regexp: 6.2.1
@@ -960,7 +958,7 @@ importers:
     specifiers:
       '@types/fs-extra': 8.0.0
       '@types/semver': 6.0.0
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/ncc': 0.24.0
       execa: 2.0.4
       fs-extra: ^7.0.1
@@ -987,11 +985,11 @@ importers:
       '@types/node-fetch': 2.5.4
       '@types/promise-timeout': 1.3.0
       '@types/semver': 7.3.13
-      '@vercel/build-utils': 6.3.0
+      '@vercel/build-utils': 6.3.1
       '@vercel/frameworks': 1.3.1
-      '@vercel/fs-detectors': 3.8.0
+      '@vercel/fs-detectors': 3.8.1
       '@vercel/gatsby-plugin-vercel-analytics': 1.0.7
-      '@vercel/gatsby-plugin-vercel-builder': 1.1.7
+      '@vercel/gatsby-plugin-vercel-builder': 1.1.9
       '@vercel/ncc': 0.24.0
       '@vercel/routing-utils': 2.1.9
       '@vercel/static-config': 2.0.13
@@ -3890,7 +3888,7 @@ packages:
     resolution: {integrity: sha512-TInJmbrsmYIwUyrRxytjO82KjJbRwm67F7LoZs1shAq6rMvNqi4NxSY9j+hT/939alFmEq1zssoy/caeLXHRfQ==}
     engines: {node: ^14.15.0 || >=16.0.0}
     dependencies:
-      node-fetch: 2.6.8
+      node-fetch: 2.6.7
       npmlog: 6.0.2
     transitivePeerDependencies:
       - encoding
@@ -4861,7 +4859,7 @@ packages:
       '@octokit/request-error': 3.0.2
       '@octokit/types': 8.1.0
       is-plain-object: 5.0.0
-      node-fetch: 2.6.8
+      node-fetch: 2.6.7
       universal-user-agent: 6.0.0
     transitivePeerDependencies:
       - encoding
@@ -5284,12 +5282,12 @@ packages:
       webpack: 5.75.0_esbuild@0.14.47
     dev: true
 
-  /@remix-run/dev/1.12.0:
-    resolution: {integrity: sha512-lBiA2FlDi+DjpOAE/vn93zFTSxudKag/FGpmbV6O+LQItDCpFARfbBMhTck/uKcc95nyhRd1GGhQ4ZDgQnyjaQ==}
+  /@remix-run/dev/1.13.0:
+    resolution: {integrity: sha512-hPqUjM9RRcz3inBOWqP3GKhggVz0a0ikWaRZpdKrhpQNCNiF6Hunbx876mJERj2YrmIzJ05eoeQmmdF6xcr4qg==}
     engines: {node: '>=14'}
     hasBin: true
     peerDependencies:
-      '@remix-run/serve': ^1.12.0
+      '@remix-run/serve': ^1.13.0
     peerDependenciesMeta:
       '@remix-run/serve':
         optional: true
@@ -5305,7 +5303,7 @@ packages:
       '@babel/types': 7.20.7
       '@esbuild-plugins/node-modules-polyfill': 0.1.4_esbuild@0.16.3
       '@npmcli/package-json': 2.0.0
-      '@remix-run/server-runtime': 1.12.0
+      '@remix-run/server-runtime': 1.13.0
       '@vanilla-extract/integration': 6.0.3
       arg: 5.0.2
       cacache: 15.3.0
@@ -5327,10 +5325,11 @@ packages:
       lodash.debounce: 4.0.8
       lru-cache: 7.14.1
       minimatch: 3.1.2
-      node-fetch: 2.6.8
+      node-fetch: 2.6.7
       ora: 5.4.1
       postcss: 8.4.21
       postcss-discard-duplicates: 5.1.0_postcss@8.4.21
+      postcss-load-config: 4.0.1_postcss@8.4.21
       postcss-modules: 6.0.0_postcss@8.4.21
       prettier: 2.7.1
       pretty-ms: 7.0.1
@@ -5349,6 +5348,7 @@ packages:
       - bufferutil
       - encoding
       - supports-color
+      - ts-node
       - utf-8-validate
     dev: false
 
@@ -5372,11 +5372,29 @@ packages:
     engines: {node: '>=14'}
     dev: false
 
+  /@remix-run/router/1.3.2:
+    resolution: {integrity: sha512-t54ONhl/h75X94SWsHGQ4G/ZrCEguKSRQr7DrjTciJXW0YU1QhlwYeycvK5JgkzlxmvrK7wq1NB/PLtHxoiDcA==}
+    engines: {node: '>=14'}
+    dev: false
+
   /@remix-run/server-runtime/1.12.0:
     resolution: {integrity: sha512-7I0165Ns/ffPfCEfuiqD58lMderTn2s/sew1xJ34ONa21mG/7+5T7diHIgxKST8rS3816JPmlwSqUaHgwbmO6Q==}
     engines: {node: '>=14'}
     dependencies:
       '@remix-run/router': 1.3.1
+      '@types/cookie': 0.4.1
+      '@types/react': 18.0.26
+      '@web3-storage/multipart-parser': 1.0.0
+      cookie: 0.4.2
+      set-cookie-parser: 2.5.1
+      source-map: 0.7.4
+    dev: false
+
+  /@remix-run/server-runtime/1.13.0:
+    resolution: {integrity: sha512-gjIW3XCeIlOt3rrOZMD6HixQydRgs1SwYjP99ZAVruG2+gNq/tL2OusMFYTLvtWrybt215tPROyF/6iTLsaO3g==}
+    engines: {node: '>=14'}
+    dependencies:
+      '@remix-run/router': 1.3.2
       '@types/cookie': 0.4.1
       '@types/react': 18.0.26
       '@web3-storage/multipart-parser': 1.0.0
@@ -6084,7 +6102,7 @@ packages:
     dependencies:
       '@types/http-cache-semantics': 4.0.1
       '@types/keyv': 3.1.4
-      '@types/node': 18.11.18
+      '@types/node': 14.18.33
       '@types/responselike': 1.0.0
 
   /@types/chance/1.1.3:
@@ -6311,7 +6329,7 @@ packages:
     resolution: {integrity: sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==}
     dependencies:
       '@types/minimatch': 5.1.2
-      '@types/node': 18.11.18
+      '@types/node': 14.18.33
 
   /@types/graceful-fs/4.1.6:
     resolution: {integrity: sha512-Sig0SNORX9fdW+bQuTEovKj3uHcUL6LQKbCrrqb1X7J6/ReAbhCXRAhc+SMejhLELFj2QcyuxmUooZ4bt5ReSw==}
@@ -6426,7 +6444,7 @@ packages:
   /@types/keyv/3.1.4:
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 14.18.33
 
   /@types/load-json-file/2.0.7:
     resolution: {integrity: sha512-NrH6jPlV77QCVPhAHofWeiOr77TgpKt82c2RVxSBChWBJqyY/u4ngl3CA4mcsAg/w7rNLrkR7dkObMV0ihLLXw==}
@@ -6548,6 +6566,7 @@ packages:
 
   /@types/node/18.11.18:
     resolution: {integrity: sha512-DHQpWGjyQKSHj3ebjFI/wRKcqQcdR+MoFBygntYOZytCqNfkd2ZC4ARDJ2DQqhjH5p85Nnd3jhUJIXrszFX/JA==}
+    dev: true
 
   /@types/node/8.10.66:
     resolution: {integrity: sha512-tktOkFUA4kXx2hhhrB8bIFb5TbwzS4uOhKEmwiD+NoiL0qtP2OQ9mFldbgD4dV1djrlBYP6eBuQZiWjuHUpqFw==}
@@ -6633,7 +6652,7 @@ packages:
   /@types/responselike/1.0.0:
     resolution: {integrity: sha512-85Y2BjiufFzaMIlvJDvTTB8Fxl2xfLo4HgmHzVBz08w4wDePCTjYw66PdrolO0kzli3yam/YCgRufyo1DdQVTA==}
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 14.18.33
 
   /@types/retry/0.12.2:
     resolution: {integrity: sha512-XISRgDJ2Tc5q4TRqvgJtzsRkFYNJzZrhTdtMoGVBttwzzQJkPnS3WWTFc7kuDRoPtPakl+T+OfdEUjYJj7Jbow==}
@@ -16286,12 +16305,6 @@ packages:
       minimist: 1.2.7
     dev: true
 
-  /json5/2.2.1:
-    resolution: {integrity: sha512-1hqLFMSrGHRHxav9q9gNjJ5EXznIxGVO09xQRrwplcS8qs28pZ8s8hupZAmqDwZUmVZ2Qb2jnyPOWcDH8m8dlA==}
-    engines: {node: '>=6'}
-    hasBin: true
-    dev: true
-
   /json5/2.2.2:
     resolution: {integrity: sha512-46Tk9JiOL2z7ytNQWFLpj99RZkVgeHf87yGQKsIkaPz1qSH9UczKH1rO7K3wgRselo0tYMUNfecYpm/p1vC7tQ==}
     engines: {node: '>=6'}
@@ -16506,7 +16519,6 @@ packages:
   /lilconfig/2.0.6:
     resolution: {integrity: sha512-9JROoBW7pobfsx+Sq2JsASvCo6Pfo6WWoUW79HuB1BCoBXD4PLWJPqDF6fNj67pqBYTbAHkE57M1kS/+L1neOg==}
     engines: {node: '>=10'}
-    dev: true
 
   /line-async-iterator/3.0.0:
     resolution: {integrity: sha512-IJwnVaX14dtWL2Za0B/qpuettNO3wtO2tb3NT37ffrz3ZOOkAFOpty5vysg7eLJ+QodMLRSROjR2csFB8ozYJg==}
@@ -19305,6 +19317,23 @@ packages:
       ts-node: 8.9.1_typescript@4.7.4
       yaml: 1.10.2
     dev: true
+
+  /postcss-load-config/4.0.1_postcss@8.4.21:
+    resolution: {integrity: sha512-vEJIc8RdiBRu3oRAI0ymerOn+7rPuMvRXslTvZUKZonDHFIczxztIyJ1urxM1x9JXEikvpWWTUUqal5j/8QgvA==}
+    engines: {node: '>= 14'}
+    peerDependencies:
+      postcss: '>=8.0.9'
+      ts-node: '>=9.0.0'
+    peerDependenciesMeta:
+      postcss:
+        optional: true
+      ts-node:
+        optional: true
+    dependencies:
+      lilconfig: 2.0.6
+      postcss: 8.4.21
+      yaml: 2.2.1
+    dev: false
 
   /postcss-loader/5.3.0_6jdsrmfenkuhhw3gx4zvjlznce:
     resolution: {integrity: sha512-/+Z1RAmssdiSLgIZwnJHwBMnlABPgF7giYzTN2NOfr9D21IJZ4mQC1R2miwp80zno9M4zMD/umGI8cR+2EL5zw==}
@@ -23647,7 +23676,6 @@ packages:
   /yaml/2.2.1:
     resolution: {integrity: sha512-e0WHiYql7+9wr4cWMx3TVQrNwejKaEe7/rHNmQmqRjazfOP5W8PB6Jpebb5o6fIapbz9o9+2ipcaTM2ZwDI6lw==}
     engines: {node: '>= 14'}
-    dev: true
 
   /yargs-parser/10.1.0:
     resolution: {integrity: sha512-VCIyR1wJoEBZUqk5PA+oOBF6ypbwh5aNB3I50guxAL/quggdfs4TtNHQrSazFA3fYZ+tEqfs0zIGlv0c/rgjbQ==}

@@ -355,6 +355,8 @@ export interface BuilderV3 {
 
 type ImageFormat = 'image/avif' | 'image/webp';
 
+type ImageContentDispositionType = 'inline' | 'attachment';
+
 export type RemotePattern = {
   /**
    * Must be `http` or `https`.
@@ -390,6 +392,7 @@ export interface Images {
   formats?: ImageFormat[];
   dangerouslyAllowSVG?: boolean;
   contentSecurityPolicy?: string;
+  contentDispositionType?: ImageContentDispositionType;
 }
 
 /**

@@ -26,7 +26,7 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
       }
     }
 
-    expect(lambdas.size).toBe(1);
+    expect(lambdas.size).toBe(2);
     expect(buildResult.output['dashboard']).toBeDefined();
     expect(buildResult.output['dashboard/another']).toBeDefined();
     expect(buildResult.output['dashboard/changelog']).toBeDefined();
