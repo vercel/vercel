@@ -3,7 +3,7 @@ import type {
   IGatsbyFunction,
   IRedirect,
   IGatsbyConfig,
-} from 'gatsby/dist/redux/types';
+} from './gatsby-types';
 import Ajv, { JSONSchemaType } from 'ajv';
 
 export type GatsbyPage = Pick<IGatsbyPage, 'mode' | 'path'>;
