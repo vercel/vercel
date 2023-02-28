@@ -64,21 +64,6 @@ export async function getAnalyzedEntrypoint(
   return analyzed;
 }
 
-// Creates a `$GOPATH` directory tree, as per `go help gopath` instructions.
-// Without this, `go` won't recognize the `$GOPATH`.
-function createGoPathTree(
-  goPath: string,
-  platform: string = process.platform,
-  arch: string = process.arch
-) {
-  const tuple = `${getPlatform(platform)}_${getArch(arch)}`;
-  debug(`Creating GOPATH directory structure for ${goPath} (${tuple})`);
-  return Promise.all([
-    mkdirp(join(goPath, 'bin')),
-    mkdirp(join(goPath, 'pkg', tuple)),
-  ]);
-}
-
 class GoWrapper {
   private env: Env;
   private opts: execa.Options;
@@ -128,22 +113,6 @@ class GoWrapper {
   }
 }
 
-const goVersionRegExp = /(\d+)\.(\d+)(?:\.(\d+))?/;
-
-function parseGoVersionString(goVersionOutput: string) {
-  const parts = goVersionOutput.match(goVersionRegExp);
-  const major = parseInt((parts && parts[1]) || '0');
-  const minor = parseInt((parts && parts[2]) || '0');
-  const patch = parseInt((parts && parts[3]) || '0');
-  return {
-    version: `${major}.${minor}.${patch}`,
-    short: `${major}.${minor}`,
-    major,
-    minor,
-    patch,
-  };
-}
-
 type CreateGoOptions = {
   goPath?: string;
   modulePath?: string;
@@ -169,13 +138,7 @@ export async function createGo({
     goPreferredVersion = goVersion;
   }
 
-  const env = cloneEnv(
-    process.env,
-    {
-      GOPATH: goPath,
-    },
-    opts.env
-  );
+  const env = cloneEnv(process.env, opts.env);
 
   if (goVersion) {
     debug(`Initializing go ${goVersion} (from go.mod)`);
@@ -184,8 +147,6 @@ export async function createGo({
     // default to newest (first) supported go version
     goVersion = Array.from(versionMap.values())[0];
   }
-
-  await createGoPathTree(goPath);
 
   const { arch, platform } = process;
   const goGlobalDir = join(
@@ -259,6 +220,22 @@ export async function createGo({
 
   env.PATH = `${goGlobalBinDir}${delimiter}${env.PATH}`;
   return new GoWrapper(env, opts);
+}
+
+const goVersionRegExp = /(\d+)\.(\d+)(?:\.(\d+))?/;
+
+function parseGoVersionString(goVersionOutput: string) {
+  const matches = goVersionOutput.match(goVersionRegExp) || [];
+  const major = parseInt(matches[1], 10);
+  const minor = parseInt(matches[2], 10);
+  const patch = parseInt(matches[3] || '0', 10);
+  return {
+    version: `${major}.${minor}.${patch}`,
+    short: `${major}.${minor}`,
+    major,
+    minor,
+    patch,
+  };
 }
 
 async function parseGoModVersion(

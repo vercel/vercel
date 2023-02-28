@@ -289,16 +289,20 @@ export async function build({
     // we need our `main.go` to be called something else
     const mainGoFileName = 'main__vc__go__.go';
 
-    if (packageName !== 'main') {
-      const go = await createGo({
-        goPath,
-        modulePath: goModPath,
-        opts: {
-          cwd: entrypointDirname,
-          stdio: 'inherit',
+    const go = await createGo({
+      goPath,
+      modulePath: goModPath,
+      opts: {
+        cwd: entrypointDirname,
+        env: {
+          GOARCH: 'amd64',
+          GOOS: 'linux',
         },
-        workPath,
-      });
+      },
+      workPath,
+    });
+
+    if (packageName !== 'main') {
       if (!isGoModExist) {
         try {
           const defaultGoModContent = `module ${packageName}`;
@@ -438,14 +442,6 @@ export async function build({
       // legacy mode
       // we need `main.go` in the same dir as the entrypoint,
       // otherwise `go build` will refuse to build
-      const go = await createGo({
-        goPath,
-        modulePath: goModPath,
-        opts: {
-          cwd: entrypointDirname,
-        },
-        workPath,
-      });
       const originalMainGoContents = await readFile(
         join(__dirname, 'main.go'),
         'utf8'
