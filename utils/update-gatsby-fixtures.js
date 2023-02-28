@@ -94,19 +94,6 @@ module.exports = async ({ github, context }) => {
         body: 'Automatically generated PR to update Gatsby fixture versions in `@vercel/static-build`',
       });
 
-      await github.rest.pulls.requestReviewers({
-        owner,
-        repo,
-        pull_number: pr.data.number,
-        reviewers: [
-          'Ethan-Arrowood',
-          'styfle',
-          'TooTallNate',
-          'EndangeredMassa',
-          'cb1kenobi',
-        ],
-      });
-
       await github.rest.issues.addLabels({
         owner,
         repo,
