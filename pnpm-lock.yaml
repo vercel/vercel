@@ -898,7 +898,7 @@ importers:
 
   packages/remix:
     specifiers:
-      '@remix-run/dev': npm:@vercel/remix-run-dev@1.13.0
+      '@remix-run/dev': npm:@vercel/remix-run-dev@1.13.0-patch.1
       '@types/jest': 27.5.1
       '@types/node': 14.18.33
       '@vercel/build-utils': 6.3.1
@@ -908,7 +908,7 @@ importers:
       ts-morph: 12.0.0
       typescript: 4.9.4
     dependencies:
-      '@remix-run/dev': /@vercel/remix-run-dev/1.13.0
+      '@remix-run/dev': /@vercel/remix-run-dev/1.13.0-patch.1
       '@vercel/nft': 0.22.5
       '@vercel/static-config': link:../static-config
       path-to-regexp: 6.2.1
@@ -7171,8 +7171,8 @@ packages:
       - encoding
       - supports-color
 
-  /@vercel/remix-run-dev/1.13.0:
-    resolution: {integrity: sha512-fc+X1VRSoUS/vlkWnAcOTmJ/AD4XSuDpvVwcllLBgAbuHnMrbwu4bfct81e+fswdvkjq9dQ23tTHq9Hju8ZixQ==}
+  /@vercel/remix-run-dev/1.13.0-patch.1:
+    resolution: {integrity: sha512-fPhA33ita1onKewvw4oubdF7IHTvE7Cr3Wqdgibm5tZ1Q2rTQ/2TQzJao3pLF+DAcp2YPBD22aPd3j6uNcHPRw==}
     engines: {node: '>=14'}
     hasBin: true
     peerDependencies:
