@@ -20,6 +20,7 @@ module.exports = async ({ github, context }) => {
   }
 
   const fixturePath = path.join(
+    __dirname,
     '..',
     'packages',
     'static-build',
