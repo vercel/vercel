@@ -123,7 +123,7 @@ export const build: BuildV2 = async ({
   const remixConfig = await chdirAndReadConfig(entrypointFsDirname);
   const remixRoutes = Object.values(remixConfig.routes);
 
-  // Figure out which pages should be edge functions
+  // Read the `export const config` (if any) for each route
   const project = new Project();
   const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig>();
   for (const route of remixRoutes) {
