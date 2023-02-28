@@ -17,7 +17,7 @@
     {
       "path": "/cookie_wsgi.py",
       "responseHeaders": {
-        "set-cookie": ["one=first", "two=second"]
+        "set-cookie": ["one=first; Path=/", "two=second; Path=/"]
       }
     }
   ]

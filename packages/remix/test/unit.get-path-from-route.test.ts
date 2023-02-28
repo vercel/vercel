@@ -4,6 +4,12 @@ import type { RouteManifest } from '@remix-run/dev/dist/config/routes';
 describe('getPathFromRoute()', () => {
   const routes: RouteManifest = {
     root: { path: '', id: 'root', file: 'root.tsx' },
+    'routes/__pathless': {
+      path: undefined,
+      id: 'routes/__pathless',
+      parentId: 'root',
+      file: 'routes/__pathless.tsx',
+    },
     'routes/$foo.$bar.$baz': {
       path: ':foo/:bar/:baz',
       id: 'routes/$foo.$bar.$baz',
@@ -22,12 +28,24 @@ describe('getPathFromRoute()', () => {
       parentId: 'root',
       file: 'routes/projects.tsx',
     },
+    'routes/projects/__pathless': {
+      path: undefined,
+      id: 'routes/projects/__pathless',
+      parentId: 'routes/projects',
+      file: 'routes/projects/__pathless.tsx',
+    },
     'routes/projects/index': {
       path: undefined,
       index: true,
-      id: 'routes/projects/indexx',
+      id: 'routes/projects/index',
       parentId: 'routes/projects',
-      file: 'routes/projects/indexx.tsx',
+      file: 'routes/projects/index.tsx',
+    },
+    'routes/projects/create': {
+      path: 'create',
+      id: 'routes/projects/create',
+      parentId: 'routes/projects',
+      file: 'routes/projects/create.tsx',
     },
     'routes/projects/$': {
       path: '*',
@@ -57,11 +75,14 @@ describe('getPathFromRoute()', () => {
   };
 
   it.each([
-    { id: 'root', expected: '' },
+    { id: 'root', expected: 'index' },
+    { id: 'routes/__pathless', expected: '' },
     { id: 'routes/index', expected: 'index' },
     { id: 'routes/api.hello', expected: 'api/hello' },
     { id: 'routes/projects', expected: 'projects' },
-    { id: 'routes/projects/index', expected: 'projects/index' },
+    { id: 'routes/projects/__pathless', expected: 'projects' },
+    { id: 'routes/projects/index', expected: 'projects' },
+    { id: 'routes/projects/create', expected: 'projects/create' },
     { id: 'routes/projects/$', expected: 'projects/*' },
     { id: 'routes/$foo.$bar.$baz', expected: ':foo/:bar/:baz' },
     { id: 'routes/node', expected: 'node' },
