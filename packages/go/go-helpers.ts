@@ -132,26 +132,25 @@ export async function createGo({
 
   // parse the `go.mod`, if exists
   let goPreferredVersion;
-  let goVersion;
   if (modulePath) {
-    goVersion = await parseGoModVersion(modulePath);
-    goPreferredVersion = goVersion;
+    goPreferredVersion = await parseGoModVersion(modulePath);
   }
+
+  // default to newest (first) supported go version
+  const goSelectedVersion =
+    goPreferredVersion || Array.from(versionMap.values())[0];
 
   const env = cloneEnv(process.env, opts.env);
 
-  if (goVersion) {
-    debug(`Initializing go ${goVersion} (from go.mod)`);
+  if (goPreferredVersion) {
+    debug(`Preferred go version ${goPreferredVersion} (from go.mod)`);
     env.GO111MODULE = 'on';
-  } else {
-    // default to newest (first) supported go version
-    goVersion = Array.from(versionMap.values())[0];
   }
 
   const { arch, platform } = process;
   const goGlobalDir = join(
     goGlobalCachePath,
-    `${goVersion}_${platform}_${arch}`
+    `${goSelectedVersion}_${platform}_${arch}`
   );
   const goGlobalBinDir = join(goGlobalDir, 'bin');
 
@@ -167,12 +166,12 @@ export async function createGo({
     });
     if (!failed) {
       const { version, short } = parseGoVersionString(stdout);
-      if (version === goVersion || short === goVersion) {
-        debug(`Initializing go ${version} (from cache)`);
+      if (version === goSelectedVersion || short === goSelectedVersion) {
+        debug(`Selected go ${version} (from cache)`);
         env.PATH = `${goGlobalBinDir}${delimiter}${env.PATH}`;
         return new GoWrapper(env, opts);
       } else {
-        debug(`Found cached go ${version}, but need ${goVersion}`);
+        debug(`Found cached go ${version}, but need ${goSelectedVersion}`);
       }
     }
   }
@@ -187,7 +186,7 @@ export async function createGo({
       if (minor < GO_MIN_VERSION) {
         debug(`Found go ${version} in system PATH, but version is unsupported`);
       } else if (!goPreferredVersion || goPreferredVersion === version) {
-        debug(`Initializing go ${version} (from system PATH)`);
+        debug(`Selected go ${version} (from system PATH)`);
         return new GoWrapper(env, opts);
       } else {
         debug(
@@ -198,7 +197,7 @@ export async function createGo({
   }
 
   // we need to download and cache the desired `go` version
-  const url = getGoUrl(goVersion, platform, arch);
+  const url = getGoUrl(goSelectedVersion, platform, arch);
   debug(`Downloading go: ${url}`);
   const res = await fetch(url);
 
@@ -207,7 +206,7 @@ export async function createGo({
   }
 
   // TODO: use a zip extractor when `ext === "zip"`
-  debug(`Installing go ${goVersion} to ${goGlobalDir}`);
+  debug(`Installing go ${goSelectedVersion} to ${goGlobalDir}`);
   await remove(goGlobalDir);
   await mkdirp(goGlobalDir);
   await new Promise((resolve, reject) => {
