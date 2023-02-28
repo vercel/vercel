@@ -48,7 +48,13 @@ module.exports = async ({ github, context }) => {
     if (fixture.includes('pnpm')) {
       exec(
         'pnpm',
-        ['install', `gatsby@^${major}`, '--save-exact', '--lockfile-only'],
+        [
+          '-w',
+          'install',
+          `gatsby@^${major}`,
+          '--save-exact',
+          '--lockfile-only',
+        ],
         { cwd: fixturePath }
       );
     } else {
