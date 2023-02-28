@@ -19,7 +19,7 @@ module.exports = async ({ github, context }) => {
     exec('git', ['checkout', '-b', branch]);
   }
 
-  const fixturePath = path.join(
+  const fixturesPath = path.join(
     __dirname,
     '..',
     'packages',
@@ -36,47 +36,41 @@ module.exports = async ({ github, context }) => {
     'gatsby-v5',
   ];
 
-  let somethingChanged = false;
-
   for (const fixture of gatsbyFixtures) {
-    const packageJSONPath = path.join(fixturePath, fixture);
+    const fixturePath = path.join(fixturesPath, fixture);
+    const packageJSONPath = path.join(fixturePath, 'package.json');
     const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, 'utf-8'));
 
     const oldVersion = packageJSON.dependencies.gatsby;
 
-    const versions = exec('npm', [
-      'view',
-      `gatsby@'^${oldVersion}'`,
-      'version',
-    ]); // [ "gatsby@5.1.2 '5.1.2'", "gatsby@5.2.0 '5.2.0'" ]
-    const newVersion = versions.split('\n').pop().split(' ')[1]; // takes the version string from the last result of `versions` i.e. '5.2.0'
+    const major = oldVersion.split('.')[0];
 
-    if (oldVersion === newVersion) {
-      console.log(
-        `gatsby version ${newVersion} did not change for fixture ${fixture}, skipping update.`
-      );
-      continue;
-    }
-
-    somethingChanged = true;
-
-    packageJSON.dependencies.gatsby = newVersion;
-
-    fs.writeFileSync(
-      packageJSONPath,
-      JSON.stringify(packageJSON, null, 2) + '\n',
-      'utf-8'
-    );
-
-    // update lockfiles
     if (fixture.includes('pnpm')) {
-      exec('pnpm', ['install', '--lockfile-only']);
+      exec(
+        'pnpm',
+        [
+          '-w',
+          'install',
+          `gatsby@^${major}`,
+          '--save-exact',
+          '--lockfile-only',
+        ],
+        { cwd: fixturePath }
+      );
     } else {
-      exec('npm', ['install', '--package-lock-only']);
+      exec(
+        'npm',
+        ['install', `gatsby@^${major}`, '--save-exact', '--package-lock-only'],
+        { cwd: fixturePath }
+      );
     }
   }
 
-  if (somethingChanged) {
+  // exec throws error on non-zero exit code
+  // git diff --quiet returns exit code 1 if changes detected
+  try {
+    exec('git', ['diff', '--quiet']);
+  } catch {
     exec('git', ['add', '-A']);
     exec('git', ['commit', '-m', branch]);
     exec('git', ['push', 'origin', branch]);

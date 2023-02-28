@@ -97,6 +97,14 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
+  const remixDevPackageJsonPath = _require.resolve(
+    '@remix-run/dev/package.json',
+    { paths: [entrypointFsDirname] }
+  );
+  const remixVersion = JSON.parse(
+    await fs.readFile(remixDevPackageJsonPath, 'utf8')
+  ).version;
+
   // Make our version of `remix` CLI available to the project's build
   // command by creating a symlink to the copy in our node modules,
   // so that `serverBundles` works: https://github.com/remix-run/remix/pull/5479
@@ -267,18 +275,20 @@ module.exports = config;`;
   const [staticFiles, nodeFunction, edgeFunction] = await Promise.all([
     glob('**', join(entrypointFsDirname, 'public')),
     createRenderNodeFunction(
+      nodeVersion,
       entrypointFsDirname,
       repoRootPath,
       join(entrypointFsDirname, 'build/build-node.js'),
       remixConfig.serverEntryPoint,
-      nodeVersion
+      remixVersion
     ),
     edgeRoutes.size > 0
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
           join(entrypointFsDirname, 'build/build-edge.js'),
-          remixConfig.serverEntryPoint
+          remixConfig.serverEntryPoint,
+          remixVersion
         )
       : undefined,
   ]);
@@ -351,11 +361,12 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
 }
 
 async function createRenderNodeFunction(
+  nodeVersion: NodeVersion,
   entrypointDir: string,
   rootDir: string,
   serverBuildPath: string,
   serverEntryPoint: string | undefined,
-  nodeVersion: NodeVersion
+  remixVersion: string
 ): Promise<NodejsLambda> {
   const files: Files = {};
 
@@ -392,6 +403,10 @@ async function createRenderNodeFunction(
     shouldAddSourcemapSupport: false,
     operationType: 'SSR',
     experimentalResponseStreaming: true,
+    framework: {
+      slug: 'remix',
+      version: remixVersion,
+    },
   });
 
   return fn;
@@ -401,7 +416,8 @@ async function createRenderEdgeFunction(
   entrypointDir: string,
   rootDir: string,
   serverBuildPath: string,
-  serverEntryPoint: string | undefined
+  serverEntryPoint: string | undefined,
+  remixVersion: string
 ): Promise<EdgeFunction> {
   const files: Files = {};
 
@@ -501,6 +517,10 @@ async function createRenderEdgeFunction(
     deploymentTarget: 'v8-worker',
     name: 'render',
     entrypoint: handler,
+    framework: {
+      slug: 'remix',
+      version: remixVersion,
+    },
   });
 
   return fn;
