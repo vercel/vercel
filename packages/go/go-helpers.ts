@@ -186,12 +186,12 @@ export async function createGo({
       const { version, minor } = parseGoVersionString(stdout);
       if (minor < GO_MIN_VERSION) {
         debug(`Found go ${version} in system PATH, but version is unsupported`);
-      } else if (!goVersion || goVersion === version) {
+      } else if (!goPreferredVersion || goPreferredVersion === version) {
         debug(`Initializing go ${version} (from system PATH)`);
         return new GoWrapper(env, opts);
       } else {
         debug(
-          `Found go ${version} in system PATH, but go.mod requests ${goVersion}`
+          `Found go ${version} in system PATH, but preferred version is ${goPreferredVersion}`
         );
       }
     }
