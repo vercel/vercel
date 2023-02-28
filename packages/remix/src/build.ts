@@ -501,14 +501,7 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
     const match = packages.find(p => p.startsWith(prefix));
     if (match) {
       const pkgDir = join(pnpmDir, match, 'node_modules', pkgName);
-      const symlinkPath = join(pnpmDir, '..', pkgName);
-      const symlinkDir = dirname(symlinkPath);
-      const symlinkTarget = relative(symlinkDir, pkgDir);
-      await fs.mkdir(symlinkDir, { recursive: true });
-      await fs.symlink(symlinkTarget, symlinkPath);
-      console.warn(
-        `WARN: Created symlink for "${pkgName}". To silence this warning, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
-      );
+      await ensureSymlink(pkgDir, join(pnpmDir, '..'), pkgName);
       return;
     }
   }
@@ -526,20 +519,44 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
     const match = packages.find(p => p.startsWith(prefix));
     if (match) {
       const pkgDir = join(prefixDir, match, 'node_modules', pkgName);
-      const symlinkPath = join(npmDir, '..', pkgName);
-      const symlinkDir = dirname(symlinkPath);
-      const symlinkTarget = relative(symlinkDir, pkgDir);
-      await fs.mkdir(symlinkDir, { recursive: true });
-      await fs.symlink(symlinkTarget, symlinkPath);
-      console.warn(
-        `WARN: Created symlink for "${pkgName}". To silence this warning, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
-      );
+      await ensureSymlink(pkgDir, join(npmDir, '..'), pkgName);
       return;
     }
   }
 
   throw new Error(
     `Failed to resolve "${pkgName}". To fix this error, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
+  );
+}
+
+async function ensureSymlink(
+  target: string,
+  nodeModulesDir: string,
+  pkgName: string
+) {
+  const symlinkPath = join(nodeModulesDir, pkgName);
+  const symlinkDir = dirname(symlinkPath);
+  const relativeTarget = relative(symlinkDir, target);
+
+  try {
+    const existingTarget = await fs.readlink(symlinkPath);
+    if (existingTarget === relativeTarget) {
+      // Symlink is already the expected value, so do nothing
+      return;
+    } else {
+      // If a symlink already exists then delete it if the target doesn't match
+      await fs.unlink(symlinkPath);
+    }
+  } catch (err: any) {
+    // Ignore when path does not exist or is not a symlink
+    if (err.code !== 'ENOENT' && err.code !== 'EINVAL') {
+      throw err;
+    }
+  }
+
+  await fs.symlink(relativeTarget, symlinkPath);
+  console.warn(
+    `WARN: Created symlink for "${pkgName}". To silence this warning, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
   );
 }
 
