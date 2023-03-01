@@ -493,7 +493,8 @@ async function createRenderEdgeFunction(
       edgeServerSrc.replace(
         '@remix-run/dev/server-build',
         `./${baseServerBuildPath}.js`
-      )
+      ),
+      rootDir
     );
   }
 
@@ -704,7 +705,7 @@ async function writeEntrypointFile(
       throw new Error(
         `The "${relative(
           rootDir,
-          dirname(dest)
+          dirname(path)
         )}" directory does not exist. Please contact support@vercel.com.`
       );
     }
