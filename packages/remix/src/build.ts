@@ -425,12 +425,13 @@ async function createRenderNodeFunction(
 
     // Copy the `server-node.mjs` file into the "build" directory
     const nodeServerSrc = await nodeServerSrcPromise;
-    await fs.writeFile(
+    await writeEntrypointFile(
       handlerPath,
       nodeServerSrc.replace(
         '@remix-run/dev/server-build',
         `./${baseServerBuildPath}.js`
-      )
+      ),
+      rootDir
     );
   }
 
@@ -487,12 +488,13 @@ async function createRenderEdgeFunction(
 
     // Copy the `server-edge.mjs` file into the "build" directory
     const edgeServerSrc = await edgeServerSrcPromise;
-    await fs.writeFile(
+    await writeEntrypointFile(
       handlerPath,
       edgeServerSrc.replace(
         '@remix-run/dev/server-build',
         `./${baseServerBuildPath}.js`
-      )
+      ),
+      rootDir
     );
   }
 
@@ -689,4 +691,24 @@ async function chdirAndReadConfig(dir: string) {
     process.chdir(originalCwd);
   }
   return remixConfig;
+}
+
+async function writeEntrypointFile(
+  path: string,
+  data: string,
+  rootDir: string
+) {
+  try {
+    await fs.writeFile(path, data);
+  } catch (err: any) {
+    if (err.code === 'ENOENT') {
+      throw new Error(
+        `The "${relative(
+          rootDir,
+          dirname(path)
+        )}" directory does not exist. Please contact support@vercel.com.`
+      );
+    }
+    throw err;
+  }
 }
