@@ -1,6 +1,27 @@
-import { existsSync } from 'fs';
 import { join } from 'path';
+import { existsSync } from 'fs';
+import { createHash } from 'crypto';
+import { pathToRegexp, Key } from 'path-to-regexp';
+import type {
+  ConfigRoute,
+  RouteManifest,
+} from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
+
+export interface ResolvedNodeRouteConfig {
+  runtime: 'nodejs';
+  regions?: string[];
+  maxDuration?: number;
+  memory?: number;
+}
+export interface ResolvedEdgeRouteConfig {
+  runtime: 'edge';
+  regions?: BaseFunctionConfig['regions'];
+}
+
+export type ResolvedRouteConfig =
+  | ResolvedNodeRouteConfig
+  | ResolvedEdgeRouteConfig;
 
 const configExts = ['.js', '.cjs', '.mjs'];
 
@@ -14,10 +35,106 @@ export function findConfig(dir: string, basename: string): string | undefined {
   return undefined;
 }
 
-export function getRegionsKey(regions?: BaseFunctionConfig['regions']): string {
-  if (!regions) return '';
-  if (Array.isArray(regions)) {
-    return JSON.stringify(Array.from(new Set(regions)).sort());
+function isEdgeRuntime(runtime: string): boolean {
+  return runtime === 'edge' || runtime === 'experimental-edge';
+}
+
+export function getResolvedRouteConfig(
+  route: ConfigRoute,
+  routes: RouteManifest,
+  configs: Map<ConfigRoute, BaseFunctionConfig>
+): ResolvedRouteConfig {
+  let runtime: ResolvedRouteConfig['runtime'] | undefined;
+  let regions: ResolvedRouteConfig['regions'];
+  let maxDuration: ResolvedNodeRouteConfig['maxDuration'];
+  let memory: ResolvedNodeRouteConfig['memory'];
+
+  for (const currentRoute of getRouteIterator(route, routes)) {
+    const staticConfig = configs.get(currentRoute);
+    if (staticConfig) {
+      if (typeof runtime === 'undefined' && staticConfig.runtime) {
+        runtime = isEdgeRuntime(staticConfig.runtime) ? 'edge' : 'nodejs';
+      }
+      if (typeof regions === 'undefined') {
+        regions = staticConfig.regions;
+      }
+      if (typeof maxDuration === 'undefined') {
+        maxDuration = staticConfig.maxDuration;
+      }
+      if (typeof memory === 'undefined') {
+        memory = staticConfig.memory;
+      }
+    }
   }
-  return regions;
+
+  if (Array.isArray(regions)) {
+    regions = Array.from(new Set(regions)).sort();
+  }
+
+  if (runtime === 'edge') {
+    return { runtime, regions };
+  }
+
+  if (regions && !Array.isArray(regions)) {
+    throw new Error(
+      `"regions" for route "${route.id}" must be an array of strings`
+    );
+  }
+
+  return { runtime: 'nodejs', regions, maxDuration, memory };
+}
+
+export function calculateResolvedConfigHash(
+  config: ResolvedRouteConfig
+): string {
+  const str = JSON.stringify(config);
+  return createHash('sha1').update(str).digest('base64url');
+}
+
+export function isLayoutRoute(
+  routeId: string,
+  routes: Pick<ConfigRoute, 'id' | 'parentId'>[]
+): boolean {
+  return routes.some(r => r.parentId === routeId);
+}
+
+export function* getRouteIterator(route: ConfigRoute, routes: RouteManifest) {
+  let currentRoute: ConfigRoute = route;
+  do {
+    yield currentRoute;
+    if (currentRoute.parentId) {
+      currentRoute = routes[currentRoute.parentId];
+    } else {
+      break;
+    }
+  } while (currentRoute);
+}
+
+export function getPathFromRoute(
+  route: ConfigRoute,
+  routes: RouteManifest
+): string {
+  if (
+    route.id === 'root' ||
+    (route.parentId === 'root' && !route.path && route.index)
+  ) {
+    return 'index';
+  }
+
+  const pathParts: string[] = [];
+  for (const currentRoute of getRouteIterator(route, routes)) {
+    if (currentRoute.path) pathParts.push(currentRoute.path);
+  }
+  const path = pathParts.reverse().join('/');
+  return path;
+}
+
+export function getRegExpFromPath(path: string): RegExp | false {
+  const keys: Key[] = [];
+  // Replace "/*" at the end to handle "splat routes"
+  const splatPath = '/:params+';
+  const rePath =
+    path === '*' ? splatPath : `/${path.replace(/\/\*$/, splatPath)}`;
+  const re = pathToRegexp(rePath, keys);
+  return keys.length > 0 ? re : false;
 }

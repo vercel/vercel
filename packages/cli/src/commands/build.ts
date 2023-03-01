@@ -16,6 +16,7 @@ import {
   BuildResultV2Typical,
   BuildResultV3,
   NowBuildError,
+  Cron,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -88,6 +89,7 @@ interface BuildOutputConfig {
   framework?: {
     version: string;
   };
+  crons?: Cron[];
 }
 
 /**
@@ -623,6 +625,7 @@ async function doBuild(
   });
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
+  const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedOverrides: Record<string, PathOverride> =
     overrides.length > 0 ? Object.assign({}, ...overrides) : undefined;
@@ -638,6 +641,7 @@ async function doBuild(
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
     framework,
+    crons: mergedCrons,
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
@@ -744,6 +748,18 @@ function mergeImages(
     }
   }
   return images;
+}
+
+function mergeCrons(
+  crons: BuildOutputConfig['crons'] = [],
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
+): BuildOutputConfig['crons'] {
+  for (const result of buildResults) {
+    if ('crons' in result && result.crons) {
+      crons = crons.concat(result.crons);
+    }
+  }
+  return crons;
 }
 
 function mergeWildcard(
