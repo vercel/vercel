@@ -449,9 +449,19 @@ export const build: BuildV3 = async ({
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const src = getRegExpFromMatchers(staticConfig?.matcher);
 
+    const middlewareRawSrc: string[] = [];
+    if (staticConfig?.matcher) {
+      if (Array.isArray(staticConfig.matcher)) {
+        middlewareRawSrc.push(...staticConfig.matcher);
+      } else {
+        middlewareRawSrc.push(staticConfig.matcher as string);
+      }
+    }
+
     routes = [
       {
         src,
+        middlewareRawSrc,
         middlewarePath: outputPath,
         continue: true,
         override: true,

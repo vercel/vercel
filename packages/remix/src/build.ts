@@ -41,6 +41,10 @@ import {
 
 const _require: typeof require = eval('require');
 
+const REMIX_RUN_DEV_PATH = dirname(
+  _require.resolve('@remix-run/dev/package.json')
+);
+
 export const build: BuildV2 = async ({
   entrypoint,
   files,
@@ -93,11 +97,85 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
+  const remixDevPackageJsonPath = _require.resolve(
+    '@remix-run/dev/package.json',
+    { paths: [entrypointFsDirname] }
+  );
+  const remixVersion = JSON.parse(
+    await fs.readFile(remixDevPackageJsonPath, 'utf8')
+  ).version;
+
+  // Make our version of `remix` CLI available to the project's build
+  // command by creating a symlink to the copy in our node modules,
+  // so that `serverBundles` works: https://github.com/remix-run/remix/pull/5479
+  const nodeModulesDir = join(entrypointFsDirname, 'node_modules');
+  const remixRunDevPath = join(nodeModulesDir, '@remix-run/dev');
+  let backupRemixRunDevPath:
+    | string
+    | false = `${remixRunDevPath}.__vercel_backup`;
+
+  try {
+    await fs.rename(remixRunDevPath, backupRemixRunDevPath);
+  } catch (err: any) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+    backupRemixRunDevPath = false;
+  }
+
+  await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
+
   // Make `remix build` output production mode
   spawnOpts.env.NODE_ENV = 'production';
 
   const remixConfig = await chdirAndReadConfig(entrypointFsDirname);
   const remixRoutes = Object.values(remixConfig.routes);
+
+  // Read the `export const config` (if any) for each route
+  const project = new Project();
+  const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig>();
+  for (const route of remixRoutes) {
+    const routePath = join(remixConfig.appDirectory, route.file);
+    const staticConfig = getConfig(project, routePath);
+    if (staticConfig) {
+      staticConfigsMap.set(route, staticConfig);
+    }
+  }
+
+  // Figure out which pages should be edge functions
+  const edgeRoutes = new Set<ConfigRoute>();
+  const nodeRoutes = new Set<ConfigRoute>();
+  for (const route of remixRoutes) {
+    if (isLayoutRoute(route.id, remixRoutes)) continue;
+
+    // Support runtime inheritance when defined in a parent route,
+    // by iterating through the route's parent hierarchy until a
+    // config containing "runtime" is found.
+    let isEdge = false;
+    for (const currentRoute of getRouteIterator(route, remixConfig.routes)) {
+      const staticConfig = staticConfigsMap.get(currentRoute);
+      if (staticConfig?.runtime) {
+        isEdge = isEdgeRuntime(staticConfig.runtime);
+        break;
+      }
+    }
+
+    if (isEdge) {
+      edgeRoutes.add(route);
+    } else {
+      nodeRoutes.add(route);
+    }
+  }
+  const serverBundles = [
+    {
+      serverBuildPath: 'build/build-edge.js',
+      routes: Array.from(edgeRoutes).map(r => r.id),
+    },
+    {
+      serverBuildPath: 'build/build-node.js',
+      routes: Array.from(nodeRoutes).map(r => r.id),
+    },
+  ];
 
   // We need to patch the `remix.config.js` file to force some values necessary
   // for a build that works on either Node.js or the Edge runtime
@@ -105,7 +183,6 @@ export const build: BuildV2 = async ({
   const renamedRemixConfigPath = remixConfigPath
     ? `${remixConfigPath}.original${extname(remixConfigPath)}`
     : undefined;
-  const serverBuildPath = 'build/index.js';
   if (remixConfigPath && renamedRemixConfigPath) {
     await fs.rename(remixConfigPath, renamedRemixConfigPath);
 
@@ -125,7 +202,8 @@ export const build: BuildV2 = async ({
 config.serverBuildTarget = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
-config.serverBuildPath = ${JSON.stringify(serverBuildPath)}
+config.serverBuildPath = undefined;
+config.serverBundles = ${JSON.stringify(serverBundles)};
 export default config;`;
     } else {
       patchedConfig = `const config = require('./${basename(
@@ -134,7 +212,8 @@ export default config;`;
 config.serverBuildTarget = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
-config.serverBuildPath = ${JSON.stringify(serverBuildPath)}
+config.serverBuildPath = undefined;
+config.serverBundles = ${JSON.stringify(serverBundles)};
 module.exports = config;`;
     }
     await fs.writeFile(remixConfigPath, patchedConfig);
@@ -174,20 +253,12 @@ module.exports = config;`;
     if (remixConfigPath && renamedRemixConfigPath) {
       await fs.rename(renamedRemixConfigPath, remixConfigPath);
     }
-  }
 
-  // Figure out which pages should be edge functions
-  let hasEdgeRoute = false;
-  const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig>();
-  const project = new Project();
-  for (const route of remixRoutes) {
-    const routePath = join(remixConfig.appDirectory, route.file);
-    const staticConfig = getConfig(project, routePath);
-    if (staticConfig) {
-      staticConfigsMap.set(route, staticConfig);
-    }
-    if (staticConfig?.runtime && isEdgeRuntime(staticConfig.runtime)) {
-      hasEdgeRoute = true;
+    // Remove `@remix-run/dev` symlink
+    await fs.unlink(remixRunDevPath);
+    if (backupRemixRunDevPath) {
+      // Restore previous version if it was existed
+      await fs.rename(backupRemixRunDevPath, remixRunDevPath);
     }
   }
 
@@ -204,18 +275,20 @@ module.exports = config;`;
   const [staticFiles, nodeFunction, edgeFunction] = await Promise.all([
     glob('**', join(entrypointFsDirname, 'public')),
     createRenderNodeFunction(
+      nodeVersion,
       entrypointFsDirname,
       repoRootPath,
-      join(entrypointFsDirname, serverBuildPath),
+      join(entrypointFsDirname, 'build/build-node.js'),
       remixConfig.serverEntryPoint,
-      nodeVersion
+      remixVersion
     ),
-    hasEdgeRoute
+    edgeRoutes.size > 0
       ? createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
-          join(entrypointFsDirname, serverBuildPath),
-          remixConfig.serverEntryPoint
+          join(entrypointFsDirname, 'build/build-edge.js'),
+          remixConfig.serverEntryPoint,
+          remixVersion
         )
       : undefined,
   ]);
@@ -244,17 +317,8 @@ module.exports = config;`;
       continue;
     }
 
-    let isEdge = false;
-    for (const currentRoute of getRouteIterator(route, remixConfig.routes)) {
-      const staticConfig = staticConfigsMap.get(currentRoute);
-      if (staticConfig?.runtime) {
-        isEdge = isEdgeRuntime(staticConfig.runtime);
-        break;
-      }
-    }
-
     const fn =
-      isEdge && edgeFunction
+      edgeRoutes.has(route) && edgeFunction
         ? // `EdgeFunction` currently requires the "name" property to be set.
           // Ideally this property will be removed, at which point we can
           // return the same `edgeFunction` instance instead of creating a
@@ -297,11 +361,12 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
 }
 
 async function createRenderNodeFunction(
+  nodeVersion: NodeVersion,
   entrypointDir: string,
   rootDir: string,
   serverBuildPath: string,
   serverEntryPoint: string | undefined,
-  nodeVersion: NodeVersion
+  remixVersion: string
 ): Promise<NodejsLambda> {
   const files: Files = {};
 
@@ -338,6 +403,10 @@ async function createRenderNodeFunction(
     shouldAddSourcemapSupport: false,
     operationType: 'SSR',
     experimentalResponseStreaming: true,
+    framework: {
+      slug: 'remix',
+      version: remixVersion,
+    },
   });
 
   return fn;
@@ -347,7 +416,8 @@ async function createRenderEdgeFunction(
   entrypointDir: string,
   rootDir: string,
   serverBuildPath: string,
-  serverEntryPoint: string | undefined
+  serverEntryPoint: string | undefined,
+  remixVersion: string
 ): Promise<EdgeFunction> {
   const files: Files = {};
 
@@ -447,6 +517,10 @@ async function createRenderEdgeFunction(
     deploymentTarget: 'v8-worker',
     name: 'render',
     entrypoint: handler,
+    framework: {
+      slug: 'remix',
+      version: remixVersion,
+    },
   });
 
   return fn;
@@ -481,14 +555,7 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
     const match = packages.find(p => p.startsWith(prefix));
     if (match) {
       const pkgDir = join(pnpmDir, match, 'node_modules', pkgName);
-      const symlinkPath = join(pnpmDir, '..', pkgName);
-      const symlinkDir = dirname(symlinkPath);
-      const symlinkTarget = relative(symlinkDir, pkgDir);
-      await fs.mkdir(symlinkDir, { recursive: true });
-      await fs.symlink(symlinkTarget, symlinkPath);
-      console.warn(
-        `WARN: Created symlink for "${pkgName}". To silence this warning, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
-      );
+      await ensureSymlink(pkgDir, join(pnpmDir, '..'), pkgName);
       return;
     }
   }
@@ -506,20 +573,44 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
     const match = packages.find(p => p.startsWith(prefix));
     if (match) {
       const pkgDir = join(prefixDir, match, 'node_modules', pkgName);
-      const symlinkPath = join(npmDir, '..', pkgName);
-      const symlinkDir = dirname(symlinkPath);
-      const symlinkTarget = relative(symlinkDir, pkgDir);
-      await fs.mkdir(symlinkDir, { recursive: true });
-      await fs.symlink(symlinkTarget, symlinkPath);
-      console.warn(
-        `WARN: Created symlink for "${pkgName}". To silence this warning, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
-      );
+      await ensureSymlink(pkgDir, join(npmDir, '..'), pkgName);
       return;
     }
   }
 
   throw new Error(
     `Failed to resolve "${pkgName}". To fix this error, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
+  );
+}
+
+async function ensureSymlink(
+  target: string,
+  nodeModulesDir: string,
+  pkgName: string
+) {
+  const symlinkPath = join(nodeModulesDir, pkgName);
+  const symlinkDir = dirname(symlinkPath);
+  const relativeTarget = relative(symlinkDir, target);
+
+  try {
+    const existingTarget = await fs.readlink(symlinkPath);
+    if (existingTarget === relativeTarget) {
+      // Symlink is already the expected value, so do nothing
+      return;
+    } else {
+      // If a symlink already exists then delete it if the target doesn't match
+      await fs.unlink(symlinkPath);
+    }
+  } catch (err: any) {
+    // Ignore when path does not exist or is not a symlink
+    if (err.code !== 'ENOENT' && err.code !== 'EINVAL') {
+      throw err;
+    }
+  }
+
+  await fs.symlink(relativeTarget, symlinkPath);
+  console.warn(
+    `WARN: Created symlink for "${pkgName}". To silence this warning, add "${pkgName}" to "dependencies" in your \`package.json\` file.`
   );
 }
 

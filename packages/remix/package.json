@@ -1,6 +1,6 @@
 {
   "name": "@vercel/remix",
-  "version": "1.4.1",
+  "version": "1.4.3",
   "license": "MIT",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -22,7 +22,7 @@
     "vercel-edge-entrypoint.js"
   ],
   "dependencies": {
-    "@remix-run/dev": "1.13.0",
+    "@remix-run/dev": "npm:@vercel/remix-run-dev@1.13.0-patch.1",
     "@vercel/nft": "0.22.5",
     "@vercel/static-config": "2.0.13",
     "path-to-regexp": "6.2.1",
@@ -31,7 +31,7 @@
   "devDependencies": {
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "6.3.1",
+    "@vercel/build-utils": "6.3.2",
     "typescript": "4.9.4"
   }
 }
