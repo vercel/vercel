@@ -324,7 +324,7 @@ async function createRenderNodeFunction(
 
     // Copy the `server-node.mjs` file into the "build" directory
     const sourceHandlerPath = join(__dirname, '../server-node.mjs');
-    await fs.copyFile(sourceHandlerPath, handlerPath);
+    await copyEntrypointFile(sourceHandlerPath, handlerPath, rootDir);
   }
 
   // Trace the handler with `@vercel/nft`
@@ -375,7 +375,7 @@ async function createRenderEdgeFunction(
 
     // Copy the `server-edge.mjs` file into the "build" directory
     const sourceHandlerPath = join(__dirname, '../server-edge.mjs');
-    await fs.copyFile(sourceHandlerPath, handlerPath);
+    await copyEntrypointFile(sourceHandlerPath, handlerPath, rootDir);
   }
 
   let remixRunVercelPkgJson: string | undefined;
@@ -574,4 +574,24 @@ async function chdirAndReadConfig(dir: string) {
     process.chdir(originalCwd);
   }
   return remixConfig;
+}
+
+async function copyEntrypointFile(
+  source: string,
+  dest: string,
+  rootDir: string
+) {
+  try {
+    await fs.copyFile(source, dest);
+  } catch (err: any) {
+    if (err.code === 'ENOENT') {
+      throw new Error(
+        `The "${relative(
+          rootDir,
+          dirname(dest)
+        )}" directory does not exist. Please contact support@vercel.com.`
+      );
+    }
+    throw err;
+  }
 }
