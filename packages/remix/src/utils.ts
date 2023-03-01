@@ -1,6 +1,5 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { createHash } from 'crypto';
 import { pathToRegexp, Key } from 'path-to-regexp';
 import type {
   ConfigRoute,
@@ -88,7 +87,7 @@ export function calculateResolvedConfigHash(
   config: ResolvedRouteConfig
 ): string {
   const str = JSON.stringify(config);
-  return createHash('sha1').update(str).digest('base64url');
+  return Buffer.from(str).toString('base64url');
 }
 
 export function isLayoutRoute(

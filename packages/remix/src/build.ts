@@ -50,6 +50,15 @@ const REMIX_RUN_DEV_PATH = dirname(
   _require.resolve('@remix-run/dev/package.json')
 );
 
+const edgeServerSrcPromise = fs.readFile(
+  join(__dirname, '../server-edge.mjs'),
+  'utf-8'
+);
+const nodeServerSrcPromise = fs.readFile(
+  join(__dirname, '../server-node.mjs'),
+  'utf-8'
+);
+
 export const build: BuildV2 = async ({
   entrypoint,
   files,
@@ -287,8 +296,8 @@ module.exports = config;`;
   const [staticFiles, ...functions] = await Promise.all([
     glob('**', join(entrypointFsDirname, 'public')),
     ...serverBundles.map(bundle => {
-      const firstRoute = remixConfig.routes[routes[0]];
-      const config = resolvedConfigsMap.get(firstRoute) || {
+      const firstRoute = remixConfig.routes[bundle.routes[0]];
+      const config = resolvedConfigsMap.get(firstRoute) ?? {
         runtime: 'nodejs',
       };
 
@@ -414,12 +423,19 @@ async function createRenderNodeFunction(
   let handler = relative(rootDir, serverBuildPath);
   let handlerPath = join(rootDir, handler);
   if (!serverEntryPoint) {
-    handler = join(dirname(handler), 'server-node.mjs');
+    const baseServerBuildPath = basename(serverBuildPath);
+    handler = join(dirname(handler), `server-${baseServerBuildPath}`);
     handlerPath = join(rootDir, handler);
 
     // Copy the `server-node.mjs` file into the "build" directory
-    const sourceHandlerPath = join(__dirname, '../server-node.mjs');
-    await fs.copyFile(sourceHandlerPath, handlerPath);
+    const nodeServerSrc = await nodeServerSrcPromise;
+    await fs.writeFile(
+      handlerPath,
+      nodeServerSrc.replace(
+        '@remix-run/dev/server-build',
+        `./${baseServerBuildPath}`
+      )
+    );
   }
 
   // Trace the handler with `@vercel/nft`
@@ -469,12 +485,19 @@ async function createRenderEdgeFunction(
   let handler = relative(rootDir, serverBuildPath);
   let handlerPath = join(rootDir, handler);
   if (!serverEntryPoint) {
-    handler = join(dirname(handler), 'server-edge.mjs');
+    const baseServerBuildPath = basename(serverBuildPath);
+    handler = join(dirname(handler), `server-${baseServerBuildPath}`);
     handlerPath = join(rootDir, handler);
 
     // Copy the `server-edge.mjs` file into the "build" directory
-    const sourceHandlerPath = join(__dirname, '../server-edge.mjs');
-    await fs.copyFile(sourceHandlerPath, handlerPath);
+    const edgeServerSrc = await edgeServerSrcPromise;
+    await fs.writeFile(
+      handlerPath,
+      edgeServerSrc.replace(
+        '@remix-run/dev/server-build',
+        `./${baseServerBuildPath}`
+      )
+    );
   }
 
   let remixRunVercelPkgJson: string | undefined;
