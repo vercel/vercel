@@ -1,3 +1,3 @@
 module go-mod
 
-go 1.20
+go 1.19
