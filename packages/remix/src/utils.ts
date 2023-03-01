@@ -5,6 +5,22 @@ import type {
   ConfigRoute,
   RouteManifest,
 } from '@remix-run/dev/dist/config/routes';
+import type { BaseFunctionConfig } from '@vercel/static-config';
+
+export interface ResolvedNodeRouteConfig {
+  runtime: 'nodejs';
+  regions?: string[];
+  maxDuration?: number;
+  memory?: number;
+}
+export interface ResolvedEdgeRouteConfig {
+  runtime: 'edge';
+  regions?: BaseFunctionConfig['regions'];
+}
+
+export type ResolvedRouteConfig =
+  | ResolvedNodeRouteConfig
+  | ResolvedEdgeRouteConfig;
 
 const configExts = ['.js', '.cjs', '.mjs'];
 
@@ -16,6 +32,60 @@ export function findConfig(dir: string, basename: string): string | undefined {
   }
 
   return undefined;
+}
+
+function isEdgeRuntime(runtime: string): boolean {
+  return runtime === 'edge' || runtime === 'experimental-edge';
+}
+
+export function getResolvedRouteConfig(
+  route: ConfigRoute,
+  routes: RouteManifest,
+  configs: Map<ConfigRoute, BaseFunctionConfig | null>
+): ResolvedRouteConfig {
+  let runtime: ResolvedRouteConfig['runtime'] | undefined;
+  let regions: ResolvedRouteConfig['regions'];
+  let maxDuration: ResolvedNodeRouteConfig['maxDuration'];
+  let memory: ResolvedNodeRouteConfig['memory'];
+
+  for (const currentRoute of getRouteIterator(route, routes)) {
+    const staticConfig = configs.get(currentRoute);
+    if (staticConfig) {
+      if (typeof runtime === 'undefined' && staticConfig.runtime) {
+        runtime = isEdgeRuntime(staticConfig.runtime) ? 'edge' : 'nodejs';
+      }
+      if (typeof regions === 'undefined') {
+        regions = staticConfig.regions;
+      }
+      if (typeof maxDuration === 'undefined') {
+        maxDuration = staticConfig.maxDuration;
+      }
+      if (typeof memory === 'undefined') {
+        memory = staticConfig.memory;
+      }
+    }
+  }
+
+  if (Array.isArray(regions)) {
+    regions = Array.from(new Set(regions)).sort();
+  }
+
+  if (runtime === 'edge') {
+    return { runtime, regions };
+  }
+
+  if (regions && !Array.isArray(regions)) {
+    throw new Error(
+      `"regions" for route "${route.id}" must be an array of strings`
+    );
+  }
+
+  return { runtime: 'nodejs', regions, maxDuration, memory };
+}
+
+export function calculateRouteConfigHash(config: ResolvedRouteConfig): string {
+  const str = JSON.stringify(config);
+  return Buffer.from(str).toString('base64url');
 }
 
 export function isLayoutRoute(
