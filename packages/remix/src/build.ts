@@ -33,7 +33,7 @@ import type { BaseFunctionConfig } from '@vercel/static-config';
 import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 import {
-  calculateResolvedConfigHash,
+  calculateRouteConfigHash,
   findConfig,
   getPathFromRoute,
   getRegExpFromPath,
@@ -147,13 +147,11 @@ export const build: BuildV2 = async ({
 
   // Read the `export const config` (if any) for each route
   const project = new Project();
-  const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig>();
+  const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
   for (const route of remixRoutes) {
     const routePath = join(remixConfig.appDirectory, route.file);
     const staticConfig = getConfig(project, routePath);
-    if (staticConfig) {
-      staticConfigsMap.set(route, staticConfig);
-    }
+    staticConfigsMap.set(route, staticConfig);
   }
 
   const resolvedConfigsMap = new Map<ConfigRoute, ResolvedRouteConfig>();
@@ -176,7 +174,7 @@ export const build: BuildV2 = async ({
     if (!config) {
       throw new Error(`Expected resolved config for "${route.id}"`);
     }
-    const hash = calculateResolvedConfigHash(config);
+    const hash = calculateRouteConfigHash(config);
 
     let routesForHash = serverBundlesMap.get(hash);
     if (!Array.isArray(routesForHash)) {

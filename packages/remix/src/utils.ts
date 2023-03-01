@@ -41,7 +41,7 @@ function isEdgeRuntime(runtime: string): boolean {
 export function getResolvedRouteConfig(
   route: ConfigRoute,
   routes: RouteManifest,
-  configs: Map<ConfigRoute, BaseFunctionConfig>
+  configs: Map<ConfigRoute, BaseFunctionConfig | null>
 ): ResolvedRouteConfig {
   let runtime: ResolvedRouteConfig['runtime'] | undefined;
   let regions: ResolvedRouteConfig['regions'];
@@ -83,9 +83,7 @@ export function getResolvedRouteConfig(
   return { runtime: 'nodejs', regions, maxDuration, memory };
 }
 
-export function calculateResolvedConfigHash(
-  config: ResolvedRouteConfig
-): string {
+export function calculateRouteConfigHash(config: ResolvedRouteConfig): string {
   const str = JSON.stringify(config);
   return Buffer.from(str).toString('base64url');
 }
