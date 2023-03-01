@@ -13,6 +13,7 @@ fi
 echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
 
 echo "Logged in to npm as: $(npm whoami)"
+echo "Version of npm is: $(npm --version)"
 
 dist_tag=""
 tag="$(git describe --tags --exact-match 2> /dev/null || :)"

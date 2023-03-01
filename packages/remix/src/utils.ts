@@ -41,7 +41,10 @@ export function getPathFromRoute(
   route: ConfigRoute,
   routes: RouteManifest
 ): string {
-  if (route.id === 'root' || (route.parentId === 'root' && route.index)) {
+  if (
+    route.id === 'root' ||
+    (route.parentId === 'root' && !route.path && route.index)
+  ) {
     return 'index';
   }
 

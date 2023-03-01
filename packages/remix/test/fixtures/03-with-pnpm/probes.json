@@ -1,0 +1,19 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Welcome to Remix",
+      "logMustContain": "WARN: Created symlink for \"@remix-run/node\". To silence this warning, add \"@remix-run/node\" to \"dependencies\" in your `package.json` file"
+    },
+    {
+      "path": "/edge",
+      "mustContain": "Welcome to Remix@Edge",
+      "logMustContain": "WARN: Created symlink for \"@remix-run/server-runtime\". To silence this warning, add \"@remix-run/server-runtime\" to \"dependencies\" in your `package.json` file"
+    },
+    { "path": "/b", "mustContain": "B page" },
+    { "path": "/nested", "mustContain": "Nested index page" },
+    { "path": "/nested/another", "mustContain": "Nested another page" },
+    { "path": "/nested/index", "mustContain": "<div>nested/index</div>" },
+    { "path": "/asdf", "mustContain": "<div>asdf</div>" }
+  ]
+}

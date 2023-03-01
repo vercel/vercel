@@ -1,3 +1,3 @@
 import { createRequestHandler } from '@remix-run/server-runtime';
-import build from './index.js';
+import build from './build-edge.js';
 export default createRequestHandler(build);
