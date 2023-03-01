@@ -1,10 +1,13 @@
 {
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
   "dependencies": {
     "next": "canary",
     "react": "experimental",
     "react-dom": "experimental"
-  },
-  "scripts": {
-    "vercel-build": "next build"
   }
 }
