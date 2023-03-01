@@ -16,6 +16,7 @@ module.exports = async ({ github, context }, newVersion) => {
       encoding: 'utf-8',
     });
   }
+  newVersion = newVersion.trim();
   const branch = `vercel-remix-run-dev-${newVersion.replaceAll('.', '-')}`;
 
   if (oldVersion === newVersion) {
