@@ -1,3 +1,3 @@
 export default (req, res) => {
-  res.text('hey there');
+  res.end('hey there');
 };
