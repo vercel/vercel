@@ -636,7 +636,7 @@ describe('build', () => {
     }
   });
 
-  it('should build ignore `middleware.js` if mentioned in `.vercelignore`', async () => {
+  it('should ignore `middleware.js` if mentioned in `.vercelignore`', async () => {
     const cwd = fixture('middleware-with-vercelignore');
     const output = join(cwd, '.vercel/output');
     try {
