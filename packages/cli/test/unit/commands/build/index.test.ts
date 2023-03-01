@@ -636,6 +636,81 @@ describe('build', () => {
     }
   });
 
+  it('should build ignore `middleware.js` if mentioned in `.vercelignore`', async () => {
+    const cwd = fixture('middleware-with-vercelignore');
+    const output = join(cwd, '.vercel/output');
+    try {
+      process.chdir(cwd);
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/node" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/node',
+            apiVersion: 3,
+            use: '@vercel/node',
+            src: 'api/hello.js',
+            config: {
+              zeroConfig: true,
+            },
+          },
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            use: '@vercel/static',
+            src: '!{api/**,package.json,middleware.[jt]s}',
+            config: {
+              zeroConfig: true,
+            },
+          },
+        ],
+      });
+
+      // `config.json` includes the "middlewarePath" route
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config).toMatchObject({
+        version: 3,
+        routes: [
+          {
+            handle: 'filesystem',
+          },
+          {
+            src: '^/api(/.*)?$',
+            status: 404,
+          },
+          {
+            handle: 'error',
+          },
+          {
+            status: 404,
+            src: '^(?!/api).*$',
+            dest: '/404.html',
+          },
+          {
+            handle: 'miss',
+          },
+          {
+            src: '^/api/(.+)(?:\\.(?:js))$',
+            dest: '/api/$1',
+            check: true,
+          },
+        ],
+        crons: [],
+      });
+
+      // "functions" directory DOES NOT contain `middleware.func`
+      const functions = await fs.readdir(join(output, 'functions'));
+      expect(functions.sort()).toEqual(['api']);
+    } finally {
+      process.chdir(originalCwd);
+      delete process.env.__VERCEL_BUILD_RUNNING;
+    }
+  });
+
   it('should support `--output` parameter', async () => {
     const cwd = fixture('static');
     const output = await getWriteableDirectory();

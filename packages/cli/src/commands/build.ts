@@ -17,6 +17,7 @@ import {
   BuildResultV3,
   NowBuildError,
   Cron,
+  getIgnoreFilter,
 } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -298,7 +299,8 @@ async function doBuild(
 ): Promise<void> {
   const { output } = client;
 
-  const workPath = join(cwd, project.settings.rootDirectory || '.');
+  const rootDirectory = project.settings.rootDirectory || '.';
+  const workPath = join(cwd, rootDirectory);
 
   const [pkg, vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
@@ -337,10 +339,16 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings, output);
   }
 
+  const ignoreFilter = await getIgnoreFilter(workPath, rootDirectory);
+  function isAllowed(filePath: string) {
+    return !ignoreFilter(filePath);
+  }
+
   // Get a list of source files
-  const files = (await getFiles(workPath, client)).map(f =>
-    normalizePath(relative(workPath, f))
-  );
+  const rawFiles = await getFiles(workPath, client);
+  const files = rawFiles
+    .map(f => normalizePath(relative(workPath, f)))
+    .filter(isAllowed);
 
   const routesResult = getTransformedRoutes(localConfig);
   if (routesResult.error) {
