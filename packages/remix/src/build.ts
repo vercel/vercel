@@ -337,8 +337,7 @@ module.exports = config;`;
 
   for (const route of remixRoutes) {
     // Layout routes don't get a function / route added
-    const isLayoutRoute = remixRoutes.some(r => r.parentId === route.id);
-    if (isLayoutRoute) continue;
+    if (isLayoutRoute(route.id, remixRoutes)) continue;
 
     const path = getPathFromRoute(route, remixConfig.routes);
 
