@@ -196,7 +196,6 @@ export const build: BuildV2 = async ({
       };
     }
   );
-  console.log(serverBundles);
 
   // We need to patch the `remix.config.js` file to force some values necessary
   // for a build that works on either Node.js or the Edge runtime
@@ -423,8 +422,8 @@ async function createRenderNodeFunction(
   let handler = relative(rootDir, serverBuildPath);
   let handlerPath = join(rootDir, handler);
   if (!serverEntryPoint) {
-    const baseServerBuildPath = basename(serverBuildPath);
-    handler = join(dirname(handler), `server-${baseServerBuildPath}`);
+    const baseServerBuildPath = basename(serverBuildPath, '.js');
+    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
     handlerPath = join(rootDir, handler);
 
     // Copy the `server-node.mjs` file into the "build" directory
@@ -433,7 +432,7 @@ async function createRenderNodeFunction(
       handlerPath,
       nodeServerSrc.replace(
         '@remix-run/dev/server-build',
-        `./${baseServerBuildPath}`
+        `./${baseServerBuildPath}.js`
       )
     );
   }
@@ -485,8 +484,8 @@ async function createRenderEdgeFunction(
   let handler = relative(rootDir, serverBuildPath);
   let handlerPath = join(rootDir, handler);
   if (!serverEntryPoint) {
-    const baseServerBuildPath = basename(serverBuildPath);
-    handler = join(dirname(handler), `server-${baseServerBuildPath}`);
+    const baseServerBuildPath = basename(serverBuildPath, '.js');
+    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
     handlerPath = join(rootDir, handler);
 
     // Copy the `server-edge.mjs` file into the "build" directory
@@ -495,7 +494,7 @@ async function createRenderEdgeFunction(
       handlerPath,
       edgeServerSrc.replace(
         '@remix-run/dev/server-build',
-        `./${baseServerBuildPath}`
+        `./${baseServerBuildPath}.js`
       )
     );
   }
