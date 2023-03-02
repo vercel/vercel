@@ -4,7 +4,7 @@ import { homedir, tmpdir } from 'os';
 import { spawn } from 'child_process';
 import { Readable } from 'stream';
 import once from '@tootallnate/once';
-import { join, dirname, basename, normalize, sep } from 'path';
+import { join, dirname, basename, normalize, posix, sep } from 'path';
 import {
   readFile,
   writeFile,
@@ -147,7 +147,7 @@ export async function build({
     }
 
     const entrypointAbsolute = join(workPath, entrypoint);
-    const entrypointArr = entrypoint.split(sep);
+    const entrypointArr = entrypoint.split(posix.sep);
 
     debug(`Parsing AST for "${entrypoint}"`);
     let analyzed: string;
@@ -178,7 +178,6 @@ export async function build({
     }
 
     const parsedAnalyzed = JSON.parse(analyzed) as Analyzed;
-    console.log(parsedAnalyzed);
 
     // find `go.mod` in modFiles
     const entrypointDirname = dirname(entrypointAbsolute);
@@ -313,12 +312,6 @@ export async function build({
             defaultGoModContent
           );
 
-          console.log();
-          console.log(join(entrypointDirname, 'go.mod'));
-          console.log();
-          console.log(defaultGoModContent);
-          console.log('\n');
-
           undoFileActions.push({
             to: undefined, // delete
             from: join(entrypointDirname, 'go.mod'),
@@ -346,8 +339,6 @@ export async function build({
       if (isGoModExist) {
         const goModContents = await readFile(join(goModPath, 'go.mod'), 'utf8');
         const usrModName = goModContents.split('\n')[0].split(' ')[1];
-        console.log('GO MOD EXISTS');
-        console.log({ entrypointArr, isGoModInRootDir });
         if (entrypointArr.length > 1 && isGoModInRootDir) {
           const cleanPackagePath = [...entrypointArr];
           cleanPackagePath.pop();
@@ -355,7 +346,6 @@ export async function build({
         } else {
           goPackageName = `${usrModName}/${packageName}`;
         }
-        console.log({ goPackageName });
       }
 
       const mainModGoContents = modMainGoContents
@@ -365,11 +355,6 @@ export async function build({
       if (isGoModExist && isGoModInRootDir) {
         debug('[mod-root] Write main file to ' + downloadPath);
         await writeFile(join(downloadPath, mainGoFileName), mainModGoContents);
-        console.log();
-        console.log(join(downloadPath, mainGoFileName));
-        console.log();
-        console.log(mainModGoContents);
-        console.log('\n');
 
         undoFileActions.push({
           to: undefined, // delete
@@ -378,11 +363,6 @@ export async function build({
       } else if (isGoModExist && !isGoModInRootDir) {
         debug('[mod-other] Write main file to ' + goModPath);
         await writeFile(join(goModPath, mainGoFileName), mainModGoContents);
-        console.log();
-        console.log(join(goModPath, mainGoFileName));
-        console.log();
-        console.log(mainModGoContents);
-        console.log('\n');
         undoFileActions.push({
           to: undefined, // delete
           from: join(goModPath, mainGoFileName),
@@ -393,11 +373,6 @@ export async function build({
           join(entrypointDirname, mainGoFileName),
           mainModGoContents
         );
-        console.log();
-        console.log(join(entrypointDirname, mainGoFileName));
-        console.log();
-        console.log(mainModGoContents);
-        console.log('\n');
         undoFileActions.push({
           to: undefined, // delete
           from: join(entrypointDirname, mainGoFileName),
@@ -479,11 +454,6 @@ export async function build({
       // Go doesn't like to build files in different directories,
       // so now we place `main.go` together with the user code
       await writeFile(join(entrypointDirname, mainGoFileName), mainGoContents);
-      console.log();
-      console.log(join(entrypointDirname, mainGoFileName));
-      console.log();
-      console.log(mainGoContents);
-      console.log('\n');
       undoFileActions.push({
         to: undefined, // delete
         from: join(entrypointDirname, mainGoFileName),
@@ -557,12 +527,6 @@ async function renameHandlerFunction(fsPath: string, from: string, to: string) {
   fileContents = fileContents.replace(fromRegex, ` ${to}`);
 
   await writeFile(fsPath, fileContents);
-  console.log();
-  console.log('RENAME HANDLER FUNCTION');
-  console.log(fsPath);
-  console.log();
-  console.log(fileContents);
-  console.log('\n');
 }
 
 export function getNewHandlerFunctionName(
