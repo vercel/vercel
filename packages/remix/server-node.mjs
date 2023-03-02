@@ -9,7 +9,7 @@ import {
 
 installGlobals();
 
-import build from './build-node.js';
+import build from '@remix-run/dev/server-build';
 
 const handleRequest = createRemixRequestHandler(build, process.env.NODE_ENV);
 
