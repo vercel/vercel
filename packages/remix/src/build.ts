@@ -122,21 +122,13 @@ export const build: BuildV2 = async ({
   // Make our version of `remix` CLI available to the project's build
   // command by creating a symlink to the copy in our node modules,
   // so that `serverBundles` works: https://github.com/remix-run/remix/pull/5479
-  const nodeModulesDir = join(entrypointFsDirname, 'node_modules');
-  const remixRunDevPath = join(nodeModulesDir, '@remix-run/dev');
-  let backupRemixRunDevPath:
-    | string
-    | false = `${remixRunDevPath}.__vercel_backup`;
-
-  try {
-    await fs.rename(remixRunDevPath, backupRemixRunDevPath);
-  } catch (err: any) {
-    if (err.code !== 'ENOENT') {
-      throw err;
-    }
-    backupRemixRunDevPath = false;
-  }
-
+  const remixRunDevPath = await ensureResolvable(
+    entrypointFsDirname,
+    repoRootPath,
+    '@remix-run/dev'
+  );
+  const backupRemixRunDevPath = `${remixRunDevPath}.__vercel_backup`;
+  await fs.rename(remixRunDevPath, backupRemixRunDevPath);
   await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
 
   // Make `remix build` output production mode
@@ -274,10 +266,7 @@ module.exports = config;`;
 
     // Remove `@remix-run/dev` symlink
     await fs.unlink(remixRunDevPath);
-    if (backupRemixRunDevPath) {
-      // Restore previous version if it was existed
-      await fs.rename(backupRemixRunDevPath, remixRunDevPath);
-    }
+    await fs.rename(backupRemixRunDevPath, remixRunDevPath);
   }
 
   // This needs to happen before we run NFT to create the Node/Edge functions
@@ -593,13 +582,20 @@ async function createRenderEdgeFunction(
   return fn;
 }
 
-async function ensureResolvable(start: string, base: string, pkgName: string) {
+async function ensureResolvable(
+  start: string,
+  base: string,
+  pkgName: string
+): Promise<string> {
   try {
-    const resolvedPath = _require.resolve(pkgName, { paths: [start] });
+    const resolvedPkgPath = _require.resolve(`${pkgName}/package.json`, {
+      paths: [start],
+    });
+    const resolvedPath = dirname(resolvedPkgPath);
     if (!relative(base, resolvedPath).startsWith(`..${sep}`)) {
       // Resolved path is within the root of the project, so all good
       debug(`"${pkgName}" resolved to '${resolvedPath}'`);
-      return;
+      return resolvedPath;
     }
   } catch (err: any) {
     if (err.code !== 'MODULE_NOT_FOUND') {
@@ -623,7 +619,7 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
     if (match) {
       const pkgDir = join(pnpmDir, match, 'node_modules', pkgName);
       await ensureSymlink(pkgDir, join(pnpmDir, '..'), pkgName);
-      return;
+      return pkgDir;
     }
   }
 
@@ -641,7 +637,7 @@ async function ensureResolvable(start: string, base: string, pkgName: string) {
     if (match) {
       const pkgDir = join(prefixDir, match, 'node_modules', pkgName);
       await ensureSymlink(pkgDir, join(npmDir, '..'), pkgName);
-      return;
+      return pkgDir;
     }
   }
 
