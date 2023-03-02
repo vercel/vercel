@@ -22,6 +22,21 @@ export type ResolvedRouteConfig =
   | ResolvedNodeRouteConfig
   | ResolvedEdgeRouteConfig;
 
+export interface ResolvedRoutePaths {
+  /**
+   * The full URL path of the route, as will be shown
+   * on the Functions tab in the deployment inspector.
+   */
+  path: string;
+  /**
+   * The full URL path of the route, but with syntax that
+   * is compatible with the `path-to-regexp` module.
+   */
+  rePath: string;
+}
+
+const SPLAT_PATH = '/:params+';
+
 const configExts = ['.js', '.cjs', '.mjs'];
 
 export function findConfig(dir: string, basename: string): string | undefined {
@@ -110,28 +125,39 @@ export function* getRouteIterator(route: ConfigRoute, routes: RouteManifest) {
 export function getPathFromRoute(
   route: ConfigRoute,
   routes: RouteManifest
-): string {
+): ResolvedRoutePaths {
   if (
     route.id === 'root' ||
     (route.parentId === 'root' && !route.path && route.index)
   ) {
-    return 'index';
+    return { path: 'index', rePath: '/index' };
   }
 
   const pathParts: string[] = [];
+  const rePathParts: string[] = [];
+
   for (const currentRoute of getRouteIterator(route, routes)) {
-    if (currentRoute.path) pathParts.push(currentRoute.path);
+    if (!currentRoute.path) continue;
+
+    pathParts.push(
+      currentRoute.path.replace(/:(.+)\?/g, (_, name) => `(:${name})`)
+    );
+
+    rePathParts.push(currentRoute.path);
   }
+
   const path = pathParts.reverse().join('/');
-  return path;
+
+  // Replace "/*" at the end to handle "splat routes"
+  let rePath = rePathParts.reverse().join('/');
+  rePath =
+    rePath === '*' ? SPLAT_PATH : `/${rePath.replace(/\/\*$/, SPLAT_PATH)}`;
+
+  return { path, rePath };
 }
 
-export function getRegExpFromPath(path: string): RegExp | false {
+export function getRegExpFromPath(rePath: string): RegExp | false {
   const keys: Key[] = [];
-  // Replace "/*" at the end to handle "splat routes"
-  const splatPath = '/:params+';
-  const rePath =
-    path === '*' ? splatPath : `/${path.replace(/\/\*$/, splatPath)}`;
   const re = pathToRegexp(rePath, keys);
   return keys.length > 0 ? re : false;
 }
