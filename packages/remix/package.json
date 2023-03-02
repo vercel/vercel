@@ -22,7 +22,7 @@
     "vercel-edge-entrypoint.js"
   ],
   "dependencies": {
-    "@remix-run/dev": "npm:@vercel/remix-run-dev@1.13.0-patch.2",
+    "@remix-run/dev": "npm:@vercel/remix-run-dev@1.14.0",
     "@vercel/nft": "0.22.5",
     "@vercel/static-config": "2.0.13",
     "path-to-regexp": "6.2.1",
