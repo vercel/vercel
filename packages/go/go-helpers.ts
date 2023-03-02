@@ -140,12 +140,6 @@ export async function createGo({
     goPreferredVersion || Array.from(versionMap.values())[0];
 
   const env = cloneEnv(process.env, opts.env);
-
-  if (goPreferredVersion) {
-    debug(`Preferred go version ${goPreferredVersion} (from go.mod)`);
-    env.GO111MODULE = 'on';
-  }
-
   const { arch, platform } = process;
   const goGlobalDir = join(
     goGlobalCachePath,
@@ -153,9 +147,15 @@ export async function createGo({
   );
   const goGlobalBinDir = join(goGlobalDir, 'bin');
 
+  if (goPreferredVersion) {
+    debug(`Preferred go version ${goPreferredVersion} (from go.mod)`);
+    env.GO111MODULE = 'on';
+  }
+
   // check we have the desired `go` version cached
   if (await pathExists(goGlobalBinDir)) {
     // check if `go` has already been downloaded and that the version is correct
+    env.GOROOT = goGlobalDir;
     env.PATH = `${goGlobalBinDir}${delimiter}${env.PATH}`;
     const { failed, stdout } = await execa('go', ['version'], {
       env,
@@ -214,6 +214,7 @@ export async function createGo({
       .on('finish', resolve);
   });
 
+  env.GOROOT = goGlobalDir;
   env.PATH = `${goGlobalBinDir}${delimiter}${env.PATH}`;
   return new GoWrapper(env, opts);
 }
