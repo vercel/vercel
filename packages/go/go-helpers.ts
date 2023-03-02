@@ -156,18 +156,15 @@ export async function createGo({
   // check we have the desired `go` version cached
   if (await pathExists(goGlobalBinDir)) {
     // check if `go` has already been downloaded and that the version is correct
+    env.PATH = `${goGlobalBinDir}${delimiter}${env.PATH}`;
     const { failed, stdout } = await execa('go', ['version'], {
-      env: {
-        ...process.env,
-        PATH: goGlobalBinDir,
-      },
+      env,
       reject: false,
     });
     if (!failed) {
       const { version, short } = parseGoVersionString(stdout);
       if (version === goSelectedVersion || short === goSelectedVersion) {
         debug(`Selected go ${version} (from cache)`);
-        env.PATH = `${goGlobalBinDir}${delimiter}${env.PATH}`;
         return new GoWrapper(env, opts);
       } else {
         debug(`Found cached go ${version}, but need ${goSelectedVersion}`);
@@ -178,6 +175,7 @@ export async function createGo({
   if (!goPreferredVersion) {
     // check if `go` is installed in the system PATH and if it's the version we want
     const { failed, stdout } = await execa('go', ['version'], {
+      env,
       reject: false,
     });
     if (!failed) {
@@ -222,6 +220,11 @@ export async function createGo({
 
 const goVersionRegExp = /(\d+)\.(\d+)(?:\.(\d+))?/;
 
+/**
+ * Parses the raw output from `go version` and returns the version parts.
+ *
+ * @param goVersionOutput The output from `go version`
+ */
 function parseGoVersionString(goVersionOutput: string) {
   const matches = goVersionOutput.match(goVersionRegExp) || [];
   const major = parseInt(matches[1], 10);
@@ -236,6 +239,12 @@ function parseGoVersionString(goVersionOutput: string) {
   };
 }
 
+/**
+ * Attempts to parse the preferred Go version from the `go.mod` file.
+ *
+ * @param modulePath The directory containing the `go.mod` file
+ * @returns
+ */
 async function parseGoModVersion(
   modulePath: string
 ): Promise<string | undefined> {

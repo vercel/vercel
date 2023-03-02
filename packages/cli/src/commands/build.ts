@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { join, normalize, relative, resolve } from 'path';
+import { join, normalize, posix, relative, resolve, sep } from 'path';
 import {
   getDiscontinuedNodeVersions,
   normalizePath,
@@ -710,7 +710,9 @@ function expandBuild(files: string[], build: Builder): Builder[] {
     });
   }
 
-  let src = normalize(build.src || '**');
+  let src = normalize(build.src || '**')
+    .split(sep)
+    .join(posix.sep);
   if (src === '.' || src === './') {
     throw new NowBuildError({
       code: `invalid_build_specification`,
