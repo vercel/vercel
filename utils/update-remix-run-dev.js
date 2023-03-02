@@ -16,6 +16,7 @@ module.exports = async ({ github, context }, newVersion) => {
       encoding: 'utf-8',
     });
   }
+  newVersion = newVersion.trim();
   const branch = `vercel-remix-run-dev-${newVersion.replaceAll('.', '-')}`;
 
   if (oldVersion === newVersion) {
@@ -55,13 +56,6 @@ module.exports = async ({ github, context }, newVersion) => {
     base: 'main',
     title: `[remix] Upgrade @remix-run/dev to version ${newVersion}`,
     body: `This auto-generated PR updates @remix-run/dev to version ${newVersion}`,
-  });
-
-  await github.rest.pulls.requestReviewers({
-    owner,
-    repo,
-    pull_number: pr.data.number,
-    reviewers: ['Ethan-Arrowood', 'TooTallNate'],
   });
 
   await github.rest.issues.addLabels({
