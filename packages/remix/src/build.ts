@@ -326,7 +326,7 @@ module.exports = config;`;
     // Layout routes don't get a function / route added
     if (isLayoutRoute(route.id, remixRoutes)) continue;
 
-    const path = getPathFromRoute(route, remixConfig.routes);
+    const { path, rePath } = getPathFromRoute(route, remixConfig.routes);
 
     // If the route is a pathless layout route (at the root level)
     // and doesn't have any sub-routes, then a function should not be created.
@@ -356,7 +356,7 @@ module.exports = config;`;
         : func;
 
     // If this is a dynamic route then add a Vercel route
-    const re = getRegExpFromPath(path);
+    const re = getRegExpFromPath(rePath);
     if (re) {
       routes.push({
         src: re.source,
