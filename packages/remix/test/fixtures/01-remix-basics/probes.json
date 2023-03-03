@@ -37,6 +37,15 @@
       "responseHeaders": {
         "set-cookie": ["hello=world", "foo=bar"]
       }
+    },
+    {
+      "path": "/text.txt",
+      "mustContain": "this is a text file served at: /text.txt"
+    },
+    {
+      "path": "/text-txt",
+      "status": 404,
+      "mustContain": "Not Found"
     }
   ]
 }
