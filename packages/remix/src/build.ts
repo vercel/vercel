@@ -111,20 +111,6 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
-  const remixDevPackageJsonPath = _require.resolve(
-    '@remix-run/dev/package.json',
-    { paths: [entrypointFsDirname] }
-  );
-  const remixVersion = JSON.parse(
-    await fs.readFile(remixDevPackageJsonPath, 'utf8')
-  ).version;
-
-  let remixConfigWrapped = false;
-  const remixConfigPath = findConfig(entrypointFsDirname, 'remix.config');
-  const renamedRemixConfigPath = remixConfigPath
-    ? `${remixConfigPath}.original${extname(remixConfigPath)}`
-    : undefined;
-
   // Make our version of `remix` CLI available to the project's build
   // command by creating a symlink to the copy in our node modules,
   // so that `serverBundles` works: https://github.com/remix-run/remix/pull/5479
@@ -133,6 +119,17 @@ export const build: BuildV2 = async ({
     repoRootPath,
     '@remix-run/dev'
   );
+
+  const remixVersion = JSON.parse(
+    await fs.readFile(join(remixRunDevPath, 'package.json'), 'utf8')
+  ).version;
+
+  let remixConfigWrapped = false;
+  const remixConfigPath = findConfig(entrypointFsDirname, 'remix.config');
+  const renamedRemixConfigPath = remixConfigPath
+    ? `${remixConfigPath}.original${extname(remixConfigPath)}`
+    : undefined;
+
   const backupRemixRunDevPath = `${remixRunDevPath}.__vercel_backup`;
   await fs.rename(remixRunDevPath, backupRemixRunDevPath);
   await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
