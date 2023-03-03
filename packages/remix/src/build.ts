@@ -151,17 +151,7 @@ export const build: BuildV2 = async ({
     // Make `remix build` output production mode
     spawnOpts.env.NODE_ENV = 'production';
 
-    try {
-      remixConfig = await chdirAndReadConfig(entrypointFsDirname);
-    } catch (err: any) {
-      if (remixConfigPath) {
-        console.log(
-          `There was an error loading the ${basename(remixConfigPath)}`
-        );
-      }
-      throw err;
-    }
-
+    remixConfig = await chdirAndReadConfig(entrypointFsDirname);
     remixRoutes = Object.values(remixConfig.routes);
 
     // Read the `export const config` (if any) for each route
