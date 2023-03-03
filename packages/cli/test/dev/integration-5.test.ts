@@ -447,3 +447,29 @@ test(
     }
   })
 );
+
+test('[vercel dev] handles bad serverless function responses', async () => {
+  const directory = fixture('invalid-node-function');
+  const { dev, port } = await testFixture(directory, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  // Monitor `stderr` for the warning
+  dev.stderr.setEncoding('utf8');
+  const warnMessage = `WARN: /api/bad-response returned a value, which is not expected for serverless functions. See: https://vercel.link/serverless-function-quickstart`;
+  const messageFoundPromise = new Promise<void>(resolve => {
+    dev.stdout.on('data', (str: string) => {
+      if (str.includes(warnMessage)) {
+        resolve();
+      }
+    });
+  });
+
+  // intentionally do not await `fetch` - this request will time out
+  const controller = new AbortController();
+  fetch(`http://localhost:${port}/api/faulty`, {
+    signal: controller.signal,
+  });
+  await messageFoundPromise;
+  controller.abort();
+});
