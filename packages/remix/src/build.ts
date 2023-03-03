@@ -386,7 +386,7 @@ module.exports = config;`;
     dest: '/404',
   });
 
-  return { routes, output };
+  return { routes, output, framework: { version: remixVersion } };
 };
 
 function hasScript(scriptName: string, pkg: PackageJson | null) {
