@@ -30,7 +30,7 @@ import type {
   BuildResultV2Typical,
 } from '@vercel/build-utils';
 import type { BaseFunctionConfig } from '@vercel/static-config';
-import type { RemixConfig } from '@remix-run/dev/dist/config';
+import type { AppConfig, RemixConfig } from '@remix-run/dev/dist/config';
 import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 import {
   calculateRouteConfigHash,
@@ -138,10 +138,7 @@ export const build: BuildV2 = async ({
   await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
 
   // These get populated inside the try/catch below
-  let serverBundles: {
-    serverBuildPath: string;
-    routes: string[];
-  }[];
+  let serverBundles: AppConfig['serverBundles'];
   let remixConfig: RemixConfig;
   let remixRoutes: ConfigRoute[];
   const serverBundlesMap = new Map<string, ConfigRoute[]>();
