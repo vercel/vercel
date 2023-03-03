@@ -9,6 +9,10 @@ export default function (
   remixContext: EntryContext
 ) {
   const remixServer = <RemixServer context={remixContext} url={request.url} />;
-  return handleRequest(request, responseStatusCode, responseHeaders, remixServer)
+  return handleRequest(
+    request,
+    responseStatusCode,
+    responseHeaders,
+    remixServer
+  );
 }
-

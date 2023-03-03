@@ -1,18 +1,8 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/remix",
-      "config": {
-        "zeroConfig": true
-      }
-    }
-  ],
   "probes": [
     { "path": "/", "mustContain": "Welcome to Remix" },
     { "path": "/edge", "mustContain": "Welcome to Remix@Edge" },
-    { "path": "/b", "mustContain": "B page" },
+    { "path": "/b", "mustContain": "hi from the B page running in sfo1" },
     { "path": "/nested", "mustContain": "Nested index page" },
     { "path": "/nested/another", "mustContain": "Nested another page" },
     { "path": "/nested/index", "status": 404, "mustContain": "Not Found" },
