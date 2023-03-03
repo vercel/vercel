@@ -2090,7 +2090,7 @@ export default class DevServer {
     res: http.ServerResponse
   ) {
     const method = (req.method || 'GET').padEnd(7);
-    this.output.print(`${chalk.bold('→')} ${method} ${chalk.bold(req.url)}\n`);
+    this.output.info(`${chalk.bold('→')} ${method} ${chalk.bold(req.url)}\n`);
 
     // wait until the response completes so that the `statusCode` has the real response value
     res.on('close', () => {
@@ -2102,7 +2102,7 @@ export default class DevServer {
       const responseLine = `${chalk.bold('←')} ${
         res.statusCode
       }     ${chalk.bold(req.url)}`;
-      this.output.print(`${chalk.gray(responseLine)}\n`);
+      this.output.info(`${chalk.gray(responseLine)}\n`);
     });
   }
 

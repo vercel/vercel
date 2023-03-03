@@ -11,6 +11,7 @@ const IS_TEST = process.env.NODE_ENV === 'test';
 
 export interface OutputOptions {
   debug?: boolean;
+  info?: boolean;
   supportsHyperlink?: boolean;
   noColor?: boolean;
 }
@@ -26,6 +27,7 @@ interface LinkOptions {
 export class Output {
   stream: WritableTTY;
   debugEnabled: boolean;
+  infoEnabled: boolean;
   supportsHyperlink: boolean;
   colorDisabled: boolean;
   private spinnerMessage: string;
@@ -35,12 +37,14 @@ export class Output {
     stream: WritableTTY,
     {
       debug: debugEnabled = false,
+      info: infoEnabled = false,
       supportsHyperlink = detectSupportsHyperlink(stream),
       noColor = false,
     }: OutputOptions = {}
   ) {
     this.stream = stream;
     this.debugEnabled = debugEnabled;
+    this.infoEnabled = infoEnabled;
     this.supportsHyperlink = supportsHyperlink;
     this.spinnerMessage = '';
     this._spinner = null;
@@ -124,13 +128,23 @@ export class Output {
   };
 
   debug = (str: string) => {
-    if (this.debugEnabled) {
-      this.log(
-        `${chalk.bold('[debug]')} ${chalk.gray(
-          `[${new Date().toISOString()}]`
-        )} ${str}`
-      );
+    if (!this.debugEnabled) {
+      return;
     }
+
+    this.log(
+      `${chalk.bold('[debug]')} ${chalk.gray(
+        `[${new Date().toISOString()}]`
+      )} ${str}`
+    );
+  };
+
+  info = (str: string) => {
+    if (!this.infoEnabled) {
+      return;
+    }
+
+    this.log(str);
   };
 
   spinner = (message: string, delay: number = 300): void => {

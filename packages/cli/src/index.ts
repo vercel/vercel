@@ -96,6 +96,7 @@ const main = async () => {
         '-v': '--version',
         '--debug': Boolean,
         '-d': '--debug',
+        '--info': Boolean,
       },
       { permissive: true }
     );
@@ -105,10 +106,12 @@ const main = async () => {
   }
 
   const isDebugging = argv['--debug'];
+  const isInfo = argv['--info'];
   const isNoColor = argv['--no-color'];
 
   output = new Output(process.stderr, {
     debug: isDebugging,
+    info: isInfo,
     noColor: isNoColor,
   });
 

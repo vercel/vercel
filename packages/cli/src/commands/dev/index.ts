@@ -31,6 +31,7 @@ const help = () => {
 
     -h, --help             Output usage information
     -d, --debug            Debug mode [off]
+    --info                 Info (request/response) logging [off]
     --no-color             No color mode [off]
     -l, --listen  [uri]    Specify a URI endpoint on which to listen [0.0.0.0:3000]
     -t, --token   [token]  Specify an Authorization Token

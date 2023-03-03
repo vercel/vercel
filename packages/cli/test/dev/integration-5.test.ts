@@ -450,9 +450,9 @@ test(
   })
 );
 
-test('[vercel dev] only logs request/response for functions', async () => {
+test('[vercel dev] only logs request/response for functions when `--info` arg is used', async () => {
   const dir = fixture('nextjs-with-api');
-  const { dev, port, readyResolver } = await testFixture(dir);
+  const { dev, port, readyResolver } = await testFixture(dir, {}, ['--info']);
 
   async function makeRequest(path: string, expectedStatusCode = 200) {
     let res = await fetch(`http://localhost:${port}${path}`);
@@ -507,6 +507,41 @@ test('[vercel dev] only logs request/response for functions', async () => {
       `! ERR     /api/node-bad\n${RED}Error: intentional break!`
     );
     expect(stderr).toMatch('← 500     /api/node-bad');
+  } finally {
+    await dev.kill();
+  }
+});
+
+test('[vercel dev] does not log request/response for functions by default', async () => {
+  const dir = fixture('nextjs-with-api');
+  const { dev, port, readyResolver } = await testFixture(dir);
+
+  async function makeRequest(path: string, expectedStatusCode = 200) {
+    let res = await fetch(`http://localhost:${port}${path}`);
+    validateResponseHeaders(res);
+    expect(await res.status, path).toBe(expectedStatusCode);
+    return res;
+  }
+
+  try {
+    await readyResolver;
+
+    await makeRequest('/api/node-good');
+    await makeRequest('/api/node-bad', 500);
+
+    const { stderr } = await dev.kill();
+
+    // GET /api/node-good
+    expect(stderr).not.toMatch('→ GET     /api/node-good');
+    expect(stderr).not.toMatch('← 200     /api/node-good');
+
+    // GET /api/node-bad
+    expect(stderr).not.toMatch('→ GET     /api/node-bad');
+    // errors are still shown!
+    expect(stderr).toMatch(
+      `! ERR     /api/node-bad\n${RED}Error: intentional break!`
+    );
+    expect(stderr).not.toMatch('← 500     /api/node-bad');
   } finally {
     await dev.kill();
   }
