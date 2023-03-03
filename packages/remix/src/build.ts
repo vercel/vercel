@@ -119,6 +119,12 @@ export const build: BuildV2 = async ({
     await fs.readFile(remixDevPackageJsonPath, 'utf8')
   ).version;
 
+  let remixConfigWrapped = false;
+  const remixConfigPath = findConfig(entrypointFsDirname, 'remix.config');
+  const renamedRemixConfigPath = remixConfigPath
+    ? `${remixConfigPath}.original${extname(remixConfigPath)}`
+    : undefined;
+
   // Make our version of `remix` CLI available to the project's build
   // command by creating a symlink to the copy in our node modules,
   // so that `serverBundles` works: https://github.com/remix-run/remix/pull/5479
@@ -131,106 +137,121 @@ export const build: BuildV2 = async ({
   await fs.rename(remixRunDevPath, backupRemixRunDevPath);
   await fs.symlink(REMIX_RUN_DEV_PATH, remixRunDevPath);
 
-  // Make `remix build` output production mode
-  spawnOpts.env.NODE_ENV = 'production';
-
-  const remixConfig = await chdirAndReadConfig(entrypointFsDirname);
-  const remixRoutes = Object.values(remixConfig.routes);
-
-  // Read the `export const config` (if any) for each route
-  const project = new Project();
-  const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
-  for (const route of remixRoutes) {
-    const routePath = join(remixConfig.appDirectory, route.file);
-    const staticConfig = getConfig(project, routePath);
-    staticConfigsMap.set(route, staticConfig);
-  }
-
-  const resolvedConfigsMap = new Map<ConfigRoute, ResolvedRouteConfig>();
-  for (const route of remixRoutes) {
-    const config = getResolvedRouteConfig(
-      route,
-      remixConfig.routes,
-      staticConfigsMap
-    );
-    resolvedConfigsMap.set(route, config);
-  }
-
-  // Figure out which routes belong to which server bundles
-  // based on having common static config properties
+  // These get populated inside the try/catch below
+  let serverBundles: {
+    serverBuildPath: string;
+    routes: string[];
+  }[];
+  let remixConfig: RemixConfig;
+  let remixRoutes: ConfigRoute[];
   const serverBundlesMap = new Map<string, ConfigRoute[]>();
-  for (const route of remixRoutes) {
-    if (isLayoutRoute(route.id, remixRoutes)) continue;
+  const resolvedConfigsMap = new Map<ConfigRoute, ResolvedRouteConfig>();
 
-    const config = resolvedConfigsMap.get(route);
-    if (!config) {
-      throw new Error(`Expected resolved config for "${route.id}"`);
-    }
-    const hash = calculateRouteConfigHash(config);
+  try {
+    // Make `remix build` output production mode
+    spawnOpts.env.NODE_ENV = 'production';
 
-    let routesForHash = serverBundlesMap.get(hash);
-    if (!Array.isArray(routesForHash)) {
-      routesForHash = [];
-      serverBundlesMap.set(hash, routesForHash);
-    }
-
-    routesForHash.push(route);
-  }
-
-  const serverBundles = Array.from(serverBundlesMap.entries()).map(
-    ([hash, routes]) => {
-      const runtime = resolvedConfigsMap.get(routes[0])?.runtime ?? 'nodejs';
-      return {
-        serverBuildPath: `build/build-${runtime}-${hash}.js`,
-        routes: routes.map(r => r.id),
-      };
-    }
-  );
-
-  // We need to patch the `remix.config.js` file to force some values necessary
-  // for a build that works on either Node.js or the Edge runtime
-  const remixConfigPath = findConfig(entrypointFsDirname, 'remix.config');
-  const renamedRemixConfigPath = remixConfigPath
-    ? `${remixConfigPath}.original${extname(remixConfigPath)}`
-    : undefined;
-  if (remixConfigPath && renamedRemixConfigPath) {
-    await fs.rename(remixConfigPath, renamedRemixConfigPath);
-
-    // Figure out if the `remix.config` file is using ESM syntax
-    let isESM = false;
     try {
-      _require(renamedRemixConfigPath);
+      remixConfig = await chdirAndReadConfig(entrypointFsDirname);
     } catch (err: any) {
-      isESM = err.code === 'ERR_REQUIRE_ESM';
+      if (remixConfigPath) {
+        console.log(
+          `There was an error loading the ${basename(remixConfigPath)}`
+        );
+      }
+      throw err;
     }
 
-    let patchedConfig: string;
-    if (isESM) {
-      patchedConfig = `import config from './${basename(
-        renamedRemixConfigPath
-      )}';
+    remixRoutes = Object.values(remixConfig.routes);
+
+    // Read the `export const config` (if any) for each route
+    const project = new Project();
+    const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
+    for (const route of remixRoutes) {
+      const routePath = join(remixConfig.appDirectory, route.file);
+      const staticConfig = getConfig(project, routePath);
+      staticConfigsMap.set(route, staticConfig);
+    }
+
+    for (const route of remixRoutes) {
+      const config = getResolvedRouteConfig(
+        route,
+        remixConfig.routes,
+        staticConfigsMap
+      );
+      resolvedConfigsMap.set(route, config);
+    }
+
+    // Figure out which routes belong to which server bundles
+    // based on having common static config properties
+    for (const route of remixRoutes) {
+      if (isLayoutRoute(route.id, remixRoutes)) continue;
+
+      const config = resolvedConfigsMap.get(route);
+      if (!config) {
+        throw new Error(`Expected resolved config for "${route.id}"`);
+      }
+      const hash = calculateRouteConfigHash(config);
+
+      let routesForHash = serverBundlesMap.get(hash);
+      if (!Array.isArray(routesForHash)) {
+        routesForHash = [];
+        serverBundlesMap.set(hash, routesForHash);
+      }
+
+      routesForHash.push(route);
+    }
+
+    serverBundles = Array.from(serverBundlesMap.entries()).map(
+      ([hash, routes]) => {
+        const runtime = resolvedConfigsMap.get(routes[0])?.runtime ?? 'nodejs';
+        return {
+          serverBuildPath: `build/build-${runtime}-${hash}.js`,
+          routes: routes.map(r => r.id),
+        };
+      }
+    );
+
+    // We need to patch the `remix.config.js` file to force some values necessary
+    // for a build that works on either Node.js or the Edge runtime
+    if (remixConfigPath && renamedRemixConfigPath) {
+      await fs.rename(remixConfigPath, renamedRemixConfigPath);
+
+      // Figure out if the `remix.config` file is using ESM syntax
+      let isESM = false;
+      try {
+        _require(renamedRemixConfigPath);
+      } catch (err: any) {
+        isESM = err.code === 'ERR_REQUIRE_ESM';
+      }
+
+      let patchedConfig: string;
+      if (isESM) {
+        patchedConfig = `import config from './${basename(
+          renamedRemixConfigPath
+        )}';
 config.serverBuildTarget = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
 config.serverBuildPath = undefined;
 config.serverBundles = ${JSON.stringify(serverBundles)};
 export default config;`;
-    } else {
-      patchedConfig = `const config = require('./${basename(
-        renamedRemixConfigPath
-      )}');
+      } else {
+        patchedConfig = `const config = require('./${basename(
+          renamedRemixConfigPath
+        )}');
 config.serverBuildTarget = undefined;
 config.serverModuleFormat = 'cjs';
 config.serverPlatform = 'node';
 config.serverBuildPath = undefined;
 config.serverBundles = ${JSON.stringify(serverBundles)};
 module.exports = config;`;
+      }
+      await fs.writeFile(remixConfigPath, patchedConfig);
+      remixConfigWrapped = true;
     }
-    await fs.writeFile(remixConfigPath, patchedConfig);
-  }
 
-  // Run "Build Command"
-  try {
+    // Run "Build Command"
     if (buildCommand) {
       debug(`Executing build command "${buildCommand}"`);
       await execCommand(buildCommand, {
@@ -260,7 +281,7 @@ module.exports = config;`;
     }
   } finally {
     // Clean up our patched `remix.config.js` to be polite
-    if (remixConfigPath && renamedRemixConfigPath) {
+    if (remixConfigWrapped && remixConfigPath && renamedRemixConfigPath) {
       await fs.rename(renamedRemixConfigPath, remixConfigPath);
     }
 
