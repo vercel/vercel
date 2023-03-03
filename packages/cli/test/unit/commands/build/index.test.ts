@@ -7,10 +7,6 @@ import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import { setupFixture } from '../../../helpers/setup-fixture';
-import JSON5 from 'json5';
-// TODO (@Ethan-Arrowood) - After shipping support for turbo and nx, revisit rush support
-// import execa from 'execa';
 
 jest.setTimeout(ms('1 minute'));
 
@@ -488,6 +484,7 @@ describe('build', () => {
           {
             src: '^/.*$',
             middlewarePath: 'middleware',
+            middlewareRawSrc: [],
             override: true,
             continue: true,
           },
@@ -552,6 +549,7 @@ describe('build', () => {
           {
             src: '^/.*$',
             middlewarePath: 'middleware',
+            middlewareRawSrc: [],
             override: true,
             continue: true,
           },
@@ -616,6 +614,7 @@ describe('build', () => {
           {
             src: '^\\/about(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$|^\\/dashboard(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
             middlewarePath: 'middleware',
+            middlewareRawSrc: ['/about/:path*', '/dashboard/:path*'],
             override: true,
             continue: true,
           },
@@ -1062,6 +1061,7 @@ describe('build', () => {
           domains: [],
           minimumCacheTTL: 60,
           formats: ['image/avif', 'image/webp'],
+          contentDispositionType: 'attachment',
         },
       });
     } finally {
@@ -1261,404 +1261,6 @@ describe('build', () => {
       );
       const packageDistFiles = await fs.readdir(packageDir);
       expect(packageDistFiles).toContain('dist-module.js');
-    });
-  });
-
-  /**
-   * TODO (@Ethan-Arrowood) - After shipping support for turbo and nx, revisit rush support
-   * Previously, rush tests were too flaky and consistently would timeout beyone the excessive
-   * timeout window granted for these tests. Maybe we are doing something wrong.
-   */
-  describe('monorepo-detection', () => {
-    beforeAll(() => {
-      process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
-    });
-
-    afterAll(() => {
-      delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
-    });
-
-    const setupMonorepoDetectionFixture = (fixture: string) => {
-      const cwd = setupFixture(`commands/build/monorepo-detection/${fixture}`);
-      process.chdir(cwd);
-      return cwd;
-    };
-
-    describe.each([
-      'nx',
-      'nx-package-config',
-      'nx-project-and-package-config-1',
-      'nx-project-and-package-config-2',
-      'nx-project-config',
-      // 'rush',
-      'turbo',
-      'turbo-package-config',
-    ])('fixture: %s', fixture => {
-      const monorepoManagerMap: Record<string, Record<string, string>> = {
-        turbo: {
-          name: 'Turbo',
-          buildCommand: 'cd ../.. && npx turbo run build --filter=app-1...',
-          installCommand: 'yarn install',
-          ignoreCommand: 'npx turbo-ignore',
-        },
-        nx: {
-          name: 'Nx',
-          buildCommand: 'cd ../.. && npx nx build app-1',
-          installCommand: 'yarn install',
-        },
-        // rush: {
-        //   name: 'Rush',
-        //   buildCommand:
-        //     'node ../../common/scripts/install-run-rush.js build --to app-1',
-        //   installCommand:
-        //     'node ../../common/scripts/install-run-rush.js install',
-        // },
-      };
-
-      const { name, ...commands } = monorepoManagerMap[fixture.split('-')[0]];
-
-      test(
-        'should detect and use correct defaults',
-        async () => {
-          try {
-            const cwd = setupMonorepoDetectionFixture(fixture);
-
-            // if (fixture === 'rush') {
-            //   await execa('npx', ['@microsoft/rush', 'update'], {
-            //     cwd,
-            //     reject: false,
-            //   });
-            // }
-
-            const exitCode = await build(client);
-            expect(exitCode).toBe(0);
-            await expect(client.stderr).toOutput(
-              `Automatically detected ${name} monorepo manager. Attempting to assign default settings.`
-            );
-            const result = await fs.readFile(
-              join(cwd, '.vercel/output/static/index.txt'),
-              'utf8'
-            );
-            expect(result).toMatch(/Hello, world/);
-          } finally {
-            process.chdir(originalCwd);
-            delete process.env.__VERCEL_BUILD_RUNNING;
-          }
-        },
-        ms('5 minutes')
-      );
-
-      test(
-        'should not override preconfigured project settings',
-        async () => {
-          try {
-            const cwd = setupMonorepoDetectionFixture(fixture);
-
-            // if (fixture === 'rush') {
-            //   await execa('npx', ['@microsoft/rush', 'update'], {
-            //     cwd,
-            //     reject: false,
-            //   });
-            // }
-
-            const projectJSONPath = join(cwd, '.vercel/project.json');
-            const projectJSON = JSON.parse(
-              await fs.readFile(projectJSONPath, 'utf-8')
-            );
-
-            const projectJSONCommands = {
-              ...commands,
-            };
-
-            if (projectJSONCommands.ignoreCommand) {
-              projectJSONCommands.commandForIgnoringBuildStep =
-                projectJSONCommands.ignoreCommand;
-              delete projectJSONCommands.ignoreCommand;
-            }
-
-            await fs.writeFile(
-              projectJSONPath,
-              JSON.stringify({
-                ...projectJSON,
-                settings: {
-                  ...projectJSON.settings,
-                  ...projectJSONCommands,
-                },
-              })
-            );
-
-            const exitCode = await build(client);
-            expect(exitCode).toBe(0);
-            await expect(client.stderr).toOutput(
-              'Cannot automatically assign buildCommand as it is already set via project settings or configuration overrides.'
-            );
-            await expect(client.stderr).toOutput(
-              'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
-            );
-            if (name === 'Turbo') {
-              await expect(client.stderr).toOutput(
-                'Cannot automatically assign commandForIgnoringBuildStep as it is already set via project settings or configuration overrides.'
-              );
-            }
-          } finally {
-            process.chdir(originalCwd);
-            delete process.env.__VERCEL_BUILD_RUNNING;
-          }
-        },
-        ms('5 minutes')
-      );
-
-      test(
-        'should not override configuration overrides',
-        async () => {
-          try {
-            const cwd = setupMonorepoDetectionFixture(fixture);
-
-            // if (fixture === 'rush') {
-            //   await execa('npx', ['@microsoft/rush', 'update'], {
-            //     cwd,
-            //     reject: false,
-            //   });
-            // }
-
-            await fs.writeFile(
-              join(cwd, 'packages/app-1/vercel.json'),
-              JSON.stringify({
-                ...commands,
-              })
-            );
-
-            const exitCode = await build(client);
-            expect(exitCode).toBe(0);
-            await expect(client.stderr).toOutput(
-              'Cannot automatically assign buildCommand as it is already set via project settings or configuration overrides.'
-            );
-            await expect(client.stderr).toOutput(
-              'Cannot automatically assign installCommand as it is already set via project settings or configuration overrides.'
-            );
-            if (name === 'Turbo') {
-              await expect(client.stderr).toOutput(
-                'Cannot automatically assign commandForIgnoringBuildStep as it is already set via project settings or configuration overrides.'
-              );
-            }
-          } finally {
-            process.chdir(originalCwd);
-            delete process.env.__VERCEL_BUILD_RUNNING;
-          }
-        },
-        ms('5 minutes')
-      );
-
-      test(
-        `skip when rootDirectory is null or '.'`,
-        async () => {
-          try {
-            const cwd = setupMonorepoDetectionFixture(fixture);
-
-            const projectJSONPath = join(cwd, '.vercel/project.json');
-            const projectJSON = JSON.parse(
-              await fs.readFile(projectJSONPath, 'utf-8')
-            );
-
-            await fs.writeFile(
-              projectJSONPath,
-              JSON.stringify({
-                ...projectJSON,
-                settings: {
-                  rootDirectory: null,
-                  outputDirectory: null,
-                },
-              })
-            );
-
-            const packageJSONPath = join(cwd, 'package.json');
-            const packageJSON = JSON.parse(
-              await fs.readFile(packageJSONPath, 'utf-8')
-            );
-
-            await fs.writeFile(
-              packageJSONPath,
-              JSON.stringify({
-                ...packageJSON,
-                scripts: {
-                  ...packageJSON.scripts,
-                  build: `node build.js`,
-                },
-              })
-            );
-
-            const exitCode = await build(client);
-            expect(exitCode).toBe(0);
-            const result = await fs.readFile(
-              join(cwd, '.vercel/output/static/index.txt'),
-              'utf8'
-            );
-            expect(result).toMatch(/Hello, from build\.js/);
-          } finally {
-            process.chdir(originalCwd);
-            delete process.env.__VERCEL_BUILD_RUNNING;
-          }
-        },
-        ms('5 miuntes')
-      );
-
-      test(
-        `skip when vercel-build is defined`,
-        async () => {
-          try {
-            const cwd = setupMonorepoDetectionFixture(fixture);
-
-            const packageJSONPath = join(cwd, 'packages/app-1/package.json');
-            const packageJSON = JSON.parse(
-              await fs.readFile(packageJSONPath, 'utf-8')
-            );
-
-            await fs.writeFile(
-              packageJSONPath,
-              JSON.stringify({
-                ...packageJSON,
-                scripts: {
-                  ...packageJSON.scripts,
-                  'vercel-build': `node ../../build.js`,
-                },
-              })
-            );
-
-            const exitCode = await build(client);
-            expect(exitCode).toBe(0);
-            const result = await fs.readFile(
-              join(cwd, '.vercel/output/static/index.txt'),
-              'utf8'
-            );
-            expect(result).toMatch(/Hello, from build\.js/);
-          } finally {
-            process.chdir(originalCwd);
-            delete process.env.__VERCEL_BUILD_RUNNING;
-          }
-        },
-        ms('5 miuntes')
-      );
-
-      test(
-        `skip when VERCEL_BUILD_MONOREPO_SUPPORT is disabled`,
-        async () => {
-          try {
-            process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '0';
-            const cwd = setupMonorepoDetectionFixture(fixture);
-
-            const packageJSONPath = join(cwd, 'packages/app-1/package.json');
-            const packageJSON = JSON.parse(
-              await fs.readFile(packageJSONPath, 'utf-8')
-            );
-
-            await fs.writeFile(
-              packageJSONPath,
-              JSON.stringify({
-                ...packageJSON,
-                scripts: {
-                  ...packageJSON.scripts,
-                  build: `node ../../build.js`,
-                },
-              })
-            );
-
-            const exitCode = await build(client);
-            expect(exitCode).toBe(0);
-            const result = await fs.readFile(
-              join(cwd, '.vercel/output/static/index.txt'),
-              'utf8'
-            );
-            expect(result).toMatch(/Hello, from build\.js/);
-          } finally {
-            process.chdir(originalCwd);
-            delete process.env.__VERCEL_BUILD_RUNNING;
-            process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
-          }
-        },
-        ms('5 miuntes')
-      );
-    });
-
-    describe.each([
-      [
-        'nx',
-        'nx.json',
-        'targetDefaults.build',
-        [
-          'Missing required `build` target in either nx.json, project.json, or package.json Nx configuration. Skipping automatic setting assignment.',
-        ],
-      ],
-      [
-        'nx-project-config',
-        'packages/app-1/project.json',
-        'targets.build',
-        [
-          'Missing required `build` target in either nx.json, project.json, or package.json Nx configuration. Skipping automatic setting assignment.',
-        ],
-      ],
-      [
-        'nx-package-config',
-        'packages/app-1/package.json',
-        'nx.targets.build',
-        [
-          'Missing required `build` target in either nx.json, project.json, or package.json Nx configuration. Skipping automatic setting assignment.',
-        ],
-      ],
-      [
-        'turbo',
-        'turbo.json',
-        'pipeline.build',
-        [
-          'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.',
-        ],
-      ],
-      [
-        'turbo-package-config',
-        'package.json',
-        'turbo.pipeline.build',
-        [
-          'Missing required `build` pipeline in turbo.json or package.json Turbo configuration. Skipping automatic setting assignment.',
-        ],
-      ],
-    ])('fixture: %s', (fixture, configFile, propertyAccessor, expectedLogs) => {
-      function deleteSubProperty(
-        obj: { [k: string]: any },
-        accessorString: string
-      ) {
-        const accessors = accessorString.split('.');
-        const lastAccessor = accessors.pop();
-        for (const accessor of accessors) {
-          obj = obj[accessor];
-        }
-        // lastAccessor cannot be undefined as accessors will always be an array of atleast one string
-        delete obj[lastAccessor as string];
-      }
-
-      test(
-        'should warn and not configure settings when project does not satisfy requirements',
-        async () => {
-          try {
-            const cwd = setupMonorepoDetectionFixture(fixture);
-
-            const configPath = join(cwd, configFile);
-            const config = JSON5.parse(await fs.readFile(configPath, 'utf-8'));
-
-            deleteSubProperty(config, propertyAccessor);
-            await fs.writeFile(configPath, JSON.stringify(config));
-
-            const exitCode = await build(client);
-
-            expect(exitCode).toBe(1);
-            for (const log of expectedLogs) {
-              await expect(client.stderr).toOutput(log);
-            }
-          } finally {
-            process.chdir(originalCwd);
-            delete process.env.__VERCEL_BUILD_RUNNING;
-          }
-        },
-        ms('3 minutes')
-      );
     });
   });
 });

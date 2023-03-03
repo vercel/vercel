@@ -1,0 +1,3 @@
+{
+  "probes": [{ "path": "/", "mustContain": "This is a remix app. Hooray!" }]
+}
