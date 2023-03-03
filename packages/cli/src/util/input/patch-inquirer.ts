@@ -84,7 +84,10 @@ function listRender(choices: (Choice | Separator)[], pointer: number) {
 
     let isSelected = i - separatorOffset === pointer;
     let line = (isSelected ? '● ' : '○ ') + choice.name;
-    line = chalk.cyan(line);
+
+    if (isSelected) {
+      line = chalk.cyan(line);
+    }
     output += line + ' \n';
   });
 

@@ -435,7 +435,13 @@ function getStreamResponseCallback({ url, socket, cipher, resolve, reject }) {
     headers += `x-vercel-status-code: ${response.statusCode || 200}${CRLF}`;
     for (const [name, value] of getHeadersIterator(response.headers)) {
       if (!['connection', 'transfer-encoding'].includes(name)) {
-        headers += `x-vercel-header-${name}: ${value}${CRLF}`;
+        if (typeof value === 'string') {
+          headers += `x-vercel-header-${name}: ${value}${CRLF}`;
+        } else {
+          for (const val of value) {
+            headers += `x-vercel-header-${name}: ${val}${CRLF}`;
+          }
+        }
       }
     }
 
