@@ -9,6 +9,7 @@ import { ProjectLinkAndSettings } from '../projects/project-settings';
 import { Output } from '../output';
 import title from 'title';
 import { PartialProjectSettings } from '../input/edit-project-settings';
+import { debug } from '@vercel/build-utils';
 
 export async function setMonorepoDefaultSettings(
   cwd: string,
@@ -26,8 +27,8 @@ export async function setMonorepoDefaultSettings(
     value: string
   ) => {
     if (projectSettings[command]) {
-      output.warn(
-        `Cannot automatically assign ${command} as it is already set via project settings or configuration overrides.`
+      debug(
+        `Skipping auto-assignment of ${command} as it is already set via project settings or configuration overrides.`
       );
     } else {
       projectSettings[command] = value;
