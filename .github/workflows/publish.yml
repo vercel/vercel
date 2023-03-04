@@ -16,6 +16,9 @@ jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
+    permissions:
+     contents: write
+     id-token: write
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -41,6 +44,8 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: 16
+    - name: install npm@9
+      run: npm i -g npm@9
     - name: install pnpm@7.24.2
       run: npm i -g pnpm@7.24.2
     - name: Install
