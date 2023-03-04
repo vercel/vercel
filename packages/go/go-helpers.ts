@@ -1,12 +1,24 @@
 import tar from 'tar';
 import execa from 'execa';
 import fetch from 'node-fetch';
-import { mkdirp, pathExists, readFile, remove } from 'fs-extra';
-import { join, delimiter } from 'path';
+import {
+  createWriteStream,
+  mkdirp,
+  pathExists,
+  readFile,
+  remove,
+} from 'fs-extra';
+import { join, delimiter, dirname } from 'path';
 import stringArgv from 'string-argv';
 import { cloneEnv, debug } from '@vercel/build-utils';
+import { pipeline } from 'stream';
+import { promisify } from 'util';
+import { tmpdir } from 'os';
+import yauzl from 'yauzl-promise';
 import XDGAppPaths from 'xdg-app-paths';
 import type { Env } from '@vercel/build-utils';
+
+const streamPipeline = promisify(pipeline);
 
 const versionMap = new Map([
   ['1.19', '1.19.6'],
@@ -28,12 +40,18 @@ const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
 const GO_MIN_VERSION = 13;
 const getPlatform = (p: string) => platformMap.get(p) || p;
 const getArch = (a: string) => archMap.get(a) || a;
-const getGoUrl = (version: string, platform: string, arch: string) => {
+
+function getGoUrl(version: string) {
+  const { arch, platform } = process;
   const goArch = getArch(arch);
   const goPlatform = getPlatform(platform);
   const ext = platform === 'win32' ? 'zip' : 'tar.gz';
-  return `https://dl.google.com/go/go${version}.${goPlatform}-${goArch}.${ext}`;
-};
+  const filename = `go${version}.${goPlatform}-${goArch}.${ext}`;
+  return {
+    filename,
+    url: `https://dl.google.com/go/${filename}`,
+  };
+}
 
 const goGlobalCachePath = join(XDGAppPaths('com.vercel.cli').cache(), 'golang');
 
@@ -140,10 +158,9 @@ export async function createGo({
     goPreferredVersion || Array.from(versionMap.values())[0];
 
   const env = cloneEnv(process.env, opts.env);
-  const { arch, platform } = process;
   const goGlobalDir = join(
     goGlobalCachePath,
-    `${goSelectedVersion}_${platform}_${arch}`
+    `${goSelectedVersion}_${process.platform}_${process.arch}`
   );
   const goGlobalBinDir = join(goGlobalDir, 'bin');
 
@@ -194,7 +211,25 @@ export async function createGo({
   }
 
   // we need to download and cache the desired `go` version
-  const url = getGoUrl(goSelectedVersion, platform, arch);
+  await download({
+    dest: goGlobalDir,
+    version: goSelectedVersion,
+  });
+
+  env.GOROOT = goGlobalDir;
+  env.PATH = `${goGlobalBinDir}${delimiter}${env.PATH}`;
+  return new GoWrapper(env, opts);
+}
+
+/**
+ * Download and installs the Go distribution.
+ *
+ * @param dest The directory to install Go into. If directory exists, it is
+ * first deleted before installing.
+ * @param version The Go version to download
+ */
+async function download({ dest, version }: { dest: string; version: string }) {
+  const { filename, url } = getGoUrl(version);
   debug(`Downloading go: ${url}`);
   const res = await fetch(url);
 
@@ -202,21 +237,50 @@ export async function createGo({
     throw new Error(`Failed to download: ${url} (${res.status})`);
   }
 
-  // TODO: use a zip extractor when `ext === "zip"`
-  debug(`Installing go ${goSelectedVersion} to ${goGlobalDir}`);
-  await remove(goGlobalDir);
-  await mkdirp(goGlobalDir);
+  debug(`Installing go ${version} to ${dest}`);
+
+  await remove(dest);
+  await mkdirp(dest);
+
+  if (/\.zip$/.test(filename)) {
+    const zipFile = join(tmpdir(), filename);
+    try {
+      await streamPipeline(res.body, createWriteStream(zipFile));
+      const zip = await yauzl.open(zipFile);
+      let entry = await zip.readEntry();
+      while (entry) {
+        const fileName = entry.fileName.split('/').slice(1).join('/');
+
+        if (fileName) {
+          const destPath = join(dest, fileName);
+
+          if (/\/$/.test(fileName)) {
+            await mkdirp(destPath);
+          } else {
+            const [entryStream] = await Promise.all([
+              entry.openReadStream(),
+              mkdirp(dirname(destPath)),
+            ]);
+            const out = createWriteStream(destPath);
+            await streamPipeline(entryStream, out);
+          }
+        }
+
+        entry = await zip.readEntry();
+      }
+    } finally {
+      await remove(zipFile);
+    }
+    return;
+  }
+
   await new Promise((resolve, reject) => {
     res.body
       .on('error', reject)
-      .pipe(tar.extract({ cwd: goGlobalDir, strip: 1 }))
+      .pipe(tar.extract({ cwd: dest, strip: 1 }))
       .on('error', reject)
       .on('finish', resolve);
   });
-
-  env.GOROOT = goGlobalDir;
-  env.PATH = `${goGlobalBinDir}${delimiter}${env.PATH}`;
-  return new GoWrapper(env, opts);
 }
 
 const goVersionRegExp = /(\d+)\.(\d+)(?:\.(\d+))?/;
