@@ -202,11 +202,12 @@ export const frameworks = [
     useRuntime: { src: 'package.json', use: '@vercel/remix' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
-      every: [
-        // Intentionally does not detect a package name
-        // https://github.com/vercel/vercel/pull/7761
+      some: [
         {
           path: 'remix.config.js',
+        },
+        {
+          path: 'remix.config.mjs',
         },
       ],
     },
@@ -1698,6 +1699,7 @@ export const frameworks = [
     description: 'React framework for headless commerce',
     website: 'https://hydrogen.shopify.dev',
     useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
+    envPrefix: 'PUBLIC_',
     detectors: {
       some: [
         {

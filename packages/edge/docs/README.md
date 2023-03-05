@@ -7,6 +7,7 @@
 - [ExtraResponseInit](interfaces/ExtraResponseInit.md)
 - [Geo](interfaces/Geo.md)
 - [ModifiedRequest](interfaces/ModifiedRequest.md)
+- [RequestContext](interfaces/RequestContext.md)
 
 ### Variables
 

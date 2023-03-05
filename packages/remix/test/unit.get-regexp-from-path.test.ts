@@ -2,17 +2,18 @@ import { getRegExpFromPath } from '../src/utils';
 
 describe('getRegExpFromPath()', () => {
   describe('paths without parameters', () => {
-    it.each([{ path: 'index' }, { path: 'api/hello' }, { path: 'projects' }])(
-      'should return `false` for "$path"',
-      ({ path }) => {
-        expect(getRegExpFromPath(path)).toEqual(false);
-      }
-    );
+    it.each([
+      { path: '/index' },
+      { path: '/api/hello' },
+      { path: '/projects' },
+    ])('should return `false` for "$path"', ({ path }) => {
+      expect(getRegExpFromPath(path)).toEqual(false);
+    });
   });
 
   describe.each([
     {
-      path: '*',
+      path: '/:params+',
       urls: [
         {
           url: '/',
@@ -37,7 +38,7 @@ describe('getRegExpFromPath()', () => {
       ],
     },
     {
-      path: 'projects/*',
+      path: '/projects/:params+',
       urls: [
         {
           url: '/',
@@ -58,7 +59,7 @@ describe('getRegExpFromPath()', () => {
       ],
     },
     {
-      path: ':foo',
+      path: '/:foo',
       urls: [
         {
           url: '/',
@@ -79,7 +80,7 @@ describe('getRegExpFromPath()', () => {
       ],
     },
     {
-      path: 'blog/:id/edit',
+      path: '/blog/:id/edit',
       urls: [
         {
           url: '/',
@@ -103,6 +104,65 @@ describe('getRegExpFromPath()', () => {
         },
         {
           url: '/blog/123/another',
+          expected: false,
+        },
+      ],
+    },
+    {
+      path: '/:lang?',
+      urls: [
+        {
+          url: '/',
+          expected: true,
+        },
+        {
+          url: '/en',
+          expected: true,
+        },
+        {
+          url: '/en/other',
+          expected: false,
+        },
+      ],
+    },
+    {
+      path: '/:lang?/other',
+      urls: [
+        {
+          url: '/other',
+          expected: true,
+        },
+        {
+          url: '/en/other',
+          expected: true,
+        },
+        {
+          url: '/',
+          expected: false,
+        },
+        {
+          url: '/another',
+          expected: false,
+        },
+      ],
+    },
+    {
+      path: '/:lang?/:pid',
+      urls: [
+        {
+          url: '/123',
+          expected: true,
+        },
+        {
+          url: '/en/123',
+          expected: true,
+        },
+        {
+          url: '/',
+          expected: false,
+        },
+        {
+          url: '/en/foo/bar',
           expected: false,
         },
       ],
