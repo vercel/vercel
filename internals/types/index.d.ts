@@ -17,7 +17,11 @@ export type JSONArray = JSONValue[];
 
 export type JSONValue = Primitive | JSONObject | JSONArray;
 
-export type JSONObject = Record<string, JSONValue>;
+// defining this as a `type` instead of an `interface` causes a circular reference bug
+// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
+export interface JSONObject {
+  [key: string]: JSONValue;
+}
 
 export interface AuthConfig {
   '// Note'?: string;
@@ -36,7 +40,7 @@ export interface GlobalConfig {
   // TODO: legacy - remove
   updateChannel?: string;
   desktop?: {
-    teamOrder: any;
+    teamOrder: unknown;
   };
 }
 
@@ -137,7 +141,7 @@ export interface Deployment {
   };
   bootedAt?: number;
   build?: { env: string[] };
-  builds?: { use: string; src?: string; config?: Record<string, any> };
+  builds?: { use: string; src?: string; config?: Record<string, unknown> };
   buildErrorAt?: number;
   buildingAt: number;
   canceledAt?: number;
