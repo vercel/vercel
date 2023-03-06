@@ -2,6 +2,8 @@ import type { Readable, Writable } from 'node:stream';
 import type { BuilderFunctions, ProjectSettings } from '@vercel/build-utils';
 import type { Route } from '@vercel/routing-utils';
 
+export type { ProjectSettings } from '@vercel/build-utils';
+
 export type Primitive =
   | bigint
   | boolean
