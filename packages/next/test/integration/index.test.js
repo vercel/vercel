@@ -32,6 +32,12 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     expect(buildResult.output['dashboard/changelog']).toBeDefined();
     expect(buildResult.output['dashboard/deployments/[id]']).toBeDefined();
 
+    expect(buildResult.output['api/hello-again']).toBeDefined();
+    expect(buildResult.output['api/hello-again'].type).toBe('Lambda');
+    expect(
+      buildResult.output['api/hello-again'].experimentalResponseStreaming
+    ).toBe(true);
+
     expect(buildResult.output['edge-route-handler']).toBeDefined();
     expect(buildResult.output['edge-route-handler'].type).toBe('EdgeFunction');
     expect(buildResult.output['edge-route-handler.rsc']).not.toBeDefined();
