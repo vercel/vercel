@@ -1,8 +1,17 @@
-import { Static, Type } from '@sinclair/typebox';
+import { Static, Type, Kind } from '@sinclair/typebox';
+import { Custom } from '@sinclair/typebox/custom';
 import { TypeCompiler } from '@sinclair/typebox/compiler';
 
+Custom.Set<{ enum: string[] }>('StringEnum', (schema, value) => {
+  return schema.enum.includes(value as string);
+});
+
 function StringEnum<T extends string[]>(values: [...T]) {
-  return Type.Unsafe<T[number]>({ type: 'string', enum: values });
+  return Type.Unsafe<T[number]>({
+    [Kind]: 'StringEnum',
+    type: 'string',
+    enum: values,
+  });
 }
 
 const GatsbyPageSchema = Type.Object({
@@ -16,6 +25,7 @@ const GatsbyFunctionSchema = Type.Object({
   originalAbsoluteFilePath: Type.String(),
 });
 export type GatsbyFunction = Static<typeof GatsbyFunctionSchema>;
+TypeCompiler.Compile(GatsbyFunctionSchema);
 
 const GatsbyRedirectSchema = Type.Object({
   fromPath: Type.String(),
@@ -39,6 +49,4 @@ const GatsbyStateSchema = Type.Object({
 });
 export type GatsbyState = Static<typeof GatsbyStateSchema>;
 
-//export const validateGatsbyState = ajv.compile(GatsbyStateSchema);
-const C = TypeCompiler.Compile(GatsbyStateSchema);
-export const validateGatsbyState = C.Check;
+export const validateGatsbyState = TypeCompiler.Compile(GatsbyStateSchema);
