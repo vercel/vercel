@@ -53,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (data.serverDataHeaders) {
     for (const [name, value] of Object.entries(data.serverDataHeaders)) {
-      res.setHeader(name, value);
+      res.setHeader(name, value as string);
     }
   }
 
