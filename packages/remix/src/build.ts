@@ -147,6 +147,7 @@ export const build: BuildV2 = async ({
 
     remixConfig = await chdirAndReadConfig(entrypointFsDirname);
     remixRoutes = Object.values(remixConfig.routes);
+    console.log(remixRoutes);
 
     // Read the `export const config` (if any) for each route
     const project = new Project();

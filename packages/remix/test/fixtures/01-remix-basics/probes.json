@@ -46,6 +46,19 @@
       "path": "/text-txt",
       "status": 404,
       "mustContain": "Not Found"
+    },
+    {
+      "path": "/admin",
+      "mustContain": "Optional static path"
+    },
+    {
+      "path": "/admin/lol",
+      "mustContain": "Optional static path"
+    },
+    {
+      "path": "/admin/other",
+      "status": 404,
+      "mustContain": "Not Found"
     }
   ]
 }
