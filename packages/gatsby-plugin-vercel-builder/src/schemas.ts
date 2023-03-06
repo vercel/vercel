@@ -1,8 +1,5 @@
-import Ajv from 'ajv';
 import { Static, Type } from '@sinclair/typebox';
 import { TypeCompiler } from '@sinclair/typebox/compiler';
-
-export const ajv = new Ajv({ allErrors: true });
 
 function StringEnum<T extends string[]>(values: [...T]) {
   return Type.Unsafe<T[number]>({ type: 'string', enum: values });
