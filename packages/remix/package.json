@@ -1,6 +1,6 @@
 {
   "name": "@vercel/remix",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
