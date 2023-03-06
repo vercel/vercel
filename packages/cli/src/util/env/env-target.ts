@@ -1,4 +1,4 @@
-import { ProjectEnvTarget } from '../../types';
+import { ProjectEnvTarget } from '@vercel-internals/types';
 
 function envTargets(): string[] {
   return Object.values(ProjectEnvTarget);

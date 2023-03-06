@@ -1,5 +1,5 @@
 import { outputJSON } from 'fs-extra';
-import { Org, Project, ProjectLink } from '../../types';
+import { Org, Project, ProjectLink } from '@vercel-internals/types';
 import { getLinkFromDir, VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
 import { join } from 'path';
 import { VercelConfig } from '@vercel/client';
