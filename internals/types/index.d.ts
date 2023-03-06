@@ -1,8 +1,6 @@
-import type { BuilderFunctions } from '@vercel/build-utils';
-import type { Readable, Writable } from 'stream';
+import type { Readable, Writable } from 'node:stream';
+import type { BuilderFunctions, ProjectSettings } from '@vercel/build-utils';
 import type { Route } from '@vercel/routing-utils';
-
-export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
 export type Primitive =
   | bigint
@@ -17,9 +15,7 @@ export type JSONArray = JSONValue[];
 
 export type JSONValue = Primitive | JSONObject | JSONArray;
 
-export interface JSONObject {
-  [key: string]: JSONValue;
-}
+export type JSONObject = Record<string, JSONValue>;
 
 export interface AuthConfig {
   '// Note'?: string;
@@ -42,16 +38,16 @@ export interface GlobalConfig {
   };
 }
 
-type Billing = {
+interface Billing {
   addons: string[];
   cancelation?: number;
   period: { start: number; end: number };
   plan: string;
   platform: string;
   trial: { start: number; end: number };
-};
+}
 
-export type User = {
+export interface User {
   id: string;
   avatar: string;
   createdAt: number;
@@ -60,7 +56,7 @@ export type User = {
   billing: Billing;
   name?: string;
   limited?: boolean;
-};
+}
 
 export interface Team {
   id: string;
@@ -80,7 +76,7 @@ export interface Team {
   };
 }
 
-export type Domain = {
+export interface Domain {
   id: string;
   name: string;
   boughtAt: number;
@@ -97,9 +93,9 @@ export type Domain = {
     username: string;
     email: string;
   };
-};
+}
 
-export type DomainConfig = {
+export interface DomainConfig {
   configuredBy: null | 'CNAME' | 'A' | 'http';
   misconfigured: boolean;
   serviceType: 'zeit.world' | 'external' | 'na';
@@ -107,16 +103,16 @@ export type DomainConfig = {
   cnames: string[] & { traceString?: string };
   aValues: string[] & { traceString?: string };
   dnssecEnabled?: boolean;
-};
+}
 
-export type Cert = {
+export interface Cert {
   uid: string;
   autoRenew: boolean;
   cns: string[];
   created: string;
   creator: string;
   expiration: string;
-};
+}
 
 type RouteOrMiddleware =
   | Route
@@ -126,7 +122,7 @@ type RouteOrMiddleware =
       middleware: 0;
     };
 
-export type Deployment = {
+export interface Deployment {
   alias?: string[];
   aliasAssigned?: boolean | null | number;
   aliasError?: null | { code: string; message: string };
@@ -139,7 +135,7 @@ export type Deployment = {
   };
   bootedAt?: number;
   build?: { env: string[] };
-  builds?: { use: string; src?: string; config?: { [key: string]: any } };
+  builds?: { use: string; src?: string; config?: Record<string, any> };
   buildErrorAt?: number;
   buildingAt: number;
   canceledAt?: number;
@@ -171,9 +167,7 @@ export type Deployment = {
   initReadyAt?: number;
   inspectorUrl?: string | null;
   lambdas?: Build[];
-  meta?: {
-    [key: string]: string | undefined;
-  };
+  meta?: Record<string, string | undefined>;
   monorepoManager?: string | null;
   name: string;
   ownerId?: string;
@@ -217,9 +211,9 @@ export type Deployment = {
   url: string;
   userAliases?: string[];
   version: 2;
-};
+}
 
-export type Alias = {
+export interface Alias {
   uid: string;
   alias: string;
   createdAt: number;
@@ -233,9 +227,9 @@ export type Alias = {
     email: string;
   };
   deploymentId?: string;
-};
+}
 
-export type DNSRecord = {
+export interface DNSRecord {
   id: string;
   creator: string;
   mxPriority?: number;
@@ -249,9 +243,9 @@ export type DNSRecord = {
   createdAt: number;
   updatedAt: number;
   domain: string;
-};
+}
 
-type SRVRecordData = {
+interface SRVRecordData {
   name: string;
   type: 'SRV';
   srv: {
@@ -260,14 +254,14 @@ type SRVRecordData = {
     target: string;
     weight: number;
   };
-};
+}
 
-type MXRecordData = {
+interface MXRecordData {
   name: string;
   type: 'MX';
   value: string;
   mxPriority: number;
-};
+}
 
 export type DNSRecordData =
   | {
@@ -500,13 +494,13 @@ export interface Build {
 
   /**
    * The Runtime the Build used to generate the output
-   * @example "@vercel/node"
+   * @example "\@vercel/node"
    */
   use?: string;
 
   /**
    * An object that contains the Build's configuration
-   * @example {"zeroConfig": true}
+   * @example \{"zeroConfig": true\}
    */
   config?: {
     distDir?: string | undefined;

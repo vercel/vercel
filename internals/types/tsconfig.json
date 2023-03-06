@@ -1,0 +1,4 @@
+{
+  "extends": "@vercel/style-guide/typescript",
+  "include": ["index.d.ts"]
+}
