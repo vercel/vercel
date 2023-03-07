@@ -47,7 +47,7 @@ jobs:
     - name: install npm@9
       run: npm i -g npm@9
     - run: npm i -g pnpm@7.24.2 turbo@1.8.3
-    - run: node utils/gen.js && turbo run pnpm-cache-hack --cache-dir=.turbo
+    - run: node utils/gen.js && turbo run pnpm-cache-hack --cache-dir=".turbo"
     - name: Install
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       run: pnpm install

@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm i -g pnpm@7.24.2 turbo@1.8.3
-      - run: node utils/gen.js && turbo run pnpm-cache-hack --cache-dir=.turbo
+      - run: node utils/gen.js && turbo run pnpm-cache-hack --cache-dir=".turbo"
       - run: pnpm install
       - run: pnpm run build
       - run: pnpm test-cli

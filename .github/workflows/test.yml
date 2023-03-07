@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm i -g pnpm@7.24.2 turbo@1.8.3
-      - run: node utils/gen.js && turbo run pnpm-cache-hack --cache-dir=.turbo
+      - run: node utils/gen.js && turbo run pnpm-cache-hack --cache-dir=".turbo"
       - run: pnpm install
       - id: set-tests
         run: |
@@ -78,16 +78,16 @@ jobs:
         run: curl -L -O https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz && tar -xzf hugo_0.56.0_macOS-64bit.tar.gz && mv ./hugo packages/cli/test/dev/fixtures/08-hugo/
 
       - run: npm i -g pnpm@7.24.2 turbo@1.8.3
-      - run: node utils/gen.js && turbo run pnpm-cache-hack --cache-dir=.turbo
+      - run: node utils/gen.js && turbo run pnpm-cache-hack --cache-dir=".turbo"
 
       - run: pnpm install
 
       - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
+        run: node utils/gen.js && turbo run build --cache-dir=".turbo" --scope=${{matrix.packageName}} --include-dependencies --no-deps
         env:
           FORCE_COLOR: '1'
       - name: Test ${{matrix.packageName}}
-        run: node utils/gen.js && node_modules/.bin/turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
+        run: node utils/gen.js && turbo run test --cache-dir=".turbo" --scope=${{matrix.packageName}} --no-deps -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
