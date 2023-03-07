@@ -11,7 +11,8 @@
   "main": "./dist/entry.server.node.js",
   "browser": "./dist/entry.server.edge.js",
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "pnpm-cache-hack": "pnpm install"
   },
   "license": "MIT",
   "files": [

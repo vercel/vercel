@@ -12,7 +12,8 @@
   "scripts": {
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
-    "test-e2e": "pnpm test"
+    "test-e2e": "pnpm test",
+    "pnpm-cache-hack": "pnpm install"
   },
   "files": [
     "dist"
