@@ -25,6 +25,8 @@ import pkg from '../package';
 import prepareFixtures from './helpers/prepare';
 import { fetchTokenWithRetry } from '../../../test/lib/deployment/now-deploy';
 
+// TODO: jest timeout of 1m
+
 // log command when running `execa`
 function execa(file, args, options) {
   console.log(`$ vercel ${args.join(' ')}`);
@@ -369,7 +371,7 @@ test('default command should prompt login with empty auth.json', async t => {
 // NOTE: Test order is important here.
 // This test MUST run before the tests below for them to work.
 test('login', async t => {
-  t.timeout(ms('1m'));
+  // NOTE: Needs timeout of 1m
 
   await fs.remove(getConfigAuthPath());
   const loginOutput = await execa(binaryPath, [
@@ -2822,7 +2824,7 @@ test('fail to add a domain without a project', async t => {
 });
 
 test('change user', async t => {
-  t.timeout(ms('1m'));
+  // NOTE: Needs timeout of 1m
 
   const { stdout: prevUser } = await execute(['whoami']);
 
