@@ -4,10 +4,27 @@ const path = require('path');
 const NUMBER_OF_CHUNKS = 5;
 const MINIMUM_PER_CHUNK = 1;
 const runnersMap = new Map([
-  ['test-e2e', ['ubuntu-latest']],
+  // ['test-cli', ['ubuntu-latest']],
   ['test-next-local', ['ubuntu-latest']],
   ['test-dev', ['ubuntu-latest', 'macos-latest']],
 ]);
+
+/*
+Looks like:
+
+  {
+    "runner": "ubuntu-latest",
+    "packagePath": "packages/next",
+    "packageName": "@vercel/next",
+    "scriptName": "test-next-local",
+    "testPaths": [
+      "test/integration/index.test.js"
+    ],
+    "chunkNumber": 1,
+    "allChunksLength": 2
+  },
+
+*/
 
 async function getChunkedTests() {
   const scripts = [...runnersMap.keys()];
