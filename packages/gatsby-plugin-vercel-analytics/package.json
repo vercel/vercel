@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "babel src --out-dir .",
-    "pnpm-cache-hack": "echo \"hack\""
+    "pnpm-cache-hack": "pnpm install"
   },
   "dependencies": {
     "@babel/runtime": "7.12.1",

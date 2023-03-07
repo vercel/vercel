@@ -12,7 +12,7 @@
     "build": "tsc",
     "test-unit": "pnpm test",
     "test": "jest --env node --verbose --runInBand --bail",
-    "pnpm-cache-hack": "echo \"hack\""
+    "pnpm-cache-hack": "pnpm install"
   },
   "files": [
     "dist"

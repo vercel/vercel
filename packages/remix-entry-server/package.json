@@ -12,7 +12,7 @@
   "browser": "./dist/entry.server.edge.js",
   "scripts": {
     "build": "node build.js",
-    "pnpm-cache-hack": "echo \"hack\""
+    "pnpm-cache-hack": "pnpm install"
   },
   "license": "MIT",
   "files": [

@@ -11,7 +11,7 @@
     "build": "tsc",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test",
-    "pnpm-cache-hack": "echo \"hack\""
+    "pnpm-cache-hack": "pnpm install"
   },
   "dependencies": {
     "@iarna/toml": "2.2.3",

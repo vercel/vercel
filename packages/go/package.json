@@ -13,7 +13,7 @@
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-e2e": "pnpm test",
-    "pnpm-cache-hack": "echo \"hack\""
+    "pnpm-cache-hack": "pnpm install"
   },
   "files": [
     "dist"

@@ -17,7 +17,7 @@
     "test-e2e": "pnpm test test/test.js",
     "test": "jest --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/prepare-cache.test.js",
-    "pnpm-cache-hack": "echo \"hack\""
+    "pnpm-cache-hack": "pnpm install"
   },
   "dependencies": {
     "@vercel/nft": "0.22.5",

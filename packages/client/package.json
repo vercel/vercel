@@ -18,7 +18,7 @@
     "test-e2e": "pnpm test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test tests/unit.*test.*",
-    "pnpm-cache-hack": "echo \"hack\""
+    "pnpm-cache-hack": "pnpm install"
   },
   "engines": {
     "node": ">= 14"

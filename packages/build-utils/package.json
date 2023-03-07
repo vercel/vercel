@@ -15,7 +15,7 @@
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test test/unit.*test.*",
     "test-e2e": "pnpm test test/integration.test.ts",
-    "pnpm-cache-hack": "echo \"hack\""
+    "pnpm-cache-hack": "pnpm install"
   },
   "devDependencies": {
     "@iarna/toml": "2.2.3",

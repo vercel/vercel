@@ -19,7 +19,7 @@
     "coverage": "codecov",
     "build": "ts-node ./scripts/build.ts",
     "dev": "ts-node ./src/index.ts",
-    "pnpm-cache-hack": "echo \"hack\""
+    "pnpm-cache-hack": "pnpm install"
   },
   "bin": {
     "vc": "./dist/index.js",
