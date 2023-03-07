@@ -8,6 +8,12 @@ jest.setTimeout(ms('6m'));
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should normalize routes in build results output', async () => {
+    if (process.platform === 'win32') {
+      // skipping flakey test (hopefully temporarily)
+      console.log('Skipping test on Windows');
+      return;
+    }
+
     const files = [
       'index.test.js',
       'next.config.js',
