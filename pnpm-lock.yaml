@@ -94,8 +94,8 @@ importers:
 
   internals/types:
     specifiers:
-      '@vercel/build-utils': workspace:6.3.2
-      '@vercel/routing-utils': workspace:2.1.10
+      '@vercel/build-utils': 6.3.2
+      '@vercel/routing-utils': 2.1.10
       '@vercel/style-guide': 4.0.2
       typescript: 4.9.4
     dependencies:
@@ -217,7 +217,7 @@ importers:
       '@types/which': 1.3.2
       '@types/write-json-file': 2.2.1
       '@types/yauzl-promise': 2.1.0
-      '@vercel-internals/types': workspace:*
+      '@vercel-internals/types': '*'
       '@vercel/build-utils': 6.3.2
       '@vercel/client': 12.4.2
       '@vercel/error-utils': 1.0.8
@@ -1150,10 +1150,10 @@ packages:
       '@babel/template': 7.20.7
       '@babel/traverse': 7.20.12
       '@babel/types': 7.20.7
-      convert-source-map: 1.9.0
+      convert-source-map: 1.8.0
       debug: 4.3.4
       gensync: 1.0.0-beta.2
-      json5: 2.2.3
+      json5: 2.2.2
       semver: 6.3.0
     transitivePeerDependencies:
       - supports-color
@@ -1732,7 +1732,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-bigint/7.8.3_@babel+core@7.20.12:
@@ -1845,7 +1845,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-optional-catch-binding/7.8.3_@babel+core@7.20.12:
@@ -1853,7 +1853,7 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
     dependencies:
-      '@babel/core': 7.20.12
+      '@babel/core': 7.20.12_supports-color@7.2.0
       '@babel/helper-plugin-utils': 7.20.2
 
   /@babel/plugin-syntax-optional-chaining/7.8.3_@babel+core@7.20.12:
@@ -3376,7 +3376,7 @@ packages:
     dependencies:
       '@lerna/child-process': 5.6.2
       '@lerna/describe-ref': 5.6.2
-      minimatch: 3.1.2
+      minimatch: 3.0.4
       npmlog: 6.0.2
       slash: 3.0.0
     dev: false
@@ -4147,7 +4147,7 @@ packages:
     dependencies:
       '@npmcli/name-from-folder': 1.0.1
       glob: 8.0.3
-      minimatch: 5.1.2
+      minimatch: 5.0.1
       read-package-json-fast: 2.0.3
     dev: false
 
@@ -4440,7 +4440,7 @@ packages:
       '@web3-storage/multipart-parser': 1.0.0
       cookie: 0.4.2
       set-cookie-parser: 2.5.1
-      source-map: 0.7.4
+      source-map: 0.7.3
     dev: false
 
   /@remix-run/server-runtime/1.14.0:
@@ -8122,7 +8122,7 @@ packages:
       json-stringify-safe: 5.0.1
       lodash: 4.17.21
       meow: 8.1.2
-      semver: 6.3.0
+      semver: 6.1.1
       split: 1.0.1
       through2: 4.0.2
     dev: false
@@ -8175,6 +8175,7 @@ packages:
 
   /convert-source-map/1.9.0:
     resolution: {integrity: sha512-ASFBup0Mz1uyiIjANan1jzLQami9z1PoYSZCiiYW2FczPbenXc45FZdBZLzOT+r6+iciuEModtmCti+hjaAk0A==}
+    dev: true
 
   /convert-source-map/2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
@@ -8431,7 +8432,7 @@ packages:
       supports-color:
         optional: true
     dependencies:
-      ms: 2.1.3
+      ms: 2.1.2
     dev: true
 
   /debug/4.1.1:
@@ -10470,7 +10471,7 @@ packages:
   /filelist/1.0.4:
     resolution: {integrity: sha512-w1cEuf3S+DrLCQL7ET6kz+gmlJdbq9J7yXCSjK/OZCPA+qEN1WyF4ZAf0YYJa4/shHJra2t/d/r8SV4Ji+x+8Q==}
     dependencies:
-      minimatch: 5.1.2
+      minimatch: 5.0.1
     dev: false
 
   /fill-range/4.0.0:
@@ -10947,7 +10948,7 @@ packages:
     hasBin: true
     dependencies:
       meow: 8.1.2
-      semver: 6.3.0
+      semver: 6.1.1
     dev: false
 
   /git-up/7.0.0:
@@ -11010,7 +11011,7 @@ packages:
       fs.realpath: 1.0.0
       inflight: 1.0.6
       inherits: 2.0.4
-      minimatch: 3.1.2
+      minimatch: 3.0.4
       once: 1.4.0
       path-is-absolute: 1.0.1
     dev: false
@@ -11130,7 +11131,7 @@ packages:
     engines: {node: '>=0.10.0'}
     dependencies:
       array-union: 1.0.2
-      glob: 7.2.3
+      glob: 7.1.2
       object-assign: 4.1.1
       pify: 2.3.0
       pinkie-promise: 2.0.1
@@ -11556,7 +11557,7 @@ packages:
   /humanize-ms/1.2.1:
     resolution: {integrity: sha512-Fl70vYtsAFb/C06PTS9dZBo7ihau+Tu/DNCk/OyHhea07S+aeMWpFFkUaXRa8fI+ScZbEI8dfSxwY7gxZ9SAVQ==}
     dependencies:
-      ms: 2.1.3
+      ms: 2.1.2
     dev: false
 
   /husky/7.0.4:
@@ -11606,7 +11607,7 @@ packages:
     resolution: {integrity: sha512-yemi4pMf51WKT7khInJqAvsIGzoqYXblnsz0ql8tM+yi1EKYTY1evX4NAbJrLL/Aanr2HyZeluqU+Oi7MGHokw==}
     engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
     dependencies:
-      minimatch: 5.1.2
+      minimatch: 5.0.1
     dev: false
 
   /ignore/4.0.6:
@@ -12357,7 +12358,7 @@ packages:
       async: 3.2.4
       chalk: 4.1.0
       filelist: 1.0.4
-      minimatch: 3.1.2
+      minimatch: 3.0.4
     dev: false
 
   /jaro-winkler/0.2.8:
@@ -13409,6 +13410,7 @@ packages:
     resolution: {integrity: sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==}
     engines: {node: '>=6'}
     hasBin: true
+    dev: true
 
   /jsonc-parser/3.2.0:
     resolution: {integrity: sha512-gfFQZrcTc8CnKXp6Y4/CBT3fTc0OVuDofpre4aEeEpSBPV5X5v4+Vmx+8snU7RLPrNHPKSgLxGo9YuQzz20o+w==}
@@ -13957,7 +13959,7 @@ packages:
     resolution: {integrity: sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw==}
     engines: {node: '>=8'}
     dependencies:
-      semver: 6.3.0
+      semver: 6.1.1
 
   /make-error/1.3.6:
     resolution: {integrity: sha512-s8UhlNe7vPKomQhC1qFelMokr/Sc3AgNbso3n74mVPA5LTZwkB9NlXf4XPamLxJE8h0gh73rM94xvwRT2CVInw==}
@@ -14804,6 +14806,7 @@ packages:
 
   /ms/2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
+    dev: true
 
   /multimatch/5.0.0:
     resolution: {integrity: sha512-ypMKuglUrZUD99Tk2bUQ+xNQj43lPEfAeX2o9cTteAmShXy2VHDJpuwu1o0xqoKCt9jLVAvwyFKdLTPXKAfJyA==}
@@ -14813,7 +14816,7 @@ packages:
       array-differ: 3.0.0
       array-union: 2.1.0
       arrify: 2.0.1
-      minimatch: 3.1.2
+      minimatch: 3.0.4
     dev: false
 
   /multistream/2.1.1:
@@ -14981,7 +14984,7 @@ packages:
     dependencies:
       hosted-git-info: 2.8.9
       resolve: 1.22.1
-      semver: 5.7.1
+      semver: 5.5.0
       validate-npm-package-license: 3.0.4
 
   /normalize-package-data/3.0.3:
@@ -16941,7 +16944,6 @@ packages:
   /semver/5.5.0:
     resolution: {integrity: sha512-4SJ3dm0WAwWy/NVeioZh5AntkdJoWKxHxcmyP622fOkgHa4z3R0TdBJICINyaSDE6uNwVc8gZr+ZinwZAH4xIA==}
     hasBin: true
-    dev: true
 
   /semver/5.7.1:
     resolution: {integrity: sha512-sauaDf/PZdVgrLTNYHRtpXa1iRiKcaebiKQ1BJdpQlWH2lCvexQdX55snPFyK7QzpudqbCI0qXFfOasHdyNDGQ==}
@@ -17303,11 +17305,6 @@ packages:
   /source-map/0.7.3:
     resolution: {integrity: sha512-CkCj6giN3S+n9qrYiBTX5gystlENnRW5jZeNLHpe6aue+SrHcG5VYwujhW9s4dY31mEGsxBDrHR6oI69fTXsaQ==}
     engines: {node: '>= 8'}
-
-  /source-map/0.7.4:
-    resolution: {integrity: sha512-l3BikUxvPOcn5E74dZiq5BGsTb5yEwhaTSzccU6t4sDOH8NWJCstKO5QT2CvtFoK6F0saL7p9xHAqHOlCPJygA==}
-    engines: {node: '>= 8'}
-    dev: false
 
   /source-map/0.8.0-beta.0:
     resolution: {integrity: sha512-2ymg6oRBpebeZi9UUNsgQ89bhx01TcTkmNTGnNO88imTmbSgy4nfujrgVEFKWpMTEGA11EDkTt7mqObTPdigIA==}
@@ -17895,7 +17892,7 @@ packages:
     dependencies:
       '@istanbuljs/schema': 0.1.3
       glob: 7.2.3
-      minimatch: 3.1.2
+      minimatch: 3.0.4
     dev: true
 
   /test-listen/1.1.0:
@@ -18291,7 +18288,7 @@ packages:
     resolution: {integrity: sha512-uhxiMgnXQp1IR622dUXI+9Ehnws7i/y6xvpZB9IbUVOPy0muvdvgXeZOn88UcGPiT98Vp3rJPTa8bFoalZ3Qhw==}
     engines: {node: '>=6'}
     dependencies:
-      json5: 2.2.3
+      json5: 2.2.2
       minimist: 1.2.7
       strip-bom: 3.0.0
     dev: false

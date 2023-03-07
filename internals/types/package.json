@@ -7,8 +7,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vercel/build-utils": "workspace:6.3.2",
-    "@vercel/routing-utils": "workspace:2.1.10"
+    "@vercel/build-utils": "6.3.2",
+    "@vercel/routing-utils": "2.1.10"
   },
   "devDependencies": {
     "@vercel/style-guide": "4.0.2",
