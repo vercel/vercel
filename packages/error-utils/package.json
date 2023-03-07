@@ -12,8 +12,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --coverage --env node --verbose",
-    "test-unit": "pnpm test",
-    "pnpm-cache-hack": "pnpm install"
+    "test-unit": "pnpm test"
   },
   "license": "MIT",
   "devDependencies": {

@@ -17,8 +17,7 @@
     "build": "node build",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test test/unit.test.ts",
-    "test-e2e": "pnpm test test/integration.test.ts",
-    "pnpm-cache-hack": "pnpm install"
+    "test-e2e": "pnpm test test/integration.test.ts"
   },
   "devDependencies": {
     "@types/execa": "^0.9.0",

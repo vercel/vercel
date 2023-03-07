@@ -13,8 +13,7 @@
     "build": "node build",
     "test": "jest --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/prepare-cache.test.ts test/utils.test.ts test/dev.test.ts",
-    "test-e2e": "pnpm test test/integration-*.test.js",
-    "pnpm-cache-hack": "pnpm install"
+    "test-e2e": "pnpm test test/integration-*.test.js"
   },
   "files": [
     "dist"
