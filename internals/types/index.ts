@@ -300,6 +300,7 @@ export interface Secret {
   createdAt: number;
 }
 
+// TODO (Ethan-Arrowood) - Replace enums
 export enum ProjectEnvTarget {
   Production = 'production',
   Preview = 'preview',

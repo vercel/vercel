@@ -1,5 +1,5 @@
 import { Output } from '../output';
-import { Alias } from '../../types';
+import { Alias } from '@vercel-internals/types';
 
 import Client from '../client';
 
