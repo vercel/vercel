@@ -16,8 +16,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --env node --verbose --runInBand --bail test/unit.*test.*",
-    "test-unit": "pnpm test",
-    "pnpm-cache-hack": "pnpm install"
+    "test-unit": "pnpm test"
   },
   "dependencies": {
     "@vercel/error-utils": "1.0.8",

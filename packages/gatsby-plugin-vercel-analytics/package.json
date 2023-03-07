@@ -8,8 +8,7 @@
     "web-vitals.js"
   ],
   "scripts": {
-    "build": "babel src --out-dir .",
-    "pnpm-cache-hack": "pnpm install"
+    "build": "babel src --out-dir ."
   },
   "dependencies": {
     "@babel/runtime": "7.12.1",

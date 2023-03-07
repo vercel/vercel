@@ -5,7 +5,7 @@
     "pnpm-cache-hack": {
       "inputs": ["package.json", "pnpm-lock.yaml"],
       "outputMode": "new-only",
-      "outputs": ["node_modules/**"]
+      "outputs": ["**/node_modules/**"]
     },
     "build": {
       "dependsOn": ["^build"],
