@@ -1,6 +1,6 @@
 {
   "name": "@vercel/hydrogen",
-  "version": "0.0.55",
+  "version": "0.0.56",
   "license": "MIT",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -21,7 +21,7 @@
   "devDependencies": {
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
-    "@vercel/build-utils": "6.3.2",
+    "@vercel/build-utils": "6.3.3",
     "@vercel/static-config": "2.0.13",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",

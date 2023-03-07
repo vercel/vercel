@@ -1,6 +1,6 @@
 {
   "name": "@vercel/build-utils",
-  "version": "6.3.2",
+  "version": "6.3.3",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
