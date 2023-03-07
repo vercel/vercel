@@ -16,7 +16,8 @@
     "build": "node build",
     "test": "jest --env node --verbose --bail --runInBand",
     "test-unit": "pnpm test test/build.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
-    "test-e2e": "pnpm test test/integration-*.test.js"
+    "test-e2e": "pnpm test test/integration-*.test.js",
+    "pnpm-cache-hack": "echo \"hack\""
   },
   "jest": {
     "preset": "ts-jest/presets/default",

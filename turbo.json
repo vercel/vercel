@@ -2,6 +2,10 @@
   "$schema": "https://turborepo.org/schema.json",
   "globalDependencies": ["turbo-cache-key.json", "test/lib/**"],
   "pipeline": {
+    "pnpm-cache-hack": {
+      "outputMode": "new-only",
+      "outputs": ["node_modules/**"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputMode": "new-only",

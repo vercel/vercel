@@ -18,7 +18,8 @@
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "test": "jest --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test",
-    "build:docs": "typedoc && node scripts/fix-links.js && prettier --write docs/**/*.md docs/*.md"
+    "build:docs": "typedoc && node scripts/fix-links.js && prettier --write docs/**/*.md docs/*.md",
+    "pnpm-cache-hack": "echo \"hack\""
   },
   "devDependencies": {
     "@edge-runtime/jest-environment": "2.0.0",

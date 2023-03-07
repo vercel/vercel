@@ -11,7 +11,8 @@
   "scripts": {
     "build": "pnpm build:src && pnpm build:gatsby",
     "build:gatsby": "tsc -p tsconfig.gatsby.json",
-    "build:src": "tsc -p tsconfig.src.json"
+    "build:src": "tsc -p tsconfig.src.json",
+    "pnpm-cache-hack": "echo \"hack\""
   },
   "dependencies": {
     "@sinclair/typebox": "0.25.24",

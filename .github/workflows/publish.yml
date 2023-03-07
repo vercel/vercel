@@ -46,8 +46,8 @@ jobs:
         node-version: 16
     - name: install npm@9
       run: npm i -g npm@9
-    - name: install pnpm@7.24.2
-      run: npm i -g pnpm@7.24.2
+    - run: npm i -g pnpm@7.24.2 turbo@1.8.2
+    - run: turbo run pnpm-cache-hack
     - name: Install
       if: ${{ steps.check-release.outputs.IS_RELEASE == 'true' }}
       run: pnpm install
