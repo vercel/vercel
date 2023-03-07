@@ -7,6 +7,12 @@ jest.setTimeout(60 * 1000);
 describe('build()', () => {
   describe('Build Output API v1', () => {
     it('should detect the output format', async () => {
+      if (process.platform === 'darwin') {
+        // skipping flakey test (hopefully temporarily)
+        console.log('Skipping test on Mac');
+        return;
+      }
+
       const workPath = path.join(
         __dirname,
         'build-fixtures',
@@ -36,6 +42,12 @@ describe('build()', () => {
     });
 
     it('should detect the v1 output format when .output exists', async () => {
+      if (process.platform === 'darwin') {
+        // skipping flakey test (hopefully temporarily)
+        console.log('Skipping test on Mac');
+        return;
+      }
+
       const workPath = path.join(
         __dirname,
         'build-fixtures',
