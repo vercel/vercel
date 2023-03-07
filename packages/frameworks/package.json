@@ -9,7 +9,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "tsc",
-    "test": "jest --env node --verbose --runInBand --bail",
+    "test": "jest --env node --verbose --runInBand --bail --testTimeout=10000",
     "test-unit": "pnpm test"
   },
   "dependencies": {

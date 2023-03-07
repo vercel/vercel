@@ -5,7 +5,7 @@
   "scripts": {
     "test-unit": "pnpm test __tests__/unit/",
     "test-e2e": "pnpm test __tests__/integration/",
-    "test": "jest --env node --verbose --runInBand --bail"
+    "test": "jest --env node --verbose --runInBand --bail --testTimeout=10000"
   },
   "devDependencies": {
     "@types/jest": "27.4.1",

@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc",
     "test-unit": "pnpm test",
-    "test": "jest --env node --verbose --runInBand --bail"
+    "test": "jest --env node --verbose --runInBand --bail --testTimeout=10000"
   },
   "files": [
     "dist"

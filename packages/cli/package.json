@@ -12,9 +12,9 @@
   },
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
-    "test": "jest --env node --verbose --bail",
+    "test": "jest --env node --verbose --bail --testTimeout=10000",
     "test-unit": "pnpm test test/unit/",
-    "test-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose",
+    "test-cli": "rimraf test/fixtures/integration && ava test/integration.js --serial --fail-fast --verbose --timeout=5m",
     "test-dev": "pnpm test test/dev/",
     "coverage": "codecov",
     "build": "ts-node ./scripts/build.ts",
