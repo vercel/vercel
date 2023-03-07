@@ -138,12 +138,24 @@ export function getPathFromRoute(
 
   for (const currentRoute of getRouteIterator(route, routes)) {
     if (!currentRoute.path) continue;
-
-    pathParts.push(
-      currentRoute.path.replace(/:(.+)\?/g, (_, name) => `(:${name})`)
-    );
-
-    rePathParts.push(currentRoute.path);
+    const currentRouteParts = currentRoute.path.split('/').reverse();
+    for (const part of currentRouteParts) {
+      if (part.endsWith('?')) {
+        if (part.startsWith(':')) {
+          // Optional path parameter
+          pathParts.push(`(${part.substring(0, part.length - 1)})`);
+          rePathParts.push(part);
+        } else {
+          // Optional static segment
+          const p = `(${part.substring(0, part.length - 1)})`;
+          pathParts.push(p);
+          rePathParts.push(`${p}?`);
+        }
+      } else {
+        pathParts.push(part);
+        rePathParts.push(part);
+      }
+    }
   }
 
   const path = pathParts.reverse().join('/');
