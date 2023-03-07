@@ -7,7 +7,7 @@ import {
   DNSConflictingRecord,
   isAPIError,
 } from '../errors-ts';
-import { DNSRecordData } from '../../types';
+import { DNSRecordData } from '@vercel-internals/types';
 
 type Response = {
   uid: string;

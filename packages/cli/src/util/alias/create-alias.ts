@@ -1,4 +1,4 @@
-import type { Deployment } from '../../types';
+import type { Deployment } from '@vercel-internals/types';
 import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
 import Client from '../client';
