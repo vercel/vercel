@@ -59,6 +59,7 @@ jobs:
     needs:
       - setup
     strategy:
+      max-parallel: 1
       fail-fast: false
       matrix:
         include: ${{ fromJson(needs.setup.outputs['tests']) }}

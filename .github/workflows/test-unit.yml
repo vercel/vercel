@@ -22,6 +22,7 @@ jobs:
     name: Unit
     timeout-minutes: 20
     strategy:
+      max-parallel: 1
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
