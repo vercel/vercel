@@ -37,8 +37,8 @@ jobs:
       - uses: actions/setup-node@v3
         with:
             node-version: ${{ matrix.node }}
-      - run: npm i -g pnpm@7.24.2 turbo@1.8.2
-      - run: turbo run pnpm-cache-hack
+      - run: npm i -g pnpm@7.24.2 turbo@1.8.3
+      - run: turbo run pnpm-cache-hack --cache-dir=.turbo
       - run: pnpm install
       - run: pnpm run build
       - run: pnpm run lint
