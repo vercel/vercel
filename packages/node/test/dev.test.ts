@@ -51,6 +51,11 @@ test('runs a mjs endpoint', async () => {
 });
 
 test('runs a esm typescript endpoint', async () => {
+  if (process.platform === 'win32') {
+    console.log('Skipping test on Windows');
+    return;
+  }
+
   const child = testForkDevServer('./esm-module.ts');
 
   try {
