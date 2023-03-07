@@ -35,7 +35,7 @@ const TMP = tmpdir();
 import {
   createGo,
   getAnalyzedEntrypoint,
-  cacheDir,
+  goGlobalCachePath,
   OUT_EXTENSION,
 } from './go-helpers';
 const handlerFileName = `handler${OUT_EXTENSION}`;
@@ -802,6 +802,6 @@ async function waitForPortFile_(opts: {
 export async function prepareCache({
   workPath,
 }: PrepareCacheOptions): Promise<Files> {
-  const cache = await glob(`${cacheDir}/**`, workPath);
+  const cache = await glob(`${goGlobalCachePath}/**`, workPath);
   return cache;
 }

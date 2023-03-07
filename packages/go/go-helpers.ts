@@ -53,7 +53,10 @@ function getGoUrl(version: string) {
   };
 }
 
-const goGlobalCachePath = join(XDGAppPaths('com.vercel.cli').cache(), 'golang');
+export const goGlobalCachePath = join(
+  XDGAppPaths('com.vercel.cli').cache(),
+  'golang'
+);
 
 export const OUT_EXTENSION = process.platform === 'win32' ? '.exe' : '';
 
